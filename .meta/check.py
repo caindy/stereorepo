@@ -248,12 +248,37 @@ def template_parses(views):
     return problems
 
 
+def one_context_per_portfolio(index):
+    """A portfolio is exactly one Bounded Context, by construction (DR-014).
+
+    The slot stays multivalued because `DddModel` is generic DDD and a Context
+    Map legitimately holds many — solorepo's own map has three. What is singular
+    is a portfolio's *own* context, so that is what is checked: one declaration
+    in `domain_vocabulary.yaml`, and the Portfolio names it.
+    """
+    problems = []
+    own = [i for i, (cls, _, where) in index.items()
+           if cls == "BoundedContext" and where == "domain_vocabulary.yaml"]
+    if len(own) > 1:
+        problems.append("domain_vocabulary.yaml declares " + str(len(own))
+                        + " Bounded Contexts; a portfolio is exactly one: " + ", ".join(sorted(own)))
+    for pid, (cls, obj, _) in index.items():
+        if cls != "Portfolio":
+            continue
+        named = obj.get("bounded_context")
+        if own and named not in own:
+            problems.append(f"{pid} names '{named}', which is not the context declared in "
+                            "domain_vocabulary.yaml")
+    return problems
+
+
 CHECKS = (
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
     ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
     ("collaboration membership", lambda i, r: collaboration_membership(i)),
     ("audit invariants", lambda i, r: audit_invariants(i)),
     ("served goals", lambda i, r: served_goals(i)),
+    ("one context per portfolio", lambda i, r: one_context_per_portfolio(i)),
     ("surviving placeholders", lambda i, r: surviving_placeholders()),
 )
 

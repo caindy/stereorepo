@@ -1,6 +1,9 @@
 # This portfolio's own domain language, and the Bounded Context it belongs to.
 # Owned here and never synced: the scaffold has no authority over your domain.
 
+# Exactly one, by construction: a portfolio is one Bounded Context. The key is
+# plural because the schema is generic DDD and a Context Map holds many; the
+# gate enforces the one that matters.
 bounded_contexts:
   - id: ddd:context/__PORTFOLIO_SLUG__
     name: __PORTFOLIO_NAME__

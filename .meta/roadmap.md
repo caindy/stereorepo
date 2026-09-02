@@ -10,6 +10,40 @@ definitions in `.meta/`. Note the terminology trap: APM's "agent" primitive is
 closest to our **Persona**, not our **Actor** — identity is exactly what cannot
 be packaged.
 
+**The APM package is derived, and late-bound.** The step that turns `.meta` into
+`.apm/` primitives is the missing half of the packaging story, and its value is
+not encapsulation — it is **late binding**. Which harnesses a portfolio needs is
+not knowable when it is specialized, and a harness introduced years later should
+cost an `apm compile`, not a migration. That works only if the package is a
+*derived artifact* and `.meta` is the source: the assertions ride with every
+portfolio, so the package can always be rebuilt from them. Built ahead of time is
+a cache, never a source.
+
+What maps to what, from APM's primitives-and-targets model:
+
+| Assertion | Primitive |
+|---|---|
+| a Discipline | `instructions`, with `applies_to` as its `applyTo` glob |
+| the Ubiquitous Language | `instructions` scoped to everything — this is how the language biases output in *any* harness |
+| a Personality, or a Persona to interrogate | `agents` |
+| a Capability of kind SKILL | `skills` |
+| the gate | `hooks`, on Stop or PostToolUse |
+
+Two consequences worth holding on to. **Specialization's copy step could become
+an install**: the inherited half is exactly what an APM package would carry, and
+re-installing is the `sync` verb that has been missing since DR-028. And the
+schemas themselves are not primitives — they would ride as a skill's supporting
+resources, which is the first place this mapping strains.
+
+**Two harnesses on one Challenge.** The concrete mission: Claude picking up where
+Gemini left off on a coding task, coordinating through a PR, each spun up in its
+own container. Directional for now, but it is what the runtime half was built
+for — two Actors with separate WorkloadIdentities answering one Challenge is a
+**Collaboration**, and asking who did what across two vendors' agents is exactly
+the diff an AuditRecord makes computable. It also sets the bar for the package:
+the same Disciplines and the same language have to reach both containers, which
+no hand-maintained per-harness config survives.
+
 **Reification via Dockerfile and/or nix.** Rather than the ontology inventing its
 own coordinate system for where a Capability comes from, point at a build that
 already pins its closure exactly, and get the bill of materials for free. See

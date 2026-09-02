@@ -703,3 +703,16 @@ behind; fixing one file of a class does not fix the class. Neither is visible
 from where the fix is made, and both are visible immediately in a specialized
 result. That is the argument for the Dogfooding Discipline requiring a full run
 rather than a review.
+
+### DR-037 · One Bounded Context per portfolio is checked, not typed
+*2026-09-02*
+
+A portfolio is exactly one Bounded Context (DR-014), and the plural
+`bounded_contexts` key invited listing several. The slot stays multivalued
+anyway: `DddModel` is generic DDD, a Context Map legitimately holds many, and
+solorepo's own map has three. What is singular is a portfolio's **own** context.
+
+So the constraint is enforced where it is true rather than where it is
+convenient: the gate checks that `domain_vocabulary.yaml` declares one Bounded
+Context and that the Portfolio names that one. Probed with a second context,
+which it rejects.
