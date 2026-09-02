@@ -272,24 +272,6 @@ def one_context_per_portfolio(index):
     return problems
 
 
-def goal_justification(index):
-    """A user-justified Goal reaches an actual END goal, not merely a Persona.
-
-    The rule on Goal gets as far as requiring a Job to be Done; it cannot follow
-    the next hop. A Job to be Done that serves nothing leaves the chain dead-
-    ending at a Persona, which is precisely the work-with-no-user-justification
-    that the basis was added to make visible.
-    """
-    problems = []
-    for gid, (cls, obj, _) in index.items():
-        if cls != "Goal" or obj.get("goal_basis") != "USER":
-            continue
-        jtbd = obj.get("jtbd")
-        if jtbd in index and not index[jtbd][1].get("serves"):
-            problems.append(f"{gid}: justified as USER, but '{jtbd}' serves no END goal")
-    return problems
-
-
 CHECKS = (
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
     ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
@@ -297,7 +279,6 @@ CHECKS = (
     ("audit invariants", lambda i, r: audit_invariants(i)),
     ("served goals", lambda i, r: served_goals(i)),
     ("one context per portfolio", lambda i, r: one_context_per_portfolio(i)),
-    ("goal justification", lambda i, r: goal_justification(i)),
     ("surviving placeholders", lambda i, r: surviving_placeholders()),
 )
 

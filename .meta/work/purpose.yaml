@@ -202,10 +202,15 @@ classes:
         One consequence: an Agency's Role is no longer implied by its Goal, and
         choosing it becomes an explicit act rather than a derivation.
       - >-
-        `serves` names the END goals this need advances. Subtracting the two
-        sides gives the product equivalent of the Permission/AuditRecord diff:
-        an END goal with no Job to be Done is a user need nobody is working on,
-        and a Job to be Done serving none is work with no user justification.
+        `serves` names the END goals this need advances, and is **required**. A
+        need that advances none of a Persona's goals is a need nobody has, and
+        making it required is what lets the schema guarantee the whole chain: a
+        USER Goal must have a Job to be Done, and a Job to be Done must reach an
+        END goal, so no Goal can dead-end at a Persona (DR-039).
+      - >-
+        Subtracting the two sides gives the product equivalent of the
+        Permission/AuditRecord diff: an END goal with no Job to be Done is a user
+        need nobody is working on.
     slots:
       - situation
       - motivation
@@ -216,6 +221,8 @@ classes:
       motivation:
         required: true
       persona:
+        required: true
+      serves:
         required: true
 
   Goal:
@@ -279,6 +286,8 @@ classes:
           slot_conditions:
             statement:
               required: true
+            jtbd:
+              value_presence: ABSENT
 
   Remit:
     is_a: WorkEntity

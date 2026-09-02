@@ -734,11 +734,40 @@ nobody cannot be written down without the omission being visible.** Two rules
 enforce the shape: a USER basis requires a Job to be Done, and a BUSINESS or
 TECHNICAL basis requires a stated objective instead. Both probed.
 
-A rule cannot follow the next hop, so the gate does: a USER-justified Goal whose
-Job to be Done serves no END goal is caught, because otherwise the chain
-dead-ends at a Persona and looks justified while justifying nothing.
+A rule cannot follow the next hop, so the gate did: a USER-justified Goal whose
+Job to be Done serves no END goal was caught there, because otherwise the chain
+dead-ends at a Persona and looks justified while justifying nothing. **DR-039
+moved that into the schema** by making the constraint local.
 
 The basis stays single-valued. A Goal that genuinely serves both a user and the
 business picks its primary, which keeps DR-031's arithmetic meaningful —
 subtracting served END goals from held ones only means something if each Goal is
 counted once.
+
+### DR-039 · The dead-end check moves from the gate into the schema
+*2026-09-02*
+
+DR-038 put "a USER Goal's Job to be Done must serve an END goal" in the gate,
+because a LinkML rule cannot reach through a reference. That was the wrong
+conclusion from a true premise. **Inheritance would not have helped** — a rule
+cannot traverse a reference however the ranges are typed — but the constraint
+can be made *local*, which does.
+
+`JobToBeDone.serves` is now **required**. A need that advances none of a
+Persona's goals is a need nobody has, so the requirement is true on its own terms
+rather than a device for reaching the Goal. And it composes: a USER Goal must
+have a Job to be Done, a Job to be Done must reach an END goal, so no Goal can
+dead-end at a Persona. Two local rules guarantee a two-hop chain.
+
+Ordering is not a burden here — DR-021's flow surfaces END goals by interrogating
+a Persona *before* a Job to be Done is written, so what the rule demands is
+already what the Discipline produces.
+
+A third rule joins them: a BUSINESS or TECHNICAL Goal carries **no** Job to be
+Done. It has no user to reach, and one carrying a user's need is a USER Goal
+mislabelled.
+
+The gate check is deleted rather than kept as a belt: a check that cannot fire is
+noise, and this session has spent its length removing summaries that can drift
+from what they summarise. Four violations now fail `linkml-validate`, and the
+gate is down to nine checks.
