@@ -113,9 +113,10 @@ the slot that exists to hold exactly this.
   scaffold prose in copied docs — was run by hand. Both are gate-shaped.
 - `README.md` describes the Disciplines and the invariant count in hand-written
   prose about generated content. It will drift.
-- Whether the `.agents` convention's file shape embeds file scopes, which would
-  collide with securable-free Capability naming. APM's `instructions` primitive
-  does exactly that with `applyTo` globs — the closest thing APM has to an
-  enforced Securable selector.
+- The frontmatter fields for each APM primitive type, and where `apm.yml` sits
+  when primitives are authored at `.meta/.apm/`. Neither was verifiable from the
+  pages read — the primitive-types reference is marked legacy — and both must be
+  checked against *Package types* and the *Targets matrix* before anything is
+  authored.
 - The compile step from `.meta/` definitions to APM primitives is unbuilt, and
   building it runs into the reification question above.

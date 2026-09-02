@@ -16,7 +16,7 @@ Turning this scaffold into a new portfolio repo. Done once, by an agent followin
 ## Steps
 
 1. Start a new empty repo. Copy only what the steps below name — never clone, and never copy the whole tree: a clone carries the scaffold's commit history and an `origin` pointing back at it, and neither belongs to a portfolio.
-2. Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas, `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.agents/`, `.meta/principles.md`, `.meta/schemas.md`, `stakeholders/` and `.gitignore`. Not the generated pages; step five writes those.
+2. Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas, `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`, `stakeholders/` and `.gitignore`. Not the generated pages; step five writes those.
 3. Copy every file under `template/` to its matching path, then link `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that must carry none of the scaffold's content.
 4. Fill in every placeholder, and write the portfolio's own assertions — its Portfolio, Products and Projects; its Personas, once there is research to draw them from; its Bounded Context and the words its domain experts actually use.
 5. Re-render, then run the gate. It fails on any placeholder left behind, so run it before removing anything. Both green before going on.

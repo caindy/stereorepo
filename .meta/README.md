@@ -28,7 +28,7 @@ for what it owns. This file routes. It does not restate.
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
 | changing or defending a rule | its DR in `decisions.md`, **and** the file that states it |
 | what is intended but unbuilt, or still open | [`roadmap.md`](roadmap.md) |
-| agent definitions supporting the scaffold | `.agents/` |
+| primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 
 **A digest tells you a rule exists and where it lives; only the file it points at
 is sufficient to apply it.** This map is deliberately insufficient.

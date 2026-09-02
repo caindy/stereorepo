@@ -22,7 +22,7 @@ disciplines:
         to a portfolio.
       - >-
         Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas,
-        `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.agents/`,
+        `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.apm/`,
         `.meta/principles.md`, `.meta/schemas.md`, `stakeholders/` and
         `.gitignore`. Not the generated pages; step five writes those.
       - >-

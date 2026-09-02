@@ -771,3 +771,33 @@ The gate check is deleted rather than kept as a belt: a check that cannot fire i
 noise, and this session has spent its length removing summaries that can drift
 from what they summarise. Four violations now fail `linkml-validate`, and the
 gate is down to nine checks.
+
+### DR-040 · Primitives are authored in `.meta/.apm/`, not `.meta/.agents/`
+*2026-09-02*
+
+`.meta/.agents/` was the wrong directory, and the reason is the producer/consumer
+split it got backwards. **`.apm/` is where primitives are authored; `.agents/` is
+somewhere they land.** Compilation writes per-target output to `.claude/`,
+`.github/`, `.gemini/` and `.agents/`, so authoring in `.agents/` means authoring
+into an output path.
+
+DR-011 is refined rather than reversed. Its reasoning — that a root `.agents/`
+belongs to a product and is also a compilation target — still holds, and is in
+fact the reason this move is right.
+
+The directory now says what belongs in it instead of that nothing has been
+decided: the verified layout, and the mapping from each kind of assertion to the
+primitive it compiles into. **Nothing is in it yet, deliberately.** The compile
+step from assertions to primitives is unbuilt, and hand-writing primitives a
+compiler will later generate is the duplication that step exists to remove.
+
+Two things are recorded as *unverified* rather than guessed at. The primitive
+frontmatter fields could not be confirmed — the primitive-types reference is
+marked legacy and redirects — and where `apm.yml` sits when primitives are at
+`.meta/.apm/` is unconfirmed, though it implies the package root is `.meta/`.
+Writing plausible field names would have been worse than recording the gap.
+
+One question this closed: whether an `applyTo` glob collides with
+securable-free Capability naming. It does not. `applyTo` scopes a **Discipline**,
+which carries `applies_to` for exactly that reason, and never a Capability. The
+axes stay clean.

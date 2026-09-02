@@ -16,7 +16,7 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 | [`README.md`](README.md) | The landing page. |
 | [`.meta/README.md`](.meta/README.md) | **Start here.** A load map routing to everything else. Deliberately small. |
 | `.meta/` | The staging ground. Never ships as product material. |
-| `.meta/.agents/` | Agent definitions supporting this portfolio. |
+| `.meta/.apm/` | APM primitives, compiled to whatever harness is needed. Derived from `assertions/`. |
 | `stakeholders/` | Product-side stakeholder material. |
 
 ## Conventions

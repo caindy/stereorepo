@@ -19,7 +19,7 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 | [`SPECIALIZE.md`](SPECIALIZE.md) | Generated. The steps for turning a clone into a portfolio. |
 | [`.meta/README.md`](.meta/README.md) | **Start here.** A load map routing to everything else. Deliberately small. |
 | `.meta/` | The staging ground. Never ships as product content. |
-| `.meta/.agents/` | Agent definitions supporting the scaffold. Contents not yet decided. |
+| `.meta/.apm/` | APM primitives, compiled to whatever harness is needed. Derived from `assertions/`. |
 | `stakeholders/` | Product-side stakeholder material. Taxonomy not yet decided. |
 
 ## Conventions
