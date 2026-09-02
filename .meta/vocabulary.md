@@ -40,6 +40,9 @@ _Authority: solorepo._
 | **Permission** | The authority to employ a Capability on a Securable. | — |
 | **Role** | A named set of Capabilities. | — |
 | **Challenge** | A problem to be addressed — a defect, epic, feature or task. | ticket, story, issue |
+| **Portfolio** | Everything one solo builds inside one Bounded Context. One per repo. | — |
+| **Product** | Something delivered to users, with its own interface and therefore its own primary Persona. The unit of value. | — |
+| **Project** | A unit of build — one toolchain, one language, its own tests and gate. The unit of construction. | workstream |
 | **Definition of Done** | The test that decides whether a Goal has been met. | — |
 | **Job to be Done** | The need the work serves, stated from the point of view of the Persona that has it. | — |
 | **Goal** | A SMART goal — Challenge, Definition of Done, Job to be Done and Deadline, all required. | — |
@@ -57,6 +60,12 @@ _Authority: solorepo._
 | **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 
 **Personality.** Called Persona in the original sketch, until Cooper's Persona took the word back.
+
+**Portfolio.** The unit Specialization produces, and the reason a solorepo is a monorepo: the repo boundary and the language boundary are the same boundary.
+
+**Product.** Cooper's rule is the test for one Product against two: a primary persona's goals cannot be met by an interface aimed at another without unacceptable compromise.
+
+**Project.** Products are composed from Projects, many-to-many. Not a piece of work, which is a Challenge; and not a whole repository, which is what python_bootstrap means by the word.
 
 **Persona goal.** An END goal is Goal-shaped but has no Deadline: it is standing rather than a bounded commitment, so it is not a Goal.
 
@@ -82,6 +91,10 @@ more often a collision than a gap.
 |---|---|
 | **Persona** | Personality |
 | **Personality** | Persona |
+| **Challenge** | Project |
+| **Portfolio** | Product |
+| **Product** | Portfolio, Project |
+| **Project** | Challenge, Product |
 | **Job to be Done** | Job |
 | **Goal** | Persona goal |
 | **Persona goal** | Goal |

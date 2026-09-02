@@ -27,6 +27,7 @@ license: https://creativecommons.org/licenses/by/4.0/
 #   who is assigned what, and where work meets      work/assignment.yaml
 #   how work must proceed, invariably               work/disciplines.yaml
 #   what was actually done, and by whom             work/provenance.yaml
+#   how the repo is divided into Products/Projects  work/structure.yaml
 #   the base every module shares                    work/core.yaml
 #
 # A module's `description` carries its reasoning, not only its contents. The
@@ -50,6 +51,7 @@ imports:
   - work/purpose
   - work/assignment
   - work/disciplines
+  - work/structure
   - work/provenance
 
 slots:
@@ -166,6 +168,20 @@ slots:
     range: Discipline
     multivalued: true
     inlined_as_list: true
+  portfolio:
+    description: The Portfolio. There is exactly one per repo.
+    range: Portfolio
+    inlined: true
+  products:
+    description: The Products in the collection.
+    range: Product
+    multivalued: true
+    inlined_as_list: true
+  projects:
+    description: The Projects in the collection.
+    range: Project
+    multivalued: true
+    inlined_as_list: true
 
 
   # Identity
@@ -215,6 +231,9 @@ classes:
       - job_set
       - collaborations
       - disciplines
+      - portfolio
+      - products
+      - projects
       # provenance
       - executions
       - boms

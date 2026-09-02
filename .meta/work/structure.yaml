@@ -1,0 +1,118 @@
+id: https://w3id.org/solorepo/work/structure
+name: work-structure
+title: Ontology of Work — Structure
+description: >-
+  How a solorepo is divided, and along which two axes.
+
+  A **Portfolio** is everything one solo builds inside one Bounded Context:
+  exactly one Ubiquitous Language, one set of stakeholders, one per repo. It is
+  what a clone becomes under Specialization. A solorepo is a monorepo by design,
+  and this is the reason — the language is what holds it together, so the repo
+  boundary and the language boundary are the same boundary.
+
+  Within it, **Products** and **Projects** are not a hierarchy. They are
+  orthogonal groupings of the same content:
+
+  A **Product** groups by *who it is for*. It is delivered to users, has its own
+  interface, and therefore its own primary Persona. Cooper supplies the test:
+  a primary persona's goals cannot be met by an interface aimed at another
+  without unacceptable compromise, which is exactly the line between one Product
+  and two.
+
+  A **Project** groups by *how it is built*. One toolchain, one language, its own
+  tests and its own gate. Products are composed from Projects, and the relation
+  is many-to-many: a shared library is one Project serving two Products, while a
+  Product with a web app and an API is one Product spanning two Projects.
+
+  "Polyglot" is therefore a property of the Portfolio rather than of anything
+  inside it. Projects differ in language; the Products they serve do not care.
+license: https://creativecommons.org/licenses/by/4.0/
+
+prefixes:
+  work: https://w3id.org/solorepo/work-ontology/
+  linkml: https://w3id.org/linkml/
+default_prefix: work
+default_range: string
+
+imports:
+  - linkml:types
+  - core
+  - personas
+
+slots:
+
+  bounded_context_ref:
+    description: >-
+      The Bounded Context this Portfolio is. Exactly one, which is the constraint
+      that makes a single Ubiquitous Language enforceable across everything in
+      the repo. A CURIE into `ddd_ontology.yaml` rather than a typed reference,
+      so the two schemas stay independently loadable.
+    range: uriorcurie
+
+  primary_persona:
+    description: >-
+      The Persona whose interface this Product is. What makes it one Product
+      rather than two.
+    range: Persona
+
+  built_from:
+    description: >-
+      The Projects a Product is composed from. Many-to-many: a Project may serve
+      several Products.
+    range: Project
+    multivalued: true
+
+  language:
+    description: The language a Project is written in. Portfolios are polyglot; Projects are not.
+
+  gate:
+    description: >-
+      The command that must pass before work on this Project is claimed done.
+      One per Project, and green before anything is called finished.
+
+classes:
+
+  Portfolio:
+    is_a: WorkEntity
+    description: >-
+      Everything one solo builds inside one Bounded Context. One per repo, and
+      the unit that Specialization produces.
+    slots:
+      - bounded_context_ref
+    slot_usage:
+      name:
+        required: true
+      bounded_context_ref:
+        required: true
+
+  Product:
+    is_a: WorkEntity
+    description: >-
+      Something delivered to users, with its own interface and therefore its own
+      primary Persona. The unit of value: it carries Personas, Jobs to be Done
+      and Goals, and it is what gets released.
+    slots:
+      - primary_persona
+      - built_from
+    slot_usage:
+      name:
+        required: true
+      primary_persona:
+        required: true
+
+  Project:
+    is_a: WorkEntity
+    description: >-
+      A unit of build: one toolchain, one language, its own tests and its own
+      gate. The unit of construction.
+    comments:
+      - >-
+        Not a piece of work — that is a Challenge. And not a whole repository,
+        which is what `python_bootstrap` means by the word. Both senses are live
+        enough to be worth naming as collisions.
+    slots:
+      - language
+      - gate
+    slot_usage:
+      name:
+        required: true
