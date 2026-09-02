@@ -42,3 +42,20 @@ disciplines:
       - Keep every digest deliberately insufficient to act on.
     produces:
       - A core that routes, and satellites that own what they hold.
+  - id: work:discipline/dogfooding
+    name: Dogfooding
+    description: >-
+      Use what is being built, on itself, before anyone else has to. When a
+      Discipline is adopted, apply it first to the repo that adopted it; when a
+      gap shows up in use, fix the thing rather than working around it.
+    judgement: >-
+      Telling a difficulty that is the tool's fault from one that is the task's.
+      Working around the first hides a defect; redesigning for the second is
+      thrashing. No test distinguishes them — only use does.
+    steps:
+      - Apply each adopted Discipline to this repo before applying it anywhere else.
+      - Instantiate a schema before trusting it. Writing an instance is the test.
+      - Run a procedure for real rather than reviewing it.
+      - When use finds a gap, change the thing, and record what use found.
+    produces:
+      - Findings that reasoning about the artifact does not reach.

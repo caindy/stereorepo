@@ -198,6 +198,14 @@ concept_set:
     definition: A structured way of working that must be adhered to because it is not an imperative program.
     in_scheme: work:scheme/solorepo
     scope_note: Not a Capability, not a Permission, and not a characterisation such as a communication style.
+  - id: work:concept/dogfooding
+    pref_label: Dogfooding
+    definition: >-
+      Using what is being built, on itself, before anyone else has to.
+    in_scheme: work:scheme/solorepo
+    scope_note: >-
+      A Discipline here, not a slogan: each adopted Discipline is applied to this
+      repo first, and a schema is instantiated before it is trusted.
   - id: work:concept/specialization
     pref_label: Specialization
     definition: Turning a fresh clone of solorepo into a new portfolio repo.

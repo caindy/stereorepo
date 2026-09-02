@@ -56,6 +56,7 @@ _Authority: solorepo._
 | **Audit Record** | One employment of a Capability on a Securable. A Permission in the past tense. | — |
 | **Agent Bill of Materials** | What an Actor was made of at a moment, resolved to immutable references. | — |
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
+| **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
 | **Specialization** | Turning a fresh clone of solorepo into a new portfolio repo. | bootstrap, init, scaffolding step |
 | **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 
@@ -70,6 +71,8 @@ _Authority: solorepo._
 **Persona goal.** An END goal is Goal-shaped but has no Deadline: it is standing rather than a bounded commitment, so it is not a Goal.
 
 **Discipline.** Not a Capability, not a Permission, and not a characterisation such as a communication style.
+
+**Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 
 ### APM primitives
 

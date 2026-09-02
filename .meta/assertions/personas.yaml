@@ -1,0 +1,49 @@
+# Cooper's personas are archetypes standing in for a class of real people. Here
+# the class has one member and he is present, so this is not a research
+# surrogate — it is a record of requirements, drawn from what he has actually
+# said and done in building this repo. A departure from the canon, marked per
+# DR-016.
+#
+# Everything below should be corrected by its subject rather than defended by
+# its author.
+
+personas:
+  - id: work:persona/the-solo
+    name: The Solo
+    persona_kind: PRIMARY
+    description: >-
+      Christopher, building software products alone with agents holding the
+      other seats. Primary persona for the scaffold itself.
+    context: >-
+      Works in long agent sessions, and expects to pick the same repo up in a
+      fresh thread with none of the prior conversation. Reads primary sources
+      before adopting from them.
+    persona_goals:
+      - goal_type: END
+        statement: >-
+          Start a new portfolio from this scaffold without rebuilding the
+          scaffolding, and without inheriting the scaffold's own history.
+      - goal_type: END
+        statement: >-
+          Hand the repo to an agent in a fresh thread and have it understand the
+          enterprise without being re-taught.
+      - goal_type: END
+        statement: Keep one language across everything built inside one portfolio.
+      - goal_type: EXPERIENCE
+        statement: >-
+          Trust that an agent working here will not quietly invent terms or let
+          a summary drift from what it summarises.
+      - goal_type: LIFE
+        statement: Build products at a scale that used to require a team.
+    behaviors:
+      - Corrects imprecise modelling immediately and specifically, rather than letting it stand.
+      - Reads the source before adopting a taxonomy from it.
+      - Walks back work that overreaches, and keeps the attempt on the record.
+      - Commits each decision as it settles rather than batching.
+    frustrations:
+      - Prose that duplicates a source and then drifts from it.
+      - Terms invented without an explicit decision.
+      - Re-explaining context that a repository could have carried.
+    proficiencies:
+      - Fluent in DDD, and in reaching for a canon before minting a term.
+      - Comfortable in LinkML, SKOS and the semantic-web framing.

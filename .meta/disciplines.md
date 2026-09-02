@@ -50,3 +50,16 @@ One small thing loads always; everything else loads on demand, routed by a load 
 3. Keep every digest deliberately insufficient to act on.
 
 _Produces: A core that routes, and satellites that own what they hold._
+
+### Dogfooding
+
+Use what is being built, on itself, before anyone else has to. When a Discipline is adopted, apply it first to the repo that adopted it; when a gap shows up in use, fix the thing rather than working around it.
+
+**Where the judgement is.** Telling a difficulty that is the tool's fault from one that is the task's. Working around the first hides a defect; redesigning for the second is thrashing. No test distinguishes them — only use does.
+
+1. Apply each adopted Discipline to this repo before applying it anywhere else.
+2. Instantiate a schema before trusting it. Writing an instance is the test.
+3. Run a procedure for real rather than reviewing it.
+4. When use finds a gap, change the thing, and record what use found.
+
+_Produces: Findings that reasoning about the artifact does not reach._

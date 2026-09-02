@@ -1,9 +1,8 @@
 # solorepo asserting its own structure.
 #
-# No Products. A Product requires a primary Persona, and solorepo has released
-# nothing to users yet — inventing a Persona to satisfy a required slot would
-# violate the Discipline that makes Personas worth having. The absence is the
-# honest assertion.
+# The scaffold is a Product because it has a primary Persona: the solo who uses
+# it. Dogfooding is what makes that true rather than a stretch — the scaffold's
+# first user is the person building it, and he is present to be asked.
 
 portfolio:
   id: work:portfolio/solorepo
@@ -21,3 +20,13 @@ projects:
       renders and checks them.
     language: LinkML YAML, with Python for rendering and the gate
     gate: uvx --with linkml --with pyyaml python .meta/check.py
+
+products:
+  - id: work:product/scaffold
+    name: The scaffold
+    description: >-
+      solorepo itself, used by the solo who builds it. Its interface is the load
+      map, the vocabulary, the gate and the Specialization procedure.
+    primary_persona: work:persona/the-solo
+    built_from:
+      - work:project/meta
