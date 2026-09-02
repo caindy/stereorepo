@@ -17,6 +17,25 @@ bundled up and shipped is built from these definitions.
 
 ---
 
+## Working with the schema
+
+No toolchain is checked in; the schema is exercised with `uvx`:
+
+```bash
+uvx --from linkml gen-json-schema .meta/work_ontology.yaml   # compiles?
+uvx --from linkml linkml-validate -s .meta/work_ontology.yaml <instance.yaml>
+uvx --from linkml linkml-lint .meta/work_ontology.yaml       # style only
+```
+
+`linkml-lint` reports warnings for uppercase enum values. That is the common
+LinkML convention and they are left as they are.
+
+There is **no instance data in the repo**. Every change so far was validated
+against a throwaway example covering all classes, including negative cases for
+each rule, but that example was never committed.
+
+---
+
 ## Vocabulary
 
 The ontology of work exists to give solorepo a shared language. It is a
