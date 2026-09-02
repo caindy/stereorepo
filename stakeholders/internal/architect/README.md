@@ -1,6 +1,5 @@
 # stakeholders/internal/architect
 
-_What belongs here is not yet decided._
-
-This file exists so git tracks the directory: without it, the folder would not
-survive a clone.
+An internal Role, kept from the original sketch as the first example of one.
+Whether it survives as a Role in its own right depends on the SDLC work, which
+has not been done.

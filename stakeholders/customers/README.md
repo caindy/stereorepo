@@ -1,6 +1,8 @@
 # stakeholders/customers
 
-_What belongs here is not yet decided._
+Research behind the customer **Personas** asserted in
+`.meta/assertions/personas.yaml`: interviews, transcripts, observations.
 
-This file exists so git tracks the directory: without it, the folder would not
-survive a clone.
+Cooper's persona kinds distinguish who is who here — `PRIMARY` for the daily
+user the interface is designed for, `CUSTOMER` for the buyer who is not that
+user, `SERVED` for someone affected without ever touching it.

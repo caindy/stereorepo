@@ -97,6 +97,13 @@ developed further, with reference resolution and orphan detection as separate
 `scripts/check_*.py`. The natural home is the `.meta` Project's `gate`, which is
 the slot that exists to hold exactly this.
 
+**External stakeholders as a source for outward-facing writing.** Investors,
+media, advisors. `stakeholders/external/` was dropped rather than kept as an
+empty folder, but the idea it held is worth keeping: a place to draw on when
+asked for a press release or a blog post, so that outward-facing writing has a
+source rather than being improvised each time. Not everything about running a
+company belongs in a solorepo; this might.
+
 **Open questions.**
 
 - `AGENTS.md` and `CLAUDE.md` are APM **outputs**: instructions primitives fold
@@ -105,8 +112,9 @@ the slot that exists to hold exactly this.
   that path. Either they become an `instructions` primitive that compiles, or
   compilation has to be kept away from them.
 
-- The `stakeholders/` taxonomy: why customers / external / internal, and what
-  "internal" means when the team is one person plus agents.
+- Whether **stakeholder** should be minted as a term. It is doing real work now,
+  and is in neither DDD nor the vocabulary — but its two halves are already
+  named (Persona, Role), so it may be a grouping rather than a concept.
 - `work:persona/the-solo` is drawn from what its subject said and did here, and
   is awaiting his review — the EXPERIENCE and LIFE goals most of all.
 - The audit that found three defects in DR-036 — markdown link resolution and
