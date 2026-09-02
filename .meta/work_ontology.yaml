@@ -42,22 +42,55 @@ enums:
       Cooper's classification of personas by the role they play in a design.
     comments:
       - >-
-        Sketched from Cooper's method rather than transcribed; the taxonomy is
-        developed more in his later work with Reimann and Cronin than in *The
-        Inmates Are Running the Asylum*. Verify against the source before
-        relying on the distinctions.
+        *The Inmates Are Running the Asylum* introduced personas and the
+        primary/secondary distinction; the six-type taxonomy was codified later
+        in *About Face* with Reimann, Cronin and Noessel. Verified against that,
+        which added CUSTOMER and SERVED to an earlier four-value sketch here.
     permissible_values:
       PRIMARY:
         description: >-
-          The persona the interface is designed for. Cooper's rule is that a
-          primary persona needs its own interface; satisfying it with a design
-          aimed at another is what fails.
+          The main target of the design. A primary persona's goals cannot be met
+          by an interface aimed at another without unacceptable compromise, so
+          there is typically one per interface.
       SECONDARY:
-        description: Mostly satisfied by the primary's interface, with some additional needs.
+        description: >-
+          Largely satisfied by the primary's interface, with a few specific
+          additional needs to accommodate without compromising the primary.
       SUPPLEMENTAL:
-        description: Fully satisfied by the primary's interface; recorded so it stays represented.
+        description: >-
+          Fully satisfied by the primary and secondary interfaces. Modelled for
+          organisational reasons, so a stakeholder sees their user represented.
+      CUSTOMER:
+        description: >-
+          The buyer rather than the daily user. Dictates purchasing,
+          administration and compliance constraints, common in enterprise sales.
+      SERVED:
+        description: >-
+          Directly affected by the product without ever touching it — the
+          patient whose vitals a nurse records.
       NEGATIVE:
-        description: Explicitly not designed for. Named so the decision is deliberate.
+        description: >-
+          Explicitly not designed for, named so that the exclusion is a decision
+          rather than an oversight.
+
+  PersonaGoalType:
+    description: >-
+      Cooper's three tiers of user goal, mapped in *About Face* against Don
+      Norman's visceral, behavioural and reflective levels of processing.
+    permissible_values:
+      EXPERIENCE:
+        description: >-
+          Visceral. How the user wants to feel while using the product — "stay
+          in control", "not feel stupid". Drives tone and microinteraction.
+      END:
+        description: >-
+          Behavioural. What the user wants to accomplish — "process an invoice
+          without manual reconciliation". Drives architecture and workflow, and
+          is the tier that is Goal-shaped.
+      LIFE:
+        description: >-
+          Reflective. Who the user wants to be — "be recognised as an expert".
+          Rarely decides a button, but underpins positioning.
 
   ChallengeType:
     description: >-
@@ -193,10 +226,19 @@ slots:
   persona_goals:
     description: >-
       What the Persona is trying to achieve. Cooper's personas are defined by
-      these. The name is qualified because these are NOT the ontology's Goal:
-      they are standing motivations, with no deadline and nothing that marks
-      them done.
+      goals rather than by tasks or demographics.
+    range: PersonaGoal
     multivalued: true
+    inlined_as_list: true
+    comments:
+      - >-
+        User goals only. *About Face* keeps business goals and technical goals
+        deliberately outside the persona so they cannot pollute the user model,
+        which is why this enum has three values and not five.
+
+  goal_type:
+    description: Which tier of Cooper's goal taxonomy this is.
+    range: PersonaGoalType
 
   context:
     description: The circumstances the Persona acts in — setting, constraints, what surrounds the work.
@@ -672,6 +714,29 @@ classes:
         required: true
       persona_kind:
         required: true
+
+  PersonaGoal:
+    description: >-
+      One goal held by a Persona, at one of Cooper's three tiers.
+    comments:
+      - >-
+        An END goal is Goal-shaped: specific, and with a plain test for having
+        been reached. What it lacks is a Deadline — it is standing and recurring
+        rather than a bounded commitment — so it is not yet an instance of Goal,
+        whose deadline is required to keep a Goal SMART (DR-003). Whether to
+        share an abstraction between them is open; see DR-020.
+      - >-
+        EXPERIENCE and LIFE goals are not Goal-shaped at all and are not
+        candidates for it.
+    slots:
+      - goal_type
+      - statement
+    slot_usage:
+      goal_type:
+        required: true
+      statement:
+        required: true
+        description: The goal in the Persona's own terms.
 
   Capability:
     is_a: WorkEntity
