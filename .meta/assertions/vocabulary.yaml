@@ -1,0 +1,11 @@
+# solorepo's own Concepts: words for things a portfolio never does, so it does
+# not inherit them. Companion to assertions/disciplines.yaml, and for the same
+# reason — DR-035 moved the Specialization Discipline out of imported/ and left
+# its Concept behind, which is the same defect one layer down.
+
+concept_set:
+  - id: work:concept/specialization
+    pref_label: Specialization
+    definition: Turning a fresh clone of solorepo into a new portfolio repo.
+    in_scheme: work:scheme/solorepo
+    avoid: [bootstrap, init, scaffolding step]

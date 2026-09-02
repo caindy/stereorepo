@@ -212,7 +212,8 @@ def surviving_placeholders():
     """
     problems = []
     for path in sorted(ROOT.rglob("*")):
-        if not path.is_file() or TEMPLATE in path.parents or ".git" in path.parts:
+        if path.is_symlink() or not path.is_file() \
+                or TEMPLATE in path.parents or ".git" in path.parts:
             continue
         try:
             text = path.read_text()

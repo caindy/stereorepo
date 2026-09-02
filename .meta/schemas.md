@@ -34,7 +34,7 @@ each rule, but that example was never committed.
 ### Assertions
 
 The schemas are **TBox**: the terminology. `assertions/` is the **ABox**: what
-solorepo actually states in that terminology — its Disciplines, its Ubiquitous
+this repo actually states in that terminology — its Disciplines, its Ubiquitous
 Language. Only the ABox compiles to APM primitives; the TBox is what validates it
 before it does.
 

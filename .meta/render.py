@@ -54,12 +54,13 @@ def vocabulary():
     needs. They are separate files because sync treats them differently, not
     because they are separate vocabularies."""
     abox = {"concept_schemes": [], "concept_set": []}
-    for rel in ("assertions/imported/vocabulary.yaml", "assertions/domain_vocabulary.yaml"):
+    for rel in ("assertions/imported/vocabulary.yaml", "assertions/vocabulary.yaml",
+                "assertions/domain_vocabulary.yaml"):
         part = load(rel) or {}
         for key in abox:
             abox[key].extend(part.get(key) or [])
     schemes = {s["id"]: s for s in abox["concept_schemes"]}
-    out = [BANNER.format(src="assertions/imported/vocabulary.yaml + assertions/domain_vocabulary.yaml"),
+    out = [BANNER.format(src="assertions/*vocabulary.yaml"),
            "## Vocabulary\n",
            "_The words this repo uses, and what they mean._\n",
            "A Concept is a unit of meaning, not a word — which is why two entries\n"

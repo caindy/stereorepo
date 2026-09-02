@@ -95,8 +95,9 @@ concept_set:
     definition: Everything one solo builds inside one Bounded Context. One per repo.
     in_scheme: work:scheme/solorepo
     scope_note: >-
-      The unit Specialization produces, and the reason a solorepo is a monorepo:
-      the repo boundary and the language boundary are the same boundary.
+      One repo, one Bounded Context, one Ubiquitous Language. The repo boundary
+      and the language boundary are the same boundary, which is why a portfolio
+      is a monorepo.
     confusable_with:
       - work:concept/product
   - id: work:concept/product
@@ -201,11 +202,6 @@ concept_set:
     scope_note: >-
       A Discipline here, not a slogan: each adopted Discipline is applied to this
       repo first, and a schema is instantiated before it is trusted.
-  - id: work:concept/specialization
-    pref_label: Specialization
-    definition: Turning a fresh clone of solorepo into a new portfolio repo.
-    in_scheme: work:scheme/solorepo
-    avoid: [bootstrap, init, scaffolding step]
   - id: work:concept/solorepo-skill
     pref_label: Skill (solorepo Capability kind)
     definition: A Capability that composes tools, as against a tool, which is atomic.

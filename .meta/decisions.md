@@ -672,3 +672,34 @@ everything outside `template/` rather than only what the template shadows. The
 cost is that prose here may not spell a token literally, which is cheap, and a
 literal token outside `template/` is a defect in any case. Verified firing inside
 a specialized portfolio, which is the only place it matters.
+
+### DR-036 · A second dogfood cycle, and three more leftovers
+*2026-09-02*
+
+Two more full Specializations, into a portfolio unrelated to the first. The
+procedure ran clean end to end — gate green, all five assertion files validating,
+one commit, no remote, the symlink preserved as a symlink, every markdown link
+resolving. Three defects the gate did not cover turned up anyway, all found by
+auditing the *result* rather than by running the steps.
+
+**`schemas.md` said "what solorepo actually states"** and is copied verbatim, so
+it carried scaffold language into a portfolio exactly as `.meta/README.md` had.
+Fixing one file of that class had not prompted a check of the others; the audit
+did.
+
+**The Specialization *Concept* was still inherited** although its Discipline was
+not. DR-035 moved the Discipline out of `assertions/imported/` and left the word
+for it behind — the same defect one layer down, and invisible from the Discipline
+side. `assertions/vocabulary.yaml` now holds solorepo's own Concepts beside its
+own Disciplines. A third leftover of the same kind hid in the inherited
+`Portfolio` concept, whose note referenced Specialization by name.
+
+**A symlink was reported as a second file to fix.** `CLAUDE.md` resolves to
+`AGENTS.md`, so the placeholder scan named both and only one could be edited.
+
+The pattern across both cycles is worth stating: **every remaining defect was a
+leftover of a fix, not an original mistake.** Moving a thing leaves its name
+behind; fixing one file of a class does not fix the class. Neither is visible
+from where the fix is made, and both are visible immediately in a specialized
+result. That is the argument for the Dogfooding Discipline requiring a full run
+rather than a review.
