@@ -89,6 +89,15 @@ slots:
   expected_outcome:
     description: The outcome that makes the need satisfied ("so that ...").
 
+  serves:
+    description: >-
+      The Persona's END goals this need advances. Multivalued, because one need
+      may serve several. Restricted to the END tier, and to goals held by this
+      Job to be Done's own Persona — neither is expressible here, so the gate
+      checks both.
+    range: PersonaGoal
+    multivalued: true
+
   challenge:
     description: The Challenge the Goal addresses.
     range: Challenge
@@ -170,14 +179,16 @@ classes:
         One consequence: an Agency's Role is no longer implied by its Goal, and
         choosing it becomes an explicit act rather than a derivation.
       - >-
-        Which of the Persona's END goals a given need serves is reachable
-        through the Persona but not stated directly. Whether that edge is worth
-        drawing is open.
+        `serves` names the END goals this need advances. Subtracting the two
+        sides gives the product equivalent of the Permission/AuditRecord diff:
+        an END goal with no Job to be Done is a user need nobody is working on,
+        and a Job to be Done serving none is work with no user justification.
     slots:
       - situation
       - motivation
       - expected_outcome
       - persona
+      - serves
     slot_usage:
       motivation:
         required: true

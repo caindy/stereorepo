@@ -41,7 +41,7 @@ and always-on (system instructions). Both are expressible as APM primitives —
 the ambient kind as `instructions`, the invoked kind as `prompts`. Candidate
 term for the ambient kind: *discipline*, itself awaiting an explicit decision.
 
-**A checker for the invariants the schemas cannot enforce.** Five constraints are
+**A checker for the invariants the schemas cannot enforce.** ✅ Built — `.meta/check.py`, DR-029. Six constraints are
 documented in class comments and enforced by nobody. Each was written down where
 it was discovered, which was right at the time and is now a scattering:
 
@@ -52,6 +52,7 @@ it was discovered, which was right at the time and is now a scattering:
 | an AuditRecord's `under_permission` is one of its Execution's Remit's | `work/provenance.yaml` | same |
 | an AuditRecord's `target` is a member of its `securable` | `work/provenance.yaml` | selectors are rules, not sets |
 | a reference resolves to something that exists | everywhere | separate tree roots are separate files |
+| a Job to be Done serves END goals its own Persona holds | `work/purpose.yaml` | the tier is on the target; ownership crosses a path |
 
 The last is the widest: `Portfolio.bounded_context` is typed, and a Portfolio
 naming a context that does not exist still validates.

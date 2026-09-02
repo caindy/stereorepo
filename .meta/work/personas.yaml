@@ -143,6 +143,11 @@ classes:
       One goal held by a Persona, at one of Cooper's three tiers.
     comments:
       - >-
+        Identified, so that a Job to be Done can name the goal it serves rather
+        than only the Persona that holds it. Naming the Persona narrows the need
+        to a set of goals; it does not resolve it to one, and SMART's relevance
+        is unfalsifiable while it stays unresolved.
+      - >-
         An END goal is Goal-shaped: specific, and with a plain test for having
         been reached. What it lacks is a Deadline — it is standing and recurring
         rather than a bounded commitment — so it is not yet an instance of Goal,
@@ -152,6 +157,7 @@ classes:
         EXPERIENCE and LIFE goals are not Goal-shaped at all and are not
         candidates for it.
     slots:
+      - id
       - goal_type
       - statement
     slot_usage:

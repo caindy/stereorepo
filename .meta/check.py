@@ -156,11 +156,39 @@ def audit_invariants(index):
     return problems
 
 
+def served_goals(index):
+    """A Job to be Done serves END goals, and only ones its own Persona holds.
+
+    Neither is expressible in the schema: the tier lives on the target object,
+    and ownership crosses a path. Both matter, because the value of the edge is
+    the subtraction it allows — an END goal with no Job to be Done is a need
+    nobody is serving — and a wrongly-tiered or borrowed goal quietly corrupts
+    that arithmetic.
+    """
+    problems = []
+    for jid, (cls, obj, _) in index.items():
+        if cls != "JobToBeDone":
+            continue
+        persona = obj.get("persona")
+        held = {g.get("id") for g in index[persona][1].get("persona_goals", [])} \
+            if persona in index else set()
+        for gid in obj.get("serves", []):
+            if gid not in index:
+                continue  # already reported as an unresolved reference
+            tier = index[gid][1].get("goal_type")
+            if tier != "END":
+                problems.append(f"{jid}: serves '{gid}', which is {tier}, not END")
+            if held and gid not in held:
+                problems.append(f"{jid}: serves '{gid}', not held by '{persona}'")
+    return problems
+
+
 CHECKS = (
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
     ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
     ("collaboration membership", lambda i, r: collaboration_membership(i)),
     ("audit invariants", lambda i, r: audit_invariants(i)),
+    ("served goals", lambda i, r: served_goals(i)),
 )
 
 if __name__ == "__main__":

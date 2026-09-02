@@ -19,21 +19,26 @@ personas:
       fresh thread with none of the prior conversation. Reads primary sources
       before adopting from them.
     persona_goals:
-      - goal_type: END
+      - id: work:persona-goal/portfolio-without-rebuilding
+        goal_type: END
         statement: >-
           Start a new portfolio from this scaffold without rebuilding the
           scaffolding, and without inheriting the scaffold's own history.
-      - goal_type: END
+      - id: work:persona-goal/fresh-thread-understands
+        goal_type: END
         statement: >-
           Hand the repo to an agent in a fresh thread and have it understand the
           enterprise without being re-taught.
-      - goal_type: END
+      - id: work:persona-goal/one-language-per-portfolio
+        goal_type: END
         statement: Keep one language across everything built inside one portfolio.
-      - goal_type: EXPERIENCE
+      - id: work:persona-goal/no-invented-terms
+        goal_type: EXPERIENCE
         statement: >-
           Trust that an agent working here will not quietly invent terms or let
           a summary drift from what it summarises.
-      - goal_type: LIFE
+      - id: work:persona-goal/team-scale-alone
+        goal_type: LIFE
         statement: Build products at a scale that used to require a team.
     behaviors:
       - Corrects imprecise modelling immediately and specifically, rather than letting it stand.
