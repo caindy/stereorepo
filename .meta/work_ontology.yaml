@@ -341,6 +341,10 @@ slots:
     description: The Role the work is done as.
     range: Role
 
+  persona:
+    description: The Persona whose job this is — the user the work is for.
+    range: Persona
+
   # Goal
   challenge:
     description: The Challenge the Goal addresses.
@@ -699,8 +703,9 @@ classes:
         authenticated, so an AuditRecord still attributes to the workload
         identity rather than to a fictional person.
       - >-
-        Deliberately not linked to JobToBeDone yet. Whether a JTBD states the
-        user's job or the worker's is unsettled, and the link would decide it.
+        A JobToBeDone names the Persona whose need it is (DR-021). Interrogating
+        a Persona to surface one is the intended path from user research into
+        the work.
     slots:
       - persona_kind
       - persona_goals
@@ -838,18 +843,29 @@ classes:
   JobToBeDone:
     is_a: WorkEntity
     description: >-
-      The need the work serves, stated from the point of view of a Role. It
-      supplies the achievability and relevance of a SMART Goal, and it is the
-      element that names the Role. Distinct from Job, which is an assignment.
+      The need the work serves, stated from the point of view of the Persona
+      that has it. It supplies the achievability and relevance of a SMART Goal,
+      and it is the element that names the Persona. Distinct from Job, which is
+      an assignment.
+    comments:
+      - >-
+        The original sketch had this specify a Role, which made the need the
+        worker's. It states the *user's* job (DR-021), so it names a Persona.
+        One consequence: an Agency's Role is no longer implied by its Goal, and
+        choosing it becomes an explicit act rather than a derivation.
+      - >-
+        Which of the Persona's END goals a given need serves is reachable
+        through the Persona but not stated directly. Whether that edge is worth
+        drawing is open.
     slots:
       - situation
       - motivation
       - expected_outcome
-      - role
+      - persona
     slot_usage:
       motivation:
         required: true
-      role:
+      persona:
         required: true
 
   Goal:

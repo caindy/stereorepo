@@ -7,7 +7,7 @@ Ontology of Work
 * Permission = the authority to employ a capability on a Securable
 * Role is a named  set of Capabilities
 * Challenges (e.g., defects, epics, features, tasks, etc.)
-* Goals (SMART) = Challenge (specificity) + Definition of Done (measurable) + JTBD (Achievable / Relevant, specifies Role) + Deadline
+* Goals (SMART) = Challenge (specificity) + Definition of Done (measurable) + JTBD (Achievable / Relevant, specifies Persona) + Deadline
 * Remit = Permissions + Goal
 * Agency = Role + Remit
 * Actor = Personality + Identity + Memory

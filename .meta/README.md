@@ -462,3 +462,25 @@ which introduced personas and the primary/secondary split only.
 
 Business and technical goals are deliberately excluded: *About Face* keeps them
 outside the persona so they cannot pollute the user model.
+
+### DR-021 · A Job to be Done states the user's job, and names a Persona
+*2026-09-02*
+
+The original sketch had a JTBD specify a **Role** — a named set of Capabilities,
+which is a worker's role. It states the **user's** job, so it names a
+**Persona**. This closes what DR-019 and DR-020 left open.
+
+The chain that results: a Persona is interrogated, which surfaces END goals,
+which yield a Job to be Done, which a Goal commits to serving by a deadline. The
+work Goal *serves* the End goal rather than being one, because a Goal carries a
+Challenge — defect, epic, feature, task — and a user's goal has no Challenge.
+Forcing a shared abstraction would break on that.
+
+One consequence worth stating: **an Agency's Role is no longer implied by its
+Goal.** The old chain ran JTBD → Role → Agency, so the worker's role fell out of
+the goal. Now the Persona says who the work is *for* and the Role says who does
+it, which are independent facts. Choosing a Role becomes an explicit act.
+
+Left open: a Persona holds several END goals, and which one a given JTBD serves
+is reachable through the Persona but not stated. Whether that edge earns its
+keep is undecided.
