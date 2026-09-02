@@ -314,4 +314,22 @@ polyglot projects. This is a deliberate departure from the DDD literature, where
 a system carries several bounded contexts: the constraint is what makes a single
 Ubiquitous Language enforceable across everything one person builds. It corrects
 the framing of DR-013, which spoke of specializing into a new *product* repo.
-Specialization produces a *portfolio*.
+Specialization produces a *portfolio*. The Ubiquitous Language meant here is the
+portfolio's **own domain** language; see DR-015.
+
+### DR-015 · Two languages: the portfolio's own, and solorepo's imported
+*2026-09-02*
+
+A generated portfolio has its own *sui generis* Ubiquitous Language, drawn from
+its domain. solorepo's vocabulary — Persona, Capability, Challenge, Goal, Job,
+Specialization and the rest — is **imported** to articulate the discipline. It
+never replaces the domain language and has no authority over it.
+
+In DDD's context-mapping terms this looks like a **Published Language** offered
+upstream by solorepo, which a portfolio **conforms** to for discipline talk while
+staying sovereign over its own domain.
+
+The consequence is structural: the two must be **separable in the file tree**, or
+`sync` cannot tell them apart. Sync pulls the imported vocabulary and machinery
+forward; a portfolio's own language is its own decision, and overwriting a
+project's own decisions is the failure that sync exists to prevent.
