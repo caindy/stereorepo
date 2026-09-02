@@ -65,7 +65,8 @@ rather than quietly routing around them.
 
 | Term | Definition |
 |---|---|
-| **Persona** | A SOUL.md plus a communication style. The character an Actor presents. |
+| **Personality** | A SOUL.md plus a communication style. The character an Actor presents. |
+| **Persona** | A user archetype the product is designed *for*, in Cooper's sense. Interrogable by an Actor that adopts its Personality. |
 | **Capability** | A kind of thing that can be done or used. Tools are atomic (`bash`, `echo`); skills compose tools ("reading and writing files"). |
 | **Securable** | A set of objects, by enumeration or by a selector rule. |
 | **Permission** | The authority to employ a Capability on a Securable. |
@@ -76,7 +77,7 @@ rather than quietly routing around them.
 | **Goal** | A SMART goal: Challenge + Definition of Done + JTBD + Deadline. All four required. |
 | **Remit** | Permissions + Goal. What may be done, and what for. |
 | **Agency** | Role + Remit. |
-| **Actor** | Persona + Identity + Memory. |
+| **Actor** | Personality + Identity + Memory. |
 | **Job** | Actor + Agency. An assignment. |
 | **Collaboration** | For a Challenge C, the Jobs that meet on it. |
 
@@ -405,3 +406,25 @@ schemes and pointed at, which the three-valued enum could not express.
 
 SKOS and its constructs are adopted, not authored, and marked in place as
 departures from DDD per DR-016.
+
+### DR-019 · Persona splits into Personality and Persona
+*2026-09-02*
+
+The original sketch's *Persona* — SOUL.md plus a communication style — is really
+a **Personality**: the character an Actor presents while working. **Persona** is
+taken back for Cooper's sense from *The Inmates Are Running the Asylum*: a
+specific, detailed, named user archetype the product is designed *for*, and a
+first-class citizen of a solorepo rather than a borrowed metaphor.
+
+The split earns itself twice over. It lets a Persona be **interrogated** — an
+Actor adopts the Persona's Personality and holds a Job to be questioned, so no
+new machinery is needed and the audit trail still attributes to the workload
+identity rather than to a fictional person. And it lets a Persona **seed a design
+tool**, which a two-slot character sketch could not.
+
+Two things left deliberately unsettled. `persona_goals` is qualified rather than
+reusing `Goal`, because a Cooper goal is a standing motivation with no deadline
+and nothing marking it done — a genuine collision with the ontology's SMART Goal,
+still to be resolved. And `Persona` is **not** linked to `JobToBeDone`, because
+whether a JTBD states the user's job or the worker's is open, and the link would
+silently decide it.

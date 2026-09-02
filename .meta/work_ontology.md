@@ -1,6 +1,7 @@
 Ontology of Work
 
-* Personas: Persona.md (SOUL.md + communication style?)
+* Personality: Personality.md (SOUL.md + communication style)
+* Persona (Cooper): a user archetype the product is designed for; interrogable
 * Capability = the kind of things you can do/use, e.g., SKILLs + Tools
 * Securable = set of objects
 * Permission = the authority to employ a capability on a Securable
@@ -9,6 +10,6 @@ Ontology of Work
 * Goals (SMART) = Challenge (specificity) + Definition of Done (measurable) + JTBD (Achievable / Relevant, specifies Role) + Deadline
 * Remit = Permissions + Goal
 * Agency = Role + Remit
-* Actor = Persona + Identity + Memory
+* Actor = Personality + Identity + Memory
 * Job = Actor + Agency
 * Collaboration: For any Challenge C, the Intersection of Jobs where Job.Agency.Remit.Goal.Challenge = C

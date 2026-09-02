@@ -37,6 +37,28 @@ enums:
       OTHER:
         description: A capability that is neither a skill nor a tool.
 
+  PersonaKind:
+    description: >-
+      Cooper's classification of personas by the role they play in a design.
+    comments:
+      - >-
+        Sketched from Cooper's method rather than transcribed; the taxonomy is
+        developed more in his later work with Reimann and Cronin than in *The
+        Inmates Are Running the Asylum*. Verify against the source before
+        relying on the distinctions.
+    permissible_values:
+      PRIMARY:
+        description: >-
+          The persona the interface is designed for. Cooper's rule is that a
+          primary persona needs its own interface; satisfying it with a design
+          aimed at another is what fails.
+      SECONDARY:
+        description: Mostly satisfied by the primary's interface, with some additional needs.
+      SUPPLEMENTAL:
+        description: Fully satisfied by the primary's interface; recorded so it stays represented.
+      NEGATIVE:
+        description: Explicitly not designed for. Named so the decision is deliberate.
+
   ChallengeType:
     description: >-
       The shape of a Challenge. The source ontology gives an open list
@@ -163,6 +185,34 @@ slots:
       How the Persona expresses itself, e.g. tone, register, verbosity, channel
       conventions. The source ontology marks this element as provisional.
 
+  # Persona
+  persona_kind:
+    description: The role this Persona plays in a design.
+    range: PersonaKind
+
+  persona_goals:
+    description: >-
+      What the Persona is trying to achieve. Cooper's personas are defined by
+      these. The name is qualified because these are NOT the ontology's Goal:
+      they are standing motivations, with no deadline and nothing that marks
+      them done.
+    multivalued: true
+
+  context:
+    description: The circumstances the Persona acts in — setting, constraints, what surrounds the work.
+
+  behaviors:
+    description: What the Persona characteristically does, observed rather than assumed.
+    multivalued: true
+
+  frustrations:
+    description: What currently gets in the Persona's way.
+    multivalued: true
+
+  proficiencies:
+    description: What the Persona is fluent in, and what it is not.
+    multivalued: true
+
   # Capability
   capability_kind:
     description: Whether the Capability is a skill, a tool, or something else.
@@ -282,9 +332,11 @@ slots:
     range: Remit
 
   # Actor
-  persona:
-    description: The Persona the Actor presents.
-    range: Persona
+  personality:
+    description: >-
+      The character presented — by an Actor doing work, or by a Persona when an
+      Actor adopts one to be interrogated.
+    range: Personality
 
   identity:
     description: The Identity the Actor authenticates as.
@@ -324,6 +376,11 @@ slots:
     multivalued: true
 
   # Container
+  personalities:
+    description: The Personalities in the collection.
+    range: Personality
+    multivalued: true
+    inlined_as_list: true
   personas:
     description: The Personas in the collection.
     range: Persona
@@ -572,14 +629,49 @@ classes:
       - name
       - description
 
-  Persona:
+  Personality:
     is_a: WorkEntity
     description: >-
       The character an Actor presents: its SOUL.md together with its
-      communication style.
+      communication style. What the original sketch called a Persona; renamed
+      once Cooper's Persona was taken up as its own concept (DR-019).
     slots:
       - soul
       - communication_style
+
+  Persona:
+    is_a: WorkEntity
+    description: >-
+      A user archetype the product is designed *for*, in Alan Cooper's sense
+      from *The Inmates Are Running the Asylum*: a specific, detailed, named
+      figure standing in for a class of real people. Distinct from Personality,
+      which is the character an Actor presents while working.
+    comments:
+      - >-
+        The detail is the discipline. A sketch answers questions differently
+        from a rigorously modelled figure, which is why Cooper insists on
+        research over invention. A thin Persona cannot be usefully interrogated.
+      - >-
+        Interrogation needs no new machinery: an Actor adopts the Persona's
+        Personality and holds a Job to be questioned. The Persona is worn, never
+        authenticated, so an AuditRecord still attributes to the workload
+        identity rather than to a fictional person.
+      - >-
+        Deliberately not linked to JobToBeDone yet. Whether a JTBD states the
+        user's job or the worker's is unsettled, and the link would decide it.
+    slots:
+      - persona_kind
+      - persona_goals
+      - context
+      - behaviors
+      - frustrations
+      - proficiencies
+      - personality
+    slot_usage:
+      name:
+        required: true
+      persona_kind:
+        required: true
 
   Capability:
     is_a: WorkEntity
@@ -797,13 +889,13 @@ classes:
 
   Actor:
     is_a: WorkEntity
-    description: A Persona with an Identity and a Memory.
+    description: A Personality with an Identity and a Memory.
     slots:
-      - persona
+      - personality
       - identity
       - memories
     slot_usage:
-      persona:
+      personality:
         required: true
       identity:
         required: true
@@ -982,6 +1074,7 @@ classes:
     tree_root: true
     description: Container for a set of work-ontology instances.
     slots:
+      - personalities
       - personas
       - capability_set
       - securables
