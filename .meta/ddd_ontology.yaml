@@ -78,18 +78,6 @@ enums:
           A region with no coherent boundaries. Named so that it can be
           recognised and fenced off rather than pretended away.
 
-  TermProvenance:
-    description: >-
-      Which stratum a term in a Ubiquitous Language comes from. A solorepo
-      addition; not a DDD pattern.
-    permissible_values:
-      DDD:
-        description: Adopted from the DDD canon. Defined by the book, not by us.
-      SOLOREPO:
-        description: Originated by solorepo's work vocabulary.
-      PORTFOLIO:
-        description: Owned by the portfolio, from its own domain.
-
 #-------------------------------------------------------------------------------
 # Slots
 #-------------------------------------------------------------------------------
@@ -120,24 +108,81 @@ slots:
     description: Whether the subdomain is core, supporting or generic.
     range: SubdomainKind
 
-  terms:
-    description: The terms that make up the language.
-    range: Term
+  concepts:
+    description: The Concepts the language is made of.
+    range: Concept
     multivalued: true
-    inlined_as_list: true
+
+  pref_label:
+    description: >-
+      The one label to use for this Concept. Where a label collides across
+      schemes, qualify it here — "Skill (APM primitive)" — so the preferred
+      label is unambiguous on its own.
+    exact_mappings:
+      - skos:prefLabel
+
+  alt_labels:
+    description: >-
+      Other labels denoting this same Concept — synonyms, acronyms, older names.
+    multivalued: true
+    exact_mappings:
+      - skos:altLabel
 
   definition:
-    description: What the term means inside this context.
+    description: What the Concept means inside its scheme.
+    exact_mappings:
+      - skos:definition
 
-  term_provenance:
-    description: Which stratum the term comes from.
-    range: TermProvenance
+  scope_note:
+    description: >-
+      Where the Concept's boundary runs: what it covers, what it does not, and
+      what it is likely to be mistaken for.
+    exact_mappings:
+      - skos:scopeNote
+
+  in_scheme:
+    description: The controlled vocabulary this Concept belongs to.
+    range: ConceptScheme
+    exact_mappings:
+      - skos:inScheme
+
+  broader:
+    description: A Concept more general than this one.
+    range: Concept
+    exact_mappings:
+      - skos:broader
+
+  related:
+    description: An associatively linked Concept, neither broader nor narrower.
+    range: Concept
+    exact_mappings:
+      - skos:related
+
+  confusable_with:
+    description: >-
+      A different Concept that shares or nearly shares a label with this one.
+      Not a synonym: the two mean different things and the collision is the
+      hazard being recorded.
+    range: Concept
+    multivalued: true
+    close_mappings:
+      - skos:related
 
   avoid:
     description: >-
-      Words not to use for this concept. The failure a Ubiquitous Language
-      guards against is usually a colliding synonym, not a missing term.
+      Labels not to use for this Concept: words that fragment the language by
+      denoting it loosely. Distinct from confusable_with, which records a
+      collision between two real Concepts rather than a word to stop using.
     multivalued: true
+    close_mappings:
+      - skos:hiddenLabel
+
+  authority:
+    description: Who owns the scheme and settles what its Concepts mean.
+
+  namespace:
+    description: URI prefix under which the scheme's Concepts are identified.
+    range: uriorcurie
 
   upstream:
     description: The context whose model the relationship flows from.
@@ -219,6 +264,16 @@ slots:
   languages:
     description: The Ubiquitous Languages in the collection.
     range: UbiquitousLanguage
+    multivalued: true
+    inlined_as_list: true
+  concept_schemes:
+    description: The Concept Schemes in the collection.
+    range: ConceptScheme
+    multivalued: true
+    inlined_as_list: true
+  concept_set:
+    description: The Concepts in the collection.
+    range: Concept
     multivalued: true
     inlined_as_list: true
   context_maps:
@@ -322,32 +377,59 @@ classes:
       conversation, a plan and a class name.
       Evans, *Domain-Driven Design*, "Ubiquitous Language".
     slots:
-      - terms
+      - concepts
       - bounded_context
 
-  Term:
+  ConceptScheme:
     description: >-
-      One word in a Ubiquitous Language, with what it means and what not to say
-      instead.
+      A controlled vocabulary that Concepts belong to, with someone who owns it
+      and settles what its Concepts mean. The three strata of DR-016 are three
+      schemes; an outside vocabulary such as APM's primitives is a fourth.
     comments:
-      - >-
-        Not a named DDD pattern. A solorepo addition so that a language can be
-        enumerated rather than only described, marked as a departure per DR-016.
-      - >-
-        term_provenance carries the three strata: adopted from DDD, originated by
-        solorepo, or owned by the portfolio.
+      - Adopted from SKOS, not DDD. Marked as a departure per DR-016.
     slots:
+      - id
       - name
-      - definition
-      - term_provenance
-      - avoid
+      - description
+      - authority
+      - namespace
     slot_usage:
       name:
         required: true
+    exact_mappings:
+      - skos:ConceptScheme
+
+  Concept:
+    description: >-
+      A unit of meaning, identified by URI and decoupled from any label that
+      denotes it. This decoupling is the point: a Ubiquitous Language is a set
+      of Concepts, and a label collision is two Concepts sharing a label, which
+      cannot even be stated if the unit of the model is the word.
+    comments:
+      - Adopted from SKOS, not DDD. Marked as a departure per DR-016.
+      - >-
+        Provenance is not a field here. It is read off in_scheme, so it cannot
+        drift from the scheme the Concept actually belongs to.
+    slots:
+      - id
+      - pref_label
+      - alt_labels
+      - definition
+      - scope_note
+      - in_scheme
+      - broader
+      - related
+      - confusable_with
+      - avoid
+    slot_usage:
+      pref_label:
+        required: true
       definition:
         required: true
-      term_provenance:
+      in_scheme:
         required: true
+    exact_mappings:
+      - skos:Concept
 
   ContextMap:
     is_a: DddElement
@@ -484,6 +566,8 @@ classes:
       - bounded_contexts
       - subdomains
       - languages
+      - concept_schemes
+      - concept_set
       - context_maps
       - entities
       - value_objects
