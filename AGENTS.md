@@ -15,7 +15,7 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 
 | Path | What it is |
 |---|---|
-| [`.meta/README.md`](.meta/README.md) | **Start here.** Vocabulary, design principles, roadmap, and the running decision record. |
+| [`.meta/README.md`](.meta/README.md) | **Start here.** A load map routing to everything else. Deliberately small. |
 | `.meta/` | The staging ground. Never ships as product content. |
 | `.meta/.agents/` | Agent definitions supporting the scaffold. Contents not yet decided. |
 | `stakeholders/` | Product-side stakeholder material. Taxonomy not yet decided. |
@@ -26,4 +26,4 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 - Use the vocabulary from the ontology of work in preference to synonyms: a
   *Challenge*, not a ticket or story; an *Actor*, not a user or a bot.
 - When a decision is settled and implemented, add an entry to the decision record
-  in `.meta/README.md` and commit it together with the change.
+  in `.meta/decisions.md` and commit it together with the change.
