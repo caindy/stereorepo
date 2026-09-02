@@ -1,0 +1,18 @@
+# This portfolio's own domain language, and the Bounded Context it belongs to.
+# Owned here and never synced: the scaffold has no authority over your domain.
+
+bounded_contexts:
+  - id: ddd:context/__PORTFOLIO_SLUG__
+    name: __PORTFOLIO_NAME__
+    description: __PORTFOLIO_DESCRIPTION__
+
+concept_schemes:
+  - id: ddd:scheme/__PORTFOLIO_SLUG__
+    name: __PORTFOLIO_NAME__ domain language
+    authority: __PORTFOLIO_NAME__
+
+# The words your domain experts actually use. Each needs a pref_label, a
+# definition and in_scheme. Record what not to say in `avoid`, and record a
+# collision with an inherited term in `confusable_with` — a shared label is the
+# failure this file exists to prevent.
+concept_set: []

@@ -18,12 +18,16 @@ inlined. Listing them by hand would drift from the schemas the moment either
 moved.
 """
 import pathlib
+import re
 import sys
 
 import yaml
 from linkml_runtime import SchemaView
 
 META = pathlib.Path(__file__).parent
+ROOT = META.parent
+TEMPLATE = ROOT / "template"
+TOKEN = re.compile(r"__[A-Z][A-Z0-9_]*__")
 SCHEMAS = ("work_ontology.yaml", "ddd_ontology.yaml")
 
 
@@ -68,8 +72,11 @@ def walk(obj, cls, sv, index, refs, where):
                 walk(v, target, sv, index, refs, where)
 
 
-def collect():
-    views = [SchemaView(str(META / s)) for s in SCHEMAS]
+def views():
+    return [SchemaView(str(META / s)) for s in SCHEMAS]
+
+
+def collect(views):
     index, refs, skipped = {}, [], []
     for path in sorted((META / "assertions").rglob("*.yaml")):
         data = yaml.safe_load(path.read_text())
@@ -185,20 +192,69 @@ def served_goals(index):
     return problems
 
 
+def _template_files():
+    if not TEMPLATE.is_dir():
+        return []
+    return [(f, ROOT / f.relative_to(TEMPLATE)) for f in sorted(TEMPLATE.rglob("*")) if f.is_file()]
+
+
+def surviving_placeholders():
+    """No template token survives in the file the template replaces.
+
+    Only the files `template/` shadows are scanned. That is exact rather than
+    cautious: placeholders come from the template and nowhere else, and scanning
+    wider would fire on any prose that discusses them.
+    """
+    problems = []
+    for _, target in _template_files():
+        if not target.exists():
+            continue
+        found = sorted(set(TOKEN.findall(target.read_text())))
+        if found:
+            rel = target.relative_to(ROOT)
+            problems.append(f"{rel}: {', '.join(found)} was never filled in")
+    return problems
+
+
+def template_parses(views):
+    """The template is data and is not linted in place. It is checked by filling
+    it in and testing the result, which is the only version anyone runs.
+    """
+    problems = []
+    for src, _ in _template_files():
+        if src.suffix != ".yaml":
+            continue
+        filled = TOKEN.sub("placeholder", src.read_text())
+        rel = src.relative_to(ROOT)
+        try:
+            data = yaml.safe_load(filled)
+        except yaml.YAMLError as exc:
+            problems.append(f"{rel}: does not parse once filled in — {exc}")
+            continue
+        if not data:
+            continue
+        sv, _ = view_for(data, views)
+        if sv is None:
+            problems.append(f"{rel}: no container accepts {sorted(data)}")
+    return problems
+
+
 CHECKS = (
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
     ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
     ("collaboration membership", lambda i, r: collaboration_membership(i)),
     ("audit invariants", lambda i, r: audit_invariants(i)),
     ("served goals", lambda i, r: served_goals(i)),
+    ("surviving placeholders", lambda i, r: surviving_placeholders()),
 )
 
 if __name__ == "__main__":
-    index, refs, skipped = collect()
+    schemas = views()
+    index, refs, skipped = collect(schemas)
     for name in skipped:
         print(f"?  {name}: no container accepts its top-level keys")
     failed = bool(skipped)
-    for label, check in CHECKS:
+    for label, check in CHECKS + (("template parses", lambda i, r: template_parses(schemas)),):
         problems = check(index, refs)
         print(("x  " if problems else "ok ") + label + (f" ({len(problems)})" if problems else ""))
         for p in problems:

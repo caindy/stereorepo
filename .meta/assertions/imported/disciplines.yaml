@@ -19,20 +19,19 @@ disciplines:
         `render.py`, `check.py`, `.meta/assertions/imported/`, the `.meta/*.md`
         satellites except `decisions.md` and `roadmap.md`, and `stakeholders/`.
       - >-
-        Write the portfolio's own assertions: `structure.yaml` for its Portfolio,
-        Products and Projects; `personas.yaml`; and `domain_vocabulary.yaml` for
-        its Bounded Context and the words its domain experts actually use.
+        Copy every file under `template/` to its matching path. These are the
+        replacements: the files that must carry none of the scaffold's content.
       - >-
-        Start a fresh `decisions.md` holding only the portfolio's DR-001, and an
-        empty `roadmap.md`. The scaffold's history is not the portfolio's.
+        Fill in every placeholder, and write the portfolio's own assertions —
+        its Portfolio, Products and Projects; its Personas, once there is
+        research to draw them from; its Bounded Context and the words its domain
+        experts actually use.
       - >-
-        Rewrite `AGENTS.md` for the portfolio. Keep its conventions; replace what
-        it says the repo is.
+        Delete `SPECIALIZE.md` and `template/`. A portfolio specializes nothing,
+        and leaving them invites someone to run this twice.
       - >-
-        Delete `SPECIALIZE.md` and rewrite `README.md`. A portfolio specializes
-        nothing, and saying otherwise invites someone to run this twice.
-      - >-
-        Re-render, then run the gate. Both green before the first commit.
+        Re-render, then run the gate. It fails on any placeholder left behind.
+        Both green before the first commit.
       - Commit.
     produces:
       - A portfolio repo, with its own history and nothing of the scaffold's.

@@ -1,0 +1,14 @@
+# This portfolio's own structure. Never synced.
+
+portfolio:
+  id: work:portfolio/__PORTFOLIO_SLUG__
+  name: __PORTFOLIO_NAME__
+  description: __PORTFOLIO_DESCRIPTION__
+  bounded_context: ddd:context/__PORTFOLIO_SLUG__
+
+# A Product needs a primary Persona, so research the Persona first. Asserting a
+# Product with an invented Persona satisfies the schema and defeats the point.
+products: []
+
+# One Project per toolchain: one language, one test suite, one gate.
+projects: []
