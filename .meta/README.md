@@ -18,7 +18,9 @@ for what it owns. This file routes. It does not restate.
 | Touching… | Load first |
 | :-- | :-- |
 | naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a term without the solo |
-| what solorepo asserts about itself | [`assertions/`](assertions/) — the ABox. The prose satellites derive from it. |
+| what this repo asserts | [`assertions/`](assertions/) — the ABox. The prose satellites derive from it. |
+| a term for **this** domain | `assertions/domain_vocabulary.yaml` — owned here, never synced |
+| anything under `assertions/imported/` | do not edit it. It is solorepo's, and a sync overwrites it. |
 | a schema, or checking one | [`schemas.md`](schemas.md), then the module its own load map names |
 | how work is meant to proceed here | [`disciplines.md`](disciplines.md) |
 | turning a clone into a portfolio | [`disciplines.md`](disciplines.md) → Specialization |

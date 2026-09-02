@@ -1,4 +1,9 @@
-# solorepo's Ubiquitous Language: the ABox that describes the TBox.
+# The vocabulary a portfolio inherits from solorepo: the DDD concepts it
+# conforms to, the terms solorepo originates, and APM's, named only so that
+# collisions can be stated. Synced forward. Do not edit in a portfolio —
+# domain terms go in ../domain_vocabulary.yaml.
+#
+# The ABox that describes the TBox.
 #
 # A Concept is a unit of meaning, not a word. Two Concepts may share a label —
 # that is what confusable_with records, and why this file cannot be replaced by
@@ -7,16 +12,6 @@
 #
 # Definitions here are one-line glosses. The full reasoning lives on the class,
 # per Literate Programming; these are for recognising a term, not applying it.
-
-bounded_contexts:
-  - id: ddd:context/solorepo
-    name: solorepo
-    description: >-
-      The scaffold's own context. Its Ubiquitous Language is the vocabulary in
-      this file — the DDD concepts it conforms to, and the terms it originates.
-      APM's concepts appear here to state collisions, not because they are part
-      of the language; `in_scheme` is what says which is which, so membership is
-      read off rather than listed twice.
 
 concept_schemes:
   - id: work:scheme/ddd

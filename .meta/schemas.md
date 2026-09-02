@@ -38,10 +38,16 @@ solorepo actually states in that terminology — its Disciplines, its Ubiquitous
 Language. Only the ABox compiles to APM primitives; the TBox is what validates it
 before it does.
 
-| File | Validates against |
-|---|---|
-| `assertions/disciplines.yaml` | `work_ontology.yaml` |
-| `assertions/vocabulary.yaml` | `ddd_ontology.yaml` |
+Assertions are split by **ownership**, because sync treats the halves
+differently: it pulls `imported/` forward and never touches anything beside it.
+
+| File | Owner | Validates against |
+|---|---|---|
+| `assertions/imported/disciplines.yaml` | solorepo | `work_ontology.yaml` |
+| `assertions/imported/vocabulary.yaml` | solorepo | `ddd_ontology.yaml` |
+| `assertions/domain_vocabulary.yaml` | this portfolio | `ddd_ontology.yaml` |
+| `assertions/structure.yaml` | this portfolio | `work_ontology.yaml` |
+| `assertions/personas.yaml` | this portfolio | `work_ontology.yaml` |
 
 Fictional instances — a made-up portfolio, an invented persona — are fixtures,
 not assertions, and do not belong here.

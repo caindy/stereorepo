@@ -541,3 +541,33 @@ must be a goal the Job to be Done's own Persona holds, which crosses a path. Bot
 matter precisely because the value here is arithmetic, and a borrowed or
 wrongly-tiered goal corrupts the count silently. Probed in both directions: a
 document violating each passes `linkml-validate` and fails the gate.
+
+### DR-032 · Assertions split by ownership
+*2026-09-02*
+
+`assertions/imported/` holds what a portfolio inherits from solorepo — the
+Disciplines, and the vocabulary of DDD, solorepo and APM. Everything beside it is
+the portfolio's own: its structure, its Personas, and
+`domain_vocabulary.yaml` for the terms its domain experts actually use.
+
+The split is by **ownership, not by kind**, because that is what `sync` needs.
+DR-015 required the two separable so a sync could pull one forward without
+trampling the other; a directory boundary is the cheapest form that requirement
+can take, and the one hardest to get wrong. `imported/README.md` states the rule
+where someone about to edit the wrong file will see it.
+
+The Bounded Context moved out of the inherited vocabulary and into
+`domain_vocabulary.yaml`, because a portfolio's context is its own. It cannot sit
+in `structure.yaml` beside the Portfolio it pairs with — `bounded_contexts` is a
+`DddModel` slot and `portfolio` is a `WorkOntology` one, and a document has one
+container. The Ubiquitous Language belongs to the Bounded Context anyway, so they
+travel together.
+
+**solorepo is the degenerate case**, and the file says so: its domain *is*
+building software as a team of one, so its domain terms are the ones it
+publishes, and `domain_vocabulary.yaml` holds nothing but its own Bounded
+Context. A generated portfolio adds a scheme and fills it.
+
+`render.py` merges both vocabularies into one page, because a reader wants the
+language whole. They are separate files because sync treats them differently, not
+because they are separate languages.

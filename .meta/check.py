@@ -71,8 +71,10 @@ def walk(obj, cls, sv, index, refs, where):
 def collect():
     views = [SchemaView(str(META / s)) for s in SCHEMAS]
     index, refs, skipped = {}, [], []
-    for path in sorted((META / "assertions").glob("*.yaml")):
+    for path in sorted((META / "assertions").rglob("*.yaml")):
         data = yaml.safe_load(path.read_text())
+        if not data:
+            continue
         sv, root = view_for(data, views)
         if sv is None:
             skipped.append(path.name)

@@ -25,8 +25,8 @@ def load(rel):
 
 def disciplines():
     tbox = load("work/disciplines.yaml")
-    abox = load("assertions/disciplines.yaml")
-    out = [BANNER.format(src="assertions/disciplines.yaml"),
+    abox = load("assertions/imported/disciplines.yaml")
+    out = [BANNER.format(src="assertions/imported/disciplines.yaml"),
            "## Disciplines\n",
            "_Structured ways of working that must be adhered to._\n",
            tbox["description"].strip() + "\n"]
@@ -44,9 +44,16 @@ def disciplines():
 
 
 def vocabulary():
-    abox = load("assertions/vocabulary.yaml")
+    """Imported and domain terms render as one language, which is what a reader
+    needs. They are separate files because sync treats them differently, not
+    because they are separate vocabularies."""
+    abox = {"concept_schemes": [], "concept_set": []}
+    for rel in ("assertions/imported/vocabulary.yaml", "assertions/domain_vocabulary.yaml"):
+        part = load(rel) or {}
+        for key in abox:
+            abox[key].extend(part.get(key) or [])
     schemes = {s["id"]: s for s in abox["concept_schemes"]}
-    out = [BANNER.format(src="assertions/vocabulary.yaml"),
+    out = [BANNER.format(src="assertions/imported/vocabulary.yaml + assertions/domain_vocabulary.yaml"),
            "## Vocabulary\n",
            "_The words this repo uses, and what they mean._\n",
            "A Concept is a unit of meaning, not a word — which is why two entries\n"
