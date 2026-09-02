@@ -13,6 +13,7 @@ bundled up and shipped is built from these definitions.
 |---|---|
 | `work_ontology.md` | The ontology of work as prose. The source. |
 | `work_ontology.yaml` | The same ontology as a LinkML schema, validatable. |
+| `ddd_ontology.yaml` | DDD reified, republished per DR-016. Restates the canon; never overrides it. |
 | `.agents/` | Agent definitions supporting the scaffold. Contents not yet decided. |
 
 ---
@@ -359,3 +360,22 @@ rule one.
 divergence from the canon is recorded as one or transitive conformity breaks
 silently. DR-014 is already such a departure: one bounded context per portfolio,
 where DDD would expect several per system.
+
+### DR-017 · DDD is reified as LinkML alongside the work ontology
+*2026-09-02*
+
+`ddd_ontology.yaml` carries the DDD pattern language as a schema: Bounded
+Context, Ubiquitous Language, Subdomain, Context Map and its relationship
+patterns, plus the tactical patterns a portfolio will model its domain with.
+
+Reification makes DR-016's provenance **structural instead of clerical**: which
+stratum a term belongs to is the file it lives in, not a column someone has to
+remember to fill. It also gives the three languages of DR-015 the separability
+that `sync` needs, since they become three files with three owners.
+
+Conformity is preserved by construction. The schema restates the canon for
+reference and says in its own header that where it and the book disagree, the
+book wins and the schema is wrong. Citations name the pattern rather than a
+chapter number. Two departures are marked in place: `Term` is a solorepo
+addition so a language can be enumerated rather than only described, and
+`DomainEvent` postdates the book.
