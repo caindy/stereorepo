@@ -87,7 +87,35 @@ def vocabulary():
     return "\n".join(out)
 
 
-TARGETS = {"disciplines.md": disciplines, "vocabulary.md": vocabulary}
+def specialize():
+    """The root-level instruction an agent arriving at the repo is pointed to.
+
+    Generated from the Specialization Discipline, so the steps exist once. A
+    procedure copied into a second file is a procedure that will disagree with
+    itself.
+    """
+    abox = load("assertions/imported/disciplines.yaml")
+    d = next(x for x in abox["disciplines"] if x["name"] == "Specialization")
+    out = [BANNER.format(src="assertions/imported/disciplines.yaml"),
+           "# Specialize this scaffold into a portfolio\n",
+           "You are looking at **solorepo**, a scaffold for building software products as a\n"
+           "team of one in the agentic AI era. Specializing it produces a **Portfolio**:\n"
+           "one repo, one Bounded Context, one Ubiquitous Language, holding however many\n"
+           "Products and Projects.\n",
+           d["description"].strip() + "\n",
+           f"**Where the judgement is.** {d['judgement'].strip()}\n",
+           "## Steps\n",
+           "\n".join(f"{i}. {s}" for i, s in enumerate(d["steps"], 1)) + "\n",
+           "_Produces: " + "; ".join(d["produces"]).rstrip(".") + "._\n",
+           "## Then\n",
+           "Read [`.meta/README.md`](.meta/README.md). Its load map routes to everything\n"
+           "else, and is deliberately insufficient on its own.\n"]
+    return "\n".join(out)
+
+
+TARGETS = {"disciplines.md": disciplines,
+           "vocabulary.md": vocabulary,
+           "../SPECIALIZE.md": specialize}
 
 if __name__ == "__main__":
     check = "--check" in sys.argv
@@ -99,7 +127,7 @@ if __name__ == "__main__":
                 stale.append(name)
         else:
             path.write_text(want)
-            print(f"wrote {name}")
+            print(f"wrote {path.resolve().name}")
     if check:
         print("stale: " + ", ".join(stale) if stale else "up to date")
         sys.exit(1 if stale else 0)

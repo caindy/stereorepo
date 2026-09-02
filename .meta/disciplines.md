@@ -14,18 +14,20 @@ Disciplines are also the reason this class exists rather than the prose that pre
 
 ### Specialization
 
-Turning a fresh clone of solorepo into a new portfolio repo.
+Turning this scaffold into a new portfolio repo. Done once, by an agent following these steps, and never again in that repo.
 
-**Where the judgement is.** Rewriting the overview for one specific portfolio, and deciding who its stakeholders actually are. Neither can be derived from the clone.
+**Where the judgement is.** Which of the inherited terms this portfolio actually needs, who its stakeholders really are, and what its domain calls things. None of it is derivable from the scaffold, which is why this is a procedure to follow rather than a program to run.
 
-1. Rewrite the overview in AGENTS.md for the portfolio.
-2. Keep the Vocabulary and Design principles; they are what is inherited.
-3. Empty the Roadmap and Decision record; delete the Specialization section.
-4. Leave the ontologies untouched. The shared vocabulary is the point.
-5. Replace the placeholder READMEs with the portfolio's actual stakeholders.
-6. Record the portfolio's own DR-001, and commit.
+1. Start a new empty repo and copy files into it. Do not clone: a clone carries the scaffold's commit history and an `origin` pointing back at it, and neither belongs to a portfolio.
+2. Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas, `render.py`, `check.py`, `.meta/assertions/imported/`, the `.meta/*.md` satellites except `decisions.md` and `roadmap.md`, and `stakeholders/`.
+3. Write the portfolio's own assertions: `structure.yaml` for its Portfolio, Products and Projects; `personas.yaml`; and `domain_vocabulary.yaml` for its Bounded Context and the words its domain experts actually use.
+4. Start a fresh `decisions.md` holding only the portfolio's DR-001, and an empty `roadmap.md`. The scaffold's history is not the portfolio's.
+5. Rewrite `AGENTS.md` for the portfolio. Keep its conventions; replace what it says the repo is.
+6. Delete `SPECIALIZE.md` and rewrite `README.md`. A portfolio specializes nothing, and saying otherwise invites someone to run this twice.
+7. Re-render, then run the gate. Both green before the first commit.
+8. Commit.
 
-_Produces: A portfolio repo._
+_Produces: A portfolio repo, with its own history and nothing of the scaffold's._
 
 ### Literate Programming
 

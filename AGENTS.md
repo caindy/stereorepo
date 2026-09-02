@@ -15,6 +15,8 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 
 | Path | What it is |
 |---|---|
+| [`README.md`](README.md) | The landing page. What solorepo is, for anyone arriving. |
+| [`SPECIALIZE.md`](SPECIALIZE.md) | Generated. The steps for turning a clone into a portfolio. |
 | [`.meta/README.md`](.meta/README.md) | **Start here.** A load map routing to everything else. Deliberately small. |
 | `.meta/` | The staging ground. Never ships as product content. |
 | `.meta/.agents/` | Agent definitions supporting the scaffold. Contents not yet decided. |
@@ -23,6 +25,8 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 ## Conventions
 
 - `CLAUDE.md` is a symlink to this file. Edit `AGENTS.md`.
+- `SPECIALIZE.md` is generated from the Specialization Discipline. Edit the
+  assertion, not the file.
 - Use the vocabulary from the ontology of work in preference to synonyms: a
   *Challenge*, not a ticket or story; an *Actor*, not a user or a bot.
 - When a decision is settled and implemented, add an entry to the decision record
