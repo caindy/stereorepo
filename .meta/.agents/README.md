@@ -1,4 +1,4 @@
-# .agents
+# .meta/.agents
 
 _What belongs here is not yet decided._
 
