@@ -1,0 +1,197 @@
+id: https://w3id.org/solorepo/work/personas
+name: work-personas
+title: Ontology of Work — Personas
+description: >-
+  Who the work is *for*.
+
+  A **Persona** is Alan Cooper's: a specific, detailed, named user archetype the
+  product is designed for, first-class here rather than a borrowed metaphor.
+  Distinct from Personality, which is the character an Actor presents while
+  working — and the two connect, because interrogating a Persona means an Actor
+  adopts its Personality.
+
+  **The detail is the discipline.** A sketch answers questions differently from a
+  rigorously modelled figure, which is why Cooper insists on research over
+  invention, and why a thin Persona cannot usefully be interrogated.
+
+  Goals are tiered, because only one tier is Goal-shaped. An END goal is specific
+  and has a plain test for being reached; what it lacks is a Deadline, being
+  standing rather than a bounded commitment. EXPERIENCE and LIFE goals are not
+  Goal-shaped at all. Business and technical goals are deliberately absent: About
+  Face keeps them outside the persona so they cannot pollute the user model.
+license: https://creativecommons.org/licenses/by/4.0/
+
+prefixes:
+  work: https://w3id.org/solorepo/work-ontology/
+  linkml: https://w3id.org/linkml/
+  prov: http://www.w3.org/ns/prov#
+default_prefix: work
+default_range: string
+
+imports:
+  - linkml:types
+  - core
+  - actors
+
+enums:
+
+  PersonaKind:
+    description: >-
+      Cooper's classification of personas by the role they play in a design.
+    comments:
+      - >-
+        *The Inmates Are Running the Asylum* introduced personas and the
+        primary/secondary distinction; the six-type taxonomy was codified later
+        in *About Face* with Reimann, Cronin and Noessel. Verified against that,
+        which added CUSTOMER and SERVED to an earlier four-value sketch here.
+    permissible_values:
+      PRIMARY:
+        description: >-
+          The main target of the design. A primary persona's goals cannot be met
+          by an interface aimed at another without unacceptable compromise, so
+          there is typically one per interface.
+      SECONDARY:
+        description: >-
+          Largely satisfied by the primary's interface, with a few specific
+          additional needs to accommodate without compromising the primary.
+      SUPPLEMENTAL:
+        description: >-
+          Fully satisfied by the primary and secondary interfaces. Modelled for
+          organisational reasons, so a stakeholder sees their user represented.
+      CUSTOMER:
+        description: >-
+          The buyer rather than the daily user. Dictates purchasing,
+          administration and compliance constraints, common in enterprise sales.
+      SERVED:
+        description: >-
+          Directly affected by the product without ever touching it — the
+          patient whose vitals a nurse records.
+      NEGATIVE:
+        description: >-
+          Explicitly not designed for, named so that the exclusion is a decision
+          rather than an oversight.
+
+  PersonaGoalType:
+    description: >-
+      Cooper's three tiers of user goal, mapped in *About Face* against Don
+      Norman's visceral, behavioural and reflective levels of processing.
+    permissible_values:
+      EXPERIENCE:
+        description: >-
+          Visceral. How the user wants to feel while using the product — "stay
+          in control", "not feel stupid". Drives tone and microinteraction.
+      END:
+        description: >-
+          Behavioural. What the user wants to accomplish — "process an invoice
+          without manual reconciliation". Drives architecture and workflow, and
+          is the tier that is Goal-shaped.
+      LIFE:
+        description: >-
+          Reflective. Who the user wants to be — "be recognised as an expert".
+          Rarely decides a button, but underpins positioning.
+
+slots:
+
+  persona_kind:
+    description: The role this Persona plays in a design.
+    range: PersonaKind
+
+  persona_goals:
+    description: >-
+      What the Persona is trying to achieve. Cooper's personas are defined by
+      goals rather than by tasks or demographics.
+    range: PersonaGoal
+    multivalued: true
+    inlined_as_list: true
+    comments:
+      - >-
+        User goals only. *About Face* keeps business goals and technical goals
+        deliberately outside the persona so they cannot pollute the user model,
+        which is why this enum has three values and not five.
+
+  goal_type:
+    description: Which tier of Cooper's goal taxonomy this is.
+    range: PersonaGoalType
+
+  context:
+    description: The circumstances the Persona acts in — setting, constraints, what surrounds the work.
+
+  behaviors:
+    description: What the Persona characteristically does, observed rather than assumed.
+    multivalued: true
+
+  frustrations:
+    description: What currently gets in the Persona's way.
+    multivalued: true
+
+  proficiencies:
+    description: What the Persona is fluent in, and what it is not.
+    multivalued: true
+
+  # Capability
+
+  persona:
+    description: The Persona whose job this is — the user the work is for.
+    range: Persona
+
+  # Goal
+
+classes:
+
+  PersonaGoal:
+    description: >-
+      One goal held by a Persona, at one of Cooper's three tiers.
+    comments:
+      - >-
+        An END goal is Goal-shaped: specific, and with a plain test for having
+        been reached. What it lacks is a Deadline — it is standing and recurring
+        rather than a bounded commitment — so it is not yet an instance of Goal,
+        whose deadline is required to keep a Goal SMART (DR-003). Whether to
+        share an abstraction between them is open; see DR-020.
+      - >-
+        EXPERIENCE and LIFE goals are not Goal-shaped at all and are not
+        candidates for it.
+    slots:
+      - goal_type
+      - statement
+    slot_usage:
+      goal_type:
+        required: true
+      statement:
+        required: true
+        description: The goal in the Persona's own terms.
+
+  Persona:
+    is_a: WorkEntity
+    description: >-
+      A user archetype the product is designed *for*, in Alan Cooper's sense
+      from *The Inmates Are Running the Asylum*: a specific, detailed, named
+      figure standing in for a class of real people. Distinct from Personality,
+      which is the character an Actor presents while working.
+    comments:
+      - >-
+        The detail is the discipline. A sketch answers questions differently
+        from a rigorously modelled figure, which is why Cooper insists on
+        research over invention. A thin Persona cannot be usefully interrogated.
+      - >-
+        Interrogation needs no new machinery: an Actor adopts the Persona's
+        Personality and holds a Job to be questioned. The Persona is worn, never
+        authenticated, so an AuditRecord still attributes to the workload
+        identity rather than to a fictional person.
+      - >-
+        A JobToBeDone names the Persona whose need it is (DR-021). Interrogating
+        a Persona to surface one is the intended path from user research into
+        the work.
+    slots:
+      - persona_kind
+      - persona_goals
+      - context
+      - behaviors
+      - frustrations
+      - proficiencies
+      - personality
+    slot_usage:
+      name:
+        required: true
+      persona_kind:
+        required: true

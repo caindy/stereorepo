@@ -1,0 +1,107 @@
+id: https://w3id.org/solorepo/work/assignment
+name: work-assignment
+title: Ontology of Work — Assignment
+description: >-
+  Who is doing what, and where their work meets.
+
+  **Agency** is a Role plus a Remit: the standing set of Capabilities, and the
+  Permissions and Goal that direct their use. A **Job** is an Actor given an
+  Agency.
+
+  Because a Job to be Done now names a Persona rather than a Role, an Agency's
+  Role is a free choice rather than a derivation. Who the work is for and who
+  does it are independent facts.
+
+  A **Collaboration** is what happens when Jobs meet on one Challenge. Two is the
+  minimum that can meet.
+license: https://creativecommons.org/licenses/by/4.0/
+
+prefixes:
+  work: https://w3id.org/solorepo/work-ontology/
+  linkml: https://w3id.org/linkml/
+  prov: http://www.w3.org/ns/prov#
+default_prefix: work
+default_range: string
+
+imports:
+  - linkml:types
+  - core
+  - authority
+  - purpose
+  - actors
+
+slots:
+
+  role:
+    description: The Role the work is done as.
+    range: Role
+
+  remit:
+    description: The Remit exercised.
+    range: Remit
+
+  # Actor
+
+  actor:
+    description: The Actor that holds the Job.
+    range: Actor
+
+  agency:
+    description: The Agency the Actor is given.
+    range: Agency
+
+  jobs:
+    description: The Jobs that meet on the shared Challenge.
+    range: Job
+    multivalued: true
+
+  # Container
+
+classes:
+
+  Agency:
+    is_a: WorkEntity
+    description: >-
+      A Role together with a Remit: the standing set of Capabilities, and the
+      Permissions and Goal that direct their use.
+    slots:
+      - role
+      - remit
+    slot_usage:
+      role:
+        required: true
+      remit:
+        required: true
+
+  Job:
+    is_a: WorkEntity
+    description: An Actor given an Agency.
+    slots:
+      - actor
+      - agency
+    slot_usage:
+      actor:
+        required: true
+      agency:
+        required: true
+
+  Collaboration:
+    is_a: WorkEntity
+    description: >-
+      For a Challenge C, the Jobs that meet on it: every Job whose
+      agency.remit.goal.challenge is C. Two Jobs are the minimum that can meet.
+    comments:
+      - >-
+        Membership invariant, which LinkML cannot state over a path of this
+        depth: for every job in jobs,
+        job.agency.remit.goal.challenge == collaboration.challenge.
+        Derive the member list from the Jobs rather than maintaining it by hand.
+    slots:
+      - challenge
+      - jobs
+    slot_usage:
+      challenge:
+        required: true
+      jobs:
+        required: true
+        minimum_cardinality: 2

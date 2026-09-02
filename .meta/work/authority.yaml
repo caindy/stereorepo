@@ -1,0 +1,159 @@
+id: https://w3id.org/solorepo/work/authority
+name: work-authority
+title: Ontology of Work — Authority
+description: >-
+  What can be done, what it can be done to, and who may do it.
+
+  Two axes meet here and they are deliberately independent. A **Capability** is a
+  kind of thing that can be done or used, and it never names an object. A
+  **Securable** is a set of objects, and it never names an action. A
+  **Permission** is their product: the authority to employ one on the other.
+
+  Expressiveness comes from that product, never from splitting one axis to encode
+  the other. This is why a Capability carries no read/write dimension: what a
+  Capability can change is answered by its application to Securables via
+  Permissions, so encoding it on the Capability would be either lossy or a
+  restatement of the whole space. It is also why a Capability's name must not
+  mention an object — "edit files" is a Capability, ".meta/**" is a Securable,
+  and the pair is a Permission.
+
+  Within the Capability axis there is structure: tools are atomic, skills compose
+  tools, and a rule enforces it. Bill-of-materials and audit resolution follow
+  that relation down to what actually runs.
+license: https://creativecommons.org/licenses/by/4.0/
+
+prefixes:
+  work: https://w3id.org/solorepo/work-ontology/
+  linkml: https://w3id.org/linkml/
+  prov: http://www.w3.org/ns/prov#
+default_prefix: work
+default_range: string
+
+imports:
+  - linkml:types
+  - core
+
+enums:
+
+  CapabilityKind:
+    description: The kind of thing a Capability is.
+    permissible_values:
+      SKILL:
+        description: Something an Actor can do, e.g. a SKILL definition.
+      TOOL:
+        description: Something an Actor can use, e.g. an MCP tool or a CLI.
+      OTHER:
+        description: A capability that is neither a skill nor a tool.
+
+slots:
+
+  capability_kind:
+    description: Whether the Capability is a skill, a tool, or something else.
+    range: CapabilityKind
+
+  composed_of:
+    description: >-
+      The Capabilities this one is built from. A skill composes tools and may
+      compose other skills; a tool is atomic. Bill-of-materials and audit
+      resolution follow this relation down to the tools that actually run.
+      Tool atomicity is enforced by a rule on Capability; the absence of cycles
+      is not, and has to be checked by whatever tooling reads these files.
+    range: Capability
+    multivalued: true
+
+  # Securable
+
+  members:
+    description: The objects that make up the Securable set, named individually.
+    range: uriorcurie
+    multivalued: true
+
+  selector:
+    description: >-
+      Rule that determines membership of the Securable set, for sets too large
+      or too dynamic to enumerate, e.g. a path glob or a label query.
+
+  # Permission
+
+  capability:
+    description: The Capability that may be employed.
+    range: Capability
+
+  securable:
+    description: The Securable the Capability may be employed on.
+    range: Securable
+
+  condition:
+    description: Constraint that limits when the authority holds, e.g. a time window.
+
+  # Role
+
+  capabilities:
+    description: The Capabilities gathered under the Role.
+    range: Capability
+    multivalued: true
+
+  # Challenge
+
+classes:
+
+  Capability:
+    is_a: WorkEntity
+    description: >-
+      A kind of thing that can be done or used, e.g. a SKILL or a Tool.
+      A Capability is not authority; authority is a Permission.
+    slots:
+      - capability_kind
+      - composed_of
+    slot_usage:
+      name:
+        required: true
+      capability_kind:
+        required: true
+    rules:
+      - description: >-
+          A tool is atomic. Only a skill composes other Capabilities, so a
+          Capability of kind TOOL carries no composed_of.
+        preconditions:
+          slot_conditions:
+            capability_kind:
+              equals_string: TOOL
+        postconditions:
+          slot_conditions:
+            composed_of:
+              value_presence: ABSENT
+
+  Securable:
+    is_a: WorkEntity
+    description: >-
+      A set of objects that Permissions can be granted over. Membership is
+      given by enumeration, by a selector rule, or by both.
+    slots:
+      - members
+      - selector
+
+  Permission:
+    is_a: WorkEntity
+    description: The authority to employ a Capability on a Securable.
+    slots:
+      - capability
+      - securable
+      - condition
+    slot_usage:
+      capability:
+        required: true
+      securable:
+        required: true
+
+  Role:
+    is_a: WorkEntity
+    description: A named set of Capabilities.
+    slots:
+      - capabilities
+    slot_usage:
+      name:
+        required: true
+      capabilities:
+        required: true
+    close_mappings:
+      - prov:Role

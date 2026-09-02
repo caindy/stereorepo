@@ -1,0 +1,50 @@
+id: https://w3id.org/solorepo/work/core
+name: work-core
+title: Ontology of Work — Core
+description: >-
+  The base every other module builds on, and nothing else.
+
+  One abstract class and three slots earn their place here for a single reason:
+  composition in this ontology is **by reference, not by nesting**. A Capability
+  appears in many Roles without being copied, and an Actor's Memory is the same
+  Memory a Bill of Materials pins. That only works if everything is identified,
+  so WorkEntity gives everything an id.
+license: https://creativecommons.org/licenses/by/4.0/
+
+prefixes:
+  work: https://w3id.org/solorepo/work-ontology/
+  linkml: https://w3id.org/linkml/
+  prov: http://www.w3.org/ns/prov#
+default_prefix: work
+default_range: string
+
+imports:
+  - linkml:types
+
+slots:
+
+  id:
+    description: Stable identifier for the entity.
+    identifier: true
+    range: uriorcurie
+
+  name:
+    description: Short human-readable label.
+
+  description:
+    description: Free-text account of the entity.
+
+  # Persona
+
+  statement:
+    description: What must be true, stated so that it can be checked.
+
+classes:
+
+  WorkEntity:
+    abstract: true
+    description: Base for every identified entity in the ontology.
+    slots:
+      - id
+      - name
+      - description

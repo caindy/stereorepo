@@ -11,8 +11,8 @@ bundled up and shipped is built from these definitions.
 
 | Path | What it is |
 |---|---|
-| `work_ontology.md` | The ontology of work as prose. The source. |
-| `work_ontology.yaml` | The same ontology as a LinkML schema, validatable. |
+| `work_ontology.yaml` | The umbrella: equations, load map, container. Small on purpose. |
+| `work/` | The ontology in seven modules. Each carries its own reasoning. |
 | `ddd_ontology.yaml` | DDD reified, republished per DR-016. Restates the canon; never overrides it. |
 | `.agents/` | Agent definitions supporting the scaffold. Contents not yet decided. |
 
@@ -123,6 +123,35 @@ person is around to notice.
 expressible (a stopped Execution records its end time; a tool composes nothing).
 Invariants crossing reference boundaries or deep paths are written as class
 comments so the checker that must own them is at least identified.
+
+---
+
+## Disciplines
+
+A **Discipline** is a structured way of working that must be adhered to because
+it is not an imperative program. It has steps and order, it is followed rather
+than executed, and it produces artifacts. Distinct from a Capability (what can be
+done), a Permission (what may be done, to what) and a characterisation (what
+something is like).
+
+**Specialization** — turning a fresh clone into a portfolio. See above.
+
+**Literate Programming.** The schema is an exposition addressed to a human
+reader; the machine-readable part is secondary to the account of what it means
+and why. In practice: a module's `description` carries its *reasoning*, not an
+inventory of its contents, and a class comment records what a reader would
+otherwise have to reconstruct. The YAML is code to be read.
+
+**Progressive Disclosure.** One small thing loads always; everything else loads
+on demand, routed by a load map from *what you are touching* to *what to read
+first*. Its sharpest rule, taken from `python_bootstrap`:
+
+> A digest tells you a rule exists and where it lives; only the file it points at
+> is sufficient to apply it. **The digest is deliberately insufficient.**
+
+A summary that is sufficient gets worked from, and the source it summarises
+rots. Route each paragraph as you write it — *what to do*, *what happened*, or
+*why* — because that is the only moment the routing decision is cheap.
 
 ---
 
@@ -484,3 +513,44 @@ it, which are independent facts. Choosing a Role becomes an explicit act.
 Left open: a Persona holds several END goals, and which one a given JTBD serves
 is reachable through the Persona but not stated. Whether that edge earns its
 keep is undecided.
+
+
+### DR-022 · Literate Programming and Progressive Disclosure are Disciplines
+*2026-09-02*
+
+Two Disciplines adopted for every solorepo, in the sense settled earlier: a
+structured way of working that must be adhered to because it is not an imperative
+program.
+
+**Literate Programming** makes the schema an exposition for a human reader, with
+the machine-readable part secondary. A module explains itself; the `description`
+carries reasoning rather than an inventory.
+
+**Progressive Disclosure** keeps one small thing always-loaded and routes the
+rest on demand. Its operative rule is that the digest is *deliberately
+insufficient* — a summary sufficient to act on gets acted on, and the source it
+summarises rots. Taken from `python_bootstrap`, which implements it as a load map
+even though it never uses the phrase.
+
+### DR-023 · The work ontology splits into seven modules
+*2026-09-02*
+
+`work_ontology.yaml` had grown to 1,180 lines holding everything, which both new
+Disciplines argue against: nothing that long is an exposition, and nothing that
+undivided can be disclosed progressively.
+
+It is now an umbrella of 213 lines — the compositional equations, a load map, and
+the container — importing seven modules under `work/`: **core**, **authority**,
+**actors**, **personas**, **purpose**, **assignment**, **provenance**. Each opens
+with a narrative carrying its own reasoning, and each compiles standalone.
+Provenance is the runtime half, peeled off as its own module.
+
+`work_ontology.md` is dropped. It was a fifteen-line sketch that the schema had
+long since overtaken, and keeping a "source" that contradicts what it sources is
+the drift these Disciplines exist to prevent. Everything in it survives: the
+compositional equations in the umbrella's description, and each definition in the
+module that owns it.
+
+Verified across the split: the umbrella validates instances that the single file
+validated, every module compiles alone, and the tool-atomicity rule still
+rejects what it rejected before.

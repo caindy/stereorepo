@@ -1,0 +1,220 @@
+id: https://w3id.org/solorepo/work/purpose
+name: work-purpose
+title: Ontology of Work — Purpose
+description: >-
+  What the work is for, and what may be done in pursuit of it.
+
+  A **Goal** is SMART by construction: Specific by its Challenge, Measurable by
+  its Definition of Done, Achievable and Relevant by its Job to be Done,
+  Time-bound by its Deadline. All four are required, so a Goal missing one fails
+  validation rather than quietly being less than it claims.
+
+  A **Job to be Done** states the *user's* job and names a Persona. The original
+  sketch had it specify a Role, which made the need the worker's; that was wrong,
+  and correcting it means an Agency's Role is no longer implied by its Goal.
+
+  A **Remit** adds Permissions to a Goal: what may be done, and what it is to be
+  done for.
+license: https://creativecommons.org/licenses/by/4.0/
+
+prefixes:
+  work: https://w3id.org/solorepo/work-ontology/
+  linkml: https://w3id.org/linkml/
+  prov: http://www.w3.org/ns/prov#
+default_prefix: work
+default_range: string
+
+imports:
+  - linkml:types
+  - core
+  - authority
+  - personas
+
+enums:
+
+  ChallengeType:
+    description: >-
+      The shape of a Challenge. The source ontology gives an open list
+      ("defects, epics, features, tasks, etc."), so this enum is illustrative
+      rather than closed; extend it as new challenge shapes are adopted.
+    permissible_values:
+      DEFECT:
+        description: Observed behaviour differs from intended behaviour.
+      EPIC:
+        description: A large body of work decomposed into features.
+      FEATURE:
+        description: A unit of delivered capability, decomposed into tasks.
+      TASK:
+        description: A single unit of executable work.
+      SPIKE:
+        description: A time-boxed investigation that resolves uncertainty.
+      CHORE:
+        description: Upkeep work that changes no external behaviour.
+
+slots:
+
+  challenge_type:
+    description: The shape of the Challenge.
+    range: ChallengeType
+
+  parent_challenge:
+    description: The Challenge this one decomposes, e.g. the epic of a feature.
+    range: Challenge
+
+  # Definition of Done
+
+  criteria:
+    description: The criteria that, all being met, make the Goal done.
+    range: AcceptanceCriterion
+    multivalued: true
+    inlined_as_list: true
+
+  metric:
+    description: The quantity observed to check the criterion.
+
+  target_value:
+    description: The value the metric must reach, held as text to allow bounds.
+
+  unit:
+    description: Unit the metric is measured in.
+
+  # Job to be done
+
+  situation:
+    description: The circumstance that triggers the need ("When ...").
+
+  motivation:
+    description: What the Role wants to do in that situation ("I want to ...").
+
+  expected_outcome:
+    description: The outcome that makes the need satisfied ("so that ...").
+
+  challenge:
+    description: The Challenge the Goal addresses.
+    range: Challenge
+
+  definition_of_done:
+    description: The measurable completion test for the Goal.
+    range: DefinitionOfDone
+
+  jtbd:
+    description: The Job to be Done the Goal serves.
+    range: JobToBeDone
+
+  deadline:
+    description: The instant by which the Goal must be met.
+    range: datetime
+
+  # Remit
+
+  permissions:
+    description: The Permissions granted.
+    range: Permission
+    multivalued: true
+
+  goal:
+    description: The Goal the Permissions are granted for.
+    range: Goal
+
+  # Agency
+
+classes:
+
+  Challenge:
+    is_a: WorkEntity
+    description: >-
+      A problem to be addressed, e.g. a defect, epic, feature or task. A
+      Challenge supplies the specificity of a SMART Goal.
+    slots:
+      - challenge_type
+      - parent_challenge
+    slot_usage:
+      challenge_type:
+        required: true
+
+  AcceptanceCriterion:
+    description: >-
+      One checkable condition in a Definition of Done. State the metric and
+      target where the criterion is quantitative.
+    slots:
+      - statement
+      - metric
+      - target_value
+      - unit
+    slot_usage:
+      statement:
+        required: true
+
+  DefinitionOfDone:
+    is_a: WorkEntity
+    description: >-
+      The test that decides whether a Goal has been met. It supplies the
+      measurability of a SMART Goal.
+    slots:
+      - criteria
+    slot_usage:
+      criteria:
+        required: true
+
+  JobToBeDone:
+    is_a: WorkEntity
+    description: >-
+      The need the work serves, stated from the point of view of the Persona
+      that has it. It supplies the achievability and relevance of a SMART Goal,
+      and it is the element that names the Persona. Distinct from Job, which is
+      an assignment.
+    comments:
+      - >-
+        The original sketch had this specify a Role, which made the need the
+        worker's. It states the *user's* job (DR-021), so it names a Persona.
+        One consequence: an Agency's Role is no longer implied by its Goal, and
+        choosing it becomes an explicit act rather than a derivation.
+      - >-
+        Which of the Persona's END goals a given need serves is reachable
+        through the Persona but not stated directly. Whether that edge is worth
+        drawing is open.
+    slots:
+      - situation
+      - motivation
+      - expected_outcome
+      - persona
+    slot_usage:
+      motivation:
+        required: true
+      persona:
+        required: true
+
+  Goal:
+    is_a: WorkEntity
+    description: >-
+      A SMART goal. Specific by its Challenge, Measurable by its Definition of
+      Done, Achievable and Relevant by its Job to be Done, Time-bound by its
+      Deadline. All four parts are required; a Goal missing one is not SMART.
+    slots:
+      - challenge
+      - definition_of_done
+      - jtbd
+      - deadline
+    slot_usage:
+      challenge:
+        required: true
+      definition_of_done:
+        required: true
+      jtbd:
+        required: true
+      deadline:
+        required: true
+
+  Remit:
+    is_a: WorkEntity
+    description: >-
+      A Goal together with the Permissions granted to pursue it: what may be
+      done, and what it is to be done for.
+    slots:
+      - permissions
+      - goal
+    slot_usage:
+      permissions:
+        required: true
+      goal:
+        required: true
