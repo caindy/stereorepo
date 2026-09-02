@@ -41,6 +41,27 @@ and always-on (system instructions). Both are expressible as APM primitives —
 the ambient kind as `instructions`, the invoked kind as `prompts`. Candidate
 term for the ambient kind: *discipline*, itself awaiting an explicit decision.
 
+**A checker for the invariants the schemas cannot enforce.** Five constraints are
+documented in class comments and enforced by nobody. Each was written down where
+it was discovered, which was right at the time and is now a scattering:
+
+| Invariant | Stated in | Why LinkML cannot |
+|---|---|---|
+| `composed_of` has no cycles | `work/authority.yaml` | acyclicity is not expressible |
+| a Collaboration's Jobs all share its Challenge | `work/assignment.yaml` | path depth — `job.agency.remit.goal.challenge` |
+| an AuditRecord's `under_permission` is one of its Execution's Remit's | `work/provenance.yaml` | same |
+| an AuditRecord's `target` is a member of its `securable` | `work/provenance.yaml` | selectors are rules, not sets |
+| a reference resolves to something that exists | everywhere | separate tree roots are separate files |
+
+The last is the widest: `Portfolio.bounded_context` is typed, and a Portfolio
+naming a context that does not exist still validates.
+
+`.meta/render.py --check` is the seed — a meta-gate that fails on staleness
+rather than trusting anyone to notice. `python_bootstrap` has the pattern
+developed further, with reference resolution and orphan detection as separate
+`scripts/check_*.py`. The natural home is the `.meta` Project's `gate`, which is
+the slot that exists to hold exactly this.
+
 **Open questions.**
 
 - `AGENTS.md` and `CLAUDE.md` are APM **outputs**: instructions primitives fold
