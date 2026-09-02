@@ -333,3 +333,29 @@ The consequence is structural: the two must be **separable in the file tree**, o
 `sync` cannot tell them apart. Sync pulls the imported vocabulary and machinery
 forward; a portfolio's own language is its own decision, and overwriting a
 project's own decisions is the failure that sync exists to prevent.
+
+### DR-016 · solorepo republishes DDD; portfolios conform transitively
+*2026-09-02*
+
+solorepo adopts DDD as a Published Language and republishes it alongside its own
+work vocabulary, so a portfolio conforming to solorepo is transitively conformist
+to DDD.
+
+**Terms carry provenance.** The published language has two strata: terms adopted
+from DDD (Bounded Context, Ubiquitous Language, Published Language, Conformist)
+and terms solorepo originates (Persona, Capability, Securable, Remit, Agency,
+Job, Specialization). An entry has to say which, because an adopted term is
+defined by the canon and is not ours to redefine. Silently redefining an
+established term is worse than minting a new one — the divergence is invisible.
+A portfolio's own domain terms are a third stratum, owned by the portfolio.
+
+**Minting a term has a search order.** Does DDD already name it? Use it. Does
+solorepo's vocabulary already name it? Use it. Only when neither does is a term
+minted, and that is the explicit decision with the solo. *Specialization* was
+reused under rule two; *Published Language* and *Conformist* were adopted under
+rule one.
+
+**Departures must be marked.** Conformity is the default, so a deliberate
+divergence from the canon is recorded as one or transitive conformity breaks
+silently. DR-014 is already such a departure: one bounded context per portfolio,
+where DDD would expect several per system.
