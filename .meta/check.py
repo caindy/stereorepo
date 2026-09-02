@@ -199,20 +199,28 @@ def _template_files():
 
 
 def surviving_placeholders():
-    """No template token survives in the file the template replaces.
+    """No template token survives anywhere outside `template/`.
 
-    Only the files `template/` shadows are scanned. That is exact rather than
-    cautious: placeholders come from the template and nowhere else, and scanning
-    wider would fire on any prose that discusses them.
+    Scanning only the files `template/` shadows was exact and also useless:
+    Specialization deletes `template/` before running the gate, so by the time
+    the check ran there was nothing left to compare against and it passed
+    vacuously. Scanning everything else keeps it alive in a portfolio, where it
+    is the only thing standing between a half-filled skeleton and a first commit.
+
+    The cost is that prose here may not spell a token literally. That is cheap,
+    and a literal token outside `template/` is a defect in any case.
     """
     problems = []
-    for _, target in _template_files():
-        if not target.exists():
+    for path in sorted(ROOT.rglob("*")):
+        if not path.is_file() or TEMPLATE in path.parents or ".git" in path.parts:
             continue
-        found = sorted(set(TOKEN.findall(target.read_text())))
+        try:
+            text = path.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        found = sorted(set(TOKEN.findall(text)))
         if found:
-            rel = target.relative_to(ROOT)
-            problems.append(f"{rel}: {', '.join(found)} was never filled in")
+            problems.append(f"{path.relative_to(ROOT)}: {', '.join(found)} was never filled in")
     return problems
 
 
@@ -263,8 +271,16 @@ if __name__ == "__main__":
 
     sys.path.insert(0, str(META))
     import render
-    stale = [n for n, fn in render.TARGETS.items()
-             if (META / n).read_text() != fn().rstrip("\n") + "\n"]
+    stale = []
+    for name, fn in render.TARGETS.items():
+        rendered, path = fn(), META / name
+        if rendered is None:
+            # Nothing to render here, so nothing should have been rendered.
+            if path.exists():
+                stale.append(f"{name} exists but nothing renders it")
+            continue
+        if not path.exists() or path.read_text() != rendered.rstrip("\n") + "\n":
+            stale.append(name)
     print(("x  " if stale else "ok ") + "rendered prose" + (f": {', '.join(stale)}" if stale else ""))
     failed |= bool(stale)
 

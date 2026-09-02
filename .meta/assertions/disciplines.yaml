@@ -1,0 +1,45 @@
+# solorepo's own Disciplines: ones a portfolio does not inherit because it
+# cannot perform them. A portfolio specializes nothing.
+#
+# Everything a portfolio does inherit is in imported/.
+
+disciplines:
+  - id: work:discipline/specialization
+    name: Specialization
+    description: >-
+      Turning this scaffold into a new portfolio repo. Done once, by an agent
+      following these steps, and never again in that repo.
+    judgement: >-
+      Which of the inherited terms this portfolio actually needs, who its
+      stakeholders really are, and what its domain calls things. None of it is
+      derivable from the scaffold, which is why this is a procedure to follow
+      rather than a program to run.
+    steps:
+      - >-
+        Start a new empty repo. Copy only what the steps below name — never
+        clone, and never copy the whole tree: a clone carries the scaffold's
+        commit history and an `origin` pointing back at it, and neither belongs
+        to a portfolio.
+      - >-
+        Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas,
+        `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.agents/`,
+        `.meta/principles.md`, `.meta/schemas.md`, `stakeholders/` and
+        `.gitignore`. Not the generated pages; step five writes those.
+      - >-
+        Copy every file under `template/` to its matching path, then link
+        `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that
+        must carry none of the scaffold's content.
+      - >-
+        Fill in every placeholder, and write the portfolio's own assertions —
+        its Portfolio, Products and Projects; its Personas, once there is
+        research to draw them from; its Bounded Context and the words its domain
+        experts actually use.
+      - >-
+        Re-render, then run the gate. It fails on any placeholder left behind, so
+        run it before removing anything. Both green before going on.
+      - >-
+        Confirm `SPECIALIZE.md` and `template/` are absent. A portfolio
+        specializes nothing, and leaving either invites someone to run this twice.
+      - Commit.
+    produces:
+      - A portfolio repo, with its own history and nothing of the scaffold's.

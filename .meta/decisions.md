@@ -633,3 +633,42 @@ The skeletons carry two refusals worth keeping. `products: []` says that a
 Product needs a researched Persona and that satisfying the schema with an
 invented one defeats the point. `personas: []` says an empty file is a truthful
 one until there is research to put in it.
+
+### DR-035 · Specializing for real, three times
+*2026-09-02*
+
+Dogfooding the procedure found **nine defects across two runs**, none of which
+reading it had surfaced.
+
+**Run one — seven.** Three files were in the repo and named by no step:
+`.gitignore`, `.meta/.agents/`, and the `CLAUDE.md` symlink — while the
+templated `AGENTS.md` asserted that symlink existed. Re-rendering **recreated the
+`SPECIALIZE.md` the previous step had just deleted**. The placeholder check
+passed **vacuously**, because it scanned only the files `template/` shadows and
+`template/` had been deleted one step earlier — it could never have fired in the
+flow it was written for. `.meta/README.md` was copied verbatim and carried three
+lines of scaffold-specific language into the portfolio. And the portfolio
+inherited the Specialization Discipline, and a Concept for it, for something it
+can never do.
+
+**Run two — two more, both in the fixes.** `render.load()` crashed on a
+scaffold-only assertion file that a portfolio legitimately lacks. The staleness
+check crashed on a rendered page that legitimately does not exist — and an
+earlier attempt to fix that had **silently no-opped**, because the replacement
+was written from memory instead of read from the file. That is the second time
+this session; both times an assertion on the match would have caught it, and the
+edits that carried one were fine.
+
+**Run three — clean.**
+
+One fix closed two defects. **Specialization is solorepo's own Discipline, not
+one it publishes**, so it moved out of `assertions/imported/` and into
+`assertions/disciplines.yaml`. A portfolio therefore never inherits it, and
+`render.py` finds nothing to render, so `SPECIALIZE.md` is never recreated. The
+ordering bug and the wrongly-inherited Discipline were the same bug seen twice.
+
+The placeholder check was rewritten from *precise* to *alive*: it now scans
+everything outside `template/` rather than only what the template shadows. The
+cost is that prose here may not spell a token literally, which is cheap, and a
+literal token outside `template/` is a defect in any case. Verified firing inside
+a specialized portfolio, which is the only place it matters.
