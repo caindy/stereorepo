@@ -3,7 +3,7 @@
 Two kinds of thing belong here:
 
 1. Tools and ideas that make sense of the repository structure.
-2. Whatever specialises a fresh clone's contents to a new product.
+2. Whatever specializes a fresh clone's contents to a new product.
 
 Everything else in the repo is product material. "Staging" means pre-product, not
 temporary. `.meta/` is also the **producer-side authoring surface**: what gets
@@ -14,6 +14,26 @@ bundled up and shipped is built from these definitions.
 | `work_ontology.md` | The ontology of work as prose. The source. |
 | `work_ontology.yaml` | The same ontology as a LinkML schema, validatable. |
 | `.agents/` | Agent definitions supporting the scaffold. Contents not yet decided. |
+
+---
+
+## Specialization
+
+**Specialization** is turning a fresh clone of solorepo into a new product repo.
+It is an instruction an agent follows, not a script: the work is judgement about
+one specific product, and it happens once.
+
+1. Rewrite the overview in `AGENTS.md` for the product — what it is, who it is
+   for. Keep the directory table and the conventions.
+2. In this file, keep the Vocabulary and the Design principles. They are what is
+   being inherited. Empty the Roadmap and the Decision record, and delete this
+   Specialization section: a product specializes nothing.
+3. Leave `work_ontology.md` and `work_ontology.yaml` untouched. The shared
+   vocabulary is the point of the scaffold.
+4. Replace the placeholder READMEs under `stakeholders/` with the product's
+   actual stakeholders.
+5. Record the product's own DR-001: what it is, and why it exists.
+6. Commit.
 
 ---
 
@@ -182,9 +202,9 @@ Newest last. Add an entry when a decision is settled *and* implemented.
 ### DR-001 · `.meta/` is the staging ground
 *2026-09-02*
 
-Structure-explaining tooling and clone-specialisation machinery live in `.meta/`;
+Structure-explaining tooling and Specialization machinery live in `.meta/`;
 product material lives everywhere else. solorepo is meant to be cloned, so the
-machinery that performs and explains that specialisation has to be separable from
+machinery that performs and explains that Specialization has to be separable from
 the content it acts on.
 
 ### DR-002 · Rough in an ontology of work
@@ -275,3 +295,12 @@ them.
 Design decisions and insights belong in the repository, not only in an assistant's
 private memory. `AGENTS.md` at the root carries the overview and a directory of
 pointers, with `CLAUDE.md` symlinked to it; this file records the rest.
+
+### DR-013 · Specialization is an instruction, not a build step
+*2026-09-02*
+
+Turning a clone into a product repo is judgement about one product, made once, so
+an agent following a written procedure beats a program to invoke — and it needs no
+toolchain, which matters when the repo is picked up in an arbitrary thread. The
+term was already in the repo from DR-001 and was reused rather than replaced;
+its spelling is normalised to **Specialization**.
