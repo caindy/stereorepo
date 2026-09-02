@@ -1,20 +1,24 @@
 id: https://w3id.org/solorepo/ddd
 name: ddd-ontology
-title: Domain-Driven Design, reified
+title: Domain-Driven Design — the umbrella
 description: >-
-  The Domain-Driven Design pattern language as a LinkML schema, republished by
-  solorepo alongside its own work ontology. See DR-016: solorepo adopts DDD as a
-  Published Language and republishes it, so a conforming portfolio is
-  transitively conformist to DDD.
+  The DDD pattern language, republished by solorepo alongside its work ontology.
 
-  These are Eric Evans' patterns, not solorepo's. The descriptions here restate
-  the canon for reference and are NOT authoritative over it; where this schema
-  and the book disagree, the book wins and this schema is wrong. Any class that
-  is a solorepo addition rather than a named DDD pattern says so in its comments,
-  per the rule that departures must be marked.
+  This file imports the modules and holds the container. It is small on purpose:
+  read the module that covers what you are touching.
 
-  Citations name the pattern and the book rather than chapter numbers, which are
-  easy to get wrong and add nothing a reader cannot find from the name.
+    strategic  — where a model applies, and how models meet   ddd/strategic.yaml
+    concepts   — a vocabulary that can be talked about        ddd/skos.yaml
+    tactical   — the building blocks inside one context       ddd/tactical.yaml
+    core       — the base every element shares                ddd/core.yaml
+
+  The container lives here and nowhere else. A `tree_root` in a module would be
+  inherited by anything importing it, and would silently replace the importer's
+  own root — see DR-027.
+
+  Republished by solorepo per DR-016. These are Eric Evans' patterns, not
+  solorepo's: where this schema and the book disagree, the book wins and this
+  schema is wrong.
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
@@ -26,309 +30,97 @@ default_range: string
 
 imports:
   - linkml:types
-
-#-------------------------------------------------------------------------------
-# Enumerations
-#-------------------------------------------------------------------------------
-
-enums:
-
-  SubdomainKind:
-    description: >-
-      Evans' distillation of the problem space. Knowing which kind a subdomain is
-      decides how much of your own thought it deserves.
-    permissible_values:
-      CORE:
-        description: The part that differentiates the business and justifies building at all.
-      SUPPORTING:
-        description: Necessary to the business but not a differentiator.
-      GENERIC:
-        description: A solved problem, better bought or adopted than modelled afresh.
-
-  ContextRelationshipPattern:
-    description: >-
-      The relationships a Context Map can record between two Bounded Contexts.
-      Evans, *Domain-Driven Design*, "Maintaining Model Integrity".
-    permissible_values:
-      PARTNERSHIP:
-        description: Two contexts succeed or fail together, with coordinated planning.
-      SHARED_KERNEL:
-        description: An explicitly bounded subset of the model shared under joint ownership.
-      CUSTOMER_SUPPLIER:
-        description: Upstream and downstream, where the downstream's needs enter upstream planning.
-      CONFORMIST:
-        description: >-
-          The downstream adopts the upstream model wholesale, without translation,
-          giving up the freedom to model differently in exchange for the cost of
-          translation disappearing.
-      ANTICORRUPTION_LAYER:
-        description: >-
-          The downstream builds a translation layer so an upstream model cannot
-          leak into its own.
-      OPEN_HOST_SERVICE:
-        description: The upstream defines a protocol for many downstream consumers at once.
-      PUBLISHED_LANGUAGE:
-        description: >-
-          A well-documented shared language that contexts translate into and out
-          of. What solorepo offers its portfolios.
-      SEPARATE_WAYS:
-        description: No integration at all, chosen deliberately.
-      BIG_BALL_OF_MUD:
-        description: >-
-          A region with no coherent boundaries. Named so that it can be
-          recognised and fenced off rather than pretended away.
-
-#-------------------------------------------------------------------------------
-# Slots
-#-------------------------------------------------------------------------------
+  - ddd/core
+  - ddd/skos
+  - ddd/strategic
+  - ddd/tactical
 
 slots:
 
-  id:
-    description: Stable identifier for the element.
-    identifier: true
-    range: uriorcurie
-
-  name:
-    description: Short human-readable label.
-
-  description:
-    description: Free-text account of the element.
-
-  # Strategic design
-  ubiquitous_language:
-    description: The language spoken inside this Bounded Context.
-    range: UbiquitousLanguage
-
-  subdomain:
-    description: The part of the problem space this context serves.
-    range: Subdomain
-
-  subdomain_kind:
-    description: Whether the subdomain is core, supporting or generic.
-    range: SubdomainKind
-
-  concepts:
-    description: The Concepts the language is made of.
-    range: Concept
-    multivalued: true
-
-  pref_label:
-    description: >-
-      The one label to use for this Concept. Where a label collides across
-      schemes, qualify it here — "Skill (APM primitive)" — so the preferred
-      label is unambiguous on its own.
-    exact_mappings:
-      - skos:prefLabel
-
-  alt_labels:
-    description: >-
-      Other labels denoting this same Concept — synonyms, acronyms, older names.
-    multivalued: true
-    exact_mappings:
-      - skos:altLabel
-
-  definition:
-    description: What the Concept means inside its scheme.
-    exact_mappings:
-      - skos:definition
-
-  scope_note:
-    description: >-
-      Where the Concept's boundary runs: what it covers, what it does not, and
-      what it is likely to be mistaken for.
-    exact_mappings:
-      - skos:scopeNote
-
-  in_scheme:
-    description: The controlled vocabulary this Concept belongs to.
-    range: ConceptScheme
-    exact_mappings:
-      - skos:inScheme
-
-  broader:
-    description: A Concept more general than this one.
-    range: Concept
-    exact_mappings:
-      - skos:broader
-
-  narrower:
-    description: A Concept more specific than this one. The inverse of broader.
-    range: Concept
-    multivalued: true
-    inverse: broader
-    exact_mappings:
-      - skos:narrower
-
-  related:
-    description: An associatively linked Concept, neither broader nor narrower.
-    range: Concept
-    exact_mappings:
-      - skos:related
-
-  confusable_with:
-    description: >-
-      A different Concept that shares or nearly shares a label with this one.
-      Not a synonym: the two mean different things and the collision is the
-      hazard being recorded.
-    range: Concept
-    multivalued: true
-    close_mappings:
-      - skos:related
-
-  avoid:
-    description: >-
-      Labels not to use for this Concept: words that fragment the language by
-      denoting it loosely. Distinct from confusable_with, which records a
-      collision between two real Concepts rather than a word to stop using.
-    multivalued: true
-    close_mappings:
-      - skos:hiddenLabel
-
-  authority:
-    description: Who owns the scheme and settles what its Concepts mean.
-
-  namespace:
-    description: URI prefix under which the scheme's Concepts are identified.
-    range: uriorcurie
-
-  upstream:
-    description: The context whose model the relationship flows from.
-    range: BoundedContext
-
-  downstream:
-    description: The context that receives, translates or conforms.
-    range: BoundedContext
-
-  relationship_pattern:
-    description: >-
-      Which of Evans' context relationships apply to this edge. Multivalued
-      because a map routinely labels one edge from both ends — Published
-      Language upstream and Conformist downstream describe the same edge from
-      the two sides — while Partnership, Shared Kernel and Separate Ways describe
-      it whole.
-    range: ContextRelationshipPattern
-    multivalued: true
-
-  relationships:
-    description: The relationships the map records.
-    range: ContextRelationship
-    multivalued: true
-    inlined_as_list: true
-
-  contexts:
-    description: The Bounded Contexts the map covers.
-    range: BoundedContext
-    multivalued: true
-
-  bounded_context:
-    description: The context this model element belongs to and takes its meaning from.
-    range: BoundedContext
-
-  # Tactical design
-  identified_by:
-    description: How the Entity's identity is established and kept stable over time.
-
-  invariants:
-    description: What must hold true, stated so it can be checked.
-    multivalued: true
-
-  root:
-    description: The Entity through which the Aggregate is reached.
-    range: Entity
-
-  members:
-    description: The elements enclosed by the Aggregate boundary.
-    range: DddElement
-    multivalued: true
-
-  aggregate:
-    description: The Aggregate this element provides access to or creates.
-    range: Aggregate
-
-  creates:
-    description: What the Factory produces.
-    range: DddElement
-
-  contains:
-    description: The elements gathered under the Module.
-    range: DddElement
-    multivalued: true
-
-  predicate:
-    description: The condition the Specification states.
-
-  # Container
   bounded_contexts:
     description: The Bounded Contexts in the collection.
     range: BoundedContext
     multivalued: true
     inlined_as_list: true
+
   subdomains:
     description: The Subdomains in the collection.
     range: Subdomain
     multivalued: true
     inlined_as_list: true
+
   languages:
     description: The Ubiquitous Languages in the collection.
     range: UbiquitousLanguage
     multivalued: true
     inlined_as_list: true
+
   concept_schemes:
     description: The Concept Schemes in the collection.
     range: ConceptScheme
     multivalued: true
     inlined_as_list: true
+
   concept_set:
     description: The Concepts in the collection.
     range: Concept
     multivalued: true
     inlined_as_list: true
+
   context_maps:
     description: The Context Maps in the collection.
     range: ContextMap
     multivalued: true
     inlined_as_list: true
+
   entities:
     description: The Entities in the collection.
     range: Entity
     multivalued: true
     inlined_as_list: true
+
   value_objects:
     description: The Value Objects in the collection.
     range: ValueObject
     multivalued: true
     inlined_as_list: true
+
   aggregates:
     description: The Aggregates in the collection.
     range: Aggregate
     multivalued: true
     inlined_as_list: true
+
   domain_events:
     description: The Domain Events in the collection.
     range: DomainEvent
     multivalued: true
     inlined_as_list: true
+
   domain_services:
     description: The Domain Services in the collection.
     range: DomainService
     multivalued: true
     inlined_as_list: true
+
   repositories:
     description: The Repositories in the collection.
     range: Repository
     multivalued: true
     inlined_as_list: true
+
   factories:
     description: The Factories in the collection.
     range: Factory
     multivalued: true
     inlined_as_list: true
+
   specifications:
     description: The Specifications in the collection.
     range: Specification
     multivalued: true
     inlined_as_list: true
+
   modules:
     description: The Modules in the collection.
     range: Module
@@ -340,242 +132,6 @@ slots:
 #-------------------------------------------------------------------------------
 
 classes:
-
-  DddElement:
-    abstract: true
-    description: Base for every identified element in the pattern language.
-    slots:
-      - id
-      - name
-      - description
-
-  #--- Strategic design ---------------------------------------------------------
-
-  BoundedContext:
-    is_a: DddElement
-    description: >-
-      An explicit boundary within which a model applies and its terms carry one
-      settled meaning. The same word outside the boundary may mean something
-      else, and that is expected rather than a fault to be resolved.
-      Evans, *Domain-Driven Design*, "Bounded Context".
-    slots:
-      - ubiquitous_language
-      - subdomain
-    slot_usage:
-      name:
-        required: true
-
-  Subdomain:
-    is_a: DddElement
-    description: >-
-      A part of the problem space, as distinct from the Bounded Context that is
-      the solution built for it. Evans, *Domain-Driven Design*, "Distillation".
-    slots:
-      - subdomain_kind
-    slot_usage:
-      subdomain_kind:
-        required: true
-
-  UbiquitousLanguage:
-    is_a: DddElement
-    description: >-
-      A language structured around the domain model and used by everyone inside
-      one Bounded Context — in speech, in documents, and in the code. Its
-      purpose is that the same words mean the same things in a requirements
-      conversation, a plan and a class name.
-      Evans, *Domain-Driven Design*, "Ubiquitous Language".
-    slots:
-      - concepts
-      - bounded_context
-
-  ConceptScheme:
-    description: >-
-      A controlled vocabulary that Concepts belong to, with someone who owns it
-      and settles what its Concepts mean. The three strata of DR-016 are three
-      schemes; an outside vocabulary such as APM's primitives is a fourth.
-    comments:
-      - Adopted from SKOS, not DDD. Marked as a departure per DR-016.
-    slots:
-      - id
-      - name
-      - description
-      - authority
-      - namespace
-    slot_usage:
-      name:
-        required: true
-    exact_mappings:
-      - skos:ConceptScheme
-
-  Concept:
-    description: >-
-      A unit of meaning, identified by URI and decoupled from any label that
-      denotes it. This decoupling is the point: a Ubiquitous Language is a set
-      of Concepts, and a label collision is two Concepts sharing a label, which
-      cannot even be stated if the unit of the model is the word.
-    comments:
-      - Adopted from SKOS, not DDD. Marked as a departure per DR-016.
-      - >-
-        Provenance is not a field here. It is read off in_scheme, so it cannot
-        drift from the scheme the Concept actually belongs to.
-      - >-
-        Labels are untagged. SKOS tags each label with a language, which a
-        multilingual thesaurus needs and a one-person portfolio does not; add
-        tagging when a second language actually appears rather than before.
-      - >-
-        LinkML also anchors enum values to concept URIs via `meaning`. It is not
-        used here because there is no authoritative URI set for DDD's patterns to
-        anchor to, and minting URIs that only look canonical would be worse than
-        leaving the values unanchored.
-    slots:
-      - id
-      - pref_label
-      - alt_labels
-      - definition
-      - scope_note
-      - in_scheme
-      - broader
-      - narrower
-      - related
-      - confusable_with
-      - avoid
-    slot_usage:
-      pref_label:
-        required: true
-      definition:
-        required: true
-      in_scheme:
-        required: true
-    exact_mappings:
-      - skos:Concept
-
-  ContextMap:
-    is_a: DddElement
-    description: >-
-      The picture of which Bounded Contexts exist and how they meet. Evans'
-      point is that the map records the relationships that *are*, including the
-      unflattering ones, rather than the ones intended.
-      Evans, *Domain-Driven Design*, "Context Map".
-    slots:
-      - contexts
-      - relationships
-
-  ContextRelationship:
-    description: >-
-      One edge of a Context Map: two contexts and the pattern governing how
-      their models meet.
-    slots:
-      - upstream
-      - downstream
-      - relationship_pattern
-      - description
-    slot_usage:
-      upstream:
-        required: true
-      downstream:
-        required: true
-      relationship_pattern:
-        required: true
-
-  #--- Tactical design ----------------------------------------------------------
-
-  Entity:
-    is_a: DddElement
-    description: >-
-      An object defined by identity and continuity rather than by its
-      attributes. Two Entities with identical attributes are still two things.
-      Evans, *Domain-Driven Design*, "Entities".
-    slots:
-      - identified_by
-      - invariants
-      - bounded_context
-
-  ValueObject:
-    is_a: DddElement
-    description: >-
-      An object that describes a characteristic and has no conceptual identity.
-      Interchangeable when equal, and best kept immutable.
-      Evans, *Domain-Driven Design*, "Value Objects".
-    slots:
-      - invariants
-      - bounded_context
-
-  Aggregate:
-    is_a: DddElement
-    description: >-
-      A cluster of associated objects treated as one unit for data changes,
-      reached only through its root, and forming a consistency boundary.
-      Evans, *Domain-Driven Design*, "Aggregates".
-    slots:
-      - root
-      - members
-      - invariants
-      - bounded_context
-    slot_usage:
-      root:
-        required: true
-
-  DomainEvent:
-    is_a: DddElement
-    description: >-
-      Something that happened in the domain that domain experts care about,
-      stated in the past tense.
-    comments:
-      - >-
-        Postdates *Domain-Driven Design*; Evans added it in the later DDD
-        Reference, and the community developed it. Marked because a reader
-        looking for it in the original book will not find it.
-    slots:
-      - bounded_context
-
-  DomainService:
-    is_a: DddElement
-    description: >-
-      An operation that belongs to the domain but not naturally to any one
-      Entity or Value Object. Stateless, and named for what it does.
-      Evans, *Domain-Driven Design*, "Services".
-    slots:
-      - bounded_context
-
-  Repository:
-    is_a: DddElement
-    description: >-
-      Collection-like access to Aggregates, hiding how they are stored so that
-      the model is not shaped by the database.
-      Evans, *Domain-Driven Design*, "Repositories".
-    slots:
-      - aggregate
-      - bounded_context
-
-  Factory:
-    is_a: DddElement
-    description: >-
-      Encapsulates the creation of a complex object or Aggregate, so that
-      assembling one does not leak its internals to the caller.
-      Evans, *Domain-Driven Design*, "Factories".
-    slots:
-      - creates
-      - bounded_context
-
-  Specification:
-    is_a: DddElement
-    description: >-
-      A predicate as an object: states a constraint that can be used to select,
-      to validate, or to build something satisfying it.
-      Evans, *Domain-Driven Design*, "Specification".
-    slots:
-      - predicate
-      - bounded_context
-
-  Module:
-    is_a: DddElement
-    description: >-
-      A named partition of the model that carries meaning, chosen so the names
-      themselves tell you how the domain is divided.
-      Evans, *Domain-Driven Design*, "Modules".
-    slots:
-      - contains
-      - bounded_context
 
   DddModel:
     tree_root: true

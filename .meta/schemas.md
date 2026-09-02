@@ -8,7 +8,8 @@ _The ontologies, and how to exercise them._
 |---|---|
 | `work_ontology.yaml` | The umbrella: equations, load map, container. |
 | `work/` | The work ontology in seven modules, each carrying its own reasoning. |
-| `ddd_ontology.yaml` | DDD reified, republished per DR-016. Restates the canon; never overrides it. |
+| `ddd_ontology.yaml` | The DDD umbrella: load map and container. |
+| `ddd/` | DDD in four modules — core, skos, strategic, tactical. Restates the canon; never overrides it. |
 
 Start from `work_ontology.yaml`'s load map, then read the module that covers
 what you are touching. A module explains itself.

@@ -38,6 +38,7 @@ imports:
   - linkml:types
   - core
   - personas
+  - ../ddd/strategic
 
 slots:
 
@@ -78,12 +79,16 @@ classes:
       Everything one solo builds inside one Bounded Context. One per repo, and
       the unit that Specialization produces.
     slots:
-      - bounded_context_ref
+      - bounded_context
     slot_usage:
       name:
         required: true
-      bounded_context_ref:
+      bounded_context:
         required: true
+        description: >-
+          The Bounded Context this Portfolio is. Exactly one, which is the
+          constraint that makes a single Ubiquitous Language enforceable across
+          everything in the repo, and so the reason a solorepo is a monorepo.
 
   Product:
     is_a: WorkEntity

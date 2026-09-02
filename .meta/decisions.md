@@ -430,4 +430,32 @@ merge. The generated JSON Schema came back with DDD's fifteen collections where
 the work ontology's twenty-five should be, with no error raised. The untyped
 CURIE keeps the two schemas independently loadable. Typing it needs the DDD
 schema modularised so its container is separable, which is the same split the
-work ontology already had.
+work ontology already had — done in DR-028, which supersedes this paragraph.
+
+### DR-028 · The DDD schema modularises, and the Portfolio link is typed
+*2026-09-02*
+
+`ddd_ontology.yaml` splits the same way the work ontology did: an umbrella
+holding only the load map and the container, over four modules — **core**,
+**skos**, **strategic**, **tactical**.
+
+Splitting `skos` out is not filing. **It marks the departure by structure rather
+than by a comment someone has to notice.** Concept and ConceptScheme are adopted
+from SKOS and not from DDD, and now that fact is the module they live in.
+
+With the container out of the modules, `work/structure.yaml` imports
+`../ddd/strategic` and `Portfolio.bounded_context` is a typed reference to
+`BoundedContext`, replacing the untyped CURIE of DR-027. Verified that the work
+ontology keeps its own tree root — twenty-five collections, none of DDD's leaking
+in — which is exactly what the unmodularised import broke silently.
+
+The umbrella records why the container may only live there: a `tree_root` in a
+module is inherited by anything importing it and silently replaces the
+importer's own.
+
+**What the typing does and does not buy.** It gives the reference a machine-
+readable range, so generators and documentation know what it points at. It does
+**not** give referential integrity: a Portfolio naming a Bounded Context that
+does not exist still validates, because the two containers are separate tree
+roots and so separate files, and LinkML does not resolve references across them.
+That check belongs to whatever tooling reads these files.
