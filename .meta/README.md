@@ -3,7 +3,7 @@
 Two kinds of thing belong here:
 
 1. Tools and ideas that make sense of the repository structure.
-2. Whatever specializes a fresh clone's contents to a new product.
+2. Whatever specializes a fresh clone's contents into a new portfolio.
 
 Everything else in the repo is product material. "Staging" means pre-product, not
 temporary. `.meta/` is also the **producer-side authoring surface**: what gets
@@ -19,20 +19,20 @@ bundled up and shipped is built from these definitions.
 
 ## Specialization
 
-**Specialization** is turning a fresh clone of solorepo into a new product repo.
-It is an instruction an agent follows, not a script: the work is judgement about
-one specific product, and it happens once.
+**Specialization** is turning a fresh clone of solorepo into a new portfolio
+repo. It is an instruction an agent follows, not a script: the work is judgement
+about one specific portfolio, and it happens once.
 
-1. Rewrite the overview in `AGENTS.md` for the product — what it is, who it is
-   for. Keep the directory table and the conventions.
+1. Rewrite the overview in `AGENTS.md` for the portfolio — what it is, who it
+   is for. Keep the directory table and the conventions.
 2. In this file, keep the Vocabulary and the Design principles. They are what is
    being inherited. Empty the Roadmap and the Decision record, and delete this
    Specialization section: a product specializes nothing.
 3. Leave `work_ontology.md` and `work_ontology.yaml` untouched. The shared
    vocabulary is the point of the scaffold.
-4. Replace the placeholder READMEs under `stakeholders/` with the product's
+4. Replace the placeholder READMEs under `stakeholders/` with the portfolio's
    actual stakeholders.
-5. Record the product's own DR-001: what it is, and why it exists.
+5. Record the portfolio's own DR-001: what it is, and why it exists.
 6. Commit.
 
 ---
@@ -304,3 +304,14 @@ an agent following a written procedure beats a program to invoke — and it need
 toolchain, which matters when the repo is picked up in an arbitrary thread. The
 term was already in the repo from DR-001 and was reused rather than replaced;
 its spelling is normalised to **Specialization**.
+
+### DR-014 · A solorepo is a monorepo: one portfolio, one bounded context, one language
+*2026-09-02*
+
+One product **portfolio** holds one **bounded context** and therefore one
+**Ubiquitous Language**, and contains multiple **products**, which may be
+polyglot projects. This is a deliberate departure from the DDD literature, where
+a system carries several bounded contexts: the constraint is what makes a single
+Ubiquitous Language enforceable across everything one person builds. It corrects
+the framing of DR-013, which spoke of specializing into a new *product* repo.
+Specialization produces a *portfolio*.

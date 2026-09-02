@@ -4,7 +4,7 @@ A scaffold for building software products as a **team of one in the agentic AI
 era**. The end state is a repository you clone to start a new product repo.
 
 `.meta/` holds the tools and ideas that make sense of the structure and that
-specialize a fresh clone to a new product. Everything outside `.meta/` is product
+specialize a fresh clone into a new portfolio. Everything outside `.meta/` is product
 material.
 
 Judge any proposal by whether it still works with one human and a fleet of
