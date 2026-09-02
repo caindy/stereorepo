@@ -32,6 +32,25 @@ imports:
 
 enums:
 
+  GoalBasis:
+    description: >-
+      What justifies a Goal. Every Goal has exactly one, so that work with no
+      justification cannot be written down without the omission showing.
+    permissible_values:
+      USER:
+        description: >-
+          It serves a Persona's END goal, through a Job to be Done. The default,
+          and the only basis that traces to someone outside the building.
+      BUSINESS:
+        description: >-
+          An organisational objective — conversion, support cost, retained
+          revenue. *About Face* names these and keeps them out of the Persona so
+          they cannot pollute the user model; they belong here instead.
+      TECHNICAL:
+        description: >-
+          An architectural constraint — latency, offline-first sync, data
+          residency. Also from *About Face*, and also kept out of the Persona.
+
   ChallengeType:
     description: >-
       The shape of a Challenge. The source ontology gives an open list
@@ -113,6 +132,10 @@ slots:
   deadline:
     description: The instant by which the Goal must be met.
     range: datetime
+
+  goal_basis:
+    description: What justifies this Goal.
+    range: GoalBasis
 
   # Remit
 
@@ -199,22 +222,63 @@ classes:
     is_a: WorkEntity
     description: >-
       A SMART goal. Specific by its Challenge, Measurable by its Definition of
-      Done, Achievable and Relevant by its Job to be Done, Time-bound by its
-      Deadline. All four parts are required; a Goal missing one is not SMART.
+      Done, Time-bound by its Deadline, and Achievable and Relevant by whatever
+      justifies it — a Job to be Done for a user, or a stated business or
+      technical objective.
+
+      Every Goal must serve a Persona's END goal, or be a business or a
+      technical goal. There is no fourth option, and that is the point: work
+      that answers to nobody cannot be written down without the omission being
+      visible.
+    comments:
+      - >-
+        A Goal that genuinely serves a user *and* the business picks its primary
+        basis. Keeping the basis single-valued is what keeps the arithmetic of
+        DR-031 clean — subtract served END goals from held ones and the
+        remainder means something.
     slots:
       - challenge
       - definition_of_done
       - jtbd
       - deadline
+      - goal_basis
+      - statement
     slot_usage:
       challenge:
         required: true
       definition_of_done:
         required: true
-      jtbd:
-        required: true
       deadline:
         required: true
+      goal_basis:
+        required: true
+      statement:
+        description: >-
+          The business or technical objective this Goal answers to, when it is
+          not a user's.
+    rules:
+      - description: A Goal justified by a user reaches that user through a Job to be Done.
+        preconditions:
+          slot_conditions:
+            goal_basis:
+              equals_string: USER
+        postconditions:
+          slot_conditions:
+            jtbd:
+              required: true
+      - description: >-
+          A business or technical Goal has no user to reach, so it states its
+          objective instead.
+        preconditions:
+          slot_conditions:
+            goal_basis:
+              any_of:
+                - equals_string: BUSINESS
+                - equals_string: TECHNICAL
+        postconditions:
+          slot_conditions:
+            statement:
+              required: true
 
   Remit:
     is_a: WorkEntity

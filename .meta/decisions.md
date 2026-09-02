@@ -716,3 +716,29 @@ So the constraint is enforced where it is true rather than where it is
 convenient: the gate checks that `domain_vocabulary.yaml` declares one Bounded
 Context and that the Portfolio names that one. Probed with a second context,
 which it rejects.
+
+### DR-038 · A Goal serves an END goal, or is a business or technical goal
+*2026-09-02*
+
+Closes what DR-020 and DR-031 left open. The two do **not** share an
+abstraction: a work Goal *serves* a Cooper END goal, and they stay apart, because
+a Goal carries a Challenge and a user's goal has none.
+
+But "serves an END goal" was not the whole rule. *About Face* names **business
+goals** and **technical goals** and keeps them out of the Persona so they cannot
+pollute the user model — DR-020 honoured the exclusion and never gave them a
+home. They belong on the Goal, as the other two things that can justify it.
+
+`Goal.goal_basis` is required and has three values, so **work that answers to
+nobody cannot be written down without the omission being visible.** Two rules
+enforce the shape: a USER basis requires a Job to be Done, and a BUSINESS or
+TECHNICAL basis requires a stated objective instead. Both probed.
+
+A rule cannot follow the next hop, so the gate does: a USER-justified Goal whose
+Job to be Done serves no END goal is caught, because otherwise the chain
+dead-ends at a Persona and looks justified while justifying nothing.
+
+The basis stays single-valued. A Goal that genuinely serves both a user and the
+business picks its primary, which keeps DR-031's arithmetic meaningful —
+subtracting served END goals from held ones only means something if each Goal is
+counted once.

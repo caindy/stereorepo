@@ -107,8 +107,6 @@ the slot that exists to hold exactly this.
 
 - The `stakeholders/` taxonomy: why customers / external / internal, and what
   "internal" means when the team is one person plus agents.
-- Whether `Goal` and a Cooper END goal should share an abstraction, or whether a
-  work Goal simply *serves* one and the two stay apart (DR-020, DR-031).
 - `work:persona/the-solo` is drawn from what its subject said and did here, and
   is awaiting his review — the EXPERIENCE and LIFE goals most of all.
 - The audit that found three defects in DR-036 — markdown link resolution and

@@ -57,6 +57,19 @@ concept_set:
       Personality; the two are not the same thing.
     confusable_with:
       - work:concept/personality
+  - id: work:concept/business-goal
+    pref_label: Business goal
+    definition: An organisational objective — conversion, support cost, retained revenue.
+    in_scheme: work:scheme/ddd
+    scope_note: >-
+      Named in *About Face* and deliberately kept out of the Persona so it cannot
+      pollute the user model. It justifies a Goal instead.
+  - id: work:concept/technical-goal
+    pref_label: Technical goal
+    definition: An architectural constraint — latency, offline-first sync, data residency.
+    in_scheme: work:scheme/ddd
+    scope_note: Kept out of the Persona for the same reason as a business goal.
+
   # ---- originated by solorepo ----
   - id: work:concept/personality
     pref_label: Personality

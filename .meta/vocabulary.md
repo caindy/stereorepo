@@ -21,12 +21,18 @@ _Authority: Eric Evans, and About Face for the persona work._
 | **Published Language** | A well-documented shared language that contexts translate into and out of. | — |
 | **Conformist** | A downstream context that adopts an upstream model wholesale, without translation. | — |
 | **Persona** | A specific, detailed, named user archetype the product is designed for. | — |
+| **Business goal** | An organisational objective — conversion, support cost, retained revenue. | — |
+| **Technical goal** | An architectural constraint — latency, offline-first sync, data residency. | — |
 
 **Ubiquitous Language.** A portfolio's own domain language. solorepo's vocabulary is imported alongside it to articulate the discipline, and has no authority over it.
 
 **Published Language.** What solorepo offers a portfolio, and what DDD offers solorepo.
 
 **Persona.** Cooper's sense. What solorepo's original sketch called a Persona is a Personality; the two are not the same thing.
+
+**Business goal.** Named in *About Face* and deliberately kept out of the Persona so it cannot pollute the user model. It justifies a Goal instead.
+
+**Technical goal.** Kept out of the Persona for the same reason as a business goal.
 
 ### solorepo work vocabulary
 
