@@ -104,20 +104,17 @@ the slot that exists to hold exactly this.
   root file under `apm compile --single-agents`. Ours are hand-written and sit in
   that path. Either they become an `instructions` primitive that compiles, or
   compilation has to be kept away from them.
-- "Skill" already means three things: a `Capability` of kind SKILL here, an APM
-  `skills` primitive (a `SKILL.md` meta-guide), and the loose sense in which a
-  `/command` is called a skill — which in APM is a `prompts` primitive. The first
-  real test of the language discipline.
-- Whether the LinkML schema and a Ubiquitous Language are the same artifact. The
-  vocabulary tables above duplicate the schema by hand, which is the drift the
-  design principles warn against.
 
 - The `stakeholders/` taxonomy: why customers / external / internal, and what
   "internal" means when the team is one person plus agents.
-- Persona as a durable *seat* versus Actor as a *filled* seat — likely the first
-  place the model moves.
-- Cycles in `Capability.composed_of` are unenforceable in LinkML and need a check
-  in whatever tooling reads these files.
+- Whether `Goal` and a Cooper END goal should share an abstraction, or whether a
+  work Goal simply *serves* one and the two stay apart (DR-020, DR-031).
+- `work:persona/the-solo` is drawn from what its subject said and did here, and
+  is awaiting his review — the EXPERIENCE and LIFE goals most of all.
+- The audit that found three defects in DR-036 — markdown link resolution and
+  scaffold prose in copied docs — was run by hand. Both are gate-shaped.
+- `README.md` describes the Disciplines and the invariant count in hand-written
+  prose about generated content. It will drift.
 - Whether the `.agents` convention's file shape embeds file scopes, which would
   collide with securable-free Capability naming. APM's `instructions` primitive
   does exactly that with `applyTo` globs — the closest thing APM has to an
