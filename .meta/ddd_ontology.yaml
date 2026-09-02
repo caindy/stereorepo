@@ -152,6 +152,14 @@ slots:
     exact_mappings:
       - skos:broader
 
+  narrower:
+    description: A Concept more specific than this one. The inverse of broader.
+    range: Concept
+    multivalued: true
+    inverse: broader
+    exact_mappings:
+      - skos:narrower
+
   related:
     description: An associatively linked Concept, neither broader nor narrower.
     range: Concept
@@ -410,6 +418,15 @@ classes:
       - >-
         Provenance is not a field here. It is read off in_scheme, so it cannot
         drift from the scheme the Concept actually belongs to.
+      - >-
+        Labels are untagged. SKOS tags each label with a language, which a
+        multilingual thesaurus needs and a one-person portfolio does not; add
+        tagging when a second language actually appears rather than before.
+      - >-
+        LinkML also anchors enum values to concept URIs via `meaning`. It is not
+        used here because there is no authoritative URI set for DDD's patterns to
+        anchor to, and minting URIs that only look canonical would be worse than
+        leaving the values unanchored.
     slots:
       - id
       - pref_label
@@ -418,6 +435,7 @@ classes:
       - scope_note
       - in_scheme
       - broader
+      - narrower
       - related
       - confusable_with
       - avoid
