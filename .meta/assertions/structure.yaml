@@ -1,0 +1,23 @@
+# solorepo asserting its own structure.
+#
+# No Products. A Product requires a primary Persona, and solorepo has released
+# nothing to users yet — inventing a Persona to satisfy a required slot would
+# violate the Discipline that makes Personas worth having. The absence is the
+# honest assertion.
+
+portfolio:
+  id: work:portfolio/solorepo
+  name: solorepo
+  description: >-
+    The scaffold itself, treated as the Portfolio it produces. One Bounded
+    Context, one Ubiquitous Language, one repo.
+  bounded_context: ddd:context/solorepo
+
+projects:
+  - id: work:project/meta
+    name: .meta
+    description: >-
+      The staging ground: the ontologies, the assertions, and the tooling that
+      renders and checks them.
+    language: LinkML YAML, with Python for rendering and the gate
+    gate: uvx --with linkml --with pyyaml python .meta/check.py

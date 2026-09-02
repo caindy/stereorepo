@@ -51,5 +51,12 @@ only in git history has not been recorded.
 
 ```bash
 uvx --with pyyaml python .meta/render.py
-uvx --with pyyaml python .meta/render.py --check   # fails if stale
+```
+
+**The gate for `.meta` is `check.py`.** Green before anything here is called
+done. It enforces the five invariants the schemas state and cannot check, and
+subsumes the staleness check above:
+
+```bash
+uvx --with linkml --with pyyaml python .meta/check.py
 ```

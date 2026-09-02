@@ -45,3 +45,14 @@ before it does.
 
 Fictional instances — a made-up portfolio, an invented persona — are fixtures,
 not assertions, and do not belong here.
+
+### The gate
+
+`linkml-validate` checks what the schemas can express. `.meta/check.py` checks
+what they cannot: four invariants crossing paths LinkML will not traverse, and
+reference resolution, which crosses a file boundary because two tree roots are
+two documents. Run both; the second assumes the first has passed.
+
+Which slots hold references is read off the schema — a slot is a reference when
+its range is a class with an identifier and it is not inlined — so the checker
+cannot drift from the schemas the way a hand-kept list would.
