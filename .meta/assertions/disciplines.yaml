@@ -1,0 +1,44 @@
+disciplines:
+  - id: work:discipline/specialization
+    name: Specialization
+    description: Turning a fresh clone of solorepo into a new portfolio repo.
+    judgement: >-
+      Rewriting the overview for one specific portfolio, and deciding who its
+      stakeholders actually are. Neither can be derived from the clone.
+    steps:
+      - Rewrite the overview in AGENTS.md for the portfolio.
+      - Keep the Vocabulary and Design principles; they are what is inherited.
+      - Empty the Roadmap and Decision record; delete the Specialization section.
+      - Leave the ontologies untouched. The shared vocabulary is the point.
+      - Replace the placeholder READMEs with the portfolio's actual stakeholders.
+      - Record the portfolio's own DR-001, and commit.
+    produces:
+      - A portfolio repo.
+  - id: work:discipline/literate-programming
+    name: Literate Programming
+    description: >-
+      A schema is an exposition addressed to a human reader; the
+      machine-readable part is secondary to the account of what it means and why.
+    judgement: >-
+      What a future reader will not be able to reconstruct. No checker can tell
+      you which reasoning is worth recording.
+    steps:
+      - Give a module a description that carries its reasoning, not an inventory.
+      - Record on a class what a reader would otherwise have to reconstruct.
+      - Mark departures from a canon in place, where they are made.
+    produces:
+      - Schemas that explain themselves.
+  - id: work:discipline/progressive-disclosure
+    name: Progressive Disclosure
+    description: >-
+      One small thing loads always; everything else loads on demand, routed by a
+      load map from what you are touching to what to read first.
+    judgement: >-
+      Where a paragraph goes — what to do, what happened, or why. Cheap only at
+      the moment of writing, and not decidable afterwards by inspection.
+    steps:
+      - Keep the always-loaded core small enough to stay read.
+      - Route each paragraph as you write it, never later.
+      - Keep every digest deliberately insufficient to act on.
+    produces:
+      - A core that routes, and satellites that own what they hold.

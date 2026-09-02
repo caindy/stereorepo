@@ -29,3 +29,18 @@ LinkML convention and they are left as they are.
 There is **no instance data in the repo**. Every change so far was validated
 against a throwaway example covering all classes, including negative cases for
 each rule, but that example was never committed.
+
+### Assertions
+
+The schemas are **TBox**: the terminology. `assertions/` is the **ABox**: what
+solorepo actually states in that terminology — its Disciplines, its Ubiquitous
+Language. Only the ABox compiles to APM primitives; the TBox is what validates it
+before it does.
+
+| File | Validates against |
+|---|---|
+| `assertions/disciplines.yaml` | `work_ontology.yaml` |
+| `assertions/vocabulary.yaml` | `ddd_ontology.yaml` |
+
+Fictional instances — a made-up portfolio, an invented persona — are fixtures,
+not assertions, and do not belong here.

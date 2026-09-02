@@ -18,6 +18,7 @@ for what it owns. This file routes. It does not restate.
 | Touching… | Load first |
 | :-- | :-- |
 | naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a term without the solo |
+| what solorepo asserts about itself | [`assertions/`](assertions/) — the ABox. The prose satellites derive from it. |
 | a schema, or checking one | [`schemas.md`](schemas.md), then the module its own load map names |
 | how work is meant to proceed here | [`disciplines.md`](disciplines.md) |
 | turning a clone into a portfolio | [`disciplines.md`](disciplines.md) → Specialization |
@@ -34,9 +35,9 @@ is sufficient to apply it.** This map is deliberately insufficient.
 
 | It tells a future reader… | It goes to |
 | :-- | :-- |
-| a word, and what it means | `vocabulary.md` |
+| a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
 | **why** a decision was taken | `decisions.md`, as a DR |
-| **how** work must proceed, always | `disciplines.md` |
+| **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | reasoning that recurs across several decisions | `principles.md` |
 | what is intended, or still undecided | `roadmap.md` |
 | what a schema means and why it is shaped so | the schema itself, per Literate Programming |
@@ -44,3 +45,11 @@ is sufficient to apply it.** This map is deliberately insufficient.
 Route each paragraph *as you write it*. That is the only moment the routing
 decision is cheap. **A commit message is not a destination**: a decision recorded
 only in git history has not been recorded.
+
+**`vocabulary.md` and `disciplines.md` are generated.** They derive from
+`assertions/`, which is the source. Edit the assertions and re-render:
+
+```bash
+uvx --with pyyaml python .meta/render.py
+uvx --with pyyaml python .meta/render.py --check   # fails if stale
+```

@@ -1,0 +1,182 @@
+# solorepo's Ubiquitous Language: the ABox that describes the TBox.
+#
+# A Concept is a unit of meaning, not a word. Two Concepts may share a label —
+# that is what confusable_with records, and why this file cannot be replaced by
+# the schemas themselves: in a TBox the classes *are* the meanings, so a label
+# collision has nowhere to be stated.
+#
+# Definitions here are one-line glosses. The full reasoning lives on the class,
+# per Literate Programming; these are for recognising a term, not applying it.
+
+concept_schemes:
+  - id: work:scheme/ddd
+    name: DDD canon
+    authority: Eric Evans, and About Face for the persona work
+  - id: work:scheme/solorepo
+    name: solorepo work vocabulary
+    authority: solorepo
+    namespace: https://w3id.org/solorepo/work-ontology/
+  - id: work:scheme/apm
+    name: APM primitives
+    authority: Microsoft APM
+    namespace: https://microsoft.github.io/apm/concepts/primitives-and-targets/
+
+concept_set:
+  # ---- adopted from DDD ----
+  - id: work:concept/bounded-context
+    pref_label: Bounded Context
+    definition: An explicit boundary within which a model applies and its terms carry one settled meaning.
+    in_scheme: work:scheme/ddd
+  - id: work:concept/ubiquitous-language
+    pref_label: Ubiquitous Language
+    definition: The language everyone inside one Bounded Context uses, in speech, documents and code.
+    in_scheme: work:scheme/ddd
+    scope_note: >-
+      A portfolio's own domain language. solorepo's vocabulary is imported
+      alongside it to articulate the discipline, and has no authority over it.
+  - id: work:concept/published-language
+    pref_label: Published Language
+    definition: A well-documented shared language that contexts translate into and out of.
+    in_scheme: work:scheme/ddd
+    scope_note: What solorepo offers a portfolio, and what DDD offers solorepo.
+  - id: work:concept/conformist
+    pref_label: Conformist
+    definition: A downstream context that adopts an upstream model wholesale, without translation.
+    in_scheme: work:scheme/ddd
+  - id: work:concept/persona
+    pref_label: Persona
+    definition: A specific, detailed, named user archetype the product is designed for.
+    in_scheme: work:scheme/ddd
+    scope_note: >-
+      Cooper's sense. What solorepo's original sketch called a Persona is a
+      Personality; the two are not the same thing.
+    confusable_with:
+      - work:concept/personality
+  # ---- originated by solorepo ----
+  - id: work:concept/personality
+    pref_label: Personality
+    definition: The character an Actor presents — a SOUL.md plus a communication style.
+    in_scheme: work:scheme/solorepo
+    scope_note: Called Persona in the original sketch, until Cooper's Persona took the word back.
+    avoid: [persona]
+    confusable_with:
+      - work:concept/persona
+  - id: work:concept/capability
+    pref_label: Capability
+    definition: A kind of thing that can be done or used. Never names an object.
+    in_scheme: work:scheme/solorepo
+    avoid: [permission, tool access]
+  - id: work:concept/securable
+    pref_label: Securable
+    definition: A set of objects, by enumeration or by a selector rule.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/permission
+    pref_label: Permission
+    definition: The authority to employ a Capability on a Securable.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/role
+    pref_label: Role
+    definition: A named set of Capabilities.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/challenge
+    pref_label: Challenge
+    definition: A problem to be addressed — a defect, epic, feature or task.
+    in_scheme: work:scheme/solorepo
+    avoid: [ticket, story, issue]
+  - id: work:concept/definition-of-done
+    pref_label: Definition of Done
+    definition: The test that decides whether a Goal has been met.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/jtbd
+    pref_label: Job to be Done
+    definition: The need the work serves, stated from the point of view of the Persona that has it.
+    in_scheme: work:scheme/solorepo
+    alt_labels: [JTBD]
+    confusable_with:
+      - work:concept/job
+  - id: work:concept/goal
+    pref_label: Goal
+    definition: A SMART goal — Challenge, Definition of Done, Job to be Done and Deadline, all required.
+    in_scheme: work:scheme/solorepo
+    confusable_with:
+      - work:concept/persona-goal
+  - id: work:concept/persona-goal
+    pref_label: Persona goal
+    definition: What a Persona is trying to achieve, at Cooper's experience, end or life tier.
+    in_scheme: work:scheme/solorepo
+    scope_note: >-
+      An END goal is Goal-shaped but has no Deadline: it is standing rather than
+      a bounded commitment, so it is not a Goal.
+    confusable_with:
+      - work:concept/goal
+  - id: work:concept/remit
+    pref_label: Remit
+    definition: Permissions plus a Goal — what may be done, and what it is to be done for.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/agency
+    pref_label: Agency
+    definition: A Role plus a Remit.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/actor
+    pref_label: Actor
+    definition: A Personality with an Identity and a Memory.
+    in_scheme: work:scheme/solorepo
+    avoid: [user, bot]
+  - id: work:concept/job
+    pref_label: Job
+    definition: An Actor given an Agency. An assignment.
+    in_scheme: work:scheme/solorepo
+    confusable_with:
+      - work:concept/jtbd
+  - id: work:concept/collaboration
+    pref_label: Collaboration
+    definition: The Jobs that meet on one Challenge. Two is the minimum.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/execution
+    pref_label: Execution
+    definition: One carrying-out of a Job. Where design-time becomes fact.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/audit-record
+    pref_label: Audit Record
+    definition: One employment of a Capability on a Securable. A Permission in the past tense.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/aibom
+    pref_label: Agent Bill of Materials
+    definition: What an Actor was made of at a moment, resolved to immutable references.
+    in_scheme: work:scheme/solorepo
+    alt_labels: [AIBOM]
+  - id: work:concept/discipline
+    pref_label: Discipline
+    definition: A structured way of working that must be adhered to because it is not an imperative program.
+    in_scheme: work:scheme/solorepo
+    scope_note: Not a Capability, not a Permission, and not a characterisation such as a communication style.
+  - id: work:concept/specialization
+    pref_label: Specialization
+    definition: Turning a fresh clone of solorepo into a new portfolio repo.
+    in_scheme: work:scheme/solorepo
+    avoid: [bootstrap, init, scaffolding step]
+  - id: work:concept/solorepo-skill
+    pref_label: Skill (solorepo Capability kind)
+    definition: A Capability that composes tools, as against a tool, which is atomic.
+    in_scheme: work:scheme/solorepo
+    confusable_with:
+      - work:concept/apm-skill
+      - work:concept/apm-prompt
+  # ---- APM's, named here only so the collisions can be stated ----
+  - id: work:concept/apm-skill
+    pref_label: Skill (APM primitive)
+    definition: A cross-tool meta-guide in the agent-skills format, at .apm/skills/<name>/SKILL.md.
+    in_scheme: work:scheme/apm
+    confusable_with:
+      - work:concept/solorepo-skill
+      - work:concept/apm-prompt
+  - id: work:concept/apm-prompt
+    pref_label: Prompt (APM primitive)
+    definition: An executable, parameterized workflow that also surfaces as a slash-command.
+    in_scheme: work:scheme/apm
+    alt_labels: [command, slash-command]
+    avoid: [skill]
+    scope_note: What "/add-ubiquitous-language-term" is. Calling it a skill is the loosest of the three collisions.
+    confusable_with:
+      - work:concept/solorepo-skill
+      - work:concept/apm-skill
