@@ -25,6 +25,7 @@ license: https://creativecommons.org/licenses/by/4.0/
 #   who the work is for                             work/personas.yaml
 #   what the work is for, and its permissions       work/purpose.yaml
 #   who is assigned what, and where work meets      work/assignment.yaml
+#   how work must proceed, invariably               work/disciplines.yaml
 #   what was actually done, and by whom             work/provenance.yaml
 #   the base every module shares                    work/core.yaml
 #
@@ -48,6 +49,7 @@ imports:
   - work/personas
   - work/purpose
   - work/assignment
+  - work/disciplines
   - work/provenance
 
 slots:
@@ -159,6 +161,11 @@ slots:
     range: Collaboration
     multivalued: true
     inlined_as_list: true
+  disciplines:
+    description: The Disciplines in the collection.
+    range: Discipline
+    multivalued: true
+    inlined_as_list: true
 
 
   # Identity
@@ -207,6 +214,7 @@ classes:
       - actors
       - job_set
       - collaborations
+      - disciplines
       # provenance
       - executions
       - boms

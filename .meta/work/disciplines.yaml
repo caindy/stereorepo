@@ -1,0 +1,90 @@
+id: https://w3id.org/solorepo/work/disciplines
+name: work-disciplines
+title: Ontology of Work — Disciplines
+description: >-
+  How work must proceed, invariably.
+
+  A **Discipline** is a structured way of working that must be adhered to because
+  it is not an imperative program. It has steps and an order, it is *followed*
+  rather than executed, and following it produces artifacts.
+
+  The clause doing the work is "not an imperative program". Adherence is what you
+  need precisely because execution is unavailable: if a Discipline could be
+  compiled, you would run it and no one would need to adhere to anything. So the
+  test for whether something belongs here is not whether it is important, but
+  whether the judgement it requires resists automation. Record that judgement —
+  it is what stops a Discipline being written when a script would do.
+
+  A Discipline is none of the three things it is most easily mistaken for. Not a
+  Capability, which is what can be done. Not a Permission, which is what may be
+  done and to what. Not a characterisation such as a communication style, which
+  describes rather than prescribes and has no steps to depart from.
+
+  Disciplines are also the reason this class exists rather than the prose that
+  preceded it: an APM `instructions` primitive is a Discipline compiled for a
+  harness, and prose in a document has nothing for that transformation to read.
+license: https://creativecommons.org/licenses/by/4.0/
+
+prefixes:
+  work: https://w3id.org/solorepo/work-ontology/
+  linkml: https://w3id.org/linkml/
+default_prefix: work
+default_range: string
+
+imports:
+  - linkml:types
+  - core
+  - authority
+
+slots:
+
+  steps:
+    description: >-
+      What following the Discipline consists of, in order. Prose steps, not
+      instructions to a machine — if they could be executed this would not be a
+      Discipline.
+    multivalued: true
+
+  judgement:
+    description: >-
+      What in this Discipline requires judgement, and so cannot be compiled away.
+      The reason adherence is needed rather than execution, and the test for
+      whether a Discipline is warranted at all.
+
+  produces:
+    description: What following the Discipline yields.
+    multivalued: true
+
+  applies_to:
+    description: >-
+      Where the Discipline holds, when it does not hold everywhere. The scope of
+      an APM `instructions` primitive — its `applyTo` glob — is this Securable.
+    range: Securable
+
+classes:
+
+  Discipline:
+    is_a: WorkEntity
+    description: >-
+      A structured way of working that must be adhered to because it is not an
+      imperative program.
+    comments:
+      - >-
+        Cooper's persona modelling is the pattern to keep in mind: the Discipline
+        is the method, and the Persona is an artifact the method produces. A
+        Discipline is not an attribute of the thing it produces.
+      - >-
+        `judgement` being empty is a smell. Something with no judgement in it is
+        a program that has not been written yet.
+    slots:
+      - steps
+      - judgement
+      - produces
+      - applies_to
+    slot_usage:
+      name:
+        required: true
+      steps:
+        required: true
+      judgement:
+        recommended: true

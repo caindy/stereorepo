@@ -351,3 +351,22 @@ on.
 
 The core states its own insufficiency, which is the discipline's operative rule
 rather than a disclaimer.
+
+### DR-025 · Discipline is a class
+*2026-09-02*
+
+`Discipline` becomes a class in its own module, `work/disciplines.yaml`, with
+`steps`, `judgement`, `produces` and an optional `applies_to` scope.
+
+The reason is transformation, not tidiness. **An APM `instructions` primitive is
+a Discipline compiled for a harness**, and prose in a document gives that
+transformation nothing to read. A Discipline had to survive into a form something
+could consume, and prose does not survive.
+
+`judgement` records what in a Discipline resists automation — the clause that
+makes it a Discipline rather than a script. An empty `judgement` is a smell: a
+Discipline with no judgement in it is a program nobody has written yet. That
+makes the class carry its own test for whether an instance belongs in it.
+
+`applies_to` is a Securable, so a Discipline that holds only in one place says
+where. An APM instruction's `applyTo` glob is exactly this.
