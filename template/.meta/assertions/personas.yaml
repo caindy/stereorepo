@@ -1,8 +1,15 @@
 # This portfolio's Personas. Never synced.
 #
-# Cooper's rule: the detail is the discipline. A persona drawn from research
-# answers questions differently from one drawn from imagination, and only the
-# first is worth interrogating. Leave this empty until there is research to put
-# in it — an empty file is a truthful one.
+# Two kinds of Persona land here, under different rules.
+#
+# A *customer* Persona follows Cooper: the detail is the discipline, a persona
+# drawn from research answers questions differently from one drawn from
+# imagination, and only the first is worth interrogating. Leave those out until
+# there is research in `stakeholders/customers/` to draw them from — an empty
+# file is a truthful one.
+#
+# The *solo's* Persona is the marked exception. Its subject is present and can
+# correct it, so it is a record of requirements rather than a research surrogate,
+# and the Modelling the Solo Discipline says to keep it current from the start.
 
 personas: []

@@ -215,6 +215,16 @@ concept_set:
     scope_note: >-
       A Discipline here, not a slogan: each adopted Discipline is applied to this
       repo first, and a schema is instantiated before it is trusted.
+  - id: work:concept/modelling-the-solo
+    pref_label: Modelling the Solo
+    definition: >-
+      Keeping a Persona of the person the agent works with, in the repo and
+      current, as external memory rather than private.
+    in_scheme: work:scheme/solorepo
+    scope_note: >-
+      Not Cooper's persona research, which models absent users from evidence.
+      This models a present person who can read and correct it.
+    avoid: [profiling]
   - id: work:concept/solorepo-skill
     pref_label: Skill (solorepo Capability kind)
     definition: A Capability that composes tools, as against a tool, which is atomic.

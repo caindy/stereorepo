@@ -64,3 +64,18 @@ Use what is being built, on itself, before anyone else has to. When a Discipline
 4. When use finds a gap, change the thing, and record what use found.
 
 _Produces: Findings that reasoning about the artifact does not reach._
+
+### Modelling the Solo
+
+Keep a Persona of the person the agent works with, in the repo, current as the work reveals things.
+External memory rather than private memory, and the distinction is the whole point: the solo can see how he is being read, and another agent can pick the model up. An agent's model of the person it works with exists whether or not it is written down. Writing it down is what makes it correctable and transferable instead of a private guess that steers the work invisibly.
+
+**Where the judgement is.** What is a durable trait and what was a one-off. A correction made twice is a preference; made once it is a correction. And where inference ends and evidence begins — the model has to be correctable by its subject rather than defended by its author, which it cannot be unless it says which is which.
+
+1. Ground each entry in something observable — a correction made, a decision taken, a preference stated in so many words.
+2. Record what would change how the work proceeds. Not character assessment, and not flattery.
+3. Mark inference as inference, so its subject knows what to push back on.
+4. Update it as the work reveals things, not in a pass at the end.
+5. Surface it for correction rather than defending it.
+
+_Produces: A Persona of the solo that another agent can pick up cold.; A visible account of how the agent is framing the work._

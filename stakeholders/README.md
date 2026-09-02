@@ -18,6 +18,10 @@ what that assertion was **drawn from** — interviews, transcripts, observations
 the evidence. The two are not duplicates: one is the distilled model, the other
 is its provenance.
 
+The solo's own Persona is the exception, and a marked one: its subject is
+present and can correct it, so it is a record of requirements rather than a
+research surrogate. Everyone else's Persona needs material here.
+
 That distinction is what makes Cooper's rule enforceable rather than
 aspirational. "The detail is the discipline" and "research over invention" mean
 nothing if there is nowhere to put the research, and a Persona with no

@@ -4,8 +4,10 @@
 # said and done in building this repo. A departure from the canon, marked per
 # DR-016.
 #
-# Everything below should be corrected by its subject rather than defended by
-# its author.
+# Maintained under the Modelling the Solo Discipline: kept current as the work
+# reveals things, grounded in something observable, and marked where it is
+# inference. Everything below should be corrected by its subject rather than
+# defended by its author.
 
 personas:
   - id: work:persona/the-solo
@@ -45,10 +47,24 @@ personas:
       - Reads the source before adopting a taxonomy from it.
       - Walks back work that overreaches, and keeps the attempt on the record.
       - Commits each decision as it settles rather than batching.
+      - >-
+        Pushes a constraint down to where it is true rather than accepting it
+        where it is convenient — asked whether the dead-end check could be
+        schema-driven before accepting it in the gate.
+      - >-
+        Says what is being deprioritised, in so many words, instead of letting
+        it decay quietly.
+      - >-
+        Drops a thing rather than keeping an empty placeholder for it, and moves
+        the idea to the roadmap.
     frustrations:
       - Prose that duplicates a source and then drifts from it.
       - Terms invented without an explicit decision.
       - Re-explaining context that a repository could have carried.
+      # inferred from the reframing of the persona-research goal, not stated
+      - Tooling that punishes an omission where it could have guided instead.
     proficiencies:
       - Fluent in DDD, and in reaching for a canon before minting a term.
       - Comfortable in LinkML, SKOS and the semantic-web framing.
+      # inferred from how consistently the ask is "can the model carry this"
+      - Reaches for the model to carry a rule before reaching for a process.

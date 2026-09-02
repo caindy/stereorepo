@@ -97,6 +97,14 @@ developed further, with reference resolution and orphan detection as separate
 `scripts/check_*.py`. The natural home is the `.meta` Project's `gate`, which is
 the slot that exists to hold exactly this.
 
+**Guiding the solo through identifying research.** A Persona should be drawn
+from research, and `stakeholders/customers/` is where that research lives — but
+the goal is **not** a check that fails when it is missing. The goal is to carry
+enough background that a coding harness can *guide* the solo through finding and
+recording the research in the first place, which is the hard part and the part a
+gate cannot help with. Deprioritised: the persona direction is not where effort
+goes next.
+
 **External stakeholders as a source for outward-facing writing.** Investors,
 media, advisors. `stakeholders/external/` was dropped rather than kept as an
 empty folder, but the idea it held is worth keeping: a place to draw on when
