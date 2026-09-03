@@ -8,4 +8,5 @@ concept_set:
     pref_label: Specialization
     definition: Turning a fresh clone of solorepo into a new portfolio repo.
     in_scheme: work:scheme/solorepo
+    broader: work:concept/g-disciplines
     avoid: [bootstrap, init, scaffolding step]

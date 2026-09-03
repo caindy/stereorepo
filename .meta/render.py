@@ -72,11 +72,29 @@ def vocabulary():
             continue
         out.append(f"### {scheme['name']}\n")
         out.append(f"_Authority: {scheme.get('authority', 'unstated')}._\n")
-        out.append("| Term | Means | Do not say |\n|---|---|---|")
+        hubs = [c for c in members
+                if any(m.get("broader") == c["id"] for m in abox["concept_set"])]
+        grouped = {h["id"]: [] for h in hubs}
+        loose = []
         for c in members:
-            avoid = ", ".join(c.get("avoid", [])) or "—"
-            out.append(f"| **{c['pref_label']}** | {c['definition'].strip()} | {avoid} |")
-        out.append("")
+            if c in hubs:
+                continue
+            (grouped[c["broader"]] if c.get("broader") in grouped else loose).append(c)
+
+        def table(rows):
+            out.append("| Term | Means | Do not say |\n|---|---|---|")
+            for c in rows:
+                avoid = ", ".join(c.get("avoid", [])) or "—"
+                out.append(f"| **{c['pref_label']}** | {c['definition'].strip()} | {avoid} |")
+            out.append("")
+
+        if loose:
+            table(loose)
+        for h in hubs:
+            if grouped[h["id"]]:
+                out.append(f"#### {h['pref_label']}\n")
+                out.append(f"_{h['definition'].strip()}_\n")
+                table(grouped[h["id"]])
         for c in members:
             if c.get("scope_note"):
                 out.append(f"**{c['pref_label']}.** {c['scope_note'].strip()}\n")

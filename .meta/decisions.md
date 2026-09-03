@@ -1146,3 +1146,29 @@ Left in the roadmap: journals at three levels, and whether the 49 entries in thi
 file are retrofitted as the scaffold Product's journal. The reframing is
 persuasive — these entries are about a Product — and the retrofit is feasible
 under one rule, that a rejection is never invented.
+
+### DR-051 · The vocabulary is grouped, because a term nobody can find is a term nobody uses
+*2026-09-02*
+
+Christopher went looking for **Agency** and could not find it. It had not been
+deleted — it was at line 60 of a flat table that had grown to 45 terms, where the
+ontology of work is now outnumbered by the vocabulary of process. **Dilution, not
+loss**, and the first failure of Progressive Disclosure inside a page rather than
+between files.
+
+Six groupings, using `broader` — SKOS machinery added in DR-018 and never
+exercised until now: *Doing the work*, *What the work is for*, *What was actually
+done*, *How the repository is divided*, *How work is recorded*, *The
+Disciplines*. The renderer nests by them, so no group exceeds eleven terms.
+
+Three Disciplines had **no Concept at all** — Literate Programming, Progressive
+Disclosure and Journaling, the first two being the oldest in the repository. They
+were adopted before the vocabulary was an artifact and nothing went back for them,
+which is the drift that only enumeration finds.
+
+Worth recording about the method rather than the outcome: the grouping was first
+attempted by slicing the file between `- id:` anchors, and **thirteen of forty-one
+concepts silently missed**. The pass reported success. It was caught only by
+asking afterwards which concepts still lacked a `broader`, and the fix was a line
+walk that cannot skip. A transformation that reports success without stating what
+it covered is A7 violated in a script rather than in a gate.

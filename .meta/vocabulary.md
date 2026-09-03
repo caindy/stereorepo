@@ -41,6 +41,10 @@ _Authority: Eric Evans, and About Face for the persona work._
 
 _Authority: solorepo._
 
+#### Doing the work
+
+_Who does work, what they may do, and what they are given to do it with._
+
 | Term | Means | Do not say |
 |---|---|---|
 | **Personality** | The character an Actor presents — a SOUL.md plus a communication style. | persona |
@@ -48,37 +52,75 @@ _Authority: solorepo._
 | **Securable** | A set of objects, by enumeration or by a selector rule. | — |
 | **Permission** | The authority to employ a Capability on a Securable. | — |
 | **Role** | A named set of Capabilities. | — |
-| **Challenge** | A problem to be addressed — a defect, epic, feature or task. | ticket, story, issue |
-| **Portfolio** | Everything one solo builds inside one Bounded Context. One per repo. | — |
-| **Product** | Something delivered to users, with its own interface and therefore its own primary Persona. The unit of value. | — |
-| **Project** | A unit of build — one toolchain, one language, its own tests and gate. The unit of construction. | workstream |
-| **Definition of Done** | The test that decides whether a Goal has been met. | — |
-| **Job to be Done** | The need the work serves, stated from the point of view of the Persona that has it. | — |
-| **Goal** | A SMART goal — Challenge, Definition of Done, Job to be Done and Deadline, all required. | — |
-| **Persona goal** | What a Persona is trying to achieve, at Cooper's experience, end or life tier. | — |
 | **Remit** | Permissions plus a Goal — what may be done, and what it is to be done for. | — |
 | **Agency** | A Role plus a Remit. | — |
 | **Actor** | A Personality with an Identity and a Memory. | user, bot |
 | **Job** | An Actor given an Agency. An assignment. | — |
 | **Collaboration** | The Jobs that meet on one Challenge. Two is the minimum. | — |
+| **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
+
+#### What the work is for
+
+_Who it serves, what problem it addresses, and how anyone knows it is done._
+
+| Term | Means | Do not say |
+|---|---|---|
+| **Challenge** | A problem to be addressed — a defect, epic, feature or task. | ticket, story, issue |
+| **Definition of Done** | The test that decides whether a Goal has been met. | — |
+| **Job to be Done** | The need the work serves, stated from the point of view of the Persona that has it. | — |
+| **Goal** | A SMART goal — Challenge, Definition of Done, Job to be Done and Deadline, all required. | — |
+| **Persona goal** | What a Persona is trying to achieve, at Cooper's experience, end or life tier. | — |
+
+#### What was actually done
+
+_The runtime record — who ran, out of what parts, and what they touched._
+
+| Term | Means | Do not say |
+|---|---|---|
 | **Execution** | One carrying-out of a Job. Where design-time becomes fact. | — |
 | **Audit Record** | One employment of a Capability on a Securable. A Permission in the past tense. | — |
 | **Agent Bill of Materials** | What an Actor was made of at a moment, resolved to immutable references. | — |
+
+#### How the repository is divided
+
+_The units a solorepo is made of._
+
+| Term | Means | Do not say |
+|---|---|---|
+| **Portfolio** | Everything one solo builds inside one Bounded Context. One per repo. | — |
+| **Product** | Something delivered to users, with its own interface and therefore its own primary Persona. The unit of value. | — |
+| **Project** | A unit of build — one toolchain, one language, its own tests and gate. The unit of construction. | workstream |
+| **Bootstrap** | The standard for one language, together with the gates that hold a project to it. | starter, boilerplate, scaffold |
+
+#### How work is recorded
+
+_The kinds of thing written down, and which of them is authoritative._
+
+| Term | Means | Do not say |
+|---|---|---|
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
 | **Journal** | An append-only record of what happened, at one level — Portfolio, Product or Project — and the intake every other record draws from. | changelog, log |
 | **Decision record** | The Portfolio's record of decisions about the repository, its language and its way of working. Numbered DR-nnn, newest last. | — |
 | **Architecture Decision Record** | A Project-level record of why one build unit is built as it is. Numbered per Project, from the form in `.meta/templates/adr.md`. | — |
-| **Bootstrap** | The standard for one language, together with the gates that hold a project to it. | starter, boilerplate, scaffold |
+| **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
+| **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
+
+#### The Disciplines
+
+_The named ways of working, each adhered to because it is not a program._
+
+| Term | Means | Do not say |
+|---|---|---|
+| **Literate Programming** | An artifact is an exposition addressed to a human reader; the machine-readable part is secondary. | — |
+| **Progressive Disclosure** | One small thing loads always; everything else loads on demand, routed by a load map that is deliberately insufficient. | — |
+| **Journaling** | Record what happened, as it happens, at the level it happened. | — |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
 | **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
 | **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
 | **Observed Failure** | A guardrail never observed to fail is not evidence of anything. | test coverage |
-| **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
-| **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
 | **Nothing Unconsumed** | An artifact prevents drift only if something consumes it and checks it against something. | — |
 | **Seeded Artifacts** | A seed is data, gated by rendering it and running the real gates on the result, and it must not violate the rules it seeds. | scaffolding |
 | **Written Decisions** | A decision that lives only in a transcript has not been made. | — |
-| **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 | **Specialization** | Turning a fresh clone of solorepo into a new portfolio repo. | bootstrap, init, scaffolding step |
 
 **Personality.** Called Persona in the original sketch, until Cooper's Persona took the word back.
@@ -98,6 +140,8 @@ _Authority: solorepo._
 **Architecture Decision Record.** The other level of the same Discipline. A Project decision in the Portfolio's record is buried among matters its readers do not share; a Portfolio decision in a Project's ADR is hidden from every other Project.
 
 **Bootstrap.** Where a Discipline becomes a command that can fail. A Bootstrap says how a Discipline is satisfied in one language; it never restates the Discipline, because the second copy is the one that drifts.
+
+**Journaling.** The practice. `Journal` is what it produces.
 
 **Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 
@@ -141,6 +185,7 @@ more often a collision than a gap.
 | **Job** | Job to be Done |
 | **Decision record** | Architecture Decision Record |
 | **Architecture Decision Record** | Decision record |
+| **Journaling** | Journal |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
 | **Prompt (APM primitive)** | Skill (solorepo Capability kind), Skill (APM primitive) |
