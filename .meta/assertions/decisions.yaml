@@ -1,7 +1,8 @@
 # solorepo's decision record: every choice that removed an alternative, and why.
 #
-# `decisions.md` is rendered from this file. Add an entry when a decision is
-# settled *and* implemented, and never renumber: a withdrawn entry leaves a hole,
+# `decisions.md` is rendered from this file. Add an entry when the question is
+# settled — `status` carries whether the answer is merely recommended or in
+# force — and never renumber: a withdrawn entry leaves a hole,
 # the same rule the Charter's Articles carry.
 #
 # `rationale` is the prose as it was written when the decision was taken. The
@@ -13,7 +14,7 @@
 decisions:
   - id: work:decision/001
     name: "DR-001 · `.meta/` is the staging ground"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -23,7 +24,7 @@ decisions:
       the content it acts on.
   - id: work:decision/002
     name: "DR-002 · Rough in an ontology of work"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -32,7 +33,7 @@ decisions:
       ignoring it would fragment the language it exists to create.
   - id: work:decision/003
     name: "DR-003 · Formalise the ontology in LinkML"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -43,7 +44,7 @@ decisions:
       Verified with `gen-json-schema` and `linkml-validate`.
   - id: work:decision/004
     name: "DR-004 · Add the runtime half"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -56,7 +57,7 @@ decisions:
       useless.
   - id: work:decision/005
     name: "DR-005 · Capability carries no projected dimensions"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -74,7 +75,7 @@ decisions:
       comes from the product of the two axes.
   - id: work:decision/006
     name: "DR-006 · Skills compose tools; tools are atomic"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -84,7 +85,7 @@ decisions:
       relation matters for BOM and audit resolution down to what actually runs.
   - id: work:decision/007
     name: "DR-007 · APM is the packaging target"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -93,7 +94,7 @@ decisions:
       portability seam rather than exposing a deficiency: Role travels, Remit does not.
   - id: work:decision/008
     name: "DR-008 · Reverted: capability reification on the schema"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -114,7 +115,7 @@ decisions:
       pointers instead. `composed_of` and the atomicity rule from DR-006 were kept.
   - id: work:decision/009
     name: "DR-009 · Commit per settled decision"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -123,7 +124,7 @@ decisions:
       state. Reverts are commits too.
   - id: work:decision/010
     name: "DR-010 · Placeholder READMEs in empty directories"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -132,7 +133,7 @@ decisions:
       README saying its contents are not yet decided.
   - id: work:decision/011
     name: "DR-011 · `.agents/` is staged under `.meta/`"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -143,7 +144,7 @@ decisions:
       them.
   - id: work:decision/012
     name: "DR-012 · Decisions are recorded in the repo"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -152,7 +153,7 @@ decisions:
       pointers, with `CLAUDE.md` symlinked to it; this file records the rest.
   - id: work:decision/013
     name: "DR-013 · Specialization is an instruction, not a build step"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -170,7 +171,7 @@ decisions:
       its spelling is normalised to **Specialization**.
   - id: work:decision/014
     name: "DR-014 · A solorepo is a monorepo: one portfolio, one bounded context, one language"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     consequences:
@@ -187,7 +188,7 @@ decisions:
       portfolio's **own domain** language; see DR-015.
   - id: work:decision/015
     name: "DR-015 · Two languages: the portfolio's own, and solorepo's imported"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -206,7 +207,7 @@ decisions:
       project's own decisions is the failure that sync exists to prevent.
   - id: work:decision/016
     name: "DR-016 · solorepo republishes DDD; portfolios conform transitively"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -234,7 +235,7 @@ decisions:
       where DDD would expect several per system.
   - id: work:decision/017
     name: "DR-017 · DDD is reified as LinkML alongside the work ontology"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -255,7 +256,7 @@ decisions:
       `DomainEvent` postdates the book.
   - id: work:decision/018
     name: "DR-018 · A Ubiquitous Language is a set of Concepts, not a set of Terms"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -293,7 +294,7 @@ decisions:
       departures from DDD per DR-016.
   - id: work:decision/019
     name: "DR-019 · Persona splits into Personality and Persona"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -317,7 +318,7 @@ decisions:
       silently decide it.
   - id: work:decision/020
     name: "DR-020 · Persona goals are typed, and the End tier is Goal-shaped"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -360,7 +361,7 @@ decisions:
       outside the persona so they cannot pollute the user model.
   - id: work:decision/021
     name: "DR-021 · A Job to be Done states the user's job, and names a Persona"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -394,7 +395,7 @@ decisions:
       keep is undecided.
   - id: work:decision/022
     name: "DR-022 · Literate Programming and Progressive Disclosure are Disciplines"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -413,7 +414,7 @@ decisions:
       even though it never uses the phrase.
   - id: work:decision/023
     name: "DR-023 · The work ontology splits into seven modules"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -438,7 +439,7 @@ decisions:
       rejects what it rejected before.
   - id: work:decision/024
     name: "DR-024 · `.meta/README.md` splits into a core and six satellites"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -463,7 +464,7 @@ decisions:
       rather than a disclaimer.
   - id: work:decision/025
     name: "DR-025 · Discipline is a class"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -484,7 +485,7 @@ decisions:
       where. An APM instruction's `applyTo` glob is exactly this.
   - id: work:decision/026
     name: "DR-026 · The ABox lives in `.meta/assertions/`, and the prose derives from it"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -512,7 +513,7 @@ decisions:
       by identity.
   - id: work:decision/027
     name: "DR-027 · Portfolio, Product and Project"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -549,7 +550,7 @@ decisions:
       work ontology already had — done in DR-028, which supersedes this paragraph.
   - id: work:decision/028
     name: "DR-028 · The DDD schema modularises, and the Portfolio link is typed"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -579,7 +580,7 @@ decisions:
       That check belongs to whatever tooling reads these files.
   - id: work:decision/029
     name: "DR-029 · The invariants get a checker, and it is the `.meta` Project's gate"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -611,7 +612,7 @@ decisions:
       twice.
   - id: work:decision/030
     name: "DR-030 · Dogfooding is a Discipline, and the scaffold is a Product"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -642,7 +643,7 @@ decisions:
       Actor adopt it.
   - id: work:decision/031
     name: "DR-031 · A persona goal is identified, and a Job to be Done names the ones it serves"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -667,7 +668,7 @@ decisions:
       document violating each passes `linkml-validate` and fails the gate.
   - id: work:decision/032
     name: "DR-032 · Assertions split by ownership"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -699,7 +700,7 @@ decisions:
       because they are separate languages.
   - id: work:decision/033
     name: "DR-033 · `README.md` for arriving, `SPECIALIZE.md` for acting"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -731,7 +732,7 @@ decisions:
       first.
   - id: work:decision/034
     name: "DR-034 · `template/` holds the replacements, and the gate catches what is left unfilled"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -775,7 +776,7 @@ decisions:
       one until there is research to put in it.
   - id: work:decision/035
     name: "DR-035 · Specializing for real, three times"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -850,7 +851,7 @@ decisions:
       rather than a review.
   - id: work:decision/037
     name: "DR-037 · One Bounded Context per portfolio is checked, not typed"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -872,7 +873,7 @@ decisions:
       which it rejects.
   - id: work:decision/038
     name: "DR-038 · A Goal serves an END goal, or is a business or technical goal"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -901,7 +902,7 @@ decisions:
       counted once.
   - id: work:decision/039
     name: "DR-039 · The dead-end check moves from the gate into the schema"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -938,7 +939,7 @@ decisions:
       gate is down to nine checks.
   - id: work:decision/040
     name: "DR-040 · Primitives are authored in `.meta/.apm/`, not `.meta/.agents/`"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -970,7 +971,7 @@ decisions:
       axes stay clean.
   - id: work:decision/041
     name: "DR-041 · The `stakeholders/` taxonomy, and why it needs no term of its own"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -1013,7 +1014,7 @@ decisions:
       An empty directory is not a placeholder for an idea; the roadmap is.
   - id: work:decision/042
     name: "DR-042 · Modelling the Solo is a Discipline"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     options:
@@ -1054,7 +1055,7 @@ decisions:
       unmistakable about what to do. Renaming costs one assertion and one Concept.
   - id: work:decision/043
     name: "DR-043 · Literate Programming generalises; six Disciplines pull up from `python_bootstrap`"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -1091,7 +1092,7 @@ decisions:
       because a Discipline without one is a program nobody has written yet.
   - id: work:decision/044
     name: "DR-044 · Literate Programming stops prescribing where prose sits"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     rationale: |-
@@ -1155,7 +1156,7 @@ decisions:
       exactly the shape everything else here takes.
   - id: work:decision/046
     name: "DR-046 · Bootstraps live in the monorepo, and Specialization picks a language"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     supersedes:
@@ -1201,7 +1202,7 @@ decisions:
       wrong was where the result belonged.
   - id: work:decision/047
     name: "DR-047 · An Invariant is not a Discipline with fewer words"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     supersedes:
@@ -1256,7 +1257,7 @@ decisions:
       about how work proceeds and one about domain state at a moment.
   - id: work:decision/048
     name: "DR-048 · The Charter and its Articles; two Personalities for two kinds of writing"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     supersedes:
@@ -1308,7 +1309,7 @@ decisions:
       portfolio.
   - id: work:decision/049
     name: "DR-049 · ADRs are the Project level of Written Decisions"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     applies:
@@ -1357,7 +1358,7 @@ decisions:
       diffed; modelling it as data would wrap the prose without gaining a check.
   - id: work:decision/050
     name: "DR-050 · Journaling is a Discipline, and structure replaces restraint"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     applies:
@@ -1399,7 +1400,7 @@ decisions:
       under one rule, that a rejection is never invented.
   - id: work:decision/051
     name: "DR-051 · The vocabulary is grouped, because a term nobody can find is a term nobody uses"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-02"
     recorded: "2026-09-02"
     applies:
@@ -1429,7 +1430,7 @@ decisions:
       it covered is A7 violated in a script rather than in a gate.
   - id: work:decision/052
     name: "DR-052 · The pull request is the journal, and a commit message is a label"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     supersedes:
@@ -1509,7 +1510,7 @@ decisions:
       this is mechanically checkable.
   - id: work:decision/053
     name: "DR-053 · A key written twice is a value that is right by luck"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     applies:
@@ -1533,7 +1534,7 @@ decisions:
       believed.
   - id: work:decision/054
     name: "DR-054 · Residue divides by tense, and the unfinished half is a linked Issue"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     supersedes:
@@ -1607,7 +1608,7 @@ decisions:
       rather than invented, but the avoid list said otherwise until now.
   - id: work:decision/055
     name: "DR-055 · PR First gets its mechanics, and the form is the only copy"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     applies:
@@ -1680,7 +1681,7 @@ decisions:
       remote.** `caindy/solorepo` does not exist, and creating it is a publish.
   - id: work:decision/056
     name: "DR-056 · main is protected, and the hook that stood in for it was removed by its own condition"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     supersedes:
@@ -1745,7 +1746,7 @@ decisions:
       an address that is not a GitHub account.
   - id: work:decision/057
     name: "DR-057 · Threads block the merge, and resolving one has to mean something"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     applies:
@@ -1833,7 +1834,7 @@ decisions:
       is not, and a hole says so where a paragraph would not.
   - id: work:decision/059
     name: "DR-059 · The decision record is assertions, and decisions.md is rendered from them"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     supersedes:
@@ -1940,7 +1941,7 @@ decisions:
       reserved for an entry that died whole. No entry here has.
   - id: work:decision/060
     name: "DR-060 · PR First compiles to a skill, and ownership is recovered from GitHub"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     supersedes:
@@ -2025,7 +2026,7 @@ decisions:
       for the case the Discipline was built for.
   - id: work:decision/061
     name: "DR-061 · The Disciplines name GitHub"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     applies:
@@ -2072,7 +2073,7 @@ decisions:
       category has to gesture at all four.
   - id: work:decision/062
     name: "DR-062 · The branch nominates the Job, the trailer nominates the Actor, and the squash carries both"
-    status: ACCEPTED
+    status: ADOPTED
     decided: "2026-09-03"
     recorded: "2026-09-03"
     supersedes:
@@ -2153,3 +2154,476 @@ decisions:
       the body is already durable as the pull request, and a commit message is a
       label. `COMMIT_MESSAGES` keeps the labels, carries the trailers through,
       and leaves the reasoning where it was routed.
+  - id: work:decision/063
+    name: "DR-063 · Handoff is a Discipline, and nothing depends on the note being written"
+    status: ADOPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    applies:
+      - work:article/1
+      - work:article/18
+    options:
+      - name: Steps inside PR First
+        chosen: false
+        reason: >-
+          PR First is about the venue — where work is proposed, argued and
+          recorded. A Handoff is about a seam between two Jobs, has its own
+          judgement about where to stop, and is followed by an arriving agent
+          that may never have opened a pull request in its life. Folding it in
+          would bury it in a Discipline already carrying nine steps.
+      - name: A Discipline of its own, with a form and one Article
+        chosen: true
+        reason: >-
+          It has genuine judgement — where to stop, and what a successor cannot
+          reconstruct — which is the test DR-047 set. What it costs is a
+          thirteenth Discipline, and a reader has to know that Handoff depends
+          on PR First rather than standing beside it.
+      - name: A state file in the repository
+        chosen: false
+        reason: >-
+          DR-054's `TECH_DEBT.md` with a different name. No open and closed, no
+          context, free to append and so unbounded, and it would land in the
+          diff as noise on every change.
+    consequences:
+      - >-
+        The note is a comment on the pull request, appended and never rewritten.
+        The body is the account of the change and is written once at the start;
+        state of play accumulates.
+      - >-
+        A18 joins the Charter and is checked by `check_pr.py --handoff`, which
+        refuses a dirty worktree or an unpushed branch and prints the form only
+        once both are clean. Watched failing on three uncommitted files.
+      - >-
+        `check_pr.py --resume` reads what GitHub holds for an arriving Job, and
+        prints the last note last, saying plainly that its absence is expected.
+      - >-
+        The asymmetry between a live-session mechanism and its recovery path is
+        now a Principle, having been argued twice — once for the watch and the
+        sweep, once here.
+      - >-
+        `Handoff` is minted as a Concept. Christopher named it; it is ordinary
+        English doing a specific job here, which is what a scope note is for.
+    falsifier: >-
+      A successor that reads a note, follows it, and is wrong — because the
+      repository had moved and the note had not. That would mean the ordering of
+      the steps is wrong, not that the note should go.
+    rationale: |-
+      The roadmap's Collaboration mission is Claude picking up where Gemini left
+      off, each in its own container. Everything needed for that existed except
+      the seam itself: `Collaboration` is already the Jobs that meet on one
+      Challenge, and DR-062 settled that the branch nominates the Job and the
+      trailer the Actor. Nothing said what must be true when one stops and
+      another starts.
+
+      **Most of what a successor needs is already answerable.** The Challenge is
+      the pull request and its linked Issue, what was done is the diff and the
+      commits, what is owed is the unresolved threads and the check states, and
+      who it follows is in the trailers. Two things are not: **what is left**,
+      and **what was tried and abandoned**. The second is unrecoverable by
+      construction — a diff records what was done and nothing records what was
+      ruled out — so a successor without it walks the same dead end at full
+      price.
+
+      **The note cannot be a precondition.** A session dies, a context fills, a
+      container is reaped, and none of those get to write anything. So `--resume`
+      reads GitHub regardless and the note is read last; where they disagree the
+      repository is right. A practice that only works when its own steps were
+      followed is not one you can hand to a stranger — and this is the second
+      time that argument has been made, so it is a Principle now rather than a
+      paragraph in a third decision.
+
+      **One step has no judgement in it and became an Article.** Everything else
+      here is about what is worth writing down. A18 is not: work in a worktree
+      the successor will never see has not been handed off, and it is the failure
+      that loses the *work* rather than the reasoning — the note reads correctly,
+      the branch looks resumable, and an afternoon is gone.
+  - id: work:decision/064
+    name: "DR-064 · Work noticed and not done is a conversation first, and an Issue only if it survives"
+    status: ADOPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/054
+      - work:decision/057
+    applies:
+      - work:article/15
+      - work:article/16
+    options:
+      - name: File an Issue at the moment of noticing
+        chosen: false
+        reason: >-
+          DR-054's rule, and it creates a tracker item with no relationship to
+          the outcome of the change that produced it. When the approach moves
+          underneath it the Issue goes stale and nothing notices, because an
+          Issue has no link back to the argument that would have corrected it.
+      - name: Raise it as a conversation, promote at merge
+        chosen: true
+        reason: >-
+          It keeps the context it was noticed in, it blocks the merge until
+          somebody rules on it, and what the change overtakes dies where it was
+          raised instead of in the tracker. What it costs is that an item is
+          invisible to anyone not reading the pull request until it is promoted.
+      - name: Keep a list in the body
+        chosen: false
+        reason: >-
+          Still what A15 was written against. A bullet closes when the pull
+          request does, and nothing blocks on it.
+    consequences:
+      - >-
+        A16 widens: a resolved thread carries a reply from someone else **or** a
+        link to the Issue it became. Without this the practice cannot be
+        followed by a solo, since every thread on a change may have one author
+        and demanding a second manufactures the reply A16 exists to catch.
+      - >-
+        The body's fourth heading is filled at merge rather than before review,
+        and is legitimately empty until then.
+      - >-
+        A thread held open on purpose is marked `**Noticed and not done.**`, or
+        the tooling wakes someone for it. Found within a minute of the first
+        one being raised, by the watch firing on it.
+      - >-
+        A pull request is merged, never abandoned. It exists because a Challenge
+        does, and a Challenge is a real need, so work that turned out to be the
+        wrong answer merges as the record of that.
+      - >-
+        PR First's merge-trail step is restored, having been deleted by accident
+        in DR-060's edit and shipped missing.
+    falsifier: >-
+      A parked conversation that outlives the pull request — promoted to nothing
+      and answered by nobody, because the merge went through while it was still
+      marked. That would mean the marker bought silence rather than distinction.
+    rationale: |-
+      Christopher's ruling, and the case for it was in front of us: Issue #10 was
+      filed at review time on a design he was about to change, which is a tracker
+      item that would have gone stale with nothing to notice.
+
+      **A conversation survives DR-054's own test**, which is what makes this a
+      replacement rather than a relaxation. That decision rejected `TECH_DEBT.md`
+      for four failures — no state, no context, unbounded growth, an unscoped
+      flush. A thread has state, carries the diff it was noticed against, is
+      bounded by one pull request, and flushes in scope. The reasoning that sent
+      these to Issues objects to prose in a body, not to threads.
+
+      **The blocking half was already installed.** DR-057 made unresolved threads
+      block the merge, so a noticed item cannot be walked past without somebody
+      deciding what it is. Nothing new enforces this; an existing control turned
+      out to be the right one.
+
+      **And the merge is the authorisation.** Asking for the merge with a
+      conversation open is the ruling that it earns an Issue — which is why
+      promotion is a step of merging rather than a thing to remember afterwards.
+
+      Abandonment was raised and does not arise: a pull request exists because a
+      Challenge does, and a Challenge in a solorepo is a real need by
+      construction. Work that turns out to be the wrong answer merges as the
+      record of that. Not made an Article, because the Charter is empirical and
+      nothing has failed here yet — if a pull request is ever abandoned with
+      parked conversations on it, that is the origin and this is the rule.
+  - id: work:decision/065
+    name: "DR-065 · A decision begins with a question that demands an answer"
+    status: ADOPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/009
+      - work:decision/059
+    applies:
+      - work:article/11
+    options:
+      - name: Record only when settled and implemented
+        chosen: false
+        reason: >-
+          It keeps the record honest about what exists, and it leaves the closed
+          alternatives open to anyone who was not in the conversation. A decision
+          that has been taken and not written down is a decision only its
+          participants can cite, which is A11 with a delay rather than an
+          exemption.
+      - name: Record when the question is settled, and let status carry the rest
+        chosen: true
+        reason: >-
+          The alternatives close when the question is answered, not when the
+          answer is built. What it costs is that the record now contains things
+          that do not exist yet, so `status` has to be read and not assumed —
+          and a reader who skips it will believe something is in force that is
+          not.
+    consequences:
+      - >-
+        `DecisionStatus` gains RECOMMENDED, between PROPOSED and in force: the
+        question is answered and the answer endorsed, but nothing is built.
+      - >-
+        ACCEPTED is renamed ADOPTED. Accepting is something done to a proposal;
+        adopting is a state the repository is in, which is what the value means.
+      - >-
+        Written Decisions loses "not before", and `AGENTS.md`, the record's own
+        header and the rendered page follow.
+      - >-
+        A recommendation must state its options, the same as something in force.
+        Closing the alternatives is what makes it a decision at all.
+      - >-
+        The roadmap's job narrows. What is *settled and unbuilt* is a
+        RECOMMENDED decision; what remains is what is genuinely open.
+    falsifier: >-
+      A record where most entries are RECOMMENDED and stay that way. That would
+      mean the status had become a place to put intentions, and the old rule was
+      buying discipline rather than costing it.
+    rationale: |-
+      Christopher's ruling, in his words: when we agree that something is worth
+      deciding, it can be recorded as a decision. Put the other way — and closer
+      to the decision taxonomy he intends to bring in — **a decision begins with
+      a question that demands an answer.**
+
+      The case that forced it was the machine users. The choice was made in
+      conversation, the alternative rejected for a stated reason, and the rule
+      as written sent all of it to `roadmap.md` as prose because no account had
+      been created yet. That is the failure this session spent its length
+      removing, one file over: reasoning in an artifact nothing can query, in the
+      last large hand-maintained file in `.meta/`.
+
+      **The status ladder is what makes it safe.** PROPOSED is a question with a
+      candidate answer, still arguable. RECOMMENDED is the answer endorsed and
+      nothing in force. ADOPTED is in force. A reader who wants to know what
+      binds reads the status, and the record stops silently conflating "we
+      decided this" with "this is how it works".
+
+      **And ACCEPTED was the wrong word** for the state it named. Acceptance is
+      something done to a proposal at a moment; adoption is a condition the
+      repository is in and stays in, which is what a reader is asking about.
+  - id: work:decision/066
+    name: "DR-066 · Two machine users, with distinct Roles, and the handoff is a review request"
+    status: RECOMMENDED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    applies:
+      - work:article/16
+    options:
+      - name: Keep acting as the solo
+        chosen: false
+        reason: >-
+          Every Permission is then honoured rather than enforced, and every
+          comment resolves to one login — so A16 cannot tell an argument from a
+          monologue without a Trailer the writer chose to add.
+      - name: A GitHub App
+        chosen: false
+        reason: >-
+          Fine-grained permissions, short-lived tokens, no seat consumed. But one
+          App is one identity, so several Roles means several Apps, which is
+          heavy setup for a repository with one human in it. Machine accounts are
+          explicitly sanctioned by GitHub's terms and are ordinary logins
+          everywhere they appear.
+      - name: A handoff note, as a comment on the pull request
+        chosen: false
+        reason: >-
+          Tried and removed. It returns the seam to natural language where what
+          is needed is a discrete signal, and every one of its four headings was
+          answerable elsewhere: two restated what GitHub holds, one presumed
+          knowledge outside the departing Job's Agency, and one duplicated the
+          pull request body's second heading.
+      - name: Two machine users, an implementer and a reviewer
+        chosen: true
+        reason: >-
+          Two, because a boundary needs two sides and one account proves nothing.
+          Not three: merging is the solo's authorisation moment, not a Role. What
+          it costs is credential sprawl — an account, a token and a recovery path
+          each — and the boundary is only as real as the separation of the
+          tokens.
+    consequences:
+      - >-
+        Permission gains an enforcement point outside this repository. An account
+        that cannot push is a Remit GitHub holds rather than one an agent was
+        asked to respect, and the token handed to a container is the binding.
+      - >-
+        A16 becomes structural: two parties in a thread is two logins, not a
+        Trailer someone remembered to write.
+      - >-
+        An AuditRecord's actor becomes what GitHub observed rather than what the
+        agent claimed, which gives DR-004's delegation link a real end.
+      - >-
+        DR-056's loose end should resolve: `require_extra_approval_for_unattributed_changes`
+        is inert only while commits carry an address that is not a GitHub account.
+      - >-
+        The Trailer is not obviated. One Role account serves many Jobs, so the
+        account says which Role and the Trailer says which Actor within it.
+      - >-
+        Creating the accounts is the solo's, not an agent's, which is why this is
+        RECOMMENDED and not in force.
+      - >-
+        **The handoff becomes a review request**, which is what an account makes
+        possible. It names a successor, it is a state GitHub holds and reports,
+        and an arriving Job finds its work by asking what has been requested of
+        it. `.meta/templates/handoff.md` is deleted and DR-063's note is
+        superseded.
+      - >-
+        Until the accounts exist a handoff has no signal at all, and the
+        Discipline says so rather than keeping a note that pretends to be one.
+        A18 and the green gate still hold in the interim.
+    falsifier: >-
+      Both tokens living in the same place. The boundary would then exist only in
+      the story, and the accounts would be costume rather than Permission.
+    rationale: |-
+      The first decision recorded under DR-065's rule, and the one that forced
+      it.
+
+      Today a Remit's Permissions are asserted in YAML and enforced by nothing:
+      an agent has the solo's full rights and behaves because it was told to.
+      That is the gap between `Permission = Capability on a Securable` as a
+      model and as a fact, and a Role with an account of its own is the first
+      place the model gets an enforcement point that is not this repository's
+      own good intentions.
+
+      Two open questions, and the second decides whether any of it is real.
+      Whether the **reviewing agent gets an account or stays Copilot**, which
+      settles whether Roles are a general mechanism here or only the seam between
+      the solo and one agent. And **where the tokens live** — the whole claim is
+      that the token is the Remit bound at install time, and two tokens in one
+      `~/.config/gh` is a single Remit wearing two names.
+
+      More Roles when the SDLC lands in earnest. Naming them now would be
+      inventing a Role before there is work for it.
+
+      **And the accounts are what turn a handoff from prose into a semaphore.**
+      DR-063 built a note, and Christopher's reading of it took every heading
+      apart. *Where this stands* and *what is owed* restate the gate state and
+      the open threads, which GitHub holds — and which the note's own closing
+      rule said to leave out, so the form broke its own claim. *What is left*
+      presumes the departing Job knows the whole Challenge's remaining work,
+      which lies outside its Agency: the gate is the completeness test, and
+      anything noticed past it goes through the conversation-to-Issue valve. And
+      *what I would not do again* was already the pull request body's second
+      heading, and where it has durable value it belongs beside the artifact it
+      explains, per Literate Programming.
+
+      What remains is a state transition with two conditions on it, and that is
+      the improvement rather than the loss: a review request is something an
+      agent in another container acts on without interpreting anything.
+  - id: work:decision/067
+    name: "DR-067 · Handoff folds into PR First"
+    status: ADOPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/063
+    applies:
+      - work:article/18
+    options:
+      - name: Keep Handoff as a Discipline of its own
+        chosen: false
+        reason: >-
+          Once the note was removed there was no judgement left in it. Where to
+          stop turned out to be the gate's business, what to write turned out to
+          be nothing, and DR-047's test says a way of working with no judgement
+          is a program nobody has written yet. Keeping it would have meant
+          filling `judgement` with implementation notes — the exact tell DR-047
+          named.
+      - name: Fold it into PR First
+        chosen: true
+        reason: >-
+          PR First already owns the pull request's whole life, and the seam is a
+          moment in that life rather than a separate practice. What it costs is
+          eleven steps in one Discipline, and a reader looking for "handoff" now
+          has to know it is there — which the Concept answers, since it survives
+          and says where it lives.
+    consequences:
+      - >-
+        Two steps join PR First rather than four: push and stop at green, and
+        request review from the next Role's account. The rest were already there
+        — the conversation-to-Issue valve, reading GitHub on arrival, and the
+        Actor Trailer — and adding them again would have been the duplication
+        this session made the priority.
+      - >-
+        A18 now enforces PR First. The Article is unchanged; the thing it holds
+        moved.
+      - >-
+        The `handoff` skill is deleted, because a skill compiles a Discipline and
+        there is no longer one to compile. `pr-first` already triggers on picking
+        work up again.
+      - >-
+        The **Handoff** Concept survives and moves out of the Disciplines
+        grouping. The seam is a real thing whether or not it has a practice of
+        its own, and a reader who reaches for the word needs to be told where it
+        lives.
+    falsifier: >-
+      A handoff that goes wrong in a way PR First's steps do not cover — which
+      would mean the seam had judgement in it after all, and folding it in buried
+      that rather than removing it.
+    rationale: |-
+      DR-063 made Handoff a Discipline on the strength of two judgements: where
+      to stop, and what a successor cannot reconstruct. DR-066 removed the second
+      by removing the note, and Christopher's reading removed the first — the
+      gate is the completeness test for the Agency a Job holds, and green is not
+      a matter of opinion.
+
+      What was left was a state transition with two conditions on it. That is an
+      Article and two steps, not a Discipline, and this repository has a
+      precedent it wrote down: DR-047 retired `Gates Do Not Fix` for the same
+      reason.
+
+      The precedent is sharper than the class comment it is usually cited with.
+      `Discipline`'s comment warns that an **empty** `judgement` is a smell, and
+      Handoff's was not empty — it held two sentences that read as judgement.
+      One, where to stop, was the gate's business; the other, what a successor
+      cannot reconstruct, stopped existing when the note went. That is DR-047's
+      own finding rather than the comment's: a `judgement` filled with something
+      that is not judgement, *which is the tell I should have read*. An empty
+      slot announces itself. A filled one has to be read, and it was written by
+      whoever most wanted the class to exist.
+
+      The seam is not thereby less real. It is where a Collaboration actually
+      happens, and it keeps its Concept, its Article and the machinery that
+      carries it — a branch that nominates the Job, a Trailer that nominates the
+      Actor, and a review request that will name the successor once there is an
+      account to name.
+  - id: work:decision/068
+    name: "DR-068 · Resolving is assent, and counts as an answer"
+    status: ADOPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/057
+    applies:
+      - work:article/16
+    options:
+      - name: Require a written reply from a second party
+        chosen: false
+        reason: >-
+          It deadlocks. An agent raises a thread, the change overtakes it, and
+          there is no Issue to promote it to — so resolving fails A16 and not
+          resolving fails the ruleset. The solo's only way out is a sentence of
+          theatre per thread, which is how a rule gets routed around rather than
+          followed.
+      - name: Count whoever resolved the thread as a party
+        chosen: true
+        reason: >-
+          Resolving is an act, not a silence: a solo who reads an answer and
+          marks it resolved has assented, which is what A16 asks for. What it
+          costs is that it holds only while an agent does not resolve its own
+          sole-authored threads, because agent and solo share one login — so it
+          rests on a step until the accounts make it structural.
+    consequences:
+      - >-
+        PR First gains a step: never resolve a thread you are the sole author of.
+      - >-
+        `resolvedBy` joins the thread query, and the party set is the logins, the
+        Actor Trailers, and the resolver.
+      - >-
+        DR-066 makes it structural. With a Role account, `resolvedBy` is a
+        different login and nothing rests on the agent's restraint.
+    falsifier: >-
+      A thread resolved by the agent that wrote every word of it and passing the
+      check. That is the shortcut A16 exists to catch, and it is available today
+      to anyone who ignores the step.
+    rationale: |-
+      Found by the practice deadlocking on its own pull request. Two threads
+      raised by an agent, both answered by the change that overtook them, neither
+      deserving an Issue: resolving them failed A16 for having one party, and
+      leaving them unresolved failed the ruleset. `mergeStateStatus` was
+      `BLOCKED` with no legal move available to the agent.
+
+      A second defect surfaced at the same time and is worth recording, because
+      it passed rather than failed. One of the two threads satisfied A16 — for
+      the wrong reason. An agent comment written **without** the Trailer counted
+      as the human, so the agent had manufactured its own second party by
+      forgetting to sign. The rule that every comment carries a Trailer is not
+      decoration; it is what stops the party count being fiction.
+
+      Both are the same shortage: one login, two parties. Counting the resolver
+      is the honest interim, and it is honest only with the step beside it.

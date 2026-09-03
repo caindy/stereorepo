@@ -9,7 +9,7 @@ any disagreement. This records why one Project is built the way it is, and it
 is a `Decision` with its `project` set — the same class as an entry in
 `.meta/decisions.md`, filed where the people it binds will find it.
 
-- **Status:** <PROPOSED | ACCEPTED | SUPERSEDED | WITHDRAWN>
+- **Status:** <PROPOSED | RECOMMENDED | ADOPTED | SUPERSEDED | WITHDRAWN>
 - **Project:** <which Project this is about>
 - **Decided:** <date> — **Recorded:** <date>
 

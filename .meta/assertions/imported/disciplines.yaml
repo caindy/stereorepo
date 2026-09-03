@@ -253,7 +253,12 @@ disciplines:
       is not a decision about the repository, and filing either as the other
       loses it.
     steps:
-      - Record a decision when it is settled *and* implemented, not before.
+      - >-
+        Record a decision when the **question** is settled, not when the answer
+        is built. A decision begins with a question that demands an answer, and
+        the alternatives close the moment it is answered — waiting for the
+        implementation leaves them open to anyone who was not in the
+        conversation. Status carries the rest: recommended, or in force.
       - Say what was decided and why, not what changed. The diff already says what changed.
       - >-
         Keep the reasoning, including what was tried and abandoned, so the next
@@ -284,6 +289,16 @@ disciplines:
       they share is the pull request — which is why review and disagreement have
       to land there, and not in a transcript only one of them can see.
 
+      It is also where a **Handoff** happens — the seam where one Job stops and
+      another takes the same Challenge up. Collaborations here are sequential,
+      one Job at a time, each aware only of its own Agency, and what crosses the
+      seam is only what the pull request and the branch hold. A handoff is a
+      **semaphore, not a message**: GitHub's review request names a successor and
+      is a state the forge holds and reports, so an arriving Job finds its work
+      by asking what has been requested of it rather than by reading anything.
+      Awaiting the machine accounts of DR-066, because a review can only be
+      requested of an account.
+
       It is where **work noticed and not done** goes, as a linked Issue. A long
       run ends with things seen and left alone — out of scope, or a reasonable
       next step — and they are delivered in a closing summary, which is the one
@@ -302,6 +317,8 @@ disciplines:
       What constitutes one pull request. Too coarse and an argument has no
       subject; too fine and the record narrates change by change without ever
       saying what the whole was for.
+
+      Which Role to hand to, once there is more than one.
 
       Whether a review comment is answered. A reviewer's point can be right,
       right about something else, or overtaken by the diff, and only the first
@@ -332,9 +349,41 @@ disciplines:
         Title it with the words someone will search for. It is the index, and an
         index is worth exactly its titles.
       - >-
-        File what was noticed and not done as a linked Issue, before asking for
-        review. Not in the body, which closes with the pull request, and never in
-        a closing summary.
+        Raise what was noticed and not done as a **conversation on the diff**,
+        tagging the solo and opening with `**Noticed and not done.**`, at the
+        moment it is noticed. The marker is what stops a thread held open on
+        purpose reading as one owed an answer, and the last comment is the one
+        that counts — so replying without it is how an item that has been
+        overtaken stops being parked. Not a bullet in the body,
+        which closes with the pull request, and never a closing summary. An
+        unresolved conversation blocks the merge, so the item cannot be walked
+        past without somebody deciding what it is.
+      - >-
+        Never resolve a thread you are the sole author of. Resolving is assent
+        and A16 counts it as a party, which only holds while the party doing it
+        is not the one who wrote everything in the thread — the solo and an agent
+        share one login until DR-066, so nothing but this step tells them apart.
+      - >-
+        Promote at merge, not before. What survives the argument earns an Issue
+        and the thread is resolved with a link to it; what the change overtook is
+        answered and resolved where it was raised. Filing at review time creates
+        a tracker item with no relationship to the outcome, which goes stale the
+        moment the approach moves under it.
+      - >-
+        Link the merge back to it, so the trail from a line of code to its
+        account survives in the clone. A pull request is **merged, never
+        abandoned**: it exists because a Challenge does, and a Challenge is a real
+        need. Work that turned out to be the wrong answer merges as the record of
+        that, which is worth more than a closed tab.
+      - >-
+        Push before stopping, and stop at green. Work that exists only in a
+        worktree the next Job will never see has not been handed off, and a red
+        gate is not a handoff — it is a mess whose author is gone. The gate is
+        the completeness test for the Agency you hold; nothing else is.
+      - >-
+        Request review from the next Role's account when you stop. Until those
+        accounts exist a handoff has no signal, and saying so is better than a
+        note that pretends to be one.
       - >-
         Stay subscribed to it until it closes. A review lands minutes after a
         push and nobody is looking by then, so the conversation that opened the
@@ -343,20 +392,27 @@ disciplines:
         and a harness that cannot wake a conversation says so rather than
         pretending.
       - >-
-        On starting work, ask what this branch already owns. One branch is one
+        On arrival, read what GitHub holds — the pull request, the diff, the
+        commits, the threads and the check states. There is nothing else, by
+        design. Ask what this branch already owns: One branch is one
         pull request, so the checkout is the token and GitHub resolves it — no
         note to find, nothing to go stale, and it survives a session ending
         mid-argument. Authorship cannot answer this: every pull request here is
         the solo's, so asking who opened one says nothing about which agent is
         answerable for it.
       - >-
-        Name the Actor in every commit. Which thread did the work is recoverable
-        from nothing else once the session is gone, and a trailer naming a
-        co-author who is not a person tells a maintainer nothing. The branch
-        says which Job; the trailer says who took it.
+        Name the Actor in every commit **and every comment**. Which thread did
+        the work is recoverable from nothing else once the session is gone, and
+        a trailer naming a co-author who is not a person tells a maintainer
+        nothing. On a comment it does more than record: every comment an agent
+        writes is posted under the solo's account, so without it an argument
+        between the two of them reads as one party talking to itself, and A16
+        cannot tell them apart. The branch says which Job; the trailer says who
+        took it.
     produces:
       - A searchable record of why each change was made, attached to the change.
       - A place two agents that share nothing else can meet.
+      - A successor that resumes rather than restarts.
       - Work noticed and not done, in a queue rather than a pile.
   - id: work:discipline/journaling
     name: Journaling

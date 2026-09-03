@@ -107,7 +107,7 @@ _Why:_ A long run ends with a summary carrying two or three things seen and left
 
 ### A16. A review thread resolved without an answer has not been resolved.
 
-**Enforces** PR First. **Checked by** `check_pr.py`, which requires every resolved thread to carry a reply from someone other than whoever opened it. GitHub requires resolution; this requires that the resolution mean something.
+**Enforces** PR First. **Checked by** `check_pr.py`, which requires every resolved thread to carry a reply from a second party, **or** a link to the Issue it became. A party is the GitHub login and the `Actor:` trailer together, because every comment an agent writes here is posted under the solo's account and logins alone can never show two. GitHub requires resolution; this requires that the resolution mean something. A promotion link is the one kind of answer a machine can verify, which is why it counts where prose from a second party would otherwise be demanded — a solo working with agents cannot manufacture a second party on request.
 
 _Why:_ Requiring resolution teaches the shortcut. A thread closed to clear the merge gate is indistinguishable afterwards from one that was answered, so the requirement that looked like a control becomes a control whose passing carries no information. The alternative on offer was auto-resolving outdated threads, which is the same failure with the work removed: an anchor moving is not a concern being met.
 
@@ -116,3 +116,9 @@ _Why:_ Requiring resolution teaches the shortcut. A thread closed to clear the m
 **Enforces** Ubiquitous Language. **Checked by** Nothing yet, and the first attempt is instructive about why. Counting words new to a diff and repeated across files does find a mint, and it finds forty other things per change, each needing a person. A gate whose output has to be triaged by hand every time is a gate that gets skipped. Deferred until PR First Collaboration is working, where a reviewing agent can read a change against the vocabulary rather than count against it.
 
 _Why:_ `forge` reached the Charter, three decision records, two READMEs, a scope note and a function name before anyone asked whether it had been agreed. The rule against minting existed as a parenthetical in one table cell of `.meta/README.md`, and nothing consumed it.
+
+### A18. Work not pushed has not been handed off.
+
+**Enforces** PR First. **Checked by** `check_pr.py --handoff`, which refuses when the worktree is dirty or the branch is ahead of its remote, and prints the note's form only once both are clean.
+
+_Why:_ A successor shares no filesystem. Every other part of a handoff is a matter of judgement about what to write down; this part is not, and it is the one that silently loses the work rather than the reasoning — the note reads correctly, the branch looks resumable, and an afternoon is simply gone.

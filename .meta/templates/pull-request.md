@@ -21,8 +21,10 @@ constraint made the obvious approach wrong.
 again. "Nothing would" means it is load-bearing forever, and that claim needs its
 reason stated.
 
-**What was noticed and not done.** One link per item, to an Issue. Not a bullet —
-a bullet here closes when the pull request does.
+**What was noticed and not done.** One link per item, to an Issue, filled in at
+**merge** — these are the conversations that survived the argument. Empty until
+then, and often empty for good: an item the change overtook is answered in its
+thread, not tracked.
 
 - #<n> — <one line, so the list is readable without opening anything>
 ```
@@ -46,9 +48,19 @@ explanation belongs in an artifact or here.
 
 **The fourth heading takes links, not text** (A15). Work noticed and not done is
 a Challenge nobody has taken up, and it needs what an Issue has and prose does
-not: an open and a closed, and a life longer than this body's. File it before
-asking for review — a closing summary is the one artifact with no persistence at
-all.
+not: an open and a closed, and a life longer than this body's.
+
+Raise it first as a **conversation on the diff**, tagging the solo, opening with
+`**Noticed and not done.**` so it is not mistaken for a point owed an answer, at
+the moment you notice it. The **last** comment decides, so re-mark it if the
+argument moves on and it is still parked — and simply reply without the marker
+when the change has overtaken it. Sign every comment with the `Actor:` trailer the
+commits carry — the marker says what kind of thread it is, the trailer says who
+is speaking, and in a repository where every comment is posted under one account
+nothing else can. An unresolved conversation blocks the merge, so nothing is walked
+past silently, and the item keeps the context it was noticed in. Promote it to an
+Issue at merge if it survived the argument, and resolve the thread with the link
+— which is also what satisfies A16.
 
 What earns an Issue is whether you can say **what would make it worth doing**. A
 trigger, or a cost that will land. That is the same question as *what would make

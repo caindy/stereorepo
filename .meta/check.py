@@ -331,6 +331,10 @@ justified at the moment it is made and paid for afterwards.
 def decision_options(index):
     """One option is chosen, and it is stated at all from DR-060 onward.
 
+    A recommendation is held to the same rule as something in force. It is the
+    closing of the alternatives that makes a decision, and that happens when the
+    question is answered rather than when the answer is built.
+
     LinkML can require the slot and cannot count across the list, so a Decision
     with two chosen options — or with a rejected option and no chosen one — is
     well formed and says nothing. Nor can it exempt the converted entries, which
@@ -343,7 +347,7 @@ def decision_options(index):
             continue
         options = obj.get("options") or []
         if not options:
-            if obj.get("status") == "ACCEPTED" \
+            if obj.get("status") in ("ADOPTED", "RECOMMENDED") \
                     and int(did.rsplit("/", 1)[-1]) >= OPTIONS_REQUIRED_FROM:
                 problems.append(f"{did}: accepted and states no options; if the alternative "
                                 "was doing nothing, say so — that is an option and it has a reason")

@@ -10,7 +10,9 @@ constraint made the obvious approach wrong.
 again. "Nothing would" means it is load-bearing forever, and that claim needs its
 reason stated.
 
-**What was noticed and not done.** One link per item, to an Issue. Not a bullet —
-a bullet here closes when the pull request does.
+**What was noticed and not done.** One link per item, to an Issue, filled in at
+**merge** — these are the conversations that survived the argument. Empty until
+then, and often empty for good: an item the change overtook is answered in its
+thread, not tracked.
 
 - #<n> — <one line, so the list is readable without opening anything>

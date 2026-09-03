@@ -8,6 +8,14 @@ into a Capability name: "edit files" is a Capability, `.meta/**` is a Securable,
 and the pair is a Permission. When tempted to add a dimension to Capability, ask
 which axis it belongs to.
 
+**A mechanism for the live session needs a recovery path that does not depend on
+it.** A watch reaches a conversation that still exists; a handoff note is written
+only by a session that got to finish its sentence. Both are optimisations, and
+both are worth having — but the thing underneath has to work when neither ran,
+because the case they fail in is exactly the case recovery is for. So ownership
+resolves from the branch whether or not a watch was registered, and a resume
+reads GitHub whether or not a note was posted.
+
 **Prefer derived over declared.** A summary that can drift from what it
 summarises is worse than no summary, because people trust the flag over the
 truth. This is why Capability carries no read/write dimension, and why

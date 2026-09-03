@@ -30,6 +30,19 @@ import sys
 
 META = pathlib.Path(__file__).parent
 FORM = META / "templates" / "pull-request.md"
+# A promotion, in the only form that can be checked: a link to the Issue the
+# thread became. Bare "#12" is deliberately not enough — it is what someone
+# types when referring to an Issue, not when filing one.
+# A parked item announces itself, so a thread deliberately held open until merge
+# is not confused with one owed an answer. Same trick as the handoff note's
+# heading: a convention a machine can see, rather than a guess from who opened it.
+# Who wrote a comment, when the GitHub login cannot say. Every comment an agent
+# posts here is authored by the solo's account, so a genuine exchange between the
+# solo and an agent is indistinguishable from one party talking to itself. The
+# trailer is what separates them — the same one the commits carry.
+ACTOR = re.compile(r"^Actor:\s*(\S+)", re.M)
+NOTICED = re.compile(r"^\W*\*\*Noticed and not done\.?\*\*", re.M)
+PROMOTED = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/issues/\d+")
 HEADING = re.compile(r"^\*\*(.+?)\.\*\*", re.M)
 PLACEHOLDER = re.compile(r"<[^<>\n]*\s[^<>\n]*>")
 LINK = re.compile(r"(#\d+|https?://\S+)")
@@ -111,6 +124,7 @@ query($owner: String!, $name: String!, $number: Int!) {
         nodes {
           id
           isResolved
+          resolvedBy { login }
           isOutdated
           path
           line
@@ -146,16 +160,35 @@ def threads(ref):
     return data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
 
 
-def unaddressed(nodes):
+def unaddressed(nodes, parked=False):
     """What is still owed an answer, in the order a reader should take them.
 
-    Unresolved is the whole test. An outdated thread is still unaddressed —
-    DR-057 — and is marked rather than filtered, because the anchor moving is
-    the reader's context and not a reason to skip it.
+    Unresolved is the test, and it now covers two different things. A review
+    point is owed an answer. An item **noticed and not done** is deliberately
+    held open until merge, because an unresolved thread is what stops it being
+    walked past — so it is unresolved on purpose and waking someone for it is
+    noise. `parked` selects which set is wanted.
+
+    The **last** comment decides, which is the only version where both
+    transitions work. Reading the first would stop a reviewer's point from ever
+    becoming work for later; reading any would let a thread be parked and never
+    un-parked, which is what happened the first time — a thread answered by the
+    change that overtook it still read as held.
+
+    The cost is that a parked item un-parks when anyone replies without the
+    marker. That is usually right, since a reply means it is live again, and
+    re-marking is one line.
+
+    An outdated thread is still unaddressed (DR-057) and is marked rather than
+    filtered: the anchor moving is the reader's context, not a reason to skip it.
     """
     out = []
     for t in nodes:
         if t["isResolved"]:
+            continue
+        comments = t["comments"]["nodes"]
+        held = bool(comments) and bool(NOTICED.search(comments[-1]["body"] or ""))
+        if held != parked:
             continue
         where = t["path"] or "the pull request"
         if t.get("line"):
@@ -163,7 +196,7 @@ def unaddressed(nodes):
         if t["isOutdated"]:
             where += " (outdated — answer it anyway)"
         said = []
-        for c in t["comments"]["nodes"]:
+        for c in comments:
             who = (c["author"] or {}).get("login", "someone")
             said.append(f"    {who}: " + " ".join((c["body"] or "").split())[:600])
         out.append(f"  {t['id']}\n  {where}\n" + "\n".join(said))
@@ -201,6 +234,64 @@ def owned_and_open():
                     for p in gh("pr", "list", "--state", "open", "--json", "number,title")]
 
 
+def unpushed():
+    """A18. Work in a worktree the successor will never see has not been done.
+
+    Two conditions, and neither needs judgement: nothing uncommitted, and nothing
+    committed that has not been pushed. It is the one step of a Handoff a machine
+    can own outright, which is exactly why it is an Article and not a step
+    carrying advice.
+    """
+    def git(*args):
+        """Failure is a finding here, not a zero.
+
+        The first version returned stdout and dropped the exit code, so
+        `rev-list @{u}..HEAD` on a branch with no upstream printed nothing to
+        stdout, failed, and read as "nothing ahead". A18 then passed on a branch
+        that had never been pushed — which is the exact case it exists to catch,
+        and the one where a silent pass costs the whole afternoon.
+        """
+        out = subprocess.run(["git", *args], capture_output=True, text=True)
+        return out.returncode, out.stdout.strip(), out.stderr.strip()
+
+    problems = []
+    code, dirty, err = git("status", "--porcelain")
+    if code:
+        return [f"git status failed, so nothing here was checked: {err}"]
+    if dirty:
+        problems.append(f"{len(dirty.splitlines())} uncommitted change(s); a successor sees none of them")
+    code, upstream, _ = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+    if code:
+        problems.append("the branch has no upstream; push it, or there is nothing to hand over")
+        return problems
+    code, ahead, err = git("rev-list", f"{upstream}..HEAD")
+    if code:
+        return problems + [f"git rev-list failed, so pushed state is unknown: {err}"]
+    if ahead:
+        problems.append(f"{len(ahead.splitlines())} commit(s) not pushed; the branch is the handoff")
+    return problems
+
+
+def resume(ref):
+    """What GitHub holds about a pull request, for an arriving Job.
+
+    This is the whole briefing. A handoff carries no prose — it is a review
+    request, which is a state rather than a message — so what an arriving Job
+    knows is what GitHub holds, and there is nothing else to go stale.
+    """
+    pr = gh("pr", "view", ref, "--json",
+            "number,title,body,headRefName,statusCheckRollup")
+    out = [f"#{pr['number']} {pr['title']}",
+           f"branch: {pr['headRefName']}", "", "--- body ---", pr["body"] or "(empty)", ""]
+    states = {c.get("name") or c.get("context"): c.get("conclusion") or c.get("state")
+              for c in pr.get("statusCheckRollup") or []}
+    out.append("checks: " + (", ".join(f"{k}={v}" for k, v in states.items()) or "none"))
+    owed = unaddressed(threads(ref))
+    out.append(f"--- {len(owed)} thread(s) owed an answer ---")
+    out += owed
+    return "\n".join(out)
+
+
 def resolved_without_an_answer(ref):
     """A16. Requiring resolution is what makes this check necessary.
 
@@ -217,18 +308,67 @@ def resolved_without_an_answer(ref):
     return unanswered(threads(ref))
 
 
+def parties(thread):
+    """Who took part: the login and the Actor Trailer, plus whoever resolved it.
+
+    Resolving is an act, not a silence. A solo who reads an agent's answer and
+    marks the thread resolved has taken part — that is assent, and it is what
+    A16 asks for. Requiring a reply as well would make the Article cost a
+    sentence of theatre per thread, which is how a rule gets routed around.
+
+    It is trustworthy only while an agent does not resolve a thread it is the
+    sole author of, because the agent and the solo share one login and
+    `resolvedBy` cannot tell them apart. That is a Discipline step until DR-066
+    gives each Role an account, at which point the distinction is GitHub's to
+    make rather than ours to observe.
+
+    A16 asks for a second party. In a solorepo every comment an agent writes is
+    posted under the solo's account, so logins alone can never show two — and the
+    Article would be unsatisfiable exactly where it matters, between the solo and
+    the agent he is arguing with. An unsigned comment is the human; a signed one
+    is the Job that signed it.
+    """
+    seen = set()
+    resolver = (thread.get("resolvedBy") or {}).get("login")
+    if resolver:
+        seen.add(resolver)
+    for c in thread["comments"]["nodes"]:
+        login = (c["author"] or {}).get("login", "someone")
+        actor = ACTOR.search(c["body"] or "")
+        seen.add(f"{login}/{actor.group(1)}" if actor else login)
+    return seen
+
+
 def unanswered(nodes):
-    """The predicate, apart from the fetching, so it can be watched failing."""
+    """The predicate, apart from the fetching, so it can be watched failing.
+
+    Three things count as an answer. A reply from someone other than whoever
+    opened the thread, which is the original rule. Or a link to the Issue the
+    thread became, which is what promotion looks like: work noticed and not done
+    is raised here first and earns an Issue only if it survives the argument, so
+    the thread that spawned one is answered by saying which.
+
+    Or the solo resolving it, which is assent rather than silence — see
+    `parties`.
+
+    The second was added because the first cannot be satisfied by a solo working
+    with agents. Every thread on a change may be opened and closed by the same
+    party, and demanding a second one either manufactures a reply or teaches the
+    shortcut A16 exists to catch.
+    """
     problems = []
     for t in nodes:
         if not t["isResolved"]:
             continue
-        authors = [c["author"]["login"] for c in t["comments"]["nodes"] if c["author"]]
-        if len(set(authors)) < 2:
-            who = authors[0] if authors else "nobody"
-            problems.append(
-                f"resolved without an answer: {t['path'] or 'the pull request'}, "
-                f"opened by {who} — if it was worth mentioning it is worth answering")
+        comments = t["comments"]["nodes"]
+        if len(parties(t)) >= 2:
+            continue
+        if any(PROMOTED.search(c["body"] or "") for c in comments):
+            continue
+        who = ", ".join(sorted(parties(t))) or "nobody"
+        problems.append(
+            f"resolved without an answer: {t['path'] or 'the pull request'}, "
+            f"opened by {who} — answer it, or promote it to an Issue and link that")
     return problems
 
 
@@ -248,6 +388,10 @@ if __name__ == "__main__":
     ap.add_argument("--title", default="a real title", help="title to use with --file")
     ap.add_argument("--threads", action="store_true",
                     help="print the threads still owed an answer, and check nothing")
+    ap.add_argument("--resume", action="store_true",
+                    help="what an arriving Job needs, read from GitHub")
+    ap.add_argument("--handoff", action="store_true",
+                    help="A18: refuse to hand off work the successor cannot see")
     ap.add_argument("--sweep", action="store_true",
                     help="every open pull request you own, and what each still owes")
     args = ap.parse_args()
@@ -266,11 +410,28 @@ if __name__ == "__main__":
                 print(item)
         sys.exit(0)
 
+    if args.handoff:
+        problems = unpushed()
+        for p in problems:
+            print(f"x  {p}")
+        print(("x  " if problems else "ok ") + "handoff")
+        sys.exit(1 if problems else 0)
+
+    if args.resume:
+        if not args.pr:
+            ap.error("--resume needs a pull request")
+        print(resume(args.pr))
+        sys.exit(0)
+
     if args.threads:
         if not args.pr:
             ap.error("--threads needs a pull request")
-        owed = unaddressed(threads(args.pr))
+        nodes = threads(args.pr)
+        owed, parked = unaddressed(nodes), unaddressed(nodes, parked=True)
         print("\n".join(owed) if owed else "nothing unaddressed")
+        if parked:
+            print(f"\n--- {len(parked)} noticed and not done, held for promotion at merge ---")
+            print("\n".join(parked))
         sys.exit(0)
 
     if args.file:

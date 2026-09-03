@@ -6,7 +6,8 @@
 
 _Every decision taken, with why. Newest last._
 
-Add an entry when a decision is settled *and* implemented. A number is a
+Add an entry when the question is settled, not when the answer is built —
+`status` says how far it has got. A number is a
 **stable identifier** and is never reused: an entry that turned out to record a
 narrative rather than a foreclosure is withdrawn, and its number stays a hole
 at the foot of this page.
@@ -1886,6 +1887,302 @@ and leaves the reasoning where it was routed.
 **Bearing on the Charter.** Applies A14.
 
 **Supersedes.** DR-060
+
+### DR-063 · Handoff is a Discipline, and nothing depends on the note being written
+
+*2026-09-03*
+
+The roadmap's Collaboration mission is Claude picking up where Gemini left
+off, each in its own container. Everything needed for that existed except
+the seam itself: `Collaboration` is already the Jobs that meet on one
+Challenge, and DR-062 settled that the branch nominates the Job and the
+trailer the Actor. Nothing said what must be true when one stops and
+another starts.
+
+**Most of what a successor needs is already answerable.** The Challenge is
+the pull request and its linked Issue, what was done is the diff and the
+commits, what is owed is the unresolved threads and the check states, and
+who it follows is in the trailers. Two things are not: **what is left**,
+and **what was tried and abandoned**. The second is unrecoverable by
+construction — a diff records what was done and nothing records what was
+ruled out — so a successor without it walks the same dead end at full
+price.
+
+**The note cannot be a precondition.** A session dies, a context fills, a
+container is reaped, and none of those get to write anything. So `--resume`
+reads GitHub regardless and the note is read last; where they disagree the
+repository is right. A practice that only works when its own steps were
+followed is not one you can hand to a stranger — and this is the second
+time that argument has been made, so it is a Principle now rather than a
+paragraph in a third decision.
+
+**One step has no judgement in it and became an Article.** Everything else
+here is about what is worth writing down. A18 is not: work in a worktree
+the successor will never see has not been handed off, and it is the failure
+that loses the *work* rather than the reasoning — the note reads correctly,
+the branch looks resumable, and an afternoon is gone.
+
+**Options considered.**
+
+- _Steps inside PR First_ — rejected. PR First is about the venue — where work is proposed, argued and recorded. A Handoff is about a seam between two Jobs, has its own judgement about where to stop, and is followed by an arriving agent that may never have opened a pull request in its life. Folding it in would bury it in a Discipline already carrying nine steps.
+- _A Discipline of its own, with a form and one Article_ — chosen. It has genuine judgement — where to stop, and what a successor cannot reconstruct — which is the test DR-047 set. What it costs is a thirteenth Discipline, and a reader has to know that Handoff depends on PR First rather than standing beside it.
+- _A state file in the repository_ — rejected. DR-054's `TECH_DEBT.md` with a different name. No open and closed, no context, free to append and so unbounded, and it would land in the diff as noise on every change.
+
+**Consequences.**
+
+- The note is a comment on the pull request, appended and never rewritten. The body is the account of the change and is written once at the start; state of play accumulates.
+- A18 joins the Charter and is checked by `check_pr.py --handoff`, which refuses a dirty worktree or an unpushed branch and prints the form only once both are clean. Watched failing on three uncommitted files.
+- `check_pr.py --resume` reads what GitHub holds for an arriving Job, and prints the last note last, saying plainly that its absence is expected.
+- The asymmetry between a live-session mechanism and its recovery path is now a Principle, having been argued twice — once for the watch and the sweep, once here.
+- `Handoff` is minted as a Concept. Christopher named it; it is ordinary English doing a specific job here, which is what a scope note is for.
+
+**What would falsify this.** A successor that reads a note, follows it, and is wrong — because the repository had moved and the note had not. That would mean the ordering of the steps is wrong, not that the note should go.
+
+**Bearing on the Charter.** Applies A1, A18.
+
+### DR-064 · Work noticed and not done is a conversation first, and an Issue only if it survives
+
+*2026-09-03*
+
+Christopher's ruling, and the case for it was in front of us: Issue #10 was
+filed at review time on a design he was about to change, which is a tracker
+item that would have gone stale with nothing to notice.
+
+**A conversation survives DR-054's own test**, which is what makes this a
+replacement rather than a relaxation. That decision rejected `TECH_DEBT.md`
+for four failures — no state, no context, unbounded growth, an unscoped
+flush. A thread has state, carries the diff it was noticed against, is
+bounded by one pull request, and flushes in scope. The reasoning that sent
+these to Issues objects to prose in a body, not to threads.
+
+**The blocking half was already installed.** DR-057 made unresolved threads
+block the merge, so a noticed item cannot be walked past without somebody
+deciding what it is. Nothing new enforces this; an existing control turned
+out to be the right one.
+
+**And the merge is the authorisation.** Asking for the merge with a
+conversation open is the ruling that it earns an Issue — which is why
+promotion is a step of merging rather than a thing to remember afterwards.
+
+Abandonment was raised and does not arise: a pull request exists because a
+Challenge does, and a Challenge in a solorepo is a real need by
+construction. Work that turns out to be the wrong answer merges as the
+record of that. Not made an Article, because the Charter is empirical and
+nothing has failed here yet — if a pull request is ever abandoned with
+parked conversations on it, that is the origin and this is the rule.
+
+**Options considered.**
+
+- _File an Issue at the moment of noticing_ — rejected. DR-054's rule, and it creates a tracker item with no relationship to the outcome of the change that produced it. When the approach moves underneath it the Issue goes stale and nothing notices, because an Issue has no link back to the argument that would have corrected it.
+- _Raise it as a conversation, promote at merge_ — chosen. It keeps the context it was noticed in, it blocks the merge until somebody rules on it, and what the change overtakes dies where it was raised instead of in the tracker. What it costs is that an item is invisible to anyone not reading the pull request until it is promoted.
+- _Keep a list in the body_ — rejected. Still what A15 was written against. A bullet closes when the pull request does, and nothing blocks on it.
+
+**Consequences.**
+
+- A16 widens: a resolved thread carries a reply from someone else **or** a link to the Issue it became. Without this the practice cannot be followed by a solo, since every thread on a change may have one author and demanding a second manufactures the reply A16 exists to catch.
+- The body's fourth heading is filled at merge rather than before review, and is legitimately empty until then.
+- A thread held open on purpose is marked `**Noticed and not done.**`, or the tooling wakes someone for it. Found within a minute of the first one being raised, by the watch firing on it.
+- A pull request is merged, never abandoned. It exists because a Challenge does, and a Challenge is a real need, so work that turned out to be the wrong answer merges as the record of that.
+- PR First's merge-trail step is restored, having been deleted by accident in DR-060's edit and shipped missing.
+
+**What would falsify this.** A parked conversation that outlives the pull request — promoted to nothing and answered by nobody, because the merge went through while it was still marked. That would mean the marker bought silence rather than distinction.
+
+**Bearing on the Charter.** Applies A15, A16.
+
+**Supersedes.** DR-054, DR-057
+
+### DR-065 · A decision begins with a question that demands an answer
+
+*2026-09-03*
+
+Christopher's ruling, in his words: when we agree that something is worth
+deciding, it can be recorded as a decision. Put the other way — and closer
+to the decision taxonomy he intends to bring in — **a decision begins with
+a question that demands an answer.**
+
+The case that forced it was the machine users. The choice was made in
+conversation, the alternative rejected for a stated reason, and the rule
+as written sent all of it to `roadmap.md` as prose because no account had
+been created yet. That is the failure this session spent its length
+removing, one file over: reasoning in an artifact nothing can query, in the
+last large hand-maintained file in `.meta/`.
+
+**The status ladder is what makes it safe.** PROPOSED is a question with a
+candidate answer, still arguable. RECOMMENDED is the answer endorsed and
+nothing in force. ADOPTED is in force. A reader who wants to know what
+binds reads the status, and the record stops silently conflating "we
+decided this" with "this is how it works".
+
+**And ACCEPTED was the wrong word** for the state it named. Acceptance is
+something done to a proposal at a moment; adoption is a condition the
+repository is in and stays in, which is what a reader is asking about.
+
+**Options considered.**
+
+- _Record only when settled and implemented_ — rejected. It keeps the record honest about what exists, and it leaves the closed alternatives open to anyone who was not in the conversation. A decision that has been taken and not written down is a decision only its participants can cite, which is A11 with a delay rather than an exemption.
+- _Record when the question is settled, and let status carry the rest_ — chosen. The alternatives close when the question is answered, not when the answer is built. What it costs is that the record now contains things that do not exist yet, so `status` has to be read and not assumed — and a reader who skips it will believe something is in force that is not.
+
+**Consequences.**
+
+- `DecisionStatus` gains RECOMMENDED, between PROPOSED and in force: the question is answered and the answer endorsed, but nothing is built.
+- ACCEPTED is renamed ADOPTED. Accepting is something done to a proposal; adopting is a state the repository is in, which is what the value means.
+- Written Decisions loses "not before", and `AGENTS.md`, the record's own header and the rendered page follow.
+- A recommendation must state its options, the same as something in force. Closing the alternatives is what makes it a decision at all.
+- The roadmap's job narrows. What is *settled and unbuilt* is a RECOMMENDED decision; what remains is what is genuinely open.
+
+**What would falsify this.** A record where most entries are RECOMMENDED and stay that way. That would mean the status had become a place to put intentions, and the old rule was buying discipline rather than costing it.
+
+**Bearing on the Charter.** Applies A11.
+
+**Supersedes.** DR-009, DR-059
+
+### DR-066 · Two machine users, with distinct Roles, and the handoff is a review request
+
+*2026-09-03*
+
+The first decision recorded under DR-065's rule, and the one that forced
+it.
+
+Today a Remit's Permissions are asserted in YAML and enforced by nothing:
+an agent has the solo's full rights and behaves because it was told to.
+That is the gap between `Permission = Capability on a Securable` as a
+model and as a fact, and a Role with an account of its own is the first
+place the model gets an enforcement point that is not this repository's
+own good intentions.
+
+Two open questions, and the second decides whether any of it is real.
+Whether the **reviewing agent gets an account or stays Copilot**, which
+settles whether Roles are a general mechanism here or only the seam between
+the solo and one agent. And **where the tokens live** — the whole claim is
+that the token is the Remit bound at install time, and two tokens in one
+`~/.config/gh` is a single Remit wearing two names.
+
+More Roles when the SDLC lands in earnest. Naming them now would be
+inventing a Role before there is work for it.
+
+**And the accounts are what turn a handoff from prose into a semaphore.**
+DR-063 built a note, and Christopher's reading of it took every heading
+apart. *Where this stands* and *what is owed* restate the gate state and
+the open threads, which GitHub holds — and which the note's own closing
+rule said to leave out, so the form broke its own claim. *What is left*
+presumes the departing Job knows the whole Challenge's remaining work,
+which lies outside its Agency: the gate is the completeness test, and
+anything noticed past it goes through the conversation-to-Issue valve. And
+*what I would not do again* was already the pull request body's second
+heading, and where it has durable value it belongs beside the artifact it
+explains, per Literate Programming.
+
+What remains is a state transition with two conditions on it, and that is
+the improvement rather than the loss: a review request is something an
+agent in another container acts on without interpreting anything.
+
+**Options considered.**
+
+- _Keep acting as the solo_ — rejected. Every Permission is then honoured rather than enforced, and every comment resolves to one login — so A16 cannot tell an argument from a monologue without a Trailer the writer chose to add.
+- _A GitHub App_ — rejected. Fine-grained permissions, short-lived tokens, no seat consumed. But one App is one identity, so several Roles means several Apps, which is heavy setup for a repository with one human in it. Machine accounts are explicitly sanctioned by GitHub's terms and are ordinary logins everywhere they appear.
+- _A handoff note, as a comment on the pull request_ — rejected. Tried and removed. It returns the seam to natural language where what is needed is a discrete signal, and every one of its four headings was answerable elsewhere: two restated what GitHub holds, one presumed knowledge outside the departing Job's Agency, and one duplicated the pull request body's second heading.
+- _Two machine users, an implementer and a reviewer_ — chosen. Two, because a boundary needs two sides and one account proves nothing. Not three: merging is the solo's authorisation moment, not a Role. What it costs is credential sprawl — an account, a token and a recovery path each — and the boundary is only as real as the separation of the tokens.
+
+**Consequences.**
+
+- Permission gains an enforcement point outside this repository. An account that cannot push is a Remit GitHub holds rather than one an agent was asked to respect, and the token handed to a container is the binding.
+- A16 becomes structural: two parties in a thread is two logins, not a Trailer someone remembered to write.
+- An AuditRecord's actor becomes what GitHub observed rather than what the agent claimed, which gives DR-004's delegation link a real end.
+- DR-056's loose end should resolve: `require_extra_approval_for_unattributed_changes` is inert only while commits carry an address that is not a GitHub account.
+- The Trailer is not obviated. One Role account serves many Jobs, so the account says which Role and the Trailer says which Actor within it.
+- Creating the accounts is the solo's, not an agent's, which is why this is RECOMMENDED and not in force.
+- **The handoff becomes a review request**, which is what an account makes possible. It names a successor, it is a state GitHub holds and reports, and an arriving Job finds its work by asking what has been requested of it. `.meta/templates/handoff.md` is deleted and DR-063's note is superseded.
+- Until the accounts exist a handoff has no signal at all, and the Discipline says so rather than keeping a note that pretends to be one. A18 and the green gate still hold in the interim.
+
+**What would falsify this.** Both tokens living in the same place. The boundary would then exist only in the story, and the accounts would be costume rather than Permission.
+
+**Bearing on the Charter.** Applies A16.
+
+### DR-067 · Handoff folds into PR First
+
+*2026-09-03*
+
+DR-063 made Handoff a Discipline on the strength of two judgements: where
+to stop, and what a successor cannot reconstruct. DR-066 removed the second
+by removing the note, and Christopher's reading removed the first — the
+gate is the completeness test for the Agency a Job holds, and green is not
+a matter of opinion.
+
+What was left was a state transition with two conditions on it. That is an
+Article and two steps, not a Discipline, and this repository has a
+precedent it wrote down: DR-047 retired `Gates Do Not Fix` for the same
+reason.
+
+The precedent is sharper than the class comment it is usually cited with.
+`Discipline`'s comment warns that an **empty** `judgement` is a smell, and
+Handoff's was not empty — it held two sentences that read as judgement.
+One, where to stop, was the gate's business; the other, what a successor
+cannot reconstruct, stopped existing when the note went. That is DR-047's
+own finding rather than the comment's: a `judgement` filled with something
+that is not judgement, *which is the tell I should have read*. An empty
+slot announces itself. A filled one has to be read, and it was written by
+whoever most wanted the class to exist.
+
+The seam is not thereby less real. It is where a Collaboration actually
+happens, and it keeps its Concept, its Article and the machinery that
+carries it — a branch that nominates the Job, a Trailer that nominates the
+Actor, and a review request that will name the successor once there is an
+account to name.
+
+**Options considered.**
+
+- _Keep Handoff as a Discipline of its own_ — rejected. Once the note was removed there was no judgement left in it. Where to stop turned out to be the gate's business, what to write turned out to be nothing, and DR-047's test says a way of working with no judgement is a program nobody has written yet. Keeping it would have meant filling `judgement` with implementation notes — the exact tell DR-047 named.
+- _Fold it into PR First_ — chosen. PR First already owns the pull request's whole life, and the seam is a moment in that life rather than a separate practice. What it costs is eleven steps in one Discipline, and a reader looking for "handoff" now has to know it is there — which the Concept answers, since it survives and says where it lives.
+
+**Consequences.**
+
+- Two steps join PR First rather than four: push and stop at green, and request review from the next Role's account. The rest were already there — the conversation-to-Issue valve, reading GitHub on arrival, and the Actor Trailer — and adding them again would have been the duplication this session made the priority.
+- A18 now enforces PR First. The Article is unchanged; the thing it holds moved.
+- The `handoff` skill is deleted, because a skill compiles a Discipline and there is no longer one to compile. `pr-first` already triggers on picking work up again.
+- The **Handoff** Concept survives and moves out of the Disciplines grouping. The seam is a real thing whether or not it has a practice of its own, and a reader who reaches for the word needs to be told where it lives.
+
+**What would falsify this.** A handoff that goes wrong in a way PR First's steps do not cover — which would mean the seam had judgement in it after all, and folding it in buried that rather than removing it.
+
+**Bearing on the Charter.** Applies A18.
+
+**Supersedes.** DR-063
+
+### DR-068 · Resolving is assent, and counts as an answer
+
+*2026-09-03*
+
+Found by the practice deadlocking on its own pull request. Two threads
+raised by an agent, both answered by the change that overtook them, neither
+deserving an Issue: resolving them failed A16 for having one party, and
+leaving them unresolved failed the ruleset. `mergeStateStatus` was
+`BLOCKED` with no legal move available to the agent.
+
+A second defect surfaced at the same time and is worth recording, because
+it passed rather than failed. One of the two threads satisfied A16 — for
+the wrong reason. An agent comment written **without** the Trailer counted
+as the human, so the agent had manufactured its own second party by
+forgetting to sign. The rule that every comment carries a Trailer is not
+decoration; it is what stops the party count being fiction.
+
+Both are the same shortage: one login, two parties. Counting the resolver
+is the honest interim, and it is honest only with the step beside it.
+
+**Options considered.**
+
+- _Require a written reply from a second party_ — rejected. It deadlocks. An agent raises a thread, the change overtakes it, and there is no Issue to promote it to — so resolving fails A16 and not resolving fails the ruleset. The solo's only way out is a sentence of theatre per thread, which is how a rule gets routed around rather than followed.
+- _Count whoever resolved the thread as a party_ — chosen. Resolving is an act, not a silence: a solo who reads an answer and marks it resolved has assented, which is what A16 asks for. What it costs is that it holds only while an agent does not resolve its own sole-authored threads, because agent and solo share one login — so it rests on a step until the accounts make it structural.
+
+**Consequences.**
+
+- PR First gains a step: never resolve a thread you are the sole author of.
+- `resolvedBy` joins the thread query, and the party set is the logins, the Actor Trailers, and the resolver.
+- DR-066 makes it structural. With a Role account, `resolvedBy` is a different login and nothing rests on the agent's restraint.
+
+**What would falsify this.** A thread resolved by the agent that wrote every word of it and passing the check. That is the shortcut A16 exists to catch, and it is available today to anyone who ignores the step.
+
+**Bearing on the Charter.** Applies A16.
+
+**Supersedes.** DR-057
 
 ## Holes
 

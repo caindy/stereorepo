@@ -2,6 +2,34 @@
 
 _What is intended and not yet built, and what is still open._
 
+**Dedupe the repository. This is the highest priority, ahead of everything below.**
+[#11](https://github.com/caindy/solorepo/issues/11) holds the inventory, the
+measurement and the order of work; what follows is why it outranks the rest.
+
+One rule was stated in five places, and changing it meant editing all five by
+hand. Exactly one was a source. Nothing would have failed if one had been missed
+— which is how the *link the merge back* step went missing from PR First for four
+commits before a grep found it, not a check.
+
+The shape of the exceptions is what makes this tractable rather than endless:
+**prose about the assertions is authored in three kinds of place the renderer
+does not read** — `template/`'s near-copies of the root files, `render.py`'s own
+string literals, and hand-written prose *about* generated content in
+`schemas.md` and the root `README.md`. The generator authoring prose is first,
+because that is the one place where the machinery built against drift is the
+thing introducing it.
+
+It is also not a LinkML failure, which is worth saying where the investment looks
+stranded. The duplicated things were never modelled at all: the load map is a
+table of *when touching X, read Y*, the routing table is *this kind of paragraph
+goes there*, and `AGENTS.md` is a list of conventions. The fix is more ABox, not
+less — and the half of the ontology with no instances is exactly the half DR-066
+would populate.
+
+The measure of done is not that copies are removed. It is that **an edit to one
+statement cannot leave another behind**: either the second copy derives, or the
+gate names it.
+
 **Package a Role and a Persona via APM.** [Microsoft APM](https://microsoft.github.io/apm/)
 is a dependency manager for AI agents — an `apm.yml` of pinned dependencies,
 integrity by content hash, `apm-policy.yml` at install time, and per-harness
@@ -43,6 +71,35 @@ for — two Actors with separate WorkloadIdentities answering one Challenge is a
 the diff an AuditRecord makes computable. It also sets the bar for the package:
 the same Disciplines and the same language have to reach both containers, which
 no hand-maintained per-harness config survives.
+
+**What is open on the machine users.** The decision is DR-066; what it does not
+settle is the part that decides whether any of it is real. Whether the
+**reviewing agent gets an account or stays Copilot**, which settles whether Roles
+are a general mechanism here or only the seam between the solo and one agent. And
+**where the tokens live** — the claim is that the token is the Remit bound at
+install time, and two tokens in one `~/.config/gh` is a single Remit wearing two
+names.
+
+**Drop ADR, and let a Decision name its level.** A Decision is currently the
+Portfolio's or a Project's, distinguished by whether `project` is set, and
+`.meta/templates/adr.md` renders the second. That misses a level: a decision
+about a **Product** — the SDLC being the case in hand — is shared by every
+Project that builds it and belongs to none of them.
+
+Adding the level exposes that the name is doing no work. *ADR* imports
+"architecture" as a subject-matter qualifier we never use, while hiding the
+distinction we do use, which is who shares the matter. Three levels of one class
+— Portfolio, Product, Project — say it plainly, and the form becomes a rendering
+of the class at whichever level, as it already is.
+
+What it costs is a borrowed term with a literature behind it, against the
+Ubiquitous Language's own preference for borrowing. The Discipline's next step
+answers that: a term is checked against what the repository already means by it,
+and here the canon's meaning and ours have come apart.
+
+Open with it: whether `product` and `project` are two slots checked as exclusive
+or one typed reference; and what happens to `python_bootstrap`'s ADRs when it is
+pulled in, which was already a question above.
 
 **Reification via Dockerfile and/or nix.** Rather than the ontology inventing its
 own coordinate system for where a Capability comes from, point at a build that

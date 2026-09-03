@@ -58,6 +58,7 @@ _Who does work, what they may do, and what they are given to do it with._
 | **Actor** | A Personality with an Identity and a Memory. | user, bot |
 | **Job** | An Actor given an Agency. An assignment. | — |
 | **Collaboration** | The Jobs that meet on one Challenge. Two is the minimum. | — |
+| **Handoff** | The seam where one Job stops and another takes the same Challenge up, sharing no filesystem, no shell and no conversation. | — |
 | **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 
 #### What the work is for
@@ -105,6 +106,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Review Thread** | One conversation on a Pull Request, opened against a line or against the change as a whole, and closed by being answered and resolved. | comment, conversation |
 | **Decision record** | The Portfolio's record of decisions about the repository, its language and its way of working. Numbered DR-nnn, newest last. | — |
 | **Architecture Decision Record** | A Project-level record of why one build unit is built as it is. Numbered per Project, from the form in `.meta/templates/adr.md`. | — |
+| **Trailer** | A `Key: value` line at the end of a commit message or a comment, naming the Actor that wrote it. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
 | **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
 
@@ -154,6 +156,10 @@ _The named ways of working, each adhered to because it is not a program._
 **Journaling.** The routing practice, not a place. What it routes goes to the artifact that owns it, and the residue to the Pull Request.
 
 **PR First.** It stands in for the tracker a team would have, and is the only Collaboration point available to agents that share no filesystem.
+
+**Trailer.** Borrowed from git, which already parses these. It carries what no other part of the record can: every commit and comment here is made under the solo's account, so identity is asserted by the writer or it is absent. A Role's machine account would say which Role; the trailer says which Actor within it, and the two do not substitute for each other.
+
+**Handoff.** A state, not a message: a review request naming the next Role. It is part of PR First rather than a Discipline of its own — once the note was removed, what remained was a transition with two conditions on it, and a way of working with no judgement in it is a program nobody has written.
 
 **Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 

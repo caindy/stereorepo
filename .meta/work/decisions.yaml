@@ -48,9 +48,19 @@ enums:
       read for what is still in force.
     permissible_values:
       PROPOSED:
-        description: Argued for and not yet settled. It binds nothing.
-      ACCEPTED:
-        description: Settled and implemented. Both halves, per Written Decisions.
+        description: >-
+          A question with a candidate answer, still being argued. It binds
+          nothing, and the options may still change.
+      RECOMMENDED:
+        description: >-
+          The question is answered and the answer is endorsed, but nothing is in
+          force yet — usually because it is not built. A recommendation is a real
+          decision: the alternatives are closed, and anyone reaching for one of
+          them is reopening something rather than choosing freely.
+      ADOPTED:
+        description: >-
+          In force. The thing exists, the practice is followed, and departing
+          from it is a departure to be marked.
       SUPERSEDED:
         description: >-
           Replaced by a later Decision, which `superseded_by` names. The entry
@@ -184,13 +194,19 @@ classes:
     description: >-
       A choice that removed an alternative, with why, kept where the people it
       binds will find it.
+
+      **A decision begins with a question that demands an answer.** That is when
+      it may be recorded, not when the answer is built — the alternatives close
+      at the moment the question is settled, and a record that waits for the
+      implementation leaves the closed alternatives open for anyone who did not
+      hear the conversation. `status` carries how far it has got.
     comments:
       - >-
         Numbered as a **stable identifier**, cited as DR-001 and so on. A
         withdrawn Decision leaves a hole and is never renumbered — the same rule
         the Charter's Articles carry, for the same reason.
       - >-
-        An ACCEPTED Decision with no rejected option is the shape this class
+        A Decision in force with no rejected option is the shape this class
         exists to make visible. It is not schema-enforceable without ruling out
         the honest case where the alternative was doing nothing, so say that:
         "do nothing" is an option and it has a reason.
