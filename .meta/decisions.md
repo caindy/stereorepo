@@ -1172,3 +1172,82 @@ concepts silently missed**. The pass reported success. It was caught only by
 asking afterwards which concepts still lacked a `broader`, and the fix was a line
 walk that cannot skip. A transformation that reports success without stating what
 it covered is A7 violated in a script rather than in a gate.
+
+### DR-052 · The pull request is the journal, and a commit message is a label
+*2026-09-03*
+
+DR-050 left the journal's venue open and took `python_bootstrap`'s three headings
+whole. Both were wrong, and for the same reason: that repository has no separate
+product decision log, so its journal is decision-shaped. solorepo has DR-049's
+ADRs and this file. Copying the form gave us two decision records under different
+names.
+
+**The unit is the pull request.** Not the commit, and not a file.
+
+Christopher's case against the commit message is in two parts and both hold. The
+first is Literate Programming: *a reader in `git blame` is there because an
+artifact failed to explain itself*, so effort spent narrating a commit is effort
+spent provisioning the failure path. Thirty years of not once finding a blame
+walk productive is the evidence. The second is discoverability: a team buys it
+with Jira — searchable, linked to commits, outside the repository. A solo will not
+run Jira, and still needs what it bought.
+
+The pull request is what remains that has both properties. It is searchable, it
+is already attached to the change rather than pointing at it across a system
+boundary, it is where an external workflow can land a Challenge, and it is the
+one Collaboration point available to agents in separate sandboxes that share no
+filesystem, no shell and no conversation. That last property is what makes it
+non-negotiable rather than merely convenient: **Claude following Gemini on a task
+have nowhere else to meet.**
+
+So there are two Disciplines where there was one.
+
+**PR First** is the venue: open it when the work starts, take Challenges in
+through it, argue there, title it with the words someone will search for, link
+the merge back to it so the trail survives in the clone.
+
+**Journaling** is the routing, and the routing comes first. Most of what wants
+writing down is already owed to an artifact — a schema's meaning to the schema, a
+decision to a decision record, a rule to the Charter, a word to the vocabulary.
+What no artifact owns is the residue, and the residue is the pull request's.
+
+The three headings survive the move, rehoused in
+`.meta/templates/pull-request.md` and re-pointed at **Chesterton's Fence**, which
+is what Christopher named as the reason for lifting any of this into the
+repository: *what changed*, *what the ground looked like*, *what would make this
+removable*. The third replaces *what would falsify this*. Falsification asks
+whether a claim is true; a later reader standing in front of a fence needs to
+know what it was put there to hold, which is the thing nobody records at the time.
+
+**A14**: reasoning that lives only in a commit message is not recorded. Its origin
+is specific to this era — the commit message is the one place an agent is always
+asked to write, so left alone it narrates an entire project into the one place
+nobody searches. A13 keeps its shape and moves with the journal: a finding that
+exists only in a pull request has not been made, and now with a sharper edge,
+because the pull request lives on a forge and not in the clone.
+
+Retired: the `Journal` Concept, folded into **Pull Request** as an alt label
+rather than kept beside it. `journal` says what the pull request is *for*, which
+is worth keeping; a second term for the same thing is not. Not settled, and now
+in the roadmap: how a Challenge arrives from outside, and whether anything about
+this is mechanically checkable.
+
+### DR-053 · A key written twice is a value that is right by luck
+*2026-09-03*
+
+DR-051's line-walk fix wrote `broader` into every concept, including the
+twenty-nine that already had one from the pass before it. PyYAML takes the last
+of a repeated key without a word. Every pair happened to be identical, so the
+render was correct — for no reason anyone had checked, and one different pair
+would have made it silently wrong.
+
+Three findings of the same shape now: a script reporting success over thirteen
+skipped concepts, a placeholder check made vacuous by deleting what it checked,
+and this. The pattern is a control whose passing carries no information, which is
+A7 exactly.
+
+The gate gets a `duplicate keys` check over every YAML in `.meta/` and
+`template/` — the schemas included, where a repeated key would be just as quiet.
+It is a loader that accumulates rather than raising, so one run names every
+duplicate instead of the first. Watched fail, per Observed Failure, before being
+believed.

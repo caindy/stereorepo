@@ -38,7 +38,7 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | It tells a future reader… | It goes to |
 | :-- | :-- |
 | a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
-| what **happened**, this once | the journal at that level, using `.meta/templates/journal-entry.md` |
+| what **happened** on this change | the pull request, using `.meta/templates/pull-request.md` |
 | **why** a decision was taken | `decisions.md`, as a DR |
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | a checkable one-line rule | `assertions/imported/charter.yaml`, then re-render |
@@ -47,8 +47,11 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | what a schema means and why it is shaped so | the schema itself, per Literate Programming |
 
 Route each paragraph *as you write it*. That is the only moment the routing
-decision is cheap. **A commit message is not a destination**: a decision recorded
-only in git history has not been recorded.
+decision is cheap. **A commit message is not a destination** (A14): reasoning
+left in git history is reached only by a blame walk, which is expensive, lost to
+rebase and squash, and attempted only by a reader these artifacts have already
+failed. Where no row of the table claims a paragraph, it is residue, and residue
+goes to the pull request.
 
 **`vocabulary.md` and `disciplines.md` are generated.** They derive from
 `assertions/`, which is the source. Edit the assertions and re-render:

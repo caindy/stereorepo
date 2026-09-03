@@ -156,19 +156,35 @@ And at which level it belongs. A decision about how one build unit is built is n
 
 _Produces: A record that answers "why is it like this" without anyone remembering._
 
+### PR First
+
+The pull request is where work is proposed, argued and recorded — not a formality wrapped round a branch that was already finished.
+It stands in for the tracker a team would have. A Portfolio with no Jira has nowhere else that is searchable, that a Challenge can arrive in from outside, and that is already attached to the change rather than pointing at it across a system boundary.
+It is also the only Collaboration point available to a solo. Agents in separate sandboxes share no filesystem, no shell and no conversation. What they share is the pull request — which is why review and disagreement have to land there, and not in a transcript only one of them can see.
+
+**Where the judgement is.** What constitutes one pull request. Too coarse and an argument has no subject; too fine and the record narrates change by change without ever saying what the whole was for.
+
+1. Open it when the work starts, not when it is finished. Written at the end it becomes a summary of the diff, which git already holds.
+2. Take Challenges in as pull requests, whatever raised them — the solo, a scheduled job, another agent.
+3. Argue there. Review, objection and answer belong where the next reader will look, not where one participant happens to be.
+4. Title it with the words someone will search for. It is the index, and an index is worth exactly its titles.
+5. Link the merge back to it, so the trail from a line of code to its account survives in the clone.
+
+_Produces: A searchable record of why each change was made, attached to the change.; A place two agents that share nothing else can meet._
+
 ### Journaling
 
-Record what happened, as it happens, at the level it happened.
-A journal is the **intake** for every other record. A finding lands here first; if it establishes a rule it goes to the Charter in the same change, and if it forecloses something it goes to a decision record. What stays is what was neither — the observation, the measurement, the approach that lost.
-It is **not authoritative**. That is the trap: a journal looks like a record, so a repository whose findings stop here has the appearance of having decided things and the substance of having noticed them.
+Narrative goes to the artifact that owns it; the pull request holds what is left over.
+Most of what wants writing down is already owed somewhere. What a schema means belongs in the schema, why a decision was taken belongs in a decision record, a rule belongs in the Charter, a word belongs in the vocabulary. Journaling is that routing — and then the residue, which is the account of this change, the path taken through it and the approach that lost. No artifact owns the residue. The pull request keeps it.
+A commit message is a **label**, not an account. Reasoning left there is reasoning hidden: it is reached by walking `git blame`, which is expensive, lossy under rebase and squash, and attempted only by a reader the artifacts have already failed. Left to itself an agent narrates an entire project through commit messages, because that is the one place it is always asked to write.
 
-**Where the judgement is.** Whether something is worth an entry at all. If nothing was rejected, it was not a decision, and an entry for it is the first paragraph of a changelog.
-And whether an entry has drifted into one. Entries slide toward a bulleted account of what was done, and under agentic maintenance they slide faster, because a model matches the register it finds and does not tire of it.
+**Where the judgement is.** Which artifact owns a paragraph, and whether any of them does. Cheap only at the moment of writing, and not recoverable afterwards by inspection.
+And whether the residue is worth writing at all. Where the change explains itself and nothing was tried and abandoned, an entry for it is a changelog.
 
-1. Write the entry as the work happens. Reconstructed at the end, it becomes a summary of the diff, which git already holds.
-2. Use the three headings every time — what was decided, what was rejected and why, what would falsify this. Required, not encouraged: an encouraged heading is one a tiring writer drops and a tireless one never notices missing.
-3. Route every finding in the same change that records it. A rule goes to the Charter; a foreclosing decision goes to a decision record.
-4. Append. Supersede by writing a new entry that names the old one, and never rewrite what is already there.
-5. Expect it to be grepped, not read. Title each entry with the words someone would search for.
+1. Route it as you write it. Where an artifact owns the paragraph, it goes there.
+2. Put the residue in the pull request — what changed, what the ground looked like, and what would make this removable.
+3. Keep commit messages to what changed. A message that has begun explaining is holding something that belongs elsewhere.
+4. Route every finding in the same change that records it. A rule goes to the Charter; a foreclosing decision goes to a decision record.
+5. Supersede by writing again and naming what is replaced. Never rewrite.
 
-_Produces: A record of what happened, and the intake every other record draws from._
+_Produces: Artifacts that carry their own reasoning, and a pull request holding what none of them owns._

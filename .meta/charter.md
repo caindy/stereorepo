@@ -87,8 +87,14 @@ _Why:_ Nobody downstream can act on a decision they cannot find, argue with one 
 
 _Why:_ A bare number is efficient for an agent's reasoning and opaque to a human. The artifact outlives the conversation that made the shorthand legible, and is read by someone who was not in it.
 
-### A13. A finding that exists only in a journal entry has not been made.
+### A13. A finding that exists only in a pull request has not been made.
 
 **Enforces** Journaling. **Checked by** Nothing mechanical. Held by routing each finding in the change that records it, while the routing decision is still cheap.
 
-_Why:_ A journal looks like a record, which is what makes it dangerous. A11 covers the transcript, which is obviously ephemeral; this covers the committed file that is not, and is still not authoritative.
+_Why:_ A pull request looks like a record, which is what makes it dangerous. A11 covers the transcript, obviously ephemeral; this covers the narrative that is durable, searchable, and still not authoritative — and that lives on a forge rather than in the clone.
+
+### A14. Reasoning that lives only in a commit message is not recorded.
+
+**Enforces** Journaling. **Checked by** Nothing yet, and a length check would be crude — the failure is a paragraph of reasoning, not a long subject line.
+
+_Why:_ Thirty years of not once finding a `git blame` walk productive. Rationale in a commit message is hidden away: expensive to reach, lost to rebase and squash, and looked for only by a reader the artifacts have already failed. Agentic maintenance makes it worse, because the commit message is the one place an agent is always asked to write, so the whole history of a project ends up narrated where nobody searches.

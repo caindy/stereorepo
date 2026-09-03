@@ -93,6 +93,47 @@ def collect(views):
     return index, refs, skipped
 
 
+class Strict(yaml.SafeLoader):
+    """A loader that notices a key written twice.
+
+    PyYAML takes the last of a repeated key without a word, so an editing slip
+    becomes a value that is right by luck rather than by construction. It was
+    right by luck once here — a script that added `broader` to concepts that
+    already had one left 29 duplicates, every pair identical, and the render was
+    correct for no reason anyone had checked.
+    """
+
+
+_DUPLICATES = []
+
+
+def _note_duplicates(loader, node, deep=False):
+    seen = set()
+    for key_node, _ in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in seen:
+            _DUPLICATES.append((key, key_node.start_mark.line + 1))
+        seen.add(key)
+    return yaml.SafeLoader.construct_mapping(loader, node, deep=deep)
+
+
+Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _note_duplicates)
+
+
+def duplicate_keys():
+    """Every YAML the gate reads, including the schemas and the seed."""
+    problems = []
+    for path in sorted([*META.rglob("*.yaml"), *TEMPLATE.rglob("*.yaml")]):
+        _DUPLICATES.clear()
+        try:
+            yaml.load(path.read_text(), Loader=Strict)
+        except yaml.YAMLError:
+            continue  # `template parses` owns malformed documents.
+        problems += [f"{path.relative_to(ROOT)}:{line} '{key}' written twice"
+                     for key, line in _DUPLICATES]
+    return problems
+
+
 def unresolved_references(index, refs):
     return [f"{site} -> {target} '{ref}' does not exist"
             for ref, target, site in refs if ref not in index]
@@ -273,6 +314,7 @@ def one_context_per_portfolio(index):
 
 
 CHECKS = (
+    ("duplicate keys", lambda i, r: duplicate_keys()),
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
     ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
     ("collaboration membership", lambda i, r: collaboration_membership(i)),

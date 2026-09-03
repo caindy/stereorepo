@@ -61,7 +61,6 @@ concept_set:
     definition: A specific, detailed, named user archetype the product is designed for.
     in_scheme: work:scheme/ddd
     broader: work:concept/g-for
-    broader: work:concept/g-for
     scope_note: >-
       Cooper's sense. What solorepo's original sketch called a Persona is a
       Personality; the two are not the same thing.
@@ -72,7 +71,6 @@ concept_set:
     definition: An organisational objective — conversion, support cost, retained revenue.
     in_scheme: work:scheme/ddd
     broader: work:concept/g-for
-    broader: work:concept/g-for
     scope_note: >-
       Named in *About Face* and deliberately kept out of the Persona so it cannot
       pollute the user model. It justifies a Goal instead.
@@ -80,7 +78,6 @@ concept_set:
     pref_label: Technical goal
     definition: An architectural constraint — latency, offline-first sync, data residency.
     in_scheme: work:scheme/ddd
-    broader: work:concept/g-for
     broader: work:concept/g-for
     scope_note: Kept out of the Persona for the same reason as a business goal.
 
@@ -118,7 +115,6 @@ concept_set:
     definition: The character an Actor presents — a SOUL.md plus a communication style.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-doing
-    broader: work:concept/g-doing
     scope_note: Called Persona in the original sketch, until Cooper's Persona took the word back.
     avoid: [persona]
     confusable_with:
@@ -127,7 +123,6 @@ concept_set:
     pref_label: Capability
     definition: A kind of thing that can be done or used. Never names an object.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-doing
     broader: work:concept/g-doing
     avoid: [permission, tool access]
   - id: work:concept/securable
@@ -150,7 +145,6 @@ concept_set:
     definition: A problem to be addressed — a defect, epic, feature or task.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-for
-    broader: work:concept/g-for
     avoid: [ticket, story, issue]
     confusable_with:
       - work:concept/project
@@ -158,7 +152,6 @@ concept_set:
     pref_label: Portfolio
     definition: Everything one solo builds inside one Bounded Context. One per repo.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-divided
     broader: work:concept/g-divided
     scope_note: >-
       One repo, one Bounded Context, one Ubiquitous Language. The repo boundary
@@ -173,7 +166,6 @@ concept_set:
       primary Persona. The unit of value.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-divided
-    broader: work:concept/g-divided
     scope_note: >-
       Cooper's rule is the test for one Product against two: a primary persona's
       goals cannot be met by an interface aimed at another without unacceptable
@@ -187,7 +179,6 @@ concept_set:
       A unit of build — one toolchain, one language, its own tests and gate. The
       unit of construction.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-divided
     broader: work:concept/g-divided
     scope_note: >-
       Products are composed from Projects, many-to-many. Not a piece of work,
@@ -207,7 +198,6 @@ concept_set:
     definition: The need the work serves, stated from the point of view of the Persona that has it.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-for
-    broader: work:concept/g-for
     alt_labels: [JTBD]
     confusable_with:
       - work:concept/job
@@ -216,14 +206,12 @@ concept_set:
     definition: A SMART goal — Challenge, Definition of Done, Job to be Done and Deadline, all required.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-for
-    broader: work:concept/g-for
     confusable_with:
       - work:concept/persona-goal
   - id: work:concept/persona-goal
     pref_label: Persona goal
     definition: What a Persona is trying to achieve, at Cooper's experience, end or life tier.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-for
     broader: work:concept/g-for
     scope_note: >-
       An END goal is Goal-shaped but has no Deadline: it is standing rather than
@@ -245,13 +233,11 @@ concept_set:
     definition: A Personality with an Identity and a Memory.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-doing
-    broader: work:concept/g-doing
     avoid: [user, bot]
   - id: work:concept/job
     pref_label: Job
     definition: An Actor given an Agency. An assignment.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-doing
     broader: work:concept/g-doing
     confusable_with:
       - work:concept/jtbd
@@ -275,35 +261,35 @@ concept_set:
     definition: What an Actor was made of at a moment, resolved to immutable references.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-done
-    broader: work:concept/g-done
     alt_labels: [AIBOM]
   - id: work:concept/discipline
     pref_label: Discipline
     definition: A structured way of working that must be adhered to because it is not an imperative program.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-recorded
-    broader: work:concept/g-recorded
     scope_note: Not a Capability, not a Permission, and not a characterisation such as a communication style.
-  - id: work:concept/journal
-    pref_label: Journal
+  - id: work:concept/pull-request
+    pref_label: Pull Request
     definition: >-
-      An append-only record of what happened, at one level — Portfolio, Product
-      or Project — and the intake every other record draws from.
+      Where a Challenge is taken in, argued and recorded — the Collaboration
+      point, and the searchable account of why each change was made.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-recorded
-    broader: work:concept/g-recorded
+    alt_labels: [PR, journal]
     scope_note: >-
-      Not authoritative, which is the trap: it looks like a record, so findings
-      that stop here give a repository the appearance of having decided things
-      and the substance of having noticed them.
-    avoid: [changelog, log]
+      `journal` is the same thing under its older name, kept because it says what
+      the pull request is *for*. Not authoritative, which is the trap: it looks
+      like a record, so findings that stop here give a repository the appearance
+      of having decided things and the substance of having noticed them.
+    confusable_with:
+      - work:concept/challenge
+    avoid: [changelog, ticket]
   - id: work:concept/decision-record
     pref_label: Decision record
     definition: >-
       The Portfolio's record of decisions about the repository, its language and
       its way of working. Numbered DR-nnn, newest last.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-recorded
     broader: work:concept/g-recorded
     confusable_with:
       - work:concept/adr
@@ -313,7 +299,6 @@ concept_set:
       A Project-level record of why one build unit is built as it is. Numbered
       per Project, from the form in `.meta/templates/adr.md`.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-recorded
     broader: work:concept/g-recorded
     alt_labels: [ADR]
     scope_note: >-
@@ -328,7 +313,6 @@ concept_set:
       The standard for one language, together with the gates that hold a project
       to it.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-divided
     broader: work:concept/g-divided
     scope_note: >-
       Where a Discipline becomes a command that can fail. A Bootstrap says how a
@@ -351,19 +335,31 @@ concept_set:
     broader: work:concept/g-disciplines
   - id: work:concept/journaling
     pref_label: Journaling
-    definition: Record what happened, as it happens, at the level it happened.
+    definition: >-
+      Routing narrative to the artifact that owns it, and the residue to the Pull
+      Request — never to a commit message.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-disciplines
-    broader: work:concept/g-disciplines
-    scope_note: The practice. `Journal` is what it produces.
+    scope_note: >-
+      The routing practice, not a place. What it routes goes to the artifact that
+      owns it, and the residue to the Pull Request.
     confusable_with:
-      - work:concept/journal
+      - work:concept/pull-request
+  - id: work:concept/pr-first
+    pref_label: PR First
+    definition: >-
+      Opening the Pull Request when the work starts, so it is where the work is
+      argued rather than a wrapper round a finished branch.
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-disciplines
+    scope_note: >-
+      It stands in for the tracker a team would have, and is the only
+      Collaboration point available to agents that share no filesystem.
   - id: work:concept/dogfooding
     pref_label: Dogfooding
     definition: >-
       Using what is being built, on itself, before anyone else has to.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-disciplines
     broader: work:concept/g-disciplines
     scope_note: >-
       A Discipline here, not a slogan: each adopted Discipline is applied to this
@@ -375,7 +371,6 @@ concept_set:
       current, as external memory rather than private.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-disciplines
-    broader: work:concept/g-disciplines
     scope_note: >-
       Not Cooper's persona research, which models absent users from evidence.
       This models a present person who can read and correct it.
@@ -385,7 +380,6 @@ concept_set:
     definition: Quality moves one way — green before commit, and never by silencing a checker.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-disciplines
-    broader: work:concept/g-disciplines
     scope_note: >-
       A suppression at the site with a rule and a reason is an exception. One in
       configuration is a rule deleted quietly.
@@ -393,7 +387,6 @@ concept_set:
     pref_label: Observed Failure
     definition: A guardrail never observed to fail is not evidence of anything.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-disciplines
     broader: work:concept/g-disciplines
     scope_note: Coverage is a floor beneath the tests, never a claim about them.
     avoid: [test coverage]
@@ -404,7 +397,6 @@ concept_set:
       and found false, numbered so it can be cited as A1, A2 and so on.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-recorded
-    broader: work:concept/g-recorded
     scope_note: >-
       Where a Discipline is followed, an Article is checked. Binding, and
       empirical rather than drafted: each carries the failure it came from.
@@ -413,7 +405,6 @@ concept_set:
     pref_label: Charter
     definition: The Articles together — a working agreement, binding on whoever works here.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-recorded
     broader: work:concept/g-recorded
     scope_note: >-
       Borrowed rather than metaphorical. A charter grants and binds; what this
@@ -433,7 +424,6 @@ concept_set:
       result, and it must not violate the rules it seeds.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-disciplines
-    broader: work:concept/g-disciplines
     avoid: [scaffolding]
   - id: work:concept/written-decisions
     pref_label: Written Decisions
@@ -444,7 +434,6 @@ concept_set:
     pref_label: Skill (solorepo Capability kind)
     definition: A Capability that composes tools, as against a tool, which is atomic.
     in_scheme: work:scheme/solorepo
-    broader: work:concept/g-doing
     broader: work:concept/g-doing
     confusable_with:
       - work:concept/apm-skill

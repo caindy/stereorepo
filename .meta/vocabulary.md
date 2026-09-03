@@ -99,7 +99,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | Term | Means | Do not say |
 |---|---|---|
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
-| **Journal** | An append-only record of what happened, at one level — Portfolio, Product or Project — and the intake every other record draws from. | changelog, log |
+| **Pull Request** | Where a Challenge is taken in, argued and recorded — the Collaboration point, and the searchable account of why each change was made. | changelog, ticket |
 | **Decision record** | The Portfolio's record of decisions about the repository, its language and its way of working. Numbered DR-nnn, newest last. | — |
 | **Architecture Decision Record** | A Project-level record of why one build unit is built as it is. Numbered per Project, from the form in `.meta/templates/adr.md`. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
@@ -113,7 +113,8 @@ _The named ways of working, each adhered to because it is not a program._
 |---|---|---|
 | **Literate Programming** | An artifact is an exposition addressed to a human reader; the machine-readable part is secondary. | — |
 | **Progressive Disclosure** | One small thing loads always; everything else loads on demand, routed by a load map that is deliberately insufficient. | — |
-| **Journaling** | Record what happened, as it happens, at the level it happened. | — |
+| **Journaling** | Routing narrative to the artifact that owns it, and the residue to the Pull Request — never to a commit message. | — |
+| **PR First** | Opening the Pull Request when the work starts, so it is where the work is argued rather than a wrapper round a finished branch. | — |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
 | **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
 | **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
@@ -135,13 +136,15 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Discipline.** Not a Capability, not a Permission, and not a characterisation such as a communication style.
 
-**Journal.** Not authoritative, which is the trap: it looks like a record, so findings that stop here give a repository the appearance of having decided things and the substance of having noticed them.
+**Pull Request.** `journal` is the same thing under its older name, kept because it says what the pull request is *for*. Not authoritative, which is the trap: it looks like a record, so findings that stop here give a repository the appearance of having decided things and the substance of having noticed them.
 
 **Architecture Decision Record.** The other level of the same Discipline. A Project decision in the Portfolio's record is buried among matters its readers do not share; a Portfolio decision in a Project's ADR is hidden from every other Project.
 
 **Bootstrap.** Where a Discipline becomes a command that can fail. A Bootstrap says how a Discipline is satisfied in one language; it never restates the Discipline, because the second copy is the one that drifts.
 
-**Journaling.** The practice. `Journal` is what it produces.
+**Journaling.** The routing practice, not a place. What it routes goes to the artifact that owns it, and the residue to the Pull Request.
+
+**PR First.** It stands in for the tracker a team would have, and is the only Collaboration point available to agents that share no filesystem.
 
 **Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 
@@ -183,9 +186,10 @@ more often a collision than a gap.
 | **Goal** | Persona goal |
 | **Persona goal** | Goal |
 | **Job** | Job to be Done |
+| **Pull Request** | Challenge |
 | **Decision record** | Architecture Decision Record |
 | **Architecture Decision Record** | Decision record |
-| **Journaling** | Journal |
+| **Journaling** | Pull Request |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
 | **Prompt (APM primitive)** | Skill (solorepo Capability kind), Skill (APM primitive) |

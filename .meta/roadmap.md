@@ -97,26 +97,29 @@ developed further, with reference resolution and orphan detection as separate
 `scripts/check_*.py`. The natural home is the `.meta` Project's `gate`, which is
 the slot that exists to hold exactly this.
 
-**Journals at three levels, and retrofitting `.meta/decisions.md`.** The
-Discipline, the form, A13 and the routing row are in. What is not settled is
-where journals sit and what happens to the 49 entries already written.
+**PR First, mechanically.** DR-052 settles that the pull request is the journal
+and the Collaboration point. What it does not settle is anything a gate could
+hold.
 
-A **Product journal** reframes them. `.meta/decisions.md` reads as a Portfolio
-record, but its entries are overwhelmingly about **the scaffold** — what it is,
-what it does for its reader, why Specialization is an instruction. The scaffold is
-a Product. solorepo is the degenerate case where a Product journal and a Portfolio
-record nearly coincide, because its Product *is* the repository's own shape; in
-any other portfolio they separate cleanly. `python_bootstrap` reached the same
-split independently, keeping `docs/architecture/` for why the generator is built
-this way and `docs/product/` for why the standard says what it says.
+How a Challenge **arrives from outside** is the first gap. The claim is that an
+external workflow can land one as a pull request; nothing here says through what
+— an issue template, a scheduled job, `gh` from another agent's sandbox — and the
+Discipline is worth exactly as much as that path is real.
 
-Retrofitting is feasible under one rule: **never invent a rejection.** Where an
-entry weighed alternatives they are already in its text and can be lifted. Where
-it did not, the honest heading is that nothing was rejected — which is itself
-informative, since it marks the entries that recorded what was rather than a
-choice between options. *What would falsify this* can be answered for any of
-them, because it is a present-tense question about the claim and not a historical
-one about the deliberation.
+Whether any of it is checkable is the second. A13 and A14 both carry *nothing
+mechanical*. A commit-message length check would be crude, since the failure is a
+paragraph of reasoning and not a long subject line. A check that every merge
+commit names its pull request is not crude and would hold the one step that keeps
+the trail alive in the clone.
+
+And the residue needs somewhere to go **before a forge exists**. A portfolio on
+its first day has no remote. Either the form waits, or the first entries land
+somewhere in-repo and move — and moving them is exactly the rewriting the
+Discipline forbids.
+
+Settled by DR-052, and so no longer open: journals at three levels, and
+retrofitting the entries in `decisions.md`. That file is a decision record under
+Written Decisions, not a journal, and there is nothing to retrofit.
 
 **An ontology of a decision, in LinkML.** A decision has structure the prose does
 not capture: a status, options with one chosen and the rest rejected for stated
