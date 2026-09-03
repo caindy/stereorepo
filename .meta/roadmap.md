@@ -97,6 +97,27 @@ developed further, with reference resolution and orphan detection as separate
 `scripts/check_*.py`. The natural home is the `.meta` Project's `gate`, which is
 the slot that exists to hold exactly this.
 
+**Journals at three levels, and retrofitting `.meta/decisions.md`.** The
+Discipline, the form, A13 and the routing row are in. What is not settled is
+where journals sit and what happens to the 49 entries already written.
+
+A **Product journal** reframes them. `.meta/decisions.md` reads as a Portfolio
+record, but its entries are overwhelmingly about **the scaffold** — what it is,
+what it does for its reader, why Specialization is an instruction. The scaffold is
+a Product. solorepo is the degenerate case where a Product journal and a Portfolio
+record nearly coincide, because its Product *is* the repository's own shape; in
+any other portfolio they separate cleanly. `python_bootstrap` reached the same
+split independently, keeping `docs/architecture/` for why the generator is built
+this way and `docs/product/` for why the standard says what it says.
+
+Retrofitting is feasible under one rule: **never invent a rejection.** Where an
+entry weighed alternatives they are already in its text and can be lifted. Where
+it did not, the honest heading is that nothing was rejected — which is itself
+informative, since it marks the entries that recorded what was rather than a
+choice between options. *What would falsify this* can be answered for any of
+them, because it is a present-tense question about the claim and not a historical
+one about the deliberation.
+
 **An ontology of a decision, in LinkML.** A decision has structure the prose does
 not capture: a status, options with one chosen and the rest rejected for stated
 reasons, consequences, an observation that would falsify it, a supersession

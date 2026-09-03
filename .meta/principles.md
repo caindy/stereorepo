@@ -26,6 +26,15 @@ no authorising Permission is a violation, and a Permission with no matching
 record is an over-grant. This matters more in a team of one, where no second
 person is around to notice.
 
+**A convention that stays healthy because a human gets bored will not survive
+agentic maintenance.** A person hits "this is getting long" and stops. A model
+does not tire, does not feel the length, and matches whatever register it finds —
+so it keeps going, in the same shape, faster. Every convention here that relies on
+restraint has to be replaced by one that relies on structure: required headings
+rather than encouraged ones, a form rather than an example, a gate rather than a
+habit. This is the argument for why so much here is mandatory, and it is the one
+premise that is specific to building with a fleet of agents rather than a team.
+
 **Enforce what the schema can; comment the rest.** LinkML rules cover what is
 expressible (a stopped Execution records its end time; a tool composes nothing).
 Invariants crossing reference boundaries or deep paths are written as class

@@ -155,3 +155,20 @@ And at which level it belongs. A decision about how one build unit is built is n
 5. Use the form in `.meta/templates/adr.md`, so the shape does not have to be re-argued.
 
 _Produces: A record that answers "why is it like this" without anyone remembering._
+
+### Journaling
+
+Record what happened, as it happens, at the level it happened.
+A journal is the **intake** for every other record. A finding lands here first; if it establishes a rule it goes to the Charter in the same change, and if it forecloses something it goes to a decision record. What stays is what was neither — the observation, the measurement, the approach that lost.
+It is **not authoritative**. That is the trap: a journal looks like a record, so a repository whose findings stop here has the appearance of having decided things and the substance of having noticed them.
+
+**Where the judgement is.** Whether something is worth an entry at all. If nothing was rejected, it was not a decision, and an entry for it is the first paragraph of a changelog.
+And whether an entry has drifted into one. Entries slide toward a bulleted account of what was done, and under agentic maintenance they slide faster, because a model matches the register it finds and does not tire of it.
+
+1. Write the entry as the work happens. Reconstructed at the end, it becomes a summary of the diff, which git already holds.
+2. Use the three headings every time — what was decided, what was rejected and why, what would falsify this. Required, not encouraged: an encouraged heading is one a tiring writer drops and a tireless one never notices missing.
+3. Route every finding in the same change that records it. A rule goes to the Charter; a foreclosing decision goes to a decision record.
+4. Append. Supersede by writing a new entry that names the old one, and never rewrite what is already there.
+5. Expect it to be grepped, not read. Title each entry with the words someone would search for.
+
+_Produces: A record of what happened, and the intake every other record draws from._

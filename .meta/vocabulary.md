@@ -65,6 +65,7 @@ _Authority: solorepo._
 | **Audit Record** | One employment of a Capability on a Securable. A Permission in the past tense. | — |
 | **Agent Bill of Materials** | What an Actor was made of at a moment, resolved to immutable references. | — |
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
+| **Journal** | An append-only record of what happened, at one level — Portfolio, Product or Project — and the intake every other record draws from. | changelog, log |
 | **Decision record** | The Portfolio's record of decisions about the repository, its language and its way of working. Numbered DR-nnn, newest last. | — |
 | **Architecture Decision Record** | A Project-level record of why one build unit is built as it is. Numbered per Project, from the form in `.meta/templates/adr.md`. | — |
 | **Bootstrap** | The standard for one language, together with the gates that hold a project to it. | starter, boilerplate, scaffold |
@@ -91,6 +92,8 @@ _Authority: solorepo._
 **Persona goal.** An END goal is Goal-shaped but has no Deadline: it is standing rather than a bounded commitment, so it is not a Goal.
 
 **Discipline.** Not a Capability, not a Permission, and not a characterisation such as a communication style.
+
+**Journal.** Not authoritative, which is the trap: it looks like a record, so findings that stop here give a repository the appearance of having decided things and the substance of having noticed them.
 
 **Architecture Decision Record.** The other level of the same Discipline. A Project decision in the Portfolio's record is buried among matters its readers do not share; a Portfolio decision in a Project's ADR is hidden from every other Project.
 

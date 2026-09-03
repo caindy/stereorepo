@@ -86,3 +86,9 @@ _Why:_ Nobody downstream can act on a decision they cannot find, argue with one 
 **Enforces** Literate Programming. **Checked by** Nothing yet. A check for a bare A-number in committed prose would do it.
 
 _Why:_ A bare number is efficient for an agent's reasoning and opaque to a human. The artifact outlives the conversation that made the shorthand legible, and is read by someone who was not in it.
+
+### A13. A finding that exists only in a journal entry has not been made.
+
+**Enforces** Journaling. **Checked by** Nothing mechanical. Held by routing each finding in the change that records it, while the routing decision is still cheap.
+
+_Why:_ A journal looks like a record, which is what makes it dangerous. A11 covers the transcript, which is obviously ephemeral; this covers the committed file that is not, and is still not authoritative.
