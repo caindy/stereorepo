@@ -97,6 +97,16 @@ developed further, with reference resolution and orphan detection as separate
 `scripts/check_*.py`. The natural home is the `.meta` Project's `gate`, which is
 the slot that exists to hold exactly this.
 
+**An ontology of a decision, in LinkML.** A decision has structure the prose does
+not capture: a status, options with one chosen and the rest rejected for stated
+reasons, consequences, an observation that would falsify it, a supersession
+relation to an earlier decision, and a bearing on the Articles it applies or
+departs from. `.meta/templates/adr.md` encodes that shape as headings, and
+`decisions.md` follows it by habit — neither is checkable, and nothing can ask
+"which decisions has this superseded" or "which Articles has nothing yet
+applied". Reifying it would make the ADR form a rendering of the model rather
+than a convention beside it. Deferred until the overhang is clear.
+
 **Pulling `python_bootstrap` in.** `bootstraps/rust/` is here; Python is not, and
 it is the harder half. `python_bootstrap` is a working repository with its own
 charter in `CLAUDE.md`, its own ADRs under `docs/architecture/`, its own journal
