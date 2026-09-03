@@ -39,7 +39,8 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | It tells a future reader… | It goes to |
 | :-- | :-- |
 | a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
-| what **happened** on this change | the pull request, using `.meta/templates/pull-request.md` |
+| what **happened** on this change | the pull request body, using `.meta/templates/pull-request.md` |
+| work **noticed and not done** | a linked Issue, before review — never a summary or a file |
 | **why** a decision was taken | `decisions.md`, as a DR |
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | a checkable one-line rule | `assertions/imported/charter.yaml`, then re-render |

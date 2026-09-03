@@ -145,9 +145,13 @@ concept_set:
     definition: A problem to be addressed — a defect, epic, feature or task.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-for
-    avoid: [ticket, story, issue]
+    avoid: [ticket, story]
+    scope_note: >-
+      The work itself, which two artifacts hold in turn: an Issue before it is
+      taken up, a Pull Request while it is being done.
     confusable_with:
       - work:concept/project
+      - work:concept/issue
   - id: work:concept/portfolio
     pref_label: Portfolio
     definition: Everything one solo builds inside one Bounded Context. One per repo.
@@ -268,6 +272,22 @@ concept_set:
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-recorded
     scope_note: Not a Capability, not a Permission, and not a characterisation such as a communication style.
+  - id: work:concept/issue
+    pref_label: Issue
+    definition: >-
+      Where a Challenge lives before it is taken up — including work noticed
+      during other work and deliberately not done.
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    scope_note: >-
+      The forge's artifact, borrowed for what it has that a file does not: an open
+      and a closed, a title someone reads, and a backlink to the work that found
+      it. Not a synonym for Challenge — it is one of the two places a Challenge
+      can be.
+    confusable_with:
+      - work:concept/challenge
+      - work:concept/pull-request
+    avoid: [tech debt, backlog item]
   - id: work:concept/pull-request
     pref_label: Pull Request
     definition: >-
@@ -283,6 +303,7 @@ concept_set:
       of having decided things and the substance of having noticed them.
     confusable_with:
       - work:concept/challenge
+      - work:concept/issue
     avoid: [changelog, ticket]
   - id: work:concept/decision-record
     pref_label: Decision record

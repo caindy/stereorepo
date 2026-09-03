@@ -20,6 +20,11 @@ constraint made the obvious approach wrong.
 **What would make this removable.** The condition under which this comes out
 again. "Nothing would" means it is load-bearing forever, and that claim needs its
 reason stated.
+
+**What was noticed and not done.** One link per item, to an Issue. Not a bullet —
+a bullet here closes when the pull request does.
+
+- #<n> — <one line, so the list is readable without opening anything>
 ```
 
 Optional, where they apply:
@@ -38,3 +43,13 @@ The pull request is durable and searchable and still not authoritative.
 
 **Commit messages stay short** (A14). If a message has begun explaining, the
 explanation belongs in an artifact or here.
+
+**The fourth heading takes links, not text** (A15). Work noticed and not done is
+a Challenge nobody has taken up, and it needs what an Issue has and prose does
+not: an open and a closed, and a life longer than this body's. File it before
+asking for review — a closing summary is the one artifact with no persistence at
+all.
+
+What earns an Issue is whether you can say **what would make it worth doing**. A
+trigger, or a cost that will land. That is the same question as *what would make
+this removable*, turned to face forward.

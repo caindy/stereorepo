@@ -98,3 +98,9 @@ _Why:_ A pull request looks like a record, which is what makes it dangerous. A11
 **Enforces** Journaling. **Checked by** Nothing yet, and a length check would be crude — the failure is a paragraph of reasoning, not a long subject line.
 
 _Why:_ Thirty years of not once finding a `git blame` walk productive. Rationale in a commit message is hidden away: expensive to reach, lost to rebase and squash, and looked for only by a reader the artifacts have already failed. Agentic maintenance makes it worse, because the commit message is the one place an agent is always asked to write, so the whole history of a project ends up narrated where nobody searches.
+
+### A15. Work noticed and not done, recorded only in a summary, has not been noticed.
+
+**Enforces** PR First. **Checked by** Mechanically, unlike A13 and A14: every item under the pull request body's *what was noticed and not done* is a link, or the check fails. `gh pr view --json body` is the whole implementation.
+
+_Why:_ A long run ends with a summary carrying two or three things seen and left alone, and the summary is the one artifact with no persistence at all. The habit it produces is a TECH_DEBT.md — a file nothing consumes, with no open and closed, whose items lose the work they were noticed during, and which is eventually flushed in one unscoped batch of unrelated items. That run is expensive because the batch was assembled by deferral rather than by anything the items have in common.

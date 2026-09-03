@@ -65,7 +65,7 @@ _Who it serves, what problem it addresses, and how anyone knows it is done._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Challenge** | A problem to be addressed — a defect, epic, feature or task. | ticket, story, issue |
+| **Challenge** | A problem to be addressed — a defect, epic, feature or task. | ticket, story |
 | **Definition of Done** | The test that decides whether a Goal has been met. | — |
 | **Job to be Done** | The need the work serves, stated from the point of view of the Persona that has it. | — |
 | **Goal** | A SMART goal — Challenge, Definition of Done, Job to be Done and Deadline, all required. | — |
@@ -99,6 +99,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | Term | Means | Do not say |
 |---|---|---|
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
+| **Issue** | Where a Challenge lives before it is taken up — including work noticed during other work and deliberately not done. | tech debt, backlog item |
 | **Pull Request** | Where a Challenge is taken in, argued and recorded — the Collaboration point, and the searchable account of why each change was made. | changelog, ticket |
 | **Decision record** | The Portfolio's record of decisions about the repository, its language and its way of working. Numbered DR-nnn, newest last. | — |
 | **Architecture Decision Record** | A Project-level record of why one build unit is built as it is. Numbered per Project, from the form in `.meta/templates/adr.md`. | — |
@@ -126,6 +127,8 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Personality.** Called Persona in the original sketch, until Cooper's Persona took the word back.
 
+**Challenge.** The work itself, which two artifacts hold in turn: an Issue before it is taken up, a Pull Request while it is being done.
+
 **Portfolio.** One repo, one Bounded Context, one Ubiquitous Language. The repo boundary and the language boundary are the same boundary, which is why a portfolio is a monorepo.
 
 **Product.** Cooper's rule is the test for one Product against two: a primary persona's goals cannot be met by an interface aimed at another without unacceptable compromise.
@@ -135,6 +138,8 @@ _The named ways of working, each adhered to because it is not a program._
 **Persona goal.** An END goal is Goal-shaped but has no Deadline: it is standing rather than a bounded commitment, so it is not a Goal.
 
 **Discipline.** Not a Capability, not a Permission, and not a characterisation such as a communication style.
+
+**Issue.** The forge's artifact, borrowed for what it has that a file does not: an open and a closed, a title someone reads, and a backlink to the work that found it. Not a synonym for Challenge — it is one of the two places a Challenge can be.
 
 **Pull Request.** `journal` is the same thing under its older name, kept because it says what the pull request is *for*. Not authoritative, which is the trap: it looks like a record, so findings that stop here give a repository the appearance of having decided things and the substance of having noticed them.
 
@@ -178,7 +183,7 @@ more often a collision than a gap.
 |---|---|
 | **Persona** | Personality |
 | **Personality** | Persona |
-| **Challenge** | Project |
+| **Challenge** | Project, Issue |
 | **Portfolio** | Product |
 | **Product** | Portfolio, Project |
 | **Project** | Challenge, Product |
@@ -186,7 +191,8 @@ more often a collision than a gap.
 | **Goal** | Persona goal |
 | **Persona goal** | Goal |
 | **Job** | Job to be Done |
-| **Pull Request** | Challenge |
+| **Issue** | Challenge, Pull Request |
+| **Pull Request** | Challenge, Issue |
 | **Decision record** | Architecture Decision Record |
 | **Architecture Decision Record** | Decision record |
 | **Journaling** | Pull Request |

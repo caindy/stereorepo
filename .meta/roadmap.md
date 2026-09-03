@@ -106,11 +106,14 @@ external workflow can land one as a pull request; nothing here says through what
 — an issue template, a scheduled job, `gh` from another agent's sandbox — and the
 Discipline is worth exactly as much as that path is real.
 
-Whether any of it is checkable is the second. A13 and A14 both carry *nothing
-mechanical*. A commit-message length check would be crude, since the failure is a
-paragraph of reasoning and not a long subject line. A check that every merge
-commit names its pull request is not crude and would hold the one step that keeps
-the trail alive in the clone.
+Whether any of it is checkable is the second, and it now divides. A13 and A14
+carry *nothing mechanical* — a commit-message length check would be crude, since
+the failure is a paragraph of reasoning and not a long subject line. **A15 is
+different**: every item under *what was noticed and not done* is a link or it is
+not, and `gh pr view --json body` is the whole implementation. A check that every
+merge commit names its pull request is equally cheap and holds the step that
+keeps the trail alive in the clone. Both want a home — the `.meta` Project's
+`gate` reads files, and these read the forge.
 
 And the residue needs somewhere to go **before a forge exists**. A portfolio on
 its first day has no remote. Either the form waits, or the first entries land

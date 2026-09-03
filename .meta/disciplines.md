@@ -161,30 +161,36 @@ _Produces: A record that answers "why is it like this" without anyone rememberin
 The pull request is where work is proposed, argued and recorded — not a formality wrapped round a branch that was already finished.
 It stands in for the tracker a team would have. A Portfolio with no Jira has nowhere else that is searchable, that a Challenge can arrive in from outside, and that is already attached to the change rather than pointing at it across a system boundary.
 It is also the only Collaboration point available to a solo. Agents in separate sandboxes share no filesystem, no shell and no conversation. What they share is the pull request — which is why review and disagreement have to land there, and not in a transcript only one of them can see.
+It is where **work noticed and not done** goes, as a linked Issue. A long run ends with things seen and left alone — out of scope, or a reasonable next step — and they are delivered in a closing summary, which is the one place with no persistence at all. Collecting them into a file instead fails four ways: a file has no open and closed, so a line removed is indistinguishable from a line resolved, abandoned or tidied; the item loses the work it was noticed during, so nobody can tell later whether it still applies; appending a line is free and invisible, so the file only grows; and flushing it means one unscoped batch of unrelated items sharing no context, which is the worst possible shape to hand an agent and the reason that follow-up run is expensive.
+A linked Issue answers each. It has state, it carries a backlink to the work that found it, its title is read by someone, and it can be picked up alone.
 
 **Where the judgement is.** What constitutes one pull request. Too coarse and an argument has no subject; too fine and the record narrates change by change without ever saying what the whole was for.
+And which observations earn an Issue. The test is whether you can say what would make it worth doing — a trigger, or a cost that will land. "This function is long" has neither. "This retry has no backoff, and it will matter the first time the endpoint is slow" has both. File everything and the tracker becomes the file it replaced, with better tooling.
 
 1. Open it when the work starts, not when it is finished. Written at the end it becomes a summary of the diff, which git already holds.
 2. Take Challenges in as pull requests, whatever raised them — the solo, a scheduled job, another agent.
 3. Argue there. Review, objection and answer belong where the next reader will look, not where one participant happens to be.
 4. Title it with the words someone will search for. It is the index, and an index is worth exactly its titles.
-5. Link the merge back to it, so the trail from a line of code to its account survives in the clone.
+5. File what was noticed and not done as a linked Issue, before asking for review. Not in the body, which closes with the pull request, and never in a closing summary.
+6. Link the merge back to it, so the trail from a line of code to its account survives in the clone.
 
-_Produces: A searchable record of why each change was made, attached to the change.; A place two agents that share nothing else can meet._
+_Produces: A searchable record of why each change was made, attached to the change.; A place two agents that share nothing else can meet.; Work noticed and not done, in a queue rather than a pile._
 
 ### Journaling
 
 Narrative goes to the artifact that owns it; the pull request holds what is left over.
-Most of what wants writing down is already owed somewhere. What a schema means belongs in the schema, why a decision was taken belongs in a decision record, a rule belongs in the Charter, a word belongs in the vocabulary. Journaling is that routing — and then the residue, which is the account of this change, the path taken through it and the approach that lost. No artifact owns the residue. The pull request keeps it.
+Most of what wants writing down is already owed somewhere. What a schema means belongs in the schema, why a decision was taken belongs in a decision record, a rule belongs in the Charter, a word belongs in the vocabulary. Journaling is that routing, and then the residue — which divides by tense. What is **finished** is the account of this change, the path taken through it and the approach that lost; it goes in the pull request body, which closes when the work does. What is **unfinished** is work noticed and not done; it is a Challenge nobody has taken up, so it goes to an Issue linked from the pull request, which stays open after the body is archived.
+Filing the second as the first is how it is lost. A body is read once, at review, and never again.
 A commit message is a **label**, not an account. Reasoning left there is reasoning hidden: it is reached by walking `git blame`, which is expensive, lossy under rebase and squash, and attempted only by a reader the artifacts have already failed. Left to itself an agent narrates an entire project through commit messages, because that is the one place it is always asked to write.
 
 **Where the judgement is.** Which artifact owns a paragraph, and whether any of them does. Cheap only at the moment of writing, and not recoverable afterwards by inspection.
 And whether the residue is worth writing at all. Where the change explains itself and nothing was tried and abandoned, an entry for it is a changelog.
 
 1. Route it as you write it. Where an artifact owns the paragraph, it goes there.
-2. Put the residue in the pull request — what changed, what the ground looked like, and what would make this removable.
-3. Keep commit messages to what changed. A message that has begun explaining is holding something that belongs elsewhere.
-4. Route every finding in the same change that records it. A rule goes to the Charter; a foreclosing decision goes to a decision record.
-5. Supersede by writing again and naming what is replaced. Never rewrite.
+2. Put finished residue in the pull request body — what changed, what the ground looked like, and what would make this removable.
+3. Put unfinished residue in a linked Issue. It is a Challenge, not a paragraph, and it outlives the body.
+4. Keep commit messages to what changed. A message that has begun explaining is holding something that belongs elsewhere.
+5. Route every finding in the same change that records it. A rule goes to the Charter; a foreclosing decision goes to a decision record.
+6. Supersede by writing again and naming what is replaced. Never rewrite.
 
 _Produces: Artifacts that carry their own reasoning, and a pull request holding what none of them owns._
