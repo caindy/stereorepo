@@ -97,48 +97,27 @@ developed further, with reference resolution and orphan detection as separate
 `scripts/check_*.py`. The natural home is the `.meta` Project's `gate`, which is
 the slot that exists to hold exactly this.
 
-**Literate Programming, implemented in Rust.** The first language
-implementation, and the design is worked out even though the bootstrap repo is
-not.
+**Language bootstraps, blessed by solorepo.** `rust_bootstrap` exists as of
+2026-09-02, specialized from here — the first Specialization that was not a test
+fixture. Its `docs/literate-programming.md` holds the Rust implementation of that
+Discipline, and this file no longer restates it: a design kept in two places is
+the drift these Disciplines exist to prevent.
 
-*Where prose sits, decided by the routing test.* `python_bootstrap`'s test —
-**what to do / what happened / why** — sorts documentation the same way it sorts
-paragraphs:
+Two parts of that implementation are candidates for pulling up, once a **second**
+language confirms them and not before: routing documentation by the paragraph
+test, and requiring a history entry to name the test that would fail if its
+change were undone. Promoting either from one implementation would repeat the
+mistake of generalising from `python_bootstrap` alone.
 
-| Tells the reader | Goes | Because |
-|---|---|---|
-| what to **do** — how to use this item | inline `///` | a reader of the source needs it in front of them |
-| **why** it is this way | an included markdown file | the reasoning reaches rustdoc without crowding the source |
-| what **happened**, this once | an included log, separately named | history is rarely germane while reading the code |
+Still to settle: **how a bootstrap declares what it implements**, and how
+solorepo checks the claim. Blessing is a conformance claim of the shape
+everything else here takes — every Discipline has an implementation per blessed
+language, or a stated reason it does not — and nothing yet records it.
 
-So Rust uses a **mix**, not includes alone. History in particular accumulates in
-comments when an agent fixes a defect, and it is exactly the material that should
-leave the source file while staying in the docs.
-
-*Filenames carry the routing*, so a reader knows what an include holds before
-opening it — `<module>.overview.md`, `<module>.rationale.md`,
-`<module>.history.md` or some settled equivalent.
-
-*The log has to beat a header changelog.* Those fail twice: an entry is too
-brief to understand in context, and there is no way to tell whether it still
-matters. Two rules fix both:
-
-1. An entry says **what failed and what the change established**, not what
-   changed. The diff already says what changed.
-2. An entry **names the test that would fail if it regressed.** That is its
-   receipt — and it makes relevance *mechanical*: if the named test is gone, the
-   entry is stale and should go with it.
-
-The second rule is what makes the log self-pruning, and it is **Observed
-Failure** and **Nothing Unconsumed** applied to prose. A history entry naming no
-test is debris by the same argument that a guardrail never seen to fail is not
-evidence.
-
-*Gates.* `RUSTDOCFLAGS="-D warnings"` with `#![deny(missing_docs)]` so no public
-item goes undocumented; `cargo test --doc` so the examples are executed rather
-than asserted; an orphan check so every markdown file beside a module is included
-by it and every include resolves; and a history check so every entry names a test
-that exists.
+Also unresolved: **a portfolio has no designated place for product material.**
+`rust_bootstrap` put its standard in `docs/`, which the scaffold neither
+suggested nor forbade. `stakeholders/` is the only product-side convention
+solorepo ships.
 
 **Guiding the solo through identifying research.** A Persona should be drawn
 from research, and `stakeholders/customers/` is where that research lives — but

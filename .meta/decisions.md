@@ -928,3 +928,33 @@ if the test is gone, the entry is stale. That is Observed Failure and Nothing
 Unconsumed applied to prose, and it is the answer to why header changelogs are
 useless — an entry with no receipt cannot be checked, and one too brief to
 understand in context was never worth keeping.
+
+### DR-045 · `rust_bootstrap` exists, and Specialization ran for real
+*2026-09-02*
+
+Created by specializing solorepo — **the first Specialization that was not a test
+fixture**, and it ran clean: gate green at 64 objects and 64 references, one
+commit, no remote, no placeholder left behind.
+
+Its purpose is to give the Rust design somewhere actionable to land. Disciplines
+here are language-neutral by construction, which is what makes them portable and
+also what leaves them with nothing to bite on. A Bootstrap is where one becomes a
+command that can fail.
+
+`docs/literate-programming.md` holds the implementation, and **solorepo's roadmap
+no longer restates it** — a design kept in two places is the drift these
+Disciplines exist to prevent. What stays here is the pointer and the open
+questions.
+
+Two things the repository refused to assert, both of which the schema forced into
+the open. It has **one Project**, `.meta`, because there is no Rust in it yet and
+a Project whose gate does not run would violate Gates Do Not Fix before the first
+commit. And its Product names **the solo** as primary Persona, because a Rust
+developer adopting the standard is the persona it wants and there is no research
+to draw one from.
+
+Two gaps this surfaced. **A portfolio has no designated place for product
+material** — `docs/` was chosen without the scaffold suggesting or forbidding it,
+and `stakeholders/` is the only product-side convention shipped. And **nothing
+records what a Bootstrap implements**, though blessing is a conformance claim of
+exactly the shape everything else here takes.
