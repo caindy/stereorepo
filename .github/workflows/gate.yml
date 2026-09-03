@@ -2,7 +2,7 @@
 #
 # A check that runs when someone remembers is not a check — Nothing Unconsumed
 # applied to the checker itself. Both halves run here: `check.py` reads files and
-# needs no network, `check_pr.py` reads the forge and has nothing to say except
+# needs no network, `check_pr.py` reads GitHub and has nothing to say except
 # on a pull request.
 #
 # Nothing here restates a Discipline. What a pull request body must contain is
@@ -15,26 +15,41 @@ on:
     branches: [main]
   pull_request:
     types: [opened, edited, reopened, synchronize, ready_for_review]
+  # Resolving a thread fires no Actions event at all — `pull_request_review_thread`
+  # is a webhook GitHub does not accept as a trigger, and using it here failed the
+  # whole workflow at startup rather than being ignored. So A16 is checked on the
+  # last push, and `workflow_dispatch` re-runs it on demand. Issue #5 has the hole.
+  workflow_dispatch:
 
 permissions:
   contents: read
   pull-requests: read
 
+# Both job names below are named again in the `main` ruleset, as required status
+# checks. Renaming one here does not fail anything — it removes a required check
+# that can then never report, and the merge gate blocks forever on a context
+# nothing produces. Rename in both places or in neither.
 jobs:
   files:
     name: files
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      # Pinned exactly: setup-uv publishes no floating major past v7 while
+      # releasing v10, so `@v10` resolves to nothing and fails the run.
+      - uses: actions/checkout@v7.0.1
+      # No lockfile to key a cache on, and uvx resolves fast enough that a cache
+      # keyed on nothing would only ever go stale.
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: false
       - run: uvx --with linkml --with pyyaml python .meta/check.py
 
   pull-request:
-    name: pull request body
-    if: github.event_name == 'pull_request'
+    name: pull request
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       # `gh` is on the runner already, and the checker is stdlib only, so this
       # job stays fast enough to run on every edit to the body.
       - run: python3 .meta/check_pr.py "$PR"

@@ -91,7 +91,7 @@ _Why:_ A bare number is efficient for an agent's reasoning and opaque to a human
 
 **Enforces** Journaling. **Checked by** Nothing mechanical. Held by routing each finding in the change that records it, while the routing decision is still cheap.
 
-_Why:_ A pull request looks like a record, which is what makes it dangerous. A11 covers the transcript, obviously ephemeral; this covers the narrative that is durable, searchable, and still not authoritative — and that lives on a forge rather than in the clone.
+_Why:_ A pull request looks like a record, which is what makes it dangerous. A11 covers the transcript, obviously ephemeral; this covers the narrative that is durable, searchable, and still not authoritative — and that lives on a hosting service rather than in the clone.
 
 ### A14. Reasoning that lives only in a commit message is not recorded.
 
@@ -104,3 +104,15 @@ _Why:_ Thirty years of not once finding a `git blame` walk productive. Rationale
 **Enforces** PR First. **Checked by** Mechanically, unlike A13 and A14: every item under the pull request body's *what was noticed and not done* is a link, or the check fails. `gh pr view --json body` is the whole implementation.
 
 _Why:_ A long run ends with a summary carrying two or three things seen and left alone, and the summary is the one artifact with no persistence at all. The habit it produces is a TECH_DEBT.md — a file nothing consumes, with no open and closed, whose items lose the work they were noticed during, and which is eventually flushed in one unscoped batch of unrelated items. That run is expensive because the batch was assembled by deferral rather than by anything the items have in common.
+
+### A16. A review thread resolved without an answer has not been resolved.
+
+**Enforces** PR First. **Checked by** `check_pr.py`, which requires every resolved thread to carry a reply from someone other than whoever opened it. GitHub requires resolution; this requires that the resolution mean something.
+
+_Why:_ Requiring resolution teaches the shortcut. A thread closed to clear the merge gate is indistinguishable afterwards from one that was answered, so the requirement that looked like a control becomes a control whose passing carries no information. The alternative on offer was auto-resolving outdated threads, which is the same failure with the work removed: an anchor moving is not a concern being met.
+
+### A17. A term that arrived by use has not been agreed.
+
+**Enforces** Ubiquitous Language. **Checked by** Nothing yet, and the first attempt is instructive about why. Counting words new to a diff and repeated across files does find a mint, and it finds forty other things per change, each needing a person. A gate whose output has to be triaged by hand every time is a gate that gets skipped. Deferred until PR First Collaboration is working, where a reviewing agent can read a change against the vocabulary rather than count against it.
+
+_Why:_ `forge` reached the Charter, three decision records, two READMEs, a scope note and a function name before anyone asked whether it had been agreed. The rule against minting existed as a parenthetical in one table cell of `.meta/README.md`, and nothing consumed it.

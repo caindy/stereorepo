@@ -47,6 +47,9 @@ concept_set:
     scope_note: >-
       A portfolio's own domain language. solorepo's vocabulary is imported
       alongside it to articulate the discipline, and has no authority over it.
+
+      Adopted here as a Discipline of the same name — DDD names the thing, and
+      solorepo names the practice of defining, maintaining and adhering to one.
   - id: work:concept/published-language
     pref_label: Published Language
     definition: A well-documented shared language that contexts translate into and out of.
@@ -280,7 +283,7 @@ concept_set:
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-recorded
     scope_note: >-
-      The forge's artifact, borrowed for what it has that a file does not: an open
+      The hosting service's artifact, borrowed for what it has that a file does not: an open
       and a closed, a title someone reads, and a backlink to the work that found
       it. Not a synonym for Challenge — it is one of the two places a Challenge
       can be.
@@ -305,6 +308,21 @@ concept_set:
       - work:concept/challenge
       - work:concept/issue
     avoid: [changelog, ticket]
+  - id: work:concept/review-thread
+    pref_label: Review Thread
+    definition: >-
+      One conversation on a Pull Request, opened against a line or against the
+      change as a whole, and closed by being answered and resolved.
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    scope_note: >-
+      **Outdated is not resolved.** GitHub collapses a thread whose anchor
+      moved and leaves it open, and the two states are independent — an
+      objection can outlive the line it was written against. A16 turns on that
+      distinction.
+    confusable_with:
+      - work:concept/pull-request
+    avoid: [comment, conversation]
   - id: work:concept/decision-record
     pref_label: Decision record
     definition: >-

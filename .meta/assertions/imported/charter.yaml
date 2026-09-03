@@ -129,7 +129,7 @@ articles:
       A pull request looks like a record, which is what makes it dangerous. A11
       covers the transcript, obviously ephemeral; this covers the narrative that
       is durable, searchable, and still not authoritative — and that lives on a
-      forge rather than in the clone.
+      hosting service rather than in the clone.
   - id: work:article/14
     name: Article 14
     statement: Reasoning that lives only in a commit message is not recorded.
@@ -160,3 +160,34 @@ articles:
       eventually flushed in one unscoped batch of unrelated items. That run is
       expensive because the batch was assembled by deferral rather than by
       anything the items have in common.
+  - id: work:article/16
+    name: Article 16
+    statement: A review thread resolved without an answer has not been resolved.
+    enforces: work:discipline/pr-first
+    checked_by: >-
+      `check_pr.py`, which requires every resolved thread to carry a reply from
+      someone other than whoever opened it. GitHub requires resolution; this
+      requires that the resolution mean something.
+    origin: >-
+      Requiring resolution teaches the shortcut. A thread closed to clear the
+      merge gate is indistinguishable afterwards from one that was answered, so
+      the requirement that looked like a control becomes a control whose passing
+      carries no information. The alternative on offer was auto-resolving
+      outdated threads, which is the same failure with the work removed: an
+      anchor moving is not a concern being met.
+  - id: work:article/17
+    name: Article 17
+    statement: A term that arrived by use has not been agreed.
+    enforces: work:discipline/ubiquitous-language
+    checked_by: >-
+      Nothing yet, and the first attempt is instructive about why. Counting words
+      new to a diff and repeated across files does find a mint, and it finds
+      forty other things per change, each needing a person. A gate whose output
+      has to be triaged by hand every time is a gate that gets skipped. Deferred
+      until PR First Collaboration is working, where a reviewing agent can read
+      a change against the vocabulary rather than count against it.
+    origin: >-
+      `forge` reached the Charter, three decision records, two READMEs, a scope
+      note and a function name before anyone asked whether it had been agreed.
+      The rule against minting existed as a parenthetical in one table cell of
+      `.meta/README.md`, and nothing consumed it.

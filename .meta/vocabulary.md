@@ -28,6 +28,7 @@ _Authority: Eric Evans, and About Face for the persona work._
 **Invariant (of an Aggregate).** Carried by the `invariants` slot on Entity, ValueObject and Aggregate. DDD keeps this word; solorepo's clauses are Articles, which is part of why the rename was worth making.
 
 **Ubiquitous Language.** A portfolio's own domain language. solorepo's vocabulary is imported alongside it to articulate the discipline, and has no authority over it.
+Adopted here as a Discipline of the same name — DDD names the thing, and solorepo names the practice of defining, maintaining and adhering to one.
 
 **Published Language.** What solorepo offers a portfolio, and what DDD offers solorepo.
 
@@ -101,6 +102,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
 | **Issue** | Where a Challenge lives before it is taken up — including work noticed during other work and deliberately not done. | tech debt, backlog item |
 | **Pull Request** | Where a Challenge is taken in, argued and recorded — the Collaboration point, and the searchable account of why each change was made. | changelog, ticket |
+| **Review Thread** | One conversation on a Pull Request, opened against a line or against the change as a whole, and closed by being answered and resolved. | comment, conversation |
 | **Decision record** | The Portfolio's record of decisions about the repository, its language and its way of working. Numbered DR-nnn, newest last. | — |
 | **Architecture Decision Record** | A Project-level record of why one build unit is built as it is. Numbered per Project, from the form in `.meta/templates/adr.md`. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
@@ -139,9 +141,11 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Discipline.** Not a Capability, not a Permission, and not a characterisation such as a communication style.
 
-**Issue.** The forge's artifact, borrowed for what it has that a file does not: an open and a closed, a title someone reads, and a backlink to the work that found it. Not a synonym for Challenge — it is one of the two places a Challenge can be.
+**Issue.** The hosting service's artifact, borrowed for what it has that a file does not: an open and a closed, a title someone reads, and a backlink to the work that found it. Not a synonym for Challenge — it is one of the two places a Challenge can be.
 
 **Pull Request.** `journal` is the same thing under its older name, kept because it says what the pull request is *for*. Not authoritative, which is the trap: it looks like a record, so findings that stop here give a repository the appearance of having decided things and the substance of having noticed them.
+
+**Review Thread.** **Outdated is not resolved.** GitHub collapses a thread whose anchor moved and leaves it open, and the two states are independent — an objection can outlive the line it was written against. A16 turns on that distinction.
 
 **Architecture Decision Record.** The other level of the same Discipline. A Project decision in the Portfolio's record is buried among matters its readers do not share; a Portfolio decision in a Project's ADR is hidden from every other Project.
 
@@ -193,6 +197,7 @@ more often a collision than a gap.
 | **Job** | Job to be Done |
 | **Issue** | Challenge, Pull Request |
 | **Pull Request** | Challenge, Issue |
+| **Review Thread** | Pull Request |
 | **Decision record** | Architecture Decision Record |
 | **Architecture Decision Record** | Decision record |
 | **Journaling** | Pull Request |

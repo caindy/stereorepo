@@ -113,9 +113,9 @@ different**: every item under *what was noticed and not done* is a link or it is
 not, and `gh pr view --json body` is the whole implementation. A check that every
 merge commit names its pull request is equally cheap and holds the step that
 keeps the trail alive in the clone. Both want a home — the `.meta` Project's
-`gate` reads files, and these read the forge.
+`gate` reads files, and these read GitHub.
 
-And the residue needs somewhere to go **before a forge exists**. A portfolio on
+And the residue needs somewhere to go **before the repository is on GitHub**. A portfolio on
 its first day has no remote. Either the form waits, or the first entries land
 somewhere in-repo and move — and moving them is exactly the rewriting the
 Discipline forbids.
@@ -123,6 +123,21 @@ Discipline forbids.
 Settled by DR-052, and so no longer open: journals at three levels, and
 retrofitting the entries in `decisions.md`. That file is a decision record under
 Written Decisions, not a journal, and there is nothing to retrofit.
+
+**A gate for A17, once Collaboration works.** DR-058 built one by counting words
+new to a diff and repeated across files, and removed it. It found the mint it was
+built for and forty other things per change, each needing a person to rule on —
+and a gate whose output is triaged by hand every time is one that gets skipped.
+
+Counting is the wrong instrument, because a word is a term by how it is used and
+no threshold reaches that. The right shape needs a reader. Once PR First
+Collaboration works — an agent reviewing a change in the Pull Request rather than
+a script scanning a diff — the question "is this word doing the work of a term,
+and is it already ours" is one a reviewer can actually answer, and the answer
+lands where an argument about a word belongs.
+
+Until then A17 is held by the Discipline, which is what it was missing when
+`forge` walked in: the rule existed as a parenthetical and nothing consumed it.
 
 **An ontology of a decision, in LinkML.** A decision has structure the prose does
 not capture: a status, options with one chosen and the rest rejected for stated

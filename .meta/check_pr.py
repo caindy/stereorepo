@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""The forge half of the gate: A15, held against a live pull request.
+"""The GitHub half of the gate: A15, held against a live pull request.
 
-`check.py` reads files and needs no network. This reads the forge, so it is a
+`check.py` reads files and needs no network. This reads GitHub, so it is a
 separate command with a separate lifecycle — it runs when a pull request opens
 or changes, and there is nothing for it to say the rest of the time.
 
@@ -103,7 +103,67 @@ def check(title, body):
     return problems
 
 
-def from_forge(ref):
+THREADS = """
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        nodes {
+          isResolved
+          isOutdated
+          path
+          comments(first: 50) { nodes { author { login } } }
+        }
+      }
+    }
+  }
+}
+"""
+
+
+def gh(*args):
+    out = subprocess.run(["gh", *args], capture_output=True, text=True)
+    if out.returncode:
+        sys.exit(f"gh: {out.stderr.strip()}")
+    return json.loads(out.stdout)
+
+
+def resolved_without_an_answer(ref):
+    """A16. Requiring resolution is what makes this check necessary.
+
+    GitHub can insist every thread be resolved, and that insistence teaches
+    the shortcut: resolve it and merge. A thread closed that way looks identical
+    afterwards to one that was answered, which makes the merge gate a control
+    whose passing carries no information — so the gate on the gate is that a
+    resolved thread carries a reply from someone other than whoever opened it.
+
+    Nothing here objects to an *unresolved* thread. The ruleset already blocks
+    the merge for those, and a check saying the same thing twice is one of them
+    drifting.
+    """
+    owner, name = gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"].split("/")
+    number = gh("pr", "view", ref, "--json", "number")["number"]
+    data = gh("api", "graphql", "-f", f"query={THREADS}",
+              "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}")
+    return unanswered(data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"])
+
+
+def unanswered(nodes):
+    """The predicate, apart from the fetching, so it can be watched failing."""
+    problems = []
+    for t in nodes:
+        if not t["isResolved"]:
+            continue
+        authors = [c["author"]["login"] for c in t["comments"]["nodes"] if c["author"]]
+        if len(set(authors)) < 2:
+            who = authors[0] if authors else "nobody"
+            problems.append(
+                f"resolved without an answer: {t['path'] or 'the pull request'}, "
+                f"opened by {who} — if it was worth mentioning it is worth answering")
+    return problems
+
+
+def from_github(ref):
     out = subprocess.run(["gh", "pr", "view", ref, "--json", "title,body"],
                          capture_output=True, text=True)
     if out.returncode:
@@ -115,20 +175,22 @@ def from_forge(ref):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("pr", nargs="?", help="pull request number, URL or branch")
-    ap.add_argument("--file", help="read a body from disk instead of the forge")
+    ap.add_argument("--file", help="read a body from disk instead of GitHub")
     ap.add_argument("--title", default="a real title", help="title to use with --file")
     args = ap.parse_args()
 
     if args.file:
         title, body = args.title, pathlib.Path(args.file).read_text()
     elif args.pr:
-        title, body = from_forge(args.pr)
+        title, body = from_github(args.pr)
     else:
         ap.error("give a pull request, or --file")
 
     problems = check(title, body)
+    if args.pr:
+        problems += resolved_without_an_answer(args.pr)
     for p in problems:
         print(f"x  {p}")
-    print(f"{'x  ' if problems else 'ok '}pull request body"
+    print(f"{'x  ' if problems else 'ok '}pull request"
           + (f" ({len(problems)})" if problems else ""))
     sys.exit(1 if problems else 0)

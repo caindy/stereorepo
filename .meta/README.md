@@ -71,7 +71,7 @@ subsumes the staleness check above:
 uvx --with linkml --with pyyaml python .meta/check.py
 ```
 
-**The gate for a pull request is `check_pr.py`.** It reads the forge rather than
+**The gate for a pull request is `check_pr.py`.** It reads GitHub rather than
 the tree, so it is a separate command with a separate lifecycle — nothing to say
 except on a pull request. It holds A15: every item under *what was noticed and
 not done* is a link, so the body cannot close over an observation that has

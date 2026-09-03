@@ -59,6 +59,24 @@ One small thing loads always; everything else loads on demand, routed by a load 
 
 _Produces: A core that routes, and satellites that own what they hold._
 
+### Ubiquitous Language
+
+One set of words, meaning the same thing in the code, the schemas, the prose and the conversation — and a word enters it by decision, never by use.
+Evans' practice, with one thing his setting did not have to handle. The language is now shared with agents that write fluently, tire of nothing, and reach for a fresh word the moment an existing one is slightly awkward. A team drifts slowly because writing is expensive and someone eventually objects. A fleet drifts quickly and *consistently*, and the drift reads as good prose, which is why nobody objects.
+So the rule is not to prefer the agreed word. It is that **minting is a decision taken with the solo**, and a word that arrived any other way has not been minted however well it is being used.
+
+**Where the judgement is.** Whether an idea needs a word at all. Most do not — a phrase, or an existing term used precisely, leaves the vocabulary smaller and the reader better off, and a vocabulary that grows with every distinction stops being one.
+And whether a word is a term or is ordinary English, which is not decidable mechanically. The gate narrows the field; a person routes what it finds.
+
+1. Reach for the vocabulary before reaching for a word, and for a canon before minting one.
+2. Borrow rather than invent. A term with a literature behind it arrives with its distinctions already argued.
+3. Mint only with the solo, and record the decision. A word in the Charter or a Discipline without one is a word nobody agreed to.
+4. Check a candidate against what the repository already means by it, including in the schemas. A collision found afterwards is a rename.
+5. Mark a confusable in both directions, at the moment the collision is noticed.
+6. Bias every output toward the vocabulary — code, prose and conversation alike.
+
+_Produces: A language the repository and everyone working in it actually share._
+
 ### Dogfooding
 
 Use what is being built, on itself, before anyone else has to. When a Discipline is adopted, apply it first to the repo that adopted it; when a gap shows up in use, fix the thing rather than working around it.
@@ -170,9 +188,10 @@ And which observations earn an Issue. The test is whether you can say what would
 1. Open it when the work starts, not when it is finished. Written at the end it becomes a summary of the diff, which git already holds.
 2. Take Challenges in as pull requests, whatever raised them — the solo, a scheduled job, another agent.
 3. Argue there. Review, objection and answer belong where the next reader will look, not where one participant happens to be.
-4. Title it with the words someone will search for. It is the index, and an index is worth exactly its titles.
-5. File what was noticed and not done as a linked Issue, before asking for review. Not in the body, which closes with the pull request, and never in a closing summary.
-6. Link the merge back to it, so the trail from a line of code to its account survives in the clone.
+4. Answer every thread and then resolve it, including one the diff has overtaken. Outdated is not answered: GitHub collapses a thread whose anchor moved and leaves it open, and a reader years later cannot tell a point that was addressed from one that was dropped.
+5. Title it with the words someone will search for. It is the index, and an index is worth exactly its titles.
+6. File what was noticed and not done as a linked Issue, before asking for review. Not in the body, which closes with the pull request, and never in a closing summary.
+7. Link the merge back to it, so the trail from a line of code to its account survives in the clone.
 
 _Produces: A searchable record of why each change was made, attached to the change.; A place two agents that share nothing else can meet.; Work noticed and not done, in a queue rather than a pile._
 

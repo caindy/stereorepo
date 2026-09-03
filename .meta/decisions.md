@@ -1224,7 +1224,7 @@ is specific to this era — the commit message is the one place an agent is alwa
 asked to write, so left alone it narrates an entire project into the one place
 nobody searches. A13 keeps its shape and moves with the journal: a finding that
 exists only in a pull request has not been made, and now with a sharper edge,
-because the pull request lives on a forge and not in the clone.
+because the pull request lives on GitHub and not in the clone.
 
 Retired: the `Journal` Concept, folded into **Pull Request** as an alt label
 rather than kept beside it. `journal` says what the pull request is *for*, which
@@ -1305,7 +1305,7 @@ turn — an **Issue** before it is taken up, a **Pull Request** while it is bein
 done. That makes PR First's intake step precise rather than hand-waved, since an
 Issue becoming a Pull Request is exactly the moment work starts. Flagged here
 because minting is supposed to be an explicit decision and not an agent's
-convenience; Christopher used the word first, and it is borrowed from the forge
+convenience; Christopher used the word first, and it is borrowed from GitHub
 rather than invented, but the avoid list said otherwise until now.
 
 ### DR-055 · PR First gets its mechanics, and the form is the only copy
@@ -1334,7 +1334,7 @@ stopped asking for something — which is the failure mode this repository keeps
 finding in itself.
 
 It is a separate command from `check.py` because it has a separate lifecycle:
-files or the forge, offline or not, always or only on a pull request. It is
+files or GitHub, offline or not, always or only on a pull request. It is
 stdlib-only and shells out to `gh`, so it is fast enough to run on every edit to
 a body.
 
@@ -1364,3 +1364,111 @@ generics and legitimate HTML. Only the correct ones pass.
 
 Still open, and now the only thing between this and dogfooding: **there is no
 remote.** `caindy/solorepo` does not exist, and creating it is a publish.
+
+### DR-056 · main is protected, and the hook that stood in for it was removed by its own condition
+*2026-09-03*
+
+This one is recorded as it happened, because the sequence is the finding.
+
+**The protection was refused.** Both routes — classic protection at
+`PUT /repos/:owner/:repo/branches/main/protection` and a ruleset at
+`POST /repos/:owner/:repo/rulesets` — returned 403 *Upgrade to GitHub Pro or make
+this repository public* for a private repository on a free account. Issue #1
+recorded the exact ruleset so that applying it later would be a lookup rather
+than a rediscovery.
+
+**A hook stood in for it**, and was written as friction rather than enforcement:
+`--no-verify` walks past it, it lives in the clone rather than the repository, and
+an agent in a fresh sandbox has not configured it. The pull request proposing it
+answered *what would make this removable* with: **issue #1 landing.**
+
+**Christopher upgraded, and it landed the same hour.** The ruleset is active with
+`bypass_actors: []` and `current_user_can_bypass: never` — `deletion` and
+`non_fast_forward` blocked, a `pull_request` rule at zero required approvals with
+`squash` as the only merge method, and `required_status_checks` set strict on the
+contexts `files` and `pull request body`.
+
+**So the hook was deleted, by the condition written into the pull request that
+introduced it.** That heading exists to answer Chesterton's Fence for a reader
+years later; here it closed a loop in about an hour, and the discipline of having
+written it is the whole reason the fence came down cleanly instead of staying up
+because nobody remembered what it was for.
+
+Watched fail before believed, and the test found a **second reason to delete it**.
+An empty commit was pushed at `main` twice, once ordinarily and once with
+`--no-verify`. Both were refused — the second with *2 of 2 required status checks
+are expected*. But the first was refused by **GitHub**, not by the hook, and
+the reason is structural: `core.hooksPath` resolves inside the worktree, so a
+tracked hook is only present on branches that carry the file. On `main` — the one
+branch it existed to protect — it was never checked out at all. A control absent
+exactly where it is needed, which is worse than no control, and which reading it
+would not have revealed.
+
+**What never needed the plan** was the part that turned out to matter most: the
+repository is squash-only with `squash_merge_commit_title=PR_TITLE`, so every
+subject on `main` carries `(#n)`. DR-055 declined to write a check for the merge
+trail on the grounds that a setting could guarantee it. That held.
+
+One thing to watch, filed rather than left in this paragraph: GitHub added
+`require_extra_approval_for_unattributed_changes: true` to the `pull_request`
+rule on its own. With zero required approvals it is inert until a commit is
+unattributed, and this repository's commits carry a `Co-Authored-By` trailer for
+an address that is not a GitHub account.
+
+### DR-057 · Threads block the merge, and resolving one has to mean something
+*2026-09-03*
+
+Copilot reviews every pull request here, and its first comment was on a file the
+branch had since deleted — outdated, collapsed, and still unresolved, because
+GitHub treats those as independent. That raised the question of whether to
+auto-resolve stale threads.
+
+**No.** Christopher's ruling: unresolved conversations block, and they get
+resolved cogently, *even when subsequent changes have removed their bearing*. If
+it was worth mentioning, it is worth resolving for the record.
+
+Auto-resolving outdated threads was the alternative on offer and it is the same
+failure with the work removed. **An anchor moving is not a concern being met.** A
+rebase outdates threads; so does an unrelated edit to nearby lines. Pairing
+required resolution with auto-resolve builds a merge gate that clears itself,
+which is machinery constructed to defeat a control this repository had just
+finished installing.
+
+`required_review_thread_resolution` is now `true` on the `main` ruleset.
+
+**A16**: a review thread resolved without an answer has not been resolved.
+Requiring resolution is precisely what makes this necessary — the requirement
+teaches the shortcut, and a thread closed to clear the gate looks identical
+afterwards to one that was answered. `check_pr.py` now requires every resolved
+thread to carry a reply from someone other than whoever opened it. GitHub
+requires resolution; A16 requires the resolution to mean something.
+
+**Resolving a thread fires no Actions event, and finding that out cost a silent
+gate.** `pull_request_review_thread` is a webhook GitHub does not accept as a
+workflow trigger. It is not ignored — it fails the whole workflow at startup, so
+a run appeared with zero jobs, no check runs, and an empty status rollup on the
+pull request. That reads as *checks have not finished yet*, not as *the gate no
+longer exists*, and the pull request sat at `BLOCKED` with nothing saying why.
+The gate had been switched off by an edit intended to strengthen it, which is
+Ratchet running backwards through a typo rather than through a decision.
+
+So A16 is checked on the last push, with `workflow_dispatch` to re-run it on
+demand, and the residual hole is issue #5: resolve without answering after the
+last push, then merge, and nothing looks. The gap sits exactly where the shortcut
+is.
+
+The predicate was split from the fetching so it could be watched failing without
+manufacturing a synthetic thread on a real pull request. Six cases: resolved by
+one author, resolved with an answer, an author replying to himself, an unresolved
+thread left alone as the ruleset's business, a thread on the pull request rather
+than a file, and two threads where one is bad.
+
+**A coupling worth naming.** The ruleset lists required status checks by job
+name. The `pull request body` job became `pull request` here, since it now checks
+more than the body — and renaming it fails nothing. It removes a required check
+and leaves the gate waiting forever on a context nothing produces. The workflow
+now says so at the point of edit; there is no mechanism that would have caught
+it, and the failure is silent in the direction that matters.
+
+The Copilot thread itself was answered and resolved rather than dismissed, which
+is the first application of the rule and the reason it is stated as one.
