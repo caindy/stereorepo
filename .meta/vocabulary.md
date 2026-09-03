@@ -25,7 +25,7 @@ _Authority: Eric Evans, and About Face for the persona work._
 | **Business goal** | An organisational objective — conversion, support cost, retained revenue. | — |
 | **Technical goal** | An architectural constraint — latency, offline-first sync, data residency. | — |
 
-**Invariant (of an Aggregate).** Carried by the `invariants` slot on Entity, ValueObject and Aggregate. A claim about domain state at a moment, not a rule about how work proceeds.
+**Invariant (of an Aggregate).** Carried by the `invariants` slot on Entity, ValueObject and Aggregate. DDD keeps this word; solorepo's clauses are Articles, which is part of why the rename was worth making.
 
 **Ubiquitous Language.** A portfolio's own domain language. solorepo's vocabulary is imported alongside it to articulate the discipline, and has no authority over it.
 
@@ -70,7 +70,8 @@ _Authority: solorepo._
 | **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
 | **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
 | **Observed Failure** | A guardrail never observed to fail is not evidence of anything. | test coverage |
-| **Invariant** | A one-line claim that can be held against a specific artifact and found false, numbered so it can be cited. | — |
+| **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
+| **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
 | **Nothing Unconsumed** | An artifact prevents drift only if something consumes it and checks it against something. | — |
 | **Seeded Artifacts** | A seed is data, gated by rendering it and running the real gates on the result, and it must not violate the rules it seeds. | scaffolding |
 | **Written Decisions** | A decision that lives only in a transcript has not been made. | — |
@@ -99,7 +100,9 @@ _Authority: solorepo._
 
 **Observed Failure.** Coverage is a floor beneath the tests, never a claim about them.
 
-**Invariant.** Where a Discipline is followed, an Invariant is checked. An Invariant needs no judgement, which is what stops it being a Discipline with fewer words.
+**Article.** Where a Discipline is followed, an Article is checked. Binding, and empirical rather than drafted: each carries the failure it came from.
+
+**Charter.** Borrowed rather than metaphorical. A charter grants and binds; what this one adds is that its clauses are empirical, so it can be argued with on evidence rather than only amended.
 
 ### APM primitives
 
@@ -119,7 +122,6 @@ more often a collision than a gap.
 
 | This | Is not | 
 |---|---|
-| **Invariant (of an Aggregate)** | Invariant |
 | **Persona** | Personality |
 | **Personality** | Persona |
 | **Challenge** | Project |
@@ -130,7 +132,6 @@ more often a collision than a gap.
 | **Goal** | Persona goal |
 | **Persona goal** | Goal |
 | **Job** | Job to be Done |
-| **Invariant** | Invariant (of an Aggregate) |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
 | **Prompt (APM primitive)** | Skill (solorepo Capability kind), Skill (APM primitive) |

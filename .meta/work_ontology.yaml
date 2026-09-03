@@ -168,9 +168,9 @@ slots:
     range: Discipline
     multivalued: true
     inlined_as_list: true
-  invariants:
-    description: The Invariants in the collection.
-    range: Invariant
+  articles:
+    description: The Articles of the Charter, in the collection.
+    range: Article
     multivalued: true
     inlined_as_list: true
   portfolio:
@@ -236,7 +236,7 @@ classes:
       - job_set
       - collaborations
       - disciplines
-      - invariants
+      - articles
       - portfolio
       - products
       - projects

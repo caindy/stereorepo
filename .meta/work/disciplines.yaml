@@ -24,12 +24,16 @@ description: >-
   preceded it: an APM `instructions` primitive is a Discipline compiled for a
   harness, and prose in a document has nothing for that transformation to read.
 
-  An **Invariant** is the other thing entirely: a one-line claim that can be
-  held against a specific artifact and found false. Where a Discipline is
-  followed, an Invariant is *checked*. The two are easy to conflate and the cost
-  of conflating them is bluntness — wrapping a checkable claim in steps and
-  judgement buries the claim, and a rule you cannot cite in one line is a rule
-  nobody cites.
+  An **Article** is the other thing entirely: a one-line claim that can be held
+  against a specific artifact and found false. Where a Discipline is followed, an
+  Article is *checked*. The two are easy to conflate and the cost of conflating
+  them is bluntness — wrapping a checkable claim in steps and judgement buries
+  the claim, and a rule you cannot cite in one line is a rule nobody cites.
+
+  Articles together are the **Charter**: a working agreement, binding on whoever
+  works here. The word is borrowed rather than metaphorical. What it must not
+  lose is that these are not drafted opinions — every Article carries the failure
+  it came from, so it is empirical before it is binding.
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
@@ -70,22 +74,22 @@ slots:
 
   enforces:
     description: >-
-      The Discipline this Invariant makes checkable. Optional: an Invariant may
-      stand alone, and one that needs no Discipline behind it is not diminished
-      by the absence.
+      The Discipline this Article makes checkable. Optional: an Article may stand
+      alone, and one that needs no Discipline behind it is not diminished by the
+      absence.
     range: Discipline
 
   checked_by:
     description: >-
-      What holds artifacts against this Invariant — a gate step, a test, a
-      review. An Invariant with nothing checking it is an aspiration, and should
-      say so rather than imply enforcement it does not have.
+      What holds artifacts against this Article — a gate step, a test, a review.
+      An Article with nothing checking it is an aspiration, and should say so
+      rather than imply enforcement it does not have.
 
   origin:
     description: >-
-      The failure this Invariant came from. Where a rule exists it exists because
+      The failure this Article came from. Where a rule exists it exists because
       something failed once, and a reader who doubts a rule can go and read what
-      it cost.
+      it cost. This is what keeps the Charter empirical rather than drafted.
 
 classes:
 
@@ -115,26 +119,27 @@ classes:
       judgement:
         recommended: true
 
-  Invariant:
+  Article:
     is_a: WorkEntity
     description: >-
-      A one-line claim that can be held against a specific artifact and found
-      false.
+      One clause of the Charter: a claim that can be held against a specific
+      artifact and found false.
 
-      Where a Discipline is followed, an Invariant is checked. It requires no
-      judgement — that is the point, and it is why an Invariant is not a
-      Discipline with fewer words. "No gate step may rewrite the tree" is
-      settled once and mechanically verifiable; nothing about applying it is a
-      matter of judgement.
+      Where a Discipline is followed, an Article is checked. It requires no
+      judgement — that is the point, and it is why an Article is not a Discipline
+      with fewer words. "No gate step may rewrite the tree" is settled once and
+      mechanically verifiable; nothing about applying it is a matter of judgement.
+
+      Binding, and **empirical rather than drafted**. An Article without an
+      `origin` is an opinion that has borrowed the Charter's authority.
     comments:
       - >-
-        Numbered as a **stable identifier**, so it can be cited in a code
-        comment or a commit message. A retired Invariant leaves a **hole** and is
-        never renumbered: a citation that silently comes to mean something else
-        is worse than a dangling one.
+        Numbered as a **stable identifier**, cited as A1, A2 and so on. A retired
+        Article leaves a **hole** and is never renumbered: a citation that
+        silently comes to mean something else is worse than a dangling one.
       - >-
-        An Invariant that states no `origin` has lost its receipt. It may still
-        be right, but nobody can weigh it against the cost of following it.
+        An Article that states no `origin` has lost its receipt. It may still be
+        right, but nobody can weigh it against the cost of following it.
     slots:
       - statement
       - enforces

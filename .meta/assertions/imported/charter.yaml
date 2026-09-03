@@ -1,4 +1,6 @@
-# Numbered as stable identifiers, so an invariant can be cited in a code comment
+# The Charter: a working agreement, binding on whoever works here.
+#
+# Numbered as stable identifiers, so an Article can be cited in a code comment
 # or a commit message. A retired invariant leaves a HOLE and is never renumbered:
 # a citation that silently comes to mean something else is worse than a dangling
 # one.
@@ -6,17 +8,17 @@
 # Distilled in python_bootstrap, where each came from a failure in a working
 # codebase. `origin` is the receipt.
 
-invariants:
-  - id: work:invariant/1
-    name: Invariant 1
+articles:
+  - id: work:article/1
+    name: Article 1
     statement: Green, then commit. Not after, and not "green apart from".
     enforces: work:discipline/ratchet
     checked_by: The gate, run before committing.
     origin: >-
       A standard falls one exception at a time, and the exception is always
       justified at the moment it is made.
-  - id: work:invariant/2
-    name: Invariant 2
+  - id: work:article/2
+    name: Article 2
     statement: >-
       A suppression names its rule and its reason, at the site. Never in
       configuration.
@@ -25,32 +27,32 @@ invariants:
     origin: >-
       Nothing downstream can tell a rule that never existed from one switched
       off quietly, so a configuration-level ignore erases its own history.
-  - id: work:invariant/3
-    name: Invariant 3
+  - id: work:article/3
+    name: Article 3
     statement: Coverage is a floor beneath the tests, never a claim about them.
     enforces: work:discipline/observed-failure
     checked_by: A coverage floor, plus mutation testing as the signal behind it.
     origin: >-
       Coverage reports what ran. A test that passes against broken code is
       covered and worthless, and no coverage figure distinguishes the two.
-  - id: work:invariant/4
-    name: Invariant 4
+  - id: work:article/4
+    name: Article 4
     statement: A guardrail never observed to fail is not evidence of anything.
     enforces: work:discipline/observed-failure
     checked_by: Mutation-probing every new guardrail before trusting it.
     origin: >-
       Guardrails that were never wired up pass forever, and their passing is
       indistinguishable from working.
-  - id: work:invariant/5
-    name: Invariant 5
+  - id: work:article/5
+    name: Article 5
     statement: No gate step rewrites the tree.
     checked_by: Fixing lives in separate commands, never invoked by the gate.
     origin: >-
       A step that repairs what it finds destroys the evidence that anything was
       wrong, and a repository whose gate quietly fixes things does not know what
       state it is in.
-  - id: work:invariant/6
-    name: Invariant 6
+  - id: work:article/6
+    name: Article 6
     statement: >-
       Every gate step has three outcomes — could not run, which is loud and
       unmarked and exits zero; passed, which is marked; found something, which is
@@ -59,15 +61,15 @@ invariants:
     origin: >-
       A green mark meaning "the tool never started" is worse than a red one,
       because nobody looks again.
-  - id: work:invariant/7
-    name: Invariant 7
+  - id: work:article/7
+    name: Article 7
     statement: A check-mark is a claim about scope, so a step says what it checked.
     checked_by: The gate's output, which names the scope of each step.
     origin: >-
       A check-mark whose scope is unstated is read as covering everything, and is
       believed in proportion to how little it says.
-  - id: work:invariant/8
-    name: Invariant 8
+  - id: work:article/8
+    name: Article 8
     statement: >-
       An artifact prevents drift only if something consumes it — and consumption
       is not sufficient. Ask what it is checked against.
@@ -76,8 +78,8 @@ invariants:
     origin: >-
       A configuration key nothing reads, a document nothing links to, a suite
       nothing runs. Each looks like a control and is none.
-  - id: work:invariant/9
-    name: Invariant 9
+  - id: work:article/9
+    name: Article 9
     statement: >-
       A seed is data. Linting it in place is not proof; it is gated by rendering
       it and running the real gates on the result.
@@ -86,16 +88,16 @@ invariants:
     origin: >-
       Linting a template in place proves its files are well formed and never
       executes what it seeds, which is the only version anyone runs.
-  - id: work:invariant/10
-    name: Invariant 10
+  - id: work:article/10
+    name: Article 10
     statement: A seeded artifact does not violate the rules it seeds.
     enforces: work:discipline/seeded-artifacts
     checked_by: The rendered seed, held to the same gate as the repository.
     origin: >-
       A defect in a seed propagates once per use, so the same fault is worse
       there than anywhere else.
-  - id: work:invariant/11
-    name: Invariant 11
+  - id: work:article/11
+    name: Article 11
     statement: A decision that lives only in a transcript has not been made.
     enforces: work:discipline/written-decisions
     checked_by: >-
@@ -104,3 +106,15 @@ invariants:
     origin: >-
       Nobody downstream can act on a decision they cannot find, argue with one
       they cannot read, or learn why from a conversation they were not in.
+  - id: work:article/12
+    name: Article 12
+    statement: >-
+      A citation in a durable artifact is dereferenced — the number, the claim it
+      names, and a link where one is possible.
+    enforces: work:discipline/literate-programming
+    checked_by: >-
+      Nothing yet. A check for a bare A-number in committed prose would do it.
+    origin: >-
+      A bare number is efficient for an agent's reasoning and opaque to a human.
+      The artifact outlives the conversation that made the shorthand legible, and
+      is read by someone who was not in it.

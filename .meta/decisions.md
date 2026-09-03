@@ -1030,3 +1030,41 @@ something said is a decision rather than a thought still being had).
 One collision fell out and is recorded: **Invariant** here, against DDD's
 `invariants` slot on an Aggregate. Both mean "something that must hold", one
 about how work proceeds and one about domain state at a moment.
+
+### DR-048 · The Charter and its Articles; two Personalities for two kinds of writing
+*2026-09-02*
+
+**`Invariant` becomes `Article`, and the Articles together are the Charter.**
+The word was too general — and it collided with DDD's `invariants` slot on an
+Aggregate, which DDD keeps. `CHARTER.md` and `CONSTITUTION.md` are conventions
+worth borrowing rather than metaphors: a charter grants and binds, which is what
+a working agreement does.
+
+What the borrowing must not lose is that these are **empirical, not drafted**.
+That work is done by `origin`, which every Article carries: the failure it came
+from. An Article without one is an opinion that has borrowed the Charter's
+authority, and the class says so. So the Charter can be argued with on evidence
+rather than only amended — which is the sharpness `Invariant` had and the reason
+the rename needed care.
+
+Cited as **A1** through **A12**. A retired Article leaves a hole and is never
+renumbered.
+
+**A12 is new, and it comes from working in that 500-commit Rust repository.** A
+bare number is excellent for an agent's internal reasoning and opaque to a human,
+so a durable artifact dereferences every citation — the number, the claim it
+names, and a link where one is possible. **Nothing checks it yet, and it says so
+rather than implying enforcement it does not have.**
+
+**Two Personalities are asserted**, which is the first use of that class since it
+was split from Persona in DR-019. `In conversation` is concise, recommendation
+before survey, and errs toward concision rather than tedium — because unpacking
+can be asked for and tedium cannot be un-read. `In the record` is spelled out for
+an audience it names, assuming a reader who was not in the conversation and
+arrives by search years later.
+
+The point is that **which style is in force is a property of the work, not of the
+agent.** The same run writes one way in a turn and another way into the record,
+and conflating them produces either tedium in conversation or shorthand in an
+artifact nobody can read. They are inherited, because that is true in any
+portfolio.

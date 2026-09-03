@@ -33,10 +33,9 @@ concept_set:
     definition: What must hold true of a model element's state, in DDD's sense.
     in_scheme: work:scheme/ddd
     scope_note: >-
-      Carried by the `invariants` slot on Entity, ValueObject and Aggregate. A
-      claim about domain state at a moment, not a rule about how work proceeds.
-    confusable_with:
-      - work:concept/invariant
+      Carried by the `invariants` slot on Entity, ValueObject and Aggregate. DDD
+      keeps this word; solorepo's clauses are Articles, which is part of why the
+      rename was worth making.
   - id: work:concept/bounded-context
     pref_label: Bounded Context
     definition: An explicit boundary within which a model applies and its terms carry one settled meaning.
@@ -258,17 +257,24 @@ concept_set:
     in_scheme: work:scheme/solorepo
     scope_note: Coverage is a floor beneath the tests, never a claim about them.
     avoid: [test coverage]
-  - id: work:concept/invariant
-    pref_label: Invariant
+  - id: work:concept/article
+    pref_label: Article
     definition: >-
-      A one-line claim that can be held against a specific artifact and found
-      false, numbered so it can be cited.
+      One clause of the Charter — a claim that can be held against an artifact
+      and found false, numbered so it can be cited as A1, A2 and so on.
     in_scheme: work:scheme/solorepo
     scope_note: >-
-      Where a Discipline is followed, an Invariant is checked. An Invariant needs
-      no judgement, which is what stops it being a Discipline with fewer words.
-    confusable_with:
-      - ddd:concept/aggregate-invariant
+      Where a Discipline is followed, an Article is checked. Binding, and
+      empirical rather than drafted: each carries the failure it came from.
+    avoid: [invariant, rule, constraint]
+  - id: work:concept/charter
+    pref_label: Charter
+    definition: The Articles together — a working agreement, binding on whoever works here.
+    in_scheme: work:scheme/solorepo
+    scope_note: >-
+      Borrowed rather than metaphorical. A charter grants and binds; what this
+      one adds is that its clauses are empirical, so it can be argued with on
+      evidence rather than only amended.
   - id: work:concept/nothing-unconsumed
     pref_label: Nothing Unconsumed
     definition: >-

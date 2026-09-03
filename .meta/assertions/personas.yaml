@@ -48,6 +48,10 @@ personas:
       - Walks back work that overreaches, and keeps the attempt on the record.
       - Commits each decision as it settles rather than batching.
       - >-
+        Asks for concision in conversation and expansion in the record, on the
+        grounds that unpacking can always be requested and tedium cannot be
+        un-read.
+      - >-
         Pushes a constraint down to where it is true rather than accepting it
         where it is convenient — asked whether the dead-end check could be
         schema-driven before accepting it in the gate.
