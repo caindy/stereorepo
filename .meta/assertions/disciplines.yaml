@@ -22,9 +22,11 @@ disciplines:
         to a portfolio.
       - >-
         Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas,
-        `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.apm/`,
-        `.meta/principles.md`, `.meta/schemas.md`, `.meta/templates/`,
-        `stakeholders/` and `.gitignore`. Not the generated pages; step five writes those.
+        `render.py`, `check.py`, `check_pr.py`, `.meta/assertions/imported/`,
+        `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`,
+        `.meta/templates/`, `.github/workflows/`, `stakeholders/` and
+        `.gitignore`. Not the generated pages, and not `.github/`'s two forms;
+        step five writes all of those from the templates.
       - >-
         Copy every file under `template/` to its matching path, then link
         `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that

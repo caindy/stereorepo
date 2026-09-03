@@ -17,3 +17,20 @@ They use different placeholder markers, and the difference is load-bearing:
 
 A form that used the first marker would fail the gate for the crime of being a
 form.
+
+## Two of them are the source for `.github/`
+
+`pull-request.md` and `issue.md` each hold their form in a ```` ```markdown ````
+fence, and `render.py` extracts the fence into
+`.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/challenge.md`.
+**Edit the form here, never the generated file** — `check.py` fails on the
+staleness either way, but only one of the two edits survives.
+
+They carry no generated-by banner, unlike the prose satellites. The issue
+template's front matter has to be the first thing in the file or GitHub will not
+parse it, and a banner in the pull request form would ride along in the body of
+every pull request thereafter.
+
+`check_pr.py` reads the same fence to decide what a submitted body must contain,
+which is what makes the angle brackets do double duty: they live in the form
+forever, and one surviving into a submitted body is the form showing through.

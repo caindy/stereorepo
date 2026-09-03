@@ -1,0 +1,43 @@
+# The gate, run where it cannot be skipped.
+#
+# A check that runs when someone remembers is not a check — Nothing Unconsumed
+# applied to the checker itself. Both halves run here: `check.py` reads files and
+# needs no network, `check_pr.py` reads the forge and has nothing to say except
+# on a pull request.
+#
+# Nothing here restates a Discipline. What a pull request body must contain is
+# derived from `.meta/templates/pull-request.md` by the checker; this file only
+# decides when the checker runs.
+name: gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  files:
+    name: files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uvx --with linkml --with pyyaml python .meta/check.py
+
+  pull-request:
+    name: pull request body
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # `gh` is on the runner already, and the checker is stdlib only, so this
+      # job stays fast enough to run on every edit to the body.
+      - run: python3 .meta/check_pr.py "$PR"
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}

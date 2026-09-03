@@ -180,10 +180,32 @@ def specialize():
     return "\n".join(out)
 
 
+def form(name):
+    """The fenced block of a form in `.meta/templates/`, which is the form itself.
+
+    The prose around it explains the form to whoever fills it in; the fence is
+    what GitHub hands them. One copy, and this is the generator reading it —
+    Literate Programming's rule applied to a template rather than to a schema.
+    """
+    text = (META / "templates" / name).read_text()
+    fence = text.split("```markdown\n", 1)[1].split("\n```", 1)[0]
+    return fence.rstrip("\n") + "\n"
+
+
+def pull_request_template():
+    return form("pull-request.md")
+
+
+def issue_template():
+    return form("issue.md")
+
+
 TARGETS = {"disciplines.md": disciplines,
            "charter.md": charter,
            "vocabulary.md": vocabulary,
-           "../SPECIALIZE.md": specialize}
+           "../SPECIALIZE.md": specialize,
+           "../.github/PULL_REQUEST_TEMPLATE.md": pull_request_template,
+           "../.github/ISSUE_TEMPLATE/challenge.md": issue_template}
 
 if __name__ == "__main__":
     check = "--check" in sys.argv
@@ -197,6 +219,7 @@ if __name__ == "__main__":
             if not path.exists() or path.read_text() != want:
                 stale.append(name)
         else:
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(want)
             print(f"wrote {path.resolve().name}")
     if check:

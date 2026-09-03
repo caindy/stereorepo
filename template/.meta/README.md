@@ -29,6 +29,7 @@ for what it owns. This file routes. It does not restate.
 | changing or defending a rule | its DR in `decisions.md`, **and** the file that states it |
 | what is intended but unbuilt, or still open | [`roadmap.md`](roadmap.md) |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
+| opening a pull request, or filing an Issue | [`templates/`](templates/) — the forms; `.github/` is generated from them |
 
 **A digest tells you a rule exists and where it lives; only the file it points at
 is sufficient to apply it.** This map is deliberately insufficient.
@@ -68,3 +69,16 @@ subsumes the staleness check above:
 ```bash
 uvx --with linkml --with pyyaml python .meta/check.py
 ```
+
+**The gate for a pull request is `check_pr.py`.** It reads the forge rather than
+the tree, so it is a separate command with a separate lifecycle — nothing to say
+except on a pull request. It holds A15: every item under *what was noticed and
+not done* is a link, so the body cannot close over an observation that has
+nowhere to live afterwards.
+
+```bash
+python3 .meta/check_pr.py 12
+```
+
+Both run in [`.github/workflows/gate.yml`](../.github/workflows/gate.yml), which
+is the point — a check that runs when someone remembers is not a check.

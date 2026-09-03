@@ -1307,3 +1307,60 @@ Issue becoming a Pull Request is exactly the moment work starts. Flagged here
 because minting is supposed to be an explicit decision and not an agent's
 convenience; Christopher used the word first, and it is borrowed from the forge
 rather than invented, but the avoid list said otherwise until now.
+
+### DR-055 · PR First gets its mechanics, and the form is the only copy
+*2026-09-03*
+
+The Discipline was worth exactly as much as the path was real, and the path did
+not exist. Four pieces now do.
+
+**The forms are the source.** `.meta/templates/pull-request.md` and the new
+`issue.md` each hold their form in a fenced block, and `render.py` extracts the
+fence into `.github/PULL_REQUEST_TEMPLATE.md` and
+`.github/ISSUE_TEMPLATE/challenge.md`. One copy, and the generator reads it —
+Literate Programming applied to a template rather than to a schema. Staleness is
+already covered, because `check.py` subsumes `render.py --check`.
+
+Neither generated file carries the usual generated-by banner. The issue
+template's front matter must lead the file or GitHub will not parse it, and a
+banner in the pull request form would ride along invisibly in every body
+thereafter.
+
+**`check_pr.py` holds A15**, and derives what it requires from that same fence
+rather than listing headings of its own. Adding a heading to the form makes it
+required by that act alone. A checker with its own copy would drift the first
+time either moved, and the drift would present as a check that had quietly
+stopped asking for something — which is the failure mode this repository keeps
+finding in itself.
+
+It is a separate command from `check.py` because it has a separate lifecycle:
+files or the forge, offline or not, always or only on a pull request. It is
+stdlib-only and shells out to `gh`, so it is fast enough to run on every edit to
+a body.
+
+**`.github/workflows/gate.yml` runs both.** A check that runs when someone
+remembers is not a check — Nothing Unconsumed turned on the checker itself.
+
+**The merge trail is a repository setting, not a check.** PR First says to link
+the merge back so the trail survives in the clone. Squash-merge with the pull
+request number in the subject gives that by construction, and a check policing
+what a setting can guarantee is a check that exists because the setting was left
+wrong. Structure over policing, per Ratchet.
+
+Two defects, both found by watching it fail rather than by reading it:
+
+- `BULLET` was compiled without `re.M`, so `^` matched only at the start of the
+  section and **every well-formed body failed** as prose. It was written and
+  believed for the length of one test run.
+- The placeholder rule flagged any `<…>` containing a space, which catches
+  `Map<K, V>` in a repository that has a Rust bootstrap. A rule that misfires is
+  a rule that gets switched off, so the checker now strips code fences and
+  inline spans first, and matches the form's own placeholders exactly. `<details>`
+  survives; `<n>` does not.
+
+Six cases were run against it: the unedited template, a good body, a bare bullet,
+a missing section, an empty section with an explicit `None.`, and a body carrying
+generics and legitimate HTML. Only the correct ones pass.
+
+Still open, and now the only thing between this and dogfooding: **there is no
+remote.** `caindy/solorepo` does not exist, and creating it is a publish.

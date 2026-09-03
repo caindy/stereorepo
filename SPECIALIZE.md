@@ -16,7 +16,7 @@ Turning this scaffold into a new portfolio repo. Done once, by an agent followin
 ## Steps
 
 1. Start a new empty repo. Copy only what the steps below name — never clone, and never copy the whole tree: a clone carries the scaffold's commit history and an `origin` pointing back at it, and neither belongs to a portfolio.
-2. Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas, `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`, `.meta/templates/`, `stakeholders/` and `.gitignore`. Not the generated pages; step five writes those.
+2. Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas, `render.py`, `check.py`, `check_pr.py`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`, `.meta/templates/`, `.github/workflows/`, `stakeholders/` and `.gitignore`. Not the generated pages, and not `.github/`'s two forms; step five writes all of those from the templates.
 3. Copy every file under `template/` to its matching path, then link `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that must carry none of the scaffold's content.
 4. Fill in every placeholder, and write the portfolio's own assertions — its Portfolio, Products and Projects; its Personas, once there is research to draw them from; its Bounded Context and the words its domain experts actually use.
 5. Choose the languages the portfolio will use, from those `bootstraps/` supports, and copy each Bootstrap's applied disciplines in — its gates, its documentation layout, its seed project. The Bootstraps themselves stay with the scaffold and are maintained there; what travels is what they apply.
