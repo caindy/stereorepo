@@ -109,10 +109,12 @@ query($owner: String!, $name: String!, $number: Int!) {
     pullRequest(number: $number) {
       reviewThreads(first: 100) {
         nodes {
+          id
           isResolved
           isOutdated
           path
-          comments(first: 50) { nodes { author { login } } }
+          line
+          comments(first: 50) { nodes { author { login } body } }
         }
       }
     }
@@ -128,6 +130,77 @@ def gh(*args):
     return json.loads(out.stdout)
 
 
+def threads(ref):
+    """Every review thread on a pull request, fetched once.
+
+    Split from both readers below because the fetch is the slow, networked,
+    untestable half and neither predicate should own it. It is also what makes
+    the threads readable at all: A16 only ever answered pass or fail, so the
+    thing that knows how to ask GitHub what was said could not be asked to say
+    it.
+    """
+    owner, name = gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"].split("/")
+    number = gh("pr", "view", ref, "--json", "number")["number"]
+    data = gh("api", "graphql", "-f", f"query={THREADS}",
+              "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}")
+    return data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+
+
+def unaddressed(nodes):
+    """What is still owed an answer, in the order a reader should take them.
+
+    Unresolved is the whole test. An outdated thread is still unaddressed —
+    DR-057 — and is marked rather than filtered, because the anchor moving is
+    the reader's context and not a reason to skip it.
+    """
+    out = []
+    for t in nodes:
+        if t["isResolved"]:
+            continue
+        where = t["path"] or "the pull request"
+        if t.get("line"):
+            where += f":{t['line']}"
+        if t["isOutdated"]:
+            where += " (outdated — answer it anyway)"
+        said = []
+        for c in t["comments"]["nodes"]:
+            who = (c["author"] or {}).get("login", "someone")
+            said.append(f"    {who}: " + " ".join((c["body"] or "").split())[:600])
+        out.append(f"  {t['id']}\n  {where}\n" + "\n".join(said))
+    return out
+
+
+def owned_and_open():
+    """The pull request this worktree is working on, and what it still owes.
+
+    Resolved by **branch**, because the branch is where the Job already is: one
+    branch, one pull request, by construction, and it is what an agent wakes up
+    on. Authorship cannot do this job — every pull request in a solorepo is the
+    solo's (DR-014), so `--author @me` reconstructs a fact that was never in
+    doubt and says nothing about which one this thread is answerable for.
+
+    No local state. A background task dies with the session that started it and
+    a branch note would have to be found before it could be read; the checkout
+    is the token, and GitHub resolves it.
+
+    Where the branch has no pull request, every open one is listed instead —
+    without pretending that ownership was established. Which of them is this
+    thread's is a question the listing cannot answer, and saying so is the
+    honest output.
+    """
+    branch = subprocess.run(["git", "branch", "--show-current"],
+                            capture_output=True, text=True).stdout.strip()
+    if branch and branch != "main":
+        found = gh("pr", "list", "--head", branch, "--state", "open",
+                   "--json", "number,title")
+        if found:
+            return branch, [(p["number"], p["title"], unaddressed(threads(str(p["number"]))))
+                            for p in found]
+        return branch, []
+    return branch, [(p["number"], p["title"], None)
+                    for p in gh("pr", "list", "--state", "open", "--json", "number,title")]
+
+
 def resolved_without_an_answer(ref):
     """A16. Requiring resolution is what makes this check necessary.
 
@@ -141,11 +214,7 @@ def resolved_without_an_answer(ref):
     the merge for those, and a check saying the same thing twice is one of them
     drifting.
     """
-    owner, name = gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"].split("/")
-    number = gh("pr", "view", ref, "--json", "number")["number"]
-    data = gh("api", "graphql", "-f", f"query={THREADS}",
-              "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}")
-    return unanswered(data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"])
+    return unanswered(threads(ref))
 
 
 def unanswered(nodes):
@@ -177,7 +246,32 @@ if __name__ == "__main__":
     ap.add_argument("pr", nargs="?", help="pull request number, URL or branch")
     ap.add_argument("--file", help="read a body from disk instead of GitHub")
     ap.add_argument("--title", default="a real title", help="title to use with --file")
+    ap.add_argument("--threads", action="store_true",
+                    help="print the threads still owed an answer, and check nothing")
+    ap.add_argument("--sweep", action="store_true",
+                    help="every open pull request you own, and what each still owes")
     args = ap.parse_args()
+
+    if args.sweep:
+        branch, found = owned_and_open()
+        if not found:
+            print(f"no open pull request for branch '{branch}'" if branch
+                  else "no open pull requests")
+        for number, title, owed in found:
+            if owed is None:
+                print(f"#{number} {title} — open, and not this branch's")
+                continue
+            print(f"#{number} {title} — {len(owed)} unaddressed")
+            for item in owed:
+                print(item)
+        sys.exit(0)
+
+    if args.threads:
+        if not args.pr:
+            ap.error("--threads needs a pull request")
+        owed = unaddressed(threads(args.pr))
+        print("\n".join(owed) if owed else "nothing unaddressed")
+        sys.exit(0)
 
     if args.file:
         title, body = args.title, pathlib.Path(args.file).read_text()

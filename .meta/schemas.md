@@ -48,6 +48,7 @@ differently: it pulls `imported/` forward and never touches anything beside it.
 | `assertions/domain_vocabulary.yaml` | this portfolio | `ddd_ontology.yaml` |
 | `assertions/structure.yaml` | this portfolio | `work_ontology.yaml` |
 | `assertions/personas.yaml` | this portfolio | `work_ontology.yaml` |
+| `assertions/decisions.yaml` | this portfolio | `work_ontology.yaml` |
 
 Fictional instances — a made-up portfolio, an invented persona — are fixtures,
 not assertions, and do not belong here.

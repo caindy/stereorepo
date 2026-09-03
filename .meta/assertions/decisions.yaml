@@ -1,0 +1,2155 @@
+# solorepo's decision record: every choice that removed an alternative, and why.
+#
+# `decisions.md` is rendered from this file. Add an entry when a decision is
+# settled *and* implemented, and never renumber: a withdrawn entry leaves a hole,
+# the same rule the Charter's Articles carry.
+#
+# `rationale` is the prose as it was written when the decision was taken. The
+# slots beside it are for asking the record questions — which decisions
+# superseded which, which Articles nothing has yet applied, which entries
+# rejected nothing. They do not replace the reasoning and are not a summary of
+# it.
+
+decisions:
+  - id: work:decision/001
+    name: "DR-001 · `.meta/` is the staging ground"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Structure-explaining tooling and Specialization machinery live in `.meta/`;
+      product material lives everywhere else. solorepo is meant to be cloned, so the
+      machinery that performs and explains that Specialization has to be separable from
+      the content it acts on.
+  - id: work:decision/002
+    name: "DR-002 · Rough in an ontology of work"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `work_ontology.md` establishes shared vocabulary for the repo before there is much
+      structure to name. Explicitly early; treating it as settled would over-commit,
+      ignoring it would fragment the language it exists to create.
+  - id: work:decision/003
+    name: "DR-003 · Formalise the ontology in LinkML"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `work_ontology.yaml` makes the prose checkable. Composition is by reference off an
+      abstract `WorkEntity`, so a Capability appears in many Roles without being copied.
+      A SMART Goal requires all four of its parts, so a non-SMART goal fails validation.
+      Definition of Done gained structure because "measurable" is what it contributes.
+      Verified with `gen-json-schema` and `linkml-validate`.
+  - id: work:decision/004
+    name: "DR-004 · Add the runtime half"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Workload identity, AIBOM and audit are one gap wearing three hats: the ontology
+      modelled intent only. Added `Execution`, split `Identity` into principal and
+      workload kinds with a delegation link, `AgentBillOfMaterials` with pinned
+      `Component`s, and `AuditRecord`. Without delegation, in a team of one every action
+      resolves to a single name and the audit trail collapses. `AuditRecord.under_permission`
+      is optional on purpose: a log that could not hold an unauthorized action would be
+      useless.
+  - id: work:decision/005
+    name: "DR-005 · Capability carries no projected dimensions"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "A read/write dimension on Capability"
+        chosen: false
+        reason: "What a Capability can change is answered fully by applying it to Securables through Permissions, so encoding it on the Capability is either lossy or a restatement of the whole space."
+      - name: "Capability stays securable-free"
+        chosen: true
+        reason: "Granularity comes from the product of the two axes, and keeping them independent is what makes the product expressive."
+    falsifier: "A Capability whose meaning cannot be recovered from any Permission naming it."
+    rationale: |-
+      Rejected a read/write dimension on `Capability`. What a Capability can change is
+      answered fully by its application to Securables via Permissions, so encoding it on
+      the Capability is either lossy or a restatement of the whole space. Granularity
+      comes from the product of the two axes.
+  - id: work:decision/006
+    name: "DR-006 · Skills compose tools; tools are atomic"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Taking "Capability = SKILLs + Tools" literally: `echo` and `bash` are tools, and
+      "reading and writing files" is a skill that combines them. Added
+      `Capability.composed_of` with a rule enforcing that a TOOL composes nothing. The
+      relation matters for BOM and audit resolution down to what actually runs.
+  - id: work:decision/007
+    name: "DR-007 · APM is the packaging target"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      A Role and a Persona should be installable outside `.meta/`, and APM is the
+      vehicle. APM has no Securable-shaped concept anywhere, which confirms the
+      portability seam rather than exposing a deficiency: Role travels, Remit does not.
+  - id: work:decision/008
+    name: "DR-008 · Reverted: capability reification on the schema"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "A Provisioning enum, a PackageRef class and a package_ref slot"
+        chosen: false
+        reason: "Added, validated, and removed: the intersection of BOM, APM and Capability reification is a step too far for now."
+      - name: "Defer reification entirely"
+        chosen: true
+        reason: "Nothing downstream needs it yet, and a coordinate system invented ahead of its consumer is one that will be wrong."
+    consequences:
+      - "The inclination to delegate reification to a Dockerfile or nix pointer is kept as a roadmap direction rather than as schema."
+      - "`composed_of` and the tool-atomicity rule from DR-006 survive the revert."
+    rationale: |-
+      A `Provisioning` enum, a `PackageRef` class and a `package_ref` slot on
+      `Capability` were added, validated, and then removed. The intersection of BOM, APM
+      and reification of Capability is a step too far for now. Kept as a roadmap
+      direction, with the inclination to delegate reification to Dockerfile or nix
+      pointers instead. `composed_of` and the atomicity rule from DR-006 were kept.
+  - id: work:decision/009
+    name: "DR-009 · Commit per settled decision"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Commit as each decision is settled and implemented, rather than batching. The repo
+      is a record of how the scaffold was reasoned into being, not only of its final
+      state. Reverts are commits too.
+  - id: work:decision/010
+    name: "DR-010 · Placeholder READMEs in empty directories"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      git does not track directories, so the empty scaffolding folders would not have
+      survived a clone — and cloning is how solorepo is distributed. Each carries a
+      README saying its contents are not yet decided.
+  - id: work:decision/011
+    name: "DR-011 · `.agents/` is staged under `.meta/`"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `.agents` is an open convention with enough consensus that its place at repo root
+      belongs to a *product's* agent definitions. The agents supporting solorepo's
+      opinionated approach are scaffold, so they keep the convention's name inside
+      `.meta/`. Trade-off: tooling that looks for `.agents/` at the root will not find
+      them.
+  - id: work:decision/012
+    name: "DR-012 · Decisions are recorded in the repo"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Design decisions and insights belong in the repository, not only in an assistant's
+      private memory. `AGENTS.md` at the root carries the overview and a directory of
+      pointers, with `CLAUDE.md` symlinked to it; this file records the rest.
+  - id: work:decision/013
+    name: "DR-013 · Specialization is an instruction, not a build step"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "A program to invoke"
+        chosen: false
+        reason: "It needs a toolchain, which is exactly what is unavailable when the repo is picked up in an arbitrary thread."
+      - name: "A written procedure an agent follows"
+        chosen: true
+        reason: "Specializing is judgement about one product, made once. An agent following a written procedure beats a program, and needs nothing installed."
+    rationale: |-
+      Turning a clone into a product repo is judgement about one product, made once, so
+      an agent following a written procedure beats a program to invoke — and it needs no
+      toolchain, which matters when the repo is picked up in an arbitrary thread. The
+      term was already in the repo from DR-001 and was reused rather than replaced;
+      its spelling is normalised to **Specialization**.
+  - id: work:decision/014
+    name: "DR-014 · A solorepo is a monorepo: one portfolio, one bounded context, one language"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    consequences:
+      - "The repo boundary and the language boundary become the same boundary."
+      - "DR-013's framing of specializing into a new *product* repo is corrected: Specialization produces a Portfolio."
+    rationale: |-
+      One product **portfolio** holds one **bounded context** and therefore one
+      **Ubiquitous Language**, and contains multiple **products**, which may be
+      polyglot projects. This is a deliberate departure from the DDD literature, where
+      a system carries several bounded contexts: the constraint is what makes a single
+      Ubiquitous Language enforceable across everything one person builds. It corrects
+      the framing of DR-013, which spoke of specializing into a new *product* repo.
+      Specialization produces a *portfolio*. The Ubiquitous Language meant here is the
+      portfolio's **own domain** language; see DR-015.
+  - id: work:decision/015
+    name: "DR-015 · Two languages: the portfolio's own, and solorepo's imported"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      A generated portfolio has its own *sui generis* Ubiquitous Language, drawn from
+      its domain. solorepo's vocabulary — Persona, Capability, Challenge, Goal, Job,
+      Specialization and the rest — is **imported** to articulate the discipline. It
+      never replaces the domain language and has no authority over it.
+
+      In DDD's context-mapping terms this looks like a **Published Language** offered
+      upstream by solorepo, which a portfolio **conforms** to for discipline talk while
+      staying sovereign over its own domain.
+
+      The consequence is structural: the two must be **separable in the file tree**, or
+      `sync` cannot tell them apart. Sync pulls the imported vocabulary and machinery
+      forward; a portfolio's own language is its own decision, and overwriting a
+      project's own decisions is the failure that sync exists to prevent.
+  - id: work:decision/016
+    name: "DR-016 · solorepo republishes DDD; portfolios conform transitively"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      solorepo adopts DDD as a Published Language and republishes it alongside its own
+      work vocabulary, so a portfolio conforming to solorepo is transitively conformist
+      to DDD.
+
+      **Terms carry provenance.** The published language has two strata: terms adopted
+      from DDD (Bounded Context, Ubiquitous Language, Published Language, Conformist)
+      and terms solorepo originates (Persona, Capability, Securable, Remit, Agency,
+      Job, Specialization). An entry has to say which, because an adopted term is
+      defined by the canon and is not ours to redefine. Silently redefining an
+      established term is worse than minting a new one — the divergence is invisible.
+      A portfolio's own domain terms are a third stratum, owned by the portfolio.
+
+      **Minting a term has a search order.** Does DDD already name it? Use it. Does
+      solorepo's vocabulary already name it? Use it. Only when neither does is a term
+      minted, and that is the explicit decision with the solo. *Specialization* was
+      reused under rule two; *Published Language* and *Conformist* were adopted under
+      rule one.
+
+      **Departures must be marked.** Conformity is the default, so a deliberate
+      divergence from the canon is recorded as one or transitive conformity breaks
+      silently. DR-014 is already such a departure: one bounded context per portfolio,
+      where DDD would expect several per system.
+  - id: work:decision/017
+    name: "DR-017 · DDD is reified as LinkML alongside the work ontology"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `ddd_ontology.yaml` carries the DDD pattern language as a schema: Bounded
+      Context, Ubiquitous Language, Subdomain, Context Map and its relationship
+      patterns, plus the tactical patterns a portfolio will model its domain with.
+
+      Reification makes DR-016's provenance **structural instead of clerical**: which
+      stratum a term belongs to is the file it lives in, not a column someone has to
+      remember to fill. It also gives the three languages of DR-015 the separability
+      that `sync` needs, since they become three files with three owners.
+
+      Conformity is preserved by construction. The schema restates the canon for
+      reference and says in its own header that where it and the book disagree, the
+      book wins and the schema is wrong. Citations name the pattern rather than a
+      chapter number. Two departures are marked in place: `Term` is a solorepo
+      addition so a language can be enumerated rather than only described, and
+      `DomainEvent` postdates the book.
+  - id: work:decision/018
+    name: "DR-018 · A Ubiquitous Language is a set of Concepts, not a set of Terms"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "Term with name, definition and an avoid list"
+        chosen: false
+        reason: "It handles many words for one concept and cannot state the hazard that matters here — one word for many concepts. A collision could not be written down."
+      - name: "SKOS Concept, with the label decoupled from the meaning"
+        chosen: true
+        reason: "The standard for exactly this, and it makes provenance structural: the stratum is read off `in_scheme` rather than kept in a field that can drift."
+    consequences:
+      - "The TermProvenance enum is deleted; the stratum is read off `in_scheme`."
+      - "Vocabularies solorepo does not own can be named as schemes and pointed at."
+    rationale: |-
+      DR-017 modelled a language as `Term`s carrying a name, a definition and an
+      `avoid` list. That cannot state the problem it most needs to: `avoid` handles
+      **many words for one concept**, but the hazard here is **one word for many
+      concepts**. "Skill" already denotes three different things in scope for this
+      repo at once — a Capability of kind SKILL, an APM `skills` primitive, and the
+      loose use for what APM calls a `prompt`. If the unit of the model is the word,
+      a collision cannot even be written down.
+
+      SKOS is the standard for this, and its central move is decoupling the concept
+      from the label. `Term` is therefore replaced by `Concept` (`skos:Concept`) with
+      `pref_label`, `alt_labels`, `definition`, `scope_note` and `in_scheme`, plus
+      `confusable_with` for a Concept that shares a label but not a meaning. `avoid`
+      stays for the other failure mode and maps close to `skos:hiddenLabel`.
+
+      Two consequences. Provenance is no longer a field: the `TermProvenance` enum is
+      gone, and the stratum is read off `in_scheme`, so it cannot drift from the scheme
+      a Concept actually belongs to. And because schemes are first class, vocabularies
+      solorepo does not own — APM's primitives, a harness's terms — can be named as
+      schemes and pointed at, which the three-valued enum could not express.
+
+      SKOS and its constructs are adopted, not authored, and marked in place as
+      departures from DDD per DR-016.
+  - id: work:decision/019
+    name: "DR-019 · Persona splits into Personality and Persona"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      The original sketch's *Persona* — SOUL.md plus a communication style — is really
+      a **Personality**: the character an Actor presents while working. **Persona** is
+      taken back for Cooper's sense from *The Inmates Are Running the Asylum*: a
+      specific, detailed, named user archetype the product is designed *for*, and a
+      first-class citizen of a solorepo rather than a borrowed metaphor.
+
+      The split earns itself twice over. It lets a Persona be **interrogated** — an
+      Actor adopts the Persona's Personality and holds a Job to be questioned, so no
+      new machinery is needed and the audit trail still attributes to the workload
+      identity rather than to a fictional person. And it lets a Persona **seed a design
+      tool**, which a two-slot character sketch could not.
+
+      Two things left deliberately unsettled. `persona_goals` is qualified rather than
+      reusing `Goal`, because a Cooper goal is a standing motivation with no deadline
+      and nothing marking it done — a genuine collision with the ontology's SMART Goal,
+      still to be resolved. And `Persona` is **not** linked to `JobToBeDone`, because
+      whether a JTBD states the user's job or the worker's is open, and the link would
+      silently decide it.
+  - id: work:decision/020
+    name: "DR-020 · Persona goals are typed, and the End tier is Goal-shaped"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "Make the End tier an instance of Goal"
+        chosen: false
+        reason: "A Goal requires a Deadline to stay SMART, and an End goal is standing and recurring rather than a bounded commitment."
+      - name: "Type the tiers and record End as Goal-shaped without being a Goal"
+        chosen: true
+        reason: "It records what is true — specific, with a plain test for having been reached, and no deadline — without breaking DR-003's requirement."
+    rationale: |-
+      `persona_goals` was a flat list of strings, justified by the claim that a Cooper
+      goal has "no deadline and nothing marking it done". Checking that against *About
+      Face* showed it is only half right, and only for two tiers of three:
+
+      | Tier | Norman level | Goal-shaped? |
+      |---|---|---|
+      | Experience | visceral | no |
+      | **End** | behavioural | **yes, apart from the Deadline** |
+      | Life | reflective | no |
+
+      An End goal — "process an invoice without manual reconciliation" — is specific
+      and has a plain test for having been reached. What it lacks is a Deadline: it is
+      standing and recurring, not a bounded commitment. So `PersonaGoal` now carries a
+      `goal_type`, and the End tier is recorded as Goal-shaped **without** being made
+      an instance of `Goal`, whose deadline is required to keep it SMART (DR-003).
+
+      Left open: whether `Goal` and an End goal should share an abstraction —
+      Challenge plus Definition of Done plus JTBD, with `Goal` adding the deadline —
+      or whether the work Goal simply *serves* an End goal and the two stay separate.
+      That decision also settles whether a `JobToBeDone` states the user's job or the
+      worker's, which DR-019 left open.
+
+      Verification also corrected `PersonaKind`, which had four values sketched from
+      memory. *About Face* defines six: CUSTOMER (the buyer, not the user) and SERVED
+      (affected without ever touching the interface) were missing. And the taxonomy is
+      attributed to *About Face* with Reimann, Cronin and Noessel, not to *Inmates*,
+      which introduced personas and the primary/secondary split only.
+
+      Business and technical goals are deliberately excluded: *About Face* keeps them
+      outside the persona so they cannot pollute the user model.
+  - id: work:decision/021
+    name: "DR-021 · A Job to be Done states the user's job, and names a Persona"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "A Job to be Done names a Role"
+        chosen: false
+        reason: "A Role is a named set of Capabilities, which is a worker's role. A JTBD states the user's job."
+      - name: "A Job to be Done names a Persona"
+        chosen: true
+        reason: "It closes what DR-019 and DR-020 left open, and makes choosing a Role an explicit act rather than something implied by the Goal."
+    consequences:
+      - "An Agency's Role is no longer implied by its Goal."
+      - "Which of a Persona's END goals a JTBD serves is reachable but not stated; whether that edge earns its keep was left open, and DR-031 settled it."
+    rationale: |-
+      The original sketch had a JTBD specify a **Role** — a named set of Capabilities,
+      which is a worker's role. It states the **user's** job, so it names a
+      **Persona**. This closes what DR-019 and DR-020 left open.
+
+      The chain that results: a Persona is interrogated, which surfaces END goals,
+      which yield a Job to be Done, which a Goal commits to serving by a deadline. The
+      work Goal *serves* the End goal rather than being one, because a Goal carries a
+      Challenge — defect, epic, feature, task — and a user's goal has no Challenge.
+      Forcing a shared abstraction would break on that.
+
+      One consequence worth stating: **an Agency's Role is no longer implied by its
+      Goal.** The old chain ran JTBD → Role → Agency, so the worker's role fell out of
+      the goal. Now the Persona says who the work is *for* and the Role says who does
+      it, which are independent facts. Choosing a Role becomes an explicit act.
+
+      Left open: a Persona holds several END goals, and which one a given JTBD serves
+      is reachable through the Persona but not stated. Whether that edge earns its
+      keep is undecided.
+  - id: work:decision/022
+    name: "DR-022 · Literate Programming and Progressive Disclosure are Disciplines"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Two Disciplines adopted for every solorepo, in the sense settled earlier: a
+      structured way of working that must be adhered to because it is not an imperative
+      program.
+
+      **Literate Programming** makes the schema an exposition for a human reader, with
+      the machine-readable part secondary. A module explains itself; the `description`
+      carries reasoning rather than an inventory.
+
+      **Progressive Disclosure** keeps one small thing always-loaded and routes the
+      rest on demand. Its operative rule is that the digest is *deliberately
+      insufficient* — a summary sufficient to act on gets acted on, and the source it
+      summarises rots. Taken from `python_bootstrap`, which implements it as a load map
+      even though it never uses the phrase.
+  - id: work:decision/023
+    name: "DR-023 · The work ontology splits into seven modules"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `work_ontology.yaml` had grown to 1,180 lines holding everything, which both new
+      Disciplines argue against: nothing that long is an exposition, and nothing that
+      undivided can be disclosed progressively.
+
+      It is now an umbrella of 213 lines — the compositional equations, a load map, and
+      the container — importing seven modules under `work/`: **core**, **authority**,
+      **actors**, **personas**, **purpose**, **assignment**, **provenance**. Each opens
+      with a narrative carrying its own reasoning, and each compiles standalone.
+      Provenance is the runtime half, peeled off as its own module.
+
+      `work_ontology.md` is dropped. It was a fifteen-line sketch that the schema had
+      long since overtaken, and keeping a "source" that contradicts what it sources is
+      the drift these Disciplines exist to prevent. Everything in it survives: the
+      compositional equations in the umbrella's description, and each definition in the
+      module that owns it.
+
+      Verified across the split: the umbrella validates instances that the single file
+      validated, every module compiles alone, and the tool-atomicity rule still
+      rejects what it rejected before.
+  - id: work:decision/024
+    name: "DR-024 · `.meta/README.md` splits into a core and six satellites"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      The README had grown to 556 lines holding vocabulary, principles, disciplines,
+      roadmap, a procedure and twenty-three decision records — while being the one file
+      `AGENTS.md` points at, and so the one that always loads. It violated the
+      Progressive Disclosure Discipline adopted one commit earlier, in the same way and
+      for the same reason the work ontology did.
+
+      It is now a ~50-line core carrying two tables and nothing else: a **load map**
+      routing from what you are touching to what to read, and a **routing table** for
+      where a new paragraph goes. Six satellites own the rest — `vocabulary.md`,
+      `principles.md`, `disciplines.md`, `roadmap.md`, `decisions.md`, `schemas.md`.
+
+      Two consolidations came with it. The Specialization procedure moved into
+      `disciplines.md` beside the definition of Discipline, since the procedure *is* a
+      Discipline and having the two apart was the split that made Discipline hard to
+      see. And the schema tooling moved into `schemas.md` beside the files it operates
+      on.
+
+      The core states its own insufficiency, which is the discipline's operative rule
+      rather than a disclaimer.
+  - id: work:decision/025
+    name: "DR-025 · Discipline is a class"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `Discipline` becomes a class in its own module, `work/disciplines.yaml`, with
+      `steps`, `judgement`, `produces` and an optional `applies_to` scope.
+
+      The reason is transformation, not tidiness. **An APM `instructions` primitive is
+      a Discipline compiled for a harness**, and prose in a document gives that
+      transformation nothing to read. A Discipline had to survive into a form something
+      could consume, and prose does not survive.
+
+      `judgement` records what in a Discipline resists automation — the clause that
+      makes it a Discipline rather than a script. An empty `judgement` is a smell: a
+      Discipline with no judgement in it is a program nobody has written yet. That
+      makes the class carry its own test for whether an instance belongs in it.
+
+      `applies_to` is a Securable, so a Discipline that holds only in one place says
+      where. An APM instruction's `applyTo` glob is exactly this.
+  - id: work:decision/026
+    name: "DR-026 · The ABox lives in `.meta/assertions/`, and the prose derives from it"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Everything committed until now was **TBox** — terminology, no assertions. Every
+      ABox artifact lived in a scratch directory, so the repo held a complete
+      vocabulary and nothing said in it.
+
+      `.meta/assertions/` now holds what solorepo states about itself: its three
+      Disciplines, and its Ubiquitous Language as SKOS Concepts. Fictional instances
+      are **fixtures**, not assertions, and stay out — which is what the earlier
+      deferral was actually about. The line is not TBox versus ABox, since both of
+      those are ABox; it is *actual* versus *invented*.
+
+      `vocabulary.md` and `disciplines.md` are now generated by `.meta/render.py` and
+      carry a banner saying so. They were listing what the assertions already held,
+      which is the duplication that prefer-derived-over-declared exists to stop.
+      `--check` fails when they are stale, so the derivation is enforceable rather than
+      remembered.
+
+      The vocabulary could not have been folded into the schemas instead. In a TBox the
+      classes *are* the meanings, so "Skill means three things" has nowhere to be
+      stated; SKOS is deliberately ABox precisely so a language can be talked about.
+      The Concept whose label is "Capability" and the class `Capability` are different
+      things in different boxes — OWL calls this punning — related by description, never
+      by identity.
+  - id: work:decision/027
+    name: "DR-027 · Portfolio, Product and Project"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      **Portfolio** — everything one solo builds inside one Bounded Context. One
+      Ubiquitous Language, one per repo, and what Specialization produces. This is why
+      a solorepo is a monorepo: the repo boundary and the language boundary are the
+      same boundary.
+
+      **Product** — delivered to users, with its own interface and therefore its own
+      primary Persona. The unit of *value*.
+
+      **Project** — one toolchain, one language, its own tests and gate. The unit of
+      *construction*.
+
+      Products and Projects are **not a hierarchy**. They are orthogonal groupings of
+      the same content: Products group by who it is for, Projects by how it is built,
+      and Products are composed from Projects many-to-many. A shared library is one
+      Project serving two Products; a Product with a web app and an API is one Product
+      across two Projects. "Polyglot" is therefore a property of the *Portfolio* —
+      Projects differ in language, and the Products they serve do not care.
+
+      Each class carries its own distinguishing test as a slot, so the boundary is in
+      the schema rather than in someone's judgement: `bounded_context_ref` for
+      Portfolio, `primary_persona` for Product (Cooper's rule for one interface against
+      two), `gate` and `language` for Project.
+
+      **`Portfolio.bounded_context_ref` is a CURIE, not a typed reference.** Importing
+      `ddd_ontology.yaml` into the work ontology *compiles* — and then silently
+      replaces the tree root, because `DddModel` is also `tree_root: true` and wins the
+      merge. The generated JSON Schema came back with DDD's fifteen collections where
+      the work ontology's twenty-five should be, with no error raised. The untyped
+      CURIE keeps the two schemas independently loadable. Typing it needs the DDD
+      schema modularised so its container is separable, which is the same split the
+      work ontology already had — done in DR-028, which supersedes this paragraph.
+  - id: work:decision/028
+    name: "DR-028 · The DDD schema modularises, and the Portfolio link is typed"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `ddd_ontology.yaml` splits the same way the work ontology did: an umbrella
+      holding only the load map and the container, over four modules — **core**,
+      **skos**, **strategic**, **tactical**.
+
+      Splitting `skos` out is not filing. **It marks the departure by structure rather
+      than by a comment someone has to notice.** Concept and ConceptScheme are adopted
+      from SKOS and not from DDD, and now that fact is the module they live in.
+
+      With the container out of the modules, `work/structure.yaml` imports
+      `../ddd/strategic` and `Portfolio.bounded_context` is a typed reference to
+      `BoundedContext`, replacing the untyped CURIE of DR-027. Verified that the work
+      ontology keeps its own tree root — twenty-five collections, none of DDD's leaking
+      in — which is exactly what the unmodularised import broke silently.
+
+      The umbrella records why the container may only live there: a `tree_root` in a
+      module is inherited by anything importing it and silently replaces the
+      importer's own.
+
+      **What the typing does and does not buy.** It gives the reference a machine-
+      readable range, so generators and documentation know what it points at. It does
+      **not** give referential integrity: a Portfolio naming a Bounded Context that
+      does not exist still validates, because the two containers are separate tree
+      roots and so separate files, and LinkML does not resolve references across them.
+      That check belongs to whatever tooling reads these files.
+  - id: work:decision/029
+    name: "DR-029 · The invariants get a checker, and it is the `.meta` Project's gate"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `.meta/check.py` enforces the five invariants of the roadmap entry: `composed_of`
+      acyclicity, Collaboration membership, the two AuditRecord invariants, and
+      reference resolution across files. It also runs `render.py`'s staleness check, so
+      one command is the whole gate.
+
+      **Which slots hold references is read off the schema**, not listed in the
+      checker: a slot is a reference when its range is a class with an identifier and
+      it is not inlined. A hand-kept list would drift the moment either schema moved,
+      which is the failure this repo keeps finding in itself.
+
+      Proved by construction rather than assumed. A probe document violating all four
+      invariants passes `linkml-validate` cleanly and fails the gate with six named
+      problems — which is the demonstration that the two tools check disjoint things,
+      and that a green checker is not a checker that cannot fail.
+
+      solorepo now asserts its own structure. `work:portfolio/solorepo` is the
+      Portfolio, `work:project/meta` is a Project, and its `gate` slot holds the
+      command. **No Products are asserted**: a Product requires a primary Persona,
+      nothing has been released to users, and inventing a Persona to fill a required
+      slot would violate the Discipline that makes Personas worth having. The absence
+      is the honest assertion, and the required slot is what forced the question.
+
+      `ddd:context/solorepo` is asserted so the Portfolio's typed link resolves. Its
+      Ubiquitous Language is not listed member by member — `in_scheme` already says
+      which scheme each Concept belongs to, so membership is read off rather than kept
+      twice.
+  - id: work:decision/030
+    name: "DR-030 · Dogfooding is a Discipline, and the scaffold is a Product"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      **Dogfooding** joins the Disciplines: use what is being built, on itself, before
+      anyone else has to. Its `judgement` is telling a difficulty that is the tool's
+      fault from one that is the task's — working around the first hides a defect,
+      redesigning for the second is thrashing, and only use distinguishes them.
+
+      It is adopted on evidence rather than principle. Testing Specialization for real
+      found five gaps that reviewing it had not. Instantiating the DDD schema found a
+      cardinality error in the same hour it was written. Enumerating the vocabulary
+      found collisions that discussing it had missed. Each was reached by use and not
+      by reasoning about the artifact.
+
+      **The scaffold is a Product**, reversing DR-029's assertion that solorepo had
+      none. The blocker was `Product.primary_persona`, and dogfooding dissolves it: the
+      scaffold's first user is the person building it, so the primary Persona is the
+      solo. `work:product/scaffold` is built from `work:project/meta`, which is the
+      Product/Project orthogonality of DR-027 in its smallest real instance — one
+      Project, one Product, the same content grouped two ways.
+
+      **A marked departure from Cooper.** A persona is normally an archetype standing
+      in for a class of real people. Here the class has one member and he is present,
+      so `work:persona/the-solo` is not a research surrogate but a record of
+      requirements, drawn from what he has said and done in building the repo. It can
+      be corrected by its subject rather than defended by its author, which no ordinary
+      persona can be — and interrogating it means asking him rather than having an
+      Actor adopt it.
+  - id: work:decision/031
+    name: "DR-031 · A persona goal is identified, and a Job to be Done names the ones it serves"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `PersonaGoal` gains an identifier, and `JobToBeDone.serves` names the END goals a
+      need advances. It stays inlined in its Persona, because a goal has no meaning
+      apart from the person holding it, but it can now be referenced.
+
+      The edge earns its place by making a subtraction possible, the same one that
+      Permission against AuditRecord already makes:
+
+      - an END goal with no Job to be Done → a user need nobody is working on
+      - a Job to be Done serving none → work with no user justification
+
+      Naming only the Persona narrowed a need to a *set* of goals without resolving it
+      to one, which left SMART's **relevance** unfalsifiable: relevant, but to what.
+
+      Two constraints on the edge are unexpressible and are checked by the gate
+      instead — the target must be END tier, which lives on the target object, and it
+      must be a goal the Job to be Done's own Persona holds, which crosses a path. Both
+      matter precisely because the value here is arithmetic, and a borrowed or
+      wrongly-tiered goal corrupts the count silently. Probed in both directions: a
+      document violating each passes `linkml-validate` and fails the gate.
+  - id: work:decision/032
+    name: "DR-032 · Assertions split by ownership"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `assertions/imported/` holds what a portfolio inherits from solorepo — the
+      Disciplines, and the vocabulary of DDD, solorepo and APM. Everything beside it is
+      the portfolio's own: its structure, its Personas, and
+      `domain_vocabulary.yaml` for the terms its domain experts actually use.
+
+      The split is by **ownership, not by kind**, because that is what `sync` needs.
+      DR-015 required the two separable so a sync could pull one forward without
+      trampling the other; a directory boundary is the cheapest form that requirement
+      can take, and the one hardest to get wrong. `imported/README.md` states the rule
+      where someone about to edit the wrong file will see it.
+
+      The Bounded Context moved out of the inherited vocabulary and into
+      `domain_vocabulary.yaml`, because a portfolio's context is its own. It cannot sit
+      in `structure.yaml` beside the Portfolio it pairs with — `bounded_contexts` is a
+      `DddModel` slot and `portfolio` is a `WorkOntology` one, and a document has one
+      container. The Ubiquitous Language belongs to the Bounded Context anyway, so they
+      travel together.
+
+      **solorepo is the degenerate case**, and the file says so: its domain *is*
+      building software as a team of one, so its domain terms are the ones it
+      publishes, and `domain_vocabulary.yaml` holds nothing but its own Bounded
+      Context. A generated portfolio adds a scheme and fills it.
+
+      `render.py` merges both vocabularies into one page, because a reader wants the
+      language whole. They are separate files because sync treats them differently, not
+      because they are separate languages.
+  - id: work:decision/033
+    name: "DR-033 · `README.md` for arriving, `SPECIALIZE.md` for acting"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Three audiences, three entry points, kept apart because conflating them is what
+      made the first Specialization attempt leak:
+
+      | Arriving at the repo | `README.md` |
+      | Turning a clone into a portfolio | `SPECIALIZE.md` |
+      | Working on the scaffold itself | `AGENTS.md` → `.meta/README.md` |
+
+      **`SPECIALIZE.md` is generated** from the Specialization Discipline, so the steps
+      exist once. A procedure copied into a second file is a procedure that will
+      disagree with itself, and the gate now catches a hand-edit of it — verified by
+      tampering.
+
+      The steps were rewritten, not moved. The DR-013 version predated the module
+      split, the assertions, the ownership split and the gate, and its first
+      instruction is the finding that testing produced: **start a new repo and copy
+      into it, never clone.** A clone carries the scaffold's history and an `origin`
+      pointing back at it, which was the worst of the five gaps found by running the
+      procedure for real. Two more steps close others — delete `SPECIALIZE.md` and
+      rewrite `README.md`, since a portfolio specializes nothing; and run the gate
+      before the first commit, which was impossible when the procedure was written
+      because there was no gate.
+
+      `README.md` credits its sources. The Disciplines and gates here are adopted from
+      DDD, Cooper, SKOS and `python_bootstrap`, and a scaffold that presented them as
+      its own inventions would be teaching the wrong lesson on the page a reader sees
+      first.
+  - id: work:decision/034
+    name: "DR-034 · `template/` holds the replacements, and the gate catches what is left unfilled"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "Template the whole repository, as python_bootstrap does"
+        chosen: false
+        reason: "Our root is already portfolio-shaped, so a full template would be a near-copy of `.meta/`, and the copy would drift."
+      - name: "Template only the files Specialization must replace"
+        chosen: true
+        reason: "It gets the template-as-data benefit where data beats instruction, and adds no duplication."
+    consequences:
+      - "Two checks join the gate: surviving placeholders, and template parses."
+      - "The skeletons carry two refusals: `products: []` and `personas: []` are truthful until there is research."
+    rationale: |-
+      `template/` holds seven files: the ones Specialization must *replace* rather than
+      copy — `AGENTS.md`, `README.md`, an empty decision record and roadmap, and
+      skeletons for the three assertion files a portfolio owns.
+
+      **It is not a full tree.** `python_bootstrap` templates a whole repository
+      because its root is a Python project and its template is a generated Python
+      project — genuinely different content. Our root is already portfolio-shaped, so a
+      full template would be a near-copy of `.meta/`, and the copy would drift. Holding
+      only the replacements gets the template-as-data benefit where data beats
+      instruction, and adds no duplication. Getting a skeleton right is something you
+      can look at; "empty the decision record" is an instruction you can get wrong,
+      which is what testing the procedure found.
+
+      Two checks join the gate. **Surviving placeholders** scans exactly the files
+      `template/` shadows, which is precise rather than cautious: placeholders come
+      from the template and nowhere else, and a wider scan would fire on any prose
+      discussing them. **Template parses** fills every token with a dummy and confirms
+      the result loads and fits a container — the template is data and is not linted in
+      place, so it is checked by filling it in and testing the result, which is the
+      only version anyone ever runs.
+
+      Both probed. A placeholder left in `AGENTS.md`, a malformed skeleton, and a
+      top-level key no container accepts are each caught and named.
+
+      The skeletons carry two refusals worth keeping. `products: []` says that a
+      Product needs a researched Persona and that satisfying the schema with an
+      invented one defeats the point. `personas: []` says an empty file is a truthful
+      one until there is research to put in it.
+  - id: work:decision/035
+    name: "DR-035 · Specializing for real, three times"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Dogfooding the procedure found **nine defects across two runs**, none of which
+      reading it had surfaced.
+
+      **Run one — seven.** Three files were in the repo and named by no step:
+      `.gitignore`, `.meta/.agents/`, and the `CLAUDE.md` symlink — while the
+      templated `AGENTS.md` asserted that symlink existed. Re-rendering **recreated the
+      `SPECIALIZE.md` the previous step had just deleted**. The placeholder check
+      passed **vacuously**, because it scanned only the files `template/` shadows and
+      `template/` had been deleted one step earlier — it could never have fired in the
+      flow it was written for. `.meta/README.md` was copied verbatim and carried three
+      lines of scaffold-specific language into the portfolio. And the portfolio
+      inherited the Specialization Discipline, and a Concept for it, for something it
+      can never do.
+
+      **Run two — two more, both in the fixes.** `render.load()` crashed on a
+      scaffold-only assertion file that a portfolio legitimately lacks. The staleness
+      check crashed on a rendered page that legitimately does not exist — and an
+      earlier attempt to fix that had **silently no-opped**, because the replacement
+      was written from memory instead of read from the file. That is the second time
+      this session; both times an assertion on the match would have caught it, and the
+      edits that carried one were fine.
+
+      **Run three — clean.**
+
+      One fix closed two defects. **Specialization is solorepo's own Discipline, not
+      one it publishes**, so it moved out of `assertions/imported/` and into
+      `assertions/disciplines.yaml`. A portfolio therefore never inherits it, and
+      `render.py` finds nothing to render, so `SPECIALIZE.md` is never recreated. The
+      ordering bug and the wrongly-inherited Discipline were the same bug seen twice.
+
+      The placeholder check was rewritten from *precise* to *alive*: it now scans
+      everything outside `template/` rather than only what the template shadows. The
+      cost is that prose here may not spell a token literally, which is cheap, and a
+      literal token outside `template/` is a defect in any case. Verified firing inside
+      a specialized portfolio, which is the only place it matters.
+  - id: work:decision/036
+    name: "DR-036 · A second dogfood cycle, and three more leftovers"
+    status: WITHDRAWN
+    withdrawn_because: "An audit report. Its three fixes are leftovers of DR-035's decision rather than new foreclosures, and the pattern it names — every remaining defect was a leftover of a fix — is a finding, which belongs to a Discipline and not to this record."
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Two more full Specializations, into a portfolio unrelated to the first. The
+      procedure ran clean end to end — gate green, all five assertion files validating,
+      one commit, no remote, the symlink preserved as a symlink, every markdown link
+      resolving. Three defects the gate did not cover turned up anyway, all found by
+      auditing the *result* rather than by running the steps.
+
+      **`schemas.md` said "what solorepo actually states"** and is copied verbatim, so
+      it carried scaffold language into a portfolio exactly as `.meta/README.md` had.
+      Fixing one file of that class had not prompted a check of the others; the audit
+      did.
+
+      **The Specialization *Concept* was still inherited** although its Discipline was
+      not. DR-035 moved the Discipline out of `assertions/imported/` and left the word
+      for it behind — the same defect one layer down, and invisible from the Discipline
+      side. `assertions/vocabulary.yaml` now holds solorepo's own Concepts beside its
+      own Disciplines. A third leftover of the same kind hid in the inherited
+      `Portfolio` concept, whose note referenced Specialization by name.
+
+      **A symlink was reported as a second file to fix.** `CLAUDE.md` resolves to
+      `AGENTS.md`, so the placeholder scan named both and only one could be edited.
+
+      The pattern across both cycles is worth stating: **every remaining defect was a
+      leftover of a fix, not an original mistake.** Moving a thing leaves its name
+      behind; fixing one file of a class does not fix the class. Neither is visible
+      from where the fix is made, and both are visible immediately in a specialized
+      result. That is the argument for the Dogfooding Discipline requiring a full run
+      rather than a review.
+  - id: work:decision/037
+    name: "DR-037 · One Bounded Context per portfolio is checked, not typed"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "Make bounded_contexts single-valued"
+        chosen: false
+        reason: "DddModel is generic DDD, a Context Map legitimately holds many, and solorepo's own map has three."
+      - name: "Check it in the gate instead"
+        chosen: true
+        reason: "The constraint is enforced where it is true rather than where it is convenient: one context declared in domain_vocabulary.yaml, and the Portfolio names it."
+    rationale: |-
+      A portfolio is exactly one Bounded Context (DR-014), and the plural
+      `bounded_contexts` key invited listing several. The slot stays multivalued
+      anyway: `DddModel` is generic DDD, a Context Map legitimately holds many, and
+      solorepo's own map has three. What is singular is a portfolio's **own** context.
+
+      So the constraint is enforced where it is true rather than where it is
+      convenient: the gate checks that `domain_vocabulary.yaml` declares one Bounded
+      Context and that the Portfolio names that one. Probed with a second context,
+      which it rejects.
+  - id: work:decision/038
+    name: "DR-038 · A Goal serves an END goal, or is a business or technical goal"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Closes what DR-020 and DR-031 left open. The two do **not** share an
+      abstraction: a work Goal *serves* a Cooper END goal, and they stay apart, because
+      a Goal carries a Challenge and a user's goal has none.
+
+      But "serves an END goal" was not the whole rule. *About Face* names **business
+      goals** and **technical goals** and keeps them out of the Persona so they cannot
+      pollute the user model — DR-020 honoured the exclusion and never gave them a
+      home. They belong on the Goal, as the other two things that can justify it.
+
+      `Goal.goal_basis` is required and has three values, so **work that answers to
+      nobody cannot be written down without the omission being visible.** Two rules
+      enforce the shape: a USER basis requires a Job to be Done, and a BUSINESS or
+      TECHNICAL basis requires a stated objective instead. Both probed.
+
+      A rule cannot follow the next hop, so the gate did: a USER-justified Goal whose
+      Job to be Done serves no END goal was caught there, because otherwise the chain
+      dead-ends at a Persona and looks justified while justifying nothing. **DR-039
+      moved that into the schema** by making the constraint local.
+
+      The basis stays single-valued. A Goal that genuinely serves both a user and the
+      business picks its primary, which keeps DR-031's arithmetic meaningful —
+      subtracting served END goals from held ones only means something if each Goal is
+      counted once.
+  - id: work:decision/039
+    name: "DR-039 · The dead-end check moves from the gate into the schema"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "Keep the gate check as a belt"
+        chosen: false
+        reason: "A check that cannot fire is noise."
+      - name: "Make JobToBeDone.serves required, and delete the gate check"
+        chosen: true
+        reason: "The constraint becomes local, so two local rules guarantee a two-hop chain and linkml-validate catches what the gate did."
+    rationale: |-
+      DR-038 put "a USER Goal's Job to be Done must serve an END goal" in the gate,
+      because a LinkML rule cannot reach through a reference. That was the wrong
+      conclusion from a true premise. **Inheritance would not have helped** — a rule
+      cannot traverse a reference however the ranges are typed — but the constraint
+      can be made *local*, which does.
+
+      `JobToBeDone.serves` is now **required**. A need that advances none of a
+      Persona's goals is a need nobody has, so the requirement is true on its own terms
+      rather than a device for reaching the Goal. And it composes: a USER Goal must
+      have a Job to be Done, a Job to be Done must reach an END goal, so no Goal can
+      dead-end at a Persona. Two local rules guarantee a two-hop chain.
+
+      Ordering is not a burden here — DR-021's flow surfaces END goals by interrogating
+      a Persona *before* a Job to be Done is written, so what the rule demands is
+      already what the Discipline produces.
+
+      A third rule joins them: a BUSINESS or TECHNICAL Goal carries **no** Job to be
+      Done. It has no user to reach, and one carrying a user's need is a USER Goal
+      mislabelled.
+
+      The gate check is deleted rather than kept as a belt: a check that cannot fire is
+      noise, and this session has spent its length removing summaries that can drift
+      from what they summarise. Four violations now fail `linkml-validate`, and the
+      gate is down to nine checks.
+  - id: work:decision/040
+    name: "DR-040 · Primitives are authored in `.meta/.apm/`, not `.meta/.agents/`"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      `.meta/.agents/` was the wrong directory, and the reason is the producer/consumer
+      split it got backwards. **`.apm/` is where primitives are authored; `.agents/` is
+      somewhere they land.** Compilation writes per-target output to `.claude/`,
+      `.github/`, `.gemini/` and `.agents/`, so authoring in `.agents/` means authoring
+      into an output path.
+
+      DR-011 is refined rather than reversed. Its reasoning — that a root `.agents/`
+      belongs to a product and is also a compilation target — still holds, and is in
+      fact the reason this move is right.
+
+      The directory now says what belongs in it instead of that nothing has been
+      decided: the verified layout, and the mapping from each kind of assertion to the
+      primitive it compiles into. **Nothing is in it yet, deliberately.** The compile
+      step from assertions to primitives is unbuilt, and hand-writing primitives a
+      compiler will later generate is the duplication that step exists to remove.
+
+      Two things are recorded as *unverified* rather than guessed at. The primitive
+      frontmatter fields could not be confirmed — the primitive-types reference is
+      marked legacy and redirects — and where `apm.yml` sits when primitives are at
+      `.meta/.apm/` is unconfirmed, though it implies the package root is `.meta/`.
+      Writing plausible field names would have been worse than recording the gap.
+
+      One question this closed: whether an `applyTo` glob collides with
+      securable-free Capability naming. It does not. `applyTo` scopes a **Discipline**,
+      which carries `applies_to` for exactly that reason, and never a Capability. The
+      axes stay clean.
+  - id: work:decision/041
+    name: "DR-041 · The `stakeholders/` taxonomy, and why it needs no term of its own"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "Mint `stakeholder` as a term"
+        chosen: false
+        reason: "Its two halves are already named — a customer is a Persona, an internal stakeholder is a Role — so the directory groups two existing concepts rather than introducing a third."
+      - name: "Two directories over the seam the ontology already has"
+        chosen: true
+        reason: "`customers/` holds the research a Persona is drawn from, `internal/` the Roles. It gives Cooper's research-over-invention rule somewhere to bite."
+    consequences:
+      - "A Persona with no material under `stakeholders/` was invented, which gives the Discipline a check it did not have."
+      - "`external/` is recorded in the roadmap rather than kept as an empty folder."
+    rationale: |-
+      `customers/` and `internal/`. `external/` is dropped.
+
+      The split follows a seam the ontology already has, which is why "stakeholder"
+      does not need minting: a **customer** is modelled as a **Persona** and their
+      interest is what the product is worth to them; an **internal** stakeholder is
+      modelled as a **Role** and their interest is how the work gets done. The
+      directory groups two existing concepts rather than introducing a third.
+
+      **What lives here is the research, not the model.** A Persona is asserted in
+      `.meta/assertions/personas.yaml`; `stakeholders/` holds what that assertion was
+      drawn from. The two are not duplicates — one is the distilled model, the other
+      its provenance — and the distinction is what makes Cooper's rule enforceable
+      rather than aspirational. "Research over invention" means nothing without
+      somewhere to put the research, and **a Persona with no material here was
+      invented**. That gives the Discipline a check it did not previously have.
+
+      It also explains why `stakeholders/` sits outside `.meta/`: it is product
+      material about real people, not scaffold machinery.
+
+      `internal/` is deliberately thin. Its Roles follow from the SDLC, which is not
+      worked out; `architect/` is kept from the original sketch as the first example
+      and may not survive that work.
+
+      `external/` — investors, media, advisors — is recorded in the roadmap rather
+      than kept as an empty folder. The idea has value, as a source to draw on when
+      asked for a press release or a blog post instead of improvising one each time.
+      An empty directory is not a placeholder for an idea; the roadmap is.
+  - id: work:decision/042
+    name: "DR-042 · Modelling the Solo is a Discipline"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    options:
+      - name: "Open Modelling"
+        chosen: false
+        reason: "Names the property that actually distinguishes it — external memory rather than private — and says nothing about what to do."
+      - name: "Modelling the Solo"
+        chosen: true
+        reason: "Unmistakable about what to do. The name is provisional; renaming costs one assertion and one Concept."
+    rationale: |-
+      An agent keeps a Persona of the person it works with, in the repo, current as the
+      work reveals things — and a portfolio inherits the practice.
+
+      The distinction that makes it worth a Discipline is **external memory rather than
+      private**. An agent's model of the person it works with exists whether or not it
+      is written down; writing it down is what makes it correctable and transferable
+      instead of a private guess that steers the work invisibly. The solo can see how
+      he is being read, and the next agent picks the model up cold.
+
+      Its `judgement` is what separates a durable trait from a one-off — *a correction
+      made twice is a preference; made once it is a correction* — and where inference
+      ends and evidence begins. The model cannot be correctable by its subject rather
+      than defended by its author unless it says which is which, so entries drawn from
+      reading rather than from something said are marked as such.
+
+      Applied immediately to `work:persona/the-solo`, which gained three behaviours,
+      one EXPERIENCE goal and two marked inferences from this session alone.
+
+      **Two rules needed reconciling.** `stakeholders/` says a Persona with no research
+      behind it was invented (DR-041), and the template says to leave personas empty
+      until there is research. Both are about *customer* Personas. The solo's is
+      DR-030's marked exception — its subject is present and can correct it, so it is a
+      record of requirements rather than a research surrogate, and this Discipline says
+      to keep it current from the start. Both files now say so.
+
+      The name is provisional. *Open Modelling* was the alternative, for the property
+      that actually distinguishes it; *Modelling the Solo* was chosen for being
+      unmistakable about what to do. Renaming costs one assertion and one Concept.
+  - id: work:decision/043
+    name: "DR-043 · Literate Programming generalises; six Disciplines pull up from `python_bootstrap`"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      **Literate Programming was too narrow to have a Rust implementation.** It said "a
+      *schema* is an exposition"; it now says an **artifact** is, wherever prose and
+      machine-readable content coexist. Two steps were added that make the
+      generalisation bite: keep the exposition in **one copy, included rather than
+      restated**, and where the language allows it make the examples executable. Those
+      turn `#![doc = include_str!(…)]` and doctests into instances of the Discipline
+      rather than Rust conventions that happen to resemble it. Note the direction —
+      the pull-up was needed *before* a language implementation could exist, not after.
+
+      **Nine of `python_bootstrap`'s eleven invariants are language-neutral**, which
+      corrects the sense that they are Python disciplines. Only `MANAGED_KEYS` config
+      parity and the 3.13 support floor carry Python, and both have a universal
+      principle beneath. Its own README is clear the rules were not invented there
+      either: each came from a failure in a working codebase — including a 560-commit
+      Rust workspace — with ADRs carrying the receipts.
+
+      **Nine collapse to six.** Three pairs say one thing twice once stated as ways of
+      working rather than as rules: coverage-is-a-floor with a-guardrail-never-observed
+      -to-fail become **Observed Failure**; gates-do-not-fix with every-step-must-be-
+      able-to-fail become **Gates Do Not Fix**; template-is-data with a-seed-must-not-
+      violate-what-it-seeds become **Seeded Artifacts**. **Ratchet**, **Nothing
+      Unconsumed** and **Written Decisions** stand alone.
+
+      Two were already practised here without being named. **Written Decisions** is
+      DR-012 and the routing rule that a commit message is not a destination.
+      **Seeded Artifacts** is DR-034's template-parses check. Naming them makes them
+      inheritable and gives a language bootstrap something to implement against.
+
+      They are adopted, not originated, and the file says where from. They live in
+      `imported/` because a portfolio inherits them, and each carries a `judgement`
+      because a Discipline without one is a program nobody has written yet.
+  - id: work:decision/044
+    name: "DR-044 · Literate Programming stops prescribing where prose sits"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      DR-043's step read "keep the exposition in one copy, **included** rather than
+      restated". That was over-prescriptive in a way that mattered: **it ruled out
+      inline documentation**, which a core Discipline has no business doing and which
+      would have made a correct Rust implementation non-conformant.
+
+      The requirement is the single copy and the machine reading it. Where the prose
+      *sits* is a language's business. The step now says so, and the description shows
+      both — a LinkML description the generators consume, and Rust prose either inline
+      or included.
+
+      The illustrations stay. An example of how a Discipline has been satisfied is not
+      a prescription, and removing them would make the Discipline harder to apply, not
+      less prescriptive.
+
+      The Rust implementation is designed in `roadmap.md` rather than settled here,
+      since the bootstrap repo does not exist. Two parts of it are worth flagging as
+      candidates for pulling up once a second language confirms them. **Documentation
+      routes by the same test as paragraphs** — what to do inline, why in an included
+      file, what happened in a log — which is Progressive Disclosure applied inside a
+      source file. And **a history entry names the test that would fail if it
+      regressed**, which makes relevance mechanical rather than a matter of judgement:
+      if the test is gone, the entry is stale. That is Observed Failure and Nothing
+      Unconsumed applied to prose, and it is the answer to why header changelogs are
+      useless — an entry with no receipt cannot be checked, and one too brief to
+      understand in context was never worth keeping.
+  - id: work:decision/045
+    name: "DR-045 · `rust_bootstrap` exists, and Specialization ran for real"
+    status: WITHDRAWN
+    withdrawn_because: "A run report. Its one claim, that the Bootstrap belonged in its own repository, was reversed by DR-046 within the hour; its finding that Specialization ran clean is kept there, and the two gaps it surfaced are in the roadmap."
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    rationale: |-
+      Created by specializing solorepo — **the first Specialization that was not a test
+      fixture**, and it ran clean: gate green at 64 objects and 64 references, one
+      commit, no remote, no placeholder left behind.
+
+      Its purpose is to give the Rust design somewhere actionable to land. Disciplines
+      here are language-neutral by construction, which is what makes them portable and
+      also what leaves them with nothing to bite on. A Bootstrap is where one becomes a
+      command that can fail.
+
+      `docs/literate-programming.md` holds the implementation, and **solorepo's roadmap
+      no longer restates it** — a design kept in two places is the drift these
+      Disciplines exist to prevent. What stays here is the pointer and the open
+      questions.
+
+      Two things the repository refused to assert, both of which the schema forced into
+      the open. It has **one Project**, `.meta`, because there is no Rust in it yet and
+      a Project whose gate does not run would violate Gates Do Not Fix before the first
+      commit. And its Product names **the solo** as primary Persona, because a Rust
+      developer adopting the standard is the persona it wants and there is no research
+      to draw one from.
+
+      Two gaps this surfaced. **A portfolio has no designated place for product
+      material** — `docs/` was chosen without the scaffold suggesting or forbidding it,
+      and `stakeholders/` is the only product-side convention shipped. And **nothing
+      records what a Bootstrap implements**, though blessing is a conformance claim of
+      exactly the shape everything else here takes.
+  - id: work:decision/046
+    name: "DR-046 · Bootstraps live in the monorepo, and Specialization picks a language"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    supersedes:
+      - work:decision/045
+    options:
+      - name: "A Bootstrap in its own repository"
+        chosen: false
+        reason: "It needs its own copy of the Disciplines it implements, and copies drift."
+      - name: "Bootstraps in the monorepo, under `bootstraps/`"
+        chosen: true
+        reason: "It reads the same `assertions/imported/disciplines.yaml` everything else does, and gives solorepo a second Product delivered to a different reader."
+    consequences:
+      - "Specialization gains a step: choose the languages, and copy in those Bootstraps' applied disciplines."
+      - "`~/code/rust_bootstrap` is superseded and should be deleted; by Nothing Unconsumed a duplicate is debris."
+    rationale: |-
+      Reverses DR-045's placement. `rust_bootstrap` was created as a separate
+      repository; the Bootstraps belong **here**, in `bootstraps/`, as product material.
+
+      The argument is one this repository keeps making. A Bootstrap implements
+      Disciplines it must not restate, and a Bootstrap in its own repository needs its
+      own copy of them — **and copies drift**. In the monorepo it reads the same
+      `assertions/imported/disciplines.yaml` everything else does, so an implementation
+      cannot fall out of step with what it implements.
+
+      It also makes the monorepo claim more than a word. `bootstraps/rust/` gives
+      solorepo a **second Product**, delivered to a different reader and released
+      independently while sharing one Bounded Context and one language. That is
+      DR-027's Product/Project orthogonality exercised on something real rather than on
+      one Product and one Project.
+
+      Specialization gains a step: **choose the languages, and copy in those
+      Bootstraps' applied disciplines** — the gates, the documentation layout, the seed
+      project. A portfolio inherits what a Bootstrap *applies*, not the Bootstrap
+      itself, which stays with the scaffold and is maintained there. That is the same
+      imported/own boundary as the assertions, drawn in a second place.
+
+      `~/code/rust_bootstrap` is superseded and should be deleted. It was a clean
+      Specialization and it is now a duplicate, which by Nothing Unconsumed is debris.
+      Its one piece of real content — the Literate Programming implementation — is
+      here.
+
+      DR-045 keeps its finding: Specialization ran for real and ran clean. What it got
+      wrong was where the result belonged.
+  - id: work:decision/047
+    name: "DR-047 · An Invariant is not a Discipline with fewer words"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    supersedes:
+      - work:decision/043
+    options:
+      - name: "Keep the invariants as Disciplines"
+        chosen: false
+        reason: "Wrapping a one-line claim in description, judgement, steps and produces buries the claim, and merging two claims leaves neither separately citable."
+      - name: "A second class, checked rather than followed"
+        chosen: true
+        reason: "A Discipline bears judgement; an Invariant requires none and is numbered as a stable identifier so it can be cited from a code comment."
+    consequences:
+      - "`Gates Do Not Fix` is retired as a Discipline and becomes three Invariants."
+      - "Five Disciplines survive the test, each with judgement that is genuinely judgement."
+      - "A collision is recorded: Invariant here, against DDD's `invariants` slot on an Aggregate."
+    rationale: |-
+      You were right that the invariants were sharper than what DR-043 made of them,
+      and the diagnosis is in this repository's own definition of a Discipline: *a
+      structured way of working that must be adhered to **because it is not an
+      imperative program***. "No gate step may rewrite the tree" is settled once and
+      mechanically verifiable. It is nearly a program. It was never a Discipline, and
+      forcing it into that shape cost it its bite.
+
+      Three things went wrong at once. Wrapping a one-line claim in description,
+      judgement, steps and produces **buries the claim**. Merging two claims into one
+      Discipline leaves **neither separately citable**. And the `judgement` slot — whose
+      own comment says an empty one is a smell — got filled with implementation notes
+      rather than judgement, which is the tell I should have read.
+
+      So there are now two kinds of thing. A **Discipline** is followed and bears
+      judgement. An **Invariant** is *checked*, requires none, and is **numbered as a
+      stable identifier** so it can be cited from a code comment. A retired Invariant
+      leaves a hole and is never renumbered, because a citation that quietly comes to
+      mean something else is worse than a dangling one. Each carries an `origin` — the
+      failure it came from — so a reader who doubts a rule can weigh it against what it
+      cost.
+
+      Eleven Invariants are asserted. **`Gates Do Not Fix` is retired as a
+      Discipline**: both its claims are checkable and its judgement was fabricated, so
+      it becomes Invariants 5, 6 and 7, standing alone. An Invariant needing no
+      Discipline behind it is not diminished by the absence.
+
+      Five Disciplines survive the test, each with judgement that is genuinely
+      judgement: Ratchet (is a suppression an exception, or a loosening dressed as
+      one), Observed Failure (what a passing check actually covers), Nothing Unconsumed
+      (does a consumer check the artifact or merely load it), Seeded Artifacts (which
+      rules a seed must satisfy while deliberately incomplete), Written Decisions (when
+      something said is a decision rather than a thought still being had).
+
+      One collision fell out and is recorded: **Invariant** here, against DDD's
+      `invariants` slot on an Aggregate. Both mean "something that must hold", one
+      about how work proceeds and one about domain state at a moment.
+  - id: work:decision/048
+    name: "DR-048 · The Charter and its Articles; two Personalities for two kinds of writing"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    supersedes:
+      - work:decision/047
+    applies:
+      - work:article/1
+      - work:article/12
+    options:
+      - name: "Keep the name Invariant"
+        chosen: false
+        reason: "Too general, and it collided with DDD's `invariants` slot on an Aggregate, which DDD keeps."
+      - name: "Article, and the Articles together are the Charter"
+        chosen: true
+        reason: "A charter grants and binds, which is what a working agreement does. `origin` is what keeps it empirical rather than drafted."
+    rationale: |-
+      **`Invariant` becomes `Article`, and the Articles together are the Charter.**
+      The word was too general — and it collided with DDD's `invariants` slot on an
+      Aggregate, which DDD keeps. `CHARTER.md` and `CONSTITUTION.md` are conventions
+      worth borrowing rather than metaphors: a charter grants and binds, which is what
+      a working agreement does.
+
+      What the borrowing must not lose is that these are **empirical, not drafted**.
+      That work is done by `origin`, which every Article carries: the failure it came
+      from. An Article without one is an opinion that has borrowed the Charter's
+      authority, and the class says so. So the Charter can be argued with on evidence
+      rather than only amended — which is the sharpness `Invariant` had and the reason
+      the rename needed care.
+
+      Cited as **A1** through **A12**. A retired Article leaves a hole and is never
+      renumbered.
+
+      **A12 is new, and it comes from working in that 500-commit Rust repository.** A
+      bare number is excellent for an agent's internal reasoning and opaque to a human,
+      so a durable artifact dereferences every citation — the number, the claim it
+      names, and a link where one is possible. **Nothing checks it yet, and it says so
+      rather than implying enforcement it does not have.**
+
+      **Two Personalities are asserted**, which is the first use of that class since it
+      was split from Persona in DR-019. `In conversation` is concise, recommendation
+      before survey, and errs toward concision rather than tedium — because unpacking
+      can be asked for and tedium cannot be un-read. `In the record` is spelled out for
+      an audience it names, assuming a reader who was not in the conversation and
+      arrives by search years later.
+
+      The point is that **which style is in force is a property of the work, not of the
+      agent.** The same run writes one way in a turn and another way into the record,
+      and conflating them produces either tedium in conversation or shorthand in an
+      artifact nobody can read. They are inherited, because that is true in any
+      portfolio.
+  - id: work:decision/049
+    name: "DR-049 · ADRs are the Project level of Written Decisions"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    applies:
+      - work:article/11
+      - work:article/12
+    consequences:
+      - "Forms and seeds use different placeholder markers, and the difference is load-bearing."
+      - "The Portfolio's record was to stay prose — superseded by DR-058."
+    rationale: |-
+      Two levels of the same Discipline, and choosing between them is a judgement the
+      Discipline now carries. **The Portfolio's record** — this file — holds decisions
+      about the repository, its language and its way of working. **A Project's ADR**
+      holds decisions about how one build unit is built. A Project decision filed here
+      is buried among matters its readers do not share; a Portfolio decision filed in a
+      Project's ADR is hidden from every other Project.
+
+      The form is at `.meta/templates/adr.md`, inherited by every portfolio. Its shape
+      is adopted from `python_bootstrap`, with three parts worth naming:
+
+      **Decided and Recorded are separate dates.** The gap between them is how long the
+      reasoning lived only in someone's head, which A11 says is not yet a decision at
+      all. Making the gap visible is what stops it being comfortable.
+
+      **Rejected options are named specifically.** That is the Discipline's step about
+      not re-deriving abandoned reasoning, and vagueness here is what causes a rejected
+      option to be proposed again.
+
+      **Consequences ask what would falsify the decision.** A decision with no such
+      observation is a preference, which is allowed — but it should say so rather than
+      borrow the authority of a finding. That is Observed Failure applied to a
+      decision.
+
+      A section for **bearing on the Charter** records which Articles a decision
+      applies, strains or departs from, dereferenced per A12. A departure marked
+      nowhere breaks transitive conformity silently.
+
+      **Forms and seeds use different placeholder markers, and the difference is
+      load-bearing.** Root `template/` is filled once by Specialization, and anything
+      left unfilled fails the gate. `.meta/templates/` holds forms filled by an author
+      every time, which keep their placeholders forever — so they use angle brackets
+      instead. A form using the seed's marker would fail the gate for the crime of
+      being a form.
+
+      The Portfolio's record stays prose rather than becoming assertions, unlike almost
+      everything else here. Each entry is a paragraph of reasoning, appended and never
+      diffed; modelling it as data would wrap the prose without gaining a check.
+  - id: work:decision/050
+    name: "DR-050 · Journaling is a Discipline, and structure replaces restraint"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    applies:
+      - work:article/11
+      - work:article/13
+    rationale: |-
+      **Journaling** joins the Disciplines: record what happened, as it happens, at the
+      level it happened. A journal is the **intake** every other record draws from — a
+      finding lands there, and in the same change goes to the Charter if it establishes
+      a rule or to a decision record if it forecloses something. What stays is what was
+      neither.
+
+      **A13**: a finding that exists only in a journal entry has not been made. Parallel
+      to A11 and subtler, because a journal *looks* like a record. A repository whose
+      findings stop there has the appearance of having decided things and the substance
+      of having noticed them.
+
+      The form is at `.meta/templates/journal-entry.md`, adopted from
+      `python_bootstrap`. Three headings, all required: *what was decided*, *what was
+      rejected and why*, *what would falsify this*. Each carries a filter — nothing
+      rejected means it was not a decision; nothing could falsify it means it is not a
+      claim.
+
+      **The reason they are required rather than encouraged is now a Principle in its
+      own right**, and it is the most solorepo-specific thing in that file: *a
+      convention that stays healthy because a human gets bored will not survive agentic
+      maintenance.* A person hits "this is getting long" and stops. A model does not
+      tire, does not feel the length, and matches the register it finds — so it
+      continues, in the same shape, faster. Every convention here that relied on
+      restraint has to be replaced by one that relies on structure: required headings
+      rather than encouraged, a form rather than an example, a gate rather than a habit.
+      That premise is specific to building with a fleet of agents rather than a team,
+      and it retroactively explains most of the mandatory shape this repository has
+      taken.
+
+      Left in the roadmap: journals at three levels, and whether the 49 entries in this
+      file are retrofitted as the scaffold Product's journal. The reframing is
+      persuasive — these entries are about a Product — and the retrofit is feasible
+      under one rule, that a rejection is never invented.
+  - id: work:decision/051
+    name: "DR-051 · The vocabulary is grouped, because a term nobody can find is a term nobody uses"
+    status: ACCEPTED
+    decided: "2026-09-02"
+    recorded: "2026-09-02"
+    applies:
+      - work:article/7
+    rationale: |-
+      Christopher went looking for **Agency** and could not find it. It had not been
+      deleted — it was at line 60 of a flat table that had grown to 45 terms, where the
+      ontology of work is now outnumbered by the vocabulary of process. **Dilution, not
+      loss**, and the first failure of Progressive Disclosure inside a page rather than
+      between files.
+
+      Six groupings, using `broader` — SKOS machinery added in DR-018 and never
+      exercised until now: *Doing the work*, *What the work is for*, *What was actually
+      done*, *How the repository is divided*, *How work is recorded*, *The
+      Disciplines*. The renderer nests by them, so no group exceeds eleven terms.
+
+      Three Disciplines had **no Concept at all** — Literate Programming, Progressive
+      Disclosure and Journaling, the first two being the oldest in the repository. They
+      were adopted before the vocabulary was an artifact and nothing went back for them,
+      which is the drift that only enumeration finds.
+
+      Worth recording about the method rather than the outcome: the grouping was first
+      attempted by slicing the file between `- id:` anchors, and **thirteen of forty-one
+      concepts silently missed**. The pass reported success. It was caught only by
+      asking afterwards which concepts still lacked a `broader`, and the fix was a line
+      walk that cannot skip. A transformation that reports success without stating what
+      it covered is A7 violated in a script rather than in a gate.
+  - id: work:decision/052
+    name: "DR-052 · The pull request is the journal, and a commit message is a label"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/050
+    applies:
+      - work:article/13
+      - work:article/14
+    options:
+      - name: "The commit message"
+        chosen: false
+        reason: "A reader in `git blame` is there because an artifact failed to explain itself, so narrating a commit provisions the failure path — and it is not searchable."
+      - name: "A journal file in the repository"
+        chosen: false
+        reason: "python_bootstrap has no separate product decision log, so its journal is decision-shaped. Copying the form gives two decision records under different names."
+      - name: "The pull request"
+        chosen: true
+        reason: "Searchable, already attached to the change, where an external workflow can land a Challenge, and the one Collaboration point available to agents in separate sandboxes."
+    consequences:
+      - "Two Disciplines where there was one: PR First is the venue, Journaling is the routing."
+      - "The `Journal` Concept is retired, folded into Pull Request as an alt label."
+      - "The pull request lives on GitHub and not in the clone, which sharpens A13's edge."
+    rationale: |-
+      DR-050 left the journal's venue open and took `python_bootstrap`'s three headings
+      whole. Both were wrong, and for the same reason: that repository has no separate
+      product decision log, so its journal is decision-shaped. solorepo has DR-049's
+      ADRs and this file. Copying the form gave us two decision records under different
+      names.
+
+      **The unit is the pull request.** Not the commit, and not a file.
+
+      Christopher's case against the commit message is in two parts and both hold. The
+      first is Literate Programming: *a reader in `git blame` is there because an
+      artifact failed to explain itself*, so effort spent narrating a commit is effort
+      spent provisioning the failure path. Thirty years of not once finding a blame
+      walk productive is the evidence. The second is discoverability: a team buys it
+      with Jira — searchable, linked to commits, outside the repository. A solo will not
+      run Jira, and still needs what it bought.
+
+      The pull request is what remains that has both properties. It is searchable, it
+      is already attached to the change rather than pointing at it across a system
+      boundary, it is where an external workflow can land a Challenge, and it is the
+      one Collaboration point available to agents in separate sandboxes that share no
+      filesystem, no shell and no conversation. That last property is what makes it
+      non-negotiable rather than merely convenient: **Claude following Gemini on a task
+      have nowhere else to meet.**
+
+      So there are two Disciplines where there was one.
+
+      **PR First** is the venue: open it when the work starts, take Challenges in
+      through it, argue there, title it with the words someone will search for, link
+      the merge back to it so the trail survives in the clone.
+
+      **Journaling** is the routing, and the routing comes first. Most of what wants
+      writing down is already owed to an artifact — a schema's meaning to the schema, a
+      decision to a decision record, a rule to the Charter, a word to the vocabulary.
+      What no artifact owns is the residue, and the residue is the pull request's.
+
+      The three headings survive the move, rehoused in
+      `.meta/templates/pull-request.md` and re-pointed at **Chesterton's Fence**, which
+      is what Christopher named as the reason for lifting any of this into the
+      repository: *what changed*, *what the ground looked like*, *what would make this
+      removable*. The third replaces *what would falsify this*. Falsification asks
+      whether a claim is true; a later reader standing in front of a fence needs to
+      know what it was put there to hold, which is the thing nobody records at the time.
+
+      **A14**: reasoning that lives only in a commit message is not recorded. Its origin
+      is specific to this era — the commit message is the one place an agent is always
+      asked to write, so left alone it narrates an entire project into the one place
+      nobody searches. A13 keeps its shape and moves with the journal: a finding that
+      exists only in a pull request has not been made, and now with a sharper edge,
+      because the pull request lives on GitHub and not in the clone.
+
+      Retired: the `Journal` Concept, folded into **Pull Request** as an alt label
+      rather than kept beside it. `journal` says what the pull request is *for*, which
+      is worth keeping; a second term for the same thing is not. Not settled, and now
+      in the roadmap: how a Challenge arrives from outside, and whether anything about
+      this is mechanically checkable.
+  - id: work:decision/053
+    name: "DR-053 · A key written twice is a value that is right by luck"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    applies:
+      - work:article/7
+    rationale: |-
+      DR-051's line-walk fix wrote `broader` into every concept, including the
+      twenty-nine that already had one from the pass before it. PyYAML takes the last
+      of a repeated key without a word. Every pair happened to be identical, so the
+      render was correct — for no reason anyone had checked, and one different pair
+      would have made it silently wrong.
+
+      Three findings of the same shape now: a script reporting success over thirteen
+      skipped concepts, a placeholder check made vacuous by deleting what it checked,
+      and this. The pattern is a control whose passing carries no information, which is
+      A7 exactly.
+
+      The gate gets a `duplicate keys` check over every YAML in `.meta/` and
+      `template/` — the schemas included, where a repeated key would be just as quiet.
+      It is a loader that accumulates rather than raising, so one run names every
+      duplicate instead of the first. Watched fail, per Observed Failure, before being
+      believed.
+  - id: work:decision/054
+    name: "DR-054 · Residue divides by tense, and the unfinished half is a linked Issue"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/052
+    applies:
+      - work:article/13
+      - work:article/14
+      - work:article/15
+    options:
+      - name: "A TECH_DEBT.md"
+        chosen: false
+        reason: "No state, no context, unbounded growth, and the flush is one unscoped batch. It is also Nothing Unconsumed failing — a file nothing reads."
+      - name: "A linked Issue per item"
+        chosen: true
+        reason: "State, a backlink to the work that found it, a title someone reads, and individual schedulability."
+    consequences:
+      - "A15 is mechanically checkable, unlike A13 and A14."
+      - "`issue` is minted as a Concept and leaves Challenge's avoid list."
+    rationale: |-
+      DR-052 said "residue goes to the pull request" as though residue were one thing.
+      It is two, and they differ in tense.
+
+      **Finished residue** is the account of what happened — backward-looking, closed,
+      and correctly in the pull request body. **Unfinished residue** is work noticed
+      and not done, which is forward-looking and open. Filing the second as the first
+      is how it is lost, because a body is read once, at review, and then never again.
+
+      The failure Christopher named is specific and recurring: a long run ends, and the
+      closing summary carries two or three things seen and left alone — out of scope, or
+      a reasonable next step. **A summary is the one artifact with no persistence at
+      all.** The habit that grows out of it is a `TECH_DEBT.md`, and that file fails
+      four ways:
+
+      - **No state.** A line removed is indistinguishable from a line resolved,
+        abandoned or quietly tidied. Open and closed is the difference between a queue
+        and a pile.
+      - **No context.** The item was noticed *during* something. In a shared file the
+        surrounding work is gone, so nobody can later tell whether the concern still
+        applies — Chesterton's Fence pointing forward.
+      - **No rate limit.** Appending a line is free and invisible, so the file only
+        grows. This is DR-050's principle again: a convention that stays healthy because
+        a human feels the length will not survive agentic maintenance.
+      - **The flush is one unscoped batch.** Unrelated items sharing no context, handed
+        over at once. That run is expensive *because the batch was assembled by
+        deferral* rather than by anything the items have in common.
+
+      A linked Issue answers each: state, a backlink to the work that found it, a title
+      someone reads, and individual schedulability. It is also `TECH_DEBT.md` failing
+      **Nothing Unconsumed** — a file nothing reads and nothing checks against
+      anything — which the Discipline already condemned without naming the instance.
+
+      **A15**: work noticed and not done, recorded only in a summary, has not been
+      noticed. Unlike A13 and A14 this one is **mechanically checkable** — every item
+      under the body's fourth heading is a link, or it is not, and `gh pr view --json
+      body` is the implementation.
+
+      The filter on what earns an Issue is in PR First's judgement, and it is the third
+      heading turned to face forward. The body asks *what would make this removable*; an
+      Issue has to answer **what would make this worth doing** — a trigger, or a cost
+      that will land. "This function is long" has neither. File everything and the
+      tracker becomes the file it replaced, with better tooling.
+
+      **A term was minted, deliberately.** `issue` was on Challenge's avoid list as a
+      sloppy synonym, and it is now a Concept of its own, so the avoid list loses it.
+      The structure this buys: a **Challenge** is the work, and two artifacts hold it in
+      turn — an **Issue** before it is taken up, a **Pull Request** while it is being
+      done. That makes PR First's intake step precise rather than hand-waved, since an
+      Issue becoming a Pull Request is exactly the moment work starts. Flagged here
+      because minting is supposed to be an explicit decision and not an agent's
+      convenience; Christopher used the word first, and it is borrowed from GitHub
+      rather than invented, but the avoid list said otherwise until now.
+  - id: work:decision/055
+    name: "DR-055 · PR First gets its mechanics, and the form is the only copy"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    applies:
+      - work:article/15
+    options:
+      - name: "A checker with its own list of required headings"
+        chosen: false
+        reason: "It would drift the first time either moved, and the drift presents as a check that had quietly stopped asking for something."
+      - name: "Derive the requirements from the form's own fence"
+        chosen: true
+        reason: "Adding a heading to the form makes it required by that act alone."
+    consequences:
+      - "Neither generated file carries the generated-by banner: the issue template's front matter must lead the file, and a banner in the pull request form would ride along in every body."
+      - "The merge trail is a repository setting, not a check."
+      - "Two defects were found by watching it fail: `BULLET` compiled without `re.M`, and a placeholder rule that flagged `Map<K, V>`."
+    falsifier: "A well-formed body the checker rejects, or a body missing a heading it accepts."
+    rationale: |-
+      The Discipline was worth exactly as much as the path was real, and the path did
+      not exist. Four pieces now do.
+
+      **The forms are the source.** `.meta/templates/pull-request.md` and the new
+      `issue.md` each hold their form in a fenced block, and `render.py` extracts the
+      fence into `.github/PULL_REQUEST_TEMPLATE.md` and
+      `.github/ISSUE_TEMPLATE/challenge.md`. One copy, and the generator reads it —
+      Literate Programming applied to a template rather than to a schema. Staleness is
+      already covered, because `check.py` subsumes `render.py --check`.
+
+      Neither generated file carries the usual generated-by banner. The issue
+      template's front matter must lead the file or GitHub will not parse it, and a
+      banner in the pull request form would ride along invisibly in every body
+      thereafter.
+
+      **`check_pr.py` holds A15**, and derives what it requires from that same fence
+      rather than listing headings of its own. Adding a heading to the form makes it
+      required by that act alone. A checker with its own copy would drift the first
+      time either moved, and the drift would present as a check that had quietly
+      stopped asking for something — which is the failure mode this repository keeps
+      finding in itself.
+
+      It is a separate command from `check.py` because it has a separate lifecycle:
+      files or GitHub, offline or not, always or only on a pull request. It is
+      stdlib-only and shells out to `gh`, so it is fast enough to run on every edit to
+      a body.
+
+      **`.github/workflows/gate.yml` runs both.** A check that runs when someone
+      remembers is not a check — Nothing Unconsumed turned on the checker itself.
+
+      **The merge trail is a repository setting, not a check.** PR First says to link
+      the merge back so the trail survives in the clone. Squash-merge with the pull
+      request number in the subject gives that by construction, and a check policing
+      what a setting can guarantee is a check that exists because the setting was left
+      wrong. Structure over policing, per Ratchet.
+
+      Two defects, both found by watching it fail rather than by reading it:
+
+      - `BULLET` was compiled without `re.M`, so `^` matched only at the start of the
+        section and **every well-formed body failed** as prose. It was written and
+        believed for the length of one test run.
+      - The placeholder rule flagged any `<…>` containing a space, which catches
+        `Map<K, V>` in a repository that has a Rust bootstrap. A rule that misfires is
+        a rule that gets switched off, so the checker now strips code fences and
+        inline spans first, and matches the form's own placeholders exactly. `<details>`
+        survives; `<n>` does not.
+
+      Six cases were run against it: the unedited template, a good body, a bare bullet,
+      a missing section, an empty section with an explicit `None.`, and a body carrying
+      generics and legitimate HTML. Only the correct ones pass.
+
+      Still open, and now the only thing between this and dogfooding: **there is no
+      remote.** `caindy/solorepo` does not exist, and creating it is a publish.
+  - id: work:decision/056
+    name: "DR-056 · main is protected, and the hook that stood in for it was removed by its own condition"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/055
+    options:
+      - name: "A pre-push hook"
+        chosen: false
+        reason: "`--no-verify` walks past it, it lives in the clone rather than the repository, and `core.hooksPath` resolves inside the worktree — so on `main`, the one branch it protected, it was never checked out at all."
+      - name: "A ruleset on main"
+        chosen: true
+        reason: "`bypass_actors: []`, squash-only, required status checks strict. Enforcement rather than friction, and it needed a paid plan."
+    consequences:
+      - "The hook was deleted by the condition written into the pull request that introduced it."
+      - "Every subject on `main` carries `(#n)`, because the repository is squash-only with `squash_merge_commit_title=PR_TITLE`."
+      - "GitHub added `require_extra_approval_for_unattributed_changes` on its own; inert at zero required approvals, and filed rather than left in a paragraph."
+    rationale: |-
+      This one is recorded as it happened, because the sequence is the finding.
+
+      **The protection was refused.** Both routes — classic protection at
+      `PUT /repos/:owner/:repo/branches/main/protection` and a ruleset at
+      `POST /repos/:owner/:repo/rulesets` — returned 403 *Upgrade to GitHub Pro or make
+      this repository public* for a private repository on a free account. Issue #1
+      recorded the exact ruleset so that applying it later would be a lookup rather
+      than a rediscovery.
+
+      **A hook stood in for it**, and was written as friction rather than enforcement:
+      `--no-verify` walks past it, it lives in the clone rather than the repository, and
+      an agent in a fresh sandbox has not configured it. The pull request proposing it
+      answered *what would make this removable* with: **issue #1 landing.**
+
+      **Christopher upgraded, and it landed the same hour.** The ruleset is active with
+      `bypass_actors: []` and `current_user_can_bypass: never` — `deletion` and
+      `non_fast_forward` blocked, a `pull_request` rule at zero required approvals with
+      `squash` as the only merge method, and `required_status_checks` set strict on the
+      contexts `files` and `pull request body`.
+
+      **So the hook was deleted, by the condition written into the pull request that
+      introduced it.** That heading exists to answer Chesterton's Fence for a reader
+      years later; here it closed a loop in about an hour, and the discipline of having
+      written it is the whole reason the fence came down cleanly instead of staying up
+      because nobody remembered what it was for.
+
+      Watched fail before believed, and the test found a **second reason to delete it**.
+      An empty commit was pushed at `main` twice, once ordinarily and once with
+      `--no-verify`. Both were refused — the second with *2 of 2 required status checks
+      are expected*. But the first was refused by **GitHub**, not by the hook, and
+      the reason is structural: `core.hooksPath` resolves inside the worktree, so a
+      tracked hook is only present on branches that carry the file. On `main` — the one
+      branch it existed to protect — it was never checked out at all. A control absent
+      exactly where it is needed, which is worse than no control, and which reading it
+      would not have revealed.
+
+      **What never needed the plan** was the part that turned out to matter most: the
+      repository is squash-only with `squash_merge_commit_title=PR_TITLE`, so every
+      subject on `main` carries `(#n)`. DR-055 declined to write a check for the merge
+      trail on the grounds that a setting could guarantee it. That held.
+
+      One thing to watch, filed rather than left in this paragraph: GitHub added
+      `require_extra_approval_for_unattributed_changes: true` to the `pull_request`
+      rule on its own. With zero required approvals it is inert until a commit is
+      unattributed, and this repository's commits carry a `Co-Authored-By` trailer for
+      an address that is not a GitHub account.
+  - id: work:decision/057
+    name: "DR-057 · Threads block the merge, and resolving one has to mean something"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    applies:
+      - work:article/16
+    options:
+      - name: "Auto-resolve outdated threads"
+        chosen: false
+        reason: "An anchor moving is not a concern being met. Pairing required resolution with auto-resolve builds a merge gate that clears itself."
+      - name: "Unresolved threads block, and resolving one has to mean something"
+        chosen: true
+        reason: "If it was worth mentioning, it is worth resolving for the record — even when subsequent changes have removed its bearing."
+    consequences:
+      - "`required_review_thread_resolution` is true on the main ruleset."
+      - "A16 is checked on the last push; the residual hole is issue #5."
+      - "The ruleset lists required status checks by job name, so renaming a job removes a required check silently."
+    rationale: |-
+      Copilot reviews every pull request here, and its first comment was on a file the
+      branch had since deleted — outdated, collapsed, and still unresolved, because
+      GitHub treats those as independent. That raised the question of whether to
+      auto-resolve stale threads.
+
+      **No.** Christopher's ruling: unresolved conversations block, and they get
+      resolved cogently, *even when subsequent changes have removed their bearing*. If
+      it was worth mentioning, it is worth resolving for the record.
+
+      Auto-resolving outdated threads was the alternative on offer and it is the same
+      failure with the work removed. **An anchor moving is not a concern being met.** A
+      rebase outdates threads; so does an unrelated edit to nearby lines. Pairing
+      required resolution with auto-resolve builds a merge gate that clears itself,
+      which is machinery constructed to defeat a control this repository had just
+      finished installing.
+
+      `required_review_thread_resolution` is now `true` on the `main` ruleset.
+
+      **A16**: a review thread resolved without an answer has not been resolved.
+      Requiring resolution is precisely what makes this necessary — the requirement
+      teaches the shortcut, and a thread closed to clear the gate looks identical
+      afterwards to one that was answered. `check_pr.py` now requires every resolved
+      thread to carry a reply from someone other than whoever opened it. GitHub
+      requires resolution; A16 requires the resolution to mean something.
+
+      **Resolving a thread fires no Actions event, and finding that out cost a silent
+      gate.** `pull_request_review_thread` is a webhook GitHub does not accept as a
+      workflow trigger. It is not ignored — it fails the whole workflow at startup, so
+      a run appeared with zero jobs, no check runs, and an empty status rollup on the
+      pull request. That reads as *checks have not finished yet*, not as *the gate no
+      longer exists*, and the pull request sat at `BLOCKED` with nothing saying why.
+      The gate had been switched off by an edit intended to strengthen it, which is
+      Ratchet running backwards through a typo rather than through a decision.
+
+      So A16 is checked on the last push, with `workflow_dispatch` to re-run it on
+      demand, and the residual hole is issue #5: resolve without answering after the
+      last push, then merge, and nothing looks. The gap sits exactly where the shortcut
+      is.
+
+      The predicate was split from the fetching so it could be watched failing without
+      manufacturing a synthetic thread on a real pull request. Six cases: resolved by
+      one author, resolved with an answer, an author replying to himself, an unresolved
+      thread left alone as the ruleset's business, a thread on the pull request rather
+      than a file, and two threads where one is bad.
+
+      **A coupling worth naming.** The ruleset lists required status checks by job
+      name. The `pull request body` job became `pull request` here, since it now checks
+      more than the body — and renaming it fails nothing. It removes a required check
+      and leaves the gate waiting forever on a context nothing produces. The workflow
+      now says so at the point of edit; there is no mechanism that would have caught
+      it, and the failure is silent in the direction that matters.
+
+      The Copilot thread itself was answered and resolved rather than dismissed, which
+      is the first application of the rule and the reason it is stated as one.
+  - id: work:decision/058
+    name: "DR-058 · Never issued"
+    status: WITHDRAWN
+    withdrawn_because: >-
+      The number was cited in `roadmap.md` for a decision nobody wrote down —
+      the A17 word-counting gate, built and removed in the same change. Writing
+      the entry afterwards from the roadmap's account was worse than the gap: an
+      entry nobody took is a reconstruction wearing a decision's authority. The
+      number stays issued and unused so that the citation resolves to what it
+      is.
+    rationale: |-
+      Nothing was decided here. The gate that this number was cited for is
+      described in `roadmap.md` under *A gate for A17*, and the failure it came
+      from is A17's own `origin` in the Charter. Both are contemporaneous; this
+      is not, and a hole says so where a paragraph would not.
+  - id: work:decision/059
+    name: "DR-059 · The decision record is assertions, and decisions.md is rendered from them"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/049
+    applies:
+      - work:article/9
+      - work:article/12
+    options:
+      - name: Leave the record as prose
+        chosen: false
+        reason: >-
+          DR-049's position, and it was right on its own evidence: modelling
+          would have wrapped the paragraphs without gaining a check. Three checks
+          have arrived since, which is what changed rather than the argument.
+      - name: Model a Decision, and render the prose from it
+        chosen: true
+        reason: >-
+          Supersession, Article bearing and "which entries rejected nothing"
+          become answerable, and `.meta` stops holding one durable record that a
+          fresh agent must read linearly rather than query. What it costs is that
+          writing an entry is now editing YAML and re-rendering, and that the
+          structured slots on the converted entries are thin — nothing was
+          backfilled, because a rejection invented is worse than a rejection
+          missing.
+      - name: Backfill the missing structure while converting
+        chosen: false
+        reason: >-
+          DR-050's rule: a rejection is never invented. An entry that named no
+          alternative is telling the truth about what was recorded at the time,
+          and the empty slot is the finding.
+    consequences:
+      - >-
+        `.meta/templates/adr.md` is rendered from the same class, so a Project's
+        ADR and the Portfolio's record are one shape with `project` set or not.
+        A heading can no longer drift from what the model requires.
+      - >-
+        Four checks join the gate that the prose could not carry: exactly one
+        chosen option where options are stated, supersession that resolves and
+        does not loop, contiguous numbering, and every DR cited in prose
+        resolving to an entry.
+      - >-
+        A cited Article is a typed reference, so a dangling citation is a gate
+        failure. The prose form of the same defect is what this change found —
+        `roadmap.md` cited DR-058 for an entry nobody wrote — and a fifth check
+        now holds it: every DR cited in prose resolves to an entry.
+      - >-
+        DR-058 is a hole rather than a reconstruction. Writing the missing entry
+        afterwards from the roadmap's account was tried and dropped: an entry
+        nobody took is a reconstruction wearing a decision's authority, and the
+        hole is what the number is honestly worth.
+      - >-
+        Two entries are withdrawn rather than converted. They keep their prose
+        and their numbers, below the record rather than in it.
+      - >-
+        The scaffold's seed changes shape: `template/.meta/decisions.md` is
+        replaced by an assertion file, since a portfolio's record is generated
+        the same way.
+    falsifier: >-
+      A year in which none of the three questions is asked, and the only observed
+      effect is friction on writing an entry. That would mean the prose was right
+      and the model is overhead.
+    rationale: |-
+      DR-049 ruled that the Portfolio's record stays prose, on the grounds that
+      each entry is a paragraph of reasoning, appended and never diffed, and that
+      modelling it would wrap the prose without gaining a check. That was true
+      when it was written and is the paragraph this supersedes; the rest of
+      DR-049 stands.
+
+      What changed is that the checks arrived. Nothing could ask this file which
+      decisions superseded which, which Articles nothing had yet applied, or
+      which entries recorded a narrative rather than a foreclosure — and nothing
+      constrained what went into it, which is how it grew to be the largest
+      artifact in `.meta/` and the last one a fresh agent had to read linearly.
+
+      `Decision` and `Option` are the model. **A Decision is a choice that removed
+      an alternative**, and `options` is where the alternative goes, so an entry
+      that rejected nothing is visibly announcing what it is. `rationale` carries
+      the prose verbatim: the reasoning is the artifact, and the slots make it
+      queryable rather than shorter.
+
+      **Nothing was backfilled.** Fifty-seven entries converted with their prose
+      intact and structure asserted only where the prose states it, which leaves
+      most of them carrying `rationale` and dates alone. That is the honest
+      state of a record written before the model existed, and DR-050's rule — a
+      rejection is never invented — is what forbids improving it.
+
+      **Two entries are withdrawn**, by the test the class states. DR-036 is an
+      audit report whose three fixes are leftovers of DR-035's decision; DR-045
+      is a run report whose one claim DR-046 reversed within the hour. Both keep
+      their numbers and their prose. Applying the test found only two, which is
+      itself worth recording: the file was in better shape than the Issue that
+      asked for this supposed, and the entries that read as narrative are almost
+      all narrative *around* a foreclosure rather than instead of one.
+
+      **A number cited is not a number issued.** `roadmap.md` named DR-058 three
+      times for the A17 word-counting gate, which was built and removed without
+      an entry ever being written. Reconstructing it was the first attempt and
+      the wrong one; DR-058 is a hole, and the check that would have caught the
+      dangling citation is now in the gate.
+
+      **Supersession is usually partial**, which the conversion made obvious.
+      Almost every entry that replaces an earlier one kills a paragraph and
+      leaves the rest standing, so `supersedes` says so and `superseded_by` is
+      reserved for an entry that died whole. No entry here has.
+  - id: work:decision/060
+    name: "DR-060 · PR First compiles to a skill, and ownership is recovered from GitHub"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/055
+    applies:
+      - work:article/16
+    options:
+      - name: A hand-written SKILL.md
+        chosen: false
+        reason: >-
+          The reasoning it would carry already exists as assertions — the
+          Discipline, the Articles it enforces, the form's own fence. A
+          hand-written skill is the third copy of each and the only one nothing
+          checks, which is the drift this repository has spent its length
+          removing.
+      - name: A skill rendered from the assertions
+        chosen: true
+        reason: >-
+          One copy, and the generator reads it. What it costs is that the skill
+          can only say what the assertions say, so anything the practice needs
+          that is not asserted has to be asserted first — which is the point,
+          and is why PR First gained two steps in this change rather than the
+          skill gaining two paragraphs.
+      - name: Wait for the APM compile step
+        chosen: false
+        reason: >-
+          The frontmatter fields for an APM primitive are still unverified
+          (DR-040), and writing plausible ones is worse than the gap. Rendering
+          one harness's target now is the same shape at smaller scale, and it is
+          usable today, which the unbuilt version is not.
+    consequences:
+      - >-
+        `.claude/skills/pr-first/SKILL.md` is a render target. It is the first
+        compiled primitive in the repository, and the first test of the claim
+        that the package is derived and the assertions are the source.
+      - >-
+        `.meta/.apm/` stays empty, deliberately and for the reason DR-040 gave.
+        What changed is that the claim is now demonstrated rather than only
+        stated.
+      - >-
+        `check_pr.py` gains `--threads` and `--sweep`. The fetch was already
+        there for A16 and could only answer pass or fail; the thing that knew
+        how to ask GitHub what was said could not be asked to say it.
+      - >-
+        An accepted Decision numbered DR-060 or higher must state its options.
+        Below that line the record was converted from prose and backfilling
+        would invent a rejection.
+    falsifier: >-
+      A restart in which the sweep reports nothing and a pull request with an
+      unanswered thread is still open — which would mean ownership is not in
+      fact recoverable from GitHub alone.
+    rationale: |-
+      DR-055 built the mechanics of PR First and left the trigger to whoever
+      remembered. That held for as long as one conversation opened a pull
+      request and stayed alive beside it, and stopped holding the first time a
+      review arrived after the conversation had moved on.
+
+      **The skill is derived.** PR First's steps, the Articles that enforce it,
+      and the body form's fence are all assertions already. `render.py` writes
+      the skill from them, so the practice has one statement and the harness
+      gets a compiled copy — which is the roadmap's late-binding claim tested at
+      the smallest scale that can test it.
+
+      **The step is "stay subscribed", not "block rather than poll".** How a
+      subscription is registered is the harness's business: a background task
+      here, a webhook or a scheduled job elsewhere, and nothing at all on a
+      harness that cannot wake a conversation. Naming this week's mechanics in a
+      Discipline would bake them into an artifact meant to outlive them.
+
+      **Ownership is recovered by asking, not by remembering.** A background task
+      dies with the session that started it, so a restart has to be able to find
+      what it owns from outside. GitHub already knows which pull requests are
+      open and who opened them, so `--sweep` reconstructs the obligation with no
+      local state — no branch note to find before it can be read, and nothing to
+      go stale. The watch is an optimisation on a live conversation; the sweep is
+      what makes the practice survive one ending mid-argument.
+
+      That asymmetry is the same one PR First rests on. A trigger aimed at a
+      conversation only reaches a conversation that exists. Gemini picking up
+      after Claude has none, so the durable rendezvous stays the pull request,
+      and any mechanism that implies otherwise has quietly stopped being true
+      for the case the Discipline was built for.
+  - id: work:decision/061
+    name: "DR-061 · The Disciplines name GitHub"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    applies:
+      - work:article/17
+    options:
+      - name: A vendor-neutral term for where pull requests live
+        chosen: false
+        reason: >-
+          It is a mint, and it buys portability nobody has asked for. `forge`
+          was exactly this and is A17's origin. The abstraction also costs
+          precision at the point of use: a step saying "wherever pull requests
+          live" cannot name `gh`, a review thread or a ruleset, which is most of
+          what the practice actually consists of.
+      - name: Say GitHub
+        chosen: true
+        reason: >-
+          It is what this repository runs on, and naming it lets the Disciplines
+          be specific about review threads, rulesets and `gh`. What it costs is
+          a rewrite if that ever changes — which is a real cost, paid once,
+          against an abstraction paid for at every reading.
+    consequences:
+      - >-
+        PR First's steps name GitHub. The harness axis stays abstract, which is
+        a different axis: which agent is working is genuinely unknown, and where
+        the pull request is is not.
+    falsifier: >-
+      A portfolio built on something other than GitHub. The rewrite it forces is
+      the measure of what this cost.
+    rationale: |-
+      Asked whether a category term was wanted for "wherever pull requests
+      live", Christopher ruled that the answer remains GitHub.
+
+      The two axes are not the same and only one is open. **Which harness is
+      working is unknown** — that is the whole late-binding argument, and it is
+      why the subscription step says a background task, a webhook or a scheduled
+      job without choosing. **Where the pull request is, is known.** Abstracting
+      it invents a word to describe a variation that does not exist, and A17's
+      origin is what that costs: `forge` reached the Charter, three decision
+      records, two READMEs, a scope note and a function name before anyone asked
+      whether it had been agreed.
+
+      The gain is at the point of use. A Discipline that names GitHub can say
+      review thread, ruleset, required status check and `gh`. One that names a
+      category has to gesture at all four.
+  - id: work:decision/062
+    name: "DR-062 · The branch nominates the Job, the trailer nominates the Actor, and the squash carries both"
+    status: ACCEPTED
+    decided: "2026-09-03"
+    recorded: "2026-09-03"
+    supersedes:
+      - work:decision/060
+    applies:
+      - work:article/14
+    options:
+      - name: Resolve what a thread owns by authorship
+        chosen: false
+        reason: >-
+          Every pull request in a solorepo is the solo's by construction
+          (DR-014), so `--author @me` reconstructs a fact that was never in
+          doubt and answers nothing about which agent is answerable for which
+          change.
+      - name: Resolve by branch, and name the Actor in a commit trailer
+        chosen: true
+        reason: >-
+          One branch is one pull request, so the checkout is already the token
+          and no new field is needed anywhere. The trailer carries what the
+          branch cannot — which thread took the Job — and costs one line per
+          commit. What neither does is say under which Remit, which is the audit
+          question and is deliberately left alone.
+      - name: A Job identifier in the pull request title
+        chosen: false
+        reason: >-
+          The title becomes the permanent subject on `main` under squash, and
+          ownership is transient — it means nothing after the merge. It also
+          spends the index on a token nobody searches for, against PR First's
+          own step.
+    consequences:
+      - >-
+        `squash_merge_commit_message` moves from `PR_BODY` to `COMMIT_MESSAGES`.
+        The body was already durable as the pull request; copying it into the
+        commit made every subject on `main` carry an essay, which is A14 read
+        backwards.
+      - >-
+        The Actor trailers now survive the merge, because the squashed body is
+        the branch's commit messages. The durable half of "who did this" is held
+        by a setting rather than by a heading on the form.
+      - >-
+        `Co-Authored-By` is retired. It named a co-author who is not a person
+        and told a maintainer nothing.
+      - >-
+        The trail from `main` back to the argument still needs GitHub. `(#n)` in
+        the subject is a pointer, and dereferencing it leaves the clone — which
+        is A13's sharper edge (DR-052) and not new here.
+    falsifier: >-
+      A restart in a fresh worktree, where the branch is not checked out and
+      nothing resolves. The branch is the token only while the checkout exists.
+    rationale: |-
+      DR-060 said ownership is recovered by asking GitHub, and implemented it as
+      "list the pull requests this account authored". That is vacuous here:
+      a solorepo is one solo, so authorship is constant and the question — which
+      pull request is *this thread* answerable for — was never asked.
+
+      **The branch is where the Job already is.** One branch, one pull request,
+      by construction. It is what an agent wakes up on, it is in `gh pr list`
+      at no extra cost, and it never touches the permanent subject line. The
+      ontology already says a Job answers exactly one Challenge — every hop from
+      Job to Challenge is single-valued, which is the path `check.py` walks for
+      Collaboration membership — so "one thread, one pull request" is that
+      constraint met rather than a new rule.
+
+      It is one-way, and the direction matters for the Collaboration mission: a
+      Job has one Challenge, a Challenge has many Jobs. Two agents on one pull
+      request stays legal. One thread across two pull requests is what has no
+      meaning, because on restart "which do I resume" would have no answer.
+
+      **The trailer says who, not which.** A restart is a new Execution of the
+      same Job (DR-004), so keying on the workload identity is exactly wrong —
+      it is the thing that changes. What persists is the Job, and the branch
+      names it. The trailer names the Actor that took it, which nothing else
+      records once the session is gone.
+
+      **And the squash had to be looked at, because it decides what survives.**
+      Under `PR_BODY` every trailer was discarded at merge and the pull request
+      body was duplicated into the commit. Both are wrong in the same direction:
+      the body is already durable as the pull request, and a commit message is a
+      label. `COMMIT_MESSAGES` keeps the labels, carries the trailers through,
+      and leaves the reasoning where it was routed.

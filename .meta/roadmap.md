@@ -121,13 +121,17 @@ somewhere in-repo and move — and moving them is exactly the rewriting the
 Discipline forbids.
 
 Settled by DR-052, and so no longer open: journals at three levels, and
-retrofitting the entries in `decisions.md`. That file is a decision record under
-Written Decisions, not a journal, and there is nothing to retrofit.
+retrofitting the entries in the decision record as a journal. Those entries are a
+decision record under Written Decisions, not a journal, and there is nothing to
+retrofit. What did happen to them is DR-059: they are assertions now, and
+`decisions.md` is rendered.
 
-**A gate for A17, once Collaboration works.** DR-058 built one by counting words
-new to a diff and repeated across files, and removed it. It found the mint it was
-built for and forty other things per change, each needing a person to rule on —
-and a gate whose output is triaged by hand every time is one that gets skipped.
+**A gate for A17, once Collaboration works.** One was built by counting words new
+to a diff and repeated across files, and removed in the same change. It found the
+mint it was built for and forty other things per change, each needing a person to
+rule on — and a gate whose output is triaged by hand every time is one that gets
+skipped. It was never recorded as a decision, and DR-058 is the hole where the
+entry would have gone.
 
 Counting is the wrong instrument, because a word is a term by how it is used and
 no threshold reaches that. The right shape needs a reader. Once PR First
@@ -139,16 +143,6 @@ lands where an argument about a word belongs.
 Until then A17 is held by the Discipline, which is what it was missing when
 `forge` walked in: the rule existed as a parenthetical and nothing consumed it.
 
-**An ontology of a decision, in LinkML.** A decision has structure the prose does
-not capture: a status, options with one chosen and the rest rejected for stated
-reasons, consequences, an observation that would falsify it, a supersession
-relation to an earlier decision, and a bearing on the Articles it applies or
-departs from. `.meta/templates/adr.md` encodes that shape as headings, and
-`decisions.md` follows it by habit — neither is checkable, and nothing can ask
-"which decisions has this superseded" or "which Articles has nothing yet
-applied". Reifying it would make the ADR form a rendering of the model rather
-than a convention beside it. Deferred until the overhang is clear.
-
 **Pulling `python_bootstrap` in.** `bootstraps/rust/` is here; Python is not, and
 it is the harder half. `python_bootstrap` is a working repository with its own
 charter in `CLAUDE.md`, its own ADRs under `docs/architecture/`, its own journal
@@ -157,8 +151,8 @@ without matching them. Merging needs decisions before it needs work:
 
 - Which charter wins, `AGENTS.md` here or `CLAUDE.md` there. Both claim to be the
   one authoritative file.
-- Whether its ADRs become entries in `.meta/decisions.md`, or stay a second
-  record with its own numbering.
+- Whether its ADRs become `Decision`s with `project` set — which DR-059 makes
+  possible — or stay a second record with its own numbering.
 - What happens to its `docs/JOURNAL.md`, which has no counterpart here at all.
 - Whether its generator (`src/python_bootstrap/`) comes too, making solorepo hold
   a real Python package — which would be the monorepo claim fully dogfooded, and

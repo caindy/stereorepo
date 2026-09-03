@@ -30,4 +30,5 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 - Use the vocabulary from the ontology of work in preference to synonyms: a
   *Challenge*, not a ticket or story; an *Actor*, not a user or a bot.
 - When a decision is settled and implemented, add an entry to the decision record
-  in `.meta/decisions.md` and commit it together with the change.
+  in `.meta/assertions/decisions.yaml`, re-render, and commit it together with the
+  change. `.meta/decisions.md` is generated from it.

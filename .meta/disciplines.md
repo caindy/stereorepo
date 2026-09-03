@@ -183,6 +183,7 @@ It is where **work noticed and not done** goes, as a linked Issue. A long run en
 A linked Issue answers each. It has state, it carries a backlink to the work that found it, its title is read by someone, and it can be picked up alone.
 
 **Where the judgement is.** What constitutes one pull request. Too coarse and an argument has no subject; too fine and the record narrates change by change without ever saying what the whole was for.
+Whether a review comment is answered. A reviewer's point can be right, right about something else, or overtaken by the diff, and only the first is a change to make — but all three are owed a reply that says which, per A16. Resolving one to clear the gate is the shortcut the gate teaches.
 And which observations earn an Issue. The test is whether you can say what would make it worth doing — a trigger, or a cost that will land. "This function is long" has neither. "This retry has no backoff, and it will matter the first time the endpoint is slow" has both. File everything and the tracker becomes the file it replaced, with better tooling.
 
 1. Open it when the work starts, not when it is finished. Written at the end it becomes a summary of the diff, which git already holds.
@@ -191,7 +192,9 @@ And which observations earn an Issue. The test is whether you can say what would
 4. Answer every thread and then resolve it, including one the diff has overtaken. Outdated is not answered: GitHub collapses a thread whose anchor moved and leaves it open, and a reader years later cannot tell a point that was addressed from one that was dropped.
 5. Title it with the words someone will search for. It is the index, and an index is worth exactly its titles.
 6. File what was noticed and not done as a linked Issue, before asking for review. Not in the body, which closes with the pull request, and never in a closing summary.
-7. Link the merge back to it, so the trail from a line of code to its account survives in the clone.
+7. Stay subscribed to it until it closes. A review lands minutes after a push and nobody is looking by then, so the conversation that opened the pull request keeps watching it. How the subscription is registered is the harness's business — a background task, a webhook, a scheduled job — and a harness that cannot wake a conversation says so rather than pretending.
+8. On starting work, ask what this branch already owns. One branch is one pull request, so the checkout is the token and GitHub resolves it — no note to find, nothing to go stale, and it survives a session ending mid-argument. Authorship cannot answer this: every pull request here is the solo's, so asking who opened one says nothing about which agent is answerable for it.
+9. Name the Actor in every commit. Which thread did the work is recoverable from nothing else once the session is gone, and a trailer naming a co-author who is not a person tells a maintainer nothing. The branch says which Job; the trailer says who took it.
 
 _Produces: A searchable record of why each change was made, attached to the change.; A place two agents that share nothing else can meet.; Work noticed and not done, in a queue rather than a pile._
 

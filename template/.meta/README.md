@@ -26,7 +26,7 @@ for what it owns. This file routes. It does not restate.
 | a rule you can cite, or check something against | [`charter.md`](charter.md) — the Articles |
 | **why** something is built this way | [`decisions.md`](decisions.md) — find its DR |
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
-| changing or defending a rule | its DR in `decisions.md`, **and** the file that states it |
+| changing or defending a rule | its DR in `assertions/decisions.yaml`, **and** the file that states it |
 | what is intended but unbuilt, or still open | [`roadmap.md`](roadmap.md) |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 | opening a pull request, or filing an Issue | [`templates/`](templates/) — the forms; `.github/` is generated from them |
@@ -41,7 +41,7 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
 | what **happened** on this change | the pull request body, using `.meta/templates/pull-request.md` |
 | work **noticed and not done** | a linked Issue, before review — never a summary or a file |
-| **why** a decision was taken | `decisions.md`, as a DR |
+| **why** a decision was taken | `assertions/decisions.yaml`, as a DR, then re-render |
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | a checkable one-line rule | `assertions/imported/charter.yaml`, then re-render |
 | reasoning that recurs across several decisions | `principles.md` |
@@ -55,15 +55,17 @@ rebase and squash, and attempted only by a reader these artifacts have already
 failed. Where no row of the table claims a paragraph, it is residue, and residue
 goes to the pull request.
 
-**`vocabulary.md` and `disciplines.md` are generated.** They derive from
-`assertions/`, which is the source. Edit the assertions and re-render:
+**`vocabulary.md`, `disciplines.md`, `charter.md` and `decisions.md` are
+generated.** They derive from `assertions/`, which is the source. So does the ADR
+form at `templates/adr.md`, which derives from the `Decision` class itself. Edit
+the source and re-render:
 
 ```bash
 uvx --with pyyaml python .meta/render.py
 ```
 
 **The gate for `.meta` is `check.py`.** Green before anything here is called
-done. It enforces the five invariants the schemas state and cannot check, and
+done. It enforces the invariants the schemas state and cannot check, and
 subsumes the staleness check above:
 
 ```bash

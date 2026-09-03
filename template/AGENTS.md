@@ -30,6 +30,7 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 - Never edit `.meta/assertions/imported/`. It is the scaffold's, and a sync
   overwrites it. Your terms go in `domain_vocabulary.yaml`.
 - When a decision is settled and implemented, add an entry to
-  `.meta/decisions.md` and commit it together with the change.
+  `.meta/assertions/decisions.yaml`, re-render, and commit it together with the
+  change. `.meta/decisions.md` is generated from it.
 - The gate is `uvx --with linkml --with pyyaml python .meta/check.py`. Green
   before anything is called done.

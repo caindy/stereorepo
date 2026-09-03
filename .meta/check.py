@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """The gate for the .meta Project.
 
-Five invariants are stated in the schemas and enforceable by none of them. Four
-cross a path LinkML cannot traverse; the fifth crosses a file boundary, because
-two tree roots are two documents and references between them resolve to nothing
-a validator will look at.
+Invariants stated in the schemas and enforceable by none of them. Some cross a
+path LinkML cannot traverse; one crosses a file boundary, because two tree roots
+are two documents and references between them resolve to nothing a validator will
+look at; and three are arithmetic over a list, which a rule cannot count.
 
     uvx --with linkml --with pyyaml python .meta/check.py
 
@@ -313,6 +313,148 @@ def one_context_per_portfolio(index):
     return problems
 
 
+OPTIONS_REQUIRED_FROM = 60
+"""The first number issued after the model existed.
+
+A ratchet, and a number rather than a date because the entries recording the
+conversion were written the same day it landed. Everything below this line was
+converted from prose that never named an alternative, and backfilling one would
+be inventing a rejection, which DR-050 forbids. Everything at or above it was
+written against a class that says what a Decision is, so an accepted entry
+naming no alternative is a non-decision and fails.
+
+Never lowered. Raising it would be the loosening the Ratchet Discipline is about,
+justified at the moment it is made and paid for afterwards.
+"""
+
+
+def decision_options(index):
+    """One option is chosen, and it is stated at all from DR-060 onward.
+
+    LinkML can require the slot and cannot count across the list, so a Decision
+    with two chosen options — or with a rejected option and no chosen one — is
+    well formed and says nothing. Nor can it exempt the converted entries, which
+    a bare `required: true` would fail for telling the truth about what was
+    recorded before the model existed.
+    """
+    problems = []
+    for did, (cls, obj, _) in index.items():
+        if cls != "Decision":
+            continue
+        options = obj.get("options") or []
+        if not options:
+            if obj.get("status") == "ACCEPTED" \
+                    and int(did.rsplit("/", 1)[-1]) >= OPTIONS_REQUIRED_FROM:
+                problems.append(f"{did}: accepted and states no options; if the alternative "
+                                "was doing nothing, say so — that is an option and it has a reason")
+            continue
+        chosen = [o for o in options if o.get("chosen")]
+        if len(chosen) != 1:
+            problems.append(f"{did}: {len(chosen)} options chosen of {len(options)}; exactly one is")
+    return problems
+
+
+def decision_supersession(index):
+    """Supersession resolves, does not loop, and the two directions agree.
+
+    Resolution is already covered by the reference check. What is not is the
+    direction: `status: SUPERSEDED` claims a whole entry is dead, so the
+    successor it names has to exist and has to be later. A record that says an
+    entry was replaced by one written before it is a record nobody can order.
+    """
+    problems, graph = [], {}
+    for did, (cls, obj, _) in index.items():
+        if cls != "Decision":
+            continue
+        graph[did] = list(obj.get("supersedes") or [])
+        later = obj.get("superseded_by")
+        if later and later in index and later <= did:
+            problems.append(f"{did}: superseded by '{later}', which is not later")
+        if obj.get("status") == "WITHDRAWN" and obj.get("superseded_by"):
+            problems.append(f"{did}: withdrawn and superseded; a hole is not a replacement")
+        for earlier in graph[did]:
+            if earlier in index and earlier >= did:
+                problems.append(f"{did}: supersedes '{earlier}', which is not earlier")
+    state = {}
+
+    def visit(node, trail):
+        if state.get(node) == "done":
+            return
+        if state.get(node) == "open":
+            problems.append("supersedes cycle: " + " -> ".join(trail + [node]))
+            return
+        state[node] = "open"
+        for nxt in graph.get(node, []):
+            visit(nxt, trail + [node])
+        state[node] = "done"
+
+    for node in graph:
+        visit(node, [])
+    return problems
+
+
+def decision_numbering(index):
+    """Numbers are stable identifiers, so the sequence is contiguous and unused.
+
+    A gap means an entry was deleted rather than withdrawn, which is the failure
+    the WITHDRAWN status exists to prevent: a citation to a number that resolves
+    to nothing is indistinguishable from a citation to a number that was never
+    issued. Duplicates cannot be seen here — the index would have silently kept
+    the last — so they are counted from the document instead.
+    """
+    seen = [d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"]
+    if not seen:
+        return []
+    raw = yaml.safe_load((META / "assertions" / "decisions.yaml").read_text()) or {}
+    ids = [d["id"] for d in raw.get("decisions") or []]
+    problems = [f"decisions.yaml declares {len(ids)} entries and {len(set(ids))} are distinct"] \
+        if len(ids) != len(set(ids)) else []
+    numbers = sorted(int(n) for n in seen)
+    missing = sorted(set(range(1, numbers[-1] + 1)) - set(numbers))
+    if missing:
+        # Truncated, because one mistyped number makes every number after it
+        # missing, and a check that answers with nine hundred lines is one
+        # nobody reads to the end of.
+        shown = ", ".join(f"DR-{n:03d}" for n in missing[:10])
+        more = f" and {len(missing) - 10} more" if len(missing) > 10 else ""
+        problems.append(f"no entry for {shown}{more}; a number withdrawn stays "
+                        "in the record as a hole")
+    return problems
+
+
+DR = re.compile(r"\bDR-(\d{3})\b")
+
+
+def cited_decisions(index):
+    """A DR cited in prose resolves to an entry.
+
+    An Article citation is a typed reference and has been checked since the
+    references check existed; a DR citation is plain text in a paragraph, and
+    nothing looked at it. `roadmap.md` cited DR-058 in three places for an entry
+    nobody wrote, and the collision was found only because that was the next
+    number to issue.
+
+    Generated pages are scanned along with the rest. A citation inside a
+    `rationale` block is prose inside the data, and it reaches a reader through
+    `decisions.md` exactly as any other paragraph does, so it is held to the same
+    rule rather than exempted for where it is stored.
+    """
+    known = {d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"}
+    if not known:
+        return []
+    problems = []
+    for path in sorted(ROOT.rglob("*.md")):
+        if path.is_symlink() or TEMPLATE in path.parents or ".git" in path.parts:
+            continue
+        try:
+            text = path.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for num in sorted(set(DR.findall(text)) - known):
+            problems.append(f"{path.relative_to(ROOT)}: DR-{num} is cited and does not exist")
+    return problems
+
+
 CHECKS = (
     ("duplicate keys", lambda i, r: duplicate_keys()),
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
@@ -321,6 +463,10 @@ CHECKS = (
     ("audit invariants", lambda i, r: audit_invariants(i)),
     ("served goals", lambda i, r: served_goals(i)),
     ("one context per portfolio", lambda i, r: one_context_per_portfolio(i)),
+    ("decision options", lambda i, r: decision_options(i)),
+    ("decision supersession", lambda i, r: decision_supersession(i)),
+    ("decision numbering", lambda i, r: decision_numbering(i)),
+    ("cited decisions", lambda i, r: cited_decisions(i)),
     ("surviving placeholders", lambda i, r: surviving_placeholders()),
 )
 

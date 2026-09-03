@@ -1,0 +1,31 @@
+# __PORTFOLIO_NAME__'s decision record: every choice that removed an
+# alternative, and why. `.meta/decisions.md` is rendered from this file.
+#
+# The scaffold's own record stayed with the scaffold. Its reasoning survives here
+# as `principles.md` and as the schemas themselves, and its chronology is not
+# this portfolio's — so this file starts at DR-001 with one entry, which is the
+# decision to exist.
+
+decisions:
+  - id: work:decision/001
+    name: "DR-001 · __PORTFOLIO_NAME__ exists"
+    status: ACCEPTED
+    decided: "__TODAY__"
+    recorded: "__TODAY__"
+    options:
+      - name: Keep building without a portfolio of its own
+        chosen: false
+        reason: >-
+          One Bounded Context and one Ubiquitous Language per repository is what
+          makes either enforceable, and work spread across repositories has
+          neither.
+      - name: Specialize solorepo into this portfolio
+        chosen: true
+        reason: >-
+          It carries the Disciplines, the Charter and the gate from the first
+          commit. What it costs is that everything inherited must be kept in
+          step with the scaffold by a sync nobody has written yet.
+    rationale: |-
+      __WHY_THIS_PORTFOLIO_EXISTS__
+
+      Specialized from solorepo.

@@ -200,12 +200,215 @@ def issue_template():
     return form("issue.md")
 
 
+def _decision_slots():
+    """The slot descriptions from the model, which is where the guidance lives.
+
+    Read as plain YAML rather than through a SchemaView so the renderer keeps its
+    one dependency. The form and the record are two views of the same class, and
+    a form whose headings were typed by hand would be the third copy of a shape
+    the schema already states.
+    """
+    return (load("work/decisions.yaml") or {}).get("slots") or {}
+
+
+def decisions():
+    """The decision record, newest last.
+
+    `rationale` is the entry as it was written. Everything rendered around it is
+    the structure the prose could not be asked about — what was rejected, what
+    this replaced, which Articles it applies. A withdrawn entry keeps its prose
+    and leaves its number as a hole, below the record rather than in it.
+    """
+    abox = load("assertions/decisions.yaml") or {}
+    rows = abox.get("decisions") or []
+    if not rows:
+        return None
+    projects = {p["id"]: p["name"] for p in (load("assertions/structure.yaml") or {}).get("projects") or []}
+    out = [BANNER.format(src="assertions/decisions.yaml"),
+           "## Decision record\n",
+           "_Every decision taken, with why. Newest last._\n",
+           "Add an entry when a decision is settled *and* implemented. A number is a\n"
+           "**stable identifier** and is never reused: an entry that turned out to record a\n"
+           "narrative rather than a foreclosure is withdrawn, and its number stays a hole\n"
+           "at the foot of this page.\n"]
+    holes = []
+    for d in rows:
+        if d.get("status") == "WITHDRAWN":
+            holes.append(d)
+            continue
+        out.append(f"### {d['name']}\n")
+        stamp = d.get("decided") or ""
+        if d.get("recorded") and d["recorded"] != stamp:
+            stamp = f"{stamp} — recorded {d['recorded']}"
+        line = f"*{stamp}*" if stamp else ""
+        if d.get("project"):
+            line += f" · {projects.get(d['project'], d['project'])}"
+        if d.get("status") == "SUPERSEDED":
+            line += f" · **Superseded by** {_ref(rows, d['superseded_by'])}"
+        if line:
+            out.append(line.strip() + "\n")
+        out.append(d["rationale"].strip() + "\n")
+        if d.get("options"):
+            out.append("**Options considered.**\n")
+            for o in d["options"]:
+                mark = "chosen" if o.get("chosen") else "rejected"
+                out.append(f"- _{o['name']}_ — {mark}. {o['reason'].strip()}")
+            out.append("")
+        if d.get("consequences"):
+            out.append("**Consequences.**\n")
+            out += [f"- {c.strip()}" for c in d["consequences"]]
+            out.append("")
+        if d.get("falsifier"):
+            out.append(f"**What would falsify this.** {d['falsifier'].strip()}\n")
+        cites = [("Applies", d.get("applies")), ("Departs from", d.get("departs_from"))]
+        bearing = "; ".join(f"{label} {', '.join('A' + a.rsplit('/', 1)[-1] for a in ids)}"
+                            for label, ids in cites if ids)
+        if bearing:
+            out.append(f"**Bearing on the Charter.** {bearing}.\n")
+        if d.get("supersedes"):
+            out.append("**Supersedes.** "
+                       + ", ".join(_ref(rows, s) for s in d["supersedes"]) + "\n")
+    if holes:
+        out.append("## Holes\n")
+        out.append("Numbers that were issued and are not decisions. They are never reused, and\n"
+                   "the prose is kept: a paragraph that was worth writing does not stop being\n"
+                   "true because it turned out to foreclose nothing.\n")
+        for d in holes:
+            out.append(f"### {d['name']} — withdrawn\n")
+            out.append(d["withdrawn_because"].strip() + "\n")
+            out.append("<details><summary>What the entry holds</summary>\n")
+            out.append(d["rationale"].strip() + "\n")
+            out.append("</details>\n")
+    return "\n".join(out)
+
+
+def _ref(rows, ident):
+    for d in rows:
+        if d["id"] == ident:
+            return d["name"].split(" · ")[0]
+    return ident
+
+
+def adr_template():
+    """The Project-level form, rendered from the same class the record uses.
+
+    A Portfolio decision and a Project's ADR are one class with `project` set or
+    not (DR-058), so the form's headings are the model's slots and its guidance
+    is their descriptions. Typing them here as well would be the copy that
+    disagrees — and the copy that keeps a form asking for something the model
+    stopped requiring.
+    """
+    slots = _decision_slots()
+    if not slots:
+        return None
+
+    def guidance(name):
+        return " ".join(slots[name]["description"].split())
+
+    out = [BANNER.format(src="work/decisions.yaml"),
+           "# ADR-<nnnn>: <one-line title, present tense>\n",
+           "**Not authoritative.** The Charter and the Disciplines hold the rules and win\n"
+           "any disagreement. This records why one Project is built the way it is, and it\n"
+           "is a `Decision` with its `project` set — the same class as an entry in\n"
+           "`.meta/decisions.md`, filed where the people it binds will find it.\n",
+           "- **Status:** <" + " | ".join(
+               (load("work/decisions.yaml") or {})["enums"]["DecisionStatus"]["permissible_values"]) + ">",
+           "- **Project:** <which Project this is about>",
+           "- **Decided:** <date> — **Recorded:** <date>\n",
+           guidance("decided").split(". ", 1)[1] + "\n",
+           "## Context\n", "<" + guidance("context") + ">\n",
+           "## Decision\n",
+           "<What was decided, in the present tense — \"we do X\". One paragraph.>\n",
+           "## Options considered\n",
+           "<" + guidance("options") + ">\n",
+           "### A: <option> — rejected\n", "<" + guidance("reason") + ">\n",
+           "### B: <option> — chosen\n", "<As above, including what it costs.>\n",
+           "## Consequences\n", "<" + guidance("consequences") + ">\n",
+           "## What would falsify this\n", "<" + guidance("falsifier") + ">\n",
+           "## Bearing on the Charter\n",
+           "Dereference every citation per A12 — \"A9 — a seed is data, gated by "
+           "rendering it\"\nrather than a bare \"A9\". Omit the section if there is "
+           "none.\n",
+           "- **Applies:** <" + guidance("applies") + ">",
+           "- **Departs from:** <" + guidance("departs_from") + ">\n",
+           "## Supersedes\n",
+           "<" + guidance("supersedes") + " Omit the section if there is none.>\n"]
+    return "\n".join(out)
+
+
+def pr_first_skill():
+    """PR First, compiled for this harness.
+
+    A skill is a Discipline plus the Capability that carries it out, written in
+    the shape one harness loads on demand. Everything here is read from the
+    assertions: the steps, the judgement, the Articles that enforce it, and the
+    body form's own fence. Nothing is restated, because a skill that restated
+    the Discipline would be the copy nothing checks — and the one an agent
+    actually reads.
+
+    Only the Claude Code target is emitted. The frontmatter an APM primitive
+    wants is still unverified (DR-040), and writing plausible field names would
+    be worse than the gap; this is the same compilation at the scale that can be
+    tested today.
+    """
+    disciplines = []
+    for rel in ("assertions/disciplines.yaml", "assertions/imported/disciplines.yaml"):
+        disciplines += (load(rel) or {}).get("disciplines") or []
+    d = next((x for x in disciplines if x["name"] == "PR First"), None)
+    if d is None:
+        return None
+    articles = [a for a in ((load("assertions/imported/charter.yaml") or {}).get("articles") or [])
+                if a.get("enforces") == d["id"]]
+    out = ["---",
+           "name: pr-first",
+           "description: >-",
+           "  Open, argue in, watch and close a pull request the way this repository",
+           "  requires. Use when starting any change, when a review or comment lands on",
+           "  one, and when picking work up again — an open pull request you own with an",
+           "  unanswered thread is work in progress, whoever noticed it.",
+           "---\n",
+           "<!-- Generated by .meta/render.py from assertions/imported/disciplines.yaml.",
+           "     Do not edit by hand: edit the assertion and re-render. -->\n",
+           "# PR First\n",
+           d["description"].strip() + "\n",
+           "## Steps\n",
+           "\n".join(f"{i}. {s.strip()}" for i, s in enumerate(d["steps"], 1)) + "\n",
+           "## Where the judgement is\n",
+           d["judgement"].strip() + "\n",
+           "**None of the below decides any of the above.** A script can tell you a thread",
+           "is unanswered. Whether the point is right, right about something else, or",
+           "overtaken by the diff is yours, and so is what to write back.\n",
+           "## Commands\n",
+           "```bash",
+           "python3 .meta/check_pr.py --sweep          # what you already own, and what it owes",
+           "python3 .meta/check_pr.py <n> --threads    # the threads still owed an answer",
+           "python3 .meta/check_pr.py <n>              # the gate: A15 and A16",
+           "```\n",
+           "`--sweep` keeps no local state. It asks GitHub which pull requests are open",
+           "and who opened them, so what you own survives this conversation ending.\n",
+           "## The body\n",
+           "Fill this in when the work **starts**. `check_pr.py` reads the same form, so a",
+           "heading added here is required by that act alone.\n",
+           "```markdown",
+           form("pull-request.md").rstrip("\n"),
+           "```\n"]
+    if articles:
+        out.append("## What is checked\n")
+        for a in articles:
+            out.append(f"- **A{a['id'].rsplit('/', 1)[-1]}.** {a['statement'].strip()}")
+        out.append("")
+    return "\n".join(out)
+
+
 TARGETS = {"disciplines.md": disciplines,
+           "decisions.md": decisions,
+           "templates/adr.md": adr_template,
            "charter.md": charter,
            "vocabulary.md": vocabulary,
            "../SPECIALIZE.md": specialize,
            "../.github/PULL_REQUEST_TEMPLATE.md": pull_request_template,
-           "../.github/ISSUE_TEMPLATE/challenge.md": issue_template}
+           "../.github/ISSUE_TEMPLATE/challenge.md": issue_template,
+           "../.claude/skills/pr-first/SKILL.md": pr_first_skill}
 
 if __name__ == "__main__":
     check = "--check" in sys.argv

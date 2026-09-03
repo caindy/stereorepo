@@ -1,0 +1,235 @@
+id: https://w3id.org/solorepo/work/decisions
+name: work-decisions
+title: Ontology of Work — Decisions
+description: >-
+  What was foreclosed, and why.
+
+  A **Decision** is a choice that removed an alternative. That is the whole test
+  for whether something belongs here: if nothing was ruled out, nothing was
+  decided, and what happened is residue for a pull request or a finding for the
+  Charter. The class is built so that the test is answerable from the instance
+  rather than from the reader's charity — `options` carries what was rejected,
+  and an entry with nothing rejected is announcing that it recorded a narrative.
+
+  Two levels of the same record, and they differ only in whether `project` is
+  set. A decision about the repository, its language or its way of working is the
+  Portfolio's, and names no Project. A decision about how one build unit is built
+  is that Project's, and names it. Filing one as the other is the failure
+  DR-049 named: a Project decision in the Portfolio's record is buried among
+  matters its readers do not share, and a Portfolio decision in a Project's is
+  hidden from every other Project.
+
+  Prose was the earlier answer, on the grounds that modelling would wrap the
+  paragraphs without gaining a check. Three checks arrived that the prose cannot
+  carry: whether a supersession points at something that exists, whether a cited
+  Article exists, and whether an entry claiming to be a decision names what it
+  rejected. `rationale` keeps the paragraphs, because the reasoning is the
+  artifact and no set of slots replaces it — the slots make it queryable, not
+  shorter.
+license: https://creativecommons.org/licenses/by/4.0/
+
+prefixes:
+  work: https://w3id.org/solorepo/work-ontology/
+  linkml: https://w3id.org/linkml/
+default_prefix: work
+default_range: string
+
+imports:
+  - linkml:types
+  - core
+  - disciplines
+  - structure
+
+enums:
+
+  DecisionStatus:
+    description: >-
+      Where a Decision stands. A record with no status is a record that cannot be
+      read for what is still in force.
+    permissible_values:
+      PROPOSED:
+        description: Argued for and not yet settled. It binds nothing.
+      ACCEPTED:
+        description: Settled and implemented. Both halves, per Written Decisions.
+      SUPERSEDED:
+        description: >-
+          Replaced by a later Decision, which `superseded_by` names. The entry
+          stays: an entry deleted is an argument nobody can weigh, and the
+          alternative that was rejected here is still rejected for its reasons.
+      WITHDRAWN:
+        description: >-
+          Kept as a hole. The number was issued and is never reused, but the
+          entry recorded a narrative rather than a foreclosure and does not
+          survive as a decision. `withdrawn_because` says which.
+
+slots:
+
+  status:
+    description: Where this Decision stands.
+    range: DecisionStatus
+    required: true
+
+  decided:
+    description: >-
+      When the choice was made. Separate from `recorded` on purpose: the gap is
+      how long the reasoning lived only in someone's head, which A11 says is not
+      yet a decision at all. Making the gap visible is what stops it being
+      comfortable.
+    range: date
+
+  recorded:
+    description: When it was written down here.
+    range: date
+
+  project:
+    description: >-
+      The Project this Decision is about. Absent means it is the Portfolio's —
+      about the repository, its language, or its way of working.
+    range: Project
+
+  context:
+    description: >-
+      What was true that made this a decision rather than a default: the forces
+      in tension, and what would have happened by doing nothing.
+
+  options:
+    description: >-
+      What was on the table. Exactly one is `chosen`; the rest were rejected, and
+      each states why specifically enough that nobody re-derives it — a rejected
+      option recorded vaguely gets proposed again.
+    range: Option
+    multivalued: true
+    inlined_as_list: true
+
+  chosen:
+    description: Whether this is the option taken.
+    range: boolean
+    required: true
+
+  reason:
+    description: >-
+      Why this option was taken, or why it was not. For the chosen one this
+      includes what it costs: every choice costs something, and a record claiming
+      otherwise is advertising.
+    required: true
+
+  consequences:
+    description: What is now true because of this, including what got worse.
+    multivalued: true
+
+  falsifier:
+    description: >-
+      The observation that would make this wrong. A Decision with none is a
+      preference, which is allowed — but it should say so rather than borrow the
+      authority of a finding. Observed Failure, applied to a decision.
+
+  supersedes:
+    description: >-
+      An earlier Decision this replaces, in whole or in part. Partial is the
+      normal case and the reason this is not `superseded_by`'s inverse: a later
+      Decision usually kills one paragraph of an earlier one and leaves the rest
+      standing. Never rewrite the earlier entry — the record is of how the
+      reasoning moved, not only of where it arrived.
+    range: Decision
+    multivalued: true
+
+  superseded_by:
+    description: >-
+      The later Decision that replaced this one **entirely**, which is what
+      `status: SUPERSEDED` claims. Set by the successor's author in the same
+      change, or the record disagrees with itself. Where only part of an entry
+      died, the successor's `supersedes` carries it and this stays empty.
+    range: Decision
+
+  applies:
+    description: >-
+      Articles this Decision puts into practice. Cited as references so that a
+      dangling citation is a gate failure rather than a reader's problem.
+    range: Article
+    multivalued: true
+
+  departs_from:
+    description: >-
+      Articles this Decision strains or breaks. A departure marked nowhere breaks
+      transitive conformity silently, which is why this is a slot and not a
+      paragraph.
+    range: Article
+    multivalued: true
+
+  withdrawn_because:
+    description: Why this number holds a hole rather than a decision.
+
+  rationale:
+    description: >-
+      The reasoning, in prose, as it was written when the decision was taken.
+      The slots above are for asking questions of the record; this is what
+      answers "why", and it is the part a later reader actually needs.
+
+classes:
+
+  Option:
+    description: >-
+      One of the things that could have been done. Recorded whether or not it was
+      taken, because the value of the record is the alternative it closes.
+    slots:
+      - name
+      - chosen
+      - reason
+    slot_usage:
+      name:
+        required: true
+
+  Decision:
+    is_a: WorkEntity
+    description: >-
+      A choice that removed an alternative, with why, kept where the people it
+      binds will find it.
+    comments:
+      - >-
+        Numbered as a **stable identifier**, cited as DR-001 and so on. A
+        withdrawn Decision leaves a hole and is never renumbered — the same rule
+        the Charter's Articles carry, for the same reason.
+      - >-
+        An ACCEPTED Decision with no rejected option is the shape this class
+        exists to make visible. It is not schema-enforceable without ruling out
+        the honest case where the alternative was doing nothing, so say that:
+        "do nothing" is an option and it has a reason.
+    slots:
+      - status
+      - decided
+      - recorded
+      - project
+      - context
+      - options
+      - consequences
+      - falsifier
+      - supersedes
+      - superseded_by
+      - applies
+      - departs_from
+      - withdrawn_because
+      - rationale
+    slot_usage:
+      name:
+        required: true
+      rationale:
+        required: true
+    rules:
+      - description: A withdrawn Decision says why it is a hole.
+        preconditions:
+          slot_conditions:
+            status:
+              equals_string: WITHDRAWN
+        postconditions:
+          slot_conditions:
+            withdrawn_because:
+              required: true
+      - description: A superseded Decision names its successor.
+        preconditions:
+          slot_conditions:
+            status:
+              equals_string: SUPERSEDED
+        postconditions:
+          slot_conditions:
+            superseded_by:
+              required: true
