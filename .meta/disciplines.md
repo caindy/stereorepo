@@ -31,14 +31,15 @@ _Produces: A portfolio repo, with its own history and nothing of the scaffold's.
 ### Literate Programming
 
 An **artifact** is an exposition addressed to a human reader; the machine-readable part is secondary to the account of what it means and why. Knuth's argument, applied wherever prose and machine-readable content coexist — a schema, a module of code, a configuration.
-The exposition must exist in **one copy, and it must be the copy the machine reads**. A LinkML module's description is what the generators consume. Rust includes a markdown file into rustdoc rather than restating it. Where the exposition is a second copy of something, it drifts, and a drifted explanation is worse than none because it is still believed.
+The exposition must exist in **one copy, and it must be the copy the machine reads**. A LinkML module's description is what the generators consume; Rust can carry prose inline or include a markdown file into rustdoc, and either satisfies this. Where the exposition is a second copy of something, it drifts — and a drifted explanation is worse than none, because it is still believed.
+Where the prose *sits* is a language's business and not this Discipline's. What is required is the single copy and the machine reading it.
 
 **Where the judgement is.** What a future reader will not be able to reconstruct. No checker can tell you which reasoning is worth recording, and recording all of it is its own failure — an exposition nobody finishes explains nothing.
 
 1. Give each unit — module, class, crate — a description carrying its reasoning rather than an inventory of its contents.
 2. Record what a reader would otherwise have to reconstruct.
 3. Mark departures from a canon in place, where they are made.
-4. Keep the exposition in one copy, included rather than restated, so it cannot drift from the thing it explains.
+4. Keep the exposition in one copy, and make that copy the one the machine reads. Inline in the source, or in a file the source includes — whichever the language does well.
 5. Where the language allows it, make the examples executable, so the prose is checked and not merely asserted.
 
 _Produces: Artifacts that explain themselves._
