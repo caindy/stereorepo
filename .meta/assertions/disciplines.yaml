@@ -35,6 +35,12 @@ disciplines:
         research to draw them from; its Bounded Context and the words its domain
         experts actually use.
       - >-
+        Choose the languages the portfolio will use, from those `bootstraps/`
+        supports, and copy each Bootstrap's applied disciplines in — its gates,
+        its documentation layout, its seed project. The Bootstraps themselves
+        stay with the scaffold and are maintained there; what travels is what
+        they apply.
+      - >-
         Re-render, then run the gate. It fails on any placeholder left behind, so
         run it before removing anything. Both green before going on.
       - >-

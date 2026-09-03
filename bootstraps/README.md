@@ -1,0 +1,33 @@
+# bootstraps
+
+A **Bootstrap** is the standard for one language, together with the gates that
+hold a project to it. Product material, not scaffold — which is why it lives out
+here rather than in `.meta/`.
+
+Disciplines are language-neutral by construction. That is what makes them
+portable, and it is also what leaves them with nothing to bite on: "a guardrail
+never observed to fail is not evidence" cannot fail a build. **A Bootstrap is
+where a Discipline becomes a command that can fail**, for one language.
+
+| Language | State |
+|---|---|
+| `rust/` | The Literate Programming implementation is designed. No Rust in it yet. |
+| Python | Not yet pulled in. `python_bootstrap` exists as a separate repository and its conventions need reconciling with this one first. |
+
+## Why they live in the monorepo
+
+A Portfolio is one repository, one Bounded Context, one Ubiquitous Language.
+Bootstraps kept as separate repositories would each need their own copy of the
+Disciplines they implement, and copies drift. Here they read the same
+`.meta/assertions/imported/disciplines.yaml` the rest of the repository does, so
+an implementation cannot fall out of step with what it implements.
+
+It is also the monorepo claim, dogfooded: several Products, polyglot Projects,
+one language holding them together.
+
+## What a portfolio gets
+
+Specialization asks which languages a portfolio will use, and it inherits those
+Bootstraps' applied disciplines on the first day — the gates, the documentation
+layout, the seed project. It does not inherit the Bootstraps themselves, which
+stay here and are maintained here.

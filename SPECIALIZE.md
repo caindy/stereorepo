@@ -19,9 +19,10 @@ Turning this scaffold into a new portfolio repo. Done once, by an agent followin
 2. Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas, `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`, `stakeholders/` and `.gitignore`. Not the generated pages; step five writes those.
 3. Copy every file under `template/` to its matching path, then link `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that must carry none of the scaffold's content.
 4. Fill in every placeholder, and write the portfolio's own assertions — its Portfolio, Products and Projects; its Personas, once there is research to draw them from; its Bounded Context and the words its domain experts actually use.
-5. Re-render, then run the gate. It fails on any placeholder left behind, so run it before removing anything. Both green before going on.
-6. Confirm `SPECIALIZE.md` and `template/` are absent. A portfolio specializes nothing, and leaving either invites someone to run this twice.
-7. Commit.
+5. Choose the languages the portfolio will use, from those `bootstraps/` supports, and copy each Bootstrap's applied disciplines in — its gates, its documentation layout, its seed project. The Bootstraps themselves stay with the scaffold and are maintained there; what travels is what they apply.
+6. Re-render, then run the gate. It fails on any placeholder left behind, so run it before removing anything. Both green before going on.
+7. Confirm `SPECIALIZE.md` and `template/` are absent. A portfolio specializes nothing, and leaving either invites someone to run this twice.
+8. Commit.
 
 _Produces: A portfolio repo, with its own history and nothing of the scaffold's._
 

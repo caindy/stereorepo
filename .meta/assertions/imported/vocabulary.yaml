@@ -207,6 +207,17 @@ concept_set:
     definition: A structured way of working that must be adhered to because it is not an imperative program.
     in_scheme: work:scheme/solorepo
     scope_note: Not a Capability, not a Permission, and not a characterisation such as a communication style.
+  - id: work:concept/bootstrap
+    pref_label: Bootstrap
+    definition: >-
+      The standard for one language, together with the gates that hold a project
+      to it.
+    in_scheme: work:scheme/solorepo
+    scope_note: >-
+      Where a Discipline becomes a command that can fail. A Bootstrap says how a
+      Discipline is satisfied in one language; it never restates the Discipline,
+      because the second copy is the one that drifts.
+    avoid: [starter, boilerplate, scaffold]
   - id: work:concept/dogfooding
     pref_label: Dogfooding
     definition: >-

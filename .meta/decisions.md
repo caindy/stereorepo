@@ -958,3 +958,35 @@ material** — `docs/` was chosen without the scaffold suggesting or forbidding 
 and `stakeholders/` is the only product-side convention shipped. And **nothing
 records what a Bootstrap implements**, though blessing is a conformance claim of
 exactly the shape everything else here takes.
+
+### DR-046 · Bootstraps live in the monorepo, and Specialization picks a language
+*2026-09-02*
+
+Reverses DR-045's placement. `rust_bootstrap` was created as a separate
+repository; the Bootstraps belong **here**, in `bootstraps/`, as product material.
+
+The argument is one this repository keeps making. A Bootstrap implements
+Disciplines it must not restate, and a Bootstrap in its own repository needs its
+own copy of them — **and copies drift**. In the monorepo it reads the same
+`assertions/imported/disciplines.yaml` everything else does, so an implementation
+cannot fall out of step with what it implements.
+
+It also makes the monorepo claim more than a word. `bootstraps/rust/` gives
+solorepo a **second Product**, delivered to a different reader and released
+independently while sharing one Bounded Context and one language. That is
+DR-027's Product/Project orthogonality exercised on something real rather than on
+one Product and one Project.
+
+Specialization gains a step: **choose the languages, and copy in those
+Bootstraps' applied disciplines** — the gates, the documentation layout, the seed
+project. A portfolio inherits what a Bootstrap *applies*, not the Bootstrap
+itself, which stays with the scaffold and is maintained there. That is the same
+imported/own boundary as the assertions, drawn in a second place.
+
+`~/code/rust_bootstrap` is superseded and should be deleted. It was a clean
+Specialization and it is now a duplicate, which by Nothing Unconsumed is debris.
+Its one piece of real content — the Literate Programming implementation — is
+here.
+
+DR-045 keeps its finding: Specialization ran for real and ran clean. What it got
+wrong was where the result belonged.

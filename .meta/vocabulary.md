@@ -62,6 +62,7 @@ _Authority: solorepo._
 | **Audit Record** | One employment of a Capability on a Securable. A Permission in the past tense. | — |
 | **Agent Bill of Materials** | What an Actor was made of at a moment, resolved to immutable references. | — |
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
+| **Bootstrap** | The standard for one language, together with the gates that hold a project to it. | starter, boilerplate, scaffold |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
 | **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
 | **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
@@ -84,6 +85,8 @@ _Authority: solorepo._
 **Persona goal.** An END goal is Goal-shaped but has no Deadline: it is standing rather than a bounded commitment, so it is not a Goal.
 
 **Discipline.** Not a Capability, not a Permission, and not a characterisation such as a communication style.
+
+**Bootstrap.** Where a Discipline becomes a command that can fail. A Bootstrap says how a Discipline is satisfied in one language; it never restates the Discipline, because the second copy is the one that drifts.
 
 **Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 

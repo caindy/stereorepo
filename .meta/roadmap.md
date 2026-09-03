@@ -97,27 +97,36 @@ developed further, with reference resolution and orphan detection as separate
 `scripts/check_*.py`. The natural home is the `.meta` Project's `gate`, which is
 the slot that exists to hold exactly this.
 
-**Language bootstraps, blessed by solorepo.** `rust_bootstrap` exists as of
-2026-09-02, specialized from here — the first Specialization that was not a test
-fixture. Its `docs/literate-programming.md` holds the Rust implementation of that
-Discipline, and this file no longer restates it: a design kept in two places is
-the drift these Disciplines exist to prevent.
+**Pulling `python_bootstrap` in.** `bootstraps/rust/` is here; Python is not, and
+it is the harder half. `python_bootstrap` is a working repository with its own
+charter in `CLAUDE.md`, its own ADRs under `docs/architecture/`, its own journal
+and its own eleven numbered invariants — conventions that overlap solorepo's
+without matching them. Merging needs decisions before it needs work:
 
-Two parts of that implementation are candidates for pulling up, once a **second**
-language confirms them and not before: routing documentation by the paragraph
-test, and requiring a history entry to name the test that would fail if its
-change were undone. Promoting either from one implementation would repeat the
-mistake of generalising from `python_bootstrap` alone.
+- Which charter wins, `AGENTS.md` here or `CLAUDE.md` there. Both claim to be the
+  one authoritative file.
+- Whether its ADRs become entries in `.meta/decisions.md`, or stay a second
+  record with its own numbering.
+- What happens to its `docs/JOURNAL.md`, which has no counterpart here at all.
+- Whether its generator (`src/python_bootstrap/`) comes too, making solorepo hold
+  a real Python package — which would be the monorepo claim fully dogfooded, and
+  would give it a second Project with a gate that actually runs.
 
-Still to settle: **how a bootstrap declares what it implements**, and how
-solorepo checks the claim. Blessing is a conformance claim of the shape
-everything else here takes — every Discipline has an implementation per blessed
-language, or a stated reason it does not — and nothing yet records it.
+Its nine language-neutral invariants are already pulled up (DR-043), so what
+remains is the Python-specific half and the reconciliation.
 
-Also unresolved: **a portfolio has no designated place for product material.**
-`rust_bootstrap` put its standard in `docs/`, which the scaffold neither
-suggested nor forbade. `stakeholders/` is the only product-side convention
-solorepo ships.
+**A portfolio has no designated place for product material.** `bootstraps/` was
+added at the root without the scaffold suggesting or forbidding it, the same way
+`docs/` was chosen when the Rust standard briefly lived in its own repository.
+`stakeholders/` remains the only product-side convention shipped, which is thin
+for a portfolio whose product is documentation.
+
+**Nothing records what a Bootstrap implements.** `bootstraps/rust/README.md`
+keeps that table by hand, which is a summary that can drift from the Disciplines
+it summarises — the failure this repository has spent its length removing.
+Blessing is a conformance claim of the shape everything else takes: every
+Discipline has an implementation per supported language, or a stated reason it
+does not.
 
 **Guiding the solo through identifying research.** A Persona should be drawn
 from research, and `stakeholders/customers/` is where that research lives — but
