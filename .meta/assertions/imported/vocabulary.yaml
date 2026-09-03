@@ -28,6 +28,15 @@ concept_schemes:
 
 concept_set:
   # ---- adopted from DDD ----
+  - id: ddd:concept/aggregate-invariant
+    pref_label: Invariant (of an Aggregate)
+    definition: What must hold true of a model element's state, in DDD's sense.
+    in_scheme: work:scheme/ddd
+    scope_note: >-
+      Carried by the `invariants` slot on Entity, ValueObject and Aggregate. A
+      claim about domain state at a moment, not a rule about how work proceeds.
+    confusable_with:
+      - work:concept/invariant
   - id: work:concept/bounded-context
     pref_label: Bounded Context
     definition: An explicit boundary within which a model applies and its terms carry one settled meaning.
@@ -249,12 +258,17 @@ concept_set:
     in_scheme: work:scheme/solorepo
     scope_note: Coverage is a floor beneath the tests, never a claim about them.
     avoid: [test coverage]
-  - id: work:concept/gates-do-not-fix
-    pref_label: Gates Do Not Fix
+  - id: work:concept/invariant
+    pref_label: Invariant
     definition: >-
-      A gate checks and never rewrites; each step can fail, and says what it
-      checked.
+      A one-line claim that can be held against a specific artifact and found
+      false, numbered so it can be cited.
     in_scheme: work:scheme/solorepo
+    scope_note: >-
+      Where a Discipline is followed, an Invariant is checked. An Invariant needs
+      no judgement, which is what stops it being a Discipline with fewer words.
+    confusable_with:
+      - ddd:concept/aggregate-invariant
   - id: work:concept/nothing-unconsumed
     pref_label: Nothing Unconsumed
     definition: >-

@@ -23,6 +23,7 @@ for what it owns. This file routes. It does not restate.
 | anything under `assertions/imported/` | do not edit it. It came from the scaffold, and a sync overwrites it. |
 | a schema, or checking one | [`schemas.md`](schemas.md), then the module its own load map names |
 | how work is meant to proceed here | [`disciplines.md`](disciplines.md) |
+| a rule you can cite, or check something against | [`invariants.md`](invariants.md) |
 | **why** something is built this way | [`decisions.md`](decisions.md) — find its DR |
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
 | changing or defending a rule | its DR in `decisions.md`, **and** the file that states it |
@@ -39,6 +40,7 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
 | **why** a decision was taken | `decisions.md`, as a DR |
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
+| a checkable one-line rule | `assertions/imported/invariants.yaml`, then re-render |
 | reasoning that recurs across several decisions | `principles.md` |
 | what is intended, or still undecided | `roadmap.md` |
 | what a schema means and why it is shaped so | the schema itself, per Literate Programming |

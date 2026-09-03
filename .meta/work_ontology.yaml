@@ -25,7 +25,7 @@ license: https://creativecommons.org/licenses/by/4.0/
 #   who the work is for                             work/personas.yaml
 #   what the work is for, and its permissions       work/purpose.yaml
 #   who is assigned what, and where work meets      work/assignment.yaml
-#   how work must proceed, invariably               work/disciplines.yaml
+#   how work must proceed, and what is checkable     work/disciplines.yaml
 #   what was actually done, and by whom             work/provenance.yaml
 #   how the repo is divided into Products/Projects  work/structure.yaml
 #   the base every module shares                    work/core.yaml
@@ -168,6 +168,11 @@ slots:
     range: Discipline
     multivalued: true
     inlined_as_list: true
+  invariants:
+    description: The Invariants in the collection.
+    range: Invariant
+    multivalued: true
+    inlined_as_list: true
   portfolio:
     description: The Portfolio. There is exactly one per repo.
     range: Portfolio
@@ -231,6 +236,7 @@ classes:
       - job_set
       - collaborations
       - disciplines
+      - invariants
       - portfolio
       - products
       - projects

@@ -23,6 +23,13 @@ description: >-
   Disciplines are also the reason this class exists rather than the prose that
   preceded it: an APM `instructions` primitive is a Discipline compiled for a
   harness, and prose in a document has nothing for that transformation to read.
+
+  An **Invariant** is the other thing entirely: a one-line claim that can be
+  held against a specific artifact and found false. Where a Discipline is
+  followed, an Invariant is *checked*. The two are easy to conflate and the cost
+  of conflating them is bluntness — wrapping a checkable claim in steps and
+  judgement buries the claim, and a rule you cannot cite in one line is a rule
+  nobody cites.
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
@@ -61,6 +68,25 @@ slots:
       an APM `instructions` primitive — its `applyTo` glob — is this Securable.
     range: Securable
 
+  enforces:
+    description: >-
+      The Discipline this Invariant makes checkable. Optional: an Invariant may
+      stand alone, and one that needs no Discipline behind it is not diminished
+      by the absence.
+    range: Discipline
+
+  checked_by:
+    description: >-
+      What holds artifacts against this Invariant — a gate step, a test, a
+      review. An Invariant with nothing checking it is an aspiration, and should
+      say so rather than imply enforcement it does not have.
+
+  origin:
+    description: >-
+      The failure this Invariant came from. Where a rule exists it exists because
+      something failed once, and a reader who doubts a rule can go and read what
+      it cost.
+
 classes:
 
   Discipline:
@@ -88,3 +114,35 @@ classes:
         required: true
       judgement:
         recommended: true
+
+  Invariant:
+    is_a: WorkEntity
+    description: >-
+      A one-line claim that can be held against a specific artifact and found
+      false.
+
+      Where a Discipline is followed, an Invariant is checked. It requires no
+      judgement — that is the point, and it is why an Invariant is not a
+      Discipline with fewer words. "No gate step may rewrite the tree" is
+      settled once and mechanically verifiable; nothing about applying it is a
+      matter of judgement.
+    comments:
+      - >-
+        Numbered as a **stable identifier**, so it can be cited in a code
+        comment or a commit message. A retired Invariant leaves a **hole** and is
+        never renumbered: a citation that silently comes to mean something else
+        is worse than a dangling one.
+      - >-
+        An Invariant that states no `origin` has lost its receipt. It may still
+        be right, but nobody can weigh it against the cost of following it.
+    slots:
+      - statement
+      - enforces
+      - checked_by
+      - origin
+    slot_usage:
+      name:
+        required: true
+      statement:
+        required: true
+        description: The claim, in one line, phrased so that a violation is recognisable.

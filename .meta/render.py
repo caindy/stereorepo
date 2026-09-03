@@ -94,6 +94,45 @@ def vocabulary():
     return "\n".join(out)
 
 
+def invariants():
+    """The numbered list, which is the form that makes an Invariant citable.
+
+    Rendered flat and in order rather than grouped by Discipline: the number is
+    the identifier, and a reader arriving from a citation wants to find it by
+    counting, not by guessing which Discipline it belongs to.
+    """
+    abox = load("assertions/imported/invariants.yaml") or {}
+    rows = abox.get("invariants") or []
+    if not rows:
+        return None
+    disciplines = {d["id"]: d["name"] for rel in
+                   ("assertions/disciplines.yaml", "assertions/imported/disciplines.yaml")
+                   for d in ((load(rel) or {}).get("disciplines") or [])}
+    out = [BANNER.format(src="assertions/imported/invariants.yaml"),
+           "## Invariants\n",
+           "_One-line claims that can be held against an artifact and found false._\n",
+           "Numbered as **stable identifiers**, so an Invariant can be cited in a code\n"
+           "comment or a commit message. A retired Invariant leaves a **hole** and is never\n"
+           "renumbered — a citation that silently comes to mean something else is worse than\n"
+           "a dangling one.\n",
+           "Where a Discipline is *followed*, an Invariant is *checked*. Some enforce a\n"
+           "Discipline; some stand alone, and need nothing behind them.\n"]
+    for inv in rows:
+        num = inv["id"].rsplit("/", 1)[-1]
+        out.append(f"### {num}. {inv['statement'].strip()}\n")
+        held = disciplines.get(inv.get("enforces"))
+        bits = []
+        if held:
+            bits.append(f"**Enforces** {held}.")
+        if inv.get("checked_by"):
+            bits.append(f"**Checked by** {inv['checked_by'].strip().rstrip('.')}.")
+        if bits:
+            out.append(" ".join(bits) + "\n")
+        if inv.get("origin"):
+            out.append(f"_Why:_ {inv['origin'].strip()}\n")
+    return "\n".join(out)
+
+
 def specialize():
     """The root-level instruction an agent arriving at the repo is pointed to.
 
@@ -123,6 +162,7 @@ def specialize():
 
 
 TARGETS = {"disciplines.md": disciplines,
+           "invariants.md": invariants,
            "vocabulary.md": vocabulary,
            "../SPECIALIZE.md": specialize}
 

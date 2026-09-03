@@ -11,6 +11,7 @@ A **Discipline** is a structured way of working that must be adhered to because 
 The clause doing the work is "not an imperative program". Adherence is what you need precisely because execution is unavailable: if a Discipline could be compiled, you would run it and no one would need to adhere to anything. So the test for whether something belongs here is not whether it is important, but whether the judgement it requires resists automation. Record that judgement — it is what stops a Discipline being written when a script would do.
 A Discipline is none of the three things it is most easily mistaken for. Not a Capability, which is what can be done. Not a Permission, which is what may be done and to what. Not a characterisation such as a communication style, which describes rather than prescribes and has no steps to depart from.
 Disciplines are also the reason this class exists rather than the prose that preceded it: an APM `instructions` primitive is a Discipline compiled for a harness, and prose in a document has nothing for that transformation to read.
+An **Invariant** is the other thing entirely: a one-line claim that can be held against a specific artifact and found false. Where a Discipline is followed, an Invariant is *checked*. The two are easy to conflate and the cost of conflating them is bluntness — wrapping a checkable claim in steps and judgement buries the claim, and a rule you cannot cite in one line is a rule nobody cites.
 
 ### Specialization
 
@@ -110,20 +111,6 @@ Coverage is a **floor, not evidence**: it reports what ran, never what was check
 3. Use mutation testing, or its equivalent, as the signal behind the floor — it is the mechanised form of watching a check fail.
 
 _Produces: Checks whose passing means something._
-
-### Gates Do Not Fix
-
-A gate checks. It never rewrites the tree.
-A step that fixes what it finds destroys the evidence that anything was wrong, and a repository where the gate quietly repairs things has no idea what state it is actually in. Formatting and fixing are separate commands, run deliberately.
-A gate step must also be **able to fail**, and must say what it checked. A check-mark is a claim about scope, so a step that could not run must be loud and must not print one — a green that means "the tool never started" is worse than a red.
-
-**Where the judgement is.** Telling could-not-run from passed. Every tool fails to start eventually, and the difference between a green mark and a missing one is the whole value of the report.
-
-1. Never let a gate step mutate the tree. Fixing is a separate, deliberate command.
-2. Give every step three outcomes — could not run, loud and unmarked; passed, marked; found something, non-zero.
-3. Say what each step checked, so a check-mark carries its scope.
-
-_Produces: A report whose green marks are claims someone can rely on._
 
 ### Nothing Unconsumed
 

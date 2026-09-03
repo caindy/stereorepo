@@ -151,32 +151,6 @@ disciplines:
         it is the mechanised form of watching a check fail.
     produces:
       - Checks whose passing means something.
-  - id: work:discipline/gates-do-not-fix
-    name: Gates Do Not Fix
-    description: >-
-      A gate checks. It never rewrites the tree.
-
-      A step that fixes what it finds destroys the evidence that anything was
-      wrong, and a repository where the gate quietly repairs things has no idea
-      what state it is actually in. Formatting and fixing are separate commands,
-      run deliberately.
-
-      A gate step must also be **able to fail**, and must say what it checked. A
-      check-mark is a claim about scope, so a step that could not run must be
-      loud and must not print one — a green that means "the tool never started"
-      is worse than a red.
-    judgement: >-
-      Telling could-not-run from passed. Every tool fails to start eventually,
-      and the difference between a green mark and a missing one is the whole
-      value of the report.
-    steps:
-      - Never let a gate step mutate the tree. Fixing is a separate, deliberate command.
-      - >-
-        Give every step three outcomes — could not run, loud and unmarked;
-        passed, marked; found something, non-zero.
-      - Say what each step checked, so a check-mark carries its scope.
-    produces:
-      - A report whose green marks are claims someone can rely on.
   - id: work:discipline/nothing-unconsumed
     name: Nothing Unconsumed
     description: >-

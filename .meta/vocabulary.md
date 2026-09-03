@@ -16,6 +16,7 @@ _Authority: Eric Evans, and About Face for the persona work._
 
 | Term | Means | Do not say |
 |---|---|---|
+| **Invariant (of an Aggregate)** | What must hold true of a model element's state, in DDD's sense. | — |
 | **Bounded Context** | An explicit boundary within which a model applies and its terms carry one settled meaning. | — |
 | **Ubiquitous Language** | The language everyone inside one Bounded Context uses, in speech, documents and code. | — |
 | **Published Language** | A well-documented shared language that contexts translate into and out of. | — |
@@ -23,6 +24,8 @@ _Authority: Eric Evans, and About Face for the persona work._
 | **Persona** | A specific, detailed, named user archetype the product is designed for. | — |
 | **Business goal** | An organisational objective — conversion, support cost, retained revenue. | — |
 | **Technical goal** | An architectural constraint — latency, offline-first sync, data residency. | — |
+
+**Invariant (of an Aggregate).** Carried by the `invariants` slot on Entity, ValueObject and Aggregate. A claim about domain state at a moment, not a rule about how work proceeds.
 
 **Ubiquitous Language.** A portfolio's own domain language. solorepo's vocabulary is imported alongside it to articulate the discipline, and has no authority over it.
 
@@ -67,7 +70,7 @@ _Authority: solorepo._
 | **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
 | **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
 | **Observed Failure** | A guardrail never observed to fail is not evidence of anything. | test coverage |
-| **Gates Do Not Fix** | A gate checks and never rewrites; each step can fail, and says what it checked. | — |
+| **Invariant** | A one-line claim that can be held against a specific artifact and found false, numbered so it can be cited. | — |
 | **Nothing Unconsumed** | An artifact prevents drift only if something consumes it and checks it against something. | — |
 | **Seeded Artifacts** | A seed is data, gated by rendering it and running the real gates on the result, and it must not violate the rules it seeds. | scaffolding |
 | **Written Decisions** | A decision that lives only in a transcript has not been made. | — |
@@ -96,6 +99,8 @@ _Authority: solorepo._
 
 **Observed Failure.** Coverage is a floor beneath the tests, never a claim about them.
 
+**Invariant.** Where a Discipline is followed, an Invariant is checked. An Invariant needs no judgement, which is what stops it being a Discipline with fewer words.
+
 ### APM primitives
 
 _Authority: Microsoft APM._
@@ -114,6 +119,7 @@ more often a collision than a gap.
 
 | This | Is not | 
 |---|---|
+| **Invariant (of an Aggregate)** | Invariant |
 | **Persona** | Personality |
 | **Personality** | Persona |
 | **Challenge** | Project |
@@ -124,6 +130,7 @@ more often a collision than a gap.
 | **Goal** | Persona goal |
 | **Persona goal** | Goal |
 | **Job** | Job to be Done |
+| **Invariant** | Invariant (of an Aggregate) |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
 | **Prompt (APM primitive)** | Skill (solorepo Capability kind), Skill (APM primitive) |
