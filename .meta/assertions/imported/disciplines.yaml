@@ -207,11 +207,23 @@ disciplines:
       When something said is a decision rather than a thought still being had.
       Recording every thought is its own failure; the test is whether anything
       would be done differently now that it is settled.
+
+      And at which level it belongs. A decision about how one build unit is built
+      is not a decision about the repository, and filing either as the other
+      loses it.
     steps:
       - Record a decision when it is settled *and* implemented, not before.
       - Say what was decided and why, not what changed. The diff already says what changed.
       - >-
         Keep the reasoning, including what was tried and abandoned, so the next
         reader does not re-derive a rejected option.
+      - >-
+        Record at the level the decision is about. The Portfolio's record holds
+        decisions about the repository, its language and its way of working; a
+        Project's ADR holds decisions about how one build unit is built. A
+        Project decision in the Portfolio record buries it among matters its
+        readers do not share; a Portfolio decision in a Project's record hides it
+        from every other Project.
+      - Use the form in `.meta/templates/adr.md`, so the shape does not have to be re-argued.
     produces:
       - A record that answers "why is it like this" without anyone remembering.

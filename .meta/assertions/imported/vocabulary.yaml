@@ -215,6 +215,27 @@ concept_set:
     definition: A structured way of working that must be adhered to because it is not an imperative program.
     in_scheme: work:scheme/solorepo
     scope_note: Not a Capability, not a Permission, and not a characterisation such as a communication style.
+  - id: work:concept/decision-record
+    pref_label: Decision record
+    definition: >-
+      The Portfolio's record of decisions about the repository, its language and
+      its way of working. Numbered DR-nnn, newest last.
+    in_scheme: work:scheme/solorepo
+    confusable_with:
+      - work:concept/adr
+  - id: work:concept/adr
+    pref_label: Architecture Decision Record
+    definition: >-
+      A Project-level record of why one build unit is built as it is. Numbered
+      per Project, from the form in `.meta/templates/adr.md`.
+    in_scheme: work:scheme/solorepo
+    alt_labels: [ADR]
+    scope_note: >-
+      The other level of the same Discipline. A Project decision in the
+      Portfolio's record is buried among matters its readers do not share; a
+      Portfolio decision in a Project's ADR is hidden from every other Project.
+    confusable_with:
+      - work:concept/decision-record
   - id: work:concept/bootstrap
     pref_label: Bootstrap
     definition: >-

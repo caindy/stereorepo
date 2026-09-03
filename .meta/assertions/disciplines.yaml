@@ -23,8 +23,8 @@ disciplines:
       - >-
         Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas,
         `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.apm/`,
-        `.meta/principles.md`, `.meta/schemas.md`, `stakeholders/` and
-        `.gitignore`. Not the generated pages; step five writes those.
+        `.meta/principles.md`, `.meta/schemas.md`, `.meta/templates/`,
+        `stakeholders/` and `.gitignore`. Not the generated pages; step five writes those.
       - >-
         Copy every file under `template/` to its matching path, then link
         `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that

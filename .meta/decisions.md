@@ -1068,3 +1068,44 @@ agent.** The same run writes one way in a turn and another way into the record,
 and conflating them produces either tedium in conversation or shorthand in an
 artifact nobody can read. They are inherited, because that is true in any
 portfolio.
+
+### DR-049 · ADRs are the Project level of Written Decisions
+*2026-09-02*
+
+Two levels of the same Discipline, and choosing between them is a judgement the
+Discipline now carries. **The Portfolio's record** — this file — holds decisions
+about the repository, its language and its way of working. **A Project's ADR**
+holds decisions about how one build unit is built. A Project decision filed here
+is buried among matters its readers do not share; a Portfolio decision filed in a
+Project's ADR is hidden from every other Project.
+
+The form is at `.meta/templates/adr.md`, inherited by every portfolio. Its shape
+is adopted from `python_bootstrap`, with three parts worth naming:
+
+**Decided and Recorded are separate dates.** The gap between them is how long the
+reasoning lived only in someone's head, which A11 says is not yet a decision at
+all. Making the gap visible is what stops it being comfortable.
+
+**Rejected options are named specifically.** That is the Discipline's step about
+not re-deriving abandoned reasoning, and vagueness here is what causes a rejected
+option to be proposed again.
+
+**Consequences ask what would falsify the decision.** A decision with no such
+observation is a preference, which is allowed — but it should say so rather than
+borrow the authority of a finding. That is Observed Failure applied to a
+decision.
+
+A section for **bearing on the Charter** records which Articles a decision
+applies, strains or departs from, dereferenced per A12. A departure marked
+nowhere breaks transitive conformity silently.
+
+**Forms and seeds use different placeholder markers, and the difference is
+load-bearing.** Root `template/` is filled once by Specialization, and anything
+left unfilled fails the gate. `.meta/templates/` holds forms filled by an author
+every time, which keep their placeholders forever — so they use angle brackets
+instead. A form using the seed's marker would fail the gate for the crime of
+being a form.
+
+The Portfolio's record stays prose rather than becoming assertions, unlike almost
+everything else here. Each entry is a paragraph of reasoning, appended and never
+diffed; modelling it as data would wrap the prose without gaining a check.

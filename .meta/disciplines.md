@@ -21,7 +21,7 @@ Turning this scaffold into a new portfolio repo. Done once, by an agent followin
 **Where the judgement is.** Which of the inherited terms this portfolio actually needs, who its stakeholders really are, and what its domain calls things. None of it is derivable from the scaffold, which is why this is a procedure to follow rather than a program to run.
 
 1. Start a new empty repo. Copy only what the steps below name — never clone, and never copy the whole tree: a clone carries the scaffold's commit history and an `origin` pointing back at it, and neither belongs to a portfolio.
-2. Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas, `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`, `stakeholders/` and `.gitignore`. Not the generated pages; step five writes those.
+2. Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas, `render.py`, `check.py`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`, `.meta/templates/`, `stakeholders/` and `.gitignore`. Not the generated pages; step five writes those.
 3. Copy every file under `template/` to its matching path, then link `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that must carry none of the scaffold's content.
 4. Fill in every placeholder, and write the portfolio's own assertions — its Portfolio, Products and Projects; its Personas, once there is research to draw them from; its Bounded Context and the words its domain experts actually use.
 5. Choose the languages the portfolio will use, from those `bootstraps/` supports, and copy each Bootstrap's applied disciplines in — its gates, its documentation layout, its seed project. The Bootstraps themselves stay with the scaffold and are maintained there; what travels is what they apply.
@@ -146,9 +146,12 @@ A decision that lives only in a transcript has not been made.
 Not recorded-badly — **not made**. Nobody downstream can act on it, argue with it, or find out why. A conversation is where a decision is reached and never where it lives.
 
 **Where the judgement is.** When something said is a decision rather than a thought still being had. Recording every thought is its own failure; the test is whether anything would be done differently now that it is settled.
+And at which level it belongs. A decision about how one build unit is built is not a decision about the repository, and filing either as the other loses it.
 
 1. Record a decision when it is settled *and* implemented, not before.
 2. Say what was decided and why, not what changed. The diff already says what changed.
 3. Keep the reasoning, including what was tried and abandoned, so the next reader does not re-derive a rejected option.
+4. Record at the level the decision is about. The Portfolio's record holds decisions about the repository, its language and its way of working; a Project's ADR holds decisions about how one build unit is built. A Project decision in the Portfolio record buries it among matters its readers do not share; a Portfolio decision in a Project's record hides it from every other Project.
+5. Use the form in `.meta/templates/adr.md`, so the shape does not have to be re-argued.
 
 _Produces: A record that answers "why is it like this" without anyone remembering._
