@@ -30,15 +30,18 @@ _Produces: A portfolio repo, with its own history and nothing of the scaffold's.
 
 ### Literate Programming
 
-A schema is an exposition addressed to a human reader; the machine-readable part is secondary to the account of what it means and why.
+An **artifact** is an exposition addressed to a human reader; the machine-readable part is secondary to the account of what it means and why. Knuth's argument, applied wherever prose and machine-readable content coexist — a schema, a module of code, a configuration.
+The exposition must exist in **one copy, and it must be the copy the machine reads**. A LinkML module's description is what the generators consume. Rust includes a markdown file into rustdoc rather than restating it. Where the exposition is a second copy of something, it drifts, and a drifted explanation is worse than none because it is still believed.
 
-**Where the judgement is.** What a future reader will not be able to reconstruct. No checker can tell you which reasoning is worth recording.
+**Where the judgement is.** What a future reader will not be able to reconstruct. No checker can tell you which reasoning is worth recording, and recording all of it is its own failure — an exposition nobody finishes explains nothing.
 
-1. Give a module a description that carries its reasoning, not an inventory.
-2. Record on a class what a reader would otherwise have to reconstruct.
+1. Give each unit — module, class, crate — a description carrying its reasoning rather than an inventory of its contents.
+2. Record what a reader would otherwise have to reconstruct.
 3. Mark departures from a canon in place, where they are made.
+4. Keep the exposition in one copy, included rather than restated, so it cannot drift from the thing it explains.
+5. Where the language allows it, make the examples executable, so the prose is checked and not merely asserted.
 
-_Produces: Schemas that explain themselves._
+_Produces: Artifacts that explain themselves._
 
 ### Progressive Disclosure
 
@@ -79,3 +82,83 @@ External memory rather than private memory, and the distinction is the whole poi
 5. Surface it for correction rather than defending it.
 
 _Produces: A Persona of the solo that another agent can pick up cold.; A visible account of how the agent is framing the work._
+
+### Ratchet
+
+Quality moves one way. Green, then commit; and silencing a checker is the ratchet running backwards.
+A targeted suppression carrying a rule and a reason is an exception, and exceptions are legible. A configuration-level `ignore` is not an exception, it is a rule deleted quietly, and nothing downstream can tell the difference between a rule that never existed and one that was switched off.
+
+**Where the judgement is.** Whether a suppression is a local exception with a reason, or a loosening dressed as one. And when a baseline may move down at all — rarely, and never merely to make today green.
+
+1. Green before commit. Not after, and not "green apart from".
+2. Suppress at the site, naming the rule and the reason. Never in configuration, where the exception becomes invisible.
+3. Where a checker cannot be clean at once, ratchet it — hold a baseline that may improve and may not regress.
+
+_Produces: A standard that cannot quietly fall._
+
+### Observed Failure
+
+A guardrail never observed to fail is not evidence of anything.
+Coverage is a **floor, not evidence**: it reports what ran, never what was checked. A test that passes against broken code passed for the wrong reason, and no coverage number distinguishes the two. The only way to know a check works is to have watched it fail.
+
+**Where the judgement is.** What a passing check actually covers — which is never what its name suggests, and rarely what its author intended.
+
+1. Watch every new guardrail fail before trusting it. Break the thing it guards, see red, then put it back.
+2. Treat a coverage figure as a floor beneath the tests, never as a claim about them.
+3. Use mutation testing, or its equivalent, as the signal behind the floor — it is the mechanised form of watching a check fail.
+
+_Produces: Checks whose passing means something._
+
+### Gates Do Not Fix
+
+A gate checks. It never rewrites the tree.
+A step that fixes what it finds destroys the evidence that anything was wrong, and a repository where the gate quietly repairs things has no idea what state it is actually in. Formatting and fixing are separate commands, run deliberately.
+A gate step must also be **able to fail**, and must say what it checked. A check-mark is a claim about scope, so a step that could not run must be loud and must not print one — a green that means "the tool never started" is worse than a red.
+
+**Where the judgement is.** Telling could-not-run from passed. Every tool fails to start eventually, and the difference between a green mark and a missing one is the whole value of the report.
+
+1. Never let a gate step mutate the tree. Fixing is a separate, deliberate command.
+2. Give every step three outcomes — could not run, loud and unmarked; passed, marked; found something, non-zero.
+3. Say what each step checked, so a check-mark carries its scope.
+
+_Produces: A report whose green marks are claims someone can rely on._
+
+### Nothing Unconsumed
+
+An artifact prevents drift only if something consumes it — and consumption is necessary, not sufficient. The question after "what reads this?" is always "and what is it checked **against**?"
+A configuration key nothing reads, a document nothing links to, a test suite nothing runs — each looks like a control and is none.
+
+**Where the judgement is.** Whether a consumer actually checks the artifact or merely loads it. Something reading a file and ignoring its contents satisfies the letter of this and none of its point.
+
+1. For each artifact, name what consumes it, and what that consumer checks it against.
+2. Delete what nothing consumes. An unread artifact is not documentation, it is debris.
+3. Detect orphans mechanically, since they accumulate faster than anyone notices.
+
+_Produces: A repository where everything present is load-bearing._
+
+### Seeded Artifacts
+
+A seed is **data**, and it must not violate the rules it seeds.
+Linting a template in place proves only that its files are well formed. It is gated by rendering it and running the real gates on the **result**, which is the only version anyone runs.
+And a defect in a seed is worse than the same defect elsewhere, because it propagates once per use. A knob nothing reads, a document nothing reaches, a suite nothing runs — each is bad in a repository and multiplied in a template.
+
+**Where the judgement is.** Which of the rules a seed must already satisfy while it is still a seed, given that it is deliberately incomplete. An empty list may be honest or may be an omission, and only the reason distinguishes them.
+
+1. Treat a template as data. Do not lint it in place and call that proof.
+2. Gate it by rendering it and running the real gates on the result.
+3. Hold a seed to the rules it seeds. Where it cannot yet satisfy one, say why in the seed itself, where whoever fills it in will read it.
+
+_Produces: Seeds that cannot propagate a defect._
+
+### Written Decisions
+
+A decision that lives only in a transcript has not been made.
+Not recorded-badly — **not made**. Nobody downstream can act on it, argue with it, or find out why. A conversation is where a decision is reached and never where it lives.
+
+**Where the judgement is.** When something said is a decision rather than a thought still being had. Recording every thought is its own failure; the test is whether anything would be done differently now that it is settled.
+
+1. Record a decision when it is settled *and* implemented, not before.
+2. Say what was decided and why, not what changed. The diff already says what changed.
+3. Keep the reasoning, including what was tried and abandoned, so the next reader does not re-derive a rejected option.
+
+_Produces: A record that answers "why is it like this" without anyone remembering._

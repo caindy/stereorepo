@@ -64,6 +64,12 @@ _Authority: solorepo._
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
 | **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
+| **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
+| **Observed Failure** | A guardrail never observed to fail is not evidence of anything. | test coverage |
+| **Gates Do Not Fix** | A gate checks and never rewrites; each step can fail, and says what it checked. | — |
+| **Nothing Unconsumed** | An artifact prevents drift only if something consumes it and checks it against something. | — |
+| **Seeded Artifacts** | A seed is data, gated by rendering it and running the real gates on the result, and it must not violate the rules it seeds. | scaffolding |
+| **Written Decisions** | A decision that lives only in a transcript has not been made. | — |
 | **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 | **Specialization** | Turning a fresh clone of solorepo into a new portfolio repo. | bootstrap, init, scaffolding step |
 
@@ -82,6 +88,10 @@ _Authority: solorepo._
 **Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 
 **Modelling the Solo.** Not Cooper's persona research, which models absent users from evidence. This models a present person who can read and correct it.
+
+**Ratchet.** A suppression at the site with a rule and a reason is an exception. One in configuration is a rule deleted quietly.
+
+**Observed Failure.** Coverage is a floor beneath the tests, never a claim about them.
 
 ### APM primitives
 

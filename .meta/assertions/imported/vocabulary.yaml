@@ -225,6 +225,42 @@ concept_set:
       Not Cooper's persona research, which models absent users from evidence.
       This models a present person who can read and correct it.
     avoid: [profiling]
+  - id: work:concept/ratchet
+    pref_label: Ratchet
+    definition: Quality moves one way — green before commit, and never by silencing a checker.
+    in_scheme: work:scheme/solorepo
+    scope_note: >-
+      A suppression at the site with a rule and a reason is an exception. One in
+      configuration is a rule deleted quietly.
+  - id: work:concept/observed-failure
+    pref_label: Observed Failure
+    definition: A guardrail never observed to fail is not evidence of anything.
+    in_scheme: work:scheme/solorepo
+    scope_note: Coverage is a floor beneath the tests, never a claim about them.
+    avoid: [test coverage]
+  - id: work:concept/gates-do-not-fix
+    pref_label: Gates Do Not Fix
+    definition: >-
+      A gate checks and never rewrites; each step can fail, and says what it
+      checked.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/nothing-unconsumed
+    pref_label: Nothing Unconsumed
+    definition: >-
+      An artifact prevents drift only if something consumes it and checks it
+      against something.
+    in_scheme: work:scheme/solorepo
+  - id: work:concept/seeded-artifacts
+    pref_label: Seeded Artifacts
+    definition: >-
+      A seed is data, gated by rendering it and running the real gates on the
+      result, and it must not violate the rules it seeds.
+    in_scheme: work:scheme/solorepo
+    avoid: [scaffolding]
+  - id: work:concept/written-decisions
+    pref_label: Written Decisions
+    definition: A decision that lives only in a transcript has not been made.
+    in_scheme: work:scheme/solorepo
   - id: work:concept/solorepo-skill
     pref_label: Skill (solorepo Capability kind)
     definition: A Capability that composes tools, as against a tool, which is atomic.
