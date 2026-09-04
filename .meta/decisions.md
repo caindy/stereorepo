@@ -2430,6 +2430,79 @@ sign with, and pretending otherwise is what the hook was doing.
 
 **Supersedes.** DR-069, DR-071
 
+### DR-075 · Merging goes through the channel
+
+*2026-09-03*
+
+Found by the hook refusing `gh pr merge` when the solo asked for a merge.
+The refusal was right for a reason the hook did not state: what makes a
+merge the channel's business is not that it posts text — it posts none —
+but that GitHub records an actor for it, and an act performed with ambient
+credentials is recorded as the solo's whoever actually performed it.
+
+**Recorded late, and the lateness is the finding.** This decision was taken
+inside #12, implemented there, and merged without an entry; the paragraph
+explaining it existed only as a code comment. That is Written Decisions
+failing in the change that made signing structural, which is precisely the
+shape of thing this repository keeps catching in itself: the rule held
+everywhere attention was pointed, and slipped where it was not.
+
+**Options considered.**
+
+- _Let the hook allow `gh pr merge`_ — rejected. A merge posts no text, so the hook's stated rule does not reach it. But the rule was the wrong description of what the channel is for: GitHub records who merged, and a merge performed with the solo's ambient credential says the solo did it.
+- _`say merge`, and the hook keeps blocking the raw verb_ — chosen. An act by a Role should be recorded as that Role's. What it costs is a verb in the wrapper for something that is not speech, and a hook whose name is now narrower than its job.
+
+**Consequences.**
+
+- `mergedBy` on a pull request is the Role account. The first merge under it recorded `caindy-solorepo-coder`.
+- The hook's comment says why `merge` and `close` are blocked although neither posts text: they are acts, and the record should say which Role performed them rather than which human owns the credential.
+
+**What would falsify this.** Wanting to know who merged something and finding the answer is always the credential's owner. That would mean the channel is decorating rather than attributing.
+
+**Bearing on the Charter.** Applies A19.
+
+### DR-076 · The pull request body names the decisions taken in the change
+
+*2026-09-03*
+
+Christopher: it *should* have been recorded with the last pull request.
+
+He is right, and the interesting part is that the Discipline already said
+so. Written Decisions requires an entry when the question is settled, and
+the routing table sends the reasoning to a DR. Both held everywhere I was
+looking and failed where I was not, which makes another statement of the
+rule the wrong response.
+
+**The form is where the question gets asked.** It is read at the moment the
+body is written, which is the moment the omission occurs, and it already
+asks four questions of exactly this kind — what changed, what the ground
+looked like, what would make this removable, what was noticed and not done.
+A fifth belongs beside them, and because `check_pr.py` derives its
+requirements from the fence, adding it required nothing else.
+
+What cannot be built is a check for whether a decision was taken. That is a
+judgement, and the failure mode of gating it is the one A17 already
+demonstrated: a check that fires on everything and is triaged by hand is a
+check that gets skipped. A form asks; only a claim can be checked.
+
+**Options considered.**
+
+- _Rely on the Discipline_ — rejected. It is what was relied on, and it failed the same day it was restated — a decision taken in #12 and recorded only after the merge. Written Decisions already said to record it; saying so again is the layer of reminders this repository has learned not to add.
+- _A fifth heading on the pull request form_ — chosen. The form is the one artifact read at the moment the omission happens, and `check_pr.py` derives what it requires from the form's own fence — so adding the heading makes it required by that act alone. What it costs is a heading on every pull request, including the many whose honest answer is "None."
+- _A check that a change touching behaviour also touches the record_ — rejected. Most changes take no decision, so it would fail constantly and be triaged by hand — the instrument A17 already found wanting. Whether a decision was taken is a judgement, and a judgement cannot be gated.
+
+**Consequences.**
+
+- `check_pr.py` requires the heading with no further change, because the fence is what it reads.
+- The heading takes links to DRs, in the same shape as the fourth heading's links to Issues — a pointer, not a restatement.
+- "None." is a complete answer and will usually be the true one.
+
+**What would falsify this.** Bodies that answer "None." while decisions keep arriving late. That would mean the question was being answered rather than asked, and the form had become a place to put a word.
+
+**Bearing on the Charter.** Applies A11.
+
+**Supersedes.** DR-055
+
 ## Holes
 
 Numbers that were issued and are not decisions. They are never reused, and

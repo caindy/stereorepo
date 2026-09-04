@@ -21,6 +21,13 @@ constraint made the obvious approach wrong.
 again. "Nothing would" means it is load-bearing forever, and that claim needs its
 reason stated.
 
+**What was decided.** One link per item, to a DR. A decision taken inside a
+change belongs in the same change — recording it afterwards is the gap the
+`decided` and `recorded` dates exist to make visible, and a gap nobody sees is
+one nobody closes. "None." is a complete answer and often the true one.
+
+- DR-<nnn> — <the question that demanded an answer, in one line>
+
 **What was noticed and not done.** One link per item, to an Issue, filled in at
 **merge** — these are the conversations that survived the argument. Empty until
 then, and often empty for good: an item the change overtook is answered in its
@@ -28,6 +35,12 @@ thread, not tracked.
 
 - #<n> — <one line, so the list is readable without opening anything>
 ```
+
+**The fifth heading is asked because it was forgotten.** A decision taken in a
+change and recorded later is one that lived, for a while, only where it was
+argued — which is A11's failure with a delay rather than an exemption. Nothing
+can check whether a decision was taken; a form can put the question in front of
+whoever would otherwise not think to ask it.
 
 Optional, where they apply:
 
