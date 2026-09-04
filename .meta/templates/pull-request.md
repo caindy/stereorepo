@@ -54,9 +54,9 @@ Raise it first as a **conversation on the diff**, tagging the solo, opening with
 `**Noticed and not done.**` so it is not mistaken for a point owed an answer, at
 the moment you notice it. The **last** comment decides, so re-mark it if the
 argument moves on and it is still parked — and simply reply without the marker
-when the change has overtaken it. Sign every comment with the `Actor:` trailer the
-commits carry — the marker says what kind of thread it is, the trailer says who
-is speaking, and in a repository where every comment is posted under one account
+when the change has overtaken it. `.meta/say` signs it with the `Actor:` and `Agent:` trailers the
+commits carry — the marker says what kind of thread it is, `Actor` says who is
+speaking, and in a repository where every comment is posted under one account
 nothing else can. An unresolved conversation blocks the merge, so nothing is walked
 past silently, and the item keeps the context it was noticed in. Promote it to an
 Issue at merge if it survived the argument, and resolve the thread with the link

@@ -1,2 +1,6 @@
 __pycache__/
 *.py[cod]
+
+# Tokens live outside the tree — see .meta/say, which reads
+# ~/.config/solorepo/coder.env. Nothing here should ever hold one.
+.env

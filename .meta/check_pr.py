@@ -144,6 +144,20 @@ def gh(*args):
     return json.loads(out.stdout)
 
 
+def unsigned_commits(ref):
+    """A19. Every commit on the branch names the Actor that wrote it.
+
+    The git hook appends the Trailer, and a hook lives in a worktree — so an
+    agent in a fresh sandbox has none, and the one thing that cannot be forgotten
+    is a check that runs on the pull request. The hook saves the trip; this is
+    the guarantee.
+    """
+    commits = gh("pr", "view", ref, "--json", "commits")["commits"]
+    return [f"{c['oid'][:8]} names no Actor: {c['messageHeadline'][:60]}"
+            for c in commits
+            if not ACTOR.search(c.get("messageBody") or "")]
+
+
 def threads(ref):
     """Every review thread on a pull request, fetched once.
 
@@ -444,6 +458,7 @@ if __name__ == "__main__":
     problems = check(title, body)
     if args.pr:
         problems += resolved_without_an_answer(args.pr)
+        problems += unsigned_commits(args.pr)
     for p in problems:
         print(f"x  {p}")
     print(f"{'x  ' if problems else 'ok '}pull request"

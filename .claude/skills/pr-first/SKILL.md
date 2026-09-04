@@ -86,3 +86,4 @@ thread, not tracked.
 - **A15.** Work noticed and not done, recorded only in a summary, has not been noticed.
 - **A16.** A review thread resolved without an answer has not been resolved.
 - **A18.** Work not pushed has not been handed off.
+- **A19.** A commit that does not name its Actor is unattributable.

@@ -211,3 +211,18 @@ articles:
       of judgement about what to write down; this part is not, and it is the one
       that silently loses the work rather than the reasoning — the note reads
       correctly, the branch looks resumable, and an afternoon is simply gone.
+  - id: work:article/19
+    name: Article 19
+    statement: A commit that does not name its Actor is unattributable.
+    enforces: work:discipline/pr-first
+    checked_by: >-
+      `check_pr.py`, which fails a pull request carrying a commit with no
+      `Actor:` Trailer. Nothing appends one but the channel — `.meta/say commit`
+      composes them from what it resolved — so a commit made outside it is
+      unsigned, and this is what says so.
+    origin: >-
+      One comment was written without the Trailer and read as the solo, which
+      manufactured the second party A16 asks for and passed the gate on a
+      fiction. Signing had been an act somebody performs, and an act can be
+      omitted; every commit and comment now comes from a channel that signs, and
+      what the channel cannot guarantee, this checks.

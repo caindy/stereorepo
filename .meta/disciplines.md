@@ -166,11 +166,13 @@ Not recorded-badly — **not made**. Nobody downstream can act on it, argue with
 **Where the judgement is.** When something said is a decision rather than a thought still being had. Recording every thought is its own failure; the test is whether anything would be done differently now that it is settled.
 And at which level it belongs. A decision about how one build unit is built is not a decision about the repository, and filing either as the other loses it.
 
-1. Record a decision when the **question** is settled, not when the answer is built. A decision begins with a question that demands an answer, and the alternatives close the moment it is answered — waiting for the implementation leaves them open to anyone who was not in the conversation. Status carries the rest: recommended, or in force.
-2. Say what was decided and why, not what changed. The diff already says what changed.
-3. Keep the reasoning, including what was tried and abandoned, so the next reader does not re-derive a rejected option.
-4. Record at the level the decision is about. The Portfolio's record holds decisions about the repository, its language and its way of working; a Project's ADR holds decisions about how one build unit is built. A Project decision in the Portfolio record buries it among matters its readers do not share; a Portfolio decision in a Project's record hides it from every other Project.
-5. Use the form in `.meta/templates/adr.md`, so the shape does not have to be re-argued.
+1. Never invent a rejection. An option nobody weighed is not an option, and a record that manufactures one is arguing with itself to look thorough. An entry naming no alternative is telling the truth about what was considered.
+2. Cite a rule where it lives — an Article, or a step of a Discipline — never the decision that led to it. A decision carries consequences; the consequences beget rules, and a rule cited from a decision is one that was never routed anywhere. Nothing checks this: the phrasings are too many to match, and counting them is the instrument A17 already found wanting.
+3. Record a decision when the **question** is settled, not when the answer is built. A decision begins with a question that demands an answer, and the alternatives close the moment it is answered — waiting for the implementation leaves them open to anyone who was not in the conversation. Status carries the rest: recommended, or in force.
+4. Say what was decided and why, not what changed. The diff already says what changed.
+5. Keep the reasoning, including what was tried and abandoned, so the next reader does not re-derive a rejected option.
+6. Record at the level the decision is about. The Portfolio's record holds decisions about the repository, its language and its way of working; a Project's ADR holds decisions about how one build unit is built. A Project decision in the Portfolio record buries it among matters its readers do not share; a Portfolio decision in a Project's record hides it from every other Project.
+7. Use the form in `.meta/templates/adr.md`, so the shape does not have to be re-argued.
 
 _Produces: A record that answers "why is it like this" without anyone remembering._
 

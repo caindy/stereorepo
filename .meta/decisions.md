@@ -1704,8 +1704,8 @@ queryable rather than shorter.
 **Nothing was backfilled.** Fifty-seven entries converted with their prose
 intact and structure asserted only where the prose states it, which leaves
 most of them carrying `rationale` and dates alone. That is the honest
-state of a record written before the model existed, and DR-050's rule — a
-rejection is never invented — is what forbids improving it.
+state of a record written before the model existed, and Written
+Decisions — never invent a rejection — is what forbids improving it.
 
 **Two entries are withdrawn**, by the test the class states. DR-036 is an
 audit report whose three fixes are leftovers of DR-035's decision; DR-045
@@ -1730,7 +1730,7 @@ reserved for an entry that died whole. No entry here has.
 
 - _Leave the record as prose_ — rejected. DR-049's position, and it was right on its own evidence: modelling would have wrapped the paragraphs without gaining a check. Three checks have arrived since, which is what changed rather than the argument.
 - _Model a Decision, and render the prose from it_ — chosen. Supersession, Article bearing and "which entries rejected nothing" become answerable, and `.meta` stops holding one durable record that a fresh agent must read linearly rather than query. What it costs is that writing an entry is now editing YAML and re-rendering, and that the structured slots on the converted entries are thin — nothing was backfilled, because a rejection invented is worse than a rejection missing.
-- _Backfill the missing structure while converting_ — rejected. DR-050's rule: a rejection is never invented. An entry that named no alternative is telling the truth about what was recorded at the time, and the empty slot is the finding.
+- _Backfill the missing structure while converting_ — rejected. Written Decisions forbids inventing a rejection. An entry that named no alternative is telling the truth about what was recorded at the time, and the empty slot is the finding.
 
 **Consequences.**
 
@@ -1973,7 +1973,7 @@ parked conversations on it, that is the origin and this is the rule.
 
 **Options considered.**
 
-- _File an Issue at the moment of noticing_ — rejected. DR-054's rule, and it creates a tracker item with no relationship to the outcome of the change that produced it. When the approach moves underneath it the Issue goes stale and nothing notices, because an Issue has no link back to the argument that would have corrected it.
+- _File an Issue at the moment of noticing_ — rejected. What A15 asked for until now, and it creates a tracker item with no relationship to the outcome of the change that produced it. When the approach moves underneath it the Issue goes stale and nothing notices, because an Issue has no link back to the argument that would have corrected it.
 - _Raise it as a conversation, promote at merge_ — chosen. It keeps the context it was noticed in, it blocks the merge until somebody rules on it, and what the change overtakes dies where it was raised instead of in the tracker. What it costs is that an item is invisible to anyone not reading the pull request until it is promoted.
 - _Keep a list in the body_ — rejected. Still what A15 was written against. A bullet closes when the pull request does, and nothing blocks on it.
 
@@ -2040,8 +2040,8 @@ repository is in and stays in, which is what a reader is asking about.
 
 *2026-09-03*
 
-The first decision recorded under DR-065's rule, and the one that forced
-it.
+The first decision recorded under Written Decisions as DR-065 amended it,
+and the one that forced the amendment.
 
 Today a Remit's Permissions are asserted in YAML and enforced by nothing:
 an agent has the solo's full rights and behaves because it was told to.
@@ -2183,6 +2183,252 @@ is the honest interim, and it is honest only with the step beside it.
 **Bearing on the Charter.** Applies A16.
 
 **Supersedes.** DR-057
+
+### DR-069 · Signing is a property of the channel, not an act anyone performs
+
+*2026-09-03*
+
+One comment went out on #9 without the Trailer. It read as the solo,
+manufactured the second party A16 asks for, and **passed** the gate on a
+fiction — the failure was invisible precisely because what it broke was the
+thing that would have detected it.
+
+Christopher's ruling was that this is structural rather than an oversight,
+and that it must be made impossible rather than mitigated with another
+layer of reminders. That is right, and the diagnosis is one line: **signing
+was an act somebody performs**, and an act can be omitted. Every fix that
+leaves it an act fails the same way on a long enough run.
+
+So the Trailer moved into the channel, which raised the question of what
+the channel is permitted to do — and that turned out to be the first real
+Capability this repository has needed to name. Not "run a shell", not "use
+`gh`": both name an implement and permit everything it can reach. *Speak on
+GitHub as this Actor* names what may be done, composes the tool per DR-006,
+and its guarantee is that the identity comes from the environment and never
+from an argument. What a caller can pass, a caller can pass wrongly.
+
+**What this is not.** A deny list over one binary and a string match over
+command lines are inspection, not structure — they shut the cheap paths and
+make the rest deliberate. The boundary that would actually hold is the
+credential: a token reachable only by `.meta/say` makes it the only path by
+construction. That is DR-066's open question, and it is now the second
+thing waiting on the same answer.
+
+**Options considered.**
+
+- _A step, a reminder, or a stricter Discipline_ — rejected. It leaves signing an act somebody performs, and an act can be omitted. DR-050's principle says why that is not a fix: a convention that stays healthy because someone is paying attention does not survive agentic maintenance, and the attention here failed within an hour of the rule being written.
+- _A channel that signs, and no other path permitted_ — chosen. The Trailer stops being something anyone types. What it costs is a wrapper to maintain and a deny list that must keep pace with the ways of reaching an endpoint — inspection rather than structure, which is why the credential boundary is named as what would finish it.
+- _Wait for the machine accounts_ — rejected. They are the real fix and they are the solo's to create. Leaving the hole open until then would mean every comment in between is unattributable, and the defect is already known to occur.
+
+**Consequences.**
+
+- `.meta/say` is the only sanctioned way for an agent to write on GitHub. It appends the Trailer from the environment and refuses when the environment does not say who is speaking.
+- `say resolve` refuses a thread this Actor is the sole author of, which turns DR-068's step into a program.
+- A19 joins the Charter: a commit that does not name its Actor is unattributable. A `prepare-commit-msg` hook appends it and `check_pr.py` fails the pull request when it is missing — and the hook survives `--no-verify`, which skips `pre-commit` and `commit-msg` and not this.
+- `.claude/settings.json` exists for the first time, denying the writing verbs of `gh` and permitting the wrapper; a `PreToolUse` hook refuses the other ways to reach the API.
+- The Trailer's value changes. It now reads `claude-code_<version>_agent/<session>`, because that is what the environment attests — the model is not in it, and naming it would have meant taking it from the caller.
+- The authority half of the ontology has instances for the first time: a TOOL, a SKILL composed of it, a Securable and a Permission. It has been TBox since DR-003 and asserted nothing, which is what #11 measured.
+
+**What would falsify this.** An unsigned comment appearing on a pull request from an agent working here. The channel would then not be the only path, and the deny list would be decoration.
+
+**Bearing on the Charter.** Applies A16, A19.
+
+**Supersedes.** DR-068
+
+### DR-070 · A decision carries consequences; a rule lives in an Article or a step
+
+*2026-09-03*
+
+Christopher, reading DR-066: *decisions do not carry rules; they carry
+consequences which beget rules, i.e. Articles.*
+
+The phrasing that gave it away — "DR-065's rule" — appeared four times, and
+the diagnosis is worse than sloppy wording. **A rule cited from a decision
+is a rule that was never routed anywhere.** `.meta/templates/adr.md` opens
+by saying a decision record is *not authoritative* and that the Charter and
+the Disciplines win any disagreement; a citation pointing back into the
+record therefore points at the one artifact that disclaims authority.
+
+Following the four citations proved it. Three named "a rejection is never
+invented" as DR-050's, and it existed in no Discipline and no Article — it
+had been binding, cited, and homeless since the day it was written. The
+fourth named A15's rule as DR-054's.
+
+The routing already existed and this is the omission it exists to catch:
+**how** work must proceed goes to a Discipline, a checkable one-line claim
+goes to the Charter, and **why** goes to a decision. Three destinations, and
+a rule that stops at the third has been recorded in the place that says of
+itself that it does not bind.
+
+**Options considered.**
+
+- _Let a decision carry a rule, and cite it_ — rejected. It is what four entries were doing, and it puts the binding text in the one artifact that is explicitly **not authoritative**. A reader following the citation lands in a paragraph of reasoning about a moment, rather than in a claim that can be held against an artifact.
+- _Route the rule, and cite where it lives_ — chosen. An Article is checked and a step is followed; a decision explains why either exists. What it costs is that nothing enforces the citation — the phrasings are too many to match, and counting them is the instrument A17 already found wanting.
+
+**Consequences.**
+
+- Written Decisions gains the step, and one that had been homeless: never invent a rejection. It was cited three times as belonging to DR-050 and was written down nowhere else.
+- Four citations are corrected to name Written Decisions or A15 rather than the decision that produced them.
+- The test for whether a rule is routed is now cheap to apply by hand: if a sentence cites a DR for what must be done, the rule has no home.
+
+**What would falsify this.** A rule that fits neither an Article nor a step, and is still binding. It would mean the taxonomy is missing a kind, rather than that the citation was lazy.
+
+**Bearing on the Charter.** Applies A12.
+
+### DR-071 · Actor is who; Agent is what
+
+*2026-09-03*
+
+Christopher asked what the prefix actually was. It is `AI_AGENT`, set by
+the harness as `{product}_{version}_agent`, and answering the question was
+enough to show the field was doing two jobs.
+
+**Which build ran** is a provenance question and the answer belongs in a
+Bill of Materials, where a Component is pinned and is expected to move.
+**Which thread wrote this** is an identity question and its answer must not
+move at all. Carrying both in one string meant the identity churned every
+time the harness updated, for a reason that had nothing to do with
+identity.
+
+The model is the third question, and it has no answer here. Twenty-four
+`CLAUDE_*` variables and none of them names it. It could be configured,
+and configuration is exactly what it must not be: a static value in
+`settings.json` becomes a lie the moment a session changes model, and it
+would be a lie stated in the same confident form as the two attested
+fields beside it.
+
+**Options considered.**
+
+- _One trailer carrying build and session_ — rejected. It answers two questions in one string and gets both slightly wrong. The build changes at every harness upgrade, so one Actor across an update reads as two, while the session — the part that actually distinguishes — never moves and is buried behind the churn.
+- _Two trailers, `Actor` and `Agent`_ — chosen. They are different classes: a session is an identity, a build is a Component of a Bill of Materials. Separating them makes the churn harmless, because `Agent` is *meant* to change when the build does. What it costs is two lines per commit and a record carrying the old one-line form as history.
+- _Configure the model into the trailer_ — rejected. Nothing in this environment attests the model, so it would come from static configuration and state a falsehood the first time a session switched models. A missing identity is recoverable; a confidently wrong one is not — which is the same argument that kept the identity out of the caller's hands.
+
+**Consequences.**
+
+- `Actor:` is the session alone, so `parties()` keys on the thread rather than on the build, and two Jobs on one harness stay distinguishable.
+- `Agent:` records `AI_AGENT` verbatim. Its format is undocumented, and prettifying it into a name and a version would be inventing structure nothing attests.
+- The model stays absent and the record says why, rather than implying it was overlooked.
+- The record carries two trailer formats: the hand-typed `claude-opus-5/<session>` from before the channel existed, the single attested line from DR-069, and this. History is not rewritten.
+
+**What would falsify this.** Wanting to ask "which model wrote this" and finding no answer. That would mean the model needed attesting rather than omitting, and the place to fix it is the harness, not the trailer.
+
+**Bearing on the Charter.** Applies A19.
+
+**Supersedes.** DR-069
+
+### DR-072 · Agents merge to trunk; the solo cuts release branches
+
+*2026-09-03*
+
+Christopher's ruling, and the reason is the release strategy rather than
+the merge: **branch for release**. Trunk is where work lands; what ships is
+a branch cut deliberately. Guarding the merge would put a gate on the step
+that is not the decision.
+
+The consequence worth naming is that it takes something out of DR-064. That
+decision made promotion-at-merge work by treating the request to merge as
+the solo's assent — "if I ask you to merge, I am authorising the
+promotion". An agent that merges on its own cannot receive that
+authorisation, so the sentence stops being true.
+
+It matters less than it looks, because the control had already moved. A16
+requires a second party to resolve a thread, and `say resolve` refuses when
+this Actor wrote all of it, so a parked conversation still cannot be
+cleared without the solo. The gate is the thread rather than the merge, and
+the thread is where the argument is anyway.
+
+**Options considered.**
+
+- _Require an approving review, so the solo merges_ — rejected. It makes every change wait on a human who is not always there, to guard a branch that is not what ships. The cost lands on every pull request; the risk it guards against lands on none of them, because trunk is not production.
+- _Agents merge to trunk, and a release is a branch the solo cuts_ — chosen. The decision that matters is what ships, and that stays the solo's by being a separate act on a separate branch. What it costs is that the merge stops being an authorisation moment, so anything that leaned on it has to lean on something else.
+
+**Consequences.**
+
+- `required_approving_review_count` stays at zero and the ruleset is unchanged.
+- DR-064's promotion rule loses the authorisation it named. Asking for the merge was the solo's assent to promoting a parked conversation; an agent that can merge cannot assent on the solo's behalf.
+- What holds it instead is A16 and `say resolve`, which refuses a thread this Actor is the sole author of. A parked item still cannot be walked past without the solo — the control moved from the merge to the thread, which is the more local place for it anyway.
+- Release branching is not built. Nothing cuts, names or protects a release branch yet.
+
+**What would falsify this.** Something reaching production that no one chose to release. That would mean trunk was production after all, and the merge needed the guard.
+
+**Bearing on the Charter.** Applies A16.
+
+**Supersedes.** DR-064
+
+### DR-073 · A Role's credential lives outside the tree, per role and per machine
+
+*2026-09-03*
+
+The credential is what makes a Role real, and where it sits decides how
+much of that is true.
+
+**On this machine, none of it is a boundary**, and the wrapper's own
+documentation says so. Anything with a shell can read the file, so
+`.meta/say` is the only path by convention rather than by construction. The
+boundary arrives when an agent runs in a container holding only its own
+token, which is the roadmap's Collaboration mission and DR-066's falsifier.
+
+What the file does buy is real for all that. GitHub can tell the Role from
+the solo, so A16's second party stops depending on a Trailer. The fallback
+is announced rather than silent. And the credential is per role and per
+machine, which is what a Remit bound at install time actually looks like —
+the Role travels with the assertions, and the token does not travel at all.
+
+**Options considered.**
+
+- _A `.env` in the repository, first line of `.gitignore`_ — rejected. It has worked so far, and it is one `git add -A` from publishing a token — a command run a dozen times in a single session here. The ignore rule protects the path, not the mistake of putting a secret on a path near a hundred tracked files.
+- _A second `gh` config directory for the Role_ — rejected. `gh auth status` reports this machine stores its token in the keyring, not in a file, and `GH_CONFIG_DIR` moves the config files. What a second login for the same host does to a shared keyring entry could not be established, and the failure mode is the solo's own credentials — not a thing to determine experimentally.
+- _A file outside the tree, read by the wrapper and passed to one child_ — chosen. `~/.config/solorepo/coder.env` touches neither the keychain nor `gh`'s config, and `GH_TOKEN` reaches exactly one process instead of every command's environment. What it costs is a file on disk in plaintext, which is honest about being convenience rather than isolation.
+
+**Consequences.**
+
+- `.meta/say` refuses a role file that is group- or world-readable, and says on stderr which identity it is speaking as — so a silent fallback to the solo's auth is visible in a transcript rather than invisible.
+- The check fired on its first run against the real file, at mode 644.
+- `.env` joins `.gitignore` with a comment pointing at where tokens actually live, so the path is closed rather than merely unused.
+
+**What would falsify this.** A token reaching the repository, or reaching a process that had no business with it. Either would mean the file's location was doing the work its permissions were supposed to.
+
+**Bearing on the Charter.** Applies A19.
+
+### DR-074 · Commits go through the channel, and the hook is deleted
+
+*2026-09-03*
+
+Christopher asked how the discrimination worked, and the honest answer was
+that I had not arranged it: the harness sets `AI_AGENT` and the session id
+in the process it spawns, and his shell is a different tree. Verified —
+both variables are empty in his terminal — so the hook was not lying. It
+was right by construction that nobody had chosen.
+
+That is the same shape as the defect this whole branch exists to remove.
+**Signing must not depend on something happening to be true.** The hook
+read what it found; `say commit` states what it resolved. The first is
+correct until an environment changes underneath it, and the change would
+be invisible in exactly the way that matters — a trailer that looks
+identical whether it names the right session or the wrong one.
+
+Deleting the hook costs the convenience of signing a commit made outside
+the channel. That is the point: outside the channel there is nothing to
+sign with, and pretending otherwise is what the hook was doing.
+
+**Options considered.**
+
+- _A repository-local git identity_ — rejected. It leaves the global config alone, which was the fear, and it still fails: `.git/config` applies to every commit made in the worktree, so the solo would start authoring as the Role in his own repository.
+- _A `prepare-commit-msg` hook reading the environment_ — rejected. What it read was inherited process ancestry, not a design. It discriminated correctly only because the solo's shell had never been given the harness's variables — luck rather than a boundary. Had it gone the other way his commits would have carried an `Actor` naming a session he was not part of, and a false attestation is worse than none because it is indistinguishable from a true one.
+- _`say commit`, setting identity and Trailers explicitly_ — chosen. The channel asserts only what it resolved: the Role's login and noreply address as author and committer, and the two Trailers composed from values it already holds. What it costs is that `git commit` by hand now produces an unsigned commit — which is honest, and which A19 catches where the guarantee always lived.
+
+**Consequences.**
+
+- `.githooks/prepare-commit-msg` is deleted and `core.hooksPath` unset. Nothing now depends on the harness's variables leaking into the right process and not the wrong one.
+- Author **and** committer are the Role. Author is the field GitHub reads for attribution, which is what DR-056's `require_extra_approval_for_unattributed_changes` was waiting on.
+- Identity is asserted only when a Role credential is in use. Without one the channel is speaking as the solo, and overriding his configured identity to say so would be the channel asserting what it was not given.
+- `say` no longer blocks on a stdin nobody is writing to. Five minutes of a session went to a `read()` on a pipe that was neither a terminal nor closed, so it asks whether anything is readable first.
+
+**What would falsify this.** A commit from the solo carrying an `Actor` Trailer, or one from an agent carrying his name. Either would mean the channel is not the only thing asserting identity.
+
+**Bearing on the Charter.** Applies A19.
+
+**Supersedes.** DR-069, DR-071
 
 ## Holes
 

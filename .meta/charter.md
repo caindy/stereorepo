@@ -122,3 +122,9 @@ _Why:_ `forge` reached the Charter, three decision records, two READMEs, a scope
 **Enforces** PR First. **Checked by** `check_pr.py --handoff`, which refuses when the worktree is dirty or the branch is ahead of its remote, and prints the note's form only once both are clean.
 
 _Why:_ A successor shares no filesystem. Every other part of a handoff is a matter of judgement about what to write down; this part is not, and it is the one that silently loses the work rather than the reasoning — the note reads correctly, the branch looks resumable, and an afternoon is simply gone.
+
+### A19. A commit that does not name its Actor is unattributable.
+
+**Enforces** PR First. **Checked by** `check_pr.py`, which fails a pull request carrying a commit with no `Actor:` Trailer. Nothing appends one but the channel — `.meta/say commit` composes them from what it resolved — so a commit made outside it is unsigned, and this is what says so.
+
+_Why:_ One comment was written without the Trailer and read as the solo, which manufactured the second party A16 asks for and passed the gate on a fiction. Signing had been an act somebody performs, and an act can be omitted; every commit and comment now comes from a channel that signs, and what the channel cannot guarantee, this checks.

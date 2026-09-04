@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+"""Speak on GitHub as this Actor, or not at all.
+
+Every comment an agent writes here is posted under the solo's account, so who
+wrote it is carried by an `Actor:` Trailer and by nothing else. A Trailer that
+the writer types is a Trailer the writer can forget — and one was forgotten on
+this repository's own pull request, where it read as the solo and manufactured
+the second party A16 asks for. That defect is not an oversight to remember
+harder about; it is what happens when signing is an act rather than a property
+of the channel.
+
+So this is the channel. It appends the Trailer itself, from the environment, and
+refuses to speak when the environment does not say who is speaking. There is no
+argument for the identity, deliberately: what a caller can pass, a caller can
+pass wrongly.
+
+    .meta/say comment  <pr> < body.md          a comment on the pull request
+    .meta/say raise    <pr> <path> <line> < body.md    open a thread on the diff
+    .meta/say reply    <thread-id> < body.md   a reply in a thread
+    .meta/say resolve  <thread-id>             mark it resolved
+    .meta/say issue    --title T [--label L] < body.md
+    .meta/say pr       --title T [--base B] < body.md  open a pull request
+    .meta/say pr-body  <pr> < body.md          replace the body
+    .meta/say pr-title <pr> --title T
+
+Bodies come from stdin rather than the command line: the text is usually long,
+often has quotes in it, and a shell is the wrong place to keep an artifact.
+
+`resolve` is here for a second reason. PR First says never to resolve a thread
+you are the sole author of, because A16 counts the resolver as a party (DR-068)
+and that only holds while the resolver is somebody else. A step is a rule an
+agent has to remember; this refuses, which is the same rule with the remembering
+taken out.
+"""
+import argparse
+import json
+import os
+import pathlib
+import select
+import subprocess
+import sys
+
+ROLE_ENV = pathlib.Path(
+    os.environ.get("SOLOREPO_ROLE_ENV", "~/.config/solorepo/coder.env")).expanduser()
+
+ENV_AGENT = ("AI_AGENT",)
+ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
+
+
+def actor():
+    """**Who** is speaking: the session, and nothing else.
+
+    One Job is one thread, and the session is what identifies it. The harness
+    build used to be part of this and was doing a different job badly — it
+    changes at every upgrade, so one Actor across an update read as two, while
+    the part that actually distinguishes never moved.
+
+    Fail closed. An unsigned comment should be unrepresentable, not discouraged.
+    """
+    session = next((os.environ[k] for k in ENV_SESSION if os.environ.get(k)), None)
+    if not session:
+        sys.exit("say: the environment does not say who is speaking "
+                 f"(need one of {ENV_SESSION}); refusing to post")
+    return session
+
+
+def agent():
+    """**What** is speaking: the harness build, verbatim.
+
+    A different question from `actor`, and a different class — this is a
+    Component of a Bill of Materials, which is *supposed* to change when the
+    build changes. It is recorded exactly as the environment gives it, because
+    `AI_AGENT`'s format is undocumented and prettifying it would be inventing
+    structure that nothing attests.
+
+    The model is not here, and not because it was forgotten. Nothing in this
+    environment attests it, and configuring it would put a confident falsehood
+    in the record the first time a session switches models. A missing identity
+    is recoverable; a wrong one is not.
+    """
+    who = next((os.environ[k] for k in ENV_AGENT if os.environ.get(k)), None)
+    if not who:
+        sys.exit(f"say: the environment does not say what is speaking "
+                 f"(need one of {ENV_AGENT}); refusing to post")
+    return who
+
+
+def role_identity():
+    """The Role's git identity, or nothing at all.
+
+    Only when a Role credential is in use. Without one the channel is speaking
+    as the solo, and overriding his configured identity to say so would be the
+    channel asserting something it was not given.
+    """
+    if not role_credential():
+        return {}
+    login, ident = gh("api", "user", "--jq", ".login,.id", parse=False).split("\n")
+    email = f"{ident}+{login}@users.noreply.github.com"
+    return {"GIT_AUTHOR_NAME": login, "GIT_AUTHOR_EMAIL": email,
+            "GIT_COMMITTER_NAME": login, "GIT_COMMITTER_EMAIL": email}
+
+
+def commit(subject):
+    """Commit as this Actor, with the Trailers composed here rather than by a hook.
+
+    A `prepare-commit-msg` hook did this until DR-074, and it worked by reading
+    variables the harness happened to put in the environment. That is inherited
+    process ancestry, not a design: it discriminated correctly only because the
+    solo's own shell had never been given those variables, which was luck rather
+    than a boundary — and had it gone the other way, his commits would have
+    carried an `Actor` naming a session he was not part of. A false attestation
+    is worse than none, and it looks identical to a real one.
+
+    So the channel composes what it knows. A commit made outside it is unsigned,
+    which is honest, and A19 catches it on the pull request — which was always
+    where the guarantee lived.
+    """
+    body = piped()
+    message = f"{subject}\n\n{body}\n" if body else f"{subject}\n"
+    message += f"\nActor: {actor()}\nAgent: {agent()}\n"
+    out = subprocess.run(["git", "commit", "-F", "-"], input=message, text=True,
+                         env={**os.environ, **role_identity()})
+    sys.exit(out.returncode)
+
+
+def trailers():
+    """The block this channel signs with, defined once because two readers need
+    it: the one that writes it, and the one that recognises it."""
+    return f"Actor: {actor()}\nAgent: {agent()}"
+
+
+def signed(text):
+    body = text.rstrip("\n")
+    block = trailers()
+    return body if body.endswith(block) else f"{body}\n\n{block}\n"
+
+
+def piped(timeout=0.5):
+    """Whatever was piped in, or nothing — but never a wait for input that will
+    not come.
+
+    A plain `sys.stdin.read()` hangs forever when this is run by a tool harness:
+    stdin is neither a terminal nor closed, so `isatty()` says pipe and the read
+    blocks on a pipe nobody is writing to. Five minutes of a session went that
+    way. Ask whether anything is actually readable first.
+    """
+    if sys.stdin.isatty():
+        return ""
+    ready, _, _ = select.select([sys.stdin], [], [], timeout)
+    return sys.stdin.read().strip() if ready else ""
+
+
+def stdin_body():
+    text = piped()
+    if not text:
+        sys.exit("say: nothing on stdin — pipe the body in, or redirect a file")
+    return text
+
+
+def role_credential():
+    """The token for the Role this machine holds, from outside the working tree.
+
+    Outside because a token in the tree is one `git add -A` from being published,
+    and per role and per machine because that is what the credential is: a Remit
+    bound where the work happens. It is read here and handed to one child
+    process, so nothing exports it into the environment of every other command.
+
+    It is not a boundary on this machine. Anything with a shell can read this
+    file, so the wrapper is the only path by convention until an agent runs
+    somewhere it cannot reach the solo's credentials at all. What it does buy is
+    that GitHub can tell the Role from the solo, and that the fallback is
+    visible rather than silent.
+    """
+    if not ROLE_ENV.exists():
+        print(f"say: no {ROLE_ENV}; speaking with ambient auth, which is the solo",
+              file=sys.stderr)
+        return {}
+    mode = ROLE_ENV.stat().st_mode
+    if mode & 0o077:
+        sys.exit(f"say: {ROLE_ENV} is readable by others (mode {mode & 0o777:o}); "
+                 f"refusing to use it. chmod 600 it.")
+    found = {}
+    for line in ROLE_ENV.read_text().splitlines():
+        line = line.strip().removeprefix("export ").strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        found[key.strip()] = value.strip().strip("\"'")
+    if "GH_TOKEN" not in found:
+        sys.exit(f"say: {ROLE_ENV} has no GH_TOKEN")
+    print(f"say: speaking with the credential in {ROLE_ENV}", file=sys.stderr)
+    return {"GH_TOKEN": found["GH_TOKEN"]}
+
+
+def gh(*args, parse=True):
+    out = subprocess.run(["gh", *args], capture_output=True, text=True,
+                         env={**os.environ, **role_credential()})
+    if out.returncode:
+        sys.exit(f"gh: {out.stderr.strip()}")
+    return json.loads(out.stdout) if parse and out.stdout.strip() else out.stdout.strip()
+
+
+def graphql(query, **variables):
+    args = ["api", "graphql", "-f", f"query={query}"]
+    for key, value in variables.items():
+        args += ["-F", f"{key}={value}"]
+    return gh(*args)
+
+
+def repo():
+    return gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
+
+
+THREAD = """
+query($id: ID!) {
+  node(id: $id) {
+    ... on PullRequestReviewThread { comments(first: 100) { nodes { body } } }
+  }
+}
+"""
+
+REPLY = """
+mutation($t: ID!, $b: String!) {
+  addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $t, body: $b}) {
+    comment { url }
+  }
+}
+"""
+
+RESOLVE = """
+mutation($t: ID!) { resolveReviewThread(input: {threadId: $t}) { thread { isResolved } } }
+"""
+
+
+def thread_comments(thread_id):
+    """Every comment in one thread, asked for by id.
+
+    The first version scanned every open pull request looking for the id, on the
+    belief that GitHub had no by-id query. It has: a review thread is a `node`
+    like anything else. Scanning was several calls, and it silently depended on
+    the thread being in the first hundred of a pull request that was still open.
+    """
+    node = graphql(THREAD, id=thread_id)["data"]["node"]
+    if not node:
+        return None
+    return [c["body"] or "" for c in node["comments"]["nodes"]]
+
+
+def sole_author(bodies):
+    """True when every comment *ends with* this Actor's Trailer and no other voice.
+
+    Ends with, rather than contains: a comment quoting the Trailer — a reply
+    discussing attribution, say, which this repository produces constantly —
+    would otherwise be read as having been written by whoever it quoted.
+
+    An unsigned comment counts as somebody else — that is the human, who signs
+    nothing. The false pass this rule exists to prevent went the other way: an
+    agent's *own* unsigned comment read as the human and made a second party out
+    of nothing. Here that failure is impossible, because everything this channel
+    posts is signed by construction.
+    """
+    block = trailers()
+    return bool(bodies) and all(b.rstrip().endswith(block) for b in bodies)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="verb", required=True)
+    p = sub.add_parser("comment"); p.add_argument("pr")
+    p = sub.add_parser("raise"); p.add_argument("pr"); p.add_argument("path"); p.add_argument("line", type=int)
+    p = sub.add_parser("reply"); p.add_argument("thread")
+    p = sub.add_parser("resolve"); p.add_argument("thread")
+    p = sub.add_parser("commit"); p.add_argument("-m", "--message", required=True)
+    p = sub.add_parser("merge"); p.add_argument("pr")
+    sub.add_parser("whoami")
+    p = sub.add_parser("issue"); p.add_argument("--title", required=True); p.add_argument("--label", action="append", default=[])
+    p = sub.add_parser("pr"); p.add_argument("--title", required=True); p.add_argument("--base", default="main")
+    p = sub.add_parser("pr-body"); p.add_argument("pr")
+    p = sub.add_parser("pr-title"); p.add_argument("pr"); p.add_argument("--title", required=True)
+    args = ap.parse_args()
+
+    if args.verb == "commit":
+        commit(args.message)
+
+    if args.verb == "merge":
+        # Not an utterance, and still the channel's. Merging is an act by the
+        # Role — DR-072 puts it in an agent's hands — so it is the Role that
+        # GitHub should record as having done it, and the squash commit that
+        # lands on trunk carries that account rather than the solo's.
+        print(gh("pr", "merge", args.pr, "--squash", "--delete-branch", parse=False))
+        return
+
+    if args.verb == "whoami":
+        """Which login this channel speaks as, and what it can reach.
+
+        The wrapper says on stderr where the credential came from; this says who
+        that credential *is*, which is the other half and the one that fails
+        interestingly. A Role account that cannot see the repository looks
+        exactly like a repository that does not exist.
+        """
+        who = gh("api", "user", "--jq", ".login,.id", parse=False).split("\n")
+        print("login:", who[0])
+        print("email:", f"{who[1]}+{who[0]}@users.noreply.github.com")
+        try:
+            print("repo: ", gh("repo", "view", "--json", "nameWithOwner",
+                               "--jq", ".nameWithOwner", parse=False))
+        except SystemExit as exc:
+            print("repo:  cannot see it —", exc.code)
+            print("       a private repository is invisible rather than forbidden, so this "
+                  "is either no collaborator invite accepted, or a token whose repository "
+                  "selection does not include it.")
+        return
+
+    if args.verb == "resolve":
+        bodies = thread_comments(args.thread)
+        if bodies is None:
+            sys.exit(f"say: no open pull request here has thread {args.thread}")
+        if sole_author(bodies):
+            sys.exit("say: refusing — you are the sole author of this thread. A16 counts "
+                     "the resolver as a party, which means nothing when it is you. Ask the "
+                     "solo to resolve it, or promote it to an Issue and link that.")
+        graphql(RESOLVE, t=args.thread)
+        print("resolved")
+        return
+
+    body = signed(stdin_body())
+
+    if args.verb == "comment":
+        print(gh("pr", "comment", args.pr, "--body", body, parse=False))
+    elif args.verb == "reply":
+        print(graphql(REPLY, t=args.thread, b=body)
+              ["data"]["addPullRequestReviewThreadReply"]["comment"]["url"])
+    elif args.verb == "raise":
+        # The pull request's head, not this worktree's. They are usually the
+        # same and the failure when they are not is opaque: GitHub rejects a
+        # comment whose commit is not part of the pull request.
+        head = gh("pr", "view", args.pr, "--json", "headRefOid",
+                  "--jq", ".headRefOid", parse=False)
+        made = gh("api", f"repos/{repo()}/pulls/{args.pr}/comments",
+                  "-f", f"body={body}", "-f", f"commit_id={head}",
+                  "-f", f"path={args.path}", "-F", f"line={args.line}")
+        print(made["html_url"])
+    elif args.verb == "issue":
+        cmd = ["issue", "create", "--title", args.title, "--body", body]
+        for label in args.label:
+            cmd += ["--label", label]
+        print(gh(*cmd, parse=False))
+    elif args.verb == "pr":
+        print(gh("pr", "create", "--title", args.title, "--base", args.base,
+                 "--body", body, parse=False))
+    elif args.verb == "pr-body":
+        gh("pr", "edit", args.pr, "--body", body, parse=False)
+        print("body set")
+    elif args.verb == "pr-title":
+        gh("pr", "edit", args.pr, "--title", args.title, parse=False)
+        print("title set")
+
+
+if __name__ == "__main__":
+    main()
