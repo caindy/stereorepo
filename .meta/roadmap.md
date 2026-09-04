@@ -81,6 +81,30 @@ are a general mechanism here or only the seam between the solo and one agent. An
 install time, and two tokens in one `~/.config/gh` is a single Remit wearing two
 names.
 
+**Issues carry a difficulty label, and loops pick them up by it.** Four
+labels beside `challenge`: `easy`, `medium`, `hard` and `human`. Whoever raises
+an Issue assigns one at filing, from perceived difficulty, and the issue form
+asks for it the way it asks for the trigger. The intent is a set of loops, one
+per agent capability, each watching for Issues at its level and working each one
+until it is a pull request that can be merged. `human` marks what needs the
+solo, and is the level a loop hands an Issue to when it finds it cannot.
+
+In the ontology's terms a loop is a Job: a Role whose Capabilities fit the
+level, given a Remit naming one Issue. That is why this waits on DR-066. A loop
+claims an Issue by assignment and hands a finished pull request on by review
+request, and both are acts of an account; and PR First's sole-author rule means
+a loop's pull request is reviewed by someone else, which is the reviewing
+account DR-066 leaves open. It belongs with
+[#20](https://github.com/caindy/solorepo/issues/20), which makes labels the
+lifecycle the roadmap currently narrates.
+
+Open with it: whether difficulty is a property of the Challenge or of its pairing
+with a Role, since the same Issue is easy for one Role and out of reach for
+another; who re-labels when the raiser's guess was wrong, and whether a loop that
+fails hands the Issue up one level or straight to `human`; and what "can be
+merged" means for a loop, which is at least the gate green, the branch pushed
+and a review requested, per A18 and PR First's handoff step.
+
 **Drop ADR, and let a Decision name its level.** A Decision is currently the
 Portfolio's or a Project's, distinguished by whether `project` is set, and
 `.meta/templates/adr.md` renders the second. That misses a level: a decision
