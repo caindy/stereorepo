@@ -5,7 +5,6 @@ decisions:
     supersedes:
       - work:decision/052
     applies:
-      - work:article/13
       - work:article/14
       - work:article/15
     alternatives:

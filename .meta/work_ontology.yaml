@@ -181,6 +181,11 @@ slots:
     range: Article
     multivalued: true
     inlined_as_list: true
+  retired_articles:
+    description: Article numbers issued and since retired, reserved forever.
+    range: RetiredArticle
+    multivalued: true
+    inlined_as_list: true
   portfolio:
     description: The Portfolio. There is exactly one per repo.
     range: Portfolio
@@ -250,6 +255,7 @@ classes:
       - collaborations
       - disciplines
       - articles
+      - retired_articles
       - decisions
       - portfolio
       - products

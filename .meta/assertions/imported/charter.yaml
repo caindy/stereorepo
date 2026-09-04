@@ -8,104 +8,121 @@
 # Distilled in python_bootstrap, where each came from a failure in a working
 # codebase. `origin` is the receipt.
 
+# Numbers that were issued and are not Articles. Never reused: a citation that
+# silently comes to mean something else is worse than a dangling one. The account
+# of a retirement is the decision that took it, not a paragraph kept here.
+retired_articles:
+  - number: 13
+    retired_by: work:decision/085
+
 articles:
   - id: work:article/1
     name: Article 1
     statement: Green, then commit. Not after, and not "green apart from".
     enforces: work:discipline/ratchet
-    checked_by: The gate, run before committing.
-    origin: >-
-      A standard falls one exception at a time, and the exception is always
-      justified at the moment it is made.
+    checked_by: >-
+      The gate, run before committing.
+    example: >-
+      `uvx --with linkml --with pyyaml python .meta/check.py` passes, then
+      the commit. Not a commit with `--no-verify` and a note to fix it
+      after.
   - id: work:article/2
     name: Article 2
     statement: >-
       A suppression names its rule and its reason, at the site. Never in
       configuration.
     enforces: work:discipline/ratchet
-    checked_by: A check that the linter's ignore list is empty and stays empty.
-    origin: >-
-      Nothing downstream can tell a rule that never existed from one switched
-      off quietly, so a configuration-level ignore erases its own history.
+    checked_by: >-
+      A check that the linter's ignore list is empty and stays empty.
+    example: >-
+      `# noqa: E501 — the URL cannot be split`, on the line itself. Never
+      an entry in a config ignore list.
   - id: work:article/3
     name: Article 3
     statement: Coverage is a floor beneath the tests, never a claim about them.
     enforces: work:discipline/observed-failure
-    checked_by: A coverage floor, plus mutation testing as the signal behind it.
-    origin: >-
-      Coverage reports what ran. A test that passes against broken code is
-      covered and worthless, and no coverage figure distinguishes the two.
+    checked_by: >-
+      A coverage floor, with mutation testing as the signal behind it.
+    example: >-
+      A coverage floor that must not fall, reported beside the mutation
+      score. Never "we are at 90%, therefore tested".
   - id: work:article/4
     name: Article 4
     statement: A guardrail never observed to fail is not evidence of anything.
     enforces: work:discipline/observed-failure
-    checked_by: Mutation-probing every new guardrail before trusting it.
-    origin: >-
-      Guardrails that were never wired up pass forever, and their passing is
-      indistinguishable from working.
+    checked_by: >-
+      Mutation-probing every new guardrail before trusting it.
+    example: >-
+      The placeholder scan run against a portfolio with a token
+      deliberately left in, before it is believed.
   - id: work:article/5
     name: Article 5
     statement: No gate step rewrites the tree.
-    checked_by: Fixing lives in separate commands, never invoked by the gate.
-    origin: >-
-      A step that repairs what it finds destroys the evidence that anything was
-      wrong, and a repository whose gate quietly fixes things does not know what
-      state it is in.
+    checked_by: >-
+      Fixing lives in separate commands, never invoked by the gate.
+    example: >-
+      `render.py --check` in the gate; `render.py` writes only when a
+      person runs it.
   - id: work:article/6
     name: Article 6
     statement: >-
       Every gate step has three outcomes — could not run, which is loud and
       unmarked and exits zero; passed, which is marked; found something, which is
       non-zero.
-    checked_by: Each step's own reporting, and a review of the report's shape.
-    origin: >-
-      A green mark meaning "the tool never started" is worse than a red one,
-      because nobody looks again.
+    checked_by: >-
+      Each step's own reporting, and a review of the report's shape.
+    example: >-
+      A missing `linkml` prints that it could not run and exits zero. A
+      violation exits non-zero.
   - id: work:article/7
     name: Article 7
     statement: A check-mark is a claim about scope, so a step says what it checked.
-    checked_by: The gate's output, which names the scope of each step.
-    origin: >-
-      A check-mark whose scope is unstated is read as covering everything, and is
-      believed in proportion to how little it says.
+    checked_by: >-
+      Each step naming what it covered, beside its result.
+    example: >-
+      `ok rendered prose` after a step that compared every render target,
+      including the templates — so the mark says what it covered.
   - id: work:article/8
     name: Article 8
     statement: >-
       An artifact prevents drift only if something consumes it — and consumption
       is not sufficient. Ask what it is checked against.
     enforces: work:discipline/nothing-unconsumed
-    checked_by: Orphan detection, which enforces the necessary half only.
-    origin: >-
-      A configuration key nothing reads, a document nothing links to, a suite
-      nothing runs. Each looks like a control and is none.
+    checked_by: >-
+      Orphan detection, which enforces the necessary half only.
+    example: >-
+      `.github/PULL_REQUEST_TEMPLATE.md` is consumed by GitHub, and
+      checked against the form's own fence by `check.py`.
   - id: work:article/9
     name: Article 9
     statement: >-
       A seed is data. Linting it in place is not proof; it is gated by rendering
       it and running the real gates on the result.
     enforces: work:discipline/seeded-artifacts
-    checked_by: A gate step that renders the seed and runs the real gates on it.
-    origin: >-
-      Linting a template in place proves its files are well formed and never
-      executes what it seeds, which is the only version anyone runs.
+    checked_by: >-
+      The template is rendered and the real gates run on the result.
+    example: >-
+      `template/` is filled with dummy tokens and the result validated.
+      Never linted where it sits.
   - id: work:article/10
     name: Article 10
     statement: A seeded artifact does not violate the rules it seeds.
     enforces: work:discipline/seeded-artifacts
-    checked_by: The rendered seed, held to the same gate as the repository.
-    origin: >-
-      A defect in a seed propagates once per use, so the same fault is worse
-      there than anywhere else.
+    checked_by: >-
+      `check.py`, which fills every token and validates what comes out.
+    example: >-
+      The seed's own `DR-001.yaml` names an Artifact under `enacted_in`,
+      because A20 requires that of any adopted entry.
   - id: work:article/11
     name: Article 11
     statement: A decision that lives only in a transcript has not been made.
     enforces: work:discipline/written-decisions
     checked_by: >-
-      Nothing mechanical. Held by the routing rule that a commit message is not a
-      destination.
-    origin: >-
-      Nobody downstream can act on a decision they cannot find, argue with one
-      they cannot read, or learn why from a conversation they were not in.
+      Nothing yet.
+    example: >-
+      A choice settled in conversation is written as
+      `assertions/decisions/DR-0nn.yaml` in the same change that acts on
+      it.
   - id: work:article/12
     name: Article 12
     statement: >-
@@ -113,130 +130,76 @@ articles:
       names, and a link where one is possible.
     enforces: work:discipline/literate-programming
     checked_by: >-
-      Nothing yet. A check for a bare A-number in committed prose would do it.
-    origin: >-
-      A bare number is efficient for an agent's reasoning and opaque to a human.
-      The artifact outlives the conversation that made the shorthand legible, and
-      is read by someone who was not in it.
-  - id: work:article/13
-    name: Article 13
-    statement: A finding that exists only in a pull request has not been made.
-    enforces: work:discipline/journaling
-    checked_by: >-
-      Nothing mechanical. Held by routing each finding in the change that records
-      it, while the routing decision is still cheap.
-    origin: >-
-      A pull request looks like a record, which is what makes it dangerous. A11
-      covers the transcript, obviously ephemeral; this covers the narrative that
-      is durable, searchable, and still not authoritative — and that lives on a
-      hosting service rather than in the clone.
+      Nothing yet.
+    example: >-
+      "A9 — a seed is data, gated by rendering it", with a link. Not a
+      bare "A9".
   - id: work:article/14
     name: Article 14
     statement: Reasoning that lives only in a commit message is not recorded.
     enforces: work:discipline/journaling
     checked_by: >-
-      Nothing yet, and a length check would be crude — the failure is a paragraph
-      of reasoning, not a long subject line.
-    origin: >-
-      Thirty years of not once finding a `git blame` walk productive. Rationale in
-      a commit message is hidden away: expensive to reach, lost to rebase and
-      squash, and looked for only by a reader the artifacts have already failed.
-      Agentic maintenance makes it worse, because the commit message is the one
-      place an agent is always asked to write, so the whole history of a project
-      ends up narrated where nobody searches.
+      Nothing yet.
+    example: >-
+      The commit subject is a label — "An Article is a reference" — and
+      the argument for it is in the pull request body.
   - id: work:article/15
     name: Article 15
     statement: Work noticed and not done, recorded only in a summary, has not been noticed.
     enforces: work:discipline/pr-first
     checked_by: >-
-      Mechanically, unlike A13 and A14: every item under the pull request body's
-      *what was noticed and not done* is a link, or the check fails. `gh pr view
-      --json body` is the whole implementation.
-    origin: >-
-      A long run ends with a summary carrying two or three things seen and left
-      alone, and the summary is the one artifact with no persistence at all. The
-      habit it produces is a TECH_DEBT.md — a file nothing consumes, with no open
-      and closed, whose items lose the work they were noticed during, and which is
-      eventually flushed in one unscoped batch of unrelated items. That run is
-      expensive because the batch was assembled by deferral rather than by
-      anything the items have in common.
+      `check_pr.py`: every item under *what was noticed and not done* is a
+      link.
+    example: >-
+      `- #21 — make the channel the only path by construction`, a link,
+      under the body's fourth heading. Not a sentence in a closing
+      summary.
   - id: work:article/16
     name: Article 16
     statement: A review thread resolved without an answer has not been resolved.
     enforces: work:discipline/pr-first
     checked_by: >-
-      `check_pr.py`, which requires every resolved thread to carry a reply from a
-      second party, **or** a link to the Issue it became. A party is the GitHub
-      login and the `Actor:` trailer together, because every comment an agent
-      writes here is posted under the solo's account and logins alone can never
-      show two.
-      GitHub requires resolution; this requires that the resolution mean
-      something. A promotion link is the one kind of answer a machine can verify,
-      which is why it counts where prose from a second party would otherwise be
-      demanded — a solo working with agents cannot manufacture a second party on
-      request.
-    origin: >-
-      Requiring resolution teaches the shortcut. A thread closed to clear the
-      merge gate is indistinguishable afterwards from one that was answered, so
-      the requirement that looked like a control becomes a control whose passing
-      carries no information. The alternative on offer was auto-resolving
-      outdated threads, which is the same failure with the work removed: an
-      anchor moving is not a concern being met.
+      `check_pr.py`: a resolved thread carries a reply from a second
+      party, or a link to the Issue it became.
+    example: >-
+      A thread the diff has overtaken gets a reply saying so, and is then
+      resolved. Not resolved silently because the anchor moved.
   - id: work:article/17
     name: Article 17
     statement: A term that arrived by use has not been agreed.
     enforces: work:discipline/ubiquitous-language
     checked_by: >-
-      Nothing yet, and the first attempt is instructive about why. Counting words
-      new to a diff and repeated across files does find a mint, and it finds
-      forty other things per change, each needing a person. A gate whose output
-      has to be triaged by hand every time is a gate that gets skipped. Deferred
-      until PR First Collaboration is working, where a reviewing agent can read
-      a change against the vocabulary rather than count against it.
-    origin: >-
-      `forge` reached the Charter, three decision records, two READMEs, a scope
-      note and a function name before anyone asked whether it had been agreed.
-      The rule against minting existed as a parenthetical in one table cell of
-      `.meta/README.md`, and nothing consumed it.
+      Nothing yet.
+    example: >-
+      `Challenge` is used because it is a Concept in the vocabulary. A
+      word that is not gets minted with the solo before it is used again.
   - id: work:article/18
     name: Article 18
     statement: Work not pushed has not been handed off.
     enforces: work:discipline/pr-first
     checked_by: >-
-      `check_pr.py --handoff`, which refuses when the worktree is dirty or the
-      branch is ahead of its remote, and prints the note's form only once both
-      are clean.
-    origin: >-
-      A successor shares no filesystem. Every other part of a handoff is a matter
-      of judgement about what to write down; this part is not, and it is the one
-      that silently loses the work rather than the reasoning — the note reads
-      correctly, the branch looks resumable, and an afternoon is simply gone.
+      `check_pr.py --handoff`, which refuses a dirty worktree or a branch
+      ahead of its remote.
+    example: >-
+      `git push` before the session ends, and `check_pr.py --handoff`
+      refuses while the branch is ahead of its remote.
   - id: work:article/19
     name: Article 19
     statement: A commit that does not name its Actor is unattributable.
     enforces: work:discipline/pr-first
     checked_by: >-
       `check_pr.py`, which fails a pull request carrying a commit with no
-      `Actor:` Trailer. Nothing appends one but the channel — `.meta/say commit`
-      composes them from what it resolved — so a commit made outside it is
-      unsigned, and this is what says so.
-    origin: >-
-      One comment was written without the Trailer and read as the solo, which
-      manufactured the second party A16 asks for and passed the gate on a
-      fiction. Signing had been an act somebody performs, and an act can be
-      omitted; every commit and comment now comes from a channel that signs, and
-      what the channel cannot guarantee, this checks.
+      `Actor:` Trailer.
+    example: >-
+      `.meta/say commit -m "…"`, which composes the `Actor:` Trailer from
+      the environment. Never `git commit` directly.
   - id: work:article/20
     name: Article 20
     statement: A rule that lives only in the decision record is not in force.
     enforces: work:discipline/written-decisions
     checked_by: >-
       `check.py`, which fails an ADOPTED Decision naming no Artifact under
-      `enacted_in`. The Artifact is a reference, so the gate resolves it like any
-      other; what the number is doing in the file it names is not checked, and a
-      text match could not tell an account from a coincidence anyway.
-    origin: >-
-      The record answers *why* and was being asked to carry *what to do*. An
-      agent about to work reads a Discipline, an Article, a skill or the schema
-      in front of it, and reaches a decision only when something surprises it —
-      so a mandate left in the record alone binds nobody.
+      `enacted_in`.
+    example: >-
+      The rule about a rationale's length is a step of Written Decisions,
+      and DR-080 names `.meta/disciplines.md` under `enacted_in`.

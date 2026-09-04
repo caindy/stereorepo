@@ -75,6 +75,17 @@ enums:
 
 slots:
 
+  number:
+    description: The Article number that was issued and is now reserved.
+    range: integer
+
+  example:
+    description: One concrete instance of the rule met.
+
+  retired_by:
+    description: The Decision that retired it, and where its account lives.
+    range: Decision
+
   status:
     description: Where this Decision stands.
     range: DecisionStatus
@@ -130,12 +141,6 @@ slots:
     range: Artifact
     multivalued: true
 
-  falsifier:
-    description: >-
-      The observation that would make this wrong. A Decision with none is a
-      preference, which is allowed — but it should say so rather than borrow the
-      authority of a finding. Observed Failure, applied to a decision.
-
   supersedes:
     description: >-
       An earlier Decision this replaces, in whole or in part. Partial is the
@@ -179,6 +184,32 @@ slots:
       answers "why", and it is the part a later reader actually needs.
 
 classes:
+
+  RetiredArticle:
+    description: >-
+      A number that was issued and is not an Article. It holds the number and
+      nothing else: what the Article claimed, and why it stopped holding, is the
+      account of the Decision that retired it, and keeping a second copy here
+      would be the residue this repository removes everywhere else.
+
+      The reservation is the whole point. A retired number reused is every
+      citation of it silently coming to mean something new, which is worse than a
+      citation that dangles and says so.
+
+      It holds no identifier, because there is nothing left to cite: `applies`
+      says a Decision *puts an Article into practice*, which is present tense, so
+      an entry naming a retired one is asserting something false rather than
+      preserving something historical. Those citations are removed; which
+      decisions had leaned on the rule is part of the account of retiring it.
+    slots:
+      - number
+      - retired_by
+    slot_usage:
+      number:
+        required: true
+      retired_by:
+        required: true
+
 
   Alternative:
     description: >-

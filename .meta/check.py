@@ -447,6 +447,22 @@ def artifact_paths(index):
             if cls == "Artifact" and not (ROOT / obj["path"]).is_file()]
 
 
+def reserved_article_numbers(index):
+    """A retired Article's number is never issued again.
+
+    The reservation is the only thing a retirement leaves behind, and it exists
+    so that a citation written years ago cannot silently come to mean something
+    new. Nothing else defends it: the Charter is hand-numbered, and a hole is an
+    absence, which nothing notices on its own.
+    """
+    charter = yaml.safe_load(
+        (META / "assertions" / "imported" / "charter.yaml").read_text()) or {}
+    retired = {r["number"] for r in charter.get("retired_articles") or []}
+    live = {int(a["id"].rsplit("/", 1)[-1]) for a in charter.get("articles") or []}
+    return [f"A{n} is retired and issued again; a retired number is reserved forever"
+            for n in sorted(retired & live)]
+
+
 def enacted_decisions(index):
     """A20. An adopted decision names an Artifact that carries its rule (DR-078).
 
@@ -511,6 +527,7 @@ CHECKS = (
     ("decision supersession", lambda i, r: decision_supersession(i)),
     ("decision numbering", lambda i, r: decision_numbering(i)),
     ("cited decisions", lambda i, r: cited_decisions(i)),
+    ("reserved article numbers", lambda i, r: reserved_article_numbers(i)),
     ("artifact paths", lambda i, r: artifact_paths(i)),
     ("enacted decisions", lambda i, r: enacted_decisions(i)),
     ("surviving placeholders", lambda i, r: surviving_placeholders()),

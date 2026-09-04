@@ -38,7 +38,7 @@ is a `Decision` with its `project` set — the same class as an entry in
 
 ## What would falsify this
 
-<The observation that would make this wrong. A Decision with none is a preference, which is allowed — but it should say so rather than borrow the authority of a finding. Observed Failure, applied to a decision.>
+<The observation that would make this wrong. Observed Failure, applied to a claim rather than to a test. On a Decision it is optional: one with none is a preference, which is allowed as long as it says so rather than borrowing the authority of a finding. On an Article it is required, because an Article binds until somebody notices it should not, and nothing re-reads a rule against a world that has moved underneath it. A13 was retired for a premise the repository had abandoned across five decisions, none of which looked at the Charter.>
 
 ## Bearing on the Charter
 

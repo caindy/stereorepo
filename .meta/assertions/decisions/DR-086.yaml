@@ -1,0 +1,46 @@
+decisions:
+  - id: work:decision/086
+    name: "DR-086 · The Trailer carries a workload identity, whatever account it is written under"
+    challenge: work:challenge/11
+    status: ADOPTED
+    applies:
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-charter
+      - work:artifact/meta-say
+    alternatives:
+      - name: The account replaces the Trailer
+        chosen: false
+        reason: >-
+          What A19's falsifier claimed until this was noticed, and it contradicts
+          DR-066, which had already ruled that the Trailer is not obviated. An
+          account is held durably and says which Role acted; one such account
+          serves many sessions, so it cannot say which run did the work.
+      - name: The Trailer carries a workload identity, and attribution is a separate axis
+        chosen: true
+        reason: >-
+          Two questions with two answers: who acted, and which run did it. The
+          account answers the first when it exists and cannot answer the second;
+          the session id answers the second and always could. What it costs is
+          that the Trailer's key still reads `Actor:`, which names the entity
+          rather than the identity it carries.
+    consequences:
+      - >-
+        A19 stops depending on the machine accounts. What retires it is the
+        credential boundary, not attribution moving.
+      - >-
+        `.meta/say` says what the Trailer carries: a workload identity, attested
+        for a run, distinct from the principal identity a Role account will hold.
+    falsifier: >-
+      A session id that outlives the session — durable, reusable, and held rather
+      than attested. It would then be a principal identity wearing a run's name,
+      and the two axes would collapse into one.
+    rationale: |-
+      Christopher, reading the falsifier written for A19: the Trailer does not go
+      away, attribution changes.
+
+      DR-004 split Identity into principal and workload for exactly this, and the
+      Trailer had been described as naming "the Actor" — the entity — rather than
+      which of its identities. An Actor has both. The account will attest the
+      durable one; the session id attests the running one, and nothing else
+      records it once the session is gone.

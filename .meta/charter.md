@@ -19,122 +19,118 @@ Discipline; some stand alone, and need nothing behind them.
 
 **Enforces** Ratchet. **Checked by** The gate, run before committing.
 
-_Why:_ A standard falls one exception at a time, and the exception is always justified at the moment it is made.
+_In practice:_ `uvx --with linkml --with pyyaml python .meta/check.py` passes, then the commit. Not a commit with `--no-verify` and a note to fix it after.
 
 ### A2. A suppression names its rule and its reason, at the site. Never in configuration.
 
 **Enforces** Ratchet. **Checked by** A check that the linter's ignore list is empty and stays empty.
 
-_Why:_ Nothing downstream can tell a rule that never existed from one switched off quietly, so a configuration-level ignore erases its own history.
+_In practice:_ `# noqa: E501 — the URL cannot be split`, on the line itself. Never an entry in a config ignore list.
 
 ### A3. Coverage is a floor beneath the tests, never a claim about them.
 
-**Enforces** Observed Failure. **Checked by** A coverage floor, plus mutation testing as the signal behind it.
+**Enforces** Observed Failure. **Checked by** A coverage floor, with mutation testing as the signal behind it.
 
-_Why:_ Coverage reports what ran. A test that passes against broken code is covered and worthless, and no coverage figure distinguishes the two.
+_In practice:_ A coverage floor that must not fall, reported beside the mutation score. Never "we are at 90%, therefore tested".
 
 ### A4. A guardrail never observed to fail is not evidence of anything.
 
 **Enforces** Observed Failure. **Checked by** Mutation-probing every new guardrail before trusting it.
 
-_Why:_ Guardrails that were never wired up pass forever, and their passing is indistinguishable from working.
+_In practice:_ The placeholder scan run against a portfolio with a token deliberately left in, before it is believed.
 
 ### A5. No gate step rewrites the tree.
 
 **Checked by** Fixing lives in separate commands, never invoked by the gate.
 
-_Why:_ A step that repairs what it finds destroys the evidence that anything was wrong, and a repository whose gate quietly fixes things does not know what state it is in.
+_In practice:_ `render.py --check` in the gate; `render.py` writes only when a person runs it.
 
 ### A6. Every gate step has three outcomes — could not run, which is loud and unmarked and exits zero; passed, which is marked; found something, which is non-zero.
 
 **Checked by** Each step's own reporting, and a review of the report's shape.
 
-_Why:_ A green mark meaning "the tool never started" is worse than a red one, because nobody looks again.
+_In practice:_ A missing `linkml` prints that it could not run and exits zero. A violation exits non-zero.
 
 ### A7. A check-mark is a claim about scope, so a step says what it checked.
 
-**Checked by** The gate's output, which names the scope of each step.
+**Checked by** Each step naming what it covered, beside its result.
 
-_Why:_ A check-mark whose scope is unstated is read as covering everything, and is believed in proportion to how little it says.
+_In practice:_ `ok rendered prose` after a step that compared every render target, including the templates — so the mark says what it covered.
 
 ### A8. An artifact prevents drift only if something consumes it — and consumption is not sufficient. Ask what it is checked against.
 
 **Enforces** Nothing Unconsumed. **Checked by** Orphan detection, which enforces the necessary half only.
 
-_Why:_ A configuration key nothing reads, a document nothing links to, a suite nothing runs. Each looks like a control and is none.
+_In practice:_ `.github/PULL_REQUEST_TEMPLATE.md` is consumed by GitHub, and checked against the form's own fence by `check.py`.
 
 ### A9. A seed is data. Linting it in place is not proof; it is gated by rendering it and running the real gates on the result.
 
-**Enforces** Seeded Artifacts. **Checked by** A gate step that renders the seed and runs the real gates on it.
+**Enforces** Seeded Artifacts. **Checked by** The template is rendered and the real gates run on the result.
 
-_Why:_ Linting a template in place proves its files are well formed and never executes what it seeds, which is the only version anyone runs.
+_In practice:_ `template/` is filled with dummy tokens and the result validated. Never linted where it sits.
 
 ### A10. A seeded artifact does not violate the rules it seeds.
 
-**Enforces** Seeded Artifacts. **Checked by** The rendered seed, held to the same gate as the repository.
+**Enforces** Seeded Artifacts. **Checked by** `check.py`, which fills every token and validates what comes out.
 
-_Why:_ A defect in a seed propagates once per use, so the same fault is worse there than anywhere else.
+_In practice:_ The seed's own `DR-001.yaml` names an Artifact under `enacted_in`, because A20 requires that of any adopted entry.
 
 ### A11. A decision that lives only in a transcript has not been made.
 
-**Enforces** Written Decisions. **Checked by** Nothing mechanical. Held by the routing rule that a commit message is not a destination.
+**Enforces** Written Decisions. **Checked by** Nothing yet.
 
-_Why:_ Nobody downstream can act on a decision they cannot find, argue with one they cannot read, or learn why from a conversation they were not in.
+_In practice:_ A choice settled in conversation is written as `assertions/decisions/DR-0nn.yaml` in the same change that acts on it.
 
 ### A12. A citation in a durable artifact is dereferenced — the number, the claim it names, and a link where one is possible.
 
-**Enforces** Literate Programming. **Checked by** Nothing yet. A check for a bare A-number in committed prose would do it.
+**Enforces** Literate Programming. **Checked by** Nothing yet.
 
-_Why:_ A bare number is efficient for an agent's reasoning and opaque to a human. The artifact outlives the conversation that made the shorthand legible, and is read by someone who was not in it.
+_In practice:_ "A9 — a seed is data, gated by rendering it", with a link. Not a bare "A9".
 
-### A13. A finding that exists only in a pull request has not been made.
-
-**Enforces** Journaling. **Checked by** Nothing mechanical. Held by routing each finding in the change that records it, while the routing decision is still cheap.
-
-_Why:_ A pull request looks like a record, which is what makes it dangerous. A11 covers the transcript, obviously ephemeral; this covers the narrative that is durable, searchable, and still not authoritative — and that lives on a hosting service rather than in the clone.
+### A13. Retired.
 
 ### A14. Reasoning that lives only in a commit message is not recorded.
 
-**Enforces** Journaling. **Checked by** Nothing yet, and a length check would be crude — the failure is a paragraph of reasoning, not a long subject line.
+**Enforces** Journaling. **Checked by** Nothing yet.
 
-_Why:_ Thirty years of not once finding a `git blame` walk productive. Rationale in a commit message is hidden away: expensive to reach, lost to rebase and squash, and looked for only by a reader the artifacts have already failed. Agentic maintenance makes it worse, because the commit message is the one place an agent is always asked to write, so the whole history of a project ends up narrated where nobody searches.
+_In practice:_ The commit subject is a label — "An Article is a reference" — and the argument for it is in the pull request body.
 
 ### A15. Work noticed and not done, recorded only in a summary, has not been noticed.
 
-**Enforces** PR First. **Checked by** Mechanically, unlike A13 and A14: every item under the pull request body's *what was noticed and not done* is a link, or the check fails. `gh pr view --json body` is the whole implementation.
+**Enforces** PR First. **Checked by** `check_pr.py`: every item under *what was noticed and not done* is a link.
 
-_Why:_ A long run ends with a summary carrying two or three things seen and left alone, and the summary is the one artifact with no persistence at all. The habit it produces is a TECH_DEBT.md — a file nothing consumes, with no open and closed, whose items lose the work they were noticed during, and which is eventually flushed in one unscoped batch of unrelated items. That run is expensive because the batch was assembled by deferral rather than by anything the items have in common.
+_In practice:_ `- #21 — make the channel the only path by construction`, a link, under the body's fourth heading. Not a sentence in a closing summary.
 
 ### A16. A review thread resolved without an answer has not been resolved.
 
-**Enforces** PR First. **Checked by** `check_pr.py`, which requires every resolved thread to carry a reply from a second party, **or** a link to the Issue it became. A party is the GitHub login and the `Actor:` trailer together, because every comment an agent writes here is posted under the solo's account and logins alone can never show two. GitHub requires resolution; this requires that the resolution mean something. A promotion link is the one kind of answer a machine can verify, which is why it counts where prose from a second party would otherwise be demanded — a solo working with agents cannot manufacture a second party on request.
+**Enforces** PR First. **Checked by** `check_pr.py`: a resolved thread carries a reply from a second party, or a link to the Issue it became.
 
-_Why:_ Requiring resolution teaches the shortcut. A thread closed to clear the merge gate is indistinguishable afterwards from one that was answered, so the requirement that looked like a control becomes a control whose passing carries no information. The alternative on offer was auto-resolving outdated threads, which is the same failure with the work removed: an anchor moving is not a concern being met.
+_In practice:_ A thread the diff has overtaken gets a reply saying so, and is then resolved. Not resolved silently because the anchor moved.
 
 ### A17. A term that arrived by use has not been agreed.
 
-**Enforces** Ubiquitous Language. **Checked by** Nothing yet, and the first attempt is instructive about why. Counting words new to a diff and repeated across files does find a mint, and it finds forty other things per change, each needing a person. A gate whose output has to be triaged by hand every time is a gate that gets skipped. Deferred until PR First Collaboration is working, where a reviewing agent can read a change against the vocabulary rather than count against it.
+**Enforces** Ubiquitous Language. **Checked by** Nothing yet.
 
-_Why:_ `forge` reached the Charter, three decision records, two READMEs, a scope note and a function name before anyone asked whether it had been agreed. The rule against minting existed as a parenthetical in one table cell of `.meta/README.md`, and nothing consumed it.
+_In practice:_ `Challenge` is used because it is a Concept in the vocabulary. A word that is not gets minted with the solo before it is used again.
 
 ### A18. Work not pushed has not been handed off.
 
-**Enforces** PR First. **Checked by** `check_pr.py --handoff`, which refuses when the worktree is dirty or the branch is ahead of its remote, and prints the note's form only once both are clean.
+**Enforces** PR First. **Checked by** `check_pr.py --handoff`, which refuses a dirty worktree or a branch ahead of its remote.
 
-_Why:_ A successor shares no filesystem. Every other part of a handoff is a matter of judgement about what to write down; this part is not, and it is the one that silently loses the work rather than the reasoning — the note reads correctly, the branch looks resumable, and an afternoon is simply gone.
+_In practice:_ `git push` before the session ends, and `check_pr.py --handoff` refuses while the branch is ahead of its remote.
 
 ### A19. A commit that does not name its Actor is unattributable.
 
-**Enforces** PR First. **Checked by** `check_pr.py`, which fails a pull request carrying a commit with no `Actor:` Trailer. Nothing appends one but the channel — `.meta/say commit` composes them from what it resolved — so a commit made outside it is unsigned, and this is what says so.
+**Enforces** PR First. **Checked by** `check_pr.py`, which fails a pull request carrying a commit with no `Actor:` Trailer.
 
-_Why:_ One comment was written without the Trailer and read as the solo, which manufactured the second party A16 asks for and passed the gate on a fiction. Signing had been an act somebody performs, and an act can be omitted; every commit and comment now comes from a channel that signs, and what the channel cannot guarantee, this checks.
+_In practice:_ `.meta/say commit -m "…"`, which composes the `Actor:` Trailer from the environment. Never `git commit` directly.
 
 ### A20. A rule that lives only in the decision record is not in force.
 
-**Enforces** Written Decisions. **Checked by** `check.py`, which fails an ADOPTED Decision naming no Artifact under `enacted_in`. The Artifact is a reference, so the gate resolves it like any other; what the number is doing in the file it names is not checked, and a text match could not tell an account from a coincidence anyway.
+**Enforces** Written Decisions. **Checked by** `check.py`, which fails an ADOPTED Decision naming no Artifact under `enacted_in`.
 
-_Why:_ The record answers *why* and was being asked to carry *what to do*. An agent about to work reads a Discipline, an Article, a skill or the schema in front of it, and reaches a decision only when something surprises it — so a mandate left in the record alone binds nobody.
+_In practice:_ The rule about a rationale's length is a step of Written Decisions, and DR-080 names `.meta/disciplines.md` under `enacted_in`.
 
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml)

@@ -1,0 +1,95 @@
+decisions:
+  - id: work:decision/085
+    name: "DR-085 · A13 is retired, and an Article states what would retire it"
+    challenge: work:challenge/11
+    status: ADOPTED
+    applies:
+      - work:article/4
+    enacted_in:
+      - work:artifact/meta-charter
+      - work:artifact/meta-work-disciplines
+    alternatives:
+      - name: Keep A13
+        chosen: false
+        reason: >-
+          Its premise is that the clone is the durable boundary, and this
+          repository abandoned that premise deliberately — the ruleset, the
+          blocking threads, Issues holding what was noticed, the handoff as a
+          review request, the channel. A13 is the last statement of a line
+          nothing else observes.
+      - name: Retire it, and keep its prose as a hole
+        chosen: false
+        reason: >-
+          That is the decision record's convention imported into a place that
+          never had it: `Article` has no withdrawn status, and the account of a
+          retirement is this entry. A paragraph kept in the Charter would be the
+          second copy, and it would be read as though it still bound something.
+      - name: Retire it, reserve the number, and operationalise what it taught
+        chosen: true
+        reason: >-
+          The number is an absence and costs nothing; the prose goes; and the
+          lesson becomes a required slot on every Article rather than an inert
+          retrospective. What it costs is nineteen falsifiers written at once,
+          which is the same enumeration DR-051 needed and found things by.
+    consequences:
+      - >-
+        `Article.falsifier` is required: what would retire this Article. The slot
+        moves to `core`, since a claim that can be held and found false is not
+        peculiar to a Decision.
+      - >-
+        Sixteen falsifiers are written, one sentence each. The slot is optional,
+        because A4, A8 and A17 are axiomatic — epistemic or definitional claims
+        that no observation retires — and inventing a condition for one of those
+        is the same failure as inventing a rejected option.
+      - >-
+        A falsifier naming something somebody could bring about is a Challenge,
+        and needs an Issue. A19's is the credential boundary DR-069 left
+        unfinished, now #21; without it the Charter was holding a plan nobody had
+        scheduled.
+      - >-
+        DR-050, DR-052 and DR-054 lose `applies: work:article/13`. `applies` says
+        a Decision *puts an Article into practice*, which is present tense: an
+        entry naming a retired one asserts something false rather than preserving
+        something historical. That they leaned on it is part of this account,
+        which is where it belongs.
+      - >-
+        The reservation is a number and the entry that retired it, held by
+        `reserved article numbers` in the gate. Nothing else defended it: the
+        Charter is hand-numbered and a hole is an absence, which nothing notices
+        on its own.
+      - >-
+        The Charter renders a retired number in sequence, as one line: `A13.
+        Retired.` A reader scanning it needs to know the gap is a gap. Why it is
+        one costs a grep, which is the right price — a section explaining every
+        retirement would be paid for by every reader who did not ask.
+      - >-
+        A13's content is not lost: routing a finding to the artifact that owns it
+        is a step of Journaling and a row of the routing table, which is where a
+        rule needing judgement belongs (DR-070).
+    falsifier: >-
+      An Article retired for a reason its own falsifier did not anticipate. The
+      slot would then be recording a guess about the future rather than the
+      condition the Article actually depends on.
+    rationale: |-
+      Christopher, on keeping a retired Article's prose: what does it buy other
+      than noise? Retirement should be confident, and the confidence should come
+      from operationalising the lesson.
+
+      Three decisions had leaned on it — DR-050, DR-052 and DR-054 — and none of
+      them is in force unamended today.
+
+      A13 did not fail because pull requests turned out to be fine. It failed
+      because its premise moved and nothing re-read it: five decisions made the
+      hosting service load-bearing on purpose, and the Charter was not consulted
+      by any of them. An Article binds until somebody notices it should not, and
+      nobody was looking.
+
+      So the forward-acting form is a slot. `origin` says what an Article cost to
+      learn; `falsifier` says what would end it.
+
+      Three drafts were wrong before this one, and each failure is in the slot's
+      description now. The first named a capability that would make each Article
+      unnecessary, which is a forecast, and nobody observes a forecast arriving.
+      The second stated the observation and then argued for it, in the one place a
+      reader is skimming rather than reading. The third gave one to every Article,
+      including those nothing can retire.

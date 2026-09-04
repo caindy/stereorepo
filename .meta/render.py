@@ -188,8 +188,16 @@ def charter():
            "a dangling one.\n",
            "Where a Discipline is *followed*, an Article is *checked*. Some enforce a\n"
            "Discipline; some stand alone, and need nothing behind them.\n"]
-    for inv in rows:
-        num = inv["id"].rsplit("/", 1)[-1]
+    # Retired numbers sit in sequence, one line each. A reader scanning the
+    # Charter needs to know the gap is a gap; why it is one is the retiring
+    # entry's, and reaching it costs a grep, which is the point.
+    holes = {h["number"]: h for h in abox.get("retired_articles") or []}
+    live = {int(a["id"].rsplit("/", 1)[-1]): a for a in rows}
+    for num in sorted(live | holes):
+        if num in holes:
+            out.append(f"### A{num}. Retired.\n")
+            continue
+        inv = live[num]
         out.append(f"### A{num}. {inv['statement'].strip()}\n")
         held = disciplines.get(inv.get("enforces"))
         bits = []
@@ -199,8 +207,10 @@ def charter():
             bits.append(f"**Checked by** {inv['checked_by'].strip().rstrip('.')}.")
         if bits:
             out.append(" ".join(bits) + "\n")
-        if inv.get("origin"):
-            out.append(f"_Why:_ {inv['origin'].strip()}\n")
+        if inv.get("example"):
+            out.append(f"_In practice:_ {inv['example'].strip()}\n")
+        if inv.get("falsifier"):
+            out.append(f"_Retired when:_ {inv['falsifier'].strip()}\n")
     return "\n".join(out) + accounted_by("charter.md")
 
 
@@ -256,11 +266,15 @@ def _decision_slots():
     """The slot descriptions from the model, which is where the guidance lives.
 
     Read as plain YAML rather than through a SchemaView so the renderer keeps its
-    one dependency. The form and the record are two views of the same class, and
+    one dependency, and from every module the class draws slots from — `falsifier`
+    is `core`'s, shared with `Article`. The form and the record are two views of the same class, and
     a form whose headings were typed by hand would be the third copy of a shape
     the schema already states.
     """
-    return (load("work/decisions.yaml") or {}).get("slots") or {}
+    slots = {}
+    for module in ("work/core.yaml", "work/decisions.yaml"):
+        slots.update((load(module) or {}).get("slots") or {})
+    return slots
 
 
 def landed(number):

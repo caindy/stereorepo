@@ -4,7 +4,6 @@ decisions:
     status: ADOPTED
     applies:
       - work:article/11
-      - work:article/13
     enacted_in:
       - work:artifact/meta-disciplines
     rationale: |-

@@ -85,12 +85,6 @@ slots:
       An Article with nothing checking it is an aspiration, and should say so
       rather than imply enforcement it does not have.
 
-  origin:
-    description: >-
-      The failure this Article came from. Where a rule exists it exists because
-      something failed once, and a reader who doubts a rule can go and read what
-      it cost. This is what keeps the Charter empirical rather than drafted.
-
 classes:
 
   Discipline:
@@ -130,24 +124,56 @@ classes:
       with fewer words. "No gate step may rewrite the tree" is settled once and
       mechanically verifiable; nothing about applying it is a matter of judgement.
 
-      Binding, and **empirical rather than drafted**. An Article without an
-      `origin` is an opinion that has borrowed the Charter's authority.
+      Binding, and it carries **no account of itself**. Why a rule exists is a
+      Decision's, and a Decision that produced an Article names it under
+      `applies` — so the relation reads forward, from the choice to the rule, and
+      a reader who wants the argument searches the record for the number.
+
+      What an Article does carry is how to apply it. A rule stated once and
+      illustrated never is an aphorism, and an aphorism is applied by whoever
+      already agreed with it.
     comments:
       - >-
         Numbered as a **stable identifier**, cited as A1, A2 and so on. A retired
         Article leaves a **hole** and is never renumbered: a citation that
         silently comes to mean something else is worse than a dangling one.
       - >-
-        An Article that states no `origin` has lost its receipt. It may still be
-        right, but nobody can weigh it against the cost of following it.
+        `example` says what following it looks like, `falsifier` what would end
+        it. Between them an Article can be applied and argued with, which is the
+        whole of what it is for.
     slots:
       - statement
       - enforces
       - checked_by
-      - origin
+      - example
+      - falsifier
     slot_usage:
       name:
         required: true
       statement:
         required: true
         description: The claim, in one line, phrased so that a violation is recognisable.
+      example:
+        required: true
+        description: >-
+          One concrete instance of the rule met — what doing it looks like here,
+          and where it helps, the near-miss it is distinguished from. Not why the
+          rule exists, and not an anecdote about the time it was broken.
+      falsifier:
+        description: >-
+          What would retire this Article: **one observation, stated plainly, and
+          nothing else.** Not a capability that might arrive — nothing notices a
+          forecast coming true — and not the argument for why the observation
+          would matter, which is what makes it unreadable at the moment somebody
+          is skimming for it.
+
+          **Optional, because some Articles are axiomatic.** A guardrail never
+          observed to fail is not evidence of anything whatever the world does;
+          nothing retires that, and inventing a condition for it is the same
+          failure as inventing a rejected option. An Article with no falsifier is
+          claiming to hold unconditionally, which is a strong claim and should be
+          rare.
+
+          **And if the observation is something you could bring about, it is a
+          Challenge.** An Article retired by work somebody could do needs an Issue
+          tracking that work, or the Charter is holding a plan nobody scheduled.

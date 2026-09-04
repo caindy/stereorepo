@@ -52,6 +52,11 @@ ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
 def actor():
     """**Who** is speaking: the session, and nothing else.
 
+    A workload identity, attested for one run (DR-086). A Role account will hold
+    the principal identity and say which Role acted; it cannot say which run did
+    the work, because one account serves many sessions. The key reads `Actor:`
+    because it names the entity, not the identity it carries.
+
     One Job is one thread, and the session is what identifies it. The harness
     build used to be part of this and was doing a different job badly — it
     changes at every upgrade, so one Actor across an update read as two, while

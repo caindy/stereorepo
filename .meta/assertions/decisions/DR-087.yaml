@@ -1,0 +1,68 @@
+decisions:
+  - id: work:decision/087
+    name: "DR-087 · An Article shows how it applies, and accounts for nothing"
+    challenge: work:challenge/11
+    status: ADOPTED
+    supersedes:
+      - work:decision/048
+    enacted_in:
+      - work:artifact/meta-charter
+      - work:artifact/meta-work-disciplines
+    alternatives:
+      - name: Keep `origin` on the Article
+        chosen: false
+        reason: >-
+          DR-048's position: the failure an Article came from is what keeps the
+          Charter empirical rather than drafted. True, and it does not follow that
+          the account belongs on the Article — every one of those paragraphs is a
+          decision's rationale restated in the artifact that should be the leanest
+          thing here.
+      - name: Point at the Decision that took it
+        chosen: false
+        reason: >-
+          A `decided_by` on the Article renders as a citation beside every rule,
+          which distracts the reader who came to check something. It also reads
+          backwards: the Article is the consequence, so the relation belongs on
+          the Decision, where `applies` already carries it.
+      - name: Show how it applies, and account for nothing
+        chosen: true
+        reason: >-
+          `example` is required and `origin` is gone. What was lost with the
+          anecdote was not the why — that is a Decision's — but the practical
+          instance the anecdote was burying. What it costs is that a reader who
+          wants the argument searches the record for the number, which is a
+          search rather than a link.
+    consequences:
+      - >-
+        `Article.origin` is removed and `Article.example` is required. A1 through
+        A11 lose eleven receipts adopted from `python_bootstrap`; DR-043 records
+        that adoption and those failures are that project's evidence, restated
+        here.
+      - >-
+        Six Articles — A2, A3, A5, A6, A10, A20 — are cited by no Decision's
+        `applies`. No edges were manufactured to close that: an invented citation
+        is the same failure as an invented rejection, and the gap is the true
+        reachability of the record.
+      - >-
+        `checked_by` is cut to what checks the Article, or "Nothing yet." Four of
+        them had become essays about why nothing checks it, which is the same
+        defect in a different slot.
+      - >-
+        Every Article now reads: the claim, what enforces and checks it, what
+        following it looks like, and what would retire it. The Charter is a
+        third shorter than the anecdotes made it, and applicable where it was
+        aphoristic.
+    falsifier: >-
+      An `example` that has to be read twice to see which rule it illustrates.
+    rationale: |-
+      Christopher: an Article is a reference, not an inline mini-treatise.
+
+      The Charter is the one artifact read to check something against, and it had
+      grown a paragraph of anecdote per rule. `origin` said what a rule cost to
+      learn, which is a Decision's job — and where an Article had one, the two
+      said the same thing twice.
+
+      Removing it took something real with it, though, and the second draft was
+      worse than the first: the anecdotes were burying a practical instance of the
+      rule being met, and without one an Article is an aphorism that whoever
+      already agreed with it can apply.

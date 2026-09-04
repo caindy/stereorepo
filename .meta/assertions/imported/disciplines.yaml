@@ -317,7 +317,7 @@ disciplines:
       one Job at a time, each aware only of its own Agency, and what crosses the
       seam is only what the pull request and the branch hold. A handoff is a
       **semaphore, not a message**: GitHub's review request names a successor and
-      is a state the forge holds and reports, so an arriving Job finds its work
+      is a state GitHub holds and reports, so an arriving Job finds its work
       by asking what has been requested of it rather than by reading anything.
       Awaiting the machine accounts of DR-066, because a review can only be
       requested of an account.
