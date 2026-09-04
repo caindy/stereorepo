@@ -22,6 +22,7 @@ pass wrongly.
     .meta/say issue    --title T [--label L] < body.md
     .meta/say pr       --title T [--base B] < body.md  open a pull request
     .meta/say pr-body  <pr> < body.md          replace the body
+    .meta/say issue-body <n> < body.md         replace an Issue's body
     .meta/say pr-title <pr> --title T
 
 Bodies come from stdin rather than the command line: the text is usually long,
@@ -287,6 +288,7 @@ def main():
     p = sub.add_parser("issue"); p.add_argument("--title", required=True); p.add_argument("--label", action="append", default=[])
     p = sub.add_parser("pr"); p.add_argument("--title", required=True); p.add_argument("--base", default="main")
     p = sub.add_parser("pr-body"); p.add_argument("pr")
+    p = sub.add_parser("issue-body"); p.add_argument("issue")
     p = sub.add_parser("pr-title"); p.add_argument("pr"); p.add_argument("--title", required=True)
     args = ap.parse_args()
 
@@ -364,6 +366,13 @@ def main():
                  "--body", body, parse=False))
     elif args.verb == "pr-body":
         gh("pr", "edit", args.pr, "--body", body, parse=False)
+        print("body set")
+    elif args.verb == "issue-body":
+        # The same verb `pr-body` is, for the other artifact the channel opens.
+        # An Issue's body is signed at creation and nowhere afterwards, so an
+        # edit that bypassed the channel would leave a Trailer naming the
+        # wrong Actor under prose that Actor never wrote.
+        gh("issue", "edit", args.issue, "--body", body, parse=False)
         print("body set")
     elif args.verb == "pr-title":
         gh("pr", "edit", args.pr, "--title", args.title, parse=False)
