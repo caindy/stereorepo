@@ -31,4 +31,5 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   *Challenge*, not a ticket or story; an *Actor*, not a user or a bot.
 - When a question that demanded an answer is settled, add an entry to the decision record
   in `.meta/assertions/decisions.yaml`, re-render, and commit it together with the
-  change. `.meta/decisions.md` is generated from it.
+  change. `.meta/decisions.md` and the entry pages under `.meta/decisions/` are
+  generated from it.

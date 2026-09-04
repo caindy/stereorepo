@@ -211,13 +211,70 @@ def _decision_slots():
     return (load("work/decisions.yaml") or {}).get("slots") or {}
 
 
-def decisions():
-    """The decision record, newest last.
+def _decision_page(d, rows, projects):
+    """One decision, whole. The satellite a `@DR-0nn` reference resolves to.
 
-    `rationale` is the entry as it was written. Everything rendered around it is
-    the structure the prose could not be asked about — what was rejected, what
-    this replaced, which Articles it applies. A withdrawn entry keeps its prose
-    and leaves its number as a hole, below the record rather than in it.
+    Everything the index cannot carry lives here, which is the whole of it: a
+    reader who has found the number has stopped browsing and needs the entry.
+    """
+    out = [BANNER.format(src="assertions/decisions.yaml"), f"# {d['name']}\n"]
+    stamp = d.get("decided") or ""
+    if d.get("recorded") and d["recorded"] != stamp:
+        stamp = f"{stamp} — recorded {d['recorded']}"
+    line = f"*{stamp}*" if stamp else ""
+    if d.get("project"):
+        line += f" · {projects.get(d['project'], d['project'])}"
+    if d.get("status") == "SUPERSEDED":
+        line += f" · **Superseded by** {_link(rows, d['superseded_by'])}"
+    if d.get("status") == "WITHDRAWN":
+        line += " · **Withdrawn**"
+    if line:
+        out.append(line.strip() + "\n")
+    if d.get("status") == "WITHDRAWN":
+        out.append(d["withdrawn_because"].strip() + "\n")
+        out.append("<details><summary>What the entry holds</summary>\n")
+        out.append(d["rationale"].strip() + "\n")
+        out.append("</details>\n")
+        return "\n".join(out)
+    out.append(d["rationale"].strip() + "\n")
+    if d.get("options"):
+        out.append("**Options considered.**\n")
+        for o in d["options"]:
+            mark = "chosen" if o.get("chosen") else "rejected"
+            out.append(f"- _{o['name']}_ — {mark}. {o['reason'].strip()}")
+        out.append("")
+    if d.get("consequences"):
+        out.append("**Consequences.**\n")
+        out += [f"- {c.strip()}" for c in d["consequences"]]
+        out.append("")
+    if d.get("falsifier"):
+        out.append(f"**What would falsify this.** {d['falsifier'].strip()}\n")
+    cites = [("Applies", d.get("applies")), ("Departs from", d.get("departs_from"))]
+    bearing = "; ".join(f"{label} {', '.join('A' + a.rsplit('/', 1)[-1] for a in ids)}"
+                        for label, ids in cites if ids)
+    if bearing:
+        out.append(f"**Bearing on the Charter.** {bearing}.\n")
+    if d.get("supersedes"):
+        out.append("**Supersedes.** "
+                   + ", ".join(_link(rows, s) for s in d["supersedes"]) + "\n")
+    return "\n".join(out)
+
+
+def decisions():
+    """The decision record: an index that routes, and one page per entry.
+
+    Progressive Disclosure applied to the record itself. Sixty-six entries in one
+    page is a file nobody loads to answer one question, and the reasoning a
+    reader wants is always a single entry's. So the index carries what is needed
+    to *choose* — number, question, status, date — and is deliberately
+    insufficient to apply anything, and each entry owns its own page.
+
+    The page names are the reference: `.meta/decisions/DR-011.md` is what a
+    conversation types as `@DR-011`, which is why the file is named for the
+    number alone and not for a slug of its title.
+
+    A withdrawn entry keeps its page — a number is a stable identifier, and a
+    citation must resolve — and is listed under Holes rather than in the record.
     """
     abox = load("assertions/decisions.yaml") or {}
     rows = abox.get("decisions") or []
@@ -231,62 +288,55 @@ def decisions():
            "`status` says how far it has got. A number is a\n"
            "**stable identifier** and is never reused: an entry that turned out to record a\n"
            "narrative rather than a foreclosure is withdrawn, and its number stays a hole\n"
-           "at the foot of this page.\n"]
+           "at the foot of this page.\n",
+           "**This page routes and does not restate.** Each entry is its own file under\n"
+           "[`decisions/`](decisions/), named for its number so a conversation can reach it\n"
+           "as `@.meta/decisions/DR-011.md`. The line here tells you an entry exists and\n"
+           "what question it answered; only the entry is sufficient to apply it.\n",
+           "| Entry | The question it settled | Status | Decided |",
+           "| :-- | :-- | :-- | :-- |"]
+    files = {}
     holes = []
     for d in rows:
+        num = d["id"].rsplit("/", 1)[-1]
+        files[f"decisions/DR-{num}.md"] = _decision_page(d, rows, projects)
         if d.get("status") == "WITHDRAWN":
             holes.append(d)
             continue
-        out.append(f"### {d['name']}\n")
-        stamp = d.get("decided") or ""
-        if d.get("recorded") and d["recorded"] != stamp:
-            stamp = f"{stamp} — recorded {d['recorded']}"
-        line = f"*{stamp}*" if stamp else ""
-        if d.get("project"):
-            line += f" · {projects.get(d['project'], d['project'])}"
+        status = (d.get("status") or "").capitalize()
         if d.get("status") == "SUPERSEDED":
-            line += f" · **Superseded by** {_ref(rows, d['superseded_by'])}"
-        if line:
-            out.append(line.strip() + "\n")
-        out.append(d["rationale"].strip() + "\n")
-        if d.get("options"):
-            out.append("**Options considered.**\n")
-            for o in d["options"]:
-                mark = "chosen" if o.get("chosen") else "rejected"
-                out.append(f"- _{o['name']}_ — {mark}. {o['reason'].strip()}")
-            out.append("")
-        if d.get("consequences"):
-            out.append("**Consequences.**\n")
-            out += [f"- {c.strip()}" for c in d["consequences"]]
-            out.append("")
-        if d.get("falsifier"):
-            out.append(f"**What would falsify this.** {d['falsifier'].strip()}\n")
-        cites = [("Applies", d.get("applies")), ("Departs from", d.get("departs_from"))]
-        bearing = "; ".join(f"{label} {', '.join('A' + a.rsplit('/', 1)[-1] for a in ids)}"
-                            for label, ids in cites if ids)
-        if bearing:
-            out.append(f"**Bearing on the Charter.** {bearing}.\n")
-        if d.get("supersedes"):
-            out.append("**Supersedes.** "
-                       + ", ".join(_ref(rows, s) for s in d["supersedes"]) + "\n")
+            status = f"Superseded by {_link(rows, d['superseded_by'], 'decisions/')}"
+        title = d["name"].split(" · ", 1)[-1]
+        if d.get("project"):
+            title += f" · {projects.get(d['project'], d['project'])}"
+        out.append(f"| [DR-{num}](decisions/DR-{num}.md) | {title} | {status} | {d.get('decided') or ''} |")
+    out.append("")
     if holes:
         out.append("## Holes\n")
         out.append("Numbers that were issued and are not decisions. They are never reused, and\n"
                    "the prose is kept: a paragraph that was worth writing does not stop being\n"
                    "true because it turned out to foreclose nothing.\n")
         for d in holes:
-            out.append(f"### {d['name']} — withdrawn\n")
-            out.append(d["withdrawn_because"].strip() + "\n")
-            out.append("<details><summary>What the entry holds</summary>\n")
-            out.append(d["rationale"].strip() + "\n")
-            out.append("</details>\n")
-    return "\n".join(out)
+            num = d["id"].rsplit("/", 1)[-1]
+            why = " ".join(d["withdrawn_because"].strip().split())
+            out.append(f"- [DR-{num}](decisions/DR-{num}.md) — withdrawn. "
+                       + why.split(". ")[0].rstrip(".") + ".")
+        out.append("")
+    files["decisions.md"] = "\n".join(out)
+    return files
 
 
-def _ref(rows, ident):
+def _link(rows, ident, prefix=""):
+    """A supersession names another entry, and now that entry is a page.
+
+    Rendered as a link rather than bare text, because the reference is the point:
+    the reader who has just been told this was superseded wants the entry that
+    superseded it, not its number.
+    """
     for d in rows:
         if d["id"] == ident:
-            return d["name"].split(" · ")[0]
+            num = d["id"].rsplit("/", 1)[-1]
+            return f"[{d['name'].split(' · ')[0]}]({prefix}DR-{num}.md)"
     return ident
 
 
@@ -415,21 +465,60 @@ TARGETS = {"disciplines.md": disciplines,
            "../.github/ISSUE_TEMPLATE/challenge.md": issue_template,
            "../.claude/skills/pr-first/SKILL.md": pr_first_skill}
 
+# Directories whose every `.md` is generated, so a file left behind when its
+# source went away is a stale copy rather than someone's page. A target that
+# renders many files needs this: dropping an entry stops writing its file, and
+# nothing else would notice the orphan.
+SWEPT = ("decisions",)
+
+
+def rendered():
+    """Every generated path, relative to `.meta/`, mapped to its content.
+
+    A target renders one file or a set of them. Both callers — the writer below
+    and `check.py`'s staleness check — want the flat mapping, so the fan-out is
+    resolved once here rather than in each of them.
+    """
+    out = {}
+    for name, fn in TARGETS.items():
+        result = fn()
+        if result is None:
+            continue
+        out.update(result if isinstance(result, dict) else {name: result})
+    return out
+
+
+def orphans(paths):
+    """Generated files under a swept directory that nothing renders."""
+    want = {(META / p).resolve() for p in paths}
+    return sorted(f for d in SWEPT for f in (META / d).glob("*.md")
+                  if f.resolve() not in want)
+
+
+def unrendered():
+    """Targets that produce nothing and yet have a file on disk."""
+    return [f"{name} exists but nothing renders it" for name, fn in TARGETS.items()
+            if fn() is None and (META / name).exists()]
+
+
 if __name__ == "__main__":
     check = "--check" in sys.argv
-    stale = []
-    for name, fn in TARGETS.items():
-        rendered, path = fn(), META / name
-        if rendered is None:
-            continue
-        want = rendered.rstrip("\n") + "\n"
+    pages = rendered()
+    stale = unrendered()
+    for name, text in pages.items():
+        path, want = META / name, text.rstrip("\n") + "\n"
         if check:
             if not path.exists() or path.read_text() != want:
                 stale.append(name)
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(want)
-            print(f"wrote {path.resolve().name}")
+    for path in orphans(pages):
+        if check:
+            stale.append(f"{path.relative_to(META)} is generated and nothing renders it")
+        else:
+            path.unlink()
     if check:
         print("stale: " + ", ".join(stale) if stale else "up to date")
         sys.exit(1 if stale else 0)
+    print(f"wrote {len(pages)} files")

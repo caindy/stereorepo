@@ -24,7 +24,7 @@ for what it owns. This file routes. It does not restate.
 | a schema, or checking one | [`schemas.md`](schemas.md), then the module its own load map names |
 | how work is meant to proceed here | [`disciplines.md`](disciplines.md) |
 | a rule you can cite, or check something against | [`charter.md`](charter.md) — the Articles |
-| **why** something is built this way | [`decisions.md`](decisions.md) — find its DR |
+| **why** something is built this way | [`decisions.md`](decisions.md) — find its DR, then read [`decisions/DR-0nn.md`](decisions/) |
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
 | changing or defending a rule | its DR in `assertions/decisions.yaml`, **and** the file that states it |
 | what is intended but unbuilt, or still open | [`roadmap.md`](roadmap.md) |

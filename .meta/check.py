@@ -489,16 +489,13 @@ if __name__ == "__main__":
 
     sys.path.insert(0, str(META))
     import render
-    stale = []
-    for name, fn in render.TARGETS.items():
-        rendered, path = fn(), META / name
-        if rendered is None:
-            # Nothing to render here, so nothing should have been rendered.
-            if path.exists():
-                stale.append(f"{name} exists but nothing renders it")
-            continue
-        if not path.exists() or path.read_text() != rendered.rstrip("\n") + "\n":
-            stale.append(name)
+    pages = render.rendered()
+    stale = render.unrendered()
+    stale += [name for name, text in pages.items()
+              if not (META / name).exists()
+              or (META / name).read_text() != text.rstrip("\n") + "\n"]
+    stale += [f"{p.relative_to(META)} is generated and nothing renders it"
+              for p in render.orphans(pages)]
     print(("x  " if stale else "ok ") + "rendered prose" + (f": {', '.join(stale)}" if stale else ""))
     failed |= bool(stale)
 

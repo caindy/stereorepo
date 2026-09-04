@@ -1,6 +1,6 @@
 # solorepo's decision record: every choice that removed an alternative, and why.
 #
-# `decisions.md` is rendered from this file. Add an entry when the question is
+# `decisions.md` and one page per entry under `decisions/` are rendered from this file. Add an entry when the question is
 # settled — `status` carries whether the answer is merely recommended or in
 # force — and never renumber: a withdrawn entry leaves a hole,
 # the same rule the Charter's Articles carry.
@@ -3143,3 +3143,64 @@ decisions:
       judgement, and the failure mode of gating it is the one A17 already
       demonstrated: a check that fires on everything and is triaged by hand is a
       check that gets skipped. A form asks; only a claim can be checked.
+  - id: work:decision/077
+    name: "DR-077 · The decision record is an index that routes, and one page per entry"
+    status: ADOPTED
+    decided: "2026-09-04"
+    recorded: "2026-09-04"
+    applies:
+      - work:article/12
+    options:
+      - name: One page, as it was
+        chosen: false
+        reason: >-
+          Seventy-six entries in twenty-six hundred lines. A reader wanting one
+          entry loads all of them, and a conversation wanting to cite one has
+          nothing smaller than the whole record to point at.
+      - name: An index of numbers alone, entries in the assertions
+        chosen: false
+        reason: >-
+          The YAML is the source and stays it, but it is not the reading surface —
+          a reader sent there gets the record's storage rather than its prose, and
+          the rendering exists precisely because those are not the same thing.
+      - name: An index that routes, and a page per entry
+        chosen: true
+        reason: >-
+          It is Progressive Disclosure with the entries as satellites. The index
+          carries what is needed to choose — number, question, status, date — and
+          nothing sufficient to apply, and the page named for the number is what a
+          conversation references.
+    consequences:
+      - >-
+        Pages are named `DR-0nn.md` and nothing else, so `@.meta/decisions/DR-011.md`
+        resolves by typing the number. A slug of the title would make the name
+        depend on prose that gets edited.
+      - >-
+        A withdrawn entry keeps its page. The number is a stable identifier and a
+        citation to a hole must reach the account of why it is one.
+      - >-
+        `render.py` renders sets of files, not only single ones, and sweeps
+        `decisions/` for pages nothing renders — a dropped entry would otherwise
+        leave its file behind with nothing to notice it.
+    falsifier: >-
+      An index line that has to be read alongside the page to be understood, or a
+      page that cannot be read without the index. Either would mean the split ran
+      through the middle of a statement rather than between two.
+    rationale: |-
+      Progressive Disclosure was adopted in DR-022 and applied to `.meta/README.md`,
+      which routes and does not restate. The decision record was never held to it.
+      It grew to seventy-six entries in one page, which is the shape the Discipline
+      exists to prevent: a file loaded in full to answer a question about one line
+      of it.
+
+      **The entry is the unit, and it always was.** Every citation in this
+      repository is to a number, every reference resolves to one entry, and no
+      reader has ever wanted the record end to end. The page was one file because
+      rendering one file was what `render.py` could do, which is a fact about the
+      renderer rather than about the record.
+
+      So the index carries the number, the question it settled, its status and its
+      date — enough to choose, and deliberately not enough to apply — and each
+      entry owns its page. The page names carry the reference: a conversation says
+      `@.meta/decisions/DR-011.md` and gets one entry rather than the record, which
+      is the interpretability the split was asked for.
