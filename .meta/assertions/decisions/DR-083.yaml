@@ -1,0 +1,51 @@
+decisions:
+  - id: work:decision/083
+    name: "DR-083 · The ruleset is read, so the pair of job names is checked rather than remembered"
+    challenge: work:challenge/4
+    status: ADOPTED
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-check-pr
+    alternatives:
+      - name: A comment at the point of edit
+        chosen: false
+        reason: >-
+          What was there: "rename in both places or in neither". It is prose
+          standing where a control belongs, it is read only by someone already
+          editing the line, and A8 says an artifact nothing checks against
+          anything is not a control however diligently it is written.
+      - name: Generate the workflow's job names from the ruleset
+        chosen: false
+        reason: >-
+          It would remove the duplication rather than detect it, and it inverts
+          the ownership: the ruleset is configuration held by GitHub and the
+          workflow is source. Generating source from a setting nobody can diff
+          is worse than two names and a check.
+      - name: Read the ruleset and compare
+        chosen: true
+        reason: >-
+          `check_pr.py` already talks to GitHub, and `repos/{nwo}/rules/branches/main`
+          needs no more permission than it has. What it costs is a check that
+          cannot run on a fork or without the ruleset readable — which it says,
+          loudly and unmarked, rather than passing.
+    consequences:
+      - >-
+        Issue #4 is answered. The failure it names — a renamed job leaving the
+        merge gate waiting on a context nothing produces — now fails the pull
+        request instead of blocking it silently.
+      - >-
+        The comment in `gate.yml` states what is checked rather than instructing
+        someone to remember.
+    falsifier: >-
+      A rename that passes because the ruleset was unreadable at the time. The
+      check would then be reporting on its own access rather than on the pair.
+    rationale: |-
+      Recorded after the fact, which is the gap A11 names: the choice was made
+      and built inside another change and had no entry of its own until the
+      record was asked which decisions served which Challenge, and this one
+      answered nothing.
+
+      That is the argument for the link rather than against the entry. A
+      decision taken under someone else's coat-tails is invisible exactly
+      because nothing was looking for it.

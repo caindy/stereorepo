@@ -39,6 +39,7 @@ imports:
   - core
   - disciplines
   - structure
+  - purpose
 
 enums:
 
@@ -214,6 +215,7 @@ classes:
         "do nothing" is an option and it has a reason.
     slots:
       - status
+      - challenge
       - project
       - context
       - alternatives

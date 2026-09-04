@@ -9,6 +9,7 @@ same way into a skill (DR-060).
 
     uvx --with pyyaml python .meta/render.py           # write
     uvx --with pyyaml python .meta/render.py --check   # fail if stale
+    uvx --with pyyaml python .meta/render.py --landed 11   # what a Challenge got
 
 Definitions in the vocabulary are one-line glosses. The full reasoning stays on
 the class, per Literate Programming; these are for recognising a term, not for
@@ -262,6 +263,46 @@ def _decision_slots():
     return (load("work/decisions.yaml") or {}).get("slots") or {}
 
 
+def landed(number):
+    """What a Challenge got, rendered from the entries taken under it.
+
+    The account of a finished piece of work is not new prose: every line of it is
+    already a `consequence` on some Decision, and writing it again by hand is the
+    copy that flatters. So it is generated, and it is **exactly as complete as the
+    record** — a decision taken under another change's coat-tails is missing here,
+    which is the point rather than a defect.
+
+    Prints rather than writes. It is addressed to a pull request at merge, so it
+    goes through the channel that signs:
+
+        uvx --with pyyaml python .meta/render.py --landed 11 | .meta/say comment 15
+    """
+    challenges = {c["id"]: c for path in
+                  sorted((META / "assertions" / "challenges").glob("*.yaml"))
+                  for c in (yaml.safe_load(path.read_text()) or {}).get("challenges") or []}
+    ident = f"work:challenge/{number}"
+    if ident not in challenges:
+        return f"No Challenge {ident} is asserted."
+    ch = challenges[ident]
+    rows = [d for d in record() if d.get("challenge") == ident]
+    out = [f"## What landed for #{number} — {ch['name']}\n"]
+    if not rows:
+        out.append("No decision names this Challenge.\n")
+        return "\n".join(out)
+    out.append(f"{len(rows)} decisions, and what each of them changed. Generated from the\n"
+               f"record: an entry missing here was taken without one.\n")
+    for d in rows:
+        num = d["id"].rsplit("/", 1)[-1]
+        head = f"**[DR-{num}]({RECORD.format(num)}) · {d['name'].split(' · ', 1)[-1]}**"
+        if d.get("status") != "ADOPTED":
+            head += f" — {d['status'].lower()}"
+        out.append(head + "\n")
+        out += [f"- {c.strip()}" for c in (d.get("consequences") or
+                                           ["No consequences recorded."])]
+        out.append("")
+    return "\n".join(out)
+
+
 def decisions():
     """The index to the record, and the only thing rendered from it (DR-082).
 
@@ -492,6 +533,9 @@ def unrendered():
 
 
 if __name__ == "__main__":
+    if "--landed" in sys.argv:
+        print(landed(sys.argv[sys.argv.index("--landed") + 1]))
+        sys.exit(0)
     check = "--check" in sys.argv
     pages = rendered()
     stale = unrendered()

@@ -1,0 +1,79 @@
+decisions:
+  - id: work:decision/084
+    name: "DR-084 · A decision names its Challenge, and what landed is rendered from the record"
+    challenge: work:challenge/11
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/11
+    enacted_in:
+      - work:artifact/meta-render
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-work-purpose
+    alternatives:
+      - name: Write the summary as a comment at merge
+        chosen: false
+        reason: >-
+          It is where the argument is, and every line of it already exists as a
+          `consequence` on some Decision — so it is a copy, unchecked, of the
+          thing the record was built to hold. Worse, a hand-written account is
+          complete whether or not the record is, which hides the omission it
+          should expose.
+      - name: A checklist in the Issue, ticked as work lands
+        chosen: false
+        reason: >-
+          The Issue is the right place and the tick is the wrong mechanism. A box
+          ticked because somebody remembers is the convention-by-restraint DR-050
+          rules out. `AcceptanceCriterion` gains `shown_by` so a criterion names
+          what demonstrates it — but a Definition of Done belongs to a Goal, and
+          asserting one for a scaffold Challenge would mean inventing a deadline.
+      - name: Read the decisions out of the pull request body
+        chosen: false
+        reason: >-
+          DR-076 already puts them there, so nothing new is asserted. But a body
+          is prose on GitHub, it is parsed rather than resolved, and it is
+          per-pull-request — a Challenge served by two of them cannot be summarised
+          at all, which is exactly the case that prompted this.
+      - name: A Decision names its Challenge
+        chosen: true
+        reason: >-
+          One slot, reusing the `challenge` relation `Goal` already has, so the
+          entries that served a Challenge are gathered by asking rather than by
+          keeping a list. What it costs is that Challenges must be asserted —
+          one file per Issue — and that an entry which names none is invisible to
+          the summary.
+    consequences:
+      - >-
+        `render.py --landed <n>` prints the decisions taken under a Challenge and
+        what each changed. It is piped through `.meta/say`, so the account is
+        generated and signed rather than composed in a comment box.
+      - >-
+        PR First gains a step: post what landed before merging.
+      - >-
+        The summary is exactly as complete as the record, which is the property
+        that makes it worth having. Running it against #11 is what found DR-083 —
+        a decision built inside another change with no entry of its own.
+      - >-
+        `Challenge` has instances for the first time. Two are asserted, for the
+        Issues that decisions actually name.
+      - >-
+        `AcceptanceCriterion.shown_by` is added and unused. What it needs is a
+        Definition of Done, which belongs to a Goal, which requires a deadline —
+        so the checklist waits on a decision about where criteria attach.
+    falsifier: >-
+      A summary that reads as complete while the work it describes had decisions
+      nobody recorded. The generation would then be laundering the record's gaps
+      into an account that looks authoritative.
+    rationale: |-
+      Christopher, on a summary written in conversation: preserve this kind of
+      thing in the record.
+
+      It was already there. Four and a half of its five points were `consequences`
+      on entries taken that week, and what the summary added was the gathering —
+      which is a query the record could not answer, because nothing said which
+      Challenge an entry served.
+
+      So the link goes in and the account is rendered. The half-point that was not
+      in the record is the whole argument for doing it this way: the ruleset check
+      had been built, had closed an Issue, and had no entry. A hand-written summary
+      would have described it fluently and left the hole exactly where it was.

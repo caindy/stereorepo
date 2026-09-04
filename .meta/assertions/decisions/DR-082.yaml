@@ -1,6 +1,7 @@
 decisions:
   - id: work:decision/082
     name: "DR-082 · An entry is its assertion file, and nothing renders a second copy of it"
+    challenge: work:challenge/11
     status: ADOPTED
     supersedes:
       - work:decision/077

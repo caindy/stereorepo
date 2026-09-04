@@ -393,6 +393,13 @@ disciplines:
         a tracker item with no relationship to the outcome, which goes stale the
         moment the approach moves under it.
       - >-
+        Post what landed for the Challenge before merging, generated and never
+        typed: `render.py --landed <n>` renders the decisions taken under it and
+        what each changed, and the channel posts it. Written by hand it is a
+        summary of consequences the record already holds, which is the copy that
+        flatters — and it would be complete whether or not the record was, which
+        is the one property the account must not have.
+      - >-
         Link the merge back to it, so the trail from a line of code to its
         account survives in the clone. A pull request is **merged, never
         abandoned**: it exists because a Challenge does, and a Challenge is a real

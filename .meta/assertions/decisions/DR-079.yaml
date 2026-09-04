@@ -1,6 +1,7 @@
 decisions:
   - id: work:decision/079
     name: "DR-079 · An enacted artifact is an entity, not a path in a string"
+    challenge: work:challenge/11
     status: ADOPTED
     applies:
       - work:article/12

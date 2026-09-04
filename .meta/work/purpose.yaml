@@ -82,6 +82,11 @@ slots:
 
   # Definition of Done
 
+  shown_by:
+    description: >-
+      What demonstrates this criterion met — a command, a check, a count that
+      can be taken. The same job `checked_by` does for an Article.
+
   criteria:
     description: The criteria that, all being met, make the Goal done.
     range: AcceptanceCriterion
@@ -118,7 +123,10 @@ slots:
     multivalued: true
 
   challenge:
-    description: The Challenge the Goal addresses.
+    description: >-
+      The Challenge this addresses. A Goal commits to one; a Decision was taken
+      under one, which is how the entries that served a Challenge are gathered
+      without anyone keeping a list.
     range: Challenge
 
   definition_of_done:
@@ -168,11 +176,16 @@ classes:
     description: >-
       One checkable condition in a Definition of Done. State the metric and
       target where the criterion is quantitative.
+
+      `shown_by` is what makes it a criterion rather than a hope: a box ticked
+      because somebody remembers is the convention-by-restraint DR-050 rules
+      out, and a criterion nothing can demonstrate cannot be met, only asserted.
     slots:
       - statement
       - metric
       - target_value
       - unit
+      - shown_by
     slot_usage:
       statement:
         required: true

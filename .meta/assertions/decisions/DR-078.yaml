@@ -1,6 +1,7 @@
 decisions:
   - id: work:decision/078
     name: "DR-078 · A decision names the artifact where its rule lives"
+    challenge: work:challenge/11
     status: ADOPTED
     applies:
       - work:article/12

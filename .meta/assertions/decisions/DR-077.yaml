@@ -1,6 +1,7 @@
 decisions:
   - id: work:decision/077
     name: "DR-077 · The decision record is an index that routes, and one page per entry"
+    challenge: work:challenge/11
     status: ADOPTED
     applies:
       - work:article/12

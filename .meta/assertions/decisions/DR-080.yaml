@@ -1,6 +1,7 @@
 decisions:
   - id: work:decision/080
     name: "DR-080 · A rationale carries what the slots cannot"
+    challenge: work:challenge/11
     status: ADOPTED
     applies:
       - work:article/12

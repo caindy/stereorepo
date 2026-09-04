@@ -1,6 +1,7 @@
 decisions:
   - id: work:decision/081
     name: "DR-081 · The record keeps no dates, and what was on the table is an alternative"
+    challenge: work:challenge/11
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-work-decisions

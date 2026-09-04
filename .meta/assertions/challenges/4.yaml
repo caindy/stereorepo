@@ -1,0 +1,8 @@
+challenges:
+  - id: work:challenge/4
+    name: Renaming a workflow job silently disables a required status check
+    challenge_type: DEFECT
+    description: >-
+      `main`'s ruleset names its required status checks by job name. Renaming a
+      job in the workflow fails nothing — it removes a required check that can
+      then never report, and every merge blocks on a context nothing produces.
