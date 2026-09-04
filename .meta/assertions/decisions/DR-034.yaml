@@ -1,0 +1,32 @@
+decisions:
+  - id: work:decision/034
+    name: "DR-034 · `template/` holds the replacements, and the gate catches what is left unfilled"
+    status: ADOPTED
+    alternatives:
+      - name: "Template the whole repository, as python_bootstrap does"
+        chosen: false
+        reason: "Our root is already portfolio-shaped, so a full template would be a near-copy of `.meta/`, and the copy would drift."
+      - name: "Template only the files Specialization must replace"
+        chosen: true
+        reason: "It gets the template-as-data benefit where data beats instruction, and adds no duplication."
+    consequences:
+      - "Two checks join the gate: surviving placeholders, and template parses."
+      - "The skeletons carry two refusals: `products: []` and `personas: []` are truthful until there is research."
+    enacted_in:
+      - work:artifact/meta-check
+    rationale: |-
+      `template/` is not a full tree. `python_bootstrap` templates a whole
+      repository because its root is a Python project and its template is
+      a generated one — genuinely different content. Our root is already
+      portfolio-shaped, so a full template would be a near-copy of
+      `.meta/`, and the copy would drift.
+
+      What it holds is the files Specialization must *replace* rather than
+      copy. Getting a skeleton right is something you can look at; "empty
+      the decision record" is an instruction you can get wrong, which is
+      what testing the procedure found.
+
+      The skeletons carry two refusals worth keeping: `products: []` says
+      a Product needs a researched Persona and that satisfying the schema
+      with an invented one defeats the point, and `personas: []` says an
+      empty file is a truthful one until there is research to put in it.

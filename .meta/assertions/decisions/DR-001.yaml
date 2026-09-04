@@ -1,0 +1,12 @@
+decisions:
+  - id: work:decision/001
+    name: "DR-001 · `.meta/` is the staging ground"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-readme
+      - work:artifact/agents
+    rationale: |-
+      Structure-explaining tooling and Specialization machinery live in `.meta/`;
+      product material lives everywhere else. solorepo is meant to be cloned, so the
+      machinery that performs and explains that Specialization has to be separable from
+      the content it acts on.

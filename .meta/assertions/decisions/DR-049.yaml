@@ -1,0 +1,23 @@
+decisions:
+  - id: work:decision/049
+    name: "DR-049 · ADRs are the Project level of Written Decisions"
+    status: ADOPTED
+    applies:
+      - work:article/11
+      - work:article/12
+    consequences:
+      - "Forms and seeds use different placeholder markers, and the difference is load-bearing."
+      - "The Portfolio's record was to stay prose — superseded by DR-058."
+    enacted_in:
+      - work:artifact/meta-work-decisions
+    rationale: |-
+      Two levels of one Discipline, and choosing between them is a
+      judgement it now carries. A Project decision filed in the
+      Portfolio's record is buried among matters its readers do not share;
+      a Portfolio decision filed in a Project's ADR is hidden from every
+      other Project.
+
+      `decided` and `recorded` are separate dates because the gap between
+      them is how long the reasoning lived only in someone's head, which
+      A11 says is not yet a decision at all. Making the gap visible is
+      what stops it being comfortable.

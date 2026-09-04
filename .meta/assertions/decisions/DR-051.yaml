@@ -1,0 +1,25 @@
+decisions:
+  - id: work:decision/051
+    name: "DR-051 · The vocabulary is grouped, because a term nobody can find is a term nobody uses"
+    status: ADOPTED
+    applies:
+      - work:article/7
+    enacted_in:
+      - work:artifact/meta-vocabulary
+    rationale: |-
+      Christopher went looking for **Agency** and could not find it. It
+      had not been deleted — it was at line 60 of a flat table grown to 45
+      terms, where the ontology of work is now outnumbered by the
+      vocabulary of process. Dilution, not loss, and the first failure of
+      Progressive Disclosure inside a page rather than between files.
+
+      Enumerating found three Disciplines with no Concept at all, the two
+      oldest in the repository among them. They were adopted before the
+      vocabulary was an artifact and nothing went back for them, which is
+      drift only enumeration finds.
+
+      Worth recording about the method: the grouping was first attempted
+      by slicing between `- id:` anchors, and thirteen of forty-one
+      concepts were silently missed while the pass reported success. A
+      transformation that reports success without stating what it covered
+      is A7 violated in a script rather than in a gate.

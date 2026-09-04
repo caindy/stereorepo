@@ -1,0 +1,18 @@
+decisions:
+  - id: work:decision/014
+    name: "DR-014 · A solorepo is a monorepo: one portfolio, one bounded context, one language"
+    status: ADOPTED
+    consequences:
+      - "The repo boundary and the language boundary become the same boundary."
+      - "DR-013's framing of specializing into a new *product* repo is corrected: Specialization produces a Portfolio."
+    enacted_in:
+      - work:artifact/meta-check
+    rationale: |-
+      One product **portfolio** holds one **bounded context** and therefore one
+      **Ubiquitous Language**, and contains multiple **products**, which may be
+      polyglot projects. This is a deliberate departure from the DDD literature, where
+      a system carries several bounded contexts: the constraint is what makes a single
+      Ubiquitous Language enforceable across everything one person builds. It corrects
+      the framing of DR-013, which spoke of specializing into a new *product* repo.
+      Specialization produces a *portfolio*. The Ubiquitous Language meant here is the
+      portfolio's **own domain** language; see DR-015.

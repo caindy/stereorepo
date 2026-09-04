@@ -1,0 +1,52 @@
+decisions:
+  - id: work:decision/070
+    name: "DR-070 · A decision carries consequences; a rule lives in an Article or a step"
+    status: ADOPTED
+    applies:
+      - work:article/12
+    alternatives:
+      - name: Let a decision carry a rule, and cite it
+        chosen: false
+        reason: >-
+          It is what four entries were doing, and it puts the binding text in the
+          one artifact that is explicitly **not authoritative**. A reader
+          following the citation lands in a paragraph of reasoning about a moment,
+          rather than in a claim that can be held against an artifact.
+      - name: Route the rule, and cite where it lives
+        chosen: true
+        reason: >-
+          An Article is checked and a step is followed; a decision explains why
+          either exists. What it costs is that nothing enforces the citation —
+          the phrasings are too many to match, and counting them is the
+          instrument A17 already found wanting.
+    consequences:
+      - >-
+        Written Decisions gains the step, and one that had been homeless: never
+        invent a rejection. It was cited three times as belonging to DR-050 and
+        was written down nowhere else.
+      - >-
+        Four citations are corrected to name Written Decisions or A15 rather than
+        the decision that produced them.
+      - >-
+        The test for whether a rule is routed is now cheap to apply by hand: if a
+        sentence cites a DR for what must be done, the rule has no home.
+    falsifier: >-
+      A rule that fits neither an Article nor a step, and is still binding. It
+      would mean the taxonomy is missing a kind, rather than that the citation
+      was lazy.
+    enacted_in:
+      - work:artifact/meta-disciplines
+    rationale: |-
+      Christopher, reading DR-066: *decisions do not carry rules; they
+      carry consequences which beget rules, i.e. Articles.*
+
+      The phrasing that gave it away — "DR-065's rule" — appeared four
+      times, and the diagnosis is worse than sloppy wording. A rule cited
+      from a decision is a rule that was never routed anywhere. `adr.md`
+      opens by saying a decision record is *not authoritative*, so a
+      citation pointing back into the record points at the one artifact
+      that disclaims authority.
+
+      Following the four proved it. Three named "a rejection is never
+      invented" as DR-050's, and it existed in no Discipline and no
+      Article — binding, cited, and homeless since the day it was written.

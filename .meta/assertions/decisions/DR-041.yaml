@@ -1,0 +1,31 @@
+decisions:
+  - id: work:decision/041
+    name: "DR-041 · The `stakeholders/` taxonomy, and why it needs no term of its own"
+    status: ADOPTED
+    alternatives:
+      - name: "Mint `stakeholder` as a term"
+        chosen: false
+        reason: "Its two halves are already named — a customer is a Persona, an internal stakeholder is a Role — so the directory groups two existing concepts rather than introducing a third."
+      - name: "Two directories over the seam the ontology already has"
+        chosen: true
+        reason: "`customers/` holds the research a Persona is drawn from, `internal/` the Roles. It gives Cooper's research-over-invention rule somewhere to bite."
+    consequences:
+      - "A Persona with no material under `stakeholders/` was invented, which gives the Discipline a check it did not have."
+      - "`external/` is recorded in the roadmap rather than kept as an empty folder."
+    enacted_in:
+      - work:artifact/stakeholders-readme
+    rationale: |-
+      The split follows a seam the ontology already has, which is why
+      "stakeholder" needs no minting: a customer is modelled as a Persona,
+      an internal stakeholder as a Role.
+
+      What lives here is the research, not the model. A Persona is
+      asserted in `.meta/assertions/personas.yaml`; this holds what that
+      assertion was drawn from. The two are not duplicates — one is the
+      distilled model, the other its provenance — and the distinction is
+      what makes Cooper's rule enforceable rather than aspirational.
+      "Research over invention" means nothing without somewhere to put the
+      research.
+
+      `external/` is recorded in the roadmap rather than kept as an empty
+      folder. An empty directory is not a placeholder for an idea.

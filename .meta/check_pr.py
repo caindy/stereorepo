@@ -386,6 +386,41 @@ def unanswered(nodes):
     return problems
 
 
+def repo():
+    return gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
+
+
+WORKFLOW = META.parent / ".github" / "workflows" / "gate.yml"
+
+
+def required_contexts():
+    """The status checks `main`'s ruleset waits for, and the jobs that report them.
+
+    A comment used to say "rename in both places or in neither", which is not a
+    control: renaming a job leaves the ruleset waiting on a context nothing
+    produces, and every merge blocks with no clue why. The ruleset is readable,
+    so it is read.
+
+    Loud and unmarked when it cannot run — a fork, or a token without
+    `administration: read`, sees no rulesets and is told so rather than passed.
+    """
+    jobs = re.findall(r"^    name: (.+)$", WORKFLOW.read_text(), re.M)
+    try:
+        rules = gh("api", f"repos/{repo()}/rules/branches/main")
+    except SystemExit:
+        print("?  ruleset not readable from here; required contexts unchecked")
+        return []
+    contexts = sorted({c["context"]
+                       for r in rules if r["type"] == "required_status_checks"
+                       for c in r["parameters"]["required_status_checks"]})
+    if not contexts:
+        print("?  no required status checks on main; nothing to compare")
+        return []
+    missing = [c for c in contexts if c not in jobs]
+    return [f"main requires the status check '{c}', which no job in "
+            f"{WORKFLOW.name} reports" for c in missing]
+
+
 def from_github(ref):
     out = subprocess.run(["gh", "pr", "view", ref, "--json", "title,body"],
                          capture_output=True, text=True)
@@ -459,6 +494,7 @@ if __name__ == "__main__":
     if args.pr:
         problems += resolved_without_an_answer(args.pr)
         problems += unsigned_commits(args.pr)
+        problems += required_contexts()
     for p in problems:
         print(f"x  {p}")
     print(f"{'x  ' if problems else 'ok '}pull request"

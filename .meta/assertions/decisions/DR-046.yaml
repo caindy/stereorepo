@@ -1,0 +1,34 @@
+decisions:
+  - id: work:decision/046
+    name: "DR-046 · Bootstraps live in the monorepo, and Specialization picks a language"
+    status: ADOPTED
+    supersedes:
+      - work:decision/045
+    alternatives:
+      - name: "A Bootstrap in its own repository"
+        chosen: false
+        reason: "It needs its own copy of the Disciplines it implements, and copies drift."
+      - name: "Bootstraps in the monorepo, under `bootstraps/`"
+        chosen: true
+        reason: "It reads the same `assertions/imported/disciplines.yaml` everything else does, and gives solorepo a second Product delivered to a different reader."
+    consequences:
+      - "Specialization gains a step: choose the languages, and copy in those Bootstraps' applied disciplines."
+      - "`~/code/rust_bootstrap` is superseded and should be deleted; by Nothing Unconsumed a duplicate is debris."
+    enacted_in:
+      - work:artifact/specialize
+    rationale: |-
+      A Bootstrap implements Disciplines it must not restate, and one in
+      its own repository needs its own copy of them. Copies drift. In the
+      monorepo it reads the same `assertions/imported/disciplines.yaml`
+      everything else does, so an implementation cannot fall out of step
+      with what it implements.
+
+      It also makes the monorepo claim more than a word:
+      `bootstraps/rust/` is a second Product, delivered to a different
+      reader and released independently while sharing one Bounded Context
+      and one language.
+
+      A portfolio inherits what a Bootstrap *applies* — the gates, the
+      documentation layout, the seed project — not the Bootstrap itself,
+      which stays with the scaffold. That is the imported/own boundary
+      drawn in a second place.

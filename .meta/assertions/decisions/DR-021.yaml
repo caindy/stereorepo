@@ -1,0 +1,32 @@
+decisions:
+  - id: work:decision/021
+    name: "DR-021 · A Job to be Done states the user's job, and names a Persona"
+    status: ADOPTED
+    alternatives:
+      - name: "A Job to be Done names a Role"
+        chosen: false
+        reason: "A Role is a named set of Capabilities, which is a worker's role. A JTBD states the user's job."
+      - name: "A Job to be Done names a Persona"
+        chosen: true
+        reason: "It closes what DR-019 and DR-020 left open, and makes choosing a Role an explicit act rather than something implied by the Goal."
+    consequences:
+      - "An Agency's Role is no longer implied by its Goal."
+      - "Which of a Persona's END goals a JTBD serves is reachable but not stated; whether that edge earns its keep was left open, and DR-031 settled it."
+    enacted_in:
+      - work:artifact/meta-work-personas
+    rationale: |-
+      The original sketch had a Job to be Done specify a Role — a named
+      set of Capabilities, which is a *worker's* role. It states the
+      **user's** job, so it names a Persona.
+
+      The chain that results: a Persona is interrogated, which surfaces
+      END goals, which yield a Job to be Done, which a Goal commits to
+      serving by a deadline. The work Goal *serves* the End goal rather
+      than being one, because a Goal carries a Challenge and a user's goal
+      has none.
+
+      The consequence worth stating is that an Agency's Role is no longer
+      implied by its Goal. The old chain ran JTBD → Role → Agency, so the
+      worker's role fell out of the goal. Now the Persona says who the
+      work is for and the Role says who does it, which are independent
+      facts.

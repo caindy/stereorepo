@@ -29,7 +29,8 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   assertion, not the file.
 - Use the vocabulary from the ontology of work in preference to synonyms: a
   *Challenge*, not a ticket or story; an *Actor*, not a user or a bot.
-- When a question that demanded an answer is settled, add an entry to the decision record
-  in `.meta/assertions/decisions.yaml`, re-render, and commit it together with the
-  change. `.meta/decisions.md` and the entry pages under `.meta/decisions/` are
-  generated from it.
+- When a question that demanded an answer is settled, write it as
+  `.meta/assertions/decisions/DR-0nn.yaml`, re-render, and commit it with the
+  change — one commit per settled decision. `.meta/decisions.md` is an index
+  generated from them; the entry itself is the assertion file.
+- An empty directory carries a README saying what will live there.

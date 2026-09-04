@@ -1,0 +1,30 @@
+decisions:
+  - id: work:decision/018
+    name: "DR-018 · A Ubiquitous Language is a set of Concepts, not a set of Terms"
+    status: ADOPTED
+    alternatives:
+      - name: "Term with name, definition and an avoid list"
+        chosen: false
+        reason: "It handles many words for one concept and cannot state the hazard that matters here — one word for many concepts. A collision could not be written down."
+      - name: "SKOS Concept, with the label decoupled from the meaning"
+        chosen: true
+        reason: "The standard for exactly this, and it makes provenance structural: the stratum is read off `in_scheme` rather than kept in a field that can drift."
+    consequences:
+      - "The TermProvenance enum is deleted; the stratum is read off `in_scheme`."
+      - "Vocabularies solorepo does not own can be named as schemes and pointed at."
+    enacted_in:
+      - work:artifact/meta-ddd-skos
+    rationale: |-
+      DR-017 modelled a language as `Term`s carrying a name, a definition
+      and an `avoid` list. That cannot state the problem it most needs to:
+      `avoid` handles many words for one concept, but the hazard here is
+      **one word for many concepts**. "Skill" already denotes three
+      different things in scope at once — a Capability of kind SKILL, an
+      APM `skills` primitive, and the loose use for what APM calls a
+      `prompt`. If the unit of the model is the word, a collision cannot
+      even be written down.
+
+      SKOS is the standard for this, and its central move is decoupling
+      the concept from the label. Because schemes are first class,
+      vocabularies solorepo does not own can be named and pointed at,
+      which a three-valued provenance enum could not express.

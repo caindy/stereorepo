@@ -273,6 +273,17 @@ disciplines:
         conversation. Status carries the rest: recommended, or in force.
       - Say what was decided and why, not what changed. The diff already says what changed.
       - >-
+        Keep `rationale` to what the slots cannot hold. `alternatives` carries what was
+        rejected and why, `consequences` what is now true, `falsifier` what would
+        overturn it — a paragraph restating any of those is a second copy inside
+        the entry. What is left is the reasoning none of them reaches, and it is
+        usually short.
+      - >-
+        Never narrate the sequence of events. What happened on a change is the
+        pull request's, and an entry that recounts an afternoon buries the
+        foreclosure it exists to record — the chronology reads as authoritative,
+        goes stale first, and nothing checks it.
+      - >-
         Keep the reasoning, including what was tried and abandoned, so the next
         reader does not re-derive a rejected option.
       - >-

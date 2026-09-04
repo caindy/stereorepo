@@ -1,0 +1,10 @@
+decisions:
+  - id: work:decision/012
+    name: "DR-012 · Decisions are recorded in the repo"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-disciplines
+    rationale: |-
+      Design decisions and insights belong in the repository, not only in an assistant's
+      private memory. `AGENTS.md` at the root carries the overview and a directory of
+      pointers, with `CLAUDE.md` symlinked to it; this file records the rest.

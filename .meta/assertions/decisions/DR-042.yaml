@@ -1,0 +1,30 @@
+decisions:
+  - id: work:decision/042
+    name: "DR-042 · Modelling the Solo is a Discipline"
+    status: ADOPTED
+    alternatives:
+      - name: "Open Modelling"
+        chosen: false
+        reason: "Names the property that actually distinguishes it — external memory rather than private — and says nothing about what to do."
+      - name: "Modelling the Solo"
+        chosen: true
+        reason: "Unmistakable about what to do. The name is provisional; renaming costs one assertion and one Concept."
+    enacted_in:
+      - work:artifact/meta-disciplines
+    rationale: |-
+      An agent's model of the person it works with exists whether or not
+      it is written down. Writing it down is what makes it correctable and
+      transferable instead of a private guess that steers the work
+      invisibly — the solo can see how he is being read, and the next
+      agent picks the model up cold.
+
+      Its judgement is what separates a durable trait from a one-off: *a
+      correction made twice is a preference; made once it is a
+      correction*. The model cannot be correctable by its subject rather
+      than defended by its author unless it says which entries are
+      inference and which are evidence.
+
+      The solo's Persona is the exception to `stakeholders/`'s rule that a
+      Persona without research was invented: its subject is present and
+      can correct it, so it is a record of requirements rather than a
+      research surrogate.

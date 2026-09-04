@@ -24,9 +24,10 @@ for what it owns. This file routes. It does not restate.
 | a schema, or checking one | [`schemas.md`](schemas.md), then the module its own load map names |
 | how work is meant to proceed here | [`disciplines.md`](disciplines.md) |
 | a rule you can cite, or check something against | [`charter.md`](charter.md) — the Articles |
-| **why** something is built this way | [`decisions.md`](decisions.md) — find its DR, then read [`decisions/DR-0nn.md`](decisions/) |
+| **why** something is built this way | [`decisions.md`](decisions.md) — find its DR, then read [`assertions/decisions/DR-0nn.yaml`](assertions/decisions/) |
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
-| changing or defending a rule | its DR in `assertions/decisions.yaml`, **and** the file that states it |
+| changing or defending a rule | its DR in `assertions/decisions/`, **and** the file that states it |
+| an id you need to resolve — `work:persona/the-solo`, say | `grep -rn -A2 "id: <the curie>" .meta/assertions/`. Every identified object is declared once, there |
 | what is intended but unbuilt, or still open | [`roadmap.md`](roadmap.md) |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 | opening a pull request, or filing an Issue | [`templates/`](templates/) — the forms; `.github/` is generated from them |
@@ -41,7 +42,8 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
 | what **happened** on this change | the pull request body, using `.meta/templates/pull-request.md` |
 | work **noticed and not done** | a linked Issue, before review — never a summary or a file |
-| **why** a decision was taken | `assertions/decisions.yaml`, as a DR, then re-render |
+| **why** a decision was taken | a new `assertions/decisions/DR-0nn.yaml`, then re-render — and name in `enacted_in` where its rule now lives |
+| a **mandate** — what someone must do | the Discipline or Article that owns it, never the DR. A20: a rule that lives only in the record is not in force |
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | a checkable one-line rule | `assertions/imported/charter.yaml`, then re-render |
 | reasoning that recurs across several decisions | `principles.md` |

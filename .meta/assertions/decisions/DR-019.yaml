@@ -1,0 +1,22 @@
+decisions:
+  - id: work:decision/019
+    name: "DR-019 · Persona splits into Personality and Persona"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-work-actors
+    rationale: |-
+      The original sketch's *Persona* — SOUL.md plus a communication style
+      — is really a Personality: the character an Actor presents while
+      working. Persona is taken back for Cooper's sense, a named user
+      archetype the product is designed *for*.
+
+      The split earns itself twice over. It lets a Persona be interrogated
+      — an Actor adopts the Persona's Personality and holds a Job to be
+      questioned, so no new machinery is needed and the audit trail still
+      attributes to the workload identity rather than to a fictional
+      person. And it lets a Persona seed a design tool, which a two-slot
+      character sketch could not.
+
+      `Persona` is deliberately not linked to `JobToBeDone`, because
+      whether a JTBD states the user's job or the worker's is open and the
+      link would silently decide it.

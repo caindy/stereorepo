@@ -210,3 +210,7 @@ more often a collision than a gap.
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
 | **Prompt (APM primitive)** | Skill (solorepo Capability kind), Skill (APM primitive) |
+
+---
+
+**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml)

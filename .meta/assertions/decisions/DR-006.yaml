@@ -1,0 +1,11 @@
+decisions:
+  - id: work:decision/006
+    name: "DR-006 · Skills compose tools; tools are atomic"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-assertions-authority
+    rationale: |-
+      Taking "Capability = SKILLs + Tools" literally: `echo` and `bash` are tools, and
+      "reading and writing files" is a skill that combines them. Added
+      `Capability.composed_of` with a rule enforcing that a TOOL composes nothing. The
+      relation matters for BOM and audit resolution down to what actually runs.

@@ -8,7 +8,7 @@ description: >-
   for whether something belongs here: if nothing was ruled out, nothing was
   decided, and what happened is residue for a pull request or a finding for the
   Charter. The class is built so that the test is answerable from the instance
-  rather than from the reader's charity — `options` carries what was rejected,
+  rather than from the reader's charity — `alternatives` carries what was rejected,
   and an entry with nothing rejected is announcing that it recorded a narrative.
 
   Two levels of the same record, and they differ only in whether `project` is
@@ -50,7 +50,7 @@ enums:
       PROPOSED:
         description: >-
           A question with a candidate answer, still being argued. It binds
-          nothing, and the options may still change.
+          nothing, and the alternatives may still change.
       RECOMMENDED:
         description: >-
           The question is answered and the answer is endorsed, but nothing is in
@@ -79,18 +79,6 @@ slots:
     range: DecisionStatus
     required: true
 
-  decided:
-    description: >-
-      When the choice was made. Separate from `recorded` on purpose: the gap is
-      how long the reasoning lived only in someone's head, which A11 says is not
-      yet a decision at all. Making the gap visible is what stops it being
-      comfortable.
-    range: date
-
-  recorded:
-    description: When it was written down here.
-    range: date
-
   project:
     description: >-
       The Project this Decision is about. Absent means it is the Portfolio's —
@@ -102,12 +90,12 @@ slots:
       What was true that made this a decision rather than a default: the forces
       in tension, and what would have happened by doing nothing.
 
-  options:
+  alternatives:
     description: >-
       What was on the table. Exactly one is `chosen`; the rest were rejected, and
       each states why specifically enough that nobody re-derives it — a rejected
-      option recorded vaguely gets proposed again.
-    range: Option
+      alternative recorded vaguely gets proposed again.
+    range: Alternative
     multivalued: true
     inlined_as_list: true
 
@@ -125,6 +113,20 @@ slots:
 
   consequences:
     description: What is now true because of this, including what got worse.
+    multivalued: true
+
+  enacted_in:
+    description: >-
+      The Artifacts that now carry the rule this Decision produced — the answer
+      to "where would I have been told this without reading the record".
+
+      Required of anything ADOPTED: in force with nowhere to be read from is in
+      force over nobody. A RECOMMENDED decision has nothing to name yet, which is
+      the difference the status carries.
+
+      A20 is the Article and `check.py` is the gate, holding the link in both
+      directions. Not a LinkML rule, because nothing runs `linkml-validate`.
+    range: Artifact
     multivalued: true
 
   falsifier:
@@ -177,7 +179,7 @@ slots:
 
 classes:
 
-  Option:
+  Alternative:
     description: >-
       One of the things that could have been done. Recorded whether or not it was
       taken, because the value of the record is the alternative it closes.
@@ -195,8 +197,8 @@ classes:
       A choice that removed an alternative, with why, kept where the people it
       binds will find it.
 
-      **A decision begins with a question that demands an answer.** That is when
-      it may be recorded, not when the answer is built — the alternatives close
+      **A decision begins with a question that demands an answer** (DR-065).
+      That is when it may be recorded, not when the answer is built — the alternatives close
       at the moment the question is settled, and a record that waits for the
       implementation leaves the closed alternatives open for anyone who did not
       hear the conversation. `status` carries how far it has got.
@@ -212,12 +214,11 @@ classes:
         "do nothing" is an option and it has a reason.
     slots:
       - status
-      - decided
-      - recorded
       - project
       - context
-      - options
+      - alternatives
       - consequences
+      - enacted_in
       - falsifier
       - supersedes
       - superseded_by

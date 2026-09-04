@@ -12,7 +12,8 @@ _The ontologies, and how to exercise them._
 | `ddd/` | DDD in four modules — core, skos, strategic, tactical. Restates the canon; never overrides it. |
 
 Start from `work_ontology.yaml`'s load map, then read the module that covers
-what you are touching. A module explains itself.
+what you are touching. A module explains itself, in LinkML rather than in prose
+([DR-003](decisions/DR-003.md)).
 
 ### Exercising them
 
@@ -48,7 +49,7 @@ differently: it pulls `imported/` forward and never touches anything beside it.
 | `assertions/domain_vocabulary.yaml` | this portfolio | `ddd_ontology.yaml` |
 | `assertions/structure.yaml` | this portfolio | `work_ontology.yaml` |
 | `assertions/personas.yaml` | this portfolio | `work_ontology.yaml` |
-| `assertions/decisions.yaml` | this portfolio | `work_ontology.yaml` |
+| `assertions/decisions/` | this portfolio, one file per entry | `work_ontology.yaml` |
 
 Fictional instances — a made-up portfolio, an invented persona — are fixtures,
 not assertions, and do not belong here.

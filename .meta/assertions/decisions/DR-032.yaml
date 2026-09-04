@@ -1,0 +1,21 @@
+decisions:
+  - id: work:decision/032
+    name: "DR-032 · Assertions split by ownership"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-readme
+    rationale: |-
+      The split is by ownership, not by kind, because that is what `sync`
+      needs: DR-015 required the two separable so a sync could pull one
+      forward without trampling the other. A directory boundary is the
+      cheapest form that requirement can take, and the hardest to get
+      wrong.
+
+      The Bounded Context could not sit in `structure.yaml` beside the
+      Portfolio it pairs with — `bounded_contexts` is a `DddModel` slot
+      and `portfolio` a `WorkOntology` one, and a document has one
+      container. The Ubiquitous Language belongs to the Bounded Context
+      anyway, so they travel together.
+
+      solorepo is the degenerate case: its domain *is* building software
+      as a team of one, so its domain terms are the ones it publishes.

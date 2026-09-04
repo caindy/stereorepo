@@ -30,7 +30,8 @@ The measure of done is not that copies are removed. It is that **an edit to one
 statement cannot leave another behind**: either the second copy derives, or the
 gate names it.
 
-**Package a Role and a Persona via APM.** [Microsoft APM](https://microsoft.github.io/apm/)
+**Package a Role and a Persona via APM**, which is the packaging target
+([DR-007](decisions/DR-007.md)). [Microsoft APM](https://microsoft.github.io/apm/)
 is a dependency manager for AI agents — an `apm.yml` of pinned dependencies,
 integrity by content hash, `apm-policy.yml` at install time, and per-harness
 compilation from a `.apm/` directory. Bundles are to be built from the

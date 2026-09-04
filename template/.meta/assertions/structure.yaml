@@ -12,3 +12,10 @@ products: []
 
 # One Project per toolchain: one language, one test suite, one gate.
 projects: []
+
+# The artifacts a Decision names under `enacted_in`. A file earns an entry by
+# being answerable for something.
+artifacts:
+  - id: work:artifact/agents
+    name: AGENTS.md
+    path: AGENTS.md

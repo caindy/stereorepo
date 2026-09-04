@@ -11,9 +11,6 @@ is a `Decision` with its `project` set — the same class as an entry in
 
 - **Status:** <PROPOSED | RECOMMENDED | ADOPTED | SUPERSEDED | WITHDRAWN>
 - **Project:** <which Project this is about>
-- **Decided:** <date> — **Recorded:** <date>
-
-Separate from `recorded` on purpose: the gap is how long the reasoning lived only in someone's head, which A11 says is not yet a decision at all. Making the gap visible is what stops it being comfortable.
 
 ## Context
 
@@ -23,15 +20,15 @@ Separate from `recorded` on purpose: the gap is how long the reasoning lived onl
 
 <What was decided, in the present tense — "we do X". One paragraph.>
 
-## Options considered
+## Alternatives considered
 
-<What was on the table. Exactly one is `chosen`; the rest were rejected, and each states why specifically enough that nobody re-derives it — a rejected option recorded vaguely gets proposed again.>
+<What was on the table. Exactly one is `chosen`; the rest were rejected, and each states why specifically enough that nobody re-derives it — a rejected alternative recorded vaguely gets proposed again.>
 
-### A: <option> — rejected
+### A: <alternative> — rejected
 
 <Why this option was taken, or why it was not. For the chosen one this includes what it costs: every choice costs something, and a record claiming otherwise is advertising.>
 
-### B: <option> — chosen
+### B: <alternative> — chosen
 
 <As above, including what it costs.>
 

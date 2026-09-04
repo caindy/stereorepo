@@ -1,0 +1,59 @@
+decisions:
+  - id: work:decision/081
+    name: "DR-081 · The record keeps no dates, and what was on the table is an alternative"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-work-decisions
+    alternatives:
+      - name: Keep both dates
+        chosen: false
+        reason: >-
+          The pair was carrying one argument — that the gap between deciding and
+          writing it down is visible — and the gap it made visible was never
+          acted on. Two required fields per entry, filled by hand, to instrument
+          a habit that A11 already states and `check_pr.py` already asks about
+          on the form.
+      - name: Keep `decided` alone
+        chosen: false
+        reason: >-
+          Still a field nobody queries. The ordering questions the record
+          actually gets asked — what came before what, what superseded what —
+          are answered by the number and by `supersedes`, and neither needs a
+          calendar.
+      - name: No dates at all
+        chosen: true
+        reason: >-
+          The number is the naive order and supersession is the causal one, so
+          the record is fully ordered without a date in it. When a real date is
+          wanted, git has the commit that added the file. What it costs is that
+          the record cannot show its own tempo, which nothing was reading.
+    consequences:
+      - >-
+        `decided` and `recorded` are removed from `Decision`, from all eighty
+        entries, from the rendered pages, from the index table and from the ADR
+        form. The seed loses its date token with them.
+      - >-
+        `options` becomes `alternatives` and `Option` becomes `Alternative`,
+        which is the word the class description, the Discipline's step and every
+        rendered heading were already using.
+      - >-
+        Nothing in the gate changes shape. `decision alternatives` is the same
+        check under the name of the slot it reads.
+    falsifier: >-
+      A question about the record that needs a date and cannot be answered from
+      git — most likely "how long did this take to settle", asked of an entry
+      whose file was committed long after the argument.
+    rationale: |-
+      Two fields were doing a job the identifiers already do. A number orders the
+      record naively and `supersedes` orders it causally, so a date adds a third
+      ordering that agrees with the first and answers nothing the second does not.
+
+      What the pair was really for was instrumenting a habit: the gap between
+      settling a question and writing it down. That habit now has a better
+      instrument — the pull request body asks what was decided, at the moment the
+      body is written, and a decision missing from it is missing where someone is
+      looking. A field that records the failure after the fact is not a control.
+
+      `alternatives` is the word everything except the slot was already using —
+      the class description, the Discipline's step, the rendered heading, and the
+      checker's own error message.

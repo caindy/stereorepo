@@ -8,6 +8,10 @@ here: what a schema means goes to the schema, why a decision was taken goes to a
 decision record, a rule goes to the Charter, a word goes to the vocabulary. What
 is left is the residue, and the residue is what this form holds.
 
+**This form is the only copy of what a body must contain.** `check_pr.py` reads
+the fence below rather than a list of its own, so a heading added here is
+required by that act alone.
+
 ```markdown
 ## <a title someone would search for>
 
@@ -22,9 +26,9 @@ again. "Nothing would" means it is load-bearing forever, and that claim needs it
 reason stated.
 
 **What was decided.** One link per item, to a DR. A decision taken inside a
-change belongs in the same change — recording it afterwards is the gap the
-`decided` and `recorded` dates exist to make visible, and a gap nobody sees is
-one nobody closes. "None." is a complete answer and often the true one.
+change belongs in the same change; recorded afterwards, it is a decision only
+its participants could cite for as long as the gap lasted. "None." is a complete
+answer and often the true one.
 
 - DR-<nnn> — <the question that demanded an answer, in one line>
 

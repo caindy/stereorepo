@@ -1,0 +1,39 @@
+decisions:
+  - id: work:decision/054
+    name: "DR-054 · Residue divides by tense, and the unfinished half is a linked Issue"
+    status: ADOPTED
+    supersedes:
+      - work:decision/052
+    applies:
+      - work:article/13
+      - work:article/14
+      - work:article/15
+    alternatives:
+      - name: "A TECH_DEBT.md"
+        chosen: false
+        reason: "No state, no context, unbounded growth, and the flush is one unscoped batch. It is also Nothing Unconsumed failing — a file nothing reads."
+      - name: "A linked Issue per item"
+        chosen: true
+        reason: "State, a backlink to the work that found it, a title someone reads, and individual schedulability."
+    consequences:
+      - "A15 is mechanically checkable, unlike A13 and A14."
+      - "`issue` is minted as a Concept and leaves Challenge's avoid list."
+    enacted_in:
+      - work:artifact/meta-disciplines
+    rationale: |-
+      DR-052 said residue goes to the pull request as though residue were
+      one thing. It is two, and they differ in tense. Finished residue is
+      the account of what happened: backward-looking, closed, correctly in
+      the body. Unfinished residue is work noticed and not done, which is
+      forward-looking and open, and filing it as the first is how it is
+      lost — a body is read once, at review, and then never again.
+
+      The habit that grows in the gap is a `TECH_DEBT.md`, and the fourth
+      of its failures is the one that is not obvious: the flush is
+      expensive *because the batch was assembled by deferral* rather than
+      by anything the items share.
+
+      `issue` was on Challenge's avoid list and is minted here
+      deliberately. The structure it buys: a Challenge is the work, and
+      two artifacts hold it in turn — an Issue before it is taken up, a
+      Pull Request while it is being done.

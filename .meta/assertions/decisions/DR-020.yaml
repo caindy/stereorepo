@@ -1,0 +1,29 @@
+decisions:
+  - id: work:decision/020
+    name: "DR-020 · Persona goals are typed, and the End tier is Goal-shaped"
+    status: ADOPTED
+    alternatives:
+      - name: "Make the End tier an instance of Goal"
+        chosen: false
+        reason: "A Goal requires a Deadline to stay SMART, and an End goal is standing and recurring rather than a bounded commitment."
+      - name: "Type the tiers and record End as Goal-shaped without being a Goal"
+        chosen: true
+        reason: "It records what is true — specific, with a plain test for having been reached, and no deadline — without breaking DR-003's requirement."
+    enacted_in:
+      - work:artifact/meta-work-personas
+    rationale: |-
+      `persona_goals` was a flat list of strings, justified by the claim
+      that a Cooper goal has no deadline and nothing marking it done. That
+      is half right, and only for two tiers of three: an End goal —
+      "process an invoice without manual reconciliation" — is specific and
+      has a plain test for having been reached. What it lacks is a
+      Deadline, being standing rather than a bounded commitment.
+      Experience and Life goals are neither.
+
+      Checking against *About Face* also corrected `PersonaKind`, sketched
+      from memory with four values where it defines six: CUSTOMER, the
+      buyer who is not the user, and SERVED, affected without ever
+      touching the interface, were missing.
+
+      Business and technical goals are excluded deliberately, so they
+      cannot pollute the user model.

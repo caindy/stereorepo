@@ -7,7 +7,7 @@
 _Structured ways of working that must be adhered to._
 
 How work must proceed, invariably.
-A **Discipline** is a structured way of working that must be adhered to because it is not an imperative program. It has steps and an order, it is *followed* rather than executed, and following it produces artifacts.
+A **Discipline** is a structured way of working that must be adhered to because it is not an imperative program (DR-025). It has steps and an order, it is *followed* rather than executed, and following it produces artifacts.
 The clause doing the work is "not an imperative program". Adherence is what you need precisely because execution is unavailable: if a Discipline could be compiled, you would run it and no one would need to adhere to anything. So the test for whether something belongs here is not whether it is important, but whether the judgement it requires resists automation. Record that judgement — it is what stops a Discipline being written when a script would do.
 A Discipline is none of the three things it is most easily mistaken for. Not a Capability, which is what can be done. Not a Permission, which is what may be done and to what. Not a characterisation such as a communication style, which describes rather than prescribes and has no steps to depart from.
 Disciplines are also the reason this class exists rather than the prose that preceded it: an APM `instructions` primitive is a Discipline compiled for a harness, and prose in a document has nothing for that transformation to read.
@@ -170,9 +170,11 @@ And at which level it belongs. A decision about how one build unit is built is n
 2. Cite a rule where it lives — an Article, or a step of a Discipline — never the decision that led to it. A decision carries consequences; the consequences beget rules, and a rule cited from a decision is one that was never routed anywhere. Nothing checks this: the phrasings are too many to match, and counting them is the instrument A17 already found wanting.
 3. Record a decision when the **question** is settled, not when the answer is built. A decision begins with a question that demands an answer, and the alternatives close the moment it is answered — waiting for the implementation leaves them open to anyone who was not in the conversation. Status carries the rest: recommended, or in force.
 4. Say what was decided and why, not what changed. The diff already says what changed.
-5. Keep the reasoning, including what was tried and abandoned, so the next reader does not re-derive a rejected option.
-6. Record at the level the decision is about. The Portfolio's record holds decisions about the repository, its language and its way of working; a Project's ADR holds decisions about how one build unit is built. A Project decision in the Portfolio record buries it among matters its readers do not share; a Portfolio decision in a Project's record hides it from every other Project.
-7. Use the form in `.meta/templates/adr.md`, so the shape does not have to be re-argued.
+5. Keep `rationale` to what the slots cannot hold. `alternatives` carries what was rejected and why, `consequences` what is now true, `falsifier` what would overturn it — a paragraph restating any of those is a second copy inside the entry. What is left is the reasoning none of them reaches, and it is usually short.
+6. Never narrate the sequence of events. What happened on a change is the pull request's, and an entry that recounts an afternoon buries the foreclosure it exists to record — the chronology reads as authoritative, goes stale first, and nothing checks it.
+7. Keep the reasoning, including what was tried and abandoned, so the next reader does not re-derive a rejected option.
+8. Record at the level the decision is about. The Portfolio's record holds decisions about the repository, its language and its way of working; a Project's ADR holds decisions about how one build unit is built. A Project decision in the Portfolio record buries it among matters its readers do not share; a Portfolio decision in a Project's record hides it from every other Project.
+9. Use the form in `.meta/templates/adr.md`, so the shape does not have to be re-argued.
 
 _Produces: A record that answers "why is it like this" without anyone remembering._
 
@@ -225,3 +227,7 @@ And whether the residue is worth writing at all. Where the change explains itsel
 6. Supersede by writing again and naming what is replaced. Never rewrite.
 
 _Produces: Artifacts that carry their own reasoning, and a pull request holding what none of them owns._
+
+---
+
+**Where this came from.** [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml)

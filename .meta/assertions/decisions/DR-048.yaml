@@ -1,0 +1,31 @@
+decisions:
+  - id: work:decision/048
+    name: "DR-048 · The Charter and its Articles; two Personalities for two kinds of writing"
+    status: ADOPTED
+    supersedes:
+      - work:decision/047
+    applies:
+      - work:article/1
+      - work:article/12
+    alternatives:
+      - name: "Keep the name Invariant"
+        chosen: false
+        reason: "Too general, and it collided with DDD's `invariants` slot on an Aggregate, which DDD keeps."
+      - name: "Article, and the Articles together are the Charter"
+        chosen: true
+        reason: "A charter grants and binds, which is what a working agreement does. `origin` is what keeps it empirical rather than drafted."
+    enacted_in:
+      - work:artifact/meta-charter
+    rationale: |-
+      What the borrowed word must not lose is that these are empirical,
+      not drafted. `origin` does that work: every Article carries the
+      failure it came from, so the Charter can be argued with on evidence
+      rather than only amended. An Article without one is an opinion that
+      has borrowed the Charter's authority.
+
+      Two Personalities are asserted, the first use of that class since
+      DR-019 split it from Persona. The point is that **which style is in
+      force is a property of the work, not of the agent**: the same run
+      writes one way in a turn and another way into the record, and
+      conflating them produces either tedium in conversation or shorthand
+      in an artifact nobody can read.

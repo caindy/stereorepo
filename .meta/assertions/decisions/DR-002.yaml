@@ -1,0 +1,10 @@
+decisions:
+  - id: work:decision/002
+    name: "DR-002 · Rough in an ontology of work"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-work-ontology
+    rationale: |-
+      `work_ontology.md` establishes shared vocabulary for the repo before there is much
+      structure to name. Explicitly early; treating it as settled would over-commit,
+      ignoring it would fragment the language it exists to create.

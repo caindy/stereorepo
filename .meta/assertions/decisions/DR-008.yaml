@@ -1,0 +1,22 @@
+decisions:
+  - id: work:decision/008
+    name: "DR-008 · Reverted: capability reification on the schema"
+    status: ADOPTED
+    alternatives:
+      - name: "A Provisioning enum, a PackageRef class and a package_ref slot"
+        chosen: false
+        reason: "Added, validated, and removed: the intersection of BOM, APM and Capability reification is a step too far for now."
+      - name: "Defer reification entirely"
+        chosen: true
+        reason: "Nothing downstream needs it yet, and a coordinate system invented ahead of its consumer is one that will be wrong."
+    consequences:
+      - "The inclination to delegate reification to a Dockerfile or nix pointer is kept as a roadmap direction rather than as schema."
+      - "`composed_of` and the tool-atomicity rule from DR-006 survive the revert."
+    enacted_in:
+      - work:artifact/meta-roadmap
+    rationale: |-
+      A `Provisioning` enum, a `PackageRef` class and a `package_ref` slot on
+      `Capability` were added, validated, and then removed. The intersection of BOM, APM
+      and reification of Capability is a step too far for now. Kept as a roadmap
+      direction, with the inclination to delegate reification to Dockerfile or nix
+      pointers instead. `composed_of` and the atomicity rule from DR-006 were kept.

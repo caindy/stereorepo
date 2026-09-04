@@ -1,0 +1,61 @@
+decisions:
+  - id: work:decision/082
+    name: "DR-082 · An entry is its assertion file, and nothing renders a second copy of it"
+    status: ADOPTED
+    supersedes:
+      - work:decision/077
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-render
+      - work:artifact/meta-readme
+    alternatives:
+      - name: Keep a rendered page per entry
+        chosen: false
+        reason: >-
+          It gave a markdown reading surface and resolved `enacted_in` to a path
+          for the reader. It also checked in 20,747 words against a source of
+          20,052 — a near-exact second copy of the whole record, which is the
+          duplication every other decision here has been spent removing.
+      - name: Drop the index as well
+        chosen: false
+        reason: >-
+          A directory of `DR-0nn.yaml` says nothing about what any entry settled,
+          so choosing one would mean grepping names. And the **By artifact**
+          table has no other home: it is the only answer to "which decisions
+          account for this file", and it cannot be reconstructed by grep.
+      - name: Drop the pages, keep the index
+        chosen: true
+        reason: >-
+          The entry is already a file, so rendering it as markdown produced a
+          copy and nothing else. What the index does that a directory cannot —
+          map a number to the question it settled, and invert `enacted_in` — is
+          148 lines. What it costs is that reading an entry means reading YAML.
+    consequences:
+      - >-
+        Eighty-one generated pages are deleted, with `SWEPT` and `orphans` in
+        `render.py`, which existed only for them.
+      - >-
+        `cited_decisions` scans `assertions/` as well as the markdown. A DR cited
+        inside a `rationale` was checked only because the rendered page was
+        markdown, and dropping the pages would have retired the check in silence.
+      - >-
+        A conversation reaches an entry as `@.meta/assertions/decisions/DR-011.yaml`.
+        DR-077's naming argument holds — the file is named for the number and
+        nothing else; what it got wrong was rendering it twice.
+      - >-
+        Nothing resolves `enacted_in` for a reader any more, so the load map
+        carries the general procedure: an id is declared once under
+        `assertions/`, and `grep` finds it.
+    falsifier: >-
+      A reader who needs an entry and will not open YAML. The pages existed for
+      that reader, and if he turns up the index is the wrong half to have kept.
+    rationale: |-
+      The record was being written once and stored twice. That is Nothing
+      Unconsumed's other edge: the pages were consumed, but only by a reader who
+      could have read the source, and being derived kept them from drifting
+      without making them earn their place.
+
+      An entry is a file already. Rendering one file into another file of the
+      same content is what the split into per-entry assertions made pointless,
+      and the second copy was the largest duplication left in the repository.

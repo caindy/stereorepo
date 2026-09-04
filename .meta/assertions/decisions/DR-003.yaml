@@ -1,0 +1,12 @@
+decisions:
+  - id: work:decision/003
+    name: "DR-003 · Formalise the ontology in LinkML"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-schemas
+    rationale: |-
+      `work_ontology.yaml` makes the prose checkable. Composition is by reference off an
+      abstract `WorkEntity`, so a Capability appears in many Roles without being copied.
+      A SMART Goal requires all four of its parts, so a non-SMART goal fails validation.
+      Definition of Done gained structure because "measurable" is what it contributes.
+      Verified with `gen-json-schema` and `linkml-validate`.

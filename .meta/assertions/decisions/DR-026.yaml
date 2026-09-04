@@ -1,0 +1,23 @@
+decisions:
+  - id: work:decision/026
+    name: "DR-026 · The ABox lives in `.meta/assertions/`, and the prose derives from it"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-readme
+      - work:artifact/meta-render
+    rationale: |-
+      Everything committed until now was TBox — terminology, with nothing
+      said in it. Every ABox artifact lived in a scratch directory.
+
+      Fictional instances are fixtures, not assertions, and stay out. That
+      is what the earlier deferral was actually about: the line is not
+      TBox versus ABox, since both of those are ABox, but *actual* versus
+      *invented*.
+
+      The vocabulary could not have been folded into the schemas instead.
+      In a TBox the classes *are* the meanings, so "Skill means three
+      things" has nowhere to be stated; SKOS is deliberately ABox
+      precisely so a language can be talked about. The Concept labelled
+      "Capability" and the class `Capability` are different things in
+      different boxes — OWL calls this punning — related by description,
+      never by identity.

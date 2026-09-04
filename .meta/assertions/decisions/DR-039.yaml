@@ -1,0 +1,28 @@
+decisions:
+  - id: work:decision/039
+    name: "DR-039 · The dead-end check moves from the gate into the schema"
+    status: ADOPTED
+    alternatives:
+      - name: "Keep the gate check as a belt"
+        chosen: false
+        reason: "A check that cannot fire is noise."
+      - name: "Make JobToBeDone.serves required, and delete the gate check"
+        chosen: true
+        reason: "The constraint becomes local, so two local rules guarantee a two-hop chain and linkml-validate catches what the gate did."
+    enacted_in:
+      - work:artifact/meta-work-purpose
+    rationale: |-
+      DR-038 put "a USER Goal's Job to be Done must serve an END goal" in
+      the gate because a LinkML rule cannot reach through a reference.
+      True premise, wrong conclusion: inheritance would not have helped
+      either, but the constraint can be made **local**, which does.
+
+      `JobToBeDone.serves` is now required — a need that advances none of
+      a Persona's goals is a need nobody has, so the requirement is true
+      on its own terms rather than a device for reaching the Goal. Two
+      local rules then guarantee a two-hop chain, and no Goal can dead-end
+      at a Persona.
+
+      Ordering is not a burden: DR-021's flow surfaces END goals by
+      interrogating a Persona before a Job to be Done is written, so the
+      rule demands what the Discipline already produces.

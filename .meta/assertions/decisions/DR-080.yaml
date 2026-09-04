@@ -1,0 +1,61 @@
+decisions:
+  - id: work:decision/080
+    name: "DR-080 · A rationale carries what the slots cannot"
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-disciplines
+    alternatives:
+      - name: Leave the entries as written
+        chosen: false
+        reason: >-
+          They are the historical record, and rewriting reasoning nobody is left
+          to check is a real risk. But the cost is paid on every read, by every
+          agent, forever, and the entries were not being read — which is the
+          state the record was in when this was raised.
+      - name: Demote the narrative to a second page per entry
+        chosen: false
+        reason: >-
+          It preserves everything and keeps the reading path clean, and it makes
+          the dumping ground an official location. A slot that exists for prose
+          nothing constrains fills up.
+      - name: Cut each rationale to what the slots cannot hold
+        chosen: true
+        reason: >-
+          The structured slots already carry the rejections, the consequences and
+          the falsifier, so most of what was cut was a second copy of them. What
+          it costs is the chronology, which the routing table always said belonged
+          to the pull request, and git holds the prior text for anyone who wants
+          the afternoon back.
+    consequences:
+      - >-
+        The record falls from 17,100 words of rationale to under 9,000, across
+        seventy-nine entries, with no entry losing a rejection or a consequence.
+      - >-
+        Written Decisions gains two steps: keep `rationale` to what the slots
+        cannot hold, and never narrate the sequence of events.
+      - >-
+        DR-056 loses a stale detail it had been carrying — it recorded the
+        required status checks as `files` and `pull request body`, and the second
+        has been `pull request` since DR-057 renamed the job.
+    falsifier: >-
+      A question about a past decision that the trimmed entry cannot answer and
+      the original could. The cut would then have taken reasoning rather than
+      restatement, and the slots were not carrying what this assumed.
+    rationale: |-
+      Christopher, on the record as it stood: it reads like someone leaving
+      breadcrumbs as a challenge to follow them, and the goal is maximal know-how
+      at minimal token cost with just-in-time recall.
+
+      The diagnosis is DRY, and it is structural rather than stylistic. A
+      rationale that restates its own `options` is a second copy inside one file,
+      which is the failure this repository spent its length removing between
+      files. DR-052 stated its three rejected options twice; DR-056 spent 452
+      words narrating an afternoon whose foreclosure is four lines.
+
+      The narrative half was never the record's to hold. The routing table has
+      always said that what happened on a change goes to the pull request body,
+      and an entry recounting the sequence is that rule broken in the artifact
+      that defines it. The stale contexts in DR-056 are what that costs: prose
+      nothing checks, wrong for a day and unnoticed.

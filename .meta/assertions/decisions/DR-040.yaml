@@ -1,0 +1,22 @@
+decisions:
+  - id: work:decision/040
+    name: "DR-040 · Primitives are authored in `.meta/.apm/`, not `.meta/.agents/`"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-render
+    rationale: |-
+      `.agents/` got the producer/consumer split backwards. `.apm/` is
+      where primitives are authored; `.agents/` is somewhere they land,
+      alongside `.claude/` and `.github/` — so authoring there means
+      authoring into an output path. DR-011 is refined rather than
+      reversed: its reasoning is in fact why this move is right.
+
+      Nothing is in the directory yet, deliberately. The compile step from
+      assertions to primitives is unbuilt, and hand-writing primitives a
+      compiler will later generate is the duplication that step exists to
+      remove.
+
+      Two things are recorded as unverified rather than guessed: the
+      primitive frontmatter fields, whose reference is marked legacy and
+      redirects, and where `apm.yml` sits. Writing plausible field names
+      would have been worse than recording the gap.

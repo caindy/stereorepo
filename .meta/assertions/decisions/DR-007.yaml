@@ -1,0 +1,10 @@
+decisions:
+  - id: work:decision/007
+    name: "DR-007 · APM is the packaging target"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-roadmap
+    rationale: |-
+      A Role and a Persona should be installable outside `.meta/`, and APM is the
+      vehicle. APM has no Securable-shaped concept anywhere, which confirms the
+      portability seam rather than exposing a deficiency: Role travels, Remit does not.

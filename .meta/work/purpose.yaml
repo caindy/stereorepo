@@ -234,9 +234,9 @@ classes:
       technical objective.
 
       Every Goal must serve a Persona's END goal, or be a business or a
-      technical goal. There is no fourth option, and that is the point: work
-      that answers to nobody cannot be written down without the omission being
-      visible.
+      technical goal (DR-038). There is no fourth option, and that is the point:
+      work that answers to nobody cannot be written down without the omission
+      being visible.
     comments:
       - >-
         A Goal that genuinely serves a user *and* the business picks its primary

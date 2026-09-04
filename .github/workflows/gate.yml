@@ -25,10 +25,10 @@ permissions:
   contents: read
   pull-requests: read
 
-# Both job names below are named again in the `main` ruleset, as required status
-# checks. Renaming one here does not fail anything — it removes a required check
-# that can then never report, and the merge gate blocks forever on a context
-# nothing produces. Rename in both places or in neither.
+# The two job names below are required status checks in `main`'s ruleset
+# (protected by a ruleset, not a hook — DR-056). Rename one here and every merge
+# blocks: the ruleset waits on a check that nothing reports. `check_pr.py` reads
+# the ruleset and compares, so the pair is checked rather than remembered.
 jobs:
   files:
     name: files

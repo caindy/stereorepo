@@ -128,3 +128,13 @@ _Why:_ A successor shares no filesystem. Every other part of a handoff is a matt
 **Enforces** PR First. **Checked by** `check_pr.py`, which fails a pull request carrying a commit with no `Actor:` Trailer. Nothing appends one but the channel — `.meta/say commit` composes them from what it resolved — so a commit made outside it is unsigned, and this is what says so.
 
 _Why:_ One comment was written without the Trailer and read as the solo, which manufactured the second party A16 asks for and passed the gate on a fiction. Signing had been an act somebody performs, and an act can be omitted; every commit and comment now comes from a channel that signs, and what the channel cannot guarantee, this checks.
+
+### A20. A rule that lives only in the decision record is not in force.
+
+**Enforces** Written Decisions. **Checked by** `check.py`, which fails an ADOPTED Decision naming no Artifact under `enacted_in`. The Artifact is a reference, so the gate resolves it like any other; what the number is doing in the file it names is not checked, and a text match could not tell an account from a coincidence anyway.
+
+_Why:_ The record answers *why* and was being asked to carry *what to do*. An agent about to work reads a Discipline, an Article, a skill or the schema in front of it, and reaches a decision only when something surprises it — so a mandate left in the record alone binds nobody.
+
+---
+
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml)

@@ -1,0 +1,23 @@
+decisions:
+  - id: work:decision/029
+    name: "DR-029 · The invariants get a checker, and it is the `.meta` Project's gate"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-check
+    rationale: |-
+      Which slots hold references is read off the schema rather than
+      listed in the checker: a slot is a reference when its range is a
+      class with an identifier and is not inlined. A hand-kept list would
+      drift the moment either schema moved.
+
+      Proved by construction rather than assumed. A probe document
+      violating all four invariants passes `linkml-validate` cleanly and
+      fails the gate with six named problems — which demonstrates that the
+      two tools check disjoint things, and that a green checker is not a
+      checker that cannot fail.
+
+      No Products are asserted. A Product requires a primary Persona,
+      nothing has been released, and inventing one to fill a required slot
+      would violate the Discipline that makes Personas worth having. The
+      absence is the honest assertion, and the required slot is what
+      forced the question.

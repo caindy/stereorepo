@@ -1,0 +1,23 @@
+decisions:
+  - id: work:decision/027
+    name: "DR-027 · Portfolio, Product and Project"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-work-structure
+    rationale: |-
+      Products and Projects are not a hierarchy. They are orthogonal
+      groupings of the same content: Products group by who it is for,
+      Projects by how it is built, many-to-many. A shared library is one
+      Project serving two Products; a Product with a web app and an API is
+      one Product across two Projects. Polyglot is therefore a property of
+      the Portfolio.
+
+      Each class carries its distinguishing test as a slot, so the
+      boundary is in the schema rather than in someone's judgement.
+
+      `Portfolio.bounded_context_ref` is a CURIE rather than a typed
+      reference because importing `ddd_ontology.yaml` *compiles* and then
+      silently replaces the tree root — `DddModel` is also `tree_root:
+      true` and wins the merge. The generated JSON Schema came back with
+      DDD's fifteen collections where the work ontology's twenty-five
+      should be, and nothing raised an error.

@@ -6,7 +6,7 @@ description: >-
 
   Every other module is design-time: it describes work **assigned**. Nothing there
   describes work **done**. Workload identity, bill of materials and audit are one
-  gap wearing three hats, and all three attach to an **Execution**.
+  gap wearing three hats (DR-004), and all three attach to an **Execution**.
 
   An **AuditRecord** is a Permission in the past tense — the same triple of
   Capability, Securable and Actor, stated as fact rather than as authority. That

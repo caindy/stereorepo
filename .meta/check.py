@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The gate for the .meta Project.
+"""The gate for the .meta Project (DR-029).
 
 Invariants stated in the schemas and enforceable by none of them. Some cross a
 path LinkML cannot traverse; one crosses a file boundary, because two tree roots
@@ -97,7 +97,7 @@ class Strict(yaml.SafeLoader):
     """A loader that notices a key written twice.
 
     PyYAML takes the last of a repeated key without a word, so an editing slip
-    becomes a value that is right by luck rather than by construction. It was
+    becomes a value that is right by luck rather than by construction (DR-053). It was
     right by luck once here — a script that added `broader` to concepts that
     already had one left 29 duplicates, every pair identical, and the render was
     correct for no reason anyone had checked.
@@ -240,7 +240,7 @@ def _template_files():
 
 
 def surviving_placeholders():
-    """No template token survives anywhere outside `template/`.
+    """No template token survives anywhere outside `template/` (DR-034).
 
     Scanning only the files `template/` shadows was exact and also useless:
     Specialization deletes `template/` before running the gate, so by the time
@@ -294,8 +294,9 @@ def one_context_per_portfolio(index):
 
     The slot stays multivalued because `DddModel` is generic DDD and a Context
     Map legitimately holds many — solorepo's own map has three. What is singular
-    is a portfolio's *own* context, so that is what is checked: one declaration
-    in `domain_vocabulary.yaml`, and the Portfolio names it.
+    is a portfolio's *own* context, so that is checked rather than typed
+    (DR-037): one declaration in `domain_vocabulary.yaml`, and the Portfolio
+    names it.
     """
     problems = []
     own = [i for i, (cls, _, where) in index.items()
@@ -328,7 +329,7 @@ justified at the moment it is made and paid for afterwards.
 """
 
 
-def decision_options(index):
+def decision_alternatives(index):
     """One option is chosen, and it is stated at all from DR-060 onward.
 
     A recommendation is held to the same rule as something in force. It is the
@@ -336,7 +337,7 @@ def decision_options(index):
     question is answered rather than when the answer is built.
 
     LinkML can require the slot and cannot count across the list, so a Decision
-    with two chosen options — or with a rejected option and no chosen one — is
+    with two chosen alternatives — or with a rejected one and none chosen — is
     well formed and says nothing. Nor can it exempt the converted entries, which
     a bare `required: true` would fail for telling the truth about what was
     recorded before the model existed.
@@ -345,16 +346,16 @@ def decision_options(index):
     for did, (cls, obj, _) in index.items():
         if cls != "Decision":
             continue
-        options = obj.get("options") or []
-        if not options:
+        alternatives = obj.get("alternatives") or []
+        if not alternatives:
             if obj.get("status") in ("ADOPTED", "RECOMMENDED") \
                     and int(did.rsplit("/", 1)[-1]) >= OPTIONS_REQUIRED_FROM:
-                problems.append(f"{did}: accepted and states no options; if the alternative "
+                problems.append(f"{did}: adopted and states no alternatives; if the alternative "
                                 "was doing nothing, say so — that is an option and it has a reason")
             continue
-        chosen = [o for o in options if o.get("chosen")]
+        chosen = [a for a in alternatives if a.get("chosen")]
         if len(chosen) != 1:
-            problems.append(f"{did}: {len(chosen)} options chosen of {len(options)}; exactly one is")
+            problems.append(f"{did}: {len(chosen)} chosen of {len(alternatives)} alternatives; exactly one is")
     return problems
 
 
@@ -409,9 +410,10 @@ def decision_numbering(index):
     seen = [d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"]
     if not seen:
         return []
-    raw = yaml.safe_load((META / "assertions" / "decisions.yaml").read_text()) or {}
-    ids = [d["id"] for d in raw.get("decisions") or []]
-    problems = [f"decisions.yaml declares {len(ids)} entries and {len(set(ids))} are distinct"] \
+    ids = [d["id"]
+           for path in sorted((META / "assertions" / "decisions").glob("DR-*.yaml"))
+           for d in (yaml.safe_load(path.read_text()) or {}).get("decisions") or []]
+    problems = [f"the record declares {len(ids)} entries and {len(set(ids))} are distinct"] \
         if len(ids) != len(set(ids)) else []
     numbers = sorted(int(n) for n in seen)
     missing = sorted(set(range(1, numbers[-1] + 1)) - set(numbers))
@@ -426,6 +428,44 @@ def decision_numbering(index):
     return problems
 
 
+# The record itself: naming it under `enacted_in` satisfies the letter of A20 and
+# defeats the point, so it does not count. `.meta/work/decisions.yaml` is the
+# schema and is a legitimate target, which is why this is a prefix and not a word.
+RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
+
+
+def artifact_paths(index):
+    """Every Artifact is a file that exists.
+
+    The reference to an Artifact is resolved by the references check, like any
+    other; what no schema can know is whether the path on the far side still
+    names something. One check per Artifact rather than one per citation, which
+    is the whole reason for making it an entity.
+    """
+    return [f"{ident}: {obj['path']} does not exist"
+            for ident, (cls, obj, _) in sorted(index.items())
+            if cls == "Artifact" and not (ROOT / obj["path"]).is_file()]
+
+
+def enacted_decisions(index):
+    """A20. An adopted decision names an Artifact that carries its rule (DR-078).
+
+    Whether the Artifact exists is a reference, resolved with every other. What
+    is left here is the arithmetic no schema states: ADOPTED means in force, and
+    in force with nowhere to be read from is in force over nobody.
+
+    Naming the record itself would satisfy the letter and defeat the point, so
+    it does not count.
+    """
+    record = {ident for ident, (cls, obj, _) in index.items()
+              if cls == "Artifact" and obj["path"].startswith(RECORD)}
+    return [f"DR-{ident.rsplit('/', 1)[-1]} is adopted and names no artifact "
+            "carrying its rule"
+            for ident, (cls, obj, _) in sorted(index.items())
+            if cls == "Decision" and obj.get("status") == "ADOPTED"
+            and not [a for a in (obj.get("enacted_in") or []) if a not in record]]
+
+
 DR = re.compile(r"\bDR-(\d{3})\b")
 
 
@@ -438,16 +478,16 @@ def cited_decisions(index):
     nobody wrote, and the collision was found only because that was the next
     number to issue.
 
-    Generated pages are scanned along with the rest. A citation inside a
-    `rationale` block is prose inside the data, and it reaches a reader through
-    `decisions.md` exactly as any other paragraph does, so it is held to the same
-    rule rather than exempted for where it is stored.
+    The assertions are scanned along with the prose. A citation inside a
+    `rationale` block is a paragraph that a reader reaches directly, now that the
+    entry is its own file, so it is held to the same rule rather than exempted
+    for being stored as YAML.
     """
     known = {d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"}
     if not known:
         return []
     problems = []
-    for path in sorted(ROOT.rglob("*.md")):
+    for path in sorted([*ROOT.rglob("*.md"), *(META / "assertions").rglob("*.yaml")]):
         if path.is_symlink() or TEMPLATE in path.parents or ".git" in path.parts:
             continue
         try:
@@ -467,10 +507,12 @@ CHECKS = (
     ("audit invariants", lambda i, r: audit_invariants(i)),
     ("served goals", lambda i, r: served_goals(i)),
     ("one context per portfolio", lambda i, r: one_context_per_portfolio(i)),
-    ("decision options", lambda i, r: decision_options(i)),
+    ("decision alternatives", lambda i, r: decision_alternatives(i)),
     ("decision supersession", lambda i, r: decision_supersession(i)),
     ("decision numbering", lambda i, r: decision_numbering(i)),
     ("cited decisions", lambda i, r: cited_decisions(i)),
+    ("artifact paths", lambda i, r: artifact_paths(i)),
+    ("enacted decisions", lambda i, r: enacted_decisions(i)),
     ("surviving placeholders", lambda i, r: surviving_placeholders()),
 )
 
@@ -494,8 +536,6 @@ if __name__ == "__main__":
     stale += [name for name, text in pages.items()
               if not (META / name).exists()
               or (META / name).read_text() != text.rstrip("\n") + "\n"]
-    stale += [f"{p.relative_to(META)} is generated and nothing renders it"
-              for p in render.orphans(pages)]
     print(("x  " if stale else "ok ") + "rendered prose" + (f": {', '.join(stale)}" if stale else ""))
     failed |= bool(stale)
 

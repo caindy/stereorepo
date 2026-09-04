@@ -1,0 +1,82 @@
+decisions:
+  - id: work:decision/059
+    name: "DR-059 · The decision record is assertions, and decisions.md is rendered from them"
+    status: ADOPTED
+    supersedes:
+      - work:decision/049
+    applies:
+      - work:article/9
+      - work:article/12
+    alternatives:
+      - name: Leave the record as prose
+        chosen: false
+        reason: >-
+          DR-049's position, and it was right on its own evidence: modelling
+          would have wrapped the paragraphs without gaining a check. Three checks
+          have arrived since, which is what changed rather than the argument.
+      - name: Model a Decision, and render the prose from it
+        chosen: true
+        reason: >-
+          Supersession, Article bearing and "which entries rejected nothing"
+          become answerable, and `.meta` stops holding one durable record that a
+          fresh agent must read linearly rather than query. What it costs is that
+          writing an entry is now editing YAML and re-rendering, and that the
+          structured slots on the converted entries are thin — nothing was
+          backfilled, because a rejection invented is worse than a rejection
+          missing.
+      - name: Backfill the missing structure while converting
+        chosen: false
+        reason: >-
+          Written Decisions forbids inventing a rejection. An entry that named
+          no alternative is telling the truth about what was recorded at the
+          time, and the empty slot is the finding.
+    consequences:
+      - >-
+        `.meta/templates/adr.md` is rendered from the same class, so a Project's
+        ADR and the Portfolio's record are one shape with `project` set or not.
+        A heading can no longer drift from what the model requires.
+      - >-
+        Four checks join the gate that the prose could not carry: exactly one
+        chosen option where options are stated, supersession that resolves and
+        does not loop, contiguous numbering, and every DR cited in prose
+        resolving to an entry.
+      - >-
+        A cited Article is a typed reference, so a dangling citation is a gate
+        failure. The prose form of the same defect is what this change found —
+        `roadmap.md` cited DR-058 for an entry nobody wrote — and a fifth check
+        now holds it: every DR cited in prose resolves to an entry.
+      - >-
+        DR-058 is a hole rather than a reconstruction. Writing the missing entry
+        afterwards from the roadmap's account was tried and dropped: an entry
+        nobody took is a reconstruction wearing a decision's authority, and the
+        hole is what the number is honestly worth.
+      - >-
+        Two entries are withdrawn rather than converted. They keep their prose
+        and their numbers, below the record rather than in it.
+      - >-
+        The scaffold's seed changes shape: `template/.meta/decisions.md` is
+        replaced by an assertion file, since a portfolio's record is generated
+        the same way.
+    falsifier: >-
+      A year in which none of the three questions is asked, and the only observed
+      effect is friction on writing an entry. That would mean the prose was right
+      and the model is overhead.
+    enacted_in:
+      - work:artifact/meta-render
+    rationale: |-
+      DR-049 ruled the record stays prose because modelling would wrap the
+      paragraphs without gaining a check. That was true when written. What
+      changed is that the checks arrived — nothing could ask the file
+      which decisions superseded which, which Articles nothing had
+      applied, or which entries recorded a narrative rather than a
+      foreclosure.
+
+      Applying the class's own test found only two entries to withdraw,
+      which is worth recording: the entries that read as narrative are
+      almost all narrative *around* a foreclosure rather than instead of
+      one.
+
+      Supersession turned out to be usually partial. Almost every entry
+      replacing an earlier one kills a paragraph and leaves the rest
+      standing, so `superseded_by` is reserved for an entry that died
+      whole. None has.

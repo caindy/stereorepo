@@ -1,0 +1,24 @@
+decisions:
+  - id: work:decision/033
+    name: "DR-033 · `README.md` for arriving, `SPECIALIZE.md` for acting"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/readme
+    rationale: |-
+      Three audiences, three entry points, kept apart because conflating
+      them is what made the first Specialization attempt leak: arriving at
+      the repo, turning a clone into a portfolio, working on the scaffold
+      itself.
+
+      `SPECIALIZE.md` is generated from the Specialization Discipline, so
+      the steps exist once. A procedure copied into a second file is one
+      that will disagree with itself.
+
+      Its first instruction is the finding testing produced: **start a new
+      repo and copy into it, never clone.** A clone carries the scaffold's
+      history and an `origin` pointing back at it, which was the worst of
+      the five gaps found by running the procedure for real.
+
+      `README.md` credits its sources, because a scaffold presenting
+      adopted work as its own invention would be teaching the wrong lesson
+      on the page a reader sees first.

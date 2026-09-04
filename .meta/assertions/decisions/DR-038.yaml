@@ -1,0 +1,22 @@
+decisions:
+  - id: work:decision/038
+    name: "DR-038 · A Goal serves an END goal, or is a business or technical goal"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-work-purpose
+    rationale: |-
+      Closes what DR-020 and DR-031 left open: the two do **not** share an
+      abstraction. A work Goal *serves* a Cooper END goal and they stay
+      apart, because a Goal carries a Challenge and a user's goal has
+      none.
+
+      But "serves an END goal" was not the whole rule. *About Face* names
+      business and technical goals and keeps them out of the Persona so
+      they cannot pollute the user model — DR-020 honoured the exclusion
+      and never gave them a home. They belong on the Goal, as the other
+      two things that can justify it.
+
+      The basis stays single-valued. A Goal that genuinely serves both a
+      user and the business picks its primary, which is what keeps
+      DR-031's arithmetic meaningful: subtracting served END goals from
+      held ones only means something if each Goal is counted once.

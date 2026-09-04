@@ -1,0 +1,23 @@
+decisions:
+  - id: work:decision/035
+    name: "DR-035 · Specializing for real, three times"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-assertions-vocabulary
+    rationale: |-
+      Dogfooding the procedure found nine defects across two runs, none of
+      which reading it had surfaced.
+
+      The sharpest was a check that passed **vacuously**: the placeholder
+      scan looked only at files `template/` shadows, and Specialization
+      deletes `template/` a step earlier — so it could never have fired in
+      the flow it was written for. It was rewritten from *precise* to
+      *alive*, scanning everything outside `template/` instead.
+
+      One fix closed two defects, and that is the lesson worth keeping.
+      Specialization is solorepo's own Discipline rather than one it
+      publishes, so moving it out of `assertions/imported/` stopped a
+      portfolio inheriting a Discipline it can never perform *and* stopped
+      `SPECIALIZE.md` being recreated by the re-render after its own
+      deletion. The ordering bug and the wrongly-inherited Discipline were
+      one bug seen twice.

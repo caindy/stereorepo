@@ -7,7 +7,8 @@ description: >-
   **Adopted from SKOS, not from DDD.** It has its own module so the departure is
   marked by structure instead of by a comment someone has to notice.
 
-  A Concept is a unit of meaning identified by URI and decoupled from any label
+  A Ubiquitous Language is a set of Concepts, not a set of Terms (DR-018). A
+  Concept is a unit of meaning identified by URI and decoupled from any label
   that denotes it. That decoupling is the whole point: a label collision is two
   Concepts sharing a label, which cannot be stated at all if the unit of the
   model is the word. It is also why this cannot be folded into the classes of a

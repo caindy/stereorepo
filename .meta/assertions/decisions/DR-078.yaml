@@ -1,0 +1,62 @@
+decisions:
+  - id: work:decision/078
+    name: "DR-078 · A decision names the artifact where its rule lives"
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-charter
+      - work:artifact/meta-readme
+      - work:artifact/meta-check
+    alternatives:
+      - name: Leave the mandate in the record and route to it
+        chosen: false
+        reason: >-
+          It is what was happening, and it costs a search through seventy entries
+          at the moment an agent is about to work. The record is ordered by when a
+          question was settled, which is the one ordering that answers no question
+          anybody asks of a rule.
+      - name: A typed link from the rule to its decision
+        chosen: false
+        reason: >-
+          A Discipline or Article gaining a `decided_by` slot would carry the same
+          link from the other end. It only covers what is modelled — the checkers,
+          the channel, `AGENTS.md` and the schemas hold rules too, and they are
+          files rather than instances.
+      - name: The decision names the artifact
+        chosen: true
+        reason: >-
+          One slot, on the class that always exists, naming any file. Requiring
+          the artifact to cite the number back was tried in the same change and
+          removed: it cannot be typed, it passes on any coincidental occurrence
+          of the number, and it forces a citation into artifacts whose own
+          sentence did not want one.
+    consequences:
+      - >-
+        `enacted_in` is required of every ADOPTED entry, and the seventy-three
+        already in force were filled in rather than grandfathered.
+      - >-
+        The reverse direction is rendered, never typed: a generated mandate page
+        ends with the entries naming it, and `decisions.md` carries a **By
+        artifact** table for everything else.
+      - >-
+        The record stops being a place to put a rule. An entry whose reasoning
+        implies an instruction has to say where that instruction now lives, and
+        the gate asks at the moment it is written.
+      - >-
+        RECOMMENDED entries are exempt, which is what the status now buys: DR-066
+        is endorsed, enacts nothing yet, and passes.
+    falsifier: >-
+      An artifact named by an entry whose rule is not in fact written there —
+      the link satisfied and the mandate still only in the record. That would
+      mean `enacted_in` had become a field to fill rather than a claim to make.
+    rationale: |-
+      Progressive Disclosure is two claims and only one had been applied. DR-077
+      split the record so nobody loads it whole. The other claim — that an agent
+      knows where to find a thing — was still failing, because the thing it needed
+      was sometimes only in the record. A satellite that owns what it holds is no
+      use if what it holds is elsewhere.
+
+      Twenty-four of seventy-seven entries had any artifact citing them at all when
+      this was written. The rest were reachable only by reading the record, which is
+      the cost being removed.

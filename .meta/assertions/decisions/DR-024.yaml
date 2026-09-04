@@ -1,0 +1,20 @@
+decisions:
+  - id: work:decision/024
+    name: "DR-024 · `.meta/README.md` splits into a core and six satellites"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-readme
+    rationale: |-
+      The README had grown to 556 lines holding vocabulary, principles,
+      disciplines, roadmap, a procedure and twenty-three decision records
+      — while being the one file `AGENTS.md` points at, and so the one
+      that always loads. It violated the Progressive Disclosure Discipline
+      adopted one commit earlier.
+
+      Two consolidations came with it. The Specialization procedure moved
+      beside the definition of Discipline, since the procedure *is* one
+      and having them apart was the split that made Discipline hard to
+      see. And the schema tooling moved beside the files it operates on.
+
+      The core states its own insufficiency, which is the Discipline's
+      operative rule rather than a disclaimer.

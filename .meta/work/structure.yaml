@@ -10,7 +10,7 @@ description: >-
   and this is the reason — the language is what holds it together, so the repo
   boundary and the language boundary are the same boundary.
 
-  Within it, **Products** and **Projects** are not a hierarchy. They are
+  Within it, **Products** and **Projects** are not a hierarchy (DR-027). They are
   orthogonal groupings of the same content:
 
   A **Product** groups by *who it is for*. It is delivered to users, has its own
@@ -63,6 +63,13 @@ slots:
     range: Project
     multivalued: true
 
+  path:
+    description: >-
+      Where the Artifact is, relative to the repository root. The one copy of the
+      location: an identifier is opaque here, as everywhere else in the ontology,
+      so nothing has to parse an id to reach a file.
+    required: true
+
   language:
     description: The language a Project is written in. Portfolios are polyglot; Projects are not.
 
@@ -103,6 +110,26 @@ classes:
       name:
         required: true
       primary_persona:
+        required: true
+
+  Artifact:
+    is_a: WorkEntity
+    description: >-
+      A file something is answerable for: the artifacts a Decision names as
+      carrying its rule, and that A20 requires to cite it back.
+
+      Identified rather than named by path so that a reference to one is a
+      reference (DR-079) — resolved against the schema by the same machinery
+      every other reference uses, rather than by a checker matching strings. Renaming a file
+      then moves one `path`, and the citations that pointed at it keep pointing.
+
+      The inventory is deliberately partial. An Artifact exists here because
+      something asserts a relationship to it, not so that the repository can hold
+      a list of its own files, which is what `ls` is for.
+    slots:
+      - path
+    slot_usage:
+      name:
         required: true
 
   Project:

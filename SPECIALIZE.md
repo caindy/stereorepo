@@ -30,3 +30,7 @@ _Produces: A portfolio repo, with its own history and nothing of the scaffold's.
 
 Read [`.meta/README.md`](.meta/README.md). Its load map routes to everything
 else, and is deliberately insufficient on its own.
+
+---
+
+**Where this came from.** [DR-013](.meta/assertions/decisions/DR-013.yaml), [DR-046](.meta/assertions/decisions/DR-046.yaml)

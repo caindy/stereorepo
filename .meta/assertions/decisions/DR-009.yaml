@@ -1,0 +1,10 @@
+decisions:
+  - id: work:decision/009
+    name: "DR-009 · Commit per settled decision"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/agents
+    rationale: |-
+      Commit as each decision is settled and implemented, rather than batching. The repo
+      is a record of how the scaffold was reasoned into being, not only of its final
+      state. Reverts are commits too.

@@ -1,0 +1,48 @@
+decisions:
+  - id: work:decision/061
+    name: "DR-061 · The Disciplines name GitHub"
+    status: ADOPTED
+    applies:
+      - work:article/17
+    alternatives:
+      - name: A vendor-neutral term for where pull requests live
+        chosen: false
+        reason: >-
+          It is a mint, and it buys portability nobody has asked for. `forge`
+          was exactly this and is A17's origin. The abstraction also costs
+          precision at the point of use: a step saying "wherever pull requests
+          live" cannot name `gh`, a review thread or a ruleset, which is most of
+          what the practice actually consists of.
+      - name: Say GitHub
+        chosen: true
+        reason: >-
+          It is what this repository runs on, and naming it lets the Disciplines
+          be specific about review threads, rulesets and `gh`. What it costs is
+          a rewrite if that ever changes — which is a real cost, paid once,
+          against an abstraction paid for at every reading.
+    consequences:
+      - >-
+        PR First's steps name GitHub. The harness axis stays abstract, which is
+        a different axis: which agent is working is genuinely unknown, and where
+        the pull request is is not.
+    falsifier: >-
+      A portfolio built on something other than GitHub. The rewrite it forces is
+      the measure of what this cost.
+    enacted_in:
+      - work:artifact/meta-disciplines
+    rationale: |-
+      Asked whether a category term was wanted for "wherever pull requests
+      live", Christopher ruled that the answer remains GitHub.
+
+      The two axes are not the same and only one is open. **Which harness is
+      working is unknown** — that is the whole late-binding argument, and it is
+      why the subscription step says a background task, a webhook or a scheduled
+      job without choosing. **Where the pull request is, is known.** Abstracting
+      it invents a word to describe a variation that does not exist, and A17's
+      origin is what that costs: `forge` reached the Charter, three decision
+      records, two READMEs, a scope note and a function name before anyone asked
+      whether it had been agreed.
+
+      The gain is at the point of use. A Discipline that names GitHub can say
+      review thread, ruleset, required status check and `gh`. One that names a
+      category has to gesture at all four.

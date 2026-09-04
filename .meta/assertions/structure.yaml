@@ -40,3 +40,103 @@ products:
       What a Rust project in a portfolio inherits — the gates, the documentation
       layout, and solorepo's Disciplines made executable for one language.
     primary_persona: work:persona/the-solo
+
+# The artifacts a Decision names under `enacted_in`, and nothing else. Listed
+# here so that naming one is a reference the gate resolves rather than a path
+# a checker matches. Partial by design: a file earns an entry by being
+# answerable for something, not by existing.
+
+artifacts:
+  - id: work:artifact/agents
+    name: AGENTS.md
+    path: AGENTS.md
+  - id: work:artifact/github-workflows-gate
+    name: .github/workflows/gate.yml
+    path: .github/workflows/gate.yml
+  - id: work:artifact/meta-assertions-authority
+    name: .meta/assertions/authority.yaml
+    path: .meta/assertions/authority.yaml
+  - id: work:artifact/meta-assertions-domain-vocabulary
+    name: .meta/assertions/domain_vocabulary.yaml
+    path: .meta/assertions/domain_vocabulary.yaml
+  - id: work:artifact/meta-assertions-vocabulary
+    name: .meta/assertions/vocabulary.yaml
+    path: .meta/assertions/vocabulary.yaml
+  - id: work:artifact/meta-charter
+    name: .meta/charter.md
+    path: .meta/charter.md
+  - id: work:artifact/meta-check
+    name: .meta/check.py
+    path: .meta/check.py
+  - id: work:artifact/meta-check-pr
+    name: .meta/check_pr.py
+    path: .meta/check_pr.py
+  - id: work:artifact/meta-ddd-ontology
+    name: .meta/ddd_ontology.yaml
+    path: .meta/ddd_ontology.yaml
+  - id: work:artifact/meta-ddd-skos
+    name: .meta/ddd/skos.yaml
+    path: .meta/ddd/skos.yaml
+  - id: work:artifact/meta-disciplines
+    name: .meta/disciplines.md
+    path: .meta/disciplines.md
+  - id: work:artifact/meta-hooks-signed-channel
+    name: .meta/hooks/signed_channel.py
+    path: .meta/hooks/signed_channel.py
+  - id: work:artifact/meta-readme
+    name: .meta/README.md
+    path: .meta/README.md
+  - id: work:artifact/meta-render
+    name: .meta/render.py
+    path: .meta/render.py
+  - id: work:artifact/meta-roadmap
+    name: .meta/roadmap.md
+    path: .meta/roadmap.md
+  - id: work:artifact/meta-say
+    name: .meta/say
+    path: .meta/say
+  - id: work:artifact/meta-schemas
+    name: .meta/schemas.md
+    path: .meta/schemas.md
+  - id: work:artifact/meta-templates-pull-request
+    name: .meta/templates/pull-request.md
+    path: .meta/templates/pull-request.md
+  - id: work:artifact/meta-vocabulary
+    name: .meta/vocabulary.md
+    path: .meta/vocabulary.md
+  - id: work:artifact/meta-work-actors
+    name: .meta/work/actors.yaml
+    path: .meta/work/actors.yaml
+  - id: work:artifact/meta-work-authority
+    name: .meta/work/authority.yaml
+    path: .meta/work/authority.yaml
+  - id: work:artifact/meta-work-decisions
+    name: .meta/work/decisions.yaml
+    path: .meta/work/decisions.yaml
+  - id: work:artifact/meta-work-disciplines
+    name: .meta/work/disciplines.yaml
+    path: .meta/work/disciplines.yaml
+  - id: work:artifact/meta-work-ontology
+    name: .meta/work_ontology.yaml
+    path: .meta/work_ontology.yaml
+  - id: work:artifact/meta-work-personas
+    name: .meta/work/personas.yaml
+    path: .meta/work/personas.yaml
+  - id: work:artifact/meta-work-provenance
+    name: .meta/work/provenance.yaml
+    path: .meta/work/provenance.yaml
+  - id: work:artifact/meta-work-purpose
+    name: .meta/work/purpose.yaml
+    path: .meta/work/purpose.yaml
+  - id: work:artifact/meta-work-structure
+    name: .meta/work/structure.yaml
+    path: .meta/work/structure.yaml
+  - id: work:artifact/readme
+    name: README.md
+    path: README.md
+  - id: work:artifact/specialize
+    name: SPECIALIZE.md
+    path: SPECIALIZE.md
+  - id: work:artifact/stakeholders-readme
+    name: stakeholders/README.md
+    path: stakeholders/README.md

@@ -1,0 +1,21 @@
+decisions:
+  - id: work:decision/031
+    name: "DR-031 · A persona goal is identified, and a Job to be Done names the ones it serves"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-work-purpose
+    rationale: |-
+      The edge earns its place by making a subtraction possible, the same
+      one Permission against AuditRecord already makes: an END goal with
+      no Job to be Done is a user need nobody is working on, and a Job to
+      be Done serving none is work with no user justification.
+
+      Naming only the Persona narrowed a need to a *set* of goals without
+      resolving it to one, which left SMART's relevance unfalsifiable —
+      relevant, but to what.
+
+      Two constraints on the edge are unexpressible and go to the gate:
+      the target must be END tier, and it must be a goal the Job to be
+      Done's own Persona holds. Both matter precisely because the value
+      here is arithmetic, and a borrowed or wrongly-tiered goal corrupts
+      the count silently.

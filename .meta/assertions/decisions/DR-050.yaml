@@ -1,0 +1,23 @@
+decisions:
+  - id: work:decision/050
+    name: "DR-050 · Journaling is a Discipline, and structure replaces restraint"
+    status: ADOPTED
+    applies:
+      - work:article/11
+      - work:article/13
+    enacted_in:
+      - work:artifact/meta-disciplines
+    rationale: |-
+      A journal is the intake every other record draws from: a finding
+      lands there and in the same change goes to the Charter if it
+      establishes a rule, or to a decision record if it forecloses
+      something. What stays is what was neither.
+
+      The reason its headings are required rather than encouraged is the
+      most solorepo-specific thing here, and it generalises past journals:
+      **a convention that stays healthy because a human gets bored will
+      not survive agentic maintenance.** A person hits "this is getting
+      long" and stops. A model does not tire, does not feel the length,
+      and matches the register it finds — so it continues, in the same
+      shape, faster. Every convention here that relied on restraint has to
+      be replaced by one that relies on structure.

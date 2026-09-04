@@ -1,0 +1,12 @@
+decisions:
+  - id: work:decision/011
+    name: "DR-011 · `.agents/` is staged under `.meta/`"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-render
+    rationale: |-
+      `.agents` is an open convention with enough consensus that its place at repo root
+      belongs to a *product's* agent definitions. The agents supporting solorepo's
+      opinionated approach are scaffold, so they keep the convention's name inside
+      `.meta/`. Trade-off: tooling that looks for `.agents/` at the root will not find
+      them.

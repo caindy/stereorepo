@@ -9,8 +9,9 @@ the second party A16 asks for. That defect is not an oversight to remember
 harder about; it is what happens when signing is an act rather than a property
 of the channel.
 
-So this is the channel. It appends the Trailer itself, from the environment, and
-refuses to speak when the environment does not say who is speaking. There is no
+So this is the channel (DR-069). It appends the Trailer itself, from the
+environment, and refuses to speak when the environment does not say who is
+speaking. There is no
 argument for the identity, deliberately: what a caller can pass, a caller can
 pass wrongly.
 
@@ -40,6 +41,7 @@ import select
 import subprocess
 import sys
 
+# Outside the tree, per role and per machine (DR-073).
 ROLE_ENV = pathlib.Path(
     os.environ.get("SOLOREPO_ROLE_ENV", "~/.config/solorepo/coder.env")).expanduser()
 
@@ -102,6 +104,9 @@ def role_identity():
 
 def commit(subject):
     """Commit as this Actor, with the Trailers composed here rather than by a hook.
+
+    The branch nominates the Job, the Trailer nominates the Actor, and the squash
+    carries both (DR-062).
 
     A `prepare-commit-msg` hook did this until DR-074, and it worked by reading
     variables the harness happened to put in the environment. That is inherited
@@ -285,7 +290,8 @@ def main():
 
     if args.verb == "merge":
         # Not an utterance, and still the channel's. Merging is an act by the
-        # Role — DR-072 puts it in an agent's hands — so it is the Role that
+        # Role — DR-072 puts it in an agent's hands and DR-075 puts the act
+        # through here — so it is the Role that
         # GitHub should record as having done it, and the squash commit that
         # lands on trunk carries that account rather than the solo's.
         print(gh("pr", "merge", args.pr, "--squash", "--delete-branch", parse=False))
@@ -324,7 +330,9 @@ def main():
         print("resolved")
         return
 
-    body = signed(stdin_body())
+    # `pr-title` says everything it has to say in an argument. Reading a body it
+    # will not use turned a rename into a refusal, twice.
+    body = None if args.verb == "pr-title" else signed(stdin_body())
 
     if args.verb == "comment":
         print(gh("pr", "comment", args.pr, "--body", body, parse=False))

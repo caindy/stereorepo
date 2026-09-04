@@ -1,0 +1,17 @@
+decisions:
+  - id: work:decision/023
+    name: "DR-023 · The work ontology splits into seven modules"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-work-ontology
+    rationale: |-
+      `work_ontology.yaml` had grown to 1,180 lines holding everything,
+      which both new Disciplines argue against: nothing that long is an
+      exposition, and nothing that undivided can be disclosed
+      progressively.
+
+      `work_ontology.md` is dropped with it. It was a fifteen-line sketch
+      the schema had long since overtaken, and keeping a "source" that
+      contradicts what it sources is the drift these Disciplines exist to
+      prevent. Everything in it survives, each definition in the module
+      that owns it.

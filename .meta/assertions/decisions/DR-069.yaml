@@ -1,0 +1,79 @@
+decisions:
+  - id: work:decision/069
+    name: "DR-069 · Signing is a property of the channel, not an act anyone performs"
+    status: ADOPTED
+    supersedes:
+      - work:decision/068
+    applies:
+      - work:article/16
+      - work:article/19
+    alternatives:
+      - name: A step, a reminder, or a stricter Discipline
+        chosen: false
+        reason: >-
+          It leaves signing an act somebody performs, and an act can be omitted.
+          DR-050's principle says why that is not a fix: a convention that stays
+          healthy because someone is paying attention does not survive agentic
+          maintenance, and the attention here failed within an hour of the rule
+          being written.
+      - name: A channel that signs, and no other path permitted
+        chosen: true
+        reason: >-
+          The Trailer stops being something anyone types. What it costs is a
+          wrapper to maintain and a deny list that must keep pace with the ways
+          of reaching an endpoint — inspection rather than structure, which is
+          why the credential boundary is named as what would finish it.
+      - name: Wait for the machine accounts
+        chosen: false
+        reason: >-
+          They are the real fix and they are the solo's to create. Leaving the
+          hole open until then would mean every comment in between is
+          unattributable, and the defect is already known to occur.
+    consequences:
+      - >-
+        `.meta/say` is the only sanctioned way for an agent to write on GitHub.
+        It appends the Trailer from the environment and refuses when the
+        environment does not say who is speaking.
+      - >-
+        `say resolve` refuses a thread this Actor is the sole author of, which
+        turns DR-068's step into a program.
+      - >-
+        A19 joins the Charter: a commit that does not name its Actor is
+        unattributable. A `prepare-commit-msg` hook appends it and `check_pr.py`
+        fails the pull request when it is missing — and the hook survives
+        `--no-verify`, which skips `pre-commit` and `commit-msg` and not this.
+      - >-
+        `.claude/settings.json` exists for the first time, denying the writing
+        verbs of `gh` and permitting the wrapper; a `PreToolUse` hook refuses the
+        other ways to reach the API.
+      - >-
+        The Trailer's value changes. It now reads `claude-code_<version>_agent/<session>`,
+        because that is what the environment attests — the model is not in it, and
+        naming it would have meant taking it from the caller.
+      - >-
+        The authority half of the ontology has instances for the first time:
+        a TOOL, a SKILL composed of it, a Securable and a Permission. It has been
+        TBox since DR-003 and asserted nothing, which is what #11 measured.
+    falsifier: >-
+      An unsigned comment appearing on a pull request from an agent working
+      here. The channel would then not be the only path, and the deny list would
+      be decoration.
+    enacted_in:
+      - work:artifact/meta-say
+      - work:artifact/meta-hooks-signed-channel
+    rationale: |-
+      One comment went out on #9 without the Trailer. It read as the solo,
+      manufactured the second party A16 asks for, and **passed** the gate
+      on a fiction — invisible precisely because what it broke was the
+      thing that would have detected it.
+
+      The diagnosis is one line: signing was an act somebody performs, and
+      an act can be omitted. Every fix that leaves it an act fails the
+      same way on a long enough run.
+
+      Moving the Trailer into a channel forced the first real Capability
+      this repository has had to name. Not "run a shell" or "use `gh`" —
+      both name an implement and permit everything it can reach. *Speak on
+      GitHub as this Actor* names what may be done, and its guarantee is
+      that the identity comes from the environment and never from an
+      argument. What a caller can pass, a caller can pass wrongly.

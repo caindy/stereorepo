@@ -1,0 +1,19 @@
+decisions:
+  - id: work:decision/053
+    name: "DR-053 · A key written twice is a value that is right by luck"
+    status: ADOPTED
+    applies:
+      - work:article/7
+    enacted_in:
+      - work:artifact/meta-check
+    rationale: |-
+      DR-051's line-walk fix wrote `broader` into every concept, including
+      the twenty-nine that already had one. PyYAML takes the last of a
+      repeated key without a word. Every pair happened to be identical, so
+      the render was correct — for no reason anyone had checked, and one
+      different pair would have made it silently wrong.
+
+      Three findings of the same shape now: a script reporting success
+      over thirteen skipped concepts, a placeholder check made vacuous by
+      deleting what it checked, and this. The pattern is a control whose
+      passing carries no information, which is A7 exactly.

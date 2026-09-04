@@ -1,0 +1,35 @@
+decisions:
+  - id: work:decision/057
+    name: "DR-057 · Threads block the merge, and resolving one has to mean something"
+    status: ADOPTED
+    applies:
+      - work:article/16
+    alternatives:
+      - name: "Auto-resolve outdated threads"
+        chosen: false
+        reason: "An anchor moving is not a concern being met. Pairing required resolution with auto-resolve builds a merge gate that clears itself."
+      - name: "Unresolved threads block, and resolving one has to mean something"
+        chosen: true
+        reason: "If it was worth mentioning, it is worth resolving for the record — even when subsequent changes have removed its bearing."
+    consequences:
+      - "`required_review_thread_resolution` is true on the main ruleset."
+      - "A16 is checked on the last push; the residual hole is issue #5."
+      - "The ruleset lists required status checks by job name, so renaming a job removes a required check silently."
+    enacted_in:
+      - work:artifact/meta-check-pr
+    rationale: |-
+      Christopher's ruling: unresolved conversations block, and they are
+      resolved cogently *even when subsequent changes have removed their
+      bearing*. If it was worth mentioning, it is worth resolving for the
+      record.
+
+      Requiring resolution is what makes A16 necessary — the requirement
+      teaches the shortcut, and a thread closed to clear the gate looks
+      identical afterwards to one that was answered.
+
+      The cost of finding out that `pull_request_review_thread` is not a
+      workflow trigger: it does not fail as an unknown event, it fails the
+      whole workflow at startup. A run appeared with zero jobs and an
+      empty status rollup, which reads as *checks have not finished*
+      rather than *the gate no longer exists*. Ratchet running backwards
+      through a typo. Issue #5 holds what is left of the hole.

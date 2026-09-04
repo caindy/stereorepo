@@ -1,0 +1,16 @@
+decisions:
+  - id: work:decision/036
+    name: "DR-036 · A second dogfood cycle, and three more leftovers"
+    status: WITHDRAWN
+    withdrawn_because: "An audit report. Its three fixes are leftovers of DR-035's decision rather than new foreclosures, and the pattern it names — every remaining defect was a leftover of a fix — is a finding, which belongs to a Discipline and not to this record."
+    rationale: |-
+      The pattern across both dogfood cycles is what this number is worth
+      keeping for: **every remaining defect was a leftover of a fix, not
+      an original mistake.** Moving a thing leaves its name behind — the
+      Specialization Discipline moved and its Concept stayed. Fixing one
+      file of a class does not fix the class — `.meta/README.md` was
+      corrected and `schemas.md`, identical in kind, was not.
+
+      Neither is visible from where the fix is made, and both are visible
+      immediately in a specialized result. That is the argument for
+      Dogfooding requiring a full run rather than a review.

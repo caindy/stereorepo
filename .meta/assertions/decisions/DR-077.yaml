@@ -1,0 +1,50 @@
+decisions:
+  - id: work:decision/077
+    name: "DR-077 · The decision record is an index that routes, and one page per entry"
+    status: ADOPTED
+    applies:
+      - work:article/12
+    alternatives:
+      - name: One page, as it was
+        chosen: false
+        reason: >-
+          Seventy-six entries in twenty-six hundred lines. A reader wanting one
+          entry loads all of them, and a conversation wanting to cite one has
+          nothing smaller than the whole record to point at.
+      - name: An index of numbers alone, entries in the assertions
+        chosen: false
+        reason: >-
+          The YAML is the source and stays it, but it is not the reading surface —
+          a reader sent there gets the record's storage rather than its prose, and
+          the rendering exists precisely because those are not the same thing.
+      - name: An index that routes, and a page per entry
+        chosen: true
+        reason: >-
+          It is Progressive Disclosure with the entries as satellites. The index
+          carries what is needed to choose — number, question, status, date — and
+          nothing sufficient to apply, and the page named for the number is what a
+          conversation references.
+    consequences:
+      - >-
+        Pages are named `DR-0nn.md` and nothing else, so `@.meta/decisions/DR-011.md`
+        resolves by typing the number. A slug of the title would make the name
+        depend on prose that gets edited.
+      - >-
+        A withdrawn entry keeps its page. The number is a stable identifier and a
+        citation to a hole must reach the account of why it is one.
+      - >-
+        `render.py` renders sets of files, not only single ones, and sweeps
+        `decisions/` for pages nothing renders — a dropped entry would otherwise
+        leave its file behind with nothing to notice it.
+    falsifier: >-
+      An index line that has to be read alongside the page to be understood, or a
+      page that cannot be read without the index. Either would mean the split ran
+      through the middle of a statement rather than between two.
+    enacted_in:
+      - work:artifact/meta-render
+    rationale: |-
+      The entry is the unit, and it always was. Every citation in this repository is
+      to a number, every reference resolves to one entry, and no reader has ever
+      wanted the record end to end. It was one file because rendering one file was
+      what `render.py` could do, which is a fact about the renderer rather than
+      about the record.

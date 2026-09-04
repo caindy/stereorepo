@@ -39,3 +39,5 @@ Design, from Alan Cooper's persona work, from SKOS, and from a working
 `python_bootstrap` repository whose load map and template-as-data argument are
 adopted almost whole. Where a rule exists, `.meta/decisions.md` records what it
 cost to learn.
+
+This file is for **arriving**; [`SPECIALIZE.md`](SPECIALIZE.md) is for **acting**.

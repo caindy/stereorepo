@@ -1,0 +1,55 @@
+decisions:
+  - id: work:decision/079
+    name: "DR-079 · An enacted artifact is an entity, not a path in a string"
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-work-structure
+      - work:artifact/meta-check
+    alternatives:
+      - name: Paths as strings, checked by hand-written code
+        chosen: false
+        reason: >-
+          What DR-078 shipped. Seventy-nine citations each carrying a path, and a
+          checker opening every one of them — the schema knowing nothing about
+          any of it, which is the arrangement LinkML is here to remove.
+      - name: An Artifact entity, and the citation as a reference
+        chosen: true
+        reason: >-
+          A slot whose range is an identified class is already a reference to the
+          gate, so validation arrives with no checker at all. What is left to
+          check is one path per file rather than one per citation, and a renamed
+          file moves one `path` instead of every entry that named it.
+    consequences:
+      - >-
+        Thirty-one Artifacts are asserted, and the reference count rises from 220
+        to 299. The bespoke path check is gone; `artifact paths` checks the
+        inventory instead.
+      - >-
+        `decisions.md` gains a **By artifact** table — the other direction of
+        `enacted_in`, which was previously answerable only by grepping the
+        assertions.
+      - >-
+        The inventory is partial on purpose. A file earns an entry by being
+        answerable for something; the repository does not need a list of itself.
+      - >-
+        The reverse direction stops being checked at all. A text match cannot
+        tell an account from a coincidence, so it is rendered where the page is
+        generated and read off the **By artifact** table everywhere else.
+    falsifier: >-
+      An artifact whose entry exists only to satisfy a citation — no other
+      assertion ever refers to it, and nothing would be lost by inlining the path
+      again. At that point the entity is ceremony around a string.
+    rationale: |-
+      `enacted_in` held bare strings and `check.py` opened each one, which is a
+      checker doing by hand what the schema does for every other reference here.
+
+      A reference is free and a path is not. `check.py` decides what a reference
+      *is* by reading the schema — a slot whose range is a class with an identifier,
+      not inlined — so giving `enacted_in` a range bought validation of all
+      seventy-nine citations without a line of checking code.
+
+      What cannot be typed is the other direction: a Python file cannot hold an
+      instance. That half was dropped rather than approximated with a text match,
+      which would have passed on any occurrence of the number anywhere in the file.

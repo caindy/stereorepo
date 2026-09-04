@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refuse any path to GitHub that does not sign what it posts.
+"""Refuse any path to GitHub that does not sign what it posts (DR-069).
 
 A PreToolUse hook, so the harness runs it rather than the agent remembering to.
 `.claude/settings.json` denies `gh`'s writing verbs and permits its read-only

@@ -1,0 +1,64 @@
+decisions:
+  - id: work:decision/067
+    name: "DR-067 · Handoff folds into PR First"
+    status: ADOPTED
+    supersedes:
+      - work:decision/063
+    applies:
+      - work:article/18
+    alternatives:
+      - name: Keep Handoff as a Discipline of its own
+        chosen: false
+        reason: >-
+          Once the note was removed there was no judgement left in it. Where to
+          stop turned out to be the gate's business, what to write turned out to
+          be nothing, and DR-047's test says a way of working with no judgement
+          is a program nobody has written yet. Keeping it would have meant
+          filling `judgement` with implementation notes — the exact tell DR-047
+          named.
+      - name: Fold it into PR First
+        chosen: true
+        reason: >-
+          PR First already owns the pull request's whole life, and the seam is a
+          moment in that life rather than a separate practice. What it costs is
+          eleven steps in one Discipline, and a reader looking for "handoff" now
+          has to know it is there — which the Concept answers, since it survives
+          and says where it lives.
+    consequences:
+      - >-
+        Two steps join PR First rather than four: push and stop at green, and
+        request review from the next Role's account. The rest were already there
+        — the conversation-to-Issue valve, reading GitHub on arrival, and the
+        Actor Trailer — and adding them again would have been the duplication
+        this session made the priority.
+      - >-
+        A18 now enforces PR First. The Article is unchanged; the thing it holds
+        moved.
+      - >-
+        The `handoff` skill is deleted, because a skill compiles a Discipline and
+        there is no longer one to compile. `pr-first` already triggers on picking
+        work up again.
+      - >-
+        The **Handoff** Concept survives and moves out of the Disciplines
+        grouping. The seam is a real thing whether or not it has a practice of
+        its own, and a reader who reaches for the word needs to be told where it
+        lives.
+    falsifier: >-
+      A handoff that goes wrong in a way PR First's steps do not cover — which
+      would mean the seam had judgement in it after all, and folding it in buried
+      that rather than removing it.
+    enacted_in:
+      - work:artifact/meta-disciplines
+    rationale: |-
+      DR-063 made Handoff a Discipline on two judgements: where to stop,
+      and what a successor cannot reconstruct. DR-066 removed the second
+      by removing the note, and the first turned out to be the gate's
+      business — green is not a matter of opinion. What was left is a
+      state transition with two conditions, which is an Article and two
+      steps.
+
+      The precedent is sharper than the class comment usually cited with
+      it. `Discipline` warns that an *empty* `judgement` is a smell;
+      Handoff's was not empty, it held two sentences that read as
+      judgement. An empty slot announces itself. A filled one has to be
+      read, and it was written by whoever most wanted the class to exist.

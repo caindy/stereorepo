@@ -11,23 +11,25 @@ bundled up and shipped is built from these definitions.
 
 **This file is the core, and the only one here that always loads. Keep it small.**
 Every other file in `.meta/` is a satellite, loaded on demand and authoritative
-for what it owns. This file routes. It does not restate.
+for what it owns. This file routes. It does not restate. A satellite may be
+long: nothing loads it until you are already in the thing it owns.
 
 ## The load map
 
 | Touching… | Load first |
 | :-- | :-- |
 | naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a term without the solo |
-| what this repo asserts | [`assertions/`](assertions/) — the ABox. The prose satellites derive from it. |
+| what this repo asserts | [`assertions/`](assertions/) — the ABox, and the source the prose derives from |
 | a term for **this** domain | `assertions/domain_vocabulary.yaml` — owned here, never synced |
-| anything under `assertions/imported/` | do not edit it. It is solorepo's, and a sync overwrites it. |
+| anything under `assertions/imported/` | do not edit it. It is solorepo's, and a sync overwrites it |
 | a schema, or checking one | [`schemas.md`](schemas.md), then the module its own load map names |
 | how work is meant to proceed here | [`disciplines.md`](disciplines.md) |
 | a rule you can cite, or check something against | [`charter.md`](charter.md) — the Articles |
 | turning a clone into a portfolio | [`disciplines.md`](disciplines.md) → Specialization |
-| **why** something is built this way | [`decisions.md`](decisions.md) — find its DR, then read [`decisions/DR-0nn.md`](decisions/) |
+| **why** something is built this way | [`decisions.md`](decisions.md) — find its DR, then read [`assertions/decisions/DR-0nn.yaml`](assertions/decisions/) |
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
-| changing or defending a rule | its DR in `assertions/decisions.yaml`, **and** the file that states it |
+| changing or defending a rule | its DR in `assertions/decisions/`, **and** the file that states it |
+| an id you need to resolve — `work:artifact/meta-disciplines`, say | `grep -rn -A2 "id: <the curie>" .meta/assertions/`. Every identified object is declared once, there |
 | what is intended but unbuilt, or still open | [`roadmap.md`](roadmap.md) |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 | opening a pull request, or filing an Issue | [`templates/`](templates/) — the forms; `.github/` is generated from them |
@@ -42,7 +44,8 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
 | what **happened** on this change | the pull request body, using `.meta/templates/pull-request.md` |
 | work **noticed and not done** | a linked Issue, before review — never a summary or a file |
-| **why** a decision was taken | `assertions/decisions.yaml`, as a DR, then re-render |
+| **why** a decision was taken | a new `assertions/decisions/DR-0nn.yaml`, then re-render — and name in `enacted_in` where its rule now lives |
+| a **mandate** — what someone must do | the Discipline or Article that owns it, never the DR. A20: a rule that lives only in the record is not in force |
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | a checkable one-line rule | `assertions/imported/charter.yaml`, then re-render |
 | reasoning that recurs across several decisions | `principles.md` |

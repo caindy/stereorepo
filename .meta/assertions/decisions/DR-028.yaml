@@ -1,0 +1,22 @@
+decisions:
+  - id: work:decision/028
+    name: "DR-028 · The DDD schema modularises, and the Portfolio link is typed"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-ddd-ontology
+    rationale: |-
+      Splitting `skos` out is not filing. It marks the departure by
+      structure rather than by a comment someone has to notice: Concept
+      and ConceptScheme are adopted from SKOS and not from DDD, and now
+      that fact is the module they live in.
+
+      A `tree_root` in a module is inherited by anything importing it and
+      silently replaces the importer's own, which is why the container may
+      only live in the umbrella.
+
+      What the typing does and does not buy: the reference gains a
+      machine-readable range, so generators know what it points at. It
+      does **not** give referential integrity — a Portfolio naming a
+      Bounded Context that does not exist still validates, because two
+      containers are two files and LinkML does not resolve across them.
+      That check belongs to whatever reads these files.

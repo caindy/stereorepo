@@ -1,0 +1,63 @@
+decisions:
+  - id: work:decision/065
+    name: "DR-065 · A decision begins with a question that demands an answer"
+    status: ADOPTED
+    supersedes:
+      - work:decision/009
+      - work:decision/059
+    applies:
+      - work:article/11
+    alternatives:
+      - name: Record only when settled and implemented
+        chosen: false
+        reason: >-
+          It keeps the record honest about what exists, and it leaves the closed
+          alternatives open to anyone who was not in the conversation. A decision
+          that has been taken and not written down is a decision only its
+          participants can cite, which is A11 with a delay rather than an
+          exemption.
+      - name: Record when the question is settled, and let status carry the rest
+        chosen: true
+        reason: >-
+          The alternatives close when the question is answered, not when the
+          answer is built. What it costs is that the record now contains things
+          that do not exist yet, so `status` has to be read and not assumed —
+          and a reader who skips it will believe something is in force that is
+          not.
+    consequences:
+      - >-
+        `DecisionStatus` gains RECOMMENDED, between PROPOSED and in force: the
+        question is answered and the answer endorsed, but nothing is built.
+      - >-
+        ACCEPTED is renamed ADOPTED. Accepting is something done to a proposal;
+        adopting is a state the repository is in, which is what the value means.
+      - >-
+        Written Decisions loses "not before", and `AGENTS.md`, the record's own
+        header and the rendered page follow.
+      - >-
+        A recommendation must state its options, the same as something in force.
+        Closing the alternatives is what makes it a decision at all.
+      - >-
+        The roadmap's job narrows. What is *settled and unbuilt* is a
+        RECOMMENDED decision; what remains is what is genuinely open.
+    falsifier: >-
+      A record where most entries are RECOMMENDED and stay that way. That would
+      mean the status had become a place to put intentions, and the old rule was
+      buying discipline rather than costing it.
+    enacted_in:
+      - work:artifact/meta-work-decisions
+    rationale: |-
+      The case that forced it was the machine users. The choice was made
+      in conversation, the alternative rejected for a stated reason, and
+      the rule as written sent all of it to `roadmap.md` as prose because
+      no account had been created yet — reasoning parked in an artifact
+      nothing can query, one file over from the record that exists for it.
+
+      The status ladder is what makes recording early safe. A reader who
+      wants to know what binds reads the status, and the record stops
+      silently conflating "we decided this" with "this is how it works".
+
+      ACCEPTED was the wrong word for the state it named. Acceptance is
+      something done to a proposal at a moment; adoption is a condition
+      the repository is in and stays in, which is what a reader is asking
+      about.

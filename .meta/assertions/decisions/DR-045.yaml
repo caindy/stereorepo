@@ -1,0 +1,20 @@
+decisions:
+  - id: work:decision/045
+    name: "DR-045 · `rust_bootstrap` exists, and Specialization ran for real"
+    status: WITHDRAWN
+    withdrawn_because: "A run report. Its one claim, that the Bootstrap belonged in its own repository, was reversed by DR-046 within the hour; its finding that Specialization ran clean is kept there, and the two gaps it surfaced are in the roadmap."
+    rationale: |-
+      The first Specialization that was not a test fixture, and it ran
+      clean.
+
+      Two things the new repository refused to assert, both forced into
+      the open by the schema. It has one Project, `.meta`, because there
+      is no Rust in it yet and a Project whose gate does not run would
+      violate Gates Do Not Fix before the first commit. And its Product
+      names the solo as primary Persona, because there is no research to
+      draw another from.
+
+      Two gaps surfaced: a portfolio has no designated place for product
+      material, and nothing records what a Bootstrap implements — though
+      blessing is a conformance claim of exactly the shape everything else
+      here takes.

@@ -1,0 +1,31 @@
+decisions:
+  - id: work:decision/047
+    name: "DR-047 · An Invariant is not a Discipline with fewer words"
+    status: ADOPTED
+    supersedes:
+      - work:decision/043
+    alternatives:
+      - name: "Keep the invariants as Disciplines"
+        chosen: false
+        reason: "Wrapping a one-line claim in description, judgement, steps and produces buries the claim, and merging two claims leaves neither separately citable."
+      - name: "A second class, checked rather than followed"
+        chosen: true
+        reason: "A Discipline bears judgement; an Invariant requires none and is numbered as a stable identifier so it can be cited from a code comment."
+    consequences:
+      - "`Gates Do Not Fix` is retired as a Discipline and becomes three Invariants."
+      - "Five Disciplines survive the test, each with judgement that is genuinely judgement."
+      - "A collision is recorded: Invariant here, against DDD's `invariants` slot on an Aggregate."
+    enacted_in:
+      - work:artifact/meta-charter
+    rationale: |-
+      The diagnosis is in this repository's own definition of a
+      Discipline: a structured way of working that must be adhered to
+      *because it is not an imperative program*. "No gate step may rewrite
+      the tree" is settled once and mechanically verifiable. It is nearly
+      a program, was never a Discipline, and forcing it into that shape
+      cost it its bite.
+
+      The tell was in the `judgement` slot, whose own comment says an
+      empty one is a smell: it had been filled with implementation notes
+      rather than judgement. A slot that cannot be left empty gets filled
+      with something.
