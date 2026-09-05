@@ -134,6 +134,42 @@ def commit(subject):
     sys.exit(out.returncode)
 
 
+def merge(pr):
+    """Merge as the Role, label trunk with the pull request's title, and report
+    what GitHub holds afterwards.
+
+    Not an utterance, and still the channel's. Merging is an act by the Role —
+    DR-072 puts it in an agent's hands and DR-075 puts the act through here — so
+    it is the Role that GitHub should record as having done it, and the squash
+    commit that lands on trunk carries that account rather than the solo's.
+
+    The subject is passed rather than left to GitHub. Left to it, a branch with
+    more than one commit landed on `main` under its first commit's subject and
+    not the pull request's title (#26), which is the label the index carries —
+    and a label on trunk cannot be rewritten. The body is left to GitHub, so the
+    Trailers on the branch's commits ride into the squash as before (DR-062).
+
+    `--delete-branch` is not used. It makes `gh` check out `main` locally after
+    the merge, which fails from a worktree because `main` is already checked out
+    elsewhere — and it fails *after* the merge, so the exit code said the act
+    had failed when it had not. The remote branch is deleted here instead, and
+    the local checkout is left alone.
+
+    The outcome is read back from GitHub, per A6: a step's result is what it
+    found, not what its last subprocess returned.
+    """
+    before = gh("pr", "view", pr, "--json", "title,state,headRefName")
+    if before["state"] != "OPEN":
+        sys.exit(f"say: #{pr} is {before['state'].lower()}, not open")
+    gh("pr", "merge", pr, "--squash", "--subject", f"{before['title']} (#{pr})", parse=False)
+    after = gh("pr", "view", pr, "--json", "state,mergeCommit")
+    if after["state"] != "MERGED":
+        sys.exit(f"say: #{pr} is {after['state'].lower()} after the merge call; not deleting the branch")
+    gh("api", "-X", "DELETE", f"repos/{repo()}/git/refs/heads/{before['headRefName']}", parse=False)
+    print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
+    print(f"deleted origin/{before['headRefName']}")
+
+
 def trailers():
     """The block this channel signs with, defined once because two readers need
     it: the one that writes it, and the one that recognises it."""
@@ -296,12 +332,7 @@ def main():
         commit(args.message)
 
     if args.verb == "merge":
-        # Not an utterance, and still the channel's. Merging is an act by the
-        # Role — DR-072 puts it in an agent's hands and DR-075 puts the act
-        # through here — so it is the Role that
-        # GitHub should record as having done it, and the squash commit that
-        # lands on trunk carries that account rather than the solo's.
-        print(gh("pr", "merge", args.pr, "--squash", "--delete-branch", parse=False))
+        merge(args.pr)
         return
 
     if args.verb == "whoami":
