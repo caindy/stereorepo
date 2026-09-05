@@ -153,7 +153,11 @@ def merge(pr):
     the merge, which fails from a worktree because `main` is already checked out
     elsewhere — and it fails *after* the merge, so the exit code said the act
     had failed when it had not. The remote branch is deleted here instead, and
-    the local checkout is left alone.
+    the local checkout is left alone — unless the repository deletes head
+    branches itself, which this one does. The first run of this verb (#46)
+    deleted a ref GitHub had already removed, and exited 1 on a merge that had
+    landed, which is the defect it was written to remove wearing a new coat. So
+    the setting is read, and the verb deletes nothing the repository will.
 
     The outcome is read back from GitHub, per A6: a step's result is what it
     found, not what its last subprocess returned.
@@ -165,9 +169,13 @@ def merge(pr):
     after = gh("pr", "view", pr, "--json", "state,mergeCommit")
     if after["state"] != "MERGED":
         sys.exit(f"say: #{pr} is {after['state'].lower()} after the merge call; not deleting the branch")
-    gh("api", "-X", "DELETE", f"repos/{repo()}/git/refs/heads/{before['headRefName']}", parse=False)
     print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
-    print(f"deleted origin/{before['headRefName']}")
+    branch = before["headRefName"]
+    if gh("repo", "view", "--json", "deleteBranchOnMerge")["deleteBranchOnMerge"]:
+        print(f"GitHub deletes origin/{branch} on merge; nothing to do here")
+    else:
+        gh("api", "-X", "DELETE", f"repos/{repo()}/git/refs/heads/{branch}", parse=False)
+        print(f"deleted origin/{branch}")
 
 
 def trailers():
