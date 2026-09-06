@@ -1,0 +1,101 @@
+decisions:
+  - id: work:decision/103
+    name: "DR-103 · The record is retrieved by meaning: ck's semantic search over a corpus rendered one entry per file, compiled to a skill"
+    challenge: work:challenge/18
+    status: RECOMMENDED
+    applies:
+      - work:article/8
+    alternatives:
+      - name: Read every title before deciding, and say so in the load map
+        chosen: false
+        reason: >-
+          The first draft of this entry, argued from size: the whole record is
+          one context window and its hundred titles are two thousand tokens.
+          Size is not the question. Loading everything is the opposite of
+          Progressive Disclosure, a row that says "read the titles first" is a
+          convention by restraint, which DR-050 says a fleet does not keep,
+          and a title carries only what it was written to carry — ranking the
+          titles alone found a relevant entry in the top five for 13 of 18
+          questions, the worst of the indexed methods.
+      - name: BM25 over the index `check.py` already builds, rendered as a skill
+        chosen: false
+        reason: >-
+          Forty lines of Python, no install, no index on disk, and 15 of 18 in
+          the top five. It is blind where the question has none of the corpus's
+          words: "I finished a task and there is leftover work" found nothing,
+          and the semantic modes found PR First and DR-054 first. Kept as the
+          fallback the falsifier names, because it costs nothing and is most of
+          the way there.
+      - name: zg, ripgrep with BM25 and vector search in one tool
+        chosen: false
+        reason: >-
+          What the Challenge asked about. It reads the assertions as they sit,
+          and with the same embedding model as ck it found a relevant entry in
+          the top five for 16 of 18 and first for 11. What it costs is 535 MB
+          of Node modules and a Node 22 runtime per machine, a 189 MB model
+          cache, and an index that is stale by default: an edited entry was
+          invisible to a direct-mode query until `--refresh wait` was passed
+          or the index rebuilt. A skill can always pass the flag, which makes
+          honesty a rule the skill carries rather than a property of the tool.
+      - name: ck's semantic mode over a corpus rendered one entry per file
+        chosen: true
+        reason: >-
+          A relevant entry in the top five for every one of 18 questions and
+          first for 12, at 0.15 s a query, with a 64 MB binary and a 129 MB
+          model cache. It re-indexes before every query, so an entry added,
+          edited or deleted was found with no command run: the index cannot
+          drift from the assertions by more than one query, which is the cost
+          the Challenge asked to be priced, and it is nil. What it costs: ck
+          does not index YAML, so the corpus is a render target — one Markdown
+          file per identified object, derived from the assertions and gated by
+          the staleness check like every other render target — which is also
+          what makes a hit name an entry rather than a line inside a 500-line
+          file; a `cargo install` per machine, like `gh stack`; a `.ck/`
+          directory beside the corpus that must be ignored; and a tool below
+          1.0 whose lexical mode returned nothing for any query.
+    consequences:
+      - >-
+        Nothing is built by this entry, which is what RECOMMENDED says. What
+        it forecloses is the shape: a skill of DR-060's kind, rendered by
+        `render.py`, whose command runs `ck --sem` over a corpus `render.py`
+        also emits, so that the skill, the corpus and the assertions are one
+        source with two derived copies.
+      - >-
+        The load map gains no row. The question the Challenge named — has this
+        been argued before — is answered by the skill when it exists, and by
+        `decisions.md` until then, as it was.
+      - >-
+        `check.py` goes on building its index and throwing it away. The BM25
+        alternative is what reuses it, and it is the fallback, not the plan.
+      - >-
+        The eighteen questions and the harness that scored every method are in
+        the pull request that recorded this. The built skill carries them as
+        its acceptance test, or the falsifier has nothing to measure.
+    falsifier: >-
+      The built skill scoring below the BM25 fallback's 15 of 18 on the same
+      questions, or an agent that has the skill re-arguing an entry the record
+      settled. The first sends this back to the second alternative; the second
+      says retrieval was never the problem.
+    rationale: |-
+      The Challenge asked three things. Whether a semantic index beats
+      grep for the questions agents arrive with: yes, measured. A keyword
+      grep put a relevant entry somewhere in a set averaging 15 files;
+      the semantic modes put one in the top five every time. The
+      questions with none of the record's own words in them — "leftover
+      work", "push to trunk", "Role versus Remit" — are where the gap
+      opened, because every entry explains its terms in plain English and
+      an embedding carries that where a keyword cannot. Whether it can
+      be a skill of DR-060's shape: yes, and the corpus it reads is a
+      render target, which is the same claim made twice. What keeping the
+      index honest costs: nothing, for a tool that re-indexes per query,
+      and one flag, for one that does not.
+
+      The first draft of this entry chose the first alternative, from
+      the size of the corpus. Christopher objected that fitting in a
+      context window is not an argument for reading it all, and the
+      measurement above is what answered him. The precedent the
+      Challenge cited still holds in one respect: DR-051's Agency and the
+      ruleset check that raised this were both cases of nobody asking,
+      and a tool answers only the question it is asked. What the tool
+      changes is the price of asking, which is the one thing a fleet of
+      agents responds to.

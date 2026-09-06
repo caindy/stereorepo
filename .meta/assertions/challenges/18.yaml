@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/18
+    name: Research zg — ripgrep with BM25 and semantic search — as a retrieval skill over the assertions
+    challenge_type: SPIKE
+    description: >-
+      The assertions are the only reading surface, and dereferencing an id is
+      a grep that answers only the question already known how to ask. The
+      question an agent arrives with — has this been argued before — has no
+      row, and one session re-argued a settled matter because nobody looked.
+      Whether a semantic index beats grep here, whether it could be rendered
+      as a skill, and what keeping such an index honest would cost.

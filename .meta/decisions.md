@@ -118,6 +118,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-100](assertions/decisions/DR-100.yaml) | A sequence of dependent changes is a GitHub stack, linked and merged through the channel, never rebased by hand | Adopted |
 | [DR-101](assertions/decisions/DR-101.yaml) | The paragraph test inside a source file and the receipt rule are steps of Literate Programming and Nothing Unconsumed, not Disciplines of their own | Adopted |
 | [DR-102](assertions/decisions/DR-102.yaml) | The subscription is the checker's watch, named by the Discipline, and keeping it running is the harness's business | Adopted |
+| [DR-103](assertions/decisions/DR-103.yaml) | The record is retrieved by meaning: ck's semantic search over a corpus rendered one entry per file, compiled to a skill | Recommended |
 
 ## Holes
 
