@@ -15,7 +15,9 @@ disciplines:
       because it is still believed.
 
       Where the prose *sits* is a language's business and not this Discipline's.
-      What is required is the single copy and the machine reading it.
+      What is required is the single copy, the machine reading it, and the
+      prose sorted by what it tells the reader, so that the language has three
+      kinds to place rather than one.
     judgement: >-
       What a future reader will not be able to reconstruct. No checker can tell
       you which reasoning is worth recording, and recording all of it is its own
@@ -30,6 +32,14 @@ disciplines:
         Keep the exposition in one copy, and make that copy the one the machine
         reads. Inline in the source, or in a file the source includes — whichever
         the language does well.
+      - >-
+        Sort the prose in a source file by what it tells the reader — the
+        paragraph test Progressive Disclosure applies to the repository, applied
+        inside a file. What to **do** stays with the item it documents; **why**
+        goes where the documentation tool renders it without crowding the code;
+        what **happened**, this once, goes to a log named for what it holds,
+        out of the code it annotates and reached from it. The language says
+        where each of the three sits; the test is the same in every language.
       - >-
         Where the language allows it, make the examples executable, so the prose
         is checked and not merely asserted.
@@ -208,6 +218,15 @@ disciplines:
     steps:
       - For each artifact, name what consumes it, and what that consumer checks it against.
       - Delete what nothing consumes. An unread artifact is not documentation, it is debris.
+      - >-
+        Hold a history log to its receipts. An entry says what failed and what
+        the change established — not what changed, which the diff already says —
+        and names its **receipt**: the test that would fail if the change were
+        undone. The entry is consumed by a reader; what it is checked against is
+        the test suite, so an entry whose test is gone is stale and goes with
+        it, and the log prunes itself. Observed Failure's argument, applied to
+        prose: an entry naming no test is debris for the same reason a guardrail
+        never seen to fail is evidence of nothing.
       - Detect orphans mechanically, since they accumulate faster than anyone notices.
     produces:
       - A repository where everything present is load-bearing.

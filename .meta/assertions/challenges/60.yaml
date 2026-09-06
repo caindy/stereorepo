@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/60
+    name: Routing prose by the paragraph test and the receipt rule are held in two languages, and are not yet Disciplines
+    challenge_type: TASK
+    description: >-
+      `bootstraps/rust/README.md` names two candidates for pulling up into a
+      Discipline — routing documentation inside a source tree by the paragraph
+      test, and the receipt rule for history entries — and declines to promote
+      either until a second language confirms it. `bootstraps/python/` is the
+      second language: both are held there in the same shape, so the trigger
+      the Rust page set has fired, and a third language would otherwise state
+      both a third time.

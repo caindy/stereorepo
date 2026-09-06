@@ -35,7 +35,7 @@ _Produces: A portfolio repo, with its own history and nothing of the scaffold's.
 
 An **artifact** is an exposition addressed to a human reader; the machine-readable part is secondary to the account of what it means and why. Knuth's argument, applied wherever prose and machine-readable content coexist — a schema, a module of code, a configuration.
 The exposition must exist in **one copy, and it must be the copy the machine reads**. A LinkML module's description is what the generators consume; Rust can carry prose inline or include a markdown file into rustdoc, and either satisfies this. Where the exposition is a second copy of something, it drifts — and a drifted explanation is worse than none, because it is still believed.
-Where the prose *sits* is a language's business and not this Discipline's. What is required is the single copy and the machine reading it.
+Where the prose *sits* is a language's business and not this Discipline's. What is required is the single copy, the machine reading it, and the prose sorted by what it tells the reader, so that the language has three kinds to place rather than one.
 
 **Where the judgement is.** What a future reader will not be able to reconstruct. No checker can tell you which reasoning is worth recording, and recording all of it is its own failure — an exposition nobody finishes explains nothing.
 
@@ -43,7 +43,8 @@ Where the prose *sits* is a language's business and not this Discipline's. What 
 2. Record what a reader would otherwise have to reconstruct.
 3. Mark departures from a canon in place, where they are made.
 4. Keep the exposition in one copy, and make that copy the one the machine reads. Inline in the source, or in a file the source includes — whichever the language does well.
-5. Where the language allows it, make the examples executable, so the prose is checked and not merely asserted.
+5. Sort the prose in a source file by what it tells the reader — the paragraph test Progressive Disclosure applies to the repository, applied inside a file. What to **do** stays with the item it documents; **why** goes where the documentation tool renders it without crowding the code; what **happened**, this once, goes to a log named for what it holds, out of the code it annotates and reached from it. The language says where each of the three sits; the test is the same in every language.
+6. Where the language allows it, make the examples executable, so the prose is checked and not merely asserted.
 
 _Produces: Artifacts that explain themselves._
 
@@ -140,7 +141,8 @@ A configuration key nothing reads, a document nothing links to, a test suite not
 
 1. For each artifact, name what consumes it, and what that consumer checks it against.
 2. Delete what nothing consumes. An unread artifact is not documentation, it is debris.
-3. Detect orphans mechanically, since they accumulate faster than anyone notices.
+3. Hold a history log to its receipts. An entry says what failed and what the change established — not what changed, which the diff already says — and names its **receipt**: the test that would fail if the change were undone. The entry is consumed by a reader; what it is checked against is the test suite, so an entry whose test is gone is stale and goes with it, and the log prunes itself. Observed Failure's argument, applied to prose: an entry naming no test is debris for the same reason a guardrail never seen to fail is evidence of nothing.
+4. Detect orphans mechanically, since they accumulate faster than anyone notices.
 
 _Produces: A repository where everything present is load-bearing._
 
@@ -232,4 +234,4 @@ _Produces: Artifacts that carry their own reasoning, and a pull request holding 
 
 ---
 
-**Where this came from.** [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-100](assertions/decisions/DR-100.yaml)
+**Where this came from.** [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-101](assertions/decisions/DR-101.yaml)

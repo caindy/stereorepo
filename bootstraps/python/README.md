@@ -56,11 +56,3 @@ DR-095, DR-096 and DR-097 are its decisions about the standard, filed at the
 level they bind. The generator stays behind (DR-099): its `new` is [`render`](render),
 and its sync, never built, is kept there as the shape a portfolio's sync
 will take.
-
-## Two candidates for pulling up, now held twice
-
-The Rust standard states routing documentation by the paragraph test, and the
-receipt rule for history entries, once each, and declined to promote either
-until a second language confirmed it. This is the second language: both are
-held here, by `doc`, `orphans` and `receipts`, in the same shape. Promoting
-them is a Decision the record does not yet hold.

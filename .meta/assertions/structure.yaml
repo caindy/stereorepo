@@ -94,6 +94,9 @@ artifacts:
   - id: work:artifact/bootstraps-rust-readme
     name: bootstraps/rust/README.md
     path: bootstraps/rust/README.md
+  - id: work:artifact/bootstraps-rust-literate-programming
+    name: bootstraps/rust/literate-programming.md
+    path: bootstraps/rust/literate-programming.md
   - id: work:artifact/bootstraps-rust-render
     name: bootstraps/rust/render
     path: bootstraps/rust/render
@@ -103,6 +106,9 @@ artifacts:
   - id: work:artifact/bootstraps-python-readme
     name: bootstraps/python/README.md
     path: bootstraps/python/README.md
+  - id: work:artifact/bootstraps-python-literate-programming
+    name: bootstraps/python/literate-programming.md
+    path: bootstraps/python/literate-programming.md
   - id: work:artifact/bootstraps-python-render
     name: bootstraps/python/render
     path: bootstraps/python/render

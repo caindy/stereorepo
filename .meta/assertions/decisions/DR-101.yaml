@@ -1,0 +1,101 @@
+decisions:
+  - id: work:decision/101
+    name: "DR-101 · The paragraph test inside a source file and the receipt rule are steps of Literate Programming and Nothing Unconsumed, not Disciplines of their own"
+    challenge: work:challenge/60
+    status: ADOPTED
+    applies:
+      - work:article/4
+      - work:article/8
+      - work:article/17
+      - work:article/20
+    enacted_in:
+      - work:artifact/meta-disciplines
+      - work:artifact/bootstraps-rust-literate-programming
+      - work:artifact/bootstraps-python-literate-programming
+      - work:artifact/bootstraps-rust-readme
+      - work:artifact/bootstraps-python-readme
+    alternatives:
+      - name: Leave both rules where they are, stated once per Bootstrap
+        chosen: false
+        reason: >-
+          The Rust page set the condition for promotion itself — a second
+          language confirming the rule — and the Python page met it. Two
+          statements of one rule had already begun to differ in wording, which
+          is the drift the single-copy rule exists to stop, and a third
+          Bootstrap would state both a third time.
+      - name: Two new Disciplines, one for routing prose and one for receipts
+        chosen: false
+        reason: >-
+          A Discipline is named, and a name is a word. Ubiquitous Language's
+          judgement is whether an idea needs one, and both pages had already
+          answered: the routing test is Progressive Disclosure's judgement
+          applied inside a file, and the receipt rule is Observed Failure and
+          Nothing Unconsumed applied to prose. A Discipline for either is a new
+          word for a thing that already has two, and a third row in every
+          Bootstrap's table implementing what its `doc`, `orphans` and
+          `receipts` steps already hold under the rows above it.
+      - name: Two Articles, since both gates already check something
+        chosen: false
+        reason: >-
+          An Article requires no judgement, and the routing test is nothing
+          but judgement — Progressive Disclosure says it is cheap only at the
+          moment of writing and not decidable afterwards by inspection, which
+          is the opposite of a claim a gate holds against an artifact. The
+          receipt rule has a checkable half, that the named test exists, and
+          that half is A8 with a particular consumer; the half no gate reads —
+          that an entry says what failed and what the change established — is
+          the half a header changelog fails, and it is judgement.
+      - name: A step added to each of the two Disciplines the rules apply
+        chosen: true
+        reason: >-
+          Literate Programming gains the sorting: prose in a source file
+          routes by what it tells the reader, and the language says where each
+          kind sits, which keeps the Discipline's own line that where prose
+          sits is not its business. Nothing Unconsumed gains the receipt, under
+          the row that already holds `receipts` in both Bootstraps. What it
+          costs: two Disciplines that bind the Portfolio each carry a step
+          that only a source tree can perform, so a reader of the Discipline
+          meets a history log before any Project has one; and the word
+          *receipt* enters a Discipline in the sense the record already uses
+          it — the evidence a claim is held against — without a Concept behind
+          it.
+    consequences:
+      - >-
+        Literate Programming gains a step: the prose in a source file is
+        sorted by what it tells the reader — what to do, why, and what
+        happened — and the language says where each of the three sits. Its
+        description asks for the sorting beside the single copy.
+      - >-
+        Nothing Unconsumed gains a step: a history entry says what failed and
+        what the change established, and names its receipt, the test that
+        would fail if the change were undone; the test suite is what the entry
+        is checked against, and an entry whose test is gone goes with it.
+      - >-
+        The Rust and Python pages for Literate Programming say only how — where
+        each kind of prose sits in that language, and what a receipt names
+        there — and the two "candidates for pulling up" sections leave both
+        READMEs.
+      - >-
+        A third Bootstrap implements the two steps and restates neither rule.
+    falsifier: >-
+      A language whose documentation tooling cannot keep the three kinds of
+      prose apart without a second copy, or one whose tests cannot be listed
+      by name so that a receipt cannot be checked mechanically. Either would
+      show the rule was a language's business after all, and it would go back
+      down to the Bootstraps that can hold it.
+    rationale: |-
+      The Rust page declined to promote a rule generalised from one
+      implementation, and said what would change its mind. #57 changed it:
+      the Python gate holds both rules by the same three steps, and the
+      Python page restated both rather than pointing at a statement that did
+      not yet exist anywhere neutral. So the question this record settles is
+      not whether but into what — and the pages had answered that as well,
+      each time they described a rule as some Discipline applied. A rule
+      that is a Discipline applied is a step of it.
+
+      The step is placed where the Bootstraps' tables already put the gate
+      that holds it: `doc` and `orphans` under Literate Programming, and
+      `receipts` under Nothing Unconsumed. Observed Failure is the argument
+      behind the receipt and is cited in the step rather than given a copy
+      of it, because the gate step lives in one row and the rule should
+      live where the row points.

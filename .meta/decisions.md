@@ -116,6 +116,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-098](assertions/decisions/DR-098.yaml) | The Python gate is a workspace member run as `uv run gate`, not a Makefile over scripts · bootstraps/python/seed | Adopted |
 | [DR-099](assertions/decisions/DR-099.yaml) | The generator stays behind, and its sync design is kept as the shape a portfolio's sync will take | Proposed |
 | [DR-100](assertions/decisions/DR-100.yaml) | A sequence of dependent changes is a GitHub stack, linked and merged through the channel, never rebased by hand | Adopted |
+| [DR-101](assertions/decisions/DR-101.yaml) | The paragraph test inside a source file and the receipt rule are steps of Literate Programming and Nothing Unconsumed, not Disciplines of their own | Adopted |
 
 ## Holes
 
@@ -145,7 +146,7 @@ and the query a reader in a file actually has.
 | [`.meta/check_pr.py`](check_pr.py) | [DR-057](assertions/decisions/DR-057.yaml), [DR-083](assertions/decisions/DR-083.yaml), [DR-089](assertions/decisions/DR-089.yaml) |
 | [`.meta/ddd/skos.yaml`](ddd/skos.yaml) | [DR-018](assertions/decisions/DR-018.yaml) |
 | [`.meta/ddd_ontology.yaml`](ddd_ontology.yaml) | [DR-016](assertions/decisions/DR-016.yaml), [DR-017](assertions/decisions/DR-017.yaml), [DR-028](assertions/decisions/DR-028.yaml) |
-| [`.meta/disciplines.md`](disciplines.md) | [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-100](assertions/decisions/DR-100.yaml) |
+| [`.meta/disciplines.md`](disciplines.md) | [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
 | [`.meta/hooks/signed_channel.py`](hooks/signed_channel.py) | [DR-069](assertions/decisions/DR-069.yaml), [DR-100](assertions/decisions/DR-100.yaml) |
 | [`.meta/render.py`](render.py) | [DR-011](assertions/decisions/DR-011.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-040](assertions/decisions/DR-040.yaml), [DR-059](assertions/decisions/DR-059.yaml), [DR-060](assertions/decisions/DR-060.yaml), [DR-077](assertions/decisions/DR-077.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-088](assertions/decisions/DR-088.yaml) |
 | [`.meta/say`](say) | [DR-062](assertions/decisions/DR-062.yaml), [DR-068](assertions/decisions/DR-068.yaml), [DR-069](assertions/decisions/DR-069.yaml), [DR-072](assertions/decisions/DR-072.yaml), [DR-073](assertions/decisions/DR-073.yaml), [DR-074](assertions/decisions/DR-074.yaml), [DR-075](assertions/decisions/DR-075.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-100](assertions/decisions/DR-100.yaml) |
@@ -165,11 +166,13 @@ and the query a reader in a file actually has.
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml) |
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml) |
 | [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml) |
-| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml) |
+| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
+| [`bootstraps/python/literate-programming.md`](../bootstraps/python/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/python/render`](../bootstraps/python/render) | [DR-094](assertions/decisions/DR-094.yaml) |
 | [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
 | [`bootstraps/python/seed/pyproject.toml`](../bootstraps/python/seed/pyproject.toml) | [DR-095](assertions/decisions/DR-095.yaml), [DR-096](assertions/decisions/DR-096.yaml), [DR-097](assertions/decisions/DR-097.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
-| [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml) |
+| [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
+| [`bootstraps/rust/literate-programming.md`](../bootstraps/rust/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
 | [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml) |
 | [`stakeholders/README.md`](../stakeholders/README.md) | [DR-041](assertions/decisions/DR-041.yaml) |

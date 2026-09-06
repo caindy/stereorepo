@@ -44,10 +44,3 @@ seed is sound.
 The seed is a real workspace named `seed`, not a tree of placeholder tokens,
 so that its own gate can run on it where it sits (DR-091). The one placeholder
 is the crate's name, and `render` is the one copy of how it is substituted.
-
-## Two candidates for pulling up
-
-Routing documentation by the paragraph test, and the receipt rule for history
-entries, are each stated once here and implemented once. Neither is promoted
-to a Discipline until a second language confirms it — a rule generalised from
-one implementation is a guess with a checker.
