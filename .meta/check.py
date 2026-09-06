@@ -19,6 +19,7 @@ moved.
 """
 import pathlib
 import re
+import subprocess
 import sys
 
 import yaml
@@ -239,6 +240,16 @@ def _template_files():
     return [(f, ROOT / f.relative_to(TEMPLATE)) for f in sorted(TEMPLATE.rglob("*")) if f.is_file()]
 
 
+def tree():
+    """Every file git would commit or is not ignoring, or every file at all
+    where there is no git to ask."""
+    listed = subprocess.run(["git", "-C", str(ROOT), "ls-files", "--cached", "--others",
+                             "--exclude-standard", "-z"], capture_output=True, text=True)
+    if listed.returncode:
+        return sorted(ROOT.rglob("*"))
+    return sorted(ROOT / name for name in listed.stdout.split("\0") if name)
+
+
 def surviving_placeholders():
     """No template token survives anywhere outside `template/` (DR-034).
 
@@ -250,9 +261,15 @@ def surviving_placeholders():
 
     The cost is that prose here may not spell a token literally. That is cheap,
     and a literal token outside `template/` is a defect in any case.
+
+    "Everything" is the tree as git sees it: tracked files and untracked ones
+    it does not ignore. A build directory is not the tree — rustc writes a
+    marker of exactly this shape into every dependency file under `target/`,
+    and a scan that walked in there failed the gate for having built the Rust
+    seed.
     """
     problems = []
-    for path in sorted(ROOT.rglob("*")):
+    for path in tree():
         if path.is_symlink() or not path.is_file() \
                 or TEMPLATE in path.parents or ".git" in path.parts:
             continue

@@ -25,10 +25,13 @@ permissions:
   contents: read
   pull-requests: read
 
-# The two job names below are required status checks in `main`'s ruleset
+env:
+  CARGO_MUTANTS: "27.1.0"
+
+# The job names below are required status checks in `main`'s ruleset
 # (protected by a ruleset, not a hook — DR-056). Rename one here and every merge
 # blocks: the ruleset waits on a check that nothing reports. `check_pr.py` reads
-# the ruleset and compares, so the pair is checked rather than remembered.
+# the ruleset and compares, so the set is checked rather than remembered.
 jobs:
   files:
     name: files
@@ -43,6 +46,27 @@ jobs:
         with:
           enable-cache: false
       - run: uvx --with linkml --with pyyaml python .meta/check.py
+
+  # The Rust seed is data, and it is gated by rendering it and running its own
+  # gate on the result (A9, DR-091). Required by main's ruleset like the two
+  # above.
+  rust:
+    name: rust seed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # rustup on the runner reads `rust-toolchain.toml` and installs the pin
+      # on first use, so no action is needed for the toolchain. cargo-mutants
+      # is the one tool the gate needs that is not a rustup component; the
+      # cache is keyed on its version so a bump reinstalls it.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-mutants
+          key: cargo-mutants-${{ env.CARGO_MUTANTS }}
+      - run: command -v cargo-mutants || cargo install cargo-mutants --locked --version "$CARGO_MUTANTS"
+      - run: bootstraps/rust/render "$RUNNER_TEMP/acme" acme
+      - run: cargo xtask gate
+        working-directory: ${{ runner.temp }}/acme
 
   pull-request:
     name: pull request

@@ -1,0 +1,10 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+description = "The gate: every Discipline this Project inherits, as a command that can fail"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

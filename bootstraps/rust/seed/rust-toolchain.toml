@@ -1,0 +1,5 @@
+# Pinned. The toolchain moves when somebody moves it, so a lint that arrives in
+# a newer compiler cannot turn a green tree red on a machine that updated.
+[toolchain]
+channel = "1.95.0"
+components = ["clippy", "rustfmt"]

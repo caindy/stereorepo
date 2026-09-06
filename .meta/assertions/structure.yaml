@@ -21,6 +21,19 @@ projects:
     language: LinkML YAML, with Python for rendering and the gate
     gate: uvx --with linkml --with pyyaml python .meta/check.py
 
+  # A second Project, in a second language: the monorepo claim as a build unit
+  # rather than a word. Its gate is written in Rust (DR-090), and the Project
+  # is asserted because that gate runs — a Project whose gate does not run
+  # would have nothing to be held to.
+  - id: work:project/rust-seed
+    name: bootstraps/rust/seed
+    description: >-
+      The seed workspace a Rust Project in a portfolio starts from: one library
+      crate, and the xtask that is its gate. Real and buildable as it sits, so
+      that the gate can run on it in place; a portfolio takes a rendered copy.
+    language: Rust
+    gate: cd bootstraps/rust/seed && cargo xtask gate
+
 products:
   - id: work:product/scaffold
     name: The scaffold
@@ -40,6 +53,8 @@ products:
       What a Rust project in a portfolio inherits — the gates, the documentation
       layout, and solorepo's Disciplines made executable for one language.
     primary_persona: work:persona/the-solo
+    built_from:
+      - work:project/rust-seed
 
 # The artifacts a Decision names under `enacted_in`, and nothing else. Listed
 # here so that naming one is a reference the gate resolves rather than a path
@@ -50,6 +65,15 @@ artifacts:
   - id: work:artifact/agents
     name: AGENTS.md
     path: AGENTS.md
+  - id: work:artifact/bootstraps-rust-readme
+    name: bootstraps/rust/README.md
+    path: bootstraps/rust/README.md
+  - id: work:artifact/bootstraps-rust-render
+    name: bootstraps/rust/render
+    path: bootstraps/rust/render
+  - id: work:artifact/bootstraps-rust-xtask
+    name: bootstraps/rust/seed/xtask/src/lib.rs
+    path: bootstraps/rust/seed/xtask/src/lib.rs
   - id: work:artifact/github-workflows-gate
     name: .github/workflows/gate.yml
     path: .github/workflows/gate.yml

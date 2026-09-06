@@ -1,0 +1,51 @@
+decisions:
+  - id: work:decision/090
+    name: "DR-090 · A Bootstrap's gate is written in the language it gates"
+    challenge: work:challenge/51
+    status: ADOPTED
+    applies:
+      - work:article/5
+      - work:article/6
+      - work:article/7
+    enacted_in:
+      - work:artifact/bootstraps-rust-xtask
+      - work:artifact/bootstraps-rust-readme
+    alternatives:
+      - name: Python scripts beside the seed
+        chosen: false
+        reason: >-
+          What `.meta` does for its own gate, and what `python_bootstrap` does
+          for its template, so it was the default. A portfolio that chose Rust
+          would carry a second runtime for its gate, and the Bootstrap's claim —
+          a Discipline becomes a command that can fail, for one language — would
+          be made in a language other than the one it is about.
+      - name: An xtask crate in the seed's workspace
+        chosen: true
+        reason: >-
+          Needs nothing but the toolchain the Project already has, and the steps
+          are functions over a path, so the probes that watch each of them fail
+          are ordinary tests in the same crate. What it costs is a second crate
+          in every Rust Project, and manifests read line by line rather than
+          parsed, because the xtask takes no dependencies.
+    consequences:
+      - >-
+        The seed is a workspace, `crates/seed` and `xtask`, and `cargo xtask gate`
+        is the Project's gate.
+      - >-
+        A5, A6 and A7 are the xtask's contract, stated on its crate
+        documentation, and `Outcome` carries the three outcomes as a type rather
+        than as an exit code somebody has to remember to distinguish.
+      - >-
+        Lints are raised once, in the workspace's `[workspace.lints]`, and a
+        step of the gate refuses an `allow` in any manifest or cargo config.
+    falsifier: >-
+      A second language whose gate cannot be written in that language without
+      dependencies its seed should not carry. The gate would then be a shared
+      tool under `.meta`, and this entry would be Rust's exception rather than
+      the rule.
+    rationale: |-
+      The Bootstrap is where a Discipline becomes a command that can fail
+      *for one language*, and a gate in another language makes that claim
+      about a tool rather than about the language. Cheap to hold here:
+      the checks are file walks and string matching, which Rust's
+      standard library does without a dependency.

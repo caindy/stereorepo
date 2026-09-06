@@ -1,0 +1,52 @@
+decisions:
+  - id: work:decision/091
+    name: "DR-091 · The seed builds as it sits, and rendering renames it"
+    challenge: work:challenge/51
+    status: ADOPTED
+    applies:
+      - work:article/9
+      - work:article/10
+    enacted_in:
+      - work:artifact/bootstraps-rust-render
+      - work:artifact/github-workflows-gate
+    alternatives:
+      - name: Placeholder tokens, as `template/` uses
+        chosen: false
+        reason: >-
+          The scaffold's own seed carries double-underscore tokens and is
+          rendered by filling them. A crate whose name is a token does not
+          build, so its own gate could never run on it, and DR-034's scan fails
+          any token outside `template/` — the Rust seed cannot live under
+          `template/`, because a portfolio copies that once and whole, while a
+          Bootstrap's seed is copied only if that language was chosen.
+      - name: A real crate named `seed`, renamed by `render`
+        chosen: true
+        reason: >-
+          The seed is a workspace that builds, tests and gates where it sits,
+          which is what lets `work:project/rust-seed` be asserted with a gate
+          that runs. The one placeholder is the crate's name, and `render`
+          substitutes it in the three places the name is the crate rather than
+          the word. What it costs is that the substitution is by pattern, and
+          the rendered tree passing its gate is the only proof it was complete.
+    consequences:
+      - >-
+        `bootstraps/rust/render <destination> <crate>` is the one copy of the
+        substitution; Specialization's fifth step runs it by hand and the
+        workflow runs it in CI.
+      - >-
+        The workflow gains a `rust seed` job that renders the seed as a crate named
+        `acme` and runs `cargo xtask gate` on the result.
+      - >-
+        Where the seed cannot yet satisfy a rule it seeds, it says why in the
+        seed: the history log has no entry and carries the form of one as a
+        comment the receipt check ignores.
+    falsifier: >-
+      A rendered crate whose gate passes while a spelling of `seed` survived
+      that `render` did not know about. That would mean the pattern is not the
+      one copy of the substitution, and the seed would need a token after all.
+    rationale: |-
+      A9 asks for the seed to be gated by rendering it, and this seed can be
+      gated both ways: in place, because it is real, and rendered, because
+      the substitution is small. The workflow runs the rendered one because it
+      is the stronger claim; the in-place one is what a person runs while
+      changing the seed.

@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Render the Rust seed into a portfolio: copy it out, and name its crate.
+
+A seed is data, and it is gated by rendering it and running the real gates on
+the result (A9). The seed builds as it sits, under the name `seed`, so that its
+own gate can run on it in place; what a portfolio needs is the same tree under
+the crate's real name. That substitution is all this does, and it is the one
+copy of how it is done — `.github/workflows/gate.yml` renders with it and runs
+`cargo xtask gate` on what comes out, and Specialization's fifth step does the
+same by hand.
+
+    bootstraps/rust/render <destination> <crate-name>
+
+The destination must not exist. The crate name is what `cargo new` accepts.
+"""
+import pathlib
+import re
+import shutil
+import sys
+
+SEED = pathlib.Path(__file__).resolve().parent / "seed"
+CRATE = re.compile(r"^[a-z][a-z0-9_]*$")
+
+# Where the word `seed` is the crate and not a word: the package's name, the
+# workspace's member path, and a path in the prose that names the crate.
+RENAMES = (
+    ('name = "seed"', 'name = "{name}"'),
+    ('"crates/seed"', '"crates/{name}"'),
+    ("seed::", "{name}::"),
+)
+
+
+def main(argv):
+    if len(argv) != 3:
+        sys.exit(__doc__)
+    destination, name = pathlib.Path(argv[1]), argv[2]
+    if not CRATE.match(name) or name == "seed":
+        sys.exit(f"render: `{name}` is not a crate name this seed can take")
+    if destination.exists():
+        sys.exit(f"render: {destination} exists; the seed renders only into an empty place")
+
+    shutil.copytree(SEED, destination, ignore=shutil.ignore_patterns("target", "mutants.out*"))
+    (destination / "crates" / "seed").rename(destination / "crates" / name)
+
+    changed = 0
+    for path in sorted(p for p in destination.rglob("*") if p.is_file()):
+        text = path.read_text()
+        for old, new in RENAMES:
+            text = text.replace(old, new.format(name=name))
+        if text != path.read_text():
+            path.write_text(text)
+            changed += 1
+    print(f"rendered {SEED.name} into {destination} as `{name}`; {changed} files named it")
+
+
+if __name__ == "__main__":
+    main(sys.argv)

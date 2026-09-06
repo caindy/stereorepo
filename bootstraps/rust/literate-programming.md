@@ -27,15 +27,20 @@ file while staying in the documentation.
 ## Filenames carry the routing
 
 An include's name says what it holds, so a reader knows before opening it
-whether it is worth opening:
+whether it is worth opening. The seed's one module,
+[`seed/crates/seed/src/example/`](seed/crates/seed/src/example/), is the
+instance:
 
 ```
-src/passage/
-  mod.rs
-  passage.overview.md     what this module is
-  passage.rationale.md    why it is this way
-  passage.history.md      what happened, and what each change established
+example/
+  mod.rs                  includes the three files below, in this order
+  example.overview.md     what this module is
+  example.rationale.md    why it is this way
+  example.history.md      what happened, and what each change established
 ```
+
+The crate itself is documented the same way: `src/lib.rs` includes the crate's
+`README.md`, so the file a person reads first is the file rustdoc renders first.
 
 ## The log, and why a header changelog is not one
 
@@ -67,17 +72,20 @@ never seen to fail is not evidence of anything.
 
 ## Gates
 
-None of this is implemented yet; the repository has no Rust in it. The intended
-gates, each of which can fail and says what it checked:
+Each is a step of `cargo xtask gate`, and each can fail and says what it
+checked:
 
-- `RUSTDOCFLAGS="-D warnings"` with `#![deny(missing_docs)]` — no public item
-  goes undocumented, and no broken intra-doc link survives.
-- `cargo test --doc` — the examples in the prose are executed rather than
-  asserted, which is the Discipline's step about making examples executable.
-- **Orphan check** — every markdown file beside a module is included by it, and
-  every include resolves. *Nothing Unconsumed.*
-- **Receipt check** — every history entry names a test that exists.
-
-Two of these are candidates for pulling up into solorepo once a second language
-confirms them: routing documentation by the paragraph test, and the receipt rule
-for history. Neither should be promoted from one implementation.
+- **`doc`** — `cargo doc` with every rustdoc warning an error, and
+  `missing_docs` denied in the workspace lints. No public item goes
+  undocumented, and no broken intra-doc link survives.
+- **`test`** — `cargo test`, which runs the doctests. The examples in the prose
+  are executed rather than asserted, which is the Discipline's step about
+  making examples executable. The crate README's example runs too, because the
+  README is the crate's documentation.
+- **`orphans`** — every markdown file under a package is included by a source
+  file in it. A missing include already fails the build; this holds the other
+  direction. *Nothing Unconsumed.*
+- **`receipts`** — every history entry names a test, and the test is one
+  `cargo test -- --list` reports. The form of an entry can sit in the log as an
+  HTML comment without counting as one, which is how the seed's log says what
+  an entry looks like before it has any.

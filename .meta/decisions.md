@@ -105,6 +105,8 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-087](assertions/decisions/DR-087.yaml) | An Article shows how it applies, and accounts for nothing | Adopted |
 | [DR-088](assertions/decisions/DR-088.yaml) | Intent is an Issue that looks forward, and the roadmap file goes | Adopted |
 | [DR-089](assertions/decisions/DR-089.yaml) | A Challenge closes by keyword at merge, not by a verb | Adopted |
+| [DR-090](assertions/decisions/DR-090.yaml) | A Bootstrap's gate is written in the language it gates | Adopted |
+| [DR-091](assertions/decisions/DR-091.yaml) | The seed builds as it sits, and rendering renames it | Adopted |
 
 ## Holes
 
@@ -123,7 +125,7 @@ and the query a reader in a file actually has.
 
 | Artifact | Entries |
 | :-- | :-- |
-| [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml) |
+| [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml), [DR-091](assertions/decisions/DR-091.yaml) |
 | [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml) |
 | [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-088](assertions/decisions/DR-088.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml) |
@@ -154,4 +156,7 @@ and the query a reader in a file actually has.
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml) |
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml) |
 | [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml) |
+| [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml) |
+| [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
+| [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml) |
 | [`stakeholders/README.md`](../stakeholders/README.md) | [DR-041](assertions/decisions/DR-041.yaml) |

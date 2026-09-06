@@ -1,0 +1,26 @@
+# The seed workspace: one library crate, and the xtask that gates it.
+#
+# Lints are set here, once, and only ever raised. A level of `allow` in this
+# table is a rule switched off where nobody reads it — A2: a suppression names
+# its rule and its reason, at the site, never in configuration — and
+# `cargo xtask lints` refuses one.
+[workspace]
+resolver = "3"
+members = ["crates/seed", "xtask"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+[workspace.lints.rust]
+missing_docs = "deny"
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# `#[allow]` hides a lint for good; `#[expect]` fails the moment the lint stops
+# firing, which is the ratchet running forward. So `allow` is refused and every
+# `expect` carries a reason.
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"

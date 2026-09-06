@@ -2,20 +2,52 @@
 
 What a Rust project in a portfolio inherits, and the gates that hold it there.
 
-| Discipline | Implemented in | State |
+The seed is [`seed/`](seed/): a workspace of one library crate and the xtask
+that gates it. **`cargo xtask gate` is the gate.** Each Discipline below says
+how it is satisfied in Rust and which step of the gate holds it there.
+
+| Discipline | How, in Rust | Held by |
 |---|---|---|
-| Literate Programming | [`literate-programming.md`](literate-programming.md) | designed, not built |
-| Observed Failure | — | not started |
-| Ratchet | — | not started |
-| Gates Do Not Fix | — | not started |
-| Nothing Unconsumed | — | not started |
-| Seeded Artifacts | — | not started |
-| Written Decisions | — | not started |
+| Literate Programming | [`literate-programming.md`](literate-programming.md) | `doc`, `test`, `orphans` |
+| Ratchet | [`ratchet.md`](ratchet.md) | `fmt`, `lints`, `clippy` |
+| Observed Failure | [`observed-failure.md`](observed-failure.md) | `mutants`, and the xtask's own probes |
+| Nothing Unconsumed | [`nothing-unconsumed.md`](nothing-unconsumed.md) | `orphans`, `receipts` |
+| Seeded Artifacts | [`seeded-artifacts.md`](seeded-artifacts.md) | [`render`](render), and the `rust seed` job in the workflow |
+| Written Decisions | [`written-decisions.md`](written-decisions.md) | nothing here — the portfolio's gate, and it says why |
+
+The other Disciplines bind the Portfolio rather than a Project — Progressive
+Disclosure, Ubiquitous Language, Dogfooding, Modelling the Solo, PR First,
+Journaling — so a Bootstrap has nothing to implement for them.
+
+Three Articles bind the gate itself rather than being implemented by it: A5 —
+no gate step rewrites the tree; A6 — every step has three outcomes; A7 — a
+check-mark is a claim about scope. [`seed/xtask/README.md`](seed/xtask/README.md)
+says how the xtask keeps each.
 
 The Disciplines are in `.meta/assertions/imported/disciplines.yaml`. This
 directory only ever says **how** — a Bootstrap that restated a Discipline would
 be a second copy of it, and the second copy is the one that drifts.
 
-Nothing here is executable yet. There is no Rust in the repository, and
-asserting a Project whose gate does not run would violate Gates Do Not Fix
-before it was implemented.
+## Taking it into a portfolio
+
+Specialization's fifth step, for Rust:
+
+```bash
+bootstraps/rust/render <destination> <crate-name>
+```
+
+That copies the seed out and names its crate. What arrives is the workspace,
+its pinned toolchain, and its gate; run `cargo xtask gate` in the destination
+before the first commit, which is also what the workflow does to prove the
+seed is sound.
+
+The seed is a real workspace named `seed`, not a tree of placeholder tokens,
+so that its own gate can run on it where it sits (DR-091). The one placeholder
+is the crate's name, and `render` is the one copy of how it is substituted.
+
+## Two candidates for pulling up
+
+Routing documentation by the paragraph test, and the receipt rule for history
+entries, are each stated once here and implemented once. Neither is promoted
+to a Discipline until a second language confirms it — a rule generalised from
+one implementation is a guess with a checker.
