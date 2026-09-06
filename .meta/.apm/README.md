@@ -36,14 +36,33 @@ Primitives are **derived from `.meta/assertions/`**, never authored twice:
 primitives is unbuilt (see [#28](https://github.com/caindy/solorepo/issues/28)), and hand-writing primitives that a
 compiler will later generate is the duplication that step exists to remove.
 
-## Before authoring anything
+## What the canon says, read on 2026-09-06
 
-Two things were not verifiable from the pages read and must be checked against
-the source first, per the rule that an adopted convention is defined by its
-canon and not by us:
+Checked against APM's own pages, per the rule that an adopted convention is
+defined by its canon and not by us. Each line names where it was read.
 
-- **Frontmatter fields per primitive type.** The primitive-types reference is
-  marked legacy and points at *Package types* and the *Targets matrix*.
-- **Where `apm.yml` sits.** If primitives live at `.meta/.apm/`, the package root
-  is `.meta/`, and the manifest presumably sits beside it at `.meta/apm.yml`.
-  Unconfirmed.
+- **A `hooks` primitive is merged into `.claude/settings.json`, and only its
+  `hooks` section.** `.apm/hooks/<name>.json` is a settings-slice keyed by
+  event (`PreToolUse`, `Stop`, with aliases normalised across targets); on
+  install it lands in that section, and a sidecar `apm-hooks.json` records
+  ownership so a removed target's entries come out cleanly. Nothing in APM
+  writes a `permissions` allow or deny list; the only permission-shaped field
+  is `allowed-tools` in a skill's frontmatter, read by the runtime. A hook can
+  register `signed_channel.py`; the script itself, and `.meta/say`, are
+  programs and not primitives, and ride only as a skill's supporting
+  resources. — [hooks and commands](https://microsoft.github.io/apm/producer/author-primitives/hooks-and-commands/)
+- **`apm.yml` sits at the package root, beside `.apm/`.** The pages show no
+  nested root, so `.meta/` as the root with `.meta/apm.yml` fits the shape and
+  is not confirmed as accepted. — [package types](https://microsoft.github.io/apm/reference/package-types/)
+- **Claude Code does not take `prompts`.** For that target the matrix deploys
+  `instructions` to `.claude/rules/<name>.md`, `agents` to `.claude/agents/`,
+  `skills` to `.claude/skills/<name>/SKILL.md`, `commands` to
+  `.claude/commands/<name>.md`, and `hooks` as above; `CLAUDE.md` is generated
+  at the root, omitting what `.claude/rules/` already holds, and `AGENTS.md`
+  is not generated for it. So the invoked half of the Ubiquitous Language
+  regime (#35) is a `command` for this harness, not a `prompt`, and `AGENTS.md`
+  is not in Claude Code's compile path. — [targets matrix](https://microsoft.github.io/apm/reference/targets-matrix/)
+- **Frontmatter per primitive is still to read from the authoring pages.** The
+  package-types page gives only that a skill collection's `name` must match
+  its directory, `description` should be present, and every value is ASCII.
+  The primitive-types reference is legacy and points at the two pages above.
