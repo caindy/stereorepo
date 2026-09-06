@@ -2,8 +2,6 @@
 
 _The ontologies, and how to exercise them._
 
-_The ontologies, and how to exercise them._
-
 | File | What it is |
 |---|---|
 | `work_ontology.yaml` | The umbrella: equations, load map, container. |
@@ -13,7 +11,7 @@ _The ontologies, and how to exercise them._
 
 Start from `work_ontology.yaml`'s load map, then read the module that covers
 what you are touching. A module explains itself, in LinkML rather than in prose
-([DR-003](decisions/DR-003.md)).
+([DR-003](assertions/decisions/DR-003.yaml)).
 
 ### Exercising them
 

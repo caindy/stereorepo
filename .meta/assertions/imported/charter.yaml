@@ -102,7 +102,7 @@ articles:
     checked_by: >-
       The template is rendered and the real gates run on the result.
     example: >-
-      `template/` is filled with dummy tokens and the result validated.
+      solorepo's `template/` is filled with dummy tokens and the result validated.
       Never linted where it sits.
   - id: work:article/10
     name: Article 10

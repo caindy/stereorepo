@@ -67,7 +67,7 @@ _In practice:_ `.github/PULL_REQUEST_TEMPLATE.md` is consumed by GitHub, and che
 
 **Enforces** Seeded Artifacts. **Checked by** The template is rendered and the real gates run on the result.
 
-_In practice:_ `template/` is filled with dummy tokens and the result validated. Never linted where it sits.
+_In practice:_ solorepo's `template/` is filled with dummy tokens and the result validated. Never linted where it sits.
 
 ### A10. A seeded artifact does not violate the rules it seeds.
 

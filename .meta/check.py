@@ -17,6 +17,7 @@ slot is a reference when its range is a class with an identifier and it is not
 inlined. Listing them by hand would drift from the schemas the moment either
 moved.
 """
+import os
 import pathlib
 import re
 import subprocess
@@ -563,6 +564,93 @@ PRECHECKS = (
     ("duplicate keys", duplicate_keys),
 )
 
+LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+FENCED = re.compile(r"```.*?```|`[^`\n]*`", re.S)
+
+
+def markdown_links():
+    """A relative link in a page resolves to something in the tree (#45).
+
+    A DR cited in prose has been checked since one dangled for a day; a markdown
+    link is the same failure with more syntax, and the audit DR-036 recorded
+    found those by hand. `schemas.md` pointed at `decisions/DR-003.md` for as
+    long as the record had lived somewhere else, and nothing objected.
+
+    Resolution is against the tree as git sees it, not the filesystem: macOS
+    would find `Readme.md` where the runner in CI would not. `template/` is
+    exempt, because its pages link to the pages Specialization renders, which
+    do not exist until it has run. Fenced and inline code is stripped first,
+    since a form showing a link is not making one.
+    """
+    problems = []
+    files = {os.path.normpath(str(f)) for f in tree()}
+    for path in tree():
+        if path.suffix != ".md" or path.is_symlink() \
+                or TEMPLATE in path.parents or ".git" in path.parts:
+            continue
+        try:
+            text = FENCED.sub("", path.read_text())
+        except (UnicodeDecodeError, OSError):
+            continue
+        for target in LINK.findall(text):
+            if re.match(r"[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
+                continue
+            target = target.split("#", 1)[0]
+            if not target:
+                continue
+            resolved = os.path.normpath(str(path.parent / target))
+            if resolved not in files and not pathlib.Path(resolved).is_dir():
+                problems.append(f"{path.relative_to(ROOT)}: [{target}] resolves to nothing")
+    return problems
+
+
+SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/")
+
+
+def inherited():
+    """What Specialization copies into a portfolio, read from the step that
+    lists it, so the copy set is stated once and this check follows it."""
+    data = yaml.safe_load((META / "assertions" / "disciplines.yaml").read_text()) or {}
+    for discipline in data.get("disciplines") or []:
+        if discipline.get("id") != "work:discipline/specialization":
+            continue
+        for step in discipline.get("steps") or []:
+            if step.startswith("Copy what is inherited"):
+                return re.findall(r"`([^`]+)`", step)
+    return []
+
+
+def scaffold_only_paths():
+    """A doc that Specialization copies does not name a path a portfolio lacks (#45).
+
+    `template/`, `SPECIALIZE.md` and `bootstraps/` stay with the scaffold, and a
+    copied page that mentions one reads as true and is not. The audit DR-036
+    recorded found the Specialization Discipline moved and its Concept left
+    behind by exactly this: prose that survived a copy it should not have.
+
+    A mention is allowed on a line that names `solorepo` as the owner, which is
+    how a portfolio's page refers to the scaffold's. The check reads the copied
+    set from the Specialization step, so in a portfolio — where the Discipline
+    is not carried — it has nothing to scan and says nothing, which is right:
+    the copy is the scaffold's to get right before it happens.
+    """
+    problems = []
+    for token in inherited():
+        base = ROOT / token if (ROOT / token).exists() else META / token
+        paths = [base] if base.is_file() else sorted(base.rglob("*")) if base.is_dir() else []
+        for path in paths:
+            if path.suffix not in (".md", ".yaml") or not path.is_file():
+                continue
+            for number, line in enumerate(path.read_text().splitlines(), 1):
+                if "solorepo" in line.lower():
+                    continue
+                for name in SCAFFOLD_ONLY:
+                    if name in line:
+                        problems.append(f"{path.relative_to(ROOT)}:{number} names "
+                                        f"'{name}', which a portfolio does not have")
+    return problems
+
+
 CHECKS = (
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
     ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
@@ -579,6 +667,8 @@ CHECKS = (
     ("artifact paths", lambda i, r: artifact_paths(i)),
     ("enacted decisions", lambda i, r: enacted_decisions(i)),
     ("surviving placeholders", lambda i, r: surviving_placeholders()),
+    ("markdown links", lambda i, r: markdown_links()),
+    ("scaffold-only paths", lambda i, r: scaffold_only_paths()),
 )
 
 if __name__ == "__main__":
