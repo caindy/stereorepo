@@ -2,15 +2,16 @@
      edit the assertions and re-render. -->
 
 
-# ADR-<nnnn>: <one-line title, present tense>
+# DR-<nnn> · <one-line title, present tense>
 
 **Not authoritative.** The Charter and the Disciplines hold the rules and win
-any disagreement. This records why one Project is built the way it is, and it
-is a `Decision` with its `project` set — the same class as an entry in
-`.meta/decisions.md`, filed where the people it binds will find it.
+any disagreement. This records why something is built the way it is, at the
+level whose readers share the matter: the Portfolio's, a Product's or a
+Project's. One class and one record, `.meta/assertions/decisions/`, whatever
+the level — the entry names its Product or Project, or neither.
 
 - **Status:** <PROPOSED | RECOMMENDED | ADOPTED | SUPERSEDED | WITHDRAWN>
-- **Project:** <which Project this is about>
+- **Level:** <Portfolio | Product: which | Project: which>
 
 ## Context
 

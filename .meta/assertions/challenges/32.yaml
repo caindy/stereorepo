@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/32
+    name: Drop ADR, and let a Decision name its level
+    challenge_type: FEATURE
+    description: >-
+      A Decision was the Portfolio's or a Project's, told apart by whether
+      `project` was set, and a decision about a Product — shared by every
+      Project that builds it and belonging to none — had nowhere to go. The
+      name ADR imported "architecture" as a qualifier nothing used and hid the
+      distinction that was used, which is who shares the matter.

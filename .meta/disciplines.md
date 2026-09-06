@@ -164,7 +164,7 @@ A decision that lives only in a transcript has not been made.
 Not recorded-badly — **not made**. Nobody downstream can act on it, argue with it, or find out why. A conversation is where a decision is reached and never where it lives.
 
 **Where the judgement is.** When something said is a decision rather than a thought still being had. Recording every thought is its own failure; the test is whether anything would be done differently now that it is settled.
-And at which level it belongs. A decision about how one build unit is built is not a decision about the repository, and filing either as the other loses it.
+And at which level it belongs — the Portfolio's, a Product's or a Project's. The test is who shares the matter: a decision about how one build unit is built is not about the repository, and one about what every Project of a Product does is about neither, and filing any of them a level off loses it to the readers it binds.
 
 1. Never invent a rejection. An option nobody weighed is not an option, and a record that manufactures one is arguing with itself to look thorough. An entry naming no alternative is telling the truth about what was considered.
 2. Cite a rule where it lives — an Article, or a step of a Discipline — never the decision that led to it. A decision carries consequences; the consequences beget rules, and a rule cited from a decision is one that was never routed anywhere. Nothing checks this: the phrasings are too many to match, and counting them is the instrument A17 already found wanting.
@@ -173,8 +173,8 @@ And at which level it belongs. A decision about how one build unit is built is n
 5. Keep `rationale` to what the slots cannot hold. `alternatives` carries what was rejected and why, `consequences` what is now true, `falsifier` what would overturn it — a paragraph restating any of those is a second copy inside the entry. What is left is the reasoning none of them reaches, and it is usually short.
 6. Never narrate the sequence of events. What happened on a change is the pull request's, and an entry that recounts an afternoon buries the foreclosure it exists to record — the chronology reads as authoritative, goes stale first, and nothing checks it.
 7. Keep the reasoning, including what was tried and abandoned, so the next reader does not re-derive a rejected option.
-8. Record at the level the decision is about. The Portfolio's record holds decisions about the repository, its language and its way of working; a Project's ADR holds decisions about how one build unit is built. A Project decision in the Portfolio record buries it among matters its readers do not share; a Portfolio decision in a Project's record hides it from every other Project.
-9. Use the form in `.meta/templates/adr.md`, so the shape does not have to be re-argued.
+8. Record at the level the decision is about, and name it on the entry. The Portfolio's decisions are about the repository, its language and its way of working, and name nothing; a Product's are what every Project that builds it shares and none owns, and name the Product; a Project's are about how one build unit is built, and name the Project. One record holds all three, so a Project decision left unmarked reads as everyone's, and a Portfolio decision marked as a Project's is hidden from every other Project.
+9. Use the form in `.meta/templates/decision.md`, so the shape does not have to be re-argued.
 
 _Produces: A record that answers "why is it like this" without anyone remembering._
 
@@ -231,4 +231,4 @@ _Produces: Artifacts that carry their own reasoning, and a pull request holding 
 
 ---
 
-**Where this came from.** [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-089](assertions/decisions/DR-089.yaml)
+**Where this came from.** [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-093](assertions/decisions/DR-093.yaml)

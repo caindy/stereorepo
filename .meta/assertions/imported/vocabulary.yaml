@@ -326,26 +326,17 @@ concept_set:
   - id: work:concept/decision-record
     pref_label: Decision record
     definition: >-
-      The Portfolio's record of decisions about the repository, its language and
-      its way of working. Numbered DR-nnn, newest last.
+      The record of decisions at every level — the Portfolio's, a Product's or
+      a Project's, told apart by which the entry names. One sequence, numbered
+      DR-nnn, newest last.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-recorded
-    confusable_with:
-      - work:concept/adr
-  - id: work:concept/adr
-    pref_label: Architecture Decision Record
-    definition: >-
-      A Project-level record of why one build unit is built as it is. Numbered
-      per Project, from the form in `.meta/templates/adr.md`.
-    in_scheme: work:scheme/solorepo
-    broader: work:concept/g-recorded
-    alt_labels: [ADR]
     scope_note: >-
-      The other level of the same Discipline. A Project decision in the
-      Portfolio's record is buried among matters its readers do not share; a
-      Portfolio decision in a Project's ADR is hidden from every other Project.
-    confusable_with:
-      - work:concept/decision-record
+      The level is who shares the matter. A Project decision unmarked reads as
+      everyone's; a Portfolio decision marked as a Project's is hidden from every
+      other Project. "ADR" named the Project level until DR-093, and imported a
+      qualifier the record never used.
+    avoid: [ADR, architecture decision record]
   - id: work:concept/bootstrap
     pref_label: Bootstrap
     definition: >-

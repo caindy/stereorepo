@@ -4,8 +4,9 @@ Nothing in this Bootstrap implements it, and the reason is where the record
 lives.
 
 A decision about how a Rust Project is built is a `Decision` with its `project`
-set, in the portfolio's own `.meta/assertions/decisions/`, rendered in the ADR
-form (DR-059). It is not a file in the crate. The portfolio's gate already holds
+set, in the portfolio's own `.meta/assertions/decisions/` — one record at every
+level, and the entry names its level (DR-059, DR-093). It is not a file in the
+crate. The portfolio's gate already holds
 that record — numbering, supersession, one chosen alternative, every cited DR
 resolving — and a second record in the crate would be a second copy with a
 weaker checker.

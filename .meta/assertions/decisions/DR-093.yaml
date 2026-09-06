@@ -1,0 +1,89 @@
+decisions:
+  - id: work:decision/093
+    name: "DR-093 · A Decision names its level — Portfolio, Product or Project — and ADR is dropped"
+    challenge: work:challenge/32
+    status: ADOPTED
+    supersedes:
+      - work:decision/049
+    applies:
+      - work:article/11
+      - work:article/17
+      - work:article/20
+    enacted_in:
+      - work:artifact/meta-work-decisions
+      - work:artifact/meta-check
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-vocabulary
+    alternatives:
+      - name: Keep ADR for the Project level, and add a Product level beside it
+        chosen: false
+        reason: >-
+          The third level exposes that the name does no work. "Architecture"
+          is a subject-matter qualifier the record never applies, and "ADR"
+          hides the distinction the record does apply, which is who shares the
+          matter. A Product-level entry would need a name of its own, and
+          three names for one class at three levels is the vocabulary growing
+          with a distinction the class already carries.
+      - name: One typed reference, `about`, ranging over Product and Project
+        chosen: false
+        reason: >-
+          Cleaner as a schema and blind as a gate. `check.py` finds a
+          reference by a slot's range being one class with an identifier; a
+          slot ranging over two has no range the walker follows, so a dangling
+          Product would resolve to nothing and pass. The typing is what makes
+          a wrong level a gate failure rather than a reader's problem.
+      - name: Three levels of one class, `product` and `project` as two slots checked as exclusive
+        chosen: true
+        reason: >-
+          Each slot keeps its type and its reference check; that at most one is
+          set is arithmetic across two slots, which is the gate's business
+          already. The form becomes the Decision form at whichever level, which
+          it already was under another name. What it costs is a name with a
+          literature behind it, and a check that is prose in the schema and
+          code in the gate rather than a rule a validator would enforce.
+      - name: File Product decisions as the Portfolio's
+        chosen: false
+        reason: >-
+          DR-049's own argument against it: a decision filed a level off is
+          buried among matters its readers do not share. An SDLC shared by two
+          Projects is not about the repository, and the Portfolio's readers
+          include Projects the Product does not reach.
+    consequences:
+      - >-
+        `Decision` gains `product`. An entry names `product`, `project` or
+        neither, and the gate fails one naming both.
+      - >-
+        The record is one sequence at three levels: DR-nnn whatever the level,
+        and the index says which Product or Project an entry is about.
+      - >-
+        `.meta/templates/adr.md` becomes `.meta/templates/decision.md`, one form
+        rendered from the class with a Level line rather than a Project line.
+      - >-
+        "Architecture Decision Record" leaves the vocabulary and "ADR" goes on
+        the avoid list of Decision record. Entries written under the old name
+        keep it; the record is never rewritten.
+      - >-
+        `python_bootstrap`'s ADRs have somewhere to go: Decisions with
+        `project` set, in this record, numbered in its sequence.
+    falsifier: >-
+      A decision shared by some Projects of a Product and not all, or by
+      Projects of two Products, which neither slot can hold without lying.
+      That would mean a level is a set of readers rather than a tier, and the
+      two slots would give way to one that names the readers.
+    rationale: |-
+      Ubiquitous Language prefers a term with a literature, and ADR has
+      one. Its step 4 is what settles this: a candidate is checked against
+      what the repository already means by it. The canon's ADR records an
+      architecturally significant decision about one system. Here the word
+      had come to mean "the Project level of the record" — a level the canon
+      does not draw — while the qualifier the canon does draw was never
+      applied. A borrowed term is kept for the distinctions it brings; once
+      the repository has stopped using those and loaded the word with one
+      of its own, it is a homonym wearing a citation, and step 4 says a
+      collision found afterwards is a rename.
+
+      Two slots rather than one was decided by reading the gate, not the
+      schema. LinkML can say `any_of` two ranges; the walker in `check.py`
+      cannot follow it, and a typed slot nothing checks is the copy that
+      disagrees. The exclusivity check is the same shape as the one on
+      `alternatives`: a count across slots that a validator cannot take.

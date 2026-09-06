@@ -104,8 +104,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Issue** | Where a Challenge lives before it is taken up — including work noticed during other work and deliberately not done. | tech debt, backlog item |
 | **Pull Request** | Where a Challenge is taken in, argued and recorded — the Collaboration point, and the searchable account of why each change was made. | changelog, ticket |
 | **Review Thread** | One conversation on a Pull Request, opened against a line or against the change as a whole, and closed by being answered and resolved. | comment, conversation |
-| **Decision record** | The Portfolio's record of decisions about the repository, its language and its way of working. Numbered DR-nnn, newest last. | — |
-| **Architecture Decision Record** | A Project-level record of why one build unit is built as it is. Numbered per Project, from the form in `.meta/templates/adr.md`. | — |
+| **Decision record** | The record of decisions at every level — the Portfolio's, a Product's or a Project's, told apart by which the entry names. One sequence, numbered DR-nnn, newest last. | ADR, architecture decision record |
 | **Trailer** | A `Key: value` line at the end of a commit message or a comment, naming the Actor that wrote it. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
 | **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
@@ -149,7 +148,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Review Thread.** **Outdated is not resolved.** GitHub collapses a thread whose anchor moved and leaves it open, and the two states are independent — an objection can outlive the line it was written against. A16 turns on that distinction.
 
-**Architecture Decision Record.** The other level of the same Discipline. A Project decision in the Portfolio's record is buried among matters its readers do not share; a Portfolio decision in a Project's ADR is hidden from every other Project.
+**Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until DR-093, and imported a qualifier the record never used.
 
 **Bootstrap.** Where a Discipline becomes a command that can fail. A Bootstrap says how a Discipline is satisfied in one language; it never restates the Discipline, because the second copy is the one that drifts.
 
@@ -204,8 +203,6 @@ more often a collision than a gap.
 | **Issue** | Challenge, Pull Request |
 | **Pull Request** | Challenge, Issue |
 | **Review Thread** | Pull Request |
-| **Decision record** | Architecture Decision Record |
-| **Architecture Decision Record** | Decision record |
 | **Journaling** | Pull Request |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
@@ -213,4 +210,4 @@ more often a collision than a gap.
 
 ---
 
-**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml)
+**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml)

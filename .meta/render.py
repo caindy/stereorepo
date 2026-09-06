@@ -337,7 +337,9 @@ def decisions():
     rows = record()
     if not rows:
         return None
-    projects = {p["id"]: p["name"] for p in (load("assertions/structure.yaml") or {}).get("projects") or []}
+    structure = load("assertions/structure.yaml") or {}
+    levels = {u["id"]: u["name"] for key in ("products", "projects")
+              for u in structure.get(key) or []}
     out = [BANNER.format(src="assertions/decisions/"),
            "## Decision record\n",
            "_Every decision taken, with why. Newest last._\n",
@@ -363,8 +365,10 @@ def decisions():
         if d.get("status") == "SUPERSEDED":
             status = f"Superseded by {_link(rows, d['superseded_by'])}"
         title = d["name"].split(" · ", 1)[-1]
-        if d.get("project"):
-            title += f" · {projects.get(d['project'], d['project'])}"
+        # The level, where it is not the Portfolio's (DR-093).
+        for level in ("product", "project"):
+            if d.get(level):
+                title += f" · {levels.get(d[level], d[level])}"
         out.append(f"| [DR-{num}]({ENTRY.format(num)}) | {title} | {status} |")
     out.append("")
     if holes:
@@ -405,14 +409,14 @@ def _link(rows, ident):
     return ident
 
 
-def adr_template():
-    """The Project-level form, rendered from the same class the record uses.
+def decision_form():
+    """The form for an entry, rendered from the same class the record uses.
 
-    A Portfolio decision and a Project's ADR are one class with `project` set or
-    not (DR-058), so the form's headings are the model's slots and its guidance
-    is their descriptions. Typing them here as well would be the copy that
-    disagrees — and the copy that keeps a form asking for something the model
-    stopped requiring.
+    One class at three levels — the Portfolio's, a Product's, a Project's —
+    told apart by what the entry names (DR-059, DR-093), so the form's headings
+    are the model's slots and its guidance is their descriptions. Typing them
+    here as well would be the copy that disagrees — and the copy that keeps a
+    form asking for something the model stopped requiring.
     """
     slots = _decision_slots()
     if not slots:
@@ -422,14 +426,15 @@ def adr_template():
         return " ".join(slots[name]["description"].split())
 
     out = [BANNER.format(src="work/decisions.yaml"),
-           "# ADR-<nnnn>: <one-line title, present tense>\n",
+           "# DR-<nnn> · <one-line title, present tense>\n",
            "**Not authoritative.** The Charter and the Disciplines hold the rules and win\n"
-           "any disagreement. This records why one Project is built the way it is, and it\n"
-           "is a `Decision` with its `project` set — the same class as an entry in\n"
-           "`.meta/decisions.md`, filed where the people it binds will find it.\n",
+           "any disagreement. This records why something is built the way it is, at the\n"
+           "level whose readers share the matter: the Portfolio's, a Product's or a\n"
+           "Project's. One class and one record, `.meta/assertions/decisions/`, whatever\n"
+           "the level — the entry names its Product or Project, or neither.\n",
            "- **Status:** <" + " | ".join(
                (load("work/decisions.yaml") or {})["enums"]["DecisionStatus"]["permissible_values"]) + ">",
-           "- **Project:** <which Project this is about>\n",
+           "- **Level:** <Portfolio | Product: which | Project: which>\n",
            "## Context\n", "<" + guidance("context") + ">\n",
            "## Decision\n",
            "<What was decided, in the present tense — \"we do X\". One paragraph.>\n",
@@ -520,7 +525,7 @@ def pr_first_skill():
 
 TARGETS = {"disciplines.md": disciplines,
            "decisions.md": decisions,
-           "templates/adr.md": adr_template,
+           "templates/decision.md": decision_form,
            "charter.md": charter,
            "vocabulary.md": vocabulary,
            "../SPECIALIZE.md": specialize,

@@ -415,6 +415,22 @@ def decision_supersession(index):
     return problems
 
 
+def decision_level(index):
+    """A Decision is the Portfolio's, a Product's or a Project's, and not two of
+    these (DR-093).
+
+    The level is who shares the matter, and an entry naming both a Product and
+    a Project claims two readerships for one question. Each slot is typed and
+    its reference resolved with every other; what no schema states is that at
+    most one is set, which is a count across two slots rather than a constraint
+    on either.
+    """
+    return [f"{did}: names both product '{obj['product']}' and project "
+            f"'{obj['project']}'; a Decision is at one level"
+            for did, (cls, obj, _) in sorted(index.items())
+            if cls == "Decision" and obj.get("product") and obj.get("project")]
+
+
 def decision_numbering(index):
     """Numbers are stable identifiers, so the sequence is contiguous and unused.
 
@@ -543,6 +559,7 @@ CHECKS = (
     ("decision alternatives", lambda i, r: decision_alternatives(i)),
     ("decision supersession", lambda i, r: decision_supersession(i)),
     ("decision numbering", lambda i, r: decision_numbering(i)),
+    ("decision level", lambda i, r: decision_level(i)),
     ("cited decisions", lambda i, r: cited_decisions(i)),
     ("reserved article numbers", lambda i, r: reserved_article_numbers(i)),
     ("artifact paths", lambda i, r: artifact_paths(i)),

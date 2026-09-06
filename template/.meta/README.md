@@ -58,9 +58,9 @@ failed. Where no row of the table claims a paragraph, it is residue, and residue
 goes to the pull request.
 
 **`vocabulary.md`, `disciplines.md`, `charter.md` and `decisions.md` are
-generated.** They derive from `assertions/`, which is the source. So does the ADR
-form at `templates/adr.md`, which derives from the `Decision` class itself. Edit
-the source and re-render:
+generated.** They derive from `assertions/`, which is the source. So does the
+Decision form at `templates/decision.md`, which derives from the `Decision`
+class itself. Edit the source and re-render:
 
 ```bash
 uvx --with pyyaml python .meta/render.py

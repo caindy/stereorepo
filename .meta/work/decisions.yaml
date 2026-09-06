@@ -11,13 +11,17 @@ description: >-
   rather than from the reader's charity — `alternatives` carries what was rejected,
   and an entry with nothing rejected is announcing that it recorded a narrative.
 
-  Two levels of the same record, and they differ only in whether `project` is
-  set. A decision about the repository, its language or its way of working is the
-  Portfolio's, and names no Project. A decision about how one build unit is built
-  is that Project's, and names it. Filing one as the other is the failure
-  DR-049 named: a Project decision in the Portfolio's record is buried among
-  matters its readers do not share, and a Portfolio decision in a Project's is
-  hidden from every other Project.
+  Three levels of the same record, told apart by which the entry names
+  (DR-093). A decision about the repository, its language or its way of working
+  is the Portfolio's, and names nothing. A decision about a Product — an SDLC,
+  a release cadence, a contract between the Projects that build it — is shared
+  by every one of those Projects and owned by none, and names the Product. A
+  decision about how one build unit is built is that Project's, and names it.
+  The level is who shares the matter, and filing an entry a level off is the
+  failure DR-049 named: a Project decision in the Portfolio's record is buried
+  among matters its readers do not share, and a Portfolio decision filed as a
+  Project's is hidden from every other Project. One sequence of numbers serves
+  all three; the index says which Product or Project an entry is about.
 
   Prose was the earlier answer, on the grounds that modelling would wrap the
   paragraphs without gaining a check. Three checks arrived that the prose cannot
@@ -91,10 +95,24 @@ slots:
     range: DecisionStatus
     required: true
 
+  product:
+    description: >-
+      The Product this Decision is about: a matter every Project that builds it
+      shares and none of them owns. Absent, with `project` absent too, means it
+      is the Portfolio's.
+
+      A slot of its own rather than one reference typed over Product and
+      Project, because `check.py` finds a reference by a slot's range being one
+      class with an identifier; a slot ranging over two has no range the walker
+      follows, and a dangling Product would pass. That at most one of the two is
+      set is arithmetic across slots, which the gate holds (DR-093).
+    range: Product
+
   project:
     description: >-
-      The Project this Decision is about. Absent means it is the Portfolio's —
-      about the repository, its language, or its way of working.
+      The Project this Decision is about. Absent, with `product` absent too,
+      means it is the Portfolio's — about the repository, its language, or its
+      way of working.
     range: Project
 
   context:
@@ -247,6 +265,7 @@ classes:
     slots:
       - status
       - challenge
+      - product
       - project
       - context
       - alternatives
