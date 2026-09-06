@@ -262,6 +262,10 @@ def issue_template():
     return form("issue.md")
 
 
+def roadmap_template():
+    return form("roadmap.md")
+
+
 def _decision_slots():
     """The slot descriptions from the model, which is where the guidance lives.
 
@@ -522,6 +526,7 @@ TARGETS = {"disciplines.md": disciplines,
            "../SPECIALIZE.md": specialize,
            "../.github/PULL_REQUEST_TEMPLATE.md": pull_request_template,
            "../.github/ISSUE_TEMPLATE/challenge.md": issue_template,
+           "../.github/ISSUE_TEMPLATE/roadmap.md": roadmap_template,
            "../.claude/skills/pr-first/SKILL.md": pr_first_skill}
 
 def rendered():

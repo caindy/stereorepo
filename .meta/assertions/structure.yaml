@@ -53,6 +53,9 @@ artifacts:
   - id: work:artifact/github-workflows-gate
     name: .github/workflows/gate.yml
     path: .github/workflows/gate.yml
+  - id: work:artifact/meta-apm-readme
+    name: .meta/.apm/README.md
+    path: .meta/.apm/README.md
   - id: work:artifact/meta-assertions-authority
     name: .meta/assertions/authority.yaml
     path: .meta/assertions/authority.yaml
@@ -89,9 +92,6 @@ artifacts:
   - id: work:artifact/meta-render
     name: .meta/render.py
     path: .meta/render.py
-  - id: work:artifact/meta-roadmap
-    name: .meta/roadmap.md
-    path: .meta/roadmap.md
   - id: work:artifact/meta-say
     name: .meta/say
     path: .meta/say
@@ -101,6 +101,9 @@ artifacts:
   - id: work:artifact/meta-templates-pull-request
     name: .meta/templates/pull-request.md
     path: .meta/templates/pull-request.md
+  - id: work:artifact/meta-templates-roadmap
+    name: .meta/templates/roadmap.md
+    path: .meta/templates/roadmap.md
   - id: work:artifact/meta-vocabulary
     name: .meta/vocabulary.md
     path: .meta/vocabulary.md

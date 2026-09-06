@@ -33,7 +33,7 @@ Primitives are **derived from `.meta/assertions/`**, never authored twice:
 | the gate | `hooks` |
 
 **Nothing is here yet, deliberately.** The compile step from assertions to
-primitives is unbuilt (see `../roadmap.md`), and hand-writing primitives that a
+primitives is unbuilt (see [#28](https://github.com/caindy/solorepo/issues/28)), and hand-writing primitives that a
 compiler will later generate is the duplication that step exists to remove.
 
 ## Before authoring anything

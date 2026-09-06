@@ -31,4 +31,4 @@ corresponding material here was invented.
 
 `external/` — investors, media, advisors — is deliberately absent for now. The
 idea has value: a source to draw on when asked for a press release or a blog
-post. It is recorded in `.meta/roadmap.md` rather than kept as an empty folder.
+post. It is recorded as [#42](https://github.com/caindy/solorepo/issues/42), a `roadmap` Issue, rather than kept as an empty folder.

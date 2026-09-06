@@ -1,0 +1,72 @@
+decisions:
+  - id: work:decision/088
+    name: "DR-088 · Intent is an Issue that looks forward, and the roadmap file goes"
+    challenge: work:challenge/20
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/15
+    enacted_in:
+      - work:artifact/meta-readme
+      - work:artifact/meta-templates-roadmap
+      - work:artifact/meta-render
+    alternatives:
+      - name: Keep `roadmap.md` as the place for intent
+        chosen: false
+        reason: >-
+          Prose about intent that nothing consumes is A8 exactly, and it had
+          already failed the way a journal file fails: entries marked built
+          beside entries long since settled, two found stale during #11, and
+          nothing to notice either. A file has no open and closed, so an entry
+          removed is indistinguishable from one done, dropped or forgotten.
+      - name: Record every intent as a RECOMMENDED decision
+        chosen: false
+        reason: >-
+          DR-065 gave the roadmap its narrower job precisely because most
+          intent forecloses nothing. A RECOMMENDED entry has closed its
+          alternatives; an item with open questions has not, and writing it as a
+          decision manufactures the rejection Written Decisions forbids.
+      - name: An Issue labelled `roadmap`, from a form of its own
+        chosen: true
+        reason: >-
+          The same artifact a Challenge already uses, with the same middle
+          heading, because a deferral is a deferral whichever way it faces.
+          What differs is direction: a Challenge Issue looks back at what was
+          noticed and where, and a roadmap Issue looks forward at what is meant
+          and what it waits on. What it costs is that intent leaves the clone,
+          which is the gap PR First already has for a portfolio with no remote,
+          and no worse here than there.
+    consequences:
+      - >-
+        `.meta/roadmap.md` and `template/.meta/roadmap.md` are deleted. Each
+        surviving entry became an Issue labelled `roadmap`; entries already
+        built, already settled by a decision, or already an Issue were dropped
+        rather than migrated.
+      - >-
+        `.meta/templates/roadmap.md` is the form, and `render.py` extracts its
+        fence to `.github/ISSUE_TEMPLATE/roadmap.md` beside the Challenge form.
+        The load map's two roadmap rows point at the label and the form.
+      - >-
+        DR-007 and DR-008 named the roadmap under `enacted_in`. DR-007 now names
+        `.meta/.apm/README.md`, which states the packaging target; DR-008 names
+        `work/authority.yaml`, which is the schema without the reification the
+        decision reverted.
+      - >-
+        The lifecycle #20 also proposed, from `challenge` to `goal` with a
+        Definition of Done gating the pull request, is not decided here and
+        stays open on that Issue.
+    falsifier: >-
+      A `roadmap` Issue discovered already done and closed by nobody, the way
+      two file entries were found stale during #11. That would mean the label
+      bought state and not attention, and a tracker is a file with better
+      tooling.
+    rationale: |-
+      Christopher: a Challenge Issue looks back, a roadmap item looks forward,
+      and in both cases filing it is an intentional deferral. There is no need
+      for a local `roadmap.md`.
+
+      The distinction that survives is direction, not kind. The middle heading
+      of both forms is the same question, because what makes something worth
+      deferring rather than dropping does not depend on which way it faces. The
+      first and last headings are where they differ, and they are the whole
+      difference.

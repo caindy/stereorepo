@@ -18,11 +18,12 @@ They use different placeholder markers, and the difference is load-bearing:
 A form that used the first marker would fail the gate for the crime of being a
 form.
 
-## Two of them are the source for `.github/`
+## Three of them are the source for `.github/`
 
-`pull-request.md` and `issue.md` each hold their form in a ```` ```markdown ````
-fence, and `render.py` extracts the fence into
-`.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/challenge.md`.
+`pull-request.md`, `issue.md` and `roadmap.md` each hold their form in a
+```` ```markdown ```` fence, and `render.py` extracts the fence into
+`.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/challenge.md` and
+`.github/ISSUE_TEMPLATE/roadmap.md`.
 **Edit the form here, never the generated file** — `check.py` fails on the
 staleness either way, but only one of the two edits survives.
 

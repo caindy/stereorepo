@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/20
+    name: Manage the roadmap as Issues and labels, with a challenge/goal lifecycle
+    challenge_type: FEATURE
+    description: >-
+      `.meta/roadmap.md` is prose about intent that nothing consumes and nothing
+      checks, and two of its entries were found stale during #11. Each entry
+      that becomes an Issue gains state, a backlink and individual
+      schedulability; what remains open is the grooming lifecycle from
+      `challenge` to `goal`, and what the roadmap is still for once its entries
+      are subtracted.

@@ -30,7 +30,7 @@ long: nothing loads it until you are already in the thing it owns.
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
 | changing or defending a rule | its DR in `assertions/decisions/`, **and** the file that states it |
 | an id you need to resolve — `work:artifact/meta-disciplines`, say | `grep -rn -A2 "id: <the curie>" .meta/assertions/`. Every identified object is declared once, there |
-| what is intended but unbuilt, or still open | [`roadmap.md`](roadmap.md) |
+| what is intended but unbuilt, or still open | the Issues labelled `roadmap` — `gh issue list --label roadmap`. They look forward; a `challenge` Issue looks back |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 | opening a pull request, or filing an Issue | [`templates/`](templates/) — the forms; `.github/` is generated from them |
 
@@ -49,7 +49,7 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | a checkable one-line rule | `assertions/imported/charter.yaml`, then re-render |
 | reasoning that recurs across several decisions | `principles.md` |
-| what is intended, or still undecided | `roadmap.md` |
+| what is intended, or still undecided | an Issue labelled `roadmap`, using `.meta/templates/roadmap.md` — a deferral, the same as a Challenge, facing forward |
 | what a schema means and why it is shaped so | the schema itself, per Literate Programming |
 
 Route each paragraph *as you write it*. That is the only moment the routing
