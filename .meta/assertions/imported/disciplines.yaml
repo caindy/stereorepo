@@ -416,6 +416,14 @@ disciplines:
         gate is not a handoff — it is a mess whose author is gone. The gate is
         the completeness test for the Agency you hold; nothing else is.
       - >-
+        Stack what waits on what. A change that can only start once another
+        lands is a **layer**: its own branch and pull request, based on the
+        layer below, opened through the channel and linked into a stack through
+        it, so the layers merge from the bottom and GitHub rebases what
+        remains. A stack built by hand on a squash-only trunk conflicts at
+        every merge but the top, and each conflict is a rebase somebody has to
+        find the old base for.
+      - >-
         Request review from the next Role's account when you stop. Until those
         accounts exist a handoff has no signal, and saying so is better than a
         note that pretends to be one.

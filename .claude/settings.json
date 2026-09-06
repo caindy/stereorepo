@@ -8,7 +8,13 @@
       "Bash(gh pr edit:*)",
       "Bash(gh issue create:*)",
       "Bash(gh issue comment:*)",
-      "Bash(gh issue edit:*)"
+      "Bash(gh issue edit:*)",
+      "Bash(gh stack link:*)",
+      "Bash(gh stack merge:*)",
+      "Bash(gh stack submit:*)",
+      "Bash(gh stack unstack:*)",
+      "Bash(gh stack sync:*)",
+      "Bash(gh stack push:*)"
     ],
     "allow": [
       "Bash(.meta/say:*)",
@@ -17,7 +23,8 @@
       "Bash(gh pr checks:*)",
       "Bash(gh pr list:*)",
       "Bash(gh issue view:*)",
-      "Bash(gh issue list:*)"
+      "Bash(gh issue list:*)",
+      "Bash(gh stack view:*)"
     ]
   },
   "hooks": {

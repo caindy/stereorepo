@@ -28,10 +28,13 @@ import sys
 # `merge` and `close` are here although neither posts text. They are acts by an
 # Actor, and GitHub records who performed them — so they go through the channel
 # for the same reason a comment does, which is that the record should say which
-# Role did it rather than which human owns the credential.
+# Role did it rather than which human owns the credential. The stack extension's
+# verbs that write — link, merge, submit and the rest — are acts of the same kind
+# (DR-100); `submit` also opens pull requests unsigned. Its views stay open.
 ENDPOINT = re.compile(r"api\.github\.com|graphql\.github\.com")
 GH_WRITES = re.compile(r"\bgh\s+(api|pr\s+(comment|review|create|edit|merge|close)"
-                       r"|issue\s+(create|comment|edit|close))\b")
+                       r"|issue\s+(create|comment|edit|close)"
+                       r"|stack\s+(link|merge|submit|unstack|delete|push|sync|rebase))\b")
 SANCTIONED = re.compile(r"\.meta/(say|check_pr\.py)\b")
 
 WHY = ("Blocked: this reaches GitHub without signing what it posts.\n"

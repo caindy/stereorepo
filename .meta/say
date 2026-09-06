@@ -21,6 +21,8 @@ pass wrongly.
     .meta/say resolve  <thread-id>             mark it resolved
     .meta/say issue    --title T [--label L] < body.md
     .meta/say pr       --title T [--base B] < body.md  open a pull request
+    .meta/say stack    <pr-or-branch>...        link layers into a stack, bottom first
+    .meta/say merge    <pr> [--stack]           merge; a layer merges everything below it
     .meta/say pr-body  <pr> < body.md          replace the body
     .meta/say issue-body <n> < body.md         replace an Issue's body
     .meta/say pr-title <pr> --title T
@@ -134,9 +136,31 @@ def commit(subject):
     sys.exit(out.returncode)
 
 
-def merge(pr):
+def stacked(pr):
+    """Whether a pull request is a layer of a stack, read from GitHub.
+
+    The pull request payload carries a `stack` object on a layer and nothing
+    otherwise. `gh pr view` does not expose it, so the endpoint is read.
+    """
+    return bool(gh("api", f"repos/{repo()}/pulls/{pr}").get("stack"))
+
+
+def stack(items):
+    """Link pull requests, bottom first, into a stack on GitHub, as the Role.
+
+    Linking is an act GitHub records, like a merge (DR-075), so it goes through
+    here. Each layer is opened with `say pr --base <layer below>` first, so its
+    body is signed; `gh stack submit` opens pull requests unsigned and stays
+    blocked. After a layer merges, GitHub rebases the layers above it, which is
+    the whole reason for a stack over a hand-built one (DR-100).
+    """
+    print(gh("stack", "link", *items, parse=False))
+
+
+def merge(pr, stack=False):
     """Merge as the Role, label trunk with the pull request's title, and report
-    what GitHub holds afterwards.
+    what GitHub holds afterwards. With `stack`, merge every layer up to and
+    including this one, atomically, and let GitHub rebase the rest.
 
     Not an utterance, and still the channel's. Merging is an act by the Role —
     DR-072 puts it in an agent's hands and DR-075 puts the act through here — so
@@ -165,7 +189,18 @@ def merge(pr):
     before = gh("pr", "view", pr, "--json", "title,state,headRefName")
     if before["state"] != "OPEN":
         sys.exit(f"say: #{pr} is {before['state'].lower()}, not open")
-    gh("pr", "merge", pr, "--squash", "--subject", f"{before['title']} (#{pr})", parse=False)
+    if stack:
+        # GitHub's stack merge: everything up to and including this layer, all
+        # or nothing, and the layers above are rebased by GitHub rather than by
+        # hand (DR-100). It takes no subject; trunk's label rests on the
+        # repository's squash-title setting, which is why the label is read
+        # back below rather than assumed.
+        gh("stack", "merge", pr, "--squash", "--yes", parse=False)
+    elif stacked(pr):
+        sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
+                 "Pass --stack to merge everything up to it.")
+    else:
+        gh("pr", "merge", pr, "--squash", "--subject", f"{before['title']} (#{pr})", parse=False)
     after = gh("pr", "view", pr, "--json", "state,mergeCommit")
     if after["state"] != "MERGED":
         sys.exit(f"say: #{pr} is {after['state'].lower()} after the merge call; not deleting the branch")
@@ -327,7 +362,8 @@ def main():
     p = sub.add_parser("reply"); p.add_argument("thread")
     p = sub.add_parser("resolve"); p.add_argument("thread")
     p = sub.add_parser("commit"); p.add_argument("-m", "--message", required=True)
-    p = sub.add_parser("merge"); p.add_argument("pr")
+    p = sub.add_parser("merge"); p.add_argument("pr"); p.add_argument("--stack", action="store_true")
+    p = sub.add_parser("stack"); p.add_argument("items", nargs="+")
     sub.add_parser("whoami")
     p = sub.add_parser("issue"); p.add_argument("--title", required=True); p.add_argument("--label", action="append", default=[])
     p = sub.add_parser("pr"); p.add_argument("--title", required=True); p.add_argument("--base", default="main")
@@ -340,7 +376,11 @@ def main():
         commit(args.message)
 
     if args.verb == "merge":
-        merge(args.pr)
+        merge(args.pr, stack=args.stack)
+        return
+
+    if args.verb == "stack":
+        stack(args.items)
         return
 
     if args.verb == "whoami":
