@@ -517,7 +517,11 @@ def pr_first_skill():
          "with an unanswered thread is work in progress, whoever noticed it."],
         ["python3 .meta/check_pr.py --sweep          # what this branch owns, and what it owes",
          "python3 .meta/check_pr.py <n> --threads    # the threads still owed an answer",
-         "python3 .meta/check_pr.py <n>              # the gate: A15 and A16"],
+         "python3 .meta/check_pr.py <n>              # the gate: A15 and A16",
+         "python3 .meta/check_pr.py <n> --watch      # the subscription: one line per change, exits when it closes",
+         "#   Keep it running for the session, as soon as the pull request is open:",
+         "#   Monitor({command: \"python3 .meta/check_pr.py <n> --watch\", persistent: true})",
+         "#   Each line wakes this conversation; a review is answered when it lands, not when someone looks."],
         [("The body", "pull-request.md",
           "Fill this in when the work **starts**. `check_pr.py` reads the same form, so a\n"
           "heading added here is required by that act alone.")])

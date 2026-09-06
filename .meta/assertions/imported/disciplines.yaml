@@ -449,10 +449,11 @@ disciplines:
       - >-
         Stay subscribed to it until it closes. A review lands minutes after a
         push and nobody is looking by then, so the conversation that opened the
-        pull request keeps watching it. How the subscription is registered is
-        the harness's business — a background task, a webhook, a scheduled job —
-        and a harness that cannot wake a conversation says so rather than
-        pretending.
+        pull request keeps watching it. `check_pr.py <n> --watch` is the
+        subscription: one line per change, until the pull request closes.
+        Keeping it running is the harness's business — a background task, a
+        webhook, a scheduled job — and a harness that cannot keep it running
+        says so after starting it, not instead.
       - >-
         On arrival, read what GitHub holds — the pull request, the diff, the
         commits, the threads and the check states. There is nothing else, by

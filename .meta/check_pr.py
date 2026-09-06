@@ -7,6 +7,7 @@ or changes, and there is nothing for it to say the rest of the time.
 
     python .meta/check_pr.py 12          # what CI runs
     python .meta/check_pr.py --file b.md # a body on disk, for watching it fail
+    python .meta/check_pr.py 12 --watch  # one line per change, until it closes
 
 What a body must contain is **derived from the form**, never listed here. The
 headings come out of the fence in `.meta/templates/pull-request.md`, which is
@@ -27,6 +28,7 @@ pull request finished and no one has to remember a second act (DR-089).
 """
 import argparse
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -330,6 +332,112 @@ def resume(ref):
     return "\n".join(out)
 
 
+def snapshot(ref):
+    """Everything on a pull request that a watcher compares between polls.
+
+    Keyed so that a change is a set difference and not a diff of text: a
+    comment or review by its id, a thread by its id and how many comments it
+    holds, a check by its name and state. The keys are what GitHub already
+    holds, so nothing is written locally and a watch restarted from scratch
+    reports the same events a continuous one would have.
+    """
+    pr = gh("pr", "view", ref, "--json", "number,state,comments,reviews,statusCheckRollup")
+    comments = {c["id"]: c for c in pr["comments"]}
+    reviews = {r["id"]: r for r in pr["reviews"]}
+    threads_ = {t["id"]: t for t in threads(ref)}
+    # A check still running has no conclusion; its status says so, which reads
+    # better than a `None` beside a result and is a change worth a line.
+    checks = {c.get("name") or c.get("context"):
+              c.get("conclusion") or c.get("state") or c.get("status") or "PENDING"
+              for c in pr.get("statusCheckRollup") or []}
+    return pr["number"], pr["state"], comments, reviews, threads_, checks
+
+
+def mine(body):
+    """Whether this session wrote a comment, read from the Trailer it carries.
+
+    A watch that reported the watcher's own comments back to it would wake a
+    conversation for every line it posted. The login cannot say — every agent
+    posts under one account — but the channel signs each comment with the
+    session's id, and that is what is compared.
+    """
+    me = next((os.environ[k] for k in ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
+               if os.environ.get(k)), None)
+    found = ACTOR.search(body or "")
+    return bool(me and found and found.group(1) == me)
+
+
+def said(body, limit=300):
+    return " ".join((body or "").split())[:limit]
+
+
+def watch(ref, every=60):
+    """One line per change on a pull request, until it closes.
+
+    PR First's fourteenth step is to stay subscribed, and until this existed it
+    was the one step in the skill with no command behind it — so a session
+    improvised a poll, or reported that it could not hold one without having
+    tried (DR-102). This is the subscription. Keeping it running is the
+    harness's business: it is a process that prints, and any harness that can
+    keep a process alive and be woken by a line it prints can hold it.
+
+    It polls, because GitHub pushes nothing to a session without a webhook and
+    a webhook needs somewhere to land. The interval is a minute, which is the
+    rate limit's comfort and well inside "a review lands minutes after a push".
+
+    Each line is one event. Nothing is emitted for the first poll except a
+    heading, so a watch started on a busy pull request does not replay it; a
+    poll that fails is skipped and the next one compares against the last that
+    did not, so nothing is lost across a transient failure. Exits when the pull
+    request merges or closes, which is the subscription ending.
+    """
+    import time
+    previous = None
+    while True:
+        try:
+            current = snapshot(ref)
+        except SystemExit as e:
+            print(f"? poll skipped: {e}", file=sys.stderr)
+            time.sleep(every)
+            continue
+        number, state, comments, reviews, threads_, checks = current
+        if previous is None:
+            owed = len(unaddressed(list(threads_.values())))
+            print(f"watching #{number}: {owed} thread(s) owed an answer, "
+                  + ", ".join(f"{k}={v}" for k, v in checks.items()), flush=True)
+        else:
+            _, _, p_comments, p_reviews, p_threads, p_checks = previous
+            for cid in comments.keys() - p_comments.keys():
+                c = comments[cid]
+                if not mine(c["body"]):
+                    print(f"comment by {c['author']['login']}: {said(c['body'])}", flush=True)
+            for rid in reviews.keys() - p_reviews.keys():
+                r = reviews[rid]
+                if not mine(r["body"]):
+                    print(f"review by {r['author']['login']}: {r['state']} {said(r['body'])}",
+                          flush=True)
+            for tid, t in threads_.items():
+                where = (t["path"] or "the pull request") + (f":{t['line']}" if t.get("line") else "")
+                before = p_threads.get(tid)
+                nodes = t["comments"]["nodes"]
+                if before is None or len(nodes) > len(before["comments"]["nodes"]):
+                    last = nodes[-1] if nodes else None
+                    if last and not mine(last["body"]):
+                        who = (last["author"] or {}).get("login", "someone")
+                        print(f"thread {tid} on {where} by {who}: {said(last['body'])}", flush=True)
+                if before is not None and t["isResolved"] and not before["isResolved"]:
+                    by = (t.get("resolvedBy") or {}).get("login", "someone")
+                    print(f"thread {tid} on {where} resolved by {by}", flush=True)
+            for name, value in checks.items():
+                if p_checks.get(name) != value:
+                    print(f"check {name}: {value}", flush=True)
+        if state in ("MERGED", "CLOSED"):
+            print(f"pr {state}", flush=True)
+            return
+        previous = current
+        time.sleep(every)
+
+
 def resolved_without_an_answer(ref):
     """A16. Requiring resolution is what makes this check necessary.
 
@@ -467,6 +575,9 @@ if __name__ == "__main__":
                     help="A18: refuse to hand off work the successor cannot see")
     ap.add_argument("--sweep", action="store_true",
                     help="every open pull request you own, and what each still owes")
+    ap.add_argument("--watch", action="store_true",
+                    help="one line per change on the pull request, until it closes")
+    ap.add_argument("--every", type=int, default=60, help="seconds between polls under --watch")
     args = ap.parse_args()
 
     if args.sweep:
@@ -489,6 +600,12 @@ if __name__ == "__main__":
             print(f"x  {p}")
         print(("x  " if problems else "ok ") + "handoff")
         sys.exit(1 if problems else 0)
+
+    if args.watch:
+        if not args.pr:
+            ap.error("--watch needs a pull request")
+        watch(args.pr, args.every)
+        sys.exit(0)
 
     if args.resume:
         if not args.pr:

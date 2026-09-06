@@ -34,7 +34,7 @@ A linked Issue answers each. It has state, it carries a backlink to the work tha
 11. Push before stopping, and stop at green. Work that exists only in a worktree the next Job will never see has not been handed off, and a red gate is not a handoff — it is a mess whose author is gone. The gate is the completeness test for the Agency you hold; nothing else is.
 12. Stack what waits on what. A change that can only start once another lands is a **layer**: its own branch and pull request, based on the layer below, opened through the channel and linked into a stack through it, so the layers merge from the bottom and GitHub rebases what remains. A stack built by hand on a squash-only trunk conflicts at every merge but the top, and each conflict is a rebase somebody has to find the old base for.
 13. Request review from the next Role's account when you stop. Until those accounts exist a handoff has no signal, and saying so is better than a note that pretends to be one.
-14. Stay subscribed to it until it closes. A review lands minutes after a push and nobody is looking by then, so the conversation that opened the pull request keeps watching it. How the subscription is registered is the harness's business — a background task, a webhook, a scheduled job — and a harness that cannot wake a conversation says so rather than pretending.
+14. Stay subscribed to it until it closes. A review lands minutes after a push and nobody is looking by then, so the conversation that opened the pull request keeps watching it. `check_pr.py <n> --watch` is the subscription: one line per change, until the pull request closes. Keeping it running is the harness's business — a background task, a webhook, a scheduled job — and a harness that cannot keep it running says so after starting it, not instead.
 15. On arrival, read what GitHub holds — the pull request, the diff, the commits, the threads and the check states. There is nothing else, by design. Ask what this branch already owns: One branch is one pull request, so the checkout is the token and GitHub resolves it — no note to find, nothing to go stale, and it survives a session ending mid-argument. Authorship cannot answer this: every pull request here is the solo's, so asking who opened one says nothing about which agent is answerable for it.
 16. Name the Actor in every commit **and every comment**. Which thread did the work is recoverable from nothing else once the session is gone, and a trailer naming a co-author who is not a person tells a maintainer nothing. On a comment it does more than record: every comment an agent writes is posted under the solo's account, so without it an argument between the two of them reads as one party talking to itself, and A16 cannot tell them apart. The branch says which Job; the trailer says who took it.
 
@@ -55,6 +55,10 @@ right, is yours.
 python3 .meta/check_pr.py --sweep          # what this branch owns, and what it owes
 python3 .meta/check_pr.py <n> --threads    # the threads still owed an answer
 python3 .meta/check_pr.py <n>              # the gate: A15 and A16
+python3 .meta/check_pr.py <n> --watch      # the subscription: one line per change, exits when it closes
+#   Keep it running for the session, as soon as the pull request is open:
+#   Monitor({command: "python3 .meta/check_pr.py <n> --watch", persistent: true})
+#   Each line wakes this conversation; a review is answered when it lands, not when someone looks.
 ```
 
 ## The body

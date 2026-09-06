@@ -26,6 +26,7 @@ pass wrongly.
     .meta/say pr-body  <pr> < body.md          replace the body
     .meta/say issue-body <n> < body.md         replace an Issue's body
     .meta/say pr-title <pr> --title T
+    .meta/say pr-base  <pr> --base B           retarget a layer onto the one below it
 
 Bodies come from stdin rather than the command line: the text is usually long,
 often has quotes in it, and a shell is the wrong place to keep an artifact.
@@ -370,6 +371,7 @@ def main():
     p = sub.add_parser("pr-body"); p.add_argument("pr")
     p = sub.add_parser("issue-body"); p.add_argument("issue")
     p = sub.add_parser("pr-title"); p.add_argument("pr"); p.add_argument("--title", required=True)
+    p = sub.add_parser("pr-base"); p.add_argument("pr"); p.add_argument("--base", required=True)
     args = ap.parse_args()
 
     if args.verb == "commit":
@@ -418,7 +420,7 @@ def main():
 
     # `pr-title` says everything it has to say in an argument. Reading a body it
     # will not use turned a rename into a refusal, twice.
-    body = None if args.verb == "pr-title" else signed(stdin_body())
+    body = None if args.verb in ("pr-title", "pr-base") else signed(stdin_body())
 
     if args.verb == "comment":
         print(gh("pr", "comment", args.pr, "--body", body, parse=False))
@@ -456,6 +458,12 @@ def main():
     elif args.verb == "pr-title":
         gh("pr", "edit", args.pr, "--title", args.title, parse=False)
         print("title set")
+    elif args.verb == "pr-base":
+        # A layer opened against trunk and found to wait on another (DR-100)
+        # is retargeted here rather than closed and reopened: a pull request
+        # is merged, never abandoned, and the edit is an act GitHub records.
+        gh("pr", "edit", args.pr, "--base", args.base, parse=False)
+        print("base set")
 
 
 if __name__ == "__main__":
