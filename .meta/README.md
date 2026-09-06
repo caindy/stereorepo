@@ -68,6 +68,11 @@ class itself. Edit the source and re-render:
 uvx --with pyyaml python .meta/render.py
 ```
 
+**The verbs are `just` recipes, at the root.** `just --list` names them; each
+invokes a tool under `.meta/` and implements nothing, and the file is rendered
+from the assertions (DR-106). `just` is installed per machine, or run as
+`uvx --from rust-just just`.
+
 **The gate for `.meta` is `check.py`.** Green before anything here is called
 done. It enforces the invariants the schemas state and cannot check, and
 subsumes the staleness check above:

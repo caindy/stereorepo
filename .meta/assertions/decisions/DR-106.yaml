@@ -1,0 +1,78 @@
+decisions:
+  - id: work:decision/106
+    name: "DR-106 · The root justfile is the verb surface: rendered, invoking only, and never in a seed"
+    status: ADOPTED
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/justfile
+      - work:artifact/meta-render
+      - work:artifact/meta-readme
+      - work:artifact/meta-disciplines
+    alternatives:
+      - name: The commands as they are, typed from the load map
+        chosen: false
+        reason: >-
+          Each verb is a line in `.meta/README.md`, read only once the load
+          map has been found. A developer arriving types the tool they know
+          before reading anything, and the words they type were the runner's
+          `uvx` incantation or nothing. The tools are good at running; the
+          root was bad at being typed at.
+      - name: A Makefile
+        chosen: false
+        reason: >-
+          The habit, and it works. But make is a build tool, and a file that
+          only invokes pays for build semantics it never uses: `.PHONY` on
+          every target, a recipe skipped because a file has its name, a tab
+          that is not spaces, arguments as `VAR=value`, and a help target
+          written by hand. It is on every machine, which is the one thing it
+          has over the choice below.
+      - name: A recipe per Project
+        chosen: false
+        reason: >-
+          `gate-rust-seed` beside `gate-meta` is the hand-kept list that
+          `gate.yml` was, and #53's runner exists so nothing keeps that list.
+          One recipe takes a word and the runner resolves it.
+      - name: A justfile, rendered, invoking only
+        chosen: true
+        reason: >-
+          `just` is a command runner with make's file shape and none of its
+          build rules: recipes take arguments, `just --list` prints every
+          recipe with its comment, and nothing is skipped for the name of a
+          file. The file is a render target so its one derived line — what
+          `gate` takes — comes from the assertions, and so a portfolio's lists
+          its own Projects without an edit. What it costs: `just` is not on a
+          machine by default, which puts it on the footing of `gh stack` and
+          `cargo-mutants`, installed per machine or run as `uvx --from
+          rust-just just`; and a second spelling of each verb exists beside
+          the tool's own, which is why every recipe is one line that invokes.
+    consequences:
+      - >-
+        `render.py` renders `justfile` at the root from `structure.yaml`, and
+        the staleness check covers it like every other page. Its recipes:
+        `gate`, `render`, `pr`, `watch`, `sweep`, `landed`, and a default
+        that lists them.
+      - >-
+        A recipe invokes and never implements. Logic in a recipe is a fifth
+        tool nothing gates, and the first one written is the file's end as a
+        surface.
+      - >-
+        The justfile stays at the root. A seed carries none, per DR-092: a
+        Project's gate is its own language's, and the verb comes from above.
+      - >-
+        `gate.yml` does not call `just`. The workflow runs the tools, which
+        the recipes only name, and installing a runner on the runner for the
+        sake of a spelling would be the cost without the benefit.
+      - >-
+        Specialization's copy step gains `.meta/gate`, which it had left
+        behind: a portfolio inherited the runner's verb and not the runner.
+    falsifier: >-
+      A recipe that grows a second line of logic and stays, or a portfolio
+      found with a `justfile` a render did not write. Either means the file
+      became a tool, and a tool belongs under `.meta/` with a gate over it.
+    rationale: |-
+      Christopher: developer ergonomics. He is used to a repository with a
+      Makefile orientation for these things, and was open to the file
+      invoking the Python scripts rather than replacing them. `just` over
+      make was the trade offered and taken: arguments and a listing, for
+      an install.

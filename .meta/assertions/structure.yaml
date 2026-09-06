@@ -121,6 +121,9 @@ artifacts:
   - id: work:artifact/github-workflows-gate
     name: .github/workflows/gate.yml
     path: .github/workflows/gate.yml
+  - id: work:artifact/justfile
+    name: justfile
+    path: justfile
   - id: work:artifact/meta-apm-readme
     name: .meta/.apm/README.md
     path: .meta/.apm/README.md
