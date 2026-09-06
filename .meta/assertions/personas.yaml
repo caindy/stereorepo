@@ -34,14 +34,6 @@ personas:
       - id: work:persona-goal/one-language-per-portfolio
         goal_type: END
         statement: Keep one language across everything built inside one portfolio.
-      - id: work:persona-goal/no-invented-terms
-        goal_type: EXPERIENCE
-        statement: >-
-          Trust that an agent working here will not quietly invent terms or let
-          a summary drift from what it summarises.
-      - id: work:persona-goal/team-scale-alone
-        goal_type: LIFE
-        statement: Build products at a scale that used to require a team.
     behaviors:
       - Corrects imprecise modelling immediately and specifically, rather than letting it stand.
       - Reads the source before adopting a taxonomy from it.
