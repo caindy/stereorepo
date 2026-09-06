@@ -562,6 +562,56 @@ def from_github(ref):
     return data["title"], data["body"] or ""
 
 
+def gate(ref):
+    """The pull request check, whole: the body against the form, A16, A19 and
+    the required contexts. One function because it is run from two places —
+    on the push, and on the clock (DR-105) — and two copies would be two gates."""
+    title, body = from_github(ref)
+    return (check(title, body) + resolved_without_an_answer(ref)
+            + unsigned_commits(ref) + required_contexts())
+
+
+CONTEXT = "pull request"
+
+
+def publish(number, head, problems):
+    """Post the result as the check run `main`'s ruleset waits on, on the pull
+    request's head commit, so a sweep's finding blocks the merge the way the
+    push's did. Needs a token that can create check runs, which is the
+    workflow's and not a person's — run by hand, this is where it stops."""
+    summary = "\n".join(f"- {p}" for p in problems) or "nothing owed"
+    gh("api", f"repos/{repo()}/check-runs",
+       "-f", f"name={CONTEXT}", "-f", f"head_sha={head}", "-f", "status=completed",
+       "-f", f"conclusion={'failure' if problems else 'success'}",
+       "-f", f"output[title]={'x ' if problems else 'ok '}{CONTEXT}",
+       "-f", f"output[summary]={summary}")
+
+
+def sweep_all(publishing):
+    """A16 between the last push and the merge (#5). Resolving a thread fires
+    no event, so the check that ran on the push is stale the moment one is
+    resolved, and a schedule is the only thing left to run it. Every open pull
+    request, one line each in A21's shape, and the result published as the
+    check when asked.
+    """
+    found = gh("pr", "list", "--state", "open", "--json", "number,title,headRefOid")
+    if not found:
+        print("ok sweep — no open pull requests")
+        return 0
+    failed = False
+    for pr in found:
+        number = str(pr["number"])
+        problems = gate(number)
+        print(f"{'x  ' if problems else 'ok '}#{number} {pr['title'][:60]}"
+              + (f" ({len(problems)})" if problems else ""))
+        for p in problems:
+            print(f"     {p}")
+        if publishing:
+            publish(number, pr["headRefOid"], problems)
+        failed |= bool(problems)
+    return 1 if failed else 0
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("pr", nargs="?", help="pull request number, URL or branch")
@@ -578,7 +628,14 @@ if __name__ == "__main__":
     ap.add_argument("--watch", action="store_true",
                     help="one line per change on the pull request, until it closes")
     ap.add_argument("--every", type=int, default=60, help="seconds between polls under --watch")
+    ap.add_argument("--all", action="store_true",
+                    help="the check on every open pull request, one line each")
+    ap.add_argument("--publish", action="store_true",
+                    help="with --all: post each result as the required check run")
     args = ap.parse_args()
+
+    if args.all:
+        sys.exit(sweep_all(args.publish))
 
     if args.sweep:
         branch, found = owned_and_open()
@@ -631,11 +688,7 @@ if __name__ == "__main__":
     else:
         ap.error("give a pull request, or --file")
 
-    problems = check(title, body)
-    if args.pr:
-        problems += resolved_without_an_answer(args.pr)
-        problems += unsigned_commits(args.pr)
-        problems += required_contexts()
+    problems = gate(args.pr) if args.pr else check(title, body)
     for p in problems:
         print(f"x  {p}")
     print(f"{'x  ' if problems else 'ok '}pull request"

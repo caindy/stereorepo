@@ -1,0 +1,63 @@
+decisions:
+  - id: work:decision/105
+    name: "DR-105 · A scheduled sweep re-runs the pull request check on every open pull request and publishes the result as the check"
+    challenge: work:challenge/5
+    status: ADOPTED
+    applies:
+      - work:article/16
+    enacted_in:
+      - work:artifact/meta-check-pr
+      - work:artifact/github-workflows-gate
+    alternatives:
+      - name: "`workflow_dispatch` and discipline"
+        chosen: false
+        reason: >-
+          What was in place. A re-run that happens when someone remembers is
+          not a control, and the person who resolved a thread without
+          answering it is the one who would have to remember.
+      - name: A workflow trigger on thread resolution
+        chosen: false
+        reason: >-
+          There is none. `pull_request_review_thread` is a webhook GitHub does
+          not accept as a workflow trigger, and naming it fails the whole
+          workflow at startup (DR-057).
+      - name: A scheduled sweep that publishes the check
+        chosen: true
+        reason: >-
+          On a schedule, `check_pr.py --all --publish` runs the pull request
+          check on every open pull request and publishes each result as a
+          check run under the name `main`'s ruleset requires, on the head
+          commit. A thread resolved without an answer after the last push
+          turns the required check red at the next sweep, and the merge waits
+          on it as it would have on a push. What it costs: a job that runs
+          whether or not anything changed; a window the length of the
+          interval, inside which the shortcut still works; and GitHub's rule
+          that a schedule stops after sixty days without a commit, so a quiet
+          repository loses the sweep without being told.
+    consequences:
+      - >-
+        `check_pr.py --all` runs the check on every open pull request and
+        prints one line per pull request in A21's shape. `--publish` posts
+        each result as a check run named `pull request` on the head commit,
+        which needs a token that can create check runs — the workflow's, not
+        a person's.
+      - >-
+        `gate.yml` gains a `schedule` trigger and a `sweep` job that runs
+        only under it, or under `workflow_dispatch`, which becomes what "on
+        demand" meant. The other jobs do not run under the schedule; nothing
+        in the tree changed.
+      - >-
+        The gap is narrowed to the sweep's interval, not closed. DR-057's
+        residual hole is this wide now, and no wider.
+    falsifier: >-
+      A thread resolved without an answer and merged inside one interval, or
+      a sweep found disabled after sixty quiet days with nobody told. Either
+      sends the check to something that fires on the act itself, which
+      GitHub does not offer today.
+    rationale: |-
+      DR-057 put the block on the merge and found there was no event to
+      hang the check on, and #5 sat with the hole named and two candidate
+      fixes, one of which is not a fix. A check that runs on a clock is
+      the shape that remains when the event does not exist; publishing
+      its result as the check the ruleset already waits on is what makes
+      it a control rather than a report.
