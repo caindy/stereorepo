@@ -131,6 +131,14 @@ _In practice:_ `.meta/say commit -m "…"`, which composes the `Actor:` Trailer 
 
 _In practice:_ The rule about a rationale's length is a step of Written Decisions, and DR-080 names `.meta/disciplines.md` under `enacted_in`.
 
+### A21. A gate reports each step in the one shape every gate here prints — `ok`, `x` or `?`, then the step, then what it covered, found, or could not do — so a reader of any Project's gate reads every other's.
+
+**Checked by** Nothing yet. The Portfolio-level runner, once it consumes a gate's report rather than its exit code.
+
+_In practice:_ `ok orphans — 5 markdown files under 2 packages, each included by a source file` from `cargo xtask gate`, beside `ok artifact paths` from `check.py`, read by the same eye. Not a Rust gate that prints cargo's own summary lines and exits.
+
+_Retired when:_ A Project whose toolchain reports in a form this shape cannot carry without hiding what the tool found.
+
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml)

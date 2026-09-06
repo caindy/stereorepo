@@ -1,0 +1,54 @@
+decisions:
+  - id: work:decision/092
+    name: "DR-092 · Every gate prints one report shape, so a runner can read any of them"
+    challenge: work:challenge/54
+    status: ADOPTED
+    applies:
+      - work:article/21
+      - work:article/6
+      - work:article/7
+    enacted_in:
+      - work:artifact/meta-charter
+    alternatives:
+      - name: Leave the shape to imitation
+        chosen: false
+        reason: >-
+          The state before this entry. Two gates matched because one author
+          copied the other, and the copy's documentation said so. A third
+          language's gate could satisfy A6 and A7 and print something nobody
+          could read beside the first two, and nothing would object.
+      - name: One front-end in every Project, whatever its language
+        chosen: false
+        reason: >-
+          `make check` everywhere, which is what `python_bootstrap` does. It
+          gives one verb, and it puts a second tool into every seed for the
+          sake of the verb; the Rust seed would carry a Makefile that calls
+          cargo. The verb can come from above instead, from a runner over the
+          assertions, once there is a shape for it to read.
+      - name: The shape as an Article, read by a runner above the Projects
+        chosen: true
+        reason: >-
+          A gate stays in its Project's language — DR-090 — and what is uniform
+          is what it prints. A21 names the three lines; the runner intended in
+          #53 consumes them and gives every Project the same verb and every
+          Product a gate. What it costs is that a gate wrapping a tool has to
+          restate the tool's result in these lines, and the tool's own output
+          streams above them rather than replacing them.
+    consequences:
+      - >-
+        Article 21 states the shape; `check.py` and the Rust xtask already print
+        it, and the xtask's documentation now cites the Article rather than the
+        other gate.
+      - >-
+        The Portfolio-level runner has a contract to read, and A21's `checked_by`
+        is that runner once it exists.
+    falsifier: >-
+      A gate that prints the shape and is still read differently by the runner,
+      because the shape carried too little. The Article would then have to
+      grow a field, or give way to a structured report.
+    rationale: |-
+      Christopher: each Project should have the same developer experience,
+      and a Product should have a surface that works across polyglot
+      Projects. Neither is the gate's language; both are what it says and
+      how the layer above can read it. The contract is the smallest thing
+      that makes both possible without a foreign tool in every seed.

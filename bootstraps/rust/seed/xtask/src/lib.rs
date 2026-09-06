@@ -27,8 +27,9 @@ impl Outcome {
         matches!(self, Outcome::Found(_))
     }
 
-    /// Prints the outcome in the shape `.meta/check.py` prints its own, so a
-    /// reader of either report reads the other.
+    /// Prints the outcome in the one shape every gate prints — A21: `ok`, `x`
+    /// or `?`, the step, then what it covered, found, or could not do — so a
+    /// reader of any Project's gate reads every other's.
     pub fn report(&self, label: &str) {
         print!("{}", self.rendered(label));
     }
