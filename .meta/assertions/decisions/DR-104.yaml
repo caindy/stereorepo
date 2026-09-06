@@ -1,0 +1,82 @@
+decisions:
+  - id: work:decision/104
+    name: "DR-104 · One verb runs any Project's gate or a Product's, and reads the report each gate prints"
+    challenge: work:challenge/53
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-gate
+      - work:artifact/meta-charter
+      - work:artifact/meta-readme
+    alternatives:
+      - name: Leave the workflow as the runner
+        chosen: false
+        reason: >-
+          `gate.yml` runs the three gates in three jobs, and it is the only
+          place that did. It runs in CI and nowhere else, it lists each command
+          by hand beside the assertions that already hold them, and it gives a
+          Product nothing: three green jobs say nothing about which Product
+          each one belongs to.
+      - name: A working-directory slot beside `gate`, and bare commands
+        chosen: false
+        reason: >-
+          Two of the three gate strings begin with a `cd`. A slot for the
+          directory would be a second way of saying what the string already
+          says, and the string is the thing a person types at the root, which
+          is what the slot's description promised. The shell reads a `cd`;
+          nothing here needs to.
+      - name: Read each gate's exit code
+        chosen: false
+        reason: >-
+          An exit code cannot tell a gate that reported nothing from one that
+          passed, and a gate whose tool crashed before its first step exits the
+          same way as one whose last step failed. DR-092 made every gate print
+          one shape precisely so that something above them could read it, and
+          A21 said it was checked by nothing until something did.
+      - name: A runner that reads the assertions and the reports
+        chosen: true
+        reason: >-
+          `.meta/gate` reads `structure.yaml` for the Projects and what each
+          Product is built from, runs each `gate` string through the shell
+          from the root, parses A21's three lines as they stream, re-prints
+          each under the Project's name, and passes every other line through
+          to stderr. A gate that printed no step in the shape fails, whatever
+          it exited with. What it costs: a second process reads what the
+          first printed, so a gate whose tool writes its own summary to stdout
+          in a colliding form would be misread, and pyyaml rides in through
+          the shebang rather than the system interpreter.
+    consequences:
+      - >-
+        `gate` on a Project and `built_from` on a Product are consumed. A
+        word names a Project by the tail of its id or its path, or a Product,
+        and the runner refuses a word that names nothing rather than running
+        nothing and printing `ok`.
+      - >-
+        A21's `checked_by` names the runner: a gate that prints no step in
+        the shape is a Project the runner fails.
+      - >-
+        `check.py` prints `ok` with no scope, and the runner allows it. The
+        Charter's own example reads a bare `ok artifact paths` beside the
+        Rust gate's scoped line, so the scope is what a gate may add rather
+        than what the shape demands.
+      - >-
+        `gate.yml` keeps its three jobs. Each is a required status check
+        named in `main`'s ruleset, and collapsing them into one job would be
+        a setting on GitHub rather than a line here. The runner is the verb
+        typed locally; the workflow is where it cannot be skipped.
+    falsifier: >-
+      A Project whose gate cannot be typed at the root as one shell string —
+      one that needs an environment the string cannot carry, or a tool whose
+      own stdout collides with the shape. Either sends the environment into a
+      slot of its own, or the report into a structured form.
+    rationale: |-
+      DR-092 chose the shape as an Article read by a runner above the
+      Projects, and left the runner to #53. What was open was where the
+      runner reads its list from and what it reads back. The list is the
+      assertions, because that is where the slots already were and had
+      never been consumed — A8 applied to two fields of the ABox. What it
+      reads back is the report, because that is the whole reason the
+      shape was made a rule: an exit code was always available and was
+      never enough.

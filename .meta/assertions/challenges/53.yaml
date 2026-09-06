@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/53
+    name: "A Portfolio-level gate runner over the assertions: one verb per Project, and a Product's gate spans its Projects"
+    challenge_type: FEATURE
+    description: >-
+      Every Project asserts a `gate` and every Product what it is `built_from`,
+      and nothing read either: a person had to know that `.meta`'s gate is
+      `check.py` and the Rust seed's is `cargo xtask gate`, and a Product built
+      from two Projects had no gate at all. One command at the Portfolio level
+      that reads both slots gives every Project the same verb and a Product a
+      gate that spans its languages.

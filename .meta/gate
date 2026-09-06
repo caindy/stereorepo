@@ -1,0 +1,149 @@
+#!/usr/bin/env -S uvx --with pyyaml python
+"""One verb for every Project's gate, and a gate for a Product (DR-104).
+
+    .meta/gate                       every Project the assertions declare
+    .meta/gate meta                  one Project, by the tail of its id or its path
+    .meta/gate rust-standard         one Product: every Project it is built from
+
+Each Project asserts a `gate` — the command that must pass, typed at the root
+of the repository — and each Product asserts what it is `built_from`. Until
+this runner nothing read either slot: the developer typed the gate that matched
+the language, and a Product built from two Projects had no gate at all. The
+runner reads both, so the verb is the same in every Project and a Product is
+red when any Project under it is.
+
+It reads what a gate **prints**, not what it exits with. Every gate here
+reports each step in one shape (A21, DR-092): `ok`, `x` or `?`, then the step,
+then what it covered, found, or could not do. The runner parses those lines as
+they stream, re-prints them under the Project's name, and passes everything
+else — cargo's build noise, uv's resolution — through to stderr where it was
+going anyway. A gate that prints no line in the shape has not reported, and
+that is a failure of the gate whatever its exit code said, which is what makes
+this the check A21 names.
+
+The gate string runs through the shell from the repository root, because that
+is what it is: the words a person types there. Two of the three carry a `cd`,
+and a slot for the working directory would be a second way of saying it.
+"""
+import pathlib
+import re
+import subprocess
+import sys
+
+import yaml
+
+META = pathlib.Path(__file__).parent
+ROOT = META.parent
+STRUCTURE = META / "assertions" / "structure.yaml"
+
+# The three lines of A21. `ok` may carry its scope after an em dash, or not:
+# `check.py` prints a bare `ok artifact paths`, and the Charter's own example
+# reads it beside the Rust gate's `ok orphans — 5 markdown files ...`. The
+# step begins at once after the mark: cargo-mutants writes `ok       Unmutated
+# baseline` to the same stdout, and one space is where the shape ends and a
+# tool's own summary begins.
+OK = re.compile(r"^ok (?P<step>\S.*?)(?: — (?P<scope>.*))?$")
+X = re.compile(r"^x  (?P<step>\S.*) \((?P<count>\d+)\)$")
+COULD_NOT = re.compile(r"^\?  (?P<step>\S[^:]*): (?P<why>.*)$")
+PROBLEM = re.compile(r"^     (?P<problem>.+)$")
+
+
+def structure():
+    data = yaml.safe_load(STRUCTURE.read_text()) or {}
+    projects = {p["id"]: p for p in data.get("projects") or []}
+    products = {p["id"]: p for p in data.get("products") or []}
+    return projects, products
+
+
+def short(ident):
+    """The tail of a CURIE: `work:project/meta` is typed as `meta`."""
+    return ident.rsplit("/", 1)[-1]
+
+
+def select(word, projects, products):
+    """The Projects a word names: all of them for no word, one by id, tail or
+    path, or every Project a Product is built from. A word that names nothing
+    is an error, not an empty run — a gate that ran nothing would print `ok`."""
+    if word is None:
+        return list(projects.values())
+    for ident, project in projects.items():
+        if word in (ident, short(ident), project.get("name")):
+            return [project]
+    for ident, product in products.items():
+        if word in (ident, short(ident), product.get("name")):
+            chosen = []
+            for ref in product.get("built_from") or []:
+                if ref not in projects:
+                    sys.exit(f"gate: {ident} is built from {ref}, which is not a Project here")
+                if projects[ref] not in chosen:
+                    chosen.append(projects[ref])
+            return chosen
+    known = [short(i) for i in (*projects, *products)]
+    sys.exit(f"gate: nothing is called '{word}'. Projects and Products: {', '.join(known)}")
+
+
+def run(project):
+    """Run one Project's gate and read its report.
+
+    Returns the steps as (mark, step, detail) triples, and the exit code. The
+    report lines go to stdout under the Project's name; every other line goes
+    to stderr as it arrives, so a slow build is seen building.
+    """
+    name = short(project["id"])
+    command = project.get("gate")
+    if not command:
+        print(f"?  {name}: no gate asserted")
+        return [], None
+    proc = subprocess.Popen(command, shell=True, cwd=ROOT, text=True,
+                            stdout=subprocess.PIPE, stderr=sys.stderr)
+    steps = []
+    # `readline`, not iteration: iterating a pipe reads ahead in blocks, and a
+    # slow build's first `ok` would sit in the buffer until the last.
+    for line in iter(proc.stdout.readline, ""):
+        line = line.rstrip("\n")
+        if (m := X.match(line)):
+            steps.append(("x", m["step"], m["count"]))
+        elif (m := COULD_NOT.match(line)):
+            steps.append(("?", m["step"], m["why"]))
+        elif (m := OK.match(line)):
+            steps.append(("ok", m["step"], m["scope"] or ""))
+        elif PROBLEM.match(line) and steps and steps[-1][0] == "x":
+            print(line)
+            continue
+        else:
+            print(line, file=sys.stderr)
+            continue
+        print(line.replace(m["step"], f"{name}/{m['step']}", 1))
+    return steps, proc.wait()
+
+
+def main(argv):
+    sys.stdout.reconfigure(line_buffering=True)  # a report is read as it is printed
+    word = argv[1] if len(argv) > 1 else None
+    projects, products = structure()
+    chosen = select(word, projects, products)
+    failures = []
+    total = 0
+    for project in chosen:
+        name = short(project["id"])
+        steps, code = run(project)
+        total += len(steps)
+        found = [step for mark, step, _ in steps if mark == "x"]
+        if not steps:
+            failures.append(f"{name}: the gate printed no step in A21's shape (exit {code})")
+        elif found:
+            failures.append(f"{name}: {', '.join(found)}")
+        elif code:
+            failures.append(f"{name}: every step reported ok or ? and the gate exited {code}")
+    label = word or "portfolio"
+    if failures:
+        print(f"x  {label} ({len(failures)})")
+        for failure in failures:
+            print(f"     {failure}")
+        return 1
+    print(f"ok {label} — {total} steps across {len(chosen)} project{'s' if len(chosen) != 1 else ''}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

@@ -142,6 +142,9 @@ artifacts:
   - id: work:artifact/meta-check-pr
     name: .meta/check_pr.py
     path: .meta/check_pr.py
+  - id: work:artifact/meta-gate
+    name: .meta/gate
+    path: .meta/gate
   - id: work:artifact/meta-ddd-ontology
     name: .meta/ddd_ontology.yaml
     path: .meta/ddd_ontology.yaml

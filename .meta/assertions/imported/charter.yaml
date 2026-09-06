@@ -210,8 +210,8 @@ articles:
       `x` or `?`, then the step, then what it covered, found, or could not do —
       so a reader of any Project's gate reads every other's.
     checked_by: >-
-      Nothing yet. The Portfolio-level runner, once it consumes a gate's report
-      rather than its exit code.
+      `.meta/gate`, which reads each Project's report rather than its exit
+      code, and fails a gate that prints no step in the shape (DR-104).
     example: >-
       `ok orphans — 5 markdown files under 2 packages, each included by a
       source file` from `cargo xtask gate`, beside `ok artifact paths` from
