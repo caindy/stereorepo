@@ -12,7 +12,7 @@ where a Discipline becomes a command that can fail**, for one language.
 | Language | State |
 |---|---|
 | [`rust/`](rust/) | Built. A seed workspace whose gate, `cargo xtask gate`, holds six Disciplines; the workflow renders it and gates the result. |
-| Python | Not yet pulled in. `python_bootstrap` exists as a separate repository and its conventions need reconciling with this one first. |
+| [`python/`](python/) | Built. A seed workspace whose gate, `uv run gate`, holds six Disciplines; the workflow renders it and gates the result. Pulled in from `python_bootstrap` (DR-094). |
 
 ## Why they live in the monorepo
 

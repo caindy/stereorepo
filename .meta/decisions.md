@@ -109,6 +109,11 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-091](assertions/decisions/DR-091.yaml) | The seed builds as it sits, and rendering renames it | Adopted |
 | [DR-092](assertions/decisions/DR-092.yaml) | Every gate prints one report shape, so a runner can read any of them | Adopted |
 | [DR-093](assertions/decisions/DR-093.yaml) | A Decision names its level — Portfolio, Product or Project — and ADR is dropped | Adopted |
+| [DR-094](assertions/decisions/DR-094.yaml) | python_bootstrap comes in as a seed and six pages; its charter, journal and generator stay behind | Adopted |
+| [DR-095](assertions/decisions/DR-095.yaml) | The support floor is 3.13 and the linters target it, not the interpreter developed on · The Python standard | Adopted |
+| [DR-096](assertions/decisions/DR-096.yaml) | The rule set, a line length of 88, and an ignore list that stays empty · The Python standard | Adopted |
+| [DR-097](assertions/decisions/DR-097.yaml) | The gate's tools are pinned exactly, and the test tools float · The Python standard | Adopted |
+| [DR-098](assertions/decisions/DR-098.yaml) | The Python gate is a workspace member run as `uv run gate`, not a Makefile over scripts · bootstraps/python/seed | Adopted |
 
 ## Holes
 
@@ -127,7 +132,7 @@ and the query a reader in a file actually has.
 
 | Artifact | Entries |
 | :-- | :-- |
-| [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml), [DR-091](assertions/decisions/DR-091.yaml) |
+| [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml), [DR-091](assertions/decisions/DR-091.yaml), [DR-094](assertions/decisions/DR-094.yaml), [DR-095](assertions/decisions/DR-095.yaml) |
 | [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml) |
 | [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-088](assertions/decisions/DR-088.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml) |
@@ -158,6 +163,10 @@ and the query a reader in a file actually has.
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml) |
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml) |
 | [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml) |
+| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml) |
+| [`bootstraps/python/render`](../bootstraps/python/render) | [DR-094](assertions/decisions/DR-094.yaml) |
+| [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
+| [`bootstraps/python/seed/pyproject.toml`](../bootstraps/python/seed/pyproject.toml) | [DR-095](assertions/decisions/DR-095.yaml), [DR-096](assertions/decisions/DR-096.yaml), [DR-097](assertions/decisions/DR-097.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
 | [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml) |
 | [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
 | [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml) |

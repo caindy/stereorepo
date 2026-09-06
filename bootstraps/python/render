@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Render the Python seed into a portfolio: copy it out, and name its package.
+
+A seed is data, and it is gated by rendering it and running the real gates on
+the result (A9). The seed builds as it sits, under the name `seed`, so that
+its own gate can run on it in place (DR-091, which holds for Python word for
+word); what a portfolio needs is the same tree under the package's real name.
+That substitution is all this does, and it is the one copy of how it is done —
+`.github/workflows/gate.yml` renders with it and runs `uv run gate` on what
+comes out, and Specialization's fifth step does the same by hand.
+
+    bootstraps/python/render <destination> <package-name>
+
+The destination must not exist. The package name is an importable module
+name, which is also the distribution's name; `uv.lock` is renamed with the rest
+and stays exact, which `uv run --locked` in the destination proves.
+"""
+
+import pathlib
+import re
+import shutil
+import sys
+
+SEED = pathlib.Path(__file__).resolve().parent / "seed"
+NAME = re.compile(r"^[a-z][a-z0-9_]*$")
+
+# Where the word `seed` is the package and not a word: the distribution's
+# name, the workspace member's path, the source it names, and an import.
+RENAMES = (
+    ('"seed-workspace"', '"{name}-workspace"'),
+    ('name = "seed"', 'name = "{name}"'),
+    ('"packages/seed"', '"packages/{name}"'),
+    ("seed = { workspace = true }", "{name} = {{ workspace = true }}"),
+    ('    "seed",', '    "{name}",'),
+    ('known-first-party = ["seed", "gate"]', 'known-first-party = ["{name}", "gate"]'),
+    ('packages = ["src/seed"]', 'packages = ["src/{name}"]'),
+    ("from seed.", "from {name}."),
+    ("from seed import", "from {name} import"),
+    ("import seed", "import {name}"),
+    ("seed.example", "{name}.example"),
+)
+TOOL_OUTPUT = (".venv", "mutants", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".mutmut-cache")
+
+
+def main(argv):
+    if len(argv) != 3:
+        sys.exit(__doc__)
+    destination, name = pathlib.Path(argv[1]), argv[2]
+    if not NAME.match(name) or name in ("seed", "gate"):
+        sys.exit(f"render: `{name}` is not a package name this seed can take")
+    if destination.exists():
+        sys.exit(f"render: {destination} exists; the seed renders only into an empty place")
+
+    shutil.copytree(SEED, destination, ignore=shutil.ignore_patterns(*TOOL_OUTPUT))
+    (destination / "packages" / "seed" / "src" / "seed").rename(destination / "packages" / "seed" / "src" / name)
+    (destination / "packages" / "seed").rename(destination / "packages" / name)
+
+    changed = 0
+    for path in sorted(p for p in destination.rglob("*") if p.is_file()):
+        text = path.read_text()
+        renamed = text
+        for old, new in RENAMES:
+            renamed = renamed.replace(old, new.format(name=name))
+        if renamed != text:
+            path.write_text(renamed)
+            changed += 1
+    print(f"rendered {SEED.name} into {destination} as `{name}`; {changed} files named it")
+
+
+if __name__ == "__main__":
+    main(sys.argv)

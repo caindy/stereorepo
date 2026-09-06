@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/38
+    name: Pull python_bootstrap in
+    challenge_type: FEATURE
+    description: >-
+      `bootstraps/rust/` is here and Python is not, though it is the harder
+      half: `python_bootstrap` is a working repository with its own charter,
+      its own decision records, its own journal and its own numbered
+      invariants, conventions that overlap solorepo's without matching them.
+      Its language-neutral invariants are already pulled up (DR-043); what
+      remains is the Python-specific half and the reconciliation — which
+      charter wins, what its records become, what happens to its journal, and
+      whether its generator comes too.

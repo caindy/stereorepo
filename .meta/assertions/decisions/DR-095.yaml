@@ -1,0 +1,51 @@
+decisions:
+  - id: work:decision/095
+    name: "DR-095 · The support floor is 3.13 and the linters target it, not the interpreter developed on"
+    challenge: work:challenge/38
+    product: work:product/python-standard
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/bootstraps-python-seed-manifest
+      - work:artifact/github-workflows-gate
+    alternatives:
+      - name: Everything on the newest interpreter
+        chosen: false
+        reason: >-
+          Simplest, and it silently narrows what the package can be installed
+          into while removing the floor check. The failure is invisible until
+          a user reports it.
+      - name: Everything on the floor
+        chosen: false
+        reason: >-
+          Develop on an older runtime than the one installed, and never
+          exercise the version that will eventually be moved to.
+      - name: Split — the interpreter developed on above, the linters at the floor
+        chosen: true
+        reason: >-
+          `.python-version` pins 3.14, `requires-python` states `>=3.13`, and
+          ruff and mypy target 3.13, so they catch code that works on the
+          newer interpreter and breaks for a user on the oldest this
+          workspace claims. What it costs is a line of explanation, which is
+          this entry, and a workflow that has to run the gate on the floor,
+          or the floor is asserted and never executed.
+    consequences:
+      - >-
+        The three settings differ on purpose, and the seed's manifest says
+        so beside each.
+      - >-
+        The `python seed` job runs the gate with `UV_PYTHON` at the floor;
+        the interpreter developed on is exercised by whoever develops.
+      - >-
+        Raising the floor is one decision: `requires-python` and both linter
+        targets move together.
+    falsifier: >-
+      3.13 reaching end of life, or a dependency requiring a higher floor.
+      Either raises the three settings together and supersedes this entry
+      in part.
+    rationale: |-
+      `python_bootstrap`'s first product record, filed here at the level
+      it binds: every Python Project in a portfolio inherits the floor,
+      and none of them owns it. Two different questions get answered by
+      the same number if you let them — what is developed on, and what
+      the code must still run on — and setting both to the newest release
+      quietly removes a whole class of check.

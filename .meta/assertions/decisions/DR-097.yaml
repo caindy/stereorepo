@@ -1,0 +1,44 @@
+decisions:
+  - id: work:decision/097
+    name: "DR-097 · The gate's tools are pinned exactly, and the test tools float"
+    challenge: work:challenge/38
+    product: work:product/python-standard
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/bootstraps-python-seed-manifest
+    alternatives:
+      - name: Float everything
+        chosen: false
+        reason: >-
+          Always current, and current on somebody else's schedule, in the
+          middle of whatever was being done. A gate that goes red for reasons
+          unrelated to the change in front of you trains re-running until
+          green, which is how a real failure gets waved through.
+      - name: Pin everything, the test runner included
+        chosen: false
+        reason: >-
+          Over-pinning creates upgrade work with no corresponding reduction
+          in risk: a test runner's exact wording is not a claim the gate
+          makes.
+      - name: Pin the gate's tools, float the rest
+        chosen: true
+        reason: >-
+          `ruff` and `mypy` are pinned exactly; `pytest` and `mutmut` carry
+          a floor. Upgrades are their own change, so new findings are
+          attributable to the upgrade rather than mixed into unrelated work.
+          What it costs is that upgrades need doing on purpose, and arrive
+          with a batch of findings when they do.
+    consequences:
+      - >-
+        A red gate is about the change in front of you. `uv.lock` pins the
+        rest of the tree, and `uv run --locked` in a rendered copy proves the
+        lock still matches.
+    falsifier: >-
+      Pinned versions falling far enough behind that an upgrade becomes
+      large. A scheduled upgrade change is the mitigation, not floating.
+    rationale: |-
+      `python_bootstrap`'s third product record, filed at the Product
+      level. The whole premise of the gate is that a red gate means
+      something, and a linter that ships rules between releases with no
+      compatibility guarantee can turn a green tree red without a line of
+      local change.

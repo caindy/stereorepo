@@ -1,0 +1,61 @@
+decisions:
+  - id: work:decision/096
+    name: "DR-096 · The rule set, a line length of 88, and an ignore list that stays empty"
+    challenge: work:challenge/38
+    product: work:product/python-standard
+    status: ADOPTED
+    applies:
+      - work:article/2
+    enacted_in:
+      - work:artifact/bootstraps-python-seed-manifest
+      - work:artifact/bootstraps-python-gate
+    alternatives:
+      - name: A smaller rule set with a permissive `ignore`
+        chosen: false
+        reason: >-
+          Rejected on the mechanism, not the size. Once `ignore` is non-empty
+          it is the natural place to put the next problem, and nothing ever
+          reads it again.
+      - name: A line length of 100 or 120
+        chosen: false
+        reason: >-
+          No evidence trail, and a non-default value means a formatting diff
+          on every pasted snippet. 88 is ruff's default, and one value drives
+          the formatter and the line-length rule so they cannot disagree.
+      - name: The docstring, annotation, exception-message and return-style rule families
+        chosen: false
+        reason: >-
+          Annotations are subsumed by mypy strict with a worse message — two
+          gates, one signal. The docstring family produces docstring-shaped
+          text rather than documentation; presence is what the `doc` step
+          holds, read off the syntax tree. The message and return families
+          fight readable code at every site.
+      - name: The selected set, `ignore` empty, and every suppression at a site with a reason
+        chosen: true
+        reason: >-
+          `E W F I N UP B C4 C90 SIM S RUF PT PTH ARG`. `C90` is required or
+          `max-complexity` can never fire; `S` subsumes bandit and covers the
+          tests; `PT` catches a `raises` with no `match`; `RUF100` removes a
+          dead `noqa`, which is the ratchet running forward. What it costs is
+          noise on the first run over legacy code, fixed or annotated per
+          site rather than by opening `ignore`.
+    consequences:
+      - >-
+        `ignore` is empty and `uv run gate lints` refuses an entry in it; a
+        `per-file-ignores` entry carries a reason on its line; a `noqa` or a
+        `type: ignore` at a site carries `reason:`.
+      - >-
+        Maximum cyclomatic complexity is 12.
+    falsifier: >-
+      A rule proving wrong everywhere rather than at particular sites. That
+      is the case for removing it from `select`, which is a different act
+      from ignoring it and is recorded as such.
+    rationale: |-
+      `python_bootstrap`'s second product record, filed at the Product
+      level. Two questions that look like taste and are not: which rules
+      run, and where an exception is allowed to live. The suppression
+      policy is the load-bearing half — a config-level allow is an
+      invisible, encoded exception that applies everywhere forever and
+      that no reviewer sees again; a site-level one is per-decision and
+      visible in the diff that adds it. A2 states the rule; this entry
+      states its Python form.

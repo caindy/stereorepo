@@ -1,0 +1,101 @@
+decisions:
+  - id: work:decision/094
+    name: "DR-094 · python_bootstrap comes in as a seed and six pages; its charter, journal and generator stay behind"
+    challenge: work:challenge/38
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/9
+      - work:article/10
+    enacted_in:
+      - work:artifact/bootstraps-python-readme
+      - work:artifact/bootstraps-python-render
+      - work:artifact/github-workflows-gate
+    alternatives:
+      - name: Copy the template tree whole, memory architecture included
+        chosen: false
+        reason: >-
+          Its charter, journal, two decision tracks, bets, parked and
+          believed-but-not-true tables, and the prose gates over them are
+          `python_bootstrap` solving for itself what `.meta/` solves for the
+          Portfolio: the load map is `.meta/README.md`, the routing table is
+          the same table, the decision tracks are the record with `product`
+          or `project` set, a bet is an entry's falsifier, and the journal
+          is what Journaling routes. A second charter inside a Project is the
+          two-rulebooks failure the template's own `AGENTS.md` forbids, and
+          gates over a copy would be checking the copy.
+      - name: Wait for the generator's fate before bringing anything in
+        chosen: false
+        reason: >-
+          Nothing in the seed depends on it. The seed is what the generator
+          renders, and rendering here is the Rust standard's `render` shape;
+          the generator's three-way sync and its managed keys are about
+          keeping many rendered projects in step, which is a question the
+          Bootstrap does not have to answer to exist.
+      - name: A seed mirroring the Rust one, with a page per Discipline saying how it is held
+        chosen: true
+        reason: >-
+          Two languages in one shape make the shape a standard rather than a
+          habit, and the Rust page's two candidates for pulling up are now
+          held twice. What it costs is what does not come with it — the
+          declaration layer, the log, the vendored skills, the tiered gate
+          with its duration budgets — each of which needs a home decided
+          rather than a copy made.
+      - name: Keep python_bootstrap a separate repository and point at it
+        chosen: false
+        reason: >-
+          `bootstraps/README.md`'s own argument: a Bootstrap kept apart needs
+          its own copy of the Disciplines it implements, and copies drift.
+          The monorepo claim is also the one being dogfooded.
+    consequences:
+      - >-
+        `bootstraps/python/` holds a uv workspace, `packages/seed` and `gate`,
+        gated by `uv run gate`; the `python seed` job renders it as `acme` and
+        runs the gate on the result, on the support floor.
+      - >-
+        The charter question closes: a Project carries no charter. `AGENTS.md`
+        is the Portfolio's, and what `python_bootstrap`'s `CLAUDE.md` held is
+        `.meta/`'s.
+      - >-
+        The journal does not come. Journaling routes what it held — a
+        decision to the record, a finding to the Charter, the residue to the
+        pull request — and its append-only rule survives as the record's
+        never-rewrite.
+      - >-
+        Its product records become Product-level Decisions, DR-095 to DR-097,
+        the first entries at that level. Its architecture records are the
+        generator's and wait on its fate, which is what remains of #38. Its
+        fourth product record, configuration as a declaration, does not come:
+        it binds an application, and a seed of one example module has nothing
+        to enact it on.
+      - >-
+        The sixteen vendored skills do not come with the seed. They are
+        Capabilities, and where a Capability is packaged is APM's question.
+      - >-
+        `python_bootstrap`'s tiered gate with duration budgets, its
+        two-sided type-error ratchet and its orphan-script checker do not
+        come: the first two are machinery ahead of a need the seed does not
+        have, by its own parked-with-intent rule, and the third has nothing to
+        check in a gate that is one package with one table of steps.
+    falsifier: >-
+      A Python Project in a portfolio that needs what was left behind — the
+      declaration layer, the log, a skill, the tiers — and finds no place for
+      it, so that the seed grows the memory architecture back.
+    rationale: |-
+      Christopher: the reconciliation is the work, not the code. Nine of
+      the eleven invariants were pulled up already (DR-043); the
+      Python-specific half is the support floor, the rule set and the
+      pins, which is what the Product-level entries carry. Everything else
+      in the template was the memory architecture, and it stays behind
+      not because it is wrong but because it is already here under other
+      names — which is why it is left rather than reconciled line by
+      line, and why the pages say where each part went.
+
+      Two things in the template's own record argued for the seed's shape.
+      Its parked-with-intent table refuses machinery ahead of the need,
+      which is the argument against bringing the tiers and the baseline
+      into a seed of one function. And its believed-but-not-true table
+      records that its seeded decision records were removed because they
+      occupied a project's numbering with inherited arguments — the
+      finding that here becomes a Product-level entry, filed once, at the
+      level every Project shares.

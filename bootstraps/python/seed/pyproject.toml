@@ -1,0 +1,65 @@
+# The seed workspace: one package, and the gate that holds it.
+#
+# Tool configuration is set here, once, and only ever raised. An `ignore` in
+# the ruff table is a rule switched off where nobody reads it — A2: a
+# suppression names its rule and its reason, at the site, never in
+# configuration — and `uv run gate lints` refuses one.
+[project]
+name = "seed-workspace"
+version = "0.1.0"
+description = "The workspace a Python Project in a portfolio starts from"
+# The SUPPORT FLOOR, not the dev interpreter. `.python-version` pins 3.14 for
+# development; the linters below target 3.13 so they catch code that would
+# break on the oldest Python this workspace claims to support (DR-095).
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/seed", "gate"]
+
+[tool.uv.sources]
+seed = { workspace = true }
+gate = { workspace = true }
+
+[dependency-groups]
+# The gate's tools are pinned exactly and the test tools float (DR-097): a
+# floating linter turns upstream churn into a red gate on a tree nobody
+# changed, while a test runner's exact wording is not a claim the gate makes.
+dev = [
+    "seed",
+    "gate",
+    "mypy==1.18.2",
+    "mutmut>=3.2",
+    "pytest>=9",
+    "ruff==0.14.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+# Tool output, not the tree: mutmut writes its mutated copy of a package's
+# source beside it, and a gate that read it would fail on its own last run.
+extend-exclude = ["mutants"]
+
+[tool.ruff.lint]
+# The rule set (DR-096). `C90` is what makes `max-complexity` able to fire.
+select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "C90", "SIM", "S", "RUF", "PT", "PTH", "ARG"]
+# Empty, and it stays empty. `uv run gate lints` fails on an entry here.
+ignore = []
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101"]  # reason: assert is the point of a test
+
+[tool.ruff.lint.isort]
+known-first-party = ["seed", "gate"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unused_configs = true

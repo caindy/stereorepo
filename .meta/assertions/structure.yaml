@@ -34,6 +34,19 @@ projects:
     language: Rust
     gate: cd bootstraps/rust/seed && cargo xtask gate
 
+  # A third Project, in a third language, pulled in from `python_bootstrap`
+  # (DR-094). The same shape as the Rust seed: a workspace whose gate is a
+  # member written in the language it gates (DR-090, DR-098).
+  - id: work:project/python-seed
+    name: bootstraps/python/seed
+    description: >-
+      The seed workspace a Python Project in a portfolio starts from: one
+      package, and the gate that is a workspace member beside it. Real and
+      gated as it sits, so that the gate can run on it in place; a portfolio
+      takes a rendered copy.
+    language: Python
+    gate: cd bootstraps/python/seed && uv run gate
+
 products:
   - id: work:product/scaffold
     name: The scaffold
@@ -56,6 +69,19 @@ products:
     built_from:
       - work:project/rust-seed
 
+  # A third Product, and the first with decisions of its own at the Product
+  # level (DR-095, DR-096, DR-097): what every Python Project inherits is
+  # shared by all of them and owned by none.
+  - id: work:product/python-standard
+    name: The Python standard
+    description: >-
+      What a Python project in a portfolio inherits — the gates, the rule
+      set, the pins and the documentation layout, and solorepo's Disciplines
+      made executable for one language.
+    primary_persona: work:persona/the-solo
+    built_from:
+      - work:project/python-seed
+
 # The artifacts a Decision names under `enacted_in`, and nothing else. Listed
 # here so that naming one is a reference the gate resolves rather than a path
 # a checker matches. Partial by design: a file earns an entry by being
@@ -74,6 +100,18 @@ artifacts:
   - id: work:artifact/bootstraps-rust-xtask
     name: bootstraps/rust/seed/xtask/src/lib.rs
     path: bootstraps/rust/seed/xtask/src/lib.rs
+  - id: work:artifact/bootstraps-python-readme
+    name: bootstraps/python/README.md
+    path: bootstraps/python/README.md
+  - id: work:artifact/bootstraps-python-render
+    name: bootstraps/python/render
+    path: bootstraps/python/render
+  - id: work:artifact/bootstraps-python-gate
+    name: bootstraps/python/seed/gate/src/gate/__init__.py
+    path: bootstraps/python/seed/gate/src/gate/__init__.py
+  - id: work:artifact/bootstraps-python-seed-manifest
+    name: bootstraps/python/seed/pyproject.toml
+    path: bootstraps/python/seed/pyproject.toml
   - id: work:artifact/github-workflows-gate
     name: .github/workflows/gate.yml
     path: .github/workflows/gate.yml

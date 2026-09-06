@@ -1,0 +1,62 @@
+decisions:
+  - id: work:decision/098
+    name: "DR-098 · The Python gate is a workspace member run as `uv run gate`, not a Makefile over scripts"
+    challenge: work:challenge/38
+    project: work:project/python-seed
+    status: ADOPTED
+    applies:
+      - work:article/5
+      - work:article/6
+      - work:article/7
+      - work:article/21
+    enacted_in:
+      - work:artifact/bootstraps-python-gate
+      - work:artifact/bootstraps-python-seed-manifest
+    alternatives:
+      - name: python_bootstrap's Makefile, with tiers budgeted by duration and a scripts/ directory of checkers
+        chosen: false
+        reason: >-
+          DR-092's reason: it puts a second tool into the seed for the sake of
+          a verb, and the verb comes from above once every gate prints one
+          shape. The tiers and their budgets are machinery ahead of a need a
+          seed of one function does not have, by the template's own
+          parked-with-intent rule, and its checkers were loose scripts held
+          only by an orphan check because nothing else could hold them.
+      - name: One script, `scripts/gate.py`, run with the interpreter
+        chosen: false
+        reason: >-
+          Nothing holds a script but the orphan check that notices it is not
+          run, and its probes have nowhere to live: a script is not a package
+          the tests can import. The Rust xtask is a crate for the same
+          reason.
+      - name: A workspace member, `gate`, whose console script is the gate
+        chosen: true
+        reason: >-
+          `uv run gate` is `cargo xtask gate` in the other language: a package
+          in the workspace, with tests, whose one table of steps is what the
+          entry point reads. What it costs is a second package in a seed of
+          one, and a `gate` console script installed into the environment.
+    consequences:
+      - >-
+        `mypy` runs from the workspace root, whose manifest holds its
+        configuration, one package at a time; `pytest` and `mutmut` run in
+        each package, whose manifest holds theirs, so the run the gate makes
+        is the run `mutmut` repeats.
+      - >-
+        `mutmut` runs in the packages under `packages/` and not in the gate.
+        Its run exits zero whatever survived, so the step reads
+        `mutmut results` and reports each line.
+      - >-
+        The report shape is A21's, character for character with the xtask's.
+    falsifier: >-
+      A portfolio's Python Project that needs a gate the console script cannot
+      express — a tier that runs on every commit, say — so that the table of
+      steps grows a second axis. That is the tiered gate coming back, and it
+      comes back with the measurement that justified it.
+    rationale: |-
+      The first Decision at the Project level under the new slot, and it
+      is about exactly what the level is for: how one build unit is
+      built, which no other Project shares. mutmut decided more of the
+      shape than expected — it knows a `src/` layout run from the package
+      and nothing else, and it exits zero over survivors — and the entry
+      records both so the next reader does not re-derive them.
