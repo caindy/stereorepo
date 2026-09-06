@@ -32,6 +32,13 @@ answer and often the true one.
 
 - DR-<nnn> — <the question that demanded an answer, in one line>
 
+**What it closes.** One item per Challenge this pull request finishes, written
+with a closing keyword so the merge closes the Issue and nobody has to remember
+to. "None." is allowed and is a question: PR First says a pull request exists
+because a Challenge does.
+
+- Closes #<n> — <the Challenge, in one line>
+
 **What was noticed and not done.** One link per item, to an Issue, filled in at
 **merge** — these are the conversations that survived the argument. Empty until
 then, and often empty for good: an item the change overtook is answered in its
@@ -40,7 +47,7 @@ thread, not tracked.
 - #<n> — <one line, so the list is readable without opening anything>
 ```
 
-**The fifth heading is asked because it was forgotten.** A decision taken in a
+**The fourth heading is asked because it was forgotten.** A decision taken in a
 change and recorded later is one that lived, for a while, only where it was
 argued — which is A11's failure with a delay rather than an exemption. Nothing
 can check whether a decision was taken; a form can put the question in front of
@@ -63,7 +70,14 @@ The pull request is durable and searchable and still not authoritative.
 **Commit messages stay short** (A14). If a message has begun explaining, the
 explanation belongs in an artifact or here.
 
-**The fourth heading takes links, not text** (A15). Work noticed and not done is
+**The fifth heading closes the Issue.** GitHub reads `Closes #n` in a body and
+closes the Issue when the pull request merges to the default branch, which is
+the one act here that needs no verb: the merge is the act, and the body the form
+already requires carries the link (DR-089). Write it only on the pull request
+that finishes the Challenge; one that takes part of it up names the Issue
+without the keyword. `check_pr.py` holds the shape, not the judgement.
+
+**The sixth heading takes links, not text** (A15). Work noticed and not done is
 a Challenge nobody has taken up, and it needs what an Issue has and prose does
 not: an open and a closed, and a life longer than this body's.
 

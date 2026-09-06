@@ -193,7 +193,7 @@ Whether a review comment is answered. A reviewer's point can be right, right abo
 And which observations earn an Issue. The test is whether you can say what would make it worth doing — a trigger, or a cost that will land. "This function is long" has neither. "This retry has no backoff, and it will matter the first time the endpoint is slow" has both. File everything and the tracker becomes the file it replaced, with better tooling.
 
 1. Open it when the work starts, not when it is finished. Written at the end it becomes a summary of the diff, which git already holds.
-2. Take Challenges in as pull requests, whatever raised them — the solo, a scheduled job, another agent.
+2. Take Challenges in as pull requests, whatever raised them — the solo, a scheduled job, another agent — and name the Challenge in the body with a closing keyword, so the merge closes it and nobody has to remember to.
 3. Argue there. Review, objection and answer belong where the next reader will look, not where one participant happens to be.
 4. Answer every thread and then resolve it, including one the diff has overtaken. Outdated is not answered: GitHub collapses a thread whose anchor moved and leaves it open, and a reader years later cannot tell a point that was addressed from one that was dropped.
 5. Title it with the words someone will search for. It is the index, and an index is worth exactly its titles.
@@ -231,4 +231,4 @@ _Produces: Artifacts that carry their own reasoning, and a pull request holding 
 
 ---
 
-**Where this came from.** [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml), [DR-084](assertions/decisions/DR-084.yaml)
+**Where this came from.** [DR-012](assertions/decisions/DR-012.yaml), [DR-022](assertions/decisions/DR-022.yaml), [DR-030](assertions/decisions/DR-030.yaml), [DR-042](assertions/decisions/DR-042.yaml), [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-050](assertions/decisions/DR-050.yaml), [DR-054](assertions/decisions/DR-054.yaml), [DR-061](assertions/decisions/DR-061.yaml), [DR-063](assertions/decisions/DR-063.yaml), [DR-064](assertions/decisions/DR-064.yaml), [DR-067](assertions/decisions/DR-067.yaml), [DR-070](assertions/decisions/DR-070.yaml), [DR-080](assertions/decisions/DR-080.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-089](assertions/decisions/DR-089.yaml)

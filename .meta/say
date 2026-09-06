@@ -23,7 +23,6 @@ pass wrongly.
     .meta/say pr       --title T [--base B] < body.md  open a pull request
     .meta/say pr-body  <pr> < body.md          replace the body
     .meta/say issue-body <n> < body.md         replace an Issue's body
-    .meta/say issue-close <n>                  close it as completed
     .meta/say pr-title <pr> --title T
 
 Bodies come from stdin rather than the command line: the text is usually long,
@@ -144,11 +143,11 @@ def merge(pr):
     it is the Role that GitHub should record as having done it, and the squash
     commit that lands on trunk carries that account rather than the solo's.
 
-    The subject is passed rather than left to GitHub. Left to it, a branch with
-    more than one commit landed on `main` under its first commit's subject and
-    not the pull request's title (#26), which is the label the index carries —
-    and a label on trunk cannot be rewritten. The body is left to GitHub, so the
-    Trailers on the branch's commits ride into the squash as before (DR-062).
+    The subject is passed rather than left to GitHub. Left to it, GitHub labels
+    the squash from the commits, and #27 landed on `main` under a subject that
+    was not its title (#26), which is the label the index carries — and a label
+    on trunk cannot be rewritten. The body is left to GitHub, so the Trailers on
+    the branch's commits ride into the squash as before (DR-062).
 
     `--delete-branch` is not used. It makes `gh` check out `main` locally after
     the merge, which fails from a worktree because `main` is already checked out
@@ -334,7 +333,6 @@ def main():
     p = sub.add_parser("pr"); p.add_argument("--title", required=True); p.add_argument("--base", default="main")
     p = sub.add_parser("pr-body"); p.add_argument("pr")
     p = sub.add_parser("issue-body"); p.add_argument("issue")
-    p = sub.add_parser("issue-close"); p.add_argument("issue")
     p = sub.add_parser("pr-title"); p.add_argument("pr"); p.add_argument("--title", required=True)
     args = ap.parse_args()
 
@@ -343,15 +341,6 @@ def main():
 
     if args.verb == "merge":
         merge(args.pr)
-        return
-
-    if args.verb == "issue-close":
-        # Not an utterance either, and the channel's for the same reason as
-        # merge: it is the Role closing the Challenge, and the hook lets nothing
-        # else reach GitHub. Completed, never "not planned" — a Challenge that
-        # will not be done is answered where it was raised, not closed quietly.
-        gh("issue", "close", args.issue, "--reason", "completed", parse=False)
-        print(f"closed #{args.issue}")
         return
 
     if args.verb == "whoami":

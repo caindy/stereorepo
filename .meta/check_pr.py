@@ -20,6 +20,10 @@ are not — reasoning in a commit message is a judgement about a paragraph, and 
 length check reaches it. What is checkable is narrower and still worth having:
 every item under *what was noticed and not done* is a link, so the pull request
 cannot close over an observation that has nowhere to live afterwards.
+
+The same shape holds the other direction. Every item under *what it closes*
+carries one of GitHub's closing keywords, so the merge closes the Challenge the
+pull request finished and no one has to remember a second act (DR-089).
 """
 import argparse
 import json
@@ -49,6 +53,12 @@ LINK = re.compile(r"(#\d+|https?://\S+)")
 BULLET = re.compile(r"^\s*[-*]\s+(.*)$", re.M)
 NONE = re.compile(r"^\s*(none|nothing)\b", re.I)
 DEFERRED = "What was noticed and not done"
+CLOSES = "What it closes"
+# GitHub's closing keywords, followed by the reference GitHub accepts — a bare
+# number, owner/repo#n, or the Issue's URL. Anything else under this heading
+# names an Issue the merge will leave open.
+KEYWORD = re.compile(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+"
+                     r"(?:#\d+|[\w.-]+/[\w.-]+#\d+|https://github\.com/[\w.-]+/[\w.-]+/issues/\d+)", re.I)
 
 
 def fence(path):
@@ -100,6 +110,20 @@ def check(title, body):
         seen = set(PLACEHOLDER.findall(text)) | (literal & set(re.findall(r"<[^<>\s]+>", text)))
         for m in sorted(seen):
             problems.append(f"unfilled placeholder in {where}: {m}")
+
+    # What the merge closes. The heading's items carry a closing keyword or the
+    # Issue stays open after the pull request that finished it has merged —
+    # which is how #26 sat open until a verb was written to close it (DR-089).
+    closing = found.get(CLOSES, "")
+    if closing and not NONE.match(closing):
+        items = [m.group(1).strip() for m in BULLET.finditer(closing)]
+        if not items:
+            problems.append(
+                f"**{CLOSES}.** is prose. It takes one `Closes #n` per item, or "
+                "an explicit 'None.'")
+        for item in items:
+            if not KEYWORD.search(item):
+                problems.append(f"no closing keyword, so the merge leaves it open: {item}")
 
     # A15 proper. Everything else above is the form being present; this is the
     # rule the form exists to carry.

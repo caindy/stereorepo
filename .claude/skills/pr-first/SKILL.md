@@ -22,7 +22,7 @@ A linked Issue answers each. It has state, it carries a backlink to the work tha
 ## Steps
 
 1. Open it when the work starts, not when it is finished. Written at the end it becomes a summary of the diff, which git already holds.
-2. Take Challenges in as pull requests, whatever raised them — the solo, a scheduled job, another agent.
+2. Take Challenges in as pull requests, whatever raised them — the solo, a scheduled job, another agent — and name the Challenge in the body with a closing keyword, so the merge closes it and nobody has to remember to.
 3. Argue there. Review, objection and answer belong where the next reader will look, not where one participant happens to be.
 4. Answer every thread and then resolve it, including one the diff has overtaken. Outdated is not answered: GitHub collapses a thread whose anchor moved and leaves it open, and a reader years later cannot tell a point that was addressed from one that was dropped.
 5. Title it with the words someone will search for. It is the index, and an index is worth exactly its titles.
@@ -80,6 +80,13 @@ its participants could cite for as long as the gap lasted. "None." is a complete
 answer and often the true one.
 
 - DR-<nnn> — <the question that demanded an answer, in one line>
+
+**What it closes.** One item per Challenge this pull request finishes, written
+with a closing keyword so the merge closes the Issue and nobody has to remember
+to. "None." is allowed and is a question: PR First says a pull request exists
+because a Challenge does.
+
+- Closes #<n> — <the Challenge, in one line>
 
 **What was noticed and not done.** One link per item, to an Issue, filled in at
 **merge** — these are the conversations that survived the argument. Empty until

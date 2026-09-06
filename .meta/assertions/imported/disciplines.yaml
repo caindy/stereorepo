@@ -359,7 +359,8 @@ disciplines:
         it becomes a summary of the diff, which git already holds.
       - >-
         Take Challenges in as pull requests, whatever raised them — the solo, a
-        scheduled job, another agent.
+        scheduled job, another agent — and name the Challenge in the body with a
+        closing keyword, so the merge closes it and nobody has to remember to.
       - >-
         Argue there. Review, objection and answer belong where the next reader
         will look, not where one participant happens to be.

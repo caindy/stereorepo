@@ -17,6 +17,13 @@ answer and often the true one.
 
 - DR-<nnn> — <the question that demanded an answer, in one line>
 
+**What it closes.** One item per Challenge this pull request finishes, written
+with a closing keyword so the merge closes the Issue and nobody has to remember
+to. "None." is allowed and is a question: PR First says a pull request exists
+because a Challenge does.
+
+- Closes #<n> — <the Challenge, in one line>
+
 **What was noticed and not done.** One link per item, to an Issue, filled in at
 **merge** — these are the conversations that survived the argument. Empty until
 then, and often empty for good: an item the change overtook is answered in its
