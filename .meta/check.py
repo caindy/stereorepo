@@ -548,8 +548,22 @@ def cited_decisions(index):
     return problems
 
 
+def report(label, problems):
+    """One step, one line, in the shape A21 names (DR-092), and its problems under it."""
+    print(("x  " if problems else "ok ") + label + (f" ({len(problems)})" if problems else ""))
+    for p in problems:
+        print(f"     {p}")
+    return bool(problems)
+
+
+# Run before the schemas load. LinkML's loader raises on the first repeated key
+# with no file and no line, so a duplicate in `work/*.yaml` used to take the
+# whole gate down before the check that names both had a chance to run (#23).
+PRECHECKS = (
+    ("duplicate keys", duplicate_keys),
+)
+
 CHECKS = (
-    ("duplicate keys", lambda i, r: duplicate_keys()),
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
     ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
     ("collaboration membership", lambda i, r: collaboration_membership(i)),
@@ -568,17 +582,24 @@ CHECKS = (
 )
 
 if __name__ == "__main__":
-    schemas = views()
-    index, refs, skipped = collect(schemas)
+    failed = False
+    for label, check in PRECHECKS:
+        failed |= report(label, check())
+    try:
+        schemas = views()
+        index, refs, skipped = collect(schemas)
+    except Exception as exc:
+        # A step that cannot run says so rather than dying (A6), and says why
+        # rather than printing a stack trace (A7). What did not run is named,
+        # because a gate that stops early looks like one that passed.
+        print(f"?  schemas: could not load — {type(exc).__name__}: {exc}")
+        print(f"     {len(CHECKS) + 2} steps did not run")
+        sys.exit(1)
     for name in skipped:
         print(f"?  {name}: no container accepts its top-level keys")
-    failed = bool(skipped)
+    failed |= bool(skipped)
     for label, check in CHECKS + (("template parses", lambda i, r: template_parses(schemas)),):
-        problems = check(index, refs)
-        print(("x  " if problems else "ok ") + label + (f" ({len(problems)})" if problems else ""))
-        for p in problems:
-            print(f"     {p}")
-        failed |= bool(problems)
+        failed |= report(label, check(index, refs))
 
     sys.path.insert(0, str(META))
     import render
