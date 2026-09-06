@@ -114,6 +114,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-096](assertions/decisions/DR-096.yaml) | The rule set, a line length of 88, and an ignore list that stays empty · The Python standard | Adopted |
 | [DR-097](assertions/decisions/DR-097.yaml) | The gate's tools are pinned exactly, and the test tools float · The Python standard | Adopted |
 | [DR-098](assertions/decisions/DR-098.yaml) | The Python gate is a workspace member run as `uv run gate`, not a Makefile over scripts · bootstraps/python/seed | Adopted |
+| [DR-099](assertions/decisions/DR-099.yaml) | The generator stays behind, and its sync design is kept as the shape a portfolio's sync will take | Proposed |
 
 ## Holes
 
@@ -163,7 +164,7 @@ and the query a reader in a file actually has.
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml) |
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml) |
 | [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml) |
-| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml) |
+| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml) |
 | [`bootstraps/python/render`](../bootstraps/python/render) | [DR-094](assertions/decisions/DR-094.yaml) |
 | [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
 | [`bootstraps/python/seed/pyproject.toml`](../bootstraps/python/seed/pyproject.toml) | [DR-095](assertions/decisions/DR-095.yaml), [DR-096](assertions/decisions/DR-096.yaml), [DR-097](assertions/decisions/DR-097.yaml), [DR-098](assertions/decisions/DR-098.yaml) |

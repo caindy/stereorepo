@@ -53,7 +53,9 @@ is `AGENTS.md`, its decision tracks are the record with `product` or
 `project` set, its bets are each entry's falsifier, and its journal is what
 Journaling routes. DR-094 is the account of what came and what stayed, and
 DR-095, DR-096 and DR-097 are its decisions about the standard, filed at the
-level they bind. The generator itself is the rest of #38.
+level they bind. The generator stays behind (DR-099): its `new` is [`render`](render),
+and its sync, never built, is kept there as the shape a portfolio's sync
+will take.
 
 ## Two candidates for pulling up, now held twice
 

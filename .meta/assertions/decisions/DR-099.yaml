@@ -1,0 +1,83 @@
+decisions:
+  - id: work:decision/099
+    name: "DR-099 · The generator stays behind, and its sync design is kept as the shape a portfolio's sync will take"
+    challenge: work:challenge/38
+    status: PROPOSED
+    applies:
+      - work:article/8
+      - work:article/20
+    enacted_in:
+      - work:artifact/bootstraps-python-readme
+    alternatives:
+      - name: Bring the generator in as a Project
+        chosen: false
+        reason: >-
+          It renders a placeholder tree that no longer exists. The seed has no
+          placeholders, by DR-091's shape, and `render` is sixty lines; the
+          generator's manifest classifies files for a sync that was never
+          built, its parity test compares a root and a template that are one
+          tree here, and its golden-tree test checks for leaks that cannot
+          occur. As a Project it would be a gated package whose product is
+          nothing solorepo renders — the dogfood that proves the wrong thing,
+          in its own first record's words. The monorepo claim it was to
+          carry is carried by the seed, whose gate runs.
+      - name: Bring only its design in, as adopted Decisions
+        chosen: false
+        reason: >-
+          A rule in force with nowhere to be read from is in force over
+          nobody (A20). Nothing here syncs a portfolio forward, in either
+          language, so a Decision adopting three-way merge would name no
+          artifact and fail the gate for telling the truth.
+      - name: Generalise it now into a scaffold-wide sync
+        chosen: false
+        reason: >-
+          `assertions/imported/` already assumes a sync that overwrites it,
+          and a Bootstrap's applied files need a merge rather than an
+          overwrite; the two are one mechanism with two rules. Building it
+          with no second portfolio to sync is machinery ahead of the need,
+          which `python_bootstrap`'s own parked-with-intent table refuses.
+      - name: Leave the generator, and keep what a sync will be when there is one
+        chosen: true
+        reason: >-
+          The three-way rule is the part worth keeping and the part never
+          written down here: overwrite a managed value only when the project
+          never changed it; record the base at render; compare a managed key
+          by value and never by substring; the standard owns mechanisms and
+          the project owns memory. Kept as consequences of this entry, so the
+          next reader does not re-derive them and does not build overwrite.
+          What it costs is that the second half of the tool — many projects
+          kept in step — is not solved, and a portfolio that moves its
+          Bootstrap forward today edits by hand.
+    consequences:
+      - >-
+        `python_bootstrap` is superseded by `bootstraps/python/` and can be
+        archived. Nothing here imports from it; `render` is the whole of its
+        `new`.
+      - >-
+        Its three architecture records resolve here. The template tree as
+        data is A9 and DR-091. The managed keys and the three-way merge are
+        the design a sync takes: a rendered Project records the Bootstrap
+        commit it came from; a sync overwrites a managed value only when
+        the Project never customised it, reports a conflict otherwise, and
+        merges manifests with their comments intact; the managed set is
+        declared once, compared by value, and is the written definition of
+        what the standard owns.
+      - >-
+        #38 closes with this entry. What it leaves open — a sync that moves a
+        portfolio's Projects and its imported assertions forward — is intent,
+        and goes to an Issue.
+    falsifier: >-
+      A second portfolio on the same Bootstrap whose Python Projects have to
+      be moved forward by hand more than once. That is the trigger for
+      building the sync; building it as an overwrite would be this entry
+      proved wrong in the other direction, against its own record of what
+      overwrite destroyed.
+    rationale: |-
+      Proposed rather than adopted, because it is the solo's call and
+      the reconciliation was his framing: the generator was the last of
+      #38's four questions, and it is the one where the answer forecloses
+      a working package rather than a copy. The argument for leaving it
+      is that everything it does is either done here in sixty lines or
+      was never built; the argument against is that a real Python
+      package with a gate would have been the monorepo claim dogfooded
+      hardest — and DR-094's seed is that package now.
