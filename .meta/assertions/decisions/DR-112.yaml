@@ -50,7 +50,12 @@ decisions:
         request through the channel, pushes, and for `easy` arms the merge;
         for `medium` it requests review and stops, and the reviewer arms the
         merge with its approval. It holds the coder's token and nothing
-        else.
+        else. A request for changes from the reviewer runs it again on the
+        same pull request, where it answers every thread, changes what a
+        right point asks, and requests review again; `workflow_dispatch`
+        runs that pass by hand for a pull request the event has already
+        passed by. Wired on #104, after #102 sat with a verdict and no run
+        to take it.
       - >-
         "Can be merged" for a loop is the gate green, the branch pushed, the
         pull request open through the channel with its form filled, and the

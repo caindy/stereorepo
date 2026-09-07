@@ -18,11 +18,22 @@ name: coder
 on:
   issues:
     types: [labeled]
+  # The reviewer's request for changes is the coder's second run: DR-112
+  # promised it and #102 sat with a verdict and no Job to take it. The
+  # dispatch runs that pass by hand, for a verdict the event passed by.
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: the pull request whose review the coder answers
+        required: true
 
-# One run per Issue at a time. A second label on the same Issue while a run
-# is going waits rather than starting a second branch.
+# One run per Issue or per pull request at a time. A second label on the
+# same Issue, or a second verdict on the same pull request, waits rather than
+# starting a second branch.
 concurrency:
-  group: coder-${{ github.event.issue.number }}
+  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}
   cancel-in-progress: false
 
 # The workflow's own token reads. Every write goes through the coder's
@@ -35,11 +46,19 @@ permissions:
 jobs:
   coder:
     name: coder
-    # Only a difficulty a loop takes, on a Challenge. `hard` and `human` are
-    # not this Job's, and a `roadmap` Issue is deferred by definition.
+    # Only a difficulty a loop takes, on a Challenge: `hard` and `human` are
+    # not this Job's, and a `roadmap` Issue is deferred by definition. Or the
+    # reviewer's account requesting changes on a branch this loop opened. Or
+    # the solo dispatching that second pass by hand.
     if: >-
-      (github.event.label.name == 'easy' || github.event.label.name == 'medium')
-      && contains(github.event.issue.labels.*.name, 'challenge')
+      (github.event_name == 'issues'
+        && (github.event.label.name == 'easy' || github.event.label.name == 'medium')
+        && contains(github.event.issue.labels.*.name, 'challenge'))
+      || (github.event_name == 'pull_request_review'
+        && github.event.review.state == 'changes_requested'
+        && github.event.review.user.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
+        && startsWith(github.event.pull_request.head.ref, 'claude/issue-'))
+      || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -56,6 +75,23 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      # Which pull request a second pass answers: the event's, or the
+      # dispatch's. Its branch is checked out below so the work continues
+      # where the first pass left it.
+      - name: find the pull request
+        id: pr
+        if: github.event_name != 'issues'
+        run: |
+          n="${EVENT_PR:-$INPUT_PR}"
+          branch=$(gh pr view "$n" --json headRefName -q .headRefName)
+          printf 'number=%s\nbranch=%s\n' "$n" "$branch" >> "$GITHUB_OUTPUT"
+          git checkout --quiet "$branch"
+          cat "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_PR: ${{ github.event.pull_request.number }}
+          INPUT_PR: ${{ inputs.pull_request }}
 
       # The Role's credential, where `.meta/say` expects it by default
       # (DR-073, DR-107): outside the tree, mode 600, one token in the
@@ -82,9 +118,13 @@ jobs:
           fi
           cat "$GITHUB_OUTPUT"
         env:
-          LEVEL: ${{ github.event.label.name }}
+          # A second pass is the larger model whatever the label was: the
+          # threads it answers were written by the deeper reviewer.
+          LEVEL: ${{ github.event.label.name || 'medium' }}
 
-      - uses: anthropics/claude-code-action@v1
+      - name: take the Issue
+        if: github.event_name == 'issues'
+        uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -142,6 +182,53 @@ jobs:
             comment` or `gh api`: the hook refuses them, and every word you
             post carries the Trailer only through the channel. Do not resolve
             any thread. Do not merge by hand; the armed merge is the merge.
+          claude_args: |
+            --model ${{ steps.depth.outputs.model }}
+            --max-turns ${{ steps.depth.outputs.turns }}
+            --permission-mode acceptEdits
+            --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
+
+      - name: answer the review
+        if: github.event_name != 'issues'
+        uses: anthropics/claude-code-action@v1
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.CODER_GH_TOKEN }}
+          show_full_output: "true"
+          prompt: |
+            You are the coder Role (DR-107), answering the reviewer's request
+            for changes on pull request #${{ steps.pr.outputs.number }} of
+            ${{ github.repository }}, on the branch
+            `${{ steps.pr.outputs.branch }}`, which a run of yours opened and
+            is checked out here. Read /pr-first first: it says what a
+            reviewer's point is owed. `AGENTS.md` has the conventions.
+
+            Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`,
+            and the review body: `gh pr view ${{ steps.pr.outputs.number }} --comments`.
+            A reviewer's point can be right, right about something else, or
+            overtaken by the diff, and only the first is a change to make;
+            all three are owed a reply that says which. Make the changes a
+            right point asks for, gate green with `.meta/gate meta`, commit
+            through `.meta/say commit -m "<subject>"` and never any other
+            way, and push.
+
+            Then answer every thread: `.meta/say reply <thread-id>` with the
+            body on stdin as a quoted heredoc, saying which of the three it
+            was and what changed, and then `.meta/say resolve <thread-id>`.
+            The channel refuses to resolve a thread you alone wrote, which is
+            right; a thread marked "Noticed and not done" is somebody else's
+            to decide and you leave it open. Update the body if what changed
+            changes it: `.meta/say pr-body ${{ steps.pr.outputs.number }}`.
+
+            Then request review again, `.meta/say request-review ${{ steps.pr.outputs.number }}`,
+            and stop. Do not arm the merge; the reviewer's approval does. Do
+            not wait for the checks.
+
+            Never `gh pr create`, `gh pr comment`, `gh pr review`, `gh issue
+            edit`, `gh issue comment` or `gh api`: the hook refuses them, and
+            every word you post carries the Trailer only through the channel.
+            Do not merge by hand.
           claude_args: |
             --model ${{ steps.depth.outputs.model }}
             --max-turns ${{ steps.depth.outputs.turns }}
