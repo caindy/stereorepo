@@ -647,6 +647,13 @@ def hook_probes():
         ("refuse", bool(worktree.blocked("Grep", {"pattern": "x", "path": "/etc\x00"}))),
         ("allow", not worktree.blocked("Grep", {"pattern": "x"})),
         ("allow", not worktree.blocked("Glob", {"pattern": "*.md"})),
+        # worktree_only: the harness's scratch is readable, the credential
+        # directories beside it are not, and context glued to its number is
+        # an option (#99).
+        ("allow", not worktree.blocked("Read", {"file_path": str(pathlib.Path.home() / ".claude/projects/-x/s/tool-results/a.txt")})),
+        ("refuse", bool(worktree.blocked("Read", {"file_path": str(pathlib.Path.home() / ".config/solorepo/reviewer.env")}))),
+        ("refuse", bool(worktree.blocked("Read", {"file_path": str(pathlib.Path.home() / ".claude/settings.json")}))),
+        ("allow", not worktree.blocked("Bash", {"command": "git grep -n -A2 -B1 'def blocked' -- .meta"})),
         ("allow", not worktree.blocked("Bash", {"command": "git log --grep='a<<b' -1"})),
         ("refuse", bool(worktree.blocked("Bash", {"command": "git log --grep='a' <<'EOF'\nx\nEOF"}))),
         ("allow", not worktree.blocked("Bash", {"command": ".meta/say raise 1 x 2 <<'EOF'\r\nfinding\r\nEOF\r\n"})),

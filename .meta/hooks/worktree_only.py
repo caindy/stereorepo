@@ -74,7 +74,9 @@ TAKES_VALUE = {
     "grep": {"-e", "--regexp", "-A", "-B", "-C"},
     "ls-files": set(),
 }
-NUMBER = re.compile(r"^-\d+$")
+# `-3` is a count for `log`; `-A2`, `-B2`, `-C2` are context glued to its
+# number, which git accepts and the reviewer types (#99).
+NUMBER = re.compile(r"^-(\d+|[ABC]\d+)$")
 
 # The other programs, by form, each with its own option list and the options
 # that consume a value, vetted the way git's are: `check_pr.py --file` reads
@@ -87,16 +89,28 @@ PROGRAMS = {
 }
 
 
+# The harness's own scratch: a tool result too large for the transcript is
+# written here and the reader is told to read it, and the code-review skill's
+# agents hand their findings back the same way. Refusing it left the reviewer
+# waiting on agents whose results it could never read (#99). No credential
+# lives under it; the token is in `~/.config` and `.git/config`.
+HARNESS = (pathlib.Path.home() / ".claude" / "projects").resolve()
+
+
 def outside(path):
     """Whether a path the reader was given leaves the worktree or enters `.git/`.
 
     Resolved, so a symlink inside the tree that points outside it counts as
     outside — `CLAUDE.md` is a symlink here, and a diff could add another.
+    The harness's project directory is the one place outside the worktree a
+    reader may go.
     """
     target = pathlib.Path(path).expanduser()
     if not target.is_absolute():
         target = ROOT / target
     target = target.resolve()
+    if HARNESS in target.parents:
+        return None
     if target != ROOT and ROOT not in target.parents:
         return f"{path} is outside the worktree {ROOT}"
     if (ROOT / ".git") == target or (ROOT / ".git") in target.parents:
