@@ -114,7 +114,7 @@ jobs:
         run: |
           if gh pr view "$PR" --json files -q '.files[].path' \
              | grep -qE '^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)'; then
-            printf 'model=claude-opus-5\neffort=high\nturns=60\nminutes=45\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-opus-5\neffort=high\nturns=90\nminutes=45\n' >> "$GITHUB_OUTPUT"
           else
             printf 'model=claude-sonnet-5\neffort=medium\nturns=25\nminutes=15\n' >> "$GITHUB_OUTPUT"
           fi
@@ -170,6 +170,15 @@ jobs:
             by a push before its verdict. A point already on the pull request
             is not raised again; where the new head changes it, answer in
             its thread.
+
+            If threads this Role raised have been answered and resolved, this
+            is a re-review, not a review: read each answer against the diff
+            it claims, say in the thread where an answer does not hold, and
+            post the verdict. Do not run the code-review skill again on a
+            head you have already reviewed; its agents cost the turns the
+            verdict needs (#102). Do not wait on `gh pr checks`: it exits
+            non-zero while a check is pending, and the ruleset holds the
+            merge until they pass whatever you do.
 
             Then review with /code-review:code-review ${{ steps.depth.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
             without --comment. Every agent the review spawns gets these
