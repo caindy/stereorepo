@@ -106,20 +106,24 @@ jobs:
             Read it: `gh issue view ${{ github.event.issue.number }}`.
 
             Branch as `claude/issue-${{ github.event.issue.number }}` from
-            `origin/main` and do the work the Issue asks for, and no more.
-            Run the gate, `.meta/gate meta`, until it is green. Commit only
-            through `.meta/say commit -m "<subject>"`: it signs, and a commit
-            made any other way is unattributable. Push the branch.
+            `origin/main`. Make the first commit as soon as there is one to
+            make, through `.meta/say commit -m "<subject>"` and never any
+            other way, since only the channel signs; push the branch; and
+            open the pull request at once through the channel with the form
+            filled: `.meta/say pr --title "<words someone will search for>"`
+            with the body on stdin as a quoted heredoc, saying what is
+            intended and naming the Issue under "What it closes" with a
+            closing keyword. The argument has a place before the diff does.
+            Then do the rest of the work the Issue asks for, and no more,
+            under it: gate green with `.meta/gate meta`, commit and push as
+            you go, and update the body at the end with `.meta/say pr-body <n>`.
 
-            Open the pull request through the channel with the form filled:
-            `.meta/say pr --title "<words someone will search for>"` with the
-            body on stdin as a quoted heredoc, naming the Issue under "What it
-            closes" with a closing keyword. Then arm the merge:
-            `.meta/say merge <n> --auto`, so it lands when the ruleset is
-            satisfied. If the label is `medium`, request review first:
-            `.meta/say request-review <n>`; an approval or a comment lets the
-            armed merge land it, and a request for changes holds it for the
-            next run.
+            If the label is `easy`, arm the merge, `.meta/say merge <n> --auto`,
+            so it lands when the ruleset is satisfied: green is the review.
+            If it is `medium`, request review, `.meta/say request-review <n>`,
+            and stop there. The reviewer arms the merge with its approval,
+            and a request for changes comes back to you as a new run. Do not
+            arm a `medium` pull request yourself.
 
             If you cannot finish — the Issue asks for a decision only the solo
             can take, the gate will not go green, or the work is larger than

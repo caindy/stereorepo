@@ -193,7 +193,13 @@ jobs:
                 BODY
 
             Never `gh pr review`, `gh pr comment` or `gh api`: the hook
-            refuses them. Do not resolve any thread. Do not merge.
+            refuses them. Do not resolve any thread.
+
+            Your approval is the arming. If your verdict is `--approve`, arm
+            the merge afterwards, `.meta/say --role reviewer merge <n> --auto`,
+            so the pull request lands when the ruleset is satisfied and not
+            before your verdict. A comment or a request for changes arms
+            nothing. Do not merge by hand.
 
             The shell here runs one plain command at a time and nothing
             else: `git log|show|diff|status|grep|ls-files` with plain
