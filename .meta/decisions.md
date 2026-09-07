@@ -124,6 +124,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-106](assertions/decisions/DR-106.yaml) | The root justfile is the verb surface: rendered, invoking only, and never in a seed | Adopted |
 | [DR-107](assertions/decisions/DR-107.yaml) | The reviewer is a machine account, and a Role's name is what its login and its credential file both carry | Adopted |
 | [DR-108](assertions/decisions/DR-108.yaml) | A merged branch's local residue is named by the sweep and removed by the Job that finds it | Adopted |
+| [DR-109](assertions/decisions/DR-109.yaml) | The reviewer Job runs where the review request lands: a workflow on the event, in a container holding one token | Adopted |
 
 ## Holes
 
@@ -143,6 +144,7 @@ and the query a reader in a file actually has.
 | Artifact | Entries |
 | :-- | :-- |
 | [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml), [DR-091](assertions/decisions/DR-091.yaml), [DR-094](assertions/decisions/DR-094.yaml), [DR-095](assertions/decisions/DR-095.yaml), [DR-105](assertions/decisions/DR-105.yaml) |
+| [`.github/workflows/review.yml`](../.github/workflows/review.yml) | [DR-109](assertions/decisions/DR-109.yaml) |
 | [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml) |
 | [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-088](assertions/decisions/DR-088.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-106](assertions/decisions/DR-106.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml) |

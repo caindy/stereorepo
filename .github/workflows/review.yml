@@ -1,0 +1,85 @@
+# The reviewer Role, answering a review request (DR-109).
+#
+# PR First's handoff is a review request: the coder names the reviewer's
+# account and GitHub holds the request. This is the arriving Job. It runs where
+# the event lands, in a container that holds one token — the reviewer's — which
+# is the credential boundary DR-073 said this machine cannot provide.
+#
+# Nothing here restates how to review. The pull request Discipline is the
+# skill the checkout carries, and the code-review plugin is Claude Code's own;
+# this file decides when the reviewer runs and as whom it speaks.
+name: review
+
+on:
+  pull_request:
+    types: [review_requested]
+
+# One run per pull request at a time; a second request while one is running
+# waits rather than reviewing the same head twice.
+concurrency:
+  group: review-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+# The workflow's own token reads. Every write goes through the reviewer's
+# credential, so what GitHub records is the Role and not the workflow.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  reviewer:
+    name: reviewer
+    # Only a request of this Role's account. A request of the solo, or of
+    # anyone else, is not this Job's.
+    if: github.event.requested_reviewer.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The Trailer's two halves (DR-086). The run id is a workload identity
+      # GitHub attests for this run and no other; the harness is the action,
+      # pinned below, recorded as the environment names it.
+      ACTOR_SESSION: gha-${{ github.run_id }}
+      AI_AGENT: anthropics/claude-code-action@v1
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      # The Role's credential, where `.meta/say --role reviewer` expects it
+      # (DR-073, DR-107): outside the tree, mode 600, one token in the
+      # container. The same channel and the same rules as on a laptop.
+      - name: hold the reviewer's credential
+        run: |
+          install -d -m 700 ~/.config/solorepo
+          install -m 600 /dev/null ~/.config/solorepo/reviewer.env
+          printf 'GH_TOKEN=%s\n' "$REVIEWER_GH_TOKEN" > ~/.config/solorepo/reviewer.env
+          .meta/say --role reviewer whoami
+        env:
+          REVIEWER_GH_TOKEN: ${{ secrets.REVIEWER_GH_TOKEN }}
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The action's own GitHub calls as the Role too, so nothing in the
+          # run is authored by an App or a bot.
+          github_token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+          prompt: |
+            You are the reviewer Role (DR-107), answering a review request on
+            pull request #${{ github.event.pull_request.number }} of
+            ${{ github.repository }}. Read /pr-first first: it says what a
+            pull request here must hold, and what a reviewer's point owes.
+
+            Then review with /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+            without --comment.
+
+            Post only through the channel, so every word carries the Trailer:
+            each finding on a line of the diff as
+            `.meta/say --role reviewer raise <n> <path> <line>` with the body on
+            stdin, and the verdict as
+            `.meta/say --role reviewer review <n> --approve|--request-changes|--comment`
+            with a body saying what was checked and what was found. Never
+            `gh pr review`, `gh pr comment` or `gh api`: the hook refuses them.
+            Do not resolve any thread. Do not merge.
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Bash(.meta/say:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Read,Grep,Glob"

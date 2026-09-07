@@ -121,6 +121,9 @@ artifacts:
   - id: work:artifact/github-workflows-gate
     name: .github/workflows/gate.yml
     path: .github/workflows/gate.yml
+  - id: work:artifact/github-workflows-review
+    name: .github/workflows/review.yml
+    path: .github/workflows/review.yml
   - id: work:artifact/justfile
     name: justfile
     path: justfile
