@@ -36,7 +36,14 @@ decisions:
       - >-
         `review.yml` runs on `review_requested` when the requested login is
         `<owner>-<repo>-reviewer`, per DR-107's convention, computed from the
-        repository name rather than written into the file.
+        repository name rather than written into the file; and on
+        `synchronize` while that login's request is still pending, since a
+        head that moves after the ask moves the question. A moved head is
+        the only thing that cancels a run in progress, whether a push, a
+        rebase GitHub performs on a layer, or a retarget moved it. Amended
+        on #86, where the trigger gained the second case. The depth of a
+        review follows what changed: the boundary gets Opus at high effort,
+        everything else Sonnet at medium.
       - >-
         The Trailer holds in the container. `ACTOR_SESSION` is the run id,
         attested by GitHub for one run (DR-086), and `AI_AGENT` is the action

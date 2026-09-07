@@ -7,18 +7,34 @@
 #
 # Nothing here restates how to review. The pull request Discipline is the
 # skill the checkout carries, and the code-review plugin is Claude Code's own;
-# this file decides when the reviewer runs and as whom it speaks.
+# this file decides when the reviewer runs, as whom it speaks, and what it may
+# read (DR-110).
+#
+# On a `pull_request` event GitHub runs the workflow file from the pull
+# request's own merge ref, so this file is the diff's. A change to it is
+# reviewed by the reviewer it defines and read by the solo before it merges;
+# nothing below can make that otherwise, and nothing below claims to.
 name: review
 
 on:
   pull_request:
-    types: [review_requested]
+    # The request, and a new head while the request is still outstanding:
+    # a review answers the head it was asked about, and a push after the
+    # ask moves the question. A push with no request pending runs nothing.
+    types: [review_requested, synchronize]
 
-# One run per pull request at a time; a second request while one is running
-# waits rather than reviewing the same head twice.
+# One run per pull request, on the head that is current. A head that moves
+# after the ask moves the question, and `.meta/say raise` anchors to the head
+# it finds at post time, so a run left going across a move reviews one head
+# and posts against another. A moved head cancels it — a push, a rebase
+# GitHub performs on a layer, a retarget — and nothing else does, because
+# concurrency is settled before any job's `if:` and a request naming somebody
+# else would otherwise kill the run it then declines to be. Rarer, not gone:
+# a `raise` in the window between the move and the runner acting on the
+# cancel still anchors to the head it finds.
 concurrency:
   group: review-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
 
 # The workflow's own token reads. Every write goes through the reviewer's
 # credential, so what GitHub records is the Role and not the workflow.
@@ -29,11 +45,15 @@ permissions:
 jobs:
   reviewer:
     name: reviewer
-    # Only a request of this Role's account. A request of the solo, or of
-    # anyone else, is not this Job's.
-    if: github.event.requested_reviewer.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
+    # Only a request of this Role's account, made now or still pending. A
+    # request of the solo, or of anyone else, is not this Job's.
+    if: >-
+      (github.event.action == 'review_requested'
+        && github.event.requested_reviewer.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name))
+      || (github.event.action == 'synchronize'
+        && contains(github.event.pull_request.requested_reviewers.*.login, format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)))
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     env:
       # The Trailer's two halves (DR-086). The run id is a workload identity
       # GitHub attests for this run and no other; the harness is the action,
@@ -41,7 +61,35 @@ jobs:
       ACTOR_SESSION: gha-${{ github.run_id }}
       AI_AGENT: anthropics/claude-code-action@v1
     steps:
+      # No token left in `.git/config`: the transcript is in the run log, and
+      # a read of that file would put the token there past the masking. Full
+      # history, so `git log` can say what was already true of a file, and
+      # the head the merge ref was built from is reachable for `git show`.
       - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # Six paths are trunk's, not the pull request's: the channel, the
+      # hooks, the checker, the settings that register them, and the
+      # instructions the session loads before it reads anything. The action
+      # restores `.claude/` from `main` on its own and its log says so; the
+      # restore is done here too, because a property this file enforces
+      # beats one it hopes for from a floating `@v1`. Index and worktree
+      # both, so `git status` and `git diff` show nothing for them and the
+      # prompt says which they are. `origin/main` is already here from the
+      # full checkout; nothing is fetched and no token is assembled. The
+      # restore is no-overlay, so a file a pull request adds under these
+      # paths is gone before the run reads anything — which is the point,
+      # and is also why the hook the action registers below must already
+      # be trunk's (#87): a hook that is missing does not block, so its
+      # absence is tested here and is a red run rather than an open one.
+      - name: run trunk's channel
+        run: |
+          git restore --quiet --source=origin/main --staged --worktree -- \
+            .claude .meta/say .meta/hooks .meta/check_pr.py AGENTS.md CLAUDE.md
+          test -x .meta/hooks/worktree_only.py
+          test -x .meta/hooks/signed_channel.py
 
       # The Role's credential, where `.meta/say --role reviewer` expects it
       # (DR-073, DR-107): outside the tree, mode 600, one token in the
@@ -55,12 +103,48 @@ jobs:
         env:
           REVIEWER_GH_TOKEN: ${{ secrets.REVIEWER_GH_TOKEN }}
 
+      # Depth by what changed. A diff that touches the boundary — the
+      # channel, the hooks, the settings, the workflows — gets Opus at the
+      # skill's high effort and most of an hour, which is what it took to
+      # find the holes in the hook (#86, #87). Everything else gets Sonnet at
+      # medium and a quarter of an hour: a decision record does not need an
+      # audit, and an audit of one is where a month goes.
+      - name: choose the depth
+        id: depth
+        run: |
+          if gh pr view "$PR" --json files -q '.files[].path' \
+             | grep -qE '^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)'; then
+            printf 'model=claude-opus-5\neffort=high\nturns=60\nminutes=45\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'model=claude-sonnet-5\neffort=medium\nturns=25\nminutes=15\n' >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+
       - uses: anthropics/claude-code-action@v1
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The action's own GitHub calls as the Role too, so nothing in the
           # run is authored by an App or a bot.
           github_token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          # The transcript, in the run log. Hidden by default; here the run is
+          # the only record of what the reviewer did, and its first run posted
+          # nothing while reporting success (#85).
+          show_full_output: "true"
+          # The bound on reading, registered here and nowhere else (DR-110):
+          # a `Read`, `Grep` or `Glob` resolves inside the worktree and
+          # outside `.git/`, and a `git` command carries no option that runs
+          # a program or writes a file. A hook, because it is the one layer
+          # that sees an argument rather than a prefix: `git grep -O` runs a
+          # shell and `git log --output=.meta/say` rewrites the channel, and
+          # no prefix list excludes an option. The script is one of the six
+          # paths restored above, so it is trunk's.
+          settings: |
+            {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
+              "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           prompt: |
@@ -69,17 +153,70 @@ jobs:
             ${{ github.repository }}. Read /pr-first first: it says what a
             pull request here must hold, and what a reviewer's point owes.
 
-            Then review with /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
-            without --comment.
+            Six paths in the worktree are trunk's, not this pull request's:
+            `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`,
+            `AGENTS.md` and `CLAUDE.md`. You run and read them as trunk's;
+            you do not review them by reading them. `git status` and
+            `git diff` show nothing for a change the pull request makes to
+            them; a file the pull request adds under them shows as a staged
+            deletion, which is the restore and not the pull request.
+            The pull request's version of any of them is
+            `git show ${{ github.event.pull_request.head.sha }}:<path>`,
+            and `gh pr diff` shows its change.
 
-            Post only through the channel, so every word carries the Trailer:
-            each finding on a line of the diff as
-            `.meta/say --role reviewer raise <n> <path> <line>` with the body on
-            stdin, and the verdict as
-            `.meta/say --role reviewer review <n> --approve|--request-changes|--comment`
-            with a body saying what was checked and what was found. Never
-            `gh pr review`, `gh pr comment` or `gh api`: the hook refuses them.
-            Do not resolve any thread. Do not merge.
+            Then read what this Role has already said on it, before saying
+            anything: `python3 .meta/check_pr.py ${{ github.event.pull_request.number }} --threads`.
+            A run before this one may have raised points and been cancelled
+            by a push before its verdict. A point already on the pull request
+            is not raised again; where the new head changes it, answer in
+            its thread.
+
+            Then review with /code-review:code-review ${{ steps.depth.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+            without --comment. Every agent the review spawns gets these
+            paragraphs; they hold for it too.
+
+            Post only through the channel, so every word carries the Trailer.
+            Every posting command begins with `.meta/say` and takes its body
+            as a quoted heredoc on stdin; a command that begins with anything
+            else, `cat` or `printf` or `echo`, is not permitted to run. Each
+            finding goes on a line of the diff:
+
+                .meta/say --role reviewer raise <n> <path> <line> <<'BODY'
+                ...
+                BODY
+
+            and the verdict carries a body saying what was checked and what
+            was found:
+
+                .meta/say --role reviewer review <n> --approve|--request-changes|--comment <<'BODY'
+                ...
+                BODY
+
+            Never `gh pr review`, `gh pr comment` or `gh api`: the hook
+            refuses them. Do not resolve any thread. Do not merge.
+
+            The shell here runs one plain command at a time and nothing
+            else: `git log|show|diff|status|grep|ls-files` with plain
+            options, `gh pr view|diff|checks`, `python3 .meta/check_pr.py`,
+            or `.meta/say` with its heredoc. No pipes, redirects, `$`,
+            backticks, globs or chaining; a pattern goes in single quotes
+            after `-e`. Read files with the Read tool and search with Grep.
+
+            Your turn ends when the verdict is posted, and not before. If the
+            review spawns agents, wait for every one of them and read what
+            they found; a turn that ends holding for an agent is a run that
+            posted nothing, which has happened twice.
+          # Which programs, by prefix; what they may reach, by the hook above.
+          # The run holds a token, its input is a diff nobody here has vetted,
+          # and `signed_channel.py` bounds only the paths to GitHub, not a
+          # `curl` to anywhere else with the token file as its body. The
+          # first two runs (#85, #86) posted nothing because `Skill` was
+          # missing from the list, not because the list was a list; the
+          # reviewer's own runs argued a blanket allowance back out, then
+          # found `git grep -O` inside the list. The shell is the channel,
+          # the checker and git; reading is the tools, under the hook.
           claude_args: |
-            --max-turns 40
-            --allowedTools "Bash(.meta/say:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Read,Grep,Glob"
+            --model ${{ steps.depth.outputs.model }}
+            --max-turns ${{ steps.depth.outputs.turns }}
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*)"
+            --disallowedTools "Read(./.git/**)"

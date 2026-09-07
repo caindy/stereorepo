@@ -272,13 +272,24 @@ def request_review(pr, to):
     arriving Job finds its work by asking what has been requested of its login.
     Read back afterwards, per A6: the act is what GitHub shows, not what `gh`
     returned.
+
+    A request already pending is withdrawn first. GitHub emits no event for
+    a reviewer it already lists, so a Job whose run answered nothing left the
+    request standing and a second ask went nowhere (#87). Withdrawing and
+    asking again is the same semaphore raised twice, and the event fires.
     """
     login = role_login(to)
+
+    def asked():
+        return [r.get("login") for r in gh("pr", "view", pr, "--json", "reviewRequests")["reviewRequests"]]
+
+    again = login in asked()
+    if again:
+        gh("pr", "edit", pr, "--remove-reviewer", login, parse=False)
     gh("pr", "edit", pr, "--add-reviewer", login, parse=False)
-    asked = [r.get("login") for r in gh("pr", "view", pr, "--json", "reviewRequests")["reviewRequests"]]
-    if login not in asked:
-        sys.exit(f"say: GitHub shows {asked or 'nobody'} requested on #{pr} after the call, not {login}")
-    print(f"requested review of #{pr} from {login}")
+    if login not in asked():
+        sys.exit(f"say: GitHub shows {asked() or 'nobody'} requested on #{pr} after the call, not {login}")
+    print(f"{'requested again' if again else 'requested'} review of #{pr} from {login}")
 
 
 def review(pr, verdict):
