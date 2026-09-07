@@ -29,12 +29,16 @@ on:
 # and posts against another. A moved head cancels it — a push, a rebase
 # GitHub performs on a layer, a retarget — and nothing else does, because
 # concurrency is settled before any job's `if:` and a request naming somebody
-# else would otherwise kill the run it then declines to be. Rarer, not gone:
-# a `raise` in the window between the move and the runner acting on the
-# cancel still anchors to the head it finds.
+# else would otherwise kill the run it then declines to be. A head the
+# reviewer's own arming moved is the one exception: `merge --auto` advances
+# the branch before it arms, and on #102 the rebase cancelled the run that
+# was about to arm, so the verdict landed and the arming did not. A move by
+# the reviewer's account is its own doing and cancels nothing. Rarer, not
+# gone: a `raise` in the window between the move and the runner acting on
+# the cancel still anchors to the head it finds.
 concurrency:
   group: review-${{ github.event.pull_request.number }}
-  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
+  cancel-in-progress: ${{ github.event.action == 'synchronize' && github.actor != format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name) }}
 
 # The workflow's own token reads. Every write goes through the reviewer's
 # credential, so what GitHub records is the Role and not the workflow.
