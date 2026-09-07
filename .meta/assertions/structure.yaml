@@ -163,6 +163,9 @@ artifacts:
   - id: work:artifact/meta-hooks-signed-channel
     name: .meta/hooks/signed_channel.py
     path: .meta/hooks/signed_channel.py
+  - id: work:artifact/meta-hooks-worktree-only
+    name: .meta/hooks/worktree_only.py
+    path: .meta/hooks/worktree_only.py
   - id: work:artifact/meta-readme
     name: .meta/README.md
     path: .meta/README.md

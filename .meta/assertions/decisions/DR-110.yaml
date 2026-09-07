@@ -1,0 +1,69 @@
+decisions:
+  - id: work:decision/110
+    name: "DR-110 · In the container, what the reviewer may read is bounded by a hook on arguments, not by a prefix list"
+    status: ADOPTED
+    applies:
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-hooks-worktree-only
+      - work:artifact/github-workflows-review
+    alternatives:
+      - name: A prefix list of shell commands, with the search tools denied
+        chosen: false
+        reason: >-
+          What #86 tried. `Bash(git grep:*)` is arbitrary shell execution
+          through `-O`, `git log --output=.meta/say` rewrites the channel
+          from a diff, and a prefix rule cannot exclude an option. The
+          reviewer found both in the container, under that exact allowance.
+      - name: The search tools, unbounded
+        chosen: false
+        reason: >-
+          `Grep` and `Glob` take any path. The credential is in `~/.config`,
+          the action writes a token into `.git/config`, and the transcript is
+          a durable log past the masking, so a diff that asks the reviewer to
+          search a path puts the token in the log.
+      - name: A hook that reads the argument, registered in the container only
+        chosen: true
+        reason: >-
+          A PreToolUse hook is the one layer that sees an argument rather
+          than a prefix. It refuses a `Read`, `Grep` or `Glob` that resolves
+          outside the worktree or into `.git/`, and a `git` command carrying
+          an option that runs a program or writes a file. Registered through
+          the workflow's `settings` input, so a laptop, where DR-073 has
+          conceded the machine is no boundary, never runs it. What it costs:
+          a second hook to keep true as git grows options, and a predicate
+          that refuses what it cannot tokenize.
+    consequences:
+      - >-
+        `.meta/hooks/worktree_only.py` exists, with its predicate separate
+        from its plumbing and a self-test in the gate. `review.yml` registers
+        it and restores it from trunk with the rest of the channel.
+      - >-
+        The search tools return to the reviewer's allowance under the hook,
+        and `git grep` and `git ls-files` stay for the agents the skill
+        spawns, which search by shell.
+      - >-
+        The shell half is a grammar for the allowed, not a scan for the bad.
+        #87's review found six ways past a token scan in two runs, each a
+        piece of shell syntax the scanner lacked, so a command is one plain
+        command with no operator the shell would act on, its program on a
+        list and its options on that program's list by exact spelling, or it
+        is refused; the channel's quoted heredoc is the one exception. What
+        that costs is the reviewer's pipes and redirects, which the tools
+        replace.
+      - >-
+        The bound is the worktree as the run holds it: trunk's channel,
+        hook, deny list, checker and instructions, and the pull request's
+        everything else.
+    falsifier: >-
+      A token, or a file the run did not check out, appearing in a run's
+      transcript; or a git option not on the list found to run a program.
+      The first means the path check has a hole, the second that the list
+      is a list after all.
+    rationale: |-
+      The reviewer's fourth run on #86, blocking on the `git grep` line it
+      had itself been handed as a substitute for `Grep`. The prefix list
+      was the answer to a blanket `Bash`; the hook is the answer to the
+      prefix list, and it is the same shape as DR-069's: signing became a
+      property of the channel, and here reading becomes a property of the
+      container.
