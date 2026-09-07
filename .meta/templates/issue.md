@@ -26,6 +26,11 @@ If neither can be stated, this is an observation and not a Challenge.
 
 **Where it was found.** The pull request or the work that turned it up, so the
 context it was noticed in survives.
+
+**Difficulty.** `easy`, `medium`, `hard` or `human`, as a label beside this
+one: your guess at what it takes. `easy` and `medium` are taken up by a loop
+the moment the label lands, and a loop that cannot finish relabels it `human`
+and says why. `hard` waits for the solo with an agent beside him.
 ```
 
 GitHub reads the front matter and removes it from the issue it creates, so what

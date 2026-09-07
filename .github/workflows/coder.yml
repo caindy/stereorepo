@@ -1,0 +1,139 @@
+# The coder Role, taking an Issue by its difficulty label (DR-112).
+#
+# An Issue labelled `easy` or `medium` is a Challenge somebody has guessed a
+# loop can take. This is the loop. It runs where the label lands, in a
+# container that holds one token — the coder's — claims the Issue, does the
+# work under the Disciplines, and leaves a pull request that can be merged:
+# gate green, branch pushed, body filled, merge armed, and for `medium` a
+# review requested first. What it cannot finish it hands to the solo by
+# relabelling `human` and saying why.
+#
+# Nothing here restates how to work. `AGENTS.md`, the Disciplines and the two
+# forms are the checkout's; this file decides when the coder runs, as whom it
+# speaks, and how deep it goes. The coder must write, so its allowance is a
+# coder's, and the bound on it is the ruleset, the gate and review rather than
+# the reviewer's reading hook.
+name: coder
+
+on:
+  issues:
+    types: [labeled]
+
+# One run per Issue at a time. A second label on the same Issue while a run
+# is going waits rather than starting a second branch.
+concurrency:
+  group: coder-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+# The workflow's own token reads. Every write goes through the coder's
+# credential, so what GitHub records is the Role and not the workflow.
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  coder:
+    name: coder
+    # Only a difficulty a loop takes, on a Challenge. `hard` and `human` are
+    # not this Job's, and a `roadmap` Issue is deferred by definition.
+    if: >-
+      (github.event.label.name == 'easy' || github.event.label.name == 'medium')
+      && contains(github.event.issue.labels.*.name, 'challenge')
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      # The Trailer's two halves (DR-086). The run id is a workload identity
+      # GitHub attests for this run and no other; the harness is the action,
+      # pinned below, recorded as the environment names it.
+      ACTOR_SESSION: gha-${{ github.run_id }}
+      AI_AGENT: anthropics/claude-code-action@v1
+    steps:
+      # Full history so the coder can read what was already true, and no
+      # token in `.git/config` from the checkout: the action writes the
+      # coder's own for the push.
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # The Role's credential, where `.meta/say` expects it by default
+      # (DR-073, DR-107): outside the tree, mode 600, one token in the
+      # container. The same channel and the same rules as on a laptop.
+      - name: hold the coder's credential
+        run: |
+          install -d -m 700 ~/.config/solorepo
+          install -m 600 /dev/null ~/.config/solorepo/coder.env
+          printf 'GH_TOKEN=%s\n' "$CODER_GH_TOKEN" > ~/.config/solorepo/coder.env
+          .meta/say whoami
+        env:
+          CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
+
+      # Depth by the label. `easy` is the smaller model and an hour at most;
+      # `medium` is the larger and the whole budget. The guess is the
+      # raiser's, and a wrong one costs a run before anyone relabels.
+      - name: choose the depth
+        id: depth
+        run: |
+          if [ "$LEVEL" = medium ]; then
+            printf 'model=claude-opus-5\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'model=claude-sonnet-5\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+        env:
+          LEVEL: ${{ github.event.label.name }}
+
+      - uses: anthropics/claude-code-action@v1
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The action's own GitHub calls and the push as the Role too, so
+          # nothing in the run is authored by an App or a bot.
+          github_token: ${{ secrets.CODER_GH_TOKEN }}
+          # The transcript, in the run log: the run is the only record of
+          # what the coder did between the Issue and the pull request.
+          show_full_output: "true"
+          prompt: |
+            You are the coder Role (DR-107), taking Issue #${{ github.event.issue.number }}
+            of ${{ github.repository }}, which somebody labelled
+            `${{ github.event.label.name }}`. Read /pr-first first: it is the
+            Discipline for how work is proposed and recorded here, and
+            `.meta/templates/pull-request.md` is the body a pull request must
+            carry. `AGENTS.md` has the conventions.
+
+            Claim it: `.meta/say claim ${{ github.event.issue.number }}`.
+            Read it: `gh issue view ${{ github.event.issue.number }}`.
+
+            Branch as `claude/issue-${{ github.event.issue.number }}` from
+            `origin/main` and do the work the Issue asks for, and no more.
+            Run the gate, `.meta/gate meta`, until it is green. Commit only
+            through `.meta/say commit -m "<subject>"`: it signs, and a commit
+            made any other way is unattributable. Push the branch.
+
+            Open the pull request through the channel with the form filled:
+            `.meta/say pr --title "<words someone will search for>"` with the
+            body on stdin as a quoted heredoc, naming the Issue under "What it
+            closes" with a closing keyword. Then arm the merge:
+            `.meta/say merge <n> --auto`, so it lands when the ruleset is
+            satisfied. If the label is `medium`, request review first:
+            `.meta/say request-review <n>`; an approval or a comment lets the
+            armed merge land it, and a request for changes holds it for the
+            next run.
+
+            If you cannot finish — the Issue asks for a decision only the solo
+            can take, the gate will not go green, or the work is larger than
+            it looked — do not leave a half-built branch. Say where you
+            stopped and why in `.meta/say issue-comment ${{ github.event.issue.number }}`
+            with the body on stdin, then
+            `.meta/say label ${{ github.event.issue.number }} --add human --remove ${{ github.event.label.name }}`.
+
+            Never `gh pr create`, `gh pr comment`, `gh issue edit`, `gh issue
+            comment` or `gh api`: the hook refuses them, and every word you
+            post carries the Trailer only through the channel. Do not resolve
+            any thread. Do not merge by hand; the armed merge is the merge.
+          claude_args: |
+            --model ${{ steps.depth.outputs.model }}
+            --max-turns ${{ steps.depth.outputs.turns }}
+            --permission-mode acceptEdits
+            --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"

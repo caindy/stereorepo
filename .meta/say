@@ -28,6 +28,9 @@ pass wrongly.
     .meta/say issue-body <n> < body.md         replace an Issue's body
     .meta/say pr-title <pr> --title T
     .meta/say pr-base  <pr> --base B           retarget a layer onto the one below it
+    .meta/say claim    <issue>                 take an Issue: assign it to this Role's account
+    .meta/say label    <issue> [--add L] [--remove L]   move an Issue's labels
+    .meta/say issue-comment <issue> < body.md  a comment on an Issue
     .meta/say request-review <pr> [--to R]     hand off: request review from Role R's account
     .meta/say --role reviewer review <pr> --approve|--request-changes|--comment < body.md
 
@@ -310,6 +313,39 @@ def review(pr, verdict):
     print(f"reviewed #{pr}: {latest[-1]['state'].lower() if latest else 'GitHub shows no review'}")
 
 
+def claim(issue):
+    """Take an Issue: assign it to this Role's account, and read back.
+
+    A loop claims by assignment (DR-112). It is an act GitHub records, so it
+    goes through here, as the Role whose token this is.
+    """
+    login = gh("api", "user", "--jq", ".login", parse=False)
+    gh("issue", "edit", issue, "--add-assignee", login, parse=False)
+    who = [a["login"] for a in gh("issue", "view", issue, "--json", "assignees")["assignees"]]
+    if login not in who:
+        sys.exit(f"say: GitHub shows #{issue} assigned to {who or 'nobody'} after the call, not {login}")
+    print(f"claimed #{issue} as {login}")
+
+
+def label(issue, add, remove):
+    """Move an Issue's labels, and read back what it carries.
+
+    A loop that cannot finish relabels `human` and removes its own level
+    (DR-112); the label is the semaphore the next loop reads.
+    """
+    cmd = ["issue", "edit", issue]
+    for name in add:
+        cmd += ["--add-label", name]
+    for name in remove:
+        cmd += ["--remove-label", name]
+    gh(*cmd, parse=False)
+    now = [l["name"] for l in gh("issue", "view", issue, "--json", "labels")["labels"]]
+    missing = [n for n in add if n not in now] + [n for n in remove if n in now]
+    if missing:
+        sys.exit(f"say: GitHub shows #{issue} labelled {now} after the call; {missing} did not take")
+    print(f"#{issue} is labelled {', '.join(now)}")
+
+
 def trailers():
     """The block this channel signs with, defined once because two readers need
     it: the one that writes it, and the one that recognises it."""
@@ -477,6 +513,10 @@ def main():
     p = sub.add_parser("pr-base"); p.add_argument("pr"); p.add_argument("--base", required=True)
     p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
     p = sub.add_parser("review"); p.add_argument("pr")
+    p = sub.add_parser("claim"); p.add_argument("issue")
+    p = sub.add_parser("label"); p.add_argument("issue")
+    p.add_argument("--add", action="append", default=[]); p.add_argument("--remove", action="append", default=[])
+    p = sub.add_parser("issue-comment"); p.add_argument("issue")
     verdict = p.add_mutually_exclusive_group(required=True)
     verdict.add_argument("--approve", action="store_const", const="approve", dest="verdict")
     verdict.add_argument("--request-changes", action="store_const", const="request-changes", dest="verdict")
@@ -496,6 +536,14 @@ def main():
 
     if args.verb == "stack":
         stack(args.items)
+        return
+
+    if args.verb == "claim":
+        claim(args.issue)
+        return
+
+    if args.verb == "label":
+        label(args.issue, args.add, args.remove)
         return
 
     if args.verb == "request-review":
@@ -546,6 +594,8 @@ def main():
 
     if args.verb == "comment":
         print(gh("pr", "comment", args.pr, "--body", body, parse=False))
+    elif args.verb == "issue-comment":
+        print(gh("issue", "comment", args.issue, "--body", body, parse=False))
     elif args.verb == "reply":
         print(graphql(REPLY, t=args.thread, b=body)
               ["data"]["addPullRequestReviewThreadReply"]["comment"]["url"])

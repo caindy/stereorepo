@@ -386,6 +386,13 @@ disciplines:
         scheduled job, another agent — and name the Challenge in the body with a
         closing keyword, so the merge closes it and nobody has to remember to.
       - >-
+        Label an Issue's difficulty when raising it: `easy`, `medium`, `hard`
+        or `human`, your guess at what it takes for the coder Role. A loop
+        takes `easy` and `medium` the moment the label lands; `hard` waits for
+        the solo; `human` is where a loop puts what it cannot finish, with a
+        comment saying where it stopped. The raiser guesses and the loop
+        corrects, downward only.
+      - >-
         Argue there. Review, objection and answer belong where the next reader
         will look, not where one participant happens to be.
       - >-

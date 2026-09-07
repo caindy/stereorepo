@@ -124,6 +124,9 @@ artifacts:
   - id: work:artifact/github-workflows-review
     name: .github/workflows/review.yml
     path: .github/workflows/review.yml
+  - id: work:artifact/github-workflows-coder
+    name: .github/workflows/coder.yml
+    path: .github/workflows/coder.yml
   - id: work:artifact/justfile
     name: justfile
     path: justfile
@@ -178,6 +181,9 @@ artifacts:
   - id: work:artifact/meta-schemas
     name: .meta/schemas.md
     path: .meta/schemas.md
+  - id: work:artifact/meta-templates-issue
+    name: .meta/templates/issue.md
+    path: .meta/templates/issue.md
   - id: work:artifact/meta-templates-pull-request
     name: .meta/templates/pull-request.md
     path: .meta/templates/pull-request.md

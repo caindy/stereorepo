@@ -1,0 +1,78 @@
+decisions:
+  - id: work:decision/112
+    name: "DR-112 · A difficulty label is the raiser's estimate, one workflow takes an Issue by it, and a loop that cannot finish hands it to the solo"
+    challenge: work:challenge/31
+    status: ADOPTED
+    applies:
+      - work:article/18
+    enacted_in:
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-say
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-templates-issue
+    alternatives:
+      - name: A scheduled loop polling for labelled Issues
+        chosen: false
+        reason: >-
+          Runs whether or not anything changed and waits an interval to
+          notice. The label is an event GitHub emits, and the reviewer
+          already runs on its event (DR-109); a loop runs on its label the
+          same way.
+      - name: One workflow per level
+        chosen: false
+        reason: >-
+          Three files that differ in a model and a budget. The reviewer's
+          depth follows what changed inside one file; the coder's follows
+          the label inside one file.
+      - name: A label the raiser sets, one workflow that reads it, and `human` as the floor
+        chosen: true
+        reason: >-
+          Whoever raises an Issue guesses its difficulty for the one coder
+          Role there is, and the guess is a label the event carries. `easy`
+          takes the smaller model and merges on green; `medium` takes the
+          larger, requests review, and arms the merge so an approval lands it
+          and a request for changes holds it; `hard` is a label with no loop,
+          for the solo to take with an agent beside him; `human` is where a
+          loop puts an Issue it cannot finish, with a comment saying where it
+          stopped. What it costs: a coder in a container must write, so its
+          allowance is a coder's and the bound on it is the ruleset, the gate
+          and review rather than the reading hook; and a wrong guess costs a
+          run before anyone relabels.
+    consequences:
+      - >-
+        Difficulty is a property of the Issue's pairing with the coder Role,
+        and there is one such Role, so it reads as a property of the Issue.
+        When Roles multiply the label names the pairing it was guessed for.
+      - >-
+        `coder.yml` runs when an Issue gains `easy` or `medium` and carries
+        `challenge`. It claims the Issue by assignment, branches, does the
+        work under the Disciplines, runs the gate, commits and opens the pull
+        request through the channel, pushes, and arms the merge; for
+        `medium` it requests review first. It holds the coder's token and
+        nothing else.
+      - >-
+        "Can be merged" for a loop is the gate green, the branch pushed, the
+        pull request open through the channel with its form filled, and the
+        merge armed; for `medium`, review requested as well (A18).
+      - >-
+        A loop that cannot finish relabels the Issue `human`, removes its
+        own level, and says in a comment where it stopped and why. There is
+        no ladder between levels until there are Roles to climb it.
+      - >-
+        The channel gains `claim`, `label` and `issue-comment`: assignment,
+        labelling and an Issue comment are acts GitHub records, and the
+        comment is signed like every other utterance.
+      - >-
+        The Issue form asks for a difficulty, and PR First says who sets it
+        and who moves it.
+    falsifier: >-
+      An `easy` Issue merged wrong on green, or a loop that relabels
+      `human` more often than it opens a pull request. The first says green
+      is not the review for the level; the second says the raiser's guess
+      is not worth the run.
+    rationale: |-
+      Christopher: the solo does not want to approve and merge everything,
+      and the reviewer loop was the first half. The accounts and the
+      container arrived with DR-107 and DR-109, which is what #31 waited
+      on; the open questions it listed are answered above in the smallest
+      way that runs.
