@@ -589,7 +589,11 @@ def sole_author(bodies):
     return bool(bodies) and all(b.rstrip().endswith(block) for b in bodies)
 
 
-def main():
+def build_parser():
+    """The parser alone, so a probe can check what each verb accepts without
+    running what it dispatches to (#95: the mutually exclusive verdict group
+    landed on the wrong verb because both reused the loop variable `p`, and
+    nothing parsed a verb without also calling `gh`)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--role", default="coder",
@@ -614,15 +618,19 @@ def main():
     p = sub.add_parser("pr-base"); p.add_argument("pr"); p.add_argument("--base", required=True)
     p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
     p = sub.add_parser("review"); p.add_argument("pr")
-    p = sub.add_parser("claim"); p.add_argument("issue")
-    p = sub.add_parser("label"); p.add_argument("issue")
-    p.add_argument("--add", action="append", default=[]); p.add_argument("--remove", action="append", default=[])
-    p = sub.add_parser("issue-comment"); p.add_argument("issue")
     verdict = p.add_mutually_exclusive_group(required=True)
     verdict.add_argument("--approve", action="store_const", const="approve", dest="verdict")
     verdict.add_argument("--request-changes", action="store_const", const="request-changes", dest="verdict")
     verdict.add_argument("--comment", action="store_const", const="comment", dest="verdict")
-    args = ap.parse_args()
+    p = sub.add_parser("claim"); p.add_argument("issue")
+    p = sub.add_parser("label"); p.add_argument("issue")
+    p.add_argument("--add", action="append", default=[]); p.add_argument("--remove", action="append", default=[])
+    p = sub.add_parser("issue-comment"); p.add_argument("issue")
+    return ap
+
+
+def main():
+    args = build_parser().parse_args()
 
     global ROLE_ENV
     if not os.environ.get("SOLOREPO_ROLE_ENV"):

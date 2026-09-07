@@ -665,12 +665,65 @@ def hook_probes():
             for n, (want, held) in enumerate(cases, 1) if not held]
 
 
+def say_parser_probes():
+    """Every verb of `.meta/say` parses the flags its own branch in `main()`
+    reads.
+
+    Each subparser is built by reassigning the same loop variable `p`, so an
+    addition meant for one verb that lands after `p` has moved on binds to
+    whichever verb comes next instead — silently, since argparse never
+    complains about the wrong verb owning an argument. That is what put the
+    verdict group on `issue-comment` rather than `review` (#95), the same
+    shape #91 found one verb over. Nothing else parses these verbs without
+    also calling `gh`, so this is the only place that would have noticed.
+    """
+    import contextlib
+    import io
+    from importlib.machinery import SourceFileLoader
+    import importlib.util
+
+    loader = SourceFileLoader("say", str(META / "say"))
+    spec = importlib.util.spec_from_loader("say", loader)
+    say = importlib.util.module_from_spec(spec)
+    loader.exec_module(say)
+
+    cases = [
+        ("review 1 --approve", {"verb": "review", "pr": "1", "verdict": "approve"}),
+        ("review 1 --request-changes", {"verdict": "request-changes"}),
+        ("review 1 --comment", {"verdict": "comment"}),
+        ("issue-comment 93", {"verb": "issue-comment", "issue": "93"}),
+        ("claim 93", {"verb": "claim", "issue": "93"}),
+        ("label 93 --add human --remove easy",
+         {"verb": "label", "issue": "93", "add": ["human"], "remove": ["easy"]}),
+    ]
+    problems = []
+    with contextlib.redirect_stderr(io.StringIO()):
+        for line, expect in cases:
+            try:
+                args = say.build_parser().parse_args(line.split())
+            except SystemExit:
+                problems.append(f"`.meta/say {line}` did not parse")
+                continue
+            for key, value in expect.items():
+                got = getattr(args, key, None)
+                if got != value:
+                    problems.append(f"`.meta/say {line}`: {key} was {got!r}, not {value!r}")
+        for line in ("review 1", "issue-comment 93 --approve"):
+            try:
+                say.build_parser().parse_args(line.split())
+                problems.append(f"`.meta/say {line}` parsed, and should have been rejected")
+            except SystemExit:
+                pass
+    return problems
+
+
 # Run before the schemas load. LinkML's loader raises on the first repeated key
 # with no file and no line, so a duplicate in `work/*.yaml` used to take the
 # whole gate down before the check that names both had a chance to run (#23).
 PRECHECKS = (
     ("duplicate keys", duplicate_keys),
     ("hook probes", hook_probes),
+    ("say parser probes", say_parser_probes),
 )
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
