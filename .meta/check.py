@@ -582,8 +582,13 @@ def hook_probes():
         ("refuse", bool(signed.blocked("gh pr comment 1 --body hi"))),
         ("refuse", bool(signed.blocked("curl https://api.github.com/repos/x/y"))),
         ("refuse", bool(signed.blocked("gh pr update-branch 92 --rebase"))),
+        # `.meta/say advance 92` was here and held nothing: `blocked()` returns
+        # on the `.meta/say` prefix before it looks at a verb, so the probe
+        # passed for the reason the `.meta/say comment 1` case below already
+        # covers and would have passed with `advance` spelled anything at all.
+        # `gh pr view` below is `update-branch`'s innocent neighbour — the one
+        # a `gh\s+pr\b` written a shade too wide would catch (#98).
         ("allow", not signed.blocked(".meta/say comment 1")),
-        ("allow", not signed.blocked(".meta/say advance 92")),
         ("allow", not signed.blocked("gh pr view 1")),
         # worktree_only: reading past the worktree.
         ("refuse", bool(worktree.blocked("Grep", {"path": "/etc"}))),
@@ -672,6 +677,234 @@ def hook_probes():
             for n, (want, held) in enumerate(cases, 1) if not held]
 
 
+def load_say():
+    """`.meta/say` as a module, for the probes below.
+
+    It has no `.py` and is a program rather than a library, so the loader is
+    named explicitly. Importing runs nothing: everything it does is under
+    `main()`, and `main()` is under `__name__`.
+    """
+    from importlib.machinery import SourceFileLoader
+    import importlib.util
+
+    loader = SourceFileLoader("say", str(META / "say"))
+    spec = importlib.util.spec_from_loader("say", loader)
+    say = importlib.util.module_from_spec(spec)
+    loader.exec_module(say)
+    return say
+
+
+class FakeGitHub:
+    """As much of GitHub as `advance` and `merge --auto` ask about.
+
+    Stands in for `say.gh`, which is where every one of #98's five findings
+    lived: `gh()` reports by ending the process, and what a caller does with
+    that is the whole question. Answering from a dict makes each state a case —
+    a rebase GitHub declines, a rebase that drops the arming, a base that moves
+    again mid-run — where before each was an argument about a code path nothing
+    ran.
+
+    A pull request here is `{behind, armed, drops, again}`: how far behind its
+    base it is, whether it is armed, whether moving the head drops the arming,
+    and what it is still behind by afterwards.
+    """
+
+    def __init__(self, pulls, no_rebase=(), no_arm=(), no_stick=(), lands=(), blip=()):
+        self.pulls = {str(n): dict(p) for n, p in pulls.items()}
+        self.no_rebase, self.no_arm = {str(n) for n in no_rebase}, {str(n) for n in no_arm}
+        # One HTTP error on the `compare` that reads back the rebase, and once:
+        # a transient is what an API blip is, and a permanent one would model a
+        # different thing entirely. It is the cheapest way into "`advance`
+        # failed and the branch is fine" — the refusal is real, the rebase
+        # already happened, and nothing about the head is wrong.
+        self.blip = {str(n) for n in blip}
+        # `gh pr merge --auto` exits 0 and the enablement does not take. The one
+        # arming outcome an exit code cannot see, and so the only one a read-back
+        # is for: without it here, a probe of the read-back would be checking a
+        # branch the fake can never reach.
+        self.no_stick = {str(n) for n in no_stick}
+        # The last check goes green in the window between arming and reading
+        # back, so GitHub merges and the read-back finds `MERGED` rather than
+        # armed. Whatever `merge --auto` says about that state, it says over a
+        # pull request that has landed.
+        self.lands = {str(n) for n in lands}
+
+    def view(self, number):
+        pull = self.pulls[str(number)]
+        return {"number": int(number), "title": f"pull {number}",
+                "state": pull.get("state", "OPEN"),
+                "mergeCommit": {"oid": f"merged{number}"},
+                "baseRefName": "main", "headRefName": f"claude/issue-{number}",
+                "headRefOid": f"head{number}",
+                "autoMergeRequest": {"enabledAt": "now"} if pull["armed"] else None}
+
+    def __call__(self, *args, parse=True):
+        head = args[:2]
+        if head == ("repo", "view"):
+            return {"nameWithOwner": "o/r", "deleteBranchOnMerge": True}
+        if head == ("pr", "list"):
+            return [self.view(n) for n in self.pulls]
+        if head == ("pr", "view"):
+            return self.view(args[2])
+        if head == ("pr", "update-branch"):
+            number = str(args[2])
+            if number in self.no_rebase:
+                sys.exit("gh: the branch has conflicts that must be resolved")
+            pull = self.pulls[number]
+            pull["behind"] = pull.get("again", 0)
+            pull["armed"] = pull["armed"] and not pull.get("drops")
+            pull["rebased"] = True
+            return ""
+        if head == ("pr", "merge"):
+            number = str(args[2])
+            if number in self.no_arm:
+                sys.exit("gh: Pull request is in clean status")
+            self.pulls[number]["armed"] = number not in self.no_stick
+            if number in self.lands:
+                self.pulls[number].update(state="MERGED", armed=False)
+            return ""
+        if args[0] == "api" and "/compare/" in args[1]:
+            number = args[1].rsplit("...head", 1)[1]
+            if number in self.blip and self.pulls[number].get("rebased"):
+                self.blip.discard(number)
+                sys.exit("gh: API rate limit exceeded")
+            return {"behind_by": self.pulls[number]["behind"]}
+        if args[0] == "api" and "/pulls/" in args[1]:
+            return {}  # no `stack` object: not a layer of a stack
+        if args[0] == "api":
+            return {"allow_auto_merge": True}  # the repository itself
+        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+
+
+def advance_probes():
+    """`advance` and `merge --auto` against a fake GitHub, in the states #98
+    found them in.
+
+    Each case is one of the reviewer's reproductions on #94, which were read
+    off the code because there was no way to run it: `advance` reaches GitHub
+    in every branch, so until `say.gh` could be stood in for, the only test of
+    what it does when a call fails was an argument.
+    """
+    import contextlib
+    import io
+
+    say = load_say()
+    problems = []
+
+    def run(fake, call):
+        """One case, with the channel's `gh` replaced and its printing swallowed.
+        Returns what it exited with, or None.
+
+        Every way out of the call is an answer, not only `sys.exit`. The fake's
+        designed refusal is an `AssertionError` naming the call it has no answer
+        for, and a number a case did not model is a `KeyError`; uncaught, either
+        one ends the whole gate in a traceback with the schemas and every later
+        check unrun (A6, A7). Returning the text keeps that `AssertionError`
+        doing the job it was written for — saying, in the report, what the fake
+        was asked. Against trunk that is not hypothetical: `held=` is this
+        change's own argument, so the case that passes it — "Armed, and nothing
+        else", below — raises `TypeError` there and crashed rather than failed.
+        A case is named and not counted: its position is what the next
+        insertion above it moves.
+        """
+        original, say.gh = say.gh, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                call()
+            return None
+        except SystemExit as exc:
+            return str(exc.code)
+        except Exception as exc:
+            return f"{type(exc).__name__}: {exc}"
+        finally:
+            say.gh = original
+
+    # The arming the rebase dropped is restored even though the base moved
+    # again under it — the two read-backs are two questions (#98).
+    fake = FakeGitHub({7: {"behind": 2, "armed": True, "drops": True, "again": 1}})
+    said = run(fake, lambda: say.advance())
+    if not fake.pulls["7"]["armed"]:
+        problems.append("advance: a rebase that dropped the arming left it dropped")
+    if not said or "still behind" not in said:
+        problems.append(f"advance: a base that moved again reported {said!r}")
+
+    # One pull request GitHub will not rebase is one pull request's problem.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True}, 8: {"behind": 1, "armed": True}},
+                      no_rebase=[7])
+    said = run(fake, lambda: say.advance())
+    if fake.pulls["8"]["behind"]:
+        problems.append("advance: a refusal on one pull request ended the sweep for the rest")
+    if not said or "#7" not in said:
+        problems.append(f"advance: the refusal it swallowed was reported as {said!r}")
+
+    # And a refusal to arm is the same: the pull request GitHub will not re-arm
+    # does not take the one behind it down.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True},
+                       8: {"behind": 1, "armed": True}}, no_arm=[7])
+    said = run(fake, lambda: say.advance())
+    if fake.pulls["8"]["behind"]:
+        problems.append("advance: a refusal to arm one pull request ended the sweep")
+    if not said or "clean status" not in said:
+        problems.append(f"advance: the refusal to arm was reported as {said!r}")
+
+    # An arming `gh` said it made and GitHub does not hold is the one the exit
+    # code cannot see, and the pull request is left rebased and unarmed — #93,
+    # and out of reach of the sweep that filters on the arming.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True}}, no_stick=[7])
+    said = run(fake, lambda: say.advance())
+    if not said or "#7" not in said:
+        problems.append(f"advance: an arming that did not take was reported as {said!r}")
+
+    # Armed, and nothing else — on the path that takes an argument too, which
+    # is the one `merge --auto` uses. And the refusal is said in the exit code:
+    # `advance 92 && <next step>` on an unarmed branch must not carry on.
+    fake = FakeGitHub({7: {"behind": 1, "armed": False}})
+    said = run(fake, lambda: say.advance("7"))
+    if not fake.pulls["7"]["behind"]:
+        problems.append("advance: it rebased a pull request nobody had asked to land")
+    if not said or "not armed" not in said:
+        problems.append(f"advance: it declined a named pull request and said {said!r}")
+    if run(fake, lambda: say.advance("7", held=True)):
+        problems.append("advance: the caller that holds the branch was refused too")
+    if fake.pulls["7"]["behind"]:
+        problems.append("advance: it refused the caller that holds the branch")
+
+    # And the arming happens even when advancing did not: armed and behind is
+    # what the next push to trunk sweeps up, rebased and unarmed is #93.
+    fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7])
+    said = run(fake, lambda: say.merge("7", auto=True))
+    if not fake.pulls["7"]["armed"]:
+        problems.append("merge --auto: a failed advance left the pull request unarmed")
+    if not said or "conflicts" not in said:
+        problems.append(f"merge --auto: the failed advance was reported as {said!r}")
+
+    # And a stall carried past a merge that landed is not reported over it. The
+    # refusal `advance` collected need not be a branch that is behind — an API
+    # blip is one too — and once GitHub has merged the pull request the question
+    # is closed. Reported here it is `merged #<n> as <sha>` followed by an exit
+    # claiming the pull request is armed and behind, which is #46's defect in a
+    # new coat.
+    fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7], lands=[7])
+    said = run(fake, lambda: say.merge("7", auto=True))
+    if said:
+        problems.append(f"merge --auto: a merge that landed exited with {said!r}")
+
+    # Nor over a branch that is armed and current. `advance` collects any
+    # refusal, and one HTTP error on the `compare` that reads the rebase back
+    # is a refusal over a branch the rebase already fixed. The exit code is the
+    # last thing the Job says, so claiming "armed and not current" here is the
+    # loop being told the landing failed on a pull request GitHub is holding
+    # armed on a head that is current.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True}}, blip=[7])
+    said = run(fake, lambda: say.merge("7", auto=True))
+    if not fake.pulls["7"]["armed"] or fake.pulls["7"]["behind"]:
+        problems.append("merge --auto: a blip on the read-back left the pull request "
+                        f"{fake.pulls['7']!r}")
+    if said:
+        problems.append(f"merge --auto: a stall over a current branch exited with {said!r}")
+    return problems
+
+
 def say_parser_probes():
     """Every verb of `.meta/say` parses the flags its own branch in `main()`
     reads.
@@ -686,13 +919,8 @@ def say_parser_probes():
     """
     import contextlib
     import io
-    from importlib.machinery import SourceFileLoader
-    import importlib.util
 
-    loader = SourceFileLoader("say", str(META / "say"))
-    spec = importlib.util.spec_from_loader("say", loader)
-    say = importlib.util.module_from_spec(spec)
-    loader.exec_module(say)
+    say = load_say()
 
     cases = [
         ("review 1 --approve", {"verb": "review", "pr": "1", "verdict": "approve"}),
@@ -731,6 +959,7 @@ PRECHECKS = (
     ("duplicate keys", duplicate_keys),
     ("hook probes", hook_probes),
     ("say parser probes", say_parser_probes),
+    ("advance probes", advance_probes),
 )
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
@@ -843,7 +1072,17 @@ CHECKS = (
 if __name__ == "__main__":
     failed = False
     for label, check in PRECHECKS:
-        failed |= report(label, check())
+        # The guard the schemas load has, for the same reason and stated there:
+        # a step that cannot run says so rather than dying (A6), and says why
+        # rather than printing a stack trace (A7). A precheck exists so that one
+        # broken thing does not take the gate down before the check that names
+        # it runs; a precheck that dies uncaught is that failure with the roles
+        # swapped.
+        try:
+            problems = check()
+        except Exception as exc:
+            problems = [f"the check itself could not run — {type(exc).__name__}: {exc}"]
+        failed |= report(label, problems)
     try:
         schemas = views()
         index, refs, skipped = collect(schemas)

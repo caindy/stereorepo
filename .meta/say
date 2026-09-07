@@ -200,7 +200,7 @@ def behind_by(pull):
 ADVANCE = "number,title,baseRefName,headRefOid,autoMergeRequest"
 
 
-def advance(pr=None):
+def advance(pr=None, held=False):
     """Bring armed pull requests that have fallen behind their base back onto it.
 
     An armed merge does not update its own branch, and `main` requires a pull
@@ -215,10 +215,21 @@ def advance(pr=None):
     — it takes a pull request number for the day one is behind for a reason
     neither edge saw.
 
-    **Armed, and nothing else.** A pull request nobody has asked to land is not
-    waiting on anything, and the rebase below rewrites commits under whatever
-    session still holds the branch. Arming is the last act of the Job that did
-    the work (DR-112), so an armed branch is one nobody is still standing on.
+    **Armed, and nothing else**, whether one pull request was named or none.
+    A pull request nobody has asked to land is not waiting on anything, and the
+    rebase below rewrites commits under whatever session still holds the branch.
+    Arming is the last act of the Job that did the work (DR-112), so an armed
+    branch is one nobody is still standing on. The filter used to be the sweep's
+    alone and the explicit argument rebased whatever it was handed — which left
+    the property holding on the path nothing calls and not on the one
+    `merge --auto` uses (#98).
+
+    `held` is the one exemption, and it is the caller saying which branch it is
+    standing on: `merge --auto` is the Job that did the work, arming in a moment,
+    so for that call the question the arming answers is already answered. It is
+    an argument of the function and not of the verb, because what a caller can
+    pass a typed command can pass wrongly, and by hand this is only ever wanted
+    for a pull request that stalled — which is to say an armed one.
 
     **By rebase, not by a merge commit.** GitHub authors the merge commit
     itself and it carries no `Actor` Trailer, so A19 would turn the required
@@ -228,38 +239,75 @@ def advance(pr=None):
     intact.
 
     Read back, per A6: the outcome is what GitHub holds afterwards, not what
-    `gh` returned. Two things are asked. Whether the head is current now — the
-    base can move again while this runs, and a second push is a second run's
-    business, not a silent pass. And whether the arming survived the head
-    moving: GitHub drops auto-merge on some pushes to a head branch, and an
-    update that disarmed what it was unblocking would leave the pull request
-    exactly where it was found, with the sole witness gone.
+    `gh` returned. Three things are asked, and they are asked independently.
+    Whether the head is current now — the base can move again while this runs,
+    and a second push is a second run's business, not a silent pass. Whether
+    the arming survived the head moving: GitHub drops auto-merge on some pushes
+    to a head branch, and an update that disarmed what it was unblocking would
+    leave the pull request exactly where it was found, with the sole witness
+    gone. The second used to hang off the first as an `elif`, so the one state
+    it exists to repair — moved, disarmed, and behind again — was the one state
+    it never looked at (#98). And whether re-arming took, which is the same
+    question `merge --auto` asks of its own arming and the one this path was
+    still answering from an exit code.
+
+    **One pull request's refusal is not the sweep's.** `gh()` reports by ending
+    the process, so a branch GitHub will not rebase, or will not arm, used to
+    take every other pull request down with it and swallow what had already been
+    collected. Each is caught where it happens and joins `failed`, which is what
+    the accumulator was for.
     """
     if pr is not None:
         found = [gh("pr", "view", pr, "--json", ADVANCE)]
     else:
-        found = [p for p in gh("pr", "list", "--state", "open", "--json", ADVANCE)
-                 if p.get("autoMergeRequest")]
+        found = gh("pr", "list", "--state", "open", "--json", ADVANCE)
+    if not held:
+        found = [p for p in found if p.get("autoMergeRequest")]
     if not found:
+        # Two answers, and only one of them is "nothing to do". A sweep with
+        # nothing armed open did its whole job and exits 0. A named pull request
+        # that is not armed is a *refusal* — the caller asked for one thing and
+        # the verb declined it — and every other refusal in this file exits
+        # non-zero. `main()` passes no `held`, so for a typed `advance <pr>`
+        # this is the terminal answer; sharing an exit code with the sweep is
+        # how `.meta/say advance 92 && <next>` carries on as though the branch
+        # had moved.
+        if pr is not None:
+            sys.exit(f"say: #{pr} is not armed; nothing has asked it to land")
         print("advance: nothing armed is open")
         return
     moved, failed = 0, []
     for pull in found:
         number = str(pull["number"])
-        behind = behind_by(pull)
-        if not behind:
-            continue
-        gh("pr", "update-branch", number, "--rebase", parse=False)
-        moved += 1
-        print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
-              f"— {pull['title']}")
-        after = gh("pr", "view", number, "--json", ADVANCE)
-        if behind_by(after):
-            failed.append(f"#{number} is still behind {pull['baseRefName']} after the update")
-        elif pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
-            arm(number, f"{pull['title']} (#{number})")
-            print(f"armed #{number} again: moving the head had dropped it")
-    if not moved:
+        try:
+            behind = behind_by(pull)
+            if not behind:
+                continue
+            gh("pr", "update-branch", number, "--rebase", parse=False)
+            moved += 1
+            print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
+                  f"— {pull['title']}")
+            after = gh("pr", "view", number, "--json", ADVANCE)
+            if behind_by(after):
+                failed.append(f"#{number} is still behind {pull['baseRefName']} after the update")
+            if pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
+                arm(number, f"{pull['title']} (#{number})")
+                # Read back, like the two above and for the same reason. This
+                # was the one act in the function whose outcome was `gh`'s exit
+                # status: `gh pr merge --auto` exits 0, the enablement does not
+                # stick, and the line below claimed an arming GitHub does not
+                # hold. That leaves the pull request rebased and unarmed, which
+                # is #93 — and unreachable by any later sweep, because the sweep
+                # filters on `autoMergeRequest` and there is no longer one to
+                # filter on.
+                if not gh("pr", "view", number, "--json", ADVANCE).get("autoMergeRequest"):
+                    failed.append(f"#{number} lost its arming to the update and GitHub does not "
+                                  "show it armed after the call that re-armed it")
+                else:
+                    print(f"armed #{number} again: moving the head had dropped it")
+        except SystemExit as exc:
+            failed.append(f"#{number}: {exc.code}")
+    if not moved and not failed:
         print(f"advance: {len(found)} pull request(s) current with their base")
     if failed:
         sys.exit("say: " + "; ".join(failed))
@@ -316,21 +364,82 @@ def merge(pr, stack=False, auto=False):
         # Arming a branch that is already behind arms something that cannot
         # merge, and the push to trunk that would have advanced it has already
         # happened (#93). The other edge — falling behind after arming — is
-        # the workflow's.
-        advance(pr)
+        # the workflow's. `held`, because this is the Job that did the work and
+        # the branch is its own; nothing else may rebase an unarmed branch.
+        #
+        # And the arming happens whether or not that worked. `advance` ends in
+        # `sys.exit` on a read-back that failed and on any refusal `gh` made,
+        # and outside this `try` every one of those exits left the branch
+        # rebased and never armed — #93's state, reached by the fix for it, with
+        # no second run coming because arming is where the Job ends (#98).
+        # Armed and behind is the recoverable half: the next push to trunk
+        # sweeps it up, precisely because it is armed. So the stall is carried
+        # to the end and reported there, after the arming it must not prevent —
+        # and it is carried as a *reason*, not as a state. What state the pull
+        # request ended in is asked of GitHub at each of the three places
+        # below, because the stall is the exit code of a verb that makes four
+        # or five calls and says nothing about which of them refused.
+        stalled = None
+        try:
+            advance(pr, held=True)
+        except SystemExit as exc:
+            stalled = str(exc.code)
         try:
             arm(pr, subject)
         except SystemExit as exc:
             # Already mergeable: GitHub refuses to arm what it could just do,
-            # in these words, and the plain merge below is the right act.
+            # in these words, and the plain merge below is the right act. A
+            # stall recorded above goes no further from here, and cannot
+            # survive: clean is GitHub saying the branch is current, which is
+            # the opposite of what stalled would claim.
             if "clean status" not in str(exc.code):
                 raise
         else:
             after = gh("pr", "view", pr, "--json", "state,mergeCommit,autoMergeRequest")
             if after["state"] == "MERGED":
+                # A stall recorded above is moot here and dies with this branch.
+                # Not every refusal `advance` collects is a branch that is
+                # genuinely behind — an API blip on a `pr view` or a `compare`
+                # is one too — and GitHub having merged the pull request is the
+                # end of the question either way. Reported here it would print
+                # `merged #<n> as <sha>` and then exit 1 saying the pull request
+                # is armed and not current with its base, both clauses false:
+                # #46's defect wearing a new coat, which is what this verb was
+                # written to remove.
                 print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
             elif after.get("autoMergeRequest"):
                 print(f"armed: #{pr} merges as a squash when green — {before['title']}")
+                # Armed and behind is the one state the message describes, and
+                # reaching this branch establishes only its first half:
+                # `after.get("autoMergeRequest")` is GitHub saying it is armed,
+                # and nothing since `advance` failed has asked whether the head
+                # is current. `stalled` cannot answer it — it is every refusal
+                # `advance` collected, and most of them say nothing about the
+                # head: a `gh` blip on the read-back `compare`, one HTTP error
+                # away out of the four or five calls that verb makes, or an
+                # arming that did not stick and that the `arm` above has since
+                # made take. Both leave the branch armed and current, and the
+                # exit code here is the last thing the Job says — a non-zero
+                # over a pull request GitHub is holding correctly armed tells
+                # the loop the landing failed when it did not. So the currency
+                # is re-asked, one `compare`, and the exit is conditional on
+                # the answer rather than on how the stall was reached.
+                if stalled:
+                    try:
+                        current = gh("pr", "view", pr, "--json", ADVANCE)
+                        behind = behind_by(current)
+                    except SystemExit as exc:
+                        sys.exit(f"say: #{pr} is armed, and advancing it did not finish — "
+                                 f"{stalled}. GitHub would not say whether it is current "
+                                 f"either — {exc.code}")
+                    if behind:
+                        sys.exit(f"say: #{pr} is armed and {behind} commit(s) behind "
+                                 f"{current['baseRefName']} — {stalled}")
+                    # Armed and current is the state the Job was for, so the
+                    # stall is reported and not exited on: it is a reason
+                    # something took two attempts, not a landing that failed.
+                    print(f"#{pr} is armed and current with {current['baseRefName']}; "
+                          f"advancing it did not finish — {stalled}")
             else:
                 sys.exit(f"say: GitHub shows #{pr} neither merged nor armed after the call")
             return
