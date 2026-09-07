@@ -391,9 +391,13 @@ def snapshot(ref):
     reviews = {r["id"]: r for r in pr["reviews"]}
     threads_ = {t["id"]: t for t in threads(ref)}
     # A check still running has no conclusion; its status says so, which reads
-    # better than a `None` beside a result and is a change worth a line.
+    # better than a `None` beside a result and is a change worth a line. The
+    # run's url rides beside the verdict: a re-run that ends where it started
+    # is the same verdict from a different run, and keyed on the verdict alone
+    # it was invisible (#79).
     checks = {c.get("name") or c.get("context"):
-              c.get("conclusion") or c.get("state") or c.get("status") or "PENDING"
+              (c.get("conclusion") or c.get("state") or c.get("status") or "PENDING",
+               c.get("detailsUrl") or c.get("targetUrl"))
               for c in pr.get("statusCheckRollup") or []}
     return pr["number"], pr["state"], comments, reviews, threads_, checks
 
@@ -449,7 +453,7 @@ def watch(ref, every=60):
         if previous is None:
             owed = len(unaddressed(list(threads_.values())))
             print(f"watching #{number}: {owed} thread(s) owed an answer, "
-                  + ", ".join(f"{k}={v}" for k, v in checks.items()), flush=True)
+                  + ", ".join(f"{k}={v}" for k, (v, _) in checks.items()), flush=True)
         else:
             _, _, p_comments, p_reviews, p_threads, p_checks = previous
             for cid in comments.keys() - p_comments.keys():
@@ -473,9 +477,12 @@ def watch(ref, every=60):
                 if before is not None and t["isResolved"] and not before["isResolved"]:
                     by = (t.get("resolvedBy") or {}).get("login", "someone")
                     print(f"thread {tid} on {where} resolved by {by}", flush=True)
-            for name, value in checks.items():
-                if p_checks.get(name) != value:
+            for name, (value, run) in checks.items():
+                before = p_checks.get(name)
+                if before is None or before[0] != value:
                     print(f"check {name}: {value}", flush=True)
+                elif before[1] != run:
+                    print(f"check {name}: {value} again, from a re-run", flush=True)
         if state in ("MERGED", "CLOSED"):
             print(f"pr {state}", flush=True)
             return

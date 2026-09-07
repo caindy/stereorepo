@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/79
+    name: The watch is blind to a re-run that ends where it started, and say merge cannot wait for green
+    challenge_type: DEFECT
+    description: >-
+      `check_pr.py --watch` keyed each check on its conclusion, so a re-run
+      that finished inside one poll interval read `pass` before and `pass`
+      after and printed nothing. `say merge` had no "when green", so a merge
+      refused for pending checks was one somebody had to remember to retry. On
+      #76 the two combined and the merge waited thirty-six minutes for a
+      person to ask.
