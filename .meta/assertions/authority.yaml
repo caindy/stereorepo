@@ -38,6 +38,18 @@ capability_set:
     composed_of:
       - work:capability/gh
 
+  - id: work:capability/review-on-github
+    name: Review a pull request on GitHub as this Actor
+    description: >-
+      Approve, request changes, or comment as a review — with the Actor Trailer
+      appended by the channel. A SKILL composed of `gh` for the reason
+      `speak-on-github` is: what is permitted is the act, not the binary. It is
+      the reviewer's half of a handoff. The coder requests and the reviewer
+      answers, and GitHub holds both as state.
+    capability_kind: SKILL
+    composed_of:
+      - work:capability/gh
+
 securables:
   - id: work:securable/github-conversations
     name: This repository's pull requests and Issues
@@ -50,12 +62,63 @@ permission_set:
   - id: work:permission/agent-speaks
     name: An agent may speak on this repository's pull requests and Issues
     description: >-
-      Held by whatever Actor is working here. It is not yet held by a Role,
-      because Roles arrive with the machine accounts of DR-066 — and until they
-      do this Permission is enforced by a deny list and a hook rather than by a
-      credential, which is inspection rather than structure.
+      Held by both Roles, each under its own account (DR-107), so GitHub
+      records which Role spoke. That the channel is the only path is still a
+      deny list and a hook rather than a credential (#21), which is inspection
+      rather than structure.
     capability: work:capability/speak-on-github
     securable: work:securable/github-conversations
     condition: >-
       Through `.meta/say`, which signs. No other path to the same endpoint is
       permitted, and the Permission is the channel rather than the endpoint.
+
+  - id: work:permission/reviewer-reviews
+    name: The reviewer may review this repository's pull requests
+    description: >-
+      Held by the reviewer Role. An approval counts with GitHub only from write
+      access, so the account holds WRITE, and not pushing to a branch is the
+      Discipline's rule rather than GitHub's (DR-107).
+    capability: work:capability/review-on-github
+    securable: work:securable/github-conversations
+    condition: >-
+      Through `.meta/say --role reviewer review`, which signs.
+
+# The Roles, and the accounts GitHub holds for them (DR-066, DR-107). A Role is a
+# name: its login is `<owner>-<repo>-<role>` and its credential is
+# `~/.config/solorepo/<role>.env` on each machine that holds it, so the three
+# derive from one word and none is copied into a script.
+
+roles:
+  - id: work:role/coder
+    name: coder
+    description: >-
+      Takes a Challenge to a pull request: commits, speaks, merges, and hands
+      off by requesting review of the reviewer's account.
+    capabilities:
+      - work:capability/speak-on-github
+
+  - id: work:role/reviewer
+    name: reviewer
+    description: >-
+      The Role a pull request is handed to. Reads what GitHub holds, argues in
+      the threads, and answers the request with a review.
+    capabilities:
+      - work:capability/speak-on-github
+      - work:capability/review-on-github
+
+principal_identities:
+  - id: work:principal-identity/coder
+    name: caindy-solorepo-coder
+    subject: caindy-solorepo-coder
+    issuer: GitHub
+    description: >-
+      The coder Role's account: held durably, proved by a token kept outside
+      the tree per machine (DR-073).
+
+  - id: work:principal-identity/reviewer
+    name: caindy-solorepo-reviewer
+    subject: caindy-solorepo-reviewer
+    issuer: GitHub
+    description: >-
+      The reviewer Role's account, on the same terms. Created by the solo, which
+      is the act DR-066 reserved for him.

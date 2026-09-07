@@ -1,9 +1,13 @@
 decisions:
   - id: work:decision/066
     name: "DR-066 · Two machine users, with distinct Roles, and the handoff is a review request"
-    status: RECOMMENDED
+    status: ADOPTED
     applies:
       - work:article/16
+    enacted_in:
+      - work:artifact/meta-say
+      - work:artifact/meta-assertions-authority
+      - work:artifact/meta-disciplines
     alternatives:
       - name: Keep acting as the solo
         chosen: false

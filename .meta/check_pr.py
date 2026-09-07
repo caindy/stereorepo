@@ -463,16 +463,16 @@ def parties(thread):
     sentence of theatre per thread, which is how a rule gets routed around.
 
     It is trustworthy only while an agent does not resolve a thread it is the
-    sole author of, because the agent and the solo share one login and
-    `resolvedBy` cannot tell them apart. That is a Discipline step until DR-066
-    gives each Role an account, at which point the distinction is GitHub's to
-    make rather than ours to observe.
+    sole author of. Each Role has an account (DR-066, DR-107), so `resolvedBy`
+    tells a Role from the solo and from another Role; within one Role two Jobs
+    share a login and only the Trailer tells them apart, which is why the
+    channel refuses on the Trailer rather than the login.
 
-    A16 asks for a second party. In a solorepo every comment an agent writes is
-    posted under the solo's account, so logins alone can never show two — and the
-    Article would be unsatisfiable exactly where it matters, between the solo and
-    the agent he is arguing with. An unsigned comment is the human; a signed one
-    is the Job that signed it.
+    A16 asks for a second party. Every comment an agent writes is posted under
+    its Role's account, so a login shows a Role and never a Job — and the
+    Article would be unsatisfiable exactly where it matters, between two Jobs of
+    one Role. An unsigned comment is the human; a signed one is the Job that
+    signed it.
     """
     seen = set()
     resolver = (thread.get("resolvedBy") or {}).get("login")
