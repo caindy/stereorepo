@@ -611,8 +611,8 @@ def main():
         print(made["html_url"])
     elif args.verb == "issue":
         cmd = ["issue", "create", "--title", args.title, "--body", body]
-        for label in args.label:
-            cmd += ["--label", label]
+        for name in args.label:
+            cmd += ["--label", name]
         print(gh(*cmd, parse=False))
     elif args.verb == "pr":
         print(gh("pr", "create", "--title", args.title, "--base", args.base,
