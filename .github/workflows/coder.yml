@@ -125,6 +125,12 @@ jobs:
             and a request for changes comes back to you as a new run. Do not
             arm a `medium` pull request yourself.
 
+            Arm or request review the moment the branch is pushed and the
+            body is final. Do not wait for the checks: the gate on the runner
+            is the same gate you ran, the reviewer runs on the request and
+            not on green, and a turn that ends "waiting on CI" is a run that
+            never asked for its review (#102).
+
             If you cannot finish — the Issue asks for a decision only the solo
             can take, the gate will not go green, or the work is larger than
             it looked — do not leave a half-built branch. Say where you
