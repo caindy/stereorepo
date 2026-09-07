@@ -248,9 +248,10 @@ def owned_and_open():
 
     Resolved by **branch**, because the branch is where the Job already is: one
     branch, one pull request, by construction, and it is what an agent wakes up
-    on. Authorship cannot do this job — every pull request in a solorepo is the
-    solo's (DR-014), so `--author @me` reconstructs a fact that was never in
-    doubt and says nothing about which one this thread is answerable for.
+    on — whoever authored it. Authorship cannot do this job — since DR-107 a
+    pull request is authored by the Role's account, not the solo's, so
+    `--author @me` only narrows to this Role's own pull requests and says
+    nothing about which one this thread is answerable for.
 
     No local state. A background task dies with the session that started it and
     a branch note would have to be found before it could be read; the checkout
