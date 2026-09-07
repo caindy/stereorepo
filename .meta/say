@@ -24,6 +24,8 @@ pass wrongly.
     .meta/say stack    <pr-or-branch>...        link layers into a stack, bottom first
     .meta/say merge    <pr> [--stack|--auto]    merge; a layer merges everything below it;
                                                --auto arms GitHub to merge when green
+    .meta/say advance  [<pr>]                  rebase every armed pull request that has
+                                               fallen behind its base back onto it
     .meta/say pr-body  <pr> < body.md          replace the body
     .meta/say issue-body <n> < body.md         replace an Issue's body
     .meta/say pr-title <pr> --title T
@@ -170,6 +172,98 @@ def stack(items):
     print(gh("stack", "link", *items, parse=False))
 
 
+def arm(pr, subject):
+    """Hand GitHub the intent to merge when the ruleset is satisfied.
+
+    One call, and two callers: the merge verb arming for the first time, and
+    `advance` arming again where moving the branch dropped it.
+    """
+    gh("pr", "merge", pr, "--squash", "--auto", "--subject", subject, parse=False)
+
+
+def behind_by(pull):
+    """How many commits of its base a pull request's head is missing.
+
+    `mergeStateStatus` is the obvious question and answers a different one.
+    GitHub computes it when it is asked for, so the first read after a push to
+    trunk is `UNKNOWN`; and `BLOCKED` outranks `BEHIND`, so a pull request
+    waiting on a review reports the review and hides the fact that it is also
+    out of date — which is every `medium` pull request (DR-112), and the case
+    where nobody is watching. A comparison answers what is actually being
+    decided: whether the head is missing commits the base has. GitHub answers
+    that the same way whatever else is outstanding.
+    """
+    return gh("api", f"repos/{repo()}/compare/"
+                     f"{pull['baseRefName']}...{pull['headRefOid']}")["behind_by"]
+
+
+ADVANCE = "number,title,baseRefName,headRefOid,autoMergeRequest"
+
+
+def advance(pr=None):
+    """Bring armed pull requests that have fallen behind their base back onto it.
+
+    An armed merge does not update its own branch, and `main` requires a pull
+    request to be current before it merges. So when two are green at once the
+    first lands and the second goes behind, armed, waiting for a Job that ended
+    when it armed — and nobody is told, because there is nobody left to tell
+    (#93). This is the step that moves it. `merge --auto` runs it before
+    arming, since a branch can be behind before it is armed as easily as
+    after; the other edge belongs to a workflow on every push to trunk, which
+    is the one event that puts a pull request in that state and which a Role's
+    token may not yet write (DR-113). Until it exists this is also the verb the
+    solo types instead of merging trunk in by hand.
+
+    **Armed, and nothing else.** A pull request nobody has asked to land is not
+    waiting on anything, and the rebase below rewrites commits under whatever
+    session still holds the branch. Arming is the last act of the Job that did
+    the work (DR-112), so an armed branch is one nobody is still standing on.
+
+    **By rebase, not by a merge commit.** GitHub authors the merge commit
+    itself and it carries no `Actor` Trailer, so A19 would turn the required
+    check red on the very branch this is unblocking — the fix would be the
+    defect wearing a new coat. A rebase writes no new commit: the branch's own
+    commits move onto the base with their messages, and so with their Trailers,
+    intact.
+
+    Read back, per A6: the outcome is what GitHub holds afterwards, not what
+    `gh` returned. Two things are asked. Whether the head is current now — the
+    base can move again while this runs, and a second push is a second run's
+    business, not a silent pass. And whether the arming survived the head
+    moving: GitHub drops auto-merge on some pushes to a head branch, and an
+    update that disarmed what it was unblocking would leave the pull request
+    exactly where it was found, with the sole witness gone.
+    """
+    if pr is not None:
+        found = [gh("pr", "view", pr, "--json", ADVANCE)]
+    else:
+        found = [p for p in gh("pr", "list", "--state", "open", "--json", ADVANCE)
+                 if p.get("autoMergeRequest")]
+    if not found:
+        print("advance: nothing armed is open")
+        return
+    moved, failed = 0, []
+    for pull in found:
+        number = str(pull["number"])
+        behind = behind_by(pull)
+        if not behind:
+            continue
+        gh("pr", "update-branch", number, "--rebase", parse=False)
+        moved += 1
+        print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
+              f"— {pull['title']}")
+        after = gh("pr", "view", number, "--json", ADVANCE)
+        if behind_by(after):
+            failed.append(f"#{number} is still behind {pull['baseRefName']} after the update")
+        elif pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
+            arm(number, f"{pull['title']} (#{number})")
+            print(f"armed #{number} again: moving the head had dropped it")
+    if not moved:
+        print(f"advance: {len(found)} pull request(s) current with their base")
+    if failed:
+        sys.exit("say: " + "; ".join(failed))
+
+
 def merge(pr, stack=False, auto=False):
     """Merge as the Role, label trunk with the pull request's title, and report
     what GitHub holds afterwards. With `stack`, merge every layer up to and
@@ -218,8 +312,13 @@ def merge(pr, stack=False, auto=False):
         if not gh("api", f"repos/{repo()}").get("allow_auto_merge"):
             sys.exit("say: this repository does not allow auto-merge; that is a setting on "
                      "GitHub, not a line here")
+        # Arming a branch that is already behind arms something that cannot
+        # merge, and the push to trunk that would have advanced it has already
+        # happened (#93). The other edge — falling behind after arming — is
+        # the workflow's.
+        advance(pr)
         try:
-            gh("pr", "merge", pr, "--squash", "--auto", "--subject", subject, parse=False)
+            arm(pr, subject)
         except SystemExit as exc:
             # Already mergeable: GitHub refuses to arm what it could just do,
             # in these words, and the plain merge below is the right act.
@@ -503,6 +602,8 @@ def main():
     p = sub.add_parser("commit"); p.add_argument("-m", "--message", required=True)
     p = sub.add_parser("merge"); p.add_argument("pr"); p.add_argument("--stack", action="store_true")
     p.add_argument("--auto", action="store_true", help="arm GitHub to merge when green")
+    p = sub.add_parser("advance")
+    p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
     p = sub.add_parser("stack"); p.add_argument("items", nargs="+")
     sub.add_parser("whoami")
     p = sub.add_parser("issue"); p.add_argument("--title", required=True); p.add_argument("--label", action="append", default=[])
@@ -532,6 +633,10 @@ def main():
 
     if args.verb == "merge":
         merge(args.pr, stack=args.stack, auto=args.auto)
+        return
+
+    if args.verb == "advance":
+        advance(args.pr)
         return
 
     if args.verb == "stack":

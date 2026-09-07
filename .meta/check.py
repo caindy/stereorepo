@@ -581,7 +581,9 @@ def hook_probes():
         # signed_channel: reaching GitHub without signing.
         ("refuse", bool(signed.blocked("gh pr comment 1 --body hi"))),
         ("refuse", bool(signed.blocked("curl https://api.github.com/repos/x/y"))),
+        ("refuse", bool(signed.blocked("gh pr update-branch 92 --rebase"))),
         ("allow", not signed.blocked(".meta/say comment 1")),
+        ("allow", not signed.blocked(".meta/say advance 92")),
         ("allow", not signed.blocked("gh pr view 1")),
         # worktree_only: reading past the worktree.
         ("refuse", bool(worktree.blocked("Grep", {"path": "/etc"}))),

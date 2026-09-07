@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/93
+    name: An armed merge that falls behind main stays behind, armed, with nobody told
+    challenge_type: DEFECT
+    description: >-
+      An armed merge does not update its own branch, and `main`'s ruleset
+      requires a pull request to be current before it merges. So when two are
+      green at once the first lands and the second goes behind, armed, waiting
+      for a Job that ended when it armed. #91 and #92 did exactly this on the
+      coder loop's first run: #92 was green, armed and stuck, and a person
+      merged `main` into it by hand. There is nobody left to tell, because
+      arming is the last act of the Job that did the work.
