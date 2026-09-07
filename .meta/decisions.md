@@ -147,6 +147,7 @@ and the query a reader in a file actually has.
 
 | Artifact | Entries |
 | :-- | :-- |
+| [`.github/workflows/advance.yml`](../.github/workflows/advance.yml) | [DR-113](assertions/decisions/DR-113.yaml) |
 | [`.github/workflows/coder.yml`](../.github/workflows/coder.yml) | [DR-112](assertions/decisions/DR-112.yaml) |
 | [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml), [DR-091](assertions/decisions/DR-091.yaml), [DR-094](assertions/decisions/DR-094.yaml), [DR-095](assertions/decisions/DR-095.yaml), [DR-105](assertions/decisions/DR-105.yaml) |
 | [`.github/workflows/review.yml`](../.github/workflows/review.yml) | [DR-109](assertions/decisions/DR-109.yaml), [DR-110](assertions/decisions/DR-110.yaml) |

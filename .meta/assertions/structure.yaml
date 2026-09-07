@@ -127,6 +127,9 @@ artifacts:
   - id: work:artifact/github-workflows-coder
     name: .github/workflows/coder.yml
     path: .github/workflows/coder.yml
+  - id: work:artifact/github-workflows-advance
+    name: .github/workflows/advance.yml
+    path: .github/workflows/advance.yml
   - id: work:artifact/justfile
     name: justfile
     path: justfile

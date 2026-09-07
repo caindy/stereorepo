@@ -209,10 +209,11 @@ def advance(pr=None):
     when it armed — and nobody is told, because there is nobody left to tell
     (#93). This is the step that moves it. `merge --auto` runs it before
     arming, since a branch can be behind before it is armed as easily as
-    after; the other edge belongs to a workflow on every push to trunk, which
-    is the one event that puts a pull request in that state and which a Role's
-    token may not yet write (DR-113). Until it exists this is also the verb the
-    solo types instead of merging trunk in by hand.
+    after; the other edge is `.github/workflows/advance.yml`, which runs this
+    on every push to trunk, the one event that puts a pull request in that
+    state (DR-113). Both edges are covered, so nobody should have to type this
+    — it takes a pull request number for the day one is behind for a reason
+    neither edge saw.
 
     **Armed, and nothing else.** A pull request nobody has asked to land is not
     waiting on anything, and the rebase below rewrites commits under whatever

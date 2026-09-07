@@ -9,6 +9,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-say
       - work:artifact/meta-hooks-signed-channel
+      - work:artifact/github-workflows-advance
     alternatives:
       - name: A merge queue
         chosen: false
@@ -86,17 +87,26 @@ decisions:
         reason `merge` and `close` are already there and one more: by hand it
         defaults to the unsigned merge commit above.
       - >-
-        The workflow that runs `advance` on a push to `main` is not here. A
-        Role's credential is a fine-grained token without the `workflow`
-        scope, so the coder loop cannot write a file under
-        `.github/workflows/` — GitHub refuses the push, and refuses the whole
-        of it rather than the file. It belongs in a file of its own rather
-        than a job in `gate.yml`: it holds a credential and the gate holds
-        none, and on a `pull_request` event GitHub runs a workflow from the
-        pull request's own ref, so a token named in the gate is a token a
-        pull request can rewrite the surroundings of. Until it lands, the
-        arming edge is covered and the falling-behind edge is
-        `.meta/say advance`, run by hand.
+        The workflow that runs `advance` on a push to `main` is
+        `.github/workflows/advance.yml`, a file of its own rather than a job in
+        `gate.yml`: it holds a credential and the gate holds none, and on a
+        `pull_request` event GitHub runs a workflow from the pull request's own
+        ref, so a token named in the gate is a token a pull request can rewrite
+        the surroundings of. Nothing but a push to `main` runs it, and a push
+        to `main` has already merged. It is serialised on a `concurrency` group
+        with `cancel-in-progress: false`, because two pushes in quick
+        succession are two runs that would rebase the same branches and the
+        second has to see what the first did.
+      - >-
+        It arrived a change later than the rest of this. A Role's credential is
+        a fine-grained token, and it carried no `workflow` scope, so the coder
+        loop could not write a file under `.github/workflows/` — GitHub
+        refuses the push, and refuses the whole of it rather than the file.
+        The run that took this decision stopped there and wrote the file into a
+        comment for a person to grant the scope or commit it; the scope was
+        granted. That is the general shape and not an accident of this Issue:
+        a change to a workflow is a change no Role can push until its token is
+        given the scope, and the loop returns it to the solo every time.
     falsifier: >-
       An armed pull request found behind `main` with nothing that tried to
       advance it, or a rebase that dropped an arming this could not restore.
