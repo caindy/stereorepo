@@ -457,6 +457,14 @@ disciplines:
         webhook, a scheduled job — and a harness that cannot keep it running
         says so after starting it, not instead.
       - >-
+        Leave nothing behind when it closes. GitHub deletes a merged branch and
+        nothing deletes the local one, so every checkout accumulates a branch
+        per pull request and a worktree per session, and the next Job reads
+        through the pile before finding its own. `check_pr.py --sweep` names
+        each branch whose remote is gone, with its pull request and the command
+        that removes it; run them. The branch this worktree stands on is
+        removed from the main checkout, or by the harness at exit.
+      - >-
         On arrival, read what GitHub holds — the pull request, the diff, the
         commits, the threads and the check states. There is nothing else, by
         design. Ask what this branch already owns: One branch is one

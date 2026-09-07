@@ -274,6 +274,51 @@ def owned_and_open():
                     for p in gh("pr", "list", "--state", "open", "--json", "number,title")]
 
 
+def residue():
+    """Local branches that outlived their pull request, and the worktrees on them.
+
+    GitHub deletes a merged branch and nothing deletes the local one, so every
+    checkout accumulates them (DR-108): a branch per pull request, a worktree
+    per session, and a listing the next Job reads through before finding its
+    own. The predicate is the remote being gone after a prune — a branch that
+    was never pushed is work in progress and is not named here.
+
+    Naming is this tool's whole part. Removing is one command per branch, and
+    it is printed rather than run, because a worktree may be the one this
+    process stands in, or another session's.
+    """
+    def git(*args):
+        return subprocess.run(["git", *args], capture_output=True, text=True).stdout
+    git("fetch", "--prune", "--quiet", "origin")
+    gone = [line.split()[0] for line in
+            git("for-each-ref", "--format=%(refname:short) %(upstream:track,nobracket)",
+                "refs/heads/").splitlines()
+            if line.endswith(" gone")]
+    if not gone:
+        return []
+    worktrees, path = {}, None
+    for line in git("worktree", "list", "--porcelain").splitlines():
+        if line.startswith("worktree "):
+            path = line[len("worktree "):]
+        elif line.startswith("branch refs/heads/"):
+            worktrees[line[len("branch refs/heads/"):]] = path
+    here = git("rev-parse", "--show-toplevel").strip()
+    out = []
+    for branch in gone:
+        found = gh("pr", "list", "--head", branch, "--state", "all", "--json", "number,state")
+        state = f"#{found[0]['number']} {found[0]['state'].lower()}" if found else "no pull request"
+        tree = worktrees.get(branch)
+        out.append(f"  {branch} — {state}" + (f"; worktree {tree}" if tree else ""))
+        if tree == here:
+            out.append("    this worktree stands on it: remove it from the main checkout, "
+                       "or let the harness at exit")
+            continue
+        if tree:
+            out.append(f"    git worktree remove {tree}")
+        out.append(f"    git branch -D {branch}")
+    return out
+
+
 def unpushed():
     """A18. Work in a worktree the successor will never see has not been done.
 
@@ -649,6 +694,11 @@ if __name__ == "__main__":
             print(f"#{number} {title} — {len(owed)} unaddressed")
             for item in owed:
                 print(item)
+        left = residue()
+        if left:
+            print(f"\n--- residue: {sum(1 for l in left if not l.startswith('    '))} "
+                  "branch(es) outlived their pull request ---")
+            print("\n".join(left))
         sys.exit(0)
 
     if args.handoff:
