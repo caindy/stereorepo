@@ -4,9 +4,9 @@
 # loop can take. This is the loop. It runs where the label lands, in a
 # container that holds one token — the coder's — claims the Issue, does the
 # work under the Disciplines, and leaves a pull request that can be merged:
-# gate green, branch pushed, body filled, merge armed, and for `medium` a
-# review requested first. What it cannot finish it hands to the solo by
-# relabelling `human` and saying why.
+# gate green, branch pushed, body filled, what landed posted, merge armed,
+# and for `medium` a review requested first. What it cannot finish it hands
+# to the solo by relabelling `human` and saying why.
 #
 # Nothing here restates how to work. `AGENTS.md`, the Disciplines and the two
 # forms are the checkout's; this file decides when the coder runs, as whom it
@@ -158,6 +158,11 @@ jobs:
             under it: gate green with `.meta/gate meta`, commit and push as
             you go, and update the body at the end with `.meta/say pr-body <n>`.
 
+            Post what landed for the Challenge before it merges, generated and
+            never typed: `uvx --with pyyaml python .meta/render.py --landed
+            ${{ github.event.issue.number }} | .meta/say comment <n>`. It is
+            the record's account of the Challenge, not a summary you write.
+
             If the label is `easy`, arm the merge, `.meta/say merge <n> --auto`,
             so it lands when the ruleset is satisfied: green is the review.
             If it is `medium`, request review, `.meta/say request-review <n>`,
@@ -220,6 +225,12 @@ jobs:
             right; a thread marked "Noticed and not done" is somebody else's
             to decide and you leave it open. Update the body if what changed
             changes it: `.meta/say pr-body ${{ steps.pr.outputs.number }}`.
+
+            Post what landed again before you request review: the Issue is
+            named under "What it closes" in the body, and
+            `uvx --with pyyaml python .meta/render.py --landed <issue-number> |
+            .meta/say comment ${{ steps.pr.outputs.number }}` picks up whatever
+            this pass added to the record.
 
             Then request review again, `.meta/say request-review ${{ steps.pr.outputs.number }}`,
             and stop. Do not arm the merge; the reviewer's approval does. Do
