@@ -31,3 +31,7 @@ sweep:
 # what landed for a Challenge, from the record; pipe it into `.meta/say comment <pr>`
 landed n:
     uvx --with pyyaml python .meta/render.py --landed {{n}}
+
+# what to work on next: pull requests, loops, the milestone, and what is ripe
+next:
+    python3 .meta/next.py

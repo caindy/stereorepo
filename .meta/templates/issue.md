@@ -5,7 +5,7 @@ noticed and not done becomes (A15), and it is how a Challenge arrives from
 outside — raised by the solo, by a scheduled job, or by an agent that has no
 other way to reach this repository.
 
-The middle heading is the filter. An observation earns an Issue when you can say
+The first line is what a listing reads, and the middle heading is the filter. An observation earns an Issue when you can say
 what would make it worth doing — a trigger, or a cost that will land. "This
 function is long" has neither, and filing it makes the tracker into the
 `TECH_DEBT.md` it replaced, with better tooling.
@@ -17,6 +17,10 @@ about: Work to be taken up — noticed and not done, or arriving from outside
 title: ""
 labels: challenge
 ---
+
+**Waits on.** Nothing — or `#<n>` per Issue that has to close first. One line,
+first, because `just next` reads it to say what is ripe; a blocker that is not
+an Issue keeps this waiting until the line is rewritten.
 
 **What was noticed.** The thing itself, and where. A path and a line if it has
 one.

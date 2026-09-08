@@ -34,3 +34,5 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   change — one commit per settled decision. `.meta/decisions.md` is an index
   generated from them; the entry itself is the assertion file.
 - An empty directory carries a README saying what will live there.
+- Asked what to work on next, run `just next` and read the screen. Do not
+  read Issue bodies to find out what waits on what: their first line says.

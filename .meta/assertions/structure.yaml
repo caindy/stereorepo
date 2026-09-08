@@ -172,6 +172,9 @@ artifacts:
   - id: work:artifact/meta-hooks-worktree-only
     name: .meta/hooks/worktree_only.py
     path: .meta/hooks/worktree_only.py
+  - id: work:artifact/meta-next
+    name: .meta/next.py
+    path: .meta/next.py
   - id: work:artifact/meta-readme
     name: .meta/README.md
     path: .meta/README.md

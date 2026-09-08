@@ -33,6 +33,7 @@ pass wrongly.
     .meta/say claim    <issue>                 take an Issue: assign it to this Role's account
     .meta/say label    <issue> [--add L] [--remove L]   move an Issue's labels
     .meta/say issue-comment <issue> < body.md  a comment on an Issue
+    .meta/say milestone <issue> --set T|--clear  put an Issue in a Milestone, creating it if new
     .meta/say request-review <pr> [--to R]     hand off: request review from Role R's account
     .meta/say --role reviewer review <pr> --approve|--request-changes|--comment < body.md
 
@@ -555,6 +556,33 @@ def label(issue, add, remove):
     print(f"#{issue} is labelled {', '.join(now)}")
 
 
+def milestone(issue, title, clear=False):
+    """Put an Issue in a Milestone, creating the Milestone when it is new, and
+    read back.
+
+    A Milestone is where the priority between Issues is written once (DR-114);
+    `just next` lists the lowest-numbered open one as next. Creating one is an
+    act GitHub records against an account, and `gh` has no verb for it, so it
+    goes through here like every other write.
+    """
+    if clear:
+        gh("issue", "edit", issue, "--milestone", "", parse=False)
+        now = gh("issue", "view", issue, "--json", "milestone")["milestone"]
+        if now:
+            sys.exit(f"say: GitHub shows #{issue} still in {now['title']!r} after the call")
+        print(f"#{issue} is in no Milestone")
+        return
+    existing = [m["title"] for m in gh("api", "repos/{owner}/{repo}/milestones?state=all&per_page=100")]
+    if title not in existing:
+        gh("api", "repos/{owner}/{repo}/milestones", "-f", f"title={title}", parse=False)
+        print(f"created Milestone {title!r}")
+    gh("issue", "edit", issue, "--milestone", title, parse=False)
+    now = gh("issue", "view", issue, "--json", "milestone")["milestone"]
+    if not now or now["title"] != title:
+        sys.exit(f"say: GitHub shows #{issue} in {now and now['title']!r} after the call, not {title!r}")
+    print(f"#{issue} is in Milestone {title!r}")
+
+
 def trailers():
     """The block this channel signs with, defined once because two readers need
     it: the one that writes it, and the one that recognises it."""
@@ -736,6 +764,10 @@ def build_parser():
     p = sub.add_parser("label"); p.add_argument("issue")
     p.add_argument("--add", action="append", default=[]); p.add_argument("--remove", action="append", default=[])
     p = sub.add_parser("issue-comment"); p.add_argument("issue")
+    p = sub.add_parser("milestone"); p.add_argument("issue")
+    target = p.add_mutually_exclusive_group(required=True)
+    target.add_argument("--set", dest="title", help="the Milestone's title; created if new")
+    target.add_argument("--clear", action="store_true", help="take the Issue out of its Milestone")
     return ap
 
 
@@ -767,6 +799,10 @@ def main():
 
     if args.verb == "label":
         label(args.issue, args.add, args.remove)
+        return
+
+    if args.verb == "milestone":
+        milestone(args.issue, args.title, clear=args.clear)
         return
 
     if args.verb == "request-review":

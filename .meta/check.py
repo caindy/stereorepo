@@ -930,6 +930,9 @@ def say_parser_probes():
         ("claim 93", {"verb": "claim", "issue": "93"}),
         ("label 93 --add human --remove easy",
          {"verb": "label", "issue": "93", "add": ["human"], "remove": ["easy"]}),
+        ("milestone 75 --set first-specialization",
+         {"verb": "milestone", "issue": "75", "title": "first-specialization", "clear": False}),
+        ("milestone 75 --clear", {"verb": "milestone", "issue": "75", "title": None, "clear": True}),
     ]
     problems = []
     with contextlib.redirect_stderr(io.StringIO()):
@@ -943,7 +946,8 @@ def say_parser_probes():
                 got = getattr(args, key, None)
                 if got != value:
                     problems.append(f"`.meta/say {line}`: {key} was {got!r}, not {value!r}")
-        for line in ("review 1", "issue-comment 93 --approve"):
+        for line in ("review 1", "issue-comment 93 --approve", "milestone 75",
+                     "milestone 75 --set x --clear"):
             try:
                 say.build_parser().parse_args(line.split())
                 problems.append(f"`.meta/say {line}` parsed, and should have been rejected")

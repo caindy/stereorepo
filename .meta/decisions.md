@@ -129,6 +129,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-111](assertions/decisions/DR-111.yaml) | GitHub holds the intent to merge when green, and the watch keys a check on its run | Adopted |
 | [DR-112](assertions/decisions/DR-112.yaml) | A difficulty label is the raiser's estimate, one workflow takes an Issue by it, and a loop that cannot finish hands it to the solo | Adopted |
 | [DR-113](assertions/decisions/DR-113.yaml) | An armed merge is brought current with its base by the channel, rebasing rather than merging, on the push that put it behind | Adopted |
+| [DR-114](assertions/decisions/DR-114.yaml) | What to work on next is a verb over fields a listing can read: a first line that says what an Issue waits on, a Milestone for the priority, and a sweep that refuses an untriaged Challenge | Adopted |
 
 ## Holes
 
@@ -149,10 +150,10 @@ and the query a reader in a file actually has.
 | :-- | :-- |
 | [`.github/workflows/advance.yml`](../.github/workflows/advance.yml) | [DR-113](assertions/decisions/DR-113.yaml) |
 | [`.github/workflows/coder.yml`](../.github/workflows/coder.yml) | [DR-112](assertions/decisions/DR-112.yaml) |
-| [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml), [DR-091](assertions/decisions/DR-091.yaml), [DR-094](assertions/decisions/DR-094.yaml), [DR-095](assertions/decisions/DR-095.yaml), [DR-105](assertions/decisions/DR-105.yaml) |
+| [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml), [DR-091](assertions/decisions/DR-091.yaml), [DR-094](assertions/decisions/DR-094.yaml), [DR-095](assertions/decisions/DR-095.yaml), [DR-105](assertions/decisions/DR-105.yaml), [DR-114](assertions/decisions/DR-114.yaml) |
 | [`.github/workflows/review.yml`](../.github/workflows/review.yml) | [DR-109](assertions/decisions/DR-109.yaml), [DR-110](assertions/decisions/DR-110.yaml) |
 | [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml) |
-| [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-088](assertions/decisions/DR-088.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-106](assertions/decisions/DR-106.yaml) |
+| [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-088](assertions/decisions/DR-088.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-114](assertions/decisions/DR-114.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml) |
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
 | [`.meta/assertions/vocabulary.yaml`](assertions/vocabulary.yaml) | [DR-035](assertions/decisions/DR-035.yaml) |
@@ -165,12 +166,13 @@ and the query a reader in a file actually has.
 | [`.meta/gate`](gate) | [DR-104](assertions/decisions/DR-104.yaml) |
 | [`.meta/hooks/signed_channel.py`](hooks/signed_channel.py) | [DR-069](assertions/decisions/DR-069.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-113](assertions/decisions/DR-113.yaml) |
 | [`.meta/hooks/worktree_only.py`](hooks/worktree_only.py) | [DR-110](assertions/decisions/DR-110.yaml) |
-| [`.meta/render.py`](render.py) | [DR-011](assertions/decisions/DR-011.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-040](assertions/decisions/DR-040.yaml), [DR-059](assertions/decisions/DR-059.yaml), [DR-060](assertions/decisions/DR-060.yaml), [DR-077](assertions/decisions/DR-077.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-088](assertions/decisions/DR-088.yaml), [DR-102](assertions/decisions/DR-102.yaml), [DR-106](assertions/decisions/DR-106.yaml) |
-| [`.meta/say`](say) | [DR-062](assertions/decisions/DR-062.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-068](assertions/decisions/DR-068.yaml), [DR-069](assertions/decisions/DR-069.yaml), [DR-072](assertions/decisions/DR-072.yaml), [DR-073](assertions/decisions/DR-073.yaml), [DR-074](assertions/decisions/DR-074.yaml), [DR-075](assertions/decisions/DR-075.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-111](assertions/decisions/DR-111.yaml), [DR-112](assertions/decisions/DR-112.yaml), [DR-113](assertions/decisions/DR-113.yaml) |
+| [`.meta/next.py`](next.py) | [DR-114](assertions/decisions/DR-114.yaml) |
+| [`.meta/render.py`](render.py) | [DR-011](assertions/decisions/DR-011.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-040](assertions/decisions/DR-040.yaml), [DR-059](assertions/decisions/DR-059.yaml), [DR-060](assertions/decisions/DR-060.yaml), [DR-077](assertions/decisions/DR-077.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-088](assertions/decisions/DR-088.yaml), [DR-102](assertions/decisions/DR-102.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-114](assertions/decisions/DR-114.yaml) |
+| [`.meta/say`](say) | [DR-062](assertions/decisions/DR-062.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-068](assertions/decisions/DR-068.yaml), [DR-069](assertions/decisions/DR-069.yaml), [DR-072](assertions/decisions/DR-072.yaml), [DR-073](assertions/decisions/DR-073.yaml), [DR-074](assertions/decisions/DR-074.yaml), [DR-075](assertions/decisions/DR-075.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-111](assertions/decisions/DR-111.yaml), [DR-112](assertions/decisions/DR-112.yaml), [DR-113](assertions/decisions/DR-113.yaml), [DR-114](assertions/decisions/DR-114.yaml) |
 | [`.meta/schemas.md`](schemas.md) | [DR-003](assertions/decisions/DR-003.yaml) |
-| [`.meta/templates/issue.md`](templates/issue.md) | [DR-112](assertions/decisions/DR-112.yaml) |
+| [`.meta/templates/issue.md`](templates/issue.md) | [DR-112](assertions/decisions/DR-112.yaml), [DR-114](assertions/decisions/DR-114.yaml) |
 | [`.meta/templates/pull-request.md`](templates/pull-request.md) | [DR-055](assertions/decisions/DR-055.yaml), [DR-076](assertions/decisions/DR-076.yaml), [DR-089](assertions/decisions/DR-089.yaml) |
-| [`.meta/templates/roadmap.md`](templates/roadmap.md) | [DR-088](assertions/decisions/DR-088.yaml) |
+| [`.meta/templates/roadmap.md`](templates/roadmap.md) | [DR-088](assertions/decisions/DR-088.yaml), [DR-114](assertions/decisions/DR-114.yaml) |
 | [`.meta/vocabulary.md`](vocabulary.md) | [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml) |
 | [`.meta/work/actors.yaml`](work/actors.yaml) | [DR-019](assertions/decisions/DR-019.yaml) |
 | [`.meta/work/authority.yaml`](work/authority.yaml) | [DR-005](assertions/decisions/DR-005.yaml), [DR-008](assertions/decisions/DR-008.yaml) |
@@ -193,5 +195,5 @@ and the query a reader in a file actually has.
 | [`bootstraps/rust/literate-programming.md`](../bootstraps/rust/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
 | [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml) |
-| [`justfile`](../justfile) | [DR-106](assertions/decisions/DR-106.yaml) |
+| [`justfile`](../justfile) | [DR-106](assertions/decisions/DR-106.yaml), [DR-114](assertions/decisions/DR-114.yaml) |
 | [`stakeholders/README.md`](../stakeholders/README.md) | [DR-041](assertions/decisions/DR-041.yaml) |

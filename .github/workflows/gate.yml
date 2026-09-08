@@ -28,6 +28,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  issues: read
   checks: write
 
 env:
@@ -120,5 +121,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - run: python3 .meta/check_pr.py --all --publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+      # And the queue: a Challenge with no difficulty is one the coder cannot
+      # see, and nothing else tells an empty queue from an untriaged one
+      # (DR-114). Red here is a label the solo owes, not a broken build.
+      - run: python3 .meta/next.py --check
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
