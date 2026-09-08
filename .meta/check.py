@@ -123,9 +123,13 @@ Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _note_dup
 
 
 def duplicate_keys():
-    """Every YAML the gate reads, including the schemas and the seed."""
+    """Every YAML the gate reads, including the schemas and the seed — and the
+    seeded workflow, whose one typo `safe_load` will not report is this one: a
+    second `steps:` under a job parses, the last wins, and the block that
+    checks out the tree is dropped without a word."""
     problems = []
-    for path in sorted([*META.rglob("*.yaml"), *TEMPLATE.rglob("*.yaml")]):
+    for path in sorted([*META.rglob("*.yaml"), *TEMPLATE.rglob("*.yaml"),
+                        *TEMPLATE.rglob("*.yml")]):
         _DUPLICATES.clear()
         try:
             yaml.load(path.read_text(), Loader=Strict)
@@ -287,10 +291,15 @@ def surviving_placeholders():
 def template_parses(views):
     """The template is data and is not linted in place. It is checked by filling
     it in and testing the result, which is the only version anyone runs.
+
+    A `.yml` here is a workflow, not an assertion: nothing in the scaffold ever
+    loads it, so it is parsed and no further. A container would reject it, and
+    the alternative to parsing it is that a portfolio's first CI run is where a
+    typo in it is found.
     """
     problems = []
     for src, _ in _template_files():
-        if src.suffix != ".yaml":
+        if src.suffix not in (".yaml", ".yml"):
             continue
         filled = TOKEN.sub("placeholder", src.read_text())
         rel = src.relative_to(ROOT)
@@ -299,7 +308,7 @@ def template_parses(views):
         except yaml.YAMLError as exc:
             problems.append(f"{rel}: does not parse once filled in — {exc}")
             continue
-        if not data:
+        if not data or src.suffix == ".yml":
             continue
         sv, _ = view_for(data, views)
         if sv is None:
@@ -1011,8 +1020,14 @@ SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/")
 
 def inherited():
     """What Specialization copies into a portfolio, read from the step that
-    lists it, so the copy set is stated once and this check follows it."""
-    data = yaml.safe_load((META / "assertions" / "disciplines.yaml").read_text()) or {}
+    lists it, so the copy set is stated once and this check follows it. A
+    portfolio carries no Specialization Discipline — its Disciplines are under
+    `imported/`, and this one is not among them — so the file is absent there,
+    and absent means nothing to scan rather than a check that dies (A6)."""
+    source = META / "assertions" / "disciplines.yaml"
+    if not source.is_file():
+        return []
+    data = yaml.safe_load(source.read_text()) or {}
     for discipline in data.get("disciplines") or []:
         if discipline.get("id") != "work:discipline/specialization":
             continue
@@ -1035,21 +1050,36 @@ def scaffold_only_paths():
     set from the Specialization step, so in a portfolio — where the Discipline
     is not carried — it has nothing to scan and says nothing, which is right:
     the copy is the scaffold's to get right before it happens.
+
+    `.yml` is read as well as `.yaml`, because the copied set is not only prose:
+    a workflow is a copied file that names paths, and the gate workflow named
+    two `bootstraps/` renders for as long as it travelled (#75) without this
+    check seeing a suffix it read.
+
+    `template/` is the copied set too — the replacements, which step three
+    copies whole — so it is walked here as well, for the two names it can
+    carry: it cannot name itself, and the seeded gate workflow is where the
+    next `bootstraps/` render would be typed (DR-115).
     """
     problems = []
-    for token in inherited():
-        base = ROOT / token if (ROOT / token).exists() else META / token
-        paths = [base] if base.is_file() else sorted(base.rglob("*")) if base.is_dir() else []
+
+    def scan(paths, names):
         for path in paths:
-            if path.suffix not in (".md", ".yaml") or not path.is_file():
+            if path.suffix not in (".md", ".yaml", ".yml") or not path.is_file():
                 continue
             for number, line in enumerate(path.read_text().splitlines(), 1):
                 if "solorepo" in line.lower():
                     continue
-                for name in SCAFFOLD_ONLY:
+                for name in names:
                     if name in line:
                         problems.append(f"{path.relative_to(ROOT)}:{number} names "
                                         f"'{name}', which a portfolio does not have")
+
+    for token in inherited():
+        base = ROOT / token if (ROOT / token).exists() else META / token
+        paths = [base] if base.is_file() else sorted(base.rglob("*")) if base.is_dir() else []
+        scan(paths, SCAFFOLD_ONLY)
+    scan(sorted(TEMPLATE.rglob("*")), tuple(n for n in SCAFFOLD_ONLY if n != "template/"))
     return problems
 
 

@@ -63,7 +63,11 @@ def short(ident):
 def select(word, projects, products):
     """The Projects a word names: all of them for no word, one by id, tail or
     path, or every Project a Product is built from. A word that names nothing
-    is an error, not an empty run — a gate that ran nothing would print `ok`."""
+    is an error, not an empty run — a gate that ran nothing would print `ok`.
+    An empty selection is refused in `main`, where every path arrives: no word
+    over no Projects, which is a portfolio between the step that copies
+    `structure.yaml` and the step that fills it in, and a Product asserted
+    before anything it is `built_from`, which the schema allows."""
     if word is None:
         return list(projects.values())
     for ident, project in projects.items():
@@ -122,6 +126,13 @@ def main(argv):
     word = argv[1] if len(argv) > 1 else None
     projects, products = structure()
     chosen = select(word, projects, products)
+    if not chosen:
+        # `select` has already refused a word that names nothing, so an empty
+        # selection here is an empty run, and the check required of every merge
+        # must say so rather than pass on nothing.
+        what = (f"no Project is asserted in {STRUCTURE.relative_to(ROOT)}" if word is None
+                else f"{word} is built from no Project")
+        sys.exit(f"gate: {what}, so there is no gate to run. A gate over nothing is not green.")
     failures = []
     total = 0
     for project in chosen:

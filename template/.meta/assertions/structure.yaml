@@ -10,8 +10,18 @@ portfolio:
 # Product with an invented Persona satisfies the schema and defeats the point.
 products: []
 
-# One Project per toolchain: one language, one test suite, one gate.
-projects: []
+# One Project per toolchain: one language, one test suite, one gate. `.meta` is
+# the first, seeded, so that `.meta/gate` has something to run from step three
+# and `check.py` runs in CI from the portfolio's first pull request. A gate over
+# no Projects is a failure, not a green run.
+projects:
+  - id: work:project/meta
+    name: .meta
+    description: >-
+      The staging ground: the assertions and the tooling that renders and
+      checks them.
+    language: LinkML YAML, with Python for rendering and the gate
+    gate: uvx --with linkml --with pyyaml python .meta/check.py
 
 # The artifacts a Decision names under `enacted_in`. A file earns an entry by
 # being answerable for something.

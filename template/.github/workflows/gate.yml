@@ -1,0 +1,80 @@
+# The gate, run where it cannot be skipped.
+#
+# One job runs `.meta/gate`, which reads this portfolio's `structure.yaml` and
+# runs the gate every Project it declares asserts. So this file lists no
+# Project and does not change when one arrives: a Project is added by being
+# asserted, and its gate runs here by the same act. What can still need an edit
+# is a *tool* — a Project whose gate calls something the runner does not carry
+# adds the step that installs it below, beside the one that installs `uv`.
+#
+# Nothing here restates a Discipline. What a pull request body must contain is
+# derived from `.meta/templates/pull-request.md` by the checker; this file only
+# decides when the checker runs.
+name: gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+  # Resolving a thread fires no Actions event at all — `pull_request_review_thread`
+  # is a webhook GitHub does not accept as a trigger. So A16 is checked on the
+  # last push, and again on the clock: the sweep below re-runs the check on every
+  # open pull request and publishes the result as the check (DR-105). The gap is
+  # the interval. `workflow_dispatch` runs the same sweep on demand.
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+# The job names below are what `main`'s ruleset should require as status checks
+# (a ruleset, not a hook — DR-056). Rename one here and every merge blocks: the
+# ruleset waits on a check that nothing reports. `check_pr.py` reads the ruleset
+# and compares, so the set is checked rather than remembered. There are two, and
+# there stay two however many Projects this portfolio grows.
+jobs:
+  gate:
+    name: gate
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned exactly: setup-uv publishes no floating major past v7 while
+      # releasing v10, so `@v10` resolves to nothing and fails the run.
+      - uses: actions/checkout@v7.0.1
+      # `.meta/gate` and `check.py` both run through `uvx`, so `uv` is the one
+      # tool the runner needs before it can ask what the Projects are.
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: false
+      - run: .meta/gate
+
+  pull-request:
+    name: pull request
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # `gh` is on the runner already, and the checker is stdlib only, so this
+      # job stays fast enough to run on every edit to the body.
+      - run: python3 .meta/check_pr.py "$PR"
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+
+  # The same check, on the clock, for every open pull request — and its result
+  # published under the job name above, so the ruleset reads the sweep's
+  # verdict as it read the push's. Not a required check itself: it is the
+  # required check, run later.
+  sweep:
+    name: sweep
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - run: python3 .meta/check_pr.py --all --publish
+        env:
+          GH_TOKEN: ${{ github.token }}

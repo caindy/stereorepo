@@ -32,5 +32,5 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 - When a question that demanded an answer is settled, add an entry to
   `.meta/assertions/decisions/DR-0nn.yaml`, re-render, and commit it together with
   the change. `.meta/decisions.md` is an index generated from them.
-- The gate is `uvx --with linkml --with pyyaml python .meta/check.py`. Green
-  before anything is called done.
+- The gate is `.meta/gate`: every Project's, or one by name — `.meta/gate meta`
+  runs `check.py` alone. Green before anything is called done.

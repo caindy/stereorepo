@@ -235,3 +235,15 @@ artifacts:
   - id: work:artifact/stakeholders-readme
     name: stakeholders/README.md
     path: stakeholders/README.md
+  - id: work:artifact/template-github-workflows-gate
+    name: template/.github/workflows/gate.yml
+    path: template/.github/workflows/gate.yml
+  - id: work:artifact/template-meta-assertions-structure
+    name: template/.meta/assertions/structure.yaml
+    path: template/.meta/assertions/structure.yaml
+  - id: work:artifact/template-meta-readme
+    name: template/.meta/README.md
+    path: template/.meta/README.md
+  - id: work:artifact/template-agents
+    name: template/AGENTS.md
+    path: template/AGENTS.md

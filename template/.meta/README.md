@@ -74,6 +74,17 @@ subsumes the staleness check above:
 uvx --with linkml --with pyyaml python .meta/check.py
 ```
 
+**One verb runs any Project's gate, or a Product's: `.meta/gate`.** It reads
+`assertions/structure.yaml` for what to run and each gate's report for what
+happened, and a gate that prints no step in A21's shape fails — as does a run
+that selected nothing. A Project is gated in CI by being asserted: the `gate`
+job runs this verb and names no Project itself.
+
+```bash
+.meta/gate                  # every Project
+.meta/gate meta             # one Project: check.py alone
+```
+
 **The gate for a pull request is `check_pr.py`.** It reads GitHub rather than
 the tree, so it is a separate command with a separate lifecycle — nothing to say
 except on a pull request. It holds A15: every item under *what was noticed and
@@ -84,5 +95,6 @@ nowhere to live afterwards.
 python3 .meta/check_pr.py 12
 ```
 
-Both run in [`.github/workflows/gate.yml`](../.github/workflows/gate.yml), which
-is the point — a check that runs when someone remembers is not a check.
+`.meta/gate` and `check_pr.py` both run in
+[`.github/workflows/gate.yml`](../.github/workflows/gate.yml), which is the
+point — a check that runs when someone remembers is not a check.

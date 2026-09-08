@@ -1,0 +1,134 @@
+decisions:
+  - id: work:decision/115
+    name: "DR-115 · A portfolio's gate workflow is a seeded file of its own, with one job that runs .meta/gate over the Projects it declares"
+    challenge: work:challenge/75
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/9
+    enacted_in:
+      - work:artifact/template-github-workflows-gate
+      - work:artifact/template-meta-assertions-structure
+      - work:artifact/github-workflows-gate
+      - work:artifact/meta-gate
+      - work:artifact/meta-check
+      - work:artifact/meta-disciplines
+      - work:artifact/template-meta-readme
+      - work:artifact/template-agents
+      - work:artifact/specialize
+    alternatives:
+      - name: Copy the scaffold's workflow and make it work everywhere
+        chosen: false
+        reason: >-
+          What was in place, and it cannot be made to work. The two seed jobs
+          render `bootstraps/`, which stays with the scaffold by decision, so
+          the copy is red on day one on jobs the portfolio has no way to
+          satisfy. Guarding them on a path that exists would leave a portfolio
+          carrying two skipped jobs forever, which is the scaffold's history
+          shipped as dead configuration.
+      - name: Collapse the scaffold's own jobs into one `.meta/gate` job and copy that
+        chosen: false
+        reason: >-
+          The obvious fix, and the one DR-104 already declined for the reason
+          that still holds: `files`, `rust seed` and `python seed` are required
+          status checks named in `main`'s ruleset, which is a setting on GitHub
+          rather than a line in the tree. Renaming them here leaves the ruleset
+          waiting on contexts nothing reports and every merge blocked, so the
+          change cannot land by itself — and it would take the scaffold's seed
+          jobs, which gate a *render* rather than a Project, and fold them into
+          a runner that reads `structure.yaml`, where they are not.
+      - name: Render the workflow from the assertions
+        chosen: false
+        reason: >-
+          One job per Project, generated. It derives the right thing and makes
+          the job names move: a Project added is a required status check added,
+          which is a GitHub setting per Project rather than none. Static job
+          names are what let the ruleset stay a thing set once, and that is the
+          property worth more here than per-Project granularity in the run log.
+      - name: A seeded workflow under `template/`, with one job that runs `.meta/gate`
+        chosen: true
+        reason: >-
+          `template/` is already where a file that must carry none of the
+          scaffold's content lives, and this is one: a portfolio's gate workflow
+          shares the scaffold's triggers and its two pull request jobs, and
+          shares no Project with it. Its one gate job runs `.meta/gate`, which
+          reads the portfolio's own `structure.yaml`, so a Project asserted is a
+          Project gated in CI and the file does not change. The scaffold's
+          `.github/workflows/gate.yml` stops travelling and keeps its three
+          jobs, which answers where the seed jobs live: in the workflow a
+          portfolio never copies. What it costs: two workflows that will drift
+          in their shared half, and a seed that is parsed rather than run.
+    consequences:
+      - >-
+        Specialization's second step names the three loop workflows it copies
+        instead of `.github/workflows/`, and step three supplies the gate
+        workflow with the rest of `template/`.
+      - >-
+        `check.py`'s `scaffold-only paths` step reads `.yml` as well as `.md`
+        and `.yaml`, so a copied workflow naming `bootstraps/`, `template/` or
+        `SPECIALIZE.md` is a failure — and it walks `template/`, which is the
+        copied set now, so the seeded workflow is scanned where the next
+        `bootstraps/` render would be typed. The suffix alone would have read
+        a file that left the copy set in the same change. `template parses`
+        reads `.yml` too and parses it and no further: a workflow is not an
+        assertion and no container accepts one.
+      - >-
+        A portfolio's ruleset requires two status checks, `gate` and `pull
+        request`, and goes on requiring two however many Projects it grows.
+        Nothing in the scaffold's ruleset changes.
+      - >-
+        A Project whose gate calls a tool the runner does not carry —
+        `cargo-mutants`, a database, a linter — still needs a step adding to
+        the workflow. What a Project no longer needs is a *job*.
+      - >-
+        `template/.meta/assertions/structure.yaml` seeds one Project, `meta`,
+        whose gate is `check.py`. A portfolio has a Project from step three, so
+        the `gate` job invokes `check.py` from its first pull request — what
+        the copied workflow's `files` job did — and `.meta/gate meta`, which
+        the coder loop tells its Job to get green, names something. Invoked
+        is not green, and the two are separated here rather than conflated.
+        Step two now copies `.meta/say`, `.meta/hooks/` and
+        `.claude/settings.json`, so the four prechecks pass in a portfolio and
+        the hook they probe is one something invokes — that half was this
+        change's, because it is the half that no amount of step four or step
+        five would have fixed and the half a `check.py` invoked by nothing had
+        never been asked. `inherited()` returns nothing where the
+        Specialization Discipline is absent, so `scaffold-only paths` says
+        nothing in a portfolio, as its docstring claims; before the guard it
+        raised there and took `template parses` and `rendered prose` down
+        with it, which is a gate that crashes rather than reports. What
+        remains red after the steps as written are run is three steps on one
+        cause — `unresolved references`, `cited decisions` and `markdown
+        links`, each on the imported record citing a Decision a portfolio does
+        not carry — which predates this change and is its own Challenge; what
+        this change does is make the one required check the place where it
+        shows.
+      - >-
+        `.meta/gate` exits red on an empty selection, in the words of its own
+        `select`: a gate that ran nothing is not green. The refusal is in
+        `main`, where every path arrives, so it covers no word over no
+        Projects — the state the seed now prevents — and a Product asserted
+        before anything it is `built_from`, which the schema allows.
+      - >-
+        `duplicate_keys` reads the seeded `.yml` as well, since a second
+        `steps:` under a job is the one workflow typo `safe_load` accepts
+        silently, and that is the check that finds it.
+    falsifier: >-
+      A portfolio whose first CI run is red on the copied workflow anyway. The
+      seed is parsed here, not run, which is A9 satisfied thinly: `template/` is
+      filled and validated, and a workflow's real gate is GitHub accepting it.
+      That sends this to a rendered portfolio run — the scaffold specializing
+      itself into a scratch repo and watching the workflow go green — which is
+      the same shape the Bootstrap seeds already have.
+    rationale: |-
+      #71 noticed the workflow travelling and #53's runner was already
+      built, so the shape was not in doubt: a portfolio's gate is
+      `.meta/gate`. What was open was where the file comes from, and the
+      answer turned on the ruleset. Required status checks name jobs and
+      live on GitHub, so a workflow whose job names derive from the
+      assertions moves a GitHub setting every time a Project is added.
+      One static job that asks the assertions what to run keeps the
+      derivation and leaves the setting alone — and once the job set is
+      static and shares nothing with the scaffold's, the file is a
+      replacement rather than an inheritance, which is what `template/`
+      is for.

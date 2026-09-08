@@ -1,5 +1,11 @@
 # The gate, run where it cannot be skipped.
 #
+# solorepo's own, and no portfolio's: the two seed jobs below render
+# `bootstraps/`, which stays here. A portfolio's gate workflow is seeded at
+# `template/.github/workflows/gate.yml`, where one job runs `.meta/gate` over
+# the Projects its assertions declare (DR-115). A change to the triggers, or to
+# either pull request job, is a change to make in both.
+#
 # A check that runs when someone remembers is not a check — Nothing Unconsumed
 # applied to the checker itself. Both halves run here: `check.py` reads files and
 # needs no network, `check_pr.py` reads GitHub and has nothing to say except
