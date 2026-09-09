@@ -219,16 +219,24 @@ def where_of(thread, owed=True):
     return where
 
 
-def shown(thread, where):
-    """A thread as the listing prints it: its id, where it sits, who said what."""
+def shown(thread, where, limit=600):
+    """A thread as the listing prints it: its id, where it sits, who said what.
+
+    `limit` cuts each comment at that many characters; `None` prints it whole.
+    The sweep's per-item line stays cut — its job is to say a thread is owed,
+    not to be read — but `--threads` and `--resume`, which are how a thread
+    gets read and answered, pass `None`: a comment cut mid-point reads as the
+    whole of it, and a reader who trusts that has answered half a point (#126).
+    """
     spoke = []
     for c in thread["comments"]["nodes"]:
         who = (c["author"] or {}).get("login", "someone")
-        spoke.append(f"    {who}: " + " ".join((c["body"] or "").split())[:600])
+        body = " ".join((c["body"] or "").split())
+        spoke.append(f"    {who}: " + (body if limit is None else body[:limit]))
     return f"  {thread['id']}\n  {where}\n" + "\n".join(spoke)
 
 
-def unaddressed(nodes, parked=False):
+def unaddressed(nodes, parked=False, limit=600):
     """What is still owed an answer, in the order a reader should take them.
 
     Unresolved is the test, and it now covers two different things. A review
@@ -258,11 +266,11 @@ def unaddressed(nodes, parked=False):
         held = bool(comments) and bool(NOTICED.search(comments[-1]["body"] or ""))
         if held != parked:
             continue
-        out.append(shown(t, where_of(t)))
+        out.append(shown(t, where_of(t), limit=limit))
     return out
 
 
-def settled(nodes):
+def settled(nodes, limit=600):
     """What was answered and resolved, in the shape of what is owed.
 
     `unaddressed` hides these on purpose: unresolved is the test, and a
@@ -278,7 +286,7 @@ def settled(nodes):
         if not t["isResolved"]:
             continue
         by = (t.get("resolvedBy") or {}).get("login", "someone")
-        out.append(shown(t, where_of(t, owed=False) + f" — resolved by {by}"))
+        out.append(shown(t, where_of(t, owed=False) + f" — resolved by {by}", limit=limit))
     return out
 
 
@@ -443,7 +451,7 @@ def resume(ref):
     if given:
         out.append(f"--- {len(given)} verdict(s), newest first, each on the head GitHub recorded it against ---")
         out += given
-    owed = unaddressed(held["reviewThreads"]["nodes"])
+    owed = unaddressed(held["reviewThreads"]["nodes"], limit=None)
     out.append(f"--- {len(owed)} thread(s) owed an answer ---")
     out += owed
     return "\n".join(out)
@@ -805,7 +813,9 @@ if __name__ == "__main__":
             ap.error("--threads needs a pull request")
         held = pull(args.pr)
         nodes = held["reviewThreads"]["nodes"]
-        owed, parked, done = unaddressed(nodes), unaddressed(nodes, parked=True), settled(nodes)
+        owed, parked, done = (unaddressed(nodes, limit=None),
+                               unaddressed(nodes, parked=True, limit=None),
+                               settled(nodes, limit=None))
         given = verdicts(held["reviews"]["nodes"])
         if given:
             print(f"--- {len(given)} verdict(s), newest first, each on the head GitHub recorded it against ---")
