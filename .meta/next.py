@@ -25,7 +25,9 @@ What it reads, and from where:
   happen to cite it.
 - **Pull requests and loops.** What is open, whether the merge is armed and
   whether it fell behind main; and the last run of each loop workflow, so
-  "idle" is a fact and not an impression.
+  "idle" is a fact and not an impression. An open pull request is the loops'
+  work in progress, not an answer to what is next: the answer is an Issue,
+  and the pull request is shown so that its being worked is a fact too.
 
 Reads only, through `gh`, which the hook permits. Nothing here writes.
 """
@@ -120,7 +122,7 @@ def pull_requests():
     prs = gh("pr", "list", "--state", "open", "--json",
              "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,isDraft,headRefName",
              default=[])
-    print("pull requests")
+    print("pull requests — the loops' work in progress, not what is next")
     if not prs:
         print("  none open")
     for pr in prs:

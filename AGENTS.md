@@ -39,5 +39,13 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   answered when it lands and not when someone looks. When one closes, `just
   sweep` names the branches whose remote is gone and the command that removes
   each; run them. Both are the harness's business, not a Discipline's step.
-- Asked what to work on next, run `just next` and read the screen. Do not
-  read Issue bodies to find out what waits on what: their first line says.
+- Asked what to work on next, run `just next` and read the screen. The
+  answer is an Issue: the next Milestone, then the ripe list. An open pull
+  request on that screen is the loops' work in progress, not the answer;
+  do not go and read its threads. Do not read Issue bodies to find out what
+  waits on what: their first line says.
+- Nothing about this repository is written to the harness's memory. What a
+  session needs remembered goes into an artifact that already exists: the
+  Python script whose behaviour it changes; failing that, the skill that
+  wraps the script; failing that, the prompt hierarchy, this file being its
+  top. A memory file is a fact only one session can read.
