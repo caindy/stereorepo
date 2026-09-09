@@ -28,7 +28,7 @@ for what it owns. This file routes. It does not restate.
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
 | changing or defending a rule | its DR in `assertions/decisions/`, **and** the file that states it |
 | an id you need to resolve — `work:persona/the-solo`, say | `grep -rn -A2 "id: <the curie>" .meta/assertions/`. Every identified object is declared once, there |
-| what is intended but unbuilt, or still open | the Issues labelled `roadmap` — `gh issue list --label roadmap`. They look forward; a `challenge` Issue looks back |
+| what to work on next, or what is intended but unbuilt | `python3 .meta/next.py` — one screen: pull requests, the loops, the Milestone, and every Issue by what it waits on. A `roadmap` Issue looks forward; a `challenge` Issue looks back |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 | opening a pull request, or filing an Issue | [`templates/`](templates/) — the forms; `.github/` is generated from them |
 

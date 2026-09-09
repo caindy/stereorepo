@@ -7,6 +7,11 @@
 # is a *tool* — a Project whose gate calls something the runner does not carry
 # adds the step that installs it below, beside the one that installs `uv`.
 #
+# The triggers, the permissions and the `pull request` and `sweep` jobs are
+# the scaffold's, and solorepo's `check.py` holds them equal to its own
+# (DR-119), so a portfolio specialized later runs the same checks the scaffold
+# does and not a version behind.
+#
 # Nothing here restates a Discipline. What a pull request body must contain is
 # derived from `.meta/templates/pull-request.md` by the checker; this file only
 # decides when the checker runs.
@@ -29,6 +34,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  issues: read
   checks: write
 
 # The job names below are what `main`'s ruleset should require as status checks
@@ -76,5 +82,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - run: python3 .meta/check_pr.py --all --publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+      # And the queue: a Challenge with no difficulty is one the coder cannot
+      # see, and nothing else tells an empty queue from an untriaged one
+      # (DR-114). Red here is a label the solo owes, not a broken build.
+      - run: python3 .meta/next.py --check
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}

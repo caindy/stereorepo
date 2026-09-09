@@ -1195,6 +1195,90 @@ def scaffold_only_paths():
     return problems
 
 
+# The half the two gate workflows share, by job (DR-119): each of these is in
+# both files and equal across them. The seed's own job is `gate` (DR-115), and
+# the scaffold's seed jobs are its alone.
+SHARED_JOBS = ("pull-request", "sweep")
+SEED_OWN_JOBS = ("gate",)
+
+
+def _first_difference(a, b, path):
+    """Where two loaded YAML values first differ, as a dotted path, or None."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        for key in list(a) + [k for k in b if k not in a]:
+            if key not in a or key not in b:
+                return f"{path}.{key}", "only on one side"
+            found = _first_difference(a[key], b[key], f"{path}.{key}")
+            if found:
+                return found
+        return None
+    if isinstance(a, list) and isinstance(b, list):
+        for i, (x, y) in enumerate(zip(a, b)):
+            found = _first_difference(x, y, f"{path}[{i}]")
+            if found:
+                return found
+        if len(a) != len(b):
+            return f"{path}[{min(len(a), len(b))}]", "only on one side"
+        return None
+    return None if a == b else (path, f"{a!r} against {b!r}")
+
+
+def gate_workflows_agree():
+    """The scaffold's gate workflow and the seeded one differ in nothing the
+    runner reads of their shared half (DR-119).
+
+    DR-115 gave a portfolio a gate workflow of its own and named the cost: two
+    workflows that will drift in their shared half. The half is the triggers,
+    the permissions, and every job both files define under one name — `pull
+    request` and `sweep` — and what held it equal was a comment in the
+    scaffold's copy saying to change both, a reminder and not a control. DR-114
+    then added a step to the scaffold's sweep and a permission for it, and the
+    seeded copy stayed a version behind (#113).
+
+    Compared as loaded YAML, so each file keeps its own comments and differs in
+    nothing GitHub reads. The shared jobs are named here and not derived: an
+    intersection of the two files' job sets is forgiving on absence, and
+    cannot tell a job the seed never had from one the seed lost, so a shared
+    job deleted from the seed would have been invisible — the falsifier DR-119
+    writes for itself, and the reviewer's point on #125. So each shared job
+    must be in both files, and the seed defines exactly the shared jobs and
+    its own `gate` job, which DR-115 fixed at that name so that a portfolio's
+    ruleset is set once. The scaffold's seed jobs are its alone and are not
+    compared. A portfolio has no `template/`, so there it compares nothing and
+    says nothing (A6), as `scaffold-only paths` does for the same reason.
+    """
+    ours = ROOT / ".github" / "workflows" / "gate.yml"
+    seed = TEMPLATE / ".github" / "workflows" / "gate.yml"
+    if not (ours.is_file() and seed.is_file()):
+        return []
+    a = yaml.safe_load(ours.read_text()) or {}
+    b = yaml.safe_load(seed.read_text()) or {}
+    # YAML 1.1 reads the bare key `on` as the boolean True, and pyyaml is 1.1.
+    shared = {"on": (a.get(True, a.get("on")), b.get(True, b.get("on"))),
+              "permissions": (a.get("permissions"), b.get("permissions"))}
+    jobs_a, jobs_b = a.get("jobs") or {}, b.get("jobs") or {}
+    problems = []
+    for name in SHARED_JOBS:
+        for path, jobs in ((ours, jobs_a), (seed, jobs_b)):
+            if name not in jobs:
+                problems.append(f"jobs.{name}: not in {path.relative_to(ROOT)}, "
+                                "and it is a job both gate workflows define")
+        if name in jobs_a and name in jobs_b:
+            shared[f"jobs.{name}"] = (jobs_a[name], jobs_b[name])
+    for name in jobs_b:
+        if name not in SHARED_JOBS + SEED_OWN_JOBS:
+            problems.append(f"jobs.{name}: in {seed.relative_to(ROOT)} and neither shared "
+                            f"nor the seed's own; the seed's jobs are {', '.join(SEED_OWN_JOBS)} "
+                            f"and the shared {', '.join(SHARED_JOBS)}")
+    for label, (x, y) in shared.items():
+        found = _first_difference(x, y, label)
+        if found:
+            where, how = found
+            problems.append(f"{where}: {how} — {ours.relative_to(ROOT)} and "
+                            f"{seed.relative_to(ROOT)} share this half, and it is held equal")
+    return problems
+
+
 CHECKS = (
     ("unresolved references", lambda i, r: unresolved_references(i, r)),
     ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
@@ -1213,6 +1297,7 @@ CHECKS = (
     ("surviving placeholders", lambda i, r: surviving_placeholders()),
     ("markdown links", lambda i, r: markdown_links()),
     ("scaffold-only paths", lambda i, r: scaffold_only_paths()),
+    ("gate workflows agree", lambda i, r: gate_workflows_agree()),
 )
 
 if __name__ == "__main__":
