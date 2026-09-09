@@ -157,6 +157,9 @@ query($owner: String!, $name: String!, $number: Int!) {
           comments(first: 50) { nodes { author { login } body } }
         }
       }
+      reviews(last: 100) {
+        nodes { author { login } state submittedAt commit { abbreviatedOid } body }
+      }
     }
   }
 }
@@ -184,20 +187,45 @@ def unsigned_commits(ref):
             if not ACTOR.search(c.get("messageBody") or "")]
 
 
-def threads(ref):
-    """Every review thread on a pull request, fetched once.
+def pull(ref):
+    """Every review thread and every review on a pull request, fetched once.
 
-    Split from both readers below because the fetch is the slow, networked,
-    untestable half and neither predicate should own it. It is also what makes
+    Split from the readers below because the fetch is the slow, networked,
+    untestable half and no predicate should own it. It is also what makes
     the threads readable at all: A16 only ever answered pass or fail, so the
     thing that knows how to ask GitHub what was said could not be asked to say
-    it.
+    it. The reviews ride in the same query because a verdict is the other half
+    of what was said, and the one half that names a head (DR-118).
     """
     owner, name = gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"].split("/")
     number = gh("pr", "view", ref, "--json", "number")["number"]
     data = gh("api", "graphql", "-f", f"query={THREADS}",
               "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}")
-    return data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+    return data["data"]["repository"]["pullRequest"]
+
+
+def threads(ref):
+    """Every review thread on a pull request."""
+    return pull(ref)["reviewThreads"]["nodes"]
+
+
+def where_of(thread, owed=True):
+    """Where a thread sits, as a reader would look for it."""
+    where = thread["path"] or "the pull request"
+    if thread.get("line"):
+        where += f":{thread['line']}"
+    if thread["isOutdated"]:
+        where += " (outdated — answer it anyway)" if owed else " (outdated)"
+    return where
+
+
+def shown(thread, where):
+    """A thread as the listing prints it: its id, where it sits, who said what."""
+    spoke = []
+    for c in thread["comments"]["nodes"]:
+        who = (c["author"] or {}).get("login", "someone")
+        spoke.append(f"    {who}: " + " ".join((c["body"] or "").split())[:600])
+    return f"  {thread['id']}\n  {where}\n" + "\n".join(spoke)
 
 
 def unaddressed(nodes, parked=False):
@@ -230,16 +258,54 @@ def unaddressed(nodes, parked=False):
         held = bool(comments) and bool(NOTICED.search(comments[-1]["body"] or ""))
         if held != parked:
             continue
-        where = t["path"] or "the pull request"
-        if t.get("line"):
-            where += f":{t['line']}"
-        if t["isOutdated"]:
-            where += " (outdated — answer it anyway)"
-        said = []
-        for c in comments:
-            who = (c["author"] or {}).get("login", "someone")
-            said.append(f"    {who}: " + " ".join((c["body"] or "").split())[:600])
-        out.append(f"  {t['id']}\n  {where}\n" + "\n".join(said))
+        out.append(shown(t, where_of(t)))
+    return out
+
+
+def settled(nodes):
+    """What was answered and resolved, in the shape of what is owed.
+
+    `unaddressed` hides these on purpose: unresolved is the test, and a
+    listing that counted the resolved would wake someone for nothing. Hidden
+    from an arriving reviewer they cost a full review (#122): its reading says
+    a re-review reads each answer against the diff it claims, and a listing
+    that shows only what is unresolved shows a re-review nothing, so every
+    pass on #117 ran the whole review again. So they are printed, after what
+    is owed and apart from it, with who resolved each; nothing counts them.
+    """
+    out = []
+    for t in nodes:
+        if not t["isResolved"]:
+            continue
+        by = (t.get("resolvedBy") or {}).get("login", "someone")
+        out.append(shown(t, where_of(t, owed=False) + f" — resolved by {by}"))
+    return out
+
+
+def verdicts(reviews):
+    """Each verdict, newest first, on the head GitHub recorded it against.
+
+    A body that says which head it reviewed is a convention the next run has
+    to trust; the commit a review was submitted on is a fact GitHub holds, and
+    it is what a re-review reads to know what it has already seen (DR-118).
+    The review a `raise` posts under — no verdict, no body — says nothing and
+    is left out; there is one per raise and per reply, which is why the query
+    asks for the newest hundred and not the oldest (#123). Newest first, and
+    printed before everything else, so the verdict a re-review needs is inside
+    the 2 KB preview a long listing is cut to; the owed section alone on #117
+    was 2.7 KB. The login is on each line and nothing here says whose Role a
+    verdict is: the reader knows its own login, and the solo's approval and a
+    dismissed verdict print as what they are.
+    """
+    out = []
+    for r in reversed(reviews):
+        body = said(r.get("body"), 600)
+        if r["state"] == "COMMENTED" and not body:
+            continue
+        who = (r["author"] or {}).get("login", "someone")
+        sha = (r.get("commit") or {}).get("abbreviatedOid") or "no head"
+        when = (r.get("submittedAt") or "")[:16].replace("T", " ")
+        out.append(f"  {who} {r['state']} on {sha} at {when}" + (f"\n    {body}" if body else ""))
     return out
 
 
@@ -372,7 +438,12 @@ def resume(ref):
     states = {c.get("name") or c.get("context"): c.get("conclusion") or c.get("state")
               for c in pr.get("statusCheckRollup") or []}
     out.append("checks: " + (", ".join(f"{k}={v}" for k, v in states.items()) or "none"))
-    owed = unaddressed(threads(ref))
+    held = pull(ref)
+    given = verdicts(held["reviews"]["nodes"])
+    if given:
+        out.append(f"--- {len(given)} verdict(s), newest first, each on the head GitHub recorded it against ---")
+        out += given
+    owed = unaddressed(held["reviewThreads"]["nodes"])
     out.append(f"--- {len(owed)} thread(s) owed an answer ---")
     out += owed
     return "\n".join(out)
@@ -671,7 +742,8 @@ if __name__ == "__main__":
     ap.add_argument("--file", help="read a body from disk instead of GitHub")
     ap.add_argument("--title", default="a real title", help="title to use with --file")
     ap.add_argument("--threads", action="store_true",
-                    help="print the threads still owed an answer, and check nothing")
+                    help="print the threads owed, held, and answered, and each verdict "
+                         "with the head it was given on; check nothing")
     ap.add_argument("--resume", action="store_true",
                     help="what an arriving Job needs, read from GitHub")
     ap.add_argument("--handoff", action="store_true",
@@ -731,12 +803,21 @@ if __name__ == "__main__":
     if args.threads:
         if not args.pr:
             ap.error("--threads needs a pull request")
-        nodes = threads(args.pr)
-        owed, parked = unaddressed(nodes), unaddressed(nodes, parked=True)
+        held = pull(args.pr)
+        nodes = held["reviewThreads"]["nodes"]
+        owed, parked, done = unaddressed(nodes), unaddressed(nodes, parked=True), settled(nodes)
+        given = verdicts(held["reviews"]["nodes"])
+        if given:
+            print(f"--- {len(given)} verdict(s), newest first, each on the head GitHub recorded it against ---")
+            print("\n".join(given))
+            print()
         print("\n".join(owed) if owed else "nothing unaddressed")
         if parked:
             print(f"\n--- {len(parked)} noticed and not done, held for promotion at merge ---")
             print("\n".join(parked))
+        if done:
+            print(f"\n--- {len(done)} answered and resolved: a re-review reads each answer against the diff it claims ---")
+            print("\n".join(done))
         sys.exit(0)
 
     if args.file:

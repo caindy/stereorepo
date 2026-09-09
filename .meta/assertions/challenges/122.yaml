@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/122
+    name: A review on the Opus path costs 12 to 15 minutes a round, and a re-review costs the same because the threads listing hides what the reviewer already said
+    challenge_type: DEFECT
+    description: >-
+      The four complete transcripts of the reviewer's successful runs on
+      #117 put 11 to 15 minutes of wall clock in the model session and
+      seconds in the workflow around it. Four of the five runs were
+      re-reviews, and each ran the whole code-review fan-out again, because
+      the threads listing hides resolved threads and the coder resolves every
+      thread it answers: the reviewer arrived to "nothing unaddressed" every
+      time. Five more causes are recorded on the Issue, from cancelled runs
+      under concurrent pushes to agents paging a 60 KB file.

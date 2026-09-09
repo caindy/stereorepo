@@ -172,19 +172,40 @@ jobs:
 
             Then read what this Role has already said on it, before saying
             anything: `python3 .meta/check_pr.py ${{ github.event.pull_request.number }} --threads`.
-            A run before this one may have raised points and been cancelled
-            by a push before its verdict. A point already on the pull request
-            is not raised again; where the new head changes it, answer in
-            its thread.
+            It lists every verdict with the head GitHub recorded it against
+            and the login that gave it, then the threads owed an answer, the
+            ones held for promotion, and the ones answered and resolved. Your
+            login is `${{ github.repository_owner }}-${{ github.event.repository.name }}-reviewer`;
+            a verdict by any other login, the solo's approval among them, is
+            not this Role's and decides nothing here, and a `DISMISSED` one
+            was withdrawn and decides nothing, whatever head it names. A run before this one may have raised
+            points and been cancelled by a push before its verdict. A point
+            already on the pull request is not raised again; where the new
+            head changes it, answer in its thread.
 
-            If threads this Role raised have been answered and resolved, this
-            is a re-review, not a review: read each answer against the diff
-            it claims, say in the thread where an answer does not hold, and
-            post the verdict. Do not run the code-review skill again on a
-            head you have already reviewed; its agents cost the turns the
-            verdict needs (#102). Do not wait on `gh pr checks`: it exits
-            non-zero while a check is pending, and the ruleset holds the
-            merge until they pass whatever you do.
+            A long argument makes a long listing, and a shell result past
+            about 30 KB arrives as its first 2 KB and the path of a file
+            holding the whole; the verdicts print before everything else so
+            the preview holds the newest, and the file is read with the Read
+            tool before anything is decided from the preview.
+
+            If the listing shows a verdict of this Role and threads it raised
+            answered and resolved, this is a re-review, not a review: read
+            each answer against the diff between the head the verdict names
+            and this one, `git diff <that-head> ${{ github.event.pull_request.head.sha }}`.
+            The head GitHub records on a verdict is the head current when it
+            was posted, which is newer than the one the run read if a push
+            landed during the run; and a rebase of an open branch orphans
+            the old head, so where `git diff` cannot resolve that head, read
+            the pull request's whole diff with `gh pr diff` and each answer
+            in its thread instead. Say in the thread where an answer does not hold,
+            and post the verdict. Do not run the code-review skill again on
+            a head a verdict of this Role already names, nor on a head that
+            differs from one only by the answers; its agents cost the turns the verdict
+            needs (#102), and on #117 every pass ran it again because the
+            listing hid what had been resolved (#122). Do not wait on
+            `gh pr checks`: it exits non-zero while a check is pending, and
+            the ruleset holds the merge until they pass whatever you do.
 
             Then review with /code-review:code-review ${{ steps.depth.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
             without --comment. Every agent the review spawns gets these

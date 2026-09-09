@@ -1,0 +1,94 @@
+decisions:
+  - id: work:decision/118
+    name: "DR-118 · The threads listing shows what was answered and resolved, and each verdict on the head GitHub recorded it against"
+    challenge: work:challenge/122
+    status: ADOPTED
+    applies:
+      - work:article/16
+    enacted_in:
+      - work:artifact/meta-check-pr
+      - work:artifact/github-workflows-review
+      - work:artifact/meta-render
+    alternatives:
+      - name: Keep the listing to what is unresolved, and have the reviewer read the reviews itself
+        chosen: false
+        reason: >-
+          What was in place. The reviewer's prompt told it to read what it had
+          already said through `--threads`, and the listing answered "nothing
+          unaddressed" on every pass of #117, because the coder resolves every
+          thread it answers. `gh pr view --json reviews` was allowed and
+          nobody said to run it; a re-review that depends on an agent thinking
+          to ask a second question is one that runs the whole review again,
+          which is what happened four times.
+      - name: Read the reviewed head from the verdict's body
+        chosen: false
+        reason: >-
+          Every verdict on #117 opened with "Reviewed at `<sha>`", so the
+          fact was there. It was there by convention: a prompt asked for it,
+          and a body that omits it, or names the wrong head, is a re-review
+          that cannot tell what it has seen. GitHub holds the commit a review
+          was submitted against, on the review, and reads it back in the same
+          query that fetches the threads.
+      - name: A new flag for the reviewer, leaving `--threads` as it was
+        chosen: false
+        reason: >-
+          The listing exists so an arriving Job reads one thing. Two flags for
+          the same question, one per Role, is a prompt that has to name the
+          right one, and the coder on its second pass wants the same history:
+          what it answered, and what the reviewer decided. Nothing counts the
+          added sections; the gate's test is still unresolved.
+      - name: The listing grows two sections, and the verdict carries GitHub's head
+        chosen: true
+        reason: >-
+          `--threads` prints every review with a verdict or a body first,
+          newest first, each on the commit GitHub recorded it against and
+          with the login that gave it; then what is owed and what is held;
+          then every thread answered and resolved with who resolved it. One fetch, since the reviews ride in
+          the threads query, and the newest hundred of them, since GitHub
+          wraps every raise and reply in a bodiless review of its own.
+          `--resume` carries the verdicts too. The reviewer's reading says a
+          re-review is what the listing shows, and the diff it reads is
+          between the head the last verdict names and this one. What it
+          costs: a long argument makes a long listing — 42 KB on #117 after
+          ten verdicts and twenty-five resolved threads — and the coder sees
+          history it did not ask for on a first pass, which is nothing until
+          something has been resolved.
+    consequences:
+      - >-
+        `check_pr.py` fetches the threads and the newest hundred reviews of a
+        pull request in one query; `threads()` reads off it, and `verdicts()`
+        and `settled()` print what `unaddressed()` hides, the verdicts before
+        everything and newest first. A review with no verdict and no body,
+        the one a `raise` or a reply posts under, is left out; the solo's
+        approval and a dismissed verdict print as what they are, and the
+        reader tells its own from the login on the line.
+      - >-
+        The reviewer's prompt names the four sections and says which diff a
+        re-review reads: from the head the verdict names to this one, and the
+        pull request's whole diff with the threads beside it where that head
+        is gone, since this repository rebases open branches. It says what
+        the recorded head is: the head current when the verdict was posted,
+        which is newer than the one read if a push landed during the run. It
+        names the reviewer's login, so a head a verdict of this Role names is
+        told from one the solo approved or a verdict that was dismissed, and
+        it does not run the code-review skill on the former.
+      - >-
+        The comment beside `--threads` in the rendered Commands says what the
+        listing holds.
+    falsifier: >-
+      A re-review on the next boundary change that runs the code-review skill
+      again with a verdict of its own in the listing. Or a listing that passes
+      the tool-result cap on a long argument and arrives as a preview, which
+      is the same blindness by another route: a shell result past roughly
+      30 KB arrives as its first 2 KB and a file, and #117's listing is 42.
+      The verdicts print before everything so the preview holds the newest,
+      and the prompt says to read the file; a reviewer that reads the preview
+      as the whole is this falsified.
+    rationale: |-
+      #122 read the four complete transcripts of the reviewer's runs on
+      #117 and found the prompt's re-review clause never fired: the
+      listing it read hid the resolved threads on purpose, because
+      unresolved is the gate's test, and the coder resolves what it
+      answers. The fix is not to change the test but to print what the
+      test ignores, apart from it, and to take the head a verdict was
+      given on from GitHub rather than from the words the reviewer chose.

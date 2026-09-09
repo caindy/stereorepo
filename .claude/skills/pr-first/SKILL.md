@@ -71,7 +71,7 @@ right, is yours.
 
 ```bash
 python3 .meta/check_pr.py --sweep          # what this branch owns, and what it owes
-python3 .meta/check_pr.py <n> --threads    # the threads still owed an answer
+python3 .meta/check_pr.py <n> --threads    # the threads: owed, held, answered; and each verdict with its head
 python3 .meta/check_pr.py <n>              # the gate: A15 and A16
 #   Watching the pull request, and removing what a merge leaves behind, are the
 #   harness's business, not yours: AGENTS.md says how this one does both.
