@@ -1,0 +1,26 @@
+# The sweep as one step (DR-120): the same check as the pull request gate, on
+# the clock, for every open pull request, with each result published under the
+# job name `pull request` so the ruleset reads the sweep's verdict as it read
+# the push's (DR-105). Typed once here for both gate workflows, as the pull
+# request gate is.
+name: sweep
+description: Re-run the pull request gate on every open pull request and publish each result, then refuse an untriaged Challenge.
+inputs:
+  token:
+    description: a token that reads pull requests and Issues and writes checks; github.token is enough
+    required: true
+runs:
+  using: composite
+  steps:
+    - run: python3 .meta/check_pr.py --all --publish
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+    # And the queue: a Challenge with no difficulty is one the coder cannot
+    # see, and nothing else tells an empty queue from an untriaged one
+    # (DR-114). Red here is a label the solo owes, not a broken build.
+    - run: python3 .meta/next.py --check
+      if: ${{ always() }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}

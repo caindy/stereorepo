@@ -157,6 +157,12 @@ artifacts:
   - id: work:artifact/meta-gate
     name: .meta/gate
     path: .meta/gate
+  - id: work:artifact/meta-actions-pull-request
+    name: .meta/actions/pull-request/action.yml
+    path: .meta/actions/pull-request/action.yml
+  - id: work:artifact/meta-actions-sweep
+    name: .meta/actions/sweep/action.yml
+    path: .meta/actions/sweep/action.yml
   - id: work:artifact/meta-ddd-ontology
     name: .meta/ddd_ontology.yaml
     path: .meta/ddd_ontology.yaml

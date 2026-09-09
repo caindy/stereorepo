@@ -4,9 +4,10 @@
 # `bootstraps/`, which stays here. A portfolio's gate workflow is seeded at
 # `template/.github/workflows/gate.yml`, where one job runs `.meta/gate` over
 # the Projects its assertions declare (DR-115). The triggers, the permissions
-# and the `pull request` and `sweep` jobs are the half the two share, and
-# `check.py` holds it equal (DR-119): a change to it lands in both or the gate
-# is red.
+# and the `pull request` and `sweep` jobs are the half the two share. What
+# those two jobs run is typed once, under `.meta/actions/`, and each job here
+# is a checkout and a `uses:` of it (DR-120); the residue — the triggers, the
+# permissions and the two stubs — `check.py` holds equal (DR-119).
 #
 # A check that runs when someone remembers is not a check — Nothing Unconsumed
 # applied to the checker itself. Both halves run here: `check.py` reads files and
@@ -111,12 +112,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # `gh` is on the runner already, and the checker is stdlib only, so this
-      # job stays fast enough to run on every edit to the body.
-      - run: python3 .meta/check_pr.py "$PR"
-        env:
-          PR: ${{ github.event.pull_request.number }}
-          GH_TOKEN: ${{ github.token }}
+      - uses: ./.meta/actions/pull-request
+        with:
+          number: ${{ github.event.pull_request.number }}
+          token: ${{ github.token }}
 
   # The same check, on the clock, for every open pull request — and its result
   # published under the job name above, so the ruleset reads the sweep's
@@ -128,13 +127,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - run: python3 .meta/check_pr.py --all --publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-      # And the queue: a Challenge with no difficulty is one the coder cannot
-      # see, and nothing else tells an empty queue from an untriaged one
-      # (DR-114). Red here is a label the solo owes, not a broken build.
-      - run: python3 .meta/next.py --check
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: ./.meta/actions/sweep
+        with:
+          token: ${{ github.token }}

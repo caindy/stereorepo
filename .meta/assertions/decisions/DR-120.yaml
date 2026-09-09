@@ -1,0 +1,106 @@
+decisions:
+  - id: work:decision/120
+    name: "DR-120 · The steps the two gate workflows share are one local composite action each, and check.py holds the residue equal"
+    challenge: work:challenge/128
+    status: ADOPTED
+    supersedes:
+      - work:decision/119
+    applies:
+      - work:article/8
+      - work:article/10
+    enacted_in:
+      - work:artifact/meta-actions-pull-request
+      - work:artifact/meta-actions-sweep
+      - work:artifact/github-workflows-gate
+      - work:artifact/template-github-workflows-gate
+      - work:artifact/meta-check
+      - work:artifact/specialize
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-readme
+    alternatives:
+      - name: The comparison alone, as DR-119 left it
+        chosen: false
+        reason: >-
+          It holds the two copies equal and it is honest about being a
+          control over a duplication rather than a removal of one: a step
+          added to the sweep is still typed twice, and the gate says so when
+          one copy is missed. DR-119 chose it over generation and never
+          weighed what GitHub itself offers, which Christopher asked about
+          on #125. Where a mechanism makes a copy unnecessary, a check that
+          keeps the copies equal is the second-best answer.
+      - name: A reusable workflow in solorepo, called by both
+        chosen: false
+        reason: >-
+          The nearest thing to an include. GitHub's reference allows it when
+          "the called workflow is stored in a public repository, and your
+          organization allows you to use public reusable workflows", and the
+          called jobs' "`GITHUB_TOKEN` permissions passed from the caller
+          workflow can be only downgraded (not elevated)". Two things rule
+          it out. The caller's `on` is what fires, so the trigger copy stays.
+          And a portfolio's gate would run code fetched from solorepo at run
+          time: pinned by SHA the portfolio drifts behind and needs a bump,
+          which is the same problem moved into a ref; pinned to a branch,
+          every scaffold change moves every portfolio's gate with no commit
+          in the portfolio. A portfolio is a clone that takes what it needs
+          and owes the scaffold nothing afterward, and syncing forward is
+          #61, a roadmap Issue and not a thing that exists. The required
+          check names would move too, and the naming rule is not in the
+          current reference.
+      - name: One local composite action per shared job, under `.meta/actions/`, and the comparison over the residue
+        chosen: true
+        reason: >-
+          GitHub's reference: composite actions "collect a series of workflow
+          job steps into a single action which you can then run as a single
+          job step in multiple workflows", referenced by relative path. The
+          steps the `pull request` and `sweep` jobs run live once, under
+          `.meta/`, and travel with the inherited set like everything there;
+          each workflow's job is a checkout and a `uses:` of the path. No
+          runtime dependency on the scaffold, no generated file, no ruleset
+          change, and the drift DR-114 caused could not have happened,
+          there being one file to add the step to. What it leaves duplicated
+          is what no mechanism shares — the `on` block, the permissions and
+          two stubs of a few lines — and that is what `check.py`'s
+          comparison goes on holding equal. What it costs: two more files in
+          the inherited set, `shell: bash` on every run step because the
+          metadata reference says it is "required if `run` is set", and a
+          sweep whose second step's `if: always()` runs inside an action,
+          which a pull request run does not exercise.
+    consequences:
+      - >-
+        `.meta/actions/pull-request/action.yml` runs `check_pr.py` on one
+        pull request; `.meta/actions/sweep/action.yml` runs it on every open
+        one with `--publish`, then `next.py --check`. Both take the token as
+        an input and set it on each step, relying on no inheritance from the
+        caller.
+      - >-
+        Both gate workflows' `pull-request` and `sweep` jobs are a checkout
+        and a `uses:` of the action, identical in the two files. `check.py`'s
+        `gate workflows agree` step is unchanged in what it does and changed
+        in what it has to catch: the triggers, the permissions and the stubs.
+        DR-119 stands in every part but the one that put the jobs' steps in
+        the comparison.
+      - >-
+        `.meta/actions/` is in the set Specialization's second step copies,
+        so a portfolio carries what its seeded workflow types, and
+        `scaffold-only paths` scans it with the rest of the inherited set.
+      - >-
+        A pull request run exercises the pull request action and not the
+        sweep, which runs on the clock and on dispatch. The sweep action is
+        first exercised by a dispatch of the gate workflow on this branch, or
+        failing that by the first scheduled run after the merge.
+    falsifier: >-
+      A step that belongs to both jobs and is typed in a workflow file rather
+      than the action; a sweep whose `next.py --check` does not run when
+      `check_pr.py --all --publish` fails, which is what `if: always()`
+      inside the action has to guarantee; or a portfolio whose seeded
+      workflow names an action path it was not given.
+    rationale: |-
+      Christopher, on #125, asked why the two files could not be one include,
+      having used a bundler that resolves `$ref` in OpenAPI. YAML has no
+      include and `$ref` is OpenAPI's, so the pyyaml answer would be a
+      bundler of this repository's own, which is the generation DR-119
+      rejected. GitHub's own mechanisms had not been weighed. A reusable
+      workflow is the include as imagined and brings a live dependency on the
+      scaffold that the clone model does not have; a composite action gets
+      one source without a build step and fits the model, so it is the
+      answer, with the comparison kept for the residue.

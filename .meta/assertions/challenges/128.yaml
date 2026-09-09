@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/128
+    name: The shared steps of the two gate workflows are one local composite action, and the comparison holds the residue
+    challenge_type: DEFECT
+    description: >-
+      DR-119 weighed a comparison of the two gate workflows' shared half
+      against generating it into both, and weighed neither of the two
+      mechanisms GitHub offers for sharing workflow content. The `pull
+      request` and `sweep` jobs' steps were still typed twice, held equal by
+      the gate rather than by construction. Raised from Christopher's
+      question on #125 why the two files are not one include.

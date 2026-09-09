@@ -1,0 +1,23 @@
+# The pull request gate as one step (DR-120). The `pull request` job of the
+# scaffold's gate workflow and of a portfolio's both run exactly this, so it
+# is typed once here and travels with `.meta/`; each workflow's job is a
+# checkout and a `uses:` of this path, and the two stubs are held equal by
+# `check.py`. `gh` is on the runner already and the checker is stdlib only,
+# so it stays fast enough to run on every edit to the body.
+name: pull request gate
+description: Run check_pr.py on one pull request, as both gate workflows do.
+inputs:
+  number:
+    description: the pull request to check
+    required: true
+  token:
+    description: a token that reads the pull request; github.token is enough
+    required: true
+runs:
+  using: composite
+  steps:
+    - run: python3 .meta/check_pr.py "$PR"
+      shell: bash
+      env:
+        PR: ${{ inputs.number }}
+        GH_TOKEN: ${{ inputs.token }}

@@ -8,9 +8,11 @@
 # adds the step that installs it below, beside the one that installs `uv`.
 #
 # The triggers, the permissions and the `pull request` and `sweep` jobs are
-# the scaffold's, and solorepo's `check.py` holds them equal to its own
-# (DR-119), so a portfolio specialized later runs the same checks the scaffold
-# does and not a version behind.
+# the scaffold's. What the two jobs run is typed once, under `.meta/actions/`,
+# which this portfolio carries (DR-120); the stubs, the triggers and the
+# permissions solorepo's `check.py` holds equal to its own (DR-119), so a
+# portfolio specialized later runs what the scaffold runs and not a version
+# behind.
 #
 # Nothing here restates a Discipline. What a pull request body must contain is
 # derived from `.meta/templates/pull-request.md` by the checker; this file only
@@ -64,12 +66,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # `gh` is on the runner already, and the checker is stdlib only, so this
-      # job stays fast enough to run on every edit to the body.
-      - run: python3 .meta/check_pr.py "$PR"
-        env:
-          PR: ${{ github.event.pull_request.number }}
-          GH_TOKEN: ${{ github.token }}
+      - uses: ./.meta/actions/pull-request
+        with:
+          number: ${{ github.event.pull_request.number }}
+          token: ${{ github.token }}
 
   # The same check, on the clock, for every open pull request — and its result
   # published under the job name above, so the ruleset reads the sweep's
@@ -81,13 +81,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - run: python3 .meta/check_pr.py --all --publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-      # And the queue: a Challenge with no difficulty is one the coder cannot
-      # see, and nothing else tells an empty queue from an untriaged one
-      # (DR-114). Red here is a label the solo owes, not a broken build.
-      - run: python3 .meta/next.py --check
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: ./.meta/actions/sweep
+        with:
+          token: ${{ github.token }}

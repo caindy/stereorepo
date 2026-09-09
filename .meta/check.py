@@ -127,10 +127,13 @@ def duplicate_keys():
     """Every YAML the gate reads, including the schemas and the seed — and the
     seeded workflow, whose one typo `safe_load` will not report is this one: a
     second `steps:` under a job parses, the last wins, and the block that
-    checks out the tree is dropped without a word."""
+    checks out the tree is dropped without a word. `.yml` under `.meta/` too,
+    since DR-120 put the composite actions there: a second `steps:` in the
+    sweep's action takes the publish out of the sweep, and the two workflow
+    stubs stay identical, so nothing else would say (#129)."""
     problems = []
-    for path in sorted([*META.rglob("*.yaml"), *TEMPLATE.rglob("*.yaml"),
-                        *TEMPLATE.rglob("*.yml")]):
+    for path in sorted([*META.rglob("*.yaml"), *META.rglob("*.yml"),
+                        *TEMPLATE.rglob("*.yaml"), *TEMPLATE.rglob("*.yml")]):
         _DUPLICATES.clear()
         try:
             yaml.load(path.read_text(), Loader=Strict)
@@ -1246,6 +1249,11 @@ def gate_workflows_agree():
     ruleset is set once. The scaffold's seed jobs are its alone and are not
     compared. A portfolio has no `template/`, so there it compares nothing and
     says nothing (A6), as `scaffold-only paths` does for the same reason.
+
+    Since DR-120 the two shared jobs run one composite action each, under
+    `.meta/actions/`, so their steps are typed once and cannot drift. What is
+    compared here is the residue no mechanism of GitHub's shares: the
+    triggers, the permissions, and the two stubs of checkout and `uses:`.
     """
     ours = ROOT / ".github" / "workflows" / "gate.yml"
     seed = TEMPLATE / ".github" / "workflows" / "gate.yml"

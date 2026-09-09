@@ -101,4 +101,6 @@ python3 .meta/check_pr.py 12
 ```
 
 Both run in [`.github/workflows/gate.yml`](../.github/workflows/gate.yml), which
-is the point — a check that runs when someone remembers is not a check.
+is the point — a check that runs when someone remembers is not a check. What the
+pull request job and the sweep run is typed once, as the two composite actions
+under [`actions/`](actions/), which a portfolio's gate workflow runs too (DR-120).
