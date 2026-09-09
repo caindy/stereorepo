@@ -15,27 +15,47 @@ speaking. There is no
 argument for the identity, deliberately: what a caller can pass, a caller can
 pass wrongly.
 
-    .meta/say comment  <pr> < body.md          a comment on the pull request
+The verbs are the steps of the Disciplines, one each, and not the nouns of `gh`
+(DR-116). A step that was two verbs with an order between them — file, then
+label; reply, then resolve; open, then link — was a composition a caller could
+get wrong, and #113 did. Each is one verb now, and the pieces are not verbs.
+
+    .meta/say file     --title T --difficulty D|--roadmap < body.md
+                                               file a Challenge, the form's way: `challenge`
+                                               and the difficulty land in one act
+    .meta/say triage   <issue> <level>         make an Issue a Challenge at a level: one that
+                                               arrived without the form, or a roadmap Issue
+                                               whose blocker has closed
+    .meta/say difficulty <issue> <level>       move a Challenge's level: easy, medium, hard, human
+    .meta/say claim    <issue>                 take an Issue: assign it to this Role's account
+    .meta/say stop     <issue> < body.md       where this Job stopped and why; the Issue
+                                               goes to the solo as `human`, unclaimed
+    .meta/say open     --title T [--base B|--on <pr>] < body.md
+                                               open a pull request; --on opens a layer on
+                                               that one and links the stack
+    .meta/say layer    <pr> --on <pr>          make an open pull request a layer on another
+    .meta/say revise   <n> [--title T] [< body.md]   replace a pull request's or an Issue's
+                                               body, or its title
+    .meta/say commit   -m <subject> [< body]   commit as this Actor, Trailers composed here
+    .meta/say comment  <n> < body.md           a comment on a pull request or an Issue
     .meta/say raise    <pr> <path> <line> < body.md    open a thread on the diff
-    .meta/say reply    <thread-id> < body.md   a reply in a thread
-    .meta/say resolve  <thread-id>             mark it resolved
-    .meta/say issue    --title T [--label L] < body.md
-    .meta/say pr       --title T [--base B] < body.md  open a pull request
-    .meta/say stack    <pr-or-branch>...        link layers into a stack, bottom first
+    .meta/say notice   <pr> <path> <line> < body.md    noticed and not done: the marker and
+                                               the mention supplied, held open for the solo
+    .meta/say reply    <thread-id> < body.md   argue: a reply that leaves the thread open
+    .meta/say answer   <thread-id> < body.md   answer: reply, then resolve
+    .meta/say promote  <thread-id> --title T --difficulty D < issue-body.md
+                                               at merge: file the Issue, with the Issue
+                                               form's body, reply with the link, resolve
+    .meta/say landed   <pr>                    post what landed for every Challenge the
+                                               body closes, rendered from the record
+    .meta/say request-review <pr> [--to R]     hand off: request review from Role R's account
+    .meta/say --role reviewer review <pr> --approve|--request-changes|--comment < body.md
     .meta/say merge    <pr> [--stack|--auto]    merge; a layer merges everything below it;
                                                --auto arms GitHub to merge when green
     .meta/say advance  [<pr>]                  rebase every armed pull request that has
                                                fallen behind its base back onto it
-    .meta/say pr-body  <pr> < body.md          replace the body
-    .meta/say issue-body <n> < body.md         replace an Issue's body
-    .meta/say pr-title <pr> --title T
-    .meta/say pr-base  <pr> --base B           retarget a layer onto the one below it
-    .meta/say claim    <issue>                 take an Issue: assign it to this Role's account
-    .meta/say label    <issue> [--add L] [--remove L]   move an Issue's labels
-    .meta/say issue-comment <issue> < body.md  a comment on an Issue
     .meta/say milestone <issue> --set T|--clear  put an Issue in a Milestone, creating it if new
-    .meta/say request-review <pr> [--to R]     hand off: request review from Role R's account
-    .meta/say --role reviewer review <pr> --approve|--request-changes|--comment < body.md
+    .meta/say whoami                           which login this channel speaks as
 
 `--role` names which Role speaks, coder by default: its credential is
 `~/.config/solorepo/<role>.env`, and its login is `<owner>-<repo>-<role>`, so a
@@ -45,19 +65,27 @@ and wins.
 Bodies come from stdin rather than the command line: the text is usually long,
 often has quotes in it, and a shell is the wrong place to keep an artifact.
 
-`resolve` is here for a second reason. PR First says never to resolve a thread
-you are the sole author of, because A16 counts the resolver as a party (DR-068)
-and that only holds while the resolver is somebody else. A step is a rule an
-agent has to remember; this refuses, which is the same rule with the remembering
-taken out.
+`answer` and `promote` resolve, and refuse to when this Actor is the sole author
+of the thread. PR First says never to, because A16 counts the resolver as a
+party (DR-068) and that only holds while the resolver is somebody else. A step
+is a rule an agent has to remember; this refuses, which is the same rule with
+the remembering taken out — and it refuses before it replies, so the step is
+never left half done.
 """
 import argparse
 import json
 import os
 import pathlib
+import re
 import select
 import subprocess
 import sys
+
+# The pull request gate's rules, held once. `landed` reads *What it closes* by
+# the same alternation `check_pr.py` blesses a body with, or a body the gate
+# passed is one the channel then calls wrong (#117).
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import check_pr  # noqa: E402
 
 # Outside the tree, per role and per machine (DR-073). `main` points ROLE_ENV at
 # the Role named by --role; the environment variable names a file and wins.
@@ -161,16 +189,399 @@ def stacked(pr):
     return bool(gh("api", f"repos/{repo()}/pulls/{pr}").get("stack"))
 
 
-def stack(items):
-    """Link pull requests, bottom first, into a stack on GitHub, as the Role.
+def link(below, above):
+    """Link one pull request onto another as the layer above it, as the Role.
 
     Linking is an act GitHub records, like a merge (DR-075), so it goes through
-    here. Each layer is opened with `say pr --base <layer below>` first, so its
-    body is signed; `gh stack submit` opens pull requests unsigned and stays
-    blocked. After a layer merges, GitHub rebases the layers above it, which is
-    the whole reason for a stack over a hand-built one (DR-100).
+    here, and it is not a verb: a layer is opened linked, `open --on`, or made
+    one, `layer --on`, and the link is half of either. Open, then link, was a
+    composition a caller assembled by hand and could leave half done (DR-116).
+    `gh stack submit` opens pull requests unsigned and stays blocked. After a
+    layer merges, GitHub rebases the layers above it, which is the whole reason
+    for a stack over a hand-built one (DR-100).
     """
-    print(gh("stack", "link", *items, parse=False))
+    print(gh("stack", "link", str(below), str(above), parse=False))
+
+
+def head_branch(pr):
+    return gh("pr", "view", str(pr), "--json", "headRefName")["headRefName"]
+
+
+def layer(pr, below):
+    """Make an open pull request a layer on another: retarget its base onto the
+    lower layer's branch, and link the two.
+
+    A pull request opened against trunk and found to wait on another (DR-100)
+    is retargeted rather than closed and reopened: it is merged, never
+    abandoned, and the edit is an act GitHub records. Retargeting without
+    linking left a pull request whose base was a branch GitHub would not
+    rebase it over when that branch merged; both halves are one verb now.
+    """
+    base = head_branch(below)
+    gh("pr", "edit", str(pr), "--base", base, parse=False)
+    now = gh("pr", "view", str(pr), "--json", "baseRefName")["baseRefName"]
+    if now != base:
+        sys.exit(f"say: GitHub shows #{pr} based on {now} after the call, not {base}")
+    link(below, pr)
+    print(f"#{pr} is a layer on #{below} ({base})")
+
+
+def open_pull_request(title, body, base="main", on=None):
+    """Open a pull request, signed; with `on`, open it as a layer on that one.
+
+    The base is the lower layer's branch, read from GitHub rather than typed,
+    and the link follows the creation, so a layer is never open and unlinked.
+    """
+    if on:
+        base = head_branch(on)
+    url = gh("pr", "create", "--title", title, "--base", base, "--body", body, parse=False)
+    print(url)
+    if on:
+        link(on, url.rstrip("/").rsplit("/", 1)[-1])
+
+
+DIFFICULTIES = ("easy", "medium", "hard", "human")
+
+
+def labels_of(issue):
+    return [l["name"] for l in gh("issue", "view", str(issue), "--json", "labels")["labels"]]
+
+
+def relabel(issue, add=(), remove=()):
+    """Move an Issue's labels, and read back what it carries.
+
+    Not a verb. The labels an agent moves are the difficulty and nothing else,
+    and `difficulty` says what a legal move is; a verb that took any label
+    took `medium` without `challenge`, which is #113 (DR-116).
+    """
+    cmd = ["issue", "edit", str(issue)]
+    for name in add:
+        cmd += ["--add-label", name]
+    for name in remove:
+        cmd += ["--remove-label", name]
+    gh(*cmd, parse=False)
+    now = labels_of(issue)
+    missing = [n for n in add if n not in now] + [n for n in remove if n in now]
+    if missing:
+        sys.exit(f"say: GitHub shows #{issue} labelled {now} after the call; {missing} did not take")
+    return now
+
+
+def challenge_labels(issue):
+    """An Issue's labels, if it is a Challenge; a refusal if it is not.
+
+    Asked before anything is posted or moved, by every verb whose second half
+    needs it: a difficulty on anything but a Challenge is a label no loop will
+    ever read, and a comment posted before the refusal is a step half done.
+    """
+    now = labels_of(issue)
+    if "challenge" not in now:
+        sys.exit(f"say: #{issue} is not a Challenge (labelled {now or 'nothing'}); a difficulty "
+                 "is a Challenge's, and a loop reads it only beside `challenge`. "
+                 "`say triage` makes it one, at a level, in one act.")
+    return now
+
+
+def difficulty(issue, level):
+    """Set a Challenge's difficulty: the raiser's estimate, moved by the raiser
+    downward or by a loop to `human` (DR-112).
+
+    One level at a time, so the Issue never carries two, and never on an Issue
+    that is not a Challenge: the coder loop takes an Issue on the event of its
+    difficulty landing and only when `challenge` is already there.
+    """
+    now = challenge_labels(issue)
+    others = [l for l in now if l in DIFFICULTIES and l != level]
+    now = relabel(issue, add=[level], remove=others)
+    print(f"#{issue} is labelled {', '.join(now)}")
+
+
+def triage(issue, level):
+    """Make an Issue a Challenge at a level: `challenge` and the difficulty in
+    one act, and `roadmap` off it.
+
+    The door `file` opens at creation, for an Issue that exists already: one
+    the solo opened from the web with no form and no labels, which `just next`
+    lists as neither kind; or a roadmap Issue whose blocker has closed, which
+    the roadmap form says is usually a Challenge and which closing and refiling
+    would strip of its number, its thread and the reason it was deferred.
+
+    A difficulty already on the Issue — #113's state, the level with no
+    `challenge` beside it — is taken off first and put back with `challenge`,
+    so the event the coder loop reads fires: GitHub emits nothing for a label
+    an Issue already carries.
+    """
+    now = labels_of(issue)
+    if "challenge" in now:
+        sys.exit(f"say: #{issue} is a Challenge already (labelled {now}); "
+                 "`say difficulty` moves its level")
+    if level in now:
+        relabel(issue, remove=[level])
+    stale = [l for l in now if l == "roadmap" or (l in DIFFICULTIES and l != level)]
+    now = relabel(issue, add=["challenge", level], remove=stale)
+    print(f"#{issue} is a Challenge, labelled {', '.join(now)}")
+
+
+def file_issue(title, body, level=None, roadmap=False):
+    """File a Challenge or a roadmap Issue the way the form does.
+
+    The form's front matter applies `challenge` at creation and the raiser adds
+    a difficulty; through the channel both land in one `create`, so there is
+    no moment when the difficulty is on an Issue that is not yet a Challenge —
+    the moment the coder loop's event fell into on #113. A roadmap Issue takes
+    `roadmap` and no difficulty, since it is deferred by definition.
+
+    A label supplied at creation fires `labeled` like any other, one delivery
+    per label beside `opened` — GitHub's workflow reference says so in as many
+    words — so one act here is the one event `coder.yml` watches.
+
+    The first line is read before anything is created. `just next` reads
+    `**Waits on.**` from the first line of both forms (DR-114), and an Issue
+    filed without it waits on nothing anyone can see.
+    """
+    first = body.lstrip().split("\n", 1)[0]
+    if not first.startswith("**Waits on.**"):
+        sys.exit("say: the body does not open with `**Waits on.**`, which is the line "
+                 f"`just next` reads; it opens with {first[:60]!r}. Both forms begin there.")
+    labels = ["roadmap"] if roadmap else ["challenge", level]
+    cmd = ["issue", "create", "--title", title, "--body", body]
+    for name in labels:
+        cmd += ["--label", name]
+    url = gh(*cmd, parse=False)
+    number = url.rstrip("/").rsplit("/", 1)[-1]
+    now = labels_of(number)
+    if any(l not in now for l in labels):
+        sys.exit(f"say: GitHub shows #{number} labelled {now} after the call, not {labels}")
+    print(url)
+    return number, url
+
+
+def stop(issue, body):
+    """Where a loop stopped and why, handed to the solo (DR-112): the refusal,
+    the comment, the release, the move to `human`.
+
+    The order is by what a failure after each act leaves behind. The refusal
+    before anything is posted, or a retry posts the comment twice. The comment
+    before the rest, so the Issue carries an account of where the loop stopped
+    whatever fails next. The release before the move: a failed move leaves an
+    unclaimed Issue at its old level, which the comment explains and a raiser
+    can re-deliver; a failed release after the move would leave `human` and
+    claimed, the one state the coder loop's guard reads as a run still
+    standing (#117). The pull request stays open — merged, never abandoned —
+    for the run that takes the Issue up again.
+    """
+    challenge_labels(issue)
+    conversation_comment(issue, body)
+    release(issue)
+    difficulty(issue, "human")
+
+
+def release(issue):
+    """Take this Role's assignment off an Issue, and read back.
+
+    The claim says a run is standing on this. The coder loop's guard reads it
+    beside the open pull request to tell a level moved under a run from a
+    hand-back the solo has answered (#117); a claim left standing after a
+    hand-back is the loop saying it has stopped and is still working at once.
+    """
+    login = gh("api", "user", "--jq", ".login", parse=False)
+    gh("issue", "edit", str(issue), "--remove-assignee", login, parse=False)
+    who = [a["login"] for a in gh("issue", "view", str(issue), "--json", "assignees")["assignees"]]
+    if login in who:
+        sys.exit(f"say: GitHub shows #{issue} still assigned to {login} after the call")
+    print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
+
+
+def kind(number):
+    """Pull request or Issue, asked of GitHub. The numbers are one sequence and
+    the verbs that take either — `comment`, `revise` — should not make a
+    caller say which."""
+    found = gh("api", f"repos/{repo()}/issues/{number}")
+    return "pull request" if found.get("pull_request") else "issue"
+
+
+def conversation_comment(number, body):
+    """A comment on a pull request's conversation or an Issue's — the same
+    endpoint on GitHub, which is why one verb serves both."""
+    made = gh("api", f"repos/{repo()}/issues/{number}/comments", "-f", f"body={body}")
+    print(made["html_url"])
+
+
+def revise(number, body=None, title=None):
+    """Replace a body or a title, on a pull request or an Issue.
+
+    A body is signed at creation and nowhere afterwards, so an edit that
+    bypassed the channel would leave a Trailer naming the wrong Actor under
+    prose that Actor never wrote. The title is what the index is worth, and
+    changing it is an act GitHub records.
+    """
+    if body is None and title is None:
+        sys.exit("say: nothing to revise — pipe a body in, or pass --title")
+    what = kind(number)
+    noun = "pr" if what == "pull request" else "issue"
+    cmd = [noun, "edit", str(number)]
+    if title is not None:
+        cmd += ["--title", title]
+    if body is not None:
+        cmd += ["--body", body]
+    gh(*cmd, parse=False)
+    print(f"{what} #{number}: {' and '.join(w for w, v in (('body', body), ('title', title)) if v is not None)} set")
+
+
+NOTICED = "**Noticed and not done.**"
+
+
+def solo():
+    """The account the repository belongs to: the party a parked conversation
+    is addressed to."""
+    return gh("repo", "view", "--json", "owner")["owner"]["login"]
+
+
+def raise_thread(pr, path, line, body):
+    """Open a thread on a line of the diff, at the pull request's head.
+
+    The pull request's head, not this worktree's. They are usually the same
+    and the failure when they are not is opaque: GitHub rejects a comment
+    whose commit is not part of the pull request.
+    """
+    head = gh("pr", "view", str(pr), "--json", "headRefOid", "--jq", ".headRefOid", parse=False)
+    made = gh("api", f"repos/{repo()}/pulls/{pr}/comments",
+              "-f", f"body={body}", "-f", f"commit_id={head}",
+              "-f", f"path={path}", "-F", f"line={line}")
+    print(made["html_url"])
+
+
+def notice(pr, path, line, text):
+    """Work noticed and not done, as a conversation on the diff (A15).
+
+    PR First's step: raise it where it was noticed, tagging the solo and
+    opening with the marker. The marker is what tells a thread held open on
+    purpose from one owed an answer, and `check_pr.py` reads it from the
+    *last* comment; the mention is who decides what it is. Both are supplied
+    here rather than typed, so a notice is never one a reader mistakes for a
+    question (DR-116).
+    """
+    raise_thread(pr, path, line, signed(f"{NOTICED} @{solo()}\n\n{text}"))
+
+
+def refuse_if_sole_author(thread_id):
+    bodies = thread_comments(thread_id)
+    if bodies is None:
+        sys.exit(f"say: GitHub has no review thread {thread_id}")
+    if sole_author(bodies):
+        sys.exit("say: refusing — you are the sole author of this thread, and a reply from you "
+                 "would not change that. A16 counts the resolver as a party, which means "
+                 "nothing when it is you. Ask the solo to resolve it, or leave it for the next "
+                 "Job, whose Trailer differs.")
+
+
+def reply(thread_id, body):
+    print(graphql(REPLY, t=thread_id, b=body)
+          ["data"]["addPullRequestReviewThreadReply"]["comment"]["url"])
+
+
+def resolve(thread_id):
+    graphql(RESOLVE, t=thread_id)
+    print("resolved")
+
+
+def answer(thread_id, body):
+    """Reply, then resolve: PR First's step, whole.
+
+    A thread answered and left open reads as one still owed something, and
+    one resolved without an answer is A16's defect; the step is both, and
+    the verb is both. The sole-author refusal is asked before anything is
+    posted: a reply that goes out and a resolve that then refuses is the step
+    half done, which is the shape this verb exists to make untypeable.
+    """
+    refuse_if_sole_author(thread_id)
+    reply(thread_id, body)
+    resolve(thread_id)
+
+
+def promote(thread_id, title, body, level):
+    """At merge: what survived the argument earns an Issue, and the thread is
+    resolved with a link to it (PR First).
+
+    File, reply, resolve, in that order and with the refusal first, so the
+    Issue exists before the thread says it does and nothing is filed for a
+    thread this Actor could not close. The body is the Issue form's, not the
+    thread's: it opens with `**Waits on.**` like anything `file` takes, since
+    what is promoted is an Issue and the thread is where it was found.
+    """
+    refuse_if_sole_author(thread_id)
+    # The link, not the number: `check_pr.py` reads a promotion in the one
+    # form it can check, the Issue's URL, and a bare `#n` is what someone types
+    # when referring to an Issue rather than when filing one.
+    _, url = file_issue(title, body, level=level)
+    reply(thread_id, signed(f"Promoted to {url}."))
+    resolve(thread_id)
+
+
+def closed_by(pr):
+    """The Challenges a pull request's body closes, by the gate's own rule.
+
+    `check_pr.py` blesses the heading: one bullet per item, each carrying a
+    closing keyword and one of the three references GitHub closes on, or an
+    explicit `None.`. The same objects read it here, so a body the required
+    check passed is never one this verb calls wrong. `None` is the answer for a
+    body that says it closes nothing, and an empty list is a body that named
+    nothing the gate would accept.
+
+    The near-miss is the heading present and its section empty, since
+    `check_pr.check()` guards its closing rule on `closing` being truthy and
+    that rule would pass it. It fails the gate one rule earlier, as a required
+    section left blank — the form submitted with nothing in it — so the parity
+    holds through that body too and the refusal in `landed` is not reached on
+    one the gate blessed (#117).
+    """
+    body = gh("pr", "view", str(pr), "--json", "body")["body"] or ""
+    found = check_pr.sections(body)
+    if check_pr.CLOSES not in found:
+        sys.exit(f"say: #{pr}'s body has no **{check_pr.CLOSES}.**; the form has one")
+    closing = found[check_pr.CLOSES]
+    if check_pr.NONE.match(closing):
+        return None
+    numbers = []
+    for item in check_pr.BULLET.finditer(closing):
+        ref = check_pr.KEYWORD.search(item.group(1))
+        if ref:
+            numbers.append(re.search(r"(\d+)$", ref.group(0)).group(1))
+    return list(dict.fromkeys(numbers))
+
+
+def landed(pr):
+    """Post what landed for every Challenge the pull request closes, rendered
+    from the record and never typed (PR First, DR-084).
+
+    One comment per Challenge the record asserts. A body that says `None.`
+    closes nothing and has nothing to post, which is allowed and is a question
+    the form asks; a Challenge with no `assertions/challenges/<n>.yaml` has
+    nothing to post either, and is the common case rather than the rare one,
+    so it is said here and not posted — the renderer's line for it is about
+    the assertion directory, not the work, and on a pull request it reads as
+    a tool error. Neither is a refusal, since the coder loop runs this on
+    every pull request and every pass. `render.py --landed` is run rather
+    than imported: it needs `yaml`, which this interpreter may not have, and
+    `uvx` is how the rest of the tree runs it.
+    """
+    numbers = closed_by(pr)
+    if numbers is None:
+        print(f"#{pr} closes nothing, and says so; nothing to post")
+        return
+    if not numbers:
+        sys.exit(f"say: nothing under #{pr}'s **{check_pr.CLOSES}.** carries a closing keyword "
+                 "and a reference; the gate would say the same")
+    root = pathlib.Path(__file__).resolve().parent.parent
+    for number in numbers:
+        if not (root / ".meta" / "assertions" / "challenges" / f"{number}.yaml").exists():
+            print(f"#{number} is not asserted as a Challenge; nothing to post for it")
+            continue
+        out = subprocess.run(["uvx", "--with", "pyyaml", "python", ".meta/render.py", "--landed", number],
+                             cwd=root, capture_output=True, text=True)
+        if out.returncode:
+            sys.exit(f"say: render.py --landed {number} failed: {out.stderr.strip()}")
+        conversation_comment(pr, signed(out.stdout))
 
 
 def arm(pr, subject):
@@ -357,8 +768,13 @@ def merge(pr, stack=False, auto=False):
     subject = f"{before['title']} (#{pr})"
     if auto:
         if stack or stacked(pr):
-            sys.exit(f"say: #{pr} is a layer of a stack; --auto would merge it into the layer "
-                     "below. Arm the bottom layer, and GitHub retargets the rest as it lands.")
+            # The bottom included: GitHub refuses auto-merge on any stacked
+            # pull request ("Auto-merge is not supported for stacked pull
+            # requests"), so a stack lands by `merge --stack`, by hand, when
+            # its bottom is green (#117).
+            sys.exit(f"say: #{pr} is in a stack, and GitHub does not arm a stacked pull request, "
+                     "bottom included. Merge it with --stack when it is green, and GitHub "
+                     "retargets the layers above as it lands.")
         if not gh("api", f"repos/{repo()}").get("allow_auto_merge"):
             sys.exit("say: this repository does not allow auto-merge; that is a setting on "
                      "GitHub, not a line here")
@@ -535,25 +951,6 @@ def claim(issue):
     if login not in who:
         sys.exit(f"say: GitHub shows #{issue} assigned to {who or 'nobody'} after the call, not {login}")
     print(f"claimed #{issue} as {login}")
-
-
-def label(issue, add, remove):
-    """Move an Issue's labels, and read back what it carries.
-
-    A loop that cannot finish relabels `human` and removes its own level
-    (DR-112); the label is the semaphore the next loop reads.
-    """
-    cmd = ["issue", "edit", issue]
-    for name in add:
-        cmd += ["--add-label", name]
-    for name in remove:
-        cmd += ["--remove-label", name]
-    gh(*cmd, parse=False)
-    now = [l["name"] for l in gh("issue", "view", issue, "--json", "labels")["labels"]]
-    missing = [n for n in add if n not in now] + [n for n in remove if n in now]
-    if missing:
-        sys.exit(f"say: GitHub shows #{issue} labelled {now} after the call; {missing} did not take")
-    print(f"#{issue} is labelled {', '.join(now)}")
 
 
 def milestone(issue, title, clear=False):
@@ -737,37 +1134,53 @@ def build_parser():
     ap.add_argument("--role", default="coder",
                     help="which Role speaks: ~/.config/solorepo/<role>.env (default coder)")
     sub = ap.add_subparsers(dest="verb", required=True)
-    p = sub.add_parser("comment"); p.add_argument("pr")
-    p = sub.add_parser("raise"); p.add_argument("pr"); p.add_argument("path"); p.add_argument("line", type=int)
-    p = sub.add_parser("reply"); p.add_argument("thread")
-    p = sub.add_parser("resolve"); p.add_argument("thread")
+
+    # An Issue's life: filed, its difficulty moved, claimed, or handed back.
+    p = sub.add_parser("file"); p.add_argument("--title", required=True)
+    what = p.add_mutually_exclusive_group(required=True)
+    what.add_argument("--difficulty", choices=DIFFICULTIES, dest="level", help="a Challenge, at this level")
+    what.add_argument("--roadmap", action="store_true", help="a roadmap Issue: intended and deferred")
+    p = sub.add_parser("triage"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
+    p = sub.add_parser("difficulty"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
+    p = sub.add_parser("claim"); p.add_argument("issue")
+    p = sub.add_parser("stop"); p.add_argument("issue")
+
+    # A pull request's: opened, layered, revised, committed to, merged.
+    p = sub.add_parser("open"); p.add_argument("--title", required=True)
+    where = p.add_mutually_exclusive_group()
+    where.add_argument("--base", default="main")
+    where.add_argument("--on", help="open as a layer on this pull request, and link the stack")
+    p = sub.add_parser("layer"); p.add_argument("pr"); p.add_argument("--on", required=True)
+    p = sub.add_parser("revise"); p.add_argument("number"); p.add_argument("--title")
     p = sub.add_parser("commit"); p.add_argument("-m", "--message", required=True)
     p = sub.add_parser("merge"); p.add_argument("pr"); p.add_argument("--stack", action="store_true")
     p.add_argument("--auto", action="store_true", help="arm GitHub to merge when green")
     p = sub.add_parser("advance")
     p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
-    p = sub.add_parser("stack"); p.add_argument("items", nargs="+")
-    sub.add_parser("whoami")
-    p = sub.add_parser("issue"); p.add_argument("--title", required=True); p.add_argument("--label", action="append", default=[])
-    p = sub.add_parser("pr"); p.add_argument("--title", required=True); p.add_argument("--base", default="main")
-    p = sub.add_parser("pr-body"); p.add_argument("pr")
-    p = sub.add_parser("issue-body"); p.add_argument("issue")
-    p = sub.add_parser("pr-title"); p.add_argument("pr"); p.add_argument("--title", required=True)
-    p = sub.add_parser("pr-base"); p.add_argument("pr"); p.add_argument("--base", required=True)
+
+    # The argument: comment, raise, notice, reply, answer, promote, landed.
+    p = sub.add_parser("comment"); p.add_argument("number")
+    p = sub.add_parser("raise"); p.add_argument("pr"); p.add_argument("path"); p.add_argument("line", type=int)
+    p = sub.add_parser("notice"); p.add_argument("pr"); p.add_argument("path"); p.add_argument("line", type=int)
+    p = sub.add_parser("reply"); p.add_argument("thread")
+    p = sub.add_parser("answer"); p.add_argument("thread")
+    p = sub.add_parser("promote"); p.add_argument("thread"); p.add_argument("--title", required=True)
+    p.add_argument("--difficulty", choices=DIFFICULTIES, dest="level", required=True)
+    p = sub.add_parser("landed"); p.add_argument("pr")
+
+    # The handoff, and its answer.
     p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
     p = sub.add_parser("review"); p.add_argument("pr")
     verdict = p.add_mutually_exclusive_group(required=True)
     verdict.add_argument("--approve", action="store_const", const="approve", dest="verdict")
     verdict.add_argument("--request-changes", action="store_const", const="request-changes", dest="verdict")
     verdict.add_argument("--comment", action="store_const", const="comment", dest="verdict")
-    p = sub.add_parser("claim"); p.add_argument("issue")
-    p = sub.add_parser("label"); p.add_argument("issue")
-    p.add_argument("--add", action="append", default=[]); p.add_argument("--remove", action="append", default=[])
-    p = sub.add_parser("issue-comment"); p.add_argument("issue")
+
     p = sub.add_parser("milestone"); p.add_argument("issue")
     target = p.add_mutually_exclusive_group(required=True)
     target.add_argument("--set", dest="title", help="the Milestone's title; created if new")
     target.add_argument("--clear", action="store_true", help="take the Issue out of its Milestone")
+    sub.add_parser("whoami")
     return ap
 
 
@@ -789,16 +1202,24 @@ def main():
         advance(args.pr)
         return
 
-    if args.verb == "stack":
-        stack(args.items)
-        return
-
     if args.verb == "claim":
         claim(args.issue)
         return
 
-    if args.verb == "label":
-        label(args.issue, args.add, args.remove)
+    if args.verb == "difficulty":
+        difficulty(args.issue, args.level)
+        return
+
+    if args.verb == "triage":
+        triage(args.issue, args.level)
+        return
+
+    if args.verb == "layer":
+        layer(args.pr, args.on)
+        return
+
+    if args.verb == "landed":
+        landed(args.pr)
         return
 
     if args.verb == "milestone":
@@ -835,66 +1256,37 @@ def main():
                   "selection does not include it.")
         return
 
-    if args.verb == "resolve":
-        bodies = thread_comments(args.thread)
-        if bodies is None:
-            sys.exit(f"say: no open pull request here has thread {args.thread}")
-        if sole_author(bodies):
-            sys.exit("say: refusing — you are the sole author of this thread. A16 counts "
-                     "the resolver as a party, which means nothing when it is you. Ask the "
-                     "solo to resolve it, or promote it to an Issue and link that.")
-        graphql(RESOLVE, t=args.thread)
-        print("resolved")
+    if args.verb == "revise":
+        # A title says everything it has to say in an argument, so the body
+        # is optional here and nowhere else; reading a body a rename will not
+        # use turned a rename into a refusal, twice.
+        text = piped()
+        revise(args.number, body=signed(text) if text else None, title=args.title)
         return
 
-    # `pr-title` says everything it has to say in an argument. Reading a body it
-    # will not use turned a rename into a refusal, twice.
-    body = None if args.verb in ("pr-title", "pr-base") else signed(stdin_body())
+    if args.verb == "notice":
+        # Signed inside, after the marker and the mention are put in front.
+        notice(args.pr, args.path, args.line, stdin_body())
+        return
 
-    if args.verb == "comment":
-        print(gh("pr", "comment", args.pr, "--body", body, parse=False))
-    elif args.verb == "issue-comment":
-        print(gh("issue", "comment", args.issue, "--body", body, parse=False))
-    elif args.verb == "reply":
-        print(graphql(REPLY, t=args.thread, b=body)
-              ["data"]["addPullRequestReviewThreadReply"]["comment"]["url"])
+    body = signed(stdin_body())
+
+    if args.verb == "file":
+        file_issue(args.title, body, level=args.level, roadmap=args.roadmap)
+    elif args.verb == "stop":
+        stop(args.issue, body)
+    elif args.verb == "open":
+        open_pull_request(args.title, body, base=args.base, on=args.on)
+    elif args.verb == "comment":
+        conversation_comment(args.number, body)
     elif args.verb == "raise":
-        # The pull request's head, not this worktree's. They are usually the
-        # same and the failure when they are not is opaque: GitHub rejects a
-        # comment whose commit is not part of the pull request.
-        head = gh("pr", "view", args.pr, "--json", "headRefOid",
-                  "--jq", ".headRefOid", parse=False)
-        made = gh("api", f"repos/{repo()}/pulls/{args.pr}/comments",
-                  "-f", f"body={body}", "-f", f"commit_id={head}",
-                  "-f", f"path={args.path}", "-F", f"line={args.line}")
-        print(made["html_url"])
-    elif args.verb == "issue":
-        cmd = ["issue", "create", "--title", args.title, "--body", body]
-        for name in args.label:
-            cmd += ["--label", name]
-        print(gh(*cmd, parse=False))
-    elif args.verb == "pr":
-        print(gh("pr", "create", "--title", args.title, "--base", args.base,
-                 "--body", body, parse=False))
-    elif args.verb == "pr-body":
-        gh("pr", "edit", args.pr, "--body", body, parse=False)
-        print("body set")
-    elif args.verb == "issue-body":
-        # The same verb `pr-body` is, for the other artifact the channel opens.
-        # An Issue's body is signed at creation and nowhere afterwards, so an
-        # edit that bypassed the channel would leave a Trailer naming the
-        # wrong Actor under prose that Actor never wrote.
-        gh("issue", "edit", args.issue, "--body", body, parse=False)
-        print("body set")
-    elif args.verb == "pr-title":
-        gh("pr", "edit", args.pr, "--title", args.title, parse=False)
-        print("title set")
-    elif args.verb == "pr-base":
-        # A layer opened against trunk and found to wait on another (DR-100)
-        # is retargeted here rather than closed and reopened: a pull request
-        # is merged, never abandoned, and the edit is an act GitHub records.
-        gh("pr", "edit", args.pr, "--base", args.base, parse=False)
-        print("base set")
+        raise_thread(args.pr, args.path, args.line, body)
+    elif args.verb == "reply":
+        reply(args.thread, body)
+    elif args.verb == "answer":
+        answer(args.thread, body)
+    elif args.verb == "promote":
+        promote(args.thread, args.title, body, args.level)
 
 
 if __name__ == "__main__":

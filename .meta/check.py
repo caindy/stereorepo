@@ -935,10 +935,24 @@ def say_parser_probes():
         ("review 1 --approve", {"verb": "review", "pr": "1", "verdict": "approve"}),
         ("review 1 --request-changes", {"verdict": "request-changes"}),
         ("review 1 --comment", {"verdict": "comment"}),
-        ("issue-comment 93", {"verb": "issue-comment", "issue": "93"}),
+        ("comment 93", {"verb": "comment", "number": "93"}),
         ("claim 93", {"verb": "claim", "issue": "93"}),
-        ("label 93 --add human --remove easy",
-         {"verb": "label", "issue": "93", "add": ["human"], "remove": ["easy"]}),
+        ("difficulty 93 human", {"verb": "difficulty", "issue": "93", "level": "human"}),
+        ("triage 93 medium", {"verb": "triage", "issue": "93", "level": "medium"}),
+        ("stop 93", {"verb": "stop", "issue": "93"}),
+        ("file --title t --difficulty medium",
+         {"verb": "file", "title": "t", "level": "medium", "roadmap": False}),
+        ("file --title t --roadmap", {"verb": "file", "level": None, "roadmap": True}),
+        ("open --title t", {"verb": "open", "title": "t", "base": "main", "on": None}),
+        ("open --title t --on 12", {"verb": "open", "on": "12"}),
+        ("layer 13 --on 12", {"verb": "layer", "pr": "13", "on": "12"}),
+        ("revise 13 --title t", {"verb": "revise", "number": "13", "title": "t"}),
+        ("revise 13", {"verb": "revise", "number": "13", "title": None}),
+        ("notice 13 .meta/say 12", {"verb": "notice", "pr": "13", "path": ".meta/say", "line": 12}),
+        ("answer T_1", {"verb": "answer", "thread": "T_1"}),
+        ("promote T_1 --title t --difficulty easy",
+         {"verb": "promote", "thread": "T_1", "title": "t", "level": "easy"}),
+        ("landed 13", {"verb": "landed", "pr": "13"}),
         ("milestone 75 --set first-specialization",
          {"verb": "milestone", "issue": "75", "title": "first-specialization", "clear": False}),
         ("milestone 75 --clear", {"verb": "milestone", "issue": "75", "title": None, "clear": True}),
@@ -955,8 +969,19 @@ def say_parser_probes():
                 got = getattr(args, key, None)
                 if got != value:
                     problems.append(f"`.meta/say {line}`: {key} was {got!r}, not {value!r}")
-        for line in ("review 1", "issue-comment 93 --approve", "milestone 75",
-                     "milestone 75 --set x --clear"):
+        # The withdrawn nouns are not verbs, and the compositions they allowed
+        # are not typeable (DR-116): a Challenge without a difficulty, a
+        # difficulty that is not one, a layer with two bases.
+        for line in ("review 1", "comment 93 --approve", "milestone 75",
+                     "milestone 75 --set x --clear",
+                     "file --title t", "file --title t --difficulty huge",
+                     "file --title t --difficulty easy --roadmap",
+                     "difficulty 93 huge", "triage 93", "triage 93 huge",
+                     "open --title t --base b --on 12",
+                     "promote T_1 --title t",
+                     "issue --title t", "pr --title t", "pr-body 1", "issue-body 1",
+                     "pr-title 1 --title t", "pr-base 1 --base b",
+                     "label 93 --add human", "issue-comment 93", "stack 1 2", "resolve T_1"):
             try:
                 say.build_parser().parse_args(line.split())
                 problems.append(f"`.meta/say {line}` parsed, and should have been rejected")

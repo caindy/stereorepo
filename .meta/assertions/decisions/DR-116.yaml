@@ -1,0 +1,117 @@
+decisions:
+  - id: work:decision/116
+    name: "DR-116 · The channel's verbs are the operations the Disciplines name, one verb per step, and gh's nouns are withdrawn from it"
+    challenge: work:challenge/116
+    status: ADOPTED
+    supersedes:
+      - work:decision/069
+      - work:decision/072
+      - work:decision/100
+    applies:
+      - work:article/15
+      - work:article/16
+    enacted_in:
+      - work:artifact/meta-say
+      - work:artifact/meta-check
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-render
+      - work:artifact/justfile
+      - work:artifact/meta-assertions-authority
+      - work:artifact/meta-templates-roadmap
+    alternatives:
+      - name: A rule about the order, in a prompt, a step or a memory
+        chosen: false
+        reason: >-
+          The agent that filed #113 saved the ordering as a memory, and the
+          correction was that a memory does not travel: the next agent, on the
+          next machine, in the next harness, composes the same two calls
+          without it. DR-050's principle applies — a convention kept healthy
+          by attention does not survive agentic maintenance — and DR-069 had
+          already declined this shape once for the identity.
+      - name: The channel signs and nothing else, and each operation is a script of its own composed of it
+        chosen: false
+        reason: >-
+          The shape the authority ontology suggests, one SKILL per operation.
+          What it costs in the tree: every script reloads the credential and
+          the Trailer or imports the channel, is another file Specialization
+          copies, another prefix the hooks sanction and another line the
+          settings allow — the surface DR-069 spent a deny list bounding,
+          multiplied. And what it buys in the ontology is nothing. A
+          Capability earns its own instance when a Role holds it and another
+          does not; every Role that may speak may perform every one of these,
+          so a Capability per verb splits the axis without a Permission that
+          could ever name one of the pieces. The one operation a single Role
+          holds, `review`, already has its Capability.
+      - name: The operations are verbs of the one channel, one per step of a Discipline, and gh's nouns are not verbs of it
+        chosen: true
+        reason: >-
+          The channel already composes: `merge --auto` advances and arms,
+          `request-review` withdraws and asks again, `resolve` reads the thread
+          before it resolves. Each was added because a rule about the order was
+          being remembered wrongly, and this is the same move for the rest. A
+          verb that is the Discipline's word applies the whole step — file
+          applies the form and both labels in one act, answer replies and
+          resolves, promote files and links and resolves, stop says why and
+          hands the Issue over — and the wrong composition is not a sequence a
+          caller can type, because the pieces are not verbs. What it costs:
+          every reference to a withdrawn verb moves in one change, an
+          operation the Discipline has not named yet has no verb until it is
+          named, and a composition the channel gets wrong is wrong for every
+          caller at once, which is where the probes in `check.py` earn their
+          keep.
+    consequences:
+      - >-
+        The channel's verbs are `file`, `triage`, `open`, `layer`, `revise`, `claim`,
+        `commit`, `comment`, `raise`, `notice`, `reply`, `answer`, `promote`,
+        `landed`, `stop`, `difficulty`, `request-review`, `review`, `merge`,
+        `advance`, `milestone` and `whoami`. Withdrawn: `issue`, `pr`,
+        `pr-body`, `pr-title`, `pr-base`, `issue-body`, `issue-comment`,
+        `label`, `stack` and `resolve`. There is no alias for any of them.
+      - >-
+        Each verb performs a whole step and refuses its own misuse, and a
+        refusal names the verb to use instead. `file` applies the form,
+        `challenge` and the difficulty in one act; `triage` is the same door
+        for an Issue that exists already; `difficulty` and `stop` refuse an
+        Issue that is not a Challenge before anything is posted, and `stop`
+        gives the claim back and leaves the pull request open for the run
+        that takes the Issue up again; `answer` and `promote` ask the
+        sole-author refusal before they reply, and `promote` links the Issue
+        in the one form the gate reads; `landed` reads *What it closes* by the
+        gate's own objects and takes `None.` as nothing to post. The mechanics
+        and the order each verb fails in are in `.meta/say`, once.
+      - >-
+        A label supplied at creation fires `labeled` like any other — GitHub's
+        workflow reference: an Issue opened with two labels starts three runs,
+        one `opened` and two `labeled` — so a Challenge filed in one act is one
+        run and the coder loop's trigger is unchanged. The loop gains a guard
+        that tells a level moved under a standing run from a hand-back the
+        solo has answered and from a delivery gone stale, and a run that ends
+        at its budget without saying so hands the Issue back through `stop`
+        as it would have itself; what the guard reads is `coder.yml`'s to say.
+      - >-
+        `revise` and `comment` take a pull request or an Issue, and the
+        channel asks GitHub which. What the caller must know is which number
+        it is passing, and that is a cost of withdrawing the nouns, which
+        carried the artifact in the verb; the coder's prompt pays it by saying
+        which number is which.
+      - >-
+        The coder loop's prompts say that the verbs are the steps and no
+        longer restate the Discipline; PR First's steps, the justfile's
+        `landed` recipe and `check.py`'s parser probes name the new verbs, and
+        the probes assert the withdrawn nouns do not parse. `speak-on-github`
+        in `authority.yaml` says its operations are the Disciplines' steps and
+        why they are not Capabilities of their own.
+    falsifier: >-
+      The next composition rule. A step of a Discipline that is two verbs of
+      the channel with an order between them, or a `gh` noun brought back
+      because an operation could not be said without it — either says the
+      verbs are not the steps.
+    rationale: |-
+      Christopher, on #113: the coder loop skipped a medium Issue because
+      the difficulty label landed before `challenge`, and the agent that
+      filed it saved the rule as a memory. The fix is in how the operation
+      is offered, not in what a caller remembers. DR-069 named the first
+      Capability by what may be done rather than by the implement; fifteen
+      decisions since each added a verb to the same file, and the file had
+      become the implement again.

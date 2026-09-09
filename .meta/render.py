@@ -291,9 +291,10 @@ def landed(number):
     which is the point rather than a defect.
 
     Prints rather than writes. It is addressed to a pull request at merge, so it
-    goes through the channel that signs:
+    goes through the channel that signs: `.meta/say landed 15` runs this for
+    every Challenge the body closes and posts each. By hand:
 
-        uvx --with pyyaml python .meta/render.py --landed 11 | .meta/say comment 15
+        uvx --with pyyaml python .meta/render.py --landed 11
     """
     challenges = {c["id"]: c for path in
                   sorted((META / "assertions" / "challenges").glob("*.yaml"))
@@ -576,7 +577,7 @@ def justfile():
         "sweep:",
         "    python3 .meta/check_pr.py --sweep",
         "",
-        "# what landed for a Challenge, from the record; pipe it into `.meta/say comment <pr>`",
+        "# what landed for a Challenge, from the record; `.meta/say landed <pr>` posts it",
         "landed n:",
         "    uvx --with pyyaml python .meta/render.py --landed {{n}}",
         "",

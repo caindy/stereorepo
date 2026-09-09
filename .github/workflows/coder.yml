@@ -52,6 +52,7 @@ jobs:
     # the solo dispatching that second pass by hand.
     if: >-
       (github.event_name == 'issues'
+        && github.event.issue.state == 'open'
         && (github.event.label.name == 'easy' || github.event.label.name == 'medium')
         && contains(github.event.issue.labels.*.name, 'challenge'))
       || (github.event_name == 'pull_request_review'
@@ -105,12 +106,62 @@ jobs:
         env:
           CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
 
+      # One run per Challenge. A label supplied at creation fires `labeled`
+      # like any other — GitHub's workflow reference: an Issue opened with two
+      # labels starts three runs, one `opened` and two `labeled` — so
+      # `labeled` alone is the trigger and a Challenge filed in one act is one
+      # run. What can still arrive twice is a level moved under a run, and the
+      # event's payload is frozen at delivery, so the job's `if` cannot see
+      # what happened while the run it waited on was standing. Four facts
+      # are read now, each into its own assignment so that a read which fails
+      # aborts the step rather than reading as empty, and `by` carries a word
+      # for every delivery that must not run, so that it is never empty by
+      # accident: whether the Issue is still open, since one closed by its
+      # own merge since the delivery is finished work; its *current*
+      # difficulty, since a run that handed it back left it `human` and a
+      # stale delivery must not take it up again; the open pull request on
+      # its branch, which every taken Issue has, opened before the work and
+      # left open by `say stop`; and the claim,
+      # which only a run still standing holds — `say stop` releases it, and
+      # the last step below hands back a run that ended at its budget without
+      # saying so, so that this is true of every way a run ends. Claimed with
+      # a pull request open is a duplicate, skipped and said so; a pull
+      # request with no claim and a level a loop takes is a hand-back the solo
+      # has answered, and the run continues under it.
+      - name: is it taken already
+        id: taken
+        if: github.event_name == 'issues'
+        run: |
+          open=$(gh pr list --state open --head "claude/issue-$ISSUE" --json number --jq '.[].number')
+          issue=$(gh issue view "$ISSUE" --json state,assignees,labels)
+          state=$(jq -r .state <<<"$issue")
+          mine=$(jq -r --arg c "$CODER" '.assignees[].login | select(. == $c)' <<<"$issue")
+          level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium")][0] // ""' <<<"$issue")
+          if [ "$state" != OPEN ]; then
+            printf 'by=closed\n' >> "$GITHUB_OUTPUT"
+            echo "#$ISSUE is closed now; this delivery is stale"
+          elif [ -n "$open" ] && [ -n "$mine" ]; then
+            printf 'by=%s\n' "$open" >> "$GITHUB_OUTPUT"
+            echo "#$ISSUE is claimed by $mine and has open pull request #$open; this delivery is a duplicate"
+          elif [ -z "$level" ]; then
+            printf 'by=stale\n' >> "$GITHUB_OUTPUT"
+            echo "#$ISSUE is labelled '$(jq -r '[.labels[].name] | join(", ")' <<<"$issue")' now; this delivery is stale"
+          else
+            printf 'by=\nresume=%s\nlevel=%s\n' "$open" "$level" >> "$GITHUB_OUTPUT"
+            [ -z "$open" ] || echo "#$ISSUE has open pull request #$open and no claim: a hand-back, taken up again"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          CODER: ${{ format('{0}-{1}-coder', github.repository_owner, github.event.repository.name) }}
+
       # Depth by the label. `easy` is the smaller model and an hour at most;
       # `medium` is the larger and the whole budget. The guess is the
       # raiser's, and a wrong one costs a run before anyone relabels.
       - name: choose the depth
         id: depth
         run: |
+          printf 'level=%s\n' "$LEVEL" >> "$GITHUB_OUTPUT"
           if [ "$LEVEL" = medium ]; then
             printf 'model=claude-opus-5\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
           else
@@ -118,12 +169,16 @@ jobs:
           fi
           cat "$GITHUB_OUTPUT"
         env:
-          # A second pass is the larger model whatever the label was: the
+          # The level the guard read from the Issue now, not the one the
+          # frozen delivery carried: a level moved while this run waited in
+          # the concurrency group is the level the run must take (#117). A
+          # second pass is the larger model whatever the label was: the
           # threads it answers were written by the deeper reviewer.
-          LEVEL: ${{ github.event.label.name || 'medium' }}
+          LEVEL: ${{ steps.taken.outputs.level || 'medium' }}
 
       - name: take the Issue
-        if: github.event_name == 'issues'
+        id: take
+        if: github.event_name == 'issues' && steps.taken.outputs.by == ''
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
@@ -136,62 +191,99 @@ jobs:
           show_full_output: "true"
           prompt: |
             You are the coder Role (DR-107), taking Issue #${{ github.event.issue.number }}
-            of ${{ github.repository }}, which somebody labelled
-            `${{ github.event.label.name }}`. Read /pr-first first: it is the
-            Discipline for how work is proposed and recorded here, and
-            `.meta/templates/pull-request.md` is the body a pull request must
-            carry. `AGENTS.md` has the conventions.
+            of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
+            Read /pr-first for what a pull request here must hold and where
+            the judgement is; `AGENTS.md` has the conventions. Every act on
+            GitHub goes through `.meta/say`, whose verbs are the Discipline's
+            steps: `.meta/say --help` lists them, each takes its body on stdin
+            as a quoted heredoc, and a refusal names the verb to use instead.
+            Commit through `.meta/say commit -m "<subject>"` and never `git
+            commit`; only the channel signs.
 
             Claim it: `.meta/say claim ${{ github.event.issue.number }}`.
             Read it: `gh issue view ${{ github.event.issue.number }}`.
-
             Branch as `claude/issue-${{ github.event.issue.number }}` from
-            `origin/main`. Make the first commit as soon as there is one to
-            make, through `.meta/say commit -m "<subject>"` and never any
-            other way, since only the channel signs; push the branch; and
-            open the pull request at once through the channel with the form
-            filled: `.meta/say pr --title "<words someone will search for>"`
-            with the body on stdin as a quoted heredoc, saying what is
-            intended and naming the Issue under "What it closes" with a
-            closing keyword. The argument has a place before the diff does.
-            Then do the rest of the work the Issue asks for, and no more,
-            under it: gate green with `.meta/gate meta`, commit and push as
-            you go, and update the body at the end with `.meta/say pr-body <n>`.
+            `origin/main`, push at the first commit, and open the pull request
+            at once with `.meta/say open`, the form filled and the Issue named
+            under "What it closes". ${{ steps.taken.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.taken.outputs.resume) || 'No run has taken this Issue before.' }}
+            Below, `<n>` is that pull request's number, never the Issue's;
+            `revise` and `comment` take either.
 
-            Post what landed for the Challenge before it merges, generated and
-            never typed: `uvx --with pyyaml python .meta/render.py --landed
-            ${{ github.event.issue.number }} | .meta/say comment <n>`. It is
-            the record's account of the Challenge, not a summary you write.
+            Do what the Issue asks and no more. Gate green with
+            `.meta/gate meta`, commit and push as you go, `.meta/say revise <n>`
+            when the body no longer says what the head does, and
+            `.meta/say landed <n>` before you hand it over.
 
-            If the label is `easy`, arm the merge, `.meta/say merge <n> --auto`,
-            so it lands when the ruleset is satisfied: green is the review.
-            If it is `medium`, request review, `.meta/say request-review <n>`,
-            and stop there. The reviewer arms the merge with its approval,
-            and a request for changes comes back to you as a new run. Do not
-            arm a `medium` pull request yourself.
+            `easy`: `.meta/say merge <n> --auto`; green is the review.
+            `medium`: `.meta/say request-review <n>` and stop; the reviewer
+            arms the merge, and a request for changes comes back to you as a
+            new run. Do either the moment the branch is pushed and the body is
+            final, and do not wait for the checks (#102).
 
-            Arm or request review the moment the branch is pushed and the
-            body is final. Do not wait for the checks: the gate on the runner
-            is the same gate you ran, the reviewer runs on the request and
-            not on green, and a turn that ends "waiting on CI" is a run that
-            never asked for its review (#102).
+            If you cannot finish — a decision only the solo can take, a gate
+            that will not go green, work larger than it looked —
+            `.meta/say stop ${{ github.event.issue.number }}` with why on
+            stdin. It hands the Issue to the solo and leaves the pull request
+            open for the run that takes it up again.
 
-            If you cannot finish — the Issue asks for a decision only the solo
-            can take, the gate will not go green, or the work is larger than
-            it looked — do not leave a half-built branch. Say where you
-            stopped and why in `.meta/say issue-comment ${{ github.event.issue.number }}`
-            with the body on stdin, then
-            `.meta/say label ${{ github.event.issue.number }} --add human --remove ${{ github.event.label.name }}`.
-
-            Never `gh pr create`, `gh pr comment`, `gh issue edit`, `gh issue
-            comment` or `gh api`: the hook refuses them, and every word you
-            post carries the Trailer only through the channel. Do not resolve
-            any thread. Do not merge by hand; the armed merge is the merge.
+            Do not answer any thread, do not merge by hand, and do not reach
+            GitHub any other way: the hook refuses `gh pr create`, `gh pr
+            comment`, `gh issue edit`, `gh issue comment` and `gh api`.
           claude_args: |
             --model ${{ steps.depth.outputs.model }}
             --max-turns ${{ steps.depth.outputs.turns }}
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
+
+      # A run that ended without finishing — the step's timeout, the turn
+      # limit, a crash — and without saying so has left the Issue claimed and
+      # its pull request open, which is what a standing run looks like, so
+      # every later delivery would read as a duplicate and the Challenge
+      # would be unreachable except by hand. The exit status alone cannot say
+      # that: a run that finished its work and then sat waiting on the checks
+      # (#102) ends the same way, and so does one that ran `say stop` itself
+      # and then ran out. So this asks what a finished run leaves. Two of the
+      # witnesses live on an *open* pull request — a review requested for
+      # `medium`, the merge armed for `easy` — and for `easy` the arming is
+      # not a resting state but an instruction GitHub carries out: when it is,
+      # the pull request closes, the Challenge closes with it, and both
+      # witnesses go with them (#117). The facts that survive that are the
+      # Issue's `state`, which the guard above already reads for the same
+      # reason, and the merge on this branch, which says the work landed even
+      # where no closing keyword closed the Issue. A run that stopped itself
+      # left the level at `human`. On any of those there is nothing to hand
+      # back, and an account written from the exit status would be false.
+      # Otherwise the hand-back is the act the run would have performed,
+      # through the same verb.
+      - name: hand back what the run did not finish
+        if: >-
+          always() && github.event_name == 'issues' && steps.taken.outputs.by == ''
+          && steps.take.outcome != 'success' && steps.take.outcome != 'skipped'
+        run: |
+          issue=$(gh issue view "$ISSUE" --json state,labels)
+          state=$(jq -r .state <<<"$issue")
+          level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""' <<<"$issue")
+          handed=$(gh pr list --state open --head "claude/issue-$ISSUE" --json reviewRequests,autoMergeRequest \
+                   --jq '.[] | ((.reviewRequests | length) > 0) or (.autoMergeRequest != null)')
+          merged=$(gh pr list --state merged --head "claude/issue-$ISSUE" --json number --jq '.[0].number // empty')
+          if [ "$state" != OPEN ]; then
+            echo "#$ISSUE is closed; a Challenge GitHub has closed has nothing to hand back"
+          elif [ -n "$merged" ]; then
+            echo "#$ISSUE's pull request #$merged has merged; the run finished and then ran out"
+          elif [ "$level" = human ]; then
+            echo "#$ISSUE is already at human; the run handed it back itself"
+          elif [ "$handed" = true ]; then
+            echo "#$ISSUE's pull request has its review requested or its merge armed; the run finished and then ran out"
+          else
+            .meta/say stop "$ISSUE" <<EOF
+          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`claude/issue-$ISSUE\` and stays open for the run that takes this up again.
+          EOF
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          OUTCOME: ${{ steps.take.outcome }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: answer the review
         if: github.event_name != 'issues'
@@ -206,40 +298,28 @@ jobs:
             for changes on pull request #${{ steps.pr.outputs.number }} of
             ${{ github.repository }}, on the branch
             `${{ steps.pr.outputs.branch }}`, which a run of yours opened and
-            is checked out here. Read /pr-first first: it says what a
-            reviewer's point is owed. `AGENTS.md` has the conventions.
+            is checked out here. Read /pr-first for what a reviewer's point is
+            owed; `AGENTS.md` has the conventions. Every act on GitHub goes
+            through `.meta/say`: `.meta/say --help` lists the verbs, each takes
+            its body on stdin as a quoted heredoc, and a refusal names the
+            verb to use instead. Commit through `.meta/say commit` only.
 
             Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`,
-            and the review body: `gh pr view ${{ steps.pr.outputs.number }} --comments`.
-            A reviewer's point can be right, right about something else, or
-            overtaken by the diff, and only the first is a change to make;
-            all three are owed a reply that says which. Make the changes a
-            right point asks for, gate green with `.meta/gate meta`, commit
-            through `.meta/say commit -m "<subject>"` and never any other
-            way, and push.
+            and the verdict: `gh pr view ${{ steps.pr.outputs.number }} --comments`.
+            A point is right, right about something else, or overtaken by the
+            diff, and only the first is a change to make; all three are owed
+            a reply that says which. Make the changes, gate green with
+            `.meta/gate meta`, commit and push. Then `.meta/say answer
+            <thread-id>` on every thread, which replies and resolves; a thread
+            marked "Noticed and not done" is the solo's and stays open.
+            `.meta/say revise ${{ steps.pr.outputs.number }}` if the body no
+            longer says what the head does, `.meta/say landed ${{ steps.pr.outputs.number }}`,
+            then `.meta/say request-review ${{ steps.pr.outputs.number }}` and
+            stop. Do not arm the merge, and do not wait for the checks.
 
-            Then answer every thread: `.meta/say reply <thread-id>` with the
-            body on stdin as a quoted heredoc, saying which of the three it
-            was and what changed, and then `.meta/say resolve <thread-id>`.
-            The channel refuses to resolve a thread you alone wrote, which is
-            right; a thread marked "Noticed and not done" is somebody else's
-            to decide and you leave it open. Update the body if what changed
-            changes it: `.meta/say pr-body ${{ steps.pr.outputs.number }}`.
-
-            Post what landed again before you request review: the Issue is
-            named under "What it closes" in the body, and
-            `uvx --with pyyaml python .meta/render.py --landed <issue-number> |
-            .meta/say comment ${{ steps.pr.outputs.number }}` picks up whatever
-            this pass added to the record.
-
-            Then request review again, `.meta/say request-review ${{ steps.pr.outputs.number }}`,
-            and stop. Do not arm the merge; the reviewer's approval does. Do
-            not wait for the checks.
-
-            Never `gh pr create`, `gh pr comment`, `gh pr review`, `gh issue
-            edit`, `gh issue comment` or `gh api`: the hook refuses them, and
-            every word you post carries the Trailer only through the channel.
-            Do not merge by hand.
+            Do not merge by hand, and do not reach GitHub any other way: the
+            hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
+            `gh issue edit`, `gh issue comment` and `gh api`.
           claude_args: |
             --model ${{ steps.depth.outputs.model }}
             --max-turns ${{ steps.depth.outputs.turns }}

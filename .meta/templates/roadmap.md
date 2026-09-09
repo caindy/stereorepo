@@ -32,7 +32,9 @@ Intent with neither is a wish, and a wish is not deferred, it is dropped.
 
 "Nothing" on the first line means it could start today, and then the question
 is why it has not — which is the question a roadmap Issue exists to defer, so
-a roadmap Issue waiting on nothing is usually a Challenge.
+a roadmap Issue waiting on nothing is usually a Challenge. `.meta/say triage
+<n> <level>` makes it one, keeping its number, its thread and the reason it was
+deferred; closing and refiling keeps none of them.
 
 GitHub reads the front matter and removes it from the issue it creates, so what
 is inside the fence is exactly what ships.

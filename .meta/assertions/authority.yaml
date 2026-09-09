@@ -34,6 +34,15 @@ capability_set:
       argument. A caller that can pass an identity can pass the wrong one, and
       the failure this exists to prevent was not a wrong identity but a missing
       one.
+
+      Its operations are the steps of the Disciplines, one verb each, and not
+      `gh`'s nouns (DR-116): file a Challenge, hand an Issue back, open a layer,
+      answer a thread, promote one at merge, post what landed. They are not
+      Capabilities of their own. A Capability earns an instance when one Role
+      holds it and another does not, and every Role that may speak may perform
+      all of these; splitting them would divide the axis without a Permission
+      that could name a piece. The one operation a single Role holds, review,
+      is the instance below.
     capability_kind: SKILL
     composed_of:
       - work:capability/gh
