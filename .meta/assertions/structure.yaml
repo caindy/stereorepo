@@ -182,8 +182,23 @@ artifacts:
     name: .meta/render.py
     path: .meta/render.py
   - id: work:artifact/meta-say
-    name: .meta/say
-    path: .meta/say
+    name: .meta/say/channel.py
+    path: .meta/say/channel.py
+  - id: work:artifact/meta-say-post
+    name: .meta/say/post
+    path: .meta/say/post
+  - id: work:artifact/meta-say-move
+    name: .meta/say/move
+    path: .meta/say/move
+  - id: work:artifact/meta-say-commit
+    name: .meta/say/commit
+    path: .meta/say/commit
+  - id: work:artifact/meta-say-whoami
+    name: .meta/say/whoami
+    path: .meta/say/whoami
+  - id: work:artifact/meta-say-verbs
+    name: .meta/say/verbs.yaml
+    path: .meta/say/verbs.yaml
   - id: work:artifact/meta-schemas
     name: .meta/schemas.md
     path: .meta/schemas.md

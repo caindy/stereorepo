@@ -8,7 +8,7 @@
 # the only thing that puts a pull request in that state, so it is the event
 # this runs on: no clock, and no interval to be stuck inside.
 #
-# The other edge is the channel's: `.meta/say merge --auto` advances a branch
+# The other edge is the channel's: `.meta/say/move merge --auto` advances a branch
 # that is already behind before it arms it, because a pull request can be
 # behind before it is armed as easily as after, and no push to `main` is coming
 # to say so.
@@ -50,7 +50,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # The Role's credential, where `.meta/say` expects it by default
+      # The Role's credential, where `.meta/say/` expects it by default
       # (DR-073, DR-107): outside the tree, mode 600, one token in the
       # container.
       - name: hold the coder's credential
@@ -58,7 +58,7 @@ jobs:
           install -d -m 700 ~/.config/solorepo
           install -m 600 /dev/null ~/.config/solorepo/coder.env
           printf 'GH_TOKEN=%s\n' "$CODER_GH_TOKEN" > ~/.config/solorepo/coder.env
-          .meta/say whoami
+          .meta/say/whoami
         env:
           CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
 
@@ -66,4 +66,4 @@ jobs:
       # posted and nothing is written: a rebase moves commits that are already
       # signed, and the Trailer they carry names the Job that wrote them, which
       # is the one this must not overwrite.
-      - run: .meta/say advance
+      - run: .meta/say/move advance

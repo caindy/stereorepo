@@ -24,7 +24,7 @@ on:
     types: [review_requested, synchronize]
 
 # One run per pull request, on the head that is current. A head that moves
-# after the ask moves the question, and `.meta/say raise` anchors to the head
+# after the ask moves the question, and `.meta/say/post raise` anchors to the head
 # it finds at post time, so a run left going across a move reviews one head
 # and posts against another. A moved head cancels it — a push, a rebase
 # GitHub performs on a layer, a retarget — and nothing else does, because
@@ -95,7 +95,7 @@ jobs:
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 
-      # The Role's credential, where `.meta/say --role reviewer` expects it
+      # The Role's credential, where `.meta/say/<program> --role reviewer` expects it
       # (DR-073, DR-107): outside the tree, mode 600, one token in the
       # container. The same channel and the same rules as on a laptop.
       - name: hold the reviewer's credential
@@ -103,7 +103,7 @@ jobs:
           install -d -m 700 ~/.config/solorepo
           install -m 600 /dev/null ~/.config/solorepo/reviewer.env
           printf 'GH_TOKEN=%s\n' "$REVIEWER_GH_TOKEN" > ~/.config/solorepo/reviewer.env
-          .meta/say --role reviewer whoami
+          .meta/say/whoami --role reviewer
         env:
           REVIEWER_GH_TOKEN: ${{ secrets.REVIEWER_GH_TOKEN }}
 
@@ -154,8 +154,10 @@ jobs:
           prompt: |
             You are the reviewer Role (DR-107), answering a review request on
             pull request #${{ github.event.pull_request.number }} of
-            ${{ github.repository }}. Read /pr-first first: it says what a
-            pull request here must hold, and what a reviewer's point owes.
+            ${{ github.repository }}. Read /pr-first-reviewer first: it is
+            the reviewer's reading of PR First, and says what a pull request
+            here must hold, what a reviewer's point owes, and which verbs
+            are yours.
 
             Six paths in the worktree are trunk's, not this pull request's:
             `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`,
@@ -189,19 +191,19 @@ jobs:
             paragraphs; they hold for it too.
 
             Post only through the channel, so every word carries the Trailer.
-            Every posting command begins with `.meta/say` and takes its body
-            as a quoted heredoc on stdin; a command that begins with anything
-            else, `cat` or `printf` or `echo`, is not permitted to run. Each
-            finding goes on a line of the diff:
+            Every posting command begins with `.meta/say/post` and takes its
+            body as a quoted heredoc on stdin; a command that begins with
+            anything else, `cat` or `printf` or `echo`, is not permitted to
+            run. Each finding goes on a line of the diff:
 
-                .meta/say --role reviewer raise <n> <path> <line> <<'BODY'
+                .meta/say/post --role reviewer raise <n> <path> <line> <<'BODY'
                 ...
                 BODY
 
             and the verdict carries a body saying what was checked and what
             was found:
 
-                .meta/say --role reviewer review <n> --approve|--request-changes|--comment <<'BODY'
+                .meta/say/post --role reviewer review <n> --approve|--request-changes|--comment <<'BODY'
                 ...
                 BODY
 
@@ -209,7 +211,7 @@ jobs:
             refuses them. Do not resolve any thread.
 
             Your approval is the arming. If your verdict is `--approve`, arm
-            the merge afterwards, `.meta/say --role reviewer merge <n> --auto`,
+            the merge afterwards, `.meta/say/move --role reviewer merge <n> --auto`,
             so the pull request lands when the ruleset is satisfied and not
             before your verdict. A comment or a request for changes arms
             nothing. Do not merge by hand.
@@ -217,7 +219,7 @@ jobs:
             The shell here runs one plain command at a time and nothing
             else: `git log|show|diff|status|grep|ls-files` with plain
             options, `gh pr view|diff|checks`, `python3 .meta/check_pr.py`,
-            or `.meta/say` with its heredoc. No pipes, redirects, `$`,
+            or `.meta/say/post` and `.meta/say/move` with their heredoc. No pipes, redirects, `$`,
             backticks, globs or chaining; a pattern goes in single quotes
             after `-e`. Read files with the Read tool and search with Grep.
 
@@ -237,5 +239,5 @@ jobs:
           claude_args: |
             --model ${{ steps.depth.outputs.model }}
             --max-turns ${{ steps.depth.outputs.turns }}
-            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*)"
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*)"
             --disallowedTools "Read(./.git/**)"

@@ -48,7 +48,7 @@ defined by its canon and not by us. Each line names where it was read.
   ownership so a removed target's entries come out cleanly. Nothing in APM
   writes a `permissions` allow or deny list; the only permission-shaped field
   is `allowed-tools` in a skill's frontmatter, read by the runtime. A hook can
-  register `signed_channel.py`; the script itself, and `.meta/say`, are
+  register `signed_channel.py`; the script itself, and `.meta/say/`, are
   programs and not primitives, and ride only as a skill's supporting
   resources. — [hooks and commands](https://microsoft.github.io/apm/producer/author-primitives/hooks-and-commands/)
 - **`apm.yml` sits at the package root, beside `.apm/`.** The pages show no

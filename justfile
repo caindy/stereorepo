@@ -28,7 +28,7 @@ watch n:
 sweep:
     python3 .meta/check_pr.py --sweep
 
-# what landed for a Challenge, from the record; `.meta/say landed <pr>` posts it
+# what landed for a Challenge, from the record; `.meta/say/post landed <pr>` posts it
 landed n:
     uvx --with pyyaml python .meta/render.py --landed {{n}}
 

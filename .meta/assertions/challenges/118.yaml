@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/118
+    name: The channel splits by concern with signing as a primitive, each Role reads only its own verbs, and a thread on a fact about an external system closes on a quote or a test
+    challenge_type: DEFECT
+    description: >-
+      `.meta/say` was eleven hundred lines under one name and held four
+      concerns — the credential and the Trailer, the utterances, the state
+      transitions, a git commit — because the credential loader lived there
+      first. Its banner showed twenty-one verbs to every reader, of which a
+      coder Job uses about seven and a reviewer three. PR First's rendered
+      skill was eighteen steps, a second copy of the verb surface, and the
+      two copies drifted on #117. And two Jobs on that branch answered a
+      thread on a fact about GitHub from recall, one each way, before the
+      reference was read.

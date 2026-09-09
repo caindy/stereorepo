@@ -17,7 +17,11 @@
       "Bash(gh stack push:*)"
     ],
     "allow": [
-      "Bash(.meta/say:*)",
+      "Bash(.meta/say/post:*)",
+      "Bash(.meta/say/move:*)",
+      "Bash(.meta/say/commit:*)",
+      "Bash(.meta/say/whoami)",
+      "Bash(.meta/say/whoami:*)",
       "Bash(python3 .meta/check_pr.py:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr checks:*)",

@@ -202,7 +202,7 @@ def command_allowed(command):
     """The predicate for the shell: one plain command, on the list.
 
     The channel's heredoc form is the one exception to the no-operator rule,
-    and only in the one shape the prompt shows: `.meta/say ... <<'WORD'`,
+    and only in the one shape the prompt shows: `.meta/say/<program> ... <<'WORD'`,
     nothing after the delimiter on that line, the body below, the delimiter
     on a line of its own, and nothing after that. The body is never executed
     and is not read; the delimiter is quoted so the body is not expanded
@@ -212,7 +212,7 @@ def command_allowed(command):
     """
     head, marker, body = partition_unquoted(command, "<<")
     if marker:
-        if not head.startswith(".meta/say"):
+        if not head.startswith(".meta/say/"):
             return "a heredoc is the channel's shape and nobody else's"
         opener, newline, rest = body.partition("\n")
         if not newline or not re.fullmatch(r"'[A-Za-z_]+'\s*", opener):
@@ -229,7 +229,8 @@ def command_allowed(command):
     if not words:
         return "an empty command"
     program = words[0]
-    if program == ".meta/say":
+    if re.fullmatch(r"\.meta/say/[a-z]+", program):
+        # The channel's programs, by the directory that sanctions them (DR-117).
         return None
     if program == "git":
         return git_allowed(words)
@@ -259,7 +260,7 @@ def blocked(tool, tool_input):
             if problem:
                 return (f"Blocked: {problem}. The reviewer runs one plain command at a time: "
                         "`git log|show|diff|status|grep|ls-files` with plain options, `gh pr view|diff|checks`, "
-                        "`python3 .meta/check_pr.py`, or `.meta/say` with a quoted heredoc. "
+                        "`python3 .meta/check_pr.py`, or a program of `.meta/say/` with a quoted heredoc. "
                         "No pipes, redirects, expansions or chaining.")
         return None
     except Exception as exc:  # noqa: BLE001 — refusing is the safe answer to anything

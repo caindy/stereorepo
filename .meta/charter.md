@@ -123,7 +123,7 @@ _In practice:_ `git push` before the session ends, and `check_pr.py --handoff` r
 
 **Enforces** PR First. **Checked by** `check_pr.py`, which fails a pull request carrying a commit with no `Actor:` Trailer.
 
-_In practice:_ `.meta/say commit -m "…"`, which composes the `Actor:` Trailer from the environment. Never `git commit` directly.
+_In practice:_ `.meta/say/commit -m "…"`, which composes the `Actor:` Trailer from the environment. Never `git commit` directly.
 
 ### A20. A rule that lives only in the decision record is not in force.
 

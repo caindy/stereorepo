@@ -343,7 +343,7 @@ disciplines:
       is a state GitHub holds and reports, so an arriving Job finds its work
       by asking what has been requested of it rather than by reading anything.
       A review can only be requested of an account, which is what the Role
-      accounts are for: `.meta/say request-review <n>` names the next Role's,
+      accounts are for: `.meta/say/move request-review <n>` names the next Role's,
       and the arriving Job asks GitHub what has been requested of its login.
 
       It is where **work noticed and not done** goes, as a linked Issue. A long
@@ -377,10 +377,16 @@ disciplines:
       function is long" has neither. "This retry has no backoff, and it will
       matter the first time the endpoint is slow" has both. File everything and
       the tracker becomes the file it replaced, with better tooling.
+
+      Whether a point turns on a fact about a system outside this repository —
+      GitHub, a harness, a language, a library. If it does, the answer is a
+      quote from that system's own reference or a test run against it, and a
+      reading is not an answer whichever way it falls. #117 closed one on
+      recall twice, once each way, and the documentation took one fetch.
     steps:
       - >-
-        Open it when the work starts, not when it is finished. Written at the end
-        it becomes a summary of the diff, which git already holds.
+        Open it when the work starts, not when it is finished. Written at the
+        end it becomes a summary of the diff, which git already holds.
       - >-
         Take Challenges in as pull requests, whatever raised them — the solo, a
         scheduled job, another agent — and name the Challenge in the body with a
@@ -389,67 +395,43 @@ disciplines:
         Label an Issue's difficulty when raising it: `easy`, `medium`, `hard`
         or `human`, your guess at what it takes for the coder Role. A loop
         takes `easy` and `medium` the moment the label lands; `hard` waits for
-        the solo; `human` is where a loop puts what it cannot finish, with a
-        comment saying where it stopped. The raiser guesses and the loop
-        corrects, downward only. Through the channel it is one act: `.meta/say
-        file --title T --difficulty D` applies the form, `challenge` and the
-        difficulty together; `.meta/say triage <n> <level>` makes an Issue that
-        arrived without it, or a roadmap Issue whose blocker has closed, a
-        Challenge at a level; and `.meta/say stop <n>` is the loop's hand-back,
-        for a Challenge and nothing else: it says where the loop stopped,
-        gives the claim back and moves the level to `human`, and the pull
-        request stays open for the run that takes the Issue up again.
+        the solo; `human` is where a loop puts what it cannot finish, saying
+        where it stopped. The raiser guesses and the loop corrects, downward
+        only.
       - >-
         Argue there. Review, objection and answer belong where the next reader
         will look, not where one participant happens to be.
       - >-
         Answer every thread and then resolve it, including one the diff has
-        overtaken: `.meta/say answer <thread>` is both. Outdated is not
-        answered: GitHub collapses a thread whose anchor moved and leaves it
-        open, and a reader years later cannot tell a point that was addressed
-        from one that was dropped.
+        overtaken. Outdated is not answered: GitHub collapses a thread whose
+        anchor moved and leaves it open, and a reader years later cannot tell
+        a point that was addressed from one that was dropped.
       - >-
         Title it with the words someone will search for. It is the index, and an
         index is worth exactly its titles.
       - >-
         Raise what was noticed and not done as a **conversation on the diff**,
-        tagging the solo and opening with `**Noticed and not done.**`, at the
-        moment it is noticed — `.meta/say notice <n> <path> <line>` supplies
-        both. The marker is what stops a thread held open on
-        purpose reading as one owed an answer, and the last comment is the one
-        that counts — so replying without it is how an item that has been
-        overtaken stops being parked. Not a bullet in the body,
-        which closes with the pull request, and never a closing summary. An
-        unresolved conversation blocks the merge, so the item cannot be walked
-        past without somebody deciding what it is.
+        at the moment it is noticed — not a bullet in the body, which closes
+        with the pull request, and never a closing summary. The last comment
+        is the one that counts, so replying without the marker is how an item
+        the change has overtaken stops being parked, and an unresolved
+        conversation blocks the merge, so nothing is walked past without
+        somebody deciding what it is.
       - >-
-        Never resolve a thread you are the sole author of. Resolving is assent
-        and A16 counts it as a party, which only holds while the party doing it
-        is not the one who wrote everything in the thread. A Role's account tells
-        it from the solo and from another Role; within one Role the Trailer is
-        all that tells two Jobs apart, and the channel refuses on that basis.
-      - >-
-        Promote at merge, not before. What survives the argument earns an Issue
-        and the thread is resolved with a link to it: `.meta/say promote
-        <thread> --title T --difficulty D`, with the Issue form's body on stdin,
-        opening with `**Waits on.**`, since what is filed is an Issue and the
-        thread is only where it was found. What the change overtook is
-        answered and resolved where it was raised. Filing at review time creates
-        a tracker item with no relationship to the outcome, which goes stale the
-        moment the approach moves under it.
+        Promote at merge, not before. What survives the argument earns an
+        Issue and the thread is resolved with a link to it; what the change
+        overtook is answered and resolved where it was raised. Filing at
+        review time creates a tracker item with no relationship to the
+        outcome, which goes stale the moment the approach moves under it.
       - >-
         Post what landed for the Challenge before merging, generated and never
-        typed: `.meta/say landed <n>` renders the decisions taken under each
-        Challenge the body closes and what each changed, and posts it. Written by hand it is a
-        summary of consequences the record already holds, which is the copy that
-        flatters — and it would be complete whether or not the record was, which
-        is the one property the account must not have.
+        typed: written by hand it is the copy that flatters, and complete
+        whether or not the record was.
       - >-
-        Link the merge back to it, so the trail from a line of code to its
-        account survives in the clone. A pull request is **merged, never
-        abandoned**: it exists because a Challenge does, and a Challenge is a real
-        need. Work that turned out to be the wrong answer merges as the record of
-        that, which is worth more than a closed tab.
+        Merged, never abandoned. A pull request exists because a Challenge
+        does, and a Challenge is a real need; work that turned out to be the
+        wrong answer merges as the record of that, which is worth more than a
+        closed tab.
       - >-
         Push before stopping, and stop at green. Work that exists only in a
         worktree the next Job will never see has not been handed off, and a red
@@ -458,49 +440,18 @@ disciplines:
       - >-
         Stack what waits on what. A change that can only start once another
         lands is a **layer**: its own branch and pull request, based on the
-        layer below, opened through the channel and linked into a stack through
-        it, so the layers merge from the bottom and GitHub rebases what
-        remains. A stack built by hand on a squash-only trunk conflicts at
-        every merge but the top, and each conflict is a rebase somebody has to
-        find the old base for.
+        layer below and linked into a stack, so the layers merge from the
+        bottom and GitHub rebases what remains.
       - >-
-        Request review from the next Role's account when you stop:
-        `.meta/say request-review <n>`. The request is the handoff's whole
-        signal, and a note beside it pretends to be one.
-      - >-
-        Stay subscribed to it until it closes. A review lands minutes after a
-        push and nobody is looking by then, so the conversation that opened the
-        pull request keeps watching it. `check_pr.py <n> --watch` is the
-        subscription: one line per change, until the pull request closes.
-        Keeping it running is the harness's business — a background task, a
-        webhook, a scheduled job — and a harness that cannot keep it running
-        says so after starting it, not instead.
-      - >-
-        Leave nothing behind when it closes. GitHub deletes a merged branch and
-        nothing deletes the local one, so every checkout accumulates a branch
-        per pull request and a worktree per session, and the next Job reads
-        through the pile before finding its own. `check_pr.py --sweep` names
-        each branch whose remote is gone, with its pull request and the command
-        that removes it; run them. The branch this worktree stands on is
-        removed from the main checkout, or by the harness at exit.
+        Hand off by requesting review of the next Role's account. The request
+        is the handoff's whole signal, and a note beside it pretends to be one.
       - >-
         On arrival, read what GitHub holds — the pull request, the diff, the
         commits, the threads and the check states. There is nothing else, by
-        design. Ask what this branch already owns: One branch is one
-        pull request, so the checkout is the token and GitHub resolves it — no
-        note to find, nothing to go stale, and it survives a session ending
-        mid-argument. Authorship cannot answer this: every pull request here is
-        the solo's, so asking who opened one says nothing about which agent is
-        answerable for it.
-      - >-
-        Name the Actor in every commit **and every comment**. Which thread did
-        the work is recoverable from nothing else once the session is gone, and
-        a trailer naming a co-author who is not a person tells a maintainer
-        nothing. On a comment it does more than record: every comment an agent
-        writes is posted under the solo's account, so without it an argument
-        between the two of them reads as one party talking to itself, and A16
-        cannot tell them apart. The branch says which Job; the trailer says who
-        took it.
+        design. Ask what this branch already owns: one branch is one pull
+        request, so the checkout is the token and GitHub resolves it.
+        Authorship cannot answer this, since every pull request here is the
+        solo's.
     produces:
       - A searchable record of why each change was made, attached to the change.
       - A place two agents that share nothing else can meet.

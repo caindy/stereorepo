@@ -1,0 +1,140 @@
+decisions:
+  - id: work:decision/117
+    name: "DR-117 · The channel is a directory of programs split by concern over one signing primitive, and each Role reads only the verbs it holds"
+    challenge: work:challenge/118
+    status: ADOPTED
+    supersedes:
+      - work:decision/060
+      - work:decision/069
+      - work:decision/116
+    applies:
+      - work:article/15
+      - work:article/16
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-say
+      - work:artifact/meta-say-post
+      - work:artifact/meta-say-move
+      - work:artifact/meta-say-commit
+      - work:artifact/meta-say-whoami
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-assertions-authority
+      - work:artifact/meta-hooks-signed-channel
+      - work:artifact/meta-hooks-worktree-only
+      - work:artifact/meta-check
+      - work:artifact/meta-render
+      - work:artifact/meta-disciplines
+      - work:artifact/github-workflows-coder
+      - work:artifact/github-workflows-review
+      - work:artifact/github-workflows-advance
+      - work:artifact/agents
+    alternatives:
+      - name: One program, with a banner compiled per Role
+        chosen: false
+        reason: >-
+          It answers the twenty-one verbs and leaves the rest. The file stays
+          eleven hundred lines under one name holding four concerns, which is
+          an accident of the credential loader having lived there first and
+          not a design; a per-Role banner needs the Role table, which a
+          program with no YAML parser cannot read and a program that carried
+          would be a second copy of; and the hooks go on sanctioning a name,
+          so the next concern is added to the same file because that is the
+          only place the hooks permit.
+      - name: A program per verb, each importing the primitive
+        chosen: false
+        reason: >-
+          DR-116's alternative B, rejected there on the Capability question
+          and rejected again here on its own terms: twenty-one names for the
+          hooks to sanction and the settings to allow, a file per verb for
+          Specialization to copy, and `answer` and `promote` — reply then
+          resolve, file then reply then resolve — importing each other's
+          halves across files, which is the composition DR-116 removed
+          wearing a new coat.
+      - name: Programs by concern over one primitive, the verb table asserted once, PR First compiled per Role from it
+        chosen: true
+        reason: >-
+          The concerns were already four — the credential and the Trailer,
+          which is all that "channel" means; what is said; what changes state;
+          a git commit — and a program per concern makes each a file a reader
+          can hold, with the primitive imported and never copied. The verbs
+          stay verbs: folding them into flags would reintroduce the
+          composition DR-116 removed. The table is one assertion, so a Role's
+          reading names no verb the Role does not hold by construction, and
+          the gate holds the table to the parsers, so a verb added to a
+          program and not to the table is red rather than drifting the way
+          step 9 drifted on #117. What it costs: five names where there was
+          one, every reference to the channel moved in one change, a settings
+          rule per program because Claude Code's permissions reference says
+          "`Bash(ls:*)` matches the same commands as `Bash(ls *)`" — a prefix
+          followed by a space, which a directory is not — and two readings of
+          one Discipline that agree only through the table.
+    consequences:
+      - >-
+        `.meta/say/` is a directory. `channel.py` is the primitive: the
+        credential, the Actor and Agent, the Trailer, `gh`, and nothing a
+        caller types. `post` holds the utterances — `comment`, `raise`,
+        `notice`, `reply`, `answer`, `promote`, `landed`, `review`; `move` the
+        transitions — `file`, `triage`, `difficulty`, `claim`, `stop`, `open`,
+        `layer`, `revise`, `merge`, `advance`, `request-review`, `milestone`;
+        `commit` is git's and `whoami` the credential's. Each speaks through
+        the primitive or not at all. The names are the solo's; renaming one is
+        the table, the settings, the workflows and the hooks' pattern.
+      - >-
+        `.meta/say/verbs.yaml` is the verb table, beside the programs and
+        not under `assertions/`, which is walked against the ontology and
+        holds its instances — this is the channel's own table, and a
+        portfolio takes it with the directory. It holds each
+        verb's program, the shape it is typed in, what it does, and which Role
+        holds it. `held_by` is who uses a verb and not who may — every Role
+        that may speak may perform every verb (DR-116) — and `solo` and
+        `workflow`, which are not Roles, name the verbs no Role's reading
+        carries. `check.py` holds the table to the parsers both ways, the
+        holders to the Roles, and PR First's steps to typing no command.
+      - >-
+        PR First compiles per Role. `/pr-first` is the coder's reading, as the
+        coder is the channel's default Role; `/pr-first-reviewer` is the
+        reviewer's. Each lists the Role's verbs under one line — the verbs are
+        the steps, and each refuses its own misuse — then the steps no verb
+        enforces, the judgement, the reading commands, the form and the
+        Articles. `disciplines.md` carries the whole: every verb, and who
+        holds each. The rationale the mechanical steps carried is in the
+        decisions each verb cites; what none held is here: outdated is not
+        answered, the last comment on a parked thread is the one that counts,
+        and authorship cannot say which branch owns a pull request.
+      - >-
+        The watch and the sweep leave the Discipline. Both are the harness's
+        business, and `AGENTS.md` says how this one does them: `just watch
+        <n>` under a persistent Monitor from the moment a pull request opens,
+        `just sweep` when one closes.
+      - >-
+        PR First's judgement gains a test: whether a point turns on a fact
+        about a system outside this repository — GitHub, a harness, a
+        language, a library. If it does, the answer is a quote from that
+        system's own reference or a test run against it, and a reading is not
+        an answer whichever way it falls. #117 closed one on recall twice,
+        once each way, and the documentation took one fetch.
+      - >-
+        The hooks sanction the directory: `signed_channel.py` passes
+        `.meta/say/` and `worktree_only.py` runs a plain program of it, so a
+        program added beside `post` is sanctioned by where it lives. The
+        settings allow each program by name, since a prefix rule is a prefix
+        and a space. Specialization copies the directory. The ontology is
+        untouched: these were never separate Capabilities, and file layout
+        was never the Capability question.
+    falsifier: >-
+      A verb parsed by a program and absent from the table, or the other way
+      about, with the gate green; a Role's reading naming a verb the Role
+      does not hold; or a thread on a fact about an external system closing
+      on a reading with nobody having quoted or tested.
+    rationale: |-
+      Christopher, on #117, after the reviewer's request for changes started
+      a container run of the coder on the same branch and the two Jobs
+      answered one thread from recall, each the other way. `.meta/say` was
+      one program because the credential loader lived there first. Its
+      banner showed twenty-one verbs to every reader: a coder Job uses about
+      seven, a reviewer three, the solo the filing and triage ones, a
+      workflow one. PR First's rendered skill was eighteen steps, a second
+      copy of the verb surface, and the reviewer found step 9 showing a
+      `promote` command the parser refused, on the change that introduced
+      both. A per-Role reading was what `.meta/.apm` was declared to be at
+      DR-069 and had never been built.

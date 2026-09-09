@@ -85,7 +85,7 @@ Raise it first as a **conversation on the diff**, tagging the solo, opening with
 `**Noticed and not done.**` so it is not mistaken for a point owed an answer, at
 the moment you notice it. The **last** comment decides, so re-mark it if the
 argument moves on and it is still parked — and simply reply without the marker
-when the change has overtaken it. `.meta/say` signs it with the `Actor:` and `Agent:` trailers the
+when the change has overtaken it. `.meta/say/post notice` signs it with the `Actor:` and `Agent:` trailers the
 commits carry — the marker says what kind of thread it is, `Actor` says who is
 speaking, and in a repository where every comment is posted under one account
 nothing else can. An unresolved conversation blocks the merge, so nothing is walked

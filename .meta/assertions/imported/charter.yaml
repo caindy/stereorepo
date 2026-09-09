@@ -191,7 +191,7 @@ articles:
       `check_pr.py`, which fails a pull request carrying a commit with no
       `Actor:` Trailer.
     example: >-
-      `.meta/say commit -m "…"`, which composes the `Actor:` Trailer from
+      `.meta/say/commit -m "…"`, which composes the `Actor:` Trailer from
       the environment. Never `git commit` directly.
   - id: work:article/20
     name: Article 20

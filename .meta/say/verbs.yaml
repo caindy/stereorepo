@@ -1,0 +1,135 @@
+# The channel's verbs, once (DR-117): which program each is a verb of, the
+# shape it is typed in, what it does, and which Role holds it.
+#
+# A Role's reading of PR First is compiled from this, so a reading names no
+# verb its Role does not hold; the programs' parsers are held to it by
+# `check.py`, so a verb here that does not parse, or one that parses and is
+# not here, is a gate failure. The programs themselves carry no list: a
+# program's `--help` is its parser, and this is its reading. It sits beside
+# the programs rather than under `assertions/`, which is walked against the
+# ontology and holds its instances; this is the channel's own table, and a
+# portfolio takes it with the directory.
+#
+# `held_by` is who uses a verb, not who may. Every Role that may speak may
+# perform every one of these (DR-116), and a reading is a Job's, not a
+# Permission. `solo` and `workflow` are not Roles — the solo directs a coder
+# session, and a workflow runs a verb as a Role — and name the verbs no Role's
+# reading carries: they are found in the program's `--help`, when the solo
+# asks for one.
+
+discipline: PR First
+
+programs:
+  - name: post
+    path: .meta/say/post
+    concern: >-
+      What is said on GitHub under the Trailer: a comment, a thread on the
+      diff, a reply, an answer, a promotion, what landed, the reviewer's
+      verdict.
+    verbs:
+      - name: comment
+        usage: "<n> < body.md"
+        does: a comment on a pull request or an Issue
+        held_by: [coder, reviewer]
+      - name: raise
+        usage: "<pr> <path> <line> < body.md"
+        does: open a thread on a line of the diff, at the pull request's head
+        held_by: [reviewer]
+      - name: notice
+        usage: "<pr> <path> <line> < body.md"
+        does: "noticed and not done: the marker and the mention supplied, held open for the solo"
+        held_by: [coder]
+      - name: reply
+        usage: "<thread-id> < body.md"
+        does: "argue: a reply that leaves the thread open"
+        held_by: [reviewer]
+      - name: answer
+        usage: "<thread-id> < body.md"
+        does: "answer: reply, then resolve; refused when this Actor is the thread's sole author"
+        held_by: [coder]
+      - name: promote
+        usage: "<thread-id> --title T --difficulty D < issue-body.md"
+        does: "at merge: file the Issue with the Issue form's body, reply with the link, resolve"
+        held_by: [solo]
+      - name: landed
+        usage: "<pr>"
+        does: post what landed for every Challenge the body closes, rendered from the record
+        held_by: [coder]
+      - name: review
+        usage: "<pr> --approve|--request-changes|--comment < body.md"
+        does: "the verdict: approve, request changes, or comment; an approval may carry no body"
+        held_by: [reviewer]
+
+  - name: move
+    path: .meta/say/move
+    concern: >-
+      What changes state on GitHub: an Issue filed, triaged, moved between
+      levels, claimed or handed back; a pull request opened, layered, revised,
+      merged or advanced; a review requested; a Milestone set.
+    verbs:
+      - name: file
+        usage: "--title T --difficulty D|--roadmap < body.md"
+        does: "file a Challenge the form's way, `challenge` and the difficulty in one act, or a roadmap Issue"
+        held_by: [solo]
+      - name: triage
+        usage: "<issue> <level>"
+        does: "make an Issue a Challenge at a level: one that arrived without the form, or a roadmap Issue whose blocker has closed"
+        held_by: [solo]
+      - name: difficulty
+        usage: "<issue> <level>"
+        does: "move a Challenge's level: easy, medium, hard, human"
+        held_by: [solo]
+      - name: claim
+        usage: "<issue>"
+        does: "take an Issue: assign it to this Role's account"
+        held_by: [coder]
+      - name: stop
+        usage: "<issue> < body.md"
+        does: "where this Job stopped and why; the claim released, the Issue to the solo as `human`, the pull request left open"
+        held_by: [coder, workflow]
+      - name: open
+        usage: "--title T [--base B|--on <pr>] < body.md"
+        does: "open a pull request, the form filled; --on opens a layer on that one and links the stack"
+        held_by: [coder]
+      - name: layer
+        usage: "<pr> --on <pr>"
+        does: make an open pull request a layer on another
+        held_by: [coder]
+      - name: revise
+        usage: "<n> [--title T] [< body.md]"
+        does: replace a pull request's or an Issue's body, or its title
+        held_by: [coder]
+      - name: merge
+        usage: "<pr> [--stack|--auto]"
+        does: "merge; a layer merges everything below it; --auto arms GitHub to merge when green"
+        held_by: [coder, reviewer]
+      - name: advance
+        usage: "[<pr>]"
+        does: rebase every armed pull request that has fallen behind its base back onto it
+        held_by: [workflow]
+      - name: request-review
+        usage: "<pr> [--to R]"
+        does: "hand off: request review from Role R's account, the reviewer's by default"
+        held_by: [coder]
+      - name: milestone
+        usage: "<issue> --set T|--clear"
+        does: put an Issue in a Milestone, creating it if new
+        held_by: [solo]
+
+  - name: commit
+    path: .meta/say/commit
+    concern: "Git's: a commit as this Actor, the Trailers composed by the channel."
+    verbs:
+      - name: commit
+        usage: "-m <subject> [< body]"
+        does: "commit as this Actor; never `git commit`, which signs nothing"
+        held_by: [coder]
+
+  - name: whoami
+    path: .meta/say/whoami
+    concern: Which login the channel speaks as, and what it can reach.
+    verbs:
+      - name: whoami
+        usage: ""
+        does: which login this channel speaks as
+        held_by: [coder, reviewer, workflow]

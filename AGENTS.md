@@ -34,5 +34,10 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   change — one commit per settled decision. `.meta/decisions.md` is an index
   generated from them; the entry itself is the assertion file.
 - An empty directory carries a README saying what will live there.
+- A pull request this session opened is watched until it closes: `just watch <n>`
+  under a persistent Monitor, started the moment it is open, so a review is
+  answered when it lands and not when someone looks. When one closes, `just
+  sweep` names the branches whose remote is gone and the command that removes
+  each; run them. Both are the harness's business, not a Discipline's step.
 - Asked what to work on next, run `just next` and read the screen. Do not
   read Issue bodies to find out what waits on what: their first line says.

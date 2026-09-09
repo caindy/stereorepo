@@ -4,7 +4,7 @@
 # since DR-003 and asserted nothing, which #11 measured: twelve of forty-nine
 # classes populated, and none of Capability, Securable or Permission among them.
 #
-# What made these writable was needing them. `.meta/say` exists because signing
+# What made these writable was needing them. `.meta/say/` exists because signing
 # had to stop being an act, and the moment it existed there was a real
 # Capability to name — one that is not "run a shell" and not "use `gh`", but the
 # thing actually being permitted.
@@ -37,7 +37,10 @@ capability_set:
 
       Its operations are the steps of the Disciplines, one verb each, and not
       `gh`'s nouns (DR-116): file a Challenge, hand an Issue back, open a layer,
-      answer a thread, promote one at merge, post what landed. They are not
+      answer a thread, promote one at merge, post what landed. They are verbs
+      of programs split by concern over one signing primitive (DR-117), and
+      which Role holds which is `.meta/say/verbs.yaml`'s to
+      say, not a Permission's. They are not
       Capabilities of their own. A Capability earns an instance when one Role
       holds it and another does not, and every Role that may speak may perform
       all of these; splitting them would divide the axis without a Permission
@@ -78,7 +81,7 @@ permission_set:
     capability: work:capability/speak-on-github
     securable: work:securable/github-conversations
     condition: >-
-      Through `.meta/say`, which signs. No other path to the same endpoint is
+      Through `.meta/say/`, which signs. No other path to the same endpoint is
       permitted, and the Permission is the channel rather than the endpoint.
 
   - id: work:permission/reviewer-reviews
@@ -90,7 +93,7 @@ permission_set:
     capability: work:capability/review-on-github
     securable: work:securable/github-conversations
     condition: >-
-      Through `.meta/say --role reviewer review`, which signs.
+      Through `.meta/say/post --role reviewer review`, which signs.
 
 # The Roles, and the accounts GitHub holds for them (DR-066, DR-107). A Role is a
 # name: its login is `<owner>-<repo>-<role>` and its credential is

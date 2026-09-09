@@ -1,0 +1,703 @@
+#!/usr/bin/env python3
+"""What changes state on GitHub: the transitions (DR-117).
+
+An Issue filed, triaged, moved between levels, claimed or handed back; a pull
+request opened, layered, revised, merged or advanced; a review requested; a
+Milestone set. Each is one step of a Discipline and refuses its own misuse
+(DR-116): `file` lands `challenge` and the difficulty in one act, `stop` asks its
+refusal before it posts, `open --on` links the layer it opens, `merge --auto`
+advances before it arms. Every outcome is read back from GitHub, per A6: the act
+is what GitHub shows afterwards, not what `gh` returned. What is *said* — a
+comment, a thread, an answer, a verdict — is `post`'s.
+"""
+import pathlib
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import channel  # noqa: E402
+
+DIFFICULTIES = ("easy", "medium", "hard", "human")
+
+
+# --- An Issue's life: filed, triaged, its level moved, claimed, handed back.
+
+def labels_of(issue):
+    return [l["name"] for l in channel.gh("issue", "view", str(issue), "--json", "labels")["labels"]]
+
+
+def relabel(issue, add=(), remove=()):
+    """Move an Issue's labels, and read back what it carries.
+
+    Not a verb. The labels an agent moves are the difficulty and nothing else,
+    and `difficulty` says what a legal move is; a verb that took any label
+    took `medium` without `challenge`, which is #113 (DR-116).
+    """
+    cmd = ["issue", "edit", str(issue)]
+    for name in add:
+        cmd += ["--add-label", name]
+    for name in remove:
+        cmd += ["--remove-label", name]
+    channel.gh(*cmd, parse=False)
+    now = labels_of(issue)
+    missing = [n for n in add if n not in now] + [n for n in remove if n in now]
+    if missing:
+        sys.exit(f"say: GitHub shows #{issue} labelled {now} after the call; {missing} did not take")
+    return now
+
+
+def challenge_labels(issue):
+    """An Issue's labels, if it is a Challenge; a refusal if it is not.
+
+    Asked before anything is posted or moved, by every verb whose second half
+    needs it: a difficulty on anything but a Challenge is a label no loop will
+    ever read, and a comment posted before the refusal is a step half done.
+    """
+    now = labels_of(issue)
+    if "challenge" not in now:
+        sys.exit(f"say: #{issue} is not a Challenge (labelled {now or 'nothing'}); a difficulty "
+                 "is a Challenge's, and a loop reads it only beside `challenge`. "
+                 "`move triage` makes it one, at a level, in one act.")
+    return now
+
+
+def difficulty(issue, level):
+    """Set a Challenge's difficulty: the raiser's estimate, moved by the raiser
+    downward or by a loop to `human` (DR-112).
+
+    One level at a time, so the Issue never carries two, and never on an Issue
+    that is not a Challenge: the coder loop takes an Issue on the event of its
+    difficulty landing and reads `challenge` beside it, so a difficulty on
+    anything else is a label nothing will ever read (#113).
+    """
+    now = challenge_labels(issue)
+    stale = [l for l in now if l in DIFFICULTIES and l != level]
+    now = relabel(issue, add=[level], remove=stale)
+    print(f"#{issue} is labelled {', '.join(now)}")
+
+
+def triage(issue, level):
+    """Make an Issue a Challenge at a level: `challenge` and the difficulty in
+    one act, and `roadmap` off it.
+
+    The door `file` opens at creation, for an Issue that exists already: one
+    the solo opened from the web with no form and no labels, which `just next`
+    lists as neither kind; or a roadmap Issue whose blocker has closed, which
+    the roadmap form says is usually a Challenge and which closing and refiling
+    would strip of its number, its thread and the reason it was deferred.
+
+    A difficulty already on the Issue — #113's state, the level with no
+    `challenge` beside it — is taken off first and put back with `challenge`,
+    so the event the coder loop reads fires: GitHub emits nothing for a label
+    an Issue already carries.
+    """
+    now = labels_of(issue)
+    if "challenge" in now:
+        sys.exit(f"say: #{issue} is a Challenge already (labelled {now}); "
+                 "`move difficulty` moves its level")
+    if level in now:
+        relabel(issue, remove=[level])
+    stale = [l for l in now if l == "roadmap" or (l in DIFFICULTIES and l != level)]
+    now = relabel(issue, add=["challenge", level], remove=stale)
+    print(f"#{issue} is a Challenge, labelled {', '.join(now)}")
+
+
+def file_issue(title, body, level=None, roadmap=False):
+    """File a Challenge or a roadmap Issue the way the form does.
+
+    The form's front matter applies `challenge` at creation and the raiser adds
+    a difficulty; through the channel both land in one `create`, so there is
+    no moment when the difficulty is on an Issue that is not yet a Challenge —
+    the moment the coder loop's event fell into on #113. A roadmap Issue takes
+    `roadmap` and no difficulty, since it is deferred by definition.
+
+    A label supplied at creation fires `labeled` like any other, one delivery
+    per label beside `opened` — GitHub's workflow reference says so in as many
+    words — so one act here is the one event `coder.yml` watches.
+
+    The first line is read before anything is created. `just next` reads
+    `**Waits on.**` from the first line of both forms (DR-114), and an Issue
+    filed without it waits on nothing anyone can see.
+    """
+    first = body.lstrip().split("\n", 1)[0]
+    if not first.startswith("**Waits on.**"):
+        sys.exit("say: the body does not open with `**Waits on.**`, which is the line "
+                 f"`just next` reads; it opens with {first[:60]!r}. Both forms begin there.")
+    labels = ["roadmap"] if roadmap else ["challenge", level]
+    cmd = ["issue", "create", "--title", title, "--body", body]
+    for name in labels:
+        cmd += ["--label", name]
+    url = channel.gh(*cmd, parse=False)
+    number = url.rstrip("/").rsplit("/", 1)[-1]
+    now = labels_of(number)
+    if any(l not in now for l in labels):
+        sys.exit(f"say: GitHub shows #{number} labelled {now} after the call, not {labels}")
+    print(url)
+    return number, url
+
+
+def claim(issue):
+    """Take an Issue: assign it to this Role's account, and read back.
+
+    A loop claims by assignment (DR-112). It is an act GitHub records, so it
+    goes through here, as the Role whose token this is.
+    """
+    login = channel.login()
+    channel.gh("issue", "edit", issue, "--add-assignee", login, parse=False)
+    who = [a["login"] for a in channel.gh("issue", "view", issue, "--json", "assignees")["assignees"]]
+    if login not in who:
+        sys.exit(f"say: GitHub shows #{issue} assigned to {who or 'nobody'} after the call, not {login}")
+    print(f"claimed #{issue} as {login}")
+
+
+def release(issue):
+    """Take this Role's assignment off an Issue, and read back.
+
+    The claim says a run is standing on this. The coder loop's guard reads it
+    beside the open pull request to tell a level moved under a run from a
+    hand-back the solo has answered (#117); a claim left standing after a
+    hand-back is the loop saying it has stopped and is still working at once.
+    """
+    login = channel.login()
+    channel.gh("issue", "edit", str(issue), "--remove-assignee", login, parse=False)
+    who = [a["login"] for a in channel.gh("issue", "view", str(issue), "--json", "assignees")["assignees"]]
+    if login in who:
+        sys.exit(f"say: GitHub shows #{issue} still assigned to {login} after the call")
+    print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
+
+
+def stop(issue, body):
+    """Where a loop stopped and why, handed to the solo (DR-112): the refusal,
+    the comment, the release, the move to `human`.
+
+    The order is by what a failure after each act leaves behind. The refusal
+    before anything is posted, or a retry posts the comment twice. The comment
+    before the rest, so the Issue carries an account of where the loop stopped
+    whatever fails next. The release before the move: a failed move leaves an
+    unclaimed Issue at its old level, which the comment explains and a raiser
+    can re-deliver; a failed release after the move would leave `human` and
+    claimed, the one state the coder loop's guard reads as a run still
+    standing (#117). The pull request stays open — merged, never abandoned —
+    for the run that takes the Issue up again.
+    """
+    challenge_labels(issue)
+    channel.sibling("post").conversation_comment(issue, body)
+    release(issue)
+    difficulty(issue, "human")
+
+
+def milestone(issue, title, clear=False):
+    """Put an Issue in a Milestone, creating the Milestone when it is new, and
+    read back.
+
+    A Milestone is where the priority between Issues is written once (DR-114);
+    `just next` lists the lowest-numbered open one as next. Creating one is an
+    act GitHub records against an account, and `gh` has no verb for it, so it
+    goes through here like every other write.
+    """
+    if clear:
+        channel.gh("issue", "edit", issue, "--milestone", "", parse=False)
+        now = channel.gh("issue", "view", issue, "--json", "milestone")["milestone"]
+        if now:
+            sys.exit(f"say: GitHub shows #{issue} still in {now['title']!r} after the call")
+        print(f"#{issue} is in no Milestone")
+        return
+    existing = [m["title"] for m in channel.gh("api", "repos/{owner}/{repo}/milestones?state=all&per_page=100")]
+    if title not in existing:
+        channel.gh("api", "repos/{owner}/{repo}/milestones", "-f", f"title={title}", parse=False)
+        print(f"created Milestone {title!r}")
+    channel.gh("issue", "edit", issue, "--milestone", title, parse=False)
+    now = channel.gh("issue", "view", issue, "--json", "milestone")["milestone"]
+    if not now or now["title"] != title:
+        sys.exit(f"say: GitHub shows #{issue} in {now and now['title']!r} after the call, not {title!r}")
+    print(f"#{issue} is in Milestone {title!r}")
+
+
+# --- A pull request's: opened, layered, revised, merged, advanced, handed off.
+
+def kind(number):
+    """Pull request or Issue, asked of GitHub. The numbers are one sequence and
+    the verbs that take either — `comment`, `revise` — should not make a
+    caller say which."""
+    found = channel.gh("api", f"repos/{channel.repo()}/issues/{number}")
+    return "pull request" if found.get("pull_request") else "issue"
+
+
+def revise(number, body=None, title=None):
+    """Replace a body or a title, on a pull request or an Issue.
+
+    A body is signed at creation and nowhere afterwards, so an edit that
+    bypassed the channel would leave a Trailer naming the wrong Actor under
+    prose that Actor never wrote. The title is what the index is worth, and
+    changing it is an act GitHub records.
+    """
+    if body is None and title is None:
+        sys.exit("say: nothing to revise — pipe a body in, or pass --title")
+    what = kind(number)
+    noun = "pr" if what == "pull request" else "issue"
+    cmd = [noun, "edit", str(number)]
+    if title is not None:
+        cmd += ["--title", title]
+    if body is not None:
+        cmd += ["--body", body]
+    channel.gh(*cmd, parse=False)
+    print(f"{what} #{number}: {' and '.join(w for w, v in (('body', body), ('title', title)) if v is not None)} set")
+
+
+def stacked(pr):
+    """Whether a pull request is a layer of a stack, read from GitHub.
+
+    The pull request payload carries a `stack` object on a layer and nothing
+    otherwise. `gh pr view` does not expose it, so the endpoint is read.
+    """
+    return bool(channel.gh("api", f"repos/{channel.repo()}/pulls/{pr}").get("stack"))
+
+
+def link(below, above):
+    """Link one pull request onto another as the layer above it, as the Role.
+
+    Linking is an act GitHub records, like a merge (DR-075), so it goes through
+    here, and it is not a verb: a layer is opened linked, `open --on`, or made
+    one, `layer --on`, and the link is half of either. Open, then link, was a
+    composition a caller assembled by hand and could leave half done (DR-116).
+    `gh stack submit` opens pull requests unsigned and stays blocked. After a
+    layer merges, GitHub rebases the layers above it, which is the whole reason
+    for a stack over a hand-built one (DR-100).
+    """
+    print(channel.gh("stack", "link", str(below), str(above), parse=False))
+
+
+def head_branch(pr):
+    return channel.gh("pr", "view", str(pr), "--json", "headRefName")["headRefName"]
+
+
+def layer(pr, below):
+    """Make an open pull request a layer on another: retarget its base onto the
+    lower layer's branch, and link the two.
+
+    A pull request opened against trunk and found to wait on another (DR-100)
+    is retargeted rather than closed and reopened: it is merged, never
+    abandoned, and the edit is an act GitHub records. Retargeting without
+    linking left a pull request whose base was a branch GitHub would not
+    rebase it over when that branch merged; both halves are one verb now.
+    """
+    base = head_branch(below)
+    channel.gh("pr", "edit", str(pr), "--base", base, parse=False)
+    now = channel.gh("pr", "view", str(pr), "--json", "baseRefName")["baseRefName"]
+    if now != base:
+        sys.exit(f"say: GitHub shows #{pr} based on {now} after the call, not {base}")
+    link(below, pr)
+    print(f"#{pr} is a layer on #{below} ({base})")
+
+
+def open_pull_request(title, body, base="main", on=None):
+    """Open a pull request, signed; with `on`, open it as a layer on that one.
+
+    The base is the lower layer's branch, read from GitHub rather than typed,
+    and the link follows the creation, so a layer is never open and unlinked.
+    """
+    if on:
+        base = head_branch(on)
+    url = channel.gh("pr", "create", "--title", title, "--base", base, "--body", body, parse=False)
+    print(url)
+    if on:
+        link(on, url.rstrip("/").rsplit("/", 1)[-1])
+
+
+def arm(pr, subject):
+    """Hand GitHub the intent to merge when the ruleset is satisfied.
+
+    One call, and two callers: the merge verb arming for the first time, and
+    `advance` arming again where moving the branch dropped it.
+    """
+    channel.gh("pr", "merge", pr, "--squash", "--auto", "--subject", subject, parse=False)
+
+
+def behind_by(pull):
+    """How many commits of its base a pull request's head is missing.
+
+    `mergeStateStatus` is the obvious question and answers a different one.
+    GitHub computes it when it is asked for, so the first read after a push to
+    trunk is `UNKNOWN`; and `BLOCKED` outranks `BEHIND`, so a pull request
+    waiting on a review reports the review and hides the fact that it is also
+    out of date — which is every `medium` pull request (DR-112), and the case
+    where nobody is watching. A comparison answers what is actually being
+    decided: whether the head is missing commits the base has. GitHub answers
+    that the same way whatever else is outstanding.
+    """
+    return channel.gh("api", f"repos/{channel.repo()}/compare/"
+                             f"{pull['baseRefName']}...{pull['headRefOid']}")["behind_by"]
+
+
+ADVANCE = "number,title,baseRefName,headRefOid,autoMergeRequest"
+
+
+def advance(pr=None, held=False):
+    """Bring armed pull requests that have fallen behind their base back onto it.
+
+    An armed merge does not update its own branch, and `main` requires a pull
+    request to be current before it merges. So when two are green at once the
+    first lands and the second goes behind, armed, waiting for a Job that ended
+    when it armed — and nobody is told, because there is nobody left to tell
+    (#93). This is the step that moves it. `merge --auto` runs it before
+    arming, since a branch can be behind before it is armed as easily as
+    after; the other edge is `.github/workflows/advance.yml`, which runs this
+    on every push to trunk, the one event that puts a pull request in that
+    state (DR-113). Both edges are covered, so nobody should have to type this
+    — it takes a pull request number for the day one is behind for a reason
+    neither edge saw.
+
+    **Armed, and nothing else**, whether one pull request was named or none.
+    A pull request nobody has asked to land is not waiting on anything, and the
+    rebase below rewrites commits under whatever session still holds the branch.
+    Arming is the last act of the Job that did the work (DR-112), so an armed
+    branch is one nobody is still standing on. The filter used to be the sweep's
+    alone and the explicit argument rebased whatever it was handed — which left
+    the property holding on the path nothing calls and not on the one
+    `merge --auto` uses (#98).
+
+    `held` is the one exemption, and it is the caller saying which branch it is
+    standing on: `merge --auto` is the Job that did the work, arming in a moment,
+    so for that call the question the arming answers is already answered. It is
+    an argument of the function and not of the verb, because what a caller can
+    pass a typed command can pass wrongly, and by hand this is only ever wanted
+    for a pull request that stalled — which is to say an armed one.
+
+    **By rebase, not by a merge commit.** GitHub authors the merge commit
+    itself and it carries no `Actor` Trailer, so A19 would turn the required
+    check red on the very branch this is unblocking — the fix would be the
+    defect wearing a new coat. A rebase writes no new commit: the branch's own
+    commits move onto the base with their messages, and so with their Trailers,
+    intact.
+
+    Read back, per A6: the outcome is what GitHub holds afterwards, not what
+    `gh` returned. Three things are asked, and they are asked independently.
+    Whether the head is current now — the base can move again while this runs,
+    and a second push is a second run's business, not a silent pass. Whether
+    the arming survived the head moving: GitHub drops auto-merge on some pushes
+    to a head branch, and an update that disarmed what it was unblocking would
+    leave the pull request exactly where it was found, with the sole witness
+    gone. The second used to hang off the first as an `elif`, so the one state
+    it exists to repair — moved, disarmed, and behind again — was the one state
+    it never looked at (#98). And whether re-arming took, which is the same
+    question `merge --auto` asks of its own arming and the one this path was
+    still answering from an exit code.
+
+    **One pull request's refusal is not the sweep's.** `gh()` reports by ending
+    the process, so a branch GitHub will not rebase, or will not arm, used to
+    take every other pull request down with it and swallow what had already been
+    collected. Each is caught where it happens and joins `failed`, which is what
+    the accumulator was for.
+    """
+    if pr is not None:
+        found = [channel.gh("pr", "view", pr, "--json", ADVANCE)]
+    else:
+        found = channel.gh("pr", "list", "--state", "open", "--json", ADVANCE)
+    if not held:
+        found = [p for p in found if p.get("autoMergeRequest")]
+    if not found:
+        # Two answers, and only one of them is "nothing to do". A sweep with
+        # nothing armed open did its whole job and exits 0. A named pull request
+        # that is not armed is a *refusal* — the caller asked for one thing and
+        # the verb declined it — and every other refusal in this file exits
+        # non-zero. `main()` passes no `held`, so for a typed `advance <pr>`
+        # this is the terminal answer; sharing an exit code with the sweep is
+        # how `move advance 92 && <next>` carries on as though the branch
+        # had moved.
+        if pr is not None:
+            sys.exit(f"say: #{pr} is not armed; nothing has asked it to land")
+        print("advance: nothing armed is open")
+        return
+    moved, failed = 0, []
+    for pull in found:
+        number = str(pull["number"])
+        try:
+            behind = behind_by(pull)
+            if not behind:
+                continue
+            channel.gh("pr", "update-branch", number, "--rebase", parse=False)
+            moved += 1
+            print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
+                  f"— {pull['title']}")
+            after = channel.gh("pr", "view", number, "--json", ADVANCE)
+            if behind_by(after):
+                failed.append(f"#{number} is still behind {pull['baseRefName']} after the update")
+            if pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
+                arm(number, f"{pull['title']} (#{number})")
+                # Read back, like the two above and for the same reason. This
+                # was the one act in the function whose outcome was `gh`'s exit
+                # status: `gh pr merge --auto` exits 0, the enablement does not
+                # stick, and the line below claimed an arming GitHub does not
+                # hold. That leaves the pull request rebased and unarmed, which
+                # is #93 — and unreachable by any later sweep, because the sweep
+                # filters on `autoMergeRequest` and there is no longer one to
+                # filter on.
+                if not channel.gh("pr", "view", number, "--json", ADVANCE).get("autoMergeRequest"):
+                    failed.append(f"#{number} lost its arming to the update and GitHub does not "
+                                  "show it armed after the call that re-armed it")
+                else:
+                    print(f"armed #{number} again: moving the head had dropped it")
+        except SystemExit as exc:
+            failed.append(f"#{number}: {exc.code}")
+    if not moved and not failed:
+        print(f"advance: {len(found)} pull request(s) current with their base")
+    if failed:
+        sys.exit("say: " + "; ".join(failed))
+
+
+def merge(pr, stack=False, auto=False):
+    """Merge as the Role, label trunk with the pull request's title, and report
+    what GitHub holds afterwards. With `stack`, merge every layer up to and
+    including this one, atomically, and let GitHub rebase the rest.
+
+    Not an utterance, and still the channel's. Merging is an act by the Role —
+    DR-072 puts it in an agent's hands and DR-075 puts the act through here — so
+    it is the Role that GitHub should record as having done it, and the squash
+    commit that lands on trunk carries that account rather than the solo's.
+
+    The subject is passed rather than left to GitHub. Left to it, GitHub labels
+    the squash from the commits, and #27 landed on `main` under a subject that
+    was not its title (#26), which is the label the index carries — and a label
+    on trunk cannot be rewritten. The body is left to GitHub, so the Trailers on
+    the branch's commits ride into the squash as before (DR-062).
+
+    `--delete-branch` is not used. It makes `gh` check out `main` locally after
+    the merge, which fails from a worktree because `main` is already checked out
+    elsewhere — and it fails *after* the merge, so the exit code said the act
+    had failed when it had not. The remote branch is deleted here instead, and
+    the local checkout is left alone — unless the repository deletes head
+    branches itself, which this one does. The first run of this verb (#46)
+    deleted a ref GitHub had already removed, and exited 1 on a merge that had
+    landed, which is the defect it was written to remove wearing a new coat. So
+    the setting is read, and the verb deletes nothing the repository will.
+
+    The outcome is read back from GitHub, per A6: a step's result is what it
+    found, not what its last subprocess returned.
+
+    `--auto` is "when green" (#79). A merge refused for pending checks was one
+    somebody had to remember to retry, and on #76 the retry came thirty-six
+    minutes after the checks passed. GitHub holds the intent instead: the
+    squash and its subject are handed over now, and the merge happens the
+    moment the ruleset is satisfied, watched or not. Not on a layer of a stack:
+    a layer's base is the layer below, and armed early it would merge into
+    that branch the moment it was green rather than into trunk after it.
+    """
+    before = channel.gh("pr", "view", pr, "--json", "title,state,headRefName")
+    if before["state"] != "OPEN":
+        sys.exit(f"say: #{pr} is {before['state'].lower()}, not open")
+    subject = f"{before['title']} (#{pr})"
+    if auto:
+        if stack or stacked(pr):
+            # The bottom included: GitHub refuses auto-merge on any stacked
+            # pull request ("Auto-merge is not supported for stacked pull
+            # requests"), so a stack lands by `merge --stack`, by hand, when
+            # its bottom is green (#117).
+            sys.exit(f"say: #{pr} is in a stack, and GitHub does not arm a stacked pull request, "
+                     "bottom included. Merge it with --stack when it is green, and GitHub "
+                     "retargets the layers above as it lands.")
+        if not channel.gh("api", f"repos/{channel.repo()}").get("allow_auto_merge"):
+            sys.exit("say: this repository does not allow auto-merge; that is a setting on "
+                     "GitHub, not a line here")
+        # Arming a branch that is already behind arms something that cannot
+        # merge, and the push to trunk that would have advanced it has already
+        # happened (#93). The other edge — falling behind after arming — is
+        # the workflow's. `held`, because this is the Job that did the work and
+        # the branch is its own; nothing else may rebase an unarmed branch.
+        #
+        # And the arming happens whether or not that worked. `advance` ends in
+        # `sys.exit` on a read-back that failed and on any refusal `gh` made,
+        # and outside this `try` every one of those exits left the branch
+        # rebased and never armed — #93's state, reached by the fix for it, with
+        # no second run coming because arming is where the Job ends (#98).
+        # Armed and behind is the recoverable half: the next push to trunk
+        # sweeps it up, precisely because it is armed. So the stall is carried
+        # to the end and reported there, after the arming it must not prevent —
+        # and it is carried as a *reason*, not as a state. What state the pull
+        # request ended in is asked of GitHub at each of the three places
+        # below, because the stall is the exit code of a verb that makes four
+        # or five calls and says nothing about which of them refused.
+        stalled = None
+        try:
+            advance(pr, held=True)
+        except SystemExit as exc:
+            stalled = str(exc.code)
+        try:
+            arm(pr, subject)
+        except SystemExit as exc:
+            # Already mergeable: GitHub refuses to arm what it could just do,
+            # in these words, and the plain merge below is the right act. A
+            # stall recorded above goes no further from here, and cannot
+            # survive: clean is GitHub saying the branch is current, which is
+            # the opposite of what stalled would claim.
+            if "clean status" not in str(exc.code):
+                raise
+        else:
+            after = channel.gh("pr", "view", pr, "--json", "state,mergeCommit,autoMergeRequest")
+            if after["state"] == "MERGED":
+                # A stall recorded above is moot here and dies with this branch.
+                # Not every refusal `advance` collects is a branch that is
+                # genuinely behind — an API blip on a `pr view` or a `compare`
+                # is one too — and GitHub having merged the pull request is the
+                # end of the question either way. Reported here it would print
+                # `merged #<n> as <sha>` and then exit 1 saying the pull request
+                # is armed and not current with its base, both clauses false:
+                # #46's defect wearing a new coat, which is what this verb was
+                # written to remove.
+                print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
+            elif after.get("autoMergeRequest"):
+                print(f"armed: #{pr} merges as a squash when green — {before['title']}")
+                # Armed and behind is the one state the message describes, and
+                # reaching this branch establishes only its first half:
+                # `after.get("autoMergeRequest")` is GitHub saying it is armed,
+                # and nothing since `advance` failed has asked whether the head
+                # is current. `stalled` cannot answer it — it is every refusal
+                # `advance` collected, and most of them say nothing about the
+                # head: a `gh` blip on the read-back `compare`, one HTTP error
+                # away out of the four or five calls that verb makes, or an
+                # arming that did not stick and that the `arm` above has since
+                # made take. Both leave the branch armed and current, and the
+                # exit code here is the last thing the Job says — a non-zero
+                # over a pull request GitHub is holding correctly armed tells
+                # the loop the landing failed when it did not. So the currency
+                # is re-asked, one `compare`, and the exit is conditional on
+                # the answer rather than on how the stall was reached.
+                if stalled:
+                    try:
+                        current = channel.gh("pr", "view", pr, "--json", ADVANCE)
+                        behind = behind_by(current)
+                    except SystemExit as exc:
+                        sys.exit(f"say: #{pr} is armed, and advancing it did not finish — "
+                                 f"{stalled}. GitHub would not say whether it is current "
+                                 f"either — {exc.code}")
+                    if behind:
+                        sys.exit(f"say: #{pr} is armed and {behind} commit(s) behind "
+                                 f"{current['baseRefName']} — {stalled}")
+                    # Armed and current is the state the Job was for, so the
+                    # stall is reported and not exited on: it is a reason
+                    # something took two attempts, not a landing that failed.
+                    print(f"#{pr} is armed and current with {current['baseRefName']}; "
+                          f"advancing it did not finish — {stalled}")
+            else:
+                sys.exit(f"say: GitHub shows #{pr} neither merged nor armed after the call")
+            return
+    if stack:
+        # GitHub's stack merge: everything up to and including this layer, all
+        # or nothing, and the layers above are rebased by GitHub rather than by
+        # hand (DR-100). It takes no subject; trunk's label rests on the
+        # repository's squash-title setting, which is why the label is read
+        # back below rather than assumed.
+        channel.gh("stack", "merge", pr, "--squash", "--yes", parse=False)
+    elif stacked(pr):
+        sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
+                 "Pass --stack to merge everything up to it.")
+    else:
+        channel.gh("pr", "merge", pr, "--squash", "--subject", subject, parse=False)
+    after = channel.gh("pr", "view", pr, "--json", "state,mergeCommit")
+    if after["state"] != "MERGED":
+        sys.exit(f"say: #{pr} is {after['state'].lower()} after the merge call; not deleting the branch")
+    print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
+    branch = before["headRefName"]
+    if channel.gh("repo", "view", "--json", "deleteBranchOnMerge")["deleteBranchOnMerge"]:
+        print(f"GitHub deletes origin/{branch} on merge; nothing to do here")
+    else:
+        channel.gh("api", "-X", "DELETE", f"repos/{channel.repo()}/git/refs/heads/{branch}", parse=False)
+        print(f"deleted origin/{branch}")
+
+
+def request_review(pr, to):
+    """The handoff: request review from the next Role's account.
+
+    A semaphore, not a message. GitHub holds the request and reports it, so the
+    arriving Job finds its work by asking what has been requested of its login.
+    Read back afterwards, per A6: the act is what GitHub shows, not what `gh`
+    returned.
+
+    A request already pending is withdrawn first. GitHub emits no event for
+    a reviewer it already lists, so a Job whose run answered nothing left the
+    request standing and a second ask went nowhere (#87). Withdrawing and
+    asking again is the same semaphore raised twice, and the event fires.
+    """
+    login = channel.role_login(to)
+
+    def asked():
+        return [r.get("login") for r in channel.gh("pr", "view", pr, "--json", "reviewRequests")["reviewRequests"]]
+
+    again = login in asked()
+    if again:
+        channel.gh("pr", "edit", pr, "--remove-reviewer", login, parse=False)
+    channel.gh("pr", "edit", pr, "--add-reviewer", login, parse=False)
+    if login not in asked():
+        sys.exit(f"say: GitHub shows {asked() or 'nobody'} requested on #{pr} after the call, not {login}")
+    print(f"{'requested again' if again else 'requested'} review of #{pr} from {login}")
+
+
+def build_parser():
+    """The parser alone, so a probe can check what each verb accepts without
+    running what it dispatches to (#95)."""
+    ap = channel.parser(__doc__)
+    sub = ap.add_subparsers(dest="verb", required=True)
+
+    # An Issue's life: filed, its difficulty moved, claimed, or handed back.
+    p = sub.add_parser("file"); p.add_argument("--title", required=True)
+    what = p.add_mutually_exclusive_group(required=True)
+    what.add_argument("--difficulty", choices=DIFFICULTIES, dest="level", help="a Challenge, at this level")
+    what.add_argument("--roadmap", action="store_true", help="a roadmap Issue: intended and deferred")
+    p = sub.add_parser("triage"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
+    p = sub.add_parser("difficulty"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
+    p = sub.add_parser("claim"); p.add_argument("issue")
+    p = sub.add_parser("stop"); p.add_argument("issue")
+    p = sub.add_parser("milestone"); p.add_argument("issue")
+    target = p.add_mutually_exclusive_group(required=True)
+    target.add_argument("--set", dest="title", help="the Milestone's title; created if new")
+    target.add_argument("--clear", action="store_true", help="take the Issue out of its Milestone")
+
+    # A pull request's: opened, layered, revised, merged, advanced, handed off.
+    p = sub.add_parser("open"); p.add_argument("--title", required=True)
+    where = p.add_mutually_exclusive_group()
+    where.add_argument("--base", default="main")
+    where.add_argument("--on", help="open as a layer on this pull request, and link the stack")
+    p = sub.add_parser("layer"); p.add_argument("pr"); p.add_argument("--on", required=True)
+    p = sub.add_parser("revise"); p.add_argument("number"); p.add_argument("--title")
+    p = sub.add_parser("merge"); p.add_argument("pr"); p.add_argument("--stack", action="store_true")
+    p.add_argument("--auto", action="store_true", help="arm GitHub to merge when green")
+    p = sub.add_parser("advance")
+    p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
+    p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
+    return ap
+
+
+def main():
+    args = build_parser().parse_args()
+    channel.speak_as(args.role)
+
+    if args.verb == "triage":
+        triage(args.issue, args.level)
+    elif args.verb == "difficulty":
+        difficulty(args.issue, args.level)
+    elif args.verb == "claim":
+        claim(args.issue)
+    elif args.verb == "milestone":
+        milestone(args.issue, args.title, clear=args.clear)
+    elif args.verb == "layer":
+        layer(args.pr, args.on)
+    elif args.verb == "merge":
+        merge(args.pr, stack=args.stack, auto=args.auto)
+    elif args.verb == "advance":
+        advance(args.pr)
+    elif args.verb == "request-review":
+        request_review(args.pr, args.to)
+    elif args.verb == "revise":
+        # A title says everything it has to say in an argument, so the body
+        # is optional here and nowhere else; reading a body a rename will not
+        # use turned a rename into a refusal, twice.
+        text = channel.piped()
+        revise(args.number, body=channel.signed(text) if text else None, title=args.title)
+    elif args.verb == "file":
+        file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level, roadmap=args.roadmap)
+    elif args.verb == "stop":
+        stop(args.issue, channel.signed(channel.stdin_body()))
+    elif args.verb == "open":
+        open_pull_request(args.title, channel.signed(channel.stdin_body()), base=args.base, on=args.on)
+
+
+if __name__ == "__main__":
+    main()

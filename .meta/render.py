@@ -96,6 +96,16 @@ def disciplines():
             out.append(f"**Where the judgement is.** {d['judgement'].strip()}\n")
         if d.get("steps"):
             out.append("\n".join(f"{i}. {s}" for i, s in enumerate(d["steps"], 1)) + "\n")
+        if d["name"] == (channel() or {}).get("discipline"):
+            out.append("The verbs are the steps, and each refuses its own misuse (DR-116). Every act\n"
+                       "on GitHub goes through the channel, `.meta/say/`, which names the Actor in\n"
+                       "every commit and every comment; which Role holds each verb is\n"
+                       "`.meta/say/verbs.yaml`'s to say, and a Role's reading lists\n"
+                       "only its own (DR-117).\n")
+            for program in channel()["programs"]:
+                out.append(f"**`.meta/say/{program['name']}`** — {program['concern'].strip()}\n")
+                out.append("\n".join(f"- `{verb_line(program, v)}` — {v['does']} *({', '.join(v['held_by'])})*"
+                                      for v in program["verbs"]) + "\n")
         if d.get("produces"):
             out.append("_Produces: " + "; ".join(d["produces"]).rstrip(".") + "._\n")
     return "\n".join(out) + accounted_by("disciplines.md")
@@ -291,7 +301,7 @@ def landed(number):
     which is the point rather than a defect.
 
     Prints rather than writes. It is addressed to a pull request at merge, so it
-    goes through the channel that signs: `.meta/say landed 15` runs this for
+    goes through the channel that signs: `.meta/say/post landed 15` runs this for
     every Challenge the body closes and posts each. By hand:
 
         uvx --with pyyaml python .meta/render.py --landed 11
@@ -464,14 +474,39 @@ def _discipline(name):
     return None
 
 
-def skill(name, discipline, trigger, commands, forms=()):
-    """A Discipline, compiled for this harness.
+def channel():
+    """The channel's verbs, once: `.meta/say/verbs.yaml`."""
+    return load("say/verbs.yaml")
+
+
+def verb_line(program, verb, role=None):
+    """How a verb is typed, from the table: the program, `--role` for any Role
+    but the channel's default, the verb unless the program is the verb, and
+    the shape of its arguments."""
+    words = [f".meta/say/{program['name']}"]
+    if role and role != "coder":
+        words.append(f"--role {role}")
+    if verb["name"] != program["name"]:
+        words.append(verb["name"])
+    if verb.get("usage"):
+        words.append(verb["usage"])
+    return " ".join(words)
+
+
+def skill(name, discipline, trigger, commands, forms=(), role=None):
+    """A Discipline, compiled for this harness, and for one Role (DR-117).
 
     A skill is a Discipline plus the commands that carry it out, in the shape one
     harness loads on demand. Everything here is read from the assertions — the
     steps, the judgement, the Articles that enforce it, and any form's own fence.
     Nothing is restated, because a skill that restated the Discipline would be
     the copy nothing checks, and the one an agent actually reads.
+
+    With a Role, the mechanical steps are one line and the Role's verbs, read
+    from `verbs.yaml`: the verbs are the steps, each refuses its own misuse,
+    and a reading names no verb its Role does not hold. The steps the assertion
+    keeps are the ones no verb enforces. Without a Role the reading is the
+    whole Discipline's, which is `disciplines.md`'s.
 
     Only the Claude Code target is emitted. The frontmatter an APM primitive
     wants is still unverified (DR-040), and writing plausible field names would
@@ -490,8 +525,15 @@ def skill(name, discipline, trigger, commands, forms=()):
             "     Do not edit by hand: edit the assertion and re-render. -->\n",
             f"# {d['name']}\n",
             d["description"].strip() + "\n",
-            "## Steps\n",
-            "\n".join(f"{i}. {s.strip()}" for i, s in enumerate(d["steps"], 1)) + "\n",
+            "## Steps\n"]
+    if role:
+        table = channel() or {"programs": []}
+        out += [f"The verbs are the steps, and each refuses its own misuse. Yours, as the {role}:\n"]
+        for program in table["programs"]:
+            held = [v for v in program["verbs"] if role in v["held_by"]]
+            out += [f"- `{verb_line(program, v, role)}` — {v['does']}" for v in held]
+        out += ["", "A verb not listed is not yours to type. What no verb enforces:\n"]
+    out += ["\n".join(f"{i}. {s.strip()}" for i, s in enumerate(d["steps"], 1)) + "\n",
             "## Where the judgement is\n",
             d["judgement"].strip() + "\n",
             "**None of the below decides any of the above.** A script can tell you a thread",
@@ -509,23 +551,41 @@ def skill(name, discipline, trigger, commands, forms=()):
     return "\n".join(out)
 
 
+READING = ["python3 .meta/check_pr.py --sweep          # what this branch owns, and what it owes",
+           "python3 .meta/check_pr.py <n> --threads    # the threads still owed an answer",
+           "python3 .meta/check_pr.py <n>              # the gate: A15 and A16",
+           "#   Watching the pull request, and removing what a merge leaves behind, are the",
+           "#   harness's business, not yours: AGENTS.md says how this one does both."]
+
+BODY = [("The body", "pull-request.md",
+         "Fill this in when the work **starts**. `check_pr.py` reads the same form, so a\n"
+         "heading added here is required by that act alone.")]
+
+
 def pr_first_skill():
+    """The coder's reading. `/pr-first` and not `/pr-first-coder`, because the
+    coder is the channel's default Role too: a session that names no Role is
+    the coder's, in what it types and in what it reads (DR-117)."""
     return skill(
         "pr-first", "PR First",
-        ["Open, argue in, watch and close a pull request the way this repository",
-         "requires. Use when starting any change, when a review or comment lands on",
-         "one, and when picking work up again — an open pull request this branch owns",
-         "with an unanswered thread is work in progress, whoever noticed it."],
-        ["python3 .meta/check_pr.py --sweep          # what this branch owns, and what it owes",
-         "python3 .meta/check_pr.py <n> --threads    # the threads still owed an answer",
-         "python3 .meta/check_pr.py <n>              # the gate: A15 and A16",
-         "python3 .meta/check_pr.py <n> --watch      # the subscription: one line per change, exits when it closes",
-         "#   Keep it running for the session, as soon as the pull request is open:",
-         "#   Monitor({command: \"python3 .meta/check_pr.py <n> --watch\", persistent: true})",
-         "#   Each line wakes this conversation; a review is answered when it lands, not when someone looks."],
-        [("The body", "pull-request.md",
-          "Fill this in when the work **starts**. `check_pr.py` reads the same form, so a\n"
-          "heading added here is required by that act alone.")])
+        ["Open, argue in and close a pull request the way this repository requires,",
+         "as the coder Role: the verbs the coder holds, and where the judgement is. Use",
+         "when starting any change, when a review or comment lands on one, and when",
+         "picking work up again — an open pull request this branch owns with an",
+         "unanswered thread is work in progress, whoever noticed it."],
+        READING, BODY, role="coder")
+
+
+def pr_first_reviewer_skill():
+    """The reviewer's reading: its verbs, the form a pull request is held to,
+    and the judgement a reviewer's point is owed (DR-117)."""
+    return skill(
+        "pr-first-reviewer", "PR First",
+        ["Review a pull request the way this repository requires, as the reviewer",
+         "Role: the verbs the reviewer holds, what a pull request here must hold, and",
+         "what a reviewer's point owes. Use when a review has been requested of the",
+         "reviewer's account."],
+        READING, BODY, role="reviewer")
 
 
 def justfile():
@@ -577,7 +637,7 @@ def justfile():
         "sweep:",
         "    python3 .meta/check_pr.py --sweep",
         "",
-        "# what landed for a Challenge, from the record; `.meta/say landed <pr>` posts it",
+        "# what landed for a Challenge, from the record; `.meta/say/post landed <pr>` posts it",
         "landed n:",
         "    uvx --with pyyaml python .meta/render.py --landed {{n}}",
         "",
@@ -597,7 +657,8 @@ TARGETS = {"disciplines.md": disciplines,
            "../.github/PULL_REQUEST_TEMPLATE.md": pull_request_template,
            "../.github/ISSUE_TEMPLATE/challenge.md": issue_template,
            "../.github/ISSUE_TEMPLATE/roadmap.md": roadmap_template,
-           "../.claude/skills/pr-first/SKILL.md": pr_first_skill}
+           "../.claude/skills/pr-first/SKILL.md": pr_first_skill,
+           "../.claude/skills/pr-first-reviewer/SKILL.md": pr_first_reviewer_skill}
 
 def rendered():
     """Every generated path, relative to `.meta/`, mapped to its content.
