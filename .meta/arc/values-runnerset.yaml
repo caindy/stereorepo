@@ -12,11 +12,27 @@ runnerScaleSetName: arc-runner-set
 githubConfigSecret: arc-github-token
 
 # Scale to zero when idle: this cluster is somebody's machine, not a fleet,
-# and should not hold a pod open for nothing. maxRunners is a ceiling sized
-# for a laptop, not a claim about how much is needed — `coder.yml` and
-# `review.yml` each key their own `concurrency:` group per Issue or pull
-# request (one run per Issue, one per pull request), not repository-wide, so
-# several can legitimately be eligible at once. A third queued job means the
-# fleet is two, not that something failed to serialize.
+# and should not hold a pod open for nothing.
+#
+# maxRunners is what one gate run needs at once plus the loops it has to run
+# beside, measured on the machine that runs it (solorepo's DR-141). Since
+# DR-140 every job of every workflow lands here: a pull request's gate is
+# four jobs — `files`, `rust seed`, `python seed` and `pull request` — that
+# become eligible together, three of them required checks in `main`'s ruleset
+# (`python seed` is not one yet), `advance` is a fifth pod on every push to
+# `main`, and `coder.yml` and `review.yml` hold one each for up to 75 and 50
+# minutes. Two slots made those four run one or two at a time behind whatever
+# session was already there.
+#
+# Eight is four plus `advance` plus three loop sessions, and it fits: the
+# heaviest pod measured on this node peaks near 2 GiB (a Claude Code
+# session; `python seed` 1.5 GiB, `rust seed` 0.7 GiB), so eight is about
+# 16 GiB of 31, and a whole gate spends ~155 CPU-seconds over ~45 seconds of
+# wall clock — under four of 24 cores. Those 45 seconds are the work, with the
+# toolchains already there; a `rust seed` *job* is 85 to 107 seconds because it
+# installs its own first — `apt-get install build-essential` measures 25 to 27
+# of them. The CPU-seconds size the node, the job durations are the latency
+# floor. A ninth queued job means the fleet is eight, not that something failed
+# to serialize.
 minRunners: 0
-maxRunners: 2
+maxRunners: 8

@@ -153,6 +153,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-137](assertions/decisions/DR-137.yaml) | The coder and reviewer runs move first to a self-hosted Actions Runner Controller scale set on Kubernetes; the gate stays GitHub-hosted until the cluster has proven itself | Adopted |
 | [DR-138](assertions/decisions/DR-138.yaml) | The checker's watch exits on actionable events, so any harness that resumes on command completion is woken | Adopted |
 | [DR-140](assertions/decisions/DR-140.yaml) | Every job in every workflow moves to the self-hosted scale set, and `runs-on:` leaves the half the two gate workflows hold equal | Adopted |
+| [DR-141](assertions/decisions/DR-141.yaml) | The runner ceiling is one gate run's width plus the loops beside it, and the machine has room for eight | Adopted |
 
 ## Holes
 
@@ -185,7 +186,7 @@ and the query a reader in a file actually has.
 | [`.meta/arc/cluster`](arc/cluster) | [DR-137](assertions/decisions/DR-137.yaml) |
 | [`.meta/arc/deploy`](arc/deploy) | [DR-137](assertions/decisions/DR-137.yaml) |
 | [`.meta/arc/teardown`](arc/teardown) | [DR-137](assertions/decisions/DR-137.yaml) |
-| [`.meta/arc/values-runnerset.yaml`](arc/values-runnerset.yaml) | [DR-137](assertions/decisions/DR-137.yaml) |
+| [`.meta/arc/values-runnerset.yaml`](arc/values-runnerset.yaml) | [DR-137](assertions/decisions/DR-137.yaml), [DR-141](assertions/decisions/DR-141.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-123](assertions/decisions/DR-123.yaml) |
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
 | [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |
