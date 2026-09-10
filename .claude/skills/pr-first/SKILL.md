@@ -77,6 +77,8 @@ python3 .meta/check_pr.py <n> --threads    # the threads: owed, held, answered; 
 python3 .meta/check_pr.py <n>              # the gate: A15 and A16
 #   Watching the pull request, and removing what a merge leaves behind, are the
 #   harness's business, not yours: AGENTS.md says how this one does both.
+just dereference                          # the citations this branch wrote, read against what they name
+#   Not a gate: its `x` is a finding to answer, and it blocks no merge.
 ```
 
 ## The body

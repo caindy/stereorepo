@@ -152,6 +152,27 @@ jobs:
         env:
           CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
 
+      # The model credential, on the same terms and for a harder reason
+      # (solorepo's DR-134). `dereference` asks through the `claude` on PATH,
+      # and a nested run authenticates from its environment — which the agent's
+      # shell does not inherit from this workflow. Run 34484811464 settles it:
+      # GitHub's own log for that step lists `CLAUDE_CODE_OAUTH_TOKEN`
+      # alongside `ACTOR_SESSION` and `AI_AGENT` in the step's `env:`, and a
+      # probe inside the same step printed `token set: no` and `claude`
+      # answered `Not logged in`. So the action does not hand the workflow's
+      # environment to the shell it gives the agent, and no `env:` block at any
+      # level reaches it. A file does, which is why the Role's credential is
+      # one and not a variable: the same probe found `coder.env` in the
+      # container. Absent this step the reading falls through to ambient auth,
+      # says so, and every pair comes back `?` — loud, and deciding nothing.
+      - name: hold the model credential
+        run: |
+          install -d -m 700 ~/.config/solorepo
+          install -m 600 /dev/null ~/.config/solorepo/claude.env
+          printf 'CLAUDE_CODE_OAUTH_TOKEN=%s\n' "$MODEL_TOKEN" > ~/.config/solorepo/claude.env
+        env:
+          MODEL_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
       # One run per Challenge. A label supplied at creation fires `labeled`
       # like any other — GitHub's workflow reference: an Issue opened with two
       # labels starts three runs, one `opened` and two `labeled` — so
@@ -268,7 +289,11 @@ jobs:
             Do what the Issue asks and no more. Gate green with
             `.meta/gate meta`, commit and push as you go, `.meta/say/move revise <n>`
             when the body no longer says what the head does, and
-            `.meta/say/post landed <n>` before you hand it over.
+            `just dereference` and then `.meta/say/post landed <n>` before you
+            hand it over. `dereference` reads the citations this branch wrote
+            against the entries they name; it is not a gate and blocks nothing,
+            so answer its `x` by fixing the sentence, or by leaving it and
+            saying why on the pull request (solorepo's DR-134).
 
             `easy`: `.meta/say/move merge <n> --auto`; green is the review.
             `medium`: `.meta/say/move request-review <n>` and stop; the reviewer
@@ -532,9 +557,16 @@ jobs:
             <thread-id>` on every thread, which replies and resolves; a thread
             marked "Noticed and not done" is the solo's and stays open.
             `.meta/say/move revise ${{ steps.pr.outputs.number }}` if the body no
-            longer says what the head does, `.meta/say/post landed ${{ steps.pr.outputs.number }}`,
-            then `.meta/say/move request-review ${{ steps.pr.outputs.number }}` and
+            longer says what the head does, `just dereference`, then
+            `.meta/say/post landed ${{ steps.pr.outputs.number }}` and
+            `.meta/say/move request-review ${{ steps.pr.outputs.number }}`, and
             stop. Do not arm the merge, and do not wait for the checks.
+            `dereference` reads the citations this branch wrote against the
+            entries they name, and this is the pass that most needs it: a point
+            answered is prose rewritten, and rewriting prose is where a
+            paraphrase gets written. It is not a gate and blocks nothing, so
+            answer its `x` by fixing the sentence, or by leaving it and saying
+            why on the pull request (solorepo's DR-134).
 
             Do not merge by hand, and do not reach GitHub any other way: the
             hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,

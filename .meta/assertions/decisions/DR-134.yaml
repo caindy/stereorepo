@@ -1,0 +1,157 @@
+decisions:
+  - id: work:decision/134
+    name: "DR-134 · A gate is a predicate a re-run cannot overturn, so a citation's reading runs before the hand-off and blocks no merge"
+    challenge: work:challenge/148
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-dereference
+      - work:artifact/meta-charter
+      - work:artifact/justfile
+      - work:artifact/github-workflows-coder
+    context: >-
+      DR-130 split a citation's claim into the four shapes a string search
+      reaches and left the rest, on the grounds that deciding whether a sentence
+      supports a paraphrase means reading the entry — the work the check was
+      meant to save. The rest is most of what went wrong: of the
+      six citation failures on solorepo's #138, #140 and #142 the new checks
+      catch two, and the other four — a sentence attributed to DR-109 it does
+      not support, a count of eighteen that was fifteen, a derivation stated of
+      two numbers that held for one — were each found by a reviewer opening the
+      target and reading it. That is an Opus round per pull request for work a
+      cheaper model can do per citation. Doing nothing leaves it there, and the
+      reviewer keeps paying it.
+    alternatives:
+      - name: Leave the paraphrase to the reviewer
+        chosen: false
+        reason: >-
+          It works, and that is the trouble: it is the reviewer's most reliable
+          finding and its most expensive. A paraphrase is caught only where
+          somebody opens the entry, so the cost is a round of the largest model
+          on the whole diff to reach four sentences, and the coder's answer
+          after it. What that buys over reading the pairs alone is nothing the
+          reviewer is uniquely able to give.
+      - name: A required status check, with `?` counted as not red
+        chosen: false
+        reason: >-
+          It is the strongest reading of A12 and the wrong shape for what it
+          checks. The verdict is a model's, so the same head can be red on one
+          run and green on the next with no commit between them, and a red that
+          a re-run clears teaches every reader to re-run rather than to look.
+          It needs a credential, so a fork's pull request would report `?` for
+          a reason that has nothing to do with the change. And it puts a
+          reading where the merge is decided, which is a Role's seat: the
+          reviewer already holds it, is requested through GitHub, and can be
+          argued with. A check cannot be argued with, which is what makes a
+          deterministic one trustworthy and this one not.
+      - name: Among the gate's steps, reporting `?` and never `x`
+        chosen: false
+        reason: >-
+          Visible on every pull request and blocking nothing, which sounds like
+          the compromise and is not. The outcome A6 leaves unmarked is the step
+          that could not run; a step that ran, read the target and disagrees is
+          saying something else entirely, and one mark carrying both leaves a reader
+          unable to tell a missing credential from a false citation. It would
+          also run the whole durable set on every push — about fifteen hundred
+          citations — where what anyone wants read is what the diff changed.
+      - name: The reviewer's method, run before the hand-off, blocking nothing
+        chosen: true
+        reason: >-
+          The step is not a new kind of gate. It is the reading a reviewer does,
+          moved earlier and made cheap, and it belongs where the coder can still
+          act on it without a round trip: before the review is requested, over
+          the citations this branch wrote. It reports in the shape everything
+          here reports in, and its `x` is a finding the coder answers — by
+          fixing the sentence, or by leaving it and saying why, which is the
+          same answer the reviewer would have got. What it costs: nothing
+          requires it, so a branch that skips it is exactly as safe as today and
+          no safer, and the reviewer stays the backstop. It costs a model call
+          per changed citation, and it is wrong sometimes, which is affordable
+          precisely because it decides nothing.
+    consequences:
+      - >-
+        `.meta/dereference.py` is the step, `just dereference` the verb, and the
+        coder's reading of PR First lists it. The extraction is deterministic,
+        and what `check.py` already holds is imported rather than written again
+        — the durable set, the shape of a citation, and the entry a citation
+        names — because two extractors would disagree about what a citation is,
+        which is the drift DR-132 closed between the two checkers. The unit is
+        the one thing this step needs and that file has no use for: a sentence.
+        `prose` flattens a page to a single string, which is what a string
+        search wants and what no reader reads, so a page is cut on its blank
+        lines and a table on its rows.
+      - >-
+        The scope is the diff, not the record. A citation is read where this
+        branch wrote or changed the sentence it sits in, found by taking the
+        citation-bearing sentences of each changed file and subtracting the ones
+        its merge base held. `--all` reads everything, for the run that wants
+        the whole record and is willing to pay for it.
+      - >-
+        It reports in A21's three marks without being a gate, and is in no
+        Project's `gate` string. The shape is what a reader here reads; the
+        claim a gate makes is that its red is a fact, and this one's is a
+        reading. `?` keeps the meaning A6 gives it — the step, or the pair,
+        could not be answered — and a disagreement is `x`, which blocks nothing,
+        because nothing requires the step.
+      - >-
+        A12's `checked_by` names it, and stops saying a paraphrase is nobody's
+        check. It is somebody's: the coder's, before the hand-off, with the
+        reviewer behind it. What it still is not is the gate's.
+      - >-
+        The model credential is `~/.config/solorepo/claude.env` where there is
+        one, read the way the channel reads a Role's: outside the tree, refused
+        when it is readable by others, and handed to one child process rather
+        than exported. `CLAUDE_CODE_OAUTH_TOKEN` already in the environment
+        wins where a shell has it. CI does not: the loop's action does not hand
+        the workflow's environment to the shell it gives the agent, so no
+        `env:` block at any level reaches the reading, and `coder.yml` writes
+        the file in a step of its own beside the Role's, for the same reason
+        the Role's is a file. Absent both, the ambient `claude` answers and the
+        step says so.
+        That last term is where this parts from the channel and is the same
+        rule: a Role's file exists so GitHub can tell the Role from the solo,
+        and nothing attributes a model's reading to anybody. Refusing without
+        one would leave the file as the only way in, and the only thing that
+        writes one is the CI step above — never the machine `just dereference`
+        is typed on — so the reading would happen in exactly one place in the
+        world.
+      - >-
+        `coder.yml` runs it before the hand-off, beside the gate and `landed`,
+        on both of the passes that hand off: taking the Issue, and answering the
+        review. The second needs it most, because a point answered is prose
+        rewritten and that is where a paraphrase gets written. A run that cannot
+        reach the model prints `?` and carries on, and a question that does not
+        come back is `?` on a timeout — a step that blocks nothing must not be
+        able to fail the run that holds it, or to hang it.
+    falsifier: >-
+      Coders reading its `x` and handing over unchanged, while the reviewer goes
+      on finding paraphrases at the rate it finds them now. That would say
+      advice nobody must act on is not worth a model call per citation, and the
+      answer would be to make it required — reopening the alternative above with
+      evidence this entry does not have — or to withdraw it. The other side is
+      the failure DR-130 named for its regular expressions, arriving here as
+      confident wrong verdicts: if a coder starts rewriting true sentences to
+      satisfy the step, the step is costing more than the round it replaced.
+    rationale: |-
+      The question underneath #148 is not where to put a script. It is what a
+      gate is here, and the answer this entry takes is that a gate is a
+      predicate a re-run cannot overturn. Everything in `check.py` has that
+      property: the number is in the index or it is not, the quoted words are in
+      the entry or they are not. Red means a fact, and that is the whole of why
+      a red gate stops a hand-off.
+
+      A model's verdict on a paraphrase does not have it. Given the same
+      sentence and the same entry it can answer differently, and a check whose
+      red is provisional does not become trustworthy by being useful — it
+      teaches the re-run, and takes the deterministic steps' authority down
+      with it.
+
+      This repository already has a seat for a reading that can stop a merge,
+      and it is a Role, not a check. The reviewer is a model, is requested
+      through GitHub, can be disagreed with in a thread, and is answerable
+      under A16. Nothing about the paraphrase problem asks for a new kind of
+      authority; it asks for the reviewer's reading to happen earlier, on less
+      text, at a smaller price. So that is what this is: the same question,
+      asked per citation instead of per pull request, at the point where the
+      coder can still answer it themselves.

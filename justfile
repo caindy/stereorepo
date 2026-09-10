@@ -35,3 +35,7 @@ landed n:
 # what to work on next: pull requests, loops, the milestone, and what is ripe
 next:
     python3 .meta/next.py
+
+# the citations this branch wrote, read against what they name; not a gate
+dereference *args:
+    uvx --with linkml --with pyyaml python .meta/dereference.py {{args}}

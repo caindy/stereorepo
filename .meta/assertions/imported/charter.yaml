@@ -165,7 +165,11 @@ articles:
       number whose target is an Issue. Over the pages, the assertions and what a
       portfolio inherits — and in an assertion over what the parser holds, so a
       citation in a YAML comment is resolved for its number alone. A paraphrase
-      is a reading and is nobody's check.
+      is a reading, and `.meta/dereference.py` is where it is read: the coder
+      runs it over what the branch wrote before the hand-off, one model question
+      per citation against the entry it names. That step is not a gate, and its
+      finding blocks no merge — a gate's red is a fact a re-run cannot overturn,
+      and a reading is not (solorepo's DR-134). The reviewer stands behind it.
     example: >-
       "A9 — a seed is data, gated by rendering it", with a link. Not a
       bare "A9".

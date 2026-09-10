@@ -101,7 +101,7 @@ _Retired when:_ A transcript the artifacts cite by a durable identifier, so a de
 
 ### A12. A citation in a durable artifact is dereferenced — the number, the claim it names, and a link where one is possible.
 
-**Enforces** Literate Programming. **Checked by** `check.py`, on the four shapes of the claim that are a string search: the number resolves to an entry or an Article, a quotation attributed to one appears in it, a relation stated in prose is the slot it names, and a `path:line` reads the span it is cited beside. `check_pr.py` resolves the number whose target is an Issue. Over the pages, the assertions and what a portfolio inherits — and in an assertion over what the parser holds, so a citation in a YAML comment is resolved for its number alone. A paraphrase is a reading and is nobody's check.
+**Enforces** Literate Programming. **Checked by** `check.py`, on the four shapes of the claim that are a string search: the number resolves to an entry or an Article, a quotation attributed to one appears in it, a relation stated in prose is the slot it names, and a `path:line` reads the span it is cited beside. `check_pr.py` resolves the number whose target is an Issue. Over the pages, the assertions and what a portfolio inherits — and in an assertion over what the parser holds, so a citation in a YAML comment is resolved for its number alone. A paraphrase is a reading, and `.meta/dereference.py` is where it is read: the coder runs it over what the branch wrote before the hand-off, one model question per citation against the entry it names. That step is not a gate, and its finding blocks no merge — a gate's red is a fact a re-run cannot overturn, and a reading is not (solorepo's DR-134). The reviewer stands behind it.
 
 _In practice:_ "A9 — a seed is data, gated by rendering it", with a link. Not a bare "A9".
 
@@ -173,4 +173,4 @@ _Retired when:_ A Project whose toolchain reports in a form this shape cannot ca
 
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml)

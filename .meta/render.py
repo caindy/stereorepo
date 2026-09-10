@@ -557,6 +557,13 @@ READING = ["python3 .meta/check_pr.py --sweep          # what this branch owns, 
            "#   Watching the pull request, and removing what a merge leaves behind, are the",
            "#   harness's business, not yours: AGENTS.md says how this one does both."]
 
+# The coder's alone, and only in the coder's reading of the Discipline: the
+# reading of a citation is run by whoever wrote it, before the hand-off, and a
+# reviewer who reaches for it is doing the work over (solorepo's DR-134).
+DEREFERENCE = [
+    "just dereference                          # the citations this branch wrote, read against what they name",
+    "#   Not a gate: its `x` is a finding to answer, and it blocks no merge."]
+
 BODY = [("The body", "pull-request.md",
          "Fill this in when the work **starts**. `check_pr.py` reads the same form, so a\n"
          "heading added here is required by that act alone.")]
@@ -573,7 +580,7 @@ def pr_first_skill():
          "when starting any change, when a review or comment lands on one, and when",
          "picking work up again — an open pull request this branch owns with an",
          "unanswered thread is work in progress, whoever noticed it."],
-        READING, BODY, role="coder")
+        READING + DEREFERENCE, BODY, role="coder")
 
 
 def pr_first_reviewer_skill():
@@ -644,6 +651,10 @@ def justfile():
         "# what to work on next: pull requests, loops, the milestone, and what is ripe",
         "next:",
         "    python3 .meta/next.py",
+        "",
+        "# the citations this branch wrote, read against what they name; not a gate",
+        'dereference *args:',
+        "    uvx --with linkml --with pyyaml python .meta/dereference.py {{args}}",
     ]) + "\n"
 
 

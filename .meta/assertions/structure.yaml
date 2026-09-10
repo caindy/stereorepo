@@ -160,6 +160,9 @@ artifacts:
   - id: work:artifact/meta-check-pr
     name: .meta/check_pr.py
     path: .meta/check_pr.py
+  - id: work:artifact/meta-dereference
+    name: .meta/dereference.py
+    path: .meta/dereference.py
   - id: work:artifact/meta-gate
     name: .meta/gate
     path: .meta/gate
