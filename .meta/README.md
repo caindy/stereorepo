@@ -44,7 +44,7 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
 | what **happened** on this change | the pull request body, using `.meta/templates/pull-request.md` |
 | work **noticed and not done** | a linked Issue, before review — never a summary or a file |
-| **why** a decision was taken | a new `assertions/decisions/DR-0nn.yaml`, then re-render — and name in `enacted_in` where its rule now lives |
+| **why** a decision was taken | a new `assertions/decisions/DR-0nn.yaml`, its number from `.meta/say/move mint`, then re-render — and name in `enacted_in` where its rule now lives |
 | a **mandate** — what someone must do | the Discipline or Article that owns it, never the DR. A20: a rule that lives only in the record is not in force |
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | a checkable one-line rule | `assertions/imported/charter.yaml`, then re-render |

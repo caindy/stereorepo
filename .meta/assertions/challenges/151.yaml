@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/151
+    name: The decision number is reserved on GitHub when it is minted, and the gate treats a reserved number as taken
+    challenge_type: DEFECT
+    description: >-
+      Every open pull request took the next number by reading the record on
+      main, which is a read of a value two branches read alike. On the evening
+      of 2026-09-09 four of them took two numbers between them: #133 and #136
+      landed DR-123 and DR-124 while #138 and #140 held the same two on a
+      branch. The repair was a rebuilt branch, a conflict resolved by hand, two
+      files renamed, three citations rewritten and a body edit across #138,
+      #140 and #149 — none of it about the changes themselves. DR-125 had
+      settled that the number is fixed the moment it is first cited; nothing
+      had settled when it is issued. Part 3 of #149.

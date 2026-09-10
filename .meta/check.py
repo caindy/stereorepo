@@ -445,8 +445,98 @@ def decision_level(index):
             if cls == "Decision" and obj.get("product") and obj.get("project")]
 
 
+# One line of `git ls-remote`: the object, a tab, the ref. Anchored at the end
+# because an annotated tag is advertised twice, `refs/tags/DR-nnn` and the
+# `^{}` line that dereferences it to the commit, and counting both would say
+# nothing wrong but would say it twice.
+RESERVATION = re.compile(r"\trefs/tags/DR-(\d+)$", re.M)
+
+
+def reserved_decision_numbers():
+    """The numbers GitHub holds a tag for, or None when it will not say
+    (solorepo's DR-128).
+
+    Asked of the remote rather than of this clone. A tag another branch pushed
+    is not here unless something fetched it, and CI checks out one commit with
+    no tags at all, so a local answer would be "none reserved" on the one
+    machine where the question is being asked in earnest.
+
+    This is the only step of this gate that reaches the network, and it is
+    reached only when the record has a hole the commits here did not explain. A
+    run over a contiguous record, or one whose every hole a deletion accounts
+    for, asks nothing of anyone.
+
+    Not, therefore, only when the answer can turn a red into a pass. A clone
+    with no history to read explains no hole, so every hole arrives here and
+    both answers are red — which is the path where this call buys least and the
+    one an old shallow portfolio takes on every red run (#152). It is made
+    anyway: skipping it would leave the caller with no answer, and no answer is
+    the sentence saying the remote would not say, printed on a run that never
+    asked it — the advice to take a number another branch is holding. Telling
+    the two reds apart instead costs a fourth sentence, on a run that is red
+    whichever of them it prints.
+    """
+    try:
+        found = subprocess.run(["git", "-C", str(ROOT), "ls-remote", "--tags", "origin", "DR-*"],
+                               capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if found.returncode:
+        return None
+    return {int(n) for n in RESERVATION.findall(found.stdout)}
+
+
+# One path of `git log --diff-filter=D --name-only`: an entry a commit in this
+# history removed. Written as a pattern rather than three digits, so that a file
+# a portfolio copies carries no citation of a Decision it does not have
+# (solorepo's DR-124).
+DELETION = re.compile(r"^\.meta/assertions/decisions/DR-(\d+)\.yaml$", re.M)
+
+
+def deleted_decision_numbers(numbers):
+    """Which of these numbers the record here once held and a commit removed, or
+    None when there is no history to read (solorepo's DR-128).
+
+    The question the tag cannot answer. A tag outlives the entry, so from the
+    first redemption on it is there whether the number is in flight or was
+    written and then dropped; what tells those apart is whether an entry for the
+    number was ever in this record, which is a fact about commits. Local, and
+    needing no remote at all: a portfolio with no `origin` still has its own.
+
+    `--no-renames`, because an entry renamed rather than deleted — a number
+    retyped as its neighbour during a repair — leaves the record short by one
+    just the same, and rename detection would call that no deletion at all. The
+    pathspec is the holes and only the holes: a number the record still holds
+    was not deleted whatever its path did on the way here.
+
+    A shallow clone is not asked. `git log` over a truncated history answers
+    "nothing was deleted" for every number older than the graft, which is the
+    green this check exists to refuse; the workflows that run this check out
+    with `fetch-depth: 0` for that reason.
+    """
+    if not numbers:
+        return set()
+    where = (META / "assertions" / "decisions").relative_to(ROOT)
+    argv = ["git", "-C", str(ROOT)]
+    try:
+        shallow = subprocess.run(argv + ["rev-parse", "--is-shallow-repository"],
+                                 capture_output=True, text=True, timeout=30)
+        if shallow.returncode or shallow.stdout.strip() != "false":
+            return None
+        found = subprocess.run(argv + ["log", "--no-renames", "--diff-filter=D",
+                                       "--name-only", "--format=", "--"]
+                               + [f"{where}/DR-{n:03d}.yaml" for n in sorted(numbers)],
+                               capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if found.returncode:
+        return None
+    return {int(m.group(1)) for m in DELETION.finditer(found.stdout)}
+
+
 def decision_numbering(index):
-    """Numbers are stable identifiers, so the sequence is contiguous and unused.
+    """Numbers are stable identifiers, so the sequence is contiguous and unused,
+    and a hole GitHub reserves is a number in flight rather than a deletion.
 
     A Decision is numbered rather than named because it is an occurrence: two
     entries with the same claim are two decisions, and the sequence says which
@@ -459,6 +549,42 @@ def decision_numbering(index):
     to nothing is indistinguishable from a citation to a number that was never
     issued. Duplicates cannot be seen here — the index would have silently kept
     the last — so they are counted from the document instead.
+
+    Since solorepo's DR-128 a number is issued by `.meta/say/move mint`, which
+    reserves it as a tag before it is cited anywhere. So a branch that mints a
+    number while another branch holds the one below it has a record with a hole
+    in it, through no fault of its own, until the other lands — and that hole is
+    a promise somebody is keeping, not an entry somebody dropped.
+
+    Two reads tell those apart, and the tag on its own cannot. The tag is never
+    deleted, so from the first redemption on it holds every number the record
+    holds too, and a hole dropped for having one would be dropped forever: an
+    entry deleted six weeks after it landed still has its tag. So a hole is a
+    reservation only when a tag holds the number *and* no commit in this history
+    removed its entry. The tag says the number was issued; the history says
+    whether it was ever redeemed, and it is the second that catches a deletion.
+
+    The history is read first, and the tags decide only the holes it leaves.
+    That order is what makes the mechanism work where it is most needed: the
+    commits are here in every install, the remote is not, so a portfolio with
+    no `origin` — and a sandbox with no network — still gets the one sentence
+    that says what to do, `the record held DR-nnn and a commit here removed
+    it`, instead of being sent at a remote it was never going to have. It also
+    means each remaining sentence speaks of holes no read has explained, and
+    that the remote is not asked at all when the commits explain every hole.
+
+    A reservation nobody redeems is closed the way every other hole is, by
+    writing the number back into the record as WITHDRAWN; the tag stays, so the
+    number is never issued twice. Nothing prompts that closure, and this is
+    where it does not: a number minted and never written has a tag and no
+    commit, which is what a number in flight has, so it reads as a promise
+    somebody is still keeping for as long as nobody looks at the tag. That hole
+    is the one failure here that stays quiet, and solorepo's DR-128 says so.
+
+    A hole neither read can explain stays a failure. Red on a hole that might
+    have been reserved costs a session one message; green on a hole that was a
+    deletion is the failure this check exists for, kept quiet by a network that
+    was down or a clone with no history behind it.
     """
     seen = [d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"]
     if not seen:
@@ -474,10 +600,45 @@ def decision_numbering(index):
         # Truncated, because one mistyped number makes every number after it
         # missing, and a check that answers with nine hundred lines is one
         # nobody reads to the end of.
-        shown = ", ".join(f"DR-{n:03d}" for n in missing[:10])
-        more = f" and {len(missing) - 10} more" if len(missing) > 10 else ""
-        problems.append(f"no entry for {shown}{more}; a number withdrawn stays "
-                        "in the record as a hole")
+        def listed(numbers):
+            shown = ", ".join(f"DR-{n:03d}" for n in numbers[:10])
+            return shown + (f" and {len(numbers) - 10} more" if len(numbers) > 10 else "")
+
+        # The commits decide the holes they can, and the tags decide what is
+        # left. Asking the remote first threw the deletion read away on every
+        # run where it would not answer — which is every run in a portfolio
+        # with no `origin`, the install that read is local for, so the one
+        # sentence saying what to do was withheld exactly where it was the only
+        # one available (#152).
+        removed = deleted_decision_numbers(missing)
+        gone = [] if removed is None else [n for n in missing if n in removed]
+        rest = [n for n in missing if n not in gone]
+        if gone:
+            problems.append(f"the record held {listed(gone)} and a commit here removed it, "
+                            "tag or no tag; a number withdrawn stays in the record as a hole")
+        if rest:
+            # Each sentence claims only what the run it is printed on actually
+            # read, and by here the holes it speaks about are the ones no read
+            # has explained. One sentence with the unreadable case bolted onto
+            # its end said "no tag reserving it" on runs where no tag was read,
+            # and then advised writing the number back as WITHDRAWN — which is
+            # how a session takes a number another branch is holding by
+            # following the check's own advice (#152).
+            held = reserved_decision_numbers()
+            if held is None and removed is None:
+                problems.append(f"no entry for {listed(rest)}; the remote would not say which "
+                                "numbers it reserves and this clone has no history to read, so "
+                                "nothing here tells a number in flight from a deletion")
+            elif held is None:
+                problems.append(f"no entry for {listed(rest)}, and no commit here removed it; "
+                                "the remote would not say which numbers it reserves, so a number "
+                                "in flight cannot be told from one nobody has written")
+            elif removed is None:
+                problems.append(f"no entry for {listed(rest)}; this clone has no history to read, "
+                                "so a deletion cannot be told from a number in flight here")
+            elif unheld := [n for n in rest if n not in held]:
+                problems.append(f"no entry for {listed(unheld)}, and no tag reserving it; "
+                                "a number withdrawn stays in the record as a hole")
     return problems
 
 
@@ -1084,6 +1245,7 @@ def channel_parser_probes():
             ("advance", {"verb": "advance", "pr": None}),
             ("advance 13", {"verb": "advance", "pr": "13"}),
             ("request-review 13", {"verb": "request-review", "pr": "13", "to": "reviewer"}),
+            ("mint", {"verb": "mint"}),
             ("--role reviewer merge 13 --auto", {"role": "reviewer", "verb": "merge"}),
             ("milestone 75 --set first-specialization",
              {"verb": "milestone", "issue": "75", "title": "first-specialization", "clear": False}),
@@ -1099,7 +1261,7 @@ def channel_parser_probes():
     rejected = {
         "post": ["review 1", "comment 93 --approve", "promote T_1 --title t",
                  "claim 93", "open --title t", "merge 13", "stop 93", "commit -m x",
-                 "issue-comment 93", "resolve T_1", "pr-body 1"],
+                 "issue-comment 93", "resolve T_1", "pr-body 1", "mint"],
         "move": ["milestone 75", "milestone 75 --set x --clear",
                  "file --title t", "file --title t --difficulty huge",
                  "file --title t --difficulty easy --roadmap",
@@ -1107,7 +1269,11 @@ def channel_parser_probes():
                  "open --title t --base b --on 12",
                  "comment 93", "answer T_1", "review 1 --approve", "landed 13",
                  "issue --title t", "pr --title t", "pr-base 1 --base b",
-                 "label 93 --add human", "stack 1 2"],
+                 "label 93 --add human", "stack 1 2",
+                 # The number is GitHub's to issue, so there is nothing to pass:
+                 # a number a caller can name is the read of a shared value that
+                 # `mint` exists to replace (solorepo's DR-128).
+                 "mint 127"],
         "commit": ["", "comment 1", "-m"],
         "whoami": ["whoami", "--role"],
     }
@@ -1181,6 +1347,117 @@ def channel_table_probes():
     return problems
 
 
+def reservation_probes():
+    """`decision numbering` over a hole GitHub reserves, a hole it does not, a
+    hole a tag holds and a commit made, a remote that will not say, a history
+    that is not there, a deletion with neither a remote nor a tag behind it,
+    and a hole neither read can speak to (solorepo's DR-128).
+
+    The record here is contiguous whenever this gate is green, so the branch
+    that reads the reservations is the one branch a real run never takes: a
+    collision is two sessions on one evening, and by the time one is happening
+    is the wrong time to find out what this does. The remote is stood in for,
+    as `advance_probes` stands in for GitHub — and standing it in is also what
+    keeps this probe from making the network call the check itself is careful
+    to make only once, and only when it is needed. The history read is stood in
+    for beside it, and for a plainer reason: the deletion it asks about is one
+    this repository has not made.
+    """
+    hole = 3
+    index = {f"work:decision/{n}": ("Decision", {}, "a probe") for n in (1, 2, 4)}
+    problems = []
+    # What `git ls-remote --tags` advertises, verbatim: the object, a tab, the
+    # ref, and a second line per annotated tag dereferencing it to the commit.
+    # The first version of this pattern anchored at the start of the line and
+    # matched none of it, and every hole would have been called a deletion —
+    # which no probe below would have seen, since they all stand the call in
+    # for. A branch is worth probing where its input comes from somewhere else.
+    advertised = ("707ad55ec421eb46374520f6c4e7641d65f6afd9\trefs/tags/DR-{0:03d}\n"
+                  "5f05eca90639651a8aadaf12fe98a30abaa39093\trefs/tags/DR-{0:03d}^{{}}\n")
+    found = RESERVATION.findall(advertised.format(hole))
+    if found != [f"{hole:03d}"]:
+        problems.append(f"decision numbering: the refs `git ls-remote` advertises read as {found!r}, "
+                        "and one annotated tag is one reservation")
+    original = reserved_decision_numbers, deleted_decision_numbers
+    try:
+        globals()["deleted_decision_numbers"] = lambda numbers: set()
+        globals()["reserved_decision_numbers"] = lambda: {hole}
+        if (said := decision_numbering(index)):
+            problems.append(f"decision numbering: a hole GitHub reserves was reported as {said!r}")
+        # The same tag, over a number the record once held. The tag is never
+        # deleted, so it says as much about a deletion as about a reservation,
+        # and the history is what has to carry the difference.
+        globals()["deleted_decision_numbers"] = lambda numbers: {hole}
+        said = decision_numbering(index)
+        # The number is spelled from `hole` rather than typed: a `DR-` and three
+        # digits in a file a portfolio copies is a citation as far as `cited
+        # decisions` is concerned, and this one is a fixture (solorepo's DR-124).
+        if not said or f"DR-{hole:03d}" not in said[0] or "removed" not in said[0]:
+            problems.append(f"decision numbering: a reserved number whose entry a commit removed "
+                            f"was reported as {said!r}, and a tag does not explain a deletion")
+        globals()["deleted_decision_numbers"] = lambda numbers: set()
+        globals()["reserved_decision_numbers"] = lambda: {5}
+        said = decision_numbering(index)
+        if not said or f"DR-{hole:03d}" not in said[0]:
+            problems.append(f"decision numbering: a hole nothing reserves was reported as {said!r}")
+        globals()["reserved_decision_numbers"] = lambda: None
+        said = decision_numbering(index)
+        if not said or "would not say" not in said[0] or "tag" in said[0]:
+            problems.append("decision numbering: a remote that would not answer was reported "
+                            f"as {said!r}, and a run that read no tags says nothing about them")
+        globals()["reserved_decision_numbers"] = lambda: {hole}
+        globals()["deleted_decision_numbers"] = lambda numbers: None
+        said = decision_numbering(index)
+        if not said or "no history" not in said[0]:
+            problems.append("decision numbering: a hole under a history that cannot be read was "
+                            f"reported as {said!r}, and an unexplained hole is a failure")
+        # The deletion, with no remote to ask — a portfolio with no `origin`,
+        # permanently, which is the install the history read is local for. The
+        # order is the whole of this case: asked the other way round the answer
+        # was the sentence about the remote, and the run that could name the
+        # deletion said nothing about it. Nothing stands the remote in here,
+        # because a hole the commits explain is one the remote is not asked
+        # about at all — and a stub that was called would say so.
+        def unreachable():
+            problems.append("decision numbering: the remote was asked about a hole a commit "
+                            "here explains, and the tags decide only what the history leaves")
+            return None
+
+        globals()["reserved_decision_numbers"] = unreachable
+        globals()["deleted_decision_numbers"] = lambda numbers: {hole}
+        said = decision_numbering(index)
+        if said != [f"the record held DR-{hole:03d} and a commit here removed it, tag or no tag; "
+                    "a number withdrawn stays in the record as a hole"]:
+            problems.append("decision numbering: a deletion with no remote to ask was reported as "
+                            f"{said!r}, and the read that can name it is the one every clone has")
+        # Neither read able to speak: the one sentence of that function no other
+        # case here prints, and the only path on which the remote is asked over
+        # a hole the commits could never have explained. The stub reports having
+        # been called, because what a later reader needs from this case is
+        # whether that call is meant — a clone with no history explains no hole,
+        # so every hole reaches the remote, and both answers are red (#152).
+        asked = []
+
+        def unreadable():
+            asked.append(True)
+            return None
+
+        globals()["reserved_decision_numbers"] = unreadable
+        globals()["deleted_decision_numbers"] = lambda numbers: None
+        said = decision_numbering(index)
+        if said != [f"no entry for DR-{hole:03d}; the remote would not say which numbers it "
+                    "reserves and this clone has no history to read, so nothing here tells a "
+                    "number in flight from a deletion"]:
+            problems.append("decision numbering: a hole neither read could speak to was reported "
+                            f"as {said!r}, and a sentence claims only what its run read")
+        if not asked:
+            problems.append("decision numbering: the remote was not asked over a hole no commit "
+                            "here could explain, and a clone with no history explains none of them")
+    finally:
+        globals()["reserved_decision_numbers"], globals()["deleted_decision_numbers"] = original
+    return problems
+
+
 # Run before the schemas load. LinkML's loader raises on the first repeated key
 # with no file and no line, so a duplicate in `work/*.yaml` used to take the
 # whole gate down before the check that names both had a chance to run (#23).
@@ -1190,6 +1467,7 @@ PRECHECKS = (
     ("channel parser probes", channel_parser_probes),
     ("channel table probes", channel_table_probes),
     ("advance probes", advance_probes),
+    ("reservation probes", reservation_probes),
 )
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")

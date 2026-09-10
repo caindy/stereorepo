@@ -29,7 +29,10 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   assertion, not the file.
 - Use the vocabulary from the ontology of work in preference to synonyms: a
   *Challenge*, not a ticket or story; an *Actor*, not a user or a bot.
-- When a question that demanded an answer is settled, write it as
+- When a question that demanded an answer is settled, mint its number with
+  `.meta/say/move mint`, which reserves it on GitHub so that two branches
+  cannot take the same one (DR-128); reading the record for the next free
+  number is what every open branch does alike. Write it as
   `.meta/assertions/decisions/DR-0nn.yaml`, re-render, and commit it with the
   change — one commit per settled decision. `.meta/decisions.md` is an index
   generated from them; the entry itself is the assertion file.

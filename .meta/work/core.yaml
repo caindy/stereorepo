@@ -32,7 +32,9 @@ slots:
       the entity is an occurrence — a Decision, an Article, a Challenge — since
       two with the same words are two, the order is when, and a deleted one
       leaves a hole the gate can see. Neither form is edited once minted, and a
-      number is never reused.
+      number is never reused. A Decision's is minted by `.meta/say/move mint`,
+      which reserves it on GitHub before it is cited anywhere, so that two
+      branches cannot take the same one (solorepo's DR-128).
     identifier: true
     range: uriorcurie
 

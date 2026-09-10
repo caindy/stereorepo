@@ -51,8 +51,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Pinned exactly: setup-uv publishes no floating major past v7 while
-      # releasing v10, so `@v10` resolves to nothing and fails the run.
+      # releasing v10, so `@v10` resolves to nothing and fails the run. The
+      # whole history, because `decision numbering` asks this portfolio's own
+      # commits whether a hole in its record is an entry somebody deleted
+      # (solorepo's DR-128), and a shallow checkout can only say it cannot tell.
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
       # `.meta/gate` and `check.py` both run through `uvx`, so `uv` is the one
       # tool the runner needs before it can ask what the Projects are.
       - uses: astral-sh/setup-uv@v10.0.1

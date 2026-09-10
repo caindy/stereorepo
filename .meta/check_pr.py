@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """The GitHub half of the gate: A15, held against a live pull request.
 
-`check.py` reads files and needs no network. This reads GitHub, so it is a
-separate command with a separate lifecycle — it runs when a pull request opens
-or changes, and there is nothing for it to say the rest of the time.
+`check.py` reads files and this repository's own commits, and reaches the remote
+for one thing only — which Decision numbers are reserved, and only when the
+record has a hole to explain (solorepo's DR-128). This reads GitHub for
+everything it does, so it is a separate command with a separate lifecycle — it
+runs when a pull request opens or changes, and there is nothing for it to say
+the rest of the time.
 
     python .meta/check_pr.py 12          # what CI runs
     python .meta/check_pr.py --file b.md # a body on disk, for watching it fail

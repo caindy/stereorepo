@@ -65,7 +65,8 @@ programs:
     concern: >-
       What changes state on GitHub: an Issue filed, triaged, moved between
       levels, claimed or handed back; a pull request opened, layered, revised,
-      merged or advanced; a review requested; a Milestone set.
+      merged or advanced; a review requested; a Milestone set; a Decision's
+      number reserved.
     verbs:
       - name: file
         usage: "--title T --difficulty D|--roadmap < body.md"
@@ -115,6 +116,10 @@ programs:
         usage: "<issue> --set T|--clear"
         does: put an Issue in a Milestone, creating it if new
         held_by: [solo]
+      - name: mint
+        usage: ""
+        does: "issue the next Decision number and reserve it on GitHub, so two branches cannot take the same one"
+        held_by: [coder]
 
   - name: commit
     path: .meta/say/commit

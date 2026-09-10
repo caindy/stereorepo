@@ -10,9 +10,11 @@
 # permissions and the two stubs — `check.py` holds equal (DR-119).
 #
 # A check that runs when someone remembers is not a check — Nothing Unconsumed
-# applied to the checker itself. Both halves run here: `check.py` reads files and
-# needs no network, `check_pr.py` reads GitHub and has nothing to say except
-# on a pull request.
+# applied to the checker itself. Both halves run here: `check.py` reads files
+# and this repository's own commits, and asks the remote for one thing only —
+# which Decision numbers are reserved, and only when the record has a hole to
+# explain (DR-128); `check_pr.py` reads GitHub and has nothing to say except on
+# a pull request.
 #
 # Nothing here restates a Discipline. What a pull request body must contain is
 # derived from `.meta/templates/pull-request.md` by the checker; this file only
@@ -55,7 +57,14 @@ jobs:
     steps:
       # Pinned exactly: setup-uv publishes no floating major past v7 while
       # releasing v10, so `@v10` resolves to nothing and fails the run.
+      # The whole history, because `decision numbering` asks it whether a hole
+      # in the record is an entry a commit deleted (DR-128). A shallow checkout
+      # answers "nothing was deleted" to every such question, which is the green
+      # that check exists to refuse — so it goes red instead, and the depth is
+      # what keeps it able to answer at all.
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
       # No lockfile to key a cache on, and uvx resolves fast enough that a cache
       # keyed on nothing would only ever go stale.
       - uses: astral-sh/setup-uv@v10.0.1

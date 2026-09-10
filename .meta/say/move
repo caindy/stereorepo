@@ -3,14 +3,17 @@
 
 An Issue filed, triaged, moved between levels, claimed or handed back; a pull
 request opened, layered, revised, merged or advanced; a review requested; a
-Milestone set. Each is one step of a Discipline and refuses its own misuse
-(solorepo's DR-116): `file` lands `challenge` and the difficulty in one act, `stop` asks its
-refusal before it posts, `open --on` links the layer it opens, `merge --auto`
-advances before it arms. Every outcome is read back from GitHub, per A6: the act
+Milestone set; a Decision's number reserved. Each is one step of a Discipline
+and refuses its own misuse (solorepo's DR-116): `file` lands `challenge` and the
+difficulty in one act, `stop` asks its refusal before it posts, `open --on`
+links the layer it opens, `merge --auto` advances before it arms, `mint` takes
+no number to reserve. Every outcome is read back from GitHub, per A6: the act
 is what GitHub shows afterwards, not what `gh` returned. What is *said* — a
 comment, a thread, an answer, a verdict — is `post`'s.
 """
 import pathlib
+import re
+import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -630,6 +633,143 @@ def request_review(pr, to):
     print(f"{'requested again' if again else 'requested'} review of #{pr} from {login}")
 
 
+# --- A Decision's number: issued once, by GitHub, and reserved from then on.
+
+ROOT = channel.HERE.parent.parent
+DECISIONS = ROOT / ".meta" / "assertions" / "decisions"
+ENTRY = re.compile(r"^DR-(\d+)$")
+RESERVATION = re.compile(r"^refs/tags/DR-(\d+)$")
+# Enough to outlast a burst of sessions minting at once and no more: each turn
+# of the loop is a refusal GitHub made, so a hundred would be a hundred writes
+# against a repository that is answering "taken" to every one.
+ATTEMPTS = 20
+
+
+def numbers_here():
+    """The numbers the record in this working tree holds."""
+    return {int(m.group(1)) for path in DECISIONS.glob("DR-*.yaml")
+            if (m := ENTRY.match(path.stem))}
+
+
+def numbers_on(branch):
+    """The numbers the record holds on a branch of the remote.
+
+    Asked because this working tree is not the record: a branch cut a week ago
+    has main's entries as they were, and a number issued from it would be one
+    main has already used. The listing is one call and it is the truth about
+    the trunk at this moment, which is what the number has to clear.
+    """
+    where = DECISIONS.relative_to(ROOT)
+    listing = channel.gh("api", f"repos/{channel.repo()}/contents/{where}?ref={branch}")
+    return {int(m.group(1)) for entry in listing
+            if (m := ENTRY.match(pathlib.Path(entry["name"]).stem))}
+
+
+def reserved():
+    """The numbers GitHub holds a tag for: every number issued and not yet
+    withdrawn, whether its pull request has landed or is still open.
+
+    All of them, in one call. `GET /repos/{owner}/{repo}/git/matching-refs/{ref}`
+    does not paginate: its reference lists an `accept` header and three path
+    parameters under "Parameters for 'List matching references'" and no query
+    parameters at all, where a listing beside it that does paginate — `GET
+    /repos/{owner}/{repo}/tags` — lists "per_page ... The number of results per
+    page (max 100). Default: 30" and `page`. So the thirty-first reservation is
+    returned like the first, which is what `mint` below means by the tags being
+    the authoritative source (#152).
+    """
+    refs = channel.gh("api", f"repos/{channel.repo()}/git/matching-refs/tags/DR-")
+    return {int(m.group(1)) for ref in refs if (m := RESERVATION.match(ref["ref"]))}
+
+
+def branch_here():
+    """The branch a reservation is taken for, or that there was no branch.
+
+    `symbolic-ref`, not `rev-parse --abbrev-ref HEAD`, which prints `HEAD` and
+    exits 0 on a detached checkout — so the fallback was unreachable in the one
+    state it names, and a mint from a detached HEAD wrote `reserved for HEAD`
+    into a tag nothing ever deletes. `symbolic-ref -q` exits non-zero there,
+    which is the question being asked (#152).
+    """
+    found = subprocess.run(["git", "-C", str(ROOT), "symbolic-ref", "-q", "--short", "HEAD"],
+                           capture_output=True, text=True)
+    return found.stdout.strip() if not found.returncode else "an unnamed branch"
+
+
+def mint():
+    """Issue the next Decision number and reserve it on GitHub, as a tag
+    (solorepo's DR-128).
+
+    A number is fixed the moment it is first cited (solorepo's DR-125), and
+    citations in pull request bodies, Issues and commits are never rewritten.
+    Until this verb the number was chosen by reading the record on a branch,
+    which is a read of a value two branches read alike: on one evening in
+    September 2026 four open pull requests took two numbers between them, and
+    the repair was a rebase with conflicts, two renames and a body edit on
+    every pull request that had cited one.
+
+    So the number is issued by the one participant both branches share.
+    `POST /git/refs` fails with "Reference already exists" when the ref is
+    held — GitHub's REST reference says so, and it is the same 422 whichever
+    session asks second — so creating `refs/tags/DR-nnn` is a compare-and-set
+    over the number, and the loser is told, in the one call, that it lost. It
+    then asks for the next one.
+
+    The candidate clears three sources before the first attempt: the record in
+    this tree, the record on the trunk, and the tags. The first two are the
+    numbers already spent, the last is the numbers spent or promised, and only
+    the last is authoritative — the other two are there because the tags begin
+    where this verb does, and everything below that was issued by hand.
+
+    The tag is annotated rather than lightweight, and stays after the entry
+    lands. The object records who issued the number and when; the message
+    records which branch it was issued for, which is what a reader needs when
+    they find a reservation nobody redeemed. Deleting it at merge would save a
+    ref and lose the only evidence that the number was ever issued, which is
+    what a reservation is for (solorepo's DR-125).
+    """
+    branch = branch_here()
+    taken = numbers_here() | numbers_on("main") | reserved()
+    at = max(taken, default=0) + 1
+    # The trunk's head, because a tag object has to point at something and the
+    # commit the entry will be written in does not exist yet. What it points at
+    # says when the number was issued, which is the only thing being recorded.
+    head = channel.gh("api", f"repos/{channel.repo()}/commits/main", "--jq", ".sha", parse=False)
+    for number in range(at, at + ATTEMPTS):
+        name = f"DR-{number:03d}"
+        message = (f"{name} reserved for {branch}.\n\nThe number is fixed the moment it is "
+                   "first cited, and this tag is what fixes it. It outlives the entry: "
+                   "nothing issues this number again, and a reservation whose pull request "
+                   "never merges is withdrawn as an entry, not by deleting the tag.")
+        # The tag object first, which never conflicts, then the ref, which is
+        # the act: two calls because the object carries the tagger and the
+        # message, and a lightweight tag would carry neither. An object whose
+        # ref was refused is unreachable and git collects it, so a number lost
+        # to another session costs nothing that lasts.
+        tag = channel.gh("api", f"repos/{channel.repo()}/git/tags",
+                         "-f", f"tag={name}", "-f", f"message={message}",
+                         "-f", f"object={head}", "-f", "type=commit")
+        try:
+            channel.gh("api", f"repos/{channel.repo()}/git/refs",
+                       "-f", f"ref=refs/tags/{name}", "-f", f"sha={tag['sha']}", parse=False)
+        except SystemExit as exc:
+            if "already exists" not in str(exc.code).lower():
+                raise
+            print(f"{name} is taken; asking for the next", file=sys.stderr)
+            continue
+        # Read back, per A6: the act is the ref GitHub holds afterwards. A ref
+        # created and pointing elsewhere is a reservation somebody else's, and
+        # this Job would otherwise go and write the entry under it.
+        now = channel.gh("api", f"repos/{channel.repo()}/git/ref/tags/{name}")["object"]["sha"]
+        if now != tag["sha"]:
+            sys.exit(f"say: GitHub shows tag {name} at {now[:7]} after the call, not {tag['sha'][:7]}")
+        print(f"minted {name}, reserved for {branch}; write it as "
+              f".meta/assertions/decisions/{name}.yaml")
+        return number
+    sys.exit(f"say: {ATTEMPTS} numbers from DR-{at:03d} are all reserved already; "
+             "something is minting faster than this can read")
+
+
 def build_parser():
     """The parser alone, so a probe can check what each verb accepts without
     running what it dispatches to (#95)."""
@@ -662,6 +802,12 @@ def build_parser():
     p = sub.add_parser("advance")
     p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
     p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
+
+    # A Decision's: the number, issued by GitHub and reserved from then on. It
+    # takes nothing — a number a caller could pass is a number a caller could
+    # pass wrongly, which is the read of a shared value this verb exists to
+    # replace.
+    sub.add_parser("mint")
     return ap
 
 
@@ -685,6 +831,8 @@ def main():
         advance(args.pr)
     elif args.verb == "request-review":
         request_review(args.pr, args.to)
+    elif args.verb == "mint":
+        mint()
     elif args.verb == "revise":
         # A title says everything it has to say in an argument, so the body
         # is optional here and nowhere else; reading a body a rename will not

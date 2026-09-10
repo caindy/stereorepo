@@ -1,0 +1,191 @@
+decisions:
+  - id: work:decision/128
+    name: "DR-128 · A Decision's number is issued by GitHub as a tag, and a hole is a reservation only where the record never held its entry"
+    challenge: work:challenge/151
+    status: ADOPTED
+    supersedes:
+      - work:decision/055
+    applies:
+      - work:article/6
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-check
+      - work:artifact/meta-check-pr
+      - work:artifact/meta-work-core
+      - work:artifact/github-workflows-gate
+      - work:artifact/template-github-workflows-gate
+      - work:artifact/agents
+      - work:artifact/meta-readme
+    alternatives:
+      - name: Read the record on main and take the next number
+        chosen: false
+        reason: >-
+          What every pull request did until now, and it is a read of a value
+          two branches read alike. Four of them read it on one evening and two
+          numbers were taken twice; the repair was a rebuilt branch, a conflict
+          resolved by hand, two renames, three citations rewritten and a body
+          edit across three pull requests, none of it about the changes
+          themselves. Parallel pull requests are the loops' normal shape, so
+          the trigger is any evening the ripe list is long.
+      - name: A counter in the tree — a registry file, or the record's own maximum
+        chosen: false
+        reason: >-
+          The same read in another file. Whatever the tree holds, two branches
+          hold their own copy of it and neither can see the other's; a value
+          that has to be unique across branches cannot be kept where branches
+          diverge. DR-125 met this shape already and said so: a registry of
+          minted slugs "would be the counter in another form".
+      - name: Number a Decision by the Issue or pull request it was taken in
+        chosen: false
+        reason: >-
+          GitHub allocates those, so they are atomic, and they are the wrong
+          number. DR-125 fixed what a Decision's identifier means — an
+          occurrence, in order — and a pull request that settles two questions
+          would have to distinguish them by something, which is the sequence
+          back again. It also spends the property the sequence buys for
+          nothing: a hole is how a deleted entry shows, and a record numbered
+          from a sparse sequence has holes everywhere and can see none of them.
+      - name: A tag per number, created through the channel by a `mint` verb
+        chosen: true
+        reason: >-
+          A tag is a ref, and GitHub refuses to create one that exists —
+          "Reference already exists", a 422 on `POST /git/refs`, and it is the
+          same refusal whichever session asks second. So creating
+          `refs/tags/DR-nnn` is a compare-and-set over the number at the one
+          participant both branches share, and the loser learns it lost in the
+          call it lost in, before the number is written anywhere. It is
+          annotated rather than lightweight, so the object records who issued
+          the number and when, and its message records the branch it was issued
+          for. What it costs: a verb to type before writing an entry, and a
+          gate step that reaches the network.
+      - name: And the branch gate fetches main, going red when a number the branch adds is already there
+        chosen: false
+        reason: >-
+          What #151 asked last. It is refused because the same question is
+          answered once, at a better moment: `mint` clears its candidate
+          against the record on the trunk before it asks for the ref, so the
+          collision this would catch cannot be issued in the first place. To
+          catch it afterwards, every run of that gate would pay a fetch of the
+          trunk — including a portfolio that has no remote, where the step
+          could only say it could not run — where the reads it does make cost
+          nothing until the record has a hole.
+
+          What is left uncaught is two things and not one. A number written
+          without minting, which shows as an add/add conflict when the second
+          branch rebases. And a number minted and never written, which has a
+          tag and no commit that ever held its entry — exactly what a number in
+          flight has — so `decision numbering` reads it as a promise somebody
+          is still keeping and says nothing, and the WITHDRAWN entry that would
+          close it is prompted by nobody. It is visible where it was made, in
+          `git ls-remote --tags` above the record's maximum, and a hole of that
+          kind outliving the branch that took it is the trigger for taking this
+          fetch again.
+    consequences:
+      - >-
+        `.meta/say/move mint` is a verb of the channel, the coder's, and takes
+        no argument: a number a caller can pass is the read of a shared value
+        this replaces. It prints the number it reserved and the path to write
+        it as. The two places a session is told to write an entry — `AGENTS.md`
+        and `.meta/README.md`'s routing table — say to mint the number rather
+        than read it, and the `id` slot's own description says who mints a
+        Decision's, since DR-125 made that slot the home of the criterion.
+      - >-
+        The candidate clears three sources — the record in the tree, the record
+        on the trunk, and the tags — and then attempts the ref, walking upward
+        while GitHub refuses. Only the tags are authoritative; the other two
+        are read because the tags begin at DR-128 and everything below it was
+        issued by hand.
+      - >-
+        `decision numbering` explains a hole by two reads and drops it only
+        when both agree: a tag holds the number, and no commit in this history
+        removed its entry. The tag alone will not do, because it outlives the
+        entry — from the first redemption on it is present whether a number is
+        in flight or was written and then deleted, so a check that dropped
+        every tagged hole would be green on the deletion it exists to catch,
+        and green on it permanently. The commits are read first and the tags
+        decide only the holes they leave, because the commits are here in every
+        install and the remote is not: asked the other way round, a portfolio
+        with no `origin` — and a sandbox with no network — is told about a
+        remote it was never going to have, on every run, instead of about the
+        deletion its own history can name. Both reads are made only when the
+        record already has a hole, so a run over a contiguous record reaches
+        nothing, and a run whose every hole a commit explains asks the remote
+        nothing either; the tags are the only step of that gate that can reach
+        the network at all, and the commits are this repository's own. The gate
+        workflow's comment and `check_pr.py`'s docstring, which both said
+        `check.py` needs no network, say what it now needs and when.
+      - >-
+        Both gate workflows check out with `fetch-depth: 0`. A shallow clone
+        answers "nothing was deleted" for every commit it does not have, which
+        is the green this check refuses, so where the history cannot be trusted
+        the check says so and the hole stays red — and the depth is what keeps
+        an ordinary hole in flight from going red on every run in CI.
+      - >-
+        A hole neither read can explain stays a failure. The step ran and found
+        an unexplained hole, which is A6's third outcome and not its first: red
+        costs a session one message, and green over a deletion is the failure
+        the check exists for, kept quiet by a network that was down or a clone
+        with no history behind it. Each sentence the check prints claims only
+        what the run printing it read — a run that could not read the tags does
+        not report that a number has none, which is advice to take a number
+        somebody else is holding.
+      - >-
+        The tag outlives the entry. It is not deleted at merge, because it is
+        the evidence that the number was issued at all, which is what a
+        reservation is for (DR-125); and a reservation whose pull request never
+        merges is closed the way every other hole is, by writing the number
+        back into the record as WITHDRAWN. Nothing issues a number twice, before
+        or after that.
+      - >-
+        No number below DR-128 is tagged retrospectively. The record on the
+        trunk holds all of them, which is the reservation those numbers have,
+        and minting 126 tags to say what 126 files already say would be the
+        second copy.
+      - >-
+        The tag's message names the branch the number was issued for, read with
+        `git symbolic-ref`, which has no answer on a detached checkout and says
+        so — where `rev-parse --abbrev-ref HEAD` prints `HEAD` and exits 0, and
+        would have written `reserved for HEAD` into a tag nothing deletes. A
+        first-pass `coder.yml` run mints from `main` before its branch exists,
+        so such a reservation records `reserved for main`: true when written
+        and of little use to the reader who finds it later, which is what
+        issuing the number before the branch costs.
+      - >-
+        DR-055 is superseded in part. Its ground for there being two commands —
+        "files or GitHub, offline or not, always or only on a pull request" —
+        loses its middle clause, since `check.py` now reaches the network too,
+        for one question and only when the record has a hole. The split stands
+        on the other two grounds, which is why this supersedes rather than
+        replaces.
+    falsifier: >-
+      Two sessions each told they hold the same number: `mint` returning DR-nnn
+      to one branch while another branch's tag already stands at it, or a merged
+      record carrying one number twice where both entries were minted. Either
+      says the compare-and-set is not one, which is the whole of what this
+      claims — the ref is the allocation, and GitHub refuses the second write.
+    rationale: |-
+      DR-125 settled that a Decision is numbered because it is an occurrence,
+      and that the number must be fixed the moment it is first cited, since
+      citations in pull request bodies, Issues and commits on GitHub are never
+      rewritten. It left open when the number is issued, and the answer in
+      force was "whenever a branch reads main", which fixes nothing: two
+      branches read the same value and both believe it.
+
+      What the question needed was an allocator both branches can see, and the
+      repository already has one — GitHub allocates an Issue's number that way,
+      and a ref is the same guarantee with a name of one's own choosing. The
+      tag is not a label on a commit here; it is a claim staked on a number,
+      which is why it points at whatever the trunk's head was when the number
+      was issued and why its message names the branch that took it.
+
+      The gate then has a question it could not previously have: a hole in the
+      sequence used to mean exactly one thing, an entry deleted rather than
+      withdrawn, and now it means either that or a number somebody else is
+      holding. From the tree as it stands the two are identical, and the tag is
+      half the answer and only half — it is never deleted, so it marks a number
+      that was issued rather than a number still in flight, and after the first
+      reservation is redeemed it is present in both cases. The other half is
+      this repository's own commits, which say whether an entry for the number
+      was ever written here: a deletion left one, a reservation in flight never
+      did. Both are read only when there is a hole, so the ordinary run stays a
+      read of files.

@@ -227,7 +227,7 @@ only its own (solorepo's DR-117).
 - `.meta/say/post landed <pr>` — post what landed for every Challenge the body closes, rendered from the record *(coder)*
 - `.meta/say/post review <pr> --approve|--request-changes|--comment < body.md` — the verdict: approve, request changes, or comment; an approval may carry no body *(reviewer)*
 
-**`.meta/say/move`** — What changes state on GitHub: an Issue filed, triaged, moved between levels, claimed or handed back; a pull request opened, layered, revised, merged or advanced; a review requested; a Milestone set.
+**`.meta/say/move`** — What changes state on GitHub: an Issue filed, triaged, moved between levels, claimed or handed back; a pull request opened, layered, revised, merged or advanced; a review requested; a Milestone set; a Decision's number reserved.
 
 - `.meta/say/move file --title T --difficulty D|--roadmap < body.md` — file a Challenge the form's way, `challenge` and the difficulty in one act, or a roadmap Issue *(solo)*
 - `.meta/say/move triage <issue> <level>` — make an Issue a Challenge at a level: one that arrived without the form, or a roadmap Issue whose blocker has closed *(solo)*
@@ -241,6 +241,7 @@ only its own (solorepo's DR-117).
 - `.meta/say/move advance [<pr>]` — rebase every armed pull request that has fallen behind its base back onto it *(workflow)*
 - `.meta/say/move request-review <pr> [--to R]` — hand off: request review from Role R's account, the reviewer's by default *(coder)*
 - `.meta/say/move milestone <issue> --set T|--clear` — put an Issue in a Milestone, creating it if new *(solo)*
+- `.meta/say/move mint` — issue the next Decision number and reserve it on GitHub, so two branches cannot take the same one *(coder)*
 
 **`.meta/say/commit`** — Git's: a commit as this Actor, the Trailers composed by the channel.
 
