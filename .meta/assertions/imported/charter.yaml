@@ -13,7 +13,7 @@
 # of a retirement is the decision that took it, not a paragraph kept here.
 retired_articles:
   - number: 13
-    retired_by: work:decision/085
+    retired_by: solorepo's DR-085
 
 articles:
   - id: work:article/1
@@ -202,7 +202,7 @@ articles:
       `enacted_in`.
     example: >-
       The rule about a rationale's length is a step of Written Decisions,
-      and DR-080 names `.meta/disciplines.md` under `enacted_in`.
+      and solorepo's DR-080 names `.meta/disciplines.md` under `enacted_in`.
   - id: work:article/21
     name: Article 21
     statement: >-
@@ -211,7 +211,7 @@ articles:
       so a reader of any Project's gate reads every other's.
     checked_by: >-
       `.meta/gate`, which reads each Project's report rather than its exit
-      code, and fails a gate that prints no step in the shape (DR-104).
+      code, and fails a gate that prints no step in the shape (solorepo's DR-104).
     example: >-
       `ok orphans — 5 markdown files under 2 packages, each included by a
       source file` from `cargo xtask gate`, beside `ok artifact paths` from

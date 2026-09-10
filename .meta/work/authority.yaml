@@ -10,7 +10,7 @@ description: >-
   **Permission** is their product: the authority to employ one on the other.
 
   Expressiveness comes from that product, never from splitting one axis to encode
-  the other. This is why a Capability carries no read/write dimension (DR-005): what a
+  the other. This is why a Capability carries no read/write dimension (solorepo's DR-005): what a
   Capability can change is answered by its application to Securables via
   Permissions, so encoding it on the Capability would be either lossy or a
   restatement of the whole space. It is also why a Capability's name must not

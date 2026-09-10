@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/114
+    name: A portfolio's check.py is red on the scaffold's Decisions that its imported record cites
+    challenge_type: DEFECT
+    description: >-
+      A portfolio specialized by the eight steps as written had a red gate on
+      its first pull request: `unresolved references` on `work:decision/085`,
+      `cited decisions` on thirteen sites, `markdown links` on one — one
+      cause, the inherited Charter, vocabulary, `schemas.md` and templates
+      citing Decisions a portfolio does not carry. Found by DR-115's review
+      tracing the Specialization Discipline to its end, parked on the diff of
+      #110 and promoted at merge.

@@ -21,7 +21,7 @@ disciplines:
         commit history and an `origin` pointing back at it, and neither belongs
         to a portfolio.
       - >-
-        Copy what is inherited — `.meta/work/`, `.meta/ddd/`, both umbrellas,
+        Copy what is inherited — `.meta/work/`, `.meta/ddd/`, `.meta/work_ontology.yaml`, `.meta/ddd_ontology.yaml`,
         `render.py`, `check.py`, `check_pr.py`, `.meta/gate`, `.meta/next.py`, `.meta/actions/`, `.meta/say/`,
         `.meta/hooks/`, `.claude/settings.json`, `.meta/assertions/imported/`,
         `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`,

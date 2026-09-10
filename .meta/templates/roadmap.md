@@ -6,7 +6,7 @@ Challenge looks back at something noticed and where; a roadmap Issue looks
 forward at something meant and what it waits on. Both are intentional deferrals,
 which is why the middle heading is the same question on both forms.
 
-`.meta/roadmap.md` used to hold these as prose, and nothing consumed it (DR-088).
+`.meta/roadmap.md` used to hold these as prose, and nothing consumed it (solorepo's DR-088).
 An Issue has what a file does not: an open and a closed, a title someone reads,
 and a place for the argument that decides it.
 

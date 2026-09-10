@@ -129,11 +129,11 @@ _In practice:_ `.meta/say/commit -m "…"`, which composes the `Actor:` Trailer 
 
 **Enforces** Written Decisions. **Checked by** `check.py`, which fails an ADOPTED Decision naming no Artifact under `enacted_in`.
 
-_In practice:_ The rule about a rationale's length is a step of Written Decisions, and DR-080 names `.meta/disciplines.md` under `enacted_in`.
+_In practice:_ The rule about a rationale's length is a step of Written Decisions, and solorepo's DR-080 names `.meta/disciplines.md` under `enacted_in`.
 
 ### A21. A gate reports each step in the one shape every gate here prints — `ok`, `x` or `?`, then the step, then what it covered, found, or could not do — so a reader of any Project's gate reads every other's.
 
-**Checked by** `.meta/gate`, which reads each Project's report rather than its exit code, and fails a gate that prints no step in the shape (DR-104).
+**Checked by** `.meta/gate`, which reads each Project's report rather than its exit code, and fails a gate that prints no step in the shape (solorepo's DR-104).
 
 _In practice:_ `ok orphans — 5 markdown files under 2 packages, each included by a source file` from `cargo xtask gate`, beside `ok artifact paths` from `check.py`, read by the same eye. Not a Rust gate that prints cargo's own summary lines and exits.
 

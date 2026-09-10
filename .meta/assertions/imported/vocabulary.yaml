@@ -334,7 +334,7 @@ concept_set:
     scope_note: >-
       The level is who shares the matter. A Project decision unmarked reads as
       everyone's; a Portfolio decision marked as a Project's is hidden from every
-      other Project. "ADR" named the Project level until DR-093, and imported a
+      other Project. "ADR" named the Project level until solorepo's DR-093, and imported a
       qualifier the record never used.
     avoid: [ADR, architecture decision record]
   - id: work:concept/bootstrap

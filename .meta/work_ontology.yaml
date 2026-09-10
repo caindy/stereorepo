@@ -13,7 +13,7 @@ description: >-
 
   This file is the umbrella. It imports the modules, holds the container, and
   otherwise stays small — read the module that covers what you are touching.
-  Roughed in ahead of the structure it names (DR-002), in seven modules (DR-023).
+  Roughed in ahead of the structure it names (solorepo's DR-002), in seven modules (solorepo's DR-023).
 license: https://creativecommons.org/licenses/by/4.0/
 
 #-------------------------------------------------------------------------------

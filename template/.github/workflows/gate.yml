@@ -9,8 +9,8 @@
 #
 # The triggers, the permissions and the `pull request` and `sweep` jobs are
 # the scaffold's. What the two jobs run is typed once, under `.meta/actions/`,
-# which this portfolio carries (DR-120); the stubs, the triggers and the
-# permissions solorepo's `check.py` holds equal to its own (DR-119), so a
+# which this portfolio carries (solorepo's DR-120); the stubs, the triggers and the
+# permissions solorepo's `check.py` holds equal to its own (solorepo's DR-119), so a
 # portfolio specialized later runs what the scaffold runs and not a version
 # behind.
 #
@@ -27,7 +27,7 @@ on:
   # Resolving a thread fires no Actions event at all — `pull_request_review_thread`
   # is a webhook GitHub does not accept as a trigger. So A16 is checked on the
   # last push, and again on the clock: the sweep below re-runs the check on every
-  # open pull request and publishes the result as the check (DR-105). The gap is
+  # open pull request and publishes the result as the check (solorepo's DR-105). The gap is
   # the interval. `workflow_dispatch` runs the same sweep on demand.
   schedule:
     - cron: "*/30 * * * *"
@@ -40,7 +40,7 @@ permissions:
   checks: write
 
 # The job names below are what `main`'s ruleset should require as status checks
-# (a ruleset, not a hook — DR-056). Rename one here and every merge blocks: the
+# (a ruleset, not a hook — solorepo's DR-056). Rename one here and every merge blocks: the
 # ruleset waits on a check that nothing reports. `check_pr.py` reads the ruleset
 # and compares, so the set is checked rather than remembered. There are two, and
 # there stay two however many Projects this portfolio grows.

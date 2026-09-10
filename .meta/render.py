@@ -97,11 +97,11 @@ def disciplines():
         if d.get("steps"):
             out.append("\n".join(f"{i}. {s}" for i, s in enumerate(d["steps"], 1)) + "\n")
         if d["name"] == (channel() or {}).get("discipline"):
-            out.append("The verbs are the steps, and each refuses its own misuse (DR-116). Every act\n"
+            out.append("The verbs are the steps, and each refuses its own misuse (solorepo's DR-116). Every act\n"
                        "on GitHub goes through the channel, `.meta/say/`, which names the Actor in\n"
                        "every commit and every comment; which Role holds each verb is\n"
                        "`.meta/say/verbs.yaml`'s to say, and a Role's reading lists\n"
-                       "only its own (DR-117).\n")
+                       "only its own (solorepo's DR-117).\n")
             for program in channel()["programs"]:
                 out.append(f"**`.meta/say/{program['name']}`** — {program['concern'].strip()}\n")
                 out.append("\n".join(f"- `{verb_line(program, v)}` — {v['does']} *({', '.join(v['held_by'])})*"
@@ -361,7 +361,7 @@ def decisions():
            "at the foot of this page.\n",
            "**This page routes and does not restate.** An entry *is* its assertion file,\n"
            "named for its number, so a conversation reaches one as\n"
-           "`@.meta/assertions/decisions/DR-011.yaml`. The line here says an entry exists\n"
+           "`@.meta/assertions/decisions/DR-001.yaml`. The line here says an entry exists\n"
            "and what question it answered; only the entry is sufficient to apply it.\n",
            "| Entry | The question it settled | Status |",
            "| :-- | :-- | :-- |"]
@@ -611,7 +611,7 @@ def justfile():
         "# edit the assertions and re-render.",
         "#",
         "# The verbs, typed. Every recipe invokes a tool under .meta/ and implements",
-        "# nothing; `just --list` is the index (DR-106). Not installed? `uvx --from rust-just just`.",
+        "# nothing; `just --list` is the index (solorepo's DR-106). Not installed? `uvx --from rust-just just`.",
         "",
         "# every recipe, and what it does",
         "default:",

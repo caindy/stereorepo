@@ -1,5 +1,5 @@
 # An armed merge, kept current with the branch it is waiting to land on
-# (DR-113).
+# (solorepo's DR-113).
 #
 # `main`'s ruleset requires a pull request to be up to date before it merges,
 # and an armed merge does not update its own branch. So the first of two green
@@ -51,7 +51,7 @@ jobs:
           persist-credentials: false
 
       # The Role's credential, where `.meta/say/` expects it by default
-      # (DR-073, DR-107): outside the tree, mode 600, one token in the
+      # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
       # container.
       - name: hold the coder's credential
         run: |

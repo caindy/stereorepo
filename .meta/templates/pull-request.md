@@ -73,7 +73,7 @@ explanation belongs in an artifact or here.
 **The fifth heading closes the Issue.** GitHub reads `Closes #n` in a body and
 closes the Issue when the pull request merges to the default branch, which is
 the one act here that needs no verb: the merge is the act, and the body the form
-already requires carries the link (DR-089). Write it only on the pull request
+already requires carries the link (solorepo's DR-089). Write it only on the pull request
 that finishes the Challenge; one that takes part of it up names the Issue
 without the keyword. `check_pr.py` holds the shape, not the judgement.
 

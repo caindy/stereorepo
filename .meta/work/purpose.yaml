@@ -178,7 +178,7 @@ classes:
       target where the criterion is quantitative.
 
       `shown_by` is what makes it a criterion rather than a hope: a box ticked
-      because somebody remembers is the convention-by-restraint DR-050 rules
+      because somebody remembers is the convention-by-restraint that solorepo's DR-050 rules
       out, and a criterion nothing can demonstrate cannot be met, only asserted.
     slots:
       - statement
@@ -211,7 +211,7 @@ classes:
     comments:
       - >-
         The original sketch had this specify a Role, which made the need the
-        worker's. It states the *user's* job (DR-021), so it names a Persona.
+        worker's. It states the *user's* job (solorepo's DR-021), so it names a Persona.
         One consequence: an Agency's Role is no longer implied by its Goal, and
         choosing it becomes an explicit act rather than a derivation.
       - >-
@@ -219,7 +219,7 @@ classes:
         need that advances none of a Persona's goals is a need nobody has, and
         making it required is what lets the schema guarantee the whole chain: a
         USER Goal must have a Job to be Done, and a Job to be Done must reach an
-        END goal, so no Goal can dead-end at a Persona (DR-039).
+        END goal, so no Goal can dead-end at a Persona (solorepo's DR-039).
       - >-
         Subtracting the two sides gives the product equivalent of the
         Permission/AuditRecord diff: an END goal with no Job to be Done is a user
@@ -247,14 +247,14 @@ classes:
       technical objective.
 
       Every Goal must serve a Persona's END goal, or be a business or a
-      technical goal (DR-038). There is no fourth option, and that is the point:
+      technical goal (solorepo's DR-038). There is no fourth option, and that is the point:
       work that answers to nobody cannot be written down without the omission
       being visible.
     comments:
       - >-
         A Goal that genuinely serves a user *and* the business picks its primary
         basis. Keeping the basis single-valued is what keeps the arithmetic of
-        DR-031 clean — subtract served END goals from held ones and the
+        solorepo's DR-031 clean — subtract served END goals from held ones and the
         remainder means something.
     slots:
       - challenge

@@ -151,8 +151,8 @@ classes:
         An END goal is Goal-shaped: specific, and with a plain test for having
         been reached. What it lacks is a Deadline — it is standing and recurring
         rather than a bounded commitment — so it is not yet an instance of Goal,
-        whose deadline is required to keep a Goal SMART (DR-003). Whether to
-        share an abstraction between them is open; see DR-020.
+        whose deadline is required to keep a Goal SMART (solorepo's DR-003). Whether to
+        share an abstraction between them is open; see solorepo's DR-020.
       - >-
         EXPERIENCE and LIFE goals are not Goal-shaped at all and are not
         candidates for it.
@@ -185,7 +185,7 @@ classes:
         authenticated, so an AuditRecord still attributes to the workload
         identity rather than to a fictional person.
       - >-
-        A JobToBeDone names the Persona whose need it is (DR-021). Interrogating
+        A JobToBeDone names the Persona whose need it is (solorepo's DR-021). Interrogating
         a Persona to surface one is the intended path from user research into
         the work.
     slots:

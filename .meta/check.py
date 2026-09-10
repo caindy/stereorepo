@@ -504,10 +504,19 @@ def reserved_article_numbers(index):
     """
     charter = yaml.safe_load(
         (META / "assertions" / "imported" / "charter.yaml").read_text()) or {}
-    retired = {r["number"] for r in charter.get("retired_articles") or []}
+    holes = charter.get("retired_articles") or []
+    retired = {r["number"] for r in holes}
     live = {int(a["id"].rsplit("/", 1)[-1]) for a in charter.get("articles") or []}
-    return [f"A{n} is retired and issued again; a retired number is reserved forever"
-            for n in sorted(retired & live)]
+    problems = [f"A{n} is retired and issued again; a retired number is reserved forever"
+                for n in sorted(retired & live)]
+    # The pointer to the account is prose, `solorepo's DR-085`, since the entry
+    # is solorepo's and the Charter goes to every portfolio (DR-121). A string
+    # slot is a slot nothing resolves, so the form is held here and the number
+    # by `cited decisions`, which together are what the reference check was.
+    problems += [f"A{r['number']}: retired_by is {r.get('retired_by')!r}, and the account "
+                 "of a retirement is cited as solorepo's DR-nnn"
+                 for r in holes if not FOREIGN.fullmatch(str(r.get("retired_by", "")))]
+    return problems
 
 
 def enacted_decisions(index):
@@ -530,10 +539,14 @@ def enacted_decisions(index):
 
 
 DR = re.compile(r"\bDR-(\d{3})\b")
+# A citation of solorepo's record, in the form the material a portfolio inherits
+# writes one: the possessive, then a run, so `solorepo's DR-073, DR-107` names two.
+FOREIGN = re.compile(r"solorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
+SCAFFOLD = "work:portfolio/solorepo"
 
 
 def cited_decisions(index):
-    """A DR cited in prose resolves to an entry.
+    """A DR cited in prose resolves to an entry of the record it names (DR-121).
 
     An Article citation is a typed reference and has been checked since the
     references check existed; a DR citation is plain text in a paragraph, and
@@ -544,21 +557,63 @@ def cited_decisions(index):
     The assertions are scanned along with the prose. A citation inside a
     `rationale` block is a paragraph that a reader reaches directly, now that the
     entry is its own file, so it is held to the same rule rather than exempted
-    for being stored as YAML.
+    for being stored as YAML. So are the schemas, the workflows and the actions,
+    because a portfolio copies them, and what it copies is scanned for the
+    reason below. A code span is a path or a form, not a citation.
+
+    Whose record. The Charter, the schemas, the templates and the pages rendered
+    from them are copied into every portfolio, and a portfolio's record starts
+    again at DR-001 — the seed's own entry says so. A bare `DR-104` in a copied
+    file is solorepo's where it was written and reads as the portfolio's on the
+    day its record reaches a hundred and four: the citation that silently comes
+    to mean something else, which the Charter holds worse than one that dangles,
+    and which this check would pass. So a copied file cites solorepo's record as
+    solorepo's, and a bare number in one fails here, where the copy is made from.
+    A citation of solorepo's record resolves against this one when this
+    Portfolio is solorepo, and is passed over where it is not: the record it
+    names is not there to resolve against, and "cited and does not exist" keeps
+    its one meaning. Under `template/` a bare number is the seed's record, which
+    is the portfolio's, and resolves against that. #114 found a portfolio red on
+    thirteen of these on its first pull request.
     """
     known = {d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"}
     if not known:
         return []
+    home = SCAFFOLD in index
+    seed = {m.group(1) for path in (TEMPLATE / ".meta" / "assertions" / "decisions").glob("DR-*.yaml")
+            if (m := DR.search(path.name))}
+    # `justfile` has no suffix and is not copied: `render.py` writes it into a
+    # portfolio from its own literals, which is the same arrival by another door.
+    copied = {ROOT / "justfile"}
+    for token in inherited():
+        base = ROOT / token if (ROOT / token).exists() else META / token
+        copied.update([base] if base.is_file() else base.rglob("*") if base.is_dir() else [])
     problems = []
-    for path in sorted([*ROOT.rglob("*.md"), *(META / "assertions").rglob("*.yaml")]):
-        if path.is_symlink() or TEMPLATE in path.parents or ".git" in path.parts:
+    for path in tree():
+        if path.is_symlink() or not path.is_file() or ".git" in path.parts:
+            continue
+        seeded = TEMPLATE in path.parents
+        scanned = path.suffix == ".md" or path == ROOT / "justfile" or (
+            path.suffix in (".yaml", ".yml")
+            and (seeded or path in copied or (META / "assertions") in path.parents))
+        if not scanned:
             continue
         try:
-            text = path.read_text()
+            text = FENCED.sub("", path.read_text())
         except (UnicodeDecodeError, OSError):
             continue
-        for num in sorted(set(DR.findall(text)) - known):
-            problems.append(f"{path.relative_to(ROOT)}: DR-{num} is cited and does not exist")
+        rel = path.relative_to(ROOT)
+        foreign = {num for m in FOREIGN.finditer(text) for num in DR.findall(m.group())}
+        bare = set(DR.findall(FOREIGN.sub("", text)))
+        if home:
+            for num in sorted(foreign - known):
+                problems.append(f"{rel}: solorepo's DR-{num} is cited and does not exist")
+        for num in sorted(bare - (seed if seeded else known)):
+            problems.append(f"{rel}: DR-{num} is cited and does not exist")
+        if path in copied:
+            for num in sorted(bare):
+                problems.append(f"{rel}: DR-{num} is cited bare in a file a portfolio inherits, "
+                                "where it will come to mean the portfolio's; cite it as solorepo's")
     return problems
 
 

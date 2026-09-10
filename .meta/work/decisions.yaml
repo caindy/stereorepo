@@ -12,13 +12,13 @@ description: >-
   and an entry with nothing rejected is announcing that it recorded a narrative.
 
   Three levels of the same record, told apart by which the entry names
-  (DR-093). A decision about the repository, its language or its way of working
+  (solorepo's DR-093). A decision about the repository, its language or its way of working
   is the Portfolio's, and names nothing. A decision about a Product — an SDLC,
   a release cadence, a contract between the Projects that build it — is shared
   by every one of those Projects and owned by none, and names the Product. A
   decision about how one build unit is built is that Project's, and names it.
   The level is who shares the matter, and filing an entry a level off is the
-  failure DR-049 named: a Project decision in the Portfolio's record is buried
+  failure solorepo's DR-049 named: a Project decision in the Portfolio's record is buried
   among matters its readers do not share, and a Portfolio decision filed as a
   Project's is hidden from every other Project. One sequence of numbers serves
   all three; the index says which Product or Project an entry is about.
@@ -87,8 +87,16 @@ slots:
     description: One concrete instance of the rule met.
 
   retired_by:
-    description: The Decision that retired it, and where its account lives.
-    range: Decision
+    description: >-
+      The Decision that retired it, and where its account lives — cited as
+      prose, `solorepo's DR-085`, rather than referenced. The Charter is copied
+      into every portfolio and the entry it names is solorepo's, which no
+      portfolio carries; a reference would resolve to nothing there, and the
+      gate resolves a citation of solorepo's record only where that record is
+      (solorepo's DR-121). The pattern holds the form; the gate holds the
+      number, and refuses the reference this was.
+    range: string
+    pattern: "^solorepo's DR-\\d{3}$"
 
   status:
     description: Where this Decision stands.
@@ -105,7 +113,7 @@ slots:
       Project, because `check.py` finds a reference by a slot's range being one
       class with an identifier; a slot ranging over two has no range the walker
       follows, and a dangling Product would pass. That at most one of the two is
-      set is arithmetic across slots, which the gate holds (DR-093).
+      set is arithmetic across slots, which the gate holds (solorepo's DR-093).
     range: Product
 
   project:
@@ -247,14 +255,14 @@ classes:
       A choice that removed an alternative, with why, kept where the people it
       binds will find it.
 
-      **A decision begins with a question that demands an answer** (DR-065).
+      **A decision begins with a question that demands an answer** (solorepo's DR-065).
       That is when it may be recorded, not when the answer is built — the alternatives close
       at the moment the question is settled, and a record that waits for the
       implementation leaves the closed alternatives open for anyone who did not
       hear the conversation. `status` carries how far it has got.
     comments:
       - >-
-        Numbered as a **stable identifier**, cited as DR-001 and so on. A
+        Numbered as a **stable identifier**, cited as `DR-001` and so on. A
         withdrawn Decision leaves a hole and is never renumbered — the same rule
         the Charter's Articles carry, for the same reason.
       - >-

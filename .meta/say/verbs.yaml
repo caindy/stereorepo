@@ -1,4 +1,4 @@
-# The channel's verbs, once (DR-117): which program each is a verb of, the
+# The channel's verbs, once (solorepo's DR-117): which program each is a verb of, the
 # shape it is typed in, what it does, and which Role holds it.
 #
 # A Role's reading of PR First is compiled from this, so a reading names no
@@ -11,7 +11,7 @@
 # portfolio takes it with the directory.
 #
 # `held_by` is who uses a verb, not who may. Every Role that may speak may
-# perform every one of these (DR-116), and a reading is a Job's, not a
+# perform every one of these (solorepo's DR-116), and a reading is a Job's, not a
 # Permission. `solo` and `workflow` are not Roles — the solo directs a coder
 # session, and a workflow runs a verb as a Role — and name the verbs no Role's
 # reading carries: they are found in the program's `--help`, when the solo

@@ -10,7 +10,7 @@ description: >-
   and this is the reason — the language is what holds it together, so the repo
   boundary and the language boundary are the same boundary.
 
-  Within it, **Products** and **Projects** are not a hierarchy (DR-027). They are
+  Within it, **Products** and **Projects** are not a hierarchy (solorepo's DR-027). They are
   orthogonal groupings of the same content:
 
   A **Product** groups by *who it is for*. It is delivered to users, has its own
@@ -119,7 +119,7 @@ classes:
       carrying its rule, and that A20 requires to cite it back.
 
       Identified rather than named by path so that a reference to one is a
-      reference (DR-079) — resolved against the schema by the same machinery
+      reference (solorepo's DR-079) — resolved against the schema by the same machinery
       every other reference uses, rather than by a checker matching strings. Renaming a file
       then moves one `path`, and the citations that pointed at it keep pointing.
 

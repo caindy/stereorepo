@@ -148,7 +148,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Review Thread.** **Outdated is not resolved.** GitHub collapses a thread whose anchor moved and leaves it open, and the two states are independent — an objection can outlive the line it was written against. A16 turns on that distinction.
 
-**Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until DR-093, and imported a qualifier the record never used.
+**Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until solorepo's DR-093, and imported a qualifier the record never used.
 
 **Bootstrap.** Where a Discipline becomes a command that can fail. A Bootstrap says how a Discipline is satisfied in one language; it never restates the Discipline, because the second copy is the one that drifts.
 

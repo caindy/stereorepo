@@ -14,10 +14,10 @@ description: >-
 
   The container lives here and nowhere else. A `tree_root` in a module would be
   inherited by anything importing it, and would silently replace the importer's
-  own root — see DR-027.
+  own root — see solorepo's DR-027.
 
-  Reified as LinkML (DR-017), and modularised with the Portfolio link typed
-  (DR-028). Republished by solorepo per DR-016. These are Eric Evans' patterns, not
+  Reified as LinkML (solorepo's DR-017), and modularised with the Portfolio link typed
+  (solorepo's DR-028). Republished per solorepo's DR-016. These are Eric Evans' patterns, not
   solorepo's: where this schema and the book disagree, the book wins and this
   schema is wrong.
 license: https://creativecommons.org/licenses/by/4.0/

@@ -142,6 +142,9 @@ artifacts:
   - id: work:artifact/meta-assertions-domain-vocabulary
     name: .meta/assertions/domain_vocabulary.yaml
     path: .meta/assertions/domain_vocabulary.yaml
+  - id: work:artifact/meta-assertions-imported-readme
+    name: .meta/assertions/imported/README.md
+    path: .meta/assertions/imported/README.md
   - id: work:artifact/meta-assertions-vocabulary
     name: .meta/assertions/vocabulary.yaml
     path: .meta/assertions/vocabulary.yaml

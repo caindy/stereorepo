@@ -5,7 +5,7 @@ description: >-
   How work must proceed, invariably.
 
   A **Discipline** is a structured way of working that must be adhered to because
-  it is not an imperative program (DR-025). It has steps and an order, it is *followed*
+  it is not an imperative program (solorepo's DR-025). It has steps and an order, it is *followed*
   rather than executed, and following it produces artifacts.
 
   The clause doing the work is "not an imperative program". Adherence is what you

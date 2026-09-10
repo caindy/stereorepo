@@ -14,7 +14,7 @@ at the foot of this page.
 
 **This page routes and does not restate.** An entry *is* its assertion file,
 named for its number, so a conversation reaches one as
-`@.meta/assertions/decisions/DR-011.yaml`. The line here says an entry exists
+`@.meta/assertions/decisions/DR-001.yaml`. The line here says an entry exists
 and what question it answered; only the entry is sufficient to apply it.
 
 | Entry | The question it settled | Status |
@@ -136,6 +136,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-118](assertions/decisions/DR-118.yaml) | The threads listing shows what was answered and resolved, and each verdict on the head GitHub recorded it against | Adopted |
 | [DR-119](assertions/decisions/DR-119.yaml) | The half the two gate workflows share is held equal by check.py, compared as loaded YAML, and the seeded sweep runs next.py | Adopted |
 | [DR-120](assertions/decisions/DR-120.yaml) | The steps the two gate workflows share are one local composite action each, and check.py holds the residue equal | Adopted |
+| [DR-121](assertions/decisions/DR-121.yaml) | What a portfolio inherits cites solorepo's record as solorepo's, and a portfolio's gate passes over a citation of a record it does not carry | Adopted |
 
 ## Holes
 
@@ -164,9 +165,10 @@ and the query a reader in a file actually has.
 | [`.meta/actions/sweep/action.yml`](actions/sweep/action.yml) | [DR-120](assertions/decisions/DR-120.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
+| [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/assertions/vocabulary.yaml`](assertions/vocabulary.yaml) | [DR-035](assertions/decisions/DR-035.yaml) |
 | [`.meta/charter.md`](charter.md) | [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml) |
-| [`.meta/check.py`](check.py) | [DR-014](assertions/decisions/DR-014.yaml), [DR-029](assertions/decisions/DR-029.yaml), [DR-034](assertions/decisions/DR-034.yaml), [DR-037](assertions/decisions/DR-037.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml) |
+| [`.meta/check.py`](check.py) | [DR-014](assertions/decisions/DR-014.yaml), [DR-029](assertions/decisions/DR-029.yaml), [DR-034](assertions/decisions/DR-034.yaml), [DR-037](assertions/decisions/DR-037.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/check_pr.py`](check_pr.py) | [DR-057](assertions/decisions/DR-057.yaml), [DR-083](assertions/decisions/DR-083.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-102](assertions/decisions/DR-102.yaml), [DR-105](assertions/decisions/DR-105.yaml), [DR-108](assertions/decisions/DR-108.yaml), [DR-111](assertions/decisions/DR-111.yaml), [DR-118](assertions/decisions/DR-118.yaml) |
 | [`.meta/ddd/skos.yaml`](ddd/skos.yaml) | [DR-018](assertions/decisions/DR-018.yaml) |
 | [`.meta/ddd_ontology.yaml`](ddd_ontology.yaml) | [DR-016](assertions/decisions/DR-016.yaml), [DR-017](assertions/decisions/DR-017.yaml), [DR-028](assertions/decisions/DR-028.yaml) |
@@ -175,21 +177,21 @@ and the query a reader in a file actually has.
 | [`.meta/hooks/signed_channel.py`](hooks/signed_channel.py) | [DR-069](assertions/decisions/DR-069.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-113](assertions/decisions/DR-113.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/hooks/worktree_only.py`](hooks/worktree_only.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/next.py`](next.py) | [DR-114](assertions/decisions/DR-114.yaml) |
-| [`.meta/render.py`](render.py) | [DR-011](assertions/decisions/DR-011.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-040](assertions/decisions/DR-040.yaml), [DR-059](assertions/decisions/DR-059.yaml), [DR-060](assertions/decisions/DR-060.yaml), [DR-077](assertions/decisions/DR-077.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-088](assertions/decisions/DR-088.yaml), [DR-102](assertions/decisions/DR-102.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-118](assertions/decisions/DR-118.yaml) |
+| [`.meta/render.py`](render.py) | [DR-011](assertions/decisions/DR-011.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-040](assertions/decisions/DR-040.yaml), [DR-059](assertions/decisions/DR-059.yaml), [DR-060](assertions/decisions/DR-060.yaml), [DR-077](assertions/decisions/DR-077.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-088](assertions/decisions/DR-088.yaml), [DR-102](assertions/decisions/DR-102.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-118](assertions/decisions/DR-118.yaml), [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/say/channel.py`](say/channel.py) | [DR-062](assertions/decisions/DR-062.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-068](assertions/decisions/DR-068.yaml), [DR-069](assertions/decisions/DR-069.yaml), [DR-072](assertions/decisions/DR-072.yaml), [DR-073](assertions/decisions/DR-073.yaml), [DR-074](assertions/decisions/DR-074.yaml), [DR-075](assertions/decisions/DR-075.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-111](assertions/decisions/DR-111.yaml), [DR-112](assertions/decisions/DR-112.yaml), [DR-113](assertions/decisions/DR-113.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/say/commit`](say/commit) | [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/say/move`](say/move) | [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/say/post`](say/post) | [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/say/verbs.yaml`](say/verbs.yaml) | [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/say/whoami`](say/whoami) | [DR-117](assertions/decisions/DR-117.yaml) |
-| [`.meta/schemas.md`](schemas.md) | [DR-003](assertions/decisions/DR-003.yaml) |
+| [`.meta/schemas.md`](schemas.md) | [DR-003](assertions/decisions/DR-003.yaml), [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/templates/issue.md`](templates/issue.md) | [DR-112](assertions/decisions/DR-112.yaml), [DR-114](assertions/decisions/DR-114.yaml) |
 | [`.meta/templates/pull-request.md`](templates/pull-request.md) | [DR-055](assertions/decisions/DR-055.yaml), [DR-076](assertions/decisions/DR-076.yaml), [DR-089](assertions/decisions/DR-089.yaml) |
 | [`.meta/templates/roadmap.md`](templates/roadmap.md) | [DR-088](assertions/decisions/DR-088.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-116](assertions/decisions/DR-116.yaml) |
 | [`.meta/vocabulary.md`](vocabulary.md) | [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml) |
 | [`.meta/work/actors.yaml`](work/actors.yaml) | [DR-019](assertions/decisions/DR-019.yaml) |
 | [`.meta/work/authority.yaml`](work/authority.yaml) | [DR-005](assertions/decisions/DR-005.yaml), [DR-008](assertions/decisions/DR-008.yaml) |
-| [`.meta/work/decisions.yaml`](work/decisions.yaml) | [DR-049](assertions/decisions/DR-049.yaml), [DR-065](assertions/decisions/DR-065.yaml), [DR-081](assertions/decisions/DR-081.yaml), [DR-093](assertions/decisions/DR-093.yaml) |
+| [`.meta/work/decisions.yaml`](work/decisions.yaml) | [DR-049](assertions/decisions/DR-049.yaml), [DR-065](assertions/decisions/DR-065.yaml), [DR-081](assertions/decisions/DR-081.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/work/disciplines.yaml`](work/disciplines.yaml) | [DR-025](assertions/decisions/DR-025.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml) |
 | [`.meta/work/personas.yaml`](work/personas.yaml) | [DR-020](assertions/decisions/DR-020.yaml), [DR-021](assertions/decisions/DR-021.yaml) |
 | [`.meta/work/provenance.yaml`](work/provenance.yaml) | [DR-004](assertions/decisions/DR-004.yaml) |
@@ -198,7 +200,7 @@ and the query a reader in a file actually has.
 | [`.meta/work_ontology.yaml`](work_ontology.yaml) | [DR-002](assertions/decisions/DR-002.yaml), [DR-023](assertions/decisions/DR-023.yaml) |
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml) |
-| [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml) |
+| [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-121](assertions/decisions/DR-121.yaml) |
 | [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/python/literate-programming.md`](../bootstraps/python/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/python/render`](../bootstraps/python/render) | [DR-094](assertions/decisions/DR-094.yaml) |

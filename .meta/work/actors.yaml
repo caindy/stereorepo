@@ -7,7 +7,7 @@ description: >-
   An **Actor** is a **Personality** with an **Identity** and a **Memory**. The
   Personality is the character presented — a SOUL.md and a communication style.
   It is what the original sketch called a Persona, renamed once Cooper's Persona
-  was taken up as its own concept (DR-019).
+  was taken up as its own concept (solorepo's DR-019).
 
   **Identity is abstract on purpose.** Every identity is either held durably by a
   principal or attested for a running workload, and an audit trail that conflates
@@ -141,7 +141,7 @@ classes:
     description: >-
       The character an Actor presents: its SOUL.md together with its
       communication style. What the original sketch called a Persona; renamed
-      once Cooper's Persona was taken up as its own concept (DR-019).
+      once Cooper's Persona was taken up as its own concept (solorepo's DR-019).
     slots:
       - soul
       - communication_style

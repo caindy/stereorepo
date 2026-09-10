@@ -1,4 +1,4 @@
-# The pull request gate as one step (DR-120). The `pull request` job of the
+# The pull request gate as one step (solorepo's DR-120). The `pull request` job of the
 # scaffold's gate workflow and of a portfolio's both run exactly this, so it
 # is typed once here and travels with `.meta/`; each workflow's job is a
 # checkout and a `uses:` of this path, and the two stubs are held equal by

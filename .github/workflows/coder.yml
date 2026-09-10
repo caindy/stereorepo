@@ -1,4 +1,4 @@
-# The coder Role, taking an Issue by its difficulty label (DR-112).
+# The coder Role, taking an Issue by its difficulty label (solorepo's DR-112).
 #
 # An Issue labelled `easy` or `medium` is a Challenge somebody has guessed a
 # loop can take. This is the loop. It runs where the label lands, in a
@@ -18,7 +18,7 @@ name: coder
 on:
   issues:
     types: [labeled]
-  # The reviewer's request for changes is the coder's second run: DR-112
+  # The reviewer's request for changes is the coder's second run: solorepo's DR-112
   # promised it and #102 sat with a verdict and no Job to take it. The
   # dispatch runs that pass by hand, for a verdict the event passed by.
   pull_request_review:
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
-      # The Trailer's two halves (DR-086). The run id is a workload identity
+      # The Trailer's two halves (solorepo's DR-086). The run id is a workload identity
       # GitHub attests for this run and no other; the harness is the action,
       # pinned below, recorded as the environment names it.
       ACTOR_SESSION: gha-${{ github.run_id }}
@@ -95,7 +95,7 @@ jobs:
           INPUT_PR: ${{ inputs.pull_request }}
 
       # The Role's credential, where `.meta/say/` expects it by default
-      # (DR-073, DR-107): outside the tree, mode 600, one token in the
+      # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
       # container. The same channel and the same rules as on a laptop.
       - name: hold the coder's credential
         run: |
@@ -190,7 +190,7 @@ jobs:
           # what the coder did between the Issue and the pull request.
           show_full_output: "true"
           prompt: |
-            You are the coder Role (DR-107), taking Issue #${{ github.event.issue.number }}
+            You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}
             of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
             Read /pr-first: it is the coder's reading of PR First, and lists
             your verbs, what each does and where the judgement is; `AGENTS.md`
@@ -295,7 +295,7 @@ jobs:
           github_token: ${{ secrets.CODER_GH_TOKEN }}
           show_full_output: "true"
           prompt: |
-            You are the coder Role (DR-107), answering the reviewer's request
+            You are the coder Role (solorepo's DR-107), answering the reviewer's request
             for changes on pull request #${{ steps.pr.outputs.number }} of
             ${{ github.repository }}, on the branch
             `${{ steps.pr.outputs.branch }}`, which a run of yours opened and

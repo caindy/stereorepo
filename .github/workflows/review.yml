@@ -1,14 +1,14 @@
-# The reviewer Role, answering a review request (DR-109).
+# The reviewer Role, answering a review request (solorepo's DR-109).
 #
 # PR First's handoff is a review request: the coder names the reviewer's
 # account and GitHub holds the request. This is the arriving Job. It runs where
 # the event lands, in a container that holds one token — the reviewer's — which
-# is the credential boundary DR-073 said this machine cannot provide.
+# is the credential boundary solorepo's DR-073 said this machine cannot provide.
 #
 # Nothing here restates how to review. The pull request Discipline is the
 # skill the checkout carries, and the code-review plugin is Claude Code's own;
 # this file decides when the reviewer runs, as whom it speaks, and what it may
-# read (DR-110).
+# read (solorepo's DR-110).
 #
 # On a `pull_request` event GitHub runs the workflow file from the pull
 # request's own merge ref, so this file is the diff's. A change to it is
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
-      # The Trailer's two halves (DR-086). The run id is a workload identity
+      # The Trailer's two halves (solorepo's DR-086). The run id is a workload identity
       # GitHub attests for this run and no other; the harness is the action,
       # pinned below, recorded as the environment names it.
       ACTOR_SESSION: gha-${{ github.run_id }}
@@ -96,7 +96,7 @@ jobs:
           test -x .meta/hooks/signed_channel.py
 
       # The Role's credential, where `.meta/say/<program> --role reviewer` expects it
-      # (DR-073, DR-107): outside the tree, mode 600, one token in the
+      # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
       # container. The same channel and the same rules as on a laptop.
       - name: hold the reviewer's credential
         run: |
@@ -138,7 +138,7 @@ jobs:
           # the only record of what the reviewer did, and its first run posted
           # nothing while reporting success (#85).
           show_full_output: "true"
-          # The bound on reading, registered here and nowhere else (DR-110):
+          # The bound on reading, registered here and nowhere else (solorepo's DR-110):
           # a `Read`, `Grep` or `Glob` resolves inside the worktree and
           # outside `.git/`, and a `git` command carries no option that runs
           # a program or writes a file. A hook, because it is the one layer
@@ -152,7 +152,7 @@ jobs:
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           prompt: |
-            You are the reviewer Role (DR-107), answering a review request on
+            You are the reviewer Role (solorepo's DR-107), answering a review request on
             pull request #${{ github.event.pull_request.number }} of
             ${{ github.repository }}. Read /pr-first-reviewer first: it is
             the reviewer's reading of PR First, and says what a pull request
