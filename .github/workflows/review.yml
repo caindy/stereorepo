@@ -81,19 +81,7 @@ jobs:
       # `ubuntu-latest` ships `gh`; the self-hosted image (solorepo's DR-137) does
       # not, and `.meta/say/channel.py` shells out to it for every read and
       # write here.
-      - name: install gh
-        run: |
-          set -euo pipefail
-          type -p gh >/dev/null || (
-            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-              | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-              | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
-            sudo apt-get update -qq
-            sudo apt-get install -y gh
-          )
-          gh --version
+      - uses: ./.meta/actions/gh
 
       # Six paths are trunk's, not the pull request's: the channel, the
       # hooks, the checker, the settings that register them, and the

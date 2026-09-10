@@ -118,19 +118,13 @@ jobs:
       # and a dozen steps below pipe its JSON through `jq`. `review.yml`'s own
       # run on this pull request's self-hosted pod is evidence for `gh` alone:
       # its one JSON read is `gh`'s own `--jq` filter, not the standalone tool.
-      - name: install gh, jq
+      - uses: ./.meta/actions/gh
+
+      - name: install jq
         run: |
           set -euo pipefail
-          type -p gh >/dev/null || (
-            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-              | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-              | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
-            sudo apt-get update -qq
-          )
-          sudo apt-get install -y gh jq
-          gh --version && jq --version
+          type -p jq >/dev/null || sudo apt-get install -y jq
+          jq --version
 
       # `gate.yml` provisions `uv` because `ubuntu-latest` never carries it
       # either (gate.yml:70, :109); this file needs it for the same reason
