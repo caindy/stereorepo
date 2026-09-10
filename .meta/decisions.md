@@ -137,6 +137,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-119](assertions/decisions/DR-119.yaml) | The half the two gate workflows share is held equal by check.py, compared as loaded YAML, and the seeded sweep runs next.py | Adopted |
 | [DR-120](assertions/decisions/DR-120.yaml) | The steps the two gate workflows share are one local composite action each, and check.py holds the residue equal | Adopted |
 | [DR-121](assertions/decisions/DR-121.yaml) | What a portfolio inherits cites solorepo's record as solorepo's, and a portfolio's gate passes over a citation of a record it does not carry | Adopted |
+| [DR-122](assertions/decisions/DR-122.yaml) | A reviewer session that added no verdict is a red run, and an agent it spawns runs in the foreground | Adopted |
 
 ## Holes
 
@@ -158,11 +159,12 @@ and the query a reader in a file actually has.
 | [`.github/workflows/advance.yml`](../.github/workflows/advance.yml) | [DR-113](assertions/decisions/DR-113.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.github/workflows/coder.yml`](../.github/workflows/coder.yml) | [DR-112](assertions/decisions/DR-112.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.github/workflows/gate.yml`](../.github/workflows/gate.yml) | [DR-056](assertions/decisions/DR-056.yaml), [DR-091](assertions/decisions/DR-091.yaml), [DR-094](assertions/decisions/DR-094.yaml), [DR-095](assertions/decisions/DR-095.yaml), [DR-105](assertions/decisions/DR-105.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml) |
-| [`.github/workflows/review.yml`](../.github/workflows/review.yml) | [DR-109](assertions/decisions/DR-109.yaml), [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-118](assertions/decisions/DR-118.yaml) |
+| [`.github/workflows/review.yml`](../.github/workflows/review.yml) | [DR-109](assertions/decisions/DR-109.yaml), [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-118](assertions/decisions/DR-118.yaml), [DR-122](assertions/decisions/DR-122.yaml) |
 | [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml) |
 | [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-088](assertions/decisions/DR-088.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-120](assertions/decisions/DR-120.yaml) |
 | [`.meta/actions/pull-request/action.yml`](actions/pull-request/action.yml) | [DR-120](assertions/decisions/DR-120.yaml) |
 | [`.meta/actions/sweep/action.yml`](actions/sweep/action.yml) | [DR-120](assertions/decisions/DR-120.yaml) |
+| [`.meta/actions/verdicts/action.yml`](actions/verdicts/action.yml) | [DR-122](assertions/decisions/DR-122.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
 | [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |

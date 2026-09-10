@@ -127,6 +127,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
 
+      # What this Role has already said on the pull request, counted before
+      # the session so that only a verdict the session itself posts satisfies
+      # the step after it.
+      - name: count the verdicts before
+        id: before
+        uses: ./.meta/actions/verdicts
+        with:
+          number: ${{ github.event.pull_request.number }}
+          login: ${{ format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name) }}
+          token: ${{ github.token }}
+
       - uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
@@ -244,10 +255,15 @@ jobs:
             backticks, globs or chaining; a pattern goes in single quotes
             after `-e`. Read files with the Read tool and search with Grep.
 
-            Your turn ends when the verdict is posted, and not before. If the
-            review spawns agents, wait for every one of them and read what
-            they found; a turn that ends holding for an agent is a run that
-            posted nothing, which has happened twice.
+            Your turn ends when the verdict is posted, and not before. The
+            run ends when your turn ends: nothing here waits for a background
+            agent, whatever the harness's own reference says, and a turn that
+            ended "waiting for the agents" is a run that posted nothing —
+            #130, #138 and #140. So an Agent you spawn runs in the foreground,
+            never with `run_in_background`, and its result arrives in the
+            same turn; one you did start in the background is read with
+            TaskOutput before anything else. The step after this session
+            counts your verdicts, and a session that added none is a red run.
           # Which programs, by prefix; what they may reach, by the hook above.
           # The run holds a token, its input is a diff nobody here has vetted,
           # and `signed_channel.py` bounds only the paths to GitHub, not a
@@ -262,3 +278,40 @@ jobs:
             --max-turns ${{ steps.depth.outputs.turns }}
             --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*)"
             --disallowedTools "Read(./.git/**)"
+
+      # A session that ended without a verdict has not reviewed, and the check
+      # says so. The action reports success when the model's turn ends, and a
+      # turn ends holding for a background subagent as readily as on a
+      # verdict: #130, #138 and #140 each ended "waiting for the agents", the
+      # check went green, and the request stood with no Job left to answer it
+      # (solorepo's DR-122). The verdict is counted rather than read, because
+      # GitHub holds it and the transcript only claims it. Both steps run
+      # whether the session's step succeeded or not — `!cancelled()` rather
+      # than `always()`, so a run a push cancelled still skips them — and a
+      # session that posted and then timed out is red on its own step and
+      # green here, and the log says which red is in front of the reader.
+      - name: count the verdicts after
+        id: after
+        if: ${{ !cancelled() }}
+        uses: ./.meta/actions/verdicts
+        with:
+          number: ${{ github.event.pull_request.number }}
+          login: ${{ format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name) }}
+          token: ${{ github.token }}
+
+      # Fails closed: the pass is the branch that has to be reached, so a
+      # count that did not arrive — a renamed output, a skipped step — takes
+      # the error branch rather than a green it did not earn.
+      - name: the verdict landed
+        if: ${{ !cancelled() }}
+        run: |
+          if [ "$AFTER" -gt "$BEFORE" ]; then
+            echo "a verdict landed on #$PR"
+          else
+            echo "::error::no verdict landed on #$PR (before=$BEFORE after=$AFTER): the reviewer's turn ended without reviewing, and the request stands"
+            exit 1
+          fi
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          BEFORE: ${{ steps.before.outputs.count }}
+          AFTER: ${{ steps.after.outputs.count }}

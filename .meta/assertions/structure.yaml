@@ -166,6 +166,9 @@ artifacts:
   - id: work:artifact/meta-actions-sweep
     name: .meta/actions/sweep/action.yml
     path: .meta/actions/sweep/action.yml
+  - id: work:artifact/meta-actions-verdicts
+    name: .meta/actions/verdicts/action.yml
+    path: .meta/actions/verdicts/action.yml
   - id: work:artifact/meta-ddd-ontology
     name: .meta/ddd_ontology.yaml
     path: .meta/ddd_ontology.yaml
