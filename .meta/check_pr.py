@@ -11,7 +11,7 @@ the rest of the time.
 
     python .meta/check_pr.py 12          # what CI runs
     python .meta/check_pr.py --file b.md # a body on disk, for watching it fail
-    python .meta/check_pr.py 12 --watch  # one line per change, until it closes
+    python .meta/check_pr.py 12 --watch  # one line per change, exiting on actionable events or when it closes
 
 What a body must contain is **derived from the form**, never listed here. The
 headings come out of the fence in `.meta/templates/pull-request.md`, which is
@@ -468,6 +468,15 @@ def resume(ref):
     return "\n".join(out)
 
 
+# A check that has concluded and did not fail. GitHub reports a check that has
+# not finished with no conclusion at all, and pending is not green: PR First
+# stops a handoff at green, and a pull request whose gate has not answered yet
+# is not one whose gate passed.
+GREEN = {"SUCCESS", "NEUTRAL", "SKIPPED"}
+# Check status/state values that mean the check is still running and has not yet concluded.
+UNCONCLUDED = {"PENDING", "IN_PROGRESS", "QUEUED", "WAITING", "REQUESTED", "EXPECTED"}
+
+
 def snapshot(ref):
     """Everything on a pull request that a watcher compares between polls.
 
@@ -481,6 +490,10 @@ def snapshot(ref):
     comments = {c["id"]: c for c in pr["comments"]}
     reviews = {r["id"]: r for r in pr["reviews"]}
     threads_ = {t["id"]: t for t in threads(ref)}
+    # When multiple check runs share a name (e.g. repeated dispatches or cancelled runs),
+    # order by startedAt so the latest run wins.
+    sorted_checks = sorted(pr.get("statusCheckRollup") or [],
+                           key=lambda c: c.get("startedAt") or c.get("completedAt") or "")
     # A check still running has no conclusion; its status says so, which reads
     # better than a `None` beside a result and is a change worth a line. The
     # run's url rides beside the verdict: a re-run that ends where it started
@@ -489,7 +502,7 @@ def snapshot(ref):
     checks = {c.get("name") or c.get("context"):
               (c.get("conclusion") or c.get("state") or c.get("status") or "PENDING",
                c.get("detailsUrl") or c.get("targetUrl"))
-              for c in pr.get("statusCheckRollup") or []}
+              for c in sorted_checks}
     return pr["number"], pr["state"], comments, reviews, threads_, checks
 
 
@@ -512,7 +525,7 @@ def said(body, limit=300):
 
 
 def watch(ref, every=60):
-    """One line per change on a pull request, until it closes.
+    """One line per change on a pull request, exiting on actionable events or when it closes.
 
     PR First's fourteenth step is to stay subscribed, and until this existed it
     was the one step in the skill with no command behind it — so a session
@@ -528,8 +541,12 @@ def watch(ref, every=60):
     Each line is one event. Nothing is emitted for the first poll except a
     heading, so a watch started on a busy pull request does not replay it; a
     poll that fails is skipped and the next one compares against the last that
-    did not, so nothing is lost across a transient failure. Exits when the pull
-    request merges or closes, which is the subscription ending.
+    did not, so nothing is lost across a transient failure. Exits 0 when the
+    subscription ends (the pull request merges or closes) or when an actionable
+    event arrives (a new review from another author, a new unaddressed comment or
+    thread, or a check failure). Exiting on actionable events completes the
+    background process, waking any harness that resumes on command completion
+    (solorepo's DR-138).
     """
     import time
     previous = None
@@ -547,15 +564,18 @@ def watch(ref, every=60):
                   + ", ".join(f"{k}={v}" for k, (v, _) in checks.items()), flush=True)
         else:
             _, _, p_comments, p_reviews, p_threads, p_checks = previous
+            actionable = []
             for cid in comments.keys() - p_comments.keys():
                 c = comments[cid]
                 if not mine(c["body"]):
                     print(f"comment by {c['author']['login']}: {said(c['body'])}", flush=True)
+                    actionable.append(f"comment by {c['author']['login']}")
             for rid in reviews.keys() - p_reviews.keys():
                 r = reviews[rid]
                 if not mine(r["body"]):
                     print(f"review by {r['author']['login']}: {r['state']} {said(r['body'])}",
                           flush=True)
+                    actionable.append(f"review by {r['author']['login']} ({r['state']})")
             for tid, t in threads_.items():
                 where = (t["path"] or "the pull request") + (f":{t['line']}" if t.get("line") else "")
                 before = p_threads.get(tid)
@@ -565,15 +585,25 @@ def watch(ref, every=60):
                     if last and not mine(last["body"]):
                         who = (last["author"] or {}).get("login", "someone")
                         print(f"thread {tid} on {where} by {who}: {said(last['body'])}", flush=True)
+                        actionable.append(f"thread comment by {who}")
                 if before is not None and t["isResolved"] and not before["isResolved"]:
                     by = (t.get("resolvedBy") or {}).get("login", "someone")
                     print(f"thread {tid} on {where} resolved by {by}", flush=True)
             for name, (value, run) in checks.items():
                 before = p_checks.get(name)
+                is_failure = (value not in GREEN and value not in UNCONCLUDED
+                              and value != "CANCELLED")
                 if before is None or before[0] != value:
                     print(f"check {name}: {value}", flush=True)
+                    if is_failure:
+                        actionable.append(f"check {name} ({value})")
                 elif before[1] != run:
                     print(f"check {name}: {value} again, from a re-run", flush=True)
+                    if is_failure:
+                        actionable.append(f"check {name} ({value})")
+            if actionable:
+                print(f"watch exiting on #{number}: " + ", ".join(actionable), flush=True)
+                return
         if state in ("MERGED", "CLOSED"):
             print(f"pr {state}", flush=True)
             return
@@ -832,11 +862,6 @@ def publish(number, head, problems):
 
 CODER = META.parent / ".github" / "workflows" / "coder.yml"
 LOOPS_BRANCH = re.compile(r"^claude/issue-(\d+)$")
-# A check that has concluded and did not fail. GitHub reports a check that has
-# not finished with no conclusion at all, and pending is not green: PR First
-# stops a handoff at green, and a pull request whose gate has not answered yet
-# is not one whose gate passed.
-GREEN = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 # The difficulties a loop takes, which is what makes a Challenge a loop's and
 # not the solo's. `human` and `hard` are the solo's, and so is a pull request
 # on their Challenge.
@@ -1047,7 +1072,7 @@ if __name__ == "__main__":
     ap.add_argument("--sweep", action="store_true",
                     help="every open pull request you own, and what each still owes")
     ap.add_argument("--watch", action="store_true",
-                    help="one line per change on the pull request, until it closes")
+                    help="one line per change on the pull request, exiting on actionable events or when it closes")
     ap.add_argument("--every", type=int, default=60, help="seconds between polls under --watch")
     ap.add_argument("--all", action="store_true",
                     help="the check on every open pull request, one line each, and who "

@@ -20,7 +20,7 @@ render:
 pr n:
     python3 .meta/check_pr.py {{n}}
 
-# the subscription: one line per change on the pull request, until it closes
+# the subscription: one line per change, exiting on actionable events or when it closes
 watch n:
     python3 .meta/check_pr.py {{n}} --watch
 
