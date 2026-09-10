@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Refuse a read outside the worktree, and a shell command that is not one plain
-command the reviewer is allowed (DR-110).
+command the reviewer is allowed (solorepo's DR-110).
 
 A PreToolUse hook for the container the reviewer runs in. `review.yml` registers
 it through the action's `settings` input and nothing else does, so on a laptop it
-never runs: there the Role's credentials sit beside each other and DR-073 has
+never runs: there the Role's credentials sit beside each other and solorepo's DR-073 has
 already said the machine is no boundary. In the container the run holds one
 token, its input is a diff nobody vetted, and its transcript is a durable log, so
 what the reviewer can read and run is the boundary, and this is the layer that
@@ -230,7 +230,7 @@ def command_allowed(command):
         return "an empty command"
     program = words[0]
     if re.fullmatch(r"\.meta/say/[a-z]+", program):
-        # The channel's programs, by the directory that sanctions them (DR-117).
+        # The channel's programs, by the directory that sanctions them (solorepo's DR-117).
         return None
     if program == "git":
         return git_allowed(words)

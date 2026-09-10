@@ -1,0 +1,66 @@
+decisions:
+  - id: work:decision/124
+    name: "DR-124 · A docstring is prose: every file a portfolio copies is held to the citation form, whatever its suffix"
+    challenge: work:challenge/134
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-check
+    alternatives:
+      - name: Leave the Python as it was
+        chosen: false
+        reason: >-
+          DR-121's fourth consequence, and its reason was that a comment is
+          read beside the code that cites it. The reader it forgot is the one
+          the docstrings are written for — a Job arriving at a portfolio's
+          `check.py` reads its module docstring before any code, and the
+          number there sends it to the portfolio's record, which has a
+          different entry under it or none. The cost named as the trigger
+          lands on the first portfolio that reaches one of those numbers, and
+          nothing would notice when it did.
+      - name: Scan `.py` as well
+        chosen: false
+        reason: >-
+          One more suffix, and it misses the channel's four programs and
+          `.meta/gate`, which are Python with no suffix and carry twenty-eight
+          of the runs between them. A rule stated by suffix is a rule that
+          the next copied file of another kind escapes.
+      - name: Scan every file a portfolio copies, whatever its suffix
+        chosen: true
+        reason: >-
+          The copied set is already read off the Specialization step, and
+          "copied" is the property the rule turns on — a file a portfolio
+          carries verbatim cites solorepo's record from inside a portfolio. A
+          file that will not decode is passed over, which is the one
+          exemption a suffix list was standing in for. What it costs: a
+          hundred and one possessives in the scaffold's own tooling, where
+          every one is a self-reference.
+    consequences:
+      - >-
+        `cited decisions` scans every file in the copied set and under
+        `template/` regardless of suffix, and `.md` and the assertions'
+        YAML everywhere, as before. A regular expression written in code
+        that spells `DR-` followed by `\d{3}` is not a citation and matches
+        nothing; a docstring that spells a number is, and is held.
+      - >-
+        The eleven files are swept by the same pass #130 made: the possessive
+        on the first number of a run, code spans untouched. A `--help` that
+        cited a decision now cites solorepo's.
+      - >-
+        DR-121's fourth consequence recorded the Python as left and named this
+        change's trigger; that consequence is answered here and not amended
+        there, since the record is what was decided and when.
+    falsifier: >-
+      A number in a copied file that means the reader's record rather than
+      solorepo's — a threshold, a starting number — held to a form it does
+      not mean. Two turned up in `check.py` on the first sweep, the
+      `OPTIONS_REQUIRED_FROM` boundary and the entry every record starts at,
+      and neither trips the gate, since the number resolves either way. A
+      code span is the exemption, and it holds only for as long as such
+      numbers are few enough to be read one by one; a copied file full of
+      them — a fixture, a table — would want the exemption stated as a rule,
+      which is where this rule would be restated.
+    rationale: |-
+      Christopher took #134 up as a layer on #133 the same day it was filed,
+      which answered the question the Issue asked: a comment is prose.

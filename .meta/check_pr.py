@@ -24,7 +24,7 @@ cannot close over an observation that has nowhere to live afterwards.
 
 The same shape holds the other direction. Every item under *what it closes*
 carries one of GitHub's closing keywords, so the merge closes the Challenge the
-pull request finished and no one has to remember a second act (DR-089).
+pull request finished and no one has to remember a second act (solorepo's DR-089).
 """
 import argparse
 import json
@@ -115,7 +115,7 @@ def check(title, body):
 
     # What the merge closes. The heading's items carry a closing keyword or the
     # Issue stays open after the pull request that finished it has merged —
-    # which is how #26 sat open until a verb was written to close it (DR-089).
+    # which is how #26 sat open until a verb was written to close it (solorepo's DR-089).
     closing = found.get(CLOSES, "")
     if closing and not NONE.match(closing):
         items = [m.group(1).strip() for m in BULLET.finditer(closing)]
@@ -195,7 +195,7 @@ def pull(ref):
     the threads readable at all: A16 only ever answered pass or fail, so the
     thing that knows how to ask GitHub what was said could not be asked to say
     it. The reviews ride in the same query because a verdict is the other half
-    of what was said, and the one half that names a head (DR-118).
+    of what was said, and the one half that names a head (solorepo's DR-118).
     """
     owner, name = gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"].split("/")
     number = gh("pr", "view", ref, "--json", "number")["number"]
@@ -255,7 +255,7 @@ def unaddressed(nodes, parked=False, limit=600):
     marker. That is usually right, since a reply means it is live again, and
     re-marking is one line.
 
-    An outdated thread is still unaddressed (DR-057) and is marked rather than
+    An outdated thread is still unaddressed (solorepo's DR-057) and is marked rather than
     filtered: the anchor moving is the reader's context, not a reason to skip it.
     """
     out = []
@@ -295,7 +295,7 @@ def verdicts(reviews):
 
     A body that says which head it reviewed is a convention the next run has
     to trust; the commit a review was submitted on is a fact GitHub holds, and
-    it is what a re-review reads to know what it has already seen (DR-118).
+    it is what a re-review reads to know what it has already seen (solorepo's DR-118).
     The review a `raise` posts under — no verdict, no body — says nothing and
     is left out; there is one per raise and per reply, which is why the query
     asks for the newest hundred and not the oldest (#123). Newest first, and
@@ -322,7 +322,7 @@ def owned_and_open():
 
     Resolved by **branch**, because the branch is where the Job already is: one
     branch, one pull request, by construction, and it is what an agent wakes up
-    on — whoever authored it. Authorship cannot do this job — since DR-107 a
+    on — whoever authored it. Authorship cannot do this job — since solorepo's DR-107 a
     pull request is authored by the Role's account, not the solo's, so
     `--author @me` only narrows to this Role's own pull requests and says
     nothing about which one this thread is answerable for.
@@ -353,7 +353,7 @@ def residue():
     """Local branches that outlived their pull request, and the worktrees on them.
 
     GitHub deletes a merged branch and nothing deletes the local one, so every
-    checkout accumulates them (DR-108): a branch per pull request, a worktree
+    checkout accumulates them (solorepo's DR-108): a branch per pull request, a worktree
     per session, and a listing the next Job reads through before finding its
     own. The predicate is the remote being gone after a prune — a branch that
     was never pushed is work in progress and is not named here.
@@ -506,7 +506,7 @@ def watch(ref, every=60):
     PR First's fourteenth step is to stay subscribed, and until this existed it
     was the one step in the skill with no command behind it — so a session
     improvised a poll, or reported that it could not hold one without having
-    tried (DR-102). This is the subscription. Keeping it running is the
+    tried (solorepo's DR-102). This is the subscription. Keeping it running is the
     harness's business: it is a process that prints, and any harness that can
     keep a process alive and be woken by a line it prints can hold it.
 
@@ -595,7 +595,7 @@ def parties(thread):
     sentence of theatre per thread, which is how a rule gets routed around.
 
     It is trustworthy only while an agent does not resolve a thread it is the
-    sole author of. Each Role has an account (DR-066, DR-107), so `resolvedBy`
+    sole author of. Each Role has an account (solorepo's DR-066, DR-107), so `resolvedBy`
     tells a Role from the solo and from another Role; within one Role two Jobs
     share a login and only the Trailer tells them apart, which is why the
     channel refuses on the Trailer rather than the login.
@@ -697,7 +697,7 @@ def from_github(ref):
 def gate(ref):
     """The pull request check, whole: the body against the form, A16, A19 and
     the required contexts. One function because it is run from two places —
-    on the push, and on the clock (DR-105) — and two copies would be two gates."""
+    on the push, and on the clock (solorepo's DR-105) — and two copies would be two gates."""
     title, body = from_github(ref)
     return (check(title, body) + resolved_without_an_answer(ref)
             + unsigned_commits(ref) + required_contexts())

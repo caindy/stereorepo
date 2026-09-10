@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""What changes state on GitHub: the transitions (DR-117).
+"""What changes state on GitHub: the transitions (solorepo's DR-117).
 
 An Issue filed, triaged, moved between levels, claimed or handed back; a pull
 request opened, layered, revised, merged or advanced; a review requested; a
 Milestone set. Each is one step of a Discipline and refuses its own misuse
-(DR-116): `file` lands `challenge` and the difficulty in one act, `stop` asks its
+(solorepo's DR-116): `file` lands `challenge` and the difficulty in one act, `stop` asks its
 refusal before it posts, `open --on` links the layer it opens, `merge --auto`
 advances before it arms. Every outcome is read back from GitHub, per A6: the act
 is what GitHub shows afterwards, not what `gh` returned. What is *said* — a
@@ -30,7 +30,7 @@ def relabel(issue, add=(), remove=()):
 
     Not a verb. The labels an agent moves are the difficulty and nothing else,
     and `difficulty` says what a legal move is; a verb that took any label
-    took `medium` without `challenge`, which is #113 (DR-116).
+    took `medium` without `challenge`, which is #113 (solorepo's DR-116).
     """
     cmd = ["issue", "edit", str(issue)]
     for name in add:
@@ -62,7 +62,7 @@ def challenge_labels(issue):
 
 def difficulty(issue, level):
     """Set a Challenge's difficulty: the raiser's estimate, moved by the raiser
-    downward or by a loop to `human` (DR-112).
+    downward or by a loop to `human` (solorepo's DR-112).
 
     One level at a time, so the Issue never carries two, and never on an Issue
     that is not a Challenge: the coder loop takes an Issue on the event of its
@@ -115,7 +115,7 @@ def file_issue(title, body, level=None, roadmap=False):
     words — so one act here is the one event `coder.yml` watches.
 
     The first line is read before anything is created. `just next` reads
-    `**Waits on.**` from the first line of both forms (DR-114), and an Issue
+    `**Waits on.**` from the first line of both forms (solorepo's DR-114), and an Issue
     filed without it waits on nothing anyone can see.
     """
     first = body.lstrip().split("\n", 1)[0]
@@ -138,7 +138,7 @@ def file_issue(title, body, level=None, roadmap=False):
 def claim(issue):
     """Take an Issue: assign it to this Role's account, and read back.
 
-    A loop claims by assignment (DR-112). It is an act GitHub records, so it
+    A loop claims by assignment (solorepo's DR-112). It is an act GitHub records, so it
     goes through here, as the Role whose token this is.
     """
     login = channel.login()
@@ -166,7 +166,7 @@ def release(issue):
 
 
 def stop(issue, body):
-    """Where a loop stopped and why, handed to the solo (DR-112): the refusal,
+    """Where a loop stopped and why, handed to the solo (solorepo's DR-112): the refusal,
     the comment, the release, the move to `human`.
 
     The order is by what a failure after each act leaves behind. The refusal
@@ -189,7 +189,7 @@ def milestone(issue, title, clear=False):
     """Put an Issue in a Milestone, creating the Milestone when it is new, and
     read back.
 
-    A Milestone is where the priority between Issues is written once (DR-114);
+    A Milestone is where the priority between Issues is written once (solorepo's DR-114);
     `just next` lists the lowest-numbered open one as next. Creating one is an
     act GitHub records against an account, and `gh` has no verb for it, so it
     goes through here like every other write.
@@ -255,13 +255,13 @@ def stacked(pr):
 def link(below, above):
     """Link one pull request onto another as the layer above it, as the Role.
 
-    Linking is an act GitHub records, like a merge (DR-075), so it goes through
+    Linking is an act GitHub records, like a merge (solorepo's DR-075), so it goes through
     here, and it is not a verb: a layer is opened linked, `open --on`, or made
     one, `layer --on`, and the link is half of either. Open, then link, was a
-    composition a caller assembled by hand and could leave half done (DR-116).
+    composition a caller assembled by hand and could leave half done (solorepo's DR-116).
     `gh stack submit` opens pull requests unsigned and stays blocked. After a
     layer merges, GitHub rebases the layers above it, which is the whole reason
-    for a stack over a hand-built one (DR-100).
+    for a stack over a hand-built one (solorepo's DR-100).
     """
     print(channel.gh("stack", "link", str(below), str(above), parse=False))
 
@@ -274,7 +274,7 @@ def layer(pr, below):
     """Make an open pull request a layer on another: retarget its base onto the
     lower layer's branch, and link the two.
 
-    A pull request opened against trunk and found to wait on another (DR-100)
+    A pull request opened against trunk and found to wait on another (solorepo's DR-100)
     is retargeted rather than closed and reopened: it is merged, never
     abandoned, and the edit is an act GitHub records. Retargeting without
     linking left a pull request whose base was a branch GitHub would not
@@ -319,7 +319,7 @@ def behind_by(pull):
     GitHub computes it when it is asked for, so the first read after a push to
     trunk is `UNKNOWN`; and `BLOCKED` outranks `BEHIND`, so a pull request
     waiting on a review reports the review and hides the fact that it is also
-    out of date — which is every `medium` pull request (DR-112), and the case
+    out of date — which is every `medium` pull request (solorepo's DR-112), and the case
     where nobody is watching. A comparison answers what is actually being
     decided: whether the head is missing commits the base has. GitHub answers
     that the same way whatever else is outstanding.
@@ -342,14 +342,14 @@ def advance(pr=None, held=False):
     arming, since a branch can be behind before it is armed as easily as
     after; the other edge is `.github/workflows/advance.yml`, which runs this
     on every push to trunk, the one event that puts a pull request in that
-    state (DR-113). Both edges are covered, so nobody should have to type this
+    state (solorepo's DR-113). Both edges are covered, so nobody should have to type this
     — it takes a pull request number for the day one is behind for a reason
     neither edge saw.
 
     **Armed, and nothing else**, whether one pull request was named or none.
     A pull request nobody has asked to land is not waiting on anything, and the
     rebase below rewrites commits under whatever session still holds the branch.
-    Arming is the last act of the Job that did the work (DR-112), so an armed
+    Arming is the last act of the Job that did the work (solorepo's DR-112), so an armed
     branch is one nobody is still standing on. The filter used to be the sweep's
     alone and the explicit argument rebased whatever it was handed — which left
     the property holding on the path nothing calls and not on the one
@@ -450,7 +450,7 @@ def merge(pr, stack=False, auto=False):
     including this one, atomically, and let GitHub rebase the rest.
 
     Not an utterance, and still the channel's. Merging is an act by the Role —
-    DR-072 puts it in an agent's hands and DR-075 puts the act through here — so
+    solorepo's DR-072 puts it in an agent's hands and solorepo's DR-075 puts the act through here — so
     it is the Role that GitHub should record as having done it, and the squash
     commit that lands on trunk carries that account rather than the solo's.
 
@@ -458,7 +458,7 @@ def merge(pr, stack=False, auto=False):
     the squash from the commits, and #27 landed on `main` under a subject that
     was not its title (#26), which is the label the index carries — and a label
     on trunk cannot be rewritten. The body is left to GitHub, so the Trailers on
-    the branch's commits ride into the squash as before (DR-062).
+    the branch's commits ride into the squash as before (solorepo's DR-062).
 
     `--delete-branch` is not used. It makes `gh` check out `main` locally after
     the merge, which fails from a worktree because `main` is already checked out
@@ -582,7 +582,7 @@ def merge(pr, stack=False, auto=False):
     if stack:
         # GitHub's stack merge: everything up to and including this layer, all
         # or nothing, and the layers above are rebased by GitHub rather than by
-        # hand (DR-100). It takes no subject; trunk's label rests on the
+        # hand (solorepo's DR-100). It takes no subject; trunk's label rests on the
         # repository's squash-title setting, which is why the label is read
         # back below rather than assumed.
         channel.gh("stack", "merge", pr, "--squash", "--yes", parse=False)

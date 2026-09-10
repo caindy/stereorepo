@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What to work on next, on one screen, read from GitHub (DR-114).
+"""What to work on next, on one screen, read from GitHub (solorepo's DR-114).
 
 The question opens most sessions, and answering it by hand meant reading
 eleven Issue bodies to learn four things: what waits on what, whether the
@@ -17,7 +17,7 @@ What it reads, and from where:
   as prose — a Decision, an account — keeps the Issue waiting until somebody
   rewrites the line. An Issue with no such line is shown as `?`, which is the
   form asking for it.
-- **Difficulty.** The label DR-112 made the raiser's estimate. A Challenge
+- **Difficulty.** The label solorepo's DR-112 made the raiser's estimate. A Challenge
   without one is invisible to the coder, and `--check` refuses that so the
   queue cannot empty without anyone noticing.
 - **Milestone.** GitHub's, with the lowest number next. The priority is
@@ -62,7 +62,7 @@ def waits_on(body):
     """The blockers an Issue declares: a list of numbers, or a string when the
     line names something that is not an Issue, or None when there is no line.
 
-    The roadmap form carried the same fact as a paragraph before DR-114, so
+    The roadmap form carried the same fact as a paragraph before solorepo's DR-114, so
     that paragraph is read too, for the Issues filed under it."""
     m = WAITS.search(body or "") or OLD_WAITS.search(body or "")
     if not m:
@@ -195,7 +195,7 @@ def check():
     missing = untriaged(issues())
     if missing:
         print(f"x  triage — {len(missing)} Challenge(s) carry no difficulty; "
-              "the coder cannot see them (DR-112)")
+              "the coder cannot see them (solorepo's DR-112)")
         for i in missing:
             print(row(i))
         return 1

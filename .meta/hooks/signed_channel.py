@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refuse any path to GitHub that does not sign what it posts (DR-069).
+"""Refuse any path to GitHub that does not sign what it posts (solorepo's DR-069).
 
 A PreToolUse hook, so the harness runs it rather than the agent remembering to.
 `.claude/settings.json` denies `gh`'s writing verbs and permits its read-only
@@ -30,14 +30,14 @@ import sys
 # Role did it rather than which human owns the credential. `update-branch` is
 # the same kind and one further: by hand it defaults to a merge commit GitHub
 # authors, which names no Actor at all and fails A19 on the branch it moved
-# (DR-113). The stack extension's verbs that write — link, merge, submit and
-# the rest — are acts of the same kind (DR-100); `submit` also opens pull
+# (solorepo's DR-113). The stack extension's verbs that write — link, merge, submit and
+# the rest — are acts of the same kind (solorepo's DR-100); `submit` also opens pull
 # requests unsigned. Its views stay open.
 ENDPOINT = re.compile(r"api\.github\.com|graphql\.github\.com")
 GH_WRITES = re.compile(r"\bgh\s+(api|pr\s+(comment|review|create|edit|merge|close|update-branch)"
                        r"|issue\s+(create|comment|edit|close)"
                        r"|stack\s+(link|merge|submit|unstack|delete|push|sync|rebase))\b")
-# The channel is a directory of programs over one signing primitive (DR-117),
+# The channel is a directory of programs over one signing primitive (solorepo's DR-117),
 # so what is sanctioned is the directory: a program added beside `post` and
 # `move` is sanctioned by where it lives, not by a name added here.
 SANCTIONED = re.compile(r"\.meta/(say/|check_pr\.py\b)")

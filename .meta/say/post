@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""What is said on GitHub, under the Trailer: the utterances (DR-117).
+"""What is said on GitHub, under the Trailer: the utterances (solorepo's DR-117).
 
 A comment, a thread on the diff, a reply, an answer, a promotion, what landed,
 and the reviewer's verdict. Each is one step of a Discipline and refuses its own
-misuse (DR-116): `answer` replies and resolves, and refuses when this Actor is
+misuse (solorepo's DR-116): `answer` replies and resolves, and refuses when this Actor is
 the thread's sole author; `notice` supplies the marker and the mention; `promote`
 files the Issue before the thread says it did; `landed` is rendered from the
 record and never typed. What changes state without saying anything — a claim, a
@@ -80,7 +80,7 @@ def notice(pr, path, line, text):
     purpose from one owed an answer, and `check_pr.py` reads it from the
     *last* comment; the mention is who decides what it is. Both are supplied
     here rather than typed, so a notice is never one a reader mistakes for a
-    question (DR-116).
+    question (solorepo's DR-116).
     """
     raise_thread(pr, path, line, channel.signed(f"{NOTICED} @{solo()}\n\n{text}"))
 
@@ -204,7 +204,7 @@ def closed_by(pr):
 
 def landed(pr):
     """Post what landed for every Challenge the pull request closes, rendered
-    from the record and never typed (PR First, DR-084).
+    from the record and never typed (PR First, solorepo's DR-084).
 
     One comment per Challenge the record asserts. A body that says `None.`
     closes nothing and has nothing to post, which is allowed and is a question

@@ -3,9 +3,9 @@
 
 `disciplines.md` and `vocabulary.md` list things that `.meta/assertions/` already
 holds. Maintaining both by hand is the drift these Disciplines exist to prevent,
-so the prose derives and the assertions are the source (DR-026). The decision
-record joined them once it too was assertions (DR-059), and PR First compiles the
-same way into a skill (DR-060).
+so the prose derives and the assertions are the source (solorepo's DR-026). The decision
+record joined them once it too was assertions (solorepo's DR-059), and PR First compiles the
+same way into a skill (solorepo's DR-060).
 
     uvx --with pyyaml python .meta/render.py           # write
     uvx --with pyyaml python .meta/render.py --check   # fail if stale
@@ -333,7 +333,7 @@ def landed(number):
 
 
 def decisions():
-    """The index to the record, and the only thing rendered from it (DR-082).
+    """The index to the record, and the only thing rendered from it (solorepo's DR-082).
 
     An entry is its assertion file, so rendering one as markdown made a second
     copy and nothing else. What survives is what a directory listing cannot do:
@@ -376,7 +376,7 @@ def decisions():
         if d.get("status") == "SUPERSEDED":
             status = f"Superseded by {_link(rows, d['superseded_by'])}"
         title = d["name"].split(" · ", 1)[-1]
-        # The level, where it is not the Portfolio's (DR-093).
+        # The level, where it is not the Portfolio's (solorepo's DR-093).
         for level in ("product", "project"):
             if d.get(level):
                 title += f" · {levels.get(d[level], d[level])}"
@@ -424,7 +424,7 @@ def decision_form():
     """The form for an entry, rendered from the same class the record uses.
 
     One class at three levels — the Portfolio's, a Product's, a Project's —
-    told apart by what the entry names (DR-059, DR-093), so the form's headings
+    told apart by what the entry names (solorepo's DR-059, DR-093), so the form's headings
     are the model's slots and its guidance is their descriptions. Typing them
     here as well would be the copy that disagrees — and the copy that keeps a
     form asking for something the model stopped requiring.
@@ -494,7 +494,7 @@ def verb_line(program, verb, role=None):
 
 
 def skill(name, discipline, trigger, commands, forms=(), role=None):
-    """A Discipline, compiled for this harness, and for one Role (DR-117).
+    """A Discipline, compiled for this harness, and for one Role (solorepo's DR-117).
 
     A skill is a Discipline plus the commands that carry it out, in the shape one
     harness loads on demand. Everything here is read from the assertions — the
@@ -509,7 +509,7 @@ def skill(name, discipline, trigger, commands, forms=(), role=None):
     whole Discipline's, which is `disciplines.md`'s.
 
     Only the Claude Code target is emitted. The frontmatter an APM primitive
-    wants is still unverified (DR-040), and writing plausible field names would
+    wants is still unverified (solorepo's DR-040), and writing plausible field names would
     be worse than the gap; this is the same compilation at the scale that can be
     tested today.
     """
@@ -565,7 +565,7 @@ BODY = [("The body", "pull-request.md",
 def pr_first_skill():
     """The coder's reading. `/pr-first` and not `/pr-first-coder`, because the
     coder is the channel's default Role too: a session that names no Role is
-    the coder's, in what it types and in what it reads (DR-117)."""
+    the coder's, in what it types and in what it reads (solorepo's DR-117)."""
     return skill(
         "pr-first", "PR First",
         ["Open, argue in and close a pull request the way this repository requires,",
@@ -578,7 +578,7 @@ def pr_first_skill():
 
 def pr_first_reviewer_skill():
     """The reviewer's reading: its verbs, the form a pull request is held to,
-    and the judgement a reviewer's point is owed (DR-117)."""
+    and the judgement a reviewer's point is owed (solorepo's DR-117)."""
     return skill(
         "pr-first-reviewer", "PR First",
         ["Review a pull request the way this repository requires, as the reviewer",
@@ -591,13 +591,13 @@ def pr_first_reviewer_skill():
 def justfile():
     """The root's verb surface, rendered so that the one line in it that names
     anything comes from the assertions rather than a list kept beside them
-    (DR-106).
+    (solorepo's DR-106).
 
     Every recipe invokes a tool under `.meta/` and implements nothing; `just
     --list` is the index. The doc comment on `gate` names what the runner
     takes, read from the Projects and Products asserted, which is the line
     that would otherwise drift when a Project is added. Never copied into a
-    seed: a verb in every Project is what DR-092 rejected.
+    seed: a verb in every Project is what solorepo's DR-092 rejected.
     """
     structure = load("assertions/structure.yaml") or {}
     tail = lambda p: p["id"].rsplit("/", 1)[-1]

@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uvx --with pyyaml python
-"""One verb for every Project's gate, and a gate for a Product (DR-104).
+"""One verb for every Project's gate, and a gate for a Product (solorepo's DR-104).
 
     .meta/gate                       every Project the assertions declare
     .meta/gate meta                  one Project, by the tail of its id or its path
@@ -13,7 +13,7 @@ runner reads both, so the verb is the same in every Project and a Product is
 red when any Project under it is.
 
 It reads what a gate **prints**, not what it exits with. Every gate here
-reports each step in one shape (A21, DR-092): `ok`, `x` or `?`, then the step,
+reports each step in one shape (A21, solorepo's DR-092): `ok`, `x` or `?`, then the step,
 then what it covered, found, or could not do. The runner parses those lines as
 they stream, re-prints them under the Project's name, and passes everything
 else — cargo's build noise, uv's resolution — through to stderr where it was

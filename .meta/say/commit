@@ -4,9 +4,9 @@
     .meta/say/commit -m <subject> [< body]
 
 The branch nominates the Job, the Trailer nominates the Actor, and the squash
-carries both (DR-062).
+carries both (solorepo's DR-062).
 
-A `prepare-commit-msg` hook did this until DR-074, and it worked by reading
+A `prepare-commit-msg` hook did this until solorepo's DR-074, and it worked by reading
 variables the harness happened to put in the environment. That is inherited
 process ancestry, not a design: it discriminated correctly only because the
 solo's own shell had never been given those variables, which was luck rather
@@ -17,7 +17,7 @@ is worse than none, and it looks identical to a real one.
 So the channel composes what it knows. A commit made outside it is unsigned,
 which is honest, and A19 catches it on the pull request — which was always
 where the guarantee lived. Git's, and not GitHub's, which is why it is a program
-of its own rather than a verb of `post` or `move` (DR-117).
+of its own rather than a verb of `post` or `move` (solorepo's DR-117).
 """
 import os
 import pathlib

@@ -9,13 +9,13 @@ manufactured the second party A16 asks for. That defect is not an oversight to
 remember harder about; it is what happens when signing is an act rather than a
 property of the channel.
 
-So this is the channel (DR-069). It appends the Trailer itself, from the
+So this is the channel (solorepo's DR-069). It appends the Trailer itself, from the
 environment, and refuses to speak when the environment does not say who is
 speaking. There is no argument for the identity, deliberately: what a caller can
 pass, a caller can pass wrongly.
 
 It is a module, not a verb surface. The programs beside it import it, and each
-holds one concern (DR-117): `post` says things — comments, threads, answers,
+holds one concern (solorepo's DR-117): `post` says things — comments, threads, answers,
 what landed, the reviewer's verdict; `move` changes what GitHub holds — claims,
 levels, layers, merges, handoffs; `commit` is git's; `whoami` answers which
 login this speaks as. None of them reads a credential or composes a Trailer:
@@ -26,7 +26,7 @@ First is compiled from it, so `/pr-first` lists the coder's verbs and
 
 `--role` names which Role speaks, coder by default: its credential is
 `~/.config/solorepo/<role>.env`, and its login is `<owner>-<repo>-<role>`, so a
-Role is one word said once (DR-107). `SOLOREPO_ROLE_ENV` names a file outright
+Role is one word said once (solorepo's DR-107). `SOLOREPO_ROLE_ENV` names a file outright
 and wins.
 
 Bodies come from stdin rather than the command line: the text is usually long,
@@ -42,7 +42,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-# Outside the tree, per role and per machine (DR-073). `speak_as` points
+# Outside the tree, per role and per machine (solorepo's DR-073). `speak_as` points
 # ROLE_ENV at the Role named by --role; the environment variable names a file
 # and wins.
 ROLE_DIR = pathlib.Path("~/.config/solorepo").expanduser()
@@ -103,7 +103,7 @@ _siblings = {}
 def actor():
     """**Who** is speaking: the session, and nothing else.
 
-    A workload identity, attested for one run (DR-086). A Role account will hold
+    A workload identity, attested for one run (solorepo's DR-086). A Role account will hold
     the principal identity and say which Role acted; it cannot say which run did
     the work, because one account serves many sessions. The key reads `Actor:`
     because it names the entity, not the identity it carries.
@@ -243,7 +243,7 @@ def login():
 def role_login(role):
     """The account a Role holds, by name and not by reading anything.
 
-    `<owner>-<repo>-<role>` is DR-107's convention, and it is what lets the
+    `<owner>-<repo>-<role>` is the convention solorepo's DR-107 set, and it is what lets the
     coder name the reviewer without touching the reviewer's token — which on
     this machine it could read, and must not.
     """

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The gate for the .meta Project (DR-029).
+"""The gate for the .meta Project (solorepo's DR-029).
 
 Invariants stated in the schemas and enforceable by none of them. Some cross a
 path LinkML cannot traverse; one crosses a file boundary, because two tree roots
@@ -100,7 +100,7 @@ class Strict(yaml.SafeLoader):
     """A loader that notices a key written twice.
 
     PyYAML takes the last of a repeated key without a word, so an editing slip
-    becomes a value that is right by luck rather than by construction (DR-053). It was
+    becomes a value that is right by luck rather than by construction (solorepo's DR-053). It was
     right by luck once here — a script that added `broader` to concepts that
     already had one left 29 duplicates, every pair identical, and the render was
     correct for no reason anyone had checked.
@@ -128,7 +128,7 @@ def duplicate_keys():
     seeded workflow, whose one typo `safe_load` will not report is this one: a
     second `steps:` under a job parses, the last wins, and the block that
     checks out the tree is dropped without a word. `.yml` under `.meta/` too,
-    since DR-120 put the composite actions there: a second `steps:` in the
+    since solorepo's DR-120 put the composite actions there: a second `steps:` in the
     sweep's action takes the publish out of the sweep, and the two workflow
     stubs stay identical, so nothing else would say (#129)."""
     problems = []
@@ -260,7 +260,7 @@ def tree():
 
 
 def surviving_placeholders():
-    """No template token survives anywhere outside `template/` (DR-034).
+    """No template token survives anywhere outside `template/` (solorepo's DR-034).
 
     Scanning only the files `template/` shadows was exact and also useless:
     Specialization deletes `template/` before running the gate, so by the time
@@ -321,12 +321,12 @@ def template_parses(views):
 
 
 def one_context_per_portfolio(index):
-    """A portfolio is exactly one Bounded Context, by construction (DR-014).
+    """A portfolio is exactly one Bounded Context, by construction (solorepo's DR-014).
 
     The slot stays multivalued because `DddModel` is generic DDD and a Context
     Map legitimately holds many — solorepo's own map has three. What is singular
     is a portfolio's *own* context, so that is checked rather than typed
-    (DR-037): one declaration in `domain_vocabulary.yaml`, and the Portfolio
+    (solorepo's DR-037): one declaration in `domain_vocabulary.yaml`, and the Portfolio
     names it.
     """
     problems = []
@@ -351,7 +351,7 @@ OPTIONS_REQUIRED_FROM = 60
 A ratchet, and a number rather than a date because the entries recording the
 conversion were written the same day it landed. Everything below this line was
 converted from prose that never named an alternative, and backfilling one would
-be inventing a rejection, which DR-050 forbids. Everything at or above it was
+be inventing a rejection, which solorepo's DR-050 forbids. Everything at or above it was
 written against a class that says what a Decision is, so an accepted entry
 naming no alternative is a non-decision and fails.
 
@@ -361,7 +361,7 @@ justified at the moment it is made and paid for afterwards.
 
 
 def decision_alternatives(index):
-    """One option is chosen, and it is stated at all from DR-060 onward.
+    """One option is chosen, and it is stated at all from `DR-060` onward.
 
     A recommendation is held to the same rule as something in force. It is the
     closing of the alternatives that makes a decision, and that happens when the
@@ -431,7 +431,7 @@ def decision_supersession(index):
 
 def decision_level(index):
     """A Decision is the Portfolio's, a Product's or a Project's, and not two of
-    these (DR-093).
+    these (solorepo's DR-093).
 
     The level is who shares the matter, and an entry naming both a Product and
     a Project claims two readerships for one question. Each slot is typed and
@@ -510,7 +510,7 @@ def reserved_article_numbers(index):
     problems = [f"A{n} is retired and issued again; a retired number is reserved forever"
                 for n in sorted(retired & live)]
     # The pointer to the account is prose, `solorepo's DR-085`, since the entry
-    # is solorepo's and the Charter goes to every portfolio (DR-121). A string
+    # is solorepo's and the Charter goes to every portfolio (solorepo's DR-121). A string
     # slot is a slot nothing resolves, so the form is held here and the number
     # by `cited decisions`, which together are what the reference check was.
     problems += [f"A{r['number']}: retired_by is {r.get('retired_by')!r}, and the account "
@@ -520,7 +520,7 @@ def reserved_article_numbers(index):
 
 
 def enacted_decisions(index):
-    """A20. An adopted decision names an Artifact that carries its rule (DR-078).
+    """A20. An adopted decision names an Artifact that carries its rule (solorepo's DR-078).
 
     Whether the Artifact exists is a reference, resolved with every other. What
     is left here is the arithmetic no schema states: ADOPTED means in force, and
@@ -546,24 +546,26 @@ SCAFFOLD = "work:portfolio/solorepo"
 
 
 def cited_decisions(index):
-    """A DR cited in prose resolves to an entry of the record it names (DR-121).
+    """A DR cited in prose resolves to an entry of the record it names (solorepo's DR-121).
 
     An Article citation is a typed reference and has been checked since the
     references check existed; a DR citation is plain text in a paragraph, and
-    nothing looked at it. `roadmap.md` cited DR-058 in three places for an entry
+    nothing looked at it. `roadmap.md` cited solorepo's DR-058 in three places for an entry
     nobody wrote, and the collision was found only because that was the next
     number to issue.
 
     The assertions are scanned along with the prose. A citation inside a
     `rationale` block is a paragraph that a reader reaches directly, now that the
     entry is its own file, so it is held to the same rule rather than exempted
-    for being stored as YAML. So are the schemas, the workflows and the actions,
-    because a portfolio copies them, and what it copies is scanned for the
-    reason below. A code span is a path or a form, not a citation.
+    for being stored as YAML. So is every file a portfolio copies, whatever its
+    suffix — the schemas, the workflows, the actions, and the Python, whose
+    docstrings are the prose a reader of `check.py` reaches first (solorepo's DR-124) —
+    because what it copies is scanned for the reason below. A code span is a
+    path or a form, not a citation.
 
     Whose record. The Charter, the schemas, the templates and the pages rendered
     from them are copied into every portfolio, and a portfolio's record starts
-    again at DR-001 — the seed's own entry says so. A bare `DR-104` in a copied
+    again at `DR-001` — the seed's own entry says so. A bare `DR-104` in a copied
     file is solorepo's where it was written and reads as the portfolio's on the
     day its record reaches a hundred and four: the citation that silently comes
     to mean something else, which the Charter holds worse than one that dangles,
@@ -582,8 +584,8 @@ def cited_decisions(index):
     home = SCAFFOLD in index
     seed = {m.group(1) for path in (TEMPLATE / ".meta" / "assertions" / "decisions").glob("DR-*.yaml")
             if (m := DR.search(path.name))}
-    # `justfile` has no suffix and is not copied: `render.py` writes it into a
-    # portfolio from its own literals, which is the same arrival by another door.
+    # `justfile` is not copied: `render.py` writes it into a portfolio from its
+    # own literals, which is the same arrival by another door.
     copied = {ROOT / "justfile"}
     for token in inherited():
         base = ROOT / token if (ROOT / token).exists() else META / token
@@ -593,9 +595,8 @@ def cited_decisions(index):
         if path.is_symlink() or not path.is_file() or ".git" in path.parts:
             continue
         seeded = TEMPLATE in path.parents
-        scanned = path.suffix == ".md" or path == ROOT / "justfile" or (
-            path.suffix in (".yaml", ".yml")
-            and (seeded or path in copied or (META / "assertions") in path.parents))
+        scanned = path.suffix == ".md" or path in copied or seeded or (
+            path.suffix in (".yaml", ".yml") and (META / "assertions") in path.parents)
         if not scanned:
             continue
         try:
@@ -618,7 +619,7 @@ def cited_decisions(index):
 
 
 def report(label, problems):
-    """One step, one line, in the shape A21 names (DR-092), and its problems under it."""
+    """One step, one line, in the shape A21 names (solorepo's DR-092), and its problems under it."""
     print(("x  " if problems else "ok ") + label + (f" ({len(problems)})" if problems else ""))
     for p in problems:
         print(f"     {p}")
@@ -633,7 +634,7 @@ def hook_probes():
     found two holes in `worktree_only.py` on the pull request that added it,
     each by running a command in the container (#86). Each of those commands
     is here, with the innocent neighbour it must not catch, so the next
-    edit to either predicate meets them before a run does (DR-110).
+    edit to either predicate meets them before a run does (solorepo's DR-110).
     """
     import importlib.util
 
@@ -656,7 +657,7 @@ def hook_probes():
         # covers and would have passed with `advance` spelled anything at all.
         # `gh pr view` below is `update-branch`'s innocent neighbour — the one
         # a `gh\s+pr\b` written a shade too wide would catch (#98). The
-        # directory is what is sanctioned (DR-117): a program beside `post` is
+        # directory is what is sanctioned (solorepo's DR-117): a program beside `post` is
         # sanctioned by where it lives, and the old one-file name is not.
         ("allow", not signed.blocked(".meta/say/post comment 1")),
         ("allow", not signed.blocked(".meta/say/move merge 1 --auto")),
@@ -706,7 +707,7 @@ def hook_probes():
         ("refuse", bool(worktree.blocked("Bash", {"command": ".meta/say/post raise 1 x 2 <<'EOF'\nno closing line"}))),
         ("refuse", bool(worktree.blocked("Bash", {"command": "git format-patch --output-directory=/tmp/x HEAD~1"}))),
         ("allow", not worktree.blocked("Bash", {"command": ".meta/say/post raise 1 x 2 <<'EOF'\nfinding\nEOF\n"})),
-        # The channel is its directory's programs and nothing else (DR-117):
+        # The channel is its directory's programs and nothing else (solorepo's DR-117):
         # not the one-file name it used to have, and not a path out of it.
         ("refuse", bool(worktree.blocked("Bash", {"command": ".meta/say raise 1 x 2 <<'EOF'\nfinding\nEOF\n"}))),
         ("refuse", bool(worktree.blocked("Bash", {"command": ".meta/say/../check.py"}))),
@@ -757,7 +758,7 @@ def hook_probes():
 
 def load_channel():
     """`.meta/say/` as modules, for the probes below: the signing primitive and
-    every program beside it, by the table's names (DR-117).
+    every program beside it, by the table's names (solorepo's DR-117).
 
     The programs have no `.py` and are programs rather than libraries, so the
     primitive's own loader is used, which is how they import each other.
@@ -991,7 +992,7 @@ def advance_probes():
 
 def channel_parser_probes():
     """Every verb of every program parses the flags its own branch in `main()`
-    reads, and belongs to the program the table says (DR-117).
+    reads, and belongs to the program the table says (solorepo's DR-117).
 
     Each subparser is built by reassigning the same loop variable `p`, so an
     addition meant for one verb that lands after `p` has moved on binds to
@@ -1048,9 +1049,9 @@ def channel_parser_probes():
         "whoami": [("", {"role": "coder"}), ("--role reviewer", {"role": "reviewer"})],
     }
     # The withdrawn nouns are not verbs, and the compositions they allowed are
-    # not typeable (DR-116): a Challenge without a difficulty, a difficulty
+    # not typeable (solorepo's DR-116): a Challenge without a difficulty, a difficulty
     # that is not one, a layer with two bases. And a verb is one program's
-    # (DR-117): what `post` says, `move` does not, and the other way about.
+    # (solorepo's DR-117): what `post` says, `move` does not, and the other way about.
     rejected = {
         "post": ["review 1", "comment 93 --approve", "promote T_1 --title t",
                  "claim 93", "open --title t", "merge 13", "stop 93", "commit -m x",
@@ -1090,7 +1091,7 @@ def channel_parser_probes():
 
 
 def channel_table_probes():
-    """The verb table is the parsers, and a Role's reading is the table (DR-117).
+    """The verb table is the parsers, and a Role's reading is the table (solorepo's DR-117).
 
     Every verb the table names parses in the program it names, every verb a
     program parses is in the table, every program the table names is where it
@@ -1102,7 +1103,7 @@ def channel_table_probes():
     channel, table, programs = load_channel()
     problems = []
     # The Roles are the channel's, so they live with it under `imported/`; a
-    # portfolio's own `authority.yaml` holds the accounts they use (DR-123).
+    # portfolio's own `authority.yaml` holds the accounts they use (solorepo's DR-123).
     roles = {r["name"] for r in (yaml.safe_load(
         (META / "assertions" / "imported" / "authority.yaml").read_text()) or {}).get("roles") or []}
     readers = roles | {"solo", "workflow"}
@@ -1155,7 +1156,7 @@ def markdown_links():
     """A relative link in a page resolves to something in the tree (#45).
 
     A DR cited in prose has been checked since one dangled for a day; a markdown
-    link is the same failure with more syntax, and the audit DR-036 recorded
+    link is the same failure with more syntax, and the audit solorepo's DR-036 recorded
     found those by hand. `schemas.md` pointed at `decisions/DR-003.md` for as
     long as the record had lived somewhere else, and nothing objected.
 
@@ -1213,7 +1214,7 @@ def scaffold_only_paths():
     """A doc that Specialization copies does not name a path a portfolio lacks (#45).
 
     `template/`, `SPECIALIZE.md` and `bootstraps/` stay with the scaffold, and a
-    copied page that mentions one reads as true and is not. The audit DR-036
+    copied page that mentions one reads as true and is not. The audit solorepo's DR-036
     recorded found the Specialization Discipline moved and its Concept left
     behind by exactly this: prose that survived a copy it should not have.
 
@@ -1231,7 +1232,7 @@ def scaffold_only_paths():
     `template/` is the copied set too — the replacements, which step three
     copies whole — so it is walked here as well, for the two names it can
     carry: it cannot name itself, and the seeded gate workflow is where the
-    next `bootstraps/` render would be typed (DR-115).
+    next `bootstraps/` render would be typed (solorepo's DR-115).
     """
     problems = []
 
@@ -1255,8 +1256,8 @@ def scaffold_only_paths():
     return problems
 
 
-# The half the two gate workflows share, by job (DR-119): each of these is in
-# both files and equal across them. The seed's own job is `gate` (DR-115), and
+# The half the two gate workflows share, by job (solorepo's DR-119): each of these is in
+# both files and equal across them. The seed's own job is `gate` (solorepo's DR-115), and
 # the scaffold's seed jobs are its alone.
 SHARED_JOBS = ("pull-request", "sweep")
 SEED_OWN_JOBS = ("gate",)
@@ -1285,13 +1286,13 @@ def _first_difference(a, b, path):
 
 def gate_workflows_agree():
     """The scaffold's gate workflow and the seeded one differ in nothing the
-    runner reads of their shared half (DR-119).
+    runner reads of their shared half (solorepo's DR-119).
 
-    DR-115 gave a portfolio a gate workflow of its own and named the cost: two
+    solorepo's DR-115 gave a portfolio a gate workflow of its own and named the cost: two
     workflows that will drift in their shared half. The half is the triggers,
     the permissions, and every job both files define under one name — `pull
     request` and `sweep` — and what held it equal was a comment in the
-    scaffold's copy saying to change both, a reminder and not a control. DR-114
+    scaffold's copy saying to change both, a reminder and not a control. solorepo's DR-114
     then added a step to the scaffold's sweep and a permission for it, and the
     seeded copy stayed a version behind (#113).
 
@@ -1299,15 +1300,15 @@ def gate_workflows_agree():
     nothing GitHub reads. The shared jobs are named here and not derived: an
     intersection of the two files' job sets is forgiving on absence, and
     cannot tell a job the seed never had from one the seed lost, so a shared
-    job deleted from the seed would have been invisible — the falsifier DR-119
+    job deleted from the seed would have been invisible — the falsifier solorepo's DR-119
     writes for itself, and the reviewer's point on #125. So each shared job
     must be in both files, and the seed defines exactly the shared jobs and
-    its own `gate` job, which DR-115 fixed at that name so that a portfolio's
+    its own `gate` job, which solorepo's DR-115 fixed at that name so that a portfolio's
     ruleset is set once. The scaffold's seed jobs are its alone and are not
     compared. A portfolio has no `template/`, so there it compares nothing and
     says nothing (A6), as `scaffold-only paths` does for the same reason.
 
-    Since DR-120 the two shared jobs run one composite action each, under
+    Since solorepo's DR-120 the two shared jobs run one composite action each, under
     `.meta/actions/`, so their steps are typed once and cannot drift. What is
     compared here is the residue no mechanism of GitHub's shares: the
     triggers, the permissions, and the two stubs of checkout and `uses:`.
