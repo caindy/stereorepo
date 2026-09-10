@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""The way back to zero: both Helm releases, both namespaces, and — asked
+for — the cluster.
+
+    .meta/arc/teardown [--cluster]
+
+`deploy` is idempotent going forward; this is idempotent going back. Helm's
+own `uninstall` already does nothing gracefully when a release is not
+there, so this does not check first — but `deploy` puts two things into the
+cluster outside Helm's own bookkeeping: the `arc-runners` and `arc-systems`
+namespaces (`--create-namespace`, and `arc-runners` again explicitly, ahead
+of the runner-set install, so the Secret has somewhere to go), and the
+`arc-github-token` Secret itself, applied by `kubectl` rather than owned by
+either release. `helm uninstall` does not delete a namespace it did not
+delete, so reaching zero means deleting both by name — which takes the
+Secret with it, the one thing this file cannot leave behind and still call
+this "the way back to zero". `--cluster` also runs `kind delete cluster`,
+for the machine that stood one up with `.meta/arc/cluster` and has nothing
+else pointed at it.
+"""
+import argparse
+import shutil
+import subprocess
+import sys
+
+RUNNER_NAMESPACE = "arc-runners"
+RUNNERSET_RELEASE = "arc-runner-set"
+CONTROLLER_NAMESPACE = "arc-systems"
+CONTROLLER_RELEASE = "arc"
+CLUSTER = "solorepo-arc"
+
+
+def require(*tools):
+    missing = [t for t in tools if not shutil.which(t)]
+    if missing:
+        sys.exit(f"arc-teardown: {', '.join(missing)} not on PATH — install "
+                 f"{'it' if len(missing) == 1 else 'them'} first")
+
+
+def current_context():
+    out = subprocess.run(["kubectl", "config", "current-context"],
+                         capture_output=True, text=True)
+    return out.stdout.strip() if out.returncode == 0 else "(none set)"
+
+
+def helm_uninstall(release, namespace):
+    subprocess.run(["helm", "uninstall", release, "--namespace", namespace])
+
+
+def delete_namespace(namespace):
+    subprocess.run(["kubectl", "delete", "namespace", namespace, "--ignore-not-found"])
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--cluster", action="store_true",
+                    help="also delete the kind cluster .meta/arc/cluster created")
+    args = ap.parse_args()
+    require("kubectl", "helm", *(["kind"] if args.cluster else []))
+    print(f"arc-teardown: tearing down kubectl context '{current_context()}'",
+         file=sys.stderr)
+    helm_uninstall(RUNNERSET_RELEASE, RUNNER_NAMESPACE)
+    helm_uninstall(CONTROLLER_RELEASE, CONTROLLER_NAMESPACE)
+    delete_namespace(RUNNER_NAMESPACE)
+    delete_namespace(CONTROLLER_NAMESPACE)
+    if args.cluster:
+        subprocess.run(["kind", "delete", "cluster", "--name", CLUSTER])
+
+
+if __name__ == "__main__":
+    main()

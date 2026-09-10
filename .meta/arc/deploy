@@ -1,0 +1,150 @@
+#!/usr/bin/env -S uvx --with pyyaml python
+"""The self-hosted runner: layer two of two, and the one that matters.
+
+    .meta/arc/deploy
+
+Installs GitHub's Actions Runner Controller — the operator, then the runner
+scale set `runs-on: arc-runner-set` targets — against whatever cluster
+`kubectl config current-context` already names. Never `kind`-specific, which
+is the whole point: the same command is what a `kind` cluster from
+`.meta/arc/cluster` runs against today and what a machine with its own
+cluster runs against tomorrow, `kubectl config use-context` being the only
+thing that changes between them.
+
+`helm upgrade --install` both times, so running this again after a values
+file changes, or after nothing changed at all, is the same command and does
+the same thing either way.
+
+The GitHub token ARC registers runners with is never a command-line argument
+and never a file this repository holds. It comes from `$ARC_GITHUB_TOKEN` in
+the environment, or from `~/.config/solorepo/arc-runner.env` — outside the
+tree, per machine, mode 600 — the same shape `.meta/say/channel.py` holds a
+Role's credential in (solorepo's DR-073), though this is not a Role's: nothing
+here posts to GitHub as anyone, it only tells ARC how to ask GitHub for
+runner registrations.
+"""
+import argparse
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+
+import yaml
+
+HERE = pathlib.Path(__file__).resolve().parent
+TOKEN_ENV = pathlib.Path("~/.config/solorepo/arc-runner.env").expanduser()
+TOKEN_VAR = "ARC_GITHUB_TOKEN"
+
+# Pinned, like every other tool this repository provisions (`actions/checkout@v7.0.1`,
+# `astral-sh/setup-uv@v10.0.1`): `helm upgrade --install` is idempotent for a
+# given chart version, not across "whatever `latest` resolves to today" — two
+# machines running this a month apart, or the same machine before and after
+# an unrelated `helm repo update`, would otherwise land different controller
+# and runner-set versions from a command that changed nothing. An upgrade is
+# an edit to this file, not a side effect of the calendar.
+CHART_VERSION = "0.14.2"
+
+CONTROLLER_CHART = "oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller"
+CONTROLLER_RELEASE = "arc"
+CONTROLLER_NAMESPACE = "arc-systems"
+
+RUNNERSET_CHART = "oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set"
+RUNNERSET_RELEASE = "arc-runner-set"
+RUNNER_NAMESPACE = "arc-runners"
+SECRET_NAME = "arc-github-token"
+
+
+def require(*tools):
+    missing = [t for t in tools if not shutil.which(t)]
+    if missing:
+        sys.exit(f"arc: {', '.join(missing)} not on PATH — install "
+                 f"{'it' if len(missing) == 1 else 'them'} first "
+                 f"(.meta/arc/README.md has the steps)")
+
+
+def token():
+    """The PAT ARC uses to register runners, read the way a Role's is: fail
+    loud rather than fall back to something that looks like success."""
+    found = os.environ.get(TOKEN_VAR)
+    if found:
+        print(f"arc: speaking with {TOKEN_VAR} from the environment", file=sys.stderr)
+        return found
+    if not TOKEN_ENV.exists():
+        sys.exit(f"arc: no {TOKEN_VAR} in the environment and no {TOKEN_ENV}. "
+                 f"Create a classic PAT with repo scope (.meta/arc/README.md has the "
+                 f"steps) and either export {TOKEN_VAR} or write it there as "
+                 f"{TOKEN_VAR}=<token>.")
+    mode = TOKEN_ENV.stat().st_mode
+    if mode & 0o077:
+        sys.exit(f"arc: {TOKEN_ENV} is readable by others (mode {mode & 0o777:o}); "
+                 f"refusing to use it. chmod 600 it.")
+    for line in TOKEN_ENV.read_text().splitlines():
+        line = line.strip().removeprefix("export ").strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == TOKEN_VAR:
+            value = value.strip().strip("\"'")
+            if not value:
+                break
+            print(f"arc: speaking with the credential in {TOKEN_ENV}", file=sys.stderr)
+            return value
+    sys.exit(f"arc: {TOKEN_ENV} has no {TOKEN_VAR}")
+
+
+def current_context():
+    out = subprocess.run(["kubectl", "config", "current-context"],
+                         capture_output=True, text=True)
+    if out.returncode:
+        sys.exit("arc: no kubectl context is set — point kubectl at a cluster first "
+                 "(`.meta/arc/cluster` for a local one, or `kubectl config use-context`)")
+    return out.stdout.strip()
+
+
+def apply_secret(pat):
+    """The registration Secret, applied as a manifest over stdin so the token
+    is never a process argument (`ps` would show it) or a shell history line."""
+    manifest = subprocess.run(["kubectl", "create", "namespace", RUNNER_NAMESPACE,
+                               "--dry-run=client", "-o", "yaml"],
+                              capture_output=True, text=True, check=True).stdout
+    subprocess.run(["kubectl", "apply", "-f", "-"], input=manifest, text=True, check=True)
+    secret = {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "metadata": {"name": SECRET_NAME, "namespace": RUNNER_NAMESPACE},
+        "type": "Opaque",
+        "stringData": {"github_token": pat},
+    }
+    subprocess.run(["kubectl", "apply", "-f", "-"], input=yaml.safe_dump(secret),
+                   text=True, check=True)
+
+
+def helm_upgrade(release, namespace, chart, values):
+    subprocess.run([
+        "helm", "upgrade", "--install", release,
+        "--namespace", namespace, "--create-namespace",
+        "--version", CHART_VERSION,
+        "-f", str(values), chart,
+    ], check=True)
+
+
+def main():
+    argparse.ArgumentParser(description=__doc__,
+                            formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
+    require("kubectl", "helm")
+    context = current_context()
+    print(f"arc: deploying to kubectl context '{context}'", file=sys.stderr)
+    pat = token()
+    helm_upgrade(CONTROLLER_RELEASE, CONTROLLER_NAMESPACE, CONTROLLER_CHART,
+                HERE / "values-controller.yaml")
+    apply_secret(pat)
+    helm_upgrade(RUNNERSET_RELEASE, RUNNER_NAMESPACE, RUNNERSET_CHART,
+                HERE / "values-runnerset.yaml")
+    print(f"arc: done. `kubectl get pods -n {CONTROLLER_NAMESPACE}` and "
+         f"GitHub's Settings → Actions → Runners on caindy/solorepo should show "
+         f"'{RUNNERSET_RELEASE}'.", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

@@ -175,6 +175,21 @@ artifacts:
   - id: work:artifact/meta-actions-verdicts
     name: .meta/actions/verdicts/action.yml
     path: .meta/actions/verdicts/action.yml
+  - id: work:artifact/meta-arc-readme
+    name: .meta/arc/README.md
+    path: .meta/arc/README.md
+  - id: work:artifact/meta-arc-cluster
+    name: .meta/arc/cluster
+    path: .meta/arc/cluster
+  - id: work:artifact/meta-arc-deploy
+    name: .meta/arc/deploy
+    path: .meta/arc/deploy
+  - id: work:artifact/meta-arc-teardown
+    name: .meta/arc/teardown
+    path: .meta/arc/teardown
+  - id: work:artifact/meta-arc-values-runnerset
+    name: .meta/arc/values-runnerset.yaml
+    path: .meta/arc/values-runnerset.yaml
   - id: work:artifact/meta-ddd-ontology
     name: .meta/ddd_ontology.yaml
     path: .meta/ddd_ontology.yaml

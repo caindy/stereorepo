@@ -1,0 +1,22 @@
+# Helm values for gha-runner-scale-set: the runners themselves, scoped to
+# this repository only (not the org) — caindy/solorepo's own decision, not a
+# general default (solorepo's DR-137).
+githubConfigUrl: https://github.com/caindy/solorepo
+
+# The name a workflow's `runs-on:` targets. `deploy` also installs this
+# release under this name, so the two stay the same word by construction.
+runnerScaleSetName: arc-runner-set
+
+# `deploy` creates this Secret from whatever token it is holding — never
+# written here, never committed.
+githubConfigSecret: arc-github-token
+
+# Scale to zero when idle: this cluster is somebody's machine, not a fleet,
+# and should not hold a pod open for nothing. maxRunners is a ceiling sized
+# for a laptop, not a claim about how much is needed — `coder.yml` and
+# `review.yml` each key their own `concurrency:` group per Issue or pull
+# request (one run per Issue, one per pull request), not repository-wide, so
+# several can legitimately be eligible at once. A third queued job means the
+# fleet is two, not that something failed to serialize.
+minRunners: 0
+maxRunners: 2

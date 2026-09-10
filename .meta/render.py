@@ -655,6 +655,15 @@ def justfile():
         "# the citations this branch wrote, read against what they name; not a gate",
         'dereference *args:',
         "    uvx --with linkml --with pyyaml python .meta/dereference.py {{args}}",
+        "",
+        "# the optional local cluster this repo's self-hosted runner can use",
+        "arc-cluster:",
+        "    .meta/arc/cluster",
+        "",
+        "# deploy or update the self-hosted runner (ARC) this repo's CI uses,",
+        "# against whatever cluster kubectl is currently pointed at",
+        "arc:",
+        "    .meta/arc/deploy",
     ]) + "\n"
 
 

@@ -1,0 +1,8 @@
+# Helm values for gha-runner-scale-set-controller, the operator that watches
+# every AutoscalingRunnerSet in the cluster. One per cluster; nothing here
+# names a repository — that is values-runnerset.yaml's.
+#
+# Empty on purpose: the chart's defaults (one replica, modest resource
+# requests) fit a single small cluster. Add overrides here when a specific
+# cluster needs them, rather than passing --set flags a second install would
+# not remember.

@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""The optional local cluster: layer one of two, and skippable.
+
+    .meta/arc/cluster
+
+Creates a `kind` cluster named `solorepo-arc` if one by that name does not
+already exist, and does nothing — loudly, not silently — if it does. A
+machine that already has a cluster some other way (an existing GKE context,
+a k3s box) never runs this at all: `deploy` is layer two, and it only ever
+acts on whatever `kubectl config current-context` already points at. This
+script exists for the machine that has nothing yet.
+"""
+import shutil
+import subprocess
+import sys
+
+CLUSTER = "solorepo-arc"
+
+
+def existing_clusters():
+    if not shutil.which("kind"):
+        sys.exit("arc-cluster: kind is not on PATH — install it, or point kubectl "
+                 "at a cluster you already have and run `just arc` directly")
+    out = subprocess.run(["kind", "get", "clusters"], capture_output=True, text=True)
+    if out.returncode:
+        sys.exit(f"arc-cluster: kind could not list clusters — {out.stderr.strip()}")
+    return [line.strip() for line in out.stdout.splitlines() if line.strip()]
+
+
+def main():
+    if CLUSTER in existing_clusters():
+        print(f"arc-cluster: {CLUSTER} already exists; nothing to do", file=sys.stderr)
+        return
+    subprocess.run(["kind", "create", "cluster", "--name", CLUSTER], check=True)
+
+
+if __name__ == "__main__":
+    main()
