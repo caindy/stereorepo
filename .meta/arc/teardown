@@ -14,9 +14,21 @@ of the runner-set install, so the Secret has somewhere to go), and the
 either release. `helm uninstall` does not delete a namespace it did not
 delete, so reaching zero means deleting both by name — which takes the
 Secret with it, the one thing this file cannot leave behind and still call
-this "the way back to zero". `--cluster` also runs `kind delete cluster`,
-for the machine that stood one up with `.meta/arc/cluster` and has nothing
-else pointed at it.
+this "the way back to zero".
+
+Order matters here in a way it does not in `deploy`. The runner-set's own
+resources carry finalizers the controller processes — deregistering with
+GitHub, releasing child pods — and the controller can only do that while
+it is still running. Uninstalling it first leaves those finalizers with
+nothing left to clear them, and the namespace they are in waits forever to
+finish terminating: found running this by hand, on a namespace that hung
+with no timeout and no error. So the runner-set release is uninstalled
+`--wait`, before the controller's own uninstall runs at all, and every
+step downstream of that carries its own `--timeout` — a stuck cleanup is
+now a message on stderr, not a process that never returns.
+
+`--cluster` also runs `kind delete cluster`, for the machine that stood
+one up with `.meta/arc/cluster` and has nothing else pointed at it.
 """
 import argparse
 import shutil
@@ -43,12 +55,45 @@ def current_context():
     return out.stdout.strip() if out.returncode == 0 else "(none set)"
 
 
-def helm_uninstall(release, namespace):
-    subprocess.run(["helm", "uninstall", release, "--namespace", namespace])
+def helm_uninstall(release, namespace, wait=False):
+    """A release that is already gone — ordinary on a second run, which the
+    docstring above calls idempotent — exits non-zero from `helm uninstall`
+    exactly like a genuinely stuck finalizer does, and the two are not the
+    same failure. `uninstall`'s own `--ignore-not-found` would tell them
+    apart, but it is a recent addition Helm carries inconsistently across
+    the versions this file might be run with (confirmed present in Helm
+    v4.2.3, confirmed absent from documented Helm 3 behaviour) — a flag
+    this file cannot assume and a wrong assumption breaks every run, not
+    just the second one. What every version says instead, in the same
+    words, is "release: not found" on stderr — matched as text so nothing
+    here depends on which Helm major version is on PATH.
+    """
+    cmd = ["helm", "uninstall", release, "--namespace", namespace, "--timeout", "2m"]
+    if wait:
+        # Helm's own `--help`: "Use '--cascade foreground' with '--wait' to
+        # ensure resources with finalizers are fully deleted before the
+        # command returns." `--wait` alone is the 'watcher' strategy and
+        # does not carry that guarantee — which is exactly the gap that let
+        # this hang in the first place.
+        cmd += ["--wait", "--cascade", "foreground"]
+    out = subprocess.run(cmd, capture_output=True, text=True)
+    sys.stderr.write(out.stdout)
+    sys.stderr.write(out.stderr)
+    if not out.returncode or "release: not found" in out.stderr.lower():
+        return
+    if wait:
+        print(f"arc-teardown: {release} did not uninstall cleanly in 2m — "
+             f"something in {namespace} may still be stuck; check `kubectl get "
+             f"all,ephemeralrunnerset -n {namespace}` before retrying", file=sys.stderr)
 
 
 def delete_namespace(namespace):
-    subprocess.run(["kubectl", "delete", "namespace", namespace, "--ignore-not-found"])
+    out = subprocess.run(["kubectl", "delete", "namespace", namespace,
+                          "--ignore-not-found", "--timeout", "60s"])
+    if out.returncode:
+        print(f"arc-teardown: {namespace} did not finish deleting in 60s — "
+             f"`kubectl get namespace {namespace} -o yaml` will show what it is "
+             f"still waiting on", file=sys.stderr)
 
 
 def main():
@@ -60,7 +105,10 @@ def main():
     require("kubectl", "helm", *(["kind"] if args.cluster else []))
     print(f"arc-teardown: tearing down kubectl context '{current_context()}'",
          file=sys.stderr)
-    helm_uninstall(RUNNERSET_RELEASE, RUNNER_NAMESPACE)
+    # `--wait`, and before the controller's own uninstall: this release's
+    # finalizers are the controller's to clear, and once its uninstall runs
+    # there is nothing left running to clear them.
+    helm_uninstall(RUNNERSET_RELEASE, RUNNER_NAMESPACE, wait=True)
     helm_uninstall(CONTROLLER_RELEASE, CONTROLLER_NAMESPACE)
     delete_namespace(RUNNER_NAMESPACE)
     delete_namespace(CONTROLLER_NAMESPACE)
