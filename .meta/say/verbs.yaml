@@ -106,7 +106,10 @@ programs:
         held_by: [coder, reviewer]
       - name: advance
         usage: "[<pr>]"
-        does: rebase every armed pull request that has fallen behind its base back onto it
+        does: >-
+          rebase every armed pull request that has fallen behind its base back
+          onto it, and dispatch the coder for every one whose review request
+          this merge left unanswerable
         held_by: [workflow]
       - name: request-review
         usage: "<pr> [--to R]"

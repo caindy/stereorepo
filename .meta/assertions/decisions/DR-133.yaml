@@ -1,0 +1,182 @@
+decisions:
+  - id: work:decision/133
+    name: "DR-133 · A merge on main that leaves a review request unanswerable dispatches the coder, and `advance` stays armed-only"
+    challenge: work:challenge/162
+    status: ADOPTED
+    applies:
+      - work:article/18
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-say-verbs
+      - work:artifact/github-workflows-coder
+    alternatives:
+      - name: Widen `advance` to every pull request with a review request outstanding
+        chosen: false
+        reason: >-
+          #162's own first option, and the one the title of it proposed:
+          rebase them too, so the `synchronize` starts the reviewer again.
+          Three things are wrong with it, and the first is fatal. It does not
+          reach the state that does the harm — GitHub refuses to update a
+          branch it reports as `CONFLICTING`, so on #159 and #161, the two
+          this was raised from, every attempt would have been a refusal.
+          Second, it would cost the ones it does reach the review itself:
+          `review.yml` cancels a review in progress on a `synchronize` by
+          anyone but the reviewer (DR-109), so on an evening where `main`
+          merges more often than a review takes — 45 minutes for a boundary
+          diff — every review would be restarted by the next merge and none
+          would finish. And what it would buy them is nothing they lack: a
+          branch that is merely behind has a merge ref, so the review runs and
+          answers, and `merge --auto` advances it before it arms. Third, the
+          armed filter is the only thing keeping `advance` off a stacked pull
+          request, because GitHub arms none of them, bottom included (DR-100).
+          A layer waiting on review is exactly what the wider filter would
+          reach, and rebasing the lower layer rewrites the commits the layer
+          above is based on, so the upper layer re-shows the lower one's work
+          as its own and goes conflicting — the fix manufacturing the defect
+          one layer up.
+      - name: The scheduled sweep dispatches it
+        chosen: false
+        reason: >-
+          #162's second option, and it is the right act in the wrong place.
+          The sweep exists for what fires no event (DR-105) and this has one:
+          a merge on `main` is what makes a valid review request unanswerable,
+          and it is the only thing that does. Put on the clock, the dispatch
+          would arrive up to half an hour after the merge, and the sweep runs
+          with the workflow's own token where `advance` already holds the
+          coder's. The sweep keeps the reading it gained in DR-129 — it names
+          the request nobody can answer, whoever opened the pull request — and
+          that is now the floor under this rather than the mechanism: what it
+          catches is the conflict no push to trunk caused and the dispatched
+          run that died at its budget.
+      - name: Hand it to the solo, as a budget death with a conflicting branch already is
+        chosen: false
+        reason: >-
+          Consistent, and it is the cost #162 was raised about. `stop` puts the
+          Challenge at `human`, which the sweep skips on purpose, so the pull
+          request waits on the solo reading an account — which is DR-129's
+          cost landed a second time, on the pull requests DR-129's own change
+          did not reach. The difference between the two cases is that a budget
+          death leaves work nobody has judged finished, and this leaves work
+          a run finished and handed over; the only thing wrong with it is that
+          trunk moved underneath.
+      - name: A merge queue
+        chosen: false
+        reason: >-
+          It removes the state rather than repairing it, and it is not
+          available here, for the reason DR-113 gave: a merge queue wants a
+          public repository or an organisation, and this one is a person's
+          private repository, which is the shape a fresh clone has. The whole
+          of `advance` comes out the day a portfolio sits in an organisation,
+          and this comes out with it.
+      - name: The push to trunk dispatches the coder, and the rebase stays armed-only
+        chosen: true
+        reason: >-
+          The two readings answer the two things a merge on `main` does to a
+          pull request. To an armed one it does something a rebase repairs, so
+          `advance` rebases it. To one waiting on review it can do something no
+          rebase repairs, because a conflict is the change made again over what
+          landed, which is authoring — so what moves is a Job and not a branch.
+          `.meta/say/move advance` already runs on that push and already holds
+          the coder's credential, so the dispatch is the same verb's second
+          reading rather than a second workflow. What it costs: a coder run per
+          conflicting pull request per merge that conflicts one, which is the
+          bound #162 asked for — coder minutes only where there is a conflict
+          to resolve — and a rebase performed by a model, which can take the
+          wrong side of one. The gate is what catches that, and the review the
+          rebase unblocks is what reads it.
+    consequences:
+      - >-
+        `move advance` given no pull request does its rebase pass as before,
+        then reads every open pull request again for a second condition: a
+        review request outstanding, a `claude/issue-<n>` branch, and
+        `CONFLICTING` against its base. Each match dispatches `coder.yml` with
+        `task=rebase`. The rebase pass is unchanged in what it may touch —
+        armed and nothing else — and the dispatch changes no branch at all.
+      - >-
+        Only on the sweep. `merge --auto` calls `advance` with one pull request
+        and its own branch in hand, and a typed `advance <pr>` names a branch
+        somebody is asking about; neither is the push to trunk, which is the
+        event the second reading answers.
+      - >-
+        `mergeable` is polled rather than read once. GitHub computes it in the
+        background when it is asked for and its reference says to poll until
+        the value is no longer null, which `gh` spells `UNKNOWN`; this runs on
+        the push that invalidated every cached answer, so a single read would
+        report every waiting pull request as unknown and dispatch nothing. Six
+        reads, five seconds apart, and only an `UNKNOWN` pays.
+      - >-
+        A request only, and a loop's branch only. A pull request nobody has
+        asked to review is waiting on nothing, and a conflict on the solo's own
+        branch is the solo's; the sweep names both for a reader either way.
+      - >-
+        And never the lower layer of a stack, which is the third thing the
+        wider filter was rejected for and so a thing the chosen alternative
+        has to answer itself. The armed filter is what keeps the rebase off a
+        stack, because GitHub arms no layer of one (DR-100), and the second
+        reading has no armed filter — the bottom layer keeps `main` as its
+        base and a `claude/issue-<n>` head, and a merge on `main` is what
+        conflicts it — so it is excluded directly: a branch that is another
+        open pull request's base is a layer below it, which is already in the
+        list `advance` read. Rebasing the lower layer rewrites the commits the
+        layer above is on, and nothing notices, because the upper layer's head
+        never moves and so fires no event. A conflicting stack is resolved
+        from the bottom, by the solo, and the pull request left alone is named
+        in the sweep's output rather than passed over in silence.
+      - >-
+        `coder.yml` gains a third pass and a `task` input that chooses it.
+        `review` is the default and is the second run DR-112 promised;
+        `rebase` is this one. It rebases the branch onto its own base and never
+        onto `main` — a layer is based on the layer below — resolves for what
+        the pull request is for, re-renders rather than taking a side on a
+        generated file, gates green and force-pushes. It requests nothing: the
+        review request is still outstanding, so the `synchronize` the push
+        fires is what finally starts the review that was asked for.
+      - >-
+        Never a merge of the base into the branch, for the reason `advance`
+        rebases (DR-113): that merge commit carries no `Actor` Trailer and A19
+        would turn the required check red on the branch being unblocked. The
+        pass is told not to squash, reword or `git commit`, because a rebase
+        keeps each commit's message and so its Trailers, and that is the whole
+        of why the branch stays attributable across the move.
+      - >-
+        What stands in for the read-back A6 asks for: GitHub answers a dispatch
+        with no content and creates the run afterwards, so there is nothing to
+        ask it about in the moment. `coder.yml` groups the rebase pass by pull
+        request with `cancel-in-progress: false`, so two merges in quick
+        succession leave one run standing and one waiting rather than two
+        rebasing one branch; and the pass begins by asking whether the branch
+        is already current with its base — `HEAD..origin/<base>`, which lists
+        what has landed under the branch and so is empty exactly when nothing
+        has — and stops if it is, which makes a dispatch that was one too many
+        cost a minute rather than a mess.
+      - >-
+        The dispatch is a write on GitHub's Actions API, so the coder's
+        credential needs it. A token without it makes the `advance` run red
+        with the refusal named against the pull request it was for, which is
+        the shape DR-113 already has for a scope the Role's token lacks: the
+        loop returns it to the solo, and nothing is silently not happening.
+      - >-
+        A rebase pass that dies at its budget leaves the branch as it found it.
+        Nothing dispatches again until the next merge on `main`, and until then
+        the floor is the sweep's line from DR-129, which names a request nobody
+        can answer every half hour.
+      - >-
+        A portfolio inherits all of it: `.meta/say/` and `coder.yml` are both in
+        the set Specialization's second step copies.
+    falsifier: >-
+      A dispatched rebase that resolves a conflict the wrong way and merges,
+      or one that loops — dispatched, dying, dispatched again on the next
+      merge — without the branch ever moving. The first says a conflict is
+      not a model's to settle unwatched and sends this to the solo after all;
+      the second says the condition is not one a single run can clear, and
+      what is needed is the state carried between them.
+    rationale: |-
+      #162 asked which of two things should act, and the answer turns on what
+      the state actually is. Behind is mechanical and `advance` already
+      repairs it. Conflicting is not mechanical, and every attempt to make it
+      so — a wider filter, an update GitHub refuses, a merge commit that fails
+      A19 — is the same mistake in a different coat. So the event dispatches
+      the one Actor that can do the work, and the rebase pass is small because
+      what it is for is exact: this branch, onto this base, with the change it
+      carries intact.

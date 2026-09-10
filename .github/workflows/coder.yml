@@ -8,6 +8,11 @@
 # and for `medium` a review requested first. What it cannot finish it hands
 # to the solo by relabelling `human` and saying why.
 #
+# Three passes, and the trigger says which: an Issue taken, a request for
+# changes answered, and a branch rebased back to where its outstanding review
+# can be answered at all (solorepo's DR-133). The last has no event of its own
+# and is dispatched by `.meta/say/move advance` on the merge that caused it.
+#
 # Nothing here restates how to work. `AGENTS.md`, the Disciplines and the two
 # forms are the checkout's; this file decides when the coder runs, as whom it
 # speaks, and how deep it goes. The coder must write, so its allowance is a
@@ -20,14 +25,23 @@ on:
     types: [labeled]
   # The reviewer's request for changes is the coder's second run: solorepo's DR-112
   # promised it and solorepo's #102 sat with a verdict and no Job to take it. The
-  # dispatch runs that pass by hand, for a verdict the event passed by.
+  # dispatch runs that pass by hand, for a verdict the event passed by — and
+  # `task` chooses which pass, because the other one has no event of its own:
+  # a merge on `main` that leaves a waiting review request unanswerable is
+  # dispatched here by `.meta/say/move advance` (solorepo's DR-133), and what it
+  # needs done is a rebase and not an answer to threads that do not exist.
   pull_request_review:
     types: [submitted]
   workflow_dispatch:
     inputs:
       pull_request:
-        description: the pull request whose review the coder answers
+        description: the pull request the coder is dispatched for
         required: true
+      task:
+        description: what the coder is dispatched to do
+        type: choice
+        options: [review, rebase]
+        default: review
 
 # One run per Issue or per pull request at a time. A second label on the
 # same Issue, or a second verdict on the same pull request, waits rather than
@@ -35,13 +49,22 @@ on:
 # reply on a thread is a submitted review too — an empty one, `commented` —
 # and GitHub keeps one pending run per group: keyed by number alone, a reply
 # arriving while a run is in progress cancels the pending verdict behind it
-# and leaves a run that skips, which is how the verdict on solorepo's #141
-# would have gone the way the one on solorepo's #102 did. Keyed by state, a `commented`
-# event can cancel only another `commented`, which was going to skip anyway.
-# A dispatch is the by-hand form of a verdict, so it takes the verdict's key
-# and waits behind one rather than running beside it.
+# and leaves a run that skips, which is how solorepo's #141's verdict would have gone
+# the way solorepo's #102's did. Keyed by state, a `commented` event can cancel only
+# another `commented`, which was going to skip anyway. A dispatch is the
+# by-hand form of a verdict, so it takes the verdict's key and waits behind
+# one rather than running beside it.
+#
+# A rebase dispatch takes a key of its own, and the key is what stands in for
+# the read-back `advance` cannot make: GitHub answers a dispatch with no
+# content and creates the run afterwards, so the dispatcher cannot ask whether
+# one is already going. Here it does not have to. Two merges on `main` in quick
+# succession dispatch twice, and this group leaves one run standing and one
+# waiting rather than two rebasing the same branch; a third cancels the one
+# waiting. What the survivor finds is a branch already current with its base,
+# which the pass is told to leave alone.
 concurrency:
-  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.pull_request && 'changes_requested') || 'take' }}
+  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || 'take' }}
   cancel-in-progress: false
 
 # The workflow's own token reads. Every write goes through the coder's
@@ -87,20 +110,35 @@ jobs:
 
       # Which pull request a second pass answers: the event's, or the
       # dispatch's. Its branch is checked out below so the work continues
-      # where the first pass left it.
+      # where the first pass left it. The base is read too, and not assumed to
+      # be `main`: a layer is based on the layer below (PR First's twelfth
+      # step), and a rebase of a layer onto trunk while that layer is open
+      # drops the lower layer's commits off the head. So is the Challenge,
+      # which is the branch's own name — `claude/issue-<n>` is the only shape
+      # `advance` dispatches — because a pass that cannot finish hands that
+      # Challenge back and has nothing else to name.
       - name: find the pull request
         id: pr
         if: github.event_name != 'issues'
         run: |
           n="${EVENT_PR:-$INPUT_PR}"
-          branch=$(gh pr view "$n" --json headRefName -q .headRefName)
-          printf 'number=%s\nbranch=%s\n' "$n" "$branch" >> "$GITHUB_OUTPUT"
+          pull=$(gh pr view "$n" --json headRefName,baseRefName)
+          branch=$(jq -r .headRefName <<<"$pull")
+          base=$(jq -r .baseRefName <<<"$pull")
+          case "$branch" in claude/issue-*) issue=${branch#claude/issue-} ;; *) issue= ;; esac
+          if [ "$TASK" = rebase ] && [ -z "$issue" ]; then
+            echo "::error::#$n is on $branch, which names no Challenge, so a rebase pass that could not finish would have nothing to hand back. Rebase it by hand."
+            exit 1
+          fi
+          printf 'number=%s\nbranch=%s\nbase=%s\nissue=%s\n' \
+            "$n" "$branch" "$base" "$issue" >> "$GITHUB_OUTPUT"
           git checkout --quiet "$branch"
           cat "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_PR: ${{ github.event.pull_request.number }}
           INPUT_PR: ${{ inputs.pull_request }}
+          TASK: ${{ inputs.task }}
 
       # The Role's credential, where `.meta/say/` expects it by default
       # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
@@ -166,17 +204,26 @@ jobs:
       # Depth by the label. `easy` is the smaller model and an hour at most;
       # `medium` is the larger and the whole budget. The guess is the
       # raiser's, and a wrong one costs a run before anyone relabels.
+      # A rebase is bounded by what it is: one branch's commits moved onto what
+      # landed under them, and whatever of that landing they collided with.
+      # The larger model, because a conflict in this repository is prose as
+      # often as it is code and taking the wrong side of one is how a change
+      # silently loses half of itself; half the budget, because a rebase that
+      # is taking an hour is not a rebase and belongs back with the solo.
       - name: choose the depth
         id: depth
         run: |
           printf 'level=%s\n' "$LEVEL" >> "$GITHUB_OUTPUT"
-          if [ "$LEVEL" = medium ]; then
+          if [ "$TASK" = rebase ]; then
+            printf 'model=claude-opus-5\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
+          elif [ "$LEVEL" = medium ]; then
             printf 'model=claude-opus-5\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
           else
             printf 'model=claude-sonnet-5\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
         env:
+          TASK: ${{ inputs.task }}
           # The level the guard read from the Issue now, not the one the
           # frozen delivery carried: a level moved while this run waited in
           # the concurrency group is the level the run must take (solorepo's #117). A
@@ -363,8 +410,100 @@ jobs:
           OUTCOME: ${{ steps.take.outcome }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
+      # The pass a merge on `main` dispatches (solorepo's DR-133). Nothing here is a
+      # verdict to answer: the review request is outstanding and has never been
+      # answerable, because GitHub builds no merge ref for a branch that
+      # conflicts and `review.yml` runs on `pull_request`. What the request
+      # needs is the branch moved onto what landed under it, which is the one
+      # thing no workflow can do for it — `gh pr update-branch` is refused on a
+      # conflicting branch, and a conflict is the change made again over what
+      # landed. The push at the end is the whole handoff: the request is still
+      # outstanding, so the `synchronize` it fires is what finally starts the
+      # review that was asked for.
+      - name: rebase onto the base
+        if: inputs.task == 'rebase'
+        uses: anthropics/claude-code-action@v1
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.CODER_GH_TOKEN }}
+          show_full_output: "true"
+          prompt: |
+            You are the coder Role (solorepo's DR-107), on pull request
+            #${{ steps.pr.outputs.number }} of ${{ github.repository }}, whose
+            branch `${{ steps.pr.outputs.branch }}` is checked out here. A
+            merge on `${{ steps.pr.outputs.base }}` has left it conflicting
+            while a review of it was outstanding, and GitHub builds no merge
+            ref for a branch that conflicts, so no review of this head can run
+            and the request stands with nobody able to answer it. Usually no
+            review has run at all. If one was already running when the merge
+            landed, your push at the end cancels it — `review.yml` cancels a
+            review in progress on a `synchronize` by anyone but the reviewer —
+            and the same push starts a fresh one, on a head that can merge,
+            which is what was wanted; the request stays outstanding
+            throughout. Your Job is to put the branch back where a review can
+            happen, and nothing else.
+            Read /pr-first for which verbs are yours; `AGENTS.md` has the
+            conventions. Every act on GitHub goes through the channel,
+            `.meta/say/post` and `.meta/say/move`, each taking its body on
+            stdin as a quoted heredoc.
+
+            First ask whether there is anything to do:
+            `git fetch origin` and `git log --oneline
+            HEAD..origin/${{ steps.pr.outputs.base }}`, which lists what the
+            base has and this branch does not and so is empty exactly when
+            the branch is already current with its base. That way round and
+            not the other: `origin/<base>..HEAD` lists this branch's own
+            commits, which every open pull request has, before a rebase and
+            after one. A run before this one may have done the work — two
+            merges dispatch two runs — and a branch already current with its
+            base is one to leave alone: say so and stop, posting nothing and
+            pushing nothing.
+
+            Otherwise rebase it: `git rebase origin/${{ steps.pr.outputs.base }}`.
+            Never a merge of the base into the branch. GitHub authors that
+            merge commit, or you would, and it carries no `Actor` Trailer, so
+            A19 turns the required check red on the branch you are unblocking.
+            A rebase writes no new commit: the branch's own commits move with
+            their messages and so with their Trailers, which is what keeps
+            them attributable, so do not squash them, do not reword them and
+            do not `git commit` — resolve each conflict and
+            `git rebase --continue`.
+
+            Resolve for what this pull request is for, which its body says and
+            the Issue it closes says: what landed under you is not yours to
+            undo, and your own change is not to be dropped to make the
+            conflict go away. Where a file is generated, take neither side —
+            re-render it, as `AGENTS.md` says.
+
+            Then `.meta/gate meta` green, and
+            `git push --force-with-lease`. Say what happened on the pull
+            request, once, so the reviewer arriving at a head it did not ask
+            about knows why it moved:
+            `.meta/say/post comment ${{ steps.pr.outputs.number }}`. Do not
+            request review — it is already requested, and your push is what
+            lets it be answered — do not arm the merge, do not answer any
+            thread, and revise the body only if the rebase changed what the
+            pull request does, which it should not have.
+
+            If the conflict is not yours to settle — the change no longer
+            makes sense over what landed, or the gate will not go green —
+            `.meta/say/move stop ${{ steps.pr.outputs.issue }}` with why on
+            stdin, which hands the Challenge to the solo and leaves the pull
+            request open.
+
+            Do not merge by hand and do not reach GitHub any other way: the
+            hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
+            `gh pr update-branch`, `gh issue edit`, `gh issue comment` and
+            `gh api`.
+          claude_args: |
+            --model ${{ steps.depth.outputs.model }}
+            --max-turns ${{ steps.depth.outputs.turns }}
+            --permission-mode acceptEdits
+            --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
+
       - name: answer the review
-        if: github.event_name != 'issues'
+        if: github.event_name != 'issues' && inputs.task != 'rebase'
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:

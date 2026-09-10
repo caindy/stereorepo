@@ -15,6 +15,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import channel  # noqa: E402
@@ -331,11 +332,139 @@ def behind_by(pull):
                              f"{pull['baseRefName']}...{pull['headRefOid']}")["behind_by"]
 
 
-ADVANCE = "number,title,baseRefName,headRefOid,autoMergeRequest"
+ADVANCE = ("number,title,baseRefName,headRefName,headRefOid,autoMergeRequest,"
+           "reviewRequests,mergeable")
+# A loop's branch, and nothing else. `claude/issue-<n>` is the shape `coder.yml`
+# cuts, so it is the shape a dispatched coder can be sent back to; the solo's
+# own pull request is the solo's to rebase, whatever it looks like from here.
+LOOPS_BRANCH = re.compile(r"^claude/issue-\d+$")
+# How long to wait for GitHub to say whether a branch still merges. `mergeable`
+# is computed in the background when it is asked for, and GitHub's reference
+# for it says to poll until the value is no longer null — which `gh` spells
+# `UNKNOWN`. This runs on the push that invalidated every cached answer, which
+# is exactly the read the reference warns about: asked once, every waiting pull
+# request would report `UNKNOWN` and nothing would ever be dispatched.
+MERGEABILITY = (6, 5)
+
+
+def mergeability(pull):
+    """Whether GitHub can still merge this branch into its base.
+
+    Waited for rather than read once, for the reason above. The first read is
+    the one already in hand, so a pull request GitHub has an answer for costs
+    nothing; only an `UNKNOWN` pays, and it pays in a sleep rather than in a
+    wrong answer. Bounded, because a value that is still unknown after half a
+    minute is one the next push to trunk will ask about again — and a sweep
+    that waited forever on one branch would hold up the rest.
+    """
+    tries, wait = MERGEABILITY
+    for _ in range(tries):
+        if pull.get("mergeable") != "UNKNOWN":
+            return pull.get("mergeable")
+        time.sleep(wait)
+        pull = channel.gh("pr", "view", str(pull["number"]), "--json", ADVANCE)
+    return pull.get("mergeable")
+
+
+def dispatch(pulls):
+    """Hand back to the coder a pull request whose review request this push has
+    made unanswerable (solorepo's DR-133).
+
+    The other thing a merge on `main` does to a pull request that is not armed.
+    A review request is a semaphore GitHub holds and reports, and a branch that
+    conflicts has no merge ref, so `review.yml`'s `pull_request` trigger has
+    nothing to check out: no run is created, GitHub goes on reporting the
+    request as outstanding, and the Job it names never learns it was asked.
+    solorepo's #159 and solorepo's #161 each stood that way with not one review run between them.
+
+    **Dispatched, not rebased.** The rebase above is not the remedy here and
+    cannot be: GitHub refuses to update a branch it reports as `CONFLICTING`,
+    and what a conflict needs is the change made again over what landed, which
+    is authoring. So what this moves is a Job and not a branch — `coder.yml`'s
+    rebase pass, on the pull request, which is the same act the sweep already
+    prescribes to a reader (solorepo's DR-129) and the same one that was
+    performed by hand on solorepo's #141, solorepo's #150 and solorepo's #156 in one evening.
+
+    Which is also why the filter above stays as it is. Widening it to every
+    pull request with a request outstanding would rebase the ones that merely
+    fell behind, and those are the ones nothing is wrong with: their merge ref
+    exists, so the review runs, and `merge --auto` advances the branch before
+    it arms. What the rebase would cost them is the review itself.
+    `review.yml` cancels a review in progress on a `synchronize` by anyone but
+    the reviewer, so on an evening where `main` merges more often than a review
+    takes, every review would be restarted by the next merge and none would
+    finish.
+
+    A loop's branch only, and a request only. A pull request nobody has asked
+    to review is waiting on nothing, and a conflict on the solo's own branch is
+    the solo's; the sweep names both of those for a reader either way.
+
+    **And never the lower layer of a stack**, which is the third thing
+    solorepo's DR-133 rejected the wider filter for and so a thing this reading
+    has to answer too. The armed filter above is what keeps the rebase off a
+    stack, because GitHub arms no layer of one (solorepo's DR-100); dropping it
+    here would put the bottom layer back in reach, since `layer` and
+    `open --on` retarget only the layer above, so the bottom keeps `main` as
+    its base and a `claude/issue-<n>` head, a `medium` layer requests review,
+    and a merge on `main` is exactly what conflicts it. Rebasing it rewrites
+    the commits the layer above is based on, and the harm is silent: the upper
+    layer's head never moves, so no event fires and the next reader of it sees
+    the lower layer's work shown as its own. Which pull requests those are is
+    already in hand — a branch that is another open pull request's base is a
+    layer below it — so the answer costs a set comprehension rather than a
+    read, and the one it declines is named on the way past rather than
+    skipped in silence. A conflicting stack is the solo's: the layers have to
+    be resolved from the bottom, and that is a judgement about the stack and
+    not about any one of its pull requests.
+
+    **What stands in for the read-back.** GitHub answers a dispatch with no
+    content and creates the run afterwards, so there is nothing here to ask it
+    for, and a `run list` a moment later answers about a run that may not exist
+    yet. Two things carry it instead. `coder.yml` groups the rebase pass by
+    pull request with `cancel-in-progress: false`, so two pushes in quick
+    succession leave one run standing and one waiting rather than two rebasing
+    the same branch. And the pass begins by asking whether the branch is
+    current with its base, so a run that arrives after the work is done says so
+    and stops — which is what makes a dispatch that was one too many cost a
+    minute rather than a mess.
+    """
+    failed = []
+    # Every branch an open pull request is based on, which is the lower layer
+    # of every open stack. Read off the list already in hand: `open_now`
+    # carries both refs of every open pull request, so no layer has to be
+    # asked about a second time.
+    below = {pull["baseRefName"] for pull in pulls}
+    for pull in pulls:
+        number = str(pull["number"])
+        asked = [r.get("login") or r.get("name") or "someone"
+                 for r in pull.get("reviewRequests") or []]
+        if not asked or not LOOPS_BRANCH.match(pull["headRefName"]):
+            continue
+        if pull["headRefName"] in below:
+            print(f"left #{number} alone: another open pull request is based on "
+                  f"{pull['headRefName']}, so rebasing it would rewrite the commits the "
+                  f"layer above is on — a conflicting stack is resolved from the bottom, "
+                  f"by the solo — {pull['title']}")
+            continue
+        try:
+            if mergeability(pull) != "CONFLICTING":
+                continue
+            channel.gh("workflow", "run", "coder.yml", "-f", f"pull_request={number}",
+                       "-f", "task=rebase", parse=False)
+        except SystemExit as exc:
+            failed.append(f"#{number} is requested of {', '.join(asked)} and the coder could "
+                          f"not be dispatched for it — {exc.code}")
+            continue
+        print(f"dispatched the coder for #{number}: requested of {', '.join(asked)} and "
+              f"conflicting with {pull['baseRefName']}, so GitHub builds no merge ref and "
+              f"the request cannot be answered — {pull['title']}")
+    return failed
 
 
 def advance(pr=None, held=False):
-    """Bring armed pull requests that have fallen behind their base back onto it.
+    """Bring armed pull requests that have fallen behind their base back onto it,
+    and, on the push to trunk, give the coder back the ones that merge left
+    unreviewable.
 
     An armed merge does not update its own branch, and `main` requires a pull
     request to be current before it merges. So when two are green at once the
@@ -390,13 +519,24 @@ def advance(pr=None, held=False):
     take every other pull request down with it and swallow what had already been
     collected. Each is caught where it happens and joins `failed`, which is what
     the accumulator was for.
+
+    **And the armed are not everything a merge on trunk leaves behind.** A pull
+    request waiting on its first review cannot be armed — GitHub refuses
+    auto-merge on a stacked one, and request-then-arm is not the order the
+    Discipline gives — so nothing above this paragraph is about it, and a merge
+    can leave it conflicting with the request still outstanding and nobody
+    able to answer. That one is handed to the coder rather than rebased here,
+    which is `dispatch` below and solorepo's DR-133. It runs on the sweep only,
+    and it is why the list is filtered into `found` rather than over itself:
+    what the rebase may touch is the armed, and what the dispatch reads is
+    every open pull request.
     """
     if pr is not None:
-        found = [channel.gh("pr", "view", pr, "--json", ADVANCE)]
+        open_now = [channel.gh("pr", "view", pr, "--json", ADVANCE)]
     else:
-        found = channel.gh("pr", "list", "--state", "open", "--json", ADVANCE)
-    if not held:
-        found = [p for p in found if p.get("autoMergeRequest")]
+        open_now = channel.gh("pr", "list", "--state", "open", "--json", ADVANCE)
+    found = open_now if held else [p for p in open_now if p.get("autoMergeRequest")]
+    moved, failed = 0, []
     if not found:
         # Two answers, and only one of them is "nothing to do". A sweep with
         # nothing armed open did its whole job and exits 0. A named pull request
@@ -409,40 +549,50 @@ def advance(pr=None, held=False):
         if pr is not None:
             sys.exit(f"say: #{pr} is not armed; nothing has asked it to land")
         print("advance: nothing armed is open")
-        return
-    moved, failed = 0, []
-    for pull in found:
-        number = str(pull["number"])
-        try:
-            behind = behind_by(pull)
-            if not behind:
-                continue
-            channel.gh("pr", "update-branch", number, "--rebase", parse=False)
-            moved += 1
-            print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
-                  f"— {pull['title']}")
-            after = channel.gh("pr", "view", number, "--json", ADVANCE)
-            if behind_by(after):
-                failed.append(f"#{number} is still behind {pull['baseRefName']} after the update")
-            if pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
-                arm(number, f"{pull['title']} (#{number})")
-                # Read back, like the two above and for the same reason. This
-                # was the one act in the function whose outcome was `gh`'s exit
-                # status: `gh pr merge --auto` exits 0, the enablement does not
-                # stick, and the line below claimed an arming GitHub does not
-                # hold. That leaves the pull request rebased and unarmed, which
-                # is solorepo's #93 — and unreachable by any later sweep, because the sweep
-                # filters on `autoMergeRequest` and there is no longer one to
-                # filter on.
-                if not channel.gh("pr", "view", number, "--json", ADVANCE).get("autoMergeRequest"):
-                    failed.append(f"#{number} lost its arming to the update and GitHub does not "
-                                  "show it armed after the call that re-armed it")
-                else:
-                    print(f"armed #{number} again: moving the head had dropped it")
-        except SystemExit as exc:
-            failed.append(f"#{number}: {exc.code}")
-    if not moved and not failed:
-        print(f"advance: {len(found)} pull request(s) current with their base")
+    else:
+        for pull in found:
+            number = str(pull["number"])
+            try:
+                behind = behind_by(pull)
+                if not behind:
+                    continue
+                channel.gh("pr", "update-branch", number, "--rebase", parse=False)
+                moved += 1
+                print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
+                      f"— {pull['title']}")
+                after = channel.gh("pr", "view", number, "--json", ADVANCE)
+                if behind_by(after):
+                    failed.append(f"#{number} is still behind {pull['baseRefName']} "
+                                  "after the update")
+                if pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
+                    arm(number, f"{pull['title']} (#{number})")
+                    # Read back, like the two above and for the same reason. This
+                    # was the one act in the function whose outcome was `gh`'s exit
+                    # status: `gh pr merge --auto` exits 0, the enablement does not
+                    # stick, and the line below claimed an arming GitHub does not
+                    # hold. That leaves the pull request rebased and unarmed, which
+                    # is solorepo's #93 — and unreachable by any later sweep, because the sweep
+                    # filters on `autoMergeRequest` and there is no longer one to
+                    # filter on.
+                    if not channel.gh("pr", "view", number,
+                                      "--json", ADVANCE).get("autoMergeRequest"):
+                        failed.append(f"#{number} lost its arming to the update and GitHub "
+                                      "does not show it armed after the call that re-armed it")
+                    else:
+                        print(f"armed #{number} again: moving the head had dropped it")
+            except SystemExit as exc:
+                failed.append(f"#{number}: {exc.code}")
+        if not moved and not failed:
+            print(f"advance: {len(found)} pull request(s) current with their base")
+    # The second reading, and the sweep's alone. `merge --auto` calls this with
+    # one pull request and its own branch in hand, and a typed `advance <pr>`
+    # names a branch somebody is asking about; neither is the push to trunk
+    # that leaves a review request unanswerable, which is what `dispatch`
+    # answers. Its refusals join the same accumulator, so a pull request the
+    # coder could not be dispatched for is reported with the rest and takes
+    # none of them down with it.
+    if pr is None:
+        failed += dispatch(open_now)
     if failed:
         sys.exit("say: " + "; ".join(failed))
 

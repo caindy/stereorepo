@@ -1558,10 +1558,16 @@ class FakeGitHub:
 
     A pull request here is `{behind, armed, drops, again}`: how far behind its
     base it is, whether it is armed, whether moving the head drops the arming,
-    and what it is still behind by afterwards.
+    and what it is still behind by afterwards. And, for the second reading
+    `advance` gained with solorepo's DR-133, `{requested, mergeable, unknown, branch, base}`:
+    who a review is requested of, what GitHub says about merging the branch,
+    how many reads say `UNKNOWN` before it says that, the head's name where
+    it is not a loop's, and the base's where it is not trunk — which is what a
+    layer of a stack looks like from here.
     """
 
-    def __init__(self, pulls, no_rebase=(), no_arm=(), no_stick=(), lands=(), blip=()):
+    def __init__(self, pulls, no_rebase=(), no_arm=(), no_stick=(), lands=(), blip=(),
+                 no_dispatch=()):
         self.pulls = {str(n): dict(p) for n, p in pulls.items()}
         self.no_rebase, self.no_arm = {str(n) for n in no_rebase}, {str(n) for n in no_arm}
         # One HTTP error on the `compare` that reads back the rebase, and once:
@@ -1580,14 +1586,38 @@ class FakeGitHub:
         # armed. Whatever `merge --auto` says about that state, it says over a
         # pull request that has landed.
         self.lands = {str(n) for n in lands}
+        # A dispatch GitHub refuses, which is what a coder token without the
+        # Actions write it needs looks like from here.
+        self.no_dispatch = {str(n) for n in no_dispatch}
+        # Every dispatch the run made, in order, as `(number, task)`. The task
+        # is recorded because it is what the dispatch is *for*: `coder.yml`
+        # defaults `task` to `review`, so a dispatch that lost it would run the
+        # review-answering pass on a pull request with no verdict to answer and
+        # rebase nothing at all — the one mutation a probe reading the number
+        # alone cannot see. The workflow file is checked by the fake having no
+        # answer for any other, which `run` reports.
+        self.dispatched = []
 
     def view(self, number):
         pull = self.pulls[str(number)]
+        # `mergeable` is computed in the background, so a read can answer
+        # `UNKNOWN` and a later one answer properly; `unknown` is how many of
+        # this pull request's reads do that before the answer arrives. Counted
+        # down here rather than in the caller, because what is being modelled
+        # is GitHub answering the same question differently over time.
+        if pull.get("unknown"):
+            pull["unknown"] -= 1
+            mergeable = "UNKNOWN"
+        else:
+            mergeable = pull.get("mergeable", "MERGEABLE")
         return {"number": int(number), "title": f"pull {number}",
                 "state": pull.get("state", "OPEN"),
                 "mergeCommit": {"oid": f"merged{number}"},
-                "baseRefName": "main", "headRefName": f"claude/issue-{number}",
+                "baseRefName": pull.get("base", "main"),
+                "headRefName": pull.get("branch", f"claude/issue-{number}"),
                 "headRefOid": f"head{number}",
+                "reviewRequests": [{"login": who} for who in pull.get("requested") or []],
+                "mergeable": mergeable,
                 "autoMergeRequest": {"enabledAt": "now"} if pull["armed"] else None}
 
     def __call__(self, *args, parse=True):
@@ -1614,6 +1644,13 @@ class FakeGitHub:
             self.pulls[number]["armed"] = number not in self.no_stick
             if number in self.lands:
                 self.pulls[number].update(state="MERGED", armed=False)
+            return ""
+        if head == ("workflow", "run") and args[2] == "coder.yml":
+            number = next(a.split("=", 1)[1] for a in args if a.startswith("pull_request="))
+            task = next((a.split("=", 1)[1] for a in args if a.startswith("task=")), None)
+            if number in self.no_dispatch:
+                sys.exit("gh: Resource not accessible by personal access token")
+            self.dispatched.append((number, task))
             return ""
         if args[0] == "api" and "/compare/" in args[1]:
             number = args[1].rsplit("...head", 1)[1]
@@ -1755,6 +1792,99 @@ def advance_probes():
                         f"{fake.pulls['7']!r}")
     if said:
         problems.append(f"merge --auto: a stall over a current branch exited with {said!r}")
+
+    # The second reading (solorepo's DR-133). The poll is shortened to nothing first:
+    # what these cases are for is that it happens at all and that it waits for
+    # an answer, and the seconds it waits are GitHub's business rather than a
+    # gate's. Nothing restores it, because this process ends with the gate.
+    move.MERGEABILITY = (3, 0)
+
+    # A merge on trunk that leaves a waiting review request unanswerable
+    # dispatches the coder, and does not touch the branch — solorepo's #159 and solorepo's #161, with
+    # nothing armed at all, which is the run that used to return before it read
+    # them.
+    fake = FakeGitHub({7: {"behind": 1, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING"},
+                       8: {"behind": 1, "armed": False, "requested": ["reviewer"]}})
+    said = run(fake, lambda: move.advance())
+    # The task and not only the number: `task=rebase` is what selects the pass
+    # that rebases, and `coder.yml` defaults the input to `review`.
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append(f"advance: the conflicting one dispatched {fake.dispatched!r}")
+    if fake.pulls["7"].get("rebased") or fake.pulls["8"].get("rebased"):
+        problems.append("advance: it rebased a pull request nobody had asked to land")
+    if said:
+        problems.append(f"advance: a dispatch that took exited with {said!r}")
+
+    # `UNKNOWN` is GitHub still computing, and this runs on the push that made
+    # it so. Read once, every waiting pull request answers `UNKNOWN` and
+    # nothing is ever dispatched.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING", "unknown": 2}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append("advance: it took the first `UNKNOWN` for an answer and dispatched "
+                        f"{fake.dispatched!r}")
+    if said:
+        problems.append(f"advance: waiting out an `UNKNOWN` exited with {said!r}")
+
+    # A request only, and a loop's branch only. Nobody has asked to review the
+    # first, and the second is the solo's own branch. `said` is read here and
+    # in every case below whose whole assertion is an absence: a `dispatch`
+    # that died before dispatching leaves `dispatched` empty too, so without
+    # it a crash reads exactly like the filter doing its job.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING"},
+                       8: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING", "branch": "solo/whatever"}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched:
+        problems.append(f"advance: it dispatched {fake.dispatched!r}, which nobody had asked "
+                        "to review or which was not a loop's branch")
+    if said:
+        problems.append(f"advance: the case that should dispatch nothing exited with {said!r}")
+
+    # And never the lower layer of a stack (solorepo's DR-133's third reason for
+    # rejecting the wider filter, which this reading has to answer too). The
+    # second pull request here is based on the first's branch, so rebasing the
+    # first would rewrite the commits the second is on — silently, because the
+    # upper layer's own head never moves. Everything else about the first is
+    # the dispatching case above.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING"},
+                       8: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "base": "claude/issue-7", "mergeable": "MERGEABLE"}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched:
+        problems.append("advance: it dispatched the lower layer of a stack, "
+                        f"{fake.dispatched!r}")
+    if said:
+        problems.append(f"advance: the stack it left alone exited with {said!r}")
+
+    # One dispatch GitHub refuses is one pull request's problem, like one
+    # rebase it refuses — and the refusal is a coder token without the Actions
+    # write, which is a thing to say rather than to swallow.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING"},
+                       8: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING"}}, no_dispatch=[7])
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched != [("8", "rebase")]:
+        problems.append(f"advance: a refused dispatch left the rest at {fake.dispatched!r}")
+    if not said or "#7" not in said:
+        problems.append(f"advance: the refused dispatch was reported as {said!r}")
+
+    # And nothing dispatches off the push to trunk. `merge --auto` holds the
+    # branch it is arming and a typed `advance <pr>` names one somebody is
+    # asking about; neither is a merge on `main` that stranded a request.
+    fake = FakeGitHub({7: {"behind": 0, "armed": True, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING"}})
+    named = run(fake, lambda: move.advance("7"))
+    merging = run(fake, lambda: move.merge("7", auto=True))
+    if fake.dispatched:
+        problems.append(f"advance: a named pull request dispatched {fake.dispatched!r}")
+    if named or merging:
+        problems.append(f"advance: the two callers that dispatch nothing exited with "
+                        f"{named!r} and {merging!r}")
     return problems
 
 
