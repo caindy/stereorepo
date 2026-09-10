@@ -347,6 +347,11 @@ def ask(pair, token, model, seconds=120):
     holds it, and one that hangs stops it instead — inside `coder.yml` it would
     spend a step budget that ends with the Issue claimed and the pull request
     open, which is the state that file's own comment exists to prevent.
+
+    A refused run's reason is read from stdout before stderr: `claude -p`
+    refusing prints the reason there, and keeps stderr for warnings that are
+    true whether the run succeeded or not — solorepo's #171 read the ordering
+    the other way and reported the warning as the reason.
     """
     env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_BASE_URL"}
     env.update(token)
@@ -357,7 +362,7 @@ def ask(pair, token, model, seconds=120):
     except subprocess.TimeoutExpired:
         return "?", f"the model did not answer within {seconds}s"
     if out.returncode:
-        why = (out.stderr.strip() or out.stdout.strip() or "the model could not be reached")
+        why = (out.stdout.strip() or out.stderr.strip() or "the model could not be reached")
         return "?", why.splitlines()[-1][:160]
     line = next((s.strip() for s in out.stdout.splitlines() if s.strip()), "")
     for mark in ("ok", "x", "?"):
