@@ -20,6 +20,11 @@ because bash has more syntax than the scanner — abbreviated options, `$(...)`,
 `;` glued to a word, `<(...)`, text after a heredoc opener, an option nobody had
 listed. A scanner for the bad cannot be sound; a grammar for the allowed can.
 
+A refusal names the nearest command the grammar takes, where the one refused
+has one: the head of a chain, or the same command without the option that is
+not carried. It is derived and then put back through the predicate rather than
+suggested, so the retry is one turn and not a guess (#144).
+
     echo '{"tool_name":"Grep","tool_input":{"path":"/home/x/.config"}}' | .meta/hooks/worktree_only.py
 
 Exit 2 blocks the call and shows the message to the agent. The predicate is
@@ -40,6 +45,16 @@ READERS = {"Read": "file_path", "Grep": "path", "Glob": "path"}
 # inside single quotes bash acts on nothing. A double quote is refused too,
 # because `$` and a backtick expand inside it.
 SHELL = set(';&|<>$`*?[]{}()~!#\\"\n')
+
+# The part of `SHELL` that ends one command and starts something else:
+# chaining, redirects and a newline. A derivation may cut there and lose only a
+# second command. The rest of `SHELL` expands *within* an argument — `~`, `$`,
+# `*`, a brace — so cutting at one of those truncates the first command's
+# argument instead, and `git show HEAD~1:x` would be offered as `git show HEAD`:
+# a different question, well-formed, with nothing in it to say what was dropped.
+# An argument carrying an expansion has no nearest command, the same as a
+# program off the list (#146).
+CHAINS = set(";&|<>\n")
 
 # What the reviewer may run, and with what. A program not named here is
 # refused; an option not named under its subcommand is refused, in its exact
@@ -86,6 +101,23 @@ PROGRAMS = {
     ("gh", "pr", "diff"): ({"--name-only", "--patch"}, set()),
     ("gh", "pr", "checks"): ({"--json", "-q", "--jq", "--required"}, {"--json", "-q", "--jq"}),
     ("python3", ".meta/check_pr.py"): ({"--threads", "--resume"}, set()),
+}
+
+# A program off the list that the reviewer reaches for anyway, and where what
+# it wanted is instead. Nothing can be derived for one of these — there is no
+# nearest command on the list to a program that is not on it — so the refusal
+# says why it is not coming, which is the only thing that stops the reach
+# repeating run after run (#144).
+#
+# `check.py` is the one, and the reason it is not simply listed is not the
+# option list. `check_pr.py` is one of the six paths `review.yml` restores from
+# trunk before the session starts; `check.py` is not, and neither is the
+# `render.py` it imports, so running it would execute the pull request's own
+# code in the container that holds the reviewer's token, which is the boundary
+# solorepo's DR-110 draws. It would not run in any case: the gate is `uvx --with linkml
+# --with pyyaml python .meta/check.py` and the container installs neither.
+INSTEAD = {
+    ("python3", ".meta/check.py"): "the gate runs on the pull request, and `gh pr checks` reads what it found",
 }
 
 
@@ -149,17 +181,21 @@ def words_of(text):
     return words
 
 
-def options_allowed(what, words, allowed, takes_value):
-    """Every option among `words` is on the list, by exact spelling.
+def refused_option(words, allowed, takes_value):
+    """Where the first option the list does not carry sits in `words`, or None.
 
     A word that does not start with `-` is a ref, a path, a number or a
     pattern, and the program's to make sense of; `--` ends the options. An
     option that takes a value consumes the next word whatever it looks like,
     and is the only kind that may carry its value after `=`: the set is the
     subcommand's own, so nothing added for one reaches another (#87).
+
+    The index rather than the message, because `plain_form` drops the word it
+    names and a refusal reads it back out.
     """
-    rest = iter(words)
-    for word in rest:
+    rest = iter(range(len(words)))
+    for i in rest:
+        word = words[i]
         if word == "--":
             return None
         if not word.startswith("-") or NUMBER.match(word):
@@ -171,15 +207,32 @@ def options_allowed(what, words, allowed, takes_value):
             next(rest, None)
             continue
         if word not in allowed:
-            return f"`{word}` is not an option `{what}` may carry here"
+            return i
     return None
 
 
-def git_allowed(words):
-    """One git subcommand from the list, with options from its list."""
-    if len(words) < 2 or words[1] not in GIT:
-        return f"`git {words[1] if len(words) > 1 else ''}` is not a subcommand the reviewer runs"
-    return options_allowed(f"git {words[1]}", words[2:], GIT[words[1]], TAKES_VALUE[words[1]])
+def options_allowed(what, words, allowed, takes_value):
+    """Every option among `words` is on the list, by exact spelling."""
+    i = refused_option(words, allowed, takes_value)
+    return None if i is None else f"`{words[i]}` is not an option `{what}` may carry here"
+
+
+def form_of(words):
+    """Which form on the list this command is, or None.
+
+    `(offset, what, allowed, takes_value)`: where the options start, what to
+    call the form in a refusal, and its two lists. One lookup for git's
+    subcommands and the other programs both, so the predicate and the
+    derivation below read the same table rather than two copies of it.
+    """
+    if words[0] == "git":
+        if len(words) > 1 and words[1] in GIT:
+            return 2, f"git {words[1]}", GIT[words[1]], TAKES_VALUE[words[1]]
+        return None
+    for form, (allowed, takes_value) in PROGRAMS.items():
+        if tuple(words[:len(form)]) == form:
+            return len(form), " ".join(form), allowed, takes_value
+    return None
 
 
 def partition_unquoted(text, marker):
@@ -232,12 +285,88 @@ def command_allowed(command):
     if re.fullmatch(r"\.meta/say/[a-z]+", program):
         # The channel's programs, by the directory that sanctions them (solorepo's DR-117).
         return None
+    form = form_of(words)
+    if form:
+        offset, what, allowed, takes_value = form
+        return options_allowed(what, words[offset:], allowed, takes_value)
     if program == "git":
-        return git_allowed(words)
-    for form, (allowed, takes_value) in PROGRAMS.items():
-        if tuple(words[:len(form)]) == form:
-            return options_allowed(" ".join(form), words[len(form):], allowed, takes_value)
-    return f"`{' '.join(words[:3])}` is not a program the reviewer runs"
+        return f"`git {words[1] if len(words) > 1 else ''}` is not a subcommand the reviewer runs"
+    instead = INSTEAD.get(tuple(words[:2]))
+    return (f"`{' '.join(words[:3])}` is not a program the reviewer runs"
+            + (f", and is not coming: {instead}" if instead else ""))
+
+
+def before_operator(text):
+    """The text up to the first character that ends the command, outside quotes.
+
+    The head of a chain, a pipe or a redirect: `gh pr diff 86 | head` is
+    `gh pr diff 86`, which is the command the reviewer wanted and the one this
+    hook takes. `CHAINS` and not `SHELL`, because only those characters drop a
+    second command; the rest would truncate this one's argument silently.
+    """
+    quoted = False
+    for i, ch in enumerate(text):
+        if ch == "'":
+            quoted = not quoted
+        elif not quoted and ch in CHAINS:
+            return text[:i]
+    return text
+
+
+def requote(word):
+    """One word of a derived command, spelled so bash gives it back whole.
+
+    Single quotes always, because a word here cannot contain one: `\\` and `"`
+    are refused, so there is no other way to have written it.
+    """
+    return word if word and not (set(word) & SHELL) and not any(c.isspace() for c in word) else f"'{word}'"
+
+
+def plain_form(command):
+    """A command on the list, derived from one that was refused, or None.
+
+    A refusal that says only what is wrong costs a turn to guess at, and the
+    guess is often wrong: across the nine review runs read for #144 the hook
+    refused between 7 and 29 calls a run — a third of one review's turns —
+    with the prompt already saying one plain command at a time. Most of them
+    have a nearest command the hook would have taken, and it is derivable
+    rather than guessable: the head of a chain, and the same command without
+    the option the list does not carry.
+
+    Nothing here is offered on trust. Whatever this returns has been through
+    `command_allowed`, so a refusal names a command this hook accepts or names
+    none, and a derivation that reaches somewhere unexpected — `git grep -O id
+    x` becomes a search for `x` — is refused by the same predicate as every
+    other call. A heredoc gets no derivation: cutting one at its `<<` would
+    offer the channel a post with no body, and those refusals already name the
+    shape they want.
+
+    Neither does anything else the channel is reached with, whatever the
+    operator: the body arrives on stdin however it was spelled, and `< body.md`
+    is the form the reviewer's own skill lists, so a command cut at that `<` is
+    the same post with the body gone. Most of the verbs would then die on
+    `say: nothing on stdin`, spending the turn this exists to save; `review
+    --approve` would not, because GitHub takes an approval with no body, and
+    the offer would be a verdict with what was checked stripped out (#146).
+    """
+    if partition_unquoted(command, "<<")[1]:
+        return None
+    words = words_of(before_operator(command))
+    if isinstance(words, str) or not words:
+        return None
+    if re.fullmatch(r"\.meta/say/[a-z]+", words[0]):
+        return None
+    form = form_of(words)
+    if form:
+        offset, _, allowed, takes_value = form
+        while (i := refused_option(words[offset:], allowed, takes_value)) is not None:
+            i += offset
+            # An option with no `=` may own the word after it: `--repo other/repo`
+            # goes whole, or the repository is left behind as a positional.
+            owns = "=" not in words[i] and i + 1 < len(words) and not words[i + 1].startswith("-")
+            words = words[:i] + words[i + (2 if owns else 1):]
+    candidate = " ".join(requote(word) for word in words)
+    return candidate if command_allowed(candidate) is None else None
 
 
 def blocked(tool, tool_input):
@@ -256,12 +385,18 @@ def blocked(tool, tool_input):
                 return f"Blocked: {problem}. The reviewer reads the worktree and nothing else."
             return None
         if tool == "Bash":
-            problem = command_allowed(tool_input.get("command", ""))
+            command = tool_input.get("command", "")
+            problem = command_allowed(command)
             if problem:
+                # The nearest command on the list goes last, because it is the
+                # one to type and the end of a refusal is where that is looked
+                # for (#144).
+                plain = plain_form(command)
                 return (f"Blocked: {problem}. The reviewer runs one plain command at a time: "
                         "`git log|show|diff|status|grep|ls-files` with plain options, `gh pr view|diff|checks`, "
                         "`python3 .meta/check_pr.py`, or a program of `.meta/say/` with a quoted heredoc. "
-                        "No pipes, redirects, expansions or chaining.")
+                        "No pipes, redirects, expansions or chaining."
+                        + (f" This one would be taken as: {plain}" if plain else ""))
         return None
     except Exception as exc:  # noqa: BLE001 — refusing is the safe answer to anything
         return f"Blocked: the hook could not read this call ({type(exc).__name__}: {exc}); refusing rather than guessing."

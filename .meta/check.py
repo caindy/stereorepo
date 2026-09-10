@@ -758,8 +758,46 @@ def hook_probes():
         ("allow", not worktree.blocked("Bash", {"command": "git grep -n -A 2 -i 'def blocked' -- .meta"})),
         ("allow", not worktree.blocked("Bash", {"command": ".meta/say/post --role reviewer raise 1 .meta/say/post 12 <<'BODY'\nfinding; see `git log $x` and <(x)\nBODY"})),
     ]
-    return [f"probe {n}: the hook should {want} it and did not"
-            for n, (want, held) in enumerate(cases, 1) if not held]
+    problems = [f"probe {n}: the hook should {want} it and did not"
+                for n, (want, held) in enumerate(cases, 1) if not held]
+
+    # worktree_only: what a refusal offers instead (#144). An operator or an
+    # option off the list has a nearest command the hook would have taken; a
+    # program off the list, a heredoc, and a git that never reached a
+    # subcommand have none, and offering one would be the guess this replaces.
+    # So has the channel reached with any operator, and so has a command cut at
+    # a character that expands inside an argument rather than ending it: the
+    # last three cases are the two edges #146 found, where the offer was
+    # well-formed, accepted, and a different command than the one refused.
+    forms = [
+        ("gh pr diff 86 | head", "gh pr diff 86"),
+        ("gh pr diff 86 > .meta/say", "gh pr diff 86"),
+        ("git status;git -c core.pager=id log -1", "git status"),
+        ("git log -1&&git -c core.pager=id log", "git log -1"),
+        ("git log -1 --output=.meta/say", "git log -1"),
+        ("gh pr view 87 --repo other/repo --json body", "gh pr view 87 --json body"),
+        ("python3 .meta/check_pr.py 87 --watch", "python3 .meta/check_pr.py 87"),
+        ("git grep -n 'a.*' -- README.md | wc -l", "git grep -n 'a.*' -- README.md"),
+        ("python3 .meta/check.py", None),
+        ("true", None),
+        ("curl https://example.com", None),
+        ("git -c core.pager=id log -1", None),
+        ("git clone --upload-pack='sh -c id' /some/repo /tmp/out", None),
+        (".meta/say/post raise 1 x 2 <<EOF\nbody\nEOF", None),
+        (".meta/say/post --role reviewer review 146 --approve < body.md", None),
+        ("git show HEAD~1:.meta/hooks/worktree_only.py", None),
+        ("git log HEAD~5..HEAD", None),
+    ]
+    for command, want in forms:
+        got = worktree.plain_form(command)
+        if got != want:
+            problems.append(f"the refusal for {command!r} should offer {want!r} and offered {got!r}")
+        elif got is not None and worktree.command_allowed(got):
+            problems.append(f"the refusal for {command!r} offers {got!r}, which the hook itself refuses")
+    # The gate has no nearest command, so its refusal says where its result is.
+    if "gh pr checks" not in (worktree.command_allowed("python3 .meta/check.py") or ""):
+        problems.append("the refusal for the gate should say where what it found is instead")
+    return problems
 
 
 def load_channel():
