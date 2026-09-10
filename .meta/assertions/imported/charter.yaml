@@ -130,7 +130,14 @@ articles:
       names, and a link where one is possible.
     enforces: work:discipline/literate-programming
     checked_by: >-
-      Nothing yet.
+      `check.py`, on the four shapes of the claim that are a string search: the
+      number resolves to an entry or an Article, a quotation attributed to one
+      appears in it, a relation stated in prose is the slot it names, and a
+      `path:line` reads the span it is cited beside. `check_pr.py` resolves the
+      number whose target is an Issue. Over the pages, the assertions and what a
+      portfolio inherits — and in an assertion over what the parser holds, so a
+      citation in a YAML comment is resolved for its number alone. A paraphrase
+      is a reading and is nobody's check.
     example: >-
       "A9 — a seed is data, gated by rendering it", with a link. Not a
       bare "A9".

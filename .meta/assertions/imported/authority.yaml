@@ -4,8 +4,9 @@
 # `../authority.yaml` (solorepo's DR-123).
 #
 # The first instances of the authority half of the ontology. It has been TBox
-# since solorepo's DR-003 and asserted nothing, which #11 measured: twelve of forty-nine
-# classes populated, and none of Capability, Securable or Permission among them.
+# since solorepo's DR-003 and asserted nothing, which solorepo's #11 measured:
+# twelve of forty-nine classes populated, and none of Capability, Securable or
+# Permission among them.
 #
 # What made these writable was needing them. `.meta/say/` exists because signing
 # had to stop being an act, and the moment it existed there was a real
@@ -79,8 +80,8 @@ permission_set:
     description: >-
       Held by both Roles, each under its own account (solorepo's DR-107), so GitHub
       records which Role spoke. That the channel is the only path is still a
-      deny list and a hook rather than a credential (#21), which is inspection
-      rather than structure.
+      deny list and a hook rather than a credential (solorepo's #21), which is
+      inspection rather than structure.
     capability: work:capability/speak-on-github
     securable: work:securable/github-conversations
     condition: >-

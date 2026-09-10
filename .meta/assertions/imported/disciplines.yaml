@@ -381,8 +381,8 @@ disciplines:
       Whether a point turns on a fact about a system outside this repository —
       GitHub, a harness, a language, a library. If it does, the answer is a
       quote from that system's own reference or a test run against it, and a
-      reading is not an answer whichever way it falls. #117 closed one on
-      recall twice, once each way, and the documentation took one fetch.
+      reading is not an answer whichever way it falls. solorepo's #117 closed
+      one on recall twice, once each way, and the documentation took one fetch.
     steps:
       - >-
         Open it when the work starts, not when it is finished. Written at the

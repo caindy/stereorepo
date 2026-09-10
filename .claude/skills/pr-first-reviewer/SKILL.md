@@ -53,7 +53,7 @@ What constitutes one pull request. Too coarse and an argument has no subject; to
 Which Role to hand to, once there is more than one.
 Whether a review comment is answered. A reviewer's point can be right, right about something else, or overtaken by the diff, and only the first is a change to make — but all three are owed a reply that says which, per A16. Resolving one to clear the gate is the shortcut the gate teaches.
 And which observations earn an Issue. The test is whether you can say what would make it worth doing — a trigger, or a cost that will land. "This function is long" has neither. "This retry has no backoff, and it will matter the first time the endpoint is slow" has both. File everything and the tracker becomes the file it replaced, with better tooling.
-Whether a point turns on a fact about a system outside this repository — GitHub, a harness, a language, a library. If it does, the answer is a quote from that system's own reference or a test run against it, and a reading is not an answer whichever way it falls. #117 closed one on recall twice, once each way, and the documentation took one fetch.
+Whether a point turns on a fact about a system outside this repository — GitHub, a harness, a language, a library. If it does, the answer is a quote from that system's own reference or a test run against it, and a reading is not an answer whichever way it falls. solorepo's #117 closed one on recall twice, once each way, and the documentation took one fetch.
 
 **None of the below decides any of the above.** A script can tell you a thread
 is unanswered, or a branch unpushed. What to write, and whether a point is

@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/147
+    name: A12 says a citation is dereferenced and nothing reads the claim attached to it
+    challenge_type: FEATURE
+    description: >-
+      Six of the eight review threads on #138, #140 and #142 were citations
+      whose attached claim did not hold when the target was read: a
+      `supersedes` between two entries that neither sets, a precedent cited at
+      a line that reads something else, a paraphrase the entry does not
+      support, a count of eighteen that was fifteen. A12's `checked_by` said
+      "Nothing yet.", so every one of them cost a reviewer round — an Opus run
+      and the coder's answer — for what a string search finds before hand-off.
+      Four of the shapes are mechanical; the rest are readings, and are #148's.

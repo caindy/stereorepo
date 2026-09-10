@@ -1,0 +1,111 @@
+decisions:
+  - id: work:decision/130
+    name: "DR-130 · A citation's claim is checked in the shapes a string search reaches, and nowhere else"
+    challenge: work:challenge/147
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-check
+      - work:artifact/meta-check-pr
+    alternatives:
+      - name: Leave the claim to review, and check the number only
+        chosen: false
+        reason: >-
+          What was happening. `cited decisions` resolves the number and stops,
+          so a citation that names a real entry and says something false about
+          it passes the gate and is caught, if at all, by a reviewer opening
+          the target. Six of eight threads on three pull requests in one day
+          were exactly that, and a round of Opus is an expensive way to run a
+          string search.
+      - name: Check every claim a citation makes
+        chosen: false
+        reason: >-
+          A paraphrase, a count and a derivation are the other half of the same
+          day's threads, and none of them is a search: deciding whether a
+          sentence supports a paraphrase is reading the entry, which is the
+          work the check was meant to save. A checker that attempts it is
+          either a second reader or a source of confident wrong answers.
+      - name: Four shapes, each resolved against the thing cited
+        chosen: true
+        reason: >-
+          Each of the four is a lookup with one answer — the number is in the
+          index or it is not, the quoted words are in the entry or they are
+          not, the slot is set or it is not, the line reads the span or it does
+          not. What it costs is a checker that reads prose with regular
+          expressions and will therefore be wrong at the edges, so every
+          pattern is narrow and every doubtful shape is passed over rather than
+          reported.
+      - name: All of it in `check.py`, with a token for the files job
+        chosen: false
+        reason: >-
+          One of the four resolves an Issue number, which only GitHub can
+          answer. `check.py` reads files and needs no network, and that is
+          what makes it the gate a portfolio runs on a laptop and in CI with
+          the same result; a gate that reaches GitHub is red when GitHub is
+          slow, and red for a reason nobody typed.
+    consequences:
+      - >-
+        `check.py` gains `cited articles`, `quoted claims`, `stated relations`
+        and `path and line claims`, over the set `cited decisions` already
+        scans, and `check_pr.py` gains `cited issues`. A12's `checked_by`
+        stops reading "Nothing yet." and names them.
+      - >-
+        The four in `check.py` share one scanned set, extracted as `durable`
+        from the check that drew it: a citation is a citation wherever it was
+        typed, and checks that each chose their own scope would disagree about
+        which files A12 covers. Two seams are left, and are written down rather
+        than closed. `cited issues` is outside that set, scanning the
+        assertions, because the checker that reaches GitHub holds no YAML
+        parser and so cannot read the copy list the set is drawn from. And the
+        four read a document's scalars where `cited decisions` reads the same
+        file as text, so a claim made in a YAML comment has its number resolved
+        and nothing more; closing that means tokenising YAML to tell a comment
+        from a `#` inside a scalar.
+      - >-
+        An inherited file cites solorepo's Issues as solorepo's — the form
+        `cited decisions` already requires of its record — and `cited issues`
+        resolves that form only where this Portfolio is solorepo. Three
+        citations under `.meta/assertions/imported/` change. With neither half a
+        portfolio is red on its first pull request for findings its author did
+        not write, and with the form alone it is wrong the other way round: an
+        inherited number resolving silently against an unrelated Issue of its
+        own, once its sequence is long enough. #114 is that failure for the
+        record.
+      - >-
+        Only an attributed quotation is read. `DR-043's step read "…"` puts a
+        noun between the citation and the words and thereby attributes them to
+        a step that entry changed, not to the entry; the claim is
+        un-dereferenceable and this check does not make it, because a check
+        that tests something other than what it says it tests is worse than
+        one that is narrow.
+      - >-
+        A relation denied or entertained is passed over. The sentence a
+        rejected alternative is made of states relations it is arguing against,
+        and reporting those would make the record's own form unwritable.
+      - >-
+        The four run over durable artifacts. A review thread is not a file, so
+        a citation written in one is still checked by whoever reads it; what
+        changes is that the same claim, once it lands in the record, is held.
+    falsifier: >-
+      A check firing on a claim that was true, often enough that somebody
+      rephrases prose to get past the checker rather than to be read. That is
+      the failure a regular expression over English earns, and the answer would
+      be to narrow the pattern until it fires only on the shape it names — or,
+      if there is no such pattern, to withdraw that one of the four. Review
+      found three of them on the first reading, each a pattern and not a
+      shape: an Article slot left out of the text a quotation is checked
+      against, a relation bound to the leftmost citation before its verb rather
+      than the nearest, and a look-back window opening inside a code span. Each
+      narrowed. On the other side, the gate caught three false claims in this
+      repository's own new docstrings before the first commit.
+    rationale: |-
+      A12 has been the Article with the most citations and the least
+      enforcement since it was written. What it asks is one thing — that a
+      citation carry the claim it names — and the reason nothing checked it was
+      that the claim looked like prose all the way down.
+
+      It is not. Four of the shapes a claim takes resolve against something the
+      repository already holds: an index of entries, an entry's own text, a
+      slot, a line of a file. The rest genuinely are prose. Splitting them was
+      the whole of the work; the checks themselves are a hundred lines.

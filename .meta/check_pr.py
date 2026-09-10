@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""The GitHub half of the gate: A15, held against a live pull request.
+"""The GitHub half of the gate: A15, held against a live pull request, and the
+quarter of A12 whose target is an Issue rather than a file.
 
 `check.py` reads files and this repository's own commits, and reaches the remote
 for one thing only — which Decision numbers are reserved, and only when the
@@ -664,6 +665,102 @@ def repo():
     return gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
 
 
+ASSERTIONS = META / "assertions"
+# What a portfolio inherits, of the assertions: the one entry the Specialization
+# copy list has under them, which is a path here rather than a parsed list.
+INHERITED = ASSERTIONS / "imported"
+FENCED = re.compile(r"```.*?```|`[^`\n]*`", re.S)
+# A Challenge cited by its number. Not `#abc123`, which is a fragment or a
+# colour, and not the tail of a longer number.
+ISSUE = re.compile(r"(?<![\w#&])#(\d{1,4})(?!\d)")
+# A citation of solorepo's Issues, in the form `cited decisions` has the
+# inherited material write one of solorepo's record: the possessive, then a run,
+# so `solorepo's #11, #21` names two.
+FOREIGN = re.compile(r"solorepo's #\d{1,4}\b(?:(?:,| and|, and) #\d{1,4}\b)*")
+# This Portfolio is solorepo, read off the identity its assertions declare.
+# `cited decisions` asks its index; a checker with no YAML parser asks for the
+# line, which is the same answer by a string search.
+SCAFFOLD = re.compile(r"^\s*id:\s*work:portfolio/solorepo\s*$", re.M)
+LIMIT = 1000
+
+
+def cited_issues():
+    """A12: every `#<n>` in an assertion resolves to an Issue (solorepo's DR-130).
+
+    An Issue number is the one citation form here whose target is not in the
+    repository. A `DR-nnn` resolves against the record and an `A<n>` against
+    the Charter, both of which `check.py` reads off disk; a number GitHub never
+    issued reads in a paragraph exactly like one it did, and nothing looked. So
+    this quarter of A12 lives with the half of the gate that reads GitHub, and
+    the other three-quarters are in `check.py`, which reads files and needs no
+    network.
+
+    Issues and pull requests share one sequence and the prose here cites both —
+    a Challenge by its Issue, a precedent by the pull request that set it — so
+    the two lists are read as one set.
+
+    The assertions and no wider, which is where #147 scopes it and as far as a
+    glob reaches. The set `check.py` scans is read out of the Specialization
+    step that lists what a portfolio inherits, and reading that here would put
+    a YAML parser into a checker that is stdlib only and stays that way.
+
+    Whose Issues. `.meta/assertions/imported/` is copied into every portfolio
+    and cites solorepo's Issues; a portfolio's own sequence starts again at #1.
+    A bare `#11` there is solorepo's where it was typed, is red on a portfolio's
+    first pull request for a finding its author did not write, and — worse, once
+    that portfolio has eleven Issues — resolves silently against an unrelated
+    one of its own, which is the citation the Charter holds worse than one that
+    dangles. So an inherited file cites solorepo's Issues as solorepo's, and a
+    bare number in one fails here, where the copy is made from; and `solorepo's
+    #11` resolves against this repository's lists only where this repository is
+    solorepo, and is passed over where it is not, since the Issues it names are
+    not there to resolve against. That is `cited decisions`'s answer to #114 in
+    both of its halves, over the other sequence.
+
+    `gh` answers newest first, so a list that comes back at the limit is
+    truncated at the bottom and says nothing about the numbers below it. Those
+    are passed over rather than reported: "cited and does not exist" has to
+    keep its one meaning.
+    """
+    bare, foreign, problems, home = {}, {}, [], False
+    for path in sorted(ASSERTIONS.rglob("*.yaml")):
+        try:
+            text = FENCED.sub("", path.read_text())
+        except (UnicodeDecodeError, OSError):
+            continue
+        where = str(path.relative_to(META.parent))
+        home = home or bool(SCAFFOLD.search(text))
+        for m in FOREIGN.finditer(text):
+            for number in ISSUE.findall(m.group()):
+                foreign.setdefault(int(number), set()).add(where)
+        plain = {int(m.group(1)) for m in ISSUE.finditer(FOREIGN.sub("", text))}
+        for number in sorted(plain):
+            bare.setdefault(number, set()).add(where)
+            if INHERITED in path.parents:
+                problems.append(f"{where}: #{number} is cited bare in a file a portfolio "
+                                "inherits, where it will come to mean the portfolio's; "
+                                "cite it as solorepo's")
+    if not (bare or foreign):
+        return problems
+    known, floor = set(), 0
+    for kind in ("issue", "pr"):
+        try:
+            found = gh(kind, "list", "--state", "all", "--limit", str(LIMIT), "--json", "number")
+        except SystemExit:
+            print(f"?  the {kind} list is not readable from here; cited issues unchecked")
+            return problems
+        known |= {item["number"] for item in found}
+        if len(found) == LIMIT:
+            floor = max(floor, min(item["number"] for item in found))
+    if home:
+        problems += [f"{where}: solorepo's #{number} is cited and is no Issue"
+                     for number in sorted(foreign) if number not in known and number > floor
+                     for where in sorted(foreign[number])]
+    return problems + [f"{where}: #{number} is cited and is no Issue"
+                       for number in sorted(bare) if number not in known and number > floor
+                       for where in sorted(bare[number])]
+
+
 WORKFLOW = META.parent / ".github" / "workflows" / "gate.yml"
 
 
@@ -710,7 +807,7 @@ def gate(ref):
     on the push, and on the clock (solorepo's DR-105) — and two copies would be two gates."""
     title, body = from_github(ref)
     return (check(title, body) + resolved_without_an_answer(ref)
-            + unsigned_commits(ref) + required_contexts())
+            + unsigned_commits(ref) + required_contexts() + cited_issues())
 
 
 CONTEXT = "pull request"

@@ -83,7 +83,7 @@ _In practice:_ A choice settled in conversation is written as `assertions/decisi
 
 ### A12. A citation in a durable artifact is dereferenced — the number, the claim it names, and a link where one is possible.
 
-**Enforces** Literate Programming. **Checked by** Nothing yet.
+**Enforces** Literate Programming. **Checked by** `check.py`, on the four shapes of the claim that are a string search: the number resolves to an entry or an Article, a quotation attributed to one appears in it, a relation stated in prose is the slot it names, and a `path:line` reads the span it is cited beside. `check_pr.py` resolves the number whose target is an Issue. Over the pages, the assertions and what a portfolio inherits — and in an assertion over what the parser holds, so a citation in a YAML comment is resolved for its number alone. A paraphrase is a reading and is nobody's check.
 
 _In practice:_ "A9 — a seed is data, gated by rendering it", with a link. Not a bare "A9".
 
