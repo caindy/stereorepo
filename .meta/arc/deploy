@@ -15,6 +15,14 @@ thing that changes between them.
 file changes, or after nothing changed at all, is the same command and does
 the same thing either way.
 
+`helm upgrade` preserves custom resource annotations across runs. If a runner
+scale set was deregistered on GitHub (for example, by `teardown` running on
+another machine), an existing `AutoscalingRunnerSet` here would otherwise
+continue holding the stale `runner-scale-set-id` annotation — a 404 from
+GitHub on JIT config generation that the controller never recovers from on its
+own. `deploy` clears that cached ID and any stuck ephemeral runners on upgrade
+so the controller re-verifies registration with GitHub and adopts the live ID.
+
 The GitHub token ARC registers runners with is never a command-line argument
 and never a file this repository holds. It comes from `$ARC_GITHUB_TOKEN` in
 the environment, or from `~/.config/solorepo/arc-runner.env` — outside the
@@ -24,11 +32,13 @@ here posts to GitHub as anyone, it only tells ARC how to ask GitHub for
 runner registrations.
 """
 import argparse
+import json
 import os
 import pathlib
 import shutil
 import subprocess
 import sys
+import time
 
 import yaml
 
@@ -129,21 +139,144 @@ def helm_upgrade(release, namespace, chart, values):
     ], check=True)
 
 
+def is_registration_stale(since_seconds=120):
+    """Whether ARC has encountered a 404 from GitHub for a dead runner scale set ID."""
+    scale_set = subprocess.run([
+        "kubectl", "-n", RUNNER_NAMESPACE, "get", "autoscalingrunnerset",
+        RUNNERSET_RELEASE, "-o", "jsonpath={.metadata.annotations.runner-scale-set-id}",
+    ], capture_output=True, text=True)
+    if scale_set.returncode != 0 or not scale_set.stdout.strip():
+        return False
+
+    since_arg = f"--since={max(60, int(since_seconds))}s"
+    for label, ns in [("app.kubernetes.io/component=runner-scale-set-listener", CONTROLLER_NAMESPACE),
+                      ("app.kubernetes.io/component=controller-manager", CONTROLLER_NAMESPACE)]:
+        logs = subprocess.run([
+            "kubectl", "-n", ns, "logs", "-l", label, since_arg, "--tail=50",
+        ], capture_output=True, text=True)
+        if logs.returncode == 0 and "RunnerScaleSetNotFoundException" in logs.stdout:
+            return True
+
+    return False
+
+
+def active_runners():
+    """Names of EphemeralRunners that are actively executing or starting a job.
+
+    Returns (runners, True) on a clean inspection, or ([], False) if kubectl
+    failed or the response was unparseable. Fails closed: callers must not
+    treat an error as 'no runners active'.
+    """
+    out = subprocess.run([
+        "kubectl", "-n", RUNNER_NAMESPACE, "get", "ephemeralrunners", "-o", "json",
+    ], capture_output=True, text=True)
+    if out.returncode != 0:
+        return [], False
+    try:
+        items = json.loads(out.stdout).get("items", [])
+    except Exception:
+        return [], False
+    active = []
+    for r in items:
+        phase = r.get("status", {}).get("phase", "")
+        if phase == "Running":
+            active.append(r["metadata"]["name"])
+        elif phase not in ("PodFailed", "Failed", "Succeeded"):
+            name = r["metadata"]["name"]
+            pod = subprocess.run([
+                "kubectl", "-n", RUNNER_NAMESPACE, "get", "pod", name,
+                "-o", "jsonpath={.status.phase}",
+            ], capture_output=True, text=True)
+            if pod.returncode == 0:
+                if pod.stdout.strip() in ("Pending", "Running"):
+                    active.append(name)
+            else:
+                active.append(name)
+    return active, True
+
+
+def reset_stale_registration(start_time=None):
+    """Clear cached scale set metadata from an existing AutoscalingRunnerSet.
+
+    `helm upgrade` preserves existing annotations on custom resources. If a
+    runner scale set was deregistered on GitHub (e.g. by `teardown` running on
+    another machine), the AutoscalingRunnerSet in this cluster continues to
+    hold the stale `runner-scale-set-id` annotation. The controller never clears
+    that annotation on 404 and fails every JIT config generation.
+
+    We only reset if the registration is actually stale (evidenced by a 404
+    `RunnerScaleSetNotFoundException` from GitHub in recent listener or controller
+    logs). When detected, we wait for any active jobs to finish, clean up stuck
+    child resources with bounded timeouts, and patch the custom resource so the
+    controller re-verifies registration with GitHub and adopts a live ID.
+    """
+    since_seconds = (time.time() - start_time + 60) if start_time else 120
+    if not is_registration_stale(since_seconds):
+        return
+
+    print("arc: detected stale runner scale set registration on GitHub; resetting...",
+          file=sys.stderr)
+
+    # Wait for any active jobs to finish before touching runner sets.
+    deadline = time.time() + 600
+    while time.time() < deadline:
+        active, ok = active_runners()
+        if ok and not active:
+            break
+        busy = active or ["(unverified runner)"]
+        print(f"arc: waiting for active runner(s) {', '.join(busy)} to finish before reset...",
+              file=sys.stderr)
+        time.sleep(5)
+    else:
+        active, ok = active_runners()
+        if not ok or active:
+            busy = active or ["(unverified runner)"]
+            print(f"arc: active runner(s) {', '.join(busy)} still running after 10m; "
+                  "aborting stale registration reset to protect active jobs.",
+                  file=sys.stderr)
+            return
+
+    out = subprocess.run([
+        "kubectl", "-n", RUNNER_NAMESPACE, "patch", "autoscalingrunnerset",
+        RUNNERSET_RELEASE, "--type=merge",
+        "-p", '{"metadata": {"annotations": {"actions.github.com/values-hash": null, "runner-scale-set-id": null}}}',
+    ], capture_output=True, text=True)
+    if out.returncode != 0:
+        print(f"arc: failed to patch {RUNNERSET_RELEASE}: {out.stderr.strip()}",
+              file=sys.stderr)
+        return
+
+    # Delete stuck child CRs that bind the dead runnerScaleSetId in their spec.
+    for kind, ns in [("ephemeralrunnerset", RUNNER_NAMESPACE),
+                     ("autoscalinglistener", CONTROLLER_NAMESPACE),
+                     ("ephemeralrunner", RUNNER_NAMESPACE)]:
+        del_cmd = subprocess.run([
+            "kubectl", "-n", ns, "delete", kind, "--all",
+            "--ignore-not-found", "--timeout", "30s",
+        ], capture_output=True, text=True)
+        if del_cmd.returncode != 0:
+            print(f"arc: {kind} did not finish deleting in 30s — "
+                  f"`kubectl get {kind} -n {ns} -o yaml` will show what it is waiting on",
+                  file=sys.stderr)
+
+
 def main():
     argparse.ArgumentParser(description=__doc__,
                             formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     require("kubectl", "helm")
     context = current_context()
     print(f"arc: deploying to kubectl context '{context}'", file=sys.stderr)
+    start_time = time.time()
     pat = token()
     helm_upgrade(CONTROLLER_RELEASE, CONTROLLER_NAMESPACE, CONTROLLER_CHART,
-                HERE / "values-controller.yaml")
+                 HERE / "values-controller.yaml")
     apply_secret(pat)
     helm_upgrade(RUNNERSET_RELEASE, RUNNER_NAMESPACE, RUNNERSET_CHART,
-                HERE / "values-runnerset.yaml")
+                 HERE / "values-runnerset.yaml")
+    reset_stale_registration(start_time)
     print(f"arc: done. `kubectl get pods -n {CONTROLLER_NAMESPACE}` and "
-         f"GitHub's Settings → Actions → Runners on caindy/solorepo should show "
-         f"'{RUNNERSET_RELEASE}'.", file=sys.stderr)
+          f"GitHub's Settings → Actions → Runners on caindy/solorepo should show "
+          f"'{RUNNERSET_RELEASE}'.", file=sys.stderr)
 
 
 if __name__ == "__main__":
