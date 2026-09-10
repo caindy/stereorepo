@@ -1,0 +1,183 @@
+decisions:
+  - id: work:decision/140
+    name: "DR-140 · Every job in every workflow moves to the self-hosted scale set, and `runs-on:` leaves the half the two gate workflows hold equal"
+    challenge: work:challenge/181
+    status: ADOPTED
+    supersedes:
+      - work:decision/119
+      - work:decision/137
+    enacted_in:
+      - work:artifact/github-workflows-gate
+      - work:artifact/github-workflows-advance
+      - work:artifact/github-workflows-coder
+      - work:artifact/github-workflows-review
+      - work:artifact/template-github-workflows-gate
+      - work:artifact/meta-check
+      - work:artifact/meta-actions-gh
+      - work:artifact/meta-actions-pull-request
+      - work:artifact/meta-actions-sweep
+      - work:artifact/meta-arc-readme
+      - work:artifact/specialize
+    context: >-
+      DR-137 moved `coder.yml` and `review.yml` to the scale set and deferred
+      `gate.yml`, naming the risk it was avoiding: its jobs are required status
+      checks in `main`'s ruleset, and pointing one at a scale set that turns out
+      to be flaky stalls every merge silently. `advance.yml` stayed hosted beside
+      it, named in the same consequence and argued for nowhere. That reasoning
+      weighed one way for a check to fail to start and not the other. On #179 the hosted account's spending limit was
+      exhausted and the gate's jobs failed at startup with a payment error,
+      while the cluster serving the loops was up and idle — the same stall, from
+      the runner this record had chosen as the safe one.
+    alternatives:
+      - name: Raise the spending limit, or buy more hosted minutes
+        chosen: false
+        reason: >-
+          DR-137 rejected this for the loops and it is no better here: a ceiling
+          paid past is still a ceiling, and the spend is not the whole of it.
+          What the gate depends on is a budget nobody in this repository
+          controls, renewed monthly, whose exhaustion arrives as a red required
+          check with no relation to the change under it. Paying moves the date
+          and leaves the dependency.
+      - name: Move `advance.yml` only, and leave the required checks hosted
+        chosen: false
+        reason: >-
+          The half that is safe to move and not the half that matters. `advance`
+          holds a runner for seconds and is not a required check; the five jobs
+          in `gate.yml` are the ones a spending limit stops, and stopping them
+          is what stalls a merge. Moving the cheap one would spend the whole
+          change and leave #181's failure exactly where it was.
+      - name: >-
+          `runs-on: ${{ vars.GATE_RUNNER || 'ubuntu-latest' }}` in both gate
+          workflows, so the shared half stays literally equal
+        chosen: false
+        reason: >-
+          It keeps DR-119's comparison untouched, and it does so by moving the
+          answer into a repository variable that nothing in the tree records: a
+          reader of either file learns which runner is used by going to a
+          settings page. Worse, its failure is silent and in the wrong
+          direction — the variable unset means hosted, which is the thing being
+          left, so a machine that forgets it goes back to spending minutes and
+          says nothing. A `runs-on:` that names its runner is a line somebody
+          can read.
+      - name: Stop holding `pull request` and `sweep` equal across the two files
+        chosen: false
+        reason: >-
+          The cheapest way to let the two differ, and it undoes DR-119 to buy
+          one line. What #113 cost was a *step* the scaffold gained and the seed
+          did not; the comparison exists for the steps, and dropping it would
+          reopen that for the sake of a runner name.
+      - name: >-
+          Move all six jobs, carve `runs-on:` out of the held-equal half, and
+          close the image's tool gaps once
+        chosen: true
+        reason: >-
+          Where a job runs is a property of the machine a repository has, not of
+          what the job does, so it is the one line of the two stubs that must be
+          allowed to differ: this repository has a scale set that exists on one
+          machine, and a fresh clone has whatever GitHub will give it. Every
+          other key of both stubs, and every step behind them, stays equal, so
+          what DR-119 was written for is untouched. The tool gaps the move opens
+          are closed where they belong — `gh` in a composite action both shared
+          jobs and `advance.yml` use, guarded by `type -p` so a hosted runner
+          pays nothing for it; a C toolchain and rustup in the `rust seed` job,
+          which is the only job that needs either. What it costs is stated
+          plainly and is the thing DR-137 was afraid of: `main`'s required
+          checks now depend on one machine being reachable, and a merge cannot
+          go green while it is down. That is accepted because the failure it
+          replaces was not better — a spending limit stalls the same merges —
+          and because this one is a machine the solo can switch on.
+    consequences:
+      - >-
+        `runs-on: arc-runner-set` in all five jobs of `gate.yml` and in
+        `advance.yml`'s `advance` job. Nothing in this repository's CI spends
+        GitHub-hosted Actions minutes, and nothing in it runs when the cluster
+        does not.
+      - >-
+        `main`'s required status checks are now the cluster's. The machine
+        being up is a merge requirement, where before it was only the loops'.
+        `.meta/arc/README.md` says so where somebody standing the cluster up
+        will read it.
+      - >-
+        `check.py`'s `gate workflows agree` compares every key of the two
+        shared job stubs except `runs-on:`. `template/.github/workflows/gate.yml`
+        stays `ubuntu-latest`, which is what a portfolio has; the steps of both
+        stubs are still held equal, which is what DR-119 was for.
+      - >-
+        Specialization's copy step says to retarget `runs-on:` in every workflow
+        it copies. All three it names — `coder.yml`, `review.yml` and
+        `advance.yml` — are pinned to `arc-runner-set`, and none of `.meta/arc/`
+        travels with them, so a portfolio that inherited them unchanged would
+        have loops and an `advance` that queue rather than run. The instruction
+        names no file, so it stays true as the copied set changes.
+      - >-
+        `.meta/actions/gh` is a composite action that installs the GitHub CLI
+        only where it is missing, used by `.meta/actions/pull-request`,
+        `.meta/actions/sweep` and `advance.yml`. `coder.yml` and `review.yml`
+        still carry their own copies of that install; folding them in is a
+        tidying this change did not take.
+      - >-
+        The `rust seed` job installs `build-essential` and rustup, which
+        `ubuntu-latest` ships and the scale set's image does not, and runs every
+        cargo command from the rendered tree rather than the repository root —
+        rustup is installed with no default toolchain, so the pin in
+        `rust-toolchain.toml` is still the only place the version is written,
+        and a `cargo install` outside that tree would have no toolchain to run
+        under. The `python seed` and `files` jobs needed nothing beyond the
+        `uv` they already provision.
+    falsifier: >-
+      Merges blocked by required checks that never scheduled, because the
+      machine was off, often enough to outweigh what the hosted runner's
+      spending limit blocked before it — which is DR-137's caution turning out
+      to have been right about the risk and wrong only about which runner
+      carried it. The remedy then is not a return to hosted-only but a second
+      runner: the deferral's reasoning does not come back, because the account's
+      limit does not go away either. What would falsify the carve-out instead:
+      the two gate workflows drifting in a *step*, with `runs-on:` having been
+      the thin end of it.
+    rationale: |-
+      DR-137 read the risk correctly and only from one side. It asked what
+      happens if the cluster is unreliable and a required check waits on it, and
+      it did not ask what happens if the hosted account cannot start that check
+      at all. #179 answered the second question: the gate's jobs failed at
+      startup with a spending-limit error while `arc-runner-set` sat idle, and
+      the merge stalled anyway. Two ways to stall, and the record had chosen the
+      one nobody in this repository can fix.
+
+      So the deferral goes, and it goes without pretending the cost went with
+      it. `main`'s required checks are now a single machine's, and a merge
+      cannot go green while that machine is down. What makes that the better
+      trade is not that it is safe but that it is *ours*: a cluster that is off
+      is a cluster somebody switches on, and a spending limit is a date.
+
+      The seeded gate is the one place the carve-out can reach. A portfolio
+      cloned from `template/` has no cluster, and a job queued forever on a scale
+      set nobody deployed is the seeded gate silently never running. That is not
+      the failure DR-119's comparison was written against — that one is drift, a
+      step the scaffold gained and the seed did not (#113) — but it is the same
+      thing going wrong in the same place, and holding `runs-on:` equal would be
+      the comparison itself causing it. Hence the carve-out, and hence its shape: one key of the stub, named, with every
+      other key and every step still held equal. `runs-on:` is where the two
+      repositories are legitimately different, and it is the only key of the
+      stubs that may differ, so it is the comparison's only exception.
+
+      It is not the only door the runner name goes through, and that was the
+      review's finding on this change. The three loop workflows reach a portfolio
+      by verbatim copy rather than through `template/`, so no comparison touches
+      them and the carve-out cannot: `coder.yml` and `review.yml` have named the
+      scale set since DR-137, and this change adds `advance.yml`, the file whose
+      whole reason is that an armed merge left behind is nobody's to notice.
+      Answered at the copy — Specialization's step two now retargets `runs-on:`
+      in every workflow it copies — rather than by seeding a fourth `template/`
+      file differing from the scaffold's in that one line, which would buy a
+      portfolio's answer at the price of a second copy to hold equal, and would
+      answer for one of the three.
+
+      The tool gaps are the same kind of finding DR-137's falsifier predicted:
+      the image does not carry what `ubuntu-latest` carried, and the way to find
+      out is to run it. `gh` was already known missing, so it is now installed
+      once in an action rather than typed a fourth time. The Rust job wanted
+      more — no `cc` and no rustup, which meant no linker and no compiler at
+      all — and both were installed and the seed's own gate run on this
+      repository's scale set before the change was written, along with the
+      Python seed's, so the two heaviest jobs are known to pass there rather
+      than hoped to.

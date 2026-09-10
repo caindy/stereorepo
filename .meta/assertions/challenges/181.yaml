@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/181
+    name: The gate's required checks were the half still spending hosted minutes, and a spending limit stalls a merge as surely as a cluster that is off
+    challenge_type: FEATURE
+    description: >-
+      DR-137 moved `coder.yml` and `review.yml` to the self-hosted scale set and
+      deferred `gate.yml`, on the reasoning that its jobs are required status
+      checks in `main`'s ruleset and pointing one at a scale set that turns out
+      to be flaky stalls every merge silently. `advance.yml` stayed hosted
+      beside it, named in the same consequence and argued for nowhere. What that
+      reasoning did not weigh is the other way the same check fails to start: on #179 the hosted account's spending limit was exhausted, and the
+      gate's jobs failed at startup with a payment error while the cluster
+      serving the loops was up and idle. Both are a merge that cannot go green;
+      only one of them is a machine the solo can switch back on.

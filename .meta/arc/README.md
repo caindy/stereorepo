@@ -5,10 +5,13 @@
 there the whole time. They ran on `ubuntu-latest` until this stood up
 GitHub's Actions Runner Controller on Kubernetes; now they run here,
 `runs-on: arc-runner-set`, scaled to zero when idle. `gate.yml` and
-`advance.yml` stay on GitHub-hosted runners for now — a required check
-pointed at a cluster that turns out to be unreliable stalls every merge
-silently, so that move waits until this one has proven itself (solorepo's
-DR-137).
+`advance.yml` followed (solorepo's DR-140), so every job in every workflow
+of this repository runs on this cluster and nothing here spends
+GitHub-hosted minutes. That includes `main`'s required status checks, which
+solorepo's DR-137 deliberately left hosted: **a merge cannot go green while
+this cluster is down**, so the machine being reachable is now the
+repository's business and not only the loops'. `template/`'s seeded gate
+stays `ubuntu-latest`, a portfolio having no cluster of its own.
 
 Two layers, separately invokable:
 

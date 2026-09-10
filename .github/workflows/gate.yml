@@ -16,6 +16,16 @@
 # explain (DR-128); `check_pr.py` reads GitHub and has nothing to say except on
 # a pull request.
 #
+# Every job here runs on the self-hosted scale set (solorepo's DR-140), which
+# solorepo's DR-137 deferred until the cluster had proven itself and which the
+# hosted account's spending limit then forced: a required check that cannot
+# start because the minutes are gone stalls a merge exactly as a cluster that
+# is off does, and only one of the two is a machine the solo can switch on.
+# `runs-on:` is the one line of the shared half `check.py` no longer holds
+# equal to the seed's, because where a job runs is a property of the machine
+# this repository has and not of what the job does; the seed stays
+# `ubuntu-latest`, which is what a fresh clone has.
+#
 # Nothing here restates a Discipline. What a pull request body must contain is
 # derived from `.meta/templates/pull-request.md` by the checker; this file only
 # decides when the checker runs.
@@ -53,7 +63,7 @@ jobs:
   files:
     name: files
     if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       # Pinned exactly: setup-uv publishes no floating major past v7 while
       # releasing v10, so `@v10` resolves to nothing and fails the run.
@@ -78,19 +88,54 @@ jobs:
   rust:
     name: rust seed
     if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
-      # rustup on the runner reads `rust-toolchain.toml` and installs the pin
-      # on first use, so no action is needed for the toolchain. cargo-mutants
-      # is the one tool the gate needs that is not a rustup component; the
-      # cache is keyed on its version so a bump reinstalls it.
+
+      # `ubuntu-latest` ships a C toolchain and the scale set's image does not
+      # (solorepo's DR-140), and Rust links through `cc`: without this every
+      # `cargo build` here fails at the link step, and `cargo install
+      # cargo-mutants` fails building itself before that. Guarded, so the step
+      # costs an `apt-get update` only where the compiler is actually absent.
+      - name: install a C toolchain
+        run: |
+          set -euo pipefail
+          command -v cc >/dev/null || {
+            sudo apt-get update -qq
+            sudo apt-get install -y build-essential
+          }
+          cc --version | head -1
+
+      # `ubuntu-latest` ships rustup and the scale set's image does not
+      # (solorepo's DR-140). Installed with no default toolchain on purpose:
+      # the pin lives in `rust-toolchain.toml` beside the seed, and a
+      # `--default-toolchain` here would be a second copy of a version number
+      # this repository keeps in one place. Which means every cargo command
+      # below runs from the rendered tree, where that file is — including the
+      # `cargo install` that used to run from the repository root, which has
+      # no toolchain file and so no toolchain at all.
+      - name: install rustup
+        run: |
+          set -euo pipefail
+          command -v rustup >/dev/null || {
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --default-toolchain none --profile minimal
+            printf '%s/.cargo/bin\n' "$HOME" >> "$GITHUB_PATH"
+          }
+
+      - run: bootstraps/rust/render "$RUNNER_TEMP/acme" acme
+
+      # rustup reads `rust-toolchain.toml` in the rendered tree and installs
+      # the pin on first use, so no action is needed for the toolchain.
+      # cargo-mutants is the one tool the gate needs that is not a rustup
+      # component; the cache is keyed on its version so a bump reinstalls it.
       - uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/cargo-mutants
           key: cargo-mutants-${{ env.CARGO_MUTANTS }}
       - run: command -v cargo-mutants || cargo install cargo-mutants --locked --version "$CARGO_MUTANTS"
-      - run: bootstraps/rust/render "$RUNNER_TEMP/acme" acme
+        working-directory: ${{ runner.temp }}/acme
+
       - run: cargo xtask gate
         working-directory: ${{ runner.temp }}/acme
 
@@ -103,7 +148,7 @@ jobs:
   python:
     name: python seed
     if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: astral-sh/setup-uv@v10.0.1
@@ -118,7 +163,7 @@ jobs:
   pull-request:
     name: pull request
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: ./.meta/actions/pull-request
@@ -133,7 +178,7 @@ jobs:
   sweep:
     name: sweep
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: ./.meta/actions/sweep

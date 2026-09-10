@@ -41,7 +41,11 @@ permissions:
 jobs:
   advance:
     name: advance
-    runs-on: ubuntu-latest
+    # The self-hosted scale set (solorepo's DR-140). Nothing here is a required
+    # check, but an armed merge that never advances is the same stall by
+    # another route, and the hosted minutes this used to spend are the ones
+    # solorepo's DR-140 stopped depending on.
+    runs-on: arc-runner-set
     steps:
       # No token in `.git/config`: nothing here pushes from the checkout. The
       # channel is all this needs from the tree, and it is trunk's by being on
@@ -49,6 +53,11 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
+
+      # `.meta/say/channel.py` shells out to `gh` for every read and write, and
+      # the scale set's image does not carry it (solorepo's DR-137); the step
+      # is a `type -p` on any image that does.
+      - uses: ./.meta/actions/gh
 
       # The Role's credential, where `.meta/say/` expects it by default
       # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the

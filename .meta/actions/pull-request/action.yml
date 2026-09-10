@@ -2,8 +2,11 @@
 # scaffold's gate workflow and of a portfolio's both run exactly this, so it
 # is typed once here and travels with `.meta/`; each workflow's job is a
 # checkout and a `uses:` of this path, and the two stubs are held equal by
-# `check.py`. `gh` is on the runner already and the checker is stdlib only,
-# so it stays fast enough to run on every edit to the body.
+# `check.py`. The checker is stdlib only and needs `gh`, which the step below
+# ensures rather than assumes: since solorepo's DR-140 this job runs
+# self-hosted here and hosted in a portfolio, and only one of the two images
+# carries it. On the one that does the step is a `type -p`, so this stays fast
+# enough to run on every edit to the body.
 name: pull request gate
 description: Run check_pr.py on one pull request, as both gate workflows do.
 inputs:
@@ -16,6 +19,7 @@ inputs:
 runs:
   using: composite
   steps:
+    - uses: ./.meta/actions/gh
     - run: python3 .meta/check_pr.py "$PR"
       shell: bash
       env:

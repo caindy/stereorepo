@@ -12,7 +12,9 @@
 # which this portfolio carries (solorepo's DR-120); the stubs, the triggers and the
 # permissions solorepo's `check.py` holds equal to its own (solorepo's DR-119), so a
 # portfolio specialized later runs what the scaffold runs and not a version
-# behind.
+# behind. All of each stub but `runs-on:` (solorepo's DR-140): the scaffold's
+# gate runs on a self-hosted runner that exists on one machine, and a
+# portfolio has `ubuntu-latest` until it says otherwise here.
 #
 # Nothing here restates a Discipline. What a pull request body must contain is
 # derived from `.meta/templates/pull-request.md` by the checker; this file only

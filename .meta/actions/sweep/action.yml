@@ -18,6 +18,10 @@ inputs:
 runs:
   using: composite
   steps:
+    # Both checkers below shell out to `gh`, and since solorepo's DR-140 this
+    # job runs self-hosted here and hosted in a portfolio; the step is a
+    # `type -p` on an image that already carries it.
+    - uses: ./.meta/actions/gh
     - run: python3 .meta/check_pr.py --all --publish
       shell: bash
       env:

@@ -2276,6 +2276,12 @@ def scaffold_only_paths():
 # the scaffold's seed jobs are its alone.
 SHARED_JOBS = ("pull-request", "sweep")
 SEED_OWN_JOBS = ("gate",)
+# Except where the job runs (solorepo's DR-140). This repository's gate runs on a
+# self-hosted scale set that exists on one machine; a fresh clone has no cluster
+# and every runner GitHub will give it. That is a fact about the machine each
+# repository has, not about what the job does, and holding it equal would force
+# one of the two to name a runner it does not have.
+NOT_SHARED = ("runs-on",)
 
 
 def _first_difference(a, b, path):
@@ -2327,6 +2333,15 @@ def gate_workflows_agree():
     `.meta/actions/`, so their steps are typed once and cannot drift. What is
     compared here is the residue no mechanism of GitHub's shares: the
     triggers, the permissions, and the two stubs of checkout and `uses:`.
+
+    All of each stub but `runs-on:` (solorepo's DR-140). This repository's gate
+    runs on a self-hosted scale set named on one machine; a portfolio cloned
+    from the seed has no cluster and `ubuntu-latest`. Held equal, one of the two
+    would have to name a runner it does not have — and a job queued forever on a
+    scale set nobody deployed is the seeded gate silently never running, which is
+    not the drift this step was written against but is the same thing going wrong
+    in the same place. What the two still share is every step, which is what "a
+    version behind" meant in solorepo's #113.
     """
     ours = ROOT / ".github" / "workflows" / "gate.yml"
     seed = TEMPLATE / ".github" / "workflows" / "gate.yml"
@@ -2345,7 +2360,9 @@ def gate_workflows_agree():
                 problems.append(f"jobs.{name}: not in {path.relative_to(ROOT)}, "
                                 "and it is a job both gate workflows define")
         if name in jobs_a and name in jobs_b:
-            shared[f"jobs.{name}"] = (jobs_a[name], jobs_b[name])
+            shared[f"jobs.{name}"] = tuple(
+                {k: v for k, v in jobs[name].items() if k not in NOT_SHARED}
+                for jobs in (jobs_a, jobs_b))
     for name in jobs_b:
         if name not in SHARED_JOBS + SEED_OWN_JOBS:
             problems.append(f"jobs.{name}: in {seed.relative_to(ROOT)} and neither shared "

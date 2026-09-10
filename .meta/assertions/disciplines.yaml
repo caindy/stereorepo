@@ -41,7 +41,14 @@ disciplines:
         from the templates. Not the gate workflow either: solorepo's runs the
         Bootstrap seeds, which a portfolio has not got, and step three writes a
         portfolio's own, whose one gate job runs `.meta/gate` over the Projects
-        its assertions declare (DR-115).
+        its assertions declare (DR-115). Then retarget `runs-on:` in every
+        workflow this step copies: each of them names `arc-runner-set`, a
+        self-hosted scale set that exists on the scaffold's own machine
+        (DR-137, DR-140), and none of what stands one up is copied. A job whose
+        label no runner offers does not fail — it queues, so the loops never
+        start and an armed merge goes behind with nobody left to notice (#93),
+        which is quieter than a job that goes red. `ubuntu-latest` is the answer
+        unless this portfolio stands up a scale set of its own.
       - >-
         Copy every file under `template/` to its matching path, then link
         `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that

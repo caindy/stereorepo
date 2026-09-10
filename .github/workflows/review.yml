@@ -58,8 +58,8 @@ jobs:
         && contains(github.event.pull_request.requested_reviewers.*.login, format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)))
     # The self-hosted scale set (solorepo's DR-137): this Job is what actually
     # spends GitHub Actions minutes, holding a runner for up to the timeout
-    # below on every review. Not `gate.yml`'s required checks, which stay
-    # hosted until the cluster serving this has proven itself.
+    # below on every review. It moved here first, ahead of `gate.yml`'s
+    # required checks, which followed under solorepo's DR-140.
     runs-on: arc-runner-set
     timeout-minutes: 50
     env:
