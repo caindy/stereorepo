@@ -31,9 +31,17 @@ on:
 
 # One run per Issue or per pull request at a time. A second label on the
 # same Issue, or a second verdict on the same pull request, waits rather than
-# starting a second branch.
+# starting a second branch. The review's state is in the key because every
+# reply on a thread is a submitted review too — an empty one, `commented` —
+# and GitHub keeps one pending run per group: keyed by number alone, a reply
+# arriving while a run is in progress cancels the pending verdict behind it
+# and leaves a run that skips, which is how #141's verdict would have gone
+# the way #102's did. Keyed by state, a `commented` event can cancel only
+# another `commented`, which was going to skip anyway. A dispatch is the
+# by-hand form of a verdict, so it takes the verdict's key and waits behind
+# one rather than running beside it.
 concurrency:
-  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}
+  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.pull_request && 'changes_requested') || 'take' }}
   cancel-in-progress: false
 
 # The workflow's own token reads. Every write goes through the coder's
