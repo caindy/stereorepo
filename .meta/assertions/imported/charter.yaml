@@ -134,6 +134,9 @@ articles:
     example: >-
       "A9 — a seed is data, gated by rendering it", with a link. Not a
       bare "A9".
+    falsifier: >-
+      A citation whose identifier already carries the claim it names, so that
+      dereferencing it writes the same words twice.
   - id: work:article/14
     name: Article 14
     statement: Reasoning that lives only in a commit message is not recorded.

@@ -24,7 +24,15 @@ imports:
 slots:
 
   id:
-    description: Stable identifier for the entity.
+    description: >-
+      Stable identifier for the entity, in one of two forms, chosen by what the
+      entity is (solorepo's DR-125). A **slug** where the entity is its meaning — a
+      Concept, a Discipline, an Artifact — since two with the same meaning are
+      one, and renaming the label leaves the identity alone. A **number** where
+      the entity is an occurrence — a Decision, an Article, a Challenge — since
+      two with the same words are two, the order is when, and a deleted one
+      leaves a hole the gate can see. Neither form is edited once minted, and a
+      number is never reused.
     identifier: true
     range: uriorcurie
 

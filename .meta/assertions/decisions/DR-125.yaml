@@ -1,0 +1,107 @@
+decisions:
+  - id: work:decision/125
+    name: "DR-125 · An identifier is a slug where the entity is its meaning and a number where it is an occurrence, and A12 states what would retire it"
+    challenge: work:challenge/19
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-work-core
+      - work:artifact/meta-charter
+      - work:artifact/meta-check
+    alternatives:
+      - name: Semantic CURIEs for Decisions and Articles, minted once and never edited
+        chosen: false
+        reason: >-
+          What #19 proposed. Minting once answers the objection DR-077 and
+          DR-079 raised — that a name depends on prose that gets edited — and
+          it is the weaker objection. The stronger one is that the claim is not
+          the identity. DR-078 and DR-079 answer the same question — where a
+          decision's rule lives — and DR-079's rejected alternative is "what
+          DR-078 shipped"; the record needs both, in order, and the order is
+          the numbers: a slug of the question collides, and a slug of the
+          answer has to be told apart from its predecessor by something, which
+          is the number back again. A slug also gives up the two things the
+          sequence does for nothing — the order is when, and a deleted entry
+          leaves a hole `decision numbering` can see, where a deleted slug
+          leaves nothing. And a slug is a gist rather than the claim:
+          `article-states-what-would-retire-it` is not what DR-085 decided, and
+          a reader who takes the mnemonic for the claim has the drift Literate
+          Programming names, believed. What it would cost to reach: 152 typed
+          references to a Decision and 125 to an Article, 429 prose citations
+          in the assertions alone, and every citation in a pull request, an
+          Issue and a commit on GitHub, which nothing rewrites.
+      - name: Ordinal identifiers, and A12 checked rather than owed
+        chosen: false
+        reason: >-
+          The other way to lighten A12: leave the numbers and have the gate
+          flag a bare `DR-085`. A text match cannot tell a citation from a
+          mention — the same reason DR-079 dropped the reverse direction of
+          `enacted_in` — so the check would pass any occurrence of the words
+          beside the number and fail a sentence that dereferences one line
+          later. It stays `checked_by: Nothing yet.`, and honestly so.
+      - name: A criterion, stated once on the `id` slot, and the numbers kept
+        chosen: true
+        reason: >-
+          Every identified class here already has one of the two forms, and
+          they sort exactly: a Concept, a Discipline, an Artifact, a Role, a
+          Product, a Persona and the rest are slugs, because two with the same
+          meaning are one and renaming the label leaves the identity alone;
+          a Decision, an Article and a Challenge are numbers, because two with
+          the same words are two — taken later, for reasons of their own —
+          and the sequence says which came first. Nothing said which rule
+          chose, so the next class added would have chosen by imitation. The
+          criterion goes on the slot every class inherits. What it costs:
+          every citation of a number still owes the dereference A12 asks for,
+          by hand, and nothing checks it.
+    consequences:
+      - >-
+        `id`'s description in `core.yaml` states the criterion, so a new class
+        knows which form its identifier takes without a decision.
+      - >-
+        Nothing is renumbered and no citation moves. `decision numbering` and
+        `reserved article numbers` stay, and the first's account says the
+        sequence is part of what the identifier means rather than only a
+        counter.
+      - >-
+        A12 stays in force and carries its falsifier: a citation whose
+        identifier already carries the claim, so that dereferencing it writes
+        the same words twice. That is what #19 proposed, weighed here and not
+        observed, which is the slot doing what DR-085 introduced it for.
+      - >-
+        The trigger #19 named does not bite. A retrieval index over the
+        assertions (#18) indexes the `name`, which carries the claim; the
+        identifier being opaque costs the index nothing.
+      - >-
+        DR-085 says sixteen falsifiers were written, and the Charter holds one,
+        A21's. A12's is written here because #19 asked about it. Of the
+        eighteen Articles without one, A4, A8 and A17 are exempt by DR-085's
+        own account, and the fifteen that remain are their own Challenge.
+    falsifier: >-
+      A Decision, Article or Challenge that nothing cites by number — every
+      reference reaching it by its name — which would mean the number was a
+      filename and the meaning was the identity all along.
+    rationale: |-
+      #19 asked whether an identifier can be semantic and stable, offering the
+      Concept as the model: `pref_label` is not the identity, so a slug minted
+      once could carry the claim and never move. The survey found the model
+      cuts the other way. `pref_label` is not a Concept's identity because its
+      *meaning* is, and SKOS says two Concepts with one meaning are one Concept.
+      A Decision is the opposite kind of thing: the record holds DR-078 and
+      DR-079 on one question, and A13's reservation exists so that a rule with
+      the same words, issued again, is a new Article and not the old one. Their
+      identity is that they happened, in order, and a number is the honest
+      name for that.
+
+      So the numbering conventions in the gate are not a cost of the scheme to
+      be mitigated; they are the scheme's evidence. Contiguity is how a deleted
+      occurrence shows, and a reservation is how a retired one stays retired.
+      A registry of minted slugs would recover the first, and it would be the
+      counter in another form.
+
+      A12 is left doing what it did, and the reason is now recorded: a number
+      names an occurrence and says nothing about it, so the claim has to travel
+      with the citation or the reader dereferences every time. The Article's
+      falsifier is the scheme #19 proposed, which is the right shape for the
+      slot — an observation somebody could bring about, weighed once and not
+      observed.

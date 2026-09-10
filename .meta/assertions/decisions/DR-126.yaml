@@ -1,0 +1,106 @@
+decisions:
+  - id: work:decision/126
+    name: "DR-126 · The reviewer's turn cap is a loop guard set above what a review is observed to use, and the minutes are the cost bound"
+    challenge: work:challenge/135
+    status: ADOPTED
+    supersedes:
+      - work:decision/109
+    enacted_in:
+      - work:artifact/github-workflows-review
+    alternatives:
+      - name: Choose the depth by the diff — files, hunks, whether a schema or `check.py` is in it
+        chosen: false
+        reason: >-
+          The first shape #135 offered, and the runs say a review's turn count
+          does not follow the diff. #138, eight files and 147 lines, needed
+          more than 25; #129, thirteen files and 276 lines, took 12 as a
+          re-review; #136, fourteen files and 299 lines, took 84 as a first
+          review and then 21 and 24 as re-reviews. What sets the count is the
+          procedure — the Discipline read, the threads listed, the diff and
+          the gate read, then the raises and the verdict posted — and whether
+          the run is a first review or a re-review, which no measure of the
+          diff sees. A size threshold would move the cap for the wrong reason
+          and leave the small first review where it is.
+      - name: A run that hits the cap raises its own depth once
+        chosen: false
+        reason: >-
+          The second shape. With the cap below the floor of a first review,
+          every cheap-path first review pays the whole quarter of an hour
+          before the escalation, which taxes the common case to rescue it.
+          With the cap above the floor, a run that reaches it is looping —
+          bouncing off the hook, or holding for a subagent — and the honest
+          answer to a loop is a red run somebody reads, not a second budget
+          spent on the same loop at the deeper model.
+      - name: The model by path, the turn cap as a loop guard from the observed use, and the minutes as the cost bound
+        chosen: true
+        reason: >-
+          The path list keeps choosing the model and the minutes: the boundary
+          is where the deeper model found the holes (#86, #87), and fifteen
+          and forty-five minutes are what a run may cost. The turn cap stops
+          doing that job. It is a guard against a run that burns turns
+          cheaply, set from one statistic on both paths: 120, above the
+          largest first review that finished, 84, with room — so that hitting
+          it means a loop and not a diff. The path is a measure of the diff,
+          and by this entry's own claim the diff does not set the count, so
+          the first reviews on the deep path are the population the cheap
+          path draws from and its cap cannot sit lower. What it costs: a
+          cheap-path run that loops burns up to 120 turns before the guard
+          fires, inside the same fifteen minutes, which at Sonnet's pace is
+          most of them; and the number comes from two finished first reviews
+          among nine runs, which is the sample there is and is recorded as
+          such.
+    consequences:
+      - >-
+        `review.yml`'s depth step prints `turns=120` on both paths; the
+        models, efforts and minutes are unchanged. The comment above the step
+        says which number bounds what.
+      - >-
+        A cheap-path run that ends `error_max_turns` is a loop to read, not a
+        diff that was too big to re-request at the deeper depth.
+      - >-
+        DR-109's sentence stands word for word: "the boundary gets Opus at
+        high effort, everything else Sonnet at medium" named the model and
+        the effort, and never the turn cap, which lived only in the depth
+        step it built as `turns=90` and `turns=25`. What this supersedes is
+        that enactment — the cap's membership in "depth by what changed",
+        which the code carried and the text never said. The cap follows the
+        procedure now, and DR-109's file is not rewritten.
+      - >-
+        The hook refused between 7 and 29 calls a run across the nine — `&&`,
+        `|`, `>`, `--repo`, `true` — a third of #136's first review and half
+        of #138's, with the prompt already saying one plain command at a
+        time. That is the largest avoidable use of turns and is its own
+        Challenge. #138's run also ended its turn holding for two subagents,
+        which is #131 and not this.
+    falsifier: >-
+      A run that ends `error_max_turns` at 120 with a verdict it was about to
+      post — two finished first reviews having been too few to find the top.
+    rationale: |-
+      #133 hit the cap twice, at 26 of 25, and posted nothing either time; the
+      re-request paid the same fifteen minutes for the same nothing, which is
+      what #135 noticed. Then #138 — eight files, a decision and a falsifier —
+      hit it at 29 on the way to a verdict.
+
+      Nine review runs were read for this entry, all of them since the depth
+      step was written. Turns used, by outcome: first reviews on the deep
+      path took 40 and 84; re-reviews 12, 21, 22 and 24; the three cheap-path
+      runs ended at 26, 26 and 29 with the cap at 25 — past it, so the count
+      the action reports is not the count `--max-turns` bounds, and the
+      action compares them anyway; the cap has room for that too. No
+      successful run of either model has taken fewer than 12, and no first
+      review finished under 40; 29 is what a cap stopped, not a measurement.
+      The cap was set from what a decision record was thought to need — "a
+      decision record does not need an audit" — and not from what the
+      procedure takes to read one, and the procedure is the same whatever
+      the diff: the Discipline, the threads, the diff, the gate, the raises,
+      the verdict. Twenty-five is below that floor for any first review, so
+      the cheap path could never have finished one.
+
+      Once the count is the procedure's, the two shapes the Issue offered
+      answer themselves. Sizing the cap to the diff moves it for a reason
+      that does not predict it. Escalating after the cap either taxes every
+      first review, when the cap is below the floor, or reruns a loop, when
+      it is above. What is left is to say what each number is for: the
+      minutes bound the cost, and the turns catch a run that is spending
+      them on nothing — which the hook bounces and the subagent wait both
+      are, and both of which are Challenges of their own.

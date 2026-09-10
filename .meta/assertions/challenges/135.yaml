@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/135
+    name: The reviewer's cheap depth is chosen by path and caps at 25 turns, and a first review does not fit
+    challenge_type: DEFECT
+    description: >-
+      The reviewer loop's depth step gives a diff off the boundary list Sonnet
+      at 25 turns, and a first review has never finished in fewer than 29 on
+      either model: #133 ran out twice with nothing posted, and #138, eight
+      files, ran out too. Every re-request pays the same quarter of an hour
+      for the same nothing.

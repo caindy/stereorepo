@@ -107,20 +107,28 @@ jobs:
         env:
           REVIEWER_GH_TOKEN: ${{ secrets.REVIEWER_GH_TOKEN }}
 
-      # Depth by what changed. A diff that touches the boundary — the
-      # channel, the hooks, the settings, the workflows — gets Opus at the
-      # skill's high effort and most of an hour, which is what it took to
-      # find the holes in the hook (#86, #87). Everything else gets Sonnet at
-      # medium and a quarter of an hour: a decision record does not need an
-      # audit, and an audit of one is where a month goes.
+      # The model and the minutes by what changed; the turn cap by what a
+      # review takes. A diff that touches the boundary — the channel, the
+      # hooks, the settings, the workflows — gets Opus at the skill's high
+      # effort and most of an hour, which is what it took to find the holes
+      # in the hook (#86, #87). Everything else gets Sonnet at medium and a
+      # quarter of an hour: a decision record does not need an audit, and an
+      # audit of one is where a month goes. The minutes are the cost bound.
+      # The turns are a loop guard and follow the procedure, not the diff:
+      # the first reviews that finished took 40 and 84 turns, re-reviews 12
+      # to 24, and a cap of 25 was hit three times with nothing posted
+      # (solorepo's DR-126). One cap on both paths, a hundred and twenty,
+      # above the largest first review seen with room; a run that reaches it
+      # is looping — bouncing off the hook, or holding for a subagent — and
+      # is read as a red run rather than re-requested deeper.
       - name: choose the depth
         id: depth
         run: |
           if gh pr view "$PR" --json files -q '.files[].path' \
              | grep -qE '^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)'; then
-            printf 'model=claude-opus-5\neffort=high\nturns=90\nminutes=45\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-opus-5\neffort=high\nturns=120\nminutes=45\n' >> "$GITHUB_OUTPUT"
           else
-            printf 'model=claude-sonnet-5\neffort=medium\nturns=25\nminutes=15\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-sonnet-5\neffort=medium\nturns=120\nminutes=15\n' >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
         env:

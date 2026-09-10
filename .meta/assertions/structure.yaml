@@ -235,6 +235,9 @@ artifacts:
   - id: work:artifact/meta-work-authority
     name: .meta/work/authority.yaml
     path: .meta/work/authority.yaml
+  - id: work:artifact/meta-work-core
+    name: .meta/work/core.yaml
+    path: .meta/work/core.yaml
   - id: work:artifact/meta-work-decisions
     name: .meta/work/decisions.yaml
     path: .meta/work/decisions.yaml

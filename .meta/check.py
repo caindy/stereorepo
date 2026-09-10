@@ -448,6 +448,12 @@ def decision_level(index):
 def decision_numbering(index):
     """Numbers are stable identifiers, so the sequence is contiguous and unused.
 
+    A Decision is numbered rather than named because it is an occurrence: two
+    entries with the same claim are two decisions, and the sequence says which
+    came first (solorepo's DR-125). The contiguity checked here is part of what the
+    identifier means, not a convention laid over it — a slug would name the
+    claim and lose the order, and a deleted slug leaves no hole to find.
+
     A gap means an entry was deleted rather than withdrawn, which is the failure
     the WITHDRAWN status exists to prevent: a citation to a number that resolves
     to nothing is indistinguishable from a citation to a number that was never

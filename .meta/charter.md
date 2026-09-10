@@ -87,6 +87,8 @@ _In practice:_ A choice settled in conversation is written as `assertions/decisi
 
 _In practice:_ "A9 — a seed is data, gated by rendering it", with a link. Not a bare "A9".
 
+_Retired when:_ A citation whose identifier already carries the claim it names, so that dereferencing it writes the same words twice.
+
 ### A13. Retired.
 
 ### A14. Reasoning that lives only in a commit message is not recorded.
@@ -141,4 +143,4 @@ _Retired when:_ A Project whose toolchain reports in a form this shape cannot ca
 
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml)
