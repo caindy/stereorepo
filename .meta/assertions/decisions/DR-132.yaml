@@ -1,0 +1,119 @@
+decisions:
+  - id: work:decision/132
+    name: "DR-132 · An Issue cited in an inherited file names its owner, and resolving the number is not the offline gate's"
+    challenge: work:challenge/160
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-check
+    alternatives:
+      - name: Leave Issue numbers bare and hold only the record's
+        chosen: false
+        reason: >-
+          DR-121 and DR-124 turned on a property an Issue number has just as
+          much: a file a portfolio carries verbatim cites the scaffold's
+          numbers from inside a portfolio, and the portfolio has a sequence of
+          its own that will reach them. `check.py` cites #114 in the docstring
+          of the check written because of it, and a portfolio reaching a
+          hundred and fourteen Issues reads that as its own — the citation that
+          silently comes to mean something else, which the Charter holds worse
+          than one that dangles.
+      - name: Resolve the number too, from the gate that reaches GitHub
+        chosen: false
+        reason: >-
+          It would put the copy list — read from the Specialization step, in
+          YAML — inside the checker that talks to the network, and turn a
+          hundred and twenty-three docstring citations into that many lookups on
+          every pull request. What it
+          would buy is a dangling number caught, which is the mild half of the
+          failure; the half that matters is a number that resolves and means
+          somebody else's Issue, and the possessive is what answers that. A
+          gate is red when GitHub is slow, and red for a reason nobody typed.
+      - name: The owner offline, over the copy set; the number wherever GitHub is
+        chosen: true
+        reason: >-
+          The two halves of a citation split cleanly by what answering them
+          costs. Whether a citation names its owner is a string search, and
+          `check.py` reaches no network, which is what makes it the gate a
+          portfolio runs on a laptop and in CI with the same result. Whether
+          the Issue exists is GitHub's to say and nothing else's. So the form
+          is checked where the copy is made from, over the set the
+          Specialization step already states, and the seam is permanent rather
+          than provisional. What it costs: a hundred and twenty-three
+          possessives in the scaffold's own tooling, where every one is a
+          self-reference, and a rule the scaffold enforces on itself alone — the
+          copy list is read from the Specialization Discipline, which no
+          portfolio carries, so a portfolio inherits both a dangling citation
+          and a bare one unchecked.
+    consequences:
+      - >-
+        `check.py` gains `inherited citations`, over the copied set and nothing
+        else. It holds the form and never the number, so it stays a check that
+        runs offline; a bare `#nn` in a file the Specialization step lists is a
+        gate failure, and one anywhere else is not.
+      - >-
+        `cited issues` gives up its form half — the half it took on with
+        DR-130, before there was a check over the copy list to hold it. It held
+        that rule over `.meta/assertions/imported/`, which is on the copy list,
+        so a bare number in an imported assertion was reported twice by two
+        gates once this check existed beside it. The
+        owner is now `inherited citations`'s alone and the number is
+        `cited issues`'s alone, and the predicate that says what a citation is —
+        the one `check_pr.py` already bounded against a hex colour and an HTML
+        entity — is stated once, in `check_pr.py`, and read from there by
+        `check.py`. That direction because `check_pr.py` imports the standard
+        library alone; importing it runs nothing and reaches no network.
+      - >-
+        `inherited citations` becomes the sixth reader of `copied_files`, which
+        `cited decisions` and the four claim checks already shared. Its
+        docstring now states why there is one set rather than one per check: a
+        copied file is copied whatever the check reading it, and a second scope
+        beside it is a second answer to which files a portfolio inherits.
+      - >-
+        A hundred and twenty-three citations take the possessive across twelve
+        files: fifty-three in the two gates, twenty-nine in the channel's
+        programs, fourteen in both hooks, twenty-four in the three workflows and
+        three in `.meta/.apm/README.md` and `stakeholders/README.md`. Nothing
+        under `.meta/assertions/imported/` is touched — DR-130 made those
+        possessive already, and it is the overlap between the two scopes rather
+        than a fourteenth file. The possessive goes on the first number of a run
+        and a code span is untouched, as under DR-124. Eight would have read
+        `solorepo's #93's state`, and those sentences are turned rather than
+        doubled; two more were about the bare form itself and are turned rather
+        than made to wear it.
+      - >-
+        Two shapes are passed over, and both are stated so that the next
+        edit meets them here rather than at a red gate. A code span is a path
+        or a form and is stripped before the scan. So is a number in quotes:
+        `"#7"` in a probe is the string it greps its own output for, and a
+        check that reported it would be teaching the next author to rephrase
+        working code to get past the checker.
+      - >-
+        The rule is enforced where the copy is made *from*, and nowhere else. A
+        portfolio inherits the check, but `copied_files` reads `inherited()`,
+        which reads the Specialization Discipline, and a portfolio carries no
+        Specialization Discipline — so there `copied_files()` is `{justfile}`
+        and the check is vacuous, which is what `inherited()` and
+        `scaffold_only_paths` each already say of themselves. A portfolio that
+        types a bare `#7` into its inherited `check.py` gets a green gate. That
+        is the cost line above, and it is stated here so that the next reader
+        meets it in the record rather than in a portfolio.
+    falsifier: >-
+      A `#nn` in a copied file that means the reader's number rather than
+      solorepo's, held to a form it does not mean — a count, a threshold, a
+      port. None turned up in the sweep, where every match was a citation or a
+      quoted string, but the exemption stated for the quoted string is the
+      shape such a number would want too, and it holds only while they are few
+      enough to be read one by one. On the other side, a bare citation typed
+      after this and caught by the check is the check working; a bare citation
+      typed after this and *not* caught is the pattern too narrow, and the
+      first place to look is a suffix `FENCED` does not strip.
+    rationale: |-
+      The question DR-130 left open, when it scoped `cited issues` to the
+      assertions, was whether resolving an Issue number would one day reach the
+      inherited Python and the workflows. It will not,
+      and the reason is not that it is hard: it is that a citation makes two
+      claims and only one of them needs the network. Splitting them puts each
+      check where its answer already lives, and leaves neither gate reaching
+      for something it has no business holding.

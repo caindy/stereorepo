@@ -208,7 +208,7 @@ def role_credential():
         found[key.strip()] = value.strip().strip("\"'")
     if not found.get("GH_TOKEN"):
         # Empty counts as missing. A secret that was never set arrives as an
-        # empty string, and the first run of review.yml (#84) passed this
+        # empty string, and the first run of review.yml (solorepo's #84) passed this
         # check with one and failed further down, in gh's words rather than
         # this file's.
         sys.exit(f"say: {ROLE_ENV} has no GH_TOKEN")

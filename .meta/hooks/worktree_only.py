@@ -15,7 +15,7 @@ Two rules. A `Read`, `Grep` or `Glob` resolves inside the worktree and outside
 writes a token into `.git/config`. And a shell command is one simple command
 with no operator the shell would act on, whose program and options are on a
 list, or it is refused: the first shape of this rule scanned a command line for
-bad tokens, and the reviewer of #87 found six ways past it in two runs, each
+bad tokens, and the reviewer of solorepo's #87 found six ways past it in two runs, each
 because bash has more syntax than the scanner — abbreviated options, `$(...)`,
 `;` glued to a word, `<(...)`, text after a heredoc opener, an option nobody had
 listed. A scanner for the bad cannot be sound; a grammar for the allowed can.
@@ -23,7 +23,7 @@ listed. A scanner for the bad cannot be sound; a grammar for the allowed can.
 A refusal names the nearest command the grammar takes, where the one refused
 has one: the head of a chain, or the same command without the option that is
 not carried. It is derived and then put back through the predicate rather than
-suggested, so the retry is one turn and not a guess (#144).
+suggested, so the retry is one turn and not a guess (solorepo's #144).
 
     echo '{"tool_name":"Grep","tool_input":{"path":"/home/x/.config"}}' | .meta/hooks/worktree_only.py
 
@@ -53,7 +53,7 @@ SHELL = set(';&|<>$`*?[]{}()~!#\\"\n')
 # argument instead, and `git show HEAD~1:x` would be offered as `git show HEAD`:
 # a different question, well-formed, with nothing in it to say what was dropped.
 # An argument carrying an expansion has no nearest command, the same as a
-# program off the list (#146).
+# program off the list (solorepo's #146).
 CHAINS = set(";&|<>\n")
 
 # What the reviewer may run, and with what. A program not named here is
@@ -90,7 +90,7 @@ TAKES_VALUE = {
     "ls-files": set(),
 }
 # `-3` is a count for `log`; `-A2`, `-B2`, `-C2` are context glued to its
-# number, which git accepts and the reviewer types (#99).
+# number, which git accepts and the reviewer types (solorepo's #99).
 NUMBER = re.compile(r"^-(\d+|[ABC]\d+)$")
 
 # The other programs, by form, each with its own option list and the options
@@ -107,7 +107,7 @@ PROGRAMS = {
 # it wanted is instead. Nothing can be derived for one of these — there is no
 # nearest command on the list to a program that is not on it — so the refusal
 # says why it is not coming, which is the only thing that stops the reach
-# repeating run after run (#144).
+# repeating run after run (solorepo's #144).
 #
 # `check.py` is the one, and the reason it is not simply listed is not the
 # option list. `check_pr.py` is one of the six paths `review.yml` restores from
@@ -124,7 +124,7 @@ INSTEAD = {
 # The harness's own scratch: a tool result too large for the transcript is
 # written here and the reader is told to read it, and the code-review skill's
 # agents hand their findings back the same way. Refusing it left the reviewer
-# waiting on agents whose results it could never read (#99). No credential
+# waiting on agents whose results it could never read (solorepo's #99). No credential
 # lives under it; the token is in `~/.config` and `.git/config`.
 HARNESS = (pathlib.Path.home() / ".claude" / "projects").resolve()
 
@@ -188,7 +188,7 @@ def refused_option(words, allowed, takes_value):
     pattern, and the program's to make sense of; `--` ends the options. An
     option that takes a value consumes the next word whatever it looks like,
     and is the only kind that may carry its value after `=`: the set is the
-    subcommand's own, so nothing added for one reaches another (#87).
+    subcommand's own, so nothing added for one reaches another (solorepo's #87).
 
     The index rather than the message, because `plain_form` drops the word it
     names and a refusal reads it back out.
@@ -239,7 +239,7 @@ def partition_unquoted(text, marker):
     """`str.partition`, blind inside single quotes.
 
     `git log --grep='a<<b'` is one plain command to bash and was two halves
-    of a heredoc to a raw split (#87). Double quotes need no case: they are
+    of a heredoc to a raw split (solorepo's #87). Double quotes need no case: they are
     refused before anything is read.
     """
     quoted = False
@@ -261,7 +261,7 @@ def command_allowed(command):
     and is not read; the delimiter is quoted so the body is not expanded
     either. The first line that is the delimiter closes the body in bash,
     so it must be the last line there is: what followed it would be a
-    second statement with the one token the container holds (#87).
+    second statement with the one token the container holds (solorepo's #87).
     """
     head, marker, body = partition_unquoted(command, "<<")
     if marker:
@@ -326,7 +326,7 @@ def plain_form(command):
     """A command on the list, derived from one that was refused, or None.
 
     A refusal that says only what is wrong costs a turn to guess at, and the
-    guess is often wrong: across the nine review runs read for #144 the hook
+    guess is often wrong: across the nine review runs read for solorepo's #144 the hook
     refused between 7 and 29 calls a run — a third of one review's turns —
     with the prompt already saying one plain command at a time. Most of them
     have a nearest command the hook would have taken, and it is derivable
@@ -347,7 +347,7 @@ def plain_form(command):
     the same post with the body gone. Most of the verbs would then die on
     `say: nothing on stdin`, spending the turn this exists to save; `review
     --approve` would not, because GitHub takes an approval with no body, and
-    the offer would be a verdict with what was checked stripped out (#146).
+    the offer would be a verdict with what was checked stripped out (solorepo's #146).
     """
     if partition_unquoted(command, "<<")[1]:
         return None
@@ -374,7 +374,7 @@ def blocked(tool, tool_input):
 
     Any exception is a refusal. Only exit 2 blocks a call; an uncaught error
     exits 1 and the call proceeds, so a path with a NUL byte in it would have
-    crashed this open (#87). What the hook cannot read, it refuses.
+    crashed this open (solorepo's #87). What the hook cannot read, it refuses.
     """
     try:
         if tool in READERS:
@@ -390,7 +390,7 @@ def blocked(tool, tool_input):
             if problem:
                 # The nearest command on the list goes last, because it is the
                 # one to type and the end of a refusal is where that is looked
-                # for (#144).
+                # for (solorepo's #144).
                 plain = plain_form(command)
                 return (f"Blocked: {problem}. The reviewer runs one plain command at a time: "
                         "`git log|show|diff|status|grep|ls-files` with plain options, `gh pr view|diff|checks`, "

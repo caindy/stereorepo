@@ -10,7 +10,7 @@ It is a string match over a command line, and string matches lose eventually.
 What it buys is that the cheap paths are shut and the remaining ones are
 deliberate. The boundary that would actually hold is the credential: a token
 reachable only by `.meta/say/` makes the channel the only path by construction rather
-than by inspection. That is #21, and this stands in until it is built.
+than by inspection. That is solorepo's #21, and this stands in until it is built.
 
     echo '{"tool_name":"Bash","tool_input":{"command":"..."}}' | .meta/hooks/signed_channel.py
 

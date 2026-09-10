@@ -19,7 +19,7 @@ import channel  # noqa: E402
 
 # The pull request gate's rules, held once. `landed` reads *What it closes* by
 # the same alternation `check_pr.py` blesses a body with, or a body the gate
-# passed is one the channel then calls wrong (#117).
+# passed is one the channel then calls wrong (solorepo's #117).
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import check_pr  # noqa: E402
 
@@ -123,7 +123,7 @@ def promotes(body):
     `check_pr.PROMOTED` rather than a pattern of this program's, so the verb
     never stands aside where the gate would go on calling the thread resolved
     without an answer — the one direction A16 depends on, and the same parity
-    `landed` keeps with the gate's sections (#117).
+    `landed` keeps with the gate's sections (solorepo's #117).
 
     The other direction does not hold and is not wanted. The gate scans every
     comment on the thread; this scans the one body about to be posted. So a
@@ -232,7 +232,7 @@ def closed_by(pr):
     that rule would pass it. It fails the gate one rule earlier, as a required
     section left blank — the form submitted with nothing in it — so the parity
     holds through that body too and the refusal in `landed` is not reached on
-    one the gate blessed (#117).
+    one the gate blessed (solorepo's #117).
     """
     body = channel.gh("pr", "view", str(pr), "--json", "body")["body"] or ""
     found = check_pr.sections(body)
@@ -305,7 +305,7 @@ def review(pr, verdict):
 
 def build_parser():
     """The parser alone, so a probe can check what each verb accepts without
-    running what it dispatches to (#95: the mutually exclusive verdict group
+    running what it dispatches to (solorepo's #95: the mutually exclusive verdict group
     landed on the wrong verb because both reused the loop variable `p`, and
     nothing parsed a verb without also calling `gh`)."""
     ap = channel.parser(__doc__)

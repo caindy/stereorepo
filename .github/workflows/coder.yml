@@ -19,7 +19,7 @@ on:
   issues:
     types: [labeled]
   # The reviewer's request for changes is the coder's second run: solorepo's DR-112
-  # promised it and #102 sat with a verdict and no Job to take it. The
+  # promised it and solorepo's #102 sat with a verdict and no Job to take it. The
   # dispatch runs that pass by hand, for a verdict the event passed by.
   pull_request_review:
     types: [submitted]
@@ -35,11 +35,11 @@ on:
 # reply on a thread is a submitted review too — an empty one, `commented` —
 # and GitHub keeps one pending run per group: keyed by number alone, a reply
 # arriving while a run is in progress cancels the pending verdict behind it
-# and leaves a run that skips, which is how #141's verdict would have gone
-# the way #102's did. Keyed by state, a `commented` event can cancel only
-# another `commented`, which was going to skip anyway. A dispatch is the
-# by-hand form of a verdict, so it takes the verdict's key and waits behind
-# one rather than running beside it.
+# and leaves a run that skips, which is how the verdict on solorepo's #141
+# would have gone the way the one on solorepo's #102 did. Keyed by state, a `commented`
+# event can cancel only another `commented`, which was going to skip anyway.
+# A dispatch is the by-hand form of a verdict, so it takes the verdict's key
+# and waits behind one rather than running beside it.
 concurrency:
   group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.pull_request && 'changes_requested') || 'take' }}
   cancel-in-progress: false
@@ -179,7 +179,7 @@ jobs:
         env:
           # The level the guard read from the Issue now, not the one the
           # frozen delivery carried: a level moved while this run waited in
-          # the concurrency group is the level the run must take (#117). A
+          # the concurrency group is the level the run must take (solorepo's #117). A
           # second pass is the larger model whatever the label was: the
           # threads it answers were written by the deeper reviewer.
           LEVEL: ${{ steps.taken.outputs.level || 'medium' }}
@@ -227,7 +227,7 @@ jobs:
             `medium`: `.meta/say/move request-review <n>` and stop; the reviewer
             arms the merge, and a request for changes comes back to you as a
             new run. Do either the moment the branch is pushed and the body is
-            final, and do not wait for the checks (#102).
+            final, and do not wait for the checks (solorepo's #102).
 
             If you cannot finish — a decision only the solo can take, a gate
             that will not go green, work larger than it looked —
@@ -250,13 +250,13 @@ jobs:
       # every later delivery would read as a duplicate and the Challenge
       # would be unreachable except by hand. The exit status alone cannot say
       # that: a run that finished its work and then sat waiting on the checks
-      # (#102) ends the same way, and so does one that ran `say stop` itself
+      # (solorepo's #102) ends the same way, and so does one that ran `say stop` itself
       # and then ran out. So this asks what a finished run leaves. Two of the
       # witnesses live on an *open* pull request — a review requested for
       # `medium`, the merge armed for `easy` — and for `easy` the arming is
       # not a resting state but an instruction GitHub carries out: when it is,
       # the pull request closes, the Challenge closes with it, and both
-      # witnesses go with them (#117). The facts that survive that are the
+      # witnesses go with them (solorepo's #117). The facts that survive that are the
       # Issue's `state`, which the guard above already reads for the same
       # reason, and the merge on this branch, which says the work landed even
       # where no closing keyword closed the Issue. A run that stopped itself

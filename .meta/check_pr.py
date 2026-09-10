@@ -126,7 +126,7 @@ def check(title, body):
 
     # What the merge closes. The heading's items carry a closing keyword or the
     # Issue stays open after the pull request that finished it has merged —
-    # which is how #26 sat open until a verb was written to close it (solorepo's DR-089).
+    # which is how solorepo's #26 sat open until a verb was written to close it (solorepo's DR-089).
     closing = found.get(CLOSES, "")
     if closing and not NONE.match(closing):
         items = [m.group(1).strip() for m in BULLET.finditer(closing)]
@@ -237,7 +237,7 @@ def shown(thread, where, limit=600):
     The sweep's per-item line stays cut — its job is to say a thread is owed,
     not to be read — but `--threads` and `--resume`, which are how a thread
     gets read and answered, pass `None`: a comment cut mid-point reads as the
-    whole of it, and a reader who trusts that has answered half a point (#126).
+    whole of it, and a reader who trusts that has answered half a point (solorepo's #126).
     """
     spoke = []
     for c in thread["comments"]["nodes"]:
@@ -286,10 +286,10 @@ def settled(nodes, limit=600):
 
     `unaddressed` hides these on purpose: unresolved is the test, and a
     listing that counted the resolved would wake someone for nothing. Hidden
-    from an arriving reviewer they cost a full review (#122): its reading says
+    from an arriving reviewer they cost a full review (solorepo's #122): its reading says
     a re-review reads each answer against the diff it claims, and a listing
     that shows only what is unresolved shows a re-review nothing, so every
-    pass on #117 ran the whole review again. So they are printed, after what
+    pass on solorepo's #117 ran the whole review again. So they are printed, after what
     is owed and apart from it, with who resolved each; nothing counts them.
     """
     out = []
@@ -309,9 +309,9 @@ def verdicts(reviews):
     it is what a re-review reads to know what it has already seen (solorepo's DR-118).
     The review a `raise` posts under — no verdict, no body — says nothing and
     is left out; there is one per raise and per reply, which is why the query
-    asks for the newest hundred and not the oldest (#123). Newest first, and
+    asks for the newest hundred and not the oldest (solorepo's #123). Newest first, and
     printed before everything else, so the verdict a re-review needs is inside
-    the 2 KB preview a long listing is cut to; the owed section alone on #117
+    the 2 KB preview a long listing is cut to; the owed section alone on solorepo's #117
     was 2.7 KB. The login is on each line and nothing here says whose Role a
     verdict is: the reader knows its own login, and the solo's approval and a
     dismissed verdict print as what they are.
@@ -485,7 +485,7 @@ def snapshot(ref):
     # better than a `None` beside a result and is a change worth a line. The
     # run's url rides beside the verdict: a re-run that ends where it started
     # is the same verdict from a different run, and keyed on the verdict alone
-    # it was invisible (#79).
+    # it was invisible (solorepo's #79).
     checks = {c.get("name") or c.get("context"):
               (c.get("conclusion") or c.get("state") or c.get("status") or "PENDING",
                c.get("detailsUrl") or c.get("targetUrl"))
@@ -666,13 +666,19 @@ def repo():
 
 
 ASSERTIONS = META / "assertions"
-# What a portfolio inherits, of the assertions: the one entry the Specialization
-# copy list has under them, which is a path here rather than a parsed list.
-INHERITED = ASSERTIONS / "imported"
 FENCED = re.compile(r"```.*?```|`[^`\n]*`", re.S)
-# A Challenge cited by its number. Not `#abc123`, which is a fragment or a
-# colour, and not the tail of a longer number.
-ISSUE = re.compile(r"(?<![\w#&])#(\d{1,4})(?!\d)")
+# What an Issue citation is, for both halves of A12's fourth quarter: the owner,
+# which `check.py`'s `inherited citations` holds over the copy set, and the
+# number, which this file resolves. One predicate, because a string the form
+# check passes over and this one resolves is the two gates disagreeing about
+# what a citation is (solorepo's DR-132). It lives here, of the two files, because
+# this one is stdlib alone and so is the one either side can import; `check.py`
+# reads it from here and defines none of its own.
+#
+# Not `#abc123`, which is a fragment or a colour, and not the tail of a longer
+# number. Not a number in quotes either: `"#7"` in a probe is the string it
+# greps its own output for, and a citation is not made by showing one.
+ISSUE = re.compile(r"(?<![\w#&\"'])#(\d{1,4})(?!\d)")
 # A citation of solorepo's Issues, in the form `cited decisions` has the
 # inherited material write one of solorepo's record: the possessive, then a run,
 # so `solorepo's #11, #21` names two.
@@ -699,23 +705,25 @@ def cited_issues():
     a Challenge by its Issue, a precedent by the pull request that set it — so
     the two lists are read as one set.
 
-    The assertions and no wider, which is where #147 scopes it and as far as a
+    The assertions and no wider, which is where solorepo's #147 scopes it and as far as a
     glob reaches. The set `check.py` scans is read out of the Specialization
     step that lists what a portfolio inherits, and reading that here would put
     a YAML parser into a checker that is stdlib only and stays that way.
 
     Whose Issues. `.meta/assertions/imported/` is copied into every portfolio
-    and cites solorepo's Issues; a portfolio's own sequence starts again at #1.
-    A bare `#11` there is solorepo's where it was typed, is red on a portfolio's
-    first pull request for a finding its author did not write, and — worse, once
-    that portfolio has eleven Issues — resolves silently against an unrelated
-    one of its own, which is the citation the Charter holds worse than one that
-    dangles. So an inherited file cites solorepo's Issues as solorepo's, and a
-    bare number in one fails here, where the copy is made from; and `solorepo's
-    #11` resolves against this repository's lists only where this repository is
-    solorepo, and is passed over where it is not, since the Issues it names are
-    not there to resolve against. That is `cited decisions`'s answer to #114 in
-    both of its halves, over the other sequence.
+    and cites solorepo's Issues; a portfolio's own sequence starts again at one,
+    so a number cited bare there comes to mean an Issue of the portfolio's — the
+    citation the Charter holds worse than one that dangles. That half of the
+    rule is not held here. It is `check.py`'s `inherited citations`, over the
+    whole copy list rather than the single entry of it that is an assertion, and
+    this check held a second copy of it for as long as it took solorepo's #160 to
+    draw the seam: one bare number in an imported assertion, reported twice, by
+    two gates (solorepo's DR-132). What is left here is the number, which is the
+    half only GitHub can answer. `solorepo's #11` resolves against this
+    repository's lists only where this repository is solorepo, and is passed
+    over where it is not, since the Issues it names are not there to resolve
+    against — `cited decisions`'s answer to solorepo's #114, over the other
+    sequence.
 
     `gh` answers newest first, so a list that comes back at the limit is
     truncated at the bottom and says nothing about the numbers below it. Those
@@ -736,10 +744,6 @@ def cited_issues():
         plain = {int(m.group(1)) for m in ISSUE.finditer(FOREIGN.sub("", text))}
         for number in sorted(plain):
             bare.setdefault(number, set()).add(where)
-            if INHERITED in path.parents:
-                problems.append(f"{where}: #{number} is cited bare in a file a portfolio "
-                                "inherits, where it will come to mean the portfolio's; "
-                                "cite it as solorepo's")
     if not (bare or foreign):
         return problems
     known, floor = set(), 0
@@ -882,7 +886,7 @@ def green(pr):
 
 
 def unheld(prs, minutes, clean):
-    """Pull requests nobody holds, and requests nobody can answer (#154).
+    """Pull requests nobody holds, and requests nobody can answer (solorepo's #154).
 
     A handoff here is a semaphore: GitHub holds a review request and reports
     it, and an arriving Job finds its work by asking what has been requested of
@@ -929,7 +933,7 @@ def unheld(prs, minutes, clean):
     no merge ref for a branch that conflicts, and the review workflow runs on
     `pull_request`, so there is nothing for it to check out and no run is
     created; GitHub reports the request as outstanding and says nothing about
-    its being unanswerable. #141 sat that way for three hours. This one is read
+    its being unanswerable. solorepo's #141 sat that way for three hours. This one is read
     on every open pull request, whoever opened it: a request pending on a
     conflicting branch is unanswerable by whoever it names.
 
@@ -977,7 +981,7 @@ def unheld(prs, minutes, clean):
 
 
 def sweep_all(publishing):
-    """A16 between the last push and the merge (#5). Resolving a thread fires
+    """A16 between the last push and the merge (solorepo's #5). Resolving a thread fires
     no event, so the check that ran on the push is stale the moment one is
     resolved, and a schedule is the only thing left to run it. Every open pull
     request, one line each in A21's shape, and the result published as the
@@ -987,7 +991,7 @@ def sweep_all(publishing):
     rather than of the body. It is printed as its own step and is never
     published: the finding *is* that the checks are green, so folding it into
     the check the ruleset waits on would turn every pull request it named red
-    and unname it (#154).
+    and unname it (solorepo's #154).
 
     The pull requests this loop found nothing on are carried into that reader.
     The rollup it would otherwise trust was fetched before the loop ran, so it

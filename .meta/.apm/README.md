@@ -33,7 +33,7 @@ Primitives are **derived from `.meta/assertions/`**, never authored twice:
 | the gate | `hooks` |
 
 **Nothing is here yet, deliberately.** The compile step from assertions to
-primitives is unbuilt (see [#28](https://github.com/caindy/solorepo/issues/28)), and hand-writing primitives that a
+primitives is unbuilt (see [solorepo's #28](https://github.com/caindy/solorepo/issues/28)), and hand-writing primitives that a
 compiler will later generate is the duplication that step exists to remove.
 
 ## What the canon says, read on 2026-09-06
@@ -60,7 +60,7 @@ defined by its canon and not by us. Each line names where it was read.
   `.claude/commands/<name>.md`, and `hooks` as above; `CLAUDE.md` is generated
   at the root, omitting what `.claude/rules/` already holds, and `AGENTS.md`
   is not generated for it. So the invoked half of the Ubiquitous Language
-  regime (#35) is a `command` for this harness, not a `prompt`, and `AGENTS.md`
+  regime (solorepo's #35) is a `command` for this harness, not a `prompt`, and `AGENTS.md`
   is not in Claude Code's compile path. — [targets matrix](https://microsoft.github.io/apm/reference/targets-matrix/)
 - **Frontmatter per primitive is still to read from the authoring pages.** The
   package-types page gives only that a skill collection's `name` must match

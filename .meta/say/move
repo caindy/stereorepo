@@ -33,7 +33,7 @@ def relabel(issue, add=(), remove=()):
 
     Not a verb. The labels an agent moves are the difficulty and nothing else,
     and `difficulty` says what a legal move is; a verb that took any label
-    took `medium` without `challenge`, which is #113 (solorepo's DR-116).
+    took `medium` without `challenge`, which is solorepo's #113 (solorepo's DR-116).
     """
     cmd = ["issue", "edit", str(issue)]
     for name in add:
@@ -70,7 +70,7 @@ def difficulty(issue, level):
     One level at a time, so the Issue never carries two, and never on an Issue
     that is not a Challenge: the coder loop takes an Issue on the event of its
     difficulty landing and reads `challenge` beside it, so a difficulty on
-    anything else is a label nothing will ever read (#113).
+    anything else is a label nothing will ever read (solorepo's #113).
     """
     now = challenge_labels(issue)
     stale = [l for l in now if l in DIFFICULTIES and l != level]
@@ -88,7 +88,7 @@ def triage(issue, level):
     the roadmap form says is usually a Challenge and which closing and refiling
     would strip of its number, its thread and the reason it was deferred.
 
-    A difficulty already on the Issue — #113's state, the level with no
+    A difficulty already on the Issue — the state of solorepo's #113, the level with no
     `challenge` beside it — is taken off first and put back with `challenge`,
     so the event the coder loop reads fires: GitHub emits nothing for a label
     an Issue already carries.
@@ -110,7 +110,7 @@ def file_issue(title, body, level=None, roadmap=False):
     The form's front matter applies `challenge` at creation and the raiser adds
     a difficulty; through the channel both land in one `create`, so there is
     no moment when the difficulty is on an Issue that is not yet a Challenge —
-    the moment the coder loop's event fell into on #113. A roadmap Issue takes
+    the moment the coder loop's event fell into on solorepo's #113. A roadmap Issue takes
     `roadmap` and no difficulty, since it is deferred by definition.
 
     A label supplied at creation fires `labeled` like any other, one delivery
@@ -157,7 +157,7 @@ def release(issue):
 
     The claim says a run is standing on this. The coder loop's guard reads it
     beside the open pull request to tell a level moved under a run from a
-    hand-back the solo has answered (#117); a claim left standing after a
+    hand-back the solo has answered (solorepo's #117); a claim left standing after a
     hand-back is the loop saying it has stopped and is still working at once.
     """
     login = channel.login()
@@ -179,7 +179,7 @@ def stop(issue, body):
     unclaimed Issue at its old level, which the comment explains and a raiser
     can re-deliver; a failed release after the move would leave `human` and
     claimed, the one state the coder loop's guard reads as a run still
-    standing (#117). The pull request stays open — merged, never abandoned —
+    standing (solorepo's #117). The pull request stays open — merged, never abandoned —
     for the run that takes the Issue up again.
     """
     challenge_labels(issue)
@@ -341,7 +341,7 @@ def advance(pr=None, held=False):
     request to be current before it merges. So when two are green at once the
     first lands and the second goes behind, armed, waiting for a Job that ended
     when it armed — and nobody is told, because there is nobody left to tell
-    (#93). This is the step that moves it. `merge --auto` runs it before
+    (solorepo's #93). This is the step that moves it. `merge --auto` runs it before
     arming, since a branch can be behind before it is armed as easily as
     after; the other edge is `.github/workflows/advance.yml`, which runs this
     on every push to trunk, the one event that puts a pull request in that
@@ -356,7 +356,7 @@ def advance(pr=None, held=False):
     branch is one nobody is still standing on. The filter used to be the sweep's
     alone and the explicit argument rebased whatever it was handed — which left
     the property holding on the path nothing calls and not on the one
-    `merge --auto` uses (#98).
+    `merge --auto` uses (solorepo's #98).
 
     `held` is the one exemption, and it is the caller saying which branch it is
     standing on: `merge --auto` is the Job that did the work, arming in a moment,
@@ -381,7 +381,7 @@ def advance(pr=None, held=False):
     leave the pull request exactly where it was found, with the sole witness
     gone. The second used to hang off the first as an `elif`, so the one state
     it exists to repair — moved, disarmed, and behind again — was the one state
-    it never looked at (#98). And whether re-arming took, which is the same
+    it never looked at (solorepo's #98). And whether re-arming took, which is the same
     question `merge --auto` asks of its own arming and the one this path was
     still answering from an exit code.
 
@@ -431,7 +431,7 @@ def advance(pr=None, held=False):
                 # status: `gh pr merge --auto` exits 0, the enablement does not
                 # stick, and the line below claimed an arming GitHub does not
                 # hold. That leaves the pull request rebased and unarmed, which
-                # is #93 — and unreachable by any later sweep, because the sweep
+                # is solorepo's #93 — and unreachable by any later sweep, because the sweep
                 # filters on `autoMergeRequest` and there is no longer one to
                 # filter on.
                 if not channel.gh("pr", "view", number, "--json", ADVANCE).get("autoMergeRequest"):
@@ -458,8 +458,8 @@ def merge(pr, stack=False, auto=False):
     commit that lands on trunk carries that account rather than the solo's.
 
     The subject is passed rather than left to GitHub. Left to it, GitHub labels
-    the squash from the commits, and #27 landed on `main` under a subject that
-    was not its title (#26), which is the label the index carries — and a label
+    the squash from the commits, and solorepo's #27 landed on `main` under a subject that
+    was not its title (solorepo's #26), which is the label the index carries — and a label
     on trunk cannot be rewritten. The body is left to GitHub, so the Trailers on
     the branch's commits ride into the squash as before (solorepo's DR-062).
 
@@ -468,7 +468,7 @@ def merge(pr, stack=False, auto=False):
     elsewhere — and it fails *after* the merge, so the exit code said the act
     had failed when it had not. The remote branch is deleted here instead, and
     the local checkout is left alone — unless the repository deletes head
-    branches itself, which this one does. The first run of this verb (#46)
+    branches itself, which this one does. The first run of this verb (solorepo's #46)
     deleted a ref GitHub had already removed, and exited 1 on a merge that had
     landed, which is the defect it was written to remove wearing a new coat. So
     the setting is read, and the verb deletes nothing the repository will.
@@ -476,8 +476,8 @@ def merge(pr, stack=False, auto=False):
     The outcome is read back from GitHub, per A6: a step's result is what it
     found, not what its last subprocess returned.
 
-    `--auto` is "when green" (#79). A merge refused for pending checks was one
-    somebody had to remember to retry, and on #76 the retry came thirty-six
+    `--auto` is "when green" (solorepo's #79). A merge refused for pending checks was one
+    somebody had to remember to retry, and on solorepo's #76 the retry came thirty-six
     minutes after the checks passed. GitHub holds the intent instead: the
     squash and its subject are handed over now, and the merge happens the
     moment the ruleset is satisfied, watched or not. Not on a layer of a stack:
@@ -493,7 +493,7 @@ def merge(pr, stack=False, auto=False):
             # The bottom included: GitHub refuses auto-merge on any stacked
             # pull request ("Auto-merge is not supported for stacked pull
             # requests"), so a stack lands by `merge --stack`, by hand, when
-            # its bottom is green (#117).
+            # its bottom is green (solorepo's #117).
             sys.exit(f"say: #{pr} is in a stack, and GitHub does not arm a stacked pull request, "
                      "bottom included. Merge it with --stack when it is green, and GitHub "
                      "retargets the layers above as it lands.")
@@ -502,15 +502,16 @@ def merge(pr, stack=False, auto=False):
                      "GitHub, not a line here")
         # Arming a branch that is already behind arms something that cannot
         # merge, and the push to trunk that would have advanced it has already
-        # happened (#93). The other edge — falling behind after arming — is
+        # happened (solorepo's #93). The other edge — falling behind after arming — is
         # the workflow's. `held`, because this is the Job that did the work and
         # the branch is its own; nothing else may rebase an unarmed branch.
         #
         # And the arming happens whether or not that worked. `advance` ends in
         # `sys.exit` on a read-back that failed and on any refusal `gh` made,
         # and outside this `try` every one of those exits left the branch
-        # rebased and never armed — #93's state, reached by the fix for it, with
-        # no second run coming because arming is where the Job ends (#98).
+        # rebased and never armed — the state of solorepo's #93, reached by the
+        # fix for it, with no second run coming because arming is where the Job
+        # ends (solorepo's #98).
         # Armed and behind is the recoverable half: the next push to trunk
         # sweeps it up, precisely because it is armed. So the stall is carried
         # to the end and reported there, after the arming it must not prevent —
@@ -543,8 +544,8 @@ def merge(pr, stack=False, auto=False):
                 # end of the question either way. Reported here it would print
                 # `merged #<n> as <sha>` and then exit 1 saying the pull request
                 # is armed and not current with its base, both clauses false:
-                # #46's defect wearing a new coat, which is what this verb was
-                # written to remove.
+                # the defect of solorepo's #46 wearing a new coat, which is what
+                # this verb was written to remove.
                 print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
             elif after.get("autoMergeRequest"):
                 print(f"armed: #{pr} merges as a squash when green — {before['title']}")
@@ -616,7 +617,7 @@ def request_review(pr, to):
 
     A request already pending is withdrawn first. GitHub emits no event for
     a reviewer it already lists, so a Job whose run answered nothing left the
-    request standing and a second ask went nowhere (#87). Withdrawing and
+    request standing and a second ask went nowhere (solorepo's #87). Withdrawing and
     asking again is the same semaphore raised twice, and the event fires.
     """
     login = channel.role_login(to)
@@ -676,7 +677,7 @@ def reserved():
     /repos/{owner}/{repo}/tags` — lists "per_page ... The number of results per
     page (max 100). Default: 30" and `page`. So the thirty-first reservation is
     returned like the first, which is what `mint` below means by the tags being
-    the authoritative source (#152).
+    the authoritative source (solorepo's #152).
     """
     refs = channel.gh("api", f"repos/{channel.repo()}/git/matching-refs/tags/DR-")
     return {int(m.group(1)) for ref in refs if (m := RESERVATION.match(ref["ref"]))}
@@ -689,7 +690,7 @@ def branch_here():
     exits 0 on a detached checkout — so the fallback was unreachable in the one
     state it names, and a mint from a detached HEAD wrote `reserved for HEAD`
     into a tag nothing ever deletes. `symbolic-ref -q` exits non-zero there,
-    which is the question being asked (#152).
+    which is the question being asked (solorepo's #152).
     """
     found = subprocess.run(["git", "-C", str(ROOT), "symbolic-ref", "-q", "--short", "HEAD"],
                            capture_output=True, text=True)
@@ -772,7 +773,7 @@ def mint():
 
 def build_parser():
     """The parser alone, so a probe can check what each verb accepts without
-    running what it dispatches to (#95)."""
+    running what it dispatches to (solorepo's #95)."""
     ap = channel.parser(__doc__)
     sub = ap.add_subparsers(dest="verb", required=True)
 

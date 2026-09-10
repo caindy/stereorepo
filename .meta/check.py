@@ -130,7 +130,7 @@ def duplicate_keys():
     checks out the tree is dropped without a word. `.yml` under `.meta/` too,
     since solorepo's DR-120 put the composite actions there: a second `steps:` in the
     sweep's action takes the publish out of the sweep, and the two workflow
-    stubs stay identical, so nothing else would say (#129)."""
+    stubs stay identical, so nothing else would say (solorepo's #129)."""
     problems = []
     for path in sorted([*META.rglob("*.yaml"), *META.rglob("*.yml"),
                         *TEMPLATE.rglob("*.yaml"), *TEMPLATE.rglob("*.yml")]):
@@ -469,7 +469,7 @@ def reserved_decision_numbers():
     Not, therefore, only when the answer can turn a red into a pass. A clone
     with no history to read explains no hole, so every hole arrives here and
     both answers are red — which is the path where this call buys least and the
-    one an old shallow portfolio takes on every red run (#152). It is made
+    one an old shallow portfolio takes on every red run (solorepo's #152). It is made
     anyway: skipping it would leave the caller with no answer, and no answer is
     the sentence saying the remote would not say, printed on a run that never
     asked it — the advice to take a number another branch is holding. Telling
@@ -609,7 +609,7 @@ def decision_numbering(index):
         # run where it would not answer — which is every run in a portfolio
         # with no `origin`, the install that read is local for, so the one
         # sentence saying what to do was withheld exactly where it was the only
-        # one available (#152).
+        # one available (solorepo's #152).
         removed = deleted_decision_numbers(missing)
         gone = [] if removed is None else [n for n in missing if n in removed]
         rest = [n for n in missing if n not in gone]
@@ -623,7 +623,7 @@ def decision_numbering(index):
             # its end said "no tag reserving it" on runs where no tag was read,
             # and then advised writing the number back as WITHDRAWN — which is
             # how a session takes a number another branch is holding by
-            # following the check's own advice (#152).
+            # following the check's own advice (solorepo's #152).
             held = reserved_decision_numbers()
             if held is None and removed is None:
                 problems.append(f"no entry for {listed(rest)}; the remote would not say which "
@@ -712,11 +712,44 @@ FOREIGN = re.compile(r"solorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
 SCAFFOLD = "work:portfolio/solorepo"
 
 
-def copied_files():
-    """Every file Specialization puts into a portfolio, as paths.
+def issue_citation():
+    """The same two, one sequence over: an Issue number, and the possessive run
+    that names it as solorepo's, so `solorepo's #138, #140 and #142` names three.
 
-    `justfile` is not among them: `render.py` writes it into a portfolio from
-    its own literals, which is the same arrival by another door.
+    Read from `check_pr.py` rather than written here, because A12's fourth
+    quarter is split across the two gates and not the predicate with it: this
+    file holds the owner over the copy set and that one resolves the number,
+    and a string one of them reads as a citation and the other does not is the
+    two disagreeing about what they are each holding half of (solorepo's DR-132).
+    Written twice they had already drifted — this copy bounded no number and
+    read `&#39;`, an HTML numeric entity, as a citation of thirty-nine, and
+    neither difference was visible from either file.
+
+    That direction, because `check_pr.py` imports the standard library alone
+    and this one needs LinkML: it can be read from here and not the reverse.
+    Importing runs nothing — everything it does is under `main()` — and reaches
+    no network, which is the property that lets this check stay offline.
+    """
+    from importlib.machinery import SourceFileLoader
+    import importlib.util
+
+    loader = SourceFileLoader("check_pr", str(META / "check_pr.py"))
+    spec = importlib.util.spec_from_loader("check_pr", loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module.ISSUE, module.FOREIGN
+
+
+def copied_files():
+    """What Specialization copies into a portfolio, as paths.
+
+    One set, so that the checks holding what a copied file owes cannot disagree
+    about which files those are: a copied file is copied whatever the check
+    reading it, and a second scope written out beside this one would be a second
+    answer to the same question.
+
+    `justfile` is not on the copy list: `render.py` writes it into a portfolio
+    from its own literals, which is the same arrival by another door.
     """
     copied = {ROOT / "justfile"}
     for token in inherited():
@@ -739,10 +772,12 @@ def durable(copied):
     One set of files, not one text. `cited decisions` and `enacting citations`
     read each of them as text; the four below read a document's scalars where it
     has them, for the reason `prose` gives, so a citation written in a YAML
-    comment has its number resolved and its claim not. And `cited issues`, the
-    seventh check of A12, is outside this set altogether: it scans the
-    assertions, being in a checker that holds no YAML parser and so cannot read
-    the copy list this set is drawn from.
+    comment has its number resolved and its claim not. Two checks of A12 are
+    outside this set altogether. `inherited citations` reads `copied_files`
+    unwrapped, because what a portfolio inherits is the whole of its question and
+    the pages and the seed are not copied. And `cited issues`, the eighth, scans
+    the assertions from `check_pr.py`, being in a checker that holds no YAML
+    parser and so cannot read the copy list this set is drawn from.
     """
     for path in tree():
         if path.is_symlink() or not path.is_file() or ".git" in path.parts:
@@ -782,7 +817,7 @@ def cited_decisions(index):
     Portfolio is solorepo, and is passed over where it is not: the record it
     names is not there to resolve against, and "cited and does not exist" keeps
     its one meaning. Under `template/` a bare number is the seed's record, which
-    is the portfolio's, and resolves against that. #114 found a portfolio red on
+    is the portfolio's, and resolves against that. solorepo's #114 found a portfolio red on
     thirteen of these on its first pull request.
     """
     known = {d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"}
@@ -816,7 +851,7 @@ def cited_decisions(index):
 
 # A12 asks three things of a citation and `cited decisions` resolves one of them:
 # the number. What follows resolves the rest — the claim the citation goes on to
-# make about the thing it names (solorepo's DR-130, #147). Four shapes, chosen
+# make about the thing it names (solorepo's DR-130, solorepo's #147). Four shapes, chosen
 # because each is a string search rather than a reading: an Article number that
 # resolves, a quotation that appears where it is attributed, a relation that is
 # the slot it claims to be, and a line that reads what it is cited for. A
@@ -906,7 +941,7 @@ def flat(text):
 
 
 def cited_articles():
-    """Every `A<n>` cited resolves to an Article, live or reserved (#147).
+    """Every `A<n>` cited resolves to an Article, live or reserved (solorepo's #147).
 
     An Article citation is a typed reference where a slot holds it, and most of
     them are not: the Charter is cited in a paragraph, a docstring, a template
@@ -991,13 +1026,13 @@ ELISION = re.compile(r"…|\.\.\.|\[[^\]]*\]")
 
 
 def quoted_claims():
-    """A quotation attributed to an entry appears in that entry (#147).
+    """A quotation attributed to an entry appears in that entry (solorepo's #147).
 
     A citation carries the claim it names (A12), and the strongest form of that
     claim is the entry's own words. It is also the form that goes wrong
     silently: quoting from memory produces a sentence the entry would have been
     happy to contain, and only opening the entry says otherwise. Three of the
-    threads on #138, #140 and #142 turned on exactly that, and each cost a
+    threads on solorepo's #138, #140 and #142 turned on exactly that, and each cost a
     reviewer round.
 
     Only an attributed quotation is checked. `SAYS` is the attribution, and it
@@ -1055,12 +1090,12 @@ STATED = re.compile(rf"(?P<subject>{CITE})(?P<before>{NEAREST})"
 
 
 def stated_relations(index):
-    """A relation stated in prose is set as the slot it names (#147).
+    """A relation stated in prose is set as the slot it names (solorepo's #147).
 
     A relation here is a slot and not a paragraph — the schema says so of
     `departs_from` in as many words, because a departure marked nowhere breaks
     transitive conformity silently. A sentence claiming one is therefore either
-    true and redundant or false and unfalsifiable, and #142 carried the second:
+    true and redundant or false and unfalsifiable, and solorepo's #142 carried the second:
     a `supersedes` between solorepo's DR-078 and DR-079 that neither entry
     sets, which took a reviewer round to find and a reader of the record would
     never have found at all.
@@ -1109,12 +1144,12 @@ PATH_LINE = re.compile(r"`(?P<path>[^`\s:]*[./][^`\s:]*):(?P<line>\d+)`")
 
 
 def path_and_line_claims():
-    """A `path:line` cited beside a code span reads that span on that line (#147).
+    """A `path:line` cited beside a code span reads that span on that line (solorepo's #147).
 
     The form is a precedent: this was decided here, and here is the line. It is
     the citation most worth having and the one that decays fastest, because the
     line number is right until anybody edits above it and nothing re-reads it
-    afterwards. #142 cited line 23 of `.meta/actions/sweep/action.yml` for
+    afterwards. solorepo's #142 cited line 23 of `.meta/actions/sweep/action.yml` for
     `!cancelled()` where that line reads `always()` — the precedent was real,
     the line was not, and reading it was the reviewer's round. Written here in
     the form the check does not read, because a docstring that quoted the
@@ -1175,7 +1210,7 @@ def enacting_citations(index):
     cited number resolves, so an entry rebuilt under the next free number leaves
     every citation of the old one resolving — to the neighbouring entry, which
     is a citation that has silently come to mean something else and the one the
-    Charter holds worse than one that dangles. Two of those went into #152 and
+    Charter holds worse than one that dangles. Two of those went into solorepo's #152 and
     were caught by a reviewer reading, one of them in `AGENTS.md`.
 
     What was already in the tree was the disagreement: `decisions.md` listed the
@@ -1200,7 +1235,7 @@ def enacting_citations(index):
     file speaks about the record at all, it agrees with the index once. A file
     that cites nothing is silent rather than wrong, and a file that cites one
     naming entry among several is passed — which is what this is blind to. Of
-    the two sites in #152 it would have caught `AGENTS.md`, whose only other
+    the two sites in solorepo's #152 it would have caught `AGENTS.md`, whose only other
     citation named another file, and not
     `template/.github/workflows/gate.yml`, which cited solorepo's DR-119, DR-120
     already. It is a floor under the residue, not a sieve for it.
@@ -1255,6 +1290,64 @@ def enacting_citations(index):
                             "that names it, or the entry that does names the file")
     return problems
 
+
+def inherited_citations():
+    """An Issue cited in a file a portfolio inherits is cited as solorepo's (solorepo's DR-132).
+
+    The failure `cited decisions` holds for the record's numbers, one sequence
+    over. A bare `#98` in `check.py` is solorepo's where it was written and
+    reads as the portfolio's own on the day that portfolio's Issues reach
+    ninety-eight — the citation that comes silently to mean something else,
+    which is worse than one that dangles. solorepo's #114 is that failure landed once
+    already, for the DR numbers, and it took a portfolio red on its first pull
+    request to find.
+
+    Only the form is held here, and that is the whole of the split solorepo's DR-132
+    settled. Whether solorepo's #98 exists is a question only GitHub can answer,
+    and `check.py` reaches no network — which is what makes it the gate a
+    portfolio runs on a laptop and in CI with the same result. So the owner is
+    checked over the copy set, and resolving the number stays with
+    `check_pr.py`. That file scans the assertions, which the copy set overlaps
+    in `imported/`; what it no longer does there is hold the form as well, which
+    is the second answer to one question `copied_files` is a single set to
+    avoid, and was a bare number in an imported assertion reported twice by two
+    gates until solorepo's DR-132 drew the seam. The predicate is read from
+    that file too, by `issue_citation`, so the two halves cannot part company
+    about what a citation is.
+
+    Where it is enforced, and where it is not. The copy set is the scaffold's:
+    `copied_files` reads `inherited()`, which reads the Specialization
+    Discipline, and a portfolio carries no Specialization Discipline. So the
+    rule is enforced where the copy is made *from*, and a portfolio's own gate
+    is silent on it — `copied_files()` there is `{justfile}` and this check has
+    nothing to scan, exactly as `scaffold_only_paths` says of itself. A
+    portfolio that types a bare `#7` into its inherited `check.py` is not caught
+    by the check it inherited, and that is the cost the chosen alternative
+    names, not an oversight.
+
+    What is passed over. A code span is a path or a form, and `FENCED` strips
+    it before the scan. So is a number in quotes: `"#7"` in a fixture is the
+    string a probe greps its own output for, not a citation of solorepo's #7,
+    and a check that reported it would be teaching the next author to rephrase
+    working code. `template/` is not on the copy list — a bare number in the
+    seed is the portfolio's, which is what it will be.
+    """
+    problems = []
+    issue, foreign = issue_citation()
+    for path in sorted(copied_files()):
+        if path.is_symlink() or not path.is_file() or ".git" in path.parts:
+            continue
+        try:
+            text = FENCED.sub("", path.read_text())
+        except (UnicodeDecodeError, OSError):
+            continue
+        for num in sorted(set(issue.findall(foreign.sub("", text))), key=int):
+            problems.append(f"{path.relative_to(ROOT)}: #{num} is cited bare in a file a "
+                            "portfolio inherits, where it will come to mean an Issue of "
+                            "the portfolio's; cite it as solorepo's")
+    return problems
+
+
 def report(label, problems):
     """One step, one line, in the shape A21 names (solorepo's DR-092), and its problems under it."""
     print(("x  " if problems else "ok ") + label + (f" ({len(problems)})" if problems else ""))
@@ -1269,7 +1362,7 @@ def hook_probes():
 
     A hook is a boundary only while its predicate holds, and the reviewer
     found two holes in `worktree_only.py` on the pull request that added it,
-    each by running a command in the container (#86). Each of those commands
+    each by running a command in the container (solorepo's #86). Each of those commands
     is here, with the innocent neighbour it must not catch, so the next
     edit to either predicate meets them before a run does (solorepo's DR-110).
     """
@@ -1293,7 +1386,7 @@ def hook_probes():
         # passed for the reason the `post comment 1` case below already
         # covers and would have passed with `advance` spelled anything at all.
         # `gh pr view` below is `update-branch`'s innocent neighbour — the one
-        # a `gh\s+pr\b` written a shade too wide would catch (#98). The
+        # a `gh\s+pr\b` written a shade too wide would catch (solorepo's #98). The
         # directory is what is sanctioned (solorepo's DR-117): a program beside `post` is
         # sanctioned by where it lives, and the old one-file name is not.
         ("allow", not signed.blocked(".meta/say/post comment 1")),
@@ -1326,7 +1419,7 @@ def hook_probes():
         ("allow", not worktree.blocked("Bash", {"command": "git log -c --oneline -3"})),
         ("allow", not worktree.blocked("Bash", {"command": ".meta/say/post --role reviewer review 1 --approve"})),
         # worktree_only: more than one command, however the shell spells it,
-        # and programs or options off the list (#87's second review).
+        # and programs or options off the list (the second review on solorepo's #87).
         ("refuse", bool(worktree.blocked("Bash", {"command": "cat <<EOF && git log -1 --output=.meta/say\nharmless\nEOF"}))),
         ("refuse", bool(worktree.blocked("Bash", {"command": "git status;git -c core.pager=id log -1"}))),
         ("refuse", bool(worktree.blocked("Bash", {"command": "git log -1&&git -c core.pager=id log"}))),
@@ -1370,7 +1463,7 @@ def hook_probes():
         ("allow", not worktree.blocked("Glob", {"pattern": "*.md"})),
         # worktree_only: the harness's scratch is readable, the credential
         # directories beside it are not, and context glued to its number is
-        # an option (#99).
+        # an option (solorepo's #99).
         ("allow", not worktree.blocked("Read", {"file_path": str(pathlib.Path.home() / ".claude/projects/-x/s/tool-results/a.txt")})),
         ("refuse", bool(worktree.blocked("Read", {"file_path": str(pathlib.Path.home() / ".config/solorepo/reviewer.env")}))),
         ("refuse", bool(worktree.blocked("Read", {"file_path": str(pathlib.Path.home() / ".claude/settings.json")}))),
@@ -1392,13 +1485,13 @@ def hook_probes():
     problems = [f"probe {n}: the hook should {want} it and did not"
                 for n, (want, held) in enumerate(cases, 1) if not held]
 
-    # worktree_only: what a refusal offers instead (#144). An operator or an
+    # worktree_only: what a refusal offers instead (solorepo's #144). An operator or an
     # option off the list has a nearest command the hook would have taken; a
     # program off the list, a heredoc, and a git that never reached a
     # subcommand have none, and offering one would be the guess this replaces.
     # So has the channel reached with any operator, and so has a command cut at
     # a character that expands inside an argument rather than ending it: the
-    # last three cases are the two edges #146 found, where the offer was
+    # last three cases are the two edges solorepo's #146 found, where the offer was
     # well-formed, accepted, and a different command than the one refused.
     forms = [
         ("gh pr diff 86 | head", "gh pr diff 86"),
@@ -1456,8 +1549,8 @@ def load_channel():
 class FakeGitHub:
     """As much of GitHub as `advance` and `merge --auto` ask about.
 
-    Stands in for `channel.gh`, which is where every one of #98's five findings
-    lived: `gh()` reports by ending the process, and what a caller does with
+    Stands in for `channel.gh`, which is where every one of the five findings
+    on solorepo's #98 lived: `gh()` reports by ending the process, and what a caller does with
     that is the whole question. Answering from a dict makes each state a case —
     a rebase GitHub declines, a rebase that drops the arming, a base that moves
     again mid-run — where before each was an argument about a code path nothing
@@ -1536,10 +1629,10 @@ class FakeGitHub:
 
 
 def advance_probes():
-    """`advance` and `merge --auto` against a fake GitHub, in the states #98
+    """`advance` and `merge --auto` against a fake GitHub, in the states solorepo's #98
     found them in.
 
-    Each case is one of the reviewer's reproductions on #94, which were read
+    Each case is one of the reviewer's reproductions on solorepo's #94, which were read
     off the code because there was no way to run it: `advance` reaches GitHub
     in every branch, so until `channel.gh` could be stood in for, the only test of
     what it does when a call fails was an argument.
@@ -1580,7 +1673,7 @@ def advance_probes():
             channel.gh = original
 
     # The arming the rebase dropped is restored even though the base moved
-    # again under it — the two read-backs are two questions (#98).
+    # again under it — the two read-backs are two questions (solorepo's #98).
     fake = FakeGitHub({7: {"behind": 2, "armed": True, "drops": True, "again": 1}})
     said = run(fake, lambda: move.advance())
     if not fake.pulls["7"]["armed"]:
@@ -1608,7 +1701,7 @@ def advance_probes():
         problems.append(f"advance: the refusal to arm was reported as {said!r}")
 
     # An arming `gh` said it made and GitHub does not hold is the one the exit
-    # code cannot see, and the pull request is left rebased and unarmed — #93,
+    # code cannot see, and the pull request is left rebased and unarmed — solorepo's #93,
     # and out of reach of the sweep that filters on the arming.
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True}}, no_stick=[7])
     said = run(fake, lambda: move.advance())
@@ -1630,7 +1723,7 @@ def advance_probes():
         problems.append("advance: it refused the caller that holds the branch")
 
     # And the arming happens even when advancing did not: armed and behind is
-    # what the next push to trunk sweeps up, rebased and unarmed is #93.
+    # what the next push to trunk sweeps up, rebased and unarmed is solorepo's #93.
     fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7])
     said = run(fake, lambda: move.merge("7", auto=True))
     if not fake.pulls["7"]["armed"]:
@@ -1642,8 +1735,8 @@ def advance_probes():
     # refusal `advance` collected need not be a branch that is behind — an API
     # blip is one too — and once GitHub has merged the pull request the question
     # is closed. Reported here it is `merged #<n> as <sha>` followed by an exit
-    # claiming the pull request is armed and behind, which is #46's defect in a
-    # new coat.
+    # claiming the pull request is armed and behind, which is the defect of
+    # solorepo's #46 in a new coat.
     fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7], lands=[7])
     said = run(fake, lambda: move.merge("7", auto=True))
     if said:
@@ -1673,8 +1766,8 @@ def channel_parser_probes():
     addition meant for one verb that lands after `p` has moved on binds to
     whichever verb comes next instead — silently, since argparse never
     complains about the wrong verb owning an argument. That is what put the
-    verdict group on `issue-comment` rather than `review` (#95), the same
-    shape #91 found one verb over. Nothing else parses these verbs without
+    verdict group on `issue-comment` rather than `review` (solorepo's #95), the same
+    shape solorepo's #91 found one verb over. Nothing else parses these verbs without
     also calling `gh`, so this is the only place that would have noticed.
     """
     import contextlib
@@ -1778,7 +1871,7 @@ def channel_table_probes():
     says and executable, every `held_by` is a Role the authority assertions
     know or one of the two readers that are not Roles, and PR First's own
     steps type no command — the verbs are the steps, and a step that spelled
-    one would be the second copy the reviewer found drifting on #117.
+    one would be the second copy the reviewer found drifting on solorepo's #117.
     """
     channel, table, programs = load_channel()
     problems = []
@@ -1905,7 +1998,7 @@ def reservation_probes():
         # a hole the commits could never have explained. The stub reports having
         # been called, because what a later reader needs from this case is
         # whether that call is meant — a clone with no history explains no hole,
-        # so every hole reaches the remote, and both answers are red (#152).
+        # so every hole reaches the remote, and both answers are red (solorepo's #152).
         asked = []
 
         def unreadable():
@@ -1930,7 +2023,7 @@ def reservation_probes():
 
 # Run before the schemas load. LinkML's loader raises on the first repeated key
 # with no file and no line, so a duplicate in `work/*.yaml` used to take the
-# whole gate down before the check that names both had a chance to run (#23).
+# whole gate down before the check that names both had a chance to run (solorepo's #23).
 PRECHECKS = (
     ("duplicate keys", duplicate_keys),
     ("hook probes", hook_probes),
@@ -1945,7 +2038,7 @@ FENCED = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 
 
 def markdown_links():
-    """A relative link in a page resolves to something in the tree (#45).
+    """A relative link in a page resolves to something in the tree (solorepo's #45).
 
     A DR cited in prose has been checked since one dangled for a day; a markdown
     link is the same failure with more syntax, and the audit solorepo's DR-036 recorded
@@ -2003,7 +2096,7 @@ def inherited():
 
 
 def scaffold_only_paths():
-    """A doc that Specialization copies does not name a path a portfolio lacks (#45).
+    """A doc that Specialization copies does not name a path a portfolio lacks (solorepo's #45).
 
     `template/`, `SPECIALIZE.md` and `bootstraps/` stay with the scaffold, and a
     copied page that mentions one reads as true and is not. The audit solorepo's DR-036
@@ -2018,7 +2111,7 @@ def scaffold_only_paths():
 
     `.yml` is read as well as `.yaml`, because the copied set is not only prose:
     a workflow is a copied file that names paths, and the gate workflow named
-    two `bootstraps/` renders for as long as it travelled (#75) without this
+    two `bootstraps/` renders for as long as it travelled (solorepo's #75) without this
     check seeing a suffix it read.
 
     `template/` is the copied set too — the replacements, which step three
@@ -2086,14 +2179,14 @@ def gate_workflows_agree():
     request` and `sweep` — and what held it equal was a comment in the
     scaffold's copy saying to change both, a reminder and not a control. solorepo's DR-114
     then added a step to the scaffold's sweep and a permission for it, and the
-    seeded copy stayed a version behind (#113).
+    seeded copy stayed a version behind (solorepo's #113).
 
     Compared as loaded YAML, so each file keeps its own comments and differs in
     nothing GitHub reads. The shared jobs are named here and not derived: an
     intersection of the two files' job sets is forgiving on absence, and
     cannot tell a job the seed never had from one the seed lost, so a shared
     job deleted from the seed would have been invisible — the falsifier solorepo's DR-119
-    writes for itself, and the reviewer's point on #125. So each shared job
+    writes for itself, and the reviewer's point on solorepo's #125. So each shared job
     must be in both files, and the seed defines exactly the shared jobs and
     its own `gate` job, which solorepo's DR-115 fixed at that name so that a portfolio's
     ruleset is set once. The scaffold's seed jobs are its alone and are not
@@ -2153,6 +2246,7 @@ CHECKS = (
     ("quoted claims", lambda i, r: quoted_claims()),
     ("stated relations", lambda i, r: stated_relations(i)),
     ("path and line claims", lambda i, r: path_and_line_claims()),
+    ("inherited citations", lambda i, r: inherited_citations()),
     ("reserved article numbers", lambda i, r: reserved_article_numbers(i)),
     ("artifact paths", lambda i, r: artifact_paths(i)),
     ("enacted decisions", lambda i, r: enacted_decisions(i)),

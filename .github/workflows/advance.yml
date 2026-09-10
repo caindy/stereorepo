@@ -4,7 +4,7 @@
 # `main`'s ruleset requires a pull request to be up to date before it merges,
 # and an armed merge does not update its own branch. So the first of two green
 # pull requests lands and the second goes behind, armed, waiting for a Job that
-# ended when it armed — with nobody left to notice (#93). A push to `main` is
+# ended when it armed — with nobody left to notice (solorepo's #93). A push to `main` is
 # the only thing that puts a pull request in that state, so it is the event
 # this runs on: no clock, and no interval to be stuck inside.
 #
