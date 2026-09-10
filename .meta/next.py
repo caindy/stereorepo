@@ -28,6 +28,9 @@ What it reads, and from where:
   "idle" is a fact and not an impression. An open pull request is the loops'
   work in progress, not an answer to what is next: the answer is an Issue,
   and the pull request is shown so that its being worked is a fact too.
+  An Issue an open pull request closes is that pull request's work, so it is
+  listed as **in progress** and not as ripe: a screen that offered it again
+  would hand the solo a Challenge a loop already holds.
 
 Reads only, through `gh`, which the hook permits. Nothing here writes.
 """
@@ -76,12 +79,16 @@ def waits_on(body):
     return text
 
 
-def classify(issue, open_numbers):
-    """Where an Issue sits: what blocks it, and whether it is ripe."""
+def classify(issue, open_numbers, closing):
+    """Where an Issue sits: what blocks it, whether an open pull request
+    already closes it, and otherwise whether it is ripe."""
     labels = {l["name"] for l in issue["labels"]}
     level = next((d for d in DIFFICULTY if d in labels), None)
     waits = waits_on(issue["body"])
-    if waits is None:
+    taken = closing.get(issue["number"])
+    if taken:
+        blocked, note = True, f"in #{taken}"
+    elif waits is None:
         blocked, note = None, "?"
     elif isinstance(waits, str):
         blocked, note = True, "waits, see body"
@@ -97,6 +104,7 @@ def classify(issue, open_numbers):
         "blocked": blocked,
         "note": note,
         "milestone": (issue.get("milestone") or {}).get("title"),
+        "taken": taken,
     }
 
 
@@ -105,11 +113,12 @@ def row(i):
     return f"  #{i['number']:<4} {level:<10} {i['note']:<24} {i['title'][:70]}"
 
 
-def issues():
+def issues(closing=None):
     found = gh("issue", "list", "--state", "open", "--limit", "200",
                "--json", "number,title,labels,body,milestone", default=[])
     numbers = {i["number"] for i in found}
-    return sorted((classify(i, numbers) for i in found), key=lambda i: i["number"])
+    return sorted((classify(i, numbers, closing or {}) for i in found),
+                  key=lambda i: i["number"])
 
 
 def untriaged(rows):
@@ -119,8 +128,12 @@ def untriaged(rows):
 
 
 def pull_requests():
+    """Print the open pull requests, and return which Issues they close:
+    Issue number to pull request number, read from the closing keywords
+    GitHub resolved in each body."""
     prs = gh("pr", "list", "--state", "open", "--json",
-             "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,isDraft,headRefName",
+             "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,isDraft,headRefName,"
+             "closingIssuesReferences",
              default=[])
     print("pull requests — the loops' work in progress, not what is next")
     if not prs:
@@ -131,6 +144,8 @@ def pull_requests():
         review = (pr.get("reviewDecision") or "").lower().replace("_", " ")
         print(f"  #{pr['number']:<4} {armed:<7} {state:<9} {review:<17} {pr['title'][:60]}")
     print()
+    return {ref["number"]: pr["number"]
+            for pr in prs for ref in pr.get("closingIssuesReferences") or []}
 
 
 def loops():
@@ -164,14 +179,15 @@ def milestones(rows):
 def screen():
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     print(f"next — {now}\n")
-    pull_requests()
+    closing = pull_requests()
     loops()
-    rows = issues()
+    rows = issues(closing)
     milestones(rows)
 
     challenges = [i for i in rows if i["kind"] == "challenge"]
+    taken = [i for i in challenges if i["taken"]]
     ripe = [i for i in challenges if i["level"] and i["blocked"] is False]
-    waiting = [i for i in challenges if i["level"] and i["blocked"]]
+    waiting = [i for i in challenges if i["level"] and i["blocked"] and not i["taken"]]
     unknown = [i for i in challenges if i["level"] and i["blocked"] is None]
     missing = untriaged(rows)
     roadmap = [i for i in rows if i["kind"] == "roadmap"]
@@ -184,6 +200,7 @@ def screen():
             print(empty)
         print()
 
+    section("in progress — an open pull request closes these; they are its, not next", taken)
     section("ripe — a Challenge with a difficulty and no open blocker; "
             "easy and medium are the coder's the moment they are labelled", ripe)
     section("waiting", waiting + unknown)
