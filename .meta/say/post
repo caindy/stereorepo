@@ -4,7 +4,8 @@
 A comment, a thread on the diff, a reply, an answer, a promotion, what landed,
 and the reviewer's verdict. Each is one step of a Discipline and refuses its own
 misuse (solorepo's DR-116): `answer` replies and resolves, and refuses when this Actor is
-the thread's sole author; `notice` supplies the marker and the mention; `promote`
+the thread's sole author unless the reply links the Issue the thread became
+(solorepo's DR-127); `notice` supplies the marker and the mention; `promote`
 files the Issue before the thread says it did; `landed` is rendered from the
 record and never typed. What changes state without saying anything — a claim, a
 level, a layer, a merge — is `move`'s.
@@ -116,15 +117,49 @@ def sole_author(bodies):
     return bool(bodies) and all(b.rstrip().endswith(block) for b in bodies)
 
 
-def refuse_if_sole_author(thread_id):
+def promotes(body):
+    """True when a reply links an Issue, which is what a promotion looks like.
+
+    `check_pr.PROMOTED` rather than a pattern of this program's, so the verb
+    never stands aside where the gate would go on calling the thread resolved
+    without an answer — the one direction A16 depends on, and the same parity
+    `landed` keeps with the gate's sections (#117).
+
+    The other direction does not hold and is not wanted. The gate scans every
+    comment on the thread; this scans the one body about to be posted. So a
+    sole-authored thread that already carries a link from a promotion whose
+    resolve failed is refused here and passed there, and the way through is to
+    repeat the URL — the conservative side, and the refusal names it. Dropping
+    either scan to make the two equal is the reading that would break A16.
+    """
+    return bool(check_pr.PROMOTED.search(body))
+
+
+def refuse_if_sole_author(thread_id, promotion=False):
+    """The sole-author refusal, and the one case it stands aside for (solorepo's DR-127).
+
+    A promotion is an answer: PR First's eighth step gives it to the coder, and
+    the thread it closes is one the coder wrote every word of, so a rule that
+    counts parties refuses the act the step assigns. A16 is not weakened by
+    standing aside, because what the reply carries is an Issue — the item
+    survives with a state of its own, which is the opposite of walking past it.
+    A reply with no link stays refused: that is the self-resolution solorepo's DR-068 and
+    solorepo's DR-072 put the control on the thread for.
+
+    The thread is fetched whether or not the rule can bite, so a bad id stops
+    the verb before anything is filed or posted rather than after.
+    """
     bodies = thread_comments(thread_id)
     if bodies is None:
         sys.exit(f"say: GitHub has no review thread {thread_id}")
+    if promotion:
+        return
     if sole_author(bodies):
         sys.exit("say: refusing — you are the sole author of this thread, and a reply from you "
                  "would not change that. A16 counts the resolver as a party, which means "
-                 "nothing when it is you. Ask the solo to resolve it, or leave it for the next "
-                 "Job, whose Trailer differs.")
+                 "nothing when it is you. Promote it, if it survived the argument, and answer "
+                 "with the Issue's link — that stands aside from this rule. Otherwise ask the "
+                 "solo to resolve it, or leave it for the next Job, whose Trailer differs.")
 
 
 def reply(thread_id, body):
@@ -145,8 +180,16 @@ def answer(thread_id, body):
     the verb is both. The sole-author refusal is asked before anything is
     posted: a reply that goes out and a resolve that then refuses is the step
     half done, which is the shape this verb exists to make untypeable.
+
+    The body decides whether that refusal applies: one linking an Issue is the
+    promotion PR First's eighth step names (solorepo's DR-127). `promote` below does the
+    whole step in one act and is the coder's ordinary door to it; this verb is
+    what closes the thread when the two came apart — a promotion whose resolve
+    failed, or an Issue filed for the thread before it was answered. The link is
+    what says the Issue exists, so a thread is never closed on a promotion that
+    did not happen.
     """
-    refuse_if_sole_author(thread_id)
+    refuse_if_sole_author(thread_id, promotion=promotes(body))
     reply(thread_id, body)
     resolve(thread_id)
 
@@ -155,13 +198,17 @@ def promote(thread_id, title, body, level):
     """At merge: what survived the argument earns an Issue, and the thread is
     resolved with a link to it (PR First).
 
-    File, reply, resolve, in that order and with the refusal first, so the
-    Issue exists before the thread says it does and nothing is filed for a
-    thread this Actor could not close. The body is the Issue form's, not the
-    thread's: it opens with `**Waits on.**` like anything `file` takes, since
-    what is promoted is an Issue and the thread is where it was found.
+    File, reply, resolve, in that order, so the Issue exists before the thread
+    says it does. The body is the Issue form's, not the thread's: it opens with
+    `**Waits on.**` like anything `file` takes, since what is promoted is an
+    Issue and the thread is where it was found.
+
+    The sole-author refusal cannot bite here and is asked as `promotion=True`
+    rather than dropped: this verb's reply carries the Issue's link by
+    construction, which is the case solorepo's DR-127 has it stand aside for, and the call
+    is still what proves the thread exists before an Issue is filed for it.
     """
-    refuse_if_sole_author(thread_id)
+    refuse_if_sole_author(thread_id, promotion=True)
     # The link, not the number: `check_pr.py` reads a promotion in the one
     # form it can check, the Issue's URL, and a bare `#n` is what someone types
     # when referring to an Issue rather than when filing one.

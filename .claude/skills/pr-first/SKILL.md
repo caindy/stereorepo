@@ -26,7 +26,8 @@ The verbs are the steps, and each refuses its own misuse. Yours, as the coder:
 
 - `.meta/say/post comment <n> < body.md` — a comment on a pull request or an Issue
 - `.meta/say/post notice <pr> <path> <line> < body.md` — noticed and not done: the marker and the mention supplied, held open for the solo
-- `.meta/say/post answer <thread-id> < body.md` — answer: reply, then resolve; refused when this Actor is the thread's sole author
+- `.meta/say/post answer <thread-id> < body.md` — answer: reply, then resolve; refused when this Actor is the thread's sole author, unless the reply links the Issue the thread was promoted to
+- `.meta/say/post promote <thread-id> --title T --difficulty D < issue-body.md` — at merge: file the Issue with the Issue form's body, reply with the link, resolve
 - `.meta/say/post landed <pr>` — post what landed for every Challenge the body closes, rendered from the record
 - `.meta/say/move claim <issue>` — take an Issue: assign it to this Role's account
 - `.meta/say/move stop <issue> < body.md` — where this Job stopped and why; the claim released, the Issue to the solo as `human`, the pull request left open

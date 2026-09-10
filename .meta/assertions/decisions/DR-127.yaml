@@ -1,0 +1,122 @@
+decisions:
+  - id: work:decision/127
+    name: "DR-127 · A promotion is an answer: the coder holds `promote`, and the sole-author refusal stands aside for a reply that links the Issue"
+    challenge: work:challenge/139
+    status: ADOPTED
+    supersedes:
+      - work:decision/069
+      - work:decision/072
+    applies:
+      - work:article/16
+    enacted_in:
+      - work:artifact/meta-say-post
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-disciplines
+    alternatives:
+      - name: Leave the refusal whole, and let the solo resolve a promoted notice
+        chosen: false
+        reason: >-
+          What was in place, and what DR-072 named as the control that replaced
+          the merge. It costs the solo a resolve on every notice that earns an
+          Issue, which PR First says is most pull requests, and the act it is
+          being asked for is clerical: the argument is over, the item has a
+          number, and the only thing left is the click the coder was refused.
+          On #130 both notices were promoted and both threads stayed open under
+          an armed merge, which is the wait turning into a stall.
+      - name: Stand aside when the thread is a held notice, by the marker
+        chosen: false
+        reason: >-
+          `check_pr.py --threads` tells a held notice from a review point by the
+          marker on the last comment, so the verb could key on that. It reads
+          the wrong fact. What makes the reply an answer is that it hands the
+          item on with a state of its own, not where the item was raised, and
+          the gate does not look at the marker when it decides whether a thread
+          was answered — so this would refuse a promotion the gate accepts, and
+          the verb and the gate would disagree about the same thread.
+      - name: Stand aside for a reply that links an Issue, by the gate's own pattern
+        chosen: true
+        reason: >-
+          `check_pr.unanswered` already counts a link to an Issue as an answer,
+          for the same reason: work noticed and not done earns an Issue only if
+          it survives the argument, so the thread that spawned one is answered
+          by saying which. The verb reuses `check_pr.PROMOTED` rather than a
+          pattern of its own, so it never stands aside where the gate would go
+          on calling the thread unresolved, which is the one direction A16
+          depends on. It is stricter than the gate in the other: the gate scans
+          every comment on the thread and the verb scans the body about to be
+          posted, so a thread already carrying a link from a promotion whose
+          resolve failed is refused until the reply repeats the URL. What it
+          costs is that the coder can now close its own thread when it files an
+          Issue for it — which is the conservative direction, the item
+          surviving rather than being walked past — and that a link to any
+          Issue anywhere satisfies it, the gate being no stricter.
+      - name: Leave `promote` the solo's, and let the coder answer with a link to the solo's Issue
+        chosen: false
+        reason: >-
+          The exception would have no caller in the Role it was written for. A
+          reading is compiled from `verbs.yaml` and says a verb not listed is
+          not the Role's to type, so a coder that may answer with an Issue's
+          link and holds nothing that files an Issue waits on the solo for the
+          filing instead of for the resolve — #139's defect moved rather than
+          answered. It is also the weaker exception: `promote` files the Issue
+          for the thread it is resolving, so the link is one that exists and
+          belongs there, which is what the falsifier below admits `answer`
+          alone cannot check.
+    consequences:
+      - >-
+        `refuse_if_sole_author` takes a `promotion` flag. `answer` computes it
+        from the body it is about to post, through `promotes()`, which is
+        `check_pr.PROMOTED` and not a second pattern; a reply with no link is
+        refused as before, and the refusal now names promotion as the way out.
+      - >-
+        `promote` passes it as `True`: its reply carries the link by
+        construction. The call stays, because it is also what proves the thread
+        exists before an Issue is filed for it.
+      - >-
+        DR-069's and DR-072's consequence — the channel refuses a thread this
+        Actor is the sole author of — gains its one exception, and what those
+        entries put on the thread is unchanged for every other reply. A coder
+        that decides its own notice is moot still cannot resolve it; it can only
+        hand it on. DR-072's own sentence, that a parked item cannot be walked
+        past without the solo, is false where a link is present, and this entry
+        carries that forward rather than rewriting it.
+      - >-
+        `promote` is `held_by: [coder, solo]`, so PR First's eighth step is one
+        act for the Role the pull request names. The exception in `answer` is
+        what the step needs when the promotion and the resolve come apart — a
+        `promote` whose resolve failed, or an Issue filed before the thread was
+        answered — and `promote` is how the coder reaches it in one.
+      - >-
+        The coder's reading of PR First says both, since `verbs.yaml` is what it
+        is compiled from and a reading names no verb its Role does not hold. The
+        step they serve was already there: what survives the argument earns an
+        Issue and the thread is resolved with a link to it.
+    falsifier: >-
+      A sole-authored thread resolved by its author with a link that promotes
+      nothing — an Issue that was already closed, or one about something else.
+      The gate would pass it too, which is the shape of what is being trusted:
+      that a link to an Issue is a promotion. A refusal that read the Issue's
+      state would be a second rule the gate does not have.
+    rationale: |-
+      The refusal was written when one login held every party (DR-068,
+      DR-069) and kept when the Role accounts arrived (DR-107), because
+      within one Role the Trailer is all that tells two Jobs apart. Nothing
+      in that reasoning was about notices, and a notice is the one thread
+      that is sole-authored by design: the coder's own observation on the
+      coder's own diff.
+
+      So the rule and the eighth step of the Discipline disagreed, and the
+      rule won on every pull request that carried a notice. The narrow fix
+      is to say what an answer is rather than who may give one — which the
+      gate already says, in `unanswered`, and had said all along.
+
+      `promote` was tabled as the solo's for the same reason and not for one
+      of its own: DR-117 wrote `held_by` as who uses a verb — it is the entry
+      that made the table — and while the refusal stood whole the coder could
+      not perform the verb's last third, so the whole verb was nobody else's
+      to use. Removing the refusal's reason removes the holding's, and an
+      exception the Role that needs it has no verb to reach is a door with no
+      key. Handing the verb over moved no code, and that is the other half of
+      the same line, which is DR-116's: every Role that may speak may perform
+      every one of these, so `held_by` governs which reading carries a verb
+      and never which login the channel will let type it.

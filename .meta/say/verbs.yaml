@@ -45,12 +45,12 @@ programs:
         held_by: [reviewer]
       - name: answer
         usage: "<thread-id> < body.md"
-        does: "answer: reply, then resolve; refused when this Actor is the thread's sole author"
+        does: "answer: reply, then resolve; refused when this Actor is the thread's sole author, unless the reply links the Issue the thread was promoted to"
         held_by: [coder]
       - name: promote
         usage: "<thread-id> --title T --difficulty D < issue-body.md"
         does: "at merge: file the Issue with the Issue form's body, reply with the link, resolve"
-        held_by: [solo]
+        held_by: [coder, solo]
       - name: landed
         usage: "<pr>"
         does: post what landed for every Challenge the body closes, rendered from the record
