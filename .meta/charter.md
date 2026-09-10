@@ -21,17 +21,23 @@ Discipline; some stand alone, and need nothing behind them.
 
 _In practice:_ `uvx --with linkml --with pyyaml python .meta/check.py` passes, then the commit. Not a commit with `--no-verify` and a note to fix it after.
 
+_Retired when:_ A commit that is the gate's own act, so a tree that did not pass is not one the history can hold and there is no order left for a Job to keep.
+
 ### A2. A suppression names its rule and its reason, at the site. Never in configuration.
 
 **Enforces** Ratchet. **Checked by** A check that the linter's ignore list is empty and stays empty.
 
 _In practice:_ `# noqa: E501 — the URL cannot be split`, on the line itself. Never an entry in a config ignore list.
 
+_Retired when:_ A rule whose every violation here carries the same reason, so that naming it at each site is one sentence copied down the file.
+
 ### A3. Coverage is a floor beneath the tests, never a claim about them.
 
 **Enforces** Observed Failure. **Checked by** A coverage floor, with mutation testing as the signal behind it.
 
 _In practice:_ A coverage floor that must not fall, reported beside the mutation score. Never "we are at 90%, therefore tested".
+
+_Retired when:_ A coverage measure a test asserting nothing cannot satisfy, so the number is a claim about the tests after all.
 
 ### A4. A guardrail never observed to fail is not evidence of anything.
 
@@ -45,17 +51,23 @@ _In practice:_ The placeholder scan run against a portfolio with a token deliber
 
 _In practice:_ `render.py --check` in the gate; `render.py` writes only when a person runs it.
 
+_Retired when:_ A step whose tool can report only by writing, so that the check is had by rewriting the tree and reading what changed.
+
 ### A6. Every gate step has three outcomes — could not run, which is loud and unmarked and exits zero; passed, which is marked; found something, which is non-zero.
 
 **Checked by** Each step's own reporting, and a review of the report's shape.
 
 _In practice:_ A missing `linkml` prints that it could not run and exits zero. A violation exits non-zero.
 
+_Retired when:_ A gate that cannot start without every step's tool, so there is no third state to report and a mark says what the exit code already said.
+
 ### A7. A check-mark is a claim about scope, so a step says what it checked.
 
 **Checked by** Each step naming what it covered, beside its result.
 
 _In practice:_ `ok rendered prose` after a step that compared every render target, including the templates — so the mark says what it covered.
+
+_Retired when:_ A step whose scope is printed from what its run collected, so nothing beside the mark is a sentence somebody has to keep true.
 
 ### A8. An artifact prevents drift only if something consumes it — and consumption is not sufficient. Ask what it is checked against.
 
@@ -69,17 +81,23 @@ _In practice:_ `.github/PULL_REQUEST_TEMPLATE.md` is consumed by GitHub, and che
 
 _In practice:_ solorepo's `template/` is filled with dummy tokens and the result validated. Never linted where it sits.
 
+_Retired when:_ A seed token whose real value is the thing a gate tests, so the filled dummy passes where the portfolio's own fill would not.
+
 ### A10. A seeded artifact does not violate the rules it seeds.
 
 **Enforces** Seeded Artifacts. **Checked by** `check.py`, which fills every token and validates what comes out.
 
 _In practice:_ The seed's own `DR-001.yaml` names an Artifact under `enacted_in`, because A20 requires that of any adopted entry.
 
+_Retired when:_ A rule a seed can satisfy only by inventing content, its subject being something a portfolio has once it has done work and not before.
+
 ### A11. A decision that lives only in a transcript has not been made.
 
 **Enforces** Written Decisions. **Checked by** Nothing yet.
 
 _In practice:_ A choice settled in conversation is written as `assertions/decisions/DR-0nn.yaml` in the same change that acts on it.
+
+_Retired when:_ A transcript the artifacts cite by a durable identifier, so a decision left in it is dereferenced from the rule it settles rather than known only to the Job that held it.
 
 ### A12. A citation in a durable artifact is dereferenced — the number, the claim it names, and a link where one is possible.
 
@@ -97,17 +115,23 @@ _Retired when:_ A citation whose identifier already carries the claim it names, 
 
 _In practice:_ The commit subject is a label — "An Article is a reference" — and the argument for it is in the pull request body.
 
+_Retired when:_ A commit message the record indexes where the artifacts are read, so the reasoning in it is cited from the line it explains rather than walked back to through `git blame`.
+
 ### A15. Work noticed and not done, recorded only in a summary, has not been noticed.
 
 **Enforces** PR First. **Checked by** `check_pr.py`: every item under *what was noticed and not done* is a link.
 
 _In practice:_ `- #21 — make the channel the only path by construction`, a link, under the body's fourth heading. Not a sentence in a closing summary.
 
+_Retired when:_ Work noticed about a change as a whole, with no line to hang a conversation on, so the marker is parked where it is not about.
+
 ### A16. A review thread resolved without an answer has not been resolved.
 
 **Enforces** PR First. **Checked by** `check_pr.py`: a resolved thread carries a reply from a second party, or a link to the Issue it became.
 
 _In practice:_ A thread the diff has overtaken gets a reply saying so, and is then resolved. Not resolved silently because the anchor moved.
+
+_Retired when:_ A review thread only the Actor who raised it can resolve, so resolved says the point was met rather than that somebody replied.
 
 ### A17. A term that arrived by use has not been agreed.
 
@@ -121,17 +145,23 @@ _In practice:_ `Challenge` is used because it is a Concept in the vocabulary. A 
 
 _In practice:_ `git push` before the session ends, and `check_pr.py --handoff` refuses while the branch is ahead of its remote.
 
+_Retired when:_ A worktree the branch holds as it is written, so a Job that stops without pushing has left nothing behind.
+
 ### A19. A commit that does not name its Actor is unattributable.
 
 **Enforces** PR First. **Checked by** `check_pr.py`, which fails a pull request carrying a commit with no `Actor:` Trailer.
 
 _In practice:_ `.meta/say/commit -m "…"`, which composes the `Actor:` Trailer from the environment. Never `git commit` directly.
 
+_Retired when:_ A credential no path but the channel can reach, so an unsigned commit is unrepresentable rather than caught.
+
 ### A20. A rule that lives only in the decision record is not in force.
 
 **Enforces** Written Decisions. **Checked by** `check.py`, which fails an ADOPTED Decision naming no Artifact under `enacted_in`.
 
 _In practice:_ The rule about a rationale's length is a step of Written Decisions, and solorepo's DR-080 names `.meta/disciplines.md` under `enacted_in`.
+
+_Retired when:_ A rule every Job here follows that no artifact but the decision record states.
 
 ### A21. A gate reports each step in the one shape every gate here prints — `ok`, `x` or `?`, then the step, then what it covered, found, or could not do — so a reader of any Project's gate reads every other's.
 

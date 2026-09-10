@@ -26,6 +26,9 @@ articles:
       `uvx --with linkml --with pyyaml python .meta/check.py` passes, then
       the commit. Not a commit with `--no-verify` and a note to fix it
       after.
+    falsifier: >-
+      A commit that is the gate's own act, so a tree that did not pass is not
+      one the history can hold and there is no order left for a Job to keep.
   - id: work:article/2
     name: Article 2
     statement: >-
@@ -37,6 +40,9 @@ articles:
     example: >-
       `# noqa: E501 — the URL cannot be split`, on the line itself. Never
       an entry in a config ignore list.
+    falsifier: >-
+      A rule whose every violation here carries the same reason, so that naming
+      it at each site is one sentence copied down the file.
   - id: work:article/3
     name: Article 3
     statement: Coverage is a floor beneath the tests, never a claim about them.
@@ -46,6 +52,9 @@ articles:
     example: >-
       A coverage floor that must not fall, reported beside the mutation
       score. Never "we are at 90%, therefore tested".
+    falsifier: >-
+      A coverage measure a test asserting nothing cannot satisfy, so the number
+      is a claim about the tests after all.
   - id: work:article/4
     name: Article 4
     statement: A guardrail never observed to fail is not evidence of anything.
@@ -63,6 +72,9 @@ articles:
     example: >-
       `render.py --check` in the gate; `render.py` writes only when a
       person runs it.
+    falsifier: >-
+      A step whose tool can report only by writing, so that the check is had by
+      rewriting the tree and reading what changed.
   - id: work:article/6
     name: Article 6
     statement: >-
@@ -74,6 +86,9 @@ articles:
     example: >-
       A missing `linkml` prints that it could not run and exits zero. A
       violation exits non-zero.
+    falsifier: >-
+      A gate that cannot start without every step's tool, so there is no third
+      state to report and a mark says what the exit code already said.
   - id: work:article/7
     name: Article 7
     statement: A check-mark is a claim about scope, so a step says what it checked.
@@ -82,6 +97,9 @@ articles:
     example: >-
       `ok rendered prose` after a step that compared every render target,
       including the templates — so the mark says what it covered.
+    falsifier: >-
+      A step whose scope is printed from what its run collected, so nothing
+      beside the mark is a sentence somebody has to keep true.
   - id: work:article/8
     name: Article 8
     statement: >-
@@ -104,6 +122,9 @@ articles:
     example: >-
       solorepo's `template/` is filled with dummy tokens and the result validated.
       Never linted where it sits.
+    falsifier: >-
+      A seed token whose real value is the thing a gate tests, so the filled
+      dummy passes where the portfolio's own fill would not.
   - id: work:article/10
     name: Article 10
     statement: A seeded artifact does not violate the rules it seeds.
@@ -113,6 +134,9 @@ articles:
     example: >-
       The seed's own `DR-001.yaml` names an Artifact under `enacted_in`,
       because A20 requires that of any adopted entry.
+    falsifier: >-
+      A rule a seed can satisfy only by inventing content, its subject being
+      something a portfolio has once it has done work and not before.
   - id: work:article/11
     name: Article 11
     statement: A decision that lives only in a transcript has not been made.
@@ -123,6 +147,10 @@ articles:
       A choice settled in conversation is written as
       `assertions/decisions/DR-0nn.yaml` in the same change that acts on
       it.
+    falsifier: >-
+      A transcript the artifacts cite by a durable identifier, so a decision
+      left in it is dereferenced from the rule it settles rather than known only
+      to the Job that held it.
   - id: work:article/12
     name: Article 12
     statement: >-
@@ -153,6 +181,10 @@ articles:
     example: >-
       The commit subject is a label — "An Article is a reference" — and
       the argument for it is in the pull request body.
+    falsifier: >-
+      A commit message the record indexes where the artifacts are read, so the
+      reasoning in it is cited from the line it explains rather than walked back
+      to through `git blame`.
   - id: work:article/15
     name: Article 15
     statement: Work noticed and not done, recorded only in a summary, has not been noticed.
@@ -164,6 +196,9 @@ articles:
       `- #21 — make the channel the only path by construction`, a link,
       under the body's fourth heading. Not a sentence in a closing
       summary.
+    falsifier: >-
+      Work noticed about a change as a whole, with no line to hang a
+      conversation on, so the marker is parked where it is not about.
   - id: work:article/16
     name: Article 16
     statement: A review thread resolved without an answer has not been resolved.
@@ -174,6 +209,9 @@ articles:
     example: >-
       A thread the diff has overtaken gets a reply saying so, and is then
       resolved. Not resolved silently because the anchor moved.
+    falsifier: >-
+      A review thread only the Actor who raised it can resolve, so resolved
+      says the point was met rather than that somebody replied.
   - id: work:article/17
     name: Article 17
     statement: A term that arrived by use has not been agreed.
@@ -193,6 +231,9 @@ articles:
     example: >-
       `git push` before the session ends, and `check_pr.py --handoff`
       refuses while the branch is ahead of its remote.
+    falsifier: >-
+      A worktree the branch holds as it is written, so a Job that stops without
+      pushing has left nothing behind.
   - id: work:article/19
     name: Article 19
     statement: A commit that does not name its Actor is unattributable.
@@ -203,6 +244,9 @@ articles:
     example: >-
       `.meta/say/commit -m "…"`, which composes the `Actor:` Trailer from
       the environment. Never `git commit` directly.
+    falsifier: >-
+      A credential no path but the channel can reach, so an unsigned commit is
+      unrepresentable rather than caught.
   - id: work:article/20
     name: Article 20
     statement: A rule that lives only in the decision record is not in force.
@@ -213,6 +257,9 @@ articles:
     example: >-
       The rule about a rationale's length is a step of Written Decisions,
       and solorepo's DR-080 names `.meta/disciplines.md` under `enacted_in`.
+    falsifier: >-
+      A rule every Job here follows that no artifact but the decision record
+      states.
   - id: work:article/21
     name: Article 21
     statement: >-
