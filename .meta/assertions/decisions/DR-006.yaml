@@ -3,7 +3,7 @@ decisions:
     name: "DR-006 · Skills compose tools; tools are atomic"
     status: ADOPTED
     enacted_in:
-      - work:artifact/meta-assertions-authority
+      - work:artifact/meta-assertions-imported-authority
     rationale: |-
       Taking "Capability = SKILLs + Tools" literally: `echo` and `bash` are tools, and
       "reading and writing files" is a skill that combines them. Added

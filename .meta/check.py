@@ -1101,8 +1101,10 @@ def channel_table_probes():
     """
     channel, table, programs = load_channel()
     problems = []
-    roles = {r["name"] for r in (yaml.safe_load((META / "assertions" / "authority.yaml").read_text())
-                                 or {}).get("roles") or []}
+    # The Roles are the channel's, so they live with it under `imported/`; a
+    # portfolio's own `authority.yaml` holds the accounts they use (DR-123).
+    roles = {r["name"] for r in (yaml.safe_load(
+        (META / "assertions" / "imported" / "authority.yaml").read_text()) or {}).get("roles") or []}
     readers = roles | {"solo", "workflow"}
     for program in table.get("programs") or []:
         name = program["name"]

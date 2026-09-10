@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/132
+    name: A portfolio has no authority.yaml, and channel table probes dies reading it
+    challenge_type: DEFECT
+    description: >-
+      `channel table probes` reads `.meta/assertions/authority.yaml` for the
+      Roles a verb may be held by, and a portfolio has no such file: neither
+      `imported/` nor `template/` carries it and the copy step does not name
+      it, so the precheck dies on a portfolio's first pull request. Found on
+      #130, verifying #114's fix on a scratch portfolio, and parked there.

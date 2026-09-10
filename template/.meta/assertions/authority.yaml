@@ -1,0 +1,22 @@
+# This portfolio's accounts, one per Role (solorepo's DR-107): the login is
+# `<owner>-<repo>-<role>` and the credential is `~/.config/<repo>/<role>.env`
+# on each machine that holds it. The Roles themselves are the channel's and
+# are inherited: `imported/authority.yaml`. Creating the accounts is the
+# solo's act (solorepo's DR-066); until then the placeholders keep the gate
+# honest. Never synced.
+
+principal_identities:
+  - id: work:principal-identity/coder
+    name: __GITHUB_OWNER__-__GITHUB_REPO__-coder
+    subject: __GITHUB_OWNER__-__GITHUB_REPO__-coder
+    issuer: GitHub
+    description: >-
+      The coder Role's account: held durably, proved by a token kept outside
+      the tree per machine.
+
+  - id: work:principal-identity/reviewer
+    name: __GITHUB_OWNER__-__GITHUB_REPO__-reviewer
+    subject: __GITHUB_OWNER__-__GITHUB_REPO__-reviewer
+    issuer: GitHub
+    description: >-
+      The reviewer Role's account, on the same terms.

@@ -18,7 +18,7 @@ decisions:
       - work:artifact/meta-say-commit
       - work:artifact/meta-say-whoami
       - work:artifact/meta-say-verbs
-      - work:artifact/meta-assertions-authority
+      - work:artifact/meta-assertions-imported-authority
       - work:artifact/meta-hooks-signed-channel
       - work:artifact/meta-hooks-worktree-only
       - work:artifact/meta-check

@@ -142,6 +142,9 @@ artifacts:
   - id: work:artifact/meta-assertions-domain-vocabulary
     name: .meta/assertions/domain_vocabulary.yaml
     path: .meta/assertions/domain_vocabulary.yaml
+  - id: work:artifact/meta-assertions-imported-authority
+    name: .meta/assertions/imported/authority.yaml
+    path: .meta/assertions/imported/authority.yaml
   - id: work:artifact/meta-assertions-imported-readme
     name: .meta/assertions/imported/README.md
     path: .meta/assertions/imported/README.md
@@ -265,6 +268,9 @@ artifacts:
   - id: work:artifact/template-github-workflows-gate
     name: template/.github/workflows/gate.yml
     path: template/.github/workflows/gate.yml
+  - id: work:artifact/template-meta-assertions-authority
+    name: template/.meta/assertions/authority.yaml
+    path: template/.meta/assertions/authority.yaml
   - id: work:artifact/template-meta-assertions-structure
     name: template/.meta/assertions/structure.yaml
     path: template/.meta/assertions/structure.yaml

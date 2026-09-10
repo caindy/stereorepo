@@ -17,7 +17,7 @@ decisions:
       - work:artifact/meta-disciplines
       - work:artifact/meta-render
       - work:artifact/justfile
-      - work:artifact/meta-assertions-authority
+      - work:artifact/meta-assertions-imported-authority
       - work:artifact/meta-templates-roadmap
     alternatives:
       - name: A rule about the order, in a prompt, a step or a memory

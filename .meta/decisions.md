@@ -138,6 +138,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-120](assertions/decisions/DR-120.yaml) | The steps the two gate workflows share are one local composite action each, and check.py holds the residue equal | Adopted |
 | [DR-121](assertions/decisions/DR-121.yaml) | What a portfolio inherits cites solorepo's record as solorepo's, and a portfolio's gate passes over a citation of a record it does not carry | Adopted |
 | [DR-122](assertions/decisions/DR-122.yaml) | A reviewer session that added no verdict is a red run, and an agent it spawns runs in the foreground | Adopted |
+| [DR-123](assertions/decisions/DR-123.yaml) | A portfolio inherits the channel's authority — its Capabilities, Permissions and Roles — under imported/, and asserts the accounts its Roles hold as its own | Adopted |
 
 ## Holes
 
@@ -165,12 +166,13 @@ and the query a reader in a file actually has.
 | [`.meta/actions/pull-request/action.yml`](actions/pull-request/action.yml) | [DR-120](assertions/decisions/DR-120.yaml) |
 | [`.meta/actions/sweep/action.yml`](actions/sweep/action.yml) | [DR-120](assertions/decisions/DR-120.yaml) |
 | [`.meta/actions/verdicts/action.yml`](actions/verdicts/action.yml) | [DR-122](assertions/decisions/DR-122.yaml) |
-| [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml) |
+| [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-123](assertions/decisions/DR-123.yaml) |
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
 | [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |
+| [`.meta/assertions/imported/authority.yaml`](assertions/imported/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-123](assertions/decisions/DR-123.yaml) |
 | [`.meta/assertions/vocabulary.yaml`](assertions/vocabulary.yaml) | [DR-035](assertions/decisions/DR-035.yaml) |
 | [`.meta/charter.md`](charter.md) | [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml) |
-| [`.meta/check.py`](check.py) | [DR-014](assertions/decisions/DR-014.yaml), [DR-029](assertions/decisions/DR-029.yaml), [DR-034](assertions/decisions/DR-034.yaml), [DR-037](assertions/decisions/DR-037.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-121](assertions/decisions/DR-121.yaml) |
+| [`.meta/check.py`](check.py) | [DR-014](assertions/decisions/DR-014.yaml), [DR-029](assertions/decisions/DR-029.yaml), [DR-034](assertions/decisions/DR-034.yaml), [DR-037](assertions/decisions/DR-037.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-123](assertions/decisions/DR-123.yaml) |
 | [`.meta/check_pr.py`](check_pr.py) | [DR-057](assertions/decisions/DR-057.yaml), [DR-083](assertions/decisions/DR-083.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-102](assertions/decisions/DR-102.yaml), [DR-105](assertions/decisions/DR-105.yaml), [DR-108](assertions/decisions/DR-108.yaml), [DR-111](assertions/decisions/DR-111.yaml), [DR-118](assertions/decisions/DR-118.yaml) |
 | [`.meta/ddd/skos.yaml`](ddd/skos.yaml) | [DR-018](assertions/decisions/DR-018.yaml) |
 | [`.meta/ddd_ontology.yaml`](ddd_ontology.yaml) | [DR-016](assertions/decisions/DR-016.yaml), [DR-017](assertions/decisions/DR-017.yaml), [DR-028](assertions/decisions/DR-028.yaml) |
@@ -216,5 +218,6 @@ and the query a reader in a file actually has.
 | [`stakeholders/README.md`](../stakeholders/README.md) | [DR-041](assertions/decisions/DR-041.yaml) |
 | [`template/.github/workflows/gate.yml`](../template/.github/workflows/gate.yml) | [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml) |
 | [`template/.meta/README.md`](../template/.meta/README.md) | [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml) |
+| [`template/.meta/assertions/authority.yaml`](../template/.meta/assertions/authority.yaml) | [DR-123](assertions/decisions/DR-123.yaml) |
 | [`template/.meta/assertions/structure.yaml`](../template/.meta/assertions/structure.yaml) | [DR-115](assertions/decisions/DR-115.yaml) |
 | [`template/AGENTS.md`](../template/AGENTS.md) | [DR-115](assertions/decisions/DR-115.yaml) |

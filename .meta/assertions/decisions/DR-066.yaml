@@ -7,6 +7,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-say
       - work:artifact/meta-assertions-authority
+      - work:artifact/meta-assertions-imported-authority
       - work:artifact/meta-disciplines
     alternatives:
       - name: Keep acting as the solo
