@@ -1,0 +1,15 @@
+challenges:
+  - id: work:challenge/158
+    name: A file a Decision enacts cites that Decision, and a citation of the wrong entry is caught where the index and the prose disagree
+    challenge_type: DEFECT
+    description: >-
+      `cited decisions` asks whether a cited number resolves, so it is blind to
+      a renumber by construction: after #152 was rebuilt under the next free
+      number its two stray citations of the number below both resolved, to the
+      neighbouring entry. One was in `AGENTS.md` and one in
+      `template/.github/workflows/gate.yml`, and nothing between them and the
+      merge could see either; the reviewer did, by reading. The evidence was
+      already in the tree — `decisions.md` listed the new entry against both
+      files, generated from `enacted_in`, while the prose in each said the old
+      one. Raised by the reviewer on #152, agreed by the coder, held as a notice
+      and promoted at merge.

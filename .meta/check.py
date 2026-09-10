@@ -729,19 +729,20 @@ def durable(copied):
     """The files a citation is durable in: every page, every file a portfolio
     inherits, the seed, and the assertions.
 
-    One set for the five checks in this file, because a citation is a citation
+    One set for the six checks in this file, because a citation is a citation
     wherever it was typed, and checks that each chose their own scope would
     disagree about which files A12 covers. The reasons for the set are `cited
     decisions`'s, which drew it: a `rationale` block is a paragraph a reader
     reaches directly, and a docstring in a file a portfolio copies is the prose
     a reader of that file reaches first (solorepo's DR-124).
 
-    One set of files, not one text. `cited decisions` reads each of them as
-    text; the four below read a document's scalars where it has them, for the
-    reason `prose` gives, so a citation written in a YAML comment has its number
-    resolved and its claim not. And `cited issues`, the sixth check of A12, is
-    outside this set altogether: it scans the assertions, being in a checker that
-    holds no YAML parser and so cannot read the copy list this set is drawn from.
+    One set of files, not one text. `cited decisions` and `enacting citations`
+    read each of them as text; the four below read a document's scalars where it
+    has them, for the reason `prose` gives, so a citation written in a YAML
+    comment has its number resolved and its claim not. And `cited issues`, the
+    seventh check of A12, is outside this set altogether: it scans the
+    assertions, being in a checker that holds no YAML parser and so cannot read
+    the copy list this set is drawn from.
     """
     for path in tree():
         if path.is_symlink() or not path.is_file() or ".git" in path.parts:
@@ -1166,6 +1167,93 @@ def path_and_line_claims():
                         + f", and line {number} reads `{lines[number - 1].strip()}`")
     return problems
 
+
+def enacting_citations(index):
+    """A file the record names cites at least one entry that names it (solorepo's DR-131).
+
+    A renumber leaves a residue nothing sees. `cited decisions` asks whether a
+    cited number resolves, so an entry rebuilt under the next free number leaves
+    every citation of the old one resolving — to the neighbouring entry, which
+    is a citation that has silently come to mean something else and the one the
+    Charter holds worse than one that dangles. Two of those went into #152 and
+    were caught by a reviewer reading, one of them in `AGENTS.md`.
+
+    What was already in the tree was the disagreement: `decisions.md` listed the
+    new entry against the file, generated from `enacted_in`, while the prose in
+    the file said the old one. So the check reads the two together, and fails a
+    file the record names whose citations name no entry that names it — the
+    index says this file is where some rule was put, the prose says its rules
+    came from somewhere else, and one of them is wrong.
+
+    Neither half of that is a rule on its own, and the counts are why. They are
+    in solorepo's DR-131's alternatives and only there: a measurement of a moving
+    tree has one home, and the copy that stood here had drifted from the entry's
+    before either was a day old, a rebase having moved the ground under both.
+    **Every enacting entry is cited** fails in file after file, and often did so
+    from the commit that added the entry: a file carries a rule, not the account
+    of every entry that moved it. **Every citation's entry names this file** fails
+    hundreds of sites, because a citation is ordinarily a cross-reference to
+    reasoning enacted elsewhere. Neither is what the record means, and a step
+    that fails hundreds of true lines is a step somebody turns off.
+
+    So the conjunction, which is the smallest claim both halves support: where a
+    file speaks about the record at all, it agrees with the index once. A file
+    that cites nothing is silent rather than wrong, and a file that cites one
+    naming entry among several is passed — which is what this is blind to. Of
+    the two sites in #152 it would have caught `AGENTS.md`, whose only other
+    citation named another file, and not
+    `template/.github/workflows/gate.yml`, which cited solorepo's DR-119, DR-120
+    already. It is a floor under the residue, not a sieve for it.
+
+    Both repairs are honest and the failure names both: cite, where the rule is
+    stated, the entry that put it there; or name this file in the entry whose
+    rule it actually carries. What that trades is that the first can be done
+    without reading either, and the falsifier of solorepo's DR-131 says so.
+
+    Whose citations. `cited decisions`'s rule, for its reasons: under
+    `template/` a bare number is the seed's record and says nothing about this
+    one, and a citation of solorepo's record counts only where this Portfolio is
+    solorepo. A number that resolves to no entry is `cited decisions`'s to
+    report and is passed over here, so one mistyped digit is one failure.
+    """
+    known = {d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"}
+    if not known:
+        return []
+    home = SCAFFOLD in index
+    named = {}
+    for ident, (cls, obj, _) in index.items():
+        if cls != "Decision":
+            continue
+        for ref in obj.get("enacted_in") or []:
+            target = index.get(ref)
+            # An `enacted_in` naming nothing is the references check's, and a
+            # slot that resolves to something other than an Artifact the
+            # schema's; either way there is no path here to hold to anything.
+            if target and target[0] == "Artifact":
+                named.setdefault(target[1]["path"], set()).add(ident.rsplit("/", 1)[-1])
+
+    def listed(numbers):
+        shown = sorted(numbers)
+        return ", ".join(f"DR-{n}" for n in shown[:6]) + (
+            f" and {len(shown) - 6} more" if len(shown) > 6 else "")
+
+    problems = []
+    for path in durable(copied_files()):
+        rel = str(path.relative_to(ROOT))
+        if rel not in named:
+            continue
+        try:
+            text = FENCED.sub("", path.read_text())
+        except (UnicodeDecodeError, OSError):
+            continue
+        foreign = {num for m in FOREIGN.finditer(text) for num in DR.findall(m.group())}
+        bare = set() if TEMPLATE in path.parents else set(DR.findall(FOREIGN.sub("", text)))
+        cited = (bare | (foreign if home else set())) & known
+        if cited and not cited & named[rel]:
+            problems.append(f"{rel}: cites {listed(cited)}, and the record names it in "
+                            f"{listed(named[rel])}; a file the record names cites an entry "
+                            "that names it, or the entry that does names the file")
+    return problems
 
 def report(label, problems):
     """One step, one line, in the shape A21 names (solorepo's DR-092), and its problems under it."""
@@ -2068,6 +2156,7 @@ CHECKS = (
     ("reserved article numbers", lambda i, r: reserved_article_numbers(i)),
     ("artifact paths", lambda i, r: artifact_paths(i)),
     ("enacted decisions", lambda i, r: enacted_decisions(i)),
+    ("enacting citations", lambda i, r: enacting_citations(i)),
     ("surviving placeholders", lambda i, r: surviving_placeholders()),
     ("markdown links", lambda i, r: markdown_links()),
     ("scaffold-only paths", lambda i, r: scaffold_only_paths()),

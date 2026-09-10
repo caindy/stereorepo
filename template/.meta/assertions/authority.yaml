@@ -1,9 +1,10 @@
 # This portfolio's accounts, one per Role (solorepo's DR-107): the login is
 # `<owner>-<repo>-<role>` and the credential is `~/.config/<repo>/<role>.env`
 # on each machine that holds it. The Roles themselves are the channel's and
-# are inherited: `imported/authority.yaml`. Creating the accounts is the
-# solo's act (solorepo's DR-066); until then the placeholders keep the gate
-# honest. Never synced.
+# are inherited: `imported/authority.yaml`, this file holding only the accounts
+# they are held by, which are this portfolio's own (solorepo's DR-123).
+# Creating the accounts is the solo's act (solorepo's DR-066); until then the
+# placeholders keep the gate honest. Never synced.
 
 principal_identities:
   - id: work:principal-identity/coder

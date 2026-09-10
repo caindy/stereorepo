@@ -3,7 +3,8 @@
 What a Rust project in a portfolio inherits, and the gates that hold it there.
 
 The seed is [`seed/`](seed/): a workspace of one library crate and the xtask
-that gates it. **`cargo xtask gate` is the gate.** Each Discipline below says
+that gates it, a Bootstrap's gate being written in the language it gates
+(DR-090). **`cargo xtask gate` is the gate.** Each Discipline below says
 how it is satisfied in Rust and which step of the gate holds it there.
 
 | Discipline | How, in Rust | Held by |

@@ -1,0 +1,134 @@
+decisions:
+  - id: work:decision/131
+    name: "DR-131 · A citation is no claim of enactment, so what is checked is the disagreement: a file the record names cites one entry that names it"
+    challenge: work:challenge/158
+    status: ADOPTED
+    applies:
+      - work:article/12
+      - work:article/20
+    enacted_in:
+      - work:artifact/meta-check
+    alternatives:
+      - name: Every entry that names a file is cited in it
+        chosen: false
+        reason: >-
+          The relation read straight, and the shape #158 was raised in. It
+          fails 71 sites over 33 files, and it is not drift: of the 224
+          entry-and-file pairs where the commit that added an entry also
+          edited the file it names, 72 wrote no citation of it. That is the
+          record working as intended. `enacted_in` says where a rule lives,
+          and a rule is stated as a rule — `.meta/say/channel.py` is named by
+          seventeen entries and cites five, because a program states what it
+          does, not the twelve other arguments that moved it. Adopting this
+          would mean writing seventy accounts nobody asked for, and each of
+          them would be written to clear a step.
+      - name: Every citation's entry names the file it is written in
+        chosen: false
+        reason: >-
+          The rule #158 guessed at, and the tree says no: 528 of the 693
+          citations here are of an entry that does not name the file, 62 of
+          them in files the record does name, and 82 of the 190 written in the
+          parenthetical form a reader takes for an attribution — `.meta/say/move`
+          cites DR-112, DR-114 and DR-116 ten times between them and is named
+          by DR-117 and DR-128. A citation is ordinarily a cross-reference to
+          reasoning enacted elsewhere, which is what A12 — a citation in a
+          durable artifact is dereferenced — asks it to be. A step that fails
+          five hundred true lines is a step somebody turns off.
+      - name: The same test over the change rather than the tree
+        chosen: false
+        reason: >-
+          The residue is made by a renumber, so a check over the branch could
+          be sharper: the entry this change adds names a file, the change
+          writes a citation into that file, and it is not the entry's own
+          number. Sharper and still not sharp — of the 172 pairs in the record
+          where the adding commit wrote any citation into a file its entry
+          names, 20 wrote only other entries', which is a false failure every
+          ninth entry. It also needs the diff, which puts a tree invariant in
+          the pull request gate or a `git diff` in `check.py`, and it goes
+          quiet in the case it was built for: a renumber lands as a second
+          commit on a branch, so the citations it was meant to move were
+          written before the entry it is compared against existed.
+      - name: The conjunction, which is where the index and the prose disagree
+        chosen: true
+        reason: >-
+          Neither direction is a rule; both together are. Where a file speaks
+          about the record at all, it agrees with the index once — a file the
+          record names, and that cites the record, cites at least one entry
+          that names it. Two sites in this tree, both repaired here by writing
+          the citation that was worth having. What it costs is reach: a file
+          citing several entries, one of which names it, hides a stray among
+          them, so of #152's two sites this catches `AGENTS.md` and not
+          `template/.github/workflows/gate.yml`, which cited solorepo's DR-119
+          and DR-120 already. A floor under the residue, not a sieve for it,
+          and the counts above are why nothing tighter is available from the
+          tree alone.
+    consequences:
+      - >-
+        `enacting citations` is a step of `check.py`, over `cited decisions`'s
+        file set and its rule for whose record a number names: under
+        `template/` a bare number is the seed's, and a citation of solorepo's
+        record counts only where this Portfolio is solorepo. A number that
+        resolves to no entry is left to `cited decisions`, so one mistyped
+        digit is one failure and not two.
+      - >-
+        The failure names both repairs, because both are honest and which one
+        is right is a reading: cite, where the rule is stated, the entry that
+        put it there — or add the file to the `enacted_in` of the entry whose
+        rule it carries, which is A20 — a rule that lives only in the decision
+        record is not in force — from the other end.
+      - >-
+        Two citations were written to clear it, and each is one a reader
+        wanted: `bootstraps/rust/README.md` now cites DR-090 where it says the
+        xtask gates the seed, and `template/.meta/assertions/authority.yaml`
+        cites solorepo's DR-123 where it says the Roles are inherited and the
+        accounts are the portfolio's.
+      - >-
+        The scan `cited decisions` did is now `copied_files` and `durable`, one
+        set for both checks. Two checks that each drew their own scope would
+        come to disagree about which files A12 covers, and the argument for the
+        set stays where it was made.
+      - >-
+        The counts are in the alternatives here and nowhere else, and
+        `enacting citations`'s docstring cites this entry for them instead of
+        repeating them. The second copy disagreed with this one inside a single
+        branch, because a rebase moved the tree under a measurement taken before
+        it: the entry is dated by the change it lands in and a docstring is not,
+        so live prose that quotes a count of the tree is a claim with nothing
+        holding it to the tree.
+    falsifier: >-
+      A file that passes on a citation added for the step rather than for a
+      reader — the check cannot tell an account of a rule from a number in a
+      sentence, and every file it fails can be made green in one line. If the
+      repairs it prompts stop being citations anybody would have written, the
+      rule is buying agreement instead of finding disagreement, and the count
+      to look at is how many of them a reviewer would have asked for anyway.
+      The other end is quieter: a renumber whose residue lands in a file that
+      already cites an entry naming it passes here, and #152's second site is
+      that case.
+    rationale: |-
+      The reviewer found both stray citations on #152 by reading, and what
+      made them findable was that the tree already held the contradiction:
+      `decisions.md`, generated from `enacted_in`, named the new entry against
+      each file while the prose in the file named the entry below it. The
+      question the Issue left open was which way round to read the relation,
+      and it guessed at the citation side.
+
+      Counting says neither side carries a rule on its own, and the counts
+      are in the alternatives above rather than here because they are the
+      argument. What is left is the conjunction, which claims only what both
+      sides support and is blind wherever a file is talkative. That is worth
+      having anyway: the residue lands in whatever file the rule was written
+      into, and the files this repository writes a rule into are mostly the
+      thin ones — a workflow, a template, a page of conventions.
+
+      Every count above is of the tree this entry lands in, over the file set
+      the step itself scans — `copied_files` and `durable`, 272 files — and a
+      citation is read there the way the step reads one, so a bare number under
+      `template/` counts for nothing. A pair is an entry and a path its
+      `enacted_in` names: the record holds 255 of them and 236 are in that set,
+      the other 19 in six files no citation check reads, which is why the count
+      of what the first alternative would fail is smaller than the record makes
+      it look. Citations are counted once per file and entry, a page that names
+      the same entry four times having said one thing four times. The two counts
+      taken from history read the commit that added each entry, found by
+      `git log --diff-filter=A` over its assertion file.
