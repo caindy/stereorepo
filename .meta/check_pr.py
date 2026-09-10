@@ -28,8 +28,15 @@ cannot close over an observation that has nowhere to live afterwards.
 The same shape holds the other direction. Every item under *what it closes*
 carries one of GitHub's closing keywords, so the merge closes the Challenge the
 pull request finished and no one has to remember a second act (solorepo's DR-089).
+
+`--all`, the sweep the gate workflow runs on the clock, asks one more thing that
+is not the body's: who takes each open pull request next (solorepo's DR-129). A
+handoff here is a review request, which GitHub holds and reports — so a pull
+request with no request on it, and a request no workflow can answer, are the two
+states nothing reports and nothing wakes on.
 """
 import argparse
+import datetime
 import json
 import os
 import pathlib
@@ -722,18 +729,183 @@ def publish(number, head, problems):
        "-f", f"output[summary]={summary}")
 
 
+CODER = META.parent / ".github" / "workflows" / "coder.yml"
+LOOPS_BRANCH = re.compile(r"^claude/issue-(\d+)$")
+# A check that has concluded and did not fail. GitHub reports a check that has
+# not finished with no conclusion at all, and pending is not green: PR First
+# stops a handoff at green, and a pull request whose gate has not answered yet
+# is not one whose gate passed.
+GREEN = {"SUCCESS", "NEUTRAL", "SKIPPED"}
+# The difficulties a loop takes, which is what makes a Challenge a loop's and
+# not the solo's. `human` and `hard` are the solo's, and so is a pull request
+# on their Challenge.
+TAKEN = ("easy", "medium")
+# The fields the hand-off reader needs, added to the sweep's own list so that
+# one fetch answers both.
+SWEEP_FIELDS = ("number,title,headRefOid,headRefName,baseRefName,isDraft,updatedAt,"
+                "reviewRequests,autoMergeRequest,mergeable,statusCheckRollup")
+
+
+def longest_run():
+    """How long a loop's run may hold a pull request without touching it.
+
+    The coder job's own `timeout-minutes`, read rather than copied. A run that
+    is working pushes and comments, and GitHub moves `updatedAt` when it does;
+    one that has not moved for longer than a run may last has no run standing
+    on it. A number restated here would drift the first time the budget moved,
+    and the drift reads either as a sweep that had quietly stopped noticing or
+    as one that names a pull request somebody is in the middle of.
+
+    Loud and unmarked when it cannot be read, like `required_contexts`: a
+    checkout without the workflow is told so rather than passed. Absent is one
+    of the ways it cannot be read, and the likeliest one — `check_pr.py` and
+    `.github/workflows/` are separate lines in Specialization's copy step, so a
+    portfolio that took one and not the other gets this line rather than a
+    traceback out of its gate every half hour.
+    """
+    if not CODER.exists():
+        print(f"?  no {CODER.name} in this checkout; who holds each pull request is unchecked")
+        return None
+    found = re.search(r"^    timeout-minutes: (\d+)\s*$", CODER.read_text(), re.M)
+    if not found:
+        print(f"?  no job timeout in {CODER.name}; who holds each pull request is unchecked")
+        return None
+    return int(found.group(1))
+
+
+def asked_of(pr):
+    return [r.get("login") or r.get("name") or "someone" for r in pr["reviewRequests"]]
+
+
+def green(pr):
+    """Whether every check on the head has concluded and none of them failed."""
+    states = [c.get("conclusion") or c.get("state") or c.get("status")
+              for c in pr.get("statusCheckRollup") or []]
+    return bool(states) and all(s in GREEN for s in states)
+
+
+def unheld(prs, minutes, clean):
+    """Pull requests nobody holds, and requests nobody can answer (#154).
+
+    A handoff here is a semaphore: GitHub holds a review request and reports
+    it, and an arriving Job finds its work by asking what has been requested of
+    its login. That makes two states invisible to everyone, because nothing
+    about either is a fact GitHub reports.
+
+    The first is a pull request that names no successor at all. A run that dies
+    at its budget with the work pushed and green has not reached the step that
+    requests review, so no Job's question — what has been requested of me —
+    ever has this pull request as its answer, and no event fires to ask it
+    again. `coder.yml` now hands off from its own hand-back handler, which
+    covers the deaths GitHub reports as failures; a run whose turn cap ends it
+    reports success, so the handler never runs, and this is what is left to
+    catch that. Four conditions, and each one is a way somebody *does* hold it:
+    a review requested, a merge armed, checks that are not green — a red gate
+    is not a handoff but a mess, and the mess is the solo's — and a head that
+    has moved recently enough that a run may still be standing on it. Greenness
+    is read twice over: the rollup GitHub reported before this sweep began, and
+    `clean`, the pull requests this same sweep found nothing on. The second is
+    this run's verdict rather than the last one's, and without it a sweep can
+    mark a head red on its gate line and then, three lines later, prescribe a
+    handoff onto it. Only a loop's branch is read: `claude/issue-<n>` is a
+    Challenge a loop took, and the solo's own pull request is held by the solo
+    whatever it looks like from here. Only while the Challenge is still a
+    loop's, too — one handed back sits at `human`, which is the solo holding
+    it, and a sweep that named it every half hour until they acted would be
+    switched off inside a week.
+
+    What a candidate is owed is not always the request. A branch GitHub reports
+    as `CONFLICTING` is one no review can be requested on, for the reason the
+    second half of this reader exists, so naming it and prescribing
+    `request-review` would prescribe the act that creates the other finding:
+    the next sweep would print the same pull request as a request nobody can
+    answer. It is still nobody's — the sweep says so — but what it needs first
+    is the rebase. Onto its base and not onto trunk: PR First's twelfth step
+    makes a layer its own branch and pull request based on the layer below, so
+    a `claude/issue-<n>` branch is not always cut from `main`, and rebasing a
+    layer onto trunk while the layer below is open drops that layer's commits
+    off the head and shows its work as a removal. `mergeable` is computed
+    against the base, so the branch the remedy names is the one the finding was
+    read against.
+
+    The second is a request that exists and cannot be answered. GitHub builds
+    no merge ref for a branch that conflicts, and the review workflow runs on
+    `pull_request`, so there is nothing for it to check out and no run is
+    created; GitHub reports the request as outstanding and says nothing about
+    its being unanswerable. #141 sat that way for three hours. This one is read
+    on every open pull request, whoever opened it: a request pending on a
+    conflicting branch is unanswerable by whoever it names.
+
+    The Challenge behind a candidate is read here rather than fetched with the
+    rest, because only a candidate needs it — the read is the judgement's, not
+    the sweep's, and on a quiet sweep there are none to make.
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+    out = []
+    for pr in prs:
+        asked = asked_of(pr)
+        if asked and pr.get("mergeable") == "CONFLICTING":
+            out.append(f"#{pr['number']} {pr['title'][:60]} — requested of "
+                       f"{', '.join(asked)}, on a branch that conflicts: GitHub builds no "
+                       f"merge ref, so the review workflow has nothing to check out and the "
+                       f"request cannot be answered. Rebase {pr['headRefName']} onto "
+                       f"{pr['baseRefName']}")
+        if asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr):
+            continue
+        if pr["number"] not in clean:
+            continue
+        branch = LOOPS_BRANCH.match(pr["headRefName"])
+        if not branch:
+            continue
+        moved = datetime.datetime.fromisoformat(pr["updatedAt"].replace("Z", "+00:00"))
+        idle = (now - moved).total_seconds() / 60
+        if idle < minutes:
+            continue
+        issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
+        level = next((l["name"] for l in issue["labels"] if l["name"] in TAKEN), None)
+        if issue["state"] != "OPEN" or not level:
+            continue
+        if pr.get("mergeable") == "CONFLICTING":
+            remedy = (f"and its branch conflicts, so a review requested on it now could not "
+                      f"be answered: rebase {pr['headRefName']} onto "
+                      f"{pr['baseRefName']}, then "
+                      f".meta/say/move request-review {pr['number']}")
+        else:
+            remedy = f"and nobody has: .meta/say/move request-review {pr['number']}"
+        out.append(f"#{pr['number']} {pr['title'][:60]} — green, and nobody holds it: "
+                   f"no review requested, no merge armed, and nothing has moved on it for "
+                   f"{int(idle)} minutes, while #{branch.group(1)} is still {level}. "
+                   f"A run ended without handing it over, {remedy}")
+    return out
+
+
 def sweep_all(publishing):
     """A16 between the last push and the merge (#5). Resolving a thread fires
     no event, so the check that ran on the push is stale the moment one is
     resolved, and a schedule is the only thing left to run it. Every open pull
     request, one line each in A21's shape, and the result published as the
     check when asked.
+
+    Then who holds each one, which is the same question asked of the handoff
+    rather than of the body. It is printed as its own step and is never
+    published: the finding *is* that the checks are green, so folding it into
+    the check the ruleset waits on would turn every pull request it named red
+    and unname it (#154).
+
+    The pull requests this loop found nothing on are carried into that reader.
+    The rollup it would otherwise trust was fetched before the loop ran, so it
+    is the last sweep's `pull request` check and not this one's, and a head
+    whose gate has just gone red — a closing keyword edited out of the body, a
+    job renamed on `main` under `required_contexts` — would be marked `x` above
+    and then handed over below, which is the handoff onto a red gate that the
+    reader exists to refuse.
     """
-    found = gh("pr", "list", "--state", "open", "--json", "number,title,headRefOid")
+    found = gh("pr", "list", "--state", "open", "--json", SWEEP_FIELDS)
     if not found:
         print("ok sweep — no open pull requests")
         return 0
     failed = False
+    clean = set()
     for pr in found:
         number = str(pr["number"])
         problems = gate(number)
@@ -743,7 +915,19 @@ def sweep_all(publishing):
             print(f"     {p}")
         if publishing:
             publish(number, pr["headRefOid"], problems)
+        if not problems:
+            clean.add(pr["number"])
         failed |= bool(problems)
+
+    minutes = longest_run()
+    if minutes is not None:
+        owed = unheld(found, minutes, clean)
+        print(f"{'x  ' if owed else 'ok '}hand-off — "
+              + (f"{len(owed)} pull request(s) nobody can take up"
+                 if owed else "every open pull request names who takes it next"))
+        for o in owed:
+            print(f"     {o}")
+        failed |= bool(owed)
     return 1 if failed else 0
 
 
@@ -765,7 +949,8 @@ if __name__ == "__main__":
                     help="one line per change on the pull request, until it closes")
     ap.add_argument("--every", type=int, default=60, help="seconds between polls under --watch")
     ap.add_argument("--all", action="store_true",
-                    help="the check on every open pull request, one line each")
+                    help="the check on every open pull request, one line each, and who "
+                         "holds each one next")
     ap.add_argument("--publish", action="store_true",
                     help="with --all: post each result as the required check run")
     args = ap.parse_args()

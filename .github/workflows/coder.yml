@@ -262,8 +262,38 @@ jobs:
       # where no closing keyword closed the Issue. A run that stopped itself
       # left the level at `human`. On any of those there is nothing to hand
       # back, and an account written from the exit status would be false.
+      #
       # Otherwise the hand-back is the act the run would have performed,
-      # through the same verb.
+      # through the same verb — and which act that is depends on what the run
+      # left behind (solorepo's DR-129). A pull request open with every check
+      # green is work a reviewer can read, and the run died one step short of
+      # asking. Handing only the Issue to the solo hands the pull request to
+      # nobody, and nothing picks it up: a Job finds its work by asking what
+      # has been requested of its login, and no event fires to ask again. So a
+      # green one is requested of the reviewer, whatever the level — the merge
+      # is never armed here, because arming says the work is finished and a
+      # budget death says the opposite, and `easy`'s "green is the review"
+      # reads a green gate on work a run declared done. Green is not enough on
+      # its own: GitHub builds no merge ref for a branch it reports as
+      # `CONFLICTING`, `review.yml` triggers on `pull_request`, so a request
+      # made on one creates no run and is answered by nobody — which is the
+      # state this step exists to prevent, reached by the step itself. The
+      # branch a run was cut from can conflict by the time it dies, because
+      # anything merging into its base while the run lasts can do it. Anything
+      # else — no pull request, a red gate, checks that have not answered yet,
+      # or a branch that conflicts — goes to the solo through `stop`, because
+      # a red gate is not a handoff by PR First's own rule and a branch nobody
+      # can review is the solo's for the same reason. `stop` puts the
+      # Challenge at `human`, and the sweep skips `human` on purpose, so that
+      # is where it rests: the solo holds it until they read the account
+      # `stop` posted, and one whose checks go green a minute later is not
+      # picked up by anything. The account is posted on the pull request
+      # before the request
+      # is made, in the order `stop` uses and for the same reason: the request
+      # is the handoff and carries no words, so the one thing the reviewer
+      # cannot otherwise know — that this branch is where a run stopped, not
+      # where it finished — has to be on the pull request, which is all an
+      # arriving Job reads.
       - name: hand back what the run did not finish
         if: >-
           always() && github.event_name == 'issues' && steps.taken.outputs.by == ''
@@ -272,8 +302,31 @@ jobs:
           issue=$(gh issue view "$ISSUE" --json state,labels)
           state=$(jq -r .state <<<"$issue")
           level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""' <<<"$issue")
-          handed=$(gh pr list --state open --head "claude/issue-$ISSUE" --json reviewRequests,autoMergeRequest \
-                   --jq '.[] | ((.reviewRequests | length) > 0) or (.autoMergeRequest != null)')
+          open=$(gh pr list --state open --head "claude/issue-$ISSUE" \
+                 --json number,baseRefName,reviewRequests,autoMergeRequest,mergeable,statusCheckRollup)
+          handed=$(jq -r '.[] | ((.reviewRequests | length) > 0) or (.autoMergeRequest != null)' <<<"$open")
+          number=$(jq -r '.[0].number // empty' <<<"$open")
+          # A branch GitHub cannot merge is one it builds no merge ref for, so
+          # `review.yml`'s `pull_request` trigger has nothing to check out and
+          # a request on it is answered by nobody. Only `CONFLICTING` is read:
+          # `UNKNOWN` is GitHub still computing, and refusing the handoff on
+          # that would refuse it on timing. The rebase named below is onto the
+          # pull request's own base, which is not always `main`: a layer is
+          # based on the layer below (PR First's twelfth step), its branch is a
+          # `claude/issue-<n>` one like any other, and rebasing it onto trunk
+          # while that layer is open drops the lower layer's commits off the
+          # head.
+          conflicting=$(jq -r '.[0].mergeable == "CONFLICTING"' <<<"$open")
+          base=$(jq -r '.[0].baseRefName // "main"' <<<"$open")
+          # Every check on the head has concluded and none of them failed. A
+          # check still running reports its conclusion as the empty string
+          # rather than as null, so `//` does not reach past it and the status
+          # is read explicitly; pending is not green either way.
+          green=$(jq -r '[.[0].statusCheckRollup[]?
+                          | if (.conclusion // "") == "" then (.state // .status // "PENDING")
+                            else .conclusion end] as $s
+                         | ($s | length) > 0
+                           and all($s[]; . == "SUCCESS" or . == "NEUTRAL" or . == "SKIPPED")' <<<"$open")
           merged=$(gh pr list --state merged --head "claude/issue-$ISSUE" --json number --jq '.[0].number // empty')
           if [ "$state" != OPEN ]; then
             echo "#$ISSUE is closed; a Challenge GitHub has closed has nothing to hand back"
@@ -283,9 +336,25 @@ jobs:
             echo "#$ISSUE is already at human; the run handed it back itself"
           elif [ "$handed" = true ]; then
             echo "#$ISSUE's pull request has its review requested or its merge armed; the run finished and then ran out"
+          elif [ -n "$number" ] && [ "$green" = true ] && [ "$conflicting" != true ]; then
+            .meta/say/post comment "$number" <<EOF
+          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN.
+
+          Every check on this head is green, so this is where a run stopped and not where one finished, and review is requested on that basis: what is here is worth reading, and whether it answers #$ISSUE is the review's question. #$ISSUE stays claimed at \`$level\`, and a request for changes comes back to the coder as a new run.
+          EOF
+            .meta/say/move request-review "$number"
           else
+            if [ -z "$number" ]; then
+              why="the run opened no pull request"
+            elif [ "$conflicting" = true ]; then
+              why="#$number's branch conflicts with its base, $base. GitHub builds no merge ref for one that does, review.yml runs on pull_request, and so a review requested on it would create no run and be answered by nobody. Rebase claude/issue-$ISSUE onto $base and the request can be made"
+            else
+              why="the checks on #$number have not all passed, and a red gate is not a handoff"
+            fi
             .meta/say/move stop "$ISSUE" <<EOF
           This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`claude/issue-$ISSUE\` and stays open for the run that takes this up again.
+
+          Not requested of the reviewer: $why.
           EOF
           fi
         env:

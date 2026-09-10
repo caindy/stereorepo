@@ -1,0 +1,169 @@
+decisions:
+  - id: work:decision/129
+    name: "DR-129 · A budget death with a green pull request requests review, and the sweep names a pull request nobody can take up"
+    challenge: work:challenge/154
+    status: ADOPTED
+    applies:
+      - work:article/18
+      - work:article/21
+    enacted_in:
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-check-pr
+      - work:artifact/meta-actions-sweep
+    alternatives:
+      - name: Leave it to the solo — the hand-back already says where the run stopped
+        chosen: false
+        reason: >-
+          What the hand-back hands over is the Issue. The pull request is
+          handed to nobody, and nobody is a real address here: a Job finds
+          its work by asking what has been requested of its login, the coder
+          loop fires on an Issue event or a review event, and a green pull
+          request with no request on it produces neither. #150 was green on
+          every check by 03:23 and stood unreviewed until the solo asked why.
+          Budget deaths are ordinary — #133 twice, #138 once, #147 once, in
+          one evening — so this is a standing cost and not an incident.
+      - name: Arm the merge instead, as `easy` does
+        chosen: false
+        reason: >-
+          Arming is a declaration that the work is finished and that green is
+          the whole review. A run that died at its budget declared nothing;
+          what its `easy` sibling arms is a green gate on work a run said it
+          had completed, and the gate is the same in both cases only if the
+          work is. The merge is never armed by the handler, whatever the
+          level.
+      - name: Hand a red or pending one over too, and let the reviewer sort it out
+        chosen: false
+        reason: >-
+          PR First's own rule settles it — a red gate is not a handoff, it is
+          a mess whose author is gone — and the reviewer's run is not free:
+          it costs a model, a budget and a verdict on work the gate has
+          already refused. Pending goes with red rather than with green,
+          because the handler must not wait for the checks (#102) and a gate
+          that has not answered is not one that passed. The cost is real and
+          it is the solo's: a run dying seconds after its last push hands to
+          the solo where it might have handed to the reviewer, and `stop`
+          leaves the Challenge at `human`, which the sweep skips on purpose.
+          Nothing picks the pull request up when the checks go green a minute
+          later. `human` is the solo holding it and the account `stop` posts
+          is on the Issue where they will read it, which is why that is the
+          resting place rather than an oversight — but it rests there until
+          they look.
+      - name: Make the hand-off finding part of the published `pull request` check
+        chosen: false
+        reason: >-
+          The finding is that the checks are green. Publishing it as the check
+          the ruleset waits on would make the pull request red, and a red one
+          is no longer green, so the finding would erase its own precondition
+          and the pull request would oscillate between named and unnamed
+          every half hour. It is printed as its own step and counted into the
+          sweep's exit status, which is what `just next`'s untriaged Challenge
+          already does: red for something a run owes, not for a broken build.
+      - name: The handler requests review on a green one, and the sweep names what the handler cannot reach
+        chosen: true
+        reason: >-
+          The two halves answer the two ways the state arises. Where GitHub
+          reports the run as failed, the handler performs the act the run
+          would have performed, through the same verb, and the pull request
+          carries the account of why it stopped there. Where GitHub reports it
+          as succeeded — a run that exhausts its turn cap ends with the action
+          reporting success, so the handler is skipped entirely — nothing
+          fires at all, and only something on a clock is left. The sweep
+          already runs every half hour over every open pull request, so it is
+          where the second half goes. What it costs: a green pull request is
+          requested of the reviewer without any run having judged it
+          complete, so a review may be spent on half a change and come back
+          as a request for changes, which is a coder run; and the sweep's
+          reading of "nobody holds it" is four conditions and an idleness
+          threshold, none of which GitHub reports directly.
+    consequences:
+      - >-
+        `coder.yml`'s `hand back what the run did not finish` step reads the
+        open pull request's checks beside its requests and its `mergeable`.
+        Green and mergeable: an account is posted on the pull request, then
+        review is requested of the reviewer, and the Issue stays claimed at its
+        level — which is the state a finished `medium` run leaves. Not green,
+        no pull request, or a branch GitHub reports as `CONFLICTING`: `stop` as
+        before, with the comment now naming which of the three it was. A
+        conflicting branch goes to the solo for the same reason a red gate
+        does — GitHub builds no merge ref for it, `review.yml` triggers on
+        `pull_request`, and a request made on it would create no run. Every
+        sentence that prescribes the rebase names the pull request's own
+        `baseRefName` and not `main`: a layer is based on the layer below, its
+        branch is a `claude/issue-<n>` one like any other, and rebasing it onto
+        trunk while the layer below is open drops that layer's commits off the
+        head and shows its work as a removal.
+      - >-
+        `check_pr.py --all` prints a `hand-off` step after the per-pull-request
+        gate lines, in A21's shape — `ok`, `x` or `?`, then the step, then what
+        it covered — and counts it into the exit status. It is never passed to
+        `publish`, so no finding of it blocks a merge.
+      - >-
+        A pull request is named as held by nobody only when every one of these
+        is true: green both by GitHub's rollup and by what this same sweep just
+        found on it, not a draft, no review requested, no merge armed, on a
+        `claude/issue-<n>` branch, its Challenge open and still `easy` or
+        `medium`, and nothing moved on it for longer than the coder job's
+        `timeout-minutes`. The last is read out of `coder.yml` rather than
+        restated, so a budget that moves moves the threshold with it — and a
+        checkout with no `coder.yml` at all gets the `?` line rather than a
+        traceback. The rollup is the one fetched before the sweep's gate loop
+        ran, so a head this run has just turned red would otherwise be marked
+        `x` on its own line and handed over three lines below. The Challenge's
+        level is what keeps a hand-back quiet: one at `human` is the solo
+        holding it, and naming it every half hour until they acted would teach
+        the reader to skip the step. What a named one is told to do depends on
+        its branch: a conflicting one is told to rebase first — onto its base,
+        which is the branch `mergeable` was computed against — because
+        prescribing the request on it would prescribe the act that produces the
+        other finding.
+      - >-
+        A review request outstanding on a branch GitHub reports as
+        `CONFLICTING` is named on every open pull request, whoever opened it.
+        GitHub builds no merge ref for a conflicting branch, the review
+        workflow triggers on `pull_request`, and so no run is created; GitHub
+        holds the request and reports nothing about its being unanswerable.
+        #141 stood that way for three hours, and #150 was in that state when
+        this was written.
+      - >-
+        A portfolio inherits all of it: `coder.yml`, `check_pr.py` and
+        `.meta/actions/` are in the set Specialization's second step copies.
+      - >-
+        What got worse: the reviewer's budget is now spent on work no run
+        called finished, and the coder's second run answers points about
+        incompleteness that a finished run would not have raised. That is the
+        trade — a review of a half-finished change costs one review, and a
+        pull request nobody holds costs however long it is until the solo
+        looks.
+    falsifier: >-
+      Reviews requested by the handler that come back as requests for changes
+      saying only "this is unfinished" — which would mean a budget death does
+      not leave work finished enough to review, and that the green pull
+      request belongs to the solo like the red one.
+    rationale: |-
+      #154 asked three questions and they have one answer between them: who
+      holds this pull request next, and is that a state anybody can read?
+
+      The handoff here is a semaphore rather than a message. GitHub holds a
+      review request and reports it, and an arriving Job finds its work by
+      asking what has been requested of its login. Everything follows from
+      that. "Requested of nobody" is not a state GitHub reports, so nothing
+      wakes on it — which is why a green pull request can sit for hours with
+      every check passed and no Role holding it. And a request that GitHub
+      holds while no workflow can answer it looks, from every side, exactly
+      like one that is about to be answered.
+
+      Requesting review is the last step of the coder's reading, so a run that
+      dies before reaching it has done everything except say where the work
+      goes. The handler already knows how to say that — it exists to perform
+      the act the run would have performed — and the only new thing it needs
+      is which act. The checks answer that: green is the condition PR First
+      already puts on a handoff, and it is a fact GitHub holds rather than a
+      judgement about the diff.
+
+      The sweep is not a second belt on the same braces. The handler runs on
+      the run's outcome, and the outcome is not always what happened: a run
+      that exhausts its turn cap ends with the action reporting success, and
+      the handler is skipped by its own `if`. That is the same shape DR-122
+      found on the reviewer's side, where a session that posted no verdict
+      reported success, and it was answered the same way — by reading what
+      GitHub holds rather than what a step returned.

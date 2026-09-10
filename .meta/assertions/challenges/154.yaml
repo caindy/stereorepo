@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/154
+    name: A run that dies at its budget with a green pull request open hands the pull request to nobody
+    challenge_type: DEFECT
+    description: >-
+      The coder's hand-back handler gives the Issue to the solo and says
+      nothing about the pull request. Requesting review is the last step of
+      the coder's reading, so a run that dies before it leaves a pull request
+      no Role holds — and "requested of nobody" is not a state GitHub reports,
+      so no Job wakes on it. #150 was green on every check by 03:23 and stood
+      unreviewed until the solo asked why. #141 stood the same way with a
+      request that existed: a conflicting branch has no merge ref, so the
+      review workflow had nothing to check out and nothing said so.
