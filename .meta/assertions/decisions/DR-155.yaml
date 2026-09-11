@@ -1,0 +1,126 @@
+decisions:
+  - id: work:decision/155
+    name: "DR-155 · The coder's hand-back asks check_pr.py whether its pull request is green, and its token gains checks and nothing wider"
+    challenge: work:challenge/233
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-check-pr
+      - work:artifact/github-workflows-coder
+    context: >-
+      The *hand back what the run did not finish* step in
+      `.github/workflows/coder.yml` is the handler that exists so a run killed
+      at its budget still names a successor: it reads what the run left, posts
+      the account, and then either requests review or hands the Challenge to
+      the solo. To choose between those it needs three facts about the pull
+      request on `claude/issue-<n>` — whether anybody holds it, whether it is
+      green, and whether its branch conflicts — and it read them from `gh pr
+      list --json ...,statusCheckRollup` with `green` written out a second time
+      in jq beside the call. Under solorepo's DR-153 that call cannot succeed:
+      `gh` answers that field with GraphQL of its own traversing
+      `checkSuite.workflowRun`, an Actions resource, and this step runs under
+      `github.token` and a `permissions:` block of `contents: read`, `issues:
+      read`, `pull-requests: read` — narrower still than the gate's block,
+      which names `checks` and had already died on the same call. The step runs
+      on `bash -e`, so the failed assignment took the whole step and nothing
+      after it ran: no account, no `request-review`, no `stop`. The handler's
+      failure mode was the one it was written to prevent, and left no trace
+      saying so. DR-153 named this call site and did not move it, on the
+      grounds that moving the step's `green`/`handed` read onto `check_pr.py`
+      "is its own change, and the falsifier below does not watch it" — which
+      is this change.
+    alternatives:
+      - name: "Write `ROLLUP` out again in the step's heredoc"
+        chosen: false
+        reason: >-
+          It keeps the step self-contained and needs no permission at all
+          beyond `checks: read`, since the query would be the same one. But it
+          would leave the repository with two hand-written rollup queries and
+          two definitions of green — `green()` in `.meta/check_pr.py` is
+          already this step's predicate, and the jq beside the failed call was
+          that second definition. Reducing exactly that duplication is what
+          DR-153 is for, so repeating the fix here would undo the reason for
+          it, and the next reader would have to find out by reading both which
+          of the two the hand-back actually turns on.
+      - name: "Grant `actions: read` to `coder.yml` and leave the call as it was"
+        chosen: false
+        reason: >-
+          One line, and the `gh --json` call works as written. It is the
+          alternative DR-153 rejected for the two gate workflows, for the
+          reason that still holds here and holds harder: a scaffold hands a
+          fresh clone whatever scope its
+          workflows declare, and a scope granted to satisfy a CLI's query plan
+          is one nobody can argue down from the code, because nothing in the
+          code names it. It would also make the two gates disagree about the
+          same read, one asking GitHub for named fields and one paying a wider
+          token for a traversal.
+      - name: Ask `check_pr.py`, and name `checks` in the block
+        chosen: true
+        reason: >-
+          `hand_back` there answers the three facts in one place, over
+          `ROLLUP`, `green` and `asked_of` — the readers the sweep already
+          uses for the same question from the other side. The predicate keeps
+          one definition, the fetch names its own fields, and the permission
+          the block gains is the one the code asks for: GitHub's own
+          permissions reference gives `GET /repos/{owner}/{repo}/commits/{ref}/check-runs`
+          as `checks` at **read**, and the gate's block is this one plus
+          `checks` and does this read every half hour. A shell that asks a
+          program for a decision is also the shape the rest of this file
+          already has: every act it takes goes through `.meta/say/`.
+    consequences:
+      - >-
+        `.meta/check_pr.py` gains `hand_back` and `--hand-back <issue>`, which
+        prints `number`, `handed`, `green`, `conflicting` and `base` as JSON —
+        scalars a shell lifts out one at a time, with no predicate left in jq.
+        `handed` is `asked_of` or an armed merge, `green` is `green`, and
+        `conflicting` reads `CONFLICTING` and not `UNKNOWN`, which is GitHub
+        still computing.
+      - >-
+        `permissions:` in `.github/workflows/coder.yml` gains `checks: read`
+        and nothing else. It is the only scope the rollup query needs, and it is
+        named because the code names it.
+      - >-
+        The hand-back's read may fail without taking the step. `bash -e` ending
+        the handler is what the Challenge was, so a read that cannot answer is
+        a branch of its own: the Challenge goes to the solo through `stop`,
+        saying that what the run left could not be read. A handler that dies
+        hands nothing back; one that says it could not tell has still named
+        somebody.
+      - >-
+        The step now runs the branch's own copy of `check_pr.py`, not trunk's.
+        `actions/checkout` runs once, at the top of the job, and the
+        hand-back's `if:` requires that *take the Issue* ran — which ran the
+        model in that same workspace, under a prompt telling it to branch from
+        `origin/main` and commit there. Nothing restores the tree between them,
+        so the handler runs whatever the dying run left on `claude/issue-<n>`,
+        committed or not. Half of that the new failure branch already covers: a
+        copy that cannot parse or that raises exits non-zero, `pr=` is empty,
+        and the Challenge goes to the solo. The other half it does not: a copy
+        left semantically half-edited exits 0 with a wrong answer, and the step
+        acts on it. What bounds that is not insulation but trust — the
+        container is the coder's own, holding that credential and having just
+        run the model in it, which is the same exposure `.meta/say/post` and
+        `.meta/say/move` in this very step already carry. The falsifier below
+        is where a wrong answer is caught: the sweep reads the same silence
+        half an hour later.
+    falsifier: >-
+      A `coder` run whose hand-back step fails again, which would mean the read
+      moved here reaches something `checks: read` does not hold; or a
+      `claude/issue-<n>` pull request found green and unheld by the sweep's
+      hand-off reader after a run died on it, which is the same silence read
+      half an hour later and would mean the handler ran and chose wrong.
+    rationale: |-
+      Two readers ask the same question — who holds this pull request, and is
+      what is on it worth handing over — and one of them is a shell. The
+      question is a predicate, so it belongs where predicates here live, and
+      the shell's part is to run the program and act on the answer.
+
+      The scope is the whole of the second argument. `checks: read` widens a
+      token in the seed every portfolio inherits, and that widening is the cost
+      DR-153 weighed when it refused `actions: read` in the two gate workflows:
+      a scope granted to please a CLI's query plan is one nobody can later
+      argue down from the code, because nothing in the code names it. The
+      difference here is that this one is
+      the permission the read actually needs, named in the block by the code
+      that needs it: a reader a year from now can follow `checks: read` to
+      `ROLLUP` and see the check runs it selects. `actions: read` led nowhere
+      any code here named.

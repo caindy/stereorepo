@@ -35,6 +35,12 @@ is not the body's: who takes each open pull request next (solorepo's DR-129). A
 handoff here is a review request, which GitHub holds and reports — so a pull
 request with no request on it, and a request no workflow can answer, are the two
 states nothing reports and nothing wakes on.
+
+`--hand-back` answers that same question from the other side, for a run that is
+about to die: whether anybody holds this Challenge's pull request yet, and
+whether what is there is worth requesting a review of. Its reader is
+`coder.yml`'s hand-back step, so the predicate lives here and not in that
+step's shell (solorepo's DR-155).
 """
 import argparse
 import datetime
@@ -1022,6 +1028,62 @@ def green(pr):
     return bool(states) and all(s in GREEN for s in states)
 
 
+# What the hand-back asks `gh pr list` for, which is everything except the
+# rollup: those fields are a pull request's own and the step's token reads them
+# at `pull-requests: read`, while the check states come through `ROLLUP` below,
+# whose scope is `checks: read` and nothing wider (solorepo's DR-155).
+HANDBACK_FIELDS = "number,baseRefName,reviewRequests,autoMergeRequest,mergeable"
+
+
+def hand_back(issue):
+    """What `coder.yml`'s hand-back handler needs about a Challenge's pull
+    request, so that green is read here and not written out a second time.
+
+    That step decides which verb a run killed at its budget owes its Challenge,
+    and its predicate is already this file's: `green` above is the same
+    question, and the step asked `gh pr list` for `statusCheckRollup` and then
+    wrote `green` out again in jq beside it. The copy could not run. `gh`
+    answers that field with GraphQL of its own that traverses
+    `checkSuite.workflowRun`, an Actions resource, and the step's
+    `permissions:` block holds no `actions` scope — so the whole query failed,
+    and on `bash -e` the failed assignment took the step with it: the one
+    handler written so that a dead run still names a successor named none, and
+    left the pull request to nobody (solorepo's #233).
+
+    Asked for here instead, the fetch names its own fields and the rollup
+    arrives through `ROLLUP`, as it does everywhere else in this file since
+    solorepo's DR-153. Three facts come back, each the reader of one
+    condition the step's branches turn on:
+
+    `handed` — somebody already holds it, by a review requested or a merge
+    armed, which means the run reached its own last step and only then ran out.
+
+    `green` — every check concluded and none failed, which is `green` above and
+    so is pending-is-not-green with it.
+
+    `conflicting` — `CONFLICTING` and not `UNKNOWN`, which is GitHub still
+    computing: refusing a handoff on that would refuse it on timing. `base` is
+    the pull request's own, because a layer is based on the layer below (PR
+    First's twelfth step) and the rebase the step prescribes has to name the
+    branch `mergeable` was computed against.
+
+    JSON, because the reader is a shell. Scalars a step lifts out one at a
+    time, with no predicate left in jq to drift from the ones here.
+    """
+    found = gh("pr", "list", "--state", "open", "--head", f"claude/issue-{issue}",
+               "--json", HANDBACK_FIELDS)
+    if not found:
+        return {"number": None, "handed": False, "green": False,
+                "conflicting": False, "base": None}
+    pr = found[0]
+    pr["statusCheckRollup"] = rollup_of(pr["number"])
+    return {"number": pr["number"],
+            "handed": bool(asked_of(pr)) or pr.get("autoMergeRequest") is not None,
+            "green": green(pr),
+            "conflicting": pr.get("mergeable") == "CONFLICTING",
+            "base": pr.get("baseRefName") or "main"}
+
+
 def unheld(prs, minutes, clean):
     """Pull requests nobody holds, and requests nobody can answer (solorepo's #154).
 
@@ -1251,7 +1313,11 @@ if __name__ == "__main__":
     ap.add_argument("--resume", action="store_true",
                     help="what an arriving Job needs, read from GitHub")
     ap.add_argument("--handoff", action="store_true",
-                    help="A18: refuse to hand off work the successor cannot see")
+                    help="A18: refuse a dirty worktree or a branch ahead of its remote")
+    ap.add_argument("--hand-back", metavar="ISSUE",
+                    help="as JSON, what a dead run's hand-back needs about the pull "
+                         "request on a Challenge's branch: whether anybody holds it, "
+                         "whether it is green, and whether it conflicts")
     ap.add_argument("--sweep", action="store_true",
                     help="every open pull request you own, and what each still owes")
     ap.add_argument("--watch", action="store_true",
@@ -1266,6 +1332,10 @@ if __name__ == "__main__":
 
     if args.all:
         sys.exit(sweep_all(args.publish))
+
+    if args.hand_back:
+        print(json.dumps(hand_back(args.hand_back)))
+        sys.exit(0)
 
     if args.sweep:
         branch, found = owned_and_open()

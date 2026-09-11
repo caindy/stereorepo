@@ -75,10 +75,18 @@ concurrency:
 
 # The workflow's own token reads. Every write goes through the coder's
 # credential, so what GitHub records is the Role and not the workflow.
+#
+# `checks: read` is here for the hand-back step, which asks `check_pr.py`
+# whether this Challenge's pull request is green, and greenness is a check run
+# (solorepo's DR-155). The scope is named because the code names it: `ROLLUP` in
+# that file selects the rollup's contexts and nothing under them, so this is
+# the whole of what the read needs, and not the wider `actions` scope a CLI's
+# query plan asked for on its behalf (solorepo's DR-153).
 permissions:
   contents: read
   issues: read
   pull-requests: read
+  checks: read
 
 jobs:
   coder:
@@ -546,31 +554,28 @@ jobs:
           issue=$(gh issue view "$ISSUE" --json state,labels)
           state=$(jq -r .state <<<"$issue")
           level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""' <<<"$issue")
-          open=$(gh pr list --state open --head "claude/issue-$ISSUE" \
-                 --json number,baseRefName,reviewRequests,autoMergeRequest,mergeable,statusCheckRollup)
-          handed=$(jq -r '.[] | ((.reviewRequests | length) > 0) or (.autoMergeRequest != null)' <<<"$open")
-          number=$(jq -r '.[0].number // empty' <<<"$open")
-          # A branch GitHub cannot merge is one it builds no merge ref for, so
-          # `review.yml`'s `pull_request` trigger has nothing to check out and
-          # a request on it is answered by nobody. Only `CONFLICTING` is read:
-          # `UNKNOWN` is GitHub still computing, and refusing the handoff on
-          # that would refuse it on timing. The rebase named below is onto the
-          # pull request's own base, which is not always `main`: a layer is
-          # based on the layer below (PR First's twelfth step), its branch is a
-          # `claude/issue-<n>` one like any other, and rebasing it onto trunk
-          # while that layer is open drops the lower layer's commits off the
-          # head.
-          conflicting=$(jq -r '.[0].mergeable == "CONFLICTING"' <<<"$open")
-          base=$(jq -r '.[0].baseRefName // "main"' <<<"$open")
-          # Every check on the head has concluded and none of them failed. A
-          # check still running reports its conclusion as the empty string
-          # rather than as null, so `//` does not reach past it and the status
-          # is read explicitly; pending is not green either way.
-          green=$(jq -r '[.[0].statusCheckRollup[]?
-                          | if (.conclusion // "") == "" then (.state // .status // "PENDING")
-                            else .conclusion end] as $s
-                         | ($s | length) > 0
-                           and all($s[]; . == "SUCCESS" or . == "NEUTRAL" or . == "SKIPPED")' <<<"$open")
+          # Whether anybody holds this Challenge's pull request, whether it is
+          # green, and whether its branch conflicts: all three are
+          # `check_pr.py`'s reads, asked of it rather than written out here a
+          # second time (solorepo's DR-155). `green()` in that file is this
+          # step's predicate already, and the jq copy that stood here asked `gh
+          # pr list` for `statusCheckRollup` under a token holding no `actions`
+          # scope — so the query failed, and on `bash -e` the failed assignment
+          # took this step and the handoff with it. What each field means is in
+          # `hand_back`'s docstring, where the code that decides it is.
+          #
+          # The read is allowed to fail without taking the step, which is the
+          # whole of what went wrong before: a handler that dies hands nothing
+          # back, and a read that cannot answer is a reason to give the solo
+          # rather than the end of the handler. Empty is that case, and the
+          # chain below names it — every `jq` here reads empty input as no
+          # value and exits 0, so nothing downstream needs guarding twice.
+          pr=$(python3 .meta/check_pr.py --hand-back "$ISSUE") || pr=
+          number=$(jq -r '.number // empty' <<<"$pr")
+          handed=$(jq -r .handed <<<"$pr")
+          green=$(jq -r .green <<<"$pr")
+          conflicting=$(jq -r .conflicting <<<"$pr")
+          base=$(jq -r '.base // "main"' <<<"$pr")
           merged=$(gh pr list --state merged --head "claude/issue-$ISSUE" --json number --jq '.[0].number // empty')
           if [ "$state" != OPEN ]; then
             echo "#$ISSUE is closed; a Challenge GitHub has closed has nothing to hand back"
@@ -588,7 +593,9 @@ jobs:
           EOF
             .meta/say/move request-review "$number"
           else
-            if [ -z "$number" ]; then
+            if [ -z "$pr" ]; then
+              why="the hand-back could not read what this run left. check_pr.py --hand-back failed, so whether a pull request is open on this branch, and whether it is green, is unknown here; the run log above says why it failed"
+            elif [ -z "$number" ]; then
               why="the run opened no pull request"
             elif [ "$conflicting" = true ]; then
               why="#$number's branch conflicts with its base, $base. GitHub builds no merge ref for one that does, review.yml runs on pull_request, and so a review requested on it would create no run and be answered by nobody. Rebase claude/issue-$ISSUE onto $base and the request can be made"
