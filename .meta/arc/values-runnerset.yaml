@@ -40,7 +40,8 @@ template:
   spec:
     containers:
       - name: runner
-        image: ghcr.io/actions/actions-runner:2.337.0
+        image: solorepo-runner:2.337.0-1
+        imagePullPolicy: IfNotPresent
         command: ["/home/runner/run.sh"]
         resources:
           requests:

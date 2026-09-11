@@ -64,6 +64,19 @@ Windows 11 Home has no Hyper-V, so `kind` needs Docker under WSL2:
    as above — nothing about the two layers is Windows-specific once WSL2
    has Docker.
 
+## The runner image
+
+`values-runnerset.yaml` pins the runner container image to
+`solorepo-runner:2.337.0-1` (solorepo's DR-156). Defined in `.meta/arc/Dockerfile`
+on top of `ghcr.io/actions/actions-runner:2.337.0`, it pre-bakes `build-essential`,
+`gh`, `jq`, `just`, `uv`, and `rustup`.
+
+To build and load it into a local `kind` cluster:
+```bash
+docker build -t solorepo-runner:2.337.0-1 -f .meta/arc/Dockerfile .meta/arc
+kind load docker-image solorepo-runner:2.337.0-1 --name solorepo-arc
+```
+
 ## Verifying it worked
 
 - `kubectl get pods -n arc-systems` — the controller, `Running`, and its

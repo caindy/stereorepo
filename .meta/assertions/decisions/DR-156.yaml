@@ -1,0 +1,79 @@
+decisions:
+  - id: work:decision/156
+    name: "DR-156 · A custom ARC runner image bakes core CLI tools and compilation toolchains, eliminating ephemeral pod bootstrap latency and network variance"
+    challenge: work:challenge/244
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-arc-dockerfile
+      - work:artifact/meta-arc-values-runnerset
+      - work:artifact/meta-arc-readme
+    context: >-
+      DR-137 moved coder and reviewer sessions to an ARC scale set, DR-140 moved
+      gate and advance workflows to the cluster, and DR-147 bounded runner pods with
+      explicit CPU/memory requests. However, all runner pods still booted from the
+      bare upstream `ghcr.io/actions/actions-runner:2.337.0` image. Because the
+      runner scale set scales to zero and provisions a fresh ephemeral pod per job,
+      every run executed `apt-get update`, fetched GPG keys, curled shell
+      installers, and downloaded binaries for `build-essential`, `gh`, `jq`, `just`,
+      `uv`, and `rustup`. Under multi-job gate runs or concurrent coder passes, this
+      compounded into tens of minutes of redundant network downloads, startup
+      latency, and intermittent apt/CDN rate limits and connection failures.
+    alternatives:
+      - name: Continue downloading dependencies dynamically at pod startup
+        chosen: false
+        reason: >-
+          Leaves 45-120s of bootstrap latency on every ephemeral job. Subject to
+          transient network rate limits, CDN outages, and upstream package archive
+          flakiness across external services (Ubuntu mirrors, GitHub release
+          assets, Rustup).
+      - name: Non-ephemeral or persistent runner pods retaining installed tooling on disk
+        chosen: false
+        reason: >-
+          Violates DR-073's single-role isolation and the clean-slate contract:
+          subsequent jobs inherit mutated environment state, leftover credentials,
+          or modified toolchain paths from previous runs.
+      - name: A monolithic third-party runner image (e.g. catthehacker/actions-runner)
+        chosen: false
+        reason: >-
+          Massive images (>20 GiB) packed with dozens of unused SDKs (.NET, Java,
+          Android, PHP) that bloat disk usage, slow down containerd image loading in
+          KIND, and expand the security audit surface.
+      - name: >-
+          A targeted custom runner image based on actions-runner:2.337.0 baking
+          solorepo's exact required toolchain, pinned in values-runnerset.yaml
+        chosen: true
+        reason: >-
+          Provides a slim (~1.9 GiB) hermetic image containing precisely what
+          solorepo's workflows execute: `build-essential`, `gh`, `jq`, `just`,
+          `uv`, and `rustup`. When runner pods start, existing `command -v` and
+          `type -p` guards in `gate.yml`, `coder.yml`, and `.meta/actions/gh`
+          succeed immediately, turning 1-2 minutes of downloading into instant
+          no-ops. Retains complete backwards compatibility with `template/` which
+          stays on `ubuntu-latest`.
+    consequences:
+      - >-
+        `.meta/arc/Dockerfile` defines the custom runner layer on top of
+        `ghcr.io/actions/actions-runner:2.337.0`.
+      - >-
+        `template.spec.containers[0].image` in `.meta/arc/values-runnerset.yaml`
+        pins `solorepo-runner:2.337.0-1` with `imagePullPolicy: IfNotPresent`.
+      - >-
+        Job startup overhead drops to container spawn time (~2s). Redundant
+        apt/curl installations across ephemeral pods are eliminated.
+      - >-
+        `.meta/arc/README.md` documents how to build and load the custom image into
+        the local `kind` cluster via `docker build` and `kind load docker-image`.
+    falsifier: >-
+      Container image storage and extraction overhead in KIND exceeding the former
+      apt-get setup time; or toolchain drift between the image and repository
+      configuration causing version mismatches that escape the gate.
+    rationale: |-
+      The move to self-hosted runners in DR-137 and DR-140 succeeded in eliminating
+      GitHub-hosted minute costs, but running on bare ephemeral pods introduced an
+      unnecessary latency tax. 
+
+      Pre-baking dependencies into a slim custom image is the standard Kubernetes
+      pattern for ARC. Because DR-140 already guarded every tool installation with
+      `command -v` and `type -p`, no workflow syntax needs breaking or bifurcating:
+      the same steps run on `ubuntu-latest` in a fresh clone, while executing as
+      instant no-ops on solorepo's custom scale set.

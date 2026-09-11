@@ -193,6 +193,9 @@ artifacts:
   - id: work:artifact/meta-arc-values-runnerset
     name: .meta/arc/values-runnerset.yaml
     path: .meta/arc/values-runnerset.yaml
+  - id: work:artifact/meta-arc-dockerfile
+    name: .meta/arc/Dockerfile
+    path: .meta/arc/Dockerfile
   - id: work:artifact/meta-ddd-ontology
     name: .meta/ddd_ontology.yaml
     path: .meta/ddd_ontology.yaml

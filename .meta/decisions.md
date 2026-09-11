@@ -164,6 +164,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-151](assertions/decisions/DR-151.yaml) | The by-hand dispatch of a coder pass is a verb of the channel, `move dispatch <pr> --task`, and the raw `gh workflow run` is refused beside it | Adopted |
 | [DR-153](assertions/decisions/DR-153.yaml) | The sweep asks GitHub for the rollup fields it reads, so the gate's token gains no Actions scope | Adopted |
 | [DR-154](assertions/decisions/DR-154.yaml) | A count about the record is a slot the renderer fills, so the arithmetic in prose is the render's and the staleness check holds it | Adopted |
+| [DR-156](assertions/decisions/DR-156.yaml) | A custom ARC runner image bakes core CLI tools and compilation toolchains, eliminating ephemeral pod bootstrap latency and network variance | Adopted |
 
 ## Holes
 
@@ -193,11 +194,12 @@ and the query a reader in a file actually has.
 | [`.meta/actions/pull-request/action.yml`](actions/pull-request/action.yml) | [DR-120](assertions/decisions/DR-120.yaml), [DR-140](assertions/decisions/DR-140.yaml) |
 | [`.meta/actions/sweep/action.yml`](actions/sweep/action.yml) | [DR-120](assertions/decisions/DR-120.yaml), [DR-129](assertions/decisions/DR-129.yaml), [DR-140](assertions/decisions/DR-140.yaml) |
 | [`.meta/actions/verdicts/action.yml`](actions/verdicts/action.yml) | [DR-122](assertions/decisions/DR-122.yaml) |
-| [`.meta/arc/README.md`](arc/README.md) | [DR-137](assertions/decisions/DR-137.yaml), [DR-140](assertions/decisions/DR-140.yaml) |
+| [`.meta/arc/Dockerfile`](arc/Dockerfile) | [DR-156](assertions/decisions/DR-156.yaml) |
+| [`.meta/arc/README.md`](arc/README.md) | [DR-137](assertions/decisions/DR-137.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-156](assertions/decisions/DR-156.yaml) |
 | [`.meta/arc/cluster`](arc/cluster) | [DR-137](assertions/decisions/DR-137.yaml) |
 | [`.meta/arc/deploy`](arc/deploy) | [DR-137](assertions/decisions/DR-137.yaml) |
 | [`.meta/arc/teardown`](arc/teardown) | [DR-137](assertions/decisions/DR-137.yaml) |
-| [`.meta/arc/values-runnerset.yaml`](arc/values-runnerset.yaml) | [DR-137](assertions/decisions/DR-137.yaml), [DR-141](assertions/decisions/DR-141.yaml), [DR-147](assertions/decisions/DR-147.yaml) |
+| [`.meta/arc/values-runnerset.yaml`](arc/values-runnerset.yaml) | [DR-137](assertions/decisions/DR-137.yaml), [DR-141](assertions/decisions/DR-141.yaml), [DR-147](assertions/decisions/DR-147.yaml), [DR-156](assertions/decisions/DR-156.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-123](assertions/decisions/DR-123.yaml) |
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
 | [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |
