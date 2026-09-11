@@ -408,7 +408,8 @@ class FakeGitHub:
                   "reviews": [{"author": {"login": who}, "state": state}
                               for who, state in pull.get("verdicts") or []],
                   "mergeable": mergeable,
-                  "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None}
+                  "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None,
+                  "updatedAt": pull.get("updatedAt", (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=2)).isoformat())}
         # A push to the head branch from outside this run. `pushed` is how many
         # reads answer before it lands, so a case counts the sweep's opening
         # `pr list` and puts the push after it, and `leaves` is what the branch
@@ -804,6 +805,36 @@ def advance_probes():
     if said:
         problems.append(f"advance: the armed conflicting one exited with {said!r}")
 
+    # An approved conflicting PR is also dispatched for rebase (solorepo's DR-167 / #316):
+    fake = FakeGitHub({7: {"behind": 1, "armed": False, "mergeable": "CONFLICTING",
+                           "verdicts": [("o-r-reviewer", "APPROVED")]}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append(f"advance: the approved conflicting one dispatched {fake.dispatched!r}")
+    if said:
+        problems.append(f"advance: the approved conflicting one exited with {said!r}")
+
+    # An unanswered review changes request is re-dispatched for review (solorepo's DR-167 / #316):
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
+                           "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched != [("7", "review")]:
+        problems.append(f"advance: unanswered changes requested one dispatched {fake.dispatched!r}")
+    if said:
+        problems.append(f"advance: unanswered changes requested one exited with {said!r}")
+
+    # An unanswered review changes request that is recent is NOT re-dispatched (waits out active run):
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
+                           "updatedAt": now_iso,
+                           "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched:
+        problems.append(f"advance: recent changes requested PR dispatched {fake.dispatched!r} during active run window")
+    if said:
+        problems.append(f"advance: recent changes requested PR exited with {said!r}")
+
+
     # Asked for something, and a loop's branch only. Nobody has asked to review
     # the first or to land it, so a Job may still be standing on it; the second
     # is the solo's own branch. `said` is read here and in every case below
@@ -1171,6 +1202,76 @@ def handoff_probes():
         )
         if recent_owed:
             problems.append(f"unheld: recent armed PR reported {recent_owed!r} instead of passing in silence")
+
+        # An approved PR on a conflicting branch is unheld (solorepo's DR-167 / #316):
+        reviewer_name = check_pr.role_login("reviewer")
+        approved_conflicting = check_pr.unheld(
+            [{"number": 11, "title": "Approved conflicting PR", "headRefName": "claude/issue-11",
+              "baseRefName": "main", "isDraft": False, "mergeable": "CONFLICTING",
+              "reviewRequests": [],
+              "latestReviews": [{"author": {"login": reviewer_name}, "state": "APPROVED"}]}],
+            minutes=30, clean={11}
+        )
+        if len(approved_conflicting) != 1 or "approved, on a branch that conflicts" not in approved_conflicting[0]:
+            problems.append(f"unheld: approved conflicting PR reported {approved_conflicting!r}")
+
+        # Unanswered changes requested on an idle loop branch is unheld (solorepo's DR-167 / #316):
+        old_time = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=60)).isoformat()
+        orig_gh = getattr(check_pr, "gh", None)
+        try:
+            check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "medium"}]}
+            changes_req_owed = check_pr.unheld(
+                [{"number": 12, "title": "Changes requested PR", "headRefName": "claude/issue-12",
+                  "baseRefName": "main", "isDraft": False, "mergeable": "MERGEABLE",
+                  "reviewRequests": [],
+                  "statusCheckRollup": [{"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z"}],
+                  "latestReviews": [{"author": {"login": reviewer_name}, "state": "CHANGES_REQUESTED"}],
+                  "updatedAt": old_time}],
+                minutes=30, clean=set()
+            )
+            if len(changes_req_owed) != 1 or "changes requested by reviewer, and unanswered" not in changes_req_owed[0]:
+                problems.append(f"unheld: changes requested PR reported {changes_req_owed!r}")
+
+            # Green unreviewed PR whose challenge was demoted to human (solorepo's DR-167 / #316):
+            check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "human"}]}
+            human_owed = check_pr.unheld(
+                [{"number": 13, "title": "Human challenge PR", "headRefName": "claude/issue-13",
+                  "baseRefName": "main", "isDraft": False, "mergeable": "MERGEABLE",
+                  "reviewRequests": [],
+                  "statusCheckRollup": [{"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-11T12:00:00Z"}],
+                  "updatedAt": old_time}],
+                minutes=30, clean={13}
+            )
+            if len(human_owed) != 1 or "while #13 is at human" not in human_owed[0]:
+                problems.append(f"unheld: green PR with human challenge reported {human_owed!r}")
+
+            # Green unreviewed PR with conflicting branch at human prescribes rebase:
+            check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "human"}]}
+            human_conf_owed = check_pr.unheld(
+                [{"number": 14, "title": "Human conflicting PR", "headRefName": "claude/issue-14",
+                  "baseRefName": "main", "isDraft": False, "mergeable": "CONFLICTING",
+                  "reviewRequests": [],
+                  "statusCheckRollup": [{"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-11T12:00:00Z"}],
+                  "updatedAt": old_time}],
+                minutes=30, clean={14}
+            )
+            if len(human_conf_owed) != 1 or "rebase claude/issue-14 onto main" not in human_conf_owed[0]:
+                problems.append(f"unheld: green conflicting PR with human challenge reported {human_conf_owed!r}")
+
+            # Green unreviewed PR whose challenge is at hard (symmetry):
+            check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "hard"}]}
+            hard_owed = check_pr.unheld(
+                [{"number": 15, "title": "Hard challenge PR", "headRefName": "claude/issue-15",
+                  "baseRefName": "main", "isDraft": False, "mergeable": "MERGEABLE",
+                  "reviewRequests": [],
+                  "statusCheckRollup": [{"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-11T12:00:00Z"}],
+                  "updatedAt": old_time}],
+                minutes=30, clean={15}
+            )
+            if len(hard_owed) != 1 or "while #15 is at hard" not in hard_owed[0]:
+                problems.append(f"unheld: green PR with hard challenge reported {hard_owed!r}")
+        finally:
+            check_pr.gh = orig_gh
     finally:
         if original_threads:
             check_pr.threads = original_threads
@@ -1905,6 +2006,35 @@ def merge_manager_probes():
                                    reviewer, "owner", "repo")
     if ok or not any("checks failing" in r for r in reasons):
         problems.append("merge manager: PR with failing check was reported as eligible")
+
+    # Deduplication of checks: a failed check run that subsequently passed with the same name
+    # evaluates as checks green (solorepo's DR-167 / #316).
+    ok_dedup, reasons_dedup = move.check_green({
+        "statusCheckRollup": [
+            {"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z", "completedAt": "2026-09-11T12:05:00Z"},
+            {"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-11T12:10:00Z", "completedAt": "2026-09-11T12:15:00Z"},
+        ]
+    })
+    if not ok_dedup:
+        problems.append(f"merge manager: check_green did not deduplicate check runs: {reasons_dedup}")
+
+    ok_zero, _ = move.check_green({
+        "statusCheckRollup": [
+            {"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z", "completedAt": "2026-09-11T12:05:00Z"},
+            {"name": "gate", "conclusion": "SUCCESS", "completedAt": "0001-01-01T00:00:00Z", "createdAt": "2026-09-11T12:10:00Z"},
+        ]
+    })
+    if not ok_zero:
+        problems.append("merge manager: check_green did not handle 0001-01-01 completedAt timestamp")
+
+    check_pr_module = citations.load_check_pr()
+    if not check_pr_module.green({
+        "statusCheckRollup": [
+            {"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z", "completedAt": "2026-09-11T12:05:00Z"},
+            {"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-11T12:10:00Z", "completedAt": "2026-09-11T12:15:00Z"},
+        ]
+    }):
+        problems.append("check_pr.green did not deduplicate check runs")
 
     # 3. Behind or conflicting
     ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "CONFLICTING",

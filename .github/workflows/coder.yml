@@ -383,7 +383,7 @@ jobs:
             printf 'by=%s\n' "$open" >> "$GITHUB_OUTPUT"
             echo "#$ISSUE is claimed by $mine and has open pull request #$open; this delivery is a duplicate"
           elif jq -e '.labels[].name | select(. == "hard")' <<<"$issue" >/dev/null; then
-            printf 'by=held\n' >> "$GITHUB_OUTPUT"
+            printf 'by=held\nwhy=%s\n' "labelled hard" >> "$GITHUB_OUTPUT"
             echo "#$ISSUE is hard now: the solo's, with a session beside him; this loop stands down"
           elif [ -z "$level" ]; then
             printf 'by=stale\nwhy=%s\n' "labelled $(jq -r '[.labels[].name] | join(", ")' <<<"$issue") now, which no loop takes" >> "$GITHUB_OUTPUT"
@@ -400,13 +400,12 @@ jobs:
           BY: ${{ steps.pr.outputs.by }}
 
       # Where the loop stood down and nobody is standing there, say so on the
-      # pull request. On `held` a session is, by construction, and a comment
-      # under it is noise. On `closed` or `stale` — an Issue closed under an
-      # open pull request, or one a run's `stop` left at `human` — the
-      # request for changes would otherwise stand with no Job and no sign,
-      # which is the state this file's head records solorepo's #102 as,
-      # reached from the other side. The solo holds a `human` Issue until they
-      # read the account `stop` posted; this is one more line of that account.
+      # pull request. On `held`, `closed`, `stale` or `unnamed` — an Issue
+      # at `hard` (where a session may have ended before the review landed),
+      # closed under an open pull request, or one a run's `stop` left at
+      # `human` — the request for changes would otherwise stand with no Job
+      # and no sign, leaving the PR abandoned. The solo holds the Issue;
+      # this is one more line alerting them.
       # The verdict's door only: it is delivered once, so the comment is the
       # only trace the verdict gets. The rebase door is delivered on every
       # push to `main` while the branch conflicts, and the facts behind
@@ -415,7 +414,7 @@ jobs:
       # level before it dispatches and names the branch it leaves alone in
       # `advance`'s own log, where the repetition costs nobody.
       - name: say the verdict has no Job
-        if: github.event_name == 'pull_request_review' && github.event.review.state != 'approved' && (steps.taken.outputs.by == 'closed' || steps.taken.outputs.by == 'stale' || steps.taken.outputs.by == 'unnamed')
+        if: github.event_name == 'pull_request_review' && github.event.review.state != 'approved' && (steps.taken.outputs.by == 'closed' || steps.taken.outputs.by == 'stale' || steps.taken.outputs.by == 'unnamed' || steps.taken.outputs.by == 'held')
         run: |
           .meta/say/post comment "$PR" <<EOF
           No run takes this up: #$ISSUE is $WHY, so what stands on this pull request is the solo's. What decided that is in the run log, $RUN.

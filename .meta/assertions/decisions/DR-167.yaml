@@ -1,0 +1,78 @@
+decisions:
+  - id: work:decision/167
+    name: "DR-167 · Deduplicate check rollups, rebase approved conflicts, re-deliver dropped reviews, and surface stalled hand-backs"
+    challenge: work:challenge/316
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-check-pr
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-checks-probes
+    context: >-
+      Five control plane loopholes across move, check_pr, and coder.yml caused pull requests
+      to stall silently without autonomous resolution:
+      (1) GitHub's GraphQL `statusCheckRollup` retains historical failures alongside subsequent
+      successful reruns or commit body revisions, and neither `move:check_green` nor `check_pr:green`
+      deduplicated checks by name and timestamp, trapping green PRs in perpetual "checks failing" states;
+      (2) `move:dispatch` only checked for review requests or autoMergeRequest, skipping approved PRs
+      that fell into CONFLICTING after trunk merges;
+      (3) webhook events on `pull_request_review: [changes_requested]` are fire-and-forget, leaving
+      unanswered reviews permanently dropped when runner setup crashes;
+      (4) coder turn exhaustions demoted Challenges to `human` while gate checks were still running,
+      leaving PRs unreviewed when checks subsequently succeeded;
+      and (5) coder stood down silently (`by=held`) on reviews for `hard` Challenges without notifying the solo.
+    alternatives:
+      - name: Poll status checks via individual commits REST API rather than deduplicating GraphQL rollup
+        chosen: false
+        reason: >-
+          GraphQL `statusCheckRollup` provides batch efficiency for the sweep and CLI verbs;
+          fetching individual checks via REST per commit multiplies API queries and risks rate limits,
+          whereas deduplicating by check name taking the latest timestamp fixes the defect directly at zero API cost.
+      - name: Rely strictly on periodic cron sweep without proactive dispatch or runner check settlement
+        chosen: false
+        reason: >-
+          Sweeps run on a 30-minute interval and only print diagnostic remedies. Pure floor detection
+          without mechanism dispatch leaves PRs stuck for at least 30 minutes; waiting for pending checks
+          during hand-back and proactively re-delivering dropped review passes ensures autonomous loops
+          remain low-latency and self-healing.
+      - name: A two-layer defense across mechanism and floor for check deduplication, conflict dispatch, review re-delivery, and hand-back surfacing
+        chosen: true
+        reason: >-
+          Deduplicating `statusCheckRollup` in `move:check_green` and `check_pr:green` eliminates phantom
+          failures across both CLI and sweep. Expanding `move:dispatch` and `check_pr:unheld` to recognise
+          approved conflicting PRs and unanswered changes-requested reviews repairs both mechanism and floor.
+          Adding check settlement before coder hand-back avoids premature demotion to `human`, detecting
+          green human-level PRs in `unheld` provides the floor if demoted, and alerting on `hard` reviews
+          prevents silent abandonment.
+    consequences:
+      - >-
+        `move:check_green` and `check_pr:green` deduplicate check runs by name, keeping only the latest
+        entry by `startedAt`, `completedAt`, or `createdAt` (handling zero "0001-01-01" timestamps),
+        so rerun successes supersede obsolete failures.
+      - >-
+        `move:dispatch` recognises approved pull requests that conflict and dispatches rebase passes on
+        pushes to trunk; `check_pr:unheld` reports approved conflicting PRs with the rebase remedy.
+      - >-
+        `move:dispatch` re-delivers review passes for loop branches with unanswered changes-requested
+        reviews when no run is active; `check_pr:unheld` surfaces unanswered review requests idle
+        longer than the threshold with the dispatch remedy.
+      - >-
+        `check_pr:wait_for_checks` allows coder hand-back to wait up to 120 seconds for in-flight checks
+        to conclude before deciding on hand-back status; `check_pr:unheld` catches green PRs whose Challenge
+        sits at `human` and prescribes requesting review or resetting difficulty.
+      - >-
+        `coder.yml` posts an issue comment alerting the solo when review changes arrive on a `hard`
+        Challenge rather than silently standing down.
+    falsifier: >-
+      A pull request whose latest check runs are all green remaining stuck in `checks failing` due to a
+      historical check run; an approved conflicting PR sitting idle on trunk merges without dispatch;
+      an unanswered reviewer changes request sitting idle without re-delivery; or a green PR demoted to
+      `human` that escapes `unheld()` notification.
+    rationale: |-
+      In a team-of-one autonomous agent repository, deadlocks and silent stalls are fatal because no
+      human is actively babysitting each pull request. Every handoff must be robust against transient
+      API anomalies (retained check failures), webhook drops (infrastructure crashes), and state race
+      conditions (checks pending during turn budget limits). Combining mechanism (proactive dispatch
+      and settlement) with floor (sweep diagnosis and remediation) guarantees that pull requests
+      either make progress autonomously or loudly notify the solo with the exact command needed to
+      unblock them.

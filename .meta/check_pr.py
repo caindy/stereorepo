@@ -57,6 +57,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 
 META = pathlib.Path(__file__).parent
 FORM = META / "templates" / "pull-request.md"
@@ -864,6 +865,21 @@ GREEN = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 UNCONCLUDED = {"PENDING", "IN_PROGRESS", "QUEUED", "WAITING", "REQUESTED", "EXPECTED"}
 
 
+def deduplicate_checks(contexts):
+    """When multiple check runs share a name (e.g. repeated runs or body revisions),
+    keep only the latest entry by startedAt / completedAt / createdAt."""
+    def timestamp(c):
+        completed = c.get("completedAt") or ""
+        if completed.startswith("0001"):
+            completed = ""
+        return c.get("startedAt") or completed or c.get("createdAt") or ""
+    deduped = {}
+    for c in sorted(contexts, key=timestamp):
+        name = c.get("name") or c.get("context") or "check"
+        deduped[name] = c
+    return list(deduped.values())
+
+
 def snapshot(ref):
     """Everything on a pull request that a watcher compares between polls.
 
@@ -884,8 +900,7 @@ def snapshot(ref):
     threads_ = {t["id"]: t for t in threads(ref)}
     # When multiple check runs share a name (e.g. repeated dispatches or cancelled runs),
     # order by startedAt so the latest run wins.
-    sorted_checks = sorted(rollup_of(pr["number"]),
-                           key=lambda c: c.get("startedAt") or c.get("completedAt") or "")
+    sorted_checks = deduplicate_checks(rollup_of(pr["number"]))
     # A check still running has no conclusion; its status says so, which reads
     # better than a `None` beside a result and is a change worth a line. The
     # run's url rides beside the verdict: a re-run that ends where it started
@@ -1121,7 +1136,28 @@ def unanswered(nodes):
 
 
 def repo():
-    return gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
+    repo_name = os.environ.get("GITHUB_REPOSITORY")
+    if repo_name:
+        return repo_name
+    try:
+        return gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
+    except (Exception, SystemExit):
+        out = subprocess.run(["git", "remote", "get-url", "origin"],
+                             capture_output=True, text=True, cwd=ROOT)
+        if out.returncode == 0 and out.stdout.strip():
+            url = out.stdout.strip()
+            m = re.search(r"[:/]([^/:]+)/([^/:]+?)(?:\.git)?$", url)
+            if m:
+                return f"{m.group(1)}/{m.group(2)}"
+        return "solo/repo"
+
+
+def role_login(role):
+    """The account a Role holds, by name and not by reading anything.
+
+    `<owner>-<repo>-<role>` is the convention solorepo's DR-107 set.
+    """
+    return f"{repo().replace('/', '-')}-{role}"
 
 
 ASSERTIONS = META / "assertions"
@@ -1296,7 +1332,7 @@ TAKEN = ("easy", "medium")
 # field with a query the gate's token cannot run, so it is fetched by name
 # alongside (solorepo's DR-153).
 SWEEP_FIELDS = ("number,title,headRefOid,headRefName,baseRefName,isDraft,updatedAt,"
-                "reviewRequests,autoMergeRequest,mergeable")
+                "reviewRequests,autoMergeRequest,mergeable,latestReviews")
 
 
 def longest_run():
@@ -1332,8 +1368,9 @@ def asked_of(pr):
 
 def green(pr):
     """Whether every check on the head has concluded and none of them failed."""
+    contexts = deduplicate_checks(pr.get("statusCheckRollup") or [])
     states = [c.get("conclusion") or c.get("state") or c.get("status")
-              for c in pr.get("statusCheckRollup") or []]
+              for c in contexts]
     return bool(states) and all(s in GREEN for s in states)
 
 
@@ -1342,6 +1379,20 @@ def green(pr):
 # at `pull-requests: read`, while the check states come through `ROLLUP` below,
 # whose scope is `checks: read` and nothing wider (solorepo's DR-155).
 HANDBACK_FIELDS = "number,headRefName,baseRefName,reviewRequests,autoMergeRequest,mergeable"
+
+
+def wait_for_checks(pr_number, timeout=120, interval=5):
+    """Wait for in-progress or queued checks on the head to conclude."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        raw = rollup_of(pr_number)
+        if not raw:
+            return []
+        pending = [c for c in raw if (c.get("conclusion") or c.get("state") or c.get("status") or "").upper() in UNCONCLUDED]
+        if not pending:
+            return raw
+        time.sleep(interval)
+    return rollup_of(pr_number)
 
 
 def hand_back(issue):
@@ -1389,7 +1440,11 @@ def hand_back(issue):
         return {"number": None, "branch": None, "handed": False, "green": False,
                 "conflicting": False, "base": None}
     pr = found[0]
-    pr["statusCheckRollup"] = rollup_of(pr["number"])
+    raw_contexts = rollup_of(pr["number"])
+    pending = [c for c in raw_contexts if (c.get("conclusion") or c.get("state") or c.get("status") or "").upper() in UNCONCLUDED]
+    if pending:
+        raw_contexts = wait_for_checks(pr["number"], timeout=120, interval=5)
+    pr["statusCheckRollup"] = deduplicate_checks(raw_contexts)
     return {"number": pr["number"],
             "branch": pr.get("headRefName"),
             "handed": bool(asked_of(pr)) or pr.get("autoMergeRequest") is not None,
@@ -1398,7 +1453,27 @@ def hand_back(issue):
             "base": pr.get("baseRefName") or "main"}
 
 
-def unheld(prs, minutes, clean, unresolved=None):
+def is_approved_pull(pr, reviewer_login=None):
+    if not (pr.get("latestReviews") or pr.get("reviews")):
+        return False
+    if reviewer_login is None:
+        reviewer_login = role_login("reviewer")
+    revs = [r for r in pr.get("latestReviews") or pr.get("reviews") or []
+            if (r.get("author") or {}).get("login") == reviewer_login]
+    return bool(revs and revs[-1].get("state") == "APPROVED")
+
+
+def is_changes_requested_pull(pr, reviewer_login=None):
+    if not (pr.get("latestReviews") or pr.get("reviews")):
+        return False
+    if reviewer_login is None:
+        reviewer_login = role_login("reviewer")
+    revs = [r for r in pr.get("latestReviews") or pr.get("reviews") or []
+            if (r.get("author") or {}).get("login") == reviewer_login]
+    return bool(revs and revs[-1].get("state") == "CHANGES_REQUESTED")
+
+
+def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
     """Pull requests nobody holds, and requests nobody can answer (solorepo's #154).
 
     A handoff here is a semaphore: GitHub holds a review request and reports
@@ -1424,9 +1499,12 @@ def unheld(prs, minutes, clean, unresolved=None):
     handoff onto it. Only a loop's branch is read: `claude/issue-<n>` is a
     Challenge a loop took, and the solo's own pull request is held by the solo
     whatever it looks like from here. Only while the Challenge is still a
-    loop's, too — one handed back sits at `human`, which is the solo holding
-    it, and a sweep that named it every half hour until they acted would be
-    switched off inside a week.
+    loop's, or when a loop handed back to `human` or `hard` while checks were
+    still in flight (solorepo's DR-167). A `stop` at `human` on a broken or
+    incomplete branch is the solo holding the work and passes in silence; but
+    a green head left unreviewed and unrequested at `human` or `hard` is a
+    handoff stall where work completed before checks settled, and the sweep
+    surfaces it with the remedy to request review or return it to an agent loop.
 
     What a candidate is owed is not always the request. A branch GitHub reports
     as `CONFLICTING` is one no review can be requested on, for the reason the
@@ -1496,6 +1574,8 @@ def unheld(prs, minutes, clean, unresolved=None):
     rest, because only a candidate needs it — the read is the judgement's, not
     the sweep's, and on a quiet sweep there are none to make.
     """
+    if reviewer_login is None:
+        reviewer_login = role_login("reviewer")
     now = datetime.datetime.now(datetime.timezone.utc)
     out = []
     for pr in prs:
@@ -1509,6 +1589,10 @@ def unheld(prs, minutes, clean, unresolved=None):
             waiting.append("armed")
             stuck.append("GitHub will not merge it and will not update the branch, so the "
                          "arming waits on an act nothing performs")
+        if is_approved_pull(pr, reviewer_login=reviewer_login):
+            waiting.append("approved")
+            stuck.append("GitHub will not merge it and will not update the branch, so the "
+                         "approval waits on a rebase nothing performs")
         if waiting and pr.get("mergeable") == "CONFLICTING":
             out.append(f"#{pr['number']} {pr['title'][:60]} — {' and '.join(waiting)}, on a "
                        f"branch that conflicts: {'; and '.join(stuck)}. Rebase "
@@ -1527,30 +1611,57 @@ def unheld(prs, minutes, clean, unresolved=None):
                            f"notices with .meta/say/post promote, resolve threads whose link or "
                            f"answer is already posted with .meta/say/post resolve, or answer with "
                            f".meta/say/post answer")
+        branch = LOOPS_BRANCH.match(pr["headRefName"])
+        # An unanswered review changes request where the webhook was spent or the run crashed.
+        if is_changes_requested_pull(pr, reviewer_login=reviewer_login) and not asked and branch and idle >= minutes:
+            threads_unresolved = (unresolved.get(pr["number"]) if unresolved is not None
+                                  else [t for t in threads(str(pr["number"])) if not t["isResolved"]])
+            if threads_unresolved or not green(pr):
+                issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
+                level = next((l["name"] for l in issue["labels"] if l["name"] in TAKEN), None)
+                if issue["state"] == "OPEN" and level:
+                    out.append(f"#{pr['number']} {pr['title'][:60]} — changes requested by "
+                               f"reviewer, and unanswered: no run is answering it and nothing "
+                               f"has moved on it for {int(idle)} minutes, while #{branch.group(1)} "
+                               f"is still {level}. A review event was dropped or a run ended "
+                               f"without answering: .meta/say/move dispatch {pr['number']}")
         if asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr):
             continue
         if pr["number"] not in clean:
             continue
-        branch = LOOPS_BRANCH.match(pr["headRefName"])
         if not branch:
             continue
         if idle < minutes:
             continue
         issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
-        level = next((l["name"] for l in issue["labels"] if l["name"] in TAKEN), None)
+        level = next((l["name"] for l in issue["labels"] if l["name"] in TAKEN or l["name"] in ("human", "hard")), None)
         if issue["state"] != "OPEN" or not level:
             continue
-        if pr.get("mergeable") == "CONFLICTING":
-            remedy = (f"and its branch conflicts, so a review requested on it now could not "
-                      f"be answered: rebase {pr['headRefName']} onto "
-                      f"{pr['baseRefName']}, then "
-                      f".meta/say/move request-review {pr['number']}")
+        if level in ("human", "hard"):
+            if pr.get("mergeable") == "CONFLICTING":
+                remedy = (f"while #{branch.group(1)} is at {level} and its branch conflicts: "
+                          f"rebase {pr['headRefName']} onto {pr['baseRefName']}, then "
+                          f".meta/say/move request-review {pr['number']} "
+                          f"(or move difficulty {branch.group(1)} medium)")
+            else:
+                remedy = (f"while #{branch.group(1)} is at {level} (a run stopped before checks were green): "
+                          f".meta/say/move request-review {pr['number']} "
+                          f"(or move difficulty {branch.group(1)} medium)")
+            out.append(f"#{pr['number']} {pr['title'][:60]} — green, and unreviewed: "
+                       f"no review requested, no merge armed, and nothing has moved on it for "
+                       f"{int(idle)} minutes, {remedy}")
         else:
-            remedy = f"and nobody has: .meta/say/move request-review {pr['number']}"
-        out.append(f"#{pr['number']} {pr['title'][:60]} — green, and nobody holds it: "
-                   f"no review requested, no merge armed, and nothing has moved on it for "
-                   f"{int(idle)} minutes, while #{branch.group(1)} is still {level}. "
-                   f"A run ended without handing it over, {remedy}")
+            if pr.get("mergeable") == "CONFLICTING":
+                remedy = (f"and its branch conflicts, so a review requested on it now could not "
+                          f"be answered: rebase {pr['headRefName']} onto "
+                          f"{pr['baseRefName']}, then "
+                          f".meta/say/move request-review {pr['number']}")
+            else:
+                remedy = f"and nobody has: .meta/say/move request-review {pr['number']}"
+            out.append(f"#{pr['number']} {pr['title'][:60]} — green, and nobody holds it: "
+                       f"no review requested, no merge armed, and nothing has moved on it for "
+                       f"{int(idle)} minutes, while #{branch.group(1)} is still {level}. "
+                       f"A run ended without handing it over, {remedy}")
     return out
 
 
@@ -1630,7 +1741,8 @@ def sweep_all(publishing):
 
     minutes = longest_run()
     if minutes is not None:
-        owed = unheld(found, minutes, clean, unresolved)
+        reviewer = role_login("reviewer")
+        owed = unheld(found, minutes, clean, unresolved, reviewer_login=reviewer)
         print(f"{'x  ' if owed else 'ok '}hand-off — "
               + (f"{len(owed)} pull request(s) nobody can take up"
                  if owed else "every open pull request names who takes it next"))
