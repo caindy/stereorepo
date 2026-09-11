@@ -405,6 +405,18 @@ jobs:
           # complete transcript and the `result` event with turns and cost
           # (solorepo's #122).
           show_full_output: "true"
+          # The last paragraph before the hand-off buys a reader who did not
+          # write the diff, which between the last commit and the reviewer's
+          # first read there is otherwise none of. The small model belongs
+          # there and not on the answering pass because of the direction it
+          # fails in: handed a diff and no verdict to interpret it fails by
+          # missing something, and the reviewer is still there unchanged;
+          # handed a deep critique it would fail by misreading a thread and
+          # writing something plausible and slightly wrong, which nothing
+          # downstream catches. Same money, opposite risk (solorepo's #220).
+          # The paragraph binds the review request and nothing else: whether
+          # the rebase and answering passes want the same reader is a separate
+          # question.
           prompt: |
             You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}
             of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
@@ -434,6 +446,26 @@ jobs:
             against the entries they name; it is not a gate and blocks nothing,
             so answer its `x` by fixing the sentence, or by leaving it and
             saying why on the pull request (solorepo's DR-134).
+
+            Before you request the review, have the diff read by somebody who
+            did not write it: spawn one subagent with `Agent` on the smaller
+            model — `sonnet`, which is `claude-sonnet-5` — tell it to read this
+            branch's diff against `origin/main` and report what it finds, and
+            tell it nothing of why you chose what you chose. Run it in the
+            foreground, never with `run_in_background`, so its report arrives
+            in the same turn (solorepo's DR-122): the run ends when your turn
+            ends, and your next act is the hand-off below that ends it, so a
+            backgrounded agent hands back an id and the reviewer gets the diff
+            unchanged. Nor could anything here read it later: TaskOutput is
+            not among this step's tools. You rereading your own diff is
+            the party with an interest reading its own work; a reader that has
+            not seen the argument is a different reader. What comes back is
+            yours to act on or not, exactly as anything you spot yourself is,
+            and what you decide not to do you raise as a notice on the diff.
+            The pass itself says nothing and changes no state: no comment that
+            it ran, no verb of its own. A notice is about a finding rather than
+            about the pass, and it is the only sign outside the run that the
+            pass happened at all.
 
             `easy`: `.meta/say/move merge <n> --auto`; green is the review.
             `medium`: `.meta/say/move request-review <n>` and stop; the reviewer
