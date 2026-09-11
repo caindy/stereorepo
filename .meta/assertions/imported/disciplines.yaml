@@ -398,8 +398,8 @@ disciplines:
         the solo; `human` is where a loop puts what it cannot finish, saying
         where it stopped. The raiser guesses and the loop corrects, downward
         only. The label is also what says whose a branch is: a session that
-        takes up a pull request the loop holds moves the Issue to `hard`
-        first, and the loop's next pass stands down. Moved back, the loop
+        takes up a pull request the loop holds has the solo move the Issue to
+        `hard` first, and the loop's next pass stands down. Moved back, the loop
         answers the next verdict and not one already standing — a relabel
         fires the Issue door and re-delivers no review — so a verdict the
         session leaves behind is the session's to answer, or the solo's to
