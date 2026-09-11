@@ -1,0 +1,25 @@
+challenges:
+  - id: work:challenge/221
+    name: check.py registers its steps at the definition, takes its sources as arguments, and orchestrates in a function
+    challenge_type: TASK
+    description: >-
+      `.meta/check.py` named its steps in two tables at the foot of the file.
+      `CHECKS` was 24 entries of the shape `("label", lambda i, r: f(i))`, every
+      lambda there to discard arguments the step does not take, and it sat two
+      thousand lines from the functions it named, so a label and the docstring
+      explaining the step were never read together and every step added meant
+      two edits in two places. `PRECHECKS` was a second table the first could
+      not hold, and `template parses` a third shape appended by hand at the call
+      site. `reservation_probes` rebound module globals eleven times and
+      restored them in a `finally`, which it needed only because
+      `decision_numbering` reached for its two reads by name: a probe that
+      mutates the module it tests is one exception away from leaving the gate
+      holding a fake, and it constrains the order the probes may run in for no
+      stated reason. The `__main__` block carried the render-staleness
+      comparison inline and the arithmetic `len(CHECKS) + 3` for the line
+      naming what a failed schema load skipped — 27 with the 24 entries of
+      `CHECKS`, `template parses`, `inherited prose` and `rendered prose`
+      beside them. A count held right by hand, and one step added in the wrong
+      table away from lying about it: the `+ 3` was a `+ 2` until the step
+      added beside it moved the constant, which is the failure stated as
+      history rather than as a risk.

@@ -18,6 +18,9 @@ inlined. Listing them by hand would drift from the schemas the moment either
 moved.
 """
 import argparse
+import collections
+import functools
+import inspect
 import os
 import pathlib
 import re
@@ -32,6 +35,44 @@ ROOT = META.parent
 TEMPLATE = ROOT / "template"
 TOKEN = re.compile(r"__[A-Z][A-Z0-9_]*__")
 SCHEMAS = ("work_ontology.yaml", "ddd_ontology.yaml")
+
+# Every step of the gate, in the order they are defined. A table of labels kept
+# somewhere else is a second place to edit for every step, and it sits far from
+# the function it names, so the label and the docstring that explains the step
+# are never read together; the decorator puts them together.
+STEPS = []
+Step = collections.namedtuple("Step", "label run pre sources")
+# What `main` has to give a step, and the only parameter names a step may
+# require. A step takes the ones it names, in the order it names them.
+SOURCES = ("index", "refs", "views", "asked", "pages")
+
+
+def check(label, pre=False):
+    """Register a step under the label the gate prints, at its definition.
+
+    A parameter with a default is not a source: it is a seam a probe passes a
+    fake through, and nothing is passed for it here. A parameter without one
+    must name a source, and a step that asks for anything else is refused at
+    import — which is the moment to find it, since the alternative is a gate
+    that dies on the step rather than on the typo.
+
+    `pre` runs the step before the schemas load. LinkML's loader raises on the
+    first repeated key with no file and no line, so a duplicate in `work/*.yaml`
+    used to take the whole gate down before the check that names both had a
+    chance to run (solorepo's #23). A precheck is a step that must not stand
+    behind that door.
+    """
+    def register(fn):
+        sources = tuple(name for name, p in inspect.signature(fn).parameters.items()
+                        if p.default is inspect.Parameter.empty)
+        unknown = [name for name in sources if name not in SOURCES]
+        if unknown:
+            raise TypeError(f"{fn.__name__} requires {', '.join(unknown)}, which the gate has "
+                            f"nothing to pass; a step's sources are {', '.join(SOURCES)}")
+        STEPS.append(Step(label, fn, pre, sources))
+        return fn
+
+    return register
 
 
 def tree_root(sv):
@@ -123,6 +164,7 @@ def _note_duplicates(loader, node, deep=False):
 Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _note_duplicates)
 
 
+@check("duplicate keys", pre=True)
 def duplicate_keys():
     """Every YAML the gate reads, including the schemas and the seed — and the
     seeded workflow, whose one typo `safe_load` will not report is this one: a
@@ -144,11 +186,13 @@ def duplicate_keys():
     return problems
 
 
+@check("unresolved references")
 def unresolved_references(index, refs):
     return [f"{site} -> {target} '{ref}' does not exist"
             for ref, target, site in refs if ref not in index]
 
 
+@check("composed_of cycles")
 def composed_of_cycles(index):
     """A skill composes tools and may compose skills. It may not compose itself."""
     graph = {i: o.get("composed_of", []) for i, (c, o, _) in index.items() if c == "Capability"}
@@ -182,6 +226,7 @@ def hop(index, start, *slots):
     return cur
 
 
+@check("collaboration membership")
 def collaboration_membership(index):
     """Every Job in a Collaboration answers the Collaboration's Challenge."""
     problems = []
@@ -196,6 +241,7 @@ def collaboration_membership(index):
     return problems
 
 
+@check("audit invariants")
 def audit_invariants(index):
     """An authorising Permission comes from the Remit; a target is in the Securable."""
     problems = []
@@ -216,6 +262,7 @@ def audit_invariants(index):
     return problems
 
 
+@check("served goals")
 def served_goals(index):
     """A Job to be Done serves END goals, and only ones its own Persona holds.
 
@@ -259,6 +306,7 @@ def tree():
     return sorted(ROOT / name for name in listed.stdout.split("\0") if name)
 
 
+@check("surviving placeholders")
 def surviving_placeholders():
     """No template token survives anywhere outside `template/` (solorepo's DR-034).
 
@@ -292,6 +340,7 @@ def surviving_placeholders():
     return problems
 
 
+@check("template parses")
 def template_parses(views):
     """The template is data and is not linted in place. It is checked by filling
     it in and testing the result, which is the only version anyone runs.
@@ -320,6 +369,7 @@ def template_parses(views):
     return problems
 
 
+@check("one context per portfolio")
 def one_context_per_portfolio(index):
     """A portfolio is exactly one Bounded Context, by construction (solorepo's DR-014).
 
@@ -360,6 +410,7 @@ justified at the moment it is made and paid for afterwards.
 """
 
 
+@check("decision alternatives")
 def decision_alternatives(index):
     """One option is chosen, and it is stated at all from `DR-060` onward.
 
@@ -390,6 +441,7 @@ def decision_alternatives(index):
     return problems
 
 
+@check("decision supersession")
 def decision_supersession(index):
     """Supersession resolves, does not loop, and the two directions agree.
 
@@ -429,6 +481,7 @@ def decision_supersession(index):
     return problems
 
 
+@check("decision level")
 def decision_level(index):
     """A Decision is the Portfolio's, a Product's or a Project's, and not two of
     these (solorepo's DR-093).
@@ -534,7 +587,9 @@ def deleted_decision_numbers(numbers):
     return {int(m.group(1)) for m in DELETION.finditer(found.stdout)}
 
 
-def decision_numbering(index):
+@check("decision numbering")
+def decision_numbering(index, reserved=reserved_decision_numbers,
+                       deleted=deleted_decision_numbers):
     """Numbers are stable identifiers, so the sequence is contiguous and unused,
     and a hole GitHub reserves is a number in flight rather than a deletion.
 
@@ -585,6 +640,13 @@ def decision_numbering(index):
     have been reserved costs a session one message; green on a hole that was a
     deletion is the failure this check exists for, kept quiet by a network that
     was down or a clone with no history behind it.
+
+    Both reads are parameters, defaulting to the two functions above, so that
+    `reservation_probes` stands them in by passing arguments. It used to rebind
+    them on the module and restore them in a `finally`, which a probe needs only
+    because a check reaches for its sources by name: a probe that mutates the
+    module it tests is one exception away from leaving the gate holding a fake,
+    and it constrains the order probes may run in for no stated reason.
     """
     seen = [d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"]
     if not seen:
@@ -610,7 +672,7 @@ def decision_numbering(index):
         # with no `origin`, the install that read is local for, so the one
         # sentence saying what to do was withheld exactly where it was the only
         # one available (solorepo's #152).
-        removed = deleted_decision_numbers(missing)
+        removed = deleted(missing)
         gone = [] if removed is None else [n for n in missing if n in removed]
         rest = [n for n in missing if n not in gone]
         if gone:
@@ -624,7 +686,7 @@ def decision_numbering(index):
             # and then advised writing the number back as WITHDRAWN — which is
             # how a session takes a number another branch is holding by
             # following the check's own advice (solorepo's #152).
-            held = reserved_decision_numbers()
+            held = reserved()
             if held is None and removed is None:
                 problems.append(f"no entry for {listed(rest)}; the remote would not say which "
                                 "numbers it reserves and this clone has no history to read, so "
@@ -648,6 +710,7 @@ def decision_numbering(index):
 RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
 
 
+@check("artifact paths")
 def artifact_paths(index):
     """Every Artifact is a file that exists.
 
@@ -661,6 +724,7 @@ def artifact_paths(index):
             if cls == "Artifact" and not (ROOT / obj["path"]).is_file()]
 
 
+@check("reserved article numbers")
 def reserved_article_numbers(index):
     """A retired Article's number is never issued again.
 
@@ -686,6 +750,7 @@ def reserved_article_numbers(index):
     return problems
 
 
+@check("enacted decisions")
 def enacted_decisions(index):
     """A20. An adopted decision names an Artifact that carries its rule (solorepo's DR-078).
 
@@ -787,6 +852,7 @@ def durable(copied):
             yield path
 
 
+@check("cited decisions")
 def cited_decisions(index):
     """A DR cited in prose resolves to an entry of the record it names (solorepo's DR-121).
 
@@ -940,6 +1006,7 @@ def flat(text):
     return re.sub(r"\s+", " ", text)
 
 
+@check("cited articles")
 def cited_articles():
     """Every `A<n>` cited resolves to an Article, live or reserved (solorepo's #147).
 
@@ -1025,6 +1092,7 @@ QUOTED = (re.compile(rf"(?P<cite>{CITE}){SUBJECT}\b(?:{SAYS})\b[^\"\n]{{0,20}}"
 ELISION = re.compile(r"…|\.\.\.|\[[^\]]*\]")
 
 
+@check("quoted claims")
 def quoted_claims():
     """A quotation attributed to an entry appears in that entry (solorepo's #147).
 
@@ -1089,6 +1157,7 @@ STATED = re.compile(rf"(?P<subject>{CITE})(?P<before>{NEAREST})"
                     rf"(?P<after>{GAP})(?P<object>{CITE})\b", re.I)
 
 
+@check("stated relations")
 def stated_relations(index):
     """A relation stated in prose is set as the slot it names (solorepo's #147).
 
@@ -1143,6 +1212,7 @@ def stated_relations(index):
 PATH_LINE = re.compile(r"`(?P<path>[^`\s:]*[./][^`\s:]*):(?P<line>\d+)`")
 
 
+@check("path and line claims")
 def path_and_line_claims():
     """A `path:line` cited beside a code span reads that span on that line (solorepo's #147).
 
@@ -1203,6 +1273,7 @@ def path_and_line_claims():
     return problems
 
 
+@check("enacting citations")
 def enacting_citations(index):
     """A file the record names cites at least one entry that names it (solorepo's DR-131).
 
@@ -1291,6 +1362,7 @@ def enacting_citations(index):
     return problems
 
 
+@check("inherited citations")
 def inherited_citations():
     """An Issue cited in a file a portfolio inherits is cited as solorepo's (solorepo's DR-132).
 
@@ -1356,6 +1428,7 @@ def report(label, problems):
     return bool(problems)
 
 
+@check("hook probes", pre=True)
 def hook_probes():
     """Both hooks' predicates, against the calls they exist to refuse and the
     calls they must let through.
@@ -1674,6 +1747,7 @@ class FakeGitHub:
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
 
+@check("advance probes", pre=True)
 def advance_probes():
     """`advance` and `merge --auto` against a fake GitHub, in the states solorepo's #98
     found them in.
@@ -1920,6 +1994,7 @@ def advance_probes():
     return problems
 
 
+@check("channel parser probes", pre=True)
 def channel_parser_probes():
     """Every verb of every program parses the flags its own branch in `main()`
     reads, and belongs to the program the table says (solorepo's DR-117).
@@ -2025,6 +2100,7 @@ def channel_parser_probes():
     return problems
 
 
+@check("channel table probes", pre=True)
 def channel_table_probes():
     """The verb table is the parsers, and a Role's reading is the table (solorepo's DR-117).
 
@@ -2072,6 +2148,7 @@ def channel_table_probes():
     return problems
 
 
+@check("reservation probes", pre=True)
 def reservation_probes():
     """`decision numbering` over a hole GitHub reserves, a hole it does not, a
     hole a tag holds and a commit made, a remote that will not say, a history
@@ -2103,102 +2180,79 @@ def reservation_probes():
     if found != [f"{hole:03d}"]:
         problems.append(f"decision numbering: the refs `git ls-remote` advertises read as {found!r}, "
                         "and one annotated tag is one reservation")
-    original = reserved_decision_numbers, deleted_decision_numbers
-    try:
-        globals()["deleted_decision_numbers"] = lambda numbers: set()
-        globals()["reserved_decision_numbers"] = lambda: {hole}
-        if (said := decision_numbering(index)):
-            problems.append(f"decision numbering: a hole GitHub reserves was reported as {said!r}")
-        # The same tag, over a number the record once held. The tag is never
-        # deleted, so it says as much about a deletion as about a reservation,
-        # and the history is what has to carry the difference.
-        globals()["deleted_decision_numbers"] = lambda numbers: {hole}
-        said = decision_numbering(index)
-        # The number is spelled from `hole` rather than typed: a `DR-` and three
-        # digits in a file a portfolio copies is a citation as far as `cited
-        # decisions` is concerned, and this one is a fixture (solorepo's DR-124).
-        if not said or f"DR-{hole:03d}" not in said[0] or "removed" not in said[0]:
-            problems.append(f"decision numbering: a reserved number whose entry a commit removed "
-                            f"was reported as {said!r}, and a tag does not explain a deletion")
-        globals()["deleted_decision_numbers"] = lambda numbers: set()
-        globals()["reserved_decision_numbers"] = lambda: {5}
-        said = decision_numbering(index)
-        if not said or f"DR-{hole:03d}" not in said[0]:
-            problems.append(f"decision numbering: a hole nothing reserves was reported as {said!r}")
-        globals()["reserved_decision_numbers"] = lambda: None
-        said = decision_numbering(index)
-        if not said or "would not say" not in said[0] or "tag" in said[0]:
-            problems.append("decision numbering: a remote that would not answer was reported "
-                            f"as {said!r}, and a run that read no tags says nothing about them")
-        globals()["reserved_decision_numbers"] = lambda: {hole}
-        globals()["deleted_decision_numbers"] = lambda numbers: None
-        said = decision_numbering(index)
-        if not said or "no history" not in said[0]:
-            problems.append("decision numbering: a hole under a history that cannot be read was "
-                            f"reported as {said!r}, and an unexplained hole is a failure")
-        # The deletion, with no remote to ask — a portfolio with no `origin`,
-        # permanently, which is the install the history read is local for. The
-        # order is the whole of this case: asked the other way round the answer
-        # was the sentence about the remote, and the run that could name the
-        # deletion said nothing about it. Nothing stands the remote in here,
-        # because a hole the commits explain is one the remote is not asked
-        # about at all — and a stub that was called would say so.
-        def unreachable():
-            problems.append("decision numbering: the remote was asked about a hole a commit "
-                            "here explains, and the tags decide only what the history leaves")
-            return None
+    if (said := decision_numbering(index, reserved=lambda: {hole},
+                                   deleted=lambda numbers: set())):
+        problems.append(f"decision numbering: a hole GitHub reserves was reported as {said!r}")
+    # The same tag, over a number the record once held. The tag is never
+    # deleted, so it says as much about a deletion as about a reservation,
+    # and the history is what has to carry the difference.
+    said = decision_numbering(index, reserved=lambda: {hole},
+                              deleted=lambda numbers: {hole})
+    # The number is spelled from `hole` rather than typed: a `DR-` and three
+    # digits in a file a portfolio copies is a citation as far as `cited
+    # decisions` is concerned, and this one is a fixture (solorepo's DR-124).
+    if not said or f"DR-{hole:03d}" not in said[0] or "removed" not in said[0]:
+        problems.append(f"decision numbering: a reserved number whose entry a commit removed "
+                        f"was reported as {said!r}, and a tag does not explain a deletion")
+    said = decision_numbering(index, reserved=lambda: {5}, deleted=lambda numbers: set())
+    if not said or f"DR-{hole:03d}" not in said[0]:
+        problems.append(f"decision numbering: a hole nothing reserves was reported as {said!r}")
+    said = decision_numbering(index, reserved=lambda: None, deleted=lambda numbers: set())
+    if not said or "would not say" not in said[0] or "tag" in said[0]:
+        problems.append("decision numbering: a remote that would not answer was reported "
+                        f"as {said!r}, and a run that read no tags says nothing about them")
+    said = decision_numbering(index, reserved=lambda: {hole}, deleted=lambda numbers: None)
+    if not said or "no history" not in said[0]:
+        problems.append("decision numbering: a hole under a history that cannot be read was "
+                        f"reported as {said!r}, and an unexplained hole is a failure")
 
-        globals()["reserved_decision_numbers"] = unreachable
-        globals()["deleted_decision_numbers"] = lambda numbers: {hole}
-        said = decision_numbering(index)
-        if said != [f"the record held DR-{hole:03d} and a commit here removed it, tag or no tag; "
-                    "a number withdrawn stays in the record as a hole"]:
-            problems.append("decision numbering: a deletion with no remote to ask was reported as "
-                            f"{said!r}, and the read that can name it is the one every clone has")
-        # Neither read able to speak: the one sentence of that function no other
-        # case here prints, and the only path on which the remote is asked over
-        # a hole the commits could never have explained. The stub reports having
-        # been called, because what a later reader needs from this case is
-        # whether that call is meant — a clone with no history explains no hole,
-        # so every hole reaches the remote, and both answers are red (solorepo's #152).
-        asked = []
+    # The deletion, with no remote to ask — a portfolio with no `origin`,
+    # permanently, which is the install the history read is local for. The
+    # order is the whole of this case: asked the other way round the answer
+    # was the sentence about the remote, and the run that could name the
+    # deletion said nothing about it. Nothing stands the remote in here,
+    # because a hole the commits explain is one the remote is not asked
+    # about at all — and a stub that was called would say so.
+    def unreachable():
+        problems.append("decision numbering: the remote was asked about a hole a commit "
+                        "here explains, and the tags decide only what the history leaves")
+        return None
 
-        def unreadable():
-            asked.append(True)
-            return None
+    said = decision_numbering(index, reserved=unreachable, deleted=lambda numbers: {hole})
+    if said != [f"the record held DR-{hole:03d} and a commit here removed it, tag or no tag; "
+                "a number withdrawn stays in the record as a hole"]:
+        problems.append("decision numbering: a deletion with no remote to ask was reported as "
+                        f"{said!r}, and the read that can name it is the one every clone has")
 
-        globals()["reserved_decision_numbers"] = unreadable
-        globals()["deleted_decision_numbers"] = lambda numbers: None
-        said = decision_numbering(index)
-        if said != [f"no entry for DR-{hole:03d}; the remote would not say which numbers it "
-                    "reserves and this clone has no history to read, so nothing here tells a "
-                    "number in flight from a deletion"]:
-            problems.append("decision numbering: a hole neither read could speak to was reported "
-                            f"as {said!r}, and a sentence claims only what its run read")
-        if not asked:
-            problems.append("decision numbering: the remote was not asked over a hole no commit "
-                            "here could explain, and a clone with no history explains none of them")
-    finally:
-        globals()["reserved_decision_numbers"], globals()["deleted_decision_numbers"] = original
+    # Neither read able to speak: the one sentence of that function no other
+    # case here prints, and the only path on which the remote is asked over
+    # a hole the commits could never have explained. The stub reports having
+    # been called, because what a later reader needs from this case is
+    # whether that call is meant — a clone with no history explains no hole,
+    # so every hole reaches the remote, and both answers are red (solorepo's #152).
+    asked = []
+
+    def unreadable():
+        asked.append(True)
+        return None
+
+    said = decision_numbering(index, reserved=unreadable, deleted=lambda numbers: None)
+    if said != [f"no entry for DR-{hole:03d}; the remote would not say which numbers it "
+                "reserves and this clone has no history to read, so nothing here tells a "
+                "number in flight from a deletion"]:
+        problems.append("decision numbering: a hole neither read could speak to was reported "
+                        f"as {said!r}, and a sentence claims only what its run read")
+    if not asked:
+        problems.append("decision numbering: the remote was not asked over a hole no commit "
+                        "here could explain, and a clone with no history explains none of them")
     return problems
 
-
-# Run before the schemas load. LinkML's loader raises on the first repeated key
-# with no file and no line, so a duplicate in `work/*.yaml` used to take the
-# whole gate down before the check that names both had a chance to run (solorepo's #23).
-PRECHECKS = (
-    ("duplicate keys", duplicate_keys),
-    ("hook probes", hook_probes),
-    ("channel parser probes", channel_parser_probes),
-    ("channel table probes", channel_table_probes),
-    ("advance probes", advance_probes),
-    ("reservation probes", reservation_probes),
-)
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 FENCED = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 
 
+@check("markdown links")
 def markdown_links():
     """A relative link in a page resolves to something in the tree (solorepo's #45).
 
@@ -2257,42 +2311,7 @@ def inherited():
     return []
 
 
-def inherited_prose(asked):
-    """Prose a generator reads is asserted where Specialization copies it.
-
-    `Artifact.preamble` moved the framing prose of the generated pages out of
-    `render.py` (solorepo's DR-144). `assertions/structure.yaml` is the wrong
-    home for it: its own first line says the file is the portfolio's and never
-    synced, and step three of Specialization replaces it with `template/`'s,
-    which declares one Artifact. The renderer is inherited and would then ask
-    every portfolio for prose nothing asserts — a portfolio red on its first
-    render, found by nothing here, because the scaffold's own copy has the
-    entries.
-
-    `asked` is what a render actually asked for, collected by `authored()` as
-    it ran. Not the slots by name: a slot named here that no generator reads
-    would fail an Artifact for prose nothing wants, and `description` is
-    `WorkEntity`'s, carried by most of what `assertions/` declares as plain
-    documentation. Not a list typed beside the call sites either, which would
-    be the second copy this change exists to remove.
-
-    `SPECIALIZE.md` is the exception the copy set already names: a portfolio
-    specializes nothing and renders no such page, so its prose is the
-    scaffold's own and stays one level up.
-    """
-    def declared(rel):
-        path = META / "assertions" / rel
-        data = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
-        return {a["path"]: a for a in data.get("artifacts") or []}
-
-    own = declared("structure.yaml")
-    return [f"{own[rel]['id']} asserts the {slot} render.py reads for {rel}, which a "
-            f"portfolio renders, in the file Specialization replaces — move it to "
-            f"assertions/imported/structure.yaml"
-            for rel, slot in sorted(asked)
-            if own.get(rel, {}).get(slot) and not rel.startswith(SCAFFOLD_ONLY)]
-
-
+@check("scaffold-only paths")
 def scaffold_only_paths():
     """A doc that Specialization copies does not name a path a portfolio lacks (solorepo's #45).
 
@@ -2373,6 +2392,7 @@ def _first_difference(a, b, path):
     return None if a == b else (path, f"{a!r} against {b!r}")
 
 
+@check("gate workflows agree")
 def gate_workflows_agree():
     """The scaffold's gate workflow and the seeded one differ in nothing the
     runner reads of their shared half (solorepo's DR-119).
@@ -2445,81 +2465,128 @@ def gate_workflows_agree():
     return problems
 
 
-CHECKS = (
-    ("unresolved references", lambda i, r: unresolved_references(i, r)),
-    ("composed_of cycles", lambda i, r: composed_of_cycles(i)),
-    ("collaboration membership", lambda i, r: collaboration_membership(i)),
-    ("audit invariants", lambda i, r: audit_invariants(i)),
-    ("served goals", lambda i, r: served_goals(i)),
-    ("one context per portfolio", lambda i, r: one_context_per_portfolio(i)),
-    ("decision alternatives", lambda i, r: decision_alternatives(i)),
-    ("decision supersession", lambda i, r: decision_supersession(i)),
-    ("decision numbering", lambda i, r: decision_numbering(i)),
-    ("decision level", lambda i, r: decision_level(i)),
-    ("cited decisions", lambda i, r: cited_decisions(i)),
-    ("cited articles", lambda i, r: cited_articles()),
-    ("quoted claims", lambda i, r: quoted_claims()),
-    ("stated relations", lambda i, r: stated_relations(i)),
-    ("path and line claims", lambda i, r: path_and_line_claims()),
-    ("inherited citations", lambda i, r: inherited_citations()),
-    ("reserved article numbers", lambda i, r: reserved_article_numbers(i)),
-    ("artifact paths", lambda i, r: artifact_paths(i)),
-    ("enacted decisions", lambda i, r: enacted_decisions(i)),
-    ("enacting citations", lambda i, r: enacting_citations(i)),
-    ("surviving placeholders", lambda i, r: surviving_placeholders()),
-    ("markdown links", lambda i, r: markdown_links()),
-    ("scaffold-only paths", lambda i, r: scaffold_only_paths()),
-    ("gate workflows agree", lambda i, r: gate_workflows_agree()),
-)
+@functools.cache
+def rendering():
+    """The render the two steps below read, run once and shared between them.
 
-if __name__ == "__main__":
+    `render.ASKED` is filled as the render runs, so what `inherited prose`
+    reads exists only after it. Both steps name a source off this rather than
+    rendering for themselves, so the gate builds the pages once and the two
+    agree about which render they are describing.
+    """
+    sys.path.insert(0, str(META))
+    import render
+    return render, render.rendered()
+
+
+@check("inherited prose")
+def inherited_prose(asked):
+    """Prose a generator reads is asserted where Specialization copies it.
+
+    `Artifact.preamble` moved the framing prose of the generated pages out of
+    `render.py` (solorepo's DR-144). `assertions/structure.yaml` is the wrong
+    home for it: its own first line says the file is the portfolio's and never
+    synced, and step three of Specialization replaces it with `template/`'s,
+    which declares one Artifact. The renderer is inherited and would then ask
+    every portfolio for prose nothing asserts — a portfolio red on its first
+    render, found by nothing here, because the scaffold's own copy has the
+    entries.
+
+    `asked` is what a render actually asked for, collected by `authored()` as
+    it ran. Not the slots by name: a slot named here that no generator reads
+    would fail an Artifact for prose nothing wants, and `description` is
+    `WorkEntity`'s, carried by most of what `assertions/` declares as plain
+    documentation. Not a list typed beside the call sites either, which would
+    be the second copy this change exists to remove.
+
+    `SPECIALIZE.md` is the exception the copy set already names: a portfolio
+    specializes nothing and renders no such page, so its prose is the
+    scaffold's own and stays one level up.
+    """
+    def declared(rel):
+        path = META / "assertions" / rel
+        data = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
+        return {a["path"]: a for a in data.get("artifacts") or []}
+
+    own = declared("structure.yaml")
+    return [f"{own[rel]['id']} asserts the {slot} render.py reads for {rel}, which a "
+            f"portfolio renders, in the file Specialization replaces — move it to "
+            f"assertions/imported/structure.yaml"
+            for rel, slot in sorted(asked)
+            if own.get(rel, {}).get(slot) and not rel.startswith(SCAFFOLD_ONLY)]
+
+
+# Registered last, because this is the one step that reads what the others'
+# subject is rendered into, and a reader watching the gate wants it under them.
+@check("rendered prose")
+def rendered_prose(pages):
+    """Every page render.py writes is the render of what it is written from.
+
+    A generated page is data twice over, and the copy in the tree is the one a
+    reader opens; stale, it is prose asserting something the record no longer
+    says. What is compared is every target `render.py` names, including the
+    templates, so the mark says what it covered.
+    """
+    render, _ = rendering()
+    stale = render.unrendered()
+    stale += [name for name, text in pages.items()
+              if not (META / name).exists()
+              or (META / name).read_text() != text.rstrip("\n") + "\n"]
+    return stale
+
+
+def main():
+    """The prechecks, then the schemas, then every other step the registry holds."""
     failed = False
-    for label, check in PRECHECKS:
+    for step in [s for s in STEPS if s.pre]:
         # The guard the schemas load has, for the same reason and stated there:
         # a step that cannot run says so rather than dying (A6), and says why
-        # rather than printing a stack trace (A7). A precheck exists so that one
+        # rather than printing a stack trace. A precheck exists so that one
         # broken thing does not take the gate down before the check that names
         # it runs; a precheck that dies uncaught is that failure with the roles
         # swapped.
         try:
-            problems = check()
+            problems = step.run()
         except Exception as exc:
             problems = [f"the check itself could not run — {type(exc).__name__}: {exc}"]
-        failed |= report(label, problems)
+        failed |= report(step.label, problems)
+    rest = [s for s in STEPS if not s.pre]
     try:
         schemas = views()
         index, refs, skipped = collect(schemas)
     except Exception as exc:
         # A step that cannot run says so rather than dying (A6), and says why
-        # rather than printing a stack trace (A7). What did not run is named,
-        # because a gate that stops early looks like one that passed.
+        # rather than printing a stack trace. What did not run is named,
+        # because a gate that stops early looks like one that passed — and it is
+        # counted off the registry, so a step added moves it and no arithmetic
+        # here is maintained by hand.
         print(f"?  schemas: could not load — {type(exc).__name__}: {exc}")
-        print(f"     {len(CHECKS) + 3} steps did not run")
-        sys.exit(1)
+        print(f"     {len(rest)} steps did not run")
+        return 1
     for name in skipped:
         print(f"?  {name}: no container accepts its top-level keys")
     failed |= bool(skipped)
-    for label, check in CHECKS + (("template parses", lambda i, r: template_parses(schemas)),):
-        failed |= report(label, check(index, refs))
-
-    sys.path.insert(0, str(META))
-    import render
-    try:
-        pages = render.rendered()
-    except Exception as exc:
-        # The guard every other step has, and for the reason A6 and A7 give: a
-        # render that cannot find what it was told to write says which page and
-        # which slot, and the two steps that read it say they did not run.
-        print(f"?  rendered prose: could not render — {type(exc).__name__}: {exc}")
-        print("?  inherited prose: did not run")
-        sys.exit(1)
-    failed |= report("inherited prose", inherited_prose(render.ASKED))
-    stale = render.unrendered()
-    stale += [name for name, text in pages.items()
-              if not (META / name).exists()
-              or (META / name).read_text() != text.rstrip("\n") + "\n"]
-    print(("x  " if stale else "ok ") + "rendered prose" + (f": {', '.join(stale)}" if stale else ""))
-    failed |= bool(stale)
-
+    # Built when a step first names one, and not before: the render is the
+    # costly source and only the last two steps read it, so a gate that goes
+    # red on the record does not pay for pages nothing asked about. It is also
+    # where the render's guard now lives — a step whose source cannot be built
+    # says so rather than dying (A6), and says why. Written by hand, that
+    # pairing named the two steps in one message and would have gone stale the
+    # moment the render found a third reader.
+    sources = {"index": lambda: index, "refs": lambda: refs, "views": lambda: schemas,
+               "asked": lambda: rendering()[0].ASKED, "pages": lambda: rendering()[1]}
+    for step in rest:
+        try:
+            given = [sources[name]() for name in step.sources]
+        except Exception as exc:
+            print(f"?  {step.label}: its source could not be built — "
+                  f"{type(exc).__name__}: {exc}")
+            failed = True
+            continue
+        failed |= report(step.label, step.run(*given))
     print(f"\n{len(index)} identified objects, {len(refs)} references")
-    sys.exit(1 if failed else 0)
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
