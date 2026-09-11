@@ -30,9 +30,11 @@ def issue_citation():
     """The same two, one sequence over: an Issue number, and the possessive run
     that names it as solorepo's, so `solorepo's #138, #140 and #142` names three.
 
-    Read from `check_pr.py` rather than written here, because A12's fourth
-    quarter is split across the two gates and not the predicate with it: this
-    file holds the owner over the copy set and that one resolves the number,
+    Read from `check_pr.py` rather than written here, because A12 hands that
+    gate "the number whose target is an Issue" and leaves the rest to this one,
+    so the Issue citation is split across the two gates and the predicate is not
+    split with it: this file holds the owner over the copy set and that one
+    resolves the number,
     and a string one of them reads as a citation and the other does not is the
     two disagreeing about what they are each holding half of (solorepo's DR-132).
     Written twice they had already drifted — this copy bounded no number and
@@ -137,9 +139,9 @@ def cited_decisions(index):
 
     An Article citation is a typed reference and has been checked since the
     references check existed; a DR citation is plain text in a paragraph, and
-    nothing looked at it. `roadmap.md` cited solorepo's DR-058 in three places for an entry
-    nobody wrote, and the collision was found only because that was the next
-    number to issue.
+    nothing looked at it. `roadmap.md` cited solorepo's DR-058 for a decision
+    nobody wrote down, and the number stays issued and unused so that the
+    citation resolves to what it is — a hole nothing here reported.
 
     The assertions are scanned along with the prose. A citation inside a
     `rationale` block is a paragraph that a reader reaches directly, now that the

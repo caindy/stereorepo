@@ -197,7 +197,7 @@ def inherited():
     lists it, so the copy set is stated once and this check follows it. A
     portfolio carries no Specialization Discipline — its Disciplines are under
     `imported/`, and this one is not among them — so the file is absent there,
-    and absent means nothing to scan rather than a check that dies (A6)."""
+    and absent is an empty copy set rather than a step that dies on the read."""
     source = META / "assertions" / "disciplines.yaml"
     if not source.is_file():
         return []
@@ -218,7 +218,9 @@ def scaffold_only_paths():
     `template/`, `SPECIALIZE.md` and `bootstraps/` stay with the scaffold, and a
     copied page that mentions one reads as true and is not. The audit solorepo's DR-036
     recorded found the Specialization Discipline moved and its Concept left
-    behind by exactly this: prose that survived a copy it should not have.
+    behind — moving a thing, it says, leaves its name behind. A copy leaves one
+    the same way: prose that crosses into a portfolio still naming what stayed
+    with the scaffold.
 
     A mention is allowed on a line that names `solorepo` as the owner, which is
     how a portfolio's page refers to the scaffold's. The check reads the copied
@@ -302,8 +304,9 @@ def gate_workflows_agree():
     the permissions, and every job both files define under one name — `pull
     request` and `sweep` — and what held it equal was a comment in the
     scaffold's copy saying to change both, a reminder and not a control. solorepo's DR-114
-    then added a step to the scaffold's sweep and a permission for it, and the
-    seeded copy stayed a version behind (solorepo's #113).
+    then made the scheduled sweep fail on a Challenge with no difficulty, which
+    reached the scaffold's copy as a step and the `issues: read` that step needs,
+    and the seeded copy stayed a version behind (solorepo's #113).
 
     Compared as loaded YAML, so each file keeps its own comments and differs in
     nothing GitHub reads. The shared jobs are named here and not derived: an
@@ -315,7 +318,7 @@ def gate_workflows_agree():
     its own `gate` job, which solorepo's DR-115 fixed at that name so that a portfolio's
     ruleset is set once. The scaffold's seed jobs are its alone and are not
     compared. A portfolio has no `template/`, so there it compares nothing and
-    says nothing (A6), as `scaffold-only paths` does for the same reason.
+    passes on an empty scope, as `scaffold-only paths` does for the same reason.
 
     Since solorepo's DR-120 the two shared jobs run one composite action each, under
     `.meta/actions/`, so their steps are typed once and cannot drift. What is

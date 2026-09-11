@@ -516,10 +516,11 @@ def advance_probes():
         Every way out of the call is an answer, not only `sys.exit`. The fake's
         designed refusal is an `AssertionError` naming the call it has no answer
         for, and a number a case did not model is a `KeyError`; uncaught, either
-        one ends the whole gate in a traceback with the schemas and every later
-        check unrun (A6, A7). Returning the text keeps that `AssertionError`
-        doing the job it was written for — saying, in the report, what the fake
-        was asked. Against trunk that is not hypothetical: `held=` is this
+        one ends this step at its first surprise, leaving `check.py`'s precheck
+        guard to report one line for the whole of it with every later case
+        unrun — a mark that no longer says what it checked (A7). Returning the
+        text keeps that `AssertionError` doing the job it was written for —
+        saying, in the report, what the fake was asked. Against trunk that is not hypothetical: `held=` is this
         change's own argument, so the case that passes it — "Armed, and nothing
         else", below — raises `TypeError` there and crashed rather than failed.
         A case is named and not counted: its position is what the next
