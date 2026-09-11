@@ -1939,18 +1939,37 @@ def advance_probes():
     if said:
         problems.append(f"advance: waiting out an `UNKNOWN` exited with {said!r}")
 
-    # A request only, and a loop's branch only. Nobody has asked to review the
-    # first, and the second is the solo's own branch. `said` is read here and
-    # in every case below whose whole assertion is an absence: a `dispatch`
-    # that died before dispatching leaves `dispatched` empty too, so without
-    # it a crash reads exactly like the filter doing its job.
+    # An armed one is the same conflict at the other end of the Discipline
+    # (solorepo's DR-149): its review has been answered, so nothing is
+    # requested of anybody, and GitHub refuses to update a branch that
+    # conflicts — which is solorepo's #201, red on every push to trunk. It is
+    # dispatched and it is not rebased, and the sweep that left it to the
+    # dispatch says so and exits 0.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "mergeable": "CONFLICTING"},
+                       8: {"behind": 1, "armed": True}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append(f"advance: the armed conflicting one dispatched {fake.dispatched!r}")
+    if fake.pulls["7"].get("rebased"):
+        problems.append("advance: it asked GitHub to rebase a branch that conflicts")
+    if not fake.pulls["8"].get("rebased"):
+        problems.append("advance: the armed one that merely fell behind was left behind")
+    if said:
+        problems.append(f"advance: the armed conflicting one exited with {said!r}")
+
+    # Asked for something, and a loop's branch only. Nobody has asked to review
+    # the first or to land it, so a Job may still be standing on it; the second
+    # is the solo's own branch. `said` is read here and in every case below
+    # whose whole assertion is an absence: a `dispatch` that died before
+    # dispatching leaves `dispatched` empty too, so without it a crash reads
+    # exactly like the filter doing its job.
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING"},
-                       8: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                       8: {"behind": 0, "armed": True,
                            "mergeable": "CONFLICTING", "branch": "solo/whatever"}})
     said = run(fake, lambda: move.advance())
     if fake.dispatched:
         problems.append(f"advance: it dispatched {fake.dispatched!r}, which nobody had asked "
-                        "to review or which was not a loop's branch")
+                        "to review or to land, or which was not a loop's branch")
     if said:
         problems.append(f"advance: the case that should dispatch nothing exited with {said!r}")
 
@@ -2019,6 +2038,17 @@ def advance_probes():
     if named or merging:
         problems.append(f"advance: the two callers that dispatch nothing exited with "
                         f"{named!r} and {merging!r}")
+
+    # And those two keep GitHub's refusal over a branch that conflicts, where
+    # the sweep now skips it (solorepo's DR-149). The skip is only sound
+    # because a dispatch runs behind it; a named pull request has nobody behind
+    # it but whoever typed the verb, and swallowing the refusal there would
+    # exit 0 over a branch that did not move.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "mergeable": "CONFLICTING"}},
+                      no_rebase=[7])
+    said = run(fake, lambda: move.advance("7"))
+    if not said or "conflicts" not in said:
+        problems.append(f"advance: a named conflicting pull request exited with {said!r}")
     return problems
 
 

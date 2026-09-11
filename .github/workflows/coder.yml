@@ -566,16 +566,22 @@ jobs:
           OUTCOME: ${{ steps.take.outcome }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      # The pass a merge on `main` dispatches (solorepo's DR-133). Nothing here is a
-      # verdict to answer: the review request is outstanding and has never been
-      # answerable, because GitHub builds no merge ref for a branch that
-      # conflicts and `review.yml` runs on `pull_request`. What the request
-      # needs is the branch moved onto what landed under it, which is the one
-      # thing no workflow can do for it — `gh pr update-branch` is refused on a
+      # The pass a merge on `main` dispatches (solorepo's DR-133). Nothing here
+      # is a verdict to answer: what the pull request is waiting on is a review
+      # nobody can run or a merge GitHub cannot make, and both wait on the same
+      # thing — the branch moved onto what landed under it, which is the one
+      # thing no workflow can do for it. `gh pr update-branch` is refused on a
       # conflicting branch, and a conflict is the change made again over what
-      # landed. The push at the end is the whole handoff: the request is still
-      # outstanding, so the `synchronize` it fires is what finally starts the
-      # review that was asked for.
+      # landed. A review request outstanding has never been answerable, because
+      # GitHub builds no merge ref for a branch that conflicts and `review.yml`
+      # runs on `pull_request`; an armed merge is refused for the conflict on
+      # every push to trunk (solorepo's DR-149). The push at the end is the
+      # whole handoff, and what it hands over is whichever of the two the pull
+      # request was waiting on: the `synchronize` that finally starts the
+      # review, or the merge when green — which is why the pass reads the
+      # arming back across its own force-push and restores what the push
+      # dropped, an arming being the one semaphore no later sweep can recover
+      # (solorepo's #93).
       - name: rebase onto the base
         if: inputs.task == 'rebase' && steps.taken.outputs.by == ''
         uses: anthropics/claude-code-action@v1
@@ -589,16 +595,21 @@ jobs:
             #${{ steps.pr.outputs.number }} of ${{ github.repository }}, whose
             branch `${{ steps.pr.outputs.branch }}` is checked out here. A
             merge on `${{ steps.pr.outputs.base }}` has left it conflicting
-            while a review of it was outstanding, and GitHub builds no merge
-            ref for a branch that conflicts, so no review of this head can run
-            and the request stands with nobody able to answer it. Usually no
-            review has run at all. If one was already running when the merge
-            landed, your push at the end cancels it — `review.yml` cancels a
-            review in progress on a `synchronize` by anyone but the reviewer —
-            and the same push starts a fresh one, on a head that can merge,
-            which is what was wanted; the request stays outstanding
-            throughout. Your Job is to put the branch back where a review can
-            happen, and nothing else.
+            while it was waiting to land — on a review requested of somebody,
+            or on the arming that says it merges when green, or on both — and
+            GitHub neither builds a merge ref for a branch that conflicts nor
+            will update one, so neither wait can end. Your Job is to put the
+            branch back where what it is waiting on can happen, and nothing
+            else.
+
+            Where a review is outstanding, no review of this head can run, so
+            usually none has run at all. If one was already running when the
+            merge landed, your push at the end cancels it — `review.yml`
+            cancels a review in progress on a `synchronize` by anyone but the
+            reviewer — and the same push starts a fresh one, on a head that
+            can merge, which is what was wanted; the request stays outstanding
+            throughout. Do not request review: it is already requested, and
+            your push is what lets it be answered.
             Read /pr-first for which verbs are yours; `AGENTS.md` has the
             conventions. Every act on GitHub goes through the channel,
             `.meta/say/post` and `.meta/say/move`, each taking its body on
@@ -632,26 +643,90 @@ jobs:
             conflict go away. Where a file is generated, take neither side —
             re-render it, as `AGENTS.md` says.
 
-            Then `.meta/gate meta` green, and
-            `git push --force-with-lease`. Say what happened on the pull
-            request, once, so the reviewer arriving at a head it did not ask
-            about knows why it moved:
-            `.meta/say/post comment ${{ steps.pr.outputs.number }}`. Do not
-            request review — it is already requested, and your push is what
-            lets it be answered — do not arm the merge, do not answer any
-            thread, and revise the body only if the rebase changed what the
-            pull request does, which it should not have.
+            Then `.meta/gate meta` green.
 
-            If the conflict is not yours to settle — the change no longer
-            makes sense over what landed, or the gate will not go green —
-            `.meta/say/move stop ${{ steps.pr.outputs.issue }}` with why on
-            stdin, which hands the Challenge to the solo and leaves the pull
-            request open.
+            Now, before you push, ask GitHub whether it holds this pull request
+            armed: `gh pr view ${{ steps.pr.outputs.number }} --json
+            autoMergeRequest`. Before, because after the push the fact is gone
+            — `autoMergeRequest` carries no history — and both guesses are
+            harmful. Guessed "was not armed" over one that was, the arming
+            stays dropped, and `.meta/say/move advance` sweeps armed pull
+            requests only, so one your push disarmed is out of the reach of
+            every push to `${{ steps.pr.outputs.base }}` after it
+            (solorepo's #93): the state this pass exists to prevent, reached by
+            the pass that exists to prevent it.
+            Guessed "was armed" over one that was only requested, you arm a
+            pull request whose review is still outstanding and it lands on
+            green with no verdict, which is the coder giving the reviewer's.
 
-            Do not merge by hand and do not reach GitHub any other way: the
-            hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
+            If it is armed, say so on the pull request before you push —
+            `.meta/say/post comment ${{ steps.pr.outputs.number }}`, a line
+            saying you found it armed and are about to force-push. Not for
+            your own use: for whoever arrives at an unarmed pull request
+            afterwards and cannot otherwise tell an arming your push dropped
+            from one nobody ever gave. Nothing you do after the push restores
+            the arming if your run ends first — your budget is closest to
+            spent here — and no sweep restores it either. One does name a pull
+            request that is neither armed nor requested nor conflicting, but
+            only once the head is green and it has sat idle, and what it
+            prescribes is a second review of a change already approved, which
+            is the cost solorepo's DR-149 refuses that alternative for. The
+            comment outlives the run; the arming does not.
+
+            Then `git push --force-with-lease`, and ask the same question
+            again. If it was armed and is not now, arm it again:
+            `.meta/say/move merge ${{ steps.pr.outputs.number }} --auto`. If it
+            was not armed, leave it so: the arming is the verdict of whoever
+            holds it (solorepo's DR-112), and a rebase is not a verdict.
+
+            Read the outcome of that re-arming off GitHub rather than off the
+            verb — `gh pr view ${{ steps.pr.outputs.number }} --json
+            state,autoMergeRequest` — because `merge --auto` is not
+            arming-only. Where GitHub refuses to arm a branch it could merge
+            now, the verb merges it, and that is the arming being honoured
+            rather than you merging by hand: what the arming says is "when
+            green", and GitHub saying it is already green is that condition
+            met. What you must not leave behind is the third answer — neither
+            armed nor merged, which is what a merge landing on
+            `${{ steps.pr.outputs.base }}` in that window leaves, the plain
+            merge being refused for a branch no longer current. Say the verb
+            once more if GitHub shows that: the second call advances the branch
+            before it arms, which is the refusal's own remedy. If it still
+            shows neither, stop below and say so. That is not a caveat on the
+            stop but the reason for it: an arming nothing holds is
+            solorepo's #93, no sweep restores one, and after `stop` no sweep
+            names the pull request either — a reader that names a green pull
+            request nobody holds wants its Challenge at a level a loop takes, and
+            `stop` moves it to `human`. Which is why the stop is the act and
+            not the giving up: the Issue in the solo's hands is the whole of
+            what carries this afterwards.
+
+            Say what happened on the pull request, once, so a reader arriving
+            at a head nobody asked about knows why it moved, and say which
+            wait you were repairing and what you did about the arming:
+            `.meta/say/post comment ${{ steps.pr.outputs.number }}`. The note
+            before the push is not that account — it said only that you found
+            the pull request armed, and it was written against a run that did
+            not get this far. Do not answer any thread, and revise the body
+            only if the rebase changed what the pull request does, which it
+            should not have.
+
+            If what is left is not yours to settle —
+            the conflict, where the change no longer makes sense over what
+            landed or the gate will not go green, or an arming you could not
+            restore — `.meta/say/move stop ${{ steps.pr.outputs.issue }}` with
+            why on stdin, which hands the Challenge to the solo and leaves the
+            pull request open. Both are a pull request waiting on a person, and
+            that is what `stop` is for.
+
+            Do not merge by hand and do not reach GitHub any other way. The
+            hook refuses `gh pr merge`, which is the one "by hand" is about,
+            and also `gh pr create`, `gh pr comment`, `gh pr review`,
             `gh pr update-branch`, `gh issue edit`, `gh issue comment` and
-            `gh api`.
+            `gh api`; the list is what this prompt happens to name and not the
+            definition, so a command not on it is not thereby allowed.
+            Restoring an arming through the channel is not merging by hand,
+            even where GitHub answers it by merging.
           claude_args: |
             --model ${{ steps.depth.outputs.model }}
             --max-turns ${{ steps.depth.outputs.turns }}

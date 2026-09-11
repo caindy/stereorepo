@@ -358,24 +358,46 @@ def mergeability(pull):
     that waited forever on one branch would hold up the rest.
     """
     tries, wait = MERGEABILITY
+    answer = pull.get("mergeable")
     for _ in range(tries):
-        if pull.get("mergeable") != "UNKNOWN":
-            return pull.get("mergeable")
+        if answer != "UNKNOWN":
+            break
         time.sleep(wait)
-        pull = channel.gh("pr", "view", str(pull["number"]), "--json", ADVANCE)
-    return pull.get("mergeable")
+        answer = channel.gh("pr", "view", str(pull["number"]),
+                            "--json", ADVANCE).get("mergeable")
+    # Settled onto the pull request the caller holds, so the sweep's two
+    # readings of one branch cost one question (solorepo's DR-149). `advance`
+    # asks before it rebases and `dispatch` asks again about the same object —
+    # `found` is filtered out of `open_now`, not copied — and the only thing
+    # that moves between the two is a rebase this run performed, which GitHub
+    # would not have performed on a branch that conflicts.
+    pull["mergeable"] = answer
+    return answer
 
 
 def dispatch(pulls):
-    """Hand back to the coder a pull request whose review request this push has
-    made unanswerable (solorepo's DR-133).
+    """Hand back to the coder a pull request this push has left conflicting
+    while it was waiting to land (solorepo's DR-133, solorepo's DR-149).
 
-    The other thing a merge on `main` does to a pull request that is not armed.
-    A review request is a semaphore GitHub holds and reports, and a branch that
-    conflicts has no merge ref, so `review.yml`'s `pull_request` trigger has
-    nothing to check out: no run is created, GitHub goes on reporting the
-    request as outstanding, and the Job it names never learns it was asked.
-    solorepo's #159 and solorepo's #161 each stood that way with not one review run between them.
+    The other thing a merge on `main` does. A review request is a semaphore
+    GitHub holds and reports, and a branch that conflicts has no merge ref, so
+    `review.yml`'s `pull_request` trigger has nothing to check out: no run is
+    created, GitHub goes on reporting the request as outstanding, and the Job
+    it names never learns it was asked. solorepo's #159 and solorepo's #161 each stood that way
+    with not one review run between them.
+
+    **Or armed**, which is the same conflict at the other end of the Discipline
+    (solorepo's DR-149). The rebase above is what an armed pull request gets
+    when it has merely fallen behind, and it is not available here either:
+    GitHub refuses `update-branch` on a `CONFLICTING` branch, so on
+    solorepo's #201 every push to `main` after solorepo's #194 landed collected
+    the same refusal and nothing moved. What the two states share is the fact
+    this reading is about — the branch conflicts, and the Job that did the work
+    has ended — and what the filter is for is the branch nobody has handed over
+    yet, which is neither requested nor armed. A pull request asked for a review is waiting
+    on the review; one that is armed is waiting on the merge; one asked for
+    neither may still have a Job standing on it, and a dispatched pass would
+    force-push under it.
 
     **Dispatched, not rebased.** The rebase above is not the remedy here and
     cannot be: GitHub refuses to update a branch it reports as `CONFLICTING`,
@@ -395,9 +417,8 @@ def dispatch(pulls):
     takes, every review would be restarted by the next merge and none would
     finish.
 
-    A loop's branch only, and a request only. A pull request nobody has asked
-    to review is waiting on nothing, and a conflict on the solo's own branch is
-    the solo's; the sweep names both of those for a reader either way.
+    A loop's branch only. A conflict on the solo's own branch is the solo's,
+    and the sweep names it for a reader either way.
 
     **And only a Challenge the loop holds.** The branch shape says which
     Issue and nothing about whose it is (solorepo's DR-142): a `hard` Issue is
@@ -409,8 +430,9 @@ def dispatch(pulls):
     `coder.yml`'s guard and said so on the pull request, one copy per merge,
     until the solo got to the branch. So the Issue's state and level are read
     here, before the dispatch, and a Challenge the loop does not hold is
-    named on the way past: the sweep already names the request nobody can
-    answer (solorepo's DR-129), and that is the reader's line, not this one's.
+    named on the way past: the sweep already names a pull request stuck on a
+    conflict, requested or armed (solorepo's DR-129, solorepo's DR-149), and
+    that is the reader's line, not this one's.
 
     **And never the lower layer of a stack**, which is the third thing
     solorepo's DR-133 rejected the wider filter for and so a thing this reading
@@ -451,8 +473,16 @@ def dispatch(pulls):
         number = str(pull["number"])
         asked = [r.get("login") or r.get("name") or "someone"
                  for r in pull.get("reviewRequests") or []]
-        if not asked or not LOOPS_BRANCH.match(pull["headRefName"]):
+        # What the pull request is waiting on, and so what the conflict is
+        # holding up. Both, where the reviewer armed one whose request GitHub
+        # still shows outstanding; the line below says which, because that is
+        # what the dispatch is repairing.
+        waiting = [f"requested of {', '.join(asked)}"] if asked else []
+        if pull.get("autoMergeRequest"):
+            waiting.append("armed")
+        if not waiting or not LOOPS_BRANCH.match(pull["headRefName"]):
             continue
+        waits = " and ".join(waiting)
         if pull["headRefName"] in below:
             print(f"left #{number} alone: another open pull request is based on "
                   f"{pull['headRefName']}, so rebasing it would rewrite the commits the "
@@ -472,23 +502,24 @@ def dispatch(pulls):
                 issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
             except SystemExit:
                 print(f"left #{number} alone: #{challenge} cannot be read, so the conflict "
-                      f"is the solo's, and the sweep names the request — {pull['title']}")
+                      f"is the solo's, and the sweep names it — {pull['title']}")
                 continue
             levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
             if issue["state"] != "OPEN" or not levels:
                 print(f"left #{number} alone: #{challenge} is "
                       f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
-                      f"so the conflict is the solo's, and the sweep names the request — {pull['title']}")
+                      f"so the conflict is the solo's, and the sweep names it — "
+                      f"{pull['title']}")
                 continue
             channel.gh("workflow", "run", "coder.yml", "-f", f"pull_request={number}",
                        "-f", "task=rebase", parse=False)
         except SystemExit as exc:
-            failed.append(f"#{number} is requested of {', '.join(asked)} and the coder could "
-                          f"not be dispatched for it — {exc.code}")
+            failed.append(f"#{number} is {waits} and the coder could not be "
+                          f"dispatched for it — {exc.code}")
             continue
-        print(f"dispatched the coder for #{number}: requested of {', '.join(asked)} and "
-              f"conflicting with {pull['baseRefName']}, so GitHub builds no merge ref and "
-              f"the request cannot be answered — {pull['title']}")
+        print(f"dispatched the coder for #{number}: {waits}, and conflicting with "
+              f"{pull['baseRefName']}, so GitHub builds no merge ref and will not update "
+              f"the branch — {pull['title']}")
     return failed
 
 
@@ -561,13 +592,28 @@ def advance(pr=None, held=False):
     and it is why the list is filtered into `found` rather than over itself:
     what the rebase may touch is the armed, and what the dispatch reads is
     every open pull request.
+
+    **And a rebase is not what an armed pull request that conflicts needs
+    either** (solorepo's DR-149). GitHub refuses `update-branch` on a branch it
+    reports as `CONFLICTING`, so on the sweep that branch is left to the
+    dispatch, which now takes an armed pull request as well as a requested
+    one; the rebase attempted anyway is a refusal known before it is made, and
+    it took `advance.yml` red on every push to trunk while the branch
+    conflicted (solorepo's #201). Only on the sweep, because only there is
+    there a dispatch behind the skip. A typed `advance <pr>` and
+    `merge --auto`'s call are somebody asking about one branch, and to them
+    GitHub's refusal is the answer.
     """
     if pr is not None:
         open_now = [channel.gh("pr", "view", pr, "--json", ADVANCE)]
     else:
         open_now = channel.gh("pr", "list", "--state", "open", "--json", ADVANCE)
     found = open_now if held else [p for p in open_now if p.get("autoMergeRequest")]
-    moved, failed = 0, []
+    # `left` is counted out of the summary below and not into `moved`: a branch
+    # left to the dispatch is neither advanced nor current with its base, and the
+    # line that says how many were current is the one place this run says
+    # nothing happened. It has already said what happened to that one.
+    moved, left, failed = 0, 0, []
     if not found:
         # Two answers, and only one of them is "nothing to do". A sweep with
         # nothing armed open did its whole job and exits 0. A named pull request
@@ -586,6 +632,25 @@ def advance(pr=None, held=False):
             try:
                 behind = behind_by(pull)
                 if not behind:
+                    continue
+                if pr is None and mergeability(pull) == "CONFLICTING":
+                    # Left to the dispatch below (solorepo's DR-149). GitHub
+                    # refuses `update-branch` on a branch it reports as
+                    # `CONFLICTING`, so the call would be a refusal known in
+                    # advance, collected into `failed` and exited on — which is
+                    # `advance.yml` red on every push to trunk for as long as
+                    # the branch conflicts, and a red that says nothing is how
+                    # the next refusal goes unread. Said on the way past rather
+                    # than skipped in silence, because the dispatch may decline
+                    # it for a reason of its own and then nothing else would —
+                    # and named for the dispatch rather than for the coder,
+                    # since in every case that sentence anticipates there is no
+                    # coder, and a line claiming a handoff that did not happen
+                    # is worse in the log than no line at all.
+                    print(f"left #{number} to the dispatch below: {behind} commit(s) behind "
+                          f"{pull['baseRefName']} and conflicting with it, which GitHub "
+                          f"will not rebase — {pull['title']}")
+                    left += 1
                     continue
                 channel.gh("pr", "update-branch", number, "--rebase", parse=False)
                 moved += 1
@@ -613,8 +678,8 @@ def advance(pr=None, held=False):
                         print(f"armed #{number} again: moving the head had dropped it")
             except SystemExit as exc:
                 failed.append(f"#{number}: {exc.code}")
-        if not moved and not failed:
-            print(f"advance: {len(found)} pull request(s) current with their base")
+        if not moved and not failed and len(found) > left:
+            print(f"advance: {len(found) - left} pull request(s) current with their base")
     # The second reading, and the sweep's alone. `merge --auto` calls this with
     # one pull request and its own branch in hand, and a typed `advance <pr>`
     # names a branch somebody is asking about; neither is the push to trunk

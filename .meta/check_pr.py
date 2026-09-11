@@ -1066,13 +1066,46 @@ def unheld(prs, minutes, clean):
     against the base, so the branch the remedy names is the one the finding was
     read against.
 
-    The second is a request that exists and cannot be answered. GitHub builds
-    no merge ref for a branch that conflicts, and the review workflow runs on
-    `pull_request`, so there is nothing for it to check out and no run is
-    created; GitHub reports the request as outstanding and says nothing about
-    its being unanswerable. solorepo's #141 sat that way for three hours. This one is read
-    on every open pull request, whoever opened it: a request pending on a
-    conflicting branch is unanswerable by whoever it names.
+    The second is a wait that cannot end, and it is one reading and not two
+    (solorepo's DR-149). A request that exists and cannot be answered: GitHub
+    builds no merge ref for a branch that conflicts, and the review workflow
+    runs on `pull_request`, so there is nothing for it to check out and no run
+    is created; GitHub reports the request as outstanding and says nothing
+    about its being unanswerable. solorepo's #141 sat that way for three hours.
+    And an arming that cannot be honoured, which is the same shape one
+    Discipline-step later: GitHub will not merge a branch it reports as
+    `CONFLICTING` and will not update one either, so an armed pull request that
+    conflicts is waiting on an act nothing performs; and because arming is one
+    of the four ways somebody *does* hold a pull request, the reader below
+    skips it by name. On solorepo's #201 that left no line anywhere — the
+    request had been answered, so no request was pending, and the arming hid it
+    from the reader below — and the only sign was `advance.yml` red on every
+    push to trunk. A push to trunk now dispatches the coder for it, so this is
+    the floor under that and not the mechanism: what it catches is the conflict
+    no push to trunk caused, the dispatch that declined, and the dispatched run
+    that died with its force-push still to come.
+
+    Not the one that died after it. A rebase pass that pushes and then ends
+    before it re-arms leaves a pull request neither armed nor requested and no
+    longer conflicting, and this reading wants a wait, so it passes over it in
+    silence; the reader below names it only once the new head is green and the
+    pull request idle, and prescribes a review of a change already approved.
+    Nothing else reaches it either — `advance` sweeps the armed, and a second
+    dispatch declines on an empty wait. So the pass says on the pull request
+    that it found the arming *before* it pushes, which is a record and not a
+    floor: restoring the arming is a person's (solorepo's DR-149).
+
+    One line whether it is waiting on one of those or on both, which is the
+    same collapse `dispatch()` makes with the same words: a pull request whose
+    request GitHub still shows outstanding *and* whose merge somebody has armed
+    — the solo approving and arming a review requested of the reviewer's
+    account — is one pull request stuck on one conflict, with one remedy, and
+    the floor and the mechanism should say the same thing about it. Two lines
+    would also make `len(owed)` a count of findings where the sweep prints it
+    as a count of pull requests.
+
+    This one is read on every open pull request, whoever opened it: a wait on a
+    conflicting branch cannot end for whoever it names.
 
     The Challenge behind a candidate is read here rather than fetched with the
     rest, because only a candidate needs it — the read is the judgement's, not
@@ -1082,12 +1115,19 @@ def unheld(prs, minutes, clean):
     out = []
     for pr in prs:
         asked = asked_of(pr)
-        if asked and pr.get("mergeable") == "CONFLICTING":
-            out.append(f"#{pr['number']} {pr['title'][:60]} — requested of "
-                       f"{', '.join(asked)}, on a branch that conflicts: GitHub builds no "
-                       f"merge ref, so the review workflow has nothing to check out and the "
-                       f"request cannot be answered. Rebase {pr['headRefName']} onto "
-                       f"{pr['baseRefName']}")
+        waiting, stuck = [], []
+        if asked:
+            waiting.append(f"requested of {', '.join(asked)}")
+            stuck.append("GitHub builds no merge ref, so the review workflow has nothing "
+                         "to check out and the request cannot be answered")
+        if pr.get("autoMergeRequest"):
+            waiting.append("armed")
+            stuck.append("GitHub will not merge it and will not update the branch, so the "
+                         "arming waits on an act nothing performs")
+        if waiting and pr.get("mergeable") == "CONFLICTING":
+            out.append(f"#{pr['number']} {pr['title'][:60]} — {' and '.join(waiting)}, on a "
+                       f"branch that conflicts: {'; and '.join(stuck)}. Rebase "
+                       f"{pr['headRefName']} onto {pr['baseRefName']}")
         if asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr):
             continue
         if pr["number"] not in clean:

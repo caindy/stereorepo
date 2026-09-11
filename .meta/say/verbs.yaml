@@ -108,8 +108,8 @@ programs:
         usage: "[<pr>]"
         does: >-
           rebase every armed pull request that has fallen behind its base back
-          onto it, and dispatch the coder for every one whose review request
-          this merge left unanswerable
+          onto it, and dispatch the coder for every one this merge left
+          conflicting while it waited on a review or on the merge
         held_by: [workflow]
       - name: request-review
         usage: "<pr> [--to R]"
