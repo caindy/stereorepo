@@ -799,6 +799,24 @@ def issue_citation():
     return module.ISSUE, module.FOREIGN
 
 
+def load_timing():
+    """`timing.py` as a module: the runtime screen, read rather than run.
+
+    Same bargain as `load_check_pr` below and for the same reason — importing
+    runs nothing and reaches no network, everything it does is under `main()`
+    — which is what lets the probe below exercise its arithmetic without a
+    token or a run to read.
+    """
+    from importlib.machinery import SourceFileLoader
+    import importlib.util
+
+    loader = SourceFileLoader("timing", str(META / "timing.py"))
+    spec = importlib.util.spec_from_loader("timing", loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
 def load_check_pr():
     """`check_pr.py` as a module: the pull request gate, read rather than run.
 
@@ -2655,6 +2673,65 @@ def claim_probes():
                         f"and left it assigned to {fake.assignees!r}")
     if fake.views:
         problems.append(f"claim: a run's claim read the labels {fake.views} time(s)")
+    return problems
+
+
+@check("timing probes", pre=True)
+def timing_probes():
+    """`pick` over the lengths where nearest-rank ties, and `gh` over the one
+    default a caller can ask for (solorepo's DR-157).
+
+    Both are probes for a bug that shipped, and both sit at the same place: a
+    Python builtin whose behaviour is not the one the surrounding prose says.
+
+    `round` is half-to-even, so `round(0.5 * 5)` is 2 and the median of five
+    runs was the second smallest of them. Five is `--deep`'s default, so the
+    wrong figure was the ordinary reading. The lengths here are the ones where
+    the product is a half with an even integer part; a `pick` written back to
+    `round` fails on every one of them.
+
+    And a sentinel of `None` cannot tell "no default" from a default of
+    `None` — which is the one `runs_of` asks for, on exactly the token with no
+    Actions scope this program exists for. Written that way the degrade branch
+    was unreachable and the screen died instead of reporting one unreadable
+    row. Probed through a `gh` subcommand that does not exist, so the failure
+    is the real one and not a stand-in.
+    """
+    timing = load_timing()
+    problems = []
+    # Nearest-rank: the median of n is the ceil(n/2)-th smallest, which is a
+    # value that occurred. Written with 1..n, the value and the rank are the
+    # same number, so what is asserted is legible without arithmetic.
+    for n in (4, 5, 9, 13):
+        want = -(-n // 2)
+        got = timing.pick(list(range(1, n + 1)), 0.5)
+        if got != want:
+            problems.append(f"timing: the median of {n} run(s) is the {want}\u2011th, "
+                            f"and `pick` answered the {got}\u2011th")
+    if timing.pick([1, 2, 3, 4, 5], 0.95) != 5:
+        problems.append("timing: p95 of five runs is the slowest of them, "
+                        "and `pick` answered otherwise")
+    if timing.pick([], 0.5) is not None:
+        problems.append("timing: no runs is no figure, and `pick` answered one")
+    # The degrade path, over a real `gh` failure. A caller that asks for `None`
+    # gets `None`; a caller that asks for nothing is not probed here, because
+    # what it does is exit.
+    #
+    # `SystemExit` is caught rather than left to propagate, because that is
+    # precisely what the bug does: with `None` for its sentinel `gh` exits, and
+    # an exit here takes the gate down with `every step reported ok and the
+    # gate exited 1` — red, and naming neither the step nor the reason. A probe
+    # whose failure cannot say what failed is half a probe.
+    for default, want in ((None, None), ({}, {})):
+        try:
+            got = timing.gh("timing-probe-no-such-subcommand", default=default)
+        except SystemExit:
+            problems.append(f"timing: a read that fails and was given a default of "
+                            f"{default!r} exited instead of degrading to it")
+            continue
+        if got != want:
+            problems.append(f"timing: a read that fails and was given a default of "
+                            f"{default!r} answered {got!r}")
     return problems
 
 

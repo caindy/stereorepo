@@ -1,0 +1,17 @@
+challenges:
+  - id: work:challenge/247
+    name: Nothing reports what a workflow costs in time
+    challenge_type: GAP
+    description: >-
+      `just next`'s `loops()` reads the last run of each of `coder.yml`,
+      `review.yml`, `advance.yml` and `gate.yml` and prints its verdict and
+      when it started, which answers whether a loop is idle and not what it
+      cost. So workflow latency was known as an impression, and a regression
+      was noticed when somebody was waiting rather than when it landed. #244
+      is about to remove a bootstrap it estimates at 45 to 120 seconds a job,
+      with nothing in the repository that would show it worked or show it
+      regressing afterwards. The obvious shape — a job that measures the
+      workflows — was closed before the question was asked: a run's duration is
+      an Actions read, and DR-153 refused `actions: read` in the gate
+      workflows on the ground that a scaffold hands a fresh clone whatever
+      scope its gate declares.

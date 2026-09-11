@@ -211,6 +211,9 @@ artifacts:
   - id: work:artifact/meta-next
     name: .meta/next.py
     path: .meta/next.py
+  - id: work:artifact/meta-timing
+    name: .meta/timing.py
+    path: .meta/timing.py
   - id: work:artifact/meta-readme
     name: .meta/README.md
     path: .meta/README.md
