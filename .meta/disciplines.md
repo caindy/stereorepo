@@ -232,7 +232,7 @@ only its own (solorepo's DR-117).
 - `.meta/say/move file --title T --difficulty D|--roadmap < body.md` — file a Challenge the form's way, `challenge` and the difficulty in one act, or a roadmap Issue *(solo)*
 - `.meta/say/move triage <issue> <level>` — make an Issue a Challenge at a level: one that arrived without the form, or a roadmap Issue whose blocker has closed *(solo)*
 - `.meta/say/move difficulty <issue> <level>` — move a Challenge's level: easy, medium, hard, human *(solo)*
-- `.meta/say/move claim <issue>` — take an Issue: assign it to this Role's account *(coder)*
+- `.meta/say/move claim <issue>` — take an Issue: assign it to this Role's account; refused to a session at `easy` or `medium`, which are the loop's until the Issue is moved to `hard` *(coder)*
 - `.meta/say/move stop <issue> < body.md` — where this Job stopped and why; the claim released, the Issue to the solo as `human`, the pull request left open *(coder, workflow)*
 - `.meta/say/move open --title T [--base B|--on <pr>] < body.md` — open a pull request, the form filled; --on opens a layer on that one and links the stack *(coder)*
 - `.meta/say/move layer <pr> --on <pr>` — make an open pull request a layer on another *(coder)*

@@ -29,7 +29,7 @@ The verbs are the steps, and each refuses its own misuse. Yours, as the coder:
 - `.meta/say/post answer <thread-id> < body.md` — answer: reply, then resolve; refused when this Actor is the thread's sole author, unless the reply links the Issue the thread was promoted to
 - `.meta/say/post promote <thread-id> --title T --difficulty D < issue-body.md` — at merge: file the Issue with the Issue form's body, reply with the link, resolve
 - `.meta/say/post landed <pr>` — post what landed for every Challenge the body closes, rendered from the record
-- `.meta/say/move claim <issue>` — take an Issue: assign it to this Role's account
+- `.meta/say/move claim <issue>` — take an Issue: assign it to this Role's account; refused to a session at `easy` or `medium`, which are the loop's until the Issue is moved to `hard`
 - `.meta/say/move stop <issue> < body.md` — where this Job stopped and why; the claim released, the Issue to the solo as `human`, the pull request left open
 - `.meta/say/move open --title T [--base B|--on <pr>] < body.md` — open a pull request, the form filled; --on opens a layer on that one and links the stack
 - `.meta/say/move layer <pr> --on <pr>` — make an open pull request a layer on another

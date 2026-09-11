@@ -5,11 +5,12 @@ An Issue filed, triaged, moved between levels, claimed or handed back; a pull
 request opened, layered, revised, merged or advanced; a review requested; a
 Milestone set; a Decision's number reserved. Each is one step of a Discipline
 and refuses its own misuse (solorepo's DR-116): `file` lands `challenge` and the
-difficulty in one act, `stop` asks its refusal before it posts, `open --on`
-links the layer it opens, `merge --auto` advances before it arms, `mint` takes
-no number to reserve. Every outcome is read back from GitHub, per A6: the act
-is what GitHub shows afterwards, not what `gh` returned. What is *said* — a
-comment, a thread, an answer, a verdict — is `post`'s.
+difficulty in one act, `stop` asks its refusal before it posts, `claim` refuses
+a session at a level a loop takes, `open --on` links the layer it opens, `merge
+--auto` advances before it arms, `mint` takes no number to reserve. Every
+outcome is read back from GitHub, per A6: the act is what GitHub shows
+afterwards, not what `gh` returned. What is *said* — a comment, a thread, an
+answer, a verdict — is `post`'s.
 """
 import pathlib
 import re
@@ -21,6 +22,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import channel  # noqa: E402
 
 DIFFICULTIES = ("easy", "medium", "hard", "human")
+
+# The two levels a loop takes on the label's own event (solorepo's DR-112), which is what
+# makes a Challenge at either one a run's rather than a session's.
+LOOP_LEVELS = ("easy", "medium")
 
 
 # --- An Issue's life: filed, triaged, its level moved, claimed, handed back.
@@ -144,7 +149,29 @@ def claim(issue):
 
     A loop claims by assignment (solorepo's DR-112). It is an act GitHub records, so it
     goes through here, as the Role whose token this is.
+
+    Refused to a session at `easy` or `medium` (solorepo's DR-148). Those levels are the
+    loop's from the moment the label lands, so a session that claims one is
+    standing beside a run that was started for it — the collision solorepo's #115 recorded
+    on solorepo's #110, where six threads were answered twice and a push dismissed the
+    other coder's approval. The act that makes such a Challenge a session's is
+    moving it to `hard`, which is the fact the loop's own guard reads, so the
+    refusal names that move rather than a way round itself.
+
+    Only a Challenge is refused: the level the loop takes an Issue on is read
+    beside `challenge` (solorepo's #113), and a bare `medium` starts no run. The labels
+    are read only where the refusal could apply, so the loop's own claim is the
+    one call it always was.
     """
+    if not channel.in_a_run():
+        now = labels_of(issue)
+        taken = next((l for l in now if l in LOOP_LEVELS), None)
+        if taken and "challenge" in now:
+            sys.exit(f"say: #{issue} is labelled `{taken}`, which is a loop's from the moment "
+                     "the label landed, and this is a session: a claim here stands beside the "
+                     f"run that was started for it. `move difficulty {issue} hard` takes the "
+                     "Challenge from the loop — the level is what says whose a branch is — and "
+                     "it can be claimed then.")
     login = channel.login()
     channel.gh("issue", "edit", issue, "--add-assignee", login, parse=False)
     who = [a["login"] for a in channel.gh("issue", "view", issue, "--json", "assignees")["assignees"]]

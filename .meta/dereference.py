@@ -286,7 +286,9 @@ def credential():
     process rather than exported.
 
     The environment wins where a shell has the token. CI's agent shell does
-    not — `claude-code-action` hands it no `env:` block of the workflow's — so
+    not have it — `claude-code-action` hands that shell no
+    `CLAUDE_CODE_OAUTH_TOKEN`, whatever `env:` block of the workflow's holds
+    it, while an ordinary variable of the workflow's does cross — so
     `coder.yml` writes the file in a step of its own, and that step is what CI
     asks with. Written here rather than taken from `channel.py` because
     the two read different files for different keys and share only the rules,

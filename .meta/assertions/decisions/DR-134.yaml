@@ -103,12 +103,23 @@ decisions:
         one, read the way the channel reads a Role's: outside the tree, refused
         when it is readable by others, and handed to one child process rather
         than exported. `CLAUDE_CODE_OAUTH_TOKEN` already in the environment
-        wins where a shell has it. CI does not: the loop's action does not hand
-        the workflow's environment to the shell it gives the agent, so no
-        `env:` block at any level reaches the reading, and `coder.yml` writes
-        the file in a step of its own beside the Role's, for the same reason
-        the Role's is a file. Absent both, the ambient `claude` answers and the
-        step says so.
+        wins where a shell has it. CI does not: the loop's action hands the
+        shell it gives the agent no `CLAUDE_CODE_OAUTH_TOKEN`, whatever `env:`
+        block holds it, and `coder.yml` writes the file in a step of its own
+        beside the Role's, for the same reason the Role's is a file. That term
+        is the credential's and not the environment's, though it was first
+        written as the environment's: run 34484811464 probed the token, and the
+        sentence generalised from it to every `env:` block at any level. Run
+        34554434032 falsifies the general form — a probe in the agent's own
+        shell, on a review pass of `coder.yml`, read
+        `ACTOR_SESSION=gha-34554434032`, the job-level `env:` of that very
+        workflow with its value matching `GITHUB_RUN_ID`, in the same shell
+        that reported the token unset. An ordinary variable crosses and the
+        credential does not, which is the whole of what the file is for; what
+        the harness overrides is the names it owns, `AI_AGENT` written in the
+        same block arriving as the harness's own build string. DR-148 rests on
+        the narrow reading and is what the probe was run for. Absent both, the
+        ambient `claude` answers and the step says so.
         That last term is where this parts from the channel and is the same
         rule: a Role's file exists so GitHub can tell the Role from the solo,
         and nothing attributes a model's reading to anybody. Refusing without

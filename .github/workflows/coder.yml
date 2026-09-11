@@ -206,16 +206,25 @@ jobs:
       # The model credential, on the same terms and for a harder reason
       # (solorepo's DR-134). `dereference` asks through the `claude` on PATH,
       # and a nested run authenticates from its environment — which the agent's
-      # shell does not inherit from this workflow. Run 34484811464 settles it:
-      # GitHub's own log for that step lists `CLAUDE_CODE_OAUTH_TOKEN`
-      # alongside `ACTOR_SESSION` and `AI_AGENT` in the step's `env:`, and a
-      # probe inside the same step printed `token set: no` and `claude`
-      # answered `Not logged in`. So the action does not hand the workflow's
-      # environment to the shell it gives the agent, and no `env:` block at any
-      # level reaches it. A file does, which is why the Role's credential is
-      # one and not a variable: the same probe found `coder.env` in the
-      # container. Absent this step the reading falls through to ambient auth,
-      # says so, and every pair comes back `?` — loud, and deciding nothing.
+      # shell does not get this one in. Run 34484811464 settles it: GitHub's own
+      # log for that step lists `CLAUDE_CODE_OAUTH_TOKEN` alongside
+      # `ACTOR_SESSION` and `AI_AGENT` in the step's `env:`, and a probe inside
+      # the same step printed `token set: no` and `claude` answered `Not logged
+      # in`. So the action hands the agent's shell no
+      # `CLAUDE_CODE_OAUTH_TOKEN`, whatever `env:` block holds it. A file does
+      # reach, which is why the Role's credential is one and not a variable:
+      # the same probe found `coder.env` in the container. Absent this step the
+      # reading falls through to ambient auth, says so, and every pair comes
+      # back `?` — loud, and deciding nothing.
+      #
+      # It is the credential that does not cross and not the environment. Run
+      # 34554434032 probed the agent's own shell on the review pass below and
+      # read `ACTOR_SESSION=gha-34554434032` — the job-level `env:` at line
+      # 112, its value matching `GITHUB_RUN_ID` — in the same shell that
+      # reported the token unset. So `in_a_run()` answers `True` in here
+      # (solorepo's DR-148); what the harness overrides is the names it owns,
+      # `AI_AGENT` arriving as its own build string rather than as the value
+      # written above.
       - name: hold the model credential
         run: |
           install -d -m 700 ~/.config/solorepo

@@ -51,6 +51,10 @@ ROLE_ENV = pathlib.Path(os.environ.get("SOLOREPO_ROLE_ENV", ROLE_DIR / "coder.en
 ENV_AGENT = ("AI_AGENT",)
 ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
 
+# What a workflow writes into `ACTOR_SESSION` and nothing else does, so that a
+# verb can tell a run from a session beside it (`in_a_run`, solorepo's DR-148).
+RUN_MARK = "gha-"
+
 READING = ("`.meta/say/verbs.yaml` says what each verb does and which "
            "Role holds it; /pr-first is the coder's reading of PR First and "
            "/pr-first-reviewer the reviewer's. Every body arrives on stdin.")
@@ -120,6 +124,35 @@ def actor():
         sys.exit("say: the environment does not say who is speaking "
                  f"(need one of {ENV_SESSION}); refusing to post")
     return session
+
+
+def in_a_run():
+    """**Where** it is speaking from: a workflow run, or a session beside it.
+
+    A third question, and the one a verb asks when what it does depends on
+    whether a loop is standing on the work (solorepo's DR-148). `coder.yml` and `review.yml`
+    write `gha-<run id>` into `ACTOR_SESSION`, so that prefix is the run's mark
+    under solorepo's DR-086 — a workload identity, attested for one run.
+
+    Not `actor()`, which answers a different question and cannot answer this
+    one: it takes the first of `ENV_SESSION` that is set, and inside the
+    container the harness sets `CLAUDE_CODE_SESSION_ID` too and wins, so a
+    run's Trailer reads a uuid indistinguishable from a session's. The mark
+    is on `ACTOR_SESSION` itself, which nothing but a workflow here writes.
+
+    That the mark reaches the agent's shell at all is a fact about the action,
+    so it is a probe: run 34554434032 read `ACTOR_SESSION=gha-34554434032`
+    beside `GITHUB_RUN_ID=34554434032` inside it, with `actor()` answering the
+    harness's uuid in the same shell. The credential in that same `env:` block
+    was not there, which is solorepo's DR-134's finding and is the
+    credential's alone.
+
+    A session is the answer wherever nothing says otherwise — unset, or a shape
+    no workflow writes. That is the side that asks rather than the side that
+    acts, which is where an unknown belongs when the refusal it feeds costs one
+    act to escape and the collision it prevents costs a Job.
+    """
+    return (os.environ.get("ACTOR_SESSION") or "").startswith(RUN_MARK)
 
 
 def agent():

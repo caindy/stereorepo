@@ -2353,6 +2353,131 @@ def channel_table_probes():
     return problems
 
 
+class FakeIssue:
+    """As much of GitHub as `claim` asks about: an Issue's labels, the
+    assignment, and the read-back of it.
+
+    One Issue, because the verb takes one. `views` counts the reads of the
+    labels, which is the only way from here to see the branch a run takes —
+    a claim that refuses nobody and a claim that never asked look identical
+    in the assignees.
+    """
+
+    def __init__(self, labels):
+        self.labels, self.assignees, self.views = list(labels), [], 0
+
+    def __call__(self, *args, parse=True):
+        if args[:2] == ("issue", "view") and "labels" in args:
+            self.views += 1
+            return {"labels": [{"name": name} for name in self.labels]}
+        if args[:2] == ("issue", "view") and "assignees" in args:
+            return {"assignees": [{"login": who} for who in self.assignees]}
+        if args[:2] == ("issue", "edit") and "--add-assignee" in args:
+            self.assignees.append(args[args.index("--add-assignee") + 1])
+            return ""
+        if args[:2] == ("api", "user"):
+            return "o-r-coder"
+        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+
+
+@check("claim probes", pre=True)
+def claim_probes():
+    """`move claim` at each level, from a run and from a session (solorepo's DR-148).
+
+    The whole of the refusal is a branch taken on the environment, and the
+    environment is the one input a reader cannot see by reading the verb: "this
+    is a session" is a condition that holds on every machine except the one
+    where it matters, or on none, and either way nothing says which. So
+    `ACTOR_SESSION` is set and unset around each case rather than stood in for
+    — the variable is the fact — and GitHub is stood in for the way
+    `advance_probes` stands it in, so that the cases are cheap enough to state
+    all seven.
+    """
+    import contextlib
+    import io
+
+    channel, _, programs = load_channel()
+    move = programs["move"]
+    problems = []
+
+    def run(fake, session):
+        """One claim, in an environment that says it is a run or does not.
+        Returns what it exited with, or None. `session` of `None` is the
+        variable unset, which is a session as much as an unrecognised value is.
+        """
+        original, channel.gh = channel.gh, fake
+        was = os.environ.pop("ACTOR_SESSION", None)
+        if session is not None:
+            os.environ["ACTOR_SESSION"] = session
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                move.claim("7")
+            return None
+        except SystemExit as exc:
+            return str(exc.code)
+        except Exception as exc:
+            return f"{type(exc).__name__}: {exc}"
+        finally:
+            channel.gh = original
+            os.environ.pop("ACTOR_SESSION", None)
+            if was is not None:
+                os.environ["ACTOR_SESSION"] = was
+
+    # The two levels a loop takes, claimed from a session: refused, nothing
+    # assigned, and the refusal names the move that takes the Challenge —
+    # which is the whole of what the refusal is for, since a session told only
+    # that it may not claim has been left with the collision and no act.
+    for level in ("easy", "medium"):
+        fake = FakeIssue(["challenge", level])
+        said = run(fake, None)
+        if fake.assignees:
+            problems.append(f"claim: a session claiming a `{level}` Challenge was assigned it")
+        if not said or "hard" not in said or "difficulty" not in said:
+            problems.append(f"claim: a session claiming a `{level}` Challenge was told {said!r}")
+
+    # An unrecognised `ACTOR_SESSION` is a session too. The mark is what a
+    # workflow writes, so anything else is nothing saying otherwise, and the
+    # unknown falls to the side that asks. The message is read here for the
+    # same reason as above and one more: `run` reports an exception rather than
+    # raising it, so a truthy answer alone cannot tell this refusal from the
+    # fake being asked something it has no answer for — and this is the case
+    # whose whole point is that the unknown falls to the side that asks.
+    fake = FakeIssue(["challenge", "medium"])
+    said = run(fake, "whatever-this-is")
+    if not said or "hard" not in said or "difficulty" not in said or fake.assignees:
+        problems.append(f"claim: an environment carrying no run mark was told {said!r} "
+                        f"claiming a `medium` Challenge, and left it assigned to "
+                        f"{fake.assignees!r}")
+
+    # The levels no loop takes are claimed as before, `human` above all: it is
+    # where a loop puts what it could not finish, and picking that up is what a
+    # session is for.
+    for level in ("hard", "human"):
+        fake = FakeIssue(["challenge", level])
+        said = run(fake, None)
+        if said or fake.assignees != ["o-r-coder"]:
+            problems.append(f"claim: a session claiming a `{level}` Challenge said {said!r} "
+                            f"and left it assigned to {fake.assignees!r}")
+
+    # A level with no `challenge` beside it starts no run (solorepo's #113), so it
+    # refuses nobody.
+    fake = FakeIssue(["medium"])
+    said = run(fake, None)
+    if said or not fake.assignees:
+        problems.append(f"claim: a session claiming a bare `medium` Issue said {said!r}")
+
+    # And the loop's own claim is the one call it always was: refused by
+    # nothing, and asking nothing extra of GitHub on the way.
+    fake = FakeIssue(["challenge", "medium"])
+    said = run(fake, "gha-1234")
+    if said or fake.assignees != ["o-r-coder"]:
+        problems.append(f"claim: a run claiming its own `medium` Challenge said {said!r} "
+                        f"and left it assigned to {fake.assignees!r}")
+    if fake.views:
+        problems.append(f"claim: a run's claim read the labels {fake.views} time(s)")
+    return problems
+
+
 @check("reservation probes", pre=True)
 def reservation_probes():
     """`decision numbering` over a hole GitHub reserves, a hole it does not, a

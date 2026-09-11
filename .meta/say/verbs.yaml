@@ -82,7 +82,7 @@ programs:
         held_by: [solo]
       - name: claim
         usage: "<issue>"
-        does: "take an Issue: assign it to this Role's account"
+        does: "take an Issue: assign it to this Role's account; refused to a session at `easy` or `medium`, which are the loop's until the Issue is moved to `hard`"
         held_by: [coder]
       - name: stop
         usage: "<issue> < body.md"

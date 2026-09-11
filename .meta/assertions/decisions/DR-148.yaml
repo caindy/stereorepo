@@ -1,0 +1,149 @@
+decisions:
+  - id: work:decision/148
+    name: "DR-148 · A session's claim on an Issue a loop takes is refused, and the refusal names the move to `hard` that takes the Challenge"
+    challenge: work:challenge/210
+    status: ADOPTED
+    applies:
+      - work:article/16
+      - work:article/18
+    enacted_in:
+      - work:artifact/meta-say
+      - work:artifact/meta-say-move
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-check
+    context: >-
+      DR-112 made `easy` and `medium` the loop's, taken on the event of the
+      label landing, and `hard` the solo's, taken with an agent beside him. The
+      claim never read that. `move claim` assigns the Issue to the coder's
+      account whatever it is labelled, so a session that takes the next ripe
+      Issue off `just next` — which says what waits on what and not whose it
+      is — stands beside a run that GitHub started for the same Challenge. That
+      is #115: on #110 a session and a run answered the same six threads within
+      minutes, and the loop's push dismissed an approval of the session's head,
+      costing a fourth review pass. The claim is the one act in that sequence
+      that happens before any of the work, and it is the last moment at which
+      the collision is still cheap.
+    alternatives:
+      - name: Leave the claim as it is; the Discipline already says whose an Issue is
+        chosen: false
+        reason: >-
+          It does say so, and saying so is what has not worked. The level's
+          meaning is in PR First's third step and in DR-112, and a session
+          claiming by habit is by definition one that is not reading either at
+          the moment it types the verb. This repository has already ruled on
+          that shape once: a Trailer the writer types is a Trailer the writer
+          can forget (DR-069), which is why signing is a property of the
+          channel rather than an act. A claim that must be thought about
+          before it is typed is the same bet, lost the same way.
+      - name: Say so and proceed — a warning where the refusal would be
+        chosen: false
+        reason: >-
+          It costs the same read of the labels and prevents nothing. The
+          warning lands in a stream the session is already producing, after
+          the assignment is on GitHub, and the collision is not the assignment
+          but the Job that follows it. Worse, the act the warning would name
+          is the act that would make the claim legitimate, so a session that
+          proceeds leaves the Issue at a level whose next verdict starts a run
+          — the warning has described the collision and left it standing.
+          Whether a session claiming beside a standing run is ever right is
+          the question underneath, and the answer is that where it is right,
+          the Challenge is the solo's and `hard` is what that is called.
+      - name: Refuse on who else is standing there, read from GitHub
+        chosen: false
+        reason: >-
+          The fact this would need is one GitHub does not hold. An assignee is
+          an account, and a session and a run are the same account by design
+          (DR-107), so the assignment cannot answer it; asking instead whether
+          a run is in flight is a question about a workflow rather than about
+          the work, and it answers "nobody" in the window between the label
+          landing and the run starting — which is exactly the window a session
+          reading `just next` claims in. A guard that is most likely to be
+          wrong when it is most likely to be asked is not a guard.
+      - name: Refuse a session at `easy` or `medium`, and name the move to `hard`
+        chosen: true
+        reason: >-
+          The level is already the fact that says which kind of Job takes a
+          Challenge, it is on the Issue's own page, and it is readable before
+          any work is done. So the claim reads it, and refuses the two levels a
+          loop takes — beside `challenge`, which is what the loop reads it
+          beside. The refusal is escapable in one act, and that act is `move
+          difficulty <n> hard`: not a way round the refusal but the thing the
+          session actually needed to do, since it is the move that makes the
+          Challenge the solo's and stands the loop down. A run is told from a
+          session by `ACTOR_SESSION` beginning `gha-`, the mark `coder.yml` and
+          `review.yml` write and the workload identity DR-086 says the Trailer
+          carries. What it costs: a session that means to take a `medium` Issue
+          types one more verb first; and a run whose environment does not carry
+          the mark is refused as a session, which is the direction an unknown
+          should fail when the escape is one act and the collision is a Job.
+    consequences:
+      - >-
+        `move claim` refuses a claim by a session on an Issue carrying
+        `challenge` and `easy` or `medium`, naming `move difficulty <n> hard`.
+        `hard`, `human` and an Issue that is not a Challenge are claimed as
+        before: `human` is where a loop puts what it could not finish, and
+        picking that up is what a session is for. The labels are read only on
+        the branch where the refusal could apply, so a loop's own claim is the
+        one call it always was.
+      - >-
+        `channel.in_a_run()` is where "a run, or a session beside it" is
+        answered, beside `actor()` and `agent()` — a third question about who
+        is speaking, asked by any verb whose behaviour turns on whether a loop
+        is standing on the work. It reads `ACTOR_SESSION` directly and not
+        `actor()`, which cannot answer it: `actor()` takes the first of
+        `ENV_SESSION` that is set, and inside the loop's container the harness
+        sets `CLAUDE_CODE_SESSION_ID` too and wins, so a run's Trailer reads a
+        uuid indistinguishable from a session's. The mark is on the variable
+        only a workflow writes.
+      - >-
+        That the mark is readable where the loop's claim is typed is a fact
+        about the action and not about this repository, so it is a probe and
+        not a reading. Run 34554434032, in the agent's own shell inside
+        `anthropics/claude-code-action@v1` on a `coder.yml` review pass:
+        `ACTOR_SESSION=gha-34554434032` and `GITHUB_RUN_ID=34554434032`, so
+        `in_a_run()` is `True`, while `actor()` in the same shell answered
+        `6fec9cf2-…`, the harness's session id, exactly as above. The
+        credential in the same `env:` block was absent, which is DR-134's
+        finding and is the credential's alone; that entry had generalised it to
+        every `env:` block and is corrected here to what the two probes
+        together support.
+      - >-
+        The mark is a constant in the channel and a line in each workflow that
+        holds a Role's token. A further workflow that claims writes
+        `ACTOR_SESSION: gha-<run id>` like the two that do, or its claim is
+        refused as a session's — which is the failure that says so at the first
+        claim rather than at the first collision.
+      - >-
+        The refusal is on the claim and on nothing else. Nothing here stops a
+        session checking out a `medium` Issue's branch or pushing to it, and
+        nothing here should: what the level buys is read by the loop's own
+        guard, and a second reading in a verb would be a rule stated twice.
+      - >-
+        `check.py` probes it against a fake GitHub, in both environments and
+        at each level, because the whole of it is a branch taken on the
+        environment — untested, "a session" is a condition that holds on every
+        machine but the one where it matters, or on none.
+    falsifier: >-
+      A session refused at `easy` or `medium` that was right to claim, often
+      enough that the move to `hard` reads as a ceremony rather than as the
+      act it is: that would say the level is not what says whose a Challenge
+      is, and the answer would be a fact GitHub does not hold today. The other
+      side is a run refused because its environment did not carry the mark,
+      which would say the mark is not the fact — the prefix is written by a
+      workflow file and nothing attests it.
+    rationale: |-
+      The Issue left the reading open — refuse, or say so and proceed — and
+      turned it on whether a session can tell that it is one. It can, and the
+      answer is a prefix a workflow writes; but the prefix is on the variable
+      the Trailer no longer reads, because the harness's own session id wins
+      inside the container. That is the only subtle thing here, and it is why
+      the question gets a function of its own rather than a comparison written
+      at the call site.
+
+      The rest follows from where the act sits. Everything the collision costs
+      — the duplicate answers, the dismissed approval — happens after the
+      claim, and the claim is the first moment either Job says anything GitHub
+      records. A verb that refuses its own misuse is the shape every other verb
+      here already has (DR-116), and the misuse is nameable in one line: this
+      Challenge belongs to a run, and the way to take it is to say it is not a
+      run's.
