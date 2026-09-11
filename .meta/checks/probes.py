@@ -315,7 +315,11 @@ class FakeGitHub:
 
     A pull request here is `{behind, armed, drops, again}`: how far behind its
     base it is, whether it is armed, whether moving the head drops the arming,
-    and what it is still behind by afterwards. And, for the second reading
+    and what it is still behind by afterwards. And `{pushed, leaves}`, for the
+    one thing that moves a head without this run asking: how many reads answer
+    before somebody else's commit lands on the branch, and what the branch is
+    behind by once it has — which is 0 where that push was itself a rebase.
+    And, for the second reading
     `advance` gained with solorepo's DR-133, `{requested, mergeable, unknown, branch, base}`:
     who a review is requested of, what GitHub says about merging the branch,
     how many reads say `UNKNOWN` before it says that, the head's name where
@@ -394,17 +398,35 @@ class FakeGitHub:
         if reads:
             pull["stale"] = (was, reads - 1)
         shown = was if reads else pull
-        return {"number": int(number), "title": f"pull {number}",
-                "state": shown.get("state", "OPEN"),
-                "mergeCommit": {"oid": f"merged{number}"},
-                "baseRefName": pull.get("base", "main"),
-                "headRefName": pull.get("branch", f"claude/issue-{number}"),
-                "headRefOid": shown["head"],
-                "reviewRequests": [{"login": who} for who in pull.get("requested") or []],
-                "reviews": [{"author": {"login": who}, "state": state}
-                            for who, state in pull.get("verdicts") or []],
-                "mergeable": mergeable,
-                "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None}
+        answer = {"number": int(number), "title": f"pull {number}",
+                  "state": shown.get("state", "OPEN"),
+                  "mergeCommit": {"oid": f"merged{number}"},
+                  "baseRefName": pull.get("base", "main"),
+                  "headRefName": pull.get("branch", f"claude/issue-{number}"),
+                  "headRefOid": shown["head"],
+                  "reviewRequests": [{"login": who} for who in pull.get("requested") or []],
+                  "reviews": [{"author": {"login": who}, "state": state}
+                              for who, state in pull.get("verdicts") or []],
+                  "mergeable": mergeable,
+                  "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None}
+        # A push to the head branch from outside this run. `pushed` is how many
+        # reads answer before it lands, so a case counts the sweep's opening
+        # `pr list` and puts the push after it, and `leaves` is what the branch
+        # is behind by once it has — 0 where the push is itself a rebase, which
+        # is the one push that changes what this run should do rather than only
+        # what it should read. Landed at the end of a read rather than at the
+        # start of one, because what it models is a commit arriving between two
+        # questions. The commit it orphans keeps what it was behind by, in the
+        # same `stale` the rebase keeps it in and with no reads owed: GitHub
+        # shows a push at once, and it is only the `compare` of the old oid
+        # that can still be asked.
+        if pull.get("pushed"):
+            pull["pushed"] -= 1
+            if not pull["pushed"]:
+                pull["stale"] = (dict(pull), 0)
+                pull["head"] = f"pushed{number}"
+                pull["behind"] = pull.get("leaves", pull["behind"])
+        return answer
 
     def __call__(self, *args, parse=True):
         head = args[:2]
@@ -463,7 +485,7 @@ class FakeGitHub:
             return ""
         if args[0] == "api" and "/compare/" in args[1]:
             oid = args[1].rsplit("...", 1)[1]
-            number = oid.removeprefix("head").removeprefix("moved")
+            number = oid.removeprefix("head").removeprefix("moved").removeprefix("pushed")
             if number in self.blip and self.pulls[number].get("rebased"):
                 self.blip.discard(number)
                 sys.exit("gh: API rate limit exceeded")
@@ -538,13 +560,16 @@ def advance_probes():
         finally:
             channel.gh = original
 
-    # The wait on a rebase GitHub has taken and not yet shown, shortened to
-    # nothing (solorepo's DR-158), as `MERGEABILITY` is below and for the same
-    # reason: what the cases are for is that the wait happens at all, and the
+    # Both of the waits, shortened to nothing (solorepo's DR-158 and
+    # solorepo's DR-133) and for the same reason: what the cases are for is
+    # that the wait happens at all and that it waits for an answer, and the
     # seconds it lasts are GitHub's business rather than a gate's. Shortened
-    # here rather than there because every case that rebases reads the head
-    # back, so a gate on trunk's timings would pay the bound on each.
+    # before the first case rather than beside the ones each is about, because
+    # every case that rebases reads the head back and a case may put a push
+    # inside the poll, so a gate on trunk's timings would pay the bound on
+    # each. Nothing restores them, because this process ends with the gate.
     move.SETTLES = (3, 0)
+    move.MERGEABILITY = (3, 0)
 
     # The arming the rebase dropped is restored even though the base moved
     # again under it — the two read-backs are two questions (solorepo's #98).
@@ -614,6 +639,61 @@ def advance_probes():
         problems.append("advance: it read the arming off the head GitHub had not moved, so "
                         "the arming the move dropped stayed dropped")
 
+    # A push to the branch between the sweep's opening `pr list` and the
+    # rebase it asks for (solorepo's #252). `pushed: 1` lands it just after the
+    # list, which is the window every pull request ahead of this one in `found`
+    # lengthens. Anchored to the listed commit, the wait is satisfied by the
+    # push on its first read and answers with the pre-rebase pull request:
+    # behind by what it was behind by, and armed as it was before the rebase
+    # dropped it — a failure reported that did not happen, and a re-arming
+    # skipped that was needed.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True, "slow": 2, "pushed": 1}})
+    said = run(fake, lambda: move.advance())
+    if said:
+        problems.append(f"advance: a push landing before the rebase reported {said!r}")
+    if not fake.pulls["7"]["armed"]:
+        problems.append("advance: it read the rebase off the commit the sweep listed rather "
+                        "than the one it asked GitHub to rebase, so a push in between "
+                        "answered for the rebase and the arming it dropped stayed dropped")
+
+    # And the push in that window is most often a rebase — this verb's own
+    # `dispatch` arranges one, and `coder.yml` performs it — so it brings the
+    # branch current, and there is then nothing to ask GitHub for. `leaves: 0`
+    # is that push. Decided on the listed commit, the compare is asked about an
+    # orphan and answers what the orphan was behind by, so the run calls
+    # `update-branch` on a branch with nothing to rebase and reads whatever
+    # GitHub does with that as a rebase that did not land. What is asserted
+    # here is that the call is not made, rather than an answer for it: what
+    # `gh pr update-branch --rebase` exits with on a branch that is not behind
+    # is a fact about GitHub, and a fake that modelled one either way would be
+    # asserting it.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "pushed": 1, "leaves": 0}})
+    said = run(fake, lambda: move.advance())
+    if fake.pulls["7"].get("rebased"):
+        problems.append("advance: a push brought the branch current inside the window and it "
+                        "asked GitHub to rebase a branch with nothing to rebase, on a compare "
+                        "of the commit that push orphaned")
+    if said:
+        problems.append(f"advance: a push that brought the branch current reported {said!r}")
+
+    # And the window that push lands in is not a round trip. `mergeability`
+    # stands between the read and the call, and `unknown: 1` is the state its
+    # own constant calls normal on this trigger: the listed `mergeable` answers
+    # `UNKNOWN`, so the poll sleeps and re-reads, and the interval the push has
+    # to arrive in is five seconds at least rather than one call. `pushed: 2`
+    # puts the push at the end of the read that poll makes — after the list and
+    # after any read taken above it — so a run that decides on a reading from
+    # before the wait asks GitHub to rebase a branch the push brought current,
+    # which is the case above in the window that is actually open.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "unknown": 1, "pushed": 2, "leaves": 0}})
+    said = run(fake, lambda: move.advance())
+    if fake.pulls["7"].get("rebased"):
+        problems.append("advance: a push landed while it waited on `mergeability` and it "
+                        "rebased the branch that push brought current, so the read the call "
+                        "was made against was taken before the wait rather than after it")
+    if said:
+        problems.append(f"advance: a push landing inside the poll reported {said!r}")
+
     # And the wait is bounded, so a head GitHub never moves is still reported —
     # as itself and not as a branch that is behind. The two are different
     # facts: the rebase may yet land, and drop the arming as it does, and a
@@ -674,12 +754,9 @@ def advance_probes():
     if said:
         problems.append(f"merge --auto: a stall over a current branch exited with {said!r}")
 
-    # The second reading (solorepo's DR-133). The poll is shortened to nothing first:
-    # what these cases are for is that it happens at all and that it waits for
-    # an answer, and the seconds it waits are GitHub's business rather than a
-    # gate's. Nothing restores it, because this process ends with the gate.
-    move.MERGEABILITY = (3, 0)
-
+    # The second reading (solorepo's DR-133), with `MERGEABILITY` already
+    # shortened above.
+    #
     # A merge on trunk that leaves a waiting review request unanswerable
     # dispatches the coder, and does not touch the branch — solorepo's #159 and solorepo's #161, with
     # nothing armed at all, which is the run that used to return before it read

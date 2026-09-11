@@ -388,6 +388,20 @@ ADVANCE = ("number,title,state,baseRefName,headRefName,headRefOid,autoMergeReque
            "reviewRequests,mergeable,latestReviews")
 
 
+def head_now(number):
+    """The commit GitHub has a pull request on, and what that commit is behind
+    its base by — the two read beside each other, in that order.
+
+    One question in two parts: whether there is a rebase to ask for, and which
+    commit it would be asked against. `advance` asks it twice — once to find
+    out there is work, and again when the waiting is over and the call is the
+    next thing that happens — and the pair is written here so that the second
+    asking cannot anchor the compare to a different reading than the first did.
+    """
+    before = channel.gh("pr", "view", str(number), "--json", ADVANCE)
+    return before, behind_by(before)
+
+
 def is_approved_pull(pull, reviewer_login=None):
     if reviewer_login is None:
         try:
@@ -834,6 +848,40 @@ def advance(pr=None, held=False):
     runs out is its own line, because it is a different fact from a branch that
     is behind: the rebase may still land, and dropping the arming as it does.
 
+    **And the commit the head questions are about is read beside them, not off
+    the sweep's opening list.** "Behind" and "moved" are both facts about a
+    named commit, and the one that matters is the commit GitHub is handed. The
+    list this sweep opens with is as old as every pull request ahead of this one
+    in `found` — each of which may have paid `MERGEABILITY`'s poll or `SETTLES`'
+    wait — so a push to this branch inside that window moves the head before
+    this run asks anything of it, and both questions asked of the listed commit
+    answer about one GitHub is no longer on. The wait is satisfied by the push
+    rather than by the rebase, and answers with the pre-rebase pull request:
+    behind by what it was behind by, which is reported as a rebase that did not
+    take, and carrying an arming the rebase is about to drop, which is the
+    arming never restored. And the decision to rebase is taken on how far behind
+    an orphaned commit was, so a push that brought the branch current is
+    rebased anyway — `update-branch` on nothing, and then whatever GitHub does
+    with that read as the rebase that did not land. A `pr view` beside the call
+    answers both questions about the commit GitHub is on, needs no answer about
+    what GitHub does with a no-op rebase because it stops asking for one, and
+    makes the `advanced #N: N commit(s) behind` line say a number that is true
+    when it is printed.
+
+    **And "beside" means after the poll, not before it.** `mergeability` stands
+    between the two, and on this trigger it is a wait and not a question:
+    `MERGEABILITY`'s own reasoning is that the push to trunk invalidates every
+    cached answer, so the listed `mergeable` reads `UNKNOWN` for every pull
+    request waiting on one and the poll sleeps five seconds at least and thirty
+    at most. A read taken above it and used below it would leave a window of
+    that length, on exactly the pull requests this runs for. So the reading is
+    taken twice: once at the top, which costs the one read the sweep was always
+    going to pay and says whether there is work here and what the `left #N`
+    line counts; and once after the poll has answered, which is the one the
+    rebase is decided on and measured against. The second costs a `pr view` on
+    the branches being rebased and on no others, and with nothing between it
+    and `update-branch` the window that is left is the round trip.
+
     **One pull request's refusal is not the sweep's.** `gh()` reports by ending
     the process, so a branch GitHub will not rebase, or will not arm, used to
     take every other pull request down with it and swallow what had already been
@@ -896,7 +944,16 @@ def advance(pr=None, held=False):
         for pull in found:
             number = str(pull["number"])
             try:
-                behind = behind_by(pull)
+                # Read here rather than taken off the `pr list` this sweep
+                # opened with: that list is as old as every pull request ahead
+                # of this one in `found`, each of which may have waited on
+                # `mergeability` or on `settled`, and a push to this branch
+                # inside that window moves the head before this run asks
+                # anything of it. It costs one read per pull request the sweep
+                # selected, and it answers the two cheap questions: whether
+                # there is anything to do here at all, and what the `left #N`
+                # line below counts.
+                before, behind = head_now(number)
                 if not behind:
                     continue
                 if pr is None and mergeability(pull) == "CONFLICTING":
@@ -918,6 +975,24 @@ def advance(pr=None, held=False):
                           f"will not rebase — {pull['title']}")
                     left += 1
                     continue
+                # And asked again, because what stands between the read above
+                # and the call below is a poll rather than a round trip.
+                # `mergeability` sleeps `MERGEABILITY` — five seconds at least
+                # and thirty at most — whenever the value it is handed reads
+                # `UNKNOWN`, and its own constant says that is the normal state
+                # on this trigger and not a corner: the push to trunk this
+                # sweep runs on invalidates every cached answer, so the listed
+                # `mergeable` is `UNKNOWN` for every pull request waiting on
+                # one. A push landing inside that sleep is the whole defect
+                # again — the rebase asked for on a commit GitHub has moved
+                # off, and asked for at all on a branch the push brought
+                # current — so the reading the call is made against is the one
+                # taken after the waiting is over. It costs a second `pr view`
+                # on the branches actually being rebased, and on those alone,
+                # and it is what makes the residual window a round trip.
+                before, behind = head_now(number)
+                if not behind:
+                    continue
                 channel.gh("pr", "update-branch", number, "--rebase", parse=False)
                 moved += 1
                 print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
@@ -929,8 +1004,8 @@ def advance(pr=None, held=False):
                 # state it is being moved out of: how far behind the old head
                 # was, and the arming that head still carries.
                 after = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
-                                lambda now: now["headRefOid"] != pull["headRefOid"])
-                if after["headRefOid"] == pull["headRefOid"]:
+                                lambda now: now["headRefOid"] != before["headRefOid"])
+                if after["headRefOid"] == before["headRefOid"]:
                     failed.append(f"#{number} is on the head it was before the update and "
                                   "GitHub has not moved it within the wait, so whether the "
                                   "rebase drops the arming is unread — and dropped, it is "
@@ -938,6 +1013,16 @@ def advance(pr=None, held=False):
                 elif behind_by(after):
                     failed.append(f"#{number} is still behind {pull['baseRefName']} "
                                   "after the update")
+                # And this one is anchored to the sweep's own reading rather
+                # than to `before`, deliberately. The question above is which
+                # commit the rebase moved the branch off, and only the read
+                # taken beside the call answers it. The question here is
+                # whether the pull request ends armed, and what it was armed at
+                # is what the sweep selected it on: a push that dropped the
+                # arming inside the window is the same solorepo's #93 the
+                # rebase would have left, and reading `before` would leave it
+                # there on the ground that this run was not the one that
+                # dropped it.
                 if pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
                     arm(number, f"{pull['title']} (#{number})")
                     # Read back, like the two above and for the same reason. This
