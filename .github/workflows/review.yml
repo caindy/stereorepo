@@ -361,9 +361,12 @@ jobs:
             a head a verdict of this Role already names, nor on a head that
             differs from one only by the answers; its agents cost the turns the verdict
             needs (solorepo's #102), and on solorepo's #117 every pass ran it again because the
-            listing hid what had been resolved (solorepo's #122). Do not wait on
-            `gh pr checks`: it exits non-zero while a check is pending, and
-            the ruleset holds the merge until they pass whatever you do.
+            listing hid what had been resolved (solorepo's #122). Do not wait for
+            pending checks to finish: `gh pr checks` exits non-zero while a check
+            is pending, and the standing merge manager evaluates completed checks
+            before landing. However, inspect completed checks on this head with
+            `gh pr checks ${{ github.event.pull_request.number }}` and test form
+            compliance with `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`.
 
             Then review with /code-review:code-review ${{ steps.depth.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
             without --comment. Every agent the review spawns is bound by
@@ -392,8 +395,18 @@ jobs:
             refuses them. Do not resolve any thread.
 
             Your approval clears the review semaphore for the merge manager. If
-            your verdict is `--approve`, post your review with `.meta/say/post --role reviewer review <n> --approve`.
-            A standing merge manager lands what is green in order of leverage
+            any completed check on this head has failed (in `gh pr checks`), or
+            if `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`
+            exits non-zero, do NOT approve. An approval on a red head leaves the
+            pull request stalled indefinitely: the merge manager will not land
+            non-green work and the promotion pass performs no checks. On a
+            `claude/issue-*` branch, requesting changes is the semaphore that
+            wakes the coder Role to fix breakage; on other branches, it informs
+            the author. Post `--request-changes` instead, naming the failing
+            checks in "What was found". If all completed checks are green (or
+            pending) and the diff is clean, post your approval with
+            `.meta/say/post --role reviewer review <n> --approve`. A standing
+            merge manager lands what is green in order of leverage
             (solorepo's DR-161). Do not arm the merge and do not merge by hand.
 
             Your turn ends when the verdict is posted, and not before. The

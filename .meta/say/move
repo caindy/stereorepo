@@ -20,7 +20,9 @@ import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import channel  # noqa: E402
+import check_pr  # noqa: E402
 
 DIFFICULTIES = ("easy", "medium", "hard", "human")
 
@@ -265,6 +267,21 @@ def revise(number, body=None, title=None):
     if body is None and title is None:
         sys.exit("say: nothing to revise — pipe a body in, or pass --title")
     what = kind(number)
+    if what == "pull request":
+        pr_data = None
+        t, b = title, body
+        if t is None or b is None:
+            pr_data = channel.gh("pr", "view", str(number), "--json", "title,body")
+            if t is None:
+                t = pr_data["title"]
+            if b is None:
+                b = pr_data["body"]
+        problems = check_pr.check(t, b)
+        if problems:
+            formatted = "\n".join(f"  - {p}" for p in problems)
+            sys.exit(f"say: revised {'title and body' if body and title else 'title' if title else 'body'} "
+                     f"does not satisfy the form (solorepo's A15):\n{formatted}\n"
+                     "Fix the form before revising the pull request.")
     noun = "pr" if what == "pull request" else "issue"
     cmd = [noun, "edit", str(number)]
     if title is not None:
@@ -327,6 +344,11 @@ def open_pull_request(title, body, base="main", on=None):
     The base is the lower layer's branch, read from GitHub rather than typed,
     and the link follows the creation, so a layer is never open and unlinked.
     """
+    problems = check_pr.check(title, body)
+    if problems:
+        formatted = "\n".join(f"  - {p}" for p in problems)
+        sys.exit(f"say: pull request body does not satisfy the form (solorepo's A15):\n{formatted}\n"
+                 "Fix the form before opening the pull request.")
     if on:
         base = head_branch(on)
     url = channel.gh("pr", "create", "--title", title, "--base", base, "--body", body, parse=False)
