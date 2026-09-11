@@ -176,6 +176,49 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 """
 
+# The check states on a pull request's head, asked for by name, per
+# solorepo's DR-153. `gh --json statusCheckRollup` answers the same question,
+# but the CLI's own GraphQL for that field traverses `checkSuite.workflowRun`
+# — an Actions resource — and the gate's token holds no `actions` scope, so the
+# whole query fails rather than returning the field null. Every reader takes a
+# name and a state, and the watcher takes the run's url and when it started;
+# nothing here wants a workflow run. Written out, the fetch names its own
+# fields, as `THREADS` above already does.
+ROLLUP = """
+      commits(last: 1) { nodes { commit { statusCheckRollup {
+        contexts(first: 100) { nodes {
+          ... on CheckRun { name status conclusion startedAt completedAt detailsUrl }
+          ... on StatusContext { context state createdAt targetUrl }
+        } }
+      } } } }
+"""
+
+ROLLUP_ONE = """
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {%s}
+  }
+}
+""" % ROLLUP
+
+# Every open pull request's head, the first hundred most recently touched.
+# Which hundred those are is not necessarily the hundred `gh pr list` returns:
+# that call takes its own default limit and orders by whatever the CLI orders
+# by, which is a fact about `gh` this file would have to assert and cannot
+# cite — and resting the sweep on what the CLI does on its behalf is the thing
+# solorepo's DR-153 is about. So `sweep_all` pairs the two by number and names
+# what this query did not answer for, rather than needing the two to agree.
+ROLLUP_ALL = """
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(states: OPEN, first: 100,
+                 orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { number %s }
+    }
+  }
+}
+""" % ROLLUP
+
 
 def gh(*args):
     out = subprocess.run(["gh", *args], capture_output=True, text=True)
@@ -218,6 +261,39 @@ def pull(ref):
 def threads(ref):
     """Every review thread on a pull request."""
     return pull(ref)["reviewThreads"]["nodes"]
+
+
+def checks_of(node):
+    """A pull request's rollup contexts, flattened as the readers expect them.
+
+    `ROLLUP` reaches the rollup where GitHub keeps it — on the head commit —
+    and the readers want the list of contexts, which is what `gh --json
+    statusCheckRollup` used to hand them. An empty list is a real answer: a
+    head with no checks on it yet.
+    """
+    commits = (node.get("commits") or {}).get("nodes") or []
+    if not commits:
+        return []
+    rollup = commits[0]["commit"].get("statusCheckRollup") or {}
+    return (rollup.get("contexts") or {}).get("nodes") or []
+
+
+def rollup_of(number):
+    """The check states on one pull request's head."""
+    owner, name = repo().split("/")
+    data = gh("api", "graphql", "-f", f"query={ROLLUP_ONE}",
+              "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}")
+    return checks_of(data["data"]["repository"]["pullRequest"])
+
+
+def rollups():
+    """The check states on every open pull request's head, by number, in one
+    query — which is what the sweep needs and what `gh pr list` was carrying."""
+    owner, name = repo().split("/")
+    data = gh("api", "graphql", "-f", f"query={ROLLUP_ALL}",
+              "-F", f"owner={owner}", "-F", f"name={name}")
+    return {pr["number"]: checks_of(pr)
+            for pr in data["data"]["repository"]["pullRequests"]["nodes"]}
 
 
 def where_of(thread, owed=True):
@@ -450,12 +526,11 @@ def resume(ref):
     request, which is a state rather than a message — so what an arriving Job
     knows is what GitHub holds, and there is nothing else to go stale.
     """
-    pr = gh("pr", "view", ref, "--json",
-            "number,title,body,headRefName,statusCheckRollup")
+    pr = gh("pr", "view", ref, "--json", "number,title,body,headRefName")
     out = [f"#{pr['number']} {pr['title']}",
            f"branch: {pr['headRefName']}", "", "--- body ---", pr["body"] or "(empty)", ""]
     states = {c.get("name") or c.get("context"): c.get("conclusion") or c.get("state")
-              for c in pr.get("statusCheckRollup") or []}
+              for c in rollup_of(pr["number"])}
     out.append("checks: " + (", ".join(f"{k}={v}" for k, v in states.items()) or "none"))
     held = pull(ref)
     given = verdicts(held["reviews"]["nodes"])
@@ -486,13 +561,13 @@ def snapshot(ref):
     holds, so nothing is written locally and a watch restarted from scratch
     reports the same events a continuous one would have.
     """
-    pr = gh("pr", "view", ref, "--json", "number,state,comments,reviews,statusCheckRollup")
+    pr = gh("pr", "view", ref, "--json", "number,state,comments,reviews")
     comments = {c["id"]: c for c in pr["comments"]}
     reviews = {r["id"]: r for r in pr["reviews"]}
     threads_ = {t["id"]: t for t in threads(ref)}
     # When multiple check runs share a name (e.g. repeated dispatches or cancelled runs),
     # order by startedAt so the latest run wins.
-    sorted_checks = sorted(pr.get("statusCheckRollup") or [],
+    sorted_checks = sorted(rollup_of(pr["number"]),
                            key=lambda c: c.get("startedAt") or c.get("completedAt") or "")
     # A check still running has no conclusion; its status says so, which reads
     # better than a `None` beside a result and is a change worth a line. The
@@ -867,9 +942,11 @@ LOOPS_BRANCH = re.compile(r"^claude/issue-(\d+)$")
 # on their Challenge.
 TAKEN = ("easy", "medium")
 # The fields the hand-off reader needs, added to the sweep's own list so that
-# one fetch answers both.
+# one fetch answers both. The rollup is not among them: `gh` answers that one
+# field with a query the gate's token cannot run, so it is fetched by name
+# alongside (solorepo's DR-153).
 SWEEP_FIELDS = ("number,title,headRefOid,headRefName,baseRefName,isDraft,updatedAt,"
-                "reviewRequests,autoMergeRequest,mergeable,statusCheckRollup")
+                "reviewRequests,autoMergeRequest,mergeable")
 
 
 def longest_run():
@@ -1026,11 +1103,42 @@ def sweep_all(publishing):
     and then handed over below, which is the handoff onto a red gate that the
     reader exists to refuse.
     """
-    found = gh("pr", "list", "--state", "open", "--json", SWEEP_FIELDS)
+    try:
+        found = gh("pr", "list", "--state", "open", "--json", SWEEP_FIELDS)
+        rolled = rollups()
+    except SystemExit as unreachable:
+        # A sweep that could not fetch and a sweep that found nothing to say
+        # read the same everywhere downstream: no verdict is published either
+        # way, and every open pull request keeps the one its last push left.
+        # So the fetch says which it was, in the sweep's own voice rather than
+        # as a `gh` error the job's tail then prints `ok triage` over
+        # (solorepo's #229). Still red — but red here now names a broken
+        # checker rather than the queue state the job's other findings are.
+        print("x  sweep — could not ask GitHub for the open pull requests, so no "
+              "verdict was published and every one keeps the verdict its last "
+              f"push left: {unreachable.code}")
+        return 1
     if not found:
         print("ok sweep — no open pull requests")
         return 0
-    failed = False
+    # A pull request `gh pr list` returned that the rollup query did not answer
+    # for is a fetch that did not happen, and `rolled.get(n, [])` would hand it
+    # to `green` as a head with no checks on it: not green, so `unheld` passes
+    # over it without a word and its line above says nothing either. That is
+    # the collapse the failure path just above refuses, kept for one pull
+    # request instead of for the run, so it is named in the same voice and
+    # carried no further. It bites only past a hundred open pull requests,
+    # where the two calls need not have taken the same ones.
+    unfetched = [pr for pr in found if pr["number"] not in rolled]
+    if unfetched:
+        print(f"x  sweep — GitHub answered for {len(rolled)} open pull request(s) "
+              "and not for "
+              + ", ".join(f"#{pr['number']}" for pr in unfetched)
+              + ", which are left unread and keep the verdict their last push left")
+    found = [pr for pr in found if pr["number"] in rolled]
+    for pr in found:
+        pr["statusCheckRollup"] = rolled[pr["number"]]
+    failed = bool(unfetched)
     clean = set()
     for pr in found:
         number = str(pr["number"])
