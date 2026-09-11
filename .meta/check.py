@@ -1563,7 +1563,10 @@ class FakeGitHub:
     who a review is requested of, what GitHub says about merging the branch,
     how many reads say `UNKNOWN` before it says that, the head's name where
     it is not a loop's, and the base's where it is not trunk — which is what a
-    layer of a stack looks like from here.
+    layer of a stack looks like from here. And `{issue}`, for the read
+    solorepo's DR-142 added before the dispatch: the Challenge the branch
+    names, as `{state, level, unreadable}`, open and `medium` unless a case
+    says otherwise, since the branch's number is the Issue's here.
     """
 
     def __init__(self, pulls, no_rebase=(), no_arm=(), no_stick=(), lands=(), blip=(),
@@ -1658,6 +1661,12 @@ class FakeGitHub:
                 self.blip.discard(number)
                 sys.exit("gh: API rate limit exceeded")
             return {"behind_by": self.pulls[number]["behind"]}
+        if head == ("issue", "view"):
+            issue = self.pulls[str(args[2])].get("issue") or {}
+            if issue.get("unreadable"):
+                sys.exit("gh: Could not resolve to an issue or pull request")
+            return {"state": issue.get("state", "OPEN"),
+                    "labels": [{"name": "challenge"}, {"name": issue.get("level", "medium")}]}
         if args[0] == "api" and "/pulls/" in args[1]:
             return {}  # no `stack` object: not a layer of a stack
         if args[0] == "api":
@@ -1859,6 +1868,29 @@ def advance_probes():
                         f"{fake.dispatched!r}")
     if said:
         problems.append(f"advance: the stack it left alone exited with {said!r}")
+
+    # And only a Challenge the loop holds (solorepo's DR-142). The first is
+    # `hard`, which is a session's with the solo beside it, and the second is
+    # closed; both are conflicting, requested and on a loop's branch, which is
+    # the dispatching case above in every other respect. What `stop` leaves
+    # is the second shape at `human`, on every push to trunk after it.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING", "issue": {"level": "hard"}},
+                       8: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING", "issue": {"state": "CLOSED"}},
+                       9: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING", "issue": {"level": "human"}},
+                       # And one whose Issue was deleted or transferred under its
+                       # branch, which fails the read the same way on every push:
+                       # named and left alone, not a red sweep each time.
+                       10: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                            "mergeable": "CONFLICTING", "issue": {"unreadable": True}}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched:
+        problems.append("advance: it dispatched a Challenge the loop does not hold, "
+                        f"{fake.dispatched!r}")
+    if said:
+        problems.append(f"advance: the Challenges it left alone exited with {said!r}")
 
     # One dispatch GitHub refuses is one pull request's problem, like one
     # rebase it refuses — and the refusal is a coder token without the Actions

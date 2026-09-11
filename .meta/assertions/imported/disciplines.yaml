@@ -397,7 +397,13 @@ disciplines:
         takes `easy` and `medium` the moment the label lands; `hard` waits for
         the solo; `human` is where a loop puts what it cannot finish, saying
         where it stopped. The raiser guesses and the loop corrects, downward
-        only.
+        only. The label is also what says whose a branch is: a session that
+        takes up a pull request the loop holds moves the Issue to `hard`
+        first, and the loop's next pass stands down. Moved back, the loop
+        answers the next verdict and not one already standing — a relabel
+        fires the Issue door and re-delivers no review — so a verdict the
+        session leaves behind is the session's to answer, or the solo's to
+        dispatch by hand.
       - >-
         Argue there. Review, objection and answer belong where the next reader
         will look, not where one participant happens to be.

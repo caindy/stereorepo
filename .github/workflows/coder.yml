@@ -30,6 +30,12 @@ on:
   # a merge on `main` that leaves a waiting review request unanswerable is
   # dispatched here by `.meta/say/move advance` (solorepo's DR-133), and what it
   # needs done is a rebase and not an answer to threads that do not exist.
+  # On this event, as on `pull_request`, GitHub's "Events that trigger
+  # workflows" table gives `GITHUB_SHA` as "Last merge commit on the
+  # `GITHUB_REF` branch" and `GITHUB_REF` as "PR merge branch
+  # `refs/pull/PULL_REQUEST_NUMBER/merge`", so the run reads this file from
+  # the pull request's own merge ref, and a change to the door below is in
+  # force on the first verdict of the pull request that makes it.
   pull_request_review:
     types: [submitted]
   workflow_dispatch:
@@ -79,8 +85,10 @@ jobs:
     name: coder
     # Only a difficulty a loop takes, on a Challenge: `hard` and `human` are
     # not this Job's, and a `roadmap` Issue is deferred by definition. Or the
-    # reviewer's account requesting changes on a branch this loop opened. Or
-    # the solo dispatching that second pass by hand.
+    # reviewer's account requesting changes on a branch named for a Challenge
+    # — the prefix says which Issue, not whose the branch is; `is it taken
+    # already` below reads whose it is, on this door as on the first
+    # (solorepo's DR-142). Or the solo dispatching that second pass by hand.
     if: >-
       (github.event_name == 'issues'
         && github.event.issue.state == 'open'
@@ -238,32 +246,107 @@ jobs:
       # a pull request open is a duplicate, skipped and said so; a pull
       # request with no claim and a level a loop takes is a hand-back the solo
       # has answered, and the run continues under it.
+      #
+      # The same facts on the second door (solorepo's DR-142). A request for
+      # changes names a branch, and a branch's name says which Challenge and
+      # nothing about who holds it: on solorepo's #168 a run took up a `hard`
+      # Issue's branch under a standing session because this step ran on the
+      # first door only. The level is the fact that says whose a Challenge is
+      # — `hard` is the solo's with an agent beside him, on either door — and
+      # it is the one a session can move: to `hard` to take a branch from the
+      # loop, back down to hand it back. The duplicate reading is the first
+      # door's alone; on the second the open pull request is the event's own
+      # and the claim is what a standing run looks like. A dispatch of a
+      # review pass is the solo's own word and is not read against; a rebase
+      # dispatch is `advance`'s on a push to `main` (solorepo's DR-133), with
+      # no solo in it, and `dispatch()` in `.meta/say/move` filters on the
+      # request, the branch shape, the stack and the conflict and on neither
+      # the level nor the claim — so it is read against here, or the pass it
+      # starts would force-push under a session and, on a conflict it could
+      # not settle, `stop` the Issue from `hard` to `human`: the semaphore the
+      # session set, overwritten by the run it was set to keep out.
+      #
+      # On those doors the Issue is read off the branch name by prefix, and
+      # the job's condition admits the name by prefix too, so `claude/issue-
+      # 169-followup` arrives here as `169-followup`; and an Issue can have
+      # been deleted or transferred under its branch. On the first door a
+      # read that fails aborts the step, and rightly: the delivery is not
+      # taken and the Issue is there to be re-delivered. On the others an
+      # aborted step is a red job with the verdict answered by nobody, which
+      # is worse than the verdict being answered, as it was before this step
+      # read anything here. So on those doors a name that is not a number,
+      # or an Issue that cannot be read, is a word — the branch names no
+      # Challenge the loop holds — and not a failure.
       - name: is it taken already
         id: taken
-        if: github.event_name == 'issues'
+        if: github.event_name != 'workflow_dispatch' || inputs.task == 'rebase'
         run: |
+          if [ "$DOOR" != issues ]; then
+            case "$ISSUE" in
+              ''|*[!0-9]*)
+                printf 'by=unnamed\nwhy=%s\n' "on a branch that names no Challenge the loop holds" >> "$GITHUB_OUTPUT"
+                echo "'$ISSUE' is not an Issue number; the branch is not the loop's shape, and this delivery is not its"
+                exit 0 ;;
+            esac
+          fi
           open=$(gh pr list --state open --head "claude/issue-$ISSUE" --json number --jq '.[].number')
-          issue=$(gh issue view "$ISSUE" --json state,assignees,labels)
+          if ! issue=$(gh issue view "$ISSUE" --json state,assignees,labels); then
+            [ "$DOOR" != issues ] || exit 1
+            printf 'by=unnamed\nwhy=%s\n' "not an Issue this repository can read" >> "$GITHUB_OUTPUT"
+            echo "#$ISSUE cannot be read; the branch names no Challenge the loop holds, and this delivery is not its"
+            exit 0
+          fi
           state=$(jq -r .state <<<"$issue")
           mine=$(jq -r --arg c "$CODER" '.assignees[].login | select(. == $c)' <<<"$issue")
           level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium")][0] // ""' <<<"$issue")
           if [ "$state" != OPEN ]; then
-            printf 'by=closed\n' >> "$GITHUB_OUTPUT"
+            printf 'by=closed\nwhy=closed\n' >> "$GITHUB_OUTPUT"
             echo "#$ISSUE is closed now; this delivery is stale"
-          elif [ -n "$open" ] && [ -n "$mine" ]; then
+          elif [ "$DOOR" = issues ] && [ -n "$open" ] && [ -n "$mine" ]; then
             printf 'by=%s\n' "$open" >> "$GITHUB_OUTPUT"
             echo "#$ISSUE is claimed by $mine and has open pull request #$open; this delivery is a duplicate"
+          elif jq -e '.labels[].name | select(. == "hard")' <<<"$issue" >/dev/null; then
+            printf 'by=held\n' >> "$GITHUB_OUTPUT"
+            echo "#$ISSUE is hard now: the solo's, with a session beside him; this loop stands down"
           elif [ -z "$level" ]; then
-            printf 'by=stale\n' >> "$GITHUB_OUTPUT"
-            echo "#$ISSUE is labelled '$(jq -r '[.labels[].name] | join(", ")' <<<"$issue")' now; this delivery is stale"
+            printf 'by=stale\nwhy=%s\n' "labelled $(jq -r '[.labels[].name] | join(", ")' <<<"$issue") now, which no loop takes" >> "$GITHUB_OUTPUT"
+            echo "#$ISSUE is labelled '$(jq -r '[.labels[].name] | join(", ")' <<<"$issue")' now; a Challenge at neither easy nor medium is not this loop's, on any door but the solo's own dispatch"
           else
             printf 'by=\nresume=%s\nlevel=%s\n' "$open" "$level" >> "$GITHUB_OUTPUT"
             [ -z "$open" ] || echo "#$ISSUE has open pull request #$open and no claim: a hand-back, taken up again"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number }}
+          DOOR: ${{ github.event_name }}
+          ISSUE: ${{ github.event.issue.number || steps.pr.outputs.issue }}
           CODER: ${{ format('{0}-{1}-coder', github.repository_owner, github.event.repository.name) }}
+
+      # Where the loop stood down and nobody is standing there, say so on the
+      # pull request. On `held` a session is, by construction, and a comment
+      # under it is noise. On `closed` or `stale` — an Issue closed under an
+      # open pull request, or one a run's `stop` left at `human` — the
+      # request for changes would otherwise stand with no Job and no sign,
+      # which is the state this file's head records solorepo's #102 as,
+      # reached from the other side. The solo holds a `human` Issue until they
+      # read the account `stop` posted; this is one more line of that account.
+      # The verdict's door only: it is delivered once, so the comment is the
+      # only trace the verdict gets. The rebase door is delivered on every
+      # push to `main` while the branch conflicts, and the facts behind
+      # `stale` and `closed` persist, so a sign here would be posted once per
+      # merge; `dispatch()` in `.meta/say/move` reads the Issue's state and
+      # level before it dispatches and names the branch it leaves alone in
+      # `advance`'s own log, where the repetition costs nobody.
+      - name: say the verdict has no Job
+        if: github.event_name == 'pull_request_review' && (steps.taken.outputs.by == 'closed' || steps.taken.outputs.by == 'stale' || steps.taken.outputs.by == 'unnamed')
+        run: |
+          .meta/say/post comment "$PR" <<EOF
+          No run takes this up: #$ISSUE is $WHY, so what stands on this pull request is the solo's. What decided that is in the run log, $RUN.
+          EOF
+        env:
+          PR: ${{ steps.pr.outputs.number }}
+          ISSUE: ${{ steps.pr.outputs.issue }}
+          WHY: ${{ steps.taken.outputs.why }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       # Depth by the label. `easy` is the smaller model and an hour at most;
       # `medium` is the larger and the whole budget. The guess is the
@@ -293,7 +376,7 @@ jobs:
           # the concurrency group is the level the run must take (solorepo's #117). A
           # second pass is the larger model whatever the label was: the
           # threads it answers were written by the deeper reviewer.
-          LEVEL: ${{ steps.taken.outputs.level || 'medium' }}
+          LEVEL: ${{ (github.event_name == 'issues' && steps.taken.outputs.level) || 'medium' }}
 
       - name: take the Issue
         id: take
@@ -494,7 +577,7 @@ jobs:
       # outstanding, so the `synchronize` it fires is what finally starts the
       # review that was asked for.
       - name: rebase onto the base
-        if: inputs.task == 'rebase'
+        if: inputs.task == 'rebase' && steps.taken.outputs.by == ''
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
@@ -576,7 +659,7 @@ jobs:
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
       - name: answer the review
-        if: github.event_name != 'issues' && inputs.task != 'rebase'
+        if: github.event_name != 'issues' && inputs.task != 'rebase' && steps.taken.outputs.by == ''
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:

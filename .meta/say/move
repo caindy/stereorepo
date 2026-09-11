@@ -399,6 +399,19 @@ def dispatch(pulls):
     to review is waiting on nothing, and a conflict on the solo's own branch is
     the solo's; the sweep names both of those for a reader either way.
 
+    **And only a Challenge the loop holds.** The branch shape says which
+    Issue and nothing about whose it is (solorepo's DR-142): a `hard` Issue is
+    the solo's with a session beside him, and `human` is where a pass that
+    could not settle a conflict left it, through `stop`, with the request
+    still outstanding and the branch still conflicting — which is this
+    reading's four facts exactly, on every push to `main` after it. Without
+    this read each of those pushes dispatched a pass that stood down at
+    `coder.yml`'s guard and said so on the pull request, one copy per merge,
+    until the solo got to the branch. So the Issue's state and level are read
+    here, before the dispatch, and a Challenge the loop does not hold is
+    named on the way past: the sweep already names the request nobody can
+    answer (solorepo's DR-129), and that is the reader's line, not this one's.
+
     **And never the lower layer of a stack**, which is the third thing
     solorepo's DR-133 rejected the wider filter for and so a thing this reading
     has to answer too. The armed filter above is what keeps the rebase off a
@@ -448,6 +461,24 @@ def dispatch(pulls):
             continue
         try:
             if mergeability(pull) != "CONFLICTING":
+                continue
+            challenge = pull["headRefName"].removeprefix("claude/issue-")
+            # Its own refusal, and not the dispatch's below: an Issue deleted
+            # or transferred under its branch fails this read the same way on
+            # every push to trunk, and a red sweep each time is the repetition
+            # this read exists to stop. `coder.yml` gives the same fact a word
+            # on its doors, `unnamed`; here it is a line, and the sweep's.
+            try:
+                issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
+            except SystemExit:
+                print(f"left #{number} alone: #{challenge} cannot be read, so the conflict "
+                      f"is the solo's, and the sweep names the request — {pull['title']}")
+                continue
+            levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
+            if issue["state"] != "OPEN" or not levels:
+                print(f"left #{number} alone: #{challenge} is "
+                      f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
+                      f"so the conflict is the solo's, and the sweep names the request — {pull['title']}")
                 continue
             channel.gh("workflow", "run", "coder.yml", "-f", f"pull_request={number}",
                        "-f", "task=rebase", parse=False)
