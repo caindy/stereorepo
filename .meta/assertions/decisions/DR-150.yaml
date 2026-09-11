@@ -1,0 +1,194 @@
+decisions:
+  - id: work:decision/150
+    name: "DR-150 · The gate's steps live in `.meta/checks/`, one module per subject, and `check.py` is the run"
+    challenge: work:challenge/222
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-check
+      - work:artifact/meta-checks-collect
+      - work:artifact/meta-checks-graph
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-citations
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-dereference
+      - work:artifact/specialize
+    context: >-
+      `check.py` reached 2,592 lines holding four subjects and one thing that is
+      not a subject at all. solorepo's #221 made each step register itself at
+      its definition, which removed the two tables that were a second place to
+      edit and left the file's size and its four subjects exactly where they
+      were; this is the half that one could not answer, because where the steps
+      live is a judgement about names and about what a portfolio copies. Three of the four are invariants — over the
+      assertion graph, over the tree, and over what prose claims about the
+      record — and the fourth, about 830 lines, is a set of probes that load
+      `.meta/hooks/` and `.meta/say/` and run them against the calls they exist
+      to refuse. The probes are not invariants over anything the gate reads, and
+      their presence showed in the import block: `import argparse` stood at the
+      top of the gate for one line inside one probe, so the gate over assertions
+      was taking its dependencies from a test suite. DR-124 makes the docstrings
+      the prose a reader of `check.py` reaches first, and that only works while
+      a reader can find the one they came for: the citation grammar alone —
+      `CITE`, `GAP`, `NEAREST`, `SAYS`, `SUBJECT`, `QUOTED`, `STATED` — carries
+      about 80 lines of commentary on leftmost-match and laziness, sitting
+      between two unrelated steps and read by everyone who opened the file for
+      something else.
+    alternatives:
+      - name: Leave it one file and rely on the docstrings
+        chosen: false
+        reason: >-
+          The position the file was already in, and the one that produced the
+          complaint. A docstring is found by a reader who is in the right
+          neighbourhood; it does nothing for a reader who has to scroll past
+          four subjects to reach it. The file also grows with the record — most
+          Decisions that change anything are enacted in `work:artifact/meta-check`
+          — so nothing about this gets better by waiting.
+      - name: Split the probes out and leave the rest
+        chosen: false
+        reason: >-
+          The half that is obviously two programs, and it buys the smaller
+          share. Moving the probes fixes the import block and removes 830 lines,
+          and it leaves 1,600 lines still holding three subjects with the
+          citation grammar still in the middle of them. Worth doing, and not
+          worth a Decision on its own; taken as part of this one.
+      - name: The registry in `check.py`, where solorepo's #221 put it
+        chosen: false
+        reason: >-
+          It cannot be, once the steps are in modules. A step registers itself
+          at its definition, so `@check` has to be importable by every module
+          that defines one, and `check.py` imports those modules — the cycle is
+          immediate. Nothing is lost by moving it down: the decorator is a thing
+          every step reaches for, which is the description of everything else in
+          `collect.py`.
+      - name: A `.meta/checks/` package whose `__init__.py` holds the collector
+        chosen: false
+        reason: >-
+          It saves one file and hides the foundation in the place a reader looks
+          last. `__init__.py` holding the paths, the schemas and the one pass
+          over `.meta/assertions/` means the module every other module imports
+          is the one with no name, and `from checks import META` reads as though
+          the package itself were a thing rather than a directory of steps.
+      - name: Flat modules beside `check.py`, as `render.py` and `next.py` are
+        chosen: false
+        reason: >-
+          It matches how `.meta/` is laid out today and it spends the names to
+          do it. Five more files at the top of `.meta/` — and the honest names
+          for them, `files.py` and `graph.py` and `citations.py`, are exactly
+          the words that read as though they were about the whole repository
+          rather than about the gate. Under a directory the same five names are
+          unambiguous, because the directory says what they are steps of.
+      - name: >-
+          `.meta/checks/` holding five modules, with `check.py` keeping the two
+          tables and the run
+        chosen: true
+        reason: >-
+          The subjects are real and the dependency analysis says so: once the
+          paths and the collector are below everything, the call graph across
+          the five is a directed acyclic graph with one cross-edge per pair —
+          `citations` reads the tree from `files`, `graph` borrows one citation
+          shape from `citations`, `probes` reaches into `graph` to substitute
+          the two sources `decision numbering` reads. Nothing had to be
+          rewritten to make that true, which is the evidence that the boundary
+          was already there. `check.py` keeps the two tables and the run, so
+          the file a reader opens to ask what the gate does still answers that
+          question in one screen, and the command in its docstring is unchanged.
+          The registry moves down to `collect.py` with the paths and the
+          collector, since a decorator every module applies cannot live in the
+          module that imports them all.
+          What it costs is a level of indirection at every step: the name in the
+          table is now `graph.decision_numbering` rather than
+          `decision_numbering`, and a reader following one has a directory to
+          open. That is the price of the names being unambiguous, and it is paid
+          once per reading rather than once per line.
+    consequences:
+      - >-
+        `.meta/check.py` is 100 lines: the module docstring, five imports, and
+        `main()`. Adding a step means writing it in the module whose subject it
+        shares, and nothing else — solorepo's #221 removed the table it would
+        otherwise also be named in.
+      - >-
+        `.meta/checks/collect.py` holds `META`, `ROOT`, `TEMPLATE`, `TOKEN`,
+        `SCHEMAS`, the collector, and `@check` with the registry behind it. It imports no sibling, which is what makes
+        the rest a DAG. `META` is `__file__.parent.parent` here rather than
+        `__file__.parent`, since the module sits one directory further down.
+      - >-
+        `.meta/checks/probes.py` holds the probes and, with them, `argparse`.
+        The gate's own imports are now the gate's. The probes still run as
+        prechecks from `check.py`, so `python .meta/check.py` is still the whole
+        gate and `.meta/gate` is untouched — what moved is where the code lives,
+        not what runs or in what order.
+      - >-
+        `files.py` holds `rendering()` and both steps that read it — `rendered
+        prose` and `inherited prose` — so the one render the gate performs stays
+        beside the two steps that describe it (solorepo's DR-144). `main()`
+        names them off `files.rendering()`.
+      - >-
+        The order the gate prints changes, because a module's steps enter the
+        registry when it is imported and `main()` reads the registry in order.
+        It is not simply the import order: the prechecks run as their own first
+        pass whatever module they came from, so `duplicate keys` and the five
+        probes still print first, and only the rest follow the imports — the
+        tree, then what prose claims about it, then the graph. Within each group
+        the steps are grouped by subject where they used to interleave. No step
+        was added, removed or renamed, and every result is the same.
+      - >-
+        `.meta/dereference.py` imports `.meta/checks/citations.py` rather than
+        `check.py`. It only ever wanted the citation grammar and the copy set,
+        and those now have a name — but the gate did not catch the break, since
+        nothing it runs imports `check.py`. `just dereference` did, on the first
+        run after the split.
+      - >-
+        Specialization's copy step names `.meta/checks/`. A portfolio that
+        copied `check.py` alone would have a gate that cannot import its own
+        steps, which is the failure mode the step exists to prevent.
+      - >-
+        The gate reports the same steps with the same results, and the collector
+        reads the same tree. What changed is the order they print in, which the
+        consequence above states.
+    falsifier: >-
+      A step that has to be written in two of the five modules, or one whose
+      subject is plainly none of them — which would say the four subjects were a
+      reading of what the file happened to contain rather than of what the gate
+      does. The nearer risk is a module that becomes the second grab-bag:
+      `files.py` and `graph.py` are the two that took what was left over after
+      `citations` and `probes` were lifted out, and if either stops having a
+      one-line description that is true of everything in it, the boundary drawn
+      here was drawn by subtraction.
+    rationale: |-
+      solorepo's #221 answered the half of this that needed no Decision: the
+      two tables, the arity-adapting lambdas, and the arithmetic counting steps
+      by hand. What it could not answer is where the steps live, because that is
+      a judgement about names and about what a portfolio copies, and this entry
+      is that judgement. The two are one argument taken in two changes, and this
+      is the layer above.
+
+      The file was two programs before it was four subjects, and the import
+      block is where that showed. A gate declares in its first line what it is
+      the gate over; this one declared assertions and then imported `argparse`
+      for a probe of a command-line parser 2,000 lines down. Nothing was broken
+      by that — the probes belong in the gate, because a boundary is a boundary
+      only while its predicate holds and reviewers have twice found holes in
+      these predicates — but where they belong in the gate is not inside the
+      module that reads the record.
+
+      What made the rest of the split safe to take in the same change is that it
+      required no rewriting. The functions were sliced at their own line ranges,
+      comments and all, and the edits are the five import headers, `META`
+      gaining a `.parent`, and two names in `probes.py` that now reach their
+      subject through `graph`.
+
+      That the slice is a script and not a hand is what settled the order the
+      two changes merge in. Both rewrite the same file, so one of them rebases
+      whichever way round they go; the question is which rebase is cheaper, and
+      it is this one, because re-running a slicer over whatever `check.py` has
+      become costs a command. solorepo's #221's work is a hand-made edit at
+      every step definition, and redoing it costs a pass. So it merges first and
+      this is a layer on it.
+
+      The names are the part that took the argument. `files.py`, `graph.py` and
+      `citations.py` are the right words for what is in them and the wrong words
+      to put at the top of `.meta/`, where they would read as claims about the
+      repository. A directory fixes that for the price of one more path, and it
+      makes the Specialization copy step shorter rather than longer — one entry
+      where five flat files would have been five. The package's `__init__.py` is
+      empty on purpose: a reader looking for the foundation should find it in a
+      file called `collect.py`, which says what it does.

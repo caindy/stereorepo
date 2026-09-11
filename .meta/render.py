@@ -117,30 +117,38 @@ NUMBERS = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight",
 
 
 def prechecks():
-    """`check.py`'s prechecks, by function name, read out of its source.
+    """The gate's prechecks, by function name, read out of the modules that
+    register them.
 
     Read and not imported. The renderer has one dependency — `uvx --with pyyaml
     python .meta/render.py` is how it is run, and how `check.py` runs it — and
-    the module a count of the gate's steps reaches into has LinkML. `check.py`
-    registers each step at its definition, so `@check(..., pre=True)` is the
+    the modules a count of the gate's steps reaches into have LinkML. Each step
+    registers itself at its definition, so `@check(..., pre=True)` is the
     declaration, and `ast` reads it without running anything.
+
+    The steps live in `.meta/checks/`, one module per subject
+    (solorepo's DR-150), so the whole directory is read rather than one file:
+    which module a precheck is written in is that split's business, and a count
+    of them should not move when one is carried from one subject to another.
 
     Empty is an error and not a count of none. A rewrite that registers steps
     some other way says so here, rather than leaving the prose that cites this
     to assert there are no prechecks at all.
     """
     found = []
-    for node in ast.parse((META / "check.py").read_text()).body:
-        for decorator in getattr(node, "decorator_list", []):
-            if not (isinstance(decorator, ast.Call)
-                    and getattr(decorator.func, "id", None) == "check"):
-                continue
-            if any(word.arg == "pre" and getattr(word.value, "value", None) is True
-                   for word in decorator.keywords):
-                found.append(node.name)
+    for path in sorted((META / "checks").glob("*.py")):
+        for node in ast.parse(path.read_text()).body:
+            for decorator in getattr(node, "decorator_list", []):
+                if not (isinstance(decorator, ast.Call)
+                        and getattr(decorator.func, "id", None) == "check"):
+                    continue
+                if any(word.arg == "pre" and getattr(word.value, "value", None) is True
+                       for word in decorator.keywords):
+                    found.append(node.name)
     if not found:
-        raise LookupError("check.py registers no step with `@check(..., pre=True)`, "
-                          "and a count cited in prose is derived from those that are")
+        raise LookupError("no module in .meta/checks/ registers a step with "
+                          "`@check(..., pre=True)`, and a count cited in prose is "
+                          "derived from those that are")
     return found
 
 

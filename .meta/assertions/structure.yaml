@@ -157,6 +157,21 @@ artifacts:
   - id: work:artifact/meta-check
     name: .meta/check.py
     path: .meta/check.py
+  - id: work:artifact/meta-checks-collect
+    name: .meta/checks/collect.py
+    path: .meta/checks/collect.py
+  - id: work:artifact/meta-checks-graph
+    name: .meta/checks/graph.py
+    path: .meta/checks/graph.py
+  - id: work:artifact/meta-checks-files
+    name: .meta/checks/files.py
+    path: .meta/checks/files.py
+  - id: work:artifact/meta-checks-citations
+    name: .meta/checks/citations.py
+    path: .meta/checks/citations.py
+  - id: work:artifact/meta-checks-probes
+    name: .meta/checks/probes.py
+    path: .meta/checks/probes.py
   - id: work:artifact/meta-check-pr
     name: .meta/check_pr.py
     path: .meta/check_pr.py

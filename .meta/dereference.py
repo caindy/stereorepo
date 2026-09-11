@@ -68,19 +68,28 @@ SENTENCE = re.compile(r"(?<=[.!?])\s+(?=[A-Z\"'`(\[*\d])")
 # hands each item the tail of the item before it and asks about the wrong pair.
 ITEM = re.compile(r"^\s*(?:\||[-*+]\s|\d+[.)]\s)")
 CONTEXT = 600
+CHECKS = META / "checks"
 
 
-def check():
-    """`check.py`, imported for its extraction and nothing else.
+def citations():
+    """`.meta/checks/citations.py`, imported for its extraction and nothing else.
 
     Importing runs nothing — everything it does is under `main()` — and the
     functions used here read files. It is imported the way `check.py` imports
     `check_pr.py`, and for the same reason: what a citation is, and which files
     hold one durably, is one fact, and a copy of it here would be a second
     answer that drifts.
+
+    The gate's steps moved out of `check.py` into `.meta/checks/`
+    (solorepo's DR-150), so what this reaches for now has a name: the citation
+    grammar and the copy set are `citations.py`'s, and nothing else in the gate
+    is wanted here. Its own siblings are imported by plain name, so the
+    directory goes on `sys.path` first.
     """
-    loader = SourceFileLoader("check", str(META / "check.py"))
-    spec = importlib.util.spec_from_loader("check", loader)
+    if str(CHECKS) not in sys.path:
+        sys.path.insert(0, str(CHECKS))
+    loader = SourceFileLoader("citations", str(CHECKS / "citations.py"))
+    spec = importlib.util.spec_from_loader("citations", loader)
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)
     return module
@@ -423,7 +432,7 @@ def main(argv=None):
                     help="print the pairs and ask nothing: the deterministic half alone")
     args = ap.parse_args(argv)
 
-    chk = check()
+    chk = citations()
     base = git("merge-base", "HEAD", args.base, default="").strip() or args.base
     pairs = scope(chk, base, args.all)
     if args.pairs:
