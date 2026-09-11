@@ -42,6 +42,7 @@ by someone who knows what the work was.
 import argparse
 import json
 import math
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -56,7 +57,7 @@ WORKFLOWS = ("gate.yml", "coder.yml", "review.yml", "merge.yml", "advance.yml")
 # toward zero. `skipped` is the common one: `coder.yml` and `review.yml` skip
 # far more deliveries than they take.
 NOT_RUN = {"skipped", "cancelled", ""}
-RUN_FIELDS = "databaseId,createdAt,startedAt,updatedAt,conclusion,event,status"
+RUN_FIELDS = "databaseId,createdAt,startedAt,updatedAt,conclusion,event,status,headBranch,headSha,displayTitle"
 
 
 # "No default was given", as a value no caller can pass. `None` cannot serve:
@@ -184,7 +185,108 @@ def critical(run, jobs):
     return wait, span(last["startedAt"], last["completedAt"])
 
 
-def summarise(workflow, limit, deep):
+BOUNDARY_PATTERN = re.compile(
+    r"^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)"
+)
+DIFFICULTY_CACHE = {}
+
+
+def model_of(run):
+    """Determine the model used for a review run (opus vs sonnet).
+    Checks if any file touched by the PR matches boundary paths as in review.yml."""
+    sha = run.get("headSha")
+    if not sha:
+        return "unknown"
+    res = subprocess.run(["git", "diff", "--name-only", f"origin/main...{sha}"],
+                         capture_output=True, text=True)
+    if res.returncode != 0 or not res.stdout.strip():
+        res = subprocess.run(["git", "diff-tree", "--no-commit-id", "--name-only", "-r", sha],
+                             capture_output=True, text=True)
+    if res.returncode == 0 and res.stdout.strip():
+        if any(BOUNDARY_PATTERN.search(f) for f in res.stdout.splitlines()):
+            return "opus"
+        return "sonnet"
+    return "unknown"
+
+
+ISSUE_DIFF_BY_NUM = {}
+ISSUE_DIFF_BY_TITLE = {}
+ISSUES_FETCHED = False
+
+
+def _ensure_issues_loaded():
+    global ISSUES_FETCHED
+    if ISSUES_FETCHED:
+        return
+    res = subprocess.run(["gh", "issue", "list", "--state", "all", "--limit", "300", "--json", "number,title,labels"],
+                         capture_output=True, text=True)
+    if res.returncode == 0:
+        try:
+            for item in json.loads(res.stdout):
+                diff = "unknown"
+                for l in item.get("labels", []):
+                    if l.get("name") in ("easy", "medium", "hard", "human"):
+                        diff = l["name"]
+                        break
+                ISSUE_DIFF_BY_NUM[str(item["number"])] = diff
+                ISSUE_DIFF_BY_TITLE[item.get("title", "").strip().lower()] = diff
+        except Exception:
+            pass
+    ISSUES_FETCHED = True
+
+
+def difficulty_of(run):
+    """Determine the challenge difficulty label from the run's branch name or issue title."""
+    branch = run.get("headBranch") or ""
+    m = re.search(r"issue-(\d+)", branch)
+    if m:
+        issue_num = m.group(1)
+        if issue_num in DIFFICULTY_CACHE:
+            return DIFFICULTY_CACHE[issue_num]
+        _ensure_issues_loaded()
+        diff = ISSUE_DIFF_BY_NUM.get(issue_num)
+        if not diff or diff == "unknown":
+            res = subprocess.run(["gh", "issue", "view", issue_num, "--json", "labels"],
+                                 capture_output=True, text=True)
+            if res.returncode == 0:
+                try:
+                    data = json.loads(res.stdout)
+                    labels = {l.get("name") for l in data.get("labels", [])}
+                    for cand in ("easy", "medium", "hard", "human"):
+                        if cand in labels:
+                            diff = cand
+                            break
+                except Exception:
+                    pass
+        diff = diff or "unknown"
+        DIFFICULTY_CACHE[issue_num] = diff
+        return diff
+
+    # When headBranch is main (e.g. issues: labeled or workflow_dispatch),
+    # resolve difficulty from the Issue's title or displayTitle.
+    title = (run.get("displayTitle") or "").strip()
+    if title:
+        m = re.search(r"#(\d+)", title)
+        if m:
+            return difficulty_of({"headBranch": f"claude/issue-{m.group(1)}"})
+        _ensure_issues_loaded()
+        if title.lower() in ISSUE_DIFF_BY_TITLE:
+            return ISSUE_DIFF_BY_TITLE[title.lower()]
+
+    return "unknown"
+
+
+def stratify_run(workflow, run, stratify):
+    if stratify == "model":
+        if workflow == "review.yml":
+            return model_of(run)
+    elif stratify == "difficulty":
+        if workflow in ("review.yml", "coder.yml"):
+            return difficulty_of(run)
+    return None
+
+
+def summarise(workflow, limit, deep, stratify=None):
     """One row per workflow: how many runs, and what they cost.
 
     `deep` is how many of those runs to open for the waiting/running split.
@@ -194,24 +296,71 @@ def summarise(workflow, limit, deep):
     found = runs_of(workflow, limit)
     if found is None:
         return None, []
-    total = [span(r["createdAt"], r["updatedAt"]) for r in found]
-    total = [s for s in total if s is not None]
-    waits, works, opened = [], [], []
+    opened = []
     for run in found[:deep]:
         jobs = jobs_of(run["databaseId"])
         if not jobs:
             continue
-        opened.append((run, jobs))
         w, x = critical(run, jobs)
-        if w is not None:
-            waits.append(w)
-        if x is not None:
-            works.append(x)
-    return {"n": len(found), "total": total, "waiting": waits, "running": works}, opened
+        opened.append((run, jobs, w, x))
+
+    # Rectify sample mismatch: when deep > 0 and runs were opened, calculate
+    # total, waiting, and running over the runs where both wait and work could be
+    # determined, so all three metrics share the exact same sample.
+    valid_runs = [(r, w, x) for r, _, w, x in opened if w is not None and x is not None]
+    if deep > 0 and valid_runs:
+        total = [span(r["createdAt"], r["updatedAt"]) for r, _, _ in valid_runs]
+        waits = [w for _, w, _ in valid_runs]
+        works = [x for _, _, x in valid_runs]
+        n = len(valid_runs)
+    elif deep > 0 and opened:
+        total = [span(r["createdAt"], r["updatedAt"]) for r, _, _, _ in opened]
+        waits = [w for _, _, w, _ in opened if w is not None]
+        works = [x for _, _, _, x in opened if x is not None]
+        n = len(opened)
+    else:
+        total = [span(r["createdAt"], r["updatedAt"]) for r in found]
+        waits = []
+        works = []
+        n = len(found)
+    total = [s for s in total if s is not None]
+
+    result = {
+        "n": n,
+        "available": len(found),
+        "total": total,
+        "waiting": waits,
+        "running": works,
+    }
+
+    if stratify and opened:
+        groups = {}
+        for run, _, w, x in opened:
+            tag = stratify_run(workflow, run, stratify)
+            if tag:
+                t = span(run["createdAt"], run["updatedAt"])
+                g = groups.setdefault(tag, {"n": 0, "total": [], "waiting": [], "running": []})
+                if w is not None and x is not None and t is not None:
+                    g["n"] += 1
+                    g["total"].append(t)
+                    g["waiting"].append(w)
+                    g["running"].append(x)
+        result["groups"] = groups
+
+    return result, opened
 
 
 def row(name, seen):
     return (f"  {name[:-4]:<9} {seen['n']:>3}  "
+            f"{clock(pick(seen['total'], 0.5))} {clock(pick(seen['total'], 0.95))} "
+            f"{clock(max(seen['total']) if seen['total'] else None)}  "
+            f"{clock(pick(seen['waiting'], 0.5))} {clock(pick(seen['waiting'], 0.95))}  "
+            f"{clock(pick(seen['running'], 0.5))} {clock(pick(seen['running'], 0.95))}")
+
+
+def subrow(tag, seen):
+    label = f"  {tag}"
+    return (f"  {label:<9} {seen['n']:>3}  "
             f"{clock(pick(seen['total'], 0.5))} {clock(pick(seen['total'], 0.95))} "
             f"{clock(max(seen['total']) if seen['total'] else None)}  "
             f"{clock(pick(seen['waiting'], 0.5))} {clock(pick(seen['waiting'], 0.95))}  "
@@ -241,7 +390,7 @@ def steps(opened, show):
               f"{job} / {step[:58]}")
 
 
-def screen(names, limit, deep, show, want_steps):
+def screen(names, limit, deep, show, want_steps, stratify=None):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     print(f"\nworkflow runtimes — {now}, last {limit} completed runs each\n")
     print(f"  {'workflow':<9} {'n':>3}  {'total':>7} {'p95':>7} {'max':>7}  "
@@ -249,12 +398,15 @@ def screen(names, limit, deep, show, want_steps):
     print(f"  {'':<9} {'':>3}  {'p50':>7} {'':>7} {'':>7}  {'p50':>7} {'':>7}  {'p50':>7} {'':>7}")
     unreadable, everything = [], []
     for name in names:
-        seen, opened = summarise(name, limit, deep)
+        seen, opened = summarise(name, limit, deep, stratify=stratify)
         everything += opened
         if seen is None:
             unreadable.append(name)
         elif seen["n"]:
             print(row(name, seen))
+            if "groups" in seen:
+                for tag in sorted(seen["groups"].keys()):
+                    print(subrow(tag, seen["groups"][tag]))
         else:
             print(f"  {name[:-4]:<9}   0  no completed run in the last {limit}")
     if unreadable:
@@ -264,9 +416,11 @@ def screen(names, limit, deep, show, want_steps):
           "\n  runner — for arc-runner-set, a pod being scheduled and pulling its image."
           "\n  run is what it spent working once it had one, which is what a step added"
           "\n  to a workflow moves. Both are read off the job that finished last, so"
-          "\n  they add across the row."
-          f"\n  wait and run are read from the {deep} most recent runs of each; total"
-          "\n  from all of them.")
+          "\n  they add across the row.")
+    if deep > 0:
+        print(f"  All three are read from the {deep} most recent runs of each.")
+    else:
+        print(f"  total is read from the {limit} most recent runs of each.")
     if want_steps:
         print(f"\nslowest steps — across the {len(everything)} run(s) opened above\n")
         steps(everything, show)
@@ -280,9 +434,14 @@ def main():
                    help="which workflows, by file name; all four by default")
     p.add_argument("--limit", type=int, default=20,
                    help="runs per workflow to summarise (default 20)")
-    p.add_argument("--deep", type=int, default=5,
-                   help="how many of those to open for the wait/run split, one call "
-                        "each (default 5)")
+    p.add_argument("--deep", default="5",
+                   help="how many of those to open for the wait/run split (default 5, or 'all')")
+    p.add_argument("--by", choices=["model", "difficulty"], default=None,
+                   help="break down runs by 'model' (opus/sonnet) or 'difficulty' (hard/medium/easy)")
+    p.add_argument("--by-model", action="store_const", dest="by", const="model",
+                   help="shortcut for --by model")
+    p.add_argument("--by-difficulty", action="store_const", dest="by", const="difficulty",
+                   help="shortcut for --by difficulty")
     p.add_argument("--steps", action="store_true",
                    help="also the slowest steps across the runs opened")
     p.add_argument("--show", type=int, default=15,
@@ -290,7 +449,14 @@ def main():
     args = p.parse_args()
     names = args.workflow or list(WORKFLOWS)
     names = [n if n.endswith(".yml") else f"{n}.yml" for n in names]
-    screen(names, args.limit, max(0, args.deep), args.show, args.steps)
+    if args.deep == "all":
+        deep = args.limit
+    else:
+        try:
+            deep = max(0, int(args.deep))
+        except ValueError:
+            p.error(f"invalid --deep value: {args.deep!r}")
+    screen(names, args.limit, deep, args.show, args.steps, stratify=args.by)
 
 
 if __name__ == "__main__":

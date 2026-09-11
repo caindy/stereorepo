@@ -21,6 +21,7 @@
 # coder's, and the bound on it is the ruleset, the gate and review rather than
 # the reviewer's reading hook.
 name: coder
+run-name: coder-issue-#${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}
 
 on:
   issues:
