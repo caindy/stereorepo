@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/111
+    name: "A Role's harness is chosen per run: Gemini CLI or Codex as the coder or the reviewer, through one step per harness"
+    challenge_type: FEATURE
+    description: >-
+      The coder and the reviewer each run in whichever harness the solo
+      chooses for the run: Claude Code, Gemini CLI, or Codex. A Role is an
+      account and a credential (DR-107), and a harness is what runs inside
+      the container as that Role. The workflow picks a harness step by label
+      or input, while Disciplines, forms, channel, and gate remain harness-independent.

@@ -413,10 +413,10 @@ def is_approved_pull(pull, reviewer_login=None):
             if (r.get("author") or {}).get("login") == reviewer_login]
     return bool(revs and revs[-1].get("state") == "APPROVED")
 
-# A loop's branch, and nothing else. `claude/issue-<n>` is the shape `coder.yml`
+# A loop's branch, and nothing else. `(claude|gemini|codex)/issue-<n>` is the shape `coder.yml`
 # cuts, so it is the shape a dispatched coder can be sent back to; the solo's
 # own pull request is the solo's to rebase, whatever it looks like from here.
-LOOPS_BRANCH = re.compile(r"^claude/issue-\d+$")
+LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-\d+$")
 # How long to wait for GitHub to say whether a branch still merges. `mergeable`
 # is computed in the background when it is asked for, and GitHub's reference
 # for it says to poll until the value is no longer null — which `gh` spells
@@ -616,7 +616,7 @@ def dispatch(pulls):
         try:
             if mergeability(pull) != "CONFLICTING":
                 continue
-            challenge = pull["headRefName"].removeprefix("claude/issue-")
+            challenge = re.sub(r"^(?:claude|gemini|codex)/issue-", "", pull["headRefName"])
             # Its own refusal, and not the dispatch's below: an Issue deleted
             # or transferred under its branch fails this read the same way on
             # every push to trunk, and a red sweep each time is the repetition
@@ -729,7 +729,7 @@ def dispatch_pass(pr, task):
         # solo's own branch, so the branch this one meets is the one the
         # machine's filter passes over.
         if not LOOPS_BRANCH.match(pull["headRefName"]):
-            sys.exit(f"say: #{pr} is on {pull['headRefName']}, which is not `claude/issue-<n>`. "
+            sys.exit(f"say: #{pr} is on {pull['headRefName']}, which is not a loop branch `(claude|gemini|codex)/issue-<n>`. "
                      "The rebase pass reads the Challenge it would hand back to off the branch "
                      "name, so on any other shape a pass that could not settle the conflict "
                      "has nowhere to stop. `coder.yml` holds that refusal already and holds it "

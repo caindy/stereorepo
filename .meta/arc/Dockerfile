@@ -4,14 +4,15 @@ FROM ghcr.io/actions/actions-runner:2.337.0
 
 USER root
 
-# Install C toolchain (build-essential), git, curl, jq, and GitHub CLI (gh)
+# Install C toolchain (build-essential), git, curl, jq, GitHub CLI (gh), and xz-utils
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
         build-essential \
         ca-certificates \
         curl \
         git \
-        jq && \
+        jq \
+        xz-utils && \
     mkdir -p -m 755 /etc/apt/keyrings && \
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
         -o /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
@@ -29,6 +30,12 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | \
 
 # Install pinned uv / uvx (0.6.14)
 COPY --from=ghcr.io/astral-sh/uv:0.6.14 /uv /uvx /usr/local/bin/
+
+# Install pinned Node.js (22.14.0 LTS) and pinned Gemini CLI (0.59.0)
+RUN curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz | \
+    tar -xJ -C /usr/local --strip-components=1 && \
+    npm install -g @google/gemini-cli@0.59.0 && \
+    chown -R runner:runner /usr/local/lib/node_modules /usr/local/bin
 
 # Install rustup for the runner user
 USER runner

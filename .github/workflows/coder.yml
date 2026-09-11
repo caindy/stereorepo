@@ -50,6 +50,11 @@ on:
         type: choice
         options: [review, rebase]
         default: review
+      harness:
+        description: which harness runs
+        type: choice
+        options: [gemini, claude, codex]
+        default: gemini
 
 # One run per Issue or per pull request at a time. A second label on the
 # same Issue, or a second verdict on the same pull request, waits rather than
@@ -108,7 +113,7 @@ jobs:
       || (github.event_name == 'pull_request_review'
         && (github.event.review.state == 'changes_requested' || github.event.review.state == 'approved')
         && github.event.review.user.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
-        && startsWith(github.event.pull_request.head.ref, 'claude/issue-'))
+        && (startsWith(github.event.pull_request.head.ref, 'claude/issue-') || startsWith(github.event.pull_request.head.ref, 'gemini/issue-') || startsWith(github.event.pull_request.head.ref, 'codex/issue-')))
       || github.event_name == 'workflow_dispatch'
     # The self-hosted scale set (solorepo's DR-137): this Job is what actually
     # spends GitHub Actions minutes, holding a runner for up to the timeout
@@ -123,9 +128,8 @@ jobs:
     env:
       # The Trailer's two halves (solorepo's DR-086). The run id is a workload identity
       # GitHub attests for this run and no other; the harness is the action,
-      # pinned below, recorded as the environment names it.
+      # recorded as the environment names it.
       ACTOR_SESSION: gha-${{ github.run_id }}
-      AI_AGENT: anthropics/claude-code-action@v1
     steps:
       # Full history so the coder can read what was already true, and no
       # token in `.git/config` from the checkout: the action writes the
@@ -157,7 +161,11 @@ jobs:
           state=$(jq -r .state <<<"$pull")
           branch=$(jq -r .headRefName <<<"$pull")
           base=$(jq -r .baseRefName <<<"$pull")
-          case "$branch" in claude/issue-*) issue=${branch#claude/issue-} ;; *) issue= ;; esac
+          case "$branch" in
+            claude/issue-*|gemini/issue-*|codex/issue-*)
+              issue="${branch#*/issue-}" ;;
+            *) issue= ;;
+          esac
           if [ "$TASK" = rebase ] && [ -z "$issue" ]; then
             echo "::error::#$n is on $branch, which names no Challenge, so a rebase pass that could not finish would have nothing to hand back. Rebase it by hand."
             exit 1
@@ -184,6 +192,58 @@ jobs:
           INPUT_PR: ${{ inputs.pull_request }}
           TASK: ${{ inputs.task }}
 
+      # Which harness speaks: Claude Code by default, or Gemini CLI or Codex by label, input, branch, or fallback
+      - name: choose the harness
+        id: harness
+        run: |
+          # Default per repository decision: claude
+          harness="claude"
+
+          if [ -n "$INPUT_HARNESS" ]; then
+            harness="$INPUT_HARNESS"
+          elif [ "$EVENT" = "issues" ]; then
+            if echo "$ISSUE_LABELS" | grep -qw "harness:gemini"; then
+              harness="gemini"
+            elif echo "$ISSUE_LABELS" | grep -qw "harness:codex"; then
+              harness="codex"
+            elif echo "$ISSUE_LABELS" | grep -qw "harness:claude"; then
+              harness="claude"
+            fi
+          elif [ -n "$PR_BRANCH" ]; then
+            pr_labels=$(gh pr view "$PR_NUMBER" --json labels -q '.labels[].name' 2>/dev/null || true)
+            if echo "$pr_labels" | grep -qw "harness:gemini"; then
+              harness="gemini"
+            elif echo "$pr_labels" | grep -qw "harness:codex"; then
+              harness="codex"
+            elif echo "$pr_labels" | grep -qw "harness:claude"; then
+              harness="claude"
+            elif [[ "$PR_BRANCH" =~ ^gemini/ ]]; then
+              harness="gemini"
+            elif [[ "$PR_BRANCH" =~ ^codex/ ]]; then
+              harness="codex"
+            fi
+          fi
+
+          if [ "$harness" = "gemini" ]; then
+            agent="google-github-actions/run-gemini-cli"
+          else
+            agent="anthropics/claude-code-action@v1"
+          fi
+
+          echo "harness=$harness" >> "$GITHUB_OUTPUT"
+          echo "branch_prefix=$harness" >> "$GITHUB_OUTPUT"
+          echo "agent=$agent" >> "$GITHUB_OUTPUT"
+          echo "AI_AGENT=$agent" >> "$GITHUB_ENV"
+          echo "Harness chosen: $harness (agent: $agent, branch_prefix: $harness)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          INPUT_HARNESS: ${{ inputs.harness }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ' ') }}
+          PR_BRANCH: ${{ steps.pr.outputs.branch }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+
+
       # The Role's credential, where `.meta/say/` expects it by default
       # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
       # container. The same channel and the same rules as on a laptop.
@@ -192,6 +252,9 @@ jobs:
           install -d -m 700 ~/.config/solorepo
           install -m 600 /dev/null ~/.config/solorepo/coder.env
           printf 'GH_TOKEN=%s\n' "$CODER_GH_TOKEN" > ~/.config/solorepo/coder.env
+          git config --global credential.helper store
+          install -m 600 /dev/null ~/.git-credentials
+          printf 'https://x-access-token:%s@github.com\n' "$CODER_GH_TOKEN" > ~/.git-credentials
           .meta/say/whoami
         env:
           CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
@@ -221,10 +284,17 @@ jobs:
       - name: hold the model credential
         run: |
           install -d -m 700 ~/.config/solorepo
-          install -m 600 /dev/null ~/.config/solorepo/claude.env
-          printf 'CLAUDE_CODE_OAUTH_TOKEN=%s\n' "$MODEL_TOKEN" > ~/.config/solorepo/claude.env
+          if [ -n "$CLAUDE_TOKEN" ]; then
+            install -m 600 /dev/null ~/.config/solorepo/claude.env
+            printf 'CLAUDE_CODE_OAUTH_TOKEN=%s\n' "$CLAUDE_TOKEN" > ~/.config/solorepo/claude.env
+          fi
+          if [ -n "$GEMINI_KEY" ]; then
+            install -m 600 /dev/null ~/.config/solorepo/gemini.env
+            printf 'GEMINI_API_KEY=%s\n' "$GEMINI_KEY" > ~/.config/solorepo/gemini.env
+          fi
         env:
-          MODEL_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       # One run per Challenge. A label supplied at creation fires `labeled`
       # like any other — GitHub's workflow reference: an Issue opened with two
@@ -296,7 +366,7 @@ jobs:
                 exit 0 ;;
             esac
           fi
-          open=$(gh pr list --state open --head "claude/issue-$ISSUE" --json number --jq '.[].number')
+          open=$(gh pr list --state open --json number,headRefName --jq ".[] | select(.headRefName | test(\"^(claude|gemini|codex)/issue-$ISSUE$\")) | .number" | head -n 1)
           if ! issue=$(gh issue view "$ISSUE" --json state,assignees,labels); then
             [ "$DOOR" != issues ] || exit 1
             printf 'by=unnamed\nwhy=%s\n' "not an Issue this repository can read" >> "$GITHUB_OUTPUT"
@@ -381,13 +451,13 @@ jobs:
         run: |
           printf 'level=%s\nreader=claude-sonnet-5\n' "$LEVEL" >> "$GITHUB_OUTPUT"
           if [ "$TASK" = rebase ]; then
-            printf 'model=claude-opus-5\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
           elif [ "$EVENT" = pull_request_review ] && [ "$STATE" = approved ]; then
-            printf 'model=claude-sonnet-5\nturns=30\nminutes=15\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\nturns=30\nminutes=15\n' >> "$GITHUB_OUTPUT"
           elif [ "$LEVEL" = medium ]; then
-            printf 'model=claude-opus-5\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
           else
-            printf 'model=claude-sonnet-5\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
         env:
@@ -403,9 +473,10 @@ jobs:
           # the budget above regardless of LEVEL.
           LEVEL: ${{ (github.event_name == 'issues' && steps.taken.outputs.level) || 'medium' }}
 
-      - name: take the Issue
-        id: take
-        if: github.event_name == 'issues' && steps.taken.outputs.by == ''
+      - name: take the Issue (claude)
+        id: take_claude
+        if: github.event_name == 'issues' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude'
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
@@ -453,7 +524,7 @@ jobs:
 
             Claim it: `.meta/say/move claim ${{ github.event.issue.number }}`.
             Read it: `gh issue view ${{ github.event.issue.number }}`.
-            Branch as `claude/issue-${{ github.event.issue.number }}` from
+            Branch as `${{ steps.harness.outputs.branch_prefix }}/issue-${{ github.event.issue.number }}` from
             `origin/main`, push at the first commit, and open the pull request
             at once with `.meta/say/move open`, the form filled and the Issue named
             under "What it closes". ${{ steps.taken.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.taken.outputs.resume) || 'No run has taken this Issue before.' }}
@@ -518,6 +589,113 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
+      - name: detect claude quota error (take)
+        id: claude_quota_take
+        if: github.event_name == 'issues' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude' && steps.take_claude.outcome == 'failure'
+        env:
+          EXECUTION_FILE: ${{ steps.take_claude.outputs.execution_file }}
+        run: |
+          python3 -c '
+          import json, os, sys
+          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
+          fallback = False
+          if os.path.exists(file):
+              try:
+                  with open(file) as f:
+                      data = json.load(f)
+                  entries = data if isinstance(data, list) else [data]
+                  for item in entries:
+                      if isinstance(item, dict):
+                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
+                              fallback = True
+                              break
+              except Exception as e:
+                  print(f"Error parsing {file}: {e}", file=sys.stderr)
+              if not fallback:
+                  try:
+                      with open(file) as f:
+                          raw = f.read().lower()
+                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
+                          fallback = True
+                  except Exception as e:
+                      print(f"Error reading {file}: {e}", file=sys.stderr)
+          print(f"Claude quota error detected: {fallback}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("fallback=" + ("true" if fallback else "false") + "\n")
+          if fallback:
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
+          else:
+              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
+              sys.exit(1)
+          '
+
+      - name: take the Issue (gemini)
+        id: take_gemini
+        if: github.event_name == 'issues' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_take.outputs.fallback == 'true')
+        uses: google-github-actions/run-gemini-cli@v0
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+          GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          prompt: |
+            You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}
+            of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
+            Read /pr-first: it is the coder's reading of PR First, and lists
+            your verbs, what each does and where the judgement is; `AGENTS.md` (and `GEMINI.md`)
+            has the conventions. Every act on GitHub goes through the channel,
+            `.meta/say/post` to say something and `.meta/say/move` to change
+            state; each verb is a step of the Discipline, takes its body on
+            stdin as a quoted heredoc, and a refusal names the verb to use
+            instead. Commit through `.meta/say/commit -m "<subject>"` and
+            never `git commit`; only the channel signs.
+
+            Claim it: `.meta/say/move claim ${{ github.event.issue.number }}`.
+            Read it: `gh issue view ${{ github.event.issue.number }}`.
+            Branch as `${{ steps.harness.outputs.branch_prefix }}/issue-${{ github.event.issue.number }}` from
+            `origin/main`, push at the first commit, and open the pull request
+            at once with `.meta/say/move open`, the form filled and the Issue named
+            under "What it closes". ${{ steps.taken.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.taken.outputs.resume) || 'No run has taken this Issue before.' }}
+            Below, `<n>` is that pull request's number, never the Issue's;
+            `revise` and `comment` take either.
+
+            Do what the Issue asks and no more. Gate green with
+            `.meta/gate meta`, commit and push as you go, `.meta/say/move revise <n>`
+            when the body no longer says what the head does, and
+            `just dereference` and then `.meta/say/post landed <n>` before you
+            hand it over. `dereference` reads the citations this branch wrote
+            against the entries they name; it is not a gate and blocks nothing,
+            so answer its `x` by fixing the sentence, or by leaving it and
+            saying why on the pull request (solorepo's DR-134).
+
+            Before you hand the branch over as finished, reread your diff
+            against origin/main to verify quality and consistency.
+            What you spot is yours to act on or not; what you decide not to
+            do you raise as a notice on the diff with `.meta/say/post notice`.
+
+            `easy` and `medium`: if you raised any notice on the diff, promote each
+            surviving thread with `.meta/say/post promote <thread-id> --title T --difficulty hard < issue-body.md`
+            and revise the body with `.meta/say/move revise <n>` to list the promoted
+            Issue(s) under `**What was noticed and not done.**`; then request review:
+            `.meta/say/move request-review <n>` and stop. The reviewer approves when clean,
+            and a standing merge manager lands what is green in order of leverage (solorepo's DR-161).
+            Do not arm the merge and do not merge by hand: the merge manager evaluates and lands
+            eligible work. Do either the moment the branch is pushed and the body is
+            final, and do not wait for the checks (solorepo's #102).
+
+            If you cannot finish — a decision only the solo can take, a gate
+            that will not go green, work larger than it looked —
+            `.meta/say/move stop ${{ github.event.issue.number }}` with why on
+            stdin. It hands the Issue to the solo and leaves the pull request
+            open for the run that takes it up again.
+
+            Do not answer any thread, do not merge by hand, and do not reach
+            GitHub any other way: the hook refuses `gh pr create`, `gh pr
+            comment`, `gh issue edit`, `gh issue comment` and `gh api`.
+
       # The falsifier for the paragraph above (solorepo's DR-165). The reading
       # pass is silent by design — no comment, no verb, no state — so GitHub
       # holds nothing that tells a run which spawned the reader from one that
@@ -573,7 +751,8 @@ jobs:
       - name: the reading pass ran
         if: >-
           !cancelled() && github.event_name == 'issues'
-          && steps.taken.outputs.by == '' && steps.take.outcome == 'success'
+          && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude'
+          && steps.take_claude.outcome == 'success'
         run: |
           pr=$(python3 .meta/check_pr.py --hand-back "$ISSUE") || pr=
           number=$(jq -r '.number // empty' <<<"$pr")
@@ -592,7 +771,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
-          EXECUTION: ${{ steps.take.outputs.execution_file }}
+          EXECUTION: ${{ steps.take_claude.outputs.execution_file }}
           MODEL: ${{ steps.depth.outputs.model }}
           READER: ${{ steps.depth.outputs.reader }}
 
@@ -645,7 +824,8 @@ jobs:
       - name: hand back what the run did not finish
         if: >-
           always() && github.event_name == 'issues' && steps.taken.outputs.by == ''
-          && steps.take.outcome != 'success' && steps.take.outcome != 'skipped'
+          && steps.take_claude.outcome != 'success' && steps.take_gemini.outcome != 'success'
+          && (steps.take_claude.outcome == 'failure' || steps.take_gemini.outcome == 'failure')
         run: |
           # `bash -e` ends the step on the first failed assignment, so every
           # bare read here is a way for the handler to die without handing
@@ -689,6 +869,10 @@ jobs:
           green=$(jq -r .green <<<"$pr")
           conflicting=$(jq -r .conflicting <<<"$pr")
           base=$(jq -r '.base // "main"' <<<"$pr")
+          branch=$(jq -r '.branch // empty' <<<"$pr")
+          if [ -z "$branch" ]; then
+            branch="${BRANCH_PREFIX}/issue-$ISSUE"
+          fi
           # This read asks only about the branch, so it needs nothing the
           # Issue says and comes first. `handed` means the run reached its own
           # last step: somebody holds the pull request, and there is nothing to
@@ -701,7 +885,7 @@ jobs:
           fi
           if ! issue=$(gh issue view "$ISSUE" --json state,labels); then
             .meta/say/move stop "$ISSUE" <<EOF
-          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`claude/issue-$ISSUE\` and stays open for the run that takes this up again.
+          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
 
           Not requested of the reviewer: #$ISSUE could not be read, so whether it is still open and at what level is unknown here; the run log above says why.
           EOF
@@ -719,11 +903,11 @@ jobs:
             echo "#$ISSUE is closed; a Challenge GitHub has closed has nothing to hand back"
           elif [ "$level" = human ]; then
             echo "#$ISSUE is already at human; the run handed it back itself"
-          elif ! merged=$(gh pr list --state merged --head "claude/issue-$ISSUE" --json number --jq '.[0].number // empty'); then
+          elif ! merged=$(gh pr list --state merged --head "$branch" --json number --jq '.[0].number // empty'); then
             .meta/say/move stop "$ISSUE" <<EOF
-          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`claude/issue-$ISSUE\` and stays open for the run that takes this up again.
+          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
 
-          Not requested of the reviewer: whether claude/issue-$ISSUE's pull request has merged could not be read, so whether the work already landed is unknown here; the run log above says why.
+          Not requested of the reviewer: whether $branch's pull request has merged could not be read, so whether the work already landed is unknown here; the run log above says why.
           EOF
           elif [ -n "$merged" ]; then
             echo "#$ISSUE's pull request #$merged has merged; the run finished and then ran out"
@@ -740,12 +924,12 @@ jobs:
             elif [ -z "$number" ]; then
               why="the run opened no pull request"
             elif [ "$conflicting" = true ]; then
-              why="#$number's branch conflicts with its base, $base. GitHub builds no merge ref for one that does, review.yml runs on pull_request, and so a review requested on it would create no run and be answered by nobody. Rebase claude/issue-$ISSUE onto $base and the request can be made"
+              why="#$number's branch conflicts with its base, $base. GitHub builds no merge ref for one that does, review.yml runs on pull_request, and so a review requested on it would create no run and be answered by nobody. Rebase $branch onto $base and the request can be made"
             else
               why="the checks on #$number have not all passed, and a red gate is not a handoff"
             fi
             .meta/say/move stop "$ISSUE" <<EOF
-          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`claude/issue-$ISSUE\` and stays open for the run that takes this up again.
+          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
 
           Not requested of the reviewer: $why.
           EOF
@@ -753,7 +937,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
-          OUTCOME: ${{ steps.take.outcome }}
+          OUTCOME: ${{ steps.take_gemini.outcome != 'skipped' && steps.take_gemini.outcome || steps.take_claude.outcome }}
+          BRANCH_PREFIX: ${{ steps.harness.outputs.branch_prefix }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       # The pass a merge on `main` dispatches (solorepo's DR-133). Nothing here
@@ -770,8 +955,10 @@ jobs:
       # two the pull request was waiting on: the `synchronize` that finally starts
       # the review, or the clean head that satisfies the merge manager's
       # semaphores to land in order of leverage.
-      - name: rebase onto the base
-        if: inputs.task == 'rebase' && steps.taken.outputs.by == ''
+      - name: rebase onto the base (claude)
+        id: rebase_claude
+        if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude'
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
@@ -798,7 +985,7 @@ jobs:
             can merge, which is what was wanted; the request stays outstanding
             throughout. Do not request review: it is already requested, and
             your push is what lets it be answered.
-            Read /pr-first for which verbs are yours; `AGENTS.md` has the
+            Read /pr-first for which verbs are yours; `AGENTS.md` (and `GEMINI.md`) has the
             conventions. Every act on GitHub goes through the channel,
             `.meta/say/post` and `.meta/say/move`, each taking its body on
             stdin as a quoted heredoc.
@@ -863,12 +1050,147 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
-      - name: answer the review
+      - name: detect claude quota error (rebase)
+        id: claude_quota_rebase
+        if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude' && steps.rebase_claude.outcome == 'failure'
+        env:
+          EXECUTION_FILE: ${{ steps.rebase_claude.outputs.execution_file }}
+        run: |
+          python3 -c '
+          import json, os, sys
+          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
+          fallback = False
+          if os.path.exists(file):
+              try:
+                  with open(file) as f:
+                      data = json.load(f)
+                  entries = data if isinstance(data, list) else [data]
+                  for item in entries:
+                      if isinstance(item, dict):
+                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
+                              fallback = True
+                              break
+              except Exception as e:
+                  print(f"Error parsing {file}: {e}", file=sys.stderr)
+              if not fallback:
+                  try:
+                      with open(file) as f:
+                          raw = f.read().lower()
+                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
+                          fallback = True
+                  except Exception as e:
+                      print(f"Error reading {file}: {e}", file=sys.stderr)
+          print(f"Claude quota error detected: {fallback}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("fallback=" + ("true" if fallback else "false") + "\n")
+          if fallback:
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
+          else:
+              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
+              sys.exit(1)
+          '
+
+      - name: rebase onto the base (gemini)
+        id: rebase_gemini
+        if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_rebase.outputs.fallback == 'true')
+        uses: google-github-actions/run-gemini-cli@v0
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+          GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          prompt: |
+            You are the coder Role (solorepo's DR-107), on pull request
+            #${{ steps.pr.outputs.number }} of ${{ github.repository }}, whose
+            branch `${{ steps.pr.outputs.branch }}` is checked out here. A
+            merge on `${{ steps.pr.outputs.base }}` has left it conflicting
+            while it was waiting to land — on a review requested of somebody,
+            or on the standing merge manager landing what is green (solorepo's DR-161) — and
+            GitHub neither builds a merge ref for a branch that conflicts nor
+            will update one, so neither wait can end. Your Job is to put the
+            branch back where what it is waiting on can happen, and nothing
+            else.
+
+            Where a review is outstanding, no review of this head can run, so
+            usually none has run at all. If one was already running when the
+            merge landed, your push at the end cancels it — `review.yml`
+            cancels a review in progress on a `synchronize` by anyone but the
+            reviewer — and the same push starts a fresh one, on a head that
+            can merge, which is what was wanted; the request stays outstanding
+            throughout. Do not request review: it is already requested, and
+            your push is what lets it be answered.
+            Read /pr-first for which verbs are yours; `AGENTS.md` (and `GEMINI.md`) has the
+            conventions. Every act on GitHub goes through the channel,
+            `.meta/say/post` and `.meta/say/move`, each taking its body on
+            stdin as a quoted heredoc.
+
+            First ask whether there is anything to do:
+            `git fetch origin` and `git log --oneline
+            HEAD..origin/${{ steps.pr.outputs.base }}`, which lists what the
+            base has and this branch does not and so is empty exactly when
+            the branch is already current with its base. That way round and
+            not the other: `origin/<base>..HEAD` lists this branch's own
+            commits, which every open pull request has, before a rebase and
+            after one. A run before this one may have done the work — two
+            merges dispatch two runs — and a branch already current with its
+            base is one to leave alone: say so and stop, posting nothing and
+            pushing nothing.
+
+            Otherwise rebase it: `git rebase origin/${{ steps.pr.outputs.base }}`.
+            Never a merge of the base into the branch. GitHub authors that
+            merge commit, or you would, and it carries no `Actor` Trailer, so
+            A19 turns the required check red on the branch you are unblocking.
+            A rebase writes no new commit: the branch's own commits move with
+            their messages and so with their Trailers, which is what keeps
+            them attributable, so do not squash them, do not reword them and
+            do not `git commit` — resolve each conflict and
+            `git rebase --continue`.
+
+            Resolve for what this pull request is for, which its body says and
+            the Issue it closes says: what landed under you is not yours to
+            undo, and your own change is not to be dropped to make the
+            conflict go away. Where a file is generated, take neither side —
+            re-render it, as `AGENTS.md` says.
+
+            Then `.meta/gate meta` green.
+
+            Now, push the rebased head: `git push --force-with-lease`.
+            Do not arm the merge and do not merge by hand: once green and approved,
+            the standing merge manager evaluates open pull requests and lands them
+            in order of leverage (solorepo's DR-161).
+
+            Say what happened on the pull request, once, so a reader arriving
+            at a head nobody asked about knows why it moved:
+            `.meta/say/post comment ${{ steps.pr.outputs.number }}`. Do not answer
+            any thread, and revise the body only if the rebase changed what the
+            pull request does, which it should not have.
+
+            If what is left is not yours to settle —
+            the conflict, where the change no longer makes sense over what
+            landed or the gate will not go green — `.meta/say/move stop ${{ steps.pr.outputs.issue }}`
+            with why on stdin, which hands the Challenge to the solo and leaves the
+            pull request open. Both are a pull request waiting on a person, and
+            that is what `stop` is for.
+
+            Do not merge by hand and do not reach GitHub any other way. The
+            hook refuses `gh pr merge`, which is the one "by hand" is about,
+            and also `gh pr create`, `gh pr comment`, `gh pr review`,
+            `gh pr update-branch`, `gh issue edit`, `gh issue comment` and
+            `gh api`; the list is what this prompt happens to name and not the
+            definition, so a command not on it is not thereby allowed.
+
+      - name: answer the review (claude)
+        id: answer_claude
         if: >-
           (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
            || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
           && steps.taken.outputs.by == ''
           && steps.pr.outputs.by == ''
+          && steps.harness.outputs.harness == 'claude'
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
@@ -882,7 +1204,7 @@ jobs:
             `${{ steps.pr.outputs.branch }}`, which a run of yours opened and
             is checked out here. Read /pr-first, the coder's reading of PR
             First, for what a reviewer's point is owed and which verbs are
-            yours; `AGENTS.md` has the conventions. Every act on GitHub goes
+            yours; `AGENTS.md` (and `GEMINI.md`) has the conventions. Every act on GitHub goes
             through the channel, `.meta/say/post` to say something and
             `.meta/say/move` to change state; each verb takes its body on
             stdin as a quoted heredoc, and a refusal names the verb to use
@@ -918,6 +1240,109 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
+      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
+      # fall back to Gemini CLI so the review response does not stall.
+      - name: detect claude quota error (answer)
+        id: claude_quota_answer
+        if: >-
+          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
+           || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
+          && steps.taken.outputs.by == ''
+          && steps.pr.outputs.by == ''
+          && steps.harness.outputs.harness == 'claude'
+          && steps.answer_claude.outcome == 'failure'
+        env:
+          EXECUTION_FILE: ${{ steps.answer_claude.outputs.execution_file }}
+        run: |
+          python3 -c '
+          import json, os, sys
+          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
+          fallback = False
+          if os.path.exists(file):
+              try:
+                  with open(file) as f:
+                      data = json.load(f)
+                  entries = data if isinstance(data, list) else [data]
+                  for item in entries:
+                      if isinstance(item, dict):
+                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
+                              fallback = True
+                              break
+              except Exception as e:
+                  print(f"Error parsing {file}: {e}", file=sys.stderr)
+              if not fallback:
+                  try:
+                      with open(file) as f:
+                          raw = f.read().lower()
+                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
+                          fallback = True
+                  except Exception as e:
+                      print(f"Error reading {file}: {e}", file=sys.stderr)
+          print(f"Claude quota error detected: {fallback}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("fallback=" + ("true" if fallback else "false") + "\n")
+          if fallback:
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
+          else:
+              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
+              sys.exit(1)
+          '
+
+      - name: answer the review (gemini)
+        id: answer_gemini
+        if: >-
+          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
+           || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
+          && steps.taken.outputs.by == ''
+          && steps.pr.outputs.by == ''
+          && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_answer.outputs.fallback == 'true')
+        uses: google-github-actions/run-gemini-cli@v0
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+          GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          prompt: |
+            You are the coder Role (solorepo's DR-107), answering the reviewer's request
+            for changes on pull request #${{ steps.pr.outputs.number }} of
+            ${{ github.repository }}, on the branch
+            `${{ steps.pr.outputs.branch }}`, which a run of yours opened and
+            is checked out here. Read /pr-first, the coder's reading of PR
+            First, for what a reviewer's point is owed and which verbs are
+            yours; `AGENTS.md` (and `GEMINI.md`) has the conventions. Every act on GitHub goes
+            through the channel, `.meta/say/post` to say something and
+            `.meta/say/move` to change state; each verb takes its body on
+            stdin as a quoted heredoc, and a refusal names the verb to use
+            instead. Commit through `.meta/say/commit` only.
+
+            Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`,
+            and the verdict: `gh pr view ${{ steps.pr.outputs.number }} --comments`.
+            A point is right, right about something else, or overtaken by the
+            diff, and only the first is a change to make; all three are owed
+            a reply that says which. Make the changes, gate green with
+            `.meta/gate meta`, commit and push. Then `.meta/say/post answer
+            <thread-id>` on every thread, which replies and resolves; a thread
+            marked "Noticed and not done" stays open until approval, when surviving
+            notices are promoted (solorepo's DR-159).
+            `.meta/say/move revise ${{ steps.pr.outputs.number }}` if the body no
+            longer says what the head does, `just dereference`, then
+            `.meta/say/post landed ${{ steps.pr.outputs.number }}` and
+            `.meta/say/move request-review ${{ steps.pr.outputs.number }}`, and
+            stop. Do not arm the merge, and do not wait for the checks.
+            `dereference` reads the citations this branch wrote against the
+            entries they name, and this is the pass that most needs it: a point
+            answered is prose rewritten, and rewriting prose is where a
+            paraphrase gets written. It is not a gate and blocks nothing, so
+            answer its `x` by fixing the sentence, or by leaving it and saying
+            why on the pull request (solorepo's DR-134).
+
+            Do not merge by hand, and do not reach GitHub any other way: the
+            hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
+            `gh issue edit`, `gh issue comment` and `gh api`.
+
       # The pass an approval starts (solorepo's DR-159). What survives the argument
       # earns an Issue when the argument is settled, not at merge. If no threads
       # are held for promotion, the pull request satisfies the merge manager
@@ -935,8 +1360,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ steps.pr.outputs.number }}
 
-      - name: promote on approval
-        if: github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && steps.taken.outputs.by == '' && steps.pr.outputs.by == '' && steps.promote.outputs.count != '0'
+      - name: promote on approval (claude)
+        id: promote_claude
+        if: >-
+          github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
+          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          && steps.promote.outputs.count != '0' && steps.harness.outputs.harness == 'claude'
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
@@ -985,3 +1415,103 @@ jobs:
             --max-turns ${{ steps.depth.outputs.turns }}
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
+
+      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
+      # fall back to Gemini CLI so promotion does not stall.
+      - name: detect claude quota error (promote)
+        id: claude_quota_promote
+        if: >-
+          github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
+          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          && steps.promote.outputs.count != '0' && steps.harness.outputs.harness == 'claude'
+          && steps.promote_claude.outcome == 'failure'
+        env:
+          EXECUTION_FILE: ${{ steps.promote_claude.outputs.execution_file }}
+        run: |
+          python3 -c '
+          import json, os, sys
+          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
+          fallback = False
+          if os.path.exists(file):
+              try:
+                  with open(file) as f:
+                      data = json.load(f)
+                  entries = data if isinstance(data, list) else [data]
+                  for item in entries:
+                      if isinstance(item, dict):
+                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
+                              fallback = True
+                              break
+              except Exception as e:
+                  print(f"Error parsing {file}: {e}", file=sys.stderr)
+              if not fallback:
+                  try:
+                      with open(file) as f:
+                          raw = f.read().lower()
+                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
+                          fallback = True
+                  except Exception as e:
+                      print(f"Error reading {file}: {e}", file=sys.stderr)
+          print(f"Claude quota error detected: {fallback}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("fallback=" + ("true" if fallback else "false") + "\n")
+          if fallback:
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
+          else:
+              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
+              sys.exit(1)
+          '
+
+      - name: promote on approval (gemini)
+        id: promote_gemini
+        if: >-
+          github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
+          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          && steps.promote.outputs.count != '0'
+          && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_promote.outputs.fallback == 'true')
+        uses: google-github-actions/run-gemini-cli@v0
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+          GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          prompt: |
+            You are the coder Role (solorepo's DR-107), on pull request
+            #${{ steps.pr.outputs.number }} of ${{ github.repository }}, on the
+            branch `${{ steps.pr.outputs.branch }}`, which is checked out here.
+            The reviewer has approved this pull request. The argument is settled,
+            and what survives the argument earns an Issue (solorepo's DR-159).
+
+            Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`.
+            Every unresolved thread marked "Noticed and not done" (or any surviving notice)
+            is promoted now to an Issue with:
+            `.meta/say/post promote <thread-id> --title "<title>" --difficulty hard --no-resolve <<'BODY'`
+            `...`
+            `BODY`
+            The body is the Issue form:
+            **Waits on.** Nothing.
+            **What was noticed.** <describe what was noticed>
+            **What would make this worth doing.** <rationale>
+            **Where it was found.** On #${{ steps.pr.outputs.number }}.
+            **Difficulty.** hard
+
+            Promoting with `--no-resolve` files the Issue and replies on the thread
+            with the link, but leaves the thread open so the standing merge manager
+            does not land the pull request prematurely (solorepo's DR-161).
+
+            For every thread you promote, add its link under `**What was noticed and not done.**`
+            in the pull request body with `.meta/say/move revise ${{ steps.pr.outputs.number }}`.
+
+            Then post what landed: `.meta/say/post landed ${{ steps.pr.outputs.number }}`.
+
+            Finally, resolve each promoted thread to release the merge:
+            `.meta/say/post resolve <thread-id>`.
+            Resolving the threads clears the remaining merge requirement, allowing
+            the standing merge manager to land the pull request cleanly in order of
+            leverage (solorepo's DR-161). Do not arm the merge.
+
+            Do not request review: the pull request is already approved.
+            Do not merge by hand, and do not make any code changes.

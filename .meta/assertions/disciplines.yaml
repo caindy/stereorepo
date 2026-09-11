@@ -48,7 +48,7 @@ disciplines:
         label no runner offers does not fail — it queues, so the loops never
         start and an armed merge goes behind with nobody left to notice (#93),
         which is quieter than a job that goes red. `runs-on: ubuntu-latest` with
-        `container: ghcr.io/caindy/solorepo-runner:2.337.0-1` is the answer
+        `container: ghcr.io/caindy/solorepo-runner:2.337.0-2` is the answer
         unless this portfolio stands up a scale set of its own (DR-160).
         The image is public on GHCR so workflows pull without credentials,
         pre-bakes the single-source CLI toolchain alongside the base image's

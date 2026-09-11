@@ -12,7 +12,7 @@ solorepo's DR-137 deliberately left hosted: **a merge cannot go green while
 this cluster is down**, so the machine being reachable is now the
 repository's business and not only the loops'. `template/`'s seeded gate
 runs on `ubuntu-latest` inside the published runner image (`container:
-ghcr.io/caindy/solorepo-runner:2.337.0-1`), a portfolio having no cluster
+ghcr.io/caindy/solorepo-runner:2.337.0-2`), a portfolio having no cluster
 of its own (solorepo's DR-160).
 
 Two layers, separately invokable:
@@ -69,19 +69,19 @@ Windows 11 Home has no Hyper-V, so `kind` needs Docker under WSL2:
 ## The runner image
 
 `values-runnerset.yaml` pins the runner container image to
-`ghcr.io/caindy/solorepo-runner:2.337.0-1` (solorepo's DR-156, solorepo's DR-160).
+`ghcr.io/caindy/solorepo-runner:2.337.0-2` (solorepo's DR-156, solorepo's DR-160).
 Defined in `.meta/arc/Dockerfile` on top of `ghcr.io/actions/actions-runner:2.337.0`
 (which carries `python3` `3.12.3`), it pre-bakes `build-essential`, `gh`,
-`jq`, `just`, `uv`, and `rustup`.
+`jq`, `just`, `uv`, `rustup`, `node` / `npm`, and `gemini`.
 
 To build, load into a local `kind` cluster, and publish to GHCR:
 ```bash
-docker build -t solorepo-runner:2.337.0-1 -t ghcr.io/caindy/solorepo-runner:2.337.0-1 -f .meta/arc/Dockerfile .meta/arc
-kind load docker-image ghcr.io/caindy/solorepo-runner:2.337.0-1 --name solorepo-arc
+docker build -t solorepo-runner:2.337.0-2 -t ghcr.io/caindy/solorepo-runner:2.337.0-2 -f .meta/arc/Dockerfile .meta/arc
+kind load docker-image ghcr.io/caindy/solorepo-runner:2.337.0-2 --name solorepo-arc
 
 # Publish to GHCR for hosted workflows and specialized portfolios:
 echo "$ARC_GITHUB_TOKEN" | docker login ghcr.io -u <username> --password-stdin
-docker push ghcr.io/caindy/solorepo-runner:2.337.0-1
+docker push ghcr.io/caindy/solorepo-runner:2.337.0-2
 ```
 
 The package on GHCR (`ghcr.io/caindy/solorepo-runner`) must remain configured as

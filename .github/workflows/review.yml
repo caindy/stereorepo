@@ -62,9 +62,8 @@ jobs:
     env:
       # The Trailer's two halves (solorepo's DR-086). The run id is a workload identity
       # GitHub attests for this run and no other; the harness is the action,
-      # pinned below, recorded as the environment names it.
+      # recorded as the environment names it.
       ACTOR_SESSION: gha-${{ github.run_id }}
-      AI_AGENT: anthropics/claude-code-action@v1
     steps:
       # No token left in `.git/config`: the transcript is in the run log, and
       # a read of that file would put the token there past the masking. Full
@@ -80,7 +79,42 @@ jobs:
       # write here.
       - uses: ./.meta/actions/gh
 
-      # Six paths are trunk's, not the pull request's: the channel, the
+      # Which harness speaks: Claude Code by default, or Gemini CLI or Codex by label, branch, or fallback
+      - name: choose the harness
+        id: harness
+        run: |
+          harness="claude"
+          labels=$(gh pr view "$PR" --json labels -q '.labels[].name' 2>/dev/null || true)
+          branch="${{ github.event.pull_request.head.ref }}"
+
+          if echo "$labels" | grep -qw "harness:gemini"; then
+            harness="gemini"
+          elif echo "$labels" | grep -qw "harness:codex"; then
+            harness="codex"
+          elif echo "$labels" | grep -qw "harness:claude"; then
+            harness="claude"
+          elif [[ "$branch" =~ ^gemini/ ]]; then
+            harness="gemini"
+          elif [[ "$branch" =~ ^codex/ ]]; then
+            harness="codex"
+          fi
+
+          if [ "$harness" = "gemini" ]; then
+            agent="google-github-actions/run-gemini-cli"
+          else
+            agent="anthropics/claude-code-action@v1"
+          fi
+
+          echo "harness=$harness" >> "$GITHUB_OUTPUT"
+          echo "agent=$agent" >> "$GITHUB_OUTPUT"
+          echo "AI_AGENT=$agent" >> "$GITHUB_ENV"
+          echo "Harness chosen: $harness (agent: $agent)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+
+
+      # Seven paths are trunk's, not the pull request's: the channel, the
       # hooks, the checker, the settings that register them, and the
       # instructions the session loads before it reads anything. The action
       # restores `.claude/` from `main` on its own and its log says so; the
@@ -97,7 +131,7 @@ jobs:
       - name: run trunk's channel
         run: |
           git restore --quiet --source=origin/main --staged --worktree -- \
-            .claude .meta/say .meta/hooks .meta/check_pr.py AGENTS.md CLAUDE.md
+            .claude .meta/say .meta/hooks .meta/check_pr.py AGENTS.md CLAUDE.md GEMINI.md
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 
@@ -149,9 +183,9 @@ jobs:
         run: |
           if gh pr view "$PR" --json files -q '.files[].path' \
              | grep -qE '^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)'; then
-            printf 'model=claude-opus-5\neffort=high\nturns=120\nminutes=45\nagents=3\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\neffort=high\nturns=120\nminutes=45\nagents=3\n' >> "$GITHUB_OUTPUT"
           else
-            printf 'model=claude-sonnet-5\neffort=medium\nturns=120\nminutes=15\nagents=1\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\neffort=medium\nturns=120\nminutes=15\nagents=1\n' >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
         env:
@@ -222,7 +256,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py AGENTS.md CLAUDE.md
+          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py AGENTS.md CLAUDE.md GEMINI.md
 
       # The paragraphs that bound every agent, in a file rather than in the
       # prompt (solorepo's #196). They used to end "every agent the review spawns gets
@@ -246,9 +280,9 @@ jobs:
           tool, which takes an offset and a limit. `gh pr diff` says the same
           thing and arrives as its first 2 KB and a path when the diff is large.
 
-          **Six paths in the worktree are trunk's, not this pull request's:**
+          **Seven paths in the worktree are trunk's, not this pull request's:**
           `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`,
-          `AGENTS.md` and `CLAUDE.md`. They were replaced with `origin/main`'s
+          `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`. They were replaced with `origin/main`'s
           copies before the session, so that what runs here is trunk's. You run
           and read them as trunk's; you do not review them by reading them.
           `git status` and `git diff` show nothing for a change the pull request
@@ -310,7 +344,11 @@ jobs:
           login: ${{ format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name) }}
           token: ${{ github.token }}
 
-      - uses: anthropics/claude-code-action@v1
+      - name: review the pull request (claude)
+        id: review_claude
+        if: steps.harness.outputs.harness == 'claude'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -471,6 +509,143 @@ jobs:
             --max-turns ${{ steps.depth.outputs.turns }}
             --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
+
+      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
+      # fall back to Gemini CLI so the review request does not stall.
+      - name: detect claude quota error
+        id: claude_quota
+        if: steps.harness.outputs.harness == 'claude' && steps.review_claude.outcome == 'failure'
+        env:
+          EXECUTION_FILE: ${{ steps.review_claude.outputs.execution_file }}
+        run: |
+          python3 -c '
+          import json, os, sys
+          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
+          fallback = False
+          if os.path.exists(file):
+              try:
+                  with open(file) as f:
+                      data = json.load(f)
+                  entries = data if isinstance(data, list) else [data]
+                  for item in entries:
+                      if isinstance(item, dict):
+                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
+                              fallback = True
+                              break
+              except Exception as e:
+                  print(f"Error parsing {file}: {e}", file=sys.stderr)
+              if not fallback:
+                  try:
+                      with open(file) as f:
+                          raw = f.read().lower()
+                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
+                          fallback = True
+                  except Exception as e:
+                      print(f"Error reading {file}: {e}", file=sys.stderr)
+          print(f"Claude quota error detected: {fallback}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("fallback=" + ("true" if fallback else "false") + "\n")
+          if fallback:
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
+          else:
+              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
+              sys.exit(1)
+          '
+
+      - name: review the pull request (gemini)
+        id: review_gemini
+        if: steps.harness.outputs.harness == 'gemini' || steps.claude_quota.outputs.fallback == 'true'
+        uses: google-github-actions/run-gemini-cli@v0
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+          GH_TOKEN: ${{ secrets.REVIEWER_GH_TOKEN }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          prompt: |
+            You are the reviewer Role (solorepo's DR-107), answering a review request on
+            pull request #${{ github.event.pull_request.number }} of
+            ${{ github.repository }}. Read /pr-first-reviewer first: it is
+            the reviewer's reading of PR First, and says what a pull request
+            here must hold, what a reviewer's point owes, and which verbs
+            are yours; `AGENTS.md` (and `GEMINI.md`) has the conventions.
+
+            Then read `.review/constraints.md`. It was
+            written before this session and says where the diff is, which
+            paths in the worktree are trunk's and not this pull request's,
+            where the pull request's own version of those is, and what the
+            shell here takes. It binds you.
+
+            Then read what this Role has already said on it, before saying
+            anything: `python3 .meta/check_pr.py ${{ github.event.pull_request.number }} --threads`.
+            It lists every verdict with the head GitHub recorded it against
+            and the login that gave it, then the threads owed an answer, the
+            ones held for promotion, and the ones answered and resolved. Your
+            login is `${{ github.repository_owner }}-${{ github.event.repository.name }}-reviewer`;
+            a verdict by any other login, the solo's approval among them, is
+            not this Role's and decides nothing here, and a `DISMISSED` one
+            was withdrawn and decides nothing, whatever head it names. A run before this one may have raised
+            points and been cancelled by a push before its verdict. A point
+            already on the pull request is not raised again; where the new
+            head changes it, answer in its thread.
+
+            If the listing shows a verdict of this Role and threads it raised
+            answered and resolved, this is a re-review, not a review: read
+            each answer against the diff between the head the verdict names
+            and this one, `git diff <that-head> ${{ github.event.pull_request.head.sha }}`.
+            The head GitHub records on a verdict is the head current when it
+            was posted, which is newer than the one the run read if a push
+            landed during the run; and a rebase of an open branch orphans
+            the old head, so where `git diff` cannot resolve that head, read
+            the pull request's whole diff at `.review/diff.patch` and each
+            answer in its thread instead. Say in the thread where an answer does not hold,
+            and post the verdict. Do not wait for
+            pending checks to finish: `gh pr checks` exits non-zero while a check
+            is pending, and the standing merge manager evaluates completed checks
+            before landing. However, inspect completed checks on this head with
+            `gh pr checks ${{ github.event.pull_request.number }}` and test form
+            compliance with `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`.
+
+            Read the diff at `.review/diff.patch` and evaluate the change against repo conventions and assertions.
+
+            Post only through the channel, so every word carries the Trailer.
+            Every posting command begins with `.meta/say/post` and takes its
+            body as a quoted heredoc on stdin; a command that begins with
+            anything else, `cat` or `printf` or `echo`, is not permitted to
+            run. Each finding goes on a line of the diff:
+
+                .meta/say/post --role reviewer raise ${{ github.event.pull_request.number }} <path> <line> <<'BODY'
+                ...
+                BODY
+
+            and the verdict carries a body saying what was checked and what
+            was found:
+
+                .meta/say/post --role reviewer review ${{ github.event.pull_request.number }} --approve|--request-changes|--comment <<'BODY'
+                ...
+                BODY
+
+            Never `gh pr review`, `gh pr comment` or `gh api`: the hook
+            refuses them. Do not resolve any thread.
+
+            Your approval clears the review semaphore for the merge manager. If
+            any completed check on this head has failed (in `gh pr checks`), or
+            if `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`
+            exits non-zero, do NOT approve. An approval on a red head leaves the
+            pull request stalled indefinitely: the merge manager will not land
+            non-green work and the promotion pass performs no checks. On a
+            `(claude|gemini|codex)/issue-*` branch, requesting changes is the semaphore that
+            wakes the coder Role to fix breakage; on other branches, it informs
+            the author. Post `--request-changes` instead, naming the failing
+            checks in "What was found". If all completed checks are green (or
+            pending) and the diff is clean, post your approval with
+            `.meta/say/post --role reviewer review ${{ github.event.pull_request.number }} --approve`. A standing
+            merge manager lands what is green in order of leverage
+            (solorepo's DR-161). Do not arm the merge and do not merge by hand.
+
+            Your turn ends when the verdict is posted, and not before.
 
       # A session that ended without a verdict has not reviewed, and the check
       # says so. The action reports success when the model's turn ends, and a

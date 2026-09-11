@@ -261,8 +261,27 @@ query($owner: String!, $name: String!) {
 """ % ROLLUP
 
 
+def _role_token():
+    for role in ("reviewer.env", "coder.env"):
+        p = pathlib.Path("~/.config/solorepo").expanduser() / role
+        if p.exists():
+            try:
+                for line in p.read_text().splitlines():
+                    line = line.strip().removeprefix("export ").strip()
+                    if line.startswith("GH_TOKEN="):
+                        return line.split("=", 1)[1].strip("\"'")
+            except Exception:
+                pass
+    return None
+
+
 def gh(*args):
-    out = subprocess.run(["gh", *args], capture_output=True, text=True)
+    env = None
+    if "GH_TOKEN" not in os.environ:
+        token = _role_token()
+        if token:
+            env = dict(os.environ, GH_TOKEN=token)
+    out = subprocess.run(["gh", *args], capture_output=True, text=True, env=env)
     if out.returncode:
         sys.exit(f"gh: {out.stderr.strip()}")
     return json.loads(out.stdout)
@@ -1237,11 +1256,7 @@ def required_contexts():
 
 
 def from_github(ref):
-    out = subprocess.run(["gh", "pr", "view", ref, "--json", "title,body"],
-                         capture_output=True, text=True)
-    if out.returncode:
-        sys.exit(f"gh: {out.stderr.strip()}")
-    data = json.loads(out.stdout)
+    data = gh("pr", "view", ref, "--json", "title,body")
     return data["title"], data["body"] or ""
 
 
@@ -1271,7 +1286,7 @@ def publish(number, head, problems):
 
 
 CODER = META.parent / ".github" / "workflows" / "coder.yml"
-LOOPS_BRANCH = re.compile(r"^claude/issue-(\d+)$")
+LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-(\d+)$")
 # The difficulties a loop takes, which is what makes a Challenge a loop's and
 # not the solo's. `human` and `hard` are the solo's, and so is a pull request
 # on their Challenge.
@@ -1326,7 +1341,7 @@ def green(pr):
 # rollup: those fields are a pull request's own and the step's token reads them
 # at `pull-requests: read`, while the check states come through `ROLLUP` below,
 # whose scope is `checks: read` and nothing wider (solorepo's DR-155).
-HANDBACK_FIELDS = "number,baseRefName,reviewRequests,autoMergeRequest,mergeable"
+HANDBACK_FIELDS = "number,headRefName,baseRefName,reviewRequests,autoMergeRequest,mergeable"
 
 
 def hand_back(issue):
@@ -1364,14 +1379,19 @@ def hand_back(issue):
     JSON, because the reader is a shell. Scalars a step lifts out one at a
     time, with no predicate left in jq to drift from the ones here.
     """
-    found = gh("pr", "list", "--state", "open", "--head", f"claude/issue-{issue}",
-               "--json", HANDBACK_FIELDS)
+    found = []
+    for prefix in ("gemini", "claude", "codex"):
+        found = gh("pr", "list", "--state", "open", "--head", f"{prefix}/issue-{issue}",
+                   "--json", HANDBACK_FIELDS)
+        if found:
+            break
     if not found:
-        return {"number": None, "handed": False, "green": False,
+        return {"number": None, "branch": None, "handed": False, "green": False,
                 "conflicting": False, "base": None}
     pr = found[0]
     pr["statusCheckRollup"] = rollup_of(pr["number"])
     return {"number": pr["number"],
+            "branch": pr.get("headRefName"),
             "handed": bool(asked_of(pr)) or pr.get("autoMergeRequest") is not None,
             "green": green(pr),
             "conflicting": pr.get("mergeable") == "CONFLICTING",
