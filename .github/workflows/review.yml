@@ -144,6 +144,129 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
 
+      # What the session reads, written to files before it starts (solorepo's #196).
+      # Two reads dominate an agent's turns and both exceed the tool-result
+      # cap: the pull request's diff, and the head's version of the six paths
+      # the step above replaced with trunk's. Past about 30 KB a shell result
+      # arrives as its first 2 KB and the path of a file holding the rest, so
+      # an agent that runs `gh pr diff` reads a preview and then pages the
+      # spill file, and one that wants the head's channel runs
+      # `git show <sha>:<path>` once per file — up to ten times a run on
+      # solorepo's #117, where `.meta/say` alone is 60 KB. As files they are paths,
+      # and the Read tool takes an offset.
+      #
+      # `.review/` is scratch and `.gitignore` holds it, so `git status` stays
+      # the pull request's. That entry is the pull request's file like any
+      # other, so a diff that removes it leaves `.review/` untracked in
+      # `git status`, which is this step and not the change.
+      #
+      # `.gitignore` silences an untracked `.review/`; it does not stop a
+      # branch committing one, and the checkout materialises whatever the
+      # merge ref tracks there before this step runs. A committed
+      # `.review/diff.patch` symlink turns the `>` below into a write onto its
+      # target — `.meta/hooks/worktree_only.py`, say, which is this run's only
+      # bound on an argument and does not block once it fails to parse — and a
+      # committed `.review/head` symlink turns `tar -C` into a chdir that
+      # lands the head's own `.meta/say` and `.meta/hooks` on top of trunk's,
+      # both after the restore and its `test -x`. Nothing legitimate is ever
+      # tracked there, which is what the `.gitignore` entry says, so the run
+      # refuses rather than guessing which shape it is looking at. The
+      # removal that follows is for a workspace a scale set reused.
+      #
+      # `git archive` writes the head's tree, not trunk's: the reviewer reads
+      # the pull request's own channel and hooks there while what runs is
+      # still trunk's, because the grammar in `worktree_only.py` admits a
+      # program spelled `.meta/say/<name>` and nothing under `.review/` is
+      # spelled that way. A path the pull request deletes is simply absent,
+      # and the diff says so; all six gone is this step failing, not a review.
+      # A `run:` block is `bash -e` and nothing more, so without the
+      # `pipefail` below the pipeline's status is `tar`'s and an archive that
+      # died after its first members would leave a partial `.review/head/`
+      # behind a green step — which the constraints file would then read to
+      # the session as paths the pull request deleted. `-z` for the same
+      # reason on the other side: a pathname holding a space, a quote or a
+      # byte `core.quotePath` escapes is C-quoted without it, and the words it
+      # splits into match nothing in `$HEAD`.
+      - name: write the diff and the head's trunk paths
+        run: |
+          set -o pipefail
+          if [ -n "$(git ls-files -- .review)" ]; then
+            echo "::error::.review/ is tracked in this tree, and this step writes the reviewer's scratch there"
+            exit 1
+          fi
+          rm -rf .review
+          install -d .review/head
+          gh pr diff "$PR" > .review/diff.patch
+          mapfile -d '' -t paths < <(git ls-tree -r -z --name-only "$HEAD" -- $TRUNK)
+          if [ "${#paths[@]}" -eq 0 ]; then
+            echo "::error::no trunk path is in $HEAD, so there is nothing for the reviewer to read there"
+            exit 1
+          fi
+          git archive "$HEAD" -- "${paths[@]}" | tar -x -C .review/head
+          find .review ! -type d | sort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py AGENTS.md CLAUDE.md
+
+      # The paragraphs that bound every agent, in a file rather than in the
+      # prompt (solorepo's #196). They used to end "every agent the review spawns gets
+      # these paragraphs", and the main agent obeyed by retyping them: each
+      # agent's prompt ran to about 4 KB, most of it these, and writing one
+      # takes 15 to 20 seconds of Opus output, so on solorepo's #117 the fourth agent
+      # started nearly a minute after the first. A file makes the handoff one
+      # line. The session reads the same copy, so there is one text here and
+      # not two to drift apart.
+      - name: write the constraints every agent reads
+        run: |
+          cat > .review/constraints.md <<'BODY'
+          # What bounds every agent on this review
+
+          This is the reviewer's container on pull request #${{ github.event.pull_request.number }}
+          of ${{ github.repository }}. Everything here holds for the reviewer's
+          own session and for every agent the review spawns.
+
+          **The diff is a file.** `.review/diff.patch` is this pull request's
+          whole diff, written before the session started. Read it with the Read
+          tool, which takes an offset and a limit. `gh pr diff` says the same
+          thing and arrives as its first 2 KB and a path when the diff is large.
+
+          **Six paths in the worktree are trunk's, not this pull request's:**
+          `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`,
+          `AGENTS.md` and `CLAUDE.md`. They were replaced with `origin/main`'s
+          copies before the session, so that what runs here is trunk's. You run
+          and read them as trunk's; you do not review them by reading them.
+          `git status` and `git diff` show nothing for a change the pull request
+          makes to them; a file the pull request adds under them shows as a
+          staged deletion, which is the restore and not the pull request.
+
+          **The pull request's version of those six is under `.review/head/`,**
+          at the same path: `.review/head/.meta/say/post` is what this pull
+          request's `post` says. That copy is read and never run, and it is the
+          version to review. `git show ${{ github.event.pull_request.head.sha }}:<path>`
+          says the same thing and costs a turn for each file.
+
+          **The shell runs one plain command at a time and nothing else:**
+          `git log|show|diff|status|grep|ls-files` with plain options,
+          `gh pr view|diff|checks`, `python3 .meta/check_pr.py`, or
+          `.meta/say/post` and `.meta/say/move` with their heredoc. No pipes,
+          redirects, `$`, backticks, globs or chaining; a pattern goes in single
+          quotes after `-e`. Read files with the Read tool and search with Grep.
+
+          **A Grep of `.review/` needs `path`.** Grep is ripgrep and ripgrep
+          honours `.gitignore`, which holds `.review/`: a Grep from the root
+          finds nothing there, including in this file. Pass `.review` or
+          `.review/head` as Grep's `path` to search the diff or the head's
+          copies, and read a hit in the worktree as trunk's until you have
+          checked `.review/head/` for the same path.
+
+          **Only the session the review was requested of posts.** An agent hands
+          its findings back to the session that spawned it; it does not run
+          `.meta/say/post`, and it resolves no thread.
+          BODY
+          cat .review/constraints.md
+
       # What this Role has already said on the pull request, counted before
       # the session so that only a verdict the session itself posts satisfies
       # the step after it.
@@ -192,16 +315,11 @@ jobs:
             here must hold, what a reviewer's point owes, and which verbs
             are yours.
 
-            Six paths in the worktree are trunk's, not this pull request's:
-            `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`,
-            `AGENTS.md` and `CLAUDE.md`. You run and read them as trunk's;
-            you do not review them by reading them. `git status` and
-            `git diff` show nothing for a change the pull request makes to
-            them; a file the pull request adds under them shows as a staged
-            deletion, which is the restore and not the pull request.
-            The pull request's version of any of them is
-            `git show ${{ github.event.pull_request.head.sha }}:<path>`,
-            and `gh pr diff` shows its change.
+            Then read `.review/constraints.md` with the Read tool. It was
+            written before this session and says where the diff is, which
+            paths in the worktree are trunk's and not this pull request's,
+            where the pull request's own version of those is, and what the
+            shell here takes. It binds you and every agent you spawn.
 
             Then read what this Role has already said on it, before saying
             anything: `python3 .meta/check_pr.py ${{ github.event.pull_request.number }} --threads`.
@@ -230,8 +348,8 @@ jobs:
             was posted, which is newer than the one the run read if a push
             landed during the run; and a rebase of an open branch orphans
             the old head, so where `git diff` cannot resolve that head, read
-            the pull request's whole diff with `gh pr diff` and each answer
-            in its thread instead. Say in the thread where an answer does not hold,
+            the pull request's whole diff at `.review/diff.patch` and each
+            answer in its thread instead. Say in the thread where an answer does not hold,
             and post the verdict. Do not run the code-review skill again on
             a head a verdict of this Role already names, nor on a head that
             differs from one only by the answers; its agents cost the turns the verdict
@@ -241,8 +359,10 @@ jobs:
             the ruleset holds the merge until they pass whatever you do.
 
             Then review with /code-review:code-review ${{ steps.depth.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
-            without --comment. Every agent the review spawns gets these
-            paragraphs; they hold for it too.
+            without --comment. Every agent the review spawns is bound by
+            `.review/constraints.md` too, and hand it that line rather than
+            the paragraphs: writing them out once per agent is what made the
+            fourth agent start nearly a minute after the first (solorepo's #196).
 
             Post only through the channel, so every word carries the Trailer.
             Every posting command begins with `.meta/say/post` and takes its
@@ -269,13 +389,6 @@ jobs:
             so the pull request lands when the ruleset is satisfied and not
             before your verdict. A comment or a request for changes arms
             nothing. Do not merge by hand.
-
-            The shell here runs one plain command at a time and nothing
-            else: `git log|show|diff|status|grep|ls-files` with plain
-            options, `gh pr view|diff|checks`, `python3 .meta/check_pr.py`,
-            or `.meta/say/post` and `.meta/say/move` with their heredoc. No pipes, redirects, `$`,
-            backticks, globs or chaining; a pattern goes in single quotes
-            after `-e`. Read files with the Read tool and search with Grep.
 
             Your turn ends when the verdict is posted, and not before. The
             run ends when your turn ends: nothing here waits for a background
