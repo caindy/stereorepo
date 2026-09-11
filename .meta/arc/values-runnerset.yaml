@@ -40,7 +40,8 @@ template:
   spec:
     containers:
       - name: runner
-        image: solorepo-runner:2.337.0-1
+        # Single-source runner image on GHCR (solorepo's DR-156, solorepo's DR-160)
+        image: ghcr.io/caindy/solorepo-runner:2.337.0-1
         imagePullPolicy: IfNotPresent
         command: ["/home/runner/run.sh"]
         resources:

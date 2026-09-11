@@ -1,3 +1,5 @@
+# The single-source runner container image (solorepo's DR-156, solorepo's DR-160).
+# Base image provides python3 (Python 3.12.3); pre-bakes core CLI toolchain.
 FROM ghcr.io/actions/actions-runner:2.337.0
 
 USER root

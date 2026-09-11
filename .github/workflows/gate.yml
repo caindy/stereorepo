@@ -65,8 +65,6 @@ jobs:
     if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
     runs-on: arc-runner-set
     steps:
-      # Pinned exactly: setup-uv publishes no floating major past v7 while
-      # releasing v10, so `@v10` resolves to nothing and fails the run.
       # The whole history, because `decision numbering` asks it whether a hole
       # in the record is an entry a commit deleted (DR-128). A shallow checkout
       # answers "nothing was deleted" to every such question, which is the green
@@ -75,11 +73,6 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      # No lockfile to key a cache on, and uvx resolves fast enough that a cache
-      # keyed on nothing would only ever go stale.
-      - uses: astral-sh/setup-uv@v10.0.1
-        with:
-          enable-cache: false
       - run: uvx --with linkml --with pyyaml python .meta/check.py
 
   # The Rust seed is data, and it is gated by rendering it and running its own
@@ -92,37 +85,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      # `ubuntu-latest` ships a C toolchain and the scale set's image does not
-      # (solorepo's DR-140), and Rust links through `cc`: without this every
-      # `cargo build` here fails at the link step, and `cargo install
-      # cargo-mutants` fails building itself before that. Guarded, so the step
-      # costs an `apt-get update` only where the compiler is actually absent.
-      - name: install a C toolchain
-        run: |
-          set -euo pipefail
-          command -v cc >/dev/null || {
-            sudo apt-get update -qq
-            sudo apt-get install -y build-essential
-          }
-          cc --version | head -1
-
-      # `ubuntu-latest` ships rustup and the scale set's image does not
-      # (solorepo's DR-140). Installed with no default toolchain on purpose:
-      # the pin lives in `rust-toolchain.toml` beside the seed, and a
-      # `--default-toolchain` here would be a second copy of a version number
-      # this repository keeps in one place. Which means every cargo command
-      # below runs from the rendered tree, where that file is — including the
-      # `cargo install` that used to run from the repository root, which has
-      # no toolchain file and so no toolchain at all.
-      - name: install rustup
-        run: |
-          set -euo pipefail
-          command -v rustup >/dev/null || {
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-              | sh -s -- -y --default-toolchain none --profile minimal
-            printf '%s/.cargo/bin\n' "$HOME" >> "$GITHUB_PATH"
-          }
-
+      # The scale set's runner image pre-bakes the C toolchain (`build-essential`)
+      # and `rustup` (solorepo's DR-156, solorepo's DR-160), so no in-workflow
+      # installation steps or guards are required.
       - run: bootstraps/rust/render "$RUNNER_TEMP/acme" acme
 
       # rustup reads `rust-toolchain.toml` in the rendered tree and installs
@@ -151,9 +116,6 @@ jobs:
     runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.0.1
-        with:
-          enable-cache: false
       - run: bootstraps/python/render "$RUNNER_TEMP/acme" acme
       - run: uv run --locked gate
         working-directory: ${{ runner.temp }}/acme

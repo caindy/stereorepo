@@ -1,0 +1,117 @@
+decisions:
+  - id: work:decision/160
+    name: "DR-160 · The runner container image is the single source of truth for CLI tooling, removing redundant tool installation steps from workflows"
+    challenge: work:challenge/264
+    status: ADOPTED
+    supersedes:
+      - work:decision/137
+      - work:decision/140
+      - work:decision/156
+    enacted_in:
+      - work:artifact/github-workflows-coder
+      - work:artifact/github-workflows-gate
+      - work:artifact/template-github-workflows-gate
+      - work:artifact/meta-arc-values-runnerset
+      - work:artifact/meta-arc-readme
+      - work:artifact/meta-arc-dockerfile
+      - work:artifact/meta-arc-deploy
+      - work:artifact/specialize
+      - work:artifact/meta-disciplines
+    context: >-
+      DR-156 pre-baked core CLI tools (`build-essential`, `gh`, `jq`, `just`,
+      `uv`, `rustup`) into the custom ARC runner image `solorepo-runner:2.337.0-1`.
+      However, `.github/workflows/coder.yml` still carried an unconditional
+      `install just` step curling `install.sh`, alongside an already-guarded
+      `install jq` step and `astral-sh/setup-uv@v10.0.1`. When runner pods spawned
+      from the baked image, `install.sh` failed with
+      `install: error: '/usr/local/bin/just' already exists`
+      (observed in run 34597826310) and aborted with exit code 1, causing every
+      coder run on `arc-runner-set` to crash 9 seconds in during setup.
+      Simultaneously, `gate.yml` carried redundant in-workflow compilation toolchain
+      installs and guards (`install a C toolchain`, `install rustup`) alongside two
+      `astral-sh/setup-uv@v10.0.1` steps (pinned to the patch because `setup-uv`
+      publishes no floating major past v7 while releasing v10, but omitting a
+      `version:` input so that `uv` itself floated current and preceded the image's
+      baked `0.6.14`), while `template/.github/workflows/gate.yml` relied on
+      GitHub-hosted `ubuntu-latest` without inheriting the baked image.
+
+      This state left claims in three earlier decisions overturned in part:
+      DR-137's consequence asserting that `coder.yml` must provision `uv` and `just`
+      because `ubuntu-latest` carries neither; DR-140's in-workflow toolchain installs
+      and guards in `gate.yml`'s `rust seed` job (`build-essential`, `rustup`) and
+      uncontainerized `template/` gate (while `.meta/actions/gh`'s guarded install
+      stands under DR-140 because that composite action is shared across callers
+      and runners outside this container image); and DR-156's rationale that
+      existing guards in `gate.yml` and `coder.yml` rendered workflow syntax
+      untouched. Maintaining dual specifications across container builds and
+      workflow files invited version drift, contradictory comments, and fragile
+      installation steps.
+    alternatives:
+      - name: Add a `type -p just >/dev/null ||` guard to the workflow step
+        chosen: false
+        reason: >-
+          Perpetuates dual-specification of dependencies across `.meta/arc/Dockerfile`
+          and workflow files, retaining guards and in-workflow installs across
+          workflows instead of standardizing on the single container image.
+      - name: Standardize on the published runner container image as the single source of truth, removing in-workflow installation steps
+        chosen: true
+        reason: >-
+          Establishes `ghcr.io/caindy/solorepo-runner:2.337.0-1` as the single source
+          of truth for runtime CLI tools. Workflows describe orchestration, while the
+          container provides the execution environment. Self-hosted ARC runners
+          execute natively in the pod, and workflows running on `ubuntu-latest`
+          (such as specialized portfolio gates and loop workflows) run inside the
+          container via `container: ghcr.io/caindy/solorepo-runner:2.337.0-1`,
+          eliminating in-workflow OS provisioning steps and guards.
+    consequences:
+      - >-
+        `install just`, `install jq`, and `setup-uv` are removed from
+        `.github/workflows/coder.yml`, resolving startup crashes on the custom
+        runner image and eliminating workflow-side tool provisioning.
+        `.meta/actions/gh` retains its guarded `type -p` install (solorepo's DR-140)
+        as a shared composite action across runners and workflows outside the
+        container image.
+      - >-
+        In `.github/workflows/gate.yml`, `install a C toolchain` and `install rustup`
+        are removed from `rust seed`, and `setup-uv` is removed from `files` and
+        `python seed`, relying entirely on the pre-baked tools in `solorepo-runner`.
+      - >-
+        In `template/.github/workflows/gate.yml`, the `gate` job specifies
+        `container: ghcr.io/caindy/solorepo-runner:2.337.0-1` and removes `setup-uv`,
+        inheriting the pre-baked toolchain on `ubuntu-latest`.
+      - >-
+        `solorepo-runner:2.337.0-1` is published to GitHub Container Registry as
+        `ghcr.io/caindy/solorepo-runner:2.337.0-1` and referenced in
+        `.meta/arc/values-runnerset.yaml`. The package is configured as public on
+        GHCR so workflows in external repositories pull without credentials.
+        `.meta/arc/README.md` documents loading `ghcr.io/caindy/solorepo-runner:2.337.0-1`
+        into kind so local builds match the pod's pull reference under
+        `imagePullPolicy: IfNotPresent`.
+      - >-
+        The Specialization Discipline instructs clones retargeting loop workflows
+        to `ubuntu-latest` to specify `container: ghcr.io/caindy/solorepo-runner:2.337.0-1`,
+        and copies `.meta/arc/Dockerfile` so portfolios can rebuild or extend the image.
+      - >-
+        Runtime CLI tools (`build-essential`, `gh`, `jq`, `just`, `uv`, `rustup`)
+        are pinned and provided by `.meta/arc/Dockerfile` on top of the base image's
+        `python3` (`Python 3.12.3`, verified via `docker run --rm ghcr.io/actions/actions-runner:2.337.0 python3 -V`).
+        Workflow orchestration tooling (such as `actions/checkout` and `actions/cache`
+        for `cargo-mutants`) remains defined in GitHub Actions workflow steps.
+    falsifier: >-
+      A CI workflow run or specialized gate job failing with `command not found`
+      or an unexpected exit code when invoking `just`, `cargo`, `rustup`, `cc`,
+      `jq`, `gh`, or `uv`, indicating missing tooling in `.meta/arc/Dockerfile`
+      or a job executing outside the container environment.
+    rationale: |-
+      The failure on #264 proved that dual-specifying dependencies in both the
+      container build and the workflow run invites race conditions and
+      conflicting assumptions. Pre-baking tools into the runner image was adopted
+      in DR-156 to eliminate bootstrap latency and network variance; retaining
+      in-workflow install steps undermined that guarantee.
+
+      Publishing the runner image to GHCR as a public container image and
+      containerizing portfolio gate runs unifies the execution environment across
+      both self-hosted ARC runners and hosted GitHub Actions runners, enabling
+      the complete removal of in-workflow OS package installations and guards.
+      Portfolios inherit `.meta/arc/Dockerfile` so they retain full agency to rebuild,
+      customize, or retarget the container image as their projects evolve.

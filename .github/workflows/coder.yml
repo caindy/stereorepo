@@ -114,6 +114,10 @@ jobs:
     # spends GitHub Actions minutes, holding a runner for up to the timeout
     # below on every Issue and review. It moved here first, ahead of
     # `gate.yml`'s required checks, which followed under solorepo's DR-140.
+    # The runner image pre-bakes core CLI tools (`just`, `jq`, `uv`, `gh`, `rustup`),
+    # removing the tool installations this file previously made (`just`, `jq`, `uv`).
+    # `.meta/actions/gh` below retains its `type -p` guard (solorepo's DR-140) because
+    # that composite action is shared across workflows and runners where `gh` may not be present (solorepo's DR-160).
     runs-on: arc-runner-set
     timeout-minutes: 75
     env:
@@ -131,44 +135,9 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      # `ubuntu-latest` ships `gh` and `jq`; the self-hosted image (solorepo's DR-137)
-      # ships neither, and this file uses both throughout —
-      # `.meta/say/channel.py` shells out to `gh` for every read and write,
-      # and a dozen steps below pipe its JSON through `jq`. `review.yml`'s own
-      # run on this pull request's self-hosted pod is evidence for `gh` alone:
-      # its one JSON read is `gh`'s own `--jq` filter, not the standalone tool.
+      # `gh` on the runner: .meta/say/channel.py shells out to `gh` for every read
+      # and write, and the composite action tests `type -p gh` before anything else.
       - uses: ./.meta/actions/gh
-
-      - name: install jq
-        run: |
-          set -euo pipefail
-          type -p jq >/dev/null || sudo apt-get install -y jq
-          jq --version
-
-      # `gate.yml` provisions `uv` because `ubuntu-latest` never carries it
-      # either (gate.yml:70, :109); this file needs it for the same reason
-      # `.meta/gate` and `just dereference` do, both `uvx` underneath.
-      - uses: astral-sh/setup-uv@v10.0.1
-        with:
-          enable-cache: false
-
-      # `just` itself, not only `uv`: the prompts below type `just
-      # dereference` literally, and `uvx --from rust-just just` is the
-      # justfile's own fallback for a session that has to spell it out, not
-      # a substitute for the command actually being on PATH. Pinned like the
-      # Helm charts in `.meta/arc/deploy` and for the same reason: `--tag`
-      # exists so an upgrade is an edit to this line, not whichever build the
-      # network hands back today. A one-line `run:` gets the same default
-      # `bash -e {0}` the `gh`/`jq` step guards explicitly — `set -euo
-      # pipefail` here too, or a `curl` that fails leaves `sudo bash`
-      # reading EOF, doing nothing, and exiting 0: a green step with no
-      # `just` on PATH.
-      - name: install just
-        run: |
-          set -euo pipefail
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh \
-            | sudo bash -s -- --tag 1.58.0 --to /usr/local/bin
-          just --version
 
       # Which pull request a second pass answers: the event's, or the
       # dispatch's. Its branch is checked out below so the work continues

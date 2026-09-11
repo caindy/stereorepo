@@ -46,13 +46,13 @@ HERE = pathlib.Path(__file__).resolve().parent
 TOKEN_ENV = pathlib.Path("~/.config/solorepo/arc-runner.env").expanduser()
 TOKEN_VAR = "ARC_GITHUB_TOKEN"
 
-# Pinned, like every other tool this repository provisions (`actions/checkout@v7.0.1`,
-# `astral-sh/setup-uv@v10.0.1`): `helm upgrade --install` is idempotent for a
-# given chart version, not across "whatever `latest` resolves to today" — two
-# machines running this a month apart, or the same machine before and after
-# an unrelated `helm repo update`, would otherwise land different controller
-# and runner-set versions from a command that changed nothing. An upgrade is
-# an edit to this file, not a side effect of the calendar.
+# Pinned, like every other tool this repository provisions (`actions/checkout@v7.0.1`):
+# `helm upgrade --install` is idempotent for a given chart version, not across
+# "whatever `latest` resolves to today" — two machines running this a month
+# apart, or the same machine before and after an unrelated `helm repo update`,
+# would otherwise land different controller and runner-set versions from a
+# command that changed nothing. An upgrade is an edit to this file, not a side
+# effect of the calendar.
 CHART_VERSION = "0.14.2"
 
 CONTROLLER_CHART = "oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller"

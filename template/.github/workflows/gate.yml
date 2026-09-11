@@ -4,8 +4,9 @@
 # runs the gate every Project it declares asserts. So this file lists no
 # Project and does not change when one arrives: a Project is added by being
 # asserted, and its gate runs here by the same act. What can still need an edit
-# is a *tool* — a Project whose gate calls something the runner does not carry
-# adds the step that installs it below, beside the one that installs `uv`.
+# is a *tool* — a Project whose gate calls something the runner image does not carry
+# can install it in a step below, or the portfolio can build a derived image from
+# `.meta/arc/Dockerfile` and repoint `container:` above (solorepo's DR-160).
 #
 # The triggers, the permissions and the `pull request` and `sweep` jobs are
 # the scaffold's. What the two jobs run is typed once, under `.meta/actions/`,
@@ -51,20 +52,18 @@ jobs:
     name: gate
     if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
     runs-on: ubuntu-latest
+    # Public runner image on GHCR; the base image provides python3 (Python 3.12.3)
+    # and pre-bakes the single-source CLI toolchain (solorepo's DR-160).
+    container: ghcr.io/caindy/solorepo-runner:2.337.0-1
     steps:
-      # Pinned exactly: setup-uv publishes no floating major past v7 while
-      # releasing v10, so `@v10` resolves to nothing and fails the run. The
-      # whole history, because `decision numbering` asks this portfolio's own
+      # The whole history, because `decision numbering` asks this portfolio's own
       # commits whether a hole in its record is an entry somebody deleted
       # (solorepo's DR-128), and a shallow checkout can only say it cannot tell.
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      # `.meta/gate` and `check.py` both run through `uvx`, so `uv` is the one
-      # tool the runner needs before it can ask what the Projects are.
-      - uses: astral-sh/setup-uv@v10.0.1
-        with:
-          enable-cache: false
+      # `.meta/gate` and `check.py` run through `uvx`, pre-installed in the
+      # single-source runner container (solorepo's DR-160).
       - run: .meta/gate
 
   pull-request:
