@@ -69,8 +69,8 @@ programs:
     concern: >-
       What changes state on GitHub: an Issue filed, triaged, moved between
       levels, claimed or handed back; a pull request opened, layered, revised,
-      merged or advanced; a review requested; a coder pass dispatched; a
-      Milestone set; a Decision's number reserved.
+      merged, superseded or advanced; a review requested; a coder pass
+      dispatched; a Milestone set; a Decision's number reserved.
     verbs:
       - name: file
         usage: "--title T --difficulty D|--roadmap < body.md"
@@ -103,6 +103,14 @@ programs:
       - name: revise
         usage: "<n> [--title T] [< body.md]"
         does: replace a pull request's or an Issue's body, or its title
+        held_by: [coder]
+      - name: supersede
+        usage: "<pr> --by <pr|DR> < body.md"
+        does: >-
+          close a pull request another answer to its Challenge overtook, the
+          reason on stdin; refused unless what `--by` names has landed — a
+          merged pull request, or a Decision the trunk adopted — and the body
+          closes a Challenge, and every Challenge it closes is closed already
         held_by: [coder]
       - name: merge
         usage: "<pr> [--stack|--auto]"

@@ -435,10 +435,22 @@ disciplines:
         typed: written by hand it is the copy that flatters, and complete
         whether or not the record was.
       - >-
-        Merged, never abandoned. A pull request exists because a Challenge
-        does, and a Challenge is a real need; work that turned out to be the
-        wrong answer merges as the record of that, which is worth more than a
-        closed tab.
+        Merged, never abandoned, and **superseded** is the one exit that is not
+        a merge. A pull request exists because a Challenge does, and a Challenge
+        is a real need; work that turned out to be the wrong answer merges as
+        the record of that, which is worth more than a closed tab. What cannot
+        merge is work another change has already answered — the tree holds a
+        different answer to the same Challenge, so the diff would install a
+        second mechanism over a working one. That closes by `move supersede
+        <pr> --by <what answered it>`, which is refused unless what `--by`
+        names has landed — a merged pull request, or a Decision the trunk
+        adopted rather than merely holds a number for — and unless the body
+        closes a Challenge and every Challenge it closes is closed already: the
+        closing is the evidence, so a change nobody superseded still has merge
+        as its only exit, and so does one that names no Challenge at all. A Decision number the branch minted and never
+        landed is not released with it — the tag is the allocation and nothing
+        issues a number twice — but written back into the record as WITHDRAWN,
+        which `supersede` names as it closes.
       - >-
         Push before stopping, and stop at green. Work that exists only in a
         worktree the next Job will never see has not been handed off, and a red

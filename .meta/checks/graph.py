@@ -379,11 +379,15 @@ def decision_numbering(index, reserved=reserved_decision_numbers,
 
     A reservation nobody redeems is closed the way every other hole is, by
     writing the number back into the record as WITHDRAWN; the tag stays, so the
-    number is never issued twice. Nothing prompts that closure, and this is
-    where it does not: a number minted and never written has a tag and no
-    commit, which is what a number in flight has, so it reads as a promise
-    somebody is still keeping for as long as nobody looks at the tag. That hole
-    is the one failure here that stays quiet, and solorepo's DR-128 says so.
+    number is never issued twice. This is not where that closure is prompted: a
+    number minted and never written has a tag and no commit, which is what a
+    number in flight has, so it reads as a promise somebody is still keeping for
+    as long as nobody looks at the tag. That hole is the one failure here that
+    stays quiet, and solorepo's DR-128 says so. One case now has a prompt
+    elsewhere — `move supersede` names the numbers the branch it closes minted
+    and will never redeem, since closing a pull request is the moment somebody
+    knows (solorepo's DR-164) — and a reservation whose branch simply stopped
+    still has none.
 
     A hole neither read can explain stays a failure. Red on a hole that might
     have been reserved costs a session one message; green on a hole that was a

@@ -2,13 +2,15 @@
 """What changes state on GitHub: the transitions (solorepo's DR-117).
 
 An Issue filed, triaged, moved between levels, claimed or handed back; a pull
-request opened, layered, revised, merged or advanced; a review requested; a
-coder pass dispatched; a Milestone set; a Decision's number reserved. Each is
-one step of a Discipline
-and refuses its own misuse (solorepo's DR-116): `file` lands `challenge` and the
+request opened, layered, revised, merged, superseded or advanced; a review
+requested; a coder pass dispatched; a Milestone set; a Decision's number
+reserved. Each is one step of a Discipline
+and refuses its own misuse, which solorepo's DR-116 asked of the verbs it then
+had and every verb since has been written to: `file` lands `challenge` and the
 difficulty in one act, `stop` asks its refusal before it posts, `claim` refuses
 a session at a level a loop takes, `open --on` links the layer it opens, `merge
---auto` advances before it arms, `mint` takes no number to reserve. Every
+--auto` advances before it arms, `supersede` refuses unless the body closes a
+Challenge and that Challenge is closed, `mint` takes no number to reserve. Every
 outcome is read back from GitHub, per A6: the act is what GitHub shows
 afterwards, not what `gh` returned. What is *said* — a comment, a thread, an
 answer, a verdict — is `post`'s.
@@ -1147,6 +1149,215 @@ def merge(pr, stack=False, auto=False):
         print(f"deleted origin/{branch}")
 
 
+SUPERSEDER = re.compile(r"^(?:#?(\d+)|[Dd][Rr]-0*(\d+))$")
+
+# The status an entry gives itself, matched in the entry's own text rather than
+# parsed out of it: these programs run under plain `python3` and the channel
+# imports nothing but the standard library, where `.meta/gate` and
+# `.meta/dereference.py` take their `pyyaml` from a `uvx` shebang.
+STATUS = re.compile(r"^\s+status:\s*(\S+)\s*$", re.M)
+
+
+def entry_status(raw):
+    """The status a Decision's entry gives itself, or None where the text is
+    not one entry with one status in it.
+
+    What the match assumes — one entry to a file, one `status` in it — is what
+    every entry in the record is, and `channel status probes` holds it against
+    `yaml` over all of them, so an entry written some other way makes that
+    probe red and makes this None. None is not a status: the caller refuses
+    loudly rather than reading whichever line matched.
+    """
+    found = STATUS.findall(raw)
+    return found[0] if len(found) == 1 else None
+
+
+def superseder(what):
+    """What `--by` names, and whether it has landed: a merged pull request, or
+    a Decision the record on the trunk adopted. The name to print, and the line
+    to cite it by.
+
+    `supersede` claims the tree already holds another answer, and this is where
+    that claim is checked rather than taken. A pull request still open is not
+    another answer yet — it is a second one in flight, and which of two in
+    flight is the wrong one is not settled by closing the other. A Decision is
+    read off the trunk for the same reason: an entry on a branch is one that
+    branch is proposing (solorepo's DR-164).
+
+    For a Decision the entry is read and not the listing, because the listing
+    cannot tell an answer from a hole. A number written back into the record as
+    WITHDRAWN is a file at that path like any other — which is how a
+    reservation nobody spent is closed (solorepo's DR-128), including the ones
+    this verb names as it closes — so a listing answers `mint`'s question,
+    whether the number is taken, and not this one. `decision supersession` puts the
+    distinction in the repository's own words: withdrawn and superseded are
+    different states, and a hole is not a replacement. So the status is asked
+    for, and only ADOPTED is an answer the tree holds: PROPOSED and RECOMMENDED
+    are decisions nobody has taken yet, and SUPERSEDED is one the tree has
+    already replaced.
+    """
+    found = SUPERSEDER.match(what.strip())
+    if not found:
+        sys.exit(f"say: --by takes a pull request, as `nnn` or `#nnn`, or a Decision, as "
+                 f"`DR-nnn`; {what!r} is neither")
+    if found.group(2):
+        name = f"DR-{int(found.group(2)):03d}"
+        entry = f"{DECISIONS.relative_to(ROOT)}/{name}.yaml"
+        if int(found.group(2)) not in numbers_on("main"):
+            sys.exit(f"say: the record on main holds no {name}, so it is not an answer anything "
+                     "has been given yet. A Decision supersedes once its entry has landed; "
+                     "until then it is a second answer in flight.")
+        status = entry_status(channel.gh("api", "-H", "Accept: application/vnd.github.raw",
+                                        f"repos/{channel.repo()}/contents/{entry}?ref=main",
+                                        parse=False))
+        if status is None:
+            sys.exit(f"say: main holds {entry} and no status can be read out of it, where every "
+                     "entry in the record is one entry with one `status` in it. Read the entry "
+                     "and name what it says: a Decision supersedes once it is adopted.")
+        if status.upper() != "ADOPTED":
+            sys.exit(f"say: the record on main has {name} as {status.lower()}, not adopted, so "
+                     "it holds the number and not an answer. A hole is not a replacement, and "
+                     "an entry still proposed is a second answer in flight. Name the Decision "
+                     "that was adopted, or the pull request that landed it.")
+        return name, f"[{name}](https://github.com/{channel.repo()}/blob/main/{entry})"
+    number = found.group(1)
+    if kind(number) != "pull request":
+        sys.exit(f"say: #{number} is an Issue. A Challenge does not supersede a pull request; "
+                 "the change that answered it does. Name that pull request, or the Decision "
+                 "it landed.")
+    pull = channel.gh("pr", "view", number, "--json", "state,title")
+    if pull["state"] != "MERGED":
+        sys.exit(f"say: #{number} is {pull['state'].lower()}, not merged, so the tree does not "
+                 "hold its answer yet. Two open pull requests are two answers in flight, and "
+                 "which of them is the wrong one is not settled by closing the other.")
+    return f"#{number}", f"#{number} — {pull['title']}"
+
+
+def minted_for(branch):
+    """The Decision numbers reserved for a branch that the record on the trunk
+    does not hold: numbers spent on a decision nobody took.
+
+    A hole in the sequence is a reservation somebody is still keeping or an
+    entry somebody dropped, and `decision numbering` tells those apart without
+    knowing whose the reservation is. Here the branch is known, so the tag's
+    message answers it: `mint` writes `DR-nnn reserved for <branch>.` into the
+    annotation, and that is the only record of who took a number.
+
+    Only the holes are read, which is the numbers in flight and no more. A
+    lightweight ref carries no message and so names no branch; `mint` writes an
+    annotated tag and nothing else here writes one at all, so one that is not
+    annotated is not this verb's to attribute. Nor is a number minted before
+    the branch existed, which records `reserved for main` (solorepo's DR-128).
+    """
+    mine = []
+    for number in sorted(reserved() - numbers_on("main")):
+        name = f"DR-{number:03d}"
+        ref = channel.gh("api", f"repos/{channel.repo()}/git/ref/tags/{name}")["object"]
+        if ref["type"] != "tag":
+            continue
+        message = channel.gh("api", f"repos/{channel.repo()}/git/tags/{ref['sha']}").get("message") or ""
+        if message.startswith(f"{name} reserved for {branch}."):
+            mine.append(name)
+    return mine
+
+
+def supersede(pr, by, reason):
+    """Close a pull request another answer to its Challenge has overtaken: the
+    one exit that is not a merge (solorepo's DR-164).
+
+    PR First's tenth step is *merged, never abandoned*, and the channel holds
+    it by construction — there is no `close` verb, so `merge` is how a pull
+    request ends. The step is written for a change that was tried and did not
+    work: merging records the attempt, and the record is worth the diff. It
+    assumes merging is available and merely unappealing, and that is what fails
+    here. A change the tree has already answered elsewhere cannot merge at all
+    — the diff would install a second mechanism over a working one — so step
+    ten cannot be followed, and without this verb nothing else can be either,
+    which leaves the act to `gh pr close` typed by hand, unsigned, which is the
+    defect solorepo's DR-069 exists to make unrepresentable.
+
+    What makes this an exception rather than a repeal is the refusals, and each
+    is a read rather than a question to the caller. The pull request is open.
+    What `--by` names has landed: a merged pull request, or a Decision the
+    record on the trunk adopted rather than merely holds a number for. And the
+    body closes a Challenge, and every Challenge it closes is closed already —
+    which is the whole of what tells superseded from abandoned, since the
+    Challenge being closed is the evidence that another answer landed. A change
+    nobody superseded still has merge as its only exit.
+
+    The body closing none is refused for the same reason and not waved through
+    it. The form allows "None." and means it as a question, so that shape
+    reaches here; what the verb would have established about such a pull
+    request is that it is open, since `--by` is satisfied by any merged pull
+    request in the repository and says nothing about this one. Closing it would
+    be the general `close` step ten refuses to have, reached through a heading.
+
+    The order is `stop`'s, and for the same reason: the comment before the
+    state, so the record carries an account of why whatever fails next. The
+    reason is the caller's and arrives on stdin; what the verb renders beside
+    it is what it read — where the answer landed, which Challenges are closed,
+    and which Decision numbers this branch minted and will never redeem. Those
+    are not released: the tag is the allocation, so deleting it would let a
+    number be issued twice while a citation of the first minting stands in a
+    closed pull request's body, and solorepo's DR-128 closes such a hole by
+    writing the number back into the record as WITHDRAWN. It also says nothing
+    prompts that; this is the moment somebody knows the number will never be
+    redeemed, so the prompt goes here.
+    """
+    before = channel.gh("pr", "view", str(pr), "--json",
+                        "state,title,headRefName,closingIssuesReferences")
+    if before["state"] != "OPEN":
+        sys.exit(f"say: #{pr} is {before['state'].lower()}, not open")
+    # Nothing here refuses a pull request named as its own superseder, because
+    # nothing can reach that state: this one is open, and `superseder` takes
+    # only what has landed.
+    name, cited = superseder(by)
+    # The Challenges the body closes, and each one's state. `gh pr view` does
+    # not report the state with the reference — it gives the number, the
+    # repository and the url and nothing else — so it is asked for, per
+    # Challenge, and there are never many.
+    closes = [c["number"] for c in before["closingIssuesReferences"]]
+    if not closes:
+        sys.exit(f"say: #{pr} closes no Challenge, so there is nothing here another answer "
+                 "could have overtaken. A Challenge that is closed already is the whole of "
+                 "what tells superseded from abandoned, and what `--by` names says nothing "
+                 f"about #{pr} — any merged pull request in the repository would satisfy it — "
+                 "so this would be the general `close` PR First's tenth step refuses to have. "
+                 f"If there is a Challenge, name it in the body with `move revise {pr}`; if "
+                 "there is not, merge is still the only exit.")
+    still_open = [n for n in closes
+                  if channel.gh("api", f"repos/{channel.repo()}/issues/{n}",
+                                "--jq", ".state", parse=False).upper() == "OPEN"]
+    if still_open:
+        listed = ", ".join(f"#{n}" for n in still_open)
+        sys.exit(f"say: #{pr} closes {listed}, still open, so nothing has answered that "
+                 "Challenge yet. Merged, never abandoned: a Challenge with no other answer "
+                 "has this pull request as the only one it has, and closing it here would "
+                 "abandon the need rather than record that it was met elsewhere.")
+
+    answered = ", ".join(f"#{n}" for n in closes)
+    said = [reason.rstrip("\n"), "",
+            f"**Superseded by {cited}.** Closed rather than merged, which is PR First's "
+            f"tenth step and its one exception: {answered} "
+            f"{'is' if len(closes) == 1 else 'are'} answered already, so this diff would "
+            "install a second answer over the one the tree holds."]
+    if unredeemed := minted_for(before["headRefName"]):
+        said += ["", f"**Minted here and never landed:** {', '.join(unredeemed)}. The tag "
+                 "stays, so nothing issues the number twice; each is closed by writing it "
+                 "back into the record as WITHDRAWN, not by releasing it (solorepo's DR-128)."]
+    channel.sibling("post").conversation_comment(pr, channel.signed("\n".join(said)))
+    channel.gh("pr", "close", str(pr), parse=False)
+    # Read back: the act is what GitHub shows afterwards, not what `gh`
+    # returned. A close that did not take leaves a pull request this Job has
+    # already announced dead, with the comment saying so standing on it.
+    after = channel.gh("pr", "view", str(pr), "--json", "state")["state"]
+    if after != "CLOSED":
+        sys.exit(f"say: GitHub shows #{pr} {after.lower()} after the call, not closed")
+    print(f"superseded #{pr} by {name} — {before['title']}")
+    for hole in unredeemed:
+        print(f"{hole} was minted here and never landed; write it back as WITHDRAWN")
+
+
 def request_review(pr, to):
     """The handoff: request review from the next Role's account.
 
@@ -1600,6 +1811,16 @@ def build_parser():
     p.add_argument("--task", required=True, choices=("review", "rebase"),
                    help="which pass: `review` answers a verdict that stands, `rebase` puts a "
                         "conflicting branch back where a review can run")
+    # The one exit that is not a merge. `--by` is required because the closing
+    # comment cites it — a close that names nowhere the answer landed is the
+    # `close` verb step ten refuses to have — and not because it is the
+    # evidence: any merged pull request satisfies it and it says nothing about
+    # the one being closed, so the Challenge the body closes is read too
+    # (solorepo's DR-164).
+    p = sub.add_parser("supersede"); p.add_argument("pr")
+    p.add_argument("--by", required=True,
+                   help="what answered the Challenge already: a merged pull request, or a "
+                        "landed Decision as DR-nnn")
     p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
 
     # A Decision's: the number, issued by GitHub and reserved from then on. It
@@ -1646,6 +1867,11 @@ def main():
         file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level, roadmap=args.roadmap)
     elif args.verb == "stop":
         stop(args.issue, channel.signed(channel.stdin_body()))
+    elif args.verb == "supersede":
+        # Signed after the body is assembled rather than here: the Trailer
+        # block closes the comment, and what this verb renders from the record
+        # goes between the caller's reason and it.
+        supersede(args.pr, args.by, channel.stdin_body())
     elif args.verb == "open":
         open_pull_request(args.title, channel.signed(channel.stdin_body()), base=args.base, on=args.on)
 

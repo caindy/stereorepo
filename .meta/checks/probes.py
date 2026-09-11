@@ -1152,6 +1152,8 @@ def channel_parser_probes():
             ("revise 13", {"verb": "revise", "number": "13", "title": None}),
             ("merge 13 --auto", {"verb": "merge", "pr": "13", "auto": True, "stack": False}),
             ("merge 13 --stack", {"verb": "merge", "pr": "13", "auto": False, "stack": True}),
+            ("supersede 13 --by 12", {"verb": "supersede", "pr": "13", "by": "12"}),
+            ("supersede 13 --by DR-152", {"verb": "supersede", "pr": "13", "by": "DR-152"}),
             ("merge-manager", {"verb": "merge-manager", "dry_run": False}),
             ("merge-manager --dry-run", {"verb": "merge-manager", "dry_run": True}),
             ("advance", {"verb": "advance", "pr": None}),
@@ -1175,7 +1177,8 @@ def channel_parser_probes():
     rejected = {
         "post": ["review 1", "comment 93 --approve", "promote T_1 --title t",
                  "claim 93", "open --title t", "merge 13", "stop 93", "commit -m x",
-                 "issue-comment 93", "resolve", "pr-body 1", "mint"],
+                 "issue-comment 93", "resolve", "pr-body 1", "mint",
+                 "supersede 13 --by 12"],
         "move": ["milestone 75", "milestone 75 --set x --clear",
                  "file --title t", "file --title t --difficulty huge",
                  "file --title t --difficulty easy --roadmap",
@@ -1184,6 +1187,11 @@ def channel_parser_probes():
                  "comment 93", "answer T_1", "review 1 --approve", "landed 13",
                  "issue --title t", "pr --title t", "pr-base 1 --base b",
                  "label 93 --add human", "stack 1 2",
+                 # The closing comment cites what `--by` names, so a close
+                 # that names nowhere the answer landed is refused before it
+                 # can be typed: that is the `close` verb PR First's tenth step
+                 # refuses to have (solorepo's DR-164).
+                 "supersede 13", "close 13", "abandon 13",
                  # Which pass is the whole of what a dispatch says, and the two
                  # do opposite things to a branch, so it is never assumed and
                  # never anything else: `coder.yml` defaults its own input to
@@ -1216,6 +1224,51 @@ def channel_parser_probes():
                     problems.append(f"`.meta/say/{name} {line}` parsed, and should have been rejected")
                 except SystemExit:
                     pass
+    return problems
+
+
+@check("channel status probes", pre=True)
+def channel_status_probes():
+    """`move`'s reading of the status a Decision's entry gives itself, against
+    `yaml`'s, over every entry in the record (solorepo's DR-164).
+
+    `supersede --by DR-nnn` asks whether the entry was adopted, because a
+    listing cannot tell an answer from a hole: a number written back as
+    WITHDRAWN is a file at that path like any other. The channel cannot import
+    `yaml` — those programs run under plain `python3`, where this gate takes
+    its own from a `uvx` shebang — so the status is matched in the entry's
+    text, and what the match assumes about that text is checked here rather
+    than asserted in a comment. Held against the whole record and not a
+    fixture, because the assumption is about the entries that exist: the day
+    one is written some other way, this is what says so, and the verb reads
+    `None` and refuses rather than reading whichever line matched.
+    """
+    _, _, programs = load_channel()
+    move = programs["move"]
+    problems = []
+    for path in sorted((META / "assertions" / "decisions").glob("DR-*.yaml")):
+        entries = (yaml.safe_load(path.read_text()) or {}).get("decisions") or []
+        said = move.entry_status(path.read_text())
+        if len(entries) != 1:
+            if said is not None:
+                problems.append(f"channel status: {path.name} holds {len(entries)} entries and "
+                                f"the channel read {said!r} out of it, where a status is one "
+                                "entry's own")
+            continue
+        want = entries[0].get("status")
+        if said != want:
+            problems.append(f"channel status: the channel reads {path.name} as {said!r} and "
+                            f"`yaml` reads it as {want!r}")
+    # The shapes the match cannot speak to, and does not pretend to: two
+    # entries in one text, and an entry with no status at all. Neither is in
+    # the record above, which is why they are written out — a refusal that
+    # only fires on a file nobody has written yet is one nothing has run.
+    for shape, text in (("two entries", "decisions:\n  - id: a\n    status: ADOPTED\n"
+                                        "  - id: b\n    status: WITHDRAWN\n"),
+                        ("no status", "decisions:\n  - id: a\n    name: n\n")):
+        if (said := move.entry_status(text)) is not None:
+            problems.append(f"channel status: {shape} read as {said!r}, where nothing in that "
+                            "text is the status of one entry")
     return problems
 
 
