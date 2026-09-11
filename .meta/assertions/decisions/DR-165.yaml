@@ -1,0 +1,216 @@
+decisions:
+  - id: work:decision/165
+    name: "DR-165 · The coder's reading pass is falsified from the run's own model breakdown, where a subagent's tokens land under the model it ran on"
+    challenge: work:challenge/255
+    status: ADOPTED
+    applies:
+      - work:article/6
+    enacted_in:
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-reading-pass
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-citations
+      - work:artifact/meta-disciplines
+      - work:artifact/specialize
+    context: >-
+      The last paragraph of `coder.yml`'s take prompt buys the coder a reader
+      who did not write the diff: one subagent, on the smaller model, in the
+      foreground, told to read the branch against its base and nothing of why
+      the author chose what they chose. The paragraph also makes the pass
+      silent — no comment, no verb, no state — so that it costs no ceremony.
+      Silence is also what leaves it unfalsifiable: a run that skipped the
+      sentence and went straight to the review request is, on GitHub, the same
+      run as one that spawned the reader. That is DR-122's shape exactly, one
+      Role over: there the prompt said "wait for every one of them" and three
+      reviewer runs ended waiting anyway, each reported green, and the
+      instruction was worth nothing until a count of verdicts stood behind it.
+    alternatives:
+      - name: Leave it a prompt half
+        chosen: false
+        reason: >-
+          The honest do-nothing, and DR-122 is the reason it loses. A prompt
+          half is an instruction whose compliance nobody measures, and the one
+          measured instance in this repository was not complied with. The cost
+          of leaving it is invisible by construction: the failure is a diff
+          reaching the reviewer with only its author having read it, and the
+          reviewer cannot tell that from the other case either.
+      - name: Say the pass ran, on the pull request
+        chosen: false
+        reason: >-
+          A comment, a label or a commit trailer would put the fact where
+          GitHub holds it, which is where this repository puts facts. It is
+          also the ceremony the pass was deliberately built without: the
+          paragraph's own rule is that a notice is about a finding and never
+          about the pass, and a line saying "a reader read this" on every pull
+          request is the summary A15 refuses in another costume. It would also
+          be the model's own testimony about itself, which is what a falsifier
+          exists to do without.
+      - name: Read the run archive after the fact
+        chosen: false
+        reason: >-
+          What #255 proposed, and the right fact by the wrong door. `gh run
+          view --log` and the zip the CLI caches are the archive of a finished
+          run, so nothing in the run can read them and a check that runs
+          afterwards is a check somebody remembers to run. The same bytes are
+          on the runner while the job is still going, under the path the
+          action's `execution_file` output names.
+      - name: Let the level pick the reader, so the `easy` half is falsifiable too
+        chosen: false
+        reason: >-
+          The breakdown separates the reader from the main loop only where the
+          two models differ, so `easy` — the coder at Sonnet and the reader at
+          Sonnet — is half the take population with no mark available on it.
+          The depth step already prints `reader` per run and branches on
+          `LEVEL` in the line beside it, so an `easy` reader at Haiku would
+          make every take falsifiable. What that trades is the read itself: the
+          pass buys a reader of a diff, and a smaller model reads a diff worse,
+          so the mark would be paid for with the quality of every `easy` read.
+          An unfalsified Sonnet reader is worth more than a falsified Haiku
+          one, and the half left unmeasured is the shorter run and the smaller
+          Challenge: `medium` is the 120-turn take at Opus, which is where the
+          reviewer's time is spent and where the mark still lands. So `easy` is
+          unfalsifiable on purpose. What
+          does not stay is the sentence reaching the `easy` coder as though the
+          check stood behind it: the prompt branches on the level, and that
+          coder is told the breakdown cannot tell and that the pass is bought
+          on its word.
+      - name: Read the session's model breakdown from the execution file, in a step after the take
+        chosen: true
+        reason: >-
+          The fact is already written, by the action, before the step ends. The
+          SDK declares `modelUsage` as covering "main loop, Task subagents,
+          sidechains", against the `usage` beside it declared "MAIN AGENT LOOP
+          ONLY", so on a `medium` run — the coder at Opus, the reader at Sonnet
+          — a Sonnet entry is a call the main loop did not make. No GitHub call,
+          no ceremony, and the answer is the step's exit status. What it costs:
+          it counts a call and cannot see what the call read, so it catches the
+          pass that never started and not the pass that started and wandered; it
+          answers nothing at all on `easy`, where the run's own model is the
+          reader's; the two models are now facts `coder.yml` states once and
+          reads twice, held equal by `steps.depth.outputs.reader` rather than by
+          a comment; and it binds this repository to a field of the Agent SDK,
+          which a future version may rename. The probe cannot hold that
+          binding: it builds its own messages and writes the literal
+          `modelUsage` into them, so a rename leaves every case green. Where it
+          surfaces is production, all at once — every take `unreadable` and red,
+          `easy` with `medium`, because `reading()` asks whether it can read the
+          breakdown before it asks whether the two models differ, so the level
+          the pass answers nothing on goes red with the level it answers. And on
+          a step whose whole report is its exit status, which by then cannot be
+          told from a run that skipped the reader.
+          Red is the right direction and the gate would have been the better
+          place, and this binding is one the gate does not reach.
+    consequences:
+      - >-
+        `.meta/reading_pass.py` reads an execution file and the two models and
+        reports one of four states: `ran`, `indistinguishable`, `silent` or
+        `unreadable`. The first two exit 0, the last two exit 1.
+      - >-
+        `coder.yml` gains a step after the take, `the reading pass ran`, which
+        runs it on the file `steps.take.outputs.execution_file` names. Red there
+        is a run that handed an unread diff to the reviewer, and it is the whole
+        of what is said about it — nothing is posted, and the pull request has
+        been handed off by the time the step runs either way.
+      - >-
+        The step asks the hand-off and not the exit status: `handed` from
+        `check_pr.py --hand-back`, a review requested or a merge armed, which
+        is the read the hand-back step below it already makes. A take that ends
+        in `.meta/say/move stop` exits 0 having spawned no reader, because it
+        never reached the paragraph, and its Challenge went to the solo rather
+        than its diff to the reviewer; on the exit status alone every
+        self-stopped `medium` run would be marked. A run killed at its budget
+        is the step below's, and where that hand-back requests review on a
+        green unfinished run the diff does go unread, which the red on the take
+        step itself already says.
+      - >-
+        The depth step prints `reader=claude-sonnet-5`, which the take prompt
+        interpolates in place of the literal it carried and the step passes to
+        the check. The model the coder is told to spawn and the model the check
+        looks for are one fact.
+      - >-
+        The prompt's closing sentences name the mechanism rather than pressing
+        the instruction harder: the run holds the breakdown, a call on the
+        reader's model is what is counted, and a subagent spawned to satisfy
+        the check rather than to read the diff satisfies nothing. They branch on the level, because the check does — the
+        `medium` coder is told what is red, and the `easy` coder, whose own
+        model is the reader's, is told the breakdown cannot tell its reader's
+        call from its own and that the pass is bought on its word there.
+      - >-
+        `reading pass probes` in `.meta/checks/probes.py` holds seven execution
+        files up to the predicate — the four states, one case each, and three a
+        real breakdown adds: a Haiku call that is the harness's and not the
+        reader's, two results in one file, and an errored result carrying no
+        breakdown, which is the second of the two worlds `unreadable` reports as
+        one. A falsifier nobody falsifies is the thing it exists to catch, and
+        this one runs on one step of one workflow.
+      - >-
+        Specialization's second step names `.meta/reading_pass.py` in the set it
+        copies, beside the `coder.yml` that calls it. A portfolio taking the
+        workflow without the file would have a step that dies on every take,
+        which is a red run saying nothing about any reader.
+    falsifier: >-
+      A run red on `the reading pass ran` whose transcript shows the subagent
+      spawned and reporting — which would mean the breakdown does not carry what
+      the SDK's declaration says it carries, and the fact to read is the
+      transcript's `Agent` call instead. Or a run green on it whose reader was
+      spawned for something other than the diff, which is the limit this entry
+      states rather than a surprise, and would mean the mark has to be the
+      subagent's prompt and not its model.
+    rationale: |-
+      #255 was raised on the review of #223, and it named both the hole and the
+      fact to read. The hole is that silence and absence look alike: the pass
+      was built to leave no mark on GitHub, and a pass that leaves no mark
+      cannot be told from one that did not happen. The fact is that a session's
+      own `result` message carries a per-model breakdown, and the reader runs on
+      a different model from the run it is spawned in.
+
+      Two readings of "the run archive" were available and only one is a check.
+      The archive `gh run view --log` caches is the archive of a finished run,
+      and a coder run cannot read its own; a check that runs afterwards is a
+      check somebody has to remember, which is the definition this repository
+      already rejected in `gate.yml`. The action writes the same messages to a
+      file on the runner and names it in an output, so the read happens inside
+      the job that produced it, one step later, with no token and no network.
+
+      The read is sound because of what the SDK says about the two fields it
+      could have used. `usage` is declared "MAIN AGENT LOOP ONLY — excludes Task
+      subagent, sidechain, and auxiliary model calls"; `modelUsage` is declared
+      "Per-model totals for every model call made through the query pipeline
+      during this query() call — main loop, Task subagents, sidechains, and
+      internal calls such as compaction and Workflow agents". So the naive field
+      is the one that would have been silent about exactly the thing being
+      looked for, and the breakdown is the one that sees it.
+
+      What the check does not claim is as load-bearing as what it does. It sees
+      a call on the reader's model and not what that call read, so it catches
+      the pass that never started — the observed failure, three times over in
+      DR-122's population — and not a pass that started and read the wrong
+      thing. On `easy` the coder is itself at Sonnet, so the breakdown cannot
+      separate the reader from the main loop; the answer there is
+      `indistinguishable`, which is green and says so rather than a pass it did
+      not earn. Both limits are written into the module's prose, because a check
+      trusted past its reach is worse than no check. The second is half the take
+      population, which the alternative above weighs and declines to buy back
+      with a smaller reader; what the prompt does not do is carry the `medium`
+      coder's sentence to the `easy` one, because an instruction standing on a
+      red the run cannot reach is worse than an instruction standing on itself.
+
+      `unreadable` exits non-zero, which is worth saying against A6. The outcome
+      A6 has exiting zero is "could not run", and its example is the step whose
+      *tool* is missing — `linkml` absent — which is loud and unmarked because
+      the environment, not the tree, is what is short. Here the tool is present
+      and what is missing is the fact: a run that cannot show its own breakdown
+      cannot show its reader either, which is A6's third outcome, found
+      something, and non-zero. DR-122 answered the same question at the same
+      door: there "a count that did not arrive takes the error branch rather
+      than a green it did not earn", and a breakdown that cannot be read here is
+      that absence under another name.
+
+      Red is the whole report. #255 asked for this without GitHub ceremony, and
+      the run's conclusion is a fact GitHub holds that costs no comment, no
+      label and no trailer. By the time the step runs the pull request is
+      already with the reviewer, so red does not stop the hand-off; it marks the
+      run, and a marked run is what the next entry on this would be written
+      from. DR-122's three were not marked — the check reported success on every
+      one of them — and finding them took reading three transcripts for a
+      sentence about waiting.

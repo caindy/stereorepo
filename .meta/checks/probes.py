@@ -1581,6 +1581,79 @@ def timing_probes():
     return problems
 
 
+@check("reading pass probes", pre=True)
+def reading_pass_probes():
+    """`reading_pass.py` over the breakdowns a coder run can end with
+    (solorepo's DR-165).
+
+    A falsifier nobody falsifies is the thing it was built to catch. This one
+    runs on one step of one workflow, and the run that would show it wrong is
+    the run that depended on it — green because the read is broken looks exactly
+    like green because the reader ran. So the execution files are held up to it
+    here, where a wrong answer costs a gate rather than a diff.
+
+    The seven cases are the four states, one case each, and three more that a
+    real breakdown adds to them. Haiku beside Opus, because the harness makes
+    small-model calls of its own and none of them is the reader — a check that
+    asked "any model but this run's" would pass on a run that never spawned
+    anything. Two results in one file, because the field is cumulative and each
+    result restates the running total, so the last is the one to read. And a
+    second `unreadable`: a result that arrived carrying no breakdown, which is
+    an errored turn and a different world from a file with no result in it at
+    all, where the run died before the SDK wrote one. `unreadable` is two states
+    reported as one, and a rename of `modelUsage` — which this entry's rationale
+    says production is where it surfaces — arrives in the second of them.
+
+    The versioned id owns no case of its own. It rides on the `ran` case, whose
+    `claude-sonnet-5-20260201` is what makes that state and carries the date the
+    prompt's `claude-sonnet-5` does not, and on the `easy` case beside it; a
+    match on equality would read every real run as silent.
+    """
+    reading_pass = citations.load_reading_pass()
+    problems = []
+
+    def usage(*models):
+        return {"type": "result", "modelUsage": {m: {"inputTokens": 1} for m in models}}
+
+    # Each case says what the step should report, `green` being the exit status
+    # the workflow reads. The two are asked separately of the module — the state
+    # from `reading`, the status from `GREEN` — because a state read right and
+    # exited wrong is the same failure one door along, and the step passes on
+    # the status alone.
+    cases = [
+        ("a medium run that spawned its reader",
+         [usage("claude-opus-5", "claude-sonnet-5-20260201")],
+         "claude-opus-5", "ran", True),
+        ("a medium run that did not",
+         [usage("claude-opus-5")],
+         "claude-opus-5", "silent", False),
+        ("a medium run whose only other model is the harness's own",
+         [usage("claude-opus-5", "claude-haiku-4-5-20251001")],
+         "claude-opus-5", "silent", False),
+        ("an easy run, whose own model is the reader's",
+         [usage("claude-sonnet-5-20260201")],
+         "claude-sonnet-5", "indistinguishable", True),
+        ("a run whose file holds no result",
+         [{"type": "assistant"}],
+         "claude-opus-5", "unreadable", False),
+        ("a result carrying no breakdown",
+         [{"type": "result", "is_error": True}],
+         "claude-opus-5", "unreadable", False),
+        ("two results, the reader's call in the last",
+         [usage("claude-opus-5"), usage("claude-opus-5", "claude-sonnet-5-20260201")],
+         "claude-opus-5", "ran", True),
+    ]
+    for what, messages, model, want, green in cases:
+        state, words = reading_pass.reading(messages, model, "claude-sonnet-5")
+        if state != want:
+            problems.append(f"reading pass: {what} was read as {state!r} rather than "
+                            f"{want!r} — {words}")
+        elif (state in reading_pass.GREEN) is not green:
+            problems.append(f"reading pass: {what} was read as {state!r}, which the step "
+                            f"{'fails' if green else 'passes'} on")
+    return problems
+
+
 @check("reservation probes", pre=True)
 def reservation_probes():
     """`decision numbering` over a hole GitHub reserves, a hole it does not, a
