@@ -90,11 +90,17 @@ decisions:
         answered, beside `actor()` and `agent()` — a third question about who
         is speaking, asked by any verb whose behaviour turns on whether a loop
         is standing on the work. It reads `ACTOR_SESSION` directly and not
-        `actor()`, which cannot answer it: `actor()` takes the first of
-        `ENV_SESSION` that is set, and inside the loop's container the harness
-        sets `CLAUDE_CODE_SESSION_ID` too and wins, so a run's Trailer reads a
-        uuid indistinguishable from a session's. The mark is on the variable
-        only a workflow writes.
+        `actor()`, which answers a different question: `actor()` says which
+        session is speaking, and a caller that needs only "a run, or not"
+        would have to compare that answer against the mark itself. The mark is
+        on the variable only a workflow writes. Amended on #285, where the
+        reason was stronger and is no longer true: as written here `actor()`
+        took the first of `ENV_SESSION` that was set, and inside the loop's
+        container the harness sets `CLAUDE_CODE_SESSION_ID` too and it won, so
+        a run's Trailer read a uuid indistinguishable from a session's —
+        which is the defect #285 fixed, by having `actor()` prefer an
+        `ACTOR_SESSION` that carries the mark. The function stays either way:
+        what it answers was never `actor()`'s question.
       - >-
         That the mark is readable where the loop's claim is typed is a fact
         about the action and not about this repository, so it is a probe and
@@ -108,8 +114,11 @@ decisions:
         every `env:` block and is corrected here to what the two probes
         together support.
       - >-
-        The mark is a constant in the channel and a line in each workflow that
-        holds a Role's token. A further workflow that claims writes
+        The mark is a constant in the channel, a second constant in
+        `check_pr.py` since #285 — where `mine()` had to resolve the session
+        the way `actor()` now does, or the two would disagree inside a run —
+        and a line in each workflow that holds a Role's token. A further
+        workflow that claims writes
         `ACTOR_SESSION: gha-<run id>` like the two that do, or its claim is
         refused as a session's — which is the failure that says so at the first
         claim rather than at the first collision.
@@ -134,11 +143,13 @@ decisions:
     rationale: |-
       The Issue left the reading open — refuse, or say so and proceed — and
       turned it on whether a session can tell that it is one. It can, and the
-      answer is a prefix a workflow writes; but the prefix is on the variable
-      the Trailer no longer reads, because the harness's own session id wins
-      inside the container. That is the only subtle thing here, and it is why
-      the question gets a function of its own rather than a comparison written
-      at the call site.
+      answer is a prefix a workflow writes; but the prefix was then on the
+      variable the Trailer did not read, because the harness's own session id
+      won inside the container. That was the only subtle thing here, and it is
+      why the question gets a function of its own rather than a comparison
+      written at the call site. #285 has since made the Trailer read that
+      variable, which takes the subtlety away and leaves the function, since
+      "a run, or a session beside it" was never the question `actor()` asks.
 
       The rest follows from where the act sits. Everything the collision costs
       — the duplicate answers, the dismissed approval — happens after the

@@ -64,6 +64,11 @@ FORM = META / "templates" / "pull-request.md"
 # solo and an agent is indistinguishable from one party talking to itself. The
 # trailer is what separates them — the same one the commits carry.
 ACTOR = re.compile(r"^Actor:\s*(\S+)", re.M)
+# What a workflow writes into `ACTOR_SESSION` and nothing else does
+# (`channel.py`'s `RUN_MARK`, solorepo's DR-148); `mine()` below resolves the
+# session the same way `channel.actor()` does, so the two never disagree
+# about which id the Trailer signed with.
+RUN_MARK = "gha-"
 NOTICED = re.compile(r"^\W*\*\*Noticed and not done\.?\*\*", re.M)
 PROMOTED = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/issues/\d+")
 HEADING = re.compile(r"^\*\*(.+?)\.\*\*", re.M)
@@ -600,9 +605,16 @@ def mine(body):
     conversation for every line it posted. The login cannot say — every agent
     posts under one account — but the channel signs each comment with the
     session's id, and that is what is compared.
+
+    Resolved the same way `channel.actor()` resolves it: `ACTOR_SESSION` wins
+    when it carries the run's mark (`gha-`), since inside a container run
+    `CLAUDE_CODE_SESSION_ID` is also set and is not what the Trailer signed
+    with. Otherwise the first of the two sets `me`.
     """
-    me = next((os.environ[k] for k in ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
-               if os.environ.get(k)), None)
+    run_session = os.environ.get("ACTOR_SESSION", "")
+    me = (run_session if run_session.startswith(RUN_MARK) else
+          next((os.environ[k] for k in ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
+                if os.environ.get(k)), None))
     found = ACTOR.search(body or "")
     return bool(me and found and found.group(1) == me)
 

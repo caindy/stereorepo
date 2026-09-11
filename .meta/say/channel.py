@@ -117,8 +117,17 @@ def actor():
     changes at every upgrade, so one Actor across an update read as two, while
     the part that actually distinguishes never moved.
 
+    `ACTOR_SESSION` wins over `ENV_SESSION`'s declared order when it carries
+    `RUN_MARK`: inside a container run the harness also sets
+    `CLAUDE_CODE_SESSION_ID`, a uuid that says nothing about the workflow, and
+    would otherwise shadow the workload identity `coder.yml` wrote — the run's
+    Trailer reading a session indistinguishable from a laptop's.
+
     Fail closed. An unsigned comment should be unrepresentable, not discouraged.
     """
+    run_session = os.environ.get("ACTOR_SESSION", "")
+    if run_session.startswith(RUN_MARK):
+        return run_session
     session = next((os.environ[k] for k in ENV_SESSION if os.environ.get(k)), None)
     if not session:
         sys.exit("say: the environment does not say who is speaking "
@@ -134,11 +143,10 @@ def in_a_run():
     write `gha-<run id>` into `ACTOR_SESSION`, so that prefix is the run's mark
     under solorepo's DR-086 — a workload identity, attested for one run.
 
-    Not `actor()`, which answers a different question and cannot answer this
-    one: it takes the first of `ENV_SESSION` that is set, and inside the
-    container the harness sets `CLAUDE_CODE_SESSION_ID` too and wins, so a
-    run's Trailer reads a uuid indistinguishable from a session's. The mark
-    is on `ACTOR_SESSION` itself, which nothing but a workflow here writes.
+    Not `actor()`, which answers a different question: it says which session
+    is speaking, and a caller that only needs to know whether one is standing
+    on a run would have to compare its answer against `RUN_MARK` itself. The
+    mark is on `ACTOR_SESSION` itself, which nothing but a workflow here writes.
 
     That the mark reaches the agent's shell at all is a fact about the action,
     so it is a probe: run 34554434032 read `ACTOR_SESSION=gha-34554434032`
