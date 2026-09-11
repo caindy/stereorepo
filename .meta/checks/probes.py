@@ -387,15 +387,15 @@ class FakeGitHub:
             mergeable = pull.get("mergeable", "MERGEABLE")
         # A rebase GitHub has taken and not yet shown (solorepo's DR-158).
         # `slow` is how many reads answer with what the pull request was before
-        # it — the head it was on, and the arming that head still carried,
-        # which go stale together because it is the head moving that drops the
-        # arming.
+        # it — the head it was on, the arming that head still carried, and
+        # whether it was merged, which go stale together because they are one
+        # object arriving at a read as it was a moment ago.
         was, reads = pull.get("stale") or (pull, 0)
         if reads:
             pull["stale"] = (was, reads - 1)
         shown = was if reads else pull
         return {"number": int(number), "title": f"pull {number}",
-                "state": pull.get("state", "OPEN"),
+                "state": shown.get("state", "OPEN"),
                 "mergeCommit": {"oid": f"merged{number}"},
                 "baseRefName": pull.get("base", "main"),
                 "headRefName": pull.get("branch", f"claude/issue-{number}"),
@@ -580,6 +580,23 @@ def advance_probes():
     said = run(fake, lambda: move.advance())
     if not said or "#7" not in said:
         problems.append(f"advance: an arming that did not take was reported as {said!r}")
+
+    # And an arming that took so well GitHub acted on it is not that (solorepo's #253).
+    # The checks go green in the window between the re-arming and the read-back,
+    # so the pull request merges and the `autoMergeRequest` that merged it is
+    # cleared. Waited for on the arming alone, this is the whole bound spent and
+    # then a report that the branch lost its arming, over one that is on trunk.
+    # `slow` because the merge arrives at a read the way everything else here
+    # does: the first answer is the pull request unarmed and open, and the
+    # second is the merge — so what the read-back has to tolerate is a read
+    # that shows neither of the two states that end the wait.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True, "slow": 1}},
+                      lands=[7])
+    said = run(fake, lambda: move.advance())
+    if said:
+        problems.append(f"advance: a re-arming that merged reported {said!r}")
+    if fake.pulls["7"]["state"] != "MERGED":
+        problems.append("advance: the case that models a merge in the window did not merge")
 
     # A rebase GitHub has taken and not yet performed (solorepo's #245).
     # `update-branch` returns when the work is queued, so a read that follows
