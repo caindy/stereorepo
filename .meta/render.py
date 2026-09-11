@@ -596,7 +596,8 @@ def decision_form():
            "- **Applies:** <" + guidance("applies") + ">",
            "- **Departs from:** <" + guidance("departs_from") + ">\n",
            "## Supersedes\n",
-           "<" + guidance("supersedes") + " Omit the section if there is none.>\n"]
+           "<" + guidance("supersedes") + " Omit the section if there is none.>\n",
+           "## Rationale\n", "<" + guidance("rationale") + ">\n"]
     return "\n".join(out)
 
 

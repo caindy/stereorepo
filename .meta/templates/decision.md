@@ -52,3 +52,7 @@ rather than a bare "A9". Omit the section if there is none.
 ## Supersedes
 
 <An earlier Decision this replaces, in whole or in part. Partial is the normal case and the reason this is not `superseded_by`'s inverse: a later Decision usually kills one paragraph of an earlier one and leaves the rest standing. Never rewrite the earlier entry — the record is of how the reasoning moved, not only of where it arrived. Omit the section if there is none.>
+
+## Rationale
+
+<The reasoning, in prose, as it was written when the decision was taken. The slots above are for asking questions of the record; this is what answers "why", and it is the part a later reader actually needs.>
