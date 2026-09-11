@@ -303,9 +303,13 @@ def landed(pr):
     the assertion directory, not the work, and on a pull request it reads as
     a tool error. Neither is a refusal, since the coder loop runs this on
     every pull request and every pass. `render.py --landed` is run rather
-    than imported: it needs `yaml`, which this interpreter may not have, and
-    `uvx` is how the rest of the tree runs it.
+    than imported: it needs `yaml`, which this interpreter may not have. The
+    interpreter already running this script is tried first, and `uvx` only
+    when `yaml` does not import under it — a laptop session with plain
+    `python3` and `pyyaml` installed has no `uvx` to fall back to
+    (solorepo's #281).
     """
+    import importlib.util
     import subprocess
 
     numbers = closed_by(pr)
@@ -316,12 +320,15 @@ def landed(pr):
         sys.exit(f"say: nothing under #{pr}'s **{check_pr.CLOSES}.** carries a closing keyword "
                  "and a reference; the gate would say the same")
     root = channel.HERE.parent.parent
+    if importlib.util.find_spec("yaml") is not None:
+        command = [sys.executable, ".meta/render.py", "--landed"]
+    else:
+        command = ["uvx", "--with", "pyyaml", "python", ".meta/render.py", "--landed"]
     for number in numbers:
         if not (root / ".meta" / "assertions" / "challenges" / f"{number}.yaml").exists():
             print(f"#{number} is not asserted as a Challenge; nothing to post for it")
             continue
-        out = subprocess.run(["uvx", "--with", "pyyaml", "python", ".meta/render.py", "--landed", number],
-                             cwd=root, capture_output=True, text=True)
+        out = subprocess.run(command + [number], cwd=root, capture_output=True, text=True)
         if out.returncode:
             sys.exit(f"say: render.py --landed {number} failed: {out.stderr.strip()}")
         conversation_comment(pr, channel.signed(out.stdout))
