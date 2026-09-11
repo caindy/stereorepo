@@ -62,7 +62,7 @@ env:
 jobs:
   files:
     name: files
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
     runs-on: arc-runner-set
     steps:
       # Pinned exactly: setup-uv publishes no floating major past v7 while
@@ -87,7 +87,7 @@ jobs:
   # above.
   rust:
     name: rust seed
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
     runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
@@ -147,7 +147,7 @@ jobs:
   # here.
   python:
     name: python seed
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
     runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
