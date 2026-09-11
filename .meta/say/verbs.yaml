@@ -65,8 +65,8 @@ programs:
     concern: >-
       What changes state on GitHub: an Issue filed, triaged, moved between
       levels, claimed or handed back; a pull request opened, layered, revised,
-      merged or advanced; a review requested; a Milestone set; a Decision's
-      number reserved.
+      merged or advanced; a review requested; a coder pass dispatched; a
+      Milestone set; a Decision's number reserved.
     verbs:
       - name: file
         usage: "--title T --difficulty D|--roadmap < body.md"
@@ -111,6 +111,12 @@ programs:
           onto it, and dispatch the coder for every one this merge left
           conflicting while it waited on a review or on the merge
         held_by: [workflow]
+      - name: dispatch
+        usage: "<pr> --task review|rebase"
+        does: >-
+          start a coder pass on a pull request by hand: `review` for a verdict
+          standing unanswered, `rebase` for a branch that conflicts
+        held_by: [solo]
       - name: request-review
         usage: "<pr> [--to R]"
         does: >-

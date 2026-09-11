@@ -1,0 +1,192 @@
+decisions:
+  - id: work:decision/151
+    name: "DR-151 · The by-hand dispatch of a coder pass is a verb of the channel, `move dispatch <pr> --task`, and the raw `gh workflow run` is refused beside it"
+    challenge: work:challenge/216
+    status: ADOPTED
+    supersedes:
+      - work:decision/142
+    applies:
+      - work:article/11
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-hooks-signed-channel
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-check
+    context: >-
+      Two places in the record prescribe an act the channel had no verb for.
+      PR First's third step says a verdict a session leaves behind is "the
+      session's to answer, or the solo's to dispatch"; DR-142's consequence
+      says `answer the review` runs "on the solo's own dispatch of a review
+      pass, which the guard does not read against because the solo dispatching
+      is the solo deciding". The rebase pass is the same shape from the other
+      side: DR-133 gave it no event of its own, `advance` dispatches it on the
+      merge that caused it, and everything that merge does not reach is a
+      person's. The only spelling either act had was
+      `gh workflow run coder.yml -f pull_request=<n> -f task=<t>`, which runs
+      under whatever credential `gh` holds and which nothing refused:
+      `GH_WRITES` in `.meta/hooks/signed_channel.py` names the CLI's writing
+      verbs one at a time, and this was not among them. So the Discipline named
+      a step whose only performance was outside the channel. DR-142 said of
+      this act "Neither is a new verb", and that was true of what it was
+      deciding — the loop stands down on a label it already reads, and no verb
+      was needed to make it — rather than a foreclosure on the act itself ever
+      having one.
+    alternatives:
+      - name: Leave it as a raw `gh workflow run`, and say so in the Discipline
+        chosen: false
+        reason: >-
+          A dispatch starts a Job. GitHub records it as dispatched by an
+          account, and the Job then writes with the coder's credential under
+          that start — so it is an act by an Actor in exactly the sense DR-075
+          settled for a merge, which posts no text either and goes through the
+          channel because "the record should say which Role performed them
+          rather than which human owns the credential". Documented rather than
+          given a verb, the act stays attributable to whoever holds `gh`, and
+          the exception is invisible rather than argued: nothing in the hook or
+          the permission list marked it as one.
+      - name: The verb, with `coder.yml`'s Issue guard in front of it
+        chosen: false
+        reason: >-
+          It would be one line and it would undo DR-142 by a second path. That
+          decision puts one guard on both of `coder.yml`'s doors and exempts
+          exactly one delivery, the solo's own dispatch of a review pass,
+          because the solo dispatching is the solo deciding. A verb that read
+          the Challenge's level and claim before dispatching would restore the
+          guard in front of the door deliberately left without one, and the
+          solo's answer to a `hard` Issue's standing verdict would be to relabel
+          around a check that exists for Jobs.
+      - name: Give both passes events of their own, so no by-hand dispatch is prescribed
+        chosen: false
+        reason: >-
+          The events are the problem rather than the gap. A relabel is an
+          `issues` delivery, which DR-142 established re-delivers no review, so
+          a verdict already standing has no event left to fire; and the rebase
+          pass's event is a merge on `main`, which `advance` already answers for
+          the population it can read. What is left over in both cases is a
+          judgement — this pull request, now, by the solo — and a judgement is
+          not a thing to manufacture an event for.
+      - name: >-
+          A verb that refuses a pass with nothing to do or one that would do
+          harm, and the raw spelling refused beside it
+        chosen: true
+        reason: >-
+          DR-075's pattern is the verb and the refusal together, and either half
+          alone is worth less than it looks: a verb supplied while the raw path
+          stays one keystroke away moves the well-behaved case and leaves the
+          act as attributable as it was. What the verb reads is the pull request
+          and nothing else, which is both what DR-142's exemption allows and
+          what it can answer — whether there is a pass to run at all. What it
+          costs: two refusals of the rebase pass duplicate refusals that exist
+          downstream in `coder.yml` and in `advance`, and a duplicated refusal
+          is a sentence that can drift from the one it copies. They are here
+          anyway because downstream is after the dispatch, where a refusal is a
+          red run attached to no check, or worse a green one; and because the
+          by-hand dispatch reaches the one population `advance` never does,
+          which is the solo's own branch.
+    consequences:
+      - >-
+        `.meta/say/move` gains `dispatch <pr> --task review|rebase`, held by the
+        solo, and `verbs.yaml` carries its shape. `--task` is required and has
+        no default although `coder.yml` defaults its own input to `review`: the
+        two passes do opposite things to a branch, and a default here would make
+        the commoner mistake the silent one. The `workflow run` call is
+        `run_coder`, shared with `advance`'s dispatch, so the task is passed by
+        both callers and assumed by neither.
+      - >-
+        The review pass is refused unless the newest verdict from the reviewer's
+        account is `CHANGES_REQUESTED` and no review is outstanding of that
+        account. A `COMMENTED` review is what every reply on a thread is
+        submitted under and overturns nothing; a request pending is the coder
+        having answered and handed back, which is the reviewer's turn.
+      - >-
+        The rebase pass is refused on three states, each of which DR-133 put on
+        `advance`'s own dispatch and for the reasons it gave there — two from
+        its filter, and the layer of a stack from the consequence that excludes
+        that case directly. The remaining condition of that filter, a review
+        request outstanding, is not one of these: it is what makes the
+        machine's dispatch necessary, not what makes a rebase pass sensible,
+        and the solo dispatching has already decided the pull request needs
+        one. A
+        branch GitHub does not report as `CONFLICTING`: one that has merely
+        fallen behind has a merge ref, so its review runs and the branch comes
+        onto its base when it is armed, and it needs no Job and no verb. A
+        branch that is not `claude/issue-<n>`: the pass reads the Challenge it
+        would hand back to off the name, `coder.yml` refuses the rest after the
+        dispatch rather than before it, and a name that only nearly fits reaches
+        no refusal at all — the guard reads it as naming no Challenge and the
+        run ends green having done nothing. And a layer of a stack: rebasing one
+        moves commits the layer above may be based on with no event on it to
+        say so, and a conflicting stack is resolved from the bottom, by the
+        solo.
+      - >-
+        Nothing about the Challenge is read: not its level, not its state, not
+        its claim. That is DR-142's exemption, and this verb is the delivery it
+        exempts.
+      - >-
+        `GH_WRITES` in `.meta/hooks/signed_channel.py` names `gh workflow run`,
+        so the raw spelling is refused in a session as every other act GitHub
+        records against an account is. `gh run list` and `gh workflow view`
+        read and stay open, and both are cases in `check.py`'s hook probe table
+        beside the refusal, which is what that table is for: a predicate edited
+        too wide meets its innocent neighbours in the gate rather than in a
+        run. `.claude/settings.json`'s deny list, which is the
+        harness's partial copy of the same fact, does not name it: the hook is
+        what refuses, and the boundary that would make both unnecessary is a
+        credential no path but the channel can reach.
+      - >-
+        PR First's third step says the act is a verb of the channel rather than
+        something done by hand. The rest of DR-142 stands: the guard on both
+        doors, the difficulty label as the semaphore a session and a loop share,
+        and the exemption above.
+      - >-
+        `FakeGitHub` in `.meta/check.py` answers `reviews` and the stack
+        endpoint, so every refusal is a probe over a state rather than an
+        argument about a code path — including the two that pin a sentence: the
+        branch that merely fell behind is not sent to `move advance`, which
+        would refuse it for being unarmed, and the branch that is not the
+        loop's is refused here rather than downstream.
+      - >-
+        A portfolio inherits it: `.meta/say/`, `.meta/hooks/` and `coder.yml`
+        are all in the set Specialization's second step copies.
+    falsifier: >-
+      A dispatch the solo needed and this refused — a pass with real work to do
+      declined by one of the five conditions — would say the refusals were
+      written for the machine's dispatch and not for a person's. A dispatch
+      this let through that stood down at `coder.yml`'s guard and said so
+      nowhere would say the pull request is not after all the whole of what the
+      verb can read. And a `gh workflow run` reaching GitHub from a session
+      would say a string match over a command line is the wrong boundary, which
+      is what a credential reachable only by `.meta/say/` would replace.
+    rationale: |-
+      #216 is a small gap with a shape worth naming: a Discipline prescribed an
+      act, the act was performable, and the only way to perform it was outside
+      the channel every comparable act goes through. That is how the raw path
+      survives — not by anyone deciding it should, but by the verb never being
+      written and the hook's list never being extended, so the exception is
+      never argued anywhere a reader would find it.
+
+      What made this need an entry rather than a docstring is DR-142. Its
+      consequence says of this exact act, in these words, "Neither is a new
+      verb; the label was already the fact the loop reads", and its rationale
+      says "No new verb, no new state". Read against a tree that now has the
+      verb, a reader of DR-142 alone is simply wrong, and there is nothing in
+      the record pointing forward. Journaling's rule is to supersede by writing
+      again and naming what is replaced, never to rewrite — so the sentence in
+      DR-142 stays as it was written and this entry names it. What DR-142
+      decided is untouched: the guard reads the level on both doors, the label
+      is how a session and a loop take a branch from each other, and the solo's
+      dispatch of a review pass is the one delivery the guard does not read
+      against. What it cost, as written, was that the act it left to the solo
+      had no verb.
+
+      The refusals are the judgement, and they are the part a docstring could
+      not carry alone. Four of them were settled here: that the review pass
+      needs the reviewer's *newest* verdict to be a request for changes; that a
+      request outstanding of that account refuses it; that the rebase pass
+      takes DR-133's three conditions rather than the one that is easiest to
+      read; and that `--task` is required although the workflow defaults it. A
+      docstring is the code's account of itself, and that is the right place
+      for how each is enforced — but a decision that lives only there is one
+      the next change can undo without noticing it had been taken.

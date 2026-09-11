@@ -33,9 +33,18 @@ import sys
 # (solorepo's DR-113). The stack extension's verbs that write — link, merge, submit and
 # the rest — are acts of the same kind (solorepo's DR-100); `submit` also opens pull
 # requests unsigned. Its views stay open.
+#
+# `workflow run` is the newest of them and the same kind again: it starts a Job,
+# which GitHub records as dispatched by an account, and the Job then writes with
+# a credential of its own. `.meta/say/move dispatch` is the verb for it
+# (solorepo's DR-151), and the refusal of the raw spelling is the other half of
+# that pattern — a verb supplied while the raw path stays one keystroke away
+# leaves the act attributable to whoever holds `gh`. `gh run list` and
+# `gh workflow view` read and stay open.
 ENDPOINT = re.compile(r"api\.github\.com|graphql\.github\.com")
 GH_WRITES = re.compile(r"\bgh\s+(api|pr\s+(comment|review|create|edit|merge|close|update-branch)"
                        r"|issue\s+(create|comment|edit|close)"
+                       r"|workflow\s+run"
                        r"|stack\s+(link|merge|submit|unstack|delete|push|sync|rebase))\b")
 # The channel is a directory of programs over one signing primitive (solorepo's DR-117),
 # so what is sanctioned is the directory: a program added beside `post` and

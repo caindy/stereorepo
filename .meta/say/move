@@ -3,7 +3,8 @@
 
 An Issue filed, triaged, moved between levels, claimed or handed back; a pull
 request opened, layered, revised, merged or advanced; a review requested; a
-Milestone set; a Decision's number reserved. Each is one step of a Discipline
+coder pass dispatched; a Milestone set; a Decision's number reserved. Each is
+one step of a Discipline
 and refuses its own misuse (solorepo's DR-116): `file` lands `challenge` and the
 difficulty in one act, `stop` asks its refusal before it posts, `claim` refuses
 a session at a level a loop takes, `open --on` links the layer it opens, `merge
@@ -402,6 +403,19 @@ def mergeability(pull):
     return answer
 
 
+def run_coder(pr, task):
+    """Start one of `coder.yml`'s passes on a pull request: the dispatch itself.
+
+    Written once because it has two callers — `dispatch` below, on the merge
+    that stranded a review request, and `dispatch_pass`, where a person makes
+    the same act — and for the reason the task is passed at all: `coder.yml`
+    defaults the input to `review`, so a dispatch that dropped it would run the
+    pass that answers threads on a branch whose problem is a conflict.
+    """
+    channel.gh("workflow", "run", "coder.yml", "-f", f"pull_request={pr}",
+               "-f", f"task={task}", parse=False)
+
+
 def dispatch(pulls):
     """Hand back to the coder a pull request this push has left conflicting
     while it was waiting to land (solorepo's DR-133, solorepo's DR-149).
@@ -538,8 +552,7 @@ def dispatch(pulls):
                       f"so the conflict is the solo's, and the sweep names it — "
                       f"{pull['title']}")
                 continue
-            channel.gh("workflow", "run", "coder.yml", "-f", f"pull_request={number}",
-                       "-f", "task=rebase", parse=False)
+            run_coder(number, "rebase")
         except SystemExit as exc:
             failed.append(f"#{number} is {waits} and the coder could not be "
                           f"dispatched for it — {exc.code}")
@@ -548,6 +561,138 @@ def dispatch(pulls):
               f"{pull['baseRefName']}, so GitHub builds no merge ref and will not update "
               f"the branch — {pull['title']}")
     return failed
+
+
+# The two states of a review that decide anything. A `COMMENTED` review is what
+# every reply on a thread is submitted under and says nothing about the pull
+# request; a `DISMISSED` one is a verdict GitHub has already taken back.
+VERDICTS = ("APPROVED", "CHANGES_REQUESTED")
+
+
+def dispatch_pass(pr, task):
+    """Start a coder pass on a pull request by hand: the act PR First's third
+    step names, as a verb rather than as a command typed at GitHub.
+
+    `coder.yml`'s events do not reach everything the coder is for. A verdict a
+    session leaves behind is delivered once and to nobody, because moving the
+    Issue back down fires the Issue door and re-delivers no review
+    (solorepo's DR-142); and the rebase pass has no event of its own at all,
+    which is why `advance` dispatches it above on the merge that caused it
+    (solorepo's DR-133). Both gaps were named as the solo's to dispatch by hand,
+    and by hand meant `gh workflow run coder.yml`, typed with whatever
+    credential `gh` holds and refused by nothing: `GH_WRITES` in
+    `.meta/hooks/signed_channel.py` named the CLI's writing verbs one by one and
+    this was not among them. Starting a Job is an act GitHub records against an
+    account, like a merge (solorepo's DR-075), so it belongs here — and the
+    verb is only half of that pattern, which is why the hook now names the raw
+    spelling too (solorepo's DR-151). The machine's dispatch was the channel's
+    already; now a person's is, and there is no longer a shorter way.
+
+    **The solo's, and the pull request is all that is read.**
+    solorepo's DR-142 puts one guard on both of `coder.yml`'s doors and exempts
+    exactly one delivery — the dispatch of a review pass, because the solo
+    dispatching is the solo deciding. So nothing here reads the Challenge's
+    level or its claim, and this verb does not become a second guard in front
+    of the door that deliberately has none.
+
+    **What it does refuse** (solorepo's DR-116). A pass with nothing to do, and
+    a rebase pass that would do harm — which together are the whole of what the
+    pull request can answer.
+
+    The review pass reads the threads and answers a request for changes, so it
+    needs one standing: the newest verdict the reviewer's account left, and no
+    review outstanding of that account — a request pending is the coder having
+    answered already and handed back, which is the reviewer's turn and not a
+    pass to run again.
+
+    The rebase pass takes three, and each of them is one `advance`'s own
+    dispatch takes, for the reason solorepo's DR-133 gave it there — two off
+    its filter, and the stack off the consequence that excludes that case
+    directly. What is not here is the other thing that filter reads, a review
+    request outstanding: that is what makes the machine's dispatch necessary
+    rather than what makes a rebase pass sensible, and the solo dispatching has
+    decided the branch needs one already. The
+    branch must be one GitHub reports as `CONFLICTING`: that is the state with
+    no merge ref, where no review of the head can run and where `gh pr
+    update-branch` is refused. A branch that has merely fallen behind is
+    waiting on nothing — its merge ref exists, so the review runs on the head
+    as it stands, and the branch is brought onto its base when it is armed, by
+    `merge --auto` before the arming or by `advance` on the next push to trunk.
+    The branch must be `claude/issue-<n>`, because that name is how the pass
+    finds the Challenge it would hand back to: `coder.yml` refuses the rest
+    itself, but after the dispatch, where the refusal is a red run attached to
+    no check — and a name that is nearly the shape, `claude/issue-<n>-followup`,
+    does not reach even that: the guard reads it as naming no Challenge, the
+    rebase step is skipped, and the run ends green having done nothing at all.
+    And the pull request must not be a layer of a stack. Rebasing the bottom
+    layer rewrites the commits the layer above is based on and the harm is
+    silent, because the upper layer's head never moves and so fires no event;
+    a conflicting stack is resolved from the bottom, and that is a judgement
+    about the stack rather than about any one of its pull requests, which is
+    why this declines a layer wherever it sits rather than asking which.
+
+    **What stands in for the read-back** (A6). The same thing as above, which
+    is to say nothing GitHub will answer now: a dispatch returns no content and
+    the run is created afterwards, so a `run list` a moment later asks about a
+    run that may not exist yet. `coder.yml` groups both passes by pull request
+    with `cancel-in-progress: false`, and the review pass takes the verdict's
+    own key, so a dispatch that was one too many waits behind the run already
+    going rather than racing it. What is printed is where the run will appear.
+    """
+    pull = channel.gh("pr", "view", str(pr), "--json", f"{ADVANCE},reviews")
+    if task == "rebase":
+        # The branch's shape first, because it is free and it is the commonest
+        # thing this verb is typed against: `advance` never dispatches for the
+        # solo's own branch, so the branch this one meets is the one the
+        # machine's filter passes over.
+        if not LOOPS_BRANCH.match(pull["headRefName"]):
+            sys.exit(f"say: #{pr} is on {pull['headRefName']}, which is not `claude/issue-<n>`. "
+                     "The rebase pass reads the Challenge it would hand back to off the branch "
+                     "name, so on any other shape a pass that could not settle the conflict "
+                     "has nowhere to stop. `coder.yml` holds that refusal already and holds it "
+                     "after the dispatch, where it is a red run attached to no check; a name "
+                     "that only nearly fits, `claude/issue-<n>-followup`, does not reach even "
+                     "that — the guard reads it as naming no Challenge, the rebase is skipped, "
+                     "and the run ends green having done nothing. Rebase it by hand.")
+        # Then the stack, which is one read, and then the conflict, which may
+        # cost half a minute of polling: a refusal that is certain is not worth
+        # waiting for GitHub to compute an answer this verb will not use.
+        if stacked(pr):
+            sys.exit(f"say: #{pr} is a layer of a stack, and rebasing one moves commits the "
+                     "layer above may be based on with no event on it to say so, so the next "
+                     "reader of that layer sees this one's work shown as its own "
+                     "(solorepo's DR-133). A conflicting stack is resolved from the bottom, "
+                     "which is a judgement about the stack and not about any one of its pull "
+                     "requests: `advance` declines the same case, and this one is the solo's "
+                     "to settle by hand.")
+        merges = mergeability(pull) or "UNKNOWN"
+        if merges != "CONFLICTING":
+            sys.exit(f"say: GitHub reports #{pr} as {merges} against "
+                     f"{pull['baseRefName']}, not CONFLICTING, and the rebase pass is for a "
+                     "branch GitHub builds no merge ref for — which is the state where no "
+                     "review of the head can run and nothing but authoring can fix it. One "
+                     "that has merely fallen behind is waiting on nothing and needs no Job: "
+                     "its merge ref exists, so a review runs on the head as it stands, and "
+                     "the branch comes onto its base when it is armed — `merge --auto` "
+                     "advances before it arms, and `advance` sweeps up an armed one on the "
+                     "next push to trunk.")
+    else:
+        reviewer = channel.role_login("reviewer")
+        if reviewer in [r.get("login") for r in pull.get("reviewRequests") or []]:
+            sys.exit(f"say: GitHub shows a review of #{pr} requested of {reviewer} and not yet "
+                     "given, so what stands on it is the reviewer's. The review pass answers a "
+                     "verdict; a verdict answered and handed back is not one to answer again.")
+        given = [r["state"] for r in pull.get("reviews") or []
+                 if (r.get("author") or {}).get("login") == reviewer and r["state"] in VERDICTS]
+        if not given or given[-1] != "CHANGES_REQUESTED":
+            sys.exit(f"say: the last verdict {reviewer} left on #{pr} is "
+                     f"{given[-1] if given else 'nothing'}, and the review pass is for a request "
+                     f"for changes: it reads the threads and answers them. `move request-review "
+                     f"{pr}` asks for a verdict; this dispatches the pass that answers one.")
+    run_coder(pr, task)
+    print(f"dispatched the coder's {task} pass for #{pr} — {pull['title']}. GitHub creates the "
+          "run after it answers the dispatch, so there is nothing to read back yet: "
+          "`gh run list --workflow coder.yml` names it once it exists.")
 
 
 def advance(pr=None, held=False):
@@ -1103,6 +1248,13 @@ def build_parser():
     p.add_argument("--auto", action="store_true", help="arm GitHub to merge when green")
     p = sub.add_parser("advance")
     p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
+    p = sub.add_parser("dispatch"); p.add_argument("pr")
+    # Required, and with no default, although `coder.yml` defaults its own
+    # input to `review`: the two passes do opposite things to a branch, and a
+    # default here would make the commoner mistake the silent one.
+    p.add_argument("--task", required=True, choices=("review", "rebase"),
+                   help="which pass: `review` answers a verdict that stands, `rebase` puts a "
+                        "conflicting branch back where a review can run")
     p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
 
     # A Decision's: the number, issued by GitHub and reserved from then on. It
@@ -1131,6 +1283,8 @@ def main():
         merge(args.pr, stack=args.stack, auto=args.auto)
     elif args.verb == "advance":
         advance(args.pr)
+    elif args.verb == "dispatch":
+        dispatch_pass(args.pr, args.task)
     elif args.verb == "request-review":
         request_review(args.pr, args.to)
     elif args.verb == "mint":

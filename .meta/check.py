@@ -1478,6 +1478,15 @@ def hook_probes():
         ("allow", not signed.blocked(".meta/say/move merge 1 --auto")),
         ("refuse", bool(signed.blocked(".meta/say comment 1 && gh api repos/x"))),
         ("allow", not signed.blocked("gh pr view 1")),
+        # Starting a Job is an act GitHub records against an account
+        # (solorepo's DR-151), so the raw spelling is refused and the verb that
+        # replaces it is reached through the channel. `gh run list` is the
+        # innocent neighbour here — the read a dispatcher makes a moment later
+        # — and `workflow view` is `pr view`'s counterpart.
+        ("refuse", bool(signed.blocked("gh workflow run coder.yml -f pull_request=219 -f task=rebase"))),
+        ("allow", not signed.blocked("gh run list --workflow coder.yml")),
+        ("allow", not signed.blocked("gh workflow view coder.yml")),
+        ("allow", not signed.blocked(".meta/say/move dispatch 219 --task rebase")),
         # worktree_only: reading past the worktree.
         ("refuse", bool(worktree.blocked("Grep", {"path": "/etc"}))),
         ("refuse", bool(worktree.blocked("Read", {"file_path": f"{root}/.git/config"}))),
@@ -1651,7 +1660,13 @@ class FakeGitHub:
     layer of a stack looks like from here. And `{issue}`, for the read
     solorepo's DR-142 added before the dispatch: the Challenge the branch
     names, as `{state, level, unreadable}`, open and `medium` unless a case
-    says otherwise, since the branch's number is the Issue's here.
+    says otherwise, since the branch's number is the Issue's here. And
+    `{verdicts}`, for the by-hand dispatch of a review pass: every review on
+    the pull request as `(login, state)`, oldest first, which is the order
+    GitHub lists them in and so the order the newest verdict is read off. And
+    `{layer}`, for the by-hand dispatch of a rebase pass: whether the pull
+    request is in a stack, which is the `stack` object GitHub answers the
+    endpoint with rather than anything `gh pr view` reports.
 
     `requested` is written as well as read, because `request-review` asks the
     same three questions of it that `advance` does: what GitHub says about
@@ -1709,6 +1724,8 @@ class FakeGitHub:
                 "headRefName": pull.get("branch", f"claude/issue-{number}"),
                 "headRefOid": f"head{number}",
                 "reviewRequests": [{"login": who} for who in pull.get("requested") or []],
+                "reviews": [{"author": {"login": who}, "state": state}
+                            for who, state in pull.get("verdicts") or []],
                 "mergeable": mergeable,
                 "autoMergeRequest": {"enabledAt": "now"} if pull["armed"] else None}
 
@@ -1769,7 +1786,12 @@ class FakeGitHub:
             return {"state": issue.get("state", "OPEN"),
                     "labels": [{"name": "challenge"}, {"name": issue.get("level", "medium")}]}
         if args[0] == "api" and "/pulls/" in args[1]:
-            return {}  # no `stack` object: not a layer of a stack
+            # The `stack` object, which GitHub puts on every layer of a stack,
+            # the bottom included — `merge --auto` reads it for exactly that
+            # (solorepo's #117) — and on nothing else. `layer` is how a case
+            # says a pull request is in one.
+            return {"stack": {"id": 1}} if (self.pulls.get(args[1].rsplit("/", 1)[-1])
+                                            or {}).get("layer") else {}
         if args[0] == "api":
             return {"allow_auto_merge": True}  # the repository itself
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
@@ -1777,8 +1799,8 @@ class FakeGitHub:
 
 @check("advance probes", pre=True)
 def advance_probes():
-    """`advance` and `merge --auto` against a fake GitHub, in the states solorepo's #98
-    found them in.
+    """`advance`, `merge --auto` and the by-hand `dispatch` against a fake
+    GitHub, in the states solorepo's #98 found them in.
 
     Each case is one of the reviewer's reproductions on solorepo's #94, which were read
     off the code because there was no way to run it: `advance` reaches GitHub
@@ -2049,6 +2071,98 @@ def advance_probes():
     said = run(fake, lambda: move.advance("7"))
     if not said or "conflicts" not in said:
         problems.append(f"advance: a named conflicting pull request exited with {said!r}")
+
+    # The dispatch a person makes. What it refuses is a pass with nothing to
+    # do, and what it reads to decide that is the pull request and nothing
+    # else: the Challenge's level and claim are deliberately not read here,
+    # because the review dispatch is the one delivery solorepo's DR-142 exempts
+    # from `coder.yml`'s guard.
+    # The fake's repository is `o/r`, and a Role's login is
+    # `<owner>-<repo>-<role>` by the convention solorepo's DR-107 set, which is
+    # what `channel.role_login` composes and what the verb asks GitHub for.
+    reviewer = "o-r-reviewer"
+
+    # The state PR First's third step names: the reviewer requested changes, a
+    # session left the verdict behind, and the loop will not re-deliver it. The
+    # `COMMENTED` review on top is what every reply on a thread is submitted
+    # under, and it overturns nothing.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False,
+                           "verdicts": [(reviewer, "CHANGES_REQUESTED"),
+                                        (reviewer, "COMMENTED")]}})
+    said = run(fake, lambda: move.dispatch_pass("7", "review"))
+    if fake.dispatched != [("7", "review")]:
+        problems.append(f"dispatch: a verdict standing dispatched {fake.dispatched!r}")
+    if said:
+        problems.append(f"dispatch: the pass it should have started exited with {said!r}")
+
+    # And a pass with no verdict to answer is refused. An approval is not a
+    # request for changes; a request for changes from anyone but the reviewer's
+    # account is not the verdict `coder.yml`'s own door reads; and no verdict
+    # at all is a pull request waiting on a review rather than on an answer.
+    for case, pull in (("an approval", {"verdicts": [(reviewer, "APPROVED")]}),
+                       ("somebody else's", {"verdicts": [(reviewer, "APPROVED"),
+                                                         ("passer-by", "CHANGES_REQUESTED")]}),
+                       ("no verdict", {})):
+        fake = FakeGitHub({7: {"behind": 0, "armed": False, **pull}})
+        said = run(fake, lambda: move.dispatch_pass("7", "review"))
+        if fake.dispatched:
+            problems.append(f"dispatch: {case} dispatched {fake.dispatched!r}")
+        if not said or "last verdict" not in said:
+            problems.append(f"dispatch: {case} was refused with {said!r}")
+
+    # A review outstanding of the reviewer is the coder having answered the
+    # verdict and handed back, whatever verdict is newest in the history: the
+    # turn is the reviewer's, and the pass would answer answered threads.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": [reviewer],
+                           "verdicts": [(reviewer, "CHANGES_REQUESTED")]}})
+    said = run(fake, lambda: move.dispatch_pass("7", "review"))
+    if fake.dispatched:
+        problems.append(f"dispatch: a verdict already answered dispatched {fake.dispatched!r}")
+    if not said or "not yet given" not in said:
+        problems.append(f"dispatch: the answered verdict was refused with {said!r}")
+
+    # The rebase pass is for the branch GitHub builds no merge ref for, which
+    # is the same filter `advance` dispatches on and the same reason. One that
+    # has merely fallen behind is waiting on nothing, and the refusal must not
+    # send it anywhere: the behind one here is unarmed, which is what a pull
+    # request that is behind and waiting on its first review is by
+    # construction, and `move advance` refuses a named pull request for exactly
+    # that. A probe over a state is worth having only if it pins the sentence
+    # that state is answered with.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING"},
+                       8: {"behind": 3, "armed": False}})
+    said = run(fake, lambda: move.dispatch_pass("7", "rebase"))
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append(f"dispatch: a conflicting branch dispatched {fake.dispatched!r}")
+    if said:
+        problems.append(f"dispatch: the rebase it should have started exited with {said!r}")
+    said = run(fake, lambda: move.dispatch_pass("8", "rebase"))
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append(f"dispatch: a branch that merely fell behind dispatched {fake.dispatched!r}")
+    if not said or "MERGEABLE" not in said:
+        problems.append(f"dispatch: the branch that was not conflicting was refused with {said!r}")
+    if said and "advance 8" in said:
+        problems.append(f"dispatch: the branch that was not conflicting was sent to a verb "
+                        f"that refuses an unarmed one — {said!r}")
+
+    # And a rebase pass that would do harm, which is the other half of what the
+    # pull request answers. A branch that is not the loop's shape names no
+    # Challenge for a pass that could not finish to hand back to — `coder.yml`
+    # holds that refusal after the dispatch, and for the nearly-right name it
+    # holds none at all — and a layer of a stack is the solo's, because
+    # rebasing one moves commits under the layer above with no event on it
+    # (solorepo's DR-133). Both are refused before `mergeable` is asked for,
+    # which is why the conflict these cases set is never reached.
+    for case, pull in (("a branch that is not the loop's",
+                        {"branch": "claude/issue-169-followup"}),
+                       ("the solo's own branch", {"branch": "fix-the-thing"}),
+                       ("a layer of a stack", {"layer": True})):
+        fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING", **pull}})
+        said = run(fake, lambda: move.dispatch_pass("7", "rebase"))
+        if fake.dispatched:
+            problems.append(f"dispatch: {case} dispatched {fake.dispatched!r}")
+        if not said or "by hand" not in said:
+            problems.append(f"dispatch: {case} was refused with {said!r}")
     return problems
 
 
@@ -2249,6 +2363,8 @@ def channel_parser_probes():
             ("merge 13 --stack", {"verb": "merge", "pr": "13", "auto": False, "stack": True}),
             ("advance", {"verb": "advance", "pr": None}),
             ("advance 13", {"verb": "advance", "pr": "13"}),
+            ("dispatch 13 --task review", {"verb": "dispatch", "pr": "13", "task": "review"}),
+            ("dispatch 13 --task rebase", {"verb": "dispatch", "pr": "13", "task": "rebase"}),
             ("request-review 13", {"verb": "request-review", "pr": "13", "to": "reviewer"}),
             ("mint", {"verb": "mint"}),
             ("--role reviewer merge 13 --auto", {"role": "reviewer", "verb": "merge"}),
@@ -2275,6 +2391,11 @@ def channel_parser_probes():
                  "comment 93", "answer T_1", "review 1 --approve", "landed 13",
                  "issue --title t", "pr --title t", "pr-base 1 --base b",
                  "label 93 --add human", "stack 1 2",
+                 # Which pass is the whole of what a dispatch says, and the two
+                 # do opposite things to a branch, so it is never assumed and
+                 # never anything else: `coder.yml` defaults its own input to
+                 # `review`, which is the silent mistake this refuses.
+                 "dispatch 13", "dispatch 13 --task answer", "dispatch --task review",
                  # The number is GitHub's to issue, so there is nothing to pass:
                  # a number a caller can name is the read of a shared value that
                  # `mint` exists to replace (solorepo's DR-128).
