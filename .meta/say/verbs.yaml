@@ -47,9 +47,13 @@ programs:
         usage: "<thread-id> < body.md"
         does: "answer: reply, then resolve; refused when this Actor is the thread's sole author, unless the reply links the Issue the thread was promoted to"
         held_by: [coder]
+      - name: resolve
+        usage: "<thread-id>"
+        does: "resolve a review thread whose answer or promotion link is already posted"
+        held_by: [coder, solo]
       - name: promote
-        usage: "<thread-id> --title T --difficulty D < issue-body.md"
-        does: "at merge: file the Issue with the Issue form's body, reply with the link, resolve"
+        usage: "<thread-id> --title T --difficulty D [--no-resolve] < issue-body.md"
+        does: "at approval: file the Issue with the Issue form's body, reply with the link, resolve (or defer resolution)"
         held_by: [coder, solo]
       - name: landed
         usage: "<pr>"

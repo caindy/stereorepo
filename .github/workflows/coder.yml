@@ -8,10 +8,11 @@
 # and for `medium` a review requested first. What it cannot finish it hands
 # to the solo by relabelling `human` and saying why.
 #
-# Three passes, and the trigger says which: an Issue taken, a request for
-# changes answered, and a branch rebased back to where its outstanding review
-# can be answered at all (solorepo's DR-133). The last has no event of its own
-# and is dispatched by `.meta/say/move advance` on the merge that caused it.
+# Four passes, and the trigger says which: an Issue taken, a request for
+# changes answered, promotion on approval, and a branch rebased back to
+# where its outstanding review can be answered at all (solorepo's DR-133,
+# solorepo's DR-159). The last has no event of its own and is dispatched by
+# `.meta/say/move advance` on the merge that caused it.
 #
 # Nothing here restates how to work. `AGENTS.md`, the Disciplines and the two
 # forms are the checkout's; this file decides when the coder runs, as whom it
@@ -93,17 +94,18 @@ jobs:
     name: coder
     # Only a difficulty a loop takes, on a Challenge: `hard` and `human` are
     # not this Job's, and a `roadmap` Issue is deferred by definition. Or the
-    # reviewer's account requesting changes on a branch named for a Challenge
-    # — the prefix says which Issue, not whose the branch is; `is it taken
-    # already` below reads whose it is, on this door as on the first
-    # (solorepo's DR-142). Or the solo dispatching that second pass by hand.
+    # reviewer's account requesting changes or approving on a branch named
+    # for a Challenge — the prefix says which Issue, not whose the branch is;
+    # `is it taken already` below reads whose it is, on this door as on the
+    # first (solorepo's DR-142, solorepo's DR-159). Or the solo dispatching that second
+    # pass by hand.
     if: >-
       (github.event_name == 'issues'
         && github.event.issue.state == 'open'
         && (github.event.label.name == 'easy' || github.event.label.name == 'medium')
         && contains(github.event.issue.labels.*.name, 'challenge'))
       || (github.event_name == 'pull_request_review'
-        && github.event.review.state == 'changes_requested'
+        && (github.event.review.state == 'changes_requested' || github.event.review.state == 'approved')
         && github.event.review.user.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
         && startsWith(github.event.pull_request.head.ref, 'claude/issue-'))
       || github.event_name == 'workflow_dispatch'
@@ -181,7 +183,8 @@ jobs:
         if: github.event_name != 'issues'
         run: |
           n="${EVENT_PR:-$INPUT_PR}"
-          pull=$(gh pr view "$n" --json headRefName,baseRefName)
+          pull=$(gh pr view "$n" --json state,headRefName,baseRefName)
+          state=$(jq -r .state <<<"$pull")
           branch=$(jq -r .headRefName <<<"$pull")
           base=$(jq -r .baseRefName <<<"$pull")
           case "$branch" in claude/issue-*) issue=${branch#claude/issue-} ;; *) issue= ;; esac
@@ -189,12 +192,24 @@ jobs:
             echo "::error::#$n is on $branch, which names no Challenge, so a rebase pass that could not finish would have nothing to hand back. Rebase it by hand."
             exit 1
           fi
+          if [ "$state" = MERGED ] || [ "$state" = CLOSED ]; then
+            echo "#$n is $state already; nothing for this run to do"
+            printf 'number=%s\nbranch=%s\nbase=%s\nissue=%s\nby=merged\nwhy=merged\n' \
+              "$n" "$branch" "$base" "$issue" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           printf 'number=%s\nbranch=%s\nbase=%s\nissue=%s\n' \
             "$n" "$branch" "$base" "$issue" >> "$GITHUB_OUTPUT"
-          git checkout --quiet "$branch"
+          if [ "$EVENT" = pull_request_review ] && [ "$REVIEW_STATE" = approved ]; then
+            git checkout --quiet "$branch" 2>/dev/null || true
+          else
+            git checkout --quiet "$branch"
+          fi
           cat "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REVIEW_STATE: ${{ github.event.review.state }}
           EVENT_PR: ${{ github.event.pull_request.number }}
           INPUT_PR: ${{ inputs.pull_request }}
           TASK: ${{ inputs.task }}
@@ -296,8 +311,13 @@ jobs:
       # Challenge the loop holds — and not a failure.
       - name: is it taken already
         id: taken
-        if: github.event_name != 'workflow_dispatch' || inputs.task == 'rebase'
+        if: github.event_name != 'workflow_dispatch' || inputs.task == 'rebase' || steps.pr.outputs.by == 'merged'
         run: |
+          if [ "$BY" = merged ]; then
+            printf 'by=merged\nwhy=merged\n' >> "$GITHUB_OUTPUT"
+            echo "Pull request is merged already; this delivery has nothing to do"
+            exit 0
+          fi
           if [ "$DOOR" != issues ]; then
             case "$ISSUE" in
               ''|*[!0-9]*)
@@ -337,6 +357,7 @@ jobs:
           DOOR: ${{ github.event_name }}
           ISSUE: ${{ github.event.issue.number || steps.pr.outputs.issue }}
           CODER: ${{ format('{0}-{1}-coder', github.repository_owner, github.event.repository.name) }}
+          BY: ${{ steps.pr.outputs.by }}
 
       # Where the loop stood down and nobody is standing there, say so on the
       # pull request. On `held` a session is, by construction, and a comment
@@ -354,7 +375,7 @@ jobs:
       # level before it dispatches and names the branch it leaves alone in
       # `advance`'s own log, where the repetition costs nobody.
       - name: say the verdict has no Job
-        if: github.event_name == 'pull_request_review' && (steps.taken.outputs.by == 'closed' || steps.taken.outputs.by == 'stale' || steps.taken.outputs.by == 'unnamed')
+        if: github.event_name == 'pull_request_review' && github.event.review.state != 'approved' && (steps.taken.outputs.by == 'closed' || steps.taken.outputs.by == 'stale' || steps.taken.outputs.by == 'unnamed')
         run: |
           .meta/say/post comment "$PR" <<EOF
           No run takes this up: #$ISSUE is $WHY, so what stands on this pull request is the solo's. What decided that is in the run log, $RUN.
@@ -374,12 +395,19 @@ jobs:
       # often as it is code and taking the wrong side of one is how a change
       # silently loses half of itself; half the budget, because a rebase that
       # is taking an hour is not a rebase and belongs back with the solo.
+      # Promotion on approval gets the smaller model, thirty turns, and fifteen
+      # minutes (solorepo's DR-159): transcribing a thread into an Issue and filing
+      # it is clerical transcription rather than code synthesis or reading a
+      # deep critique, and thirty turns is ample to promote surviving notices
+      # and post what landed without letting the run wander.
       - name: choose the depth
         id: depth
         run: |
           printf 'level=%s\n' "$LEVEL" >> "$GITHUB_OUTPUT"
           if [ "$TASK" = rebase ]; then
             printf 'model=claude-opus-5\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT" = pull_request_review ] && [ "$STATE" = approved ]; then
+            printf 'model=claude-sonnet-5\nturns=30\nminutes=15\n' >> "$GITHUB_OUTPUT"
           elif [ "$LEVEL" = medium ]; then
             printf 'model=claude-opus-5\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
           else
@@ -388,11 +416,15 @@ jobs:
           cat "$GITHUB_OUTPUT"
         env:
           TASK: ${{ inputs.task }}
+          EVENT: ${{ github.event_name }}
+          STATE: ${{ github.event.review.state }}
           # The level the guard read from the Issue now, not the one the
           # frozen delivery carried: a level moved while this run waited in
-          # the concurrency group is the level the run must take (solorepo's #117). A
-          # second pass is the larger model whatever the label was: the
-          # threads it answers were written by the deeper reviewer.
+          # the concurrency group is the level the run must take (solorepo's #117). An
+          # answering pass (changes_requested) is the larger model whatever the
+          # label was: the threads it answers were written by the deeper reviewer.
+          # A promotion pass (approved) takes the smaller model and a quarter of
+          # the budget above regardless of LEVEL.
           LEVEL: ${{ (github.event_name == 'issues' && steps.taken.outputs.level) || 'medium' }}
 
       - name: take the Issue
@@ -475,7 +507,11 @@ jobs:
             about the pass, and it is the only sign outside the run that the
             pass happened at all.
 
-            `easy`: `.meta/say/move merge <n> --auto`; green is the review.
+            `easy`: if you raised any notice on the diff, promote each surviving
+            thread with `.meta/say/post promote <thread-id> --title T --difficulty hard < issue-body.md`
+            and revise the body with `.meta/say/move revise <n>` to list the promoted
+            Issue(s) under `**What was noticed and not done.**`; then
+            `.meta/say/move merge <n> --auto`; green is the review (solorepo's DR-159).
             `medium`: `.meta/say/move request-review <n>` and stop; the reviewer
             arms the merge, and a request for changes comes back to you as a
             new run. Do either the moment the branch is pushed and the body is
@@ -782,7 +818,11 @@ jobs:
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
       - name: answer the review
-        if: github.event_name != 'issues' && inputs.task != 'rebase' && steps.taken.outputs.by == ''
+        if: >-
+          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
+           || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
+          && steps.taken.outputs.by == ''
+          && steps.pr.outputs.by == ''
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         with:
@@ -809,7 +849,8 @@ jobs:
             a reply that says which. Make the changes, gate green with
             `.meta/gate meta`, commit and push. Then `.meta/say/post answer
             <thread-id>` on every thread, which replies and resolves; a thread
-            marked "Noticed and not done" is the solo's and stays open.
+            marked "Noticed and not done" stays open until approval, when surviving
+            notices are promoted (solorepo's DR-159).
             `.meta/say/move revise ${{ steps.pr.outputs.number }}` if the body no
             longer says what the head does, `just dereference`, then
             `.meta/say/post landed ${{ steps.pr.outputs.number }}` and
@@ -825,6 +866,75 @@ jobs:
             Do not merge by hand, and do not reach GitHub any other way: the
             hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
             `gh issue edit`, `gh issue comment` and `gh api`.
+          claude_args: |
+            --model ${{ steps.depth.outputs.model }}
+            --max-turns ${{ steps.depth.outputs.turns }}
+            --permission-mode acceptEdits
+            --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
+
+      # The pass an approval starts (solorepo's DR-159). What survives the argument
+      # earns an Issue when the argument is settled, not at merge. If no threads
+      # are held for promotion, auto-merge is already armed and will land unattended;
+      # if threads are held, this pass promotes each, revises the body, posts landed,
+      # and leaves the armed pull request to merge once green.
+      - name: check for threads to promote
+        id: promote
+        if: github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+        run: |
+          count=$(python3 -c "import sys; sys.path.insert(0, '.meta'); from check_pr import threads; print(len([t for t in threads('$PR') if not t['isResolved']]))")
+          printf 'count=%s\n' "$count" >> "$GITHUB_OUTPUT"
+          echo "Found $count unresolved thread(s) on approved #$PR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.pr.outputs.number }}
+
+      - name: promote on approval
+        if: github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && steps.taken.outputs.by == '' && steps.pr.outputs.by == '' && steps.promote.outputs.count != '0'
+        uses: anthropics/claude-code-action@v1
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.CODER_GH_TOKEN }}
+          show_full_output: "true"
+          prompt: |
+            You are the coder Role (solorepo's DR-107), on pull request
+            #${{ steps.pr.outputs.number }} of ${{ github.repository }}, on the
+            branch `${{ steps.pr.outputs.branch }}`, which is checked out here.
+            The reviewer has approved this pull request. The argument is settled,
+            and what survives the argument earns an Issue (solorepo's DR-159).
+
+            Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`.
+            Every unresolved thread marked "Noticed and not done" (or any surviving notice)
+            is promoted now to an Issue with:
+            `.meta/say/post promote <thread-id> --title "<title>" --difficulty hard --no-resolve <<'BODY'`
+            `...`
+            `BODY`
+            The body is the Issue form:
+            **Waits on.** Nothing.
+            **What was noticed.** <describe what was noticed>
+            **What would make this worth doing.** <rationale>
+            **Where it was found.** On #${{ steps.pr.outputs.number }}.
+            **Difficulty.** hard
+
+            Promoting with `--no-resolve` files the Issue and replies on the thread
+            with the link, but leaves the thread open so auto-merge does not fire
+            prematurely.
+
+            For every thread you promote, add its link under `**What was noticed and not done.**`
+            in the pull request body with `.meta/say/move revise ${{ steps.pr.outputs.number }}`.
+
+            Then post what landed: `.meta/say/post landed ${{ steps.pr.outputs.number }}`.
+
+            Ensure the merge is armed: `gh pr view ${{ steps.pr.outputs.number }} --json autoMergeRequest`.
+            If it is not armed, arm it with `.meta/say/move merge ${{ steps.pr.outputs.number }} --auto`.
+
+            Finally, resolve each promoted thread to release the merge:
+            `.meta/say/post resolve <thread-id>`.
+            Resolving the threads clears the remaining merge requirement, allowing GitHub
+            to merge the pull request cleanly.
+
+            Do not request review: the pull request is already approved.
+            Do not merge by hand, and do not make any code changes.
           claude_args: |
             --model ${{ steps.depth.outputs.model }}
             --max-turns ${{ steps.depth.outputs.turns }}

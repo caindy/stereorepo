@@ -1,0 +1,100 @@
+decisions:
+  - id: work:decision/159
+    name: "DR-159 · Promotion is at approval: what survives the argument earns an Issue when the argument is settled, not at merge"
+    challenge: work:challenge/232
+    status: ADOPTED
+    applies:
+      - work:article/15
+      - work:article/16
+    enacted_in:
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-check-pr
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-say-post
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-probes
+      - work:artifact/skill-pr-first
+      - work:artifact/skill-pr-first-reviewer
+      - work:artifact/meta-templates-pull-request
+    context: >-
+      PR First's eighth step historically said to promote at merge. In an
+      agentic loop, no Job is alive at merge: the coder's run ends when review
+      is requested (or when merge is armed on easy), and the reviewer's run ends
+      when the review is submitted and the merge armed. Auto-merge merges the
+      pull request later, unattended. GitHub branch protection requires that
+      all conversations must be resolved before a pull request can merge, and
+      auto-merge honours that requirement. When an armed pull request held an
+      unresolved noticed-and-not-done thread, GitHub refused to merge it ("A
+      conversation must be resolved before this pull request can be merged"),
+      leaving the pull request in mergeState=BLOCKED armed=yes indefinitely
+      (specimen #230). The sweep's unheld() reader treated an armed merge as
+      evidence of being held, creating a false negative that left the stuck
+      pull request unnamed. The rationale for "at merge, not before" was that
+      what survives the argument earns an Issue — and the argument is settled
+      when the reviewer approves (or on easy, when the change is finished and
+      gate green before arming), not after merge.
+    alternatives:
+      - name: Run a standing post-merge job to promote threads
+        chosen: false
+        reason: >-
+          GitHub refuses auto-merge while conversations are unresolved, so a
+          post-merge job could never run: the pull request cannot merge until
+          the threads are already resolved. Moving promotion after merge makes
+          the merge depend on a job that only runs after the merge occurs.
+      - name: Let the reviewer promote surviving notices at approval
+        chosen: false
+        reason: >-
+          The reviewer's agency is critique and verdict; the coder Role holds
+          the challenge, writes the follow-up work, and manages its difficulty.
+          Having the reviewer file Issues for notices the coder raised inverts
+          authorship and blurs Role boundaries (solorepo's DR-107, DR-127).
+      - name: Promote notices on the loop's path at easy or medium
+        chosen: false
+        reason: >-
+          Promoting an Issue at easy or medium immediately starts a new coder run
+          without human intervention, because coder.yml watches the labeled event
+          (solorepo's DR-107, DR-127). A loop delivering its own follow-up work
+          circumvents the solo's judgement on what work is taken. Promoting at
+          hard creates the Issue, links it to resolve the review thread, and lets
+          the merge proceed, keeping the choice of when to take up the work with
+          the solo.
+      - name: Move promotion to approval and before arming, and open the coder door on approved
+        chosen: true
+        reason: >-
+          What survives the argument earns an Issue when the argument is
+          settled: on medium, when the reviewer submits an approval, the coder
+          wakes to promote surviving notices, update the pull request body, post
+          what landed, and leave the armed pull request to merge unattended; on
+          easy, the coder promotes notices before arming. The sweep reader
+          unheld() is taught that an armed pull request with unresolved
+          conversations is held by nobody.
+    consequences:
+      - >-
+        PR First's eighth step, the pull request template in
+        `.meta/templates/pull-request.md`, and the verb summary in
+        `.meta/say/verbs.yaml` move from "at merge" to "at approval",
+        re-rendering `.meta/disciplines.md`, `.github/PULL_REQUEST_TEMPLATE.md`,
+        and both skill definitions.
+      - >-
+        `.github/workflows/coder.yml` opens its review door to `approved` from
+        the reviewer account beside `changes_requested`, adding a bounded
+        promotion pass that promotes surviving notices, revises the body, and
+        posts what landed when threads are held, or skips when none exist.
+      - >-
+        On easy challenges and during the approval promotion pass, surviving
+        notices are promoted with difficulty hard so that threads resolve and
+        merges proceed without autonomous follow-up runs initiating
+        unsupervised.
+      - >-
+        `.meta/check_pr.py`'s `unheld()` checks armed pull requests for
+        unresolved conversations when idle for longer than longest_run(),
+        naming them as unheld with the promotion or answering remedy while
+        giving active promotion passes their running window. The sweep collects
+        unresolved threads alongside the gate check and hands them in, keeping
+        `unheld()` a pure predicate over fetched data.
+      - >-
+        `.meta/say/post` adds a `resolve` verb and a `--no-resolve` flag to
+        `promote`. On approval, the coder promotes surviving notices with
+        `--no-resolve`, revises the pull request body, and posts what landed
+        before resolving the threads, preventing auto-merge from firing
+        prematurely while body revisions and landed comments are in progress.

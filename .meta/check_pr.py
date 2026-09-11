@@ -727,7 +727,7 @@ def watch(ref, every=60):
         time.sleep(every)
 
 
-def resolved_without_an_answer(ref):
+def resolved_without_an_answer(ref, thread_nodes=None):
     """A16. Requiring resolution is what makes this check necessary.
 
     GitHub can insist every thread be resolved, and that insistence teaches
@@ -740,7 +740,7 @@ def resolved_without_an_answer(ref):
     the merge for those, and a check saying the same thing twice is one of them
     drifting.
     """
-    return unanswered(threads(ref))
+    return unanswered(threads(ref) if thread_nodes is None else thread_nodes)
 
 
 def parties(thread):
@@ -951,12 +951,12 @@ def from_github(ref):
     return data["title"], data["body"] or ""
 
 
-def gate(ref):
+def gate(ref, thread_nodes=None):
     """The pull request check, whole: the body against the form, A16, A19 and
     the required contexts. One function because it is run from two places —
     on the push, and on the clock (solorepo's DR-105) — and two copies would be two gates."""
     title, body = from_github(ref)
-    return (check(title, body) + resolved_without_an_answer(ref)
+    return (check(title, body) + resolved_without_an_answer(ref, thread_nodes=thread_nodes)
             + unsigned_commits(ref) + required_contexts() + cited_issues())
 
 
@@ -1084,7 +1084,7 @@ def hand_back(issue):
             "base": pr.get("baseRefName") or "main"}
 
 
-def unheld(prs, minutes, clean):
+def unheld(prs, minutes, clean, unresolved=None):
     """Pull requests nobody holds, and requests nobody can answer (solorepo's #154).
 
     A handoff here is a semaphore: GitHub holds a review request and reports
@@ -1147,6 +1147,15 @@ def unheld(prs, minutes, clean):
     no push to trunk caused, the dispatch that declined, and the dispatched run
     that died with its force-push still to come.
 
+    And an armed pull request carrying unresolved conversations: GitHub refuses
+    the merge with "A conversation must be resolved before this pull request can
+    be merged", and auto-merge honours the requirement, so an armed pull request
+    with a noticed-and-not-done thread waits on an act no standing Job performs
+    (solorepo's #232, solorepo's DR-159). Once idle for longer than a run may last,
+    the reader names this rather than counting it as handled, giving the promotion
+    or answering remedy, while a recently touched head is passed over in silence so
+    an active promotion pass can run.
+
     Not the one that died after it. A rebase pass that pushes and then ends
     before it re-arms leaves a pull request neither armed nor requested and no
     longer conflicting, and this reading wants a wait, so it passes over it in
@@ -1190,6 +1199,20 @@ def unheld(prs, minutes, clean):
             out.append(f"#{pr['number']} {pr['title'][:60]} — {' and '.join(waiting)}, on a "
                        f"branch that conflicts: {'; and '.join(stuck)}. Rebase "
                        f"{pr['headRefName']} onto {pr['baseRefName']}")
+        moved = (datetime.datetime.fromisoformat(pr["updatedAt"].replace("Z", "+00:00"))
+                 if pr.get("updatedAt") else None)
+        idle = (now - moved).total_seconds() / 60 if moved else float("inf")
+        if pr.get("autoMergeRequest") and pr.get("mergeable") != "CONFLICTING" and idle >= minutes:
+            threads_unresolved = (unresolved.get(pr["number"]) if unresolved is not None
+                                  else [t for t in threads(str(pr["number"])) if not t["isResolved"]])
+            if threads_unresolved:
+                out.append(f"#{pr['number']} {pr['title'][:60]} — armed, with "
+                           f"{len(threads_unresolved)} unresolved conversation(s): GitHub will "
+                           f"not merge it while conversations are unresolved, and no Job is "
+                           f"standing to resolve them (solorepo's DR-159). Promote surviving "
+                           f"notices with .meta/say/post promote, resolve threads whose link or "
+                           f"answer is already posted with .meta/say/post resolve, or answer with "
+                           f".meta/say/post answer")
         if asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr):
             continue
         if pr["number"] not in clean:
@@ -1197,8 +1220,6 @@ def unheld(prs, minutes, clean):
         branch = LOOPS_BRANCH.match(pr["headRefName"])
         if not branch:
             continue
-        moved = datetime.datetime.fromisoformat(pr["updatedAt"].replace("Z", "+00:00"))
-        idle = (now - moved).total_seconds() / 60
         if idle < minutes:
             continue
         issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
@@ -1277,9 +1298,12 @@ def sweep_all(publishing):
         pr["statusCheckRollup"] = rolled[pr["number"]]
     failed = bool(unfetched)
     clean = set()
+    unresolved = {}
     for pr in found:
         number = str(pr["number"])
-        problems = gate(number)
+        pr_threads = threads(number)
+        unresolved[pr["number"]] = [t for t in pr_threads if not t["isResolved"]]
+        problems = gate(number, thread_nodes=pr_threads)
         print(f"{'x  ' if problems else 'ok '}#{number} {pr['title'][:60]}"
               + (f" ({len(problems)})" if problems else ""))
         for p in problems:
@@ -1292,7 +1316,7 @@ def sweep_all(publishing):
 
     minutes = longest_run()
     if minutes is not None:
-        owed = unheld(found, minutes, clean)
+        owed = unheld(found, minutes, clean, unresolved)
         print(f"{'x  ' if owed else 'ok '}hand-off — "
               + (f"{len(owed)} pull request(s) nobody can take up"
                  if owed else "every open pull request names who takes it next"))
@@ -1390,7 +1414,7 @@ if __name__ == "__main__":
             print()
         print("\n".join(owed) if owed else "nothing unaddressed")
         if parked:
-            print(f"\n--- {len(parked)} noticed and not done, held for promotion at merge ---")
+            print(f"\n--- {len(parked)} noticed and not done, held for promotion at approval (solorepo's DR-159) ---")
             print("\n".join(parked))
         if done:
             print(f"\n--- {len(done)} answered and resolved: a re-review reads each answer against the diff it claims ---")

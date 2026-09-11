@@ -8,6 +8,7 @@ over assertions should not take its imports from a test suite — `argparse` is
 here, and it is here for one line (solorepo's DR-150).
 """
 import argparse
+import datetime
 import os
 import pathlib
 import re
@@ -1039,6 +1040,43 @@ def handoff_probes():
     if len(changes) != 1 or "CONFLICTING" not in changes[0]:
         problems.append(f"watch: a watch headed `UNKNOWN` reported {changes!r}, and the answer "
                         "that followed is the only one it could have said")
+
+    # An armed pull request holding an unresolved conversation is unheld (solorepo's DR-159):
+    # auto-merge will not merge it, and no Job is standing to resolve it.
+    original_threads = getattr(check_pr, "threads", None)
+    try:
+        check_pr.threads = lambda n: [{"id": "t1", "isResolved": False}]
+        owed = check_pr.unheld(
+            [{"number": 10, "title": "Stuck armed PR", "headRefName": "claude/issue-10",
+              "baseRefName": "main", "isDraft": False, "autoMergeRequest": {"enabledAt": "2026-09-11"},
+              "mergeable": "MERGEABLE", "reviewRequests": []}],
+            minutes=30, clean={10}
+        )
+        if len(owed) != 1 or "unresolved conversation" not in owed[0]:
+            problems.append(f"unheld: an armed PR with unresolved threads reported {owed!r}")
+        check_pr.threads = lambda n: [{"id": "t1", "isResolved": True}]
+        clean_owed = check_pr.unheld(
+            [{"number": 10, "title": "Stuck armed PR", "headRefName": "claude/issue-10",
+              "baseRefName": "main", "isDraft": False, "autoMergeRequest": {"enabledAt": "2026-09-11"},
+              "mergeable": "MERGEABLE", "reviewRequests": []}],
+            minutes=30, clean={10}
+        )
+        if clean_owed:
+            problems.append(f"unheld: an armed PR with no unresolved threads reported {clean_owed!r}")
+        # Recency: while recent, a promotion pass may be running; unheld is silent until idle >= minutes
+        recent_owed = check_pr.unheld(
+            [{"number": 10, "title": "Stuck armed PR", "headRefName": "claude/issue-10",
+              "baseRefName": "main", "isDraft": False, "autoMergeRequest": {"enabledAt": "2026-09-11"},
+              "mergeable": "MERGEABLE", "reviewRequests": [],
+              "updatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat()}],
+            minutes=30, clean={10}, unresolved={10: [{"id": "t1", "isResolved": False}]}
+        )
+        if recent_owed:
+            problems.append(f"unheld: recent armed PR reported {recent_owed!r} instead of passing in silence")
+    finally:
+        if original_threads:
+            check_pr.threads = original_threads
+
     return problems
 
 
@@ -1071,8 +1109,11 @@ def channel_parser_probes():
             ("notice 13 .meta/say/post 12", {"verb": "notice", "pr": "13", "path": ".meta/say/post", "line": 12}),
             ("reply T_1", {"verb": "reply", "thread": "T_1"}),
             ("answer T_1", {"verb": "answer", "thread": "T_1"}),
+            ("resolve T_1", {"verb": "resolve", "thread": "T_1"}),
             ("promote T_1 --title t --difficulty easy",
-             {"verb": "promote", "thread": "T_1", "title": "t", "level": "easy"}),
+             {"verb": "promote", "thread": "T_1", "title": "t", "level": "easy", "no_resolve": False}),
+            ("promote T_1 --title t --difficulty hard --no-resolve",
+             {"verb": "promote", "thread": "T_1", "title": "t", "level": "hard", "no_resolve": True}),
             ("landed 13", {"verb": "landed", "pr": "13"}),
         ],
         "move": [
@@ -1081,7 +1122,7 @@ def channel_parser_probes():
             ("triage 93 medium", {"verb": "triage", "issue": "93", "level": "medium"}),
             ("stop 93", {"verb": "stop", "issue": "93"}),
             ("file --title t --difficulty medium",
-             {"verb": "file", "title": "t", "level": "medium", "roadmap": False}),
+              {"verb": "file", "title": "t", "level": "medium", "roadmap": False}),
             ("file --title t --roadmap", {"verb": "file", "level": None, "roadmap": True}),
             ("open --title t", {"verb": "open", "title": "t", "base": "main", "on": None}),
             ("open --title t --on 12", {"verb": "open", "on": "12"}),
@@ -1098,7 +1139,7 @@ def channel_parser_probes():
             ("mint", {"verb": "mint"}),
             ("--role reviewer merge 13 --auto", {"role": "reviewer", "verb": "merge"}),
             ("milestone 75 --set first-specialization",
-             {"verb": "milestone", "issue": "75", "title": "first-specialization", "clear": False}),
+              {"verb": "milestone", "issue": "75", "title": "first-specialization", "clear": False}),
             ("milestone 75 --clear", {"verb": "milestone", "issue": "75", "title": None, "clear": True}),
         ],
         "commit": [("-m subject", {"message": "subject"})],
@@ -1111,7 +1152,7 @@ def channel_parser_probes():
     rejected = {
         "post": ["review 1", "comment 93 --approve", "promote T_1 --title t",
                  "claim 93", "open --title t", "merge 13", "stop 93", "commit -m x",
-                 "issue-comment 93", "resolve T_1", "pr-body 1", "mint"],
+                 "issue-comment 93", "resolve", "pr-body 1", "mint"],
         "move": ["milestone 75", "milestone 75 --set x --clear",
                  "file --title t", "file --title t --difficulty huge",
                  "file --title t --difficulty easy --roadmap",

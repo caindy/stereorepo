@@ -25,7 +25,7 @@ because a Challenge does.
 - Closes #<n> — <the Challenge, in one line>
 
 **What was noticed and not done.** One link per item, to an Issue, filled in at
-**merge** — these are the conversations that survived the argument. Empty until
+**approval** — these are the conversations that survived the argument. Empty until
 then, and often empty for good: an item the change overtook is answered in its
 thread, not tracked.
 

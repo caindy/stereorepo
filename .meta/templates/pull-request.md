@@ -40,7 +40,7 @@ because a Challenge does.
 - Closes #<n> — <the Challenge, in one line>
 
 **What was noticed and not done.** One link per item, to an Issue, filled in at
-**merge** — these are the conversations that survived the argument. Empty until
+**approval** — these are the conversations that survived the argument. Empty until
 then, and often empty for good: an item the change overtook is answered in its
 thread, not tracked.
 
@@ -90,7 +90,7 @@ commits carry — the marker says what kind of thread it is, `Actor` says who is
 speaking, and in a repository where every comment is posted under one account
 nothing else can. An unresolved conversation blocks the merge, so nothing is walked
 past silently, and the item keeps the context it was noticed in. Promote it to an
-Issue at merge if it survived the argument, and resolve the thread with the link
+Issue at approval if it survived the argument, and resolve the thread with the link
 — which is also what satisfies A16.
 
 What earns an Issue is whether you can say **what would make it worth doing**. A

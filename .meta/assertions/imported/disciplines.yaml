@@ -425,7 +425,7 @@ disciplines:
         conversation blocks the merge, so nothing is walked past without
         somebody deciding what it is.
       - >-
-        Promote at merge, not before. What survives the argument earns an
+        Promote at approval, not before. What survives the argument earns an
         Issue and the thread is resolved with a link to it; what the change
         overtook is answered and resolved where it was raised. Filing at
         review time creates a tracker item with no relationship to the

@@ -39,7 +39,7 @@ A verb not listed is not yours to type. What no verb enforces:
 5. Answer every thread and then resolve it, including one the diff has overtaken. Outdated is not answered: GitHub collapses a thread whose anchor moved and leaves it open, and a reader years later cannot tell a point that was addressed from one that was dropped.
 6. Title it with the words someone will search for. It is the index, and an index is worth exactly its titles.
 7. Raise what was noticed and not done as a **conversation on the diff**, at the moment it is noticed — not a bullet in the body, which closes with the pull request, and never a closing summary. The last comment is the one that counts, so replying without the marker is how an item the change has overtaken stops being parked, and an unresolved conversation blocks the merge, so nothing is walked past without somebody deciding what it is.
-8. Promote at merge, not before. What survives the argument earns an Issue and the thread is resolved with a link to it; what the change overtook is answered and resolved where it was raised. Filing at review time creates a tracker item with no relationship to the outcome, which goes stale the moment the approach moves under it.
+8. Promote at approval, not before. What survives the argument earns an Issue and the thread is resolved with a link to it; what the change overtook is answered and resolved where it was raised. Filing at review time creates a tracker item with no relationship to the outcome, which goes stale the moment the approach moves under it.
 9. Post what landed for the Challenge before merging, generated and never typed: written by hand it is the copy that flatters, and complete whether or not the record was.
 10. Merged, never abandoned. A pull request exists because a Challenge does, and a Challenge is a real need; work that turned out to be the wrong answer merges as the record of that, which is worth more than a closed tab.
 11. Push before stopping, and stop at green. Work that exists only in a worktree the next Job will never see has not been handed off, and a red gate is not a handoff — it is a mess whose author is gone. The gate is the completeness test for the Agency you hold; nothing else is.
@@ -103,7 +103,7 @@ because a Challenge does.
 - Closes #<n> — <the Challenge, in one line>
 
 **What was noticed and not done.** One link per item, to an Issue, filled in at
-**merge** — these are the conversations that survived the argument. Empty until
+**approval** — these are the conversations that survived the argument. Empty until
 then, and often empty for good: an item the change overtook is answered in its
 thread, not tracked.
 

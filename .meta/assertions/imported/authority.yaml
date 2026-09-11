@@ -41,7 +41,7 @@ capability_set:
 
       Its operations are the steps of the Disciplines, one verb each, and not
       `gh`'s nouns (solorepo's DR-116): file a Challenge, hand an Issue back, open a layer,
-      answer a thread, promote one at merge, post what landed. They are verbs
+      answer a thread, promote one at approval, post what landed. They are verbs
       of programs split by concern over one signing primitive (solorepo's DR-117), and
       which Role holds which is `.meta/say/verbs.yaml`'s to
       say, not a Permission's. They are not

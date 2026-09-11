@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/232
+    name: PR First says promote at merge, and no Job is alive at merge, so an armed pull request with a noticed-and-not-done thread can never land
+    challenge_type: DEFECT
+    description: >-
+      PR First's eighth step historically directed to promote at merge. On a
+      loop's pull request no Job is alive at merge, so the step never runs and
+      an armed pull request holding an unresolved noticed-and-not-done thread
+      can never land: GitHub refuses auto-merge with "A conversation must be
+      resolved before this pull request can be merged". The coder was never told
+      to promote on either path, the review door opened only on
+      changes_requested, and the sweep's unheld() reader had a false negative
+      treating an armed pull request as handled even when blocked by unresolved
+      conversations.
