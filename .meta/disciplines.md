@@ -206,9 +206,10 @@ Whether a point turns on a fact about a system outside this repository — GitHu
 9. Post what landed for the Challenge before merging, generated and never typed: written by hand it is the copy that flatters, and complete whether or not the record was.
 10. Merged, never abandoned. A pull request exists because a Challenge does, and a Challenge is a real need; work that turned out to be the wrong answer merges as the record of that, which is worth more than a closed tab.
 11. Push before stopping, and stop at green. Work that exists only in a worktree the next Job will never see has not been handed off, and a red gate is not a handoff — it is a mess whose author is gone. The gate is the completeness test for the Agency you hold; nothing else is.
-12. Stack what waits on what. A change that can only start once another lands is a **layer**: its own branch and pull request, based on the layer below and linked into a stack, so the layers merge from the bottom and GitHub rebases what remains.
-13. Hand off by requesting review of the next Role's account. The request is the handoff's whole signal, and a note beside it pretends to be one.
-14. On arrival, read what GitHub holds — the pull request, the diff, the commits, the threads and the check states. There is nothing else, by design. Ask what this branch already owns: one branch is one pull request, so the checkout is the token and GitHub resolves it. Authorship cannot answer this, since every pull request here is the solo's.
+12. Bring a branch current by rebase, never by GitHub's plain **Update branch** button on the pull request page: it authors a merge commit with no `Actor` Trailer, which A19 refuses in the same words as a commit made by hand. **Update with rebase**, and the channel's own `advance`, write no such commit.
+13. Stack what waits on what. A change that can only start once another lands is a **layer**: its own branch and pull request, based on the layer below and linked into a stack, so the layers merge from the bottom and GitHub rebases what remains.
+14. Hand off by requesting review of the next Role's account. The request is the handoff's whole signal, and a note beside it pretends to be one.
+15. On arrival, read what GitHub holds — the pull request, the diff, the commits, the threads and the check states. There is nothing else, by design. Ask what this branch already owns: one branch is one pull request, so the checkout is the token and GitHub resolves it. Authorship cannot answer this, since every pull request here is the solo's.
 
 The verbs are the steps, and each refuses its own misuse (solorepo's DR-116). Every act
 on GitHub goes through the channel, `.meta/say/`, which names the Actor in
