@@ -26,10 +26,10 @@ disciplines:
         `.meta/hooks/`, `.claude/settings.json`, `.meta/assertions/imported/`,
         `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`,
         `.meta/templates/`, `.github/workflows/coder.yml`,
-        `.github/workflows/review.yml`, `.github/workflows/advance.yml`,
+        `.github/workflows/review.yml`, `.github/workflows/merge.yml`, `.github/workflows/advance.yml`,
         `stakeholders/` and `.gitignore`. The channel, its hooks and the
         settings that register them travel with the loop workflows rather than
-        after them: every instruction those three give is typed as a program of `.meta/say/`,
+        after them: every instruction those four give is typed as a program of `.meta/say/`,
         most of `check.py`'s {#prechecks} prechecks load the channel or a hook, and
         `.claude/settings.json` is the one place the hook is invoked and the
         unsigned `gh` verbs denied (DR-069) — a hook file that nothing invokes

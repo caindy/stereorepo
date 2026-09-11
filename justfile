@@ -28,6 +28,10 @@ watch n:
 sweep:
     python3 .meta/check_pr.py --sweep
 
+# evaluate open pull requests and merge the top candidate in order of leverage
+merge-manager *args:
+    .meta/say/move merge-manager {{args}}
+
 # what landed for a Challenge, from the record; `.meta/say/post landed <pr>` posts it
 landed n:
     uvx --with pyyaml python .meta/render.py --landed {{n}}

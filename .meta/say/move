@@ -361,7 +361,20 @@ def behind_by(pull):
 
 
 ADVANCE = ("number,title,baseRefName,headRefName,headRefOid,autoMergeRequest,"
-           "reviewRequests,mergeable")
+           "reviewRequests,mergeable,latestReviews")
+
+
+def is_approved_pull(pull, reviewer_login=None):
+    if reviewer_login is None:
+        try:
+            owner, name = channel.repo().split("/")
+            reviewer_login = f"{owner}-{name}-reviewer"
+        except Exception:
+            reviewer_login = "reviewer"
+    revs = [r for r in pull.get("latestReviews") or pull.get("reviews") or []
+            if (r.get("author") or {}).get("login") == reviewer_login]
+    return bool(revs and revs[-1].get("state") == "APPROVED")
+
 # A loop's branch, and nothing else. `claude/issue-<n>` is the shape `coder.yml`
 # cuts, so it is the shape a dispatched coder can be sent back to; the solo's
 # own pull request is the solo's to rebase, whatever it looks like from here.
@@ -744,11 +757,16 @@ def advance(pr=None, held=False):
     — it takes a pull request number for the day one is behind for a reason
     neither edge saw.
 
-    **Armed, and nothing else**, whether one pull request was named or none.
+    **Armed or approved, and not another open pull request's base** (solorepo's DR-133, solorepo's DR-161).
     A pull request nobody has asked to land is not waiting on anything, and the
     rebase below rewrites commits under whatever session still holds the branch.
-    Arming is the last act of the Job that did the work (solorepo's DR-112), so an armed
-    branch is one nobody is still standing on. The filter used to be the sweep's
+    Arming was historically the last act of the Job that did the work (solorepo's DR-112);
+    with a standing merge manager (solorepo's DR-161), reviewer approval is what frees
+    a pull request to land. Both are swept, but crucially excluding any branch
+    that is another open pull request's base: as solorepo's DR-133 noted, rebasing a lower layer
+    rewrites the commits the layer above is based on, causing it to conflict.
+    Excluding bases keeps the stack intact while keeping ready pull requests
+    current with their base. The filter used to be the sweep's
     alone and the explicit argument rebased whatever it was handed — which left
     the property holding on the path nothing calls and not on the one
     `merge --auto` uses (solorepo's #98).
@@ -758,7 +776,7 @@ def advance(pr=None, held=False):
     so for that call the question the arming answers is already answered. It is
     an argument of the function and not of the verb, because what a caller can
     pass a typed command can pass wrongly, and by hand this is only ever wanted
-    for a pull request that stalled — which is to say an armed one.
+    for a pull request that stalled — which is to say an armed or approved one.
 
     **By rebase, not by a merge commit.** GitHub authors the merge commit
     itself and it carries no `Actor` Trailer, so A19 would turn the required
@@ -822,9 +840,14 @@ def advance(pr=None, held=False):
     """
     if pr is not None:
         open_now = [channel.gh("pr", "view", pr, "--json", ADVANCE)]
+        bases = {p.get("baseRefName") for p in channel.gh("pr", "list", "--state", "open", "--json", "baseRefName") if p.get("baseRefName")}
     else:
         open_now = channel.gh("pr", "list", "--state", "open", "--json", ADVANCE)
-    found = open_now if held else [p for p in open_now if p.get("autoMergeRequest")]
+        bases = {p.get("baseRefName") for p in open_now if p.get("baseRefName")}
+    found = open_now if held else [
+        p for p in open_now
+        if (p.get("autoMergeRequest") or is_approved_pull(p)) and p.get("headRefName") not in bases
+    ]
     # `left` is counted out of the summary below and not into `moved`: a branch
     # left to the dispatch is neither advanced nor current with its base, and the
     # line that says how many were current is the one place this run says
@@ -840,8 +863,11 @@ def advance(pr=None, held=False):
         # how `move advance 92 && <next>` carries on as though the branch
         # had moved.
         if pr is not None:
-            sys.exit(f"say: #{pr} is not armed; nothing has asked it to land")
-        print("advance: nothing armed is open")
+            pull = open_now[0]
+            if pull.get("headRefName") in bases:
+                sys.exit(f"say: #{pr} is the base of another open pull request; rebasing it would conflict the stack (solorepo's DR-133)")
+            sys.exit(f"say: #{pr} is not armed or approved; nothing has asked it to land")
+        print("advance: nothing armed or approved is open")
     else:
         for pull in found:
             number = str(pull["number"])
@@ -1278,6 +1304,227 @@ def mint():
              "something is minting faster than this can read")
 
 
+
+MERGE_MANAGER_FIELDS = (
+    "number,title,headRefName,baseRefName,headRefOid,isDraft,mergeable,"
+    "mergeStateStatus,latestReviews,reviewRequests,closingIssuesReferences,"
+    "additions,deletions,statusCheckRollup,body"
+)
+
+THREADS_QUERY = """
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        nodes {
+          isResolved
+          isOutdated
+        }
+      }
+    }
+  }
+}
+"""
+
+
+def parse_waits_on(body):
+    """The blockers an Issue or PR declares: a list of numbers."""
+    if not body:
+        return []
+    m = re.search(r"^\*\*Waits on\.\*\*\s*(.*?)\s*$", body, re.M) or \
+        re.search(r"\*\*What it waits on\.\*\*\s*(.*?)(?:\n\s*\n|\Z)", body, re.S)
+    if not m:
+        return []
+    text = m.group(1).strip()
+    if text.lower().rstrip(".") in ("nothing", "none", ""):
+        return []
+    return [int(n) for n in re.findall(r"#(\d+)", text)]
+
+
+def check_green(pull):
+    """Whether every check on the head has concluded and none failed."""
+    contexts = pull.get("statusCheckRollup") or []
+    if not contexts:
+        return False, "checks pending (no checks concluded)"
+    green_states = {"SUCCESS", "NEUTRAL", "SKIPPED"}
+    failed = []
+    pending = []
+    for c in contexts:
+        state = (c.get("conclusion") or c.get("state") or c.get("status") or "").upper()
+        name = c.get("name") or c.get("context") or "check"
+        if state not in green_states:
+            if state in ("PENDING", "IN_PROGRESS", "QUEUED", ""):
+                pending.append(name)
+            else:
+                failed.append(f"{name}:{state.lower()}")
+    if failed:
+        return False, f"checks failing ({', '.join(failed[:3])})"
+    if pending:
+        return False, f"checks pending ({', '.join(pending[:3])})"
+    return True, "checks green"
+
+
+def check_reviewer_approval(pull, reviewer_login):
+    """Whether the reviewer account has approved."""
+    reviews = pull.get("latestReviews") or pull.get("reviews") or []
+    matching = [r for r in reviews if (r.get("author") or {}).get("login") == reviewer_login]
+    if not matching:
+        reqs = [r.get("login") if isinstance(r, dict) else r for r in pull.get("reviewRequests") or []]
+        if reviewer_login in reqs:
+            return False, f"waiting on review from {reviewer_login}"
+        return False, f"no review from {reviewer_login}"
+    latest = matching[-1]
+    state = latest.get("state")
+    if state == "APPROVED":
+        return True, "approved by reviewer"
+    if state == "CHANGES_REQUESTED":
+        return False, f"changes requested by {reviewer_login}"
+    return False, f"review from {reviewer_login} is {state.lower()}"
+
+
+def check_threads(pull, owner, name):
+    """Whether all review conversations are resolved."""
+    threads = pull.get("reviewThreads")
+    if threads is None:
+        try:
+            res = channel.graphql(THREADS_QUERY, owner=owner, name=name, number=int(pull["number"]))
+            repo_data = res.get("data", {}).get("repository")
+            if not repo_data:
+                return False, "could not read conversations (no repository data)"
+            pr_data = repo_data.get("pullRequest")
+            if not pr_data:
+                return False, "could not read conversations (no pull request data)"
+            threads = pr_data.get("reviewThreads", {}).get("nodes", [])
+        except (Exception, SystemExit) as exc:
+            return False, f"could not read conversations ({type(exc).__name__})"
+    unresolved = [t for t in threads if not t.get("isResolved")]
+    if unresolved:
+        return False, f"{len(unresolved)} unresolved conversation(s)"
+    return True, "0 unresolved conversations"
+
+
+def check_mergeable_clean(pull):
+    """Whether branch is mergeable and not behind or dirty."""
+    mergeable = pull.get("mergeable")
+    status = pull.get("mergeStateStatus")
+    if mergeable == "CONFLICTING":
+        return False, "branch conflicts with base"
+    if status == "BEHIND":
+        return False, "branch is behind base"
+    if status == "DIRTY":
+        return False, "branch has dirty merge state"
+    if mergeable not in (None, "MERGEABLE"):
+        return False, f"mergeable is {mergeable}"
+    return True, "mergeable clean"
+
+
+def evaluate_pr(pull, reviewer_login, owner, name):
+    """Evaluate a pull request against all semaphores (solorepo's DR-161)."""
+    if pull.get("isDraft"):
+        return False, ["draft"]
+    reasons = []
+    if pull.get("baseRefName") and pull.get("baseRefName") != "main":
+        reasons.append(f"base is {pull.get('baseRefName')}, not main")
+    clean_ok, clean_msg = check_mergeable_clean(pull)
+    if not clean_ok:
+        reasons.append(clean_msg)
+    green_ok, green_msg = check_green(pull)
+    if not green_ok:
+        reasons.append(green_msg)
+    rev_ok, rev_msg = check_reviewer_approval(pull, reviewer_login)
+    if not rev_ok:
+        reasons.append(rev_msg)
+    if pull.get("reviewThreads") is not None or not reasons:
+        threads_ok, threads_msg = check_threads(pull, owner, name)
+        if not threads_ok:
+            reasons.append(threads_msg)
+    if reasons:
+        return False, reasons
+    return True, ["eligible"]
+
+
+def merge_manager(dry_run=False):
+    """Evaluate open pull requests against semaphores, rank eligible candidates
+    by leverage, assert choices and deferrals out loud, and squash-merge the top
+    candidate (solorepo's DR-161).
+    """
+    try:
+        repo = channel.repo()
+        owner, name = repo.split("/")
+        reviewer_login = f"{owner}-{name}-reviewer"
+    except Exception:
+        owner, name, reviewer_login = "owner", "repo", "reviewer"
+
+    pulls = channel.gh("pr", "list", "--state", "open", "--limit", "100", "--json", MERGE_MANAGER_FIELDS)
+    if not pulls:
+        print("merge-manager: idle — no open pull requests")
+        return
+
+    evaluations = {}
+    eligible = []
+    for pull in pulls:
+        num = pull["number"]
+        ok, reasons = evaluate_pr(pull, reviewer_login, owner, name)
+        evaluations[num] = (ok, reasons)
+        if ok:
+            eligible.append(pull)
+
+    if not eligible:
+        print(f"merge-manager: idle — 0 of {len(pulls)} open pull request(s) eligible")
+        for pull in pulls:
+            num = pull["number"]
+            _, reasons = evaluations[num]
+            print(f"  #{num} ({pull.get('title', '')[:50]}): {'; '.join(reasons)}")
+        return
+
+    try:
+        issues = channel.gh("issue", "list", "--state", "open", "--limit", "100",
+                            "--json", "number,title,body")
+    except Exception:
+        issues = []
+
+    metrics = {}
+    for pull in eligible:
+        num = pull["number"]
+        is_base = any(other.get("baseRefName") == pull.get("headRefName")
+                      for other in pulls if other.get("number") != num)
+        targets = {num} | {ref["number"] for ref in (pull.get("closingIssuesReferences") or [])}
+        unblocks_issues = sum(1 for iss in issues if any(t in targets for t in parse_waits_on(iss.get("body"))))
+        unblocks_prs = sum(1 for other in pulls if other.get("baseRefName") == pull.get("headRefName")
+                           or any(t in targets for t in parse_waits_on(other.get("body"))))
+        total_unblocks = unblocks_issues + unblocks_prs
+        churn = (pull.get("additions") or 0) + (pull.get("deletions") or 0)
+        metrics[num] = {
+            "is_base": is_base,
+            "unblocks": total_unblocks,
+            "churn": churn,
+        }
+
+    def leverage_key(pull):
+        m = metrics[pull["number"]]
+        return (1 if m["is_base"] else 0, m["unblocks"], m["churn"], -pull["number"])
+
+    eligible.sort(key=leverage_key, reverse=True)
+    winner = eligible[0]
+    deferred = eligible[1:]
+
+    wm = metrics[winner["number"]]
+    print(f"merge-manager: evaluated {len(eligible)} eligible candidate(s)")
+    print(f"chosen: #{winner['number']} — {winner['title']} "
+          f"(unblocks: {wm['unblocks']}, base: {wm['is_base']}, churn: +{winner.get('additions', 0)}/-{winner.get('deletions', 0)})")
+    for d in deferred:
+        dm = metrics[d["number"]]
+        print(f"deferred: #{d['number']} — {d['title']} "
+              f"(lower leverage: unblocks: {dm['unblocks']}, base: {dm['is_base']}, churn: +{d.get('additions', 0)}/-{d.get('deletions', 0)})")
+
+    if dry_run:
+        print(f"merge-manager: dry run — not merging #{winner['number']}")
+        return
+
+    print(f"merge-manager: merging #{winner['number']}...")
+    merge(str(winner["number"]), stack=stacked(winner["number"]), auto=False)
+
+
 def build_parser():
     """The parser alone, so a probe can check what each verb accepts without
     running what it dispatches to (solorepo's #95)."""
@@ -1307,6 +1554,8 @@ def build_parser():
     p = sub.add_parser("revise"); p.add_argument("number"); p.add_argument("--title")
     p = sub.add_parser("merge"); p.add_argument("pr"); p.add_argument("--stack", action="store_true")
     p.add_argument("--auto", action="store_true", help="arm GitHub to merge when green")
+    p = sub.add_parser("merge-manager")
+    p.add_argument("--dry-run", action="store_true", help="evaluate eligibility and leverage order without merging")
     p = sub.add_parser("advance")
     p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
     p = sub.add_parser("dispatch"); p.add_argument("pr")
@@ -1342,6 +1591,8 @@ def main():
         layer(args.pr, args.on)
     elif args.verb == "merge":
         merge(args.pr, stack=args.stack, auto=args.auto)
+    elif args.verb == "merge-manager":
+        merge_manager(dry_run=args.dry_run)
     elif args.verb == "advance":
         advance(args.pr)
     elif args.verb == "dispatch":

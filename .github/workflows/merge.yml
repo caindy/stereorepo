@@ -1,0 +1,64 @@
+# A standing merge manager agent, landing eligible green pull requests in order
+# of leverage (solorepo's DR-161).
+#
+# Pull requests previously merged via GitHub's `merge --auto` in the order checks
+# turned green. A standing merge manager replaces first-come arming with leverage-ordered
+# merges, computing objective semaphores (head checks green, clean mergeable, zero
+# unresolved threads, reviewer approved) and ranking eligible candidates by stack depth,
+# blocker impact, and drift risk.
+#
+# Runs on push to main (when trunk moves, to land newly current work), on a
+# 15-minute schedule (for quiet check completions), and on workflow_dispatch.
+# Does not run on pull_request or pull_request_review events: those run unmerged
+# code from the PR's merge ref holding the coder's token (solorepo's DR-161).
+name: merge
+
+# One at a time: two merges in quick succession must serialize.
+concurrency:
+  group: merge
+  cancel-in-progress: false
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: evaluate eligibility and leverage order without merging
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  merge:
+    name: merge
+    # The self-hosted scale set (solorepo's DR-140).
+    runs-on: arc-runner-set
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.meta/actions/gh
+
+      - name: hold the coder's credential
+        run: |
+          install -d -m 700 ~/.config/solorepo
+          install -m 600 /dev/null ~/.config/solorepo/coder.env
+          printf 'GH_TOKEN=%s\n' "$CODER_GH_TOKEN" > ~/.config/solorepo/coder.env
+          .meta/say/whoami
+        env:
+          CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
+
+      - name: run merge manager
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            .meta/say/move merge-manager --dry-run
+          else
+            .meta/say/move merge-manager
+          fi

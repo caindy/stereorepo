@@ -130,6 +130,9 @@ artifacts:
   - id: work:artifact/github-workflows-advance
     name: .github/workflows/advance.yml
     path: .github/workflows/advance.yml
+  - id: work:artifact/github-workflows-merge
+    name: .github/workflows/merge.yml
+    path: .github/workflows/merge.yml
   - id: work:artifact/gitattributes
     name: .gitattributes
     path: .gitattributes

@@ -4,14 +4,11 @@
 # `main`'s ruleset requires a pull request to be up to date before it merges,
 # and an armed merge does not update its own branch. So the first of two green
 # pull requests lands and the second goes behind, armed, waiting for a Job that
-# ended when it armed — with nobody left to notice (solorepo's #93). A push to `main` is
-# the only thing that puts a pull request in that state, so it is the event
-# this runs on: no clock, and no interval to be stuck inside.
-#
-# The other edge is the channel's: `.meta/say/move merge --auto` advances a branch
-# that is already behind before it arms it, because a pull request can be
-# behind before it is armed as easily as after, and no push to `main` is coming
-# to say so.
+# ended when it armed — with nobody left to notice (solorepo's #93).
+# A push to `main` is the only thing that puts a pull request in that state,
+# so it is the event this runs on: no clock, and no interval to be stuck inside.
+# It advances approved or armed branches (excluding branches that are bases of other
+# open pull requests, solorepo's DR-133, DR-161) so the merge manager finds them clean and current.
 #
 # A file of its own rather than a job in `gate.yml`. This holds a credential
 # and the gate holds none; and on a `pull_request` event GitHub runs a workflow

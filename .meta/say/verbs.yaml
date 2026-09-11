@@ -108,6 +108,10 @@ programs:
         usage: "<pr> [--stack|--auto]"
         does: "merge; a layer merges everything below it; --auto arms GitHub to merge when green"
         held_by: [coder, reviewer]
+      - name: merge-manager
+        usage: "[--dry-run]"
+        does: "evaluate open pull requests against semaphores, rank eligible candidates by leverage, assert choices and deferrals out loud, and squash-merge the top candidate"
+        held_by: [coder, workflow]
       - name: advance
         usage: "[<pr>]"
         does: >-

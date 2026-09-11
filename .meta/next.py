@@ -42,7 +42,7 @@ import sys
 from datetime import datetime, timezone
 
 DIFFICULTY = ("easy", "medium", "hard", "human")
-LOOPS = ("coder.yml", "review.yml", "advance.yml", "gate.yml")
+LOOPS = ("coder.yml", "review.yml", "merge.yml", "advance.yml", "gate.yml")
 
 WAITS = re.compile(r"^\*\*Waits on\.\*\*\s*(.*?)\s*$", re.M)
 OLD_WAITS = re.compile(r"\*\*What it waits on\.\*\*\s*(.*?)(?:\n\s*\n|\Z)", re.S)
@@ -132,7 +132,7 @@ def pull_requests():
     Issue number to pull request number, read from the closing keywords
     GitHub resolved in each body."""
     prs = gh("pr", "list", "--state", "open", "--json",
-             "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,isDraft,headRefName,"
+             "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,latestReviews,reviewRequests,isDraft,headRefName,"
              "closingIssuesReferences",
              default=[])
     print("pull requests — the loops' work in progress, not what is next")
@@ -142,6 +142,13 @@ def pull_requests():
         armed = "armed" if pr.get("autoMergeRequest") else "draft" if pr["isDraft"] else "open"
         state = (pr.get("mergeStateStatus") or "").lower()
         review = (pr.get("reviewDecision") or "").lower().replace("_", " ")
+        if not review:
+            revs = [r for r in pr.get("latestReviews") or []
+                    if (r.get("author") or {}).get("login", "").endswith("-reviewer")]
+            if revs:
+                review = revs[-1].get("state", "").lower().replace("_", " ")
+            elif pr.get("reviewRequests"):
+                review = "requested"
         print(f"  #{pr['number']:<4} {armed:<7} {state:<9} {review:<17} {pr['title'][:60]}")
     print()
     return {ref["number"]: pr["number"]

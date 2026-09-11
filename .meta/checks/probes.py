@@ -741,6 +741,9 @@ def advance_probes():
                         f"{fake.dispatched!r}")
     if said:
         problems.append(f"advance: the stack it left alone exited with {said!r}")
+    named_said = run(fake, lambda: move.advance("7"))
+    if not named_said or "base of another open pull request" not in named_said:
+        problems.append(f"advance: named stack base should be refused, got {named_said!r}")
 
     # And only a Challenge the loop holds (solorepo's DR-142). The first is
     # `hard`, which is a session's with the solo beside it, and the second is
@@ -1131,6 +1134,8 @@ def channel_parser_probes():
             ("revise 13", {"verb": "revise", "number": "13", "title": None}),
             ("merge 13 --auto", {"verb": "merge", "pr": "13", "auto": True, "stack": False}),
             ("merge 13 --stack", {"verb": "merge", "pr": "13", "auto": False, "stack": True}),
+            ("merge-manager", {"verb": "merge-manager", "dry_run": False}),
+            ("merge-manager --dry-run", {"verb": "merge-manager", "dry_run": True}),
             ("advance", {"verb": "advance", "pr": None}),
             ("advance 13", {"verb": "advance", "pr": "13"}),
             ("dispatch 13 --task review", {"verb": "dispatch", "pr": "13", "task": "review"}),
@@ -1526,3 +1531,221 @@ def reservation_probes():
         problems.append("decision numbering: the remote was not asked over a hole no commit "
                         "here could explain, and a clone with no history explains none of them")
     return problems
+
+
+@check("merge manager probes", pre=True)
+def merge_manager_probes():
+    """`merge-manager` against semaphores and leverage ranking (solorepo's DR-161)."""
+    import contextlib
+    import io
+
+    channel, _, programs = load_channel()
+    move = programs["move"]
+    problems = []
+
+    reviewer = "owner-repo-reviewer"
+
+    # 1. Draft PR
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": True}, reviewer, "owner", "repo")
+    if ok or "draft" not in reasons:
+        problems.append("merge manager: draft PR was reported as eligible")
+
+    # 2. Checks pending or failing
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                                    "statusCheckRollup": []}, reviewer, "owner", "repo")
+    if ok or not any("checks pending" in r for r in reasons):
+        problems.append("merge manager: PR with empty checks rollup was reported as eligible")
+
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                                    "statusCheckRollup": [{"name": "gate", "conclusion": "FAILURE"}]},
+                                   reviewer, "owner", "repo")
+    if ok or not any("checks failing" in r for r in reasons):
+        problems.append("merge manager: PR with failing check was reported as eligible")
+
+    # 3. Behind or conflicting
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "CONFLICTING",
+                                    "statusCheckRollup": [{"conclusion": "SUCCESS"}]},
+                                   reviewer, "owner", "repo")
+    if ok or not any("conflicts" in r for r in reasons):
+        problems.append("merge manager: conflicting PR was reported as eligible")
+
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                                    "mergeStateStatus": "BEHIND",
+                                    "statusCheckRollup": [{"conclusion": "SUCCESS"}]},
+                                   reviewer, "owner", "repo")
+    if ok or not any("behind" in r for r in reasons):
+        problems.append("merge manager: behind PR was reported as eligible")
+
+    # 4. Reviewer approval
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                                    "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+                                    "latestReviews": [{"author": {"login": reviewer}, "state": "CHANGES_REQUESTED"}]},
+                                   reviewer, "owner", "repo")
+    if ok or not any("changes requested" in r for r in reasons):
+        problems.append("merge manager: PR with changes requested was reported as eligible")
+
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                                    "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+                                    "latestReviews": []},
+                                   reviewer, "owner", "repo")
+    if ok or not any("no review" in r for r in reasons):
+        problems.append("merge manager: unreviewed PR was reported as eligible")
+
+    # 5. Unresolved review threads
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                                    "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+                                    "latestReviews": [{"author": {"login": reviewer}, "state": "APPROVED"}],
+                                    "reviewThreads": [{"isResolved": False}]},
+                                   reviewer, "owner", "repo")
+    if ok or not any("unresolved" in r for r in reasons):
+        problems.append("merge manager: PR with unresolved threads was reported as eligible")
+
+    # 6. Base must be main
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                                    "baseRefName": "feature-branch",
+                                    "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+                                    "latestReviews": [{"author": {"login": reviewer}, "state": "APPROVED"}],
+                                    "reviewThreads": [{"isResolved": True}]},
+                                   reviewer, "owner", "repo")
+    if ok or not any("base is feature-branch, not main" in r for r in reasons):
+        problems.append("merge manager: PR targeting non-main branch was reported as eligible")
+
+    # 7. Check threads fails closed on GraphQL exception or missing repo
+    class BrokenGraphQL:
+        def graphql(self, *a, **kw):
+            raise RuntimeError("GraphQL outage")
+    orig_gql = channel.graphql
+    channel.graphql = BrokenGraphQL().graphql
+    try:
+        ok_th, msg_th = move.check_threads({"number": 99}, "owner", "repo")
+        if ok_th or "could not read conversations" not in msg_th:
+            problems.append(f"merge manager: check_threads did not fail closed on exception: {msg_th}")
+    finally:
+        channel.graphql = orig_gql
+
+    # 8. All semaphores satisfied -> eligible
+    ok, reasons = move.evaluate_pr({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                                    "baseRefName": "main",
+                                    "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+                                    "latestReviews": [{"author": {"login": reviewer}, "state": "APPROVED"}],
+                                    "reviewThreads": [{"isResolved": True}]},
+                                   reviewer, "owner", "repo")
+    if not ok or reasons != ["eligible"]:
+        problems.append(f"merge manager: eligible PR failed evaluation: {reasons}")
+
+    # 9. End-to-end leverage ranking and affirmative assertions
+    pull_a = {
+        "number": 10,
+        "title": "stack base PR",
+        "headRefName": "branch-a",
+        "baseRefName": "main",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+        "latestReviews": [{"author": {"login": reviewer}, "state": "APPROVED"}],
+        "reviewThreads": [{"isResolved": True}],
+        "body": "implements base",
+        "additions": 100,
+        "deletions": 20,
+    }
+    pull_b = {
+        "number": 11,
+        "title": "dependent PR",
+        "headRefName": "branch-b",
+        "baseRefName": "main",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+        "latestReviews": [{"author": {"login": reviewer}, "state": "APPROVED"}],
+        "reviewThreads": [{"isResolved": True}],
+        "body": "**Waits on.** #10",
+        "additions": 500,
+        "deletions": 100,
+    }
+    pull_c = {
+        "number": 12,
+        "title": "unreviewed PR",
+        "headRefName": "branch-c",
+        "baseRefName": "main",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+        "latestReviews": [],
+        "body": "",
+    }
+    pull_d = {
+        "number": 13,
+        "title": "layered PR with non-main base",
+        "headRefName": "branch-d",
+        "baseRefName": "branch-a",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+        "latestReviews": [{"author": {"login": reviewer}, "state": "APPROVED"}],
+        "reviewThreads": [{"isResolved": True}],
+        "body": "",
+    }
+
+    mock_pulls = [pull_a, pull_b, pull_c, pull_d]
+    mock_issues = [{"number": 50, "body": "**Waits on.** #10", "title": "blocked issue"}]
+
+    class ManagerFake:
+        def __init__(self):
+            self.merged = []
+
+        def gh(self, *args, parse=True):
+            head = args[:2]
+            if head == ("repo", "view") or args[0] == "repo":
+                return {"nameWithOwner": "owner/repo", "deleteBranchOnMerge": True}
+            if head == ("pr", "list"):
+                return list(mock_pulls)
+            if head == ("issue", "list"):
+                return list(mock_issues)
+            if head in (("pr", "merge"), ("stack", "merge")):
+                self.merged.append(args[2])
+                return {}
+            if head == ("pr", "view"):
+                state = "MERGED" if self.merged else "OPEN"
+                return {"number": int(args[2]), "title": "merged pr", "state": state,
+                        "mergeCommit": {"oid": "sha1234"}, "headRefName": "branch"}
+            if len(args) >= 2 and args[0] == "api" and str(args[1]).endswith("/pulls/10"):
+                return {"stack": {"id": "stack-1"}}
+            return {}
+
+        def repo(self):
+            return "owner/repo"
+
+        def graphql(self, query, **vars):
+            return {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": [{"isResolved": True}]}}}}}
+
+    fake = ManagerFake()
+    orig_gh, orig_repo, orig_gql = channel.gh, channel.repo, channel.graphql
+    channel.gh, channel.repo, channel.graphql = fake.gh, fake.repo, fake.graphql
+    try:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            move.merge_manager(dry_run=True)
+        text = out.getvalue()
+        if "chosen: #10" not in text:
+            problems.append(f"merge manager: expected #10 to be chosen as stack base, got:\n{text}")
+        if "deferred: #11" not in text:
+            problems.append(f"merge manager: expected #11 to be deferred, got:\n{text}")
+        if "dry run — not merging" not in text:
+            problems.append("merge manager: dry run message missing")
+        if fake.merged:
+            problems.append(f"merge manager: dry run executed merges: {fake.merged}")
+
+        # Run without dry run to verify merge execution
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            move.merge_manager(dry_run=False)
+        text = out.getvalue()
+        if "merging #10" not in text:
+            problems.append(f"merge manager: did not attempt merging #10, got:\n{text}")
+        if fake.merged != ["10"]:
+            problems.append(f"merge manager: expected merge of #10, got: {fake.merged}")
+    finally:
+        channel.gh, channel.repo, channel.graphql = orig_gh, orig_repo, orig_gql
+
+    return problems
+
