@@ -553,9 +553,26 @@ jobs:
           always() && github.event_name == 'issues' && steps.taken.outputs.by == ''
           && steps.take.outcome != 'success' && steps.take.outcome != 'skipped'
         run: |
-          issue=$(gh issue view "$ISSUE" --json state,labels)
-          state=$(jq -r .state <<<"$issue")
-          level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""' <<<"$issue")
+          # `bash -e` ends the step on the first failed assignment, so every
+          # bare read here is a way for the handler to die without handing
+          # anything back — the failure solorepo's DR-155 fixed for
+          # `check_pr.py`'s read below, and the same failure on the two `gh`
+          # reads this run also makes (solorepo's #257). Each is guarded, in
+          # the `if ! X=$(...); then` shape "is it taken already" already uses
+          # on the same call. That step hard-fails on a failed read because it
+          # holds no claim yet and a red job there costs nothing but a retry;
+          # this step's run may already hold one, so its failure hands the
+          # Issue to the solo through `stop` instead of leaving the claim stuck
+          # behind a dead step.
+          #
+          # Each guard sits where its answer is consumed and not where the read
+          # is made, and the reads are ordered so that the ones needing nothing
+          # come first. A failed read is a reason to give the solo only when
+          # nothing already known says the run finished: handing back a
+          # Challenge some other fact says is finished releases a claim the
+          # reviewer is holding, posts a second account of a run that already
+          # stopped itself, or drops to `human`, where the sweep stops looking.
+          #
           # Whether anybody holds this Challenge's pull request, whether it is
           # green, and whether its branch conflicts: all three are
           # `check_pr.py`'s reads, asked of it rather than written out here a
@@ -578,15 +595,44 @@ jobs:
           green=$(jq -r .green <<<"$pr")
           conflicting=$(jq -r .conflicting <<<"$pr")
           base=$(jq -r '.base // "main"' <<<"$pr")
-          merged=$(gh pr list --state merged --head "claude/issue-$ISSUE" --json number --jq '.[0].number // empty')
+          # This read asks only about the branch, so it needs nothing the
+          # Issue says and comes first. `handed` means the run reached its own
+          # last step: somebody holds the pull request, and there is nothing to
+          # hand back whatever the Issue turns out to say. Asked here, it also
+          # means the guard below stops the handler only when no fact in hand
+          # already says the work was handed off.
+          if [ "$handed" = true ]; then
+            echo "#$ISSUE's pull request has its review requested; the run finished and then ran out"
+            exit 0
+          fi
+          if ! issue=$(gh issue view "$ISSUE" --json state,labels); then
+            .meta/say/move stop "$ISSUE" <<EOF
+          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`claude/issue-$ISSUE\` and stays open for the run that takes this up again.
+
+          Not requested of the reviewer: #$ISSUE could not be read, so whether it is still open and at what level is unknown here; the run log above says why.
+          EOF
+            exit 0
+          fi
+          state=$(jq -r .state <<<"$issue")
+          level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""' <<<"$issue")
+          # Whether the branch already merged is asked in the chain, below the
+          # two facts that need no asking: a Challenge GitHub has closed, and
+          # one already at `human`, are both finished, and a blip on this read
+          # must not be allowed to say otherwise. `if !` in an `elif` suspends
+          # errexit the same as in an `if`, so the failure reaches its own
+          # branch and `stop` names it.
           if [ "$state" != OPEN ]; then
             echo "#$ISSUE is closed; a Challenge GitHub has closed has nothing to hand back"
-          elif [ -n "$merged" ]; then
-            echo "#$ISSUE's pull request #$merged has merged; the run finished and then ran out"
           elif [ "$level" = human ]; then
             echo "#$ISSUE is already at human; the run handed it back itself"
-          elif [ "$handed" = true ]; then
-            echo "#$ISSUE's pull request has its review requested; the run finished and then ran out"
+          elif ! merged=$(gh pr list --state merged --head "claude/issue-$ISSUE" --json number --jq '.[0].number // empty'); then
+            .meta/say/move stop "$ISSUE" <<EOF
+          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`claude/issue-$ISSUE\` and stays open for the run that takes this up again.
+
+          Not requested of the reviewer: whether claude/issue-$ISSUE's pull request has merged could not be read, so whether the work already landed is unknown here; the run log above says why.
+          EOF
+          elif [ -n "$merged" ]; then
+            echo "#$ISSUE's pull request #$merged has merged; the run finished and then ran out"
           elif [ -n "$number" ] && [ "$green" = true ] && [ "$conflicting" != true ]; then
             .meta/say/post comment "$number" <<EOF
           This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN.
