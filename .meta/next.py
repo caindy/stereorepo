@@ -160,7 +160,30 @@ def loops():
         when = r["createdAt"][:16].replace("T", " ")
         verdict = r["conclusion"] or r["status"]
         print(f"  {wf[:-4]:<9} {verdict:<10} {when}  {r['event']:<9} {r['displayTitle'][:50]}")
+    sweep_row()
     print()
+
+
+def sweep_row():
+    """The half-hourly sweep, apart from the row above: gate.yml's last
+    *scheduled* run and its last *successful* one. The `gate` row above reads
+    gate.yml's last run whatever the event, and a push or pull request touches
+    gate.yml on nearly every commit here, so a scheduled failure sits behind a
+    green row until one goes a full cycle with neither (solorepo's #235). The
+    two times answer different questions: a gap between them and now means
+    GitHub is throttling the schedule; a recent run with an old success means
+    the checker itself is broken."""
+    runs = gh("run", "list", "--workflow", "gate.yml", "--event", "schedule",
+              "--limit", "50", "--json", "status,conclusion,createdAt", default=[])
+    if not runs:
+        print(f"  {'sweep':<9} no scheduled run listed (or no permission to list runs)")
+        return
+    last = runs[0]
+    when = last["createdAt"][:16].replace("T", " ")
+    verdict = last["conclusion"] or last["status"]
+    ok = next((r for r in runs if r["conclusion"] == "success"), None)
+    ok_when = ok["createdAt"][:16].replace("T", " ") if ok else f"none in last {len(runs)}"
+    print(f"  {'sweep':<9} {verdict:<10} {when}  last ok  {ok_when}")
 
 
 def milestones(rows):
