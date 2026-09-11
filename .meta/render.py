@@ -15,7 +15,7 @@ Definitions in the vocabulary are one-line glosses. The full reasoning stays on
 the class, per Literate Programming; these are for recognising a term, not for
 applying it.
 """
-import posixpath, sys, pathlib, textwrap, yaml
+import ast, posixpath, re, sys, pathlib, textwrap, yaml
 
 META = pathlib.Path(__file__).parent
 # An entry *is* its assertion file. Two spellings of the same path: one from the
@@ -94,6 +94,83 @@ def authored(target, slot="preamble"):
             return a[slot].strip() + "\n"
     raise LookupError(f"no Artifact asserts a {slot} for {rel}, "
                       f"which {target} is rendered from")
+
+
+# A count about the record, cited in prose as `{#name}` and filled by the
+# render. A number an author typed is true the day it is typed and silently
+# false one landing later: step two of Specialization said "three of
+# `check.py`'s four prechecks load the channel or a hook" across the two
+# landings that added a fifth precheck and a sixth, and that sentence is the
+# reason the procedure gives for copying the channel into a portfolio
+# (solorepo's #231). Filled here it is held by `rendered prose`, which compares
+# the committed page against a fresh render: the count moves, the page is
+# stale, the gate says so — so the arithmetic is the render's and no step of
+# the gate is added to hold it (solorepo's DR-154).
+COUNT = re.compile(r"\{#(?P<name>[a-z][a-z ]*[a-z])\}")
+
+# Small counts as the words a sentence wants. The number is filled into the
+# middle of a sentence somebody wrote, where a numeral reads as a citation
+# rather than as a quantity; past twelve the word is the harder read and the
+# digits win.
+NUMBERS = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight",
+           "nine", "ten", "eleven", "twelve")
+
+
+def prechecks():
+    """`check.py`'s prechecks, by function name, read out of its source.
+
+    Read and not imported. The renderer has one dependency — `uvx --with pyyaml
+    python .meta/render.py` is how it is run, and how `check.py` runs it — and
+    the module a count of the gate's steps reaches into has LinkML. `check.py`
+    registers each step at its definition, so `@check(..., pre=True)` is the
+    declaration, and `ast` reads it without running anything.
+
+    Empty is an error and not a count of none. A rewrite that registers steps
+    some other way says so here, rather than leaving the prose that cites this
+    to assert there are no prechecks at all.
+    """
+    found = []
+    for node in ast.parse((META / "check.py").read_text()).body:
+        for decorator in getattr(node, "decorator_list", []):
+            if not (isinstance(decorator, ast.Call)
+                    and getattr(decorator.func, "id", None) == "check"):
+                continue
+            if any(word.arg == "pre" and getattr(word.value, "value", None) is True
+                   for word in decorator.keywords):
+                found.append(node.name)
+    if not found:
+        raise LookupError("check.py registers no step with `@check(..., pre=True)`, "
+                          "and a count cited in prose is derived from those that are")
+    return found
+
+
+def counts():
+    """What prose may cite a count of, each derived from the thing counted."""
+    return {"prechecks": len(prechecks())}
+
+
+def counted(text):
+    """Every count the prose of a page cites, filled.
+
+    Applied to the finished page rather than to each scalar as it is read, so
+    that a count can be cited from any prose the assertions hold and no
+    generator has to remember to ask for it.
+
+    A name nothing derives is an error and not a number invented, for the
+    reason `authored()` gives: an unfilled `{#...}` reaching a page is the
+    drift this exists to remove, printed.
+    """
+    table = counts()
+
+    def fill(m):
+        if m["name"] not in table:
+            raise LookupError(
+                f"prose cites a count of {m['name']}, which nothing derives; "
+                f"the counts are {', '.join(sorted(table))}")
+        n = table[m["name"]]
+        return NUMBERS[n] if n < len(NUMBERS) else str(n)
+
+    return COUNT.sub(fill, text)
 
 
 def accounted_by(target):
@@ -740,6 +817,10 @@ def rendered():
     A target renders one file or a set of them. Both callers — the writer below
     and `check.py`'s staleness check — want the flat mapping, so the fan-out is
     resolved once here rather than in each of them.
+
+    Counts are filled last, over every page alike: a sentence citing one is
+    prose in the assertions, and which generator carries it to a page is not
+    that sentence's business.
     """
     out = {}
     for name, fn in TARGETS.items():
@@ -747,7 +828,7 @@ def rendered():
         if result is None:
             continue
         out.update(result if isinstance(result, dict) else {name: result})
-    return out
+    return {name: counted(text) for name, text in out.items()}
 
 
 def unrendered():

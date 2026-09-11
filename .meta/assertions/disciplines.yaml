@@ -30,7 +30,7 @@ disciplines:
         `stakeholders/` and `.gitignore`. The channel, its hooks and the
         settings that register them travel with the loop workflows rather than
         after them: every instruction those three give is typed as a program of `.meta/say/`,
-        three of `check.py`'s four prechecks load the channel or a hook, and
+        most of `check.py`'s {#prechecks} prechecks load the channel or a hook, and
         `.claude/settings.json` is the one place the hook is invoked and the
         unsigned `gh` verbs denied (DR-069) — a hook file that nothing invokes
         is the channel as a rule to remember, which is what it exists not to be.

@@ -1,0 +1,141 @@
+decisions:
+  - id: work:decision/154
+    name: "DR-154 · A count about the record is a slot the renderer fills, so the arithmetic in prose is the render's and the staleness check holds it"
+    challenge: work:challenge/231
+    status: ADOPTED
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-render
+    context: >-
+      Step two of Specialization argued that the channel, its hooks and
+      `.claude/settings.json` travel into a portfolio with the loop workflows,
+      and one of its three reasons was a count of how many of the gate's
+      prechecks load one of them. The count was typed. It was right when it was
+      typed, wrong once a fifth precheck landed, and wrong by two once a sixth
+      did, and in between it was read by every session that specialized a clone.
+      Nothing in the gate had an opinion: `quoted claims`, `path and line
+      claims`, `stated relations` and `cited decisions` hold prose against the
+      record in four shapes, and a number is none of them.
+
+      What makes it worth a mechanism rather than a correction is that the
+      correction is the same sentence one landing away from being wrong again.
+      "Four of six" is as unchecked as "three of four" was. Two more instances
+      of the shape turned up on #225 within an hour of the first, so the trigger
+      is not rare, and each was found by somebody reading rather than by the
+      gate.
+    alternatives:
+      - name: Write the right number and move on
+        chosen: false
+        reason: >-
+          It is what was done the last two times, and the last two times are
+          why there is a Challenge. A typed count has no relationship to the
+          thing it counts, so it is true by coincidence from the moment it is
+          written, and the coincidence ends at the next landing. The Charter
+          asks what an artifact is checked against (A8); the answer for a
+          number in a sentence is nothing.
+      - name: A gate step that holds a count in prose against the record
+        chosen: false
+        reason: >-
+          Keyed on the countable noun — "`<number>` prechecks", "`<number>`
+          steps", "`<number>` entries" — it matches about forty sites in this
+          tree, and almost every one of them counts what some change did rather
+          than what the record holds: nine entries edited, two steps moved,
+          eleven rebindings removed. Those are true sentences about a moment and
+          the record cannot answer them, so the step would fail them all. A step
+          that fails that many true lines is a step somebody switches off, which
+          the Challenge says in as many words. Narrowing it to the counts that
+          are derivable leaves a step that reads the same table the renderer
+          would, one indirection later, to catch what the render already
+          prevents.
+      - name: The count is a slot the renderer fills
+        chosen: true
+        reason: >-
+          `{#name}` in prose is a count, and `render.py` fills it when it writes
+          the page. The number stops being something an author remembers and
+          becomes something the tree answers, which is what `render.py` is for
+          — DR-026 made the assertions the source and the prose derive, and a
+          count is prose that derives from something other than the assertions.
+          Nothing new checks it, because `rendered prose` already compares each
+          committed page against a fresh render: the count moves, the page is
+          stale, the gate is red, and `just render` writes the sentence
+          correctly. What it costs is that the assertion is now unreadable at
+          exactly one word — a reader of `disciplines.yaml` sees `{#prechecks}`
+          and has to know what fills it — and that a count nothing can derive
+          exactly has no way in.
+    consequences:
+      - >-
+        `render.py` gains `counts()`, the table of what prose may cite, and
+        `counted()`, which fills every `{#name}` over each finished page. It is
+        applied in `rendered()` rather than in each generator, so a sentence
+        citing a count is prose in the assertions and which page carries it is
+        not that sentence's business.
+      - >-
+        One count is derived: `prechecks`, the number of `check.py`'s steps
+        registered with `@check(..., pre=True)`. It is read out of the source by
+        `ast` and not by importing the module. The renderer has one dependency,
+        which is what `uvx --with pyyaml python .meta/render.py` says and what
+        `check.py` itself runs it with, and `check.py` has LinkML; importing it
+        to count it would cost the renderer the property that makes it runnable
+        on its own.
+      - >-
+        A name nothing derives raises, naming the counts there are, for the
+        reason `authored()` raises: an unfilled slot reaching a page is the
+        drift this exists to remove, printed. So does a `check.py` that
+        registers no precheck — a rewrite of the registry says so here rather
+        than leaving the prose asserting there are none.
+      - >-
+        A small count renders as a word and a large one as digits. The number is
+        filled into the middle of a sentence somebody wrote, where a numeral
+        reads as a citation rather than as a quantity.
+      - >-
+        Step two of Specialization now reads "most of `check.py`'s six
+        prechecks load the channel or a hook", with the six filled.
+        `.meta/disciplines.md` and `SPECIALIZE.md` re-render. The qualitative
+        half stays typed: deriving it means asking the source whether a precheck
+        calls `load_channel` or reads `.meta/hooks/`, and a precheck reaching
+        either by some other route would make that count silently wrong, which
+        is this defect at one remove. "Most" is true unless three prechecks that
+        need neither are added, and it is never arithmetic anybody has to redo.
+      - >-
+        The count in DR-115's rationale is left as it stands. An entry records
+        the ground a decision was taken on, and a number there is of its moment
+        rather than a claim about today.
+    falsifier: >-
+      A counts table that fills up with numbers read out of source by string
+      search would say the slot has stopped being a derivation and is an
+      author's memory with extra steps — at which point the exactness that makes
+      this better than a typed number is gone and only the indirection is left.
+      A sentence that has to be rewritten around a count because the slot cannot
+      express it would say the same thing from the other end. And prose that
+      stops citing counts at all retires this: the table empties, `counted()`
+      fills nothing, and both come out.
+    rationale: |-
+      The defect is not that somebody got a number wrong. It is that a number in
+      a sentence is the one kind of claim this repository makes that has no
+      relationship to the thing it is about. A path is dereferenced, a
+      quotation is looked up, a relation is a slot, a decision number resolves —
+      four steps of the gate exist for exactly that — and a count sits in the
+      middle of the same paragraph answerable to nobody.
+
+      The argument for a step rather than a slot is that a step covers prose
+      wherever it was typed, including the record's own entries and `AGENTS.md`,
+      which no render reaches. The argument against it is what the tree actually
+      holds: counts in prose here are overwhelmingly counts about a change —
+      how many entries it edited, how many steps it moved — and those are true
+      sentences about a moment that the record cannot answer. A step keyed
+      tightly enough to avoid them is a step reading the same derivation the
+      renderer would, to catch a number the renderer would not have let anybody
+      type.
+
+      So the fix is at the point of authorship rather than at the gate, and the
+      gate step that holds it is the one that was already there. That is the
+      shape worth having: `rendered prose` is byte-comparison against a fresh
+      render, which is the strongest check in the file and the cheapest, and
+      every count routed through a slot inherits it.
+
+      What this does not reach is a count in prose nothing renders — a
+      docstring, an entry's rationale, the root `AGENTS.md`. Those stay typed
+      and stay unchecked, and the honest reason is that the counts they make are
+      mostly about the moment they were written, where the record has no answer
+      to give. Naming it here so the next pass has a subject.

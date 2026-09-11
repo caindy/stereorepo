@@ -1,0 +1,23 @@
+challenges:
+  - id: work:challenge/231
+    name: Prose asserting a count over the record is checked by nobody, and was wrong three times on one pull request
+    challenge_type: DEFECT
+    description: >-
+      Prose in the record asserts arithmetic over the record and nothing checks
+      it. Step two of Specialization read "three of `check.py`'s four prechecks
+      load the channel or a hook" when there were six, of which four load one,
+      and it went wrong silently as the fifth precheck landed and then the
+      sixth — the sentence Specialization gives as its reason for copying the
+      channel, its hooks and `.claude/settings.json` into a fresh portfolio, so
+      an argument whose stated evidence is wrong is one a reader is entitled to
+      discount. Two more of the same shape were found on #225 within an hour of
+      it: `.meta/assertions/challenges/221.yaml` and that pull request's body
+      both said the arithmetic being removed was `len(CHECKS) + 2`, true when
+      written and false eight hours later because #199 landed a step and the
+      constant was hand-edited to `+ 3`; and the body argued from the first
+      that the Challenge's stated reason was weaker than claimed, which the
+      rebase disproved. Each was caught by somebody reading carefully rather
+      than by the gate, which already holds prose against the record in four
+      steps — `quoted claims`, `path and line claims`, `stated relations` and
+      `cited decisions` — so this is a shape that subsystem does not cover
+      rather than a new kind of check.
