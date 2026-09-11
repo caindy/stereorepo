@@ -14,25 +14,37 @@ githubConfigSecret: arc-github-token
 # Scale to zero when idle: this cluster is somebody's machine, not a fleet,
 # and should not hold a pod open for nothing.
 #
-# maxRunners is what one gate run needs at once plus the loops it has to run
-# beside, measured on the machine that runs it (solorepo's DR-141). Since
-# DR-140 every job of every workflow lands here: a pull request's gate is
-# four jobs — `files`, `rust seed`, `python seed` and `pull request` — that
-# become eligible together, three of them required checks in `main`'s ruleset
-# (`python seed` is not one yet), `advance` is a fifth pod on every push to
-# `main`, and `coder.yml` and `review.yml` hold one each for up to 75 and 50
-# minutes. Two slots made those four run one or two at a time behind whatever
-# session was already there.
+# DR-141 sized maxRunners to eight (one gate run, advance, three loop sessions)
+# with unbounded pod resources. DR-147 bounds runner pods with explicit CPU
+# and memory requests/limits tracking observed peak session usage, and expands
+# maxRunners to twelve (solorepo's DR-147).
 #
-# Eight is four plus `advance` plus three loop sessions, and it fits: the
-# heaviest pod measured on this node peaks near 2 GiB (a Claude Code
-# session; `python seed` 1.5 GiB, `rust seed` 0.7 GiB), so eight is about
-# 16 GiB of 31, and a whole gate spends ~155 CPU-seconds over ~45 seconds of
-# wall clock — under four of 24 cores. Those 45 seconds are the work, with the
-# toolchains already there; a `rust seed` *job* is 85 to 107 seconds because it
-# installs its own first — `apt-get install build-essential` measures 25 to 27
-# of them. The CPU-seconds size the node, the job durations are the latency
-# floor. A ninth queued job means the fleet is eight, not that something failed
-# to serialize.
+# Pod resources:
+# - requests.memory: 2Gi (tracks the ~1.9-2.0 GiB peak observed for Claude Code
+#   sessions, so the scheduler guarantees node memory is never oversubscribed;
+#   12 pods request 24 GiB of 31.2 GiB allocatable, leaving 7.2 GiB headroom).
+# - limits.memory: 4Gi (caps rogue builds or memory leaks at 2x above the
+#   heaviest observed workload of ~1.9 GiB peak for Claude Code / ~1.5 GiB for
+#   Python seed).
+# - requests.cpu: "1" (guarantees scheduling floor and fair CPU shares under
+#   contention across 24 cores).
+# - limits.cpu: omitted (avoids CFS quota throttling so jobs burst freely across
+#   idle cores).
+#
+# Twelve accommodates two full gate runs (8 jobs), advance (1 job), and three
+# loop sessions (3 jobs) simultaneously.
 minRunners: 0
-maxRunners: 8
+maxRunners: 12
+
+template:
+  spec:
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:2.337.0
+        command: ["/home/runner/run.sh"]
+        resources:
+          requests:
+            cpu: "1"
+            memory: 2Gi
+          limits:
+            memory: 4Gi

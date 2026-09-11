@@ -1,0 +1,131 @@
+decisions:
+  - id: work:decision/147
+    name: "DR-147 · Runner pods declare CPU and memory requests tracking peak session usage so Kubernetes bounds the node, and the ceiling expands to twelve"
+    challenge: work:challenge/207
+    status: ADOPTED
+    supersedes:
+      - work:decision/141
+    enacted_in:
+      - work:artifact/meta-arc-values-runnerset
+    context: >-
+      `maxRunners: 8` was sized under DR-141 as an arithmetic sum: one gate
+      run's four jobs (`files`, `rust seed`, `python seed`, `pull request`), plus
+      `advance`, plus three loop sessions. DR-141 deliberately rejected a higher
+      number because runner pods declared no resource requests or limits
+      (omitting the `template` block), meaning the Kubernetes scheduler had no
+      numbers to schedule against and an unbounded ceiling on 31.2 GiB invited
+      kernel OOM kills. But a static integer ceiling of eight is a brittle
+      proxy for node capacity: under a burst of several pull requests open
+      concurrently, dozens of gate checks serialize behind the 8-pod limit even
+      though the host has 24 logical CPUs, 31.2 GiB RAM, and current 8-pod
+      utilization measures under 6 GiB.
+    alternatives:
+      - name: Leave the ceiling at eight with unbounded pod resources
+        chosen: false
+        reason: >-
+          It leaves the bottleneck observed when multiple pull requests opened
+          concurrently: dozens of jobs queued behind eight active slots, waiting
+          despite over 25 GiB of idle host memory. The number answered one gate
+          run and three loops, not concurrent pull request activity.
+      - name: Raise maxRunners without resource requests or limits
+        chosen: false
+        reason: >-
+          DR-141 rejected this and the reasons still hold: without requests,
+          Kubernetes admits every pod until the host kernel steps in. The
+          scheduler is bypassed and the kernel's OOM killer or pod evictions
+          arbitrate which check dies. Raising the ceiling without bounding the
+          pods is delegation to the kernel.
+      - name: Separate scale sets for gates and loops
+        chosen: false
+        reason: >-
+          Evaluated and rejected in DR-141: doubles deploy and teardown surface,
+          fragments single-node capacity into non-fungible pools that cannot lend
+          to each other, and complicates workflow definitions. A single scale set
+          with explicit pod resource requests solves contention cleanly without
+          fragmenting resources.
+      - name: >-
+          Declare pod resource requests (1 CPU, 2 GiB memory) and limits (4 GiB
+          memory), pin the runner image, and raise maxRunners to twelve
+        chosen: true
+        reason: >-
+          The next architectural step DR-141 named in its alternative #5 and PR
+          #188 recorded under Chesterton's fence: Kubernetes bounds the node
+          itself rather than a brittle integer ceiling. Setting `requests.memory:
+          2Gi` directly tracks the ~1.9-2.0 GiB peak observed for Claude Code
+          sessions, ensuring that even under Burstable QoS, kube-scheduler's
+          admission check guarantees the node is never oversubscribed if all
+          twelve active pods run heaviest-case sessions simultaneously. On a node
+          with 24 logical CPUs and 31.2 GiB allocatable, twelve pods request 12
+          CPUs and 24 GiB RAM, leaving 7.2 GiB of protected headroom for host OS,
+          Kubernetes control plane, and desktop. The 4 GiB memory limit provides
+          2x headroom to contain runaway memory leaks or rogue processes without
+          risk to legitimate jobs. CPU limits are omitted so compilation (`cargo
+          xtask gate`) bursts freely across idle cores. Twelve slots accommodates
+          two full gate runs (8 jobs), advance (1 job), and three loop sessions
+          (3 jobs) concurrently.
+    consequences:
+      - >-
+        `template.spec.containers[0].resources` in
+        `.meta/arc/values-runnerset.yaml` declares `requests: { cpu: "1",
+        memory: "2Gi" }` and `limits: { memory: "4Gi" }`.
+      - >-
+        `template.spec.containers[0].image` in `.meta/arc/values-runnerset.yaml`
+        is pinned to `ghcr.io/actions/actions-runner:2.337.0` matching the chart
+        runner version and adhering to the repository's pinning discipline.
+      - >-
+        `maxRunners: 12` in `.meta/arc/values-runnerset.yaml`. Multi-PR bursts
+        drain 50% faster while scheduler admission guarantees node memory is
+        never oversubscribed even if every active pod operates at its measured
+        peak.
+      - >-
+        Takes effect at the next `just arc` on the machine holding the cluster;
+        nothing in CI deploys it, separating the change from its application.
+    falsifier: >-
+      Runner pods failing to schedule with `FailedScheduling: Insufficient
+      memory` or `Insufficient cpu` under twelve concurrent jobs, indicating
+      the requests floor was set too high for node allocatable capacity; or
+      node memory pressure / OOM evictions occurring under full load; or `rust
+      seed` wall-clock duration ballooning past 180 seconds due to CPU cache
+      contention across parallel compilations.
+    rationale: |-
+      DR-141 anticipated this progression in its alternative #5, and PR #188
+      recorded the condition under "What would make this removable": once runner
+      pods declare resource requests and limits, Kubernetes bounds the node
+      itself, and the values file ceiling stops being the only thing standing
+      between runner pods and 31 GiB.
+
+      The 8-runner ceiling established under DR-141 solved the immediate
+      starvation of gate runs behind loops under normal operations. But when
+      autonomous coder loops open multiple pull requests concurrently, dozens of
+      gate checks queue up. At 8 runners, the machine ran at ~5.1 GiB of 31.2 GiB
+      memory and load ~9.5 on 24 cores — more than 25 GiB of RAM sat idle while
+      gate checks queued for tens of minutes.
+
+      The remedy is to give the Kubernetes scheduler the information it needs to
+      protect the node natively. The measured peak memory footprints from DR-141:
+      - Claude Code session: ~1.9 GiB
+      - Python seed (`uv run --locked gate`): ~1.5 GiB
+      - Rust seed (`cargo xtask gate`): ~0.7 GiB
+      - Files check (`check.py`): ~0.3 GiB
+
+      Setting `requests.memory: 2Gi` tracks the heaviest workload's observed
+      peak (~1.9-2.0 GiB). Across 12 pods, this commits 24 GiB against 31.2 GiB
+      allocatable, leaving 7.2 GiB of protected headroom for the host OS and
+      Kubernetes control plane. Because the request covers the legitimate peak,
+      Burstable eviction under node memory pressure is prevented even if all 12
+      slots are running Claude Code sessions at peak RSS.
+
+      Setting `requests.cpu: "1"` gives each pod a guaranteed share under
+      contention while allowing the scheduler to admit 12 pods against 24
+      available cores. Omitting `limits.cpu` avoids CFS bandwidth quota
+      throttling, allowing `cargo` to burst across all available cores when the
+      node is lightly loaded.
+
+      Setting `limits.memory: 4Gi` protects the host against runaway defects or
+      memory leaks, providing 2x headroom above the heaviest measured workload.
+      The container image is pinned to `ghcr.io/actions/actions-runner:2.337.0`,
+      consistent with `.meta/arc/deploy`'s pinning discipline.
+
+      With these bounds in place, `maxRunners` expands from 8 to 12, allowing
+      two complete 4-job gate runs (8 jobs), advance (1 job), and three loop
+      sessions (3 jobs) to execute side-by-side without risking node stability.

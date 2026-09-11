@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/207
+    name: Declare runner pod resource requests and limits so the node bounds ARC scaling
+    challenge_type: TASK
+    description: >-
+      `values-runnerset.yaml` previously omitted the `template` block, defaulting
+      to unbounded pod resources with a static `maxRunners: 8` integer ceiling.
+      DR-141 and PR #188 noted that the integer ceiling is a brittle proxy for
+      node capacity: without resource requests, Kubernetes scheduler cannot
+      schedule pods against real node limits, leaving the cluster vulnerable
+      either to queue starvation under multi-PR bursts or to uncoordinated
+      memory contention if pods grow unbounded.
