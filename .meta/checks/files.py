@@ -481,7 +481,9 @@ def rendered_prose(pages):
     templates, so the mark says what it covered.
     """
     render, _ = rendering()
-    stale = render.unrendered()
+    # `unrendered` answers by page name, so the sentence that says what is wrong
+    # with that page is written here rather than carried out of the render.
+    stale = [f"{name} exists but nothing renders it" for name in render.unrendered()]
     stale += [name for name, text in pages.items()
               if not (META / name).exists()
               or (META / name).read_text() != text.rstrip("\n") + "\n"]

@@ -1178,6 +1178,129 @@ def handoff_probes():
     return problems
 
 
+@check("enacted probes", pre=True)
+def enacted_probes():
+    """`--handoff`'s reading of a decision against the artifacts the branch edits.
+
+    Three halves, and they fail differently. The judgement — which edited
+    artifacts a settled decision leaves unnamed — is run against a branch stood
+    in for, because the real one is whatever this session happens to be doing
+    and a check cannot be written against that. Then the ordering the step
+    depends on: it reads the record's rendered index, so it is skipped wherever
+    that page's freshness is not established — an unrunnable render is one of
+    those places, a page nothing renders another — and it says so rather than
+    answering, as it does over a base git cannot resolve. The readers under both
+    are run
+    against the tree itself, because their failure is silence: both are regexes
+    over text `check_pr.py` has no YAML reader for, and a reformat of either
+    file would leave them matching nothing and every question they are asked
+    answered green. So what is held is that they still find something and still
+    agree — every file the record's rendered table names is a declared
+    Artifact — which is the claim a drift in either shape breaks first.
+    """
+    check_pr = citations.load_check_pr()
+    problems = []
+
+    def read(changed):
+        original = check_pr.touched, check_pr.artifacts, check_pr.accounted
+        check_pr.touched = lambda base: changed
+        check_pr.artifacts = lambda: {".meta/arc/deploy", ".meta/say/move",
+                                      check_pr.INDEX}
+        check_pr.accounted = lambda: {".meta/arc/deploy": {137, 160},
+                                      ".meta/say/move": {117}}
+        try:
+            return check_pr.unenacted("origin/main")
+        finally:
+            check_pr.touched, check_pr.artifacts, check_pr.accounted = original
+
+    entry = ".meta/assertions/decisions/DR-160.yaml"
+    found, note = read([".meta/arc/deploy", ".meta/say/move"])
+    if found or "settles no decision" not in note:
+        problems.append(f"unenacted: a branch settling no decision reported {found!r}, {note!r}")
+
+    # The one finding, and the three silences beside it: the artifact the entry
+    # names, the record's own index, and a file no `artifacts:` list declares.
+    found, _ = read([entry, ".meta/arc/deploy", ".meta/say/move", check_pr.INDEX,
+                     ".meta/checks/probes.py"])
+    if len(found) != 1 or not found[0].startswith(".meta/say/move:"):
+        problems.append(f"unenacted: DR-160 editing an artifact it names and one it does "
+                        f"not reported {found!r}")
+    if found and "DR-160" not in found[0]:
+        problems.append(f"unenacted: the finding {found[0]!r} does not name the entry it is "
+                        "read against, which is what the repair is made in")
+
+    # And the step is skipped, rather than answered, wherever the freshness of
+    # the page it reads is not established — stale, and unread alike. A render
+    # that could not run leaves it unknown, and `ok` over an unknown is the
+    # reading this ordering exists to refuse.
+    import contextlib
+    import io
+
+    asked, said = [], io.StringIO()
+    render, step = check_pr.RENDER, check_pr.unenacted
+    check_pr.RENDER = ["no-such-program-here"]
+    check_pr.unenacted = lambda base: (asked.append(base), ([], ""))[1]
+    try:
+        with contextlib.redirect_stdout(said):
+            check_pr.handoff("origin/main")
+    finally:
+        check_pr.RENDER, check_pr.unenacted = render, step
+    enacted = [line for line in said.getvalue().splitlines() if "enacted" in line]
+    if asked or not enacted or not all(line.startswith("?") for line in enacted):
+        problems.append(f"handoff: with the render unrunnable it said {enacted!r} and asked "
+                        f"{len(asked)} question(s) of an index whose freshness is unknown")
+
+    # The render answers two findings under two prefixes, and a page nothing
+    # renders leaves that page's freshness as unestablished as a stale one does
+    # — `just render` writes nothing for it. So the index arriving under either
+    # word skips the step below, and a page that is not the index under either
+    # word does not: the skip guards the one reading that turns on the page.
+    for answer, run in ((f"unrendered: {check_pr.INDEX.split('/')[-1]}", False),
+                        (f"stale: {check_pr.INDEX.split('/')[-1]}", False),
+                        ("unrendered: justfile", True),
+                        ("stale: justfile", True)):
+        asked, said = [], io.StringIO()
+        render, step = check_pr.RENDER, check_pr.unenacted
+        check_pr.RENDER = [sys.executable, "-c",
+                           f"import sys; print({answer!r}); sys.exit(1)"]
+        check_pr.unenacted = lambda base: (asked.append(base), ([], ""))[1]
+        try:
+            with contextlib.redirect_stdout(said):
+                check_pr.handoff("origin/main")
+        finally:
+            check_pr.RENDER, check_pr.unenacted = render, step
+        enacted = [line for line in said.getvalue().splitlines() if " enacted" in line]
+        if bool(asked) is not run or not enacted or any(
+                line.startswith("?") is run for line in enacted):
+            problems.append(f"handoff: the render answering {answer!r} left the enacted step "
+                            f"saying {enacted!r}, which is not the "
+                            + ("reading" if run else "skip") + " that page calls for")
+        page = answer.split(": ", 1)[1]
+        if not any(line.startswith("x ") and page in line
+                   for line in said.getvalue().splitlines()):
+            problems.append(f"handoff: the render answering {answer!r} produced no finding "
+                            "naming the page, so the repair the coder needs is unsaid")
+
+    # And the third step's own unknown: a base git cannot resolve. `git diff`
+    # against it exits non-zero, and read as an empty diff that is a branch
+    # reported to settle no decision — `ok` over a diff nobody read.
+    found, note = check_pr.unenacted("no-such-ref-on-any-checkout")
+    if found is not None:
+        problems.append(f"unenacted: an unresolvable base answered {found!r}, {note!r}, "
+                        "rather than saying the diff went unread")
+
+    declared, named = check_pr.artifacts(), check_pr.accounted()
+    if not declared or not named:
+        problems.append(f"the handoff's readers found {len(declared)} declared artifact(s) and "
+                        f"{len(named)} accounted for; a regex over a file that has been "
+                        "reformatted matches nothing and answers every question green")
+    stray = sorted(set(named) - declared)
+    if stray:
+        problems.append(f"the record's table names {stray}, which no `artifacts:` list "
+                        "declares; the two readers disagree about what a path is")
+    return problems
+
+
 @check("channel parser probes", pre=True)
 def channel_parser_probes():
     """Every verb of every program parses the flags its own branch in `main()`

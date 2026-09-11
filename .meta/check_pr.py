@@ -41,6 +41,13 @@ about to die: whether anybody holds this Challenge's pull request yet, and
 whether what is there is worth requesting a review of. Its reader is
 `coder.yml`'s hand-back step, so the predicate lives here and not in that
 step's shell (solorepo's DR-155).
+
+`--handoff` is the one mode that reads the tree rather than GitHub, because what
+it holds is about the branch: A18, and what a branch that changes the record owes
+along with it — a render that is current, and a decision that names the artifacts
+the branch edits while settling it. Both are deterministic, both were costing
+review rounds that found them by reading, and a review round is the most expensive
+place to discover either (solorepo's #302).
 """
 import argparse
 import datetime
@@ -83,6 +90,29 @@ CLOSES = "What it closes"
 # names an Issue the merge will leave open.
 KEYWORD = re.compile(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+"
                      r"(?:#\d+|[\w.-]+/[\w.-]+#\d+|https://github\.com/[\w.-]+/[\w.-]+/issues/\d+)", re.I)
+
+ROOT = META.resolve().parent
+# The record's own rendered index. Every branch that settles a decision rewrites
+# it and no entry names it, so the step below passes over it — the exclusion A20
+# already makes, for the reason it gives: naming the record itself would satisfy
+# the letter and defeat the point.
+INDEX = ".meta/decisions.md"
+# An entry of the record, by the file it is written in.
+ENTRY_FILE = re.compile(r"^\.meta/assertions/decisions/DR-(\d+)\.yaml$")
+# An Artifact's path, as the two files that declare one write it: four spaces,
+# because an Artifact is an item of a single list in each file and `path` is its
+# slot. Read with a regex rather than parsed, because `check_pr.py` is run with
+# bare `python3` everywhere it runs — CI, `just pr`, the reviewer's tool list —
+# and so holds to the standard library and has no YAML reader to reach for.
+ARTIFACT = re.compile(r"^    path: (\S+)$", re.M)
+# A row of `decisions.md`'s by-artifact table: the file, then the entries naming
+# it. The record's other tables key on an entry rather than on a backticked
+# path, so none of them match.
+ROW = re.compile(r"^\| \[`([^`]+)`\][^|]*\|([^|]*)\|", re.M)
+DR = re.compile(r"DR-(\d+)")
+# The render, invoked as `just render` invokes it. Naming what it is run with is
+# this file's only choice: it needs PyYAML and this one does not have it.
+RENDER = ["uvx", "--with", "pyyaml", "python", str(META.resolve() / "render.py"), "--check"]
 
 
 def fence(path):
@@ -528,6 +558,258 @@ def unpushed():
     if ahead:
         problems.append(f"{len(ahead.splitlines())} commit(s) not pushed; the branch is the handoff")
     return problems
+
+
+def git_read(*args):
+    """git, as an exit code beside what it printed.
+
+    Whether a failure is a finding is the caller's to say, and both answers are
+    wanted below, so the two are kept apart here rather than collapsed into one
+    of them. `unpushed` above keeps its own for the same reason it always did.
+    """
+    out = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
+    return out.returncode, out.stdout
+
+
+def git_text(*args, default=""):
+    """git, as text, with a failure answered rather than raised.
+
+    For the reads that have somewhere to go when the command fails: a branch
+    with no merge base is read against its base, and a tree with no untracked
+    files is read as having none. The read that has nowhere to go — the diff the
+    whole `enacted` step turns on — takes `git_read` instead.
+    """
+    code, out = git_read(*args)
+    return default if code else out
+
+
+def touched(base):
+    """Every path this branch changed, committed or not; or why git could not say.
+
+    Against the merge base and not against the base's head: a landing on the
+    trunk while this branch was open is not this branch's work, and reading it
+    as such would name files nobody here edited. The same scope
+    `dereference.py` takes, for the same reason, and read the same way.
+
+    Uncommitted and untracked alike. A decision entry is a new file, and a
+    handoff check that read only what git had already been told about would pass
+    over the file the branch exists to add — which is the one file both steps
+    below turn on.
+
+    A base git cannot resolve returns `None` rather than an empty list, because
+    those are different answers and the step below reports the emptier one. The
+    first version swallowed the diff's exit code: `merge-base` failed, `merge`
+    fell back to the literal `base`, `git diff` against it failed too, and a
+    branch that settles a decision and edits an Artifact read as one that
+    settles none. The `--base` flag's own help invites the ref that does it —
+    a bare `claude/issue-nnn` resolves for neither command in a checkout
+    holding only the remote-tracking form — and the default does the same
+    wherever `origin/main` is absent, which is any `--single-branch` clone.
+    """
+    merge = git_text("merge-base", "HEAD", base).strip() or base
+    code, diffed = git_read("diff", "--name-only", merge)
+    if code:
+        return None
+    named = diffed.split()
+    named += git_text("ls-files", "--others", "--exclude-standard").split()
+    return list(dict.fromkeys(named))
+
+
+def artifacts():
+    """The paths that are Artifacts, from the two files that declare one.
+
+    `assertions/structure.yaml` says what an Artifact is for: the things a
+    Decision names under `enacted_in`, and nothing else. So the set of them is
+    the universe the step below asks its question over, and a file that is not
+    one is not a file an entry could name.
+    """
+    found = set()
+    for rel in ("assertions/structure.yaml", "assertions/imported/structure.yaml"):
+        path = META / rel
+        if path.is_file():
+            found |= set(ARTIFACT.findall(path.read_text()))
+    return found
+
+
+def accounted():
+    """Which entries name each file under `enacted_in`, read from the record's index.
+
+    `decisions.md`'s by-artifact table is `enacted_in` rendered the other way
+    round — "which entries account for a file", as the page says of itself — and
+    the step before this one holds the page current. So the record is read here
+    through its own render, rather than through a second reader of the entries
+    that would drift from the first the day either moved.
+    """
+    path = ROOT / INDEX
+    if not path.is_file():
+        return {}
+    return {file: {int(n) for n in DR.findall(entries)}
+            for file, entries in ROW.findall(path.read_text())}
+
+
+def unrendered():
+    """Whether every generated page is the render of what this branch now asserts.
+
+    The render's own answer, asked of it. `render.py --check` compares each
+    target against a fresh render and names what differs, which is the same
+    question `check.py`'s `rendered prose` step asks; asking it again here is
+    not a second copy of the rule but the same command, run where the coder is
+    rather than where the gate is.
+
+    It is asked at the handoff because that is where it is cheap. A stale
+    `decisions.md` is a page asserting something the assertions no longer say,
+    and every reader of it downstream — a reviewer, and the step below — is
+    reading the record as it was before this branch touched it.
+
+    Three answers, and the third is why this returns what it does: a `None` is
+    "the render could not run", which is neither green nor a finding about the
+    tree (A6). `uvx` is how the render is invoked everywhere, and a machine
+    without it can still hand off — with this unread and saying so.
+
+    The render itself has two findings, not one, and they are kept apart here
+    because their repairs differ and the step after this one asks which page
+    each names. A page that differs from its render is made current by running
+    the render; a page no target renders at all is not, and `just render`
+    writes nothing for it. Read under a single prefix, the second arrived as a
+    sentence rather than a name — a finding whose named repair could not work,
+    and one that could never match `INDEX`, so the one page whose freshness the
+    render had just said it could not establish was the one the step below read
+    on anyway. Not reachable on this tree, where every target renders; reachable
+    in a portfolio that keeps a generated page after dropping the assertions it
+    came from, and `check_pr.py` is in the copy set Specialization's step two
+    names.
+
+    The pages are returned by the names the render gives them, rather than as
+    sentences about them, because the step after this one asks which page went
+    stale and not how many.
+    """
+    try:
+        out = subprocess.run(RENDER, capture_output=True, text=True, cwd=ROOT)
+    except OSError as missing:
+        return None, None, f"{RENDER[0]} could not be run — {missing}"
+    said = out.stdout.strip()
+    if out.returncode == 0 and said == "up to date":
+        return [], [], ""
+    named = {}
+    for line in said.splitlines():
+        prefix, colon, rest = line.partition(":")
+        if colon:
+            named[prefix.strip()] = [n.strip() for n in rest.split(",") if n.strip()]
+    if out.returncode == 1 and named and set(named) <= {"stale", "unrendered"}:
+        return named.get("stale", []), named.get("unrendered", []), ""
+    return None, None, ("render.py --check answered neither: "
+                        + (said or out.stderr.strip() or f"exit {out.returncode}"))
+
+
+def unenacted(base):
+    """Artifacts this branch edits that no decision it settles names (A20, solorepo's DR-131).
+
+    `enacted_in` says where a rule lives, and a change that settles a decision is
+    the change that puts the rule where it now lives. So an artifact edited by
+    that change and named by none of its entries is one of two things, and both
+    are worth stopping for: a rule put somewhere the record does not point at, or
+    a file edited on a branch that is not about it.
+
+    This is the reviewer's standard, read at the handoff instead of in a review
+    round. On solorepo's #265 it took four of them — a verdict at a time, each
+    naming one more artifact the branch edited and `enacted_in` did not, the last
+    approving on "every artifact this branch edits is named in it, which was the
+    whole ask". Nothing about that reading needs a reader: what the branch edited
+    is in git and what the entry names is in the record, and the comparison is
+    the two of them.
+
+    The universe is the Artifacts, because `enacted_in` names those and nothing
+    else, so a file that is not one cannot be named without being declared first
+    — which is a judgement, and this is not where it is made. The record's own
+    index is passed over for A20's reason. What this is blind to is therefore
+    the file no `artifacts:` list declares, and the repair for it is one an
+    entry's own author is better placed to see than a check is.
+
+    Two repairs, and the failure names both. Name the Artifact under
+    `enacted_in`, where the entry's rule does live in that file; or leave the
+    file out of this branch, where it does not — one commit per settled decision
+    is the convention that makes the second answer available at all.
+
+    Three answers, as the render's reader has: a `None` is "what this branch
+    changed went unread", which is neither green nor a finding about the tree
+    (A6), and is what a base git cannot resolve produces.
+    """
+    changed = touched(base)
+    if changed is None:
+        return None, f"{base} did not resolve, so what this branch changed is unread"
+    settled = sorted({int(m.group(1)) for p in changed if (m := ENTRY_FILE.match(p))})
+    if not settled:
+        return [], "this branch settles no decision"
+    shown = ", ".join(f"DR-{n:03d}" for n in settled)
+    named, declared = accounted(), artifacts()
+    edited = [p for p in changed if p in declared and p != INDEX]
+    return ([f"{p}: this branch edits it, and none of the entries it settles "
+             f"({shown}) names it under enacted_in — name the Artifact at that "
+             f"path there, or leave the file to the change that carries its rule"
+             for p in edited if not named.get(p, set()) & set(settled)],
+            f"{len(edited)} artifact(s) edited, each named in {shown}")
+
+
+def handoff(base):
+    """A18, and what a branch that changes the record owes along with it.
+
+    Three steps, each a line in A21's shape and each refusing the handoff on its
+    own. They are ordered so that a reader repairs them in the order that works:
+    a push is what makes the branch the handoff at all, a render is what makes
+    the record's index readable, and the index is what the third step reads.
+
+    So the third runs only where its source is known current, and otherwise says
+    it did not. Read against a stale index it would ask what names each file of a
+    page written before this branch existed, and answer with findings about
+    entries the branch has already added — a step that is wrong rather than
+    silent when its source is, which is the failure A6 asks a step not to have.
+    An unread index is that same failure and not a milder one: a render that
+    could not run leaves the page's freshness unknown, and a step that reports
+    `ok` over an unknown says it checked something it did not. A page nothing
+    renders is the same unknown by a different road, and counts alike. Only that
+    page, though: a stale `justfile` says nothing about what an entry names, and
+    skipping the third step over it would withhold a reading that is sound.
+
+    The third step has the same three answers for the same reason, and its own
+    unknown is a base git cannot resolve. `ok` over that would be `ok` over a
+    diff nobody read.
+    """
+    def mark(label, problems, note=""):
+        for p in problems:
+            print(f"x  {p}")
+        print(("x  " if problems else "ok ") + label
+              + (f" — {note}" if note and not problems else ""))
+        return bool(problems)
+
+    failed = mark("handoff", unpushed())
+    stale, orphans, unread = unrendered()
+    if stale is None:
+        print(f"?  rendered — {unread}")
+    else:
+        failed |= mark("rendered",
+                       [f"{name} is stale; re-render with `just render` and commit it"
+                        for name in stale]
+                       + [f"{name} is on disk and no target renders it; `just render` writes "
+                          f"nothing for it — restore the target, or drop the page"
+                          for name in orphans],
+                       "every generated page is the render of what it asserts")
+    # The render names a page relative to `.meta/`, which is how the Artifact
+    # that asserts its prose is found too; here it is turned back into the path
+    # the record's table and this file's own reads are keyed on.
+    unnamed = [] if stale is None else stale + orphans
+    unsure = stale is None or INDEX in {
+        os.path.normpath(os.path.join(".meta", name)).replace(os.sep, "/") for name in unnamed}
+    if unsure:
+        print(f"?  enacted — {INDEX} is "
+              + ("unread, " if stale is None else "a page the render could not call current, ")
+              + "and what names each file is read from it")
+    else:
+        problems, note = unenacted(base)
+        if problems is None:
+            print(f"?  enacted — {note}")
+        else:
+            failed |= mark("enacted", problems, note)
+    return 1 if failed else 0
 
 
 def resume(ref):
@@ -1349,7 +1631,12 @@ if __name__ == "__main__":
     ap.add_argument("--resume", action="store_true",
                     help="what an arriving Job needs, read from GitHub")
     ap.add_argument("--handoff", action="store_true",
-                    help="A18: refuse a dirty worktree or a branch ahead of its remote")
+                    help="A18: a dirty worktree, or a branch ahead of its remote. "
+                         "Beside it: a generated page this branch left un-rendered, or "
+                         "an artifact it edits that no decision it settles names")
+    ap.add_argument("--base", default="origin/main",
+                    help="what --handoff reads this branch against (default origin/main); "
+                         "a layer of a stack is read against the layer below")
     ap.add_argument("--hand-back", metavar="ISSUE",
                     help="as JSON, what a dead run's hand-back needs about the pull "
                          "request on a Challenge's branch: whether anybody holds it, "
@@ -1393,11 +1680,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.handoff:
-        problems = unpushed()
-        for p in problems:
-            print(f"x  {p}")
-        print(("x  " if problems else "ok ") + "handoff")
-        sys.exit(1 if problems else 0)
+        sys.exit(handoff(args.base))
 
     if args.watch:
         if not args.pr:

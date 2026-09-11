@@ -895,8 +895,14 @@ def rendered():
 
 
 def unrendered():
-    """Targets that produce nothing and yet have a file on disk."""
-    return [f"{name} exists but nothing renders it" for name, fn in TARGETS.items()
+    """Targets that produce nothing and yet have a file on disk, by name.
+
+    By name and not as a sentence about the name, because both callers key on
+    the page: the gate wraps it in prose, and `check_pr.py` asks whether the
+    record's index is one of them. A sentence answered that question `False`
+    however the page stood.
+    """
+    return [name for name, fn in TARGETS.items()
             if fn() is None and (META / name).exists()]
 
 
@@ -906,7 +912,8 @@ if __name__ == "__main__":
         sys.exit(0)
     check = "--check" in sys.argv
     pages = rendered()
-    stale = unrendered()
+    orphans = unrendered()
+    stale = []
     for name, text in pages.items():
         path, want = META / name, text.rstrip("\n") + "\n"
         if check:
@@ -916,6 +923,17 @@ if __name__ == "__main__":
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(want)
     if check:
-        print("stale: " + ", ".join(stale) if stale else "up to date")
-        sys.exit(1 if stale else 0)
+        # Two answers under two prefixes, because they are not the same answer
+        # and neither is the other's repair. A stale page is made current by
+        # running this program; a page nothing renders is not made anything by
+        # it, and what is wrong is the target or the file. Printed on one line
+        # under one word they were indistinguishable to a reader and to
+        # `check_pr.py`, which named the second one's repair as the first's.
+        if stale:
+            print("stale: " + ", ".join(stale))
+        if orphans:
+            print("unrendered: " + ", ".join(orphans))
+        if not (stale or orphans):
+            print("up to date")
+        sys.exit(1 if stale or orphans else 0)
     print(f"wrote {len(pages)} files")
