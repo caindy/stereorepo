@@ -130,6 +130,9 @@ artifacts:
   - id: work:artifact/github-workflows-advance
     name: .github/workflows/advance.yml
     path: .github/workflows/advance.yml
+  - id: work:artifact/gitattributes
+    name: .gitattributes
+    path: .gitattributes
   - id: work:artifact/justfile
     name: justfile
     path: justfile
