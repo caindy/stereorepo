@@ -8,9 +8,17 @@
 # blocker impact, and drift risk.
 #
 # Runs on push to main (when trunk moves, to land newly current work), on a
-# 15-minute schedule (for quiet check completions), and on workflow_dispatch.
+# gate or review run that *succeeded* (the instant a candidate's checks or
+# review finish, rather than waiting on the clock), on a 15-minute schedule
+# (for quiet check completions, and as a backstop if a workflow_run delivery
+# is ever missed), and on workflow_dispatch.
 # Does not run on pull_request or pull_request_review events: those run unmerged
 # code from the PR's merge ref holding the coder's token (solorepo's DR-161).
+# workflow_run is not among them — GitHub's reference gives its GITHUB_REF as
+# the default branch and its GITHUB_SHA as the last commit on it, and says the
+# event "will only trigger a workflow run if the workflow file exists on the
+# default branch", regardless of which ref gate or review itself ran against.
+# So the same invariant holds here too.
 name: merge
 
 # One at a time: two merges in quick succession must serialize.
@@ -21,6 +29,9 @@ concurrency:
 on:
   push:
     branches: [main]
+  workflow_run:
+    workflows: [gate, review]
+    types: [completed]
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
@@ -37,6 +48,19 @@ permissions:
 jobs:
   merge:
     name: merge
+    # A completion only matters when the run concluded. GitHub delivers
+    # workflow_run "regardless of the conclusion of the previous workflow",
+    # and review reaches completed without a verdict on most pushes: its one
+    # job is gated on this account being the pending reviewer, and its
+    # concurrency cancels a run in flight when anyone else pushes. Seventy of
+    # the last hundred review runs concluded `skipped` and two `cancelled`.
+    # None of those makes a candidate newly eligible, and a failed gate makes
+    # one less so; the gate completion from the same push carries the signal
+    # and fires anyway. The other three events name no workflow_run, where the
+    # conclusion would interpolate empty and refuse the job.
+    if: >-
+      github.event_name != 'workflow_run'
+      || github.event.workflow_run.conclusion == 'success'
     # The self-hosted scale set (solorepo's DR-140).
     runs-on: arc-runner-set
     steps:

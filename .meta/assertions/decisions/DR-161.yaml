@@ -75,8 +75,13 @@ decisions:
         requests (answering DR-133), preventing stack layers from conflicting.
       - >-
         .github/workflows/merge.yml runs the standing merge manager on push to main,
-        a 15-minute cron schedule, and workflow_dispatch, strictly from the default
-        branch without running unmerged PR merge refs.
+        a 15-minute cron schedule, workflow_dispatch, and — added on #269 — the
+        completion of a gate or review run whose conclusion was success, strictly
+        from the default branch without running unmerged PR merge refs. The
+        conclusion filter is load-bearing rather than tidy: GitHub delivers
+        workflow_run regardless of the triggering run's conclusion, and review
+        concludes skipped or cancelled on most pushes, none of which makes a
+        candidate newly eligible.
       - >-
         .meta/next.py reads reviewer approval from latestReviews when reviewDecision
         is null on GitHub, surfacing reviewer status (approved, changes requested, or
@@ -131,6 +136,23 @@ decisions:
       stack commit SHAs while keeping independent approved pull requests fresh.
 
       Security of the standing manager is maintained by running `.github/workflows/merge.yml`
-      only from `main` (on push, schedule, and dispatch) rather than from PR
-      merge refs (`pull_request_review`), ensuring code that holds the coder's
-      token has been reviewed and merged before it executes.
+      only from `main` (on push, schedule, dispatch, and `workflow_run`) rather
+      than from PR merge refs (`pull_request_review`), ensuring code that holds
+      the coder's token has been reviewed and merged before it executes.
+
+      `workflow_run` was weighed against that boundary on #269 and belongs with
+      the safe three rather than with `pull_request_review`. The distinction is
+      not which ref the *triggering* workflow ran against — `gate` and `review`
+      both run against pull request refs — but which ref the *triggered*
+      workflow runs from. GitHub's reference gives `workflow_run`'s `GITHUB_REF`
+      as the default branch and its `GITHUB_SHA` as the last commit on it, and
+      states the event "will only trigger a workflow run if the workflow file
+      exists on the default branch". So the merge manager still executes only
+      reviewed, merged code. The job names no ref and reads no ref or SHA from
+      the event payload: it reads `workflow_run.conclusion` and nothing else,
+      in the job's `if:`, which GitHub computes and which decides only whether
+      the job runs. It never touches `workflow_run.head_sha`, so nothing a pull
+      request controls reaches the step that writes `CODER_GH_TOKEN`. This is
+      the ordinary `workflow_run` hazard — a privileged workflow checking out
+      or trusting the untrusted head that triggered it — and it is avoided by
+      not doing that, not by the trigger being absent.
