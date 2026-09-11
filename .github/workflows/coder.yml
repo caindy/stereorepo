@@ -307,6 +307,11 @@ jobs:
           github_token: ${{ secrets.CODER_GH_TOKEN }}
           # The transcript, in the run log: the run is the only record of
           # what the coder did between the Issue and the pull request.
+          # `gh run view <id> --log` prints this step cut off at about two
+          # minutes; the whole of it is in the archive the CLI caches at
+          # `~/.cache/gh/run-log-<id>-*.zip`, where `0_coder.txt` holds the
+          # complete transcript and the `result` event with turns and cost
+          # (solorepo's #122).
           show_full_output: "true"
           prompt: |
             You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}

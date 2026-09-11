@@ -164,7 +164,12 @@ jobs:
           github_token: ${{ secrets.REVIEWER_GH_TOKEN }}
           # The transcript, in the run log. Hidden by default; here the run is
           # the only record of what the reviewer did, and its first run posted
-          # nothing while reporting success (solorepo's #85).
+          # nothing while reporting success (solorepo's #85). `gh run view
+          # <id> --log` prints this step cut off at about two minutes; the
+          # whole of it is in the archive the CLI caches at
+          # `~/.cache/gh/run-log-<id>-*.zip`, where `0_reviewer.txt` holds the
+          # complete transcript and the `result` event with turns and cost
+          # (solorepo's #122).
           show_full_output: "true"
           # The bound on reading, registered here and nowhere else (solorepo's DR-110):
           # a `Read`, `Grep` or `Glob` resolves inside the worktree and
