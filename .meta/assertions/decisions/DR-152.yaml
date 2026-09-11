@@ -1,0 +1,153 @@
+decisions:
+  - id: work:decision/152
+    name: "DR-152 · Prose woven through generated content is a named block on what it frames, and the gate names a block nothing reads"
+    challenge: work:challenge/226
+    status: ADOPTED
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-render
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-work-core
+      - work:artifact/meta-work-structure
+      - work:artifact/meta-work-disciplines
+    context: >-
+      solorepo's DR-144 moved a generated page's framing prose onto the Artifact
+      it is written to, and said in its own consequences what it could not
+      reach: prose woven *through* generated content rather than placed before
+      or after it. Two blocks of that were left in `render.py`.
+      `decision_form()` authored three placeholders interleaved with guidance
+      read from the model's slot descriptions, so an edit to one could leave the
+      other behind — and one of them, `<As above, including what it costs.>`,
+      was a hand-written summary of a sentence sitting in the `reason` slot.
+      `skill()` authored four paragraphs between a Discipline's steps, its
+      judgement, its commands and the form it embeds. Nothing consumed either
+      block and nothing checked either, which is A8's question answered badly by
+      the tool built to answer it well.
+
+      `preamble` and `postamble` could not take them. Both are identified by
+      where they sit, and a block in the middle of a page has no position to be
+      named by; `path` says which page and nothing says which block. That is why
+      this is a decision rather than a second use of solorepo's DR-144, and why
+      that entry stopped where it did.
+
+      The second constraint is that `skill()` writes two pages from one
+      Discipline and will write one per Role as Roles are added. Prose keyed on
+      the page it lands in would have been asserted once per reading, which is
+      the copy this repository removes everywhere else.
+    alternatives:
+      - name: Leave the woven blocks in `render.py`, since they are short and there are only two
+        chosen: false
+        reason: >-
+          Length is not the test and A8's is. The decision form's placeholders
+          sit beside guidance the model supplies, so the pair drifts by an edit
+          to either side, and the drift is silent — the form still renders and
+          the byte-compare still passes. The cost compounds the way #11 says:
+          the next generated form written here reaches for the idiom solorepo's
+          DR-144 established, finds nothing for its middle, and adds a block at
+          the same rate.
+      - name: A `{placeholder}` inside `preamble`, with the generator splitting on it
+        chosen: false
+        reason: >-
+          It makes the prose know where the generated part goes, which is the
+          coupling `postamble` was minted to avoid, and it does not scale past
+          one hole: a page with three woven blocks needs three markers, in
+          order, and a reordering of the generator silently reorders the prose.
+          Nor does it name anything — a block is found by counting, so a dropped
+          section moves every block after it.
+      - name: The blocks are woven prose on the Artifact of the page they are written into, always
+        chosen: false
+        reason: >-
+          Right for the decision form and wrong for a compiled reading. One
+          Discipline renders into one page per Role, and the paragraphs between
+          the parts do not differ by Role, so the two skills would assert the
+          same four blocks and every Role added would assert them again. The
+          host has to be what the block frames, and for those blocks that is the
+          Discipline.
+      - name: A named block on whatever it frames — the Artifact for a page's own prose, the Discipline for prose every reading of it carries
+        chosen: true
+        reason: >-
+          `woven` is a list of named `Prose`, and the name is what `path` could
+          not supply: a generator asks for a block by name, so a reordering
+          moves nothing and a dropped section is a `LookupError` that says which
+          host and which block. Hosting it on what it frames follows the rule
+          solorepo's DR-144 already set — the prose sits one slot from the thing
+          it is about — and answers the second-copy problem by construction,
+          since a Discipline has one of each block however many readings are
+          compiled from it. What it costs: two hosts rather than one, so a
+          reader asking where a block lives has to ask what it frames first, and
+          `Prose` is a nested class in an ontology whose base module says
+          composition is by reference.
+    consequences:
+      - >-
+        `Artifact` and `Discipline` gain `woven`, a list of named `Prose`
+        blocks. The slot and the class are `core`'s, because two modules' classes
+        carry them and a module importing another for one slot is the worse
+        answer; `core`'s own description now says why the one nested class in it
+        is nested.
+      - >-
+        `render.py` gains `woven(host, block, **holes)` and loses both blocks.
+        It writes the middle of a page without authoring it. A block may leave a
+        named hole — `{role}` is the only one — which the generator fills, and
+        that is the whole of what a generator may add to prose it is handed.
+      - >-
+        The decision form's chosen alternative asks for `reason` like the
+        rejected one, because `reason`'s description already says the chosen
+        one's includes what it costs. That is the only rendered page this change
+        moves, by one line, and it is the placeholder that could have gone on
+        disagreeing with the model.
+      - >-
+        The decision form's remaining two placeholders are woven blocks on
+        `.meta/templates/decision.md`'s Artifact. `## Decision` is authored
+        because no slot backs the section — which is a finding about the form
+        rather than about this change, and is raised as one.
+      - >-
+        `.meta/checks/files.py` gains `unread prose`: a `preamble`, `postamble`
+        or woven block that no render asked for is named. `inherited prose`
+        holds where a block is asserted; this holds whether anything reads it at
+        all, which is A8's other half and the half that catches a block left
+        behind by the generator that stopped reading it. `ASKED` carries the
+        block's name for it, so the two steps read the same set.
+      - >-
+        `ASKED` entries become `(host, slot, block)`. `host` is a path or a
+        Discipline's id, and an entry hosted on a Discipline falls out of
+        `inherited prose` by having no path to match — right, because the
+        Disciplines are under `imported/` already and Specialization copies that
+        whole.
+      - >-
+        Every generated page but the decision form is byte-identical. The two
+        skills' prose travelled without a word changing, which is what a move
+        should look like.
+    falsifier: >-
+      A third host for woven prose — something that is neither the page nor what
+      every page of it is compiled from — would say the rule "it hangs off what
+      it frames" is a description of two cases rather than a rule. A block whose
+      text has to know what surrounds it, beyond filling a named hole, would say
+      the interleaving is the generator's shape rather than the prose's and that
+      the block wants to be a template. And `unread prose` never firing, over a
+      year in which blocks were renamed and sections dropped, would say the
+      residue it exists to catch does not happen and the step is ceremony.
+    rationale: |-
+      solorepo's DR-144 named this work and left it, on the grounds that a slot
+      for woven prose is a different decision. It is, and the difference is one
+      word: a preamble is identified by position and a woven block is identified
+      by name. Everything else follows from that — the list, the `LookupError`
+      that says which block, and the gate step that can now ask about a block
+      rather than about a slot.
+
+      What was not obvious until both call sites were in front of each other is
+      that they want different hosts. The decision form is one page and its
+      placeholders are that page's. A compiled reading is one of several pages
+      that a single Discipline produces, and its fixed paragraphs belong to the
+      Discipline, not to whichever Role's copy is being written. Keying both on
+      the Artifact would have passed every gate and quietly reintroduced, at one
+      copy per Role, the duplication the move was for. The rule that covers both
+      is the one this entry states: prose hangs off what it frames.
+
+      The third piece is the gate. Moving prose into the assertions makes it
+      answerable to the render, which is what the byte-compare holds; it does
+      not make it answerable to being read. A block that no generator asks for
+      renders nothing, breaks nothing, and goes on saying something about a page
+      that stopped saying it — the residue that has no symptom. `unread prose`
+      is the cheapest possible check for it, because the render already collects
+      what it asked for.

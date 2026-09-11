@@ -470,6 +470,26 @@ disciplines:
       - A place two agents that share nothing else can meet.
       - A successor that resumes rather than restarts.
       - Work noticed and not done, in a queue rather than a pile.
+    # What a reading of this Discipline says between the parts it is compiled
+    # from: the verbs, the steps, the judgement and the form. Here rather than
+    # on either skill's Artifact, because one Discipline compiles into a
+    # reading per Role and the blocks do not differ by Role (solorepo's DR-152).
+    woven:
+      - name: verbs
+        text: |
+          The verbs are the steps, and each refuses its own misuse. Yours, as the {role}:
+      - name: steps
+        text: |
+          A verb not listed is not yours to type. What no verb enforces:
+      - name: commands
+        text: |
+          **None of the below decides any of the above.** A script can tell you a thread
+          is unanswered, or a branch unpushed. What to write, and whether a point is
+          right, is yours.
+      - name: the body
+        text: |
+          Fill this in when the work **starts**. `check_pr.py` reads the same form, so a
+          heading added here is required by that act alone.
   - id: work:discipline/journaling
     name: Journaling
     description: >-

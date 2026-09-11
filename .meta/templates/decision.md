@@ -31,7 +31,7 @@ the level — the entry names its Product or Project, or neither.
 
 ### B: <alternative> — chosen
 
-<As above, including what it costs.>
+<Why this option was taken, or why it was not. For the chosen one this includes what it costs: every choice costs something, and a record claiming otherwise is advertising.>
 
 ## Consequences
 

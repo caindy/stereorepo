@@ -105,6 +105,7 @@ classes:
       - judgement
       - produces
       - applies_to
+      - woven
     slot_usage:
       name:
         required: true

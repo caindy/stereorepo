@@ -9,6 +9,12 @@ description: >-
   appears in many Roles without being copied, and an Actor's Memory is the same
   Memory a Bill of Materials pins. That only works if everything is identified,
   so WorkEntity gives everything an id.
+
+  `Prose` is the one thing here that is not referred to and not identified. A
+  block of authored prose is the text itself rather than an entity anything
+  points at, so it nests in whatever it frames; it is here because more than one
+  module's class carries one, and a module importing another for a single slot
+  would be a worse answer than the exception (solorepo's DR-152).
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
@@ -61,7 +67,45 @@ slots:
   statement:
     description: What must be true, stated so that it can be checked.
 
+  # Authored prose a generator writes between what it derives
+
+  text:
+    description: The prose itself, as Markdown.
+
+  woven:
+    description: >-
+      The authored prose a generator writes **between** the content it derives,
+      as named blocks. `preamble` and `postamble` need no name because their
+      position identifies them; a block in the middle has no position to be
+      named by, so it carries one and the generator asks for it by that name
+      (solorepo's DR-152).
+
+      A block hangs off what it frames. The page, where the block belongs to one
+      Artifact; the Discipline, where every reading compiled from it carries the
+      same block and one per page would be the second copy.
+
+      A block may leave a **named hole** — `{role}` — which the generator fills,
+      and that is the whole of what a generator may add to prose it is handed.
+      Interpolating a value is not authoring; writing a sentence is.
+    range: Prose
+    multivalued: true
+    inlined_as_list: true
+
 classes:
+
+  Prose:
+    description: >-
+      One named block of authored prose, nested in whatever it frames. It has no
+      identifier because nothing refers to a paragraph: the name is unique within
+      its host, which is as far as a generator asking for one needs to reach.
+    slots:
+      - name
+      - text
+    slot_usage:
+      name:
+        required: true
+      text:
+        required: true
 
   WorkEntity:
     abstract: true

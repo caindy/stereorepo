@@ -85,6 +85,9 @@ slots:
       A slot of its own rather than a placeholder inside `preamble`, so that
       neither block has to know where the generated part goes.
 
+  # Prose *between* what a generator derives is `woven`, in `core`: a Discipline
+  # carries such blocks too, and a slot two modules use is the base module's.
+
   language:
     description: The language a Project is written in. Portfolios are polyglot; Projects are not.
 
@@ -145,6 +148,7 @@ classes:
       - path
       - preamble
       - postamble
+      - woven
     slot_usage:
       name:
         required: true
