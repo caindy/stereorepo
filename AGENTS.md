@@ -37,6 +37,12 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   change — one commit per settled decision. `.meta/decisions.md` is an index
   generated from them; the entry itself is the assertion file.
 - An empty directory carries a README saying what will live there.
+- The full repository operator surface is `just --list`, run at the root:
+  every recipe invokes one tool under `.meta/`, is self-documented by its own
+  comment, and the file is rendered from the assertions, so a second list kept
+  here would drift the moment a recipe did (DR-106). Run it before reaching
+  for a raw script, an ad-hoc API call, or a human. Not installed? `uvx
+  --from rust-just just`.
 - A pull request this session opened is watched until it closes: `just watch <n>`
   under a persistent Monitor, started the moment it is open, so a review is
   answered when it lands and not when someone looks. When one closes, `just
