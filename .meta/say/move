@@ -403,6 +403,38 @@ def mergeability(pull):
     return answer
 
 
+# How long to wait for GitHub to *show* an act it has accepted. The sibling of
+# `MERGEABILITY` above and a different question: that one waits on a value
+# GitHub computes when asked, this one on work GitHub queues and performs.
+# `gh pr update-branch --rebase` returns when GitHub has taken the rebase, not
+# when it has done it — measured on runs 34593386083 and 34594139086, where the
+# branch heads were rewritten one to two seconds after the call and a `pr view`
+# half a second later still answered with the head they had before. Same bound
+# as the other, because a branch GitHub has not moved after half a minute is
+# one the next push to trunk will ask about again.
+SETTLES = (6, 5)
+
+
+def settled(read, shows):
+    """What GitHub holds once it shows the act asked of it — or what it still
+    holds when the wait runs out, which is the caller's to report.
+
+    The first read is the one that usually answers, so an act GitHub has
+    already shown costs one question and no sleep; only the read that is too
+    early pays, and it pays in a wait rather than in a wrong answer. The
+    predicate is the caller's because what counts as shown differs: a head that
+    has moved off the commit it was on, an arming GitHub lists.
+    """
+    tries, wait = SETTLES
+    answer = read()
+    for _ in range(tries):
+        if shows(answer):
+            break
+        time.sleep(wait)
+        answer = read()
+    return answer
+
+
 def run_coder(pr, task):
     """Start one of `coder.yml`'s passes on a pull request: the dispatch itself.
 
@@ -748,6 +780,18 @@ def advance(pr=None, held=False):
     question `merge --auto` asks of its own arming and the one this path was
     still answering from an exit code.
 
+    **And "afterwards" is waited for** (solorepo's DR-158). `gh pr
+    update-branch --rebase` returns when GitHub has taken the rebase, not when
+    it has performed it, so the read that followed it answered about the head
+    the branch still had — every `advance` on 2026-09-11 concluded failure
+    while doing its work correctly, and a workflow that is always red cannot
+    report the one case it exists to catch. The head moving off the commit it
+    was on is the rebase landing, so that is what the read-back waits for,
+    bounded by `SETTLES`; both of the questions above are then asked of a pull
+    request GitHub has finished moving. A head that has not moved when the wait
+    runs out is its own line, because it is a different fact from a branch that
+    is behind: the rebase may still land, and dropping the arming as it does.
+
     **One pull request's refusal is not the sweep's.** `gh()` reports by ending
     the process, so a branch GitHub will not rebase, or will not arm, used to
     take every other pull request down with it and swallow what had already been
@@ -828,8 +872,20 @@ def advance(pr=None, held=False):
                 moved += 1
                 print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
                       f"— {pull['title']}")
-                after = channel.gh("pr", "view", number, "--json", ADVANCE)
-                if behind_by(after):
+                # The head moving is the rebase happening, so it is what this
+                # waits for rather than asks about once (solorepo's DR-158).
+                # Both questions below are about a pull request GitHub has
+                # finished rebasing, and asked of one it has not they read the
+                # state it is being moved out of: how far behind the old head
+                # was, and the arming that head still carries.
+                after = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
+                                lambda now: now["headRefOid"] != pull["headRefOid"])
+                if after["headRefOid"] == pull["headRefOid"]:
+                    failed.append(f"#{number} is on the head it was before the update and "
+                                  "GitHub has not moved it within the wait, so whether the "
+                                  "rebase drops the arming is unread — and dropped, it is "
+                                  "out of reach of every later sweep")
+                elif behind_by(after):
                     failed.append(f"#{number} is still behind {pull['baseRefName']} "
                                   "after the update")
                 if pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
@@ -841,9 +897,14 @@ def advance(pr=None, held=False):
                     # hold. That leaves the pull request rebased and unarmed, which
                     # is solorepo's #93 — and unreachable by any later sweep, because the sweep
                     # filters on `autoMergeRequest` and there is no longer one to
-                    # filter on.
-                    if not channel.gh("pr", "view", number,
-                                      "--json", ADVANCE).get("autoMergeRequest"):
+                    # filter on. Waited for, like the read above and unlike it on
+                    # no measurement: what an early read here would produce is the
+                    # false report's mirror, a branch GitHub is holding armed
+                    # called unarmed, and the wait costs a sleep only on the
+                    # branch this is about to report as broken anyway.
+                    if not settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
+                                   lambda now: now.get("autoMergeRequest")
+                                   ).get("autoMergeRequest"):
                         failed.append(f"#{number} lost its arming to the update and GitHub "
                                       "does not show it armed after the call that re-armed it")
                     else:

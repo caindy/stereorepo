@@ -316,6 +316,11 @@ class FakeGitHub:
     def __init__(self, pulls, no_rebase=(), no_arm=(), no_stick=(), lands=(), blip=(),
                  no_dispatch=()):
         self.pulls = {str(n): dict(p) for n, p in pulls.items()}
+        for number, pull in self.pulls.items():
+            # The commit the head is on. Derived before, because nothing read
+            # it; it is a value the fake holds now because GitHub moves it when
+            # a rebase lands and that is what `advance` reads the rebase off.
+            pull.setdefault("head", f"head{number}")
         self.no_rebase, self.no_arm = {str(n) for n in no_rebase}, {str(n) for n in no_arm}
         # One HTTP error on the `compare` that reads back the rebase, and once:
         # a transient is what an API blip is, and a permanent one would model a
@@ -357,17 +362,26 @@ class FakeGitHub:
             mergeable = "UNKNOWN"
         else:
             mergeable = pull.get("mergeable", "MERGEABLE")
+        # A rebase GitHub has taken and not yet shown (solorepo's DR-158).
+        # `slow` is how many reads answer with what the pull request was before
+        # it — the head it was on, and the arming that head still carried,
+        # which go stale together because it is the head moving that drops the
+        # arming.
+        was, reads = pull.get("stale") or (pull, 0)
+        if reads:
+            pull["stale"] = (was, reads - 1)
+        shown = was if reads else pull
         return {"number": int(number), "title": f"pull {number}",
                 "state": pull.get("state", "OPEN"),
                 "mergeCommit": {"oid": f"merged{number}"},
                 "baseRefName": pull.get("base", "main"),
                 "headRefName": pull.get("branch", f"claude/issue-{number}"),
-                "headRefOid": f"head{number}",
+                "headRefOid": shown["head"],
                 "reviewRequests": [{"login": who} for who in pull.get("requested") or []],
                 "reviews": [{"author": {"login": who}, "state": state}
                             for who, state in pull.get("verdicts") or []],
                 "mergeable": mergeable,
-                "autoMergeRequest": {"enabledAt": "now"} if pull["armed"] else None}
+                "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None}
 
     def __call__(self, *args, parse=True):
         head = args[:2]
@@ -382,8 +396,14 @@ class FakeGitHub:
             if number in self.no_rebase:
                 sys.exit("gh: the branch has conflicts that must be resolved")
             pull = self.pulls[number]
+            # What the pull request was, kept for as many reads as `slow` says
+            # GitHub answers with it, and for the `compare` of a head it has
+            # not moved yet, which is a question about that commit and answers
+            # what that commit was behind by.
+            pull["stale"] = (dict(pull), pull.get("slow", 0))
             pull["behind"] = pull.get("again", 0)
             pull["armed"] = pull["armed"] and not pull.get("drops")
+            pull["head"] = f"moved{number}"
             pull["rebased"] = True
             return ""
         if head == ("pr", "edit"):
@@ -402,9 +422,14 @@ class FakeGitHub:
             number = str(args[2])
             if number in self.no_arm:
                 sys.exit("gh: Pull request is in clean status")
-            self.pulls[number]["armed"] = number not in self.no_stick
+            pull = self.pulls[number]
+            # The arming GitHub holds, and the arming GitHub shows: `slow` lags
+            # the second behind the first here as it does the head above, since
+            # the read-back after the re-arming is the same kind of read.
+            pull["stale"] = (dict(pull), pull.get("slow", 0))
+            pull["armed"] = number not in self.no_stick
             if number in self.lands:
-                self.pulls[number].update(state="MERGED", armed=False)
+                pull.update(state="MERGED", armed=False)
             return ""
         if head == ("workflow", "run") and args[2] == "coder.yml":
             number = next(a.split("=", 1)[1] for a in args if a.startswith("pull_request="))
@@ -414,11 +439,18 @@ class FakeGitHub:
             self.dispatched.append((number, task))
             return ""
         if args[0] == "api" and "/compare/" in args[1]:
-            number = args[1].rsplit("...head", 1)[1]
+            oid = args[1].rsplit("...", 1)[1]
+            number = oid.removeprefix("head").removeprefix("moved")
             if number in self.blip and self.pulls[number].get("rebased"):
                 self.blip.discard(number)
                 sys.exit("gh: API rate limit exceeded")
-            return {"behind_by": self.pulls[number]["behind"]}
+            pull = self.pulls[number]
+            # Asked about a commit, so it answers about that commit: the head
+            # GitHub has not moved yet is behind by what it was behind by
+            # before the rebase, which is the true answer to the wrong question
+            # and what solorepo's #245 read as a rebase that had not happened.
+            was, _ = pull.get("stale") or (pull, 0)
+            return {"behind_by": pull["behind"] if oid == pull["head"] else was["behind"]}
         if head == ("issue", "view"):
             issue = self.pulls[str(args[2])].get("issue") or {}
             if issue.get("unreadable"):
@@ -482,6 +514,14 @@ def advance_probes():
         finally:
             channel.gh = original
 
+    # The wait on a rebase GitHub has taken and not yet shown, shortened to
+    # nothing (solorepo's DR-158), as `MERGEABILITY` is below and for the same
+    # reason: what the cases are for is that the wait happens at all, and the
+    # seconds it lasts are GitHub's business rather than a gate's. Shortened
+    # here rather than there because every case that rebases reads the head
+    # back, so a gate on trunk's timings would pay the bound on each.
+    move.SETTLES = (3, 0)
+
     # The arming the rebase dropped is restored even though the base moved
     # again under it — the two read-backs are two questions (solorepo's #98).
     fake = FakeGitHub({7: {"behind": 2, "armed": True, "drops": True, "again": 1}})
@@ -517,6 +557,33 @@ def advance_probes():
     said = run(fake, lambda: move.advance())
     if not said or "#7" not in said:
         problems.append(f"advance: an arming that did not take was reported as {said!r}")
+
+    # A rebase GitHub has taken and not yet performed (solorepo's #245).
+    # `update-branch` returns when the work is queued, so a read that follows
+    # it answers about the head the branch is being moved off — behind by what
+    # it was behind by, and carrying the arming the move is about to drop. Read
+    # once, this is the sweep reporting a failure that did not happen and
+    # walking past the repair that was needed; every `advance` on 2026-09-11
+    # concluded failure this way while rebasing correctly each time.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True, "slow": 2}})
+    said = run(fake, lambda: move.advance())
+    if said:
+        problems.append(f"advance: a rebase GitHub had not shown yet reported {said!r}")
+    if not fake.pulls["7"]["armed"]:
+        problems.append("advance: it read the arming off the head GitHub had not moved, so "
+                        "the arming the move dropped stayed dropped")
+
+    # And the wait is bounded, so a head GitHub never moves is still reported —
+    # as itself and not as a branch that is behind. The two are different
+    # facts: the rebase may yet land, and drop the arming as it does, and a
+    # pull request rebased and unarmed is out of reach of every later sweep.
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "slow": 9}})
+    said = run(fake, lambda: move.advance())
+    if not said or "has not moved it" not in said:
+        problems.append(f"advance: a head GitHub never moved was reported as {said!r}")
+    if said and "still behind" in said:
+        problems.append("advance: a rebase GitHub had not shown was reported as a branch "
+                        "that is still behind its base")
 
     # Armed, and nothing else — on the path that takes an argument too, which
     # is the one `merge --auto` uses. And the refusal is said in the exit code:
