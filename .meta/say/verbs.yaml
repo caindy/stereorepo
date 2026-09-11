@@ -113,7 +113,10 @@ programs:
         held_by: [workflow]
       - name: request-review
         usage: "<pr> [--to R]"
-        does: "hand off: request review from Role R's account, the reviewer's by default"
+        does: >-
+          hand off: request review from Role R's account, the reviewer's by
+          default; refused on a branch GitHub reports as conflicting, which no
+          review can run on
         held_by: [coder]
       - name: milestone
         usage: "<issue> --set T|--clear"

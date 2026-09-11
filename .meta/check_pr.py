@@ -560,8 +560,13 @@ def snapshot(ref):
     holds, a check by its name and state. The keys are what GitHub already
     holds, so nothing is written locally and a watch restarted from scratch
     reports the same events a continuous one would have.
+
+    `mergeable` rides along because a branch that goes conflicting under a
+    standing review request is a change on the pull request that produces no
+    thread, no review and no check, and so was the one thing a watch could not
+    see (solorepo's #192).
     """
-    pr = gh("pr", "view", ref, "--json", "number,state,comments,reviews")
+    pr = gh("pr", "view", ref, "--json", "number,state,comments,reviews,mergeable")
     comments = {c["id"]: c for c in pr["comments"]}
     reviews = {r["id"]: r for r in pr["reviews"]}
     threads_ = {t["id"]: t for t in threads(ref)}
@@ -578,7 +583,8 @@ def snapshot(ref):
               (c.get("conclusion") or c.get("state") or c.get("status") or "PENDING",
                c.get("detailsUrl") or c.get("targetUrl"))
               for c in sorted_checks}
-    return pr["number"], pr["state"], comments, reviews, threads_, checks
+    return (pr["number"], pr["state"], comments, reviews, threads_, checks,
+            pr.get("mergeable") or "UNKNOWN")
 
 
 def mine(body):
@@ -613,10 +619,20 @@ def watch(ref, every=60):
     a webhook needs somewhere to land. The interval is a minute, which is the
     rate limit's comfort and well inside "a review lands minutes after a push".
 
-    Each line is one event. Nothing is emitted for the first poll except a
-    heading, so a watch started on a busy pull request does not replay it; a
-    poll that fails is skipped and the next one compares against the last that
-    did not, so nothing is lost across a transient failure. Exits 0 when the
+    Each line is one event, a change in whether GitHub can still merge the
+    branch among them (solorepo's DR-145): a merge on the base while a review
+    is requested makes the request unanswerable, and that produces no thread,
+    no review and no check, so the silence read as a review in progress
+    (solorepo's #192). The
+    heading carries the state a watch starts on, since a branch already
+    conflicting when the watch begins never changes into it — and when the
+    watch begins while GitHub is still computing one, the heading carries
+    `UNKNOWN` and the first answer that follows is printed instead, since a
+    state never said is not one a reader can be left to infer. Nothing else is
+    emitted for the first poll, so a watch started on a busy pull request does
+    not replay it; a poll that fails is skipped and the next one compares
+    against the last that did not, so nothing is lost across a transient
+    failure. Exits 0 when the
     subscription ends (the pull request merges or closes) or when an actionable
     event arrives (a new review from another author, a new unaddressed comment or
     thread, or a check failure). Exiting on actionable events completes the
@@ -625,6 +641,14 @@ def watch(ref, every=60):
     """
     import time
     previous = None
+    # The last thing GitHub said about merging this branch that was an answer.
+    # Held apart from the snapshot because `UNKNOWN` is not a state of the
+    # branch but GitHub computing one, and every push sets it: compared
+    # snapshot to snapshot, a push would report `UNKNOWN` and then the value it
+    # already had, which is two lines for no change. `None` means nothing has
+    # been said yet, including by the heading, so the first answer is a change
+    # from nothing and is printed.
+    merges = None
     while True:
         try:
             current = snapshot(ref)
@@ -632,13 +656,13 @@ def watch(ref, every=60):
             print(f"? poll skipped: {e}", file=sys.stderr)
             time.sleep(every)
             continue
-        number, state, comments, reviews, threads_, checks = current
+        number, state, comments, reviews, threads_, checks, mergeable = current
         if previous is None:
             owed = len(unaddressed(list(threads_.values())))
-            print(f"watching #{number}: {owed} thread(s) owed an answer, "
+            print(f"watching #{number}: {owed} thread(s) owed an answer, mergeable={mergeable}, "
                   + ", ".join(f"{k}={v}" for k, (v, _) in checks.items()), flush=True)
         else:
-            _, _, p_comments, p_reviews, p_threads, p_checks = previous
+            _, _, p_comments, p_reviews, p_threads, p_checks, _ = previous
             actionable = []
             for cid in comments.keys() - p_comments.keys():
                 c = comments[cid]
@@ -676,12 +700,23 @@ def watch(ref, every=60):
                     print(f"check {name}: {value} again, from a re-run", flush=True)
                     if is_failure:
                         actionable.append(f"check {name} ({value})")
+            # Said and not exited on. A conflict under a standing request
+            # already dispatches the coder's rebase pass off the merge that
+            # caused it (solorepo's DR-133), so waking this session to rebase
+            # would put two Actors on one branch; what the session watching
+            # lacked was the reason the review was silent, which is the line.
+            if mergeable != "UNKNOWN" and mergeable != merges:
+                print(f"mergeable: {mergeable}" + (
+                    " — GitHub builds no merge ref for a branch that conflicts, so no review "
+                    "of this head can run" if mergeable == "CONFLICTING" else ""), flush=True)
             if actionable:
                 print(f"watch exiting on #{number}: " + ", ".join(actionable), flush=True)
                 return
         if state in ("MERGED", "CLOSED"):
             print(f"pr {state}", flush=True)
             return
+        if mergeable != "UNKNOWN":
+            merges = mergeable
         previous = current
         time.sleep(every)
 

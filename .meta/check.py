@@ -795,6 +795,18 @@ def issue_citation():
     Importing runs nothing — everything it does is under `main()` — and reaches
     no network, which is the property that lets this check stay offline.
     """
+    module = load_check_pr()
+    return module.ISSUE, module.FOREIGN
+
+
+def load_check_pr():
+    """`check_pr.py` as a module: the pull request gate, read rather than run.
+
+    The loader the channel's programs get, for the one file beside them that is
+    a program too. Importing runs nothing and reaches no network — everything
+    it does is under `main()` — which is what lets a check read its patterns and
+    a probe stand GitHub in behind them.
+    """
     from importlib.machinery import SourceFileLoader
     import importlib.util
 
@@ -802,7 +814,7 @@ def issue_citation():
     spec = importlib.util.spec_from_loader("check_pr", loader)
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)
-    return module.ISSUE, module.FOREIGN
+    return module
 
 
 def copied_files():
@@ -1620,7 +1632,7 @@ def load_channel():
 
 
 class FakeGitHub:
-    """As much of GitHub as `advance` and `merge --auto` ask about.
+    """As much of GitHub as `advance`, `merge --auto` and `request-review` ask about.
 
     Stands in for `channel.gh`, which is where every one of the five findings
     on solorepo's #98 lived: `gh()` reports by ending the process, and what a caller does with
@@ -1640,6 +1652,10 @@ class FakeGitHub:
     solorepo's DR-142 added before the dispatch: the Challenge the branch
     names, as `{state, level, unreadable}`, open and `medium` unless a case
     says otherwise, since the branch's number is the Issue's here.
+
+    `requested` is written as well as read, because `request-review` asks the
+    same three questions of it that `advance` does: what GitHub says about
+    merging the branch, who it already lists, and who it lists after the call.
     """
 
     def __init__(self, pulls, no_rebase=(), no_arm=(), no_stick=(), lands=(), blip=(),
@@ -1712,6 +1728,18 @@ class FakeGitHub:
             pull["behind"] = pull.get("again", 0)
             pull["armed"] = pull["armed"] and not pull.get("drops")
             pull["rebased"] = True
+            return ""
+        if head == ("pr", "edit"):
+            # The two `request-review` makes: the reviewer it already lists
+            # withdrawn, and the reviewer asked. Held in the same `requested`
+            # the view reports, so what a probe reads back is what GitHub would
+            # be holding rather than the call the verb made.
+            pull = self.pulls[str(args[2])]
+            asked = list(pull.get("requested") or [])
+            for flag, edit in (("--remove-reviewer", asked.remove), ("--add-reviewer", asked.append)):
+                if flag in args:
+                    edit(args[args.index(flag) + 1])
+            pull["requested"] = asked
             return ""
         if head == ("pr", "merge"):
             number = str(args[2])
@@ -1991,6 +2019,153 @@ def advance_probes():
     if named or merging:
         problems.append(f"advance: the two callers that dispatch nothing exited with "
                         f"{named!r} and {merging!r}")
+    return problems
+
+
+class WatchGitHub:
+    """GitHub as `--watch` polls it: one answer per poll, off a list.
+
+    A poll is `(state, mergeable)` and nothing else, because what is being
+    probed is the one change that produces no comment, no review, no thread and
+    no check — so every other thing a snapshot holds is empty here, and a list
+    that runs out answers `MERGED`, which is how the watch is made to end.
+    """
+
+    def __init__(self, polls):
+        self.polls = list(polls)
+
+    def __call__(self, *args):
+        if args[:2] == ("repo", "view"):
+            return {"nameWithOwner": "o/r"}
+        if args[:2] == ("pr", "view"):
+            # `pull` asks for the number alone on its way to the threads query;
+            # the snapshot asks for everything. The fields say which.
+            if args[-1] == "number":
+                return {"number": 7}
+            state, mergeable = self.polls.pop(0) if self.polls else ("MERGED", "MERGEABLE")
+            return {"number": 7, "state": state, "comments": [], "reviews": [],
+                    "mergeable": mergeable}
+        if args[0] == "api":
+            # One shape answers both graphql reads the snapshot makes: the
+            # threads query wants `reviewThreads` and `reviews`, and the rollup
+            # query (solorepo's #230, which took the checks off `pr view`) wants
+            # `commits`, whose absence `checks_of` reads as a head with no
+            # checks on it — which is the empty this probe wants anyway.
+            return {"data": {"repository": {"pullRequest": {
+                "reviewThreads": {"nodes": []}, "reviews": {"nodes": []}}}}}
+        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+
+
+@check("handoff probes", pre=True)
+def handoff_probes():
+    """The two readings of solorepo's #195: `request-review` on a branch GitHub
+    reports as `CONFLICTING`, and `--watch` on one that becomes it.
+
+    A request made on a conflicting branch is held by GitHub and answered by
+    nobody — no merge ref, so `review.yml`'s `pull_request` trigger creates no
+    run — and neither the verb nor the watch said so, which is why
+    solorepo's #192 stood unreviewed. Both halves are a state GitHub reports and a
+    sentence about it, so both are probed the way `advance` is: by standing
+    GitHub in, since the state costs a merge on trunk to reach for real and is
+    gone by the time anyone could look.
+    """
+    import contextlib
+    import io
+
+    channel, _, programs = load_channel()
+    move = programs["move"]
+    problems = []
+    # The poll shortened to nothing, as `advance probes` does and for the same
+    # reason: that the verb waits out an `UNKNOWN` is the claim, and how many
+    # seconds it waits is GitHub's business.
+    move.MERGEABILITY = (3, 0)
+
+    def run(fake, call):
+        original, channel.gh = channel.gh, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                call()
+            return None
+        except SystemExit as exc:
+            return str(exc.code)
+        except Exception as exc:
+            return f"{type(exc).__name__}: {exc}"
+        finally:
+            channel.gh = original
+
+    # A conflicting branch: refused, nobody requested, and the refusal names
+    # the branch and the base it is to be rebased onto — which is the pull
+    # request's own, so a layer is not sent to trunk.
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "base": "claude/issue-6",
+                           "mergeable": "CONFLICTING"}})
+    said = run(fake, lambda: move.request_review("7", "reviewer"))
+    if fake.pulls["7"].get("requested"):
+        problems.append(f"request-review: a conflicting branch was requested of "
+                        f"{fake.pulls['7']['requested']!r}, and no review can run on it")
+    if not said or "claude/issue-6" not in said or "no merge ref" not in said:
+        problems.append(f"request-review: the refusal on a conflicting branch was {said!r}, "
+                        "which does not name the rebase that lifts it")
+
+    # A branch GitHub can merge: requested, and the read-back agrees.
+    fake = FakeGitHub({8: {"behind": 0, "armed": False}})
+    said = run(fake, lambda: move.request_review("8", "reviewer"))
+    if fake.pulls["8"].get("requested") != ["o-r-reviewer"]:
+        problems.append(f"request-review: a mergeable branch left GitHub holding "
+                        f"{fake.pulls['8'].get('requested')!r}")
+    if said:
+        problems.append(f"request-review: the handoff it should have made exited with {said!r}")
+
+    # `UNKNOWN` is GitHub still computing and a request follows the push that
+    # set it computing, so read once this refuses every handoff on timing.
+    fake = FakeGitHub({9: {"behind": 0, "armed": False, "unknown": 2}})
+    said = run(fake, lambda: move.request_review("9", "reviewer"))
+    if fake.pulls["9"].get("requested") != ["o-r-reviewer"]:
+        problems.append("request-review: it took the first `UNKNOWN` for an answer and left "
+                        f"GitHub holding {fake.pulls['9'].get('requested')!r}")
+    if said:
+        problems.append(f"request-review: waiting out an `UNKNOWN` exited with {said!r}")
+
+    check_pr = load_check_pr()
+
+    def watched(polls):
+        original, check_pr.gh = check_pr.gh, WatchGitHub(polls)
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                check_pr.watch("7", every=0)
+        finally:
+            check_pr.gh = original
+        return out.getvalue().splitlines()
+
+    # A branch that goes conflicting under a standing request says so, once:
+    # the push that invalidated the answer reports `UNKNOWN` and then the value
+    # it already had, and neither is a change to the branch.
+    lines = watched([("OPEN", "MERGEABLE"), ("OPEN", "UNKNOWN"), ("OPEN", "MERGEABLE"),
+                     ("OPEN", "CONFLICTING"), ("MERGED", "CONFLICTING")])
+    changes = [line for line in lines[1:] if line.startswith("mergeable")]
+    if len(changes) != 1 or "CONFLICTING" not in changes[0]:
+        problems.append(f"watch: a branch that went conflicting reported {changes!r}")
+    if "mergeable=MERGEABLE" not in lines[0]:
+        problems.append(f"watch: the heading was {lines[0]!r}, and a watch that never says "
+                        "what it started on cannot report a change from it")
+
+    # And one already conflicting when the watch starts is in the heading:
+    # there is no change to report on a state that was true before the first
+    # poll, which is the shape solorepo's #192 arrived in.
+    lines = watched([("OPEN", "CONFLICTING"), ("MERGED", "CONFLICTING")])
+    if "mergeable=CONFLICTING" not in lines[0]:
+        problems.append(f"watch: a watch begun on a conflicting branch headed itself {lines[0]!r}")
+
+    # And one begun while GitHub is still computing has no state in its
+    # heading, so the first answer is the first thing said about the branch.
+    # This is the ordinary case, not a corner: a request follows a push and a
+    # push sets `mergeable` computing, which is why the verb waits rather than
+    # reads. A branch that opened conflicting lands exactly here.
+    lines = watched([("OPEN", "UNKNOWN"), ("OPEN", "CONFLICTING"), ("MERGED", "CONFLICTING")])
+    changes = [line for line in lines[1:] if line.startswith("mergeable")]
+    if len(changes) != 1 or "CONFLICTING" not in changes[0]:
+        problems.append(f"watch: a watch headed `UNKNOWN` reported {changes!r}, and the answer "
+                        "that followed is the only one it could have said")
     return problems
 
 

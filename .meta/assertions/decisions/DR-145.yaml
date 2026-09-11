@@ -1,0 +1,113 @@
+decisions:
+  - id: work:decision/145
+    name: "DR-145 · The verb refuses the handoff a conflicting branch cannot carry, and the watch says when a branch becomes one"
+    challenge: work:challenge/195
+    status: ADOPTED
+    applies:
+      - work:article/18
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-check-pr
+    alternatives:
+      - name: Leave it to DR-133's dispatch, which already rebases a conflicting branch under a standing request
+        chosen: false
+        reason: >-
+          That dispatch fires on the merge to `main` that made the branch
+          conflict, and so covers one order of two: the request outstanding
+          when the merge lands. #192 arrived in the other order — the merge
+          landed first and the branch was cut from a checkout that had not
+          fetched, so the pull request opened conflicting and the request was
+          made three minutes later, with no push to trunk left to dispatch
+          anything. A remedy that fires on the merge cannot cover a request
+          that follows it, and the request is the act being made here.
+      - name: Have `request-review` rebase the branch rather than refuse
+        chosen: false
+        reason: >-
+          GitHub refuses to update a branch it reports as `CONFLICTING`
+          (DR-133), and what a conflict needs is the change made again over
+          what landed, which is authoring and not a verb. A verb that could not
+          do the thing would have to dispatch a Job to do it, which is the
+          rejected alternative above wearing the verb's clothes, and it would
+          do so from a session that is holding the checkout and could rebase
+          in one command.
+      - name: Give `review.yml` a trigger that fires on a conflicting head
+        chosen: false
+        reason: >-
+          A review of a head GitHub cannot merge is a review of a diff against
+          a base the change has not been made over, and the rebase is owed
+          whatever the verdict says — so the review would be spent, and spent
+          again after the rebase, on a reviewer's budget. What GitHub does not
+          build cannot be checked out; the answer to no merge ref is a head
+          that has one.
+      - name: Have `--watch` exit on `CONFLICTING`, as it exits on a failed check
+        chosen: false
+        reason: >-
+          An exit is a wake, and a woken session rebases (DR-138). Under a
+          standing request that is the state DR-133 already dispatches the
+          coder's rebase pass for, so the wake would put two Actors on one
+          branch — the session holding the checkout and the dispatched run —
+          with no concurrency group between them, since `coder.yml` groups
+          only its own runs. What the watching session lacked was not an
+          instruction but the reason for the silence, and a line carries that.
+      - name: The verb refuses, naming the rebase, and the watch reports the branch's mergeable state
+        chosen: true
+        reason: >-
+          The two ways into the state are the two readings. A request made on a
+          branch that already conflicts is refused where it is typed, in the
+          words the hand-back step already uses, so a session learns it at the
+          moment it would otherwise have handed off to nobody; and a branch
+          that goes conflicting under a request already made is a change on the
+          pull request that produces no thread, no review and no check, so the
+          watch is where it has to be said. What it costs: the verb makes one
+          more read of GitHub and may wait up to half a minute on it, because a
+          request follows a push and a push is what sets `mergeable` computing.
+    consequences:
+      - >-
+        `.meta/say/move request-review` reads `mergeable` through the same
+        `mergeability` wait `advance` uses and exits on `CONFLICTING`, naming
+        the head, the pull request's own base and the rebase that lifts it. The
+        base and not `main`: a layer is based on the layer below, and rebasing
+        it onto trunk drops that layer's commits off the head. Only
+        `CONFLICTING` is read — `UNKNOWN` is GitHub still computing, and
+        refusing on that would refuse a handoff on timing.
+      - >-
+        `.meta/say/verbs.yaml` says so in the verb's line, so every Role's
+        reading of PR First is rendered with the refusal in it. The channel's
+        refusals are what a session reads instead of a manual (DR-116).
+      - >-
+        `coder.yml`'s hand-back step keeps its own read of `mergeable`. It is
+        answering a different question — whether to request review or to
+        `stop`, which is what a run that died owes the Issue — and a refusal
+        from the verb there would fail the step rather than hand the Challenge
+        to the solo.
+      - >-
+        `check_pr.py --watch` carries `mergeable` in its heading and prints a
+        line when it changes, `UNKNOWN` excepted. A watch begun while GitHub is
+        computing heads itself `UNKNOWN` and prints the first answer that
+        follows, since the heading said no state for that answer to be a change
+        from — and that is the ordinary case, a request following the push that
+        set the value computing. It is not counted as actionable, so the watch
+        does not exit on it.
+      - >-
+        A portfolio inherits all of it: `.meta/say/`, `check_pr.py` and the
+        verb table are in the set Specialization's second step copies.
+    falsifier: >-
+      A handoff refused on a branch a review could in fact have run on — which
+      would mean the read is answering about timing rather than about the
+      branch — or a review request that stands unanswered on a conflicting
+      branch with the session that made it watching.
+    rationale: |-
+      The handoff here is a semaphore: GitHub holds the review request and
+      reports it, and the arriving Job finds its work by asking what has been
+      requested of its login. A semaphore raised over a branch GitHub builds no
+      merge ref for is raised where nothing can see it, and — this is the whole
+      of the defect — it is reported, by GitHub and by every reader of the pull
+      request, exactly as one that is about to be answered.
+
+      DR-129 read that state and refused the handoff on it, but in the
+      workflow's hand-back step, which is one of the two places a request is
+      made and the rarer one. DR-133 read it again on the push to trunk and
+      dispatched a rebase. What neither reads is the verb itself, which is the
+      act, and so the state the verb was written to avoid was reachable by
+      typing the verb.

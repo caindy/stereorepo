@@ -239,7 +239,7 @@ only its own (solorepo's DR-117).
 - `.meta/say/move revise <n> [--title T] [< body.md]` — replace a pull request's or an Issue's body, or its title *(coder)*
 - `.meta/say/move merge <pr> [--stack|--auto]` — merge; a layer merges everything below it; --auto arms GitHub to merge when green *(coder, reviewer)*
 - `.meta/say/move advance [<pr>]` — rebase every armed pull request that has fallen behind its base back onto it, and dispatch the coder for every one whose review request this merge left unanswerable *(workflow)*
-- `.meta/say/move request-review <pr> [--to R]` — hand off: request review from Role R's account, the reviewer's by default *(coder)*
+- `.meta/say/move request-review <pr> [--to R]` — hand off: request review from Role R's account, the reviewer's by default; refused on a branch GitHub reports as conflicting, which no review can run on *(coder)*
 - `.meta/say/move milestone <issue> --set T|--clear` — put an Issue in a Milestone, creating it if new *(solo)*
 - `.meta/say/move mint` — issue the next Decision number and reserve it on GitHub, so two branches cannot take the same one *(coder)*
 

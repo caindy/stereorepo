@@ -35,7 +35,7 @@ The verbs are the steps, and each refuses its own misuse. Yours, as the coder:
 - `.meta/say/move layer <pr> --on <pr>` — make an open pull request a layer on another
 - `.meta/say/move revise <n> [--title T] [< body.md]` — replace a pull request's or an Issue's body, or its title
 - `.meta/say/move merge <pr> [--stack|--auto]` — merge; a layer merges everything below it; --auto arms GitHub to merge when green
-- `.meta/say/move request-review <pr> [--to R]` — hand off: request review from Role R's account, the reviewer's by default
+- `.meta/say/move request-review <pr> [--to R]` — hand off: request review from Role R's account, the reviewer's by default; refused on a branch GitHub reports as conflicting, which no review can run on
 - `.meta/say/move mint` — issue the next Decision number and reserve it on GitHub, so two branches cannot take the same one
 - `.meta/say/commit -m <subject> [< body]` — commit as this Actor; never `git commit`, which signs nothing
 - `.meta/say/whoami` — which login this channel speaks as

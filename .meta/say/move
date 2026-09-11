@@ -800,8 +800,36 @@ def request_review(pr, to):
     a reviewer it already lists, so a Job whose run answered nothing left the
     request standing and a second ask went nowhere (solorepo's #87). Withdrawing and
     asking again is the same semaphore raised twice, and the event fires.
+
+    **Refused on a branch GitHub reports as `CONFLICTING`** (solorepo's DR-145).
+    The semaphore is raised and nothing can answer it: GitHub builds
+    no merge ref for a branch that conflicts, `review.yml` runs on
+    `pull_request`, and so the request creates no run while GitHub goes on
+    reporting it as outstanding — which reads, from the pull request and from
+    a watch alike, exactly like a review in progress. `coder.yml`'s hand-back step reads `mergeable` for this reason
+    already (solorepo's DR-129) and the verb a session types did not, so
+    solorepo's #192 was opened conflicting, requested three minutes later, and
+    answered by nobody until the solo looked. The remedy is the one the
+    hand-back step names: the branch rebased onto its own base, which is not
+    always `main`, and pushed — a `synchronize` on a head that merges is what
+    starts the review.
+
+    Only `CONFLICTING`, for the reason the hand-back step gives: `UNKNOWN` is
+    GitHub still computing, and refusing on that would refuse on timing. Which
+    is what the wait is for, and it is a wait: a push is what invalidates the
+    cached answer and a request follows a push, so the read this verb makes is
+    the one GitHub's reference says to poll. Bounded at half a minute by
+    `mergeability`, and it is the branch being asked about rather than the
+    checks, which a handoff does not wait for (solorepo's #102).
     """
     login = channel.role_login(to)
+    pull = channel.gh("pr", "view", pr, "--json", ADVANCE)
+    if mergeability(pull) == "CONFLICTING":
+        sys.exit(f"say: #{pr}'s branch {pull['headRefName']} conflicts with its base, "
+                 f"{pull['baseRefName']}. GitHub builds no merge ref for one that does, "
+                 "review.yml runs on pull_request, and so a review requested on it would "
+                 f"create no run and be answered by nobody. Rebase {pull['headRefName']} "
+                 f"onto {pull['baseRefName']}, push, and the request can be made")
 
     def asked():
         return [r.get("login") for r in channel.gh("pr", "view", pr, "--json", "reviewRequests")["reviewRequests"]]
