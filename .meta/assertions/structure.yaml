@@ -154,9 +154,6 @@ artifacts:
   - id: work:artifact/meta-assertions-vocabulary
     name: .meta/assertions/vocabulary.yaml
     path: .meta/assertions/vocabulary.yaml
-  - id: work:artifact/meta-charter
-    name: .meta/charter.md
-    path: .meta/charter.md
   - id: work:artifact/meta-check
     name: .meta/check.py
     path: .meta/check.py
@@ -202,9 +199,6 @@ artifacts:
   - id: work:artifact/meta-ddd-skos
     name: .meta/ddd/skos.yaml
     path: .meta/ddd/skos.yaml
-  - id: work:artifact/meta-disciplines
-    name: .meta/disciplines.md
-    path: .meta/disciplines.md
   - id: work:artifact/meta-hooks-signed-channel
     name: .meta/hooks/signed_channel.py
     path: .meta/hooks/signed_channel.py
@@ -250,9 +244,6 @@ artifacts:
   - id: work:artifact/meta-templates-roadmap
     name: .meta/templates/roadmap.md
     path: .meta/templates/roadmap.md
-  - id: work:artifact/meta-vocabulary
-    name: .meta/vocabulary.md
-    path: .meta/vocabulary.md
   - id: work:artifact/meta-work-actors
     name: .meta/work/actors.yaml
     path: .meta/work/actors.yaml
@@ -289,6 +280,18 @@ artifacts:
   - id: work:artifact/specialize
     name: SPECIALIZE.md
     path: SPECIALIZE.md
+    preamble: |
+      # Specialize this scaffold into a portfolio
+
+      You are looking at **solorepo**, a scaffold for building software products as a
+      team of one in the agentic AI era. Specializing it produces a **Portfolio**:
+      one repo, one Bounded Context, one Ubiquitous Language, holding however many
+      Products and Projects.
+    postamble: |
+      ## Then
+
+      Read [`.meta/README.md`](.meta/README.md). Its load map routes to everything
+      else, and is deliberately insufficient on its own.
   - id: work:artifact/stakeholders-readme
     name: stakeholders/README.md
     path: stakeholders/README.md

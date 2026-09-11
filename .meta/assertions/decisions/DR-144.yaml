@@ -1,0 +1,175 @@
+decisions:
+  - id: work:decision/144
+    name: "DR-144 · A generated page's framing prose is an assertion on the Artifact it is written to, so the generator writes pages and never authors them"
+    challenge: work:challenge/202
+    status: ADOPTED
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-render
+      - work:artifact/meta-check
+      - work:artifact/meta-work-structure
+    context: >-
+      `render.py` exists because prose about the assertions drifts from them:
+      DR-026 made the assertions the source and the satellites derive. It was
+      itself holding around a hundred lines of authored prose in string
+      literals — the Charter's preamble, the decision record's intro, the
+      Disciplines' and Vocabulary's framing, `SPECIALIZE.md`'s opening and its
+      closing pointer, the decision form's caveat, and both skills' front-matter
+      descriptions. That prose is consumed by nothing and checked against
+      nothing, which is A8's question answered badly by the one tool built to
+      answer it well. Editing it means editing the generator, so a change to
+      what a page says arrives in a diff about how pages are written. #11 names
+      this first of the three kinds of place the renderer does not read,
+      because it is the one where the tool against drift is the thing
+      introducing it.
+
+      The constraint that decides where the prose goes is Specialization's.
+      `render.py` is inherited; `assertions/structure.yaml` is not — its first
+      line says the file is the portfolio's and never synced, and step three
+      replaces it with `template/`'s, which declares one Artifact. Prose put
+      there is prose a portfolio's inherited renderer asks for and nothing
+      asserts.
+    alternatives:
+      - name: Leave it. The prose has one copy already, in the generator
+        chosen: false
+        reason: >-
+          One copy is not the test; A8's is. The prose sits where no reader of
+          the page looks, in a file whose readers are there for the rendering
+          and not for the words, and nothing holds it against the assertions it
+          frames. The drift it invites is the drift between what a page claims
+          about the record and what the record is — which is exactly the pair
+          the generator was built to keep together, and the pair it holds apart
+          for itself.
+      - name: A directory of Markdown partials the renderer inlines by filename
+        chosen: false
+        reason: >-
+          It moves the prose out of Python and stops there. The partial has no
+          relationship to anything: nothing says which page it opens except the
+          filename, nothing resolves it as a reference, and the gate that walks
+          the assertions never sees it. It would be a second inventory of
+          repository files, which the Artifact class already refuses to be.
+      - name: The portfolio's own `assertions/structure.yaml` carries it, and `template/` carries a portfolio's copies
+        chosen: false
+        reason: >-
+          It makes every portfolio re-author the Charter's preamble, the
+          vocabulary's, the decision record's and the decision form's — pages
+          rendered from inherited assertions by an inherited renderer, whose
+          framing says nothing about the portfolio. That is a different
+          decision from this one: it would say a portfolio owns the scaffold's
+          framing prose, which nothing else about those pages says.
+      - name: The Artifact the page is written to carries the prose, asserted where Specialization copies it
+        chosen: true
+        reason: >-
+          Every render target is a path, and every such path is already an
+          `Artifact` — `path` says where the file is, and `preamble` now says
+          what it opens with. So the key was there and nothing had to be minted
+          to hold the text; `check.py` walks it as it walks everything else in
+          `assertions/`, and `enacted_in` already points at these files, so the
+          prose and the decisions that account for it sit one slot apart. A
+          skill's front-matter `description` needs no slot at all: it describes
+          the artifact, and `WorkEntity` has held `description` all along. What
+          it costs: four files join the Artifact inventory because their prose
+          has to live somewhere, which stretches "an Artifact exists here
+          because something asserts a relationship to it" to include the
+          relationship of being written by a generator.
+    consequences:
+      - >-
+        `Artifact` gains `preamble` and `postamble`, both optional Markdown.
+        `postamble` exists because `SPECIALIZE.md` ends in a pointer to the
+        load map rather than in its last rendered row; two slots rather than a
+        placeholder inside one, so that neither block has to know where the
+        generated part goes.
+      - >-
+        `render.py` gains `authored(target, slot)` and loses six string-literal
+        blocks. It writes pages and authors none of them. Every generated file
+        is byte-identical afterwards except `pr-first/SKILL.md`, whose
+        description re-wraps by one word.
+      - >-
+        `assertions/imported/structure.yaml` holds the seven Artifacts whose
+        pages a portfolio renders — the Charter, the vocabulary, the
+        Disciplines, the decision record, the decision form and both skills.
+        Specialization copies `assertions/imported/` whole, so no step changes.
+        `SPECIALIZE.md`'s preamble and postamble stay in the portfolio's own
+        file, where a portfolio will not find them and does not need to.
+      - >-
+        `.meta/decisions.md`, `.meta/templates/decision.md` and both skills
+        join the Artifact inventory. They were generated all along and named by
+        nothing.
+      - >-
+        `check.py` gains `inherited prose`, which holds the rule the renderer
+        cannot: an Artifact asserting prose for a path a portfolio has, in the
+        file Specialization replaces, is named before a portfolio renders. The
+        scaffold's own copy would otherwise stay green over a portfolio that
+        cannot render at all. The set it holds is what a render asked for —
+        `authored()` fills `render.ASKED` as it is called — and not the slots
+        by name: `description` is `WorkEntity`'s, carried by most of what
+        `assertions/` declares as documentation, and a step reading it by name
+        fails an Artifact for prose nothing wants. Nor a list typed beside the
+        call sites, which would be the second copy this entry exists to remove.
+      - >-
+        `check.py` calls `render.rendered()` inside a `try`. A render that
+        cannot find what it was told to write says which page and which slot,
+        and the step that reads its set says it did not run, rather than the
+        gate ending in a traceback (A6, A7).
+      - >-
+        `assertions/imported/README.md` says structure is in both places and
+        what each holds. Its first paragraph named structure among the
+        portfolio's own, which was unambiguous while there was one such file;
+        `vocabulary.yaml` is split the same way and survives because the
+        portfolio's own has a second name, `domain_vocabulary.yaml`, which
+        `structure.yaml` has not.
+      - >-
+        `authored()` raises naming the page and the slot rather than returning
+        `None` into a `"\\n".join(...)`, where it arrived as
+        `sequence item 1: expected str` several frames from its cause — the
+        shape A7 says a step does not print.
+      - >-
+        Prose woven through generated content is untouched and is the rest of
+        the job: the decision form's placeholders, and the fixed paragraphs in
+        `skill()`. Neither is a preamble, and neither has a home yet.
+      - >-
+        The `justfile`'s header comment stays in `render.py`. It is a program's
+        comment rather than prose about the assertions, and the file is
+        authored-with-one-hole rather than rendered-with-a-preamble.
+    falsifier: >-
+      A portfolio that renders every page and still carries framing prose it
+      had to write itself would say the split between `imported/` and the
+      portfolio's own inventory was drawn in the wrong place. A page whose
+      preamble and whose rendered body disagree after this lands
+      would show that the move bought nothing: the prose would have travelled
+      without becoming answerable to anything. And a preamble slot filling up
+      with text that a reader of `assertions/structure.yaml` has to skip past
+      to find the inventory would say the inventory is the wrong home, and that
+      the prose wants a class of its own.
+    rationale: |-
+      The generator is the one artifact in the repository whose whole purpose
+      is that a statement has one home, and it was keeping a hundred lines
+      whose home was itself. That is not a small inconsistency: it is the
+      mechanism's own exception, and an exception at the mechanism is what
+      teaches a reader the rule is optional.
+
+      The choice was between moving the prose somewhere and modelling where it
+      belongs. A partials directory would have moved it; the Artifact carries
+      it. The difference is that `path` and `preamble` on one entry say the
+      same kind of thing about the same file — where it is, and what it opens
+      with — and both are read by the gate that reads everything else. #11's
+      own finding is that the duplicated things were never modelled, and the
+      fix is more ABox rather than less; this is the smallest instance of that
+      claim that could be tested, and it holds.
+
+      Where the first attempt at it did not hold was Specialization. Putting
+      the entries in `assertions/structure.yaml` read as obvious — that is
+      where the inventory is — and that file is the one the procedure replaces.
+      The scaffold's gate could not see it, because the scaffold's copy had the
+      entries; only a portfolio would have found it, on its first render, as a
+      `TypeError` several frames from its cause. The two answers are the split
+      inventory and the `inherited prose` step, and the second is the one that
+      makes the first checkable rather than remembered.
+
+      What it does not reach is the prose that is woven rather than placed. The
+      decision form asks for eight sections and its placeholders are authored
+      beside guidance read from the model; `skill()` writes fixed paragraphs
+      between a Discipline's steps and its Articles. Both are real instances of
+      the same defect and neither is a preamble. They are named here so that
+      the next pass has a subject, and left alone so that this one has a shape.

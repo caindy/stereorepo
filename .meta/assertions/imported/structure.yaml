@@ -1,0 +1,92 @@
+# The Artifacts that every portfolio renders, and the prose their pages open
+# with. Inherited rather than the portfolio's own, because the pages are: the
+# Charter, the vocabulary, the decision record, the decision form and both
+# skills are written from `assertions/imported/` by a renderer a portfolio also
+# inherits (solorepo's DR-144).
+#
+# `assertions/structure.yaml` is the portfolio's own and is never synced, so a
+# preamble left there would leave every portfolio's renderer asking for prose
+# nothing asserts. An Artifact here is the scaffold's statement about a file
+# every portfolio has; one there is the portfolio's about its own.
+
+artifacts:
+  - id: work:artifact/meta-charter
+    name: .meta/charter.md
+    path: .meta/charter.md
+    preamble: |
+      ## The Charter
+
+      _A working agreement. One-line claims that can be held against an artifact_
+      _and found false._
+
+      Numbered as **stable identifiers**, cited as A1, A2 and so on. A retired
+      Article leaves a **hole** and is never
+      renumbered — a citation that silently comes to mean something else is worse than
+      a dangling one.
+
+      Where a Discipline is *followed*, an Article is *checked*. Some enforce a
+      Discipline; some stand alone, and need nothing behind them.
+  - id: work:artifact/meta-decisions
+    name: .meta/decisions.md
+    path: .meta/decisions.md
+    preamble: |
+      ## Decision record
+
+      _Every decision taken, with why. Newest last._
+
+      Add an entry when the question is settled, not when the answer is built —
+      `status` says how far it has got. A number is a
+      **stable identifier** and is never reused: an entry that turned out to record a
+      narrative rather than a foreclosure is withdrawn, and its number stays a hole
+      at the foot of this page.
+
+      **This page routes and does not restate.** An entry *is* its assertion file,
+      named for its number, so a conversation reaches one as
+      `@.meta/assertions/decisions/DR-001.yaml`. The line here says an entry exists
+      and what question it answered; only the entry is sufficient to apply it.
+  - id: work:artifact/meta-disciplines
+    name: .meta/disciplines.md
+    path: .meta/disciplines.md
+    preamble: |
+      ## Disciplines
+
+      _Structured ways of working that must be adhered to._
+  - id: work:artifact/meta-templates-decision
+    name: .meta/templates/decision.md
+    path: .meta/templates/decision.md
+    preamble: |
+      # DR-<nnn> · <one-line title, present tense>
+
+      **Not authoritative.** The Charter and the Disciplines hold the rules and win
+      any disagreement. This records why something is built the way it is, at the
+      level whose readers share the matter: the Portfolio's, a Product's or a
+      Project's. One class and one record, `.meta/assertions/decisions/`, whatever
+      the level — the entry names its Product or Project, or neither.
+  - id: work:artifact/meta-vocabulary
+    name: .meta/vocabulary.md
+    path: .meta/vocabulary.md
+    preamble: |
+      ## Vocabulary
+
+      _The words this repo uses, and what they mean._
+
+      A Concept is a unit of meaning, not a word — which is why two entries
+      below share a label. Use the preferred label; do not mint a term without
+      the solo. Check DDD first, then this vocabulary, then ask.
+  - id: work:artifact/skill-pr-first
+    name: .claude/skills/pr-first/SKILL.md
+    path: .claude/skills/pr-first/SKILL.md
+    description: >-
+      Open, argue in and close a pull request the way this repository requires,
+      as the coder Role: the verbs the coder holds, and where the judgement is.
+      Use when starting any change, when a review or comment lands on one, and
+      when picking work up again — an open pull request this branch owns with an
+      unanswered thread is work in progress, whoever noticed it.
+  - id: work:artifact/skill-pr-first-reviewer
+    name: .claude/skills/pr-first-reviewer/SKILL.md
+    path: .claude/skills/pr-first-reviewer/SKILL.md
+    description: >-
+      Review a pull request the way this repository requires, as the reviewer
+      Role: the verbs the reviewer holds, what a pull request here must hold,
+      and what a reviewer's point owes. Use when a review has been requested of
+      the reviewer's account.

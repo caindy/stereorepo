@@ -1,8 +1,8 @@
 ---
 name: pr-first
 description: >-
-  Open, argue in and close a pull request the way this repository requires,
-  as the coder Role: the verbs the coder holds, and where the judgement is. Use
+  Open, argue in and close a pull request the way this repository requires, as
+  the coder Role: the verbs the coder holds, and where the judgement is. Use
   when starting any change, when a review or comment lands on one, and when
   picking work up again — an open pull request this branch owns with an
   unanswered thread is work in progress, whoever noticed it.

@@ -70,6 +70,21 @@ slots:
       so nothing has to parse an id to reach a file.
     required: true
 
+  preamble:
+    description: >-
+      The authored prose that opens a generated Artifact: what the page is, and
+      what a reader is to do with it. Held here because the renderer that writes
+      the page must not also author it — a generator with prose of its own is a
+      second author, which is the single-copy rule broken by the machinery built
+      to keep it (solorepo's DR-144). Markdown, and only where a generator asks for it.
+
+  postamble:
+    description: >-
+      The authored prose that closes a generated Artifact, where the page ends
+      in something addressed to the reader rather than in the last rendered row.
+      A slot of its own rather than a placeholder inside `preamble`, so that
+      neither block has to know where the generated part goes.
+
   language:
     description: The language a Project is written in. Portfolios are polyglot; Projects are not.
 
@@ -128,6 +143,8 @@ classes:
       a list of its own files, which is what `ls` is for.
     slots:
       - path
+      - preamble
+      - postamble
     slot_usage:
       name:
         required: true

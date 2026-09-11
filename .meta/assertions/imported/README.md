@@ -4,8 +4,16 @@ What a portfolio inherits from solorepo, and what `sync` pulls forward.
 
 **Do not edit these in a portfolio.** A change here is lost on the next sync, and
 solorepo has no authority over anything outside this directory. The portfolio's
-own assertions — its Personas, its structure, its domain vocabulary — live one
-level up and are never touched by a sync.
+own assertions — its Personas, its Portfolio, Products and Projects, its domain
+vocabulary — live one level up and are never touched by a sync.
+
+**`structure.yaml` is in both places, and the two say different things.** One
+level up is the portfolio's own: its Portfolio, its Products, its Projects, and
+the Artifacts it is answerable for. The copy here holds the Artifacts of files
+every portfolio has and a generator writes — the prose their pages open with,
+which is the scaffold's statement rather than a portfolio's. An Artifact here is
+the scaffold's about a file every portfolio has; one there is the portfolio's
+about its own. The gate names the mistake either way round.
 
 
 **A DR cited here as solorepo's is an entry of solorepo's record**, which stays

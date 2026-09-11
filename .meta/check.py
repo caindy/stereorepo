@@ -2257,6 +2257,42 @@ def inherited():
     return []
 
 
+def inherited_prose(asked):
+    """Prose a generator reads is asserted where Specialization copies it.
+
+    `Artifact.preamble` moved the framing prose of the generated pages out of
+    `render.py` (solorepo's DR-144). `assertions/structure.yaml` is the wrong
+    home for it: its own first line says the file is the portfolio's and never
+    synced, and step three of Specialization replaces it with `template/`'s,
+    which declares one Artifact. The renderer is inherited and would then ask
+    every portfolio for prose nothing asserts — a portfolio red on its first
+    render, found by nothing here, because the scaffold's own copy has the
+    entries.
+
+    `asked` is what a render actually asked for, collected by `authored()` as
+    it ran. Not the slots by name: a slot named here that no generator reads
+    would fail an Artifact for prose nothing wants, and `description` is
+    `WorkEntity`'s, carried by most of what `assertions/` declares as plain
+    documentation. Not a list typed beside the call sites either, which would
+    be the second copy this change exists to remove.
+
+    `SPECIALIZE.md` is the exception the copy set already names: a portfolio
+    specializes nothing and renders no such page, so its prose is the
+    scaffold's own and stays one level up.
+    """
+    def declared(rel):
+        path = META / "assertions" / rel
+        data = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
+        return {a["path"]: a for a in data.get("artifacts") or []}
+
+    own = declared("structure.yaml")
+    return [f"{own[rel]['id']} asserts the {slot} render.py reads for {rel}, which a "
+            f"portfolio renders, in the file Specialization replaces — move it to "
+            f"assertions/imported/structure.yaml"
+            for rel, slot in sorted(asked)
+            if own.get(rel, {}).get(slot) and not rel.startswith(SCAFFOLD_ONLY)]
+
+
 def scaffold_only_paths():
     """A doc that Specialization copies does not name a path a portfolio lacks (solorepo's #45).
 
@@ -2458,7 +2494,7 @@ if __name__ == "__main__":
         # rather than printing a stack trace (A7). What did not run is named,
         # because a gate that stops early looks like one that passed.
         print(f"?  schemas: could not load — {type(exc).__name__}: {exc}")
-        print(f"     {len(CHECKS) + 2} steps did not run")
+        print(f"     {len(CHECKS) + 3} steps did not run")
         sys.exit(1)
     for name in skipped:
         print(f"?  {name}: no container accepts its top-level keys")
@@ -2468,7 +2504,16 @@ if __name__ == "__main__":
 
     sys.path.insert(0, str(META))
     import render
-    pages = render.rendered()
+    try:
+        pages = render.rendered()
+    except Exception as exc:
+        # The guard every other step has, and for the reason A6 and A7 give: a
+        # render that cannot find what it was told to write says which page and
+        # which slot, and the two steps that read it say they did not run.
+        print(f"?  rendered prose: could not render — {type(exc).__name__}: {exc}")
+        print("?  inherited prose: did not run")
+        sys.exit(1)
+    failed |= report("inherited prose", inherited_prose(render.ASKED))
     stale = render.unrendered()
     stale += [name for name, text in pages.items()
               if not (META / name).exists()

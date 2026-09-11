@@ -1,0 +1,15 @@
+challenges:
+  - id: work:challenge/202
+    name: "render.py authors prose in string literals, and nothing reads it"
+    challenge_type: FEATURE
+    parent_challenge: work:challenge/11
+    description: >-
+      `render.py` exists because prose about the assertions drifts from them,
+      and it was itself holding about a hundred lines of authored prose in
+      string literals — the Charter's preamble, the decision record's intro,
+      the Disciplines' and Vocabulary's framing, `SPECIALIZE.md`'s opening and
+      closing, the decision form's caveat, and both skills' front-matter
+      descriptions. Nothing consumes that prose and nothing checks it, which is
+      A8's question answered badly by the one tool built to answer it well. The
+      first of the three kinds of place #11 names, because it is the one where
+      the tool against drift is the thing introducing it.
