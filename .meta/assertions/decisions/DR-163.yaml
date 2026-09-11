@@ -1,0 +1,81 @@
+decisions:
+  - id: work:decision/163
+    name: "DR-163 · The pre-review reading pass binds to the hand-off, not to the difficulty"
+    challenge: work:challenge/256
+    status: ADOPTED
+    applies:
+      - work:article/4
+      - work:article/20
+    enacted_in:
+      - work:artifact/github-workflows-coder
+    context: >-
+      The paragraph that buys a reader who did not write the diff was written
+      as "Before you request the review". Requesting a review was `medium`'s
+      hand-off and not `easy`'s, which armed the merge instead, so the pass ran
+      on one level of the two and an `easy` diff reached `main` with no reader
+      between the last commit and the merge. DR-161 has since ended that
+      arming, and the prompt now has both levels hand off by requesting review,
+      so the sentence as written fires on both — which leaves the question of
+      what the pass is bound to answered by a coincidence of two verbs rather
+      than by anything stated.
+    alternatives:
+      - name: Leave it, since both levels request review now
+        chosen: false
+        reason: >-
+          The coverage would hold only while the two levels' last verb agrees,
+          and nothing states or checks that it does. It took a review on #223
+          and an Issue open across three changes to notice the first divergence,
+          and the pass leaves no trace on GitHub to notice it by.
+      - name: A second paragraph for the easy path
+        chosen: false
+        reason: >-
+          One rule written twice, each copy naming a level's current verb. It
+          answers the divergence that happened rather than the shape that
+          produced it, and the next level or the next verb starts the same
+          argument.
+      - name: Make the pass a step of the workflow rather than a sentence of the prompt
+        chosen: false
+        reason: >-
+          A step could not do what the pass is for. Its product is a report the
+          coder reads and acts on inside the same run, before the hand-off; a
+          separate job has no way to hand anything to a finished run and could
+          only post, which is the one thing the pass is defined not to do. Nor
+          is there a fact to check afterwards: DR-122 could count verdicts
+          because a verdict is a fact GitHub holds, and this pass by design
+          leaves GitHub nothing.
+      - name: Name the hand-off rather than the verb that performs it
+        chosen: true
+        reason: >-
+          What the pass is for is a reader between the last commit and the next
+          Job's first read, and what ends that gap is the hand-off, whichever
+          verb a level uses to make it. Bound to the act, the paragraph covers
+          every difficulty the loop takes and keeps covering one whose last verb
+          changes.
+    consequences:
+      - >-
+        The `take the Issue` prompt in `.github/workflows/coder.yml` opens the
+        paragraph "Before you hand the branch over as finished — whatever the
+        last verb of that hand-off is at this level", and the comment above the
+        prompt says the binding is to the hand-off, with what the level-named
+        version cost.
+      - >-
+        The pass still binds this step's hand-off and nothing else. The rebase
+        and answering passes are the separate question that comment already
+        names; the hand-back step, which requests review for a run that died at
+        its budget, cannot have it, because no session survives there to spawn a
+        reader and the reviewer is the first reader by default — which is the
+        state the pass exists to improve on, not one it can reach.
+    falsifier: >-
+      A run that hands the branch over as finished with no pass having run,
+      which would mean a sentence naming the act is not read as covering the
+      verb, and the pass has to become something the workflow performs rather
+      than something the prompt asks for.
+    rationale: |-
+      A rule bound to the name of an act is safe only where the act is what the
+      rule is about. Here it is not: the rule is about there being a reader, and
+      the verb is whatever the level happens to end with.
+
+      The repository's other guard of this shape went the opposite way and could
+      afford to. DR-122 bound to a fact GitHub holds and put a check on it, so
+      its wording carries little. This pass leaves nothing countable behind, so
+      the wording is the whole of the guarantee.

@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/256
+    name: The pre-review reading pass fired on medium alone, because its trigger was named for the verb only medium used
+    challenge_type: DEFECT
+    description: >-
+      The paragraph that buys a reader who did not write the diff opened
+      "Before you request the review", and `easy` did not request a review: it
+      armed the merge, so the trigger never fired and an `easy` diff reached
+      `main` with no reader between the last commit and the merge. Noticed in
+      the review on #223, the change that added the paragraph. A guardrail that
+      covers one path of two is not evidence about the other.

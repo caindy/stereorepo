@@ -430,9 +430,15 @@ jobs:
           # handed a deep critique it would fail by misreading a thread and
           # writing something plausible and slightly wrong, which nothing
           # downstream catches. Same money, opposite risk (solorepo's #220).
-          # The paragraph binds the review request and nothing else: whether
+          # The paragraph binds this step's hand-off and nothing else: whether
           # the rebase and answering passes want the same reader is a separate
-          # question.
+          # question. The hand-off and not the difficulty, because a trigger
+          # named for one level's last verb is a guardrail on the other levels
+          # only by coincidence (solorepo's DR-163): written as "before you
+          # request the review" it fired on `medium` alone, since `easy` then
+          # armed the merge instead, and an `easy` diff reached `main` with no
+          # reader at all (solorepo's #256) until solorepo's DR-161 ended that
+          # arming: both levels hand off by requesting review below.
           prompt: |
             You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}
             of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
@@ -463,8 +469,9 @@ jobs:
             so answer its `x` by fixing the sentence, or by leaving it and
             saying why on the pull request (solorepo's DR-134).
 
-            Before you request the review, have the diff read by somebody who
-            did not write it: spawn one subagent with `Agent` on the smaller
+            Before you hand the branch over as finished — whatever the last
+            verb of that hand-off is at this level — have the diff read by
+            somebody who did not write it: spawn one subagent with `Agent` on the smaller
             model — `sonnet`, which is `${{ steps.depth.outputs.reader }}` — tell it to read this
             branch's diff against `origin/main` and report what it finds, and
             tell it nothing of why you chose what you chose. Run it in the
