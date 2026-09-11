@@ -127,14 +127,31 @@ jobs:
       # above the largest first review seen with room; a run that reaches it
       # is looping — bouncing off the hook, or holding for a subagent — and
       # is read as a red run rather than re-requested deeper.
+      #
+      # The agents by the same path, and unlike the turns they are wall clock
+      # rather than a guard: solorepo's DR-122 requires every agent a review
+      # spawns in the foreground, and what the timing measures is the sum of
+      # them. That is where an initial review's 11 to 15 minutes go
+      # (solorepo's #303), and most of it is a persona reading the same diff
+      # for a dimension the change does not have. The
+      # boundary path keeps three, which is a judgement and not a derivation:
+      # the minutes would afford three times it, and what recommends three is
+      # that breadth here is what found the holes in the hook
+      # (solorepo's #86, #87), while three at the three to four minutes an
+      # agent takes puts the pass under ten minutes rather than over fifteen.
+      # Everything else gets one: a
+      # decision record, a page, a script has one dimension, and a second
+      # agent on it reads the same diff for the same thing. The number is a
+      # ceiling on what the session spawns and not a quota to fill, so a
+      # one-dimension diff gets one agent on either path.
       - name: choose the depth
         id: depth
         run: |
           if gh pr view "$PR" --json files -q '.files[].path' \
              | grep -qE '^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)'; then
-            printf 'model=claude-opus-5\neffort=high\nturns=120\nminutes=45\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-opus-5\neffort=high\nturns=120\nminutes=45\nagents=3\n' >> "$GITHUB_OUTPUT"
           else
-            printf 'model=claude-sonnet-5\neffort=medium\nturns=120\nminutes=15\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-sonnet-5\neffort=medium\nturns=120\nminutes=15\nagents=1\n' >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
         env:
@@ -271,6 +288,14 @@ jobs:
           **Only the session the review was requested of posts.** An agent hands
           its findings back to the session that spawned it; it does not run
           `.meta/say/post`, and it resolves no thread.
+
+          **An agent reviews the dimension it was given and no other.** The
+          pass is scoped before it is spawned (solorepo's DR-166): the session
+          has read the diff itself and named the dimensions it holds, and each
+          agent has one of them. A sweep for everything, done by an agent asked
+          for one thing, is the same diff read again for what the session or
+          another agent already holds — and every agent here runs in the
+          foreground, so the run waits on it while it does.
           BODY
           cat .review/constraints.md
 
@@ -373,6 +398,20 @@ jobs:
             `.review/constraints.md` too, and hand it that line rather than
             the paragraphs: writing them out once per agent is what made the
             fourth agent start nearly a minute after the first (solorepo's #196).
+
+            Scope that pass before you spawn it (solorepo's DR-166). Every
+            agent runs in the foreground and the pass has been costing the sum
+            of its agents: that is where an initial review's 11 to 15 minutes
+            go (solorepo's #303). Name
+            the dimensions this diff actually has, from `.review/diff.patch`
+            which you have already read, and spawn no more than
+            ${{ steps.depth.outputs.agents }} of them, one to a dimension. A
+            dimension this diff does not touch is not reviewed by an agent
+            that finds nothing in it; one you can settle from the diff
+            yourself does not need an agent either; and no two agents get the
+            same dimension in different words. That number is a ceiling and
+            not a quota, so a diff with one dimension gets one agent whatever
+            the path, and a diff you have read whole gets none.
 
             Post only through the channel, so every word carries the Trailer.
             Every posting command begins with `.meta/say/post` and takes its
