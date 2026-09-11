@@ -28,9 +28,10 @@ reason the rule is written from bash's reference rather than from a character
 set is that the character set is the scanner again (solorepo's #197).
 
 A refusal names the nearest command the grammar takes, where the one refused
-has one: the head of a chain, or the same command without the option that is
-not carried. It is derived and then put back through the predicate rather than
-suggested, so the retry is one turn and not a guess (solorepo's #144).
+has one: the head of a chain, the same command without the option that is not
+carried, or the same words in the pair of quotes that is taken. It is derived
+and then put back through the predicate rather than suggested, so the retry is
+one turn and not a guess (solorepo's #144).
 
     echo '{"tool_name":"Grep","tool_input":{"path":"/home/x/.config"}}' | .meta/hooks/worktree_only.py
 
@@ -64,6 +65,20 @@ SHELL = set(';&|<>$`*?[]{}()~!#\\"\n')
 # otherwise commands the list already carries (solorepo's #197).
 QUOTES = {"'", '"'}
 EXPANDS = set("$`\\!")
+
+# The two of `EXPANDS` that stand for something else. What bash puts in their
+# place is the output of a command, so no spelling of the same characters in
+# single quotes asks the same question and a refusal on one has no nearest
+# command — where a refusal on the `\` or the `!` beside them has one, since
+# those are the characters themselves (solorepo's #242).
+SUBSTITUTES = set("$`")
+
+# What a `\` escapes inside a double quote, from the same passage of the
+# reference: bash drops the `\` and takes the next character literally, and
+# drops both when it is a newline. The derivation reads the escape the way bash
+# does rather than passing the `\` through, because `"a\$b"` is the word `a$b`
+# and `'a\$b'` is not it.
+ESCAPES = set('$`"\\\n')
 
 # The part of `SHELL` that ends one command and starts something else:
 # chaining, redirects and a newline. A derivation may cut there and lose only a
@@ -207,21 +222,49 @@ def outside(path):
     return None
 
 
-def words_of(text):
+def words_of(text, literal=False):
     """Split one simple command on whitespace, honouring both quotes.
 
     Returns the words, or a string saying which character the shell would act
     on. Nothing is expanded, because nothing that expands is admitted: a `'a.*'`
     or `"a.*"` pattern is a word, a bare `*` is a refusal, and a `$` inside a
     double quote is a refusal because that is where bash still expands.
+
+    `literal` is the derivation's reading and never the predicate's, which
+    passes it nowhere. Inside a double quote it finishes the word instead of
+    returning where the `\\` or the `!` is, so `plain_form` has a word to offer
+    back in the pair that is taken — thirteen of the fifty-four refusals on
+    solorepo's #117 were the pair rather than the pattern, and the ones
+    carrying a `\\` are the ones solorepo's #197 left with no command to type
+    (solorepo's #242). Outside an escaped quote it is the same split either way:
+    the same quotes open and close in the same places, and every character
+    refused outside a double quote is refused in both. What changes is only what
+    the word holds, and it holds what bash would have put there — the `\\` read
+    as the escape bash reads there, the `!` as itself. A `$` or a backtick stops
+    both readings, because `SUBSTITUTES` is not a character in the word but the
+    output of something.
     """
-    words, word, quote, seen = [], [], "", False
+    words, word, quote, seen, escaped = [], [], "", False, False
     for ch in text:
-        if quote:
+        if escaped:
+            # A `\` inside a double quote escapes one of `ESCAPES` and is
+            # dropped, taking a newline with it; before anything else it stands
+            # for itself, which is what `\s` and `\b` want of it.
+            escaped = False
+            if ch not in ESCAPES:
+                word.append("\\")
+            if ch != "\n":
+                word.append(ch)
+        elif quote:
             if ch == quote:
                 quote = ""
             elif quote == '"' and ch in EXPANDS:
-                return f"`{ch}`"
+                if not literal or ch in SUBSTITUTES:
+                    return f"`{ch}`"
+                if ch == "\\":
+                    escaped = True
+                else:
+                    word.append(ch)
             else:
                 word.append(ch)
         elif ch in QUOTES:
@@ -303,6 +346,17 @@ def unquoted(text):
     own kind closes: `git log --grep='a<<b'` is one plain command to bash and
     was two halves of a heredoc to a raw split (solorepo's #87), and `"a|b"` is
     a pattern rather than a pipe for the same reason (solorepo's #197).
+
+    The scan does not track escapes, so on `"a\\"b"` it closes at the escaped `"`
+    where `words_of(literal=True)` keeps the quote open to the final `"`.
+    `before_operator` and `partition_unquoted` reading a different quote from
+    the derivation's is safe in both directions. Where `unquoted` cuts inside
+    what bash calls a quote, `words_of(literal=True)` is left mid-quote and
+    returns "an unclosed quote"; where `unquoted` misses a cut bash would make,
+    the operator reaches `words_of` outside any quote and `SHELL` refuses it.
+    Either way `plain_form` returns `None` — a missed offer on that command form,
+    never a wrong one (`git grep -n "a\\"b" -- README.md` gets its offer and the
+    same command behind a pipe gets nothing).
     """
     quote = ""
     for i, ch in enumerate(text):
@@ -432,8 +486,18 @@ def plain_form(command):
     refused between 7 and 29 calls a run — a third of one review's turns —
     with the prompt already saying one plain command at a time. Most of them
     have a nearest command the hook would have taken, and it is derivable
-    rather than guessable: the head of a chain, and the same command without
-    the option the list does not carry.
+    rather than guessable: the head of a chain, the same command without
+    the option the list does not carry, and the same words in the pair of
+    quotes that is taken.
+
+    That last one is what `literal` asks `words_of` for. A double quote is a
+    quote here and four characters are not stopped by it; a `\\` is one of
+    them and is what most regexes are made of, so the refusal a reviewer meets
+    most often was the one with nothing at the end of it (solorepo's #242).
+    `requote` spells every word in single quotes, where bash stops all four, so
+    the offer is the command that was wanted with the pair swapped — which is
+    also why the derivation has to read the word the way bash reads it rather
+    than pass it through: `"a\\$b"` is the word `a$b`, and `'a\\$b'` is not it.
 
     Nothing here is offered on trust. Whatever this returns has been through
     `command_allowed`, so a refusal names a command this hook accepts or names
@@ -453,7 +517,7 @@ def plain_form(command):
     """
     if partition_unquoted(command, "<<")[1]:
         return None
-    words = words_of(before_operator(command))
+    words = words_of(before_operator(command), literal=True)
     if isinstance(words, str) or not words:
         return None
     if any("'" in word for word in words):

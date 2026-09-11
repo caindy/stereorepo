@@ -239,6 +239,28 @@ def hook_probes():
         # A word carrying a single quote has only `requote`'s single quotes to
         # be spelled with, so it has no offer rather than a mangled one.
         ('git grep -n "it\'s" -- README.md | wc -l', None),
+        # A refusal on a character a double quote does not stop is a refusal
+        # about the pair and not about the pattern, so the nearest command is
+        # the same words in the pair that is taken (solorepo's #242). The `\`
+        # is the one this happens on, because it is what a regex is made of:
+        # `\s`, `\b`, `\.`.
+        ('git grep -n -E "^\\s*def blocked" -- .meta',
+         "git grep -n -E '^\\s*def blocked' -- .meta"),
+        ('git grep -n -E "\\bdef\\b" HEAD -- .meta | head -20',
+         "git grep -n -E '\\bdef\\b' HEAD -- .meta"),
+        ('git log --grep="fix!" -1', "git log '--grep=fix!' -1"),
+        # What is offered is the word bash would have made, which is why the
+        # escape is read rather than passed through: `"a\$b"` is `a$b`, and the
+        # hook would take `'a\$b'` just as readily while asking for something
+        # else. The pair either way, since a quoted `"` is a character of the
+        # word and single quotes are where it needs no escape at all.
+        ('git grep -n "a\\$b" -- README.md', "git grep -n 'a$b' -- README.md"),
+        ('git grep -n "a\\"b" -- README.md', 'git grep -n \'a"b\' -- README.md'),
+        # And a `$` or a backtick that is not escaped has none: what bash puts
+        # there is the output of something, and no spelling of those same
+        # characters in single quotes asks for it.
+        ('git grep -n "$(id)" -- README.md', None),
+        ('git grep -n "`id`" -- README.md', None),
     ]
     for command, want in forms:
         got = worktree.plain_form(command)
