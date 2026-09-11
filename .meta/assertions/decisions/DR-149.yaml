@@ -90,10 +90,14 @@ decisions:
           alter — what landed under it is not its to undo and its own change is
           not to be dropped — and the gate reads the result before the push.
           Against that, a second review per conflict on an evening with several
-          open is the load DR-133 was already careful about, and the reviewer
-          arming again is the only outcome it can reasonably reach. The trace
-          is the comment the pass already posts, which says the head moved and
-          why.
+          open is this entry's reason and not DR-133's. What DR-133 bounds is
+          the coder run — "coder minutes only where there is a conflict to
+          resolve" — and where it does count a review it counts one cancelled
+          and restarted rather than one given twice: "every review would be
+          restarted by the next merge and none would finish". The reviewer
+          arming again is the only outcome a second request can reasonably
+          reach. The trace is the comment the pass already posts, which says
+          the head moved and why.
       - name: The push to trunk dispatches the coder for an armed conflicting pull request too
         chosen: true
         reason: >-
