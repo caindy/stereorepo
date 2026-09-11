@@ -248,11 +248,21 @@ jobs:
           says the same thing and costs a turn for each file.
 
           **The shell runs one plain command at a time and nothing else:**
-          `git log|show|diff|status|grep|ls-files` with plain options,
+          `git log|show|diff|status|grep|ls-files|ls-tree` with plain options,
           `gh pr view|diff|checks`, `python3 .meta/check_pr.py`, or
           `.meta/say/post` and `.meta/say/move` with their heredoc. No pipes,
-          redirects, `$`, backticks, globs or chaining; a pattern goes in single
-          quotes after `-e`. Read files with the Read tool and search with Grep.
+          redirects or chaining, and nothing the shell would expand: a `$`, a
+          backtick, a bare glob. Quoting is what stops it, either pair — a
+          pattern or a glob goes inside one, single quotes where it holds a
+          `$`, a backtick, a `\` or a `!`, the four a double quote does not
+          stop here. A regex usually holds the `\` — `\s`, `\b`, `\.` — so
+          `git grep -n -E '^\s*def blocked' -- .meta` is the pair that is taken
+          and the same words in a double quote are refused. List the
+          worktree's files with the Glob tool and a commit's with
+          `git ls-tree -r --name-only <sha>`, read them with the Read tool and
+          search with Grep. A refusal names the nearest command it would have
+          taken, where the one refused has one; that is the command to type
+          next, rather than a guess at another.
 
           **A Grep of `.review/` needs `path`.** Grep is ripgrep and ripgrep
           honours `.gitignore`, which holds `.review/`: a Grep from the root
@@ -411,7 +421,7 @@ jobs:
           claude_args: |
             --model ${{ steps.depth.outputs.model }}
             --max-turns ${{ steps.depth.outputs.turns }}
-            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*)"
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
       # A session that ended without a verdict has not reviewed, and the check

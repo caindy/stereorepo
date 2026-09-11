@@ -20,6 +20,13 @@ because bash has more syntax than the scanner — abbreviated options, `$(...)`,
 `;` glued to a word, `<(...)`, text after a heredoc opener, an option nobody had
 listed. A scanner for the bad cannot be sound; a grammar for the allowed can.
 
+What the grammar takes is what bash would not act on, rather than which
+characters were typed. A quote of either kind is a quote, and what is inside a
+double one is a word except for the four things bash still expands there; that
+is a fifth of the refusals a review spends, given back for nothing, and the
+reason the rule is written from bash's reference rather than from a character
+set is that the character set is the scanner again (solorepo's #197).
+
 A refusal names the nearest command the grammar takes, where the one refused
 has one: the head of a chain, or the same command without the option that is
 not carried. It is derived and then put back through the predicate rather than
@@ -41,10 +48,22 @@ ROOT = pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()).resolve
 
 READERS = {"Read": "file_path", "Grep": "path", "Glob": "path"}
 
-# Characters the shell acts on. None of them may appear outside single quotes;
-# inside single quotes bash acts on nothing. A double quote is refused too,
-# because `$` and a backtick expand inside it.
+# Characters the shell acts on. None of them may appear unquoted; inside quotes
+# bash acts on almost nothing, and `EXPANDS` is the almost.
 SHELL = set(';&|<>$`*?[]{}()~!#\\"\n')
+
+# The two quotes, and what still expands inside a double one. Bash's reference:
+# enclosing characters in double quotes "preserves the literal value of all
+# characters within the quotes, with the exception of $, `, \, and, when
+# history expansion is enabled, !". History expansion is off in a
+# non-interactive shell, and `!` is refused anyway rather than resting the
+# boundary on how the harness spawns bash. So `"a|b"` and `"^[a-z]"` are words,
+# which is how a pattern gets typed: thirteen of the fifty-four calls this hook
+# refused across the four Opus runs on solorepo's #117 were a double quote
+# around a pattern with nothing in it to expand, and eight of those were
+# otherwise commands the list already carries (solorepo's #197).
+QUOTES = {"'", '"'}
+EXPANDS = set("$`\\!")
 
 # The part of `SHELL` that ends one command and starts something else:
 # chaining, redirects and a newline. A derivation may cut there and lose only a
@@ -56,6 +75,10 @@ SHELL = set(';&|<>$`*?[]{}()~!#\\"\n')
 # program off the list (solorepo's #146).
 CHAINS = set(";&|<>\n")
 
+# A redirect's file descriptor, where `before_operator` cuts: the digits bash
+# reads as part of the operator rather than as the word before it.
+DESCRIPTOR = re.compile(r"(?:^|\s)\d+$")
+
 # What the reviewer may run, and with what. A program not named here is
 # refused; an option not named under its subcommand is refused, in its exact
 # spelling, so an abbreviation git would accept is not one this accepts. An
@@ -63,13 +86,19 @@ CHAINS = set(";&|<>\n")
 # whatever it looks like: `-e -O` is a pattern. A token that does not start with `-` is a ref, a
 # path, a number or a pattern, and is git's to make sense of; after `--`
 # every token is a pathspec.
+# `--numstat` and `--shortstat` join `--stat` and `--name-only` because they
+# are the same thing said shorter: a count per path, reading what `--stat`
+# reads (solorepo's #197).
 GIT = {
-    "log": {"--oneline", "--stat", "--name-only", "--name-status", "--all",
+    "log": {"--oneline", "--stat", "--numstat", "--shortstat", "--name-only",
+            "--name-status", "--all",
             "--decorate", "--graph", "--follow", "--first-parent", "--reverse",
             "-p", "--patch", "-c", "--no-merges", "--merges"},
-    "show": {"--stat", "--name-only", "--name-status", "--oneline", "-p",
+    "show": {"--stat", "--numstat", "--shortstat", "--name-only",
+             "--name-status", "--oneline", "-p",
              "--patch", "--no-patch", "-s"},
-    "diff": {"--stat", "--name-only", "--name-status", "--cached", "--staged",
+    "diff": {"--stat", "--numstat", "--shortstat", "--name-only",
+             "--name-status", "--cached", "--staged",
              "-p", "--patch", "-w", "--word-diff", "-M", "--no-color"},
     "status": {"--porcelain", "-s", "--short", "-b", "--branch", "-uno"},
     "grep": {"-n", "--line-number", "-i", "--ignore-case", "-l", "--files-with-matches",
@@ -78,6 +107,13 @@ GIT = {
              "--name-only", "-v", "--invert-match", "--heading", "--break", "--no-color"},
     "ls-files": {"--cached", "--modified", "--deleted", "--others",
                  "--exclude-standard", "--full-name"},
+    # The files of a commit, which `ls-files` cannot say: it reads the index
+    # and the worktree, so the reviewer asking what a head holds had nothing to
+    # ask with and asked twenty times, one path per call (solorepo's #197). It
+    # reads objects, writes nothing, and carries no option that runs a program
+    # — the `-O` and `--output` that `grep` and `log` have to be kept from.
+    "ls-tree": {"-r", "-d", "-t", "-l", "--long", "--name-only", "--full-name",
+                "--full-tree"},
 }
 # Per subcommand, because `-n` is a count for `log` and a flag for `grep`.
 TAKES_VALUE = {
@@ -88,19 +124,28 @@ TAKES_VALUE = {
     "status": set(),
     "grep": {"-e", "--regexp", "-A", "-B", "-C"},
     "ls-files": set(),
+    "ls-tree": set(),
 }
 # `-3` is a count for `log`; `-A2`, `-B2`, `-C2` are context glued to its
-# number, which git accepts and the reviewer types (solorepo's #99).
-NUMBER = re.compile(r"^-(\d+|[ABC]\d+)$")
+# number, which git accepts and the reviewer types (solorepo's #99). `-U2` is
+# `diff`'s unified context, glued the same way, and `-U 2` was already carried:
+# the spelling was the whole difference (solorepo's #197).
+NUMBER = re.compile(r"^-(\d+|[ABCU]\d+)$")
 
 # The other programs, by form, each with its own option list and the options
 # that consume a value, vetted the way git's are: `check_pr.py --file` reads
 # any path and `gh --repo` reaches any repository, and neither is listed.
+#
+# `--help` is carried here and by no git subcommand, which is not an oversight:
+# each of the four forms below prints its usage and stops, and `git log --help`
+# execs `man`, which is a program off the list reached through one on it. The prompt
+# hierarchy tells an agent a program's `--help` lists its own verbs, so it asks
+# (solorepo's #197).
 PROGRAMS = {
-    ("gh", "pr", "view"): ({"--json", "-q", "--jq", "--comments"}, {"--json", "-q", "--jq"}),
-    ("gh", "pr", "diff"): ({"--name-only", "--patch"}, set()),
-    ("gh", "pr", "checks"): ({"--json", "-q", "--jq", "--required"}, {"--json", "-q", "--jq"}),
-    ("python3", ".meta/check_pr.py"): ({"--threads", "--resume"}, set()),
+    ("gh", "pr", "view"): ({"--json", "-q", "--jq", "--comments", "--help"}, {"--json", "-q", "--jq"}),
+    ("gh", "pr", "diff"): ({"--name-only", "--patch", "--help"}, set()),
+    ("gh", "pr", "checks"): ({"--json", "-q", "--jq", "--required", "--help"}, {"--json", "-q", "--jq"}),
+    ("python3", ".meta/check_pr.py"): ({"--threads", "--resume", "--help"}, set()),
 }
 
 # A program off the list that the reviewer reaches for anyway, and where what
@@ -109,15 +154,27 @@ PROGRAMS = {
 # says why it is not coming, which is the only thing that stops the reach
 # repeating run after run (solorepo's #144).
 #
-# `check.py` is the one, and the reason it is not simply listed is not the
+# `check.py` is one, and the reason it is not simply listed is not the
 # option list. `check_pr.py` is one of the six paths `review.yml` restores from
 # trunk before the session starts; `check.py` is not, and neither is the
 # `render.py` it imports, so running it would execute the pull request's own
 # code in the container that holds the reviewer's token, which is the boundary
 # solorepo's DR-110 draws. It would not run in any case: the gate is `uvx --with linkml
 # --with pyyaml python .meta/check.py` and the container installs neither.
+#
+# `grep` and `wc` are the other two, and they are here because the reviewer
+# reached for them seven times across the four Opus runs on solorepo's #117 and got the
+# generic refusal each time (solorepo's #197). Neither is a widening question —
+# the tools already do what was wanted, and unlike a program of `.meta/say/`
+# they carry no Trailer and unlike `git grep` they read outside the worktree by
+# path — so what the refusal owes is the name of the thing to use.
+#
+# A key is a program's first two words or its first, so a form that is one word
+# is spelled as one.
 INSTEAD = {
     ("python3", ".meta/check.py"): "the gate runs on the pull request, and `gh pr checks` reads what it found",
+    ("grep",): "the Grep tool searches the worktree, and `git grep` searches a commit",
+    ("wc",): "the Read tool reads a file and counts what it read",
 }
 
 
@@ -151,21 +208,24 @@ def outside(path):
 
 
 def words_of(text):
-    """Split one simple command on whitespace, honouring single quotes only.
+    """Split one simple command on whitespace, honouring both quotes.
 
     Returns the words, or a string saying which character the shell would act
     on. Nothing is expanded, because nothing that expands is admitted: a `'a.*'`
-    pattern is a word, a bare `*` is a refusal.
+    or `"a.*"` pattern is a word, a bare `*` is a refusal, and a `$` inside a
+    double quote is a refusal because that is where bash still expands.
     """
-    words, word, quoted, seen = [], [], False, False
+    words, word, quote, seen = [], [], "", False
     for ch in text:
-        if quoted:
-            if ch == "'":
-                quoted = False
+        if quote:
+            if ch == quote:
+                quote = ""
+            elif quote == '"' and ch in EXPANDS:
+                return f"`{ch}`"
             else:
                 word.append(ch)
-        elif ch == "'":
-            quoted, seen = True, True
+        elif ch in QUOTES:
+            quote, seen = ch, True
         elif ch in SHELL:
             return f"`{ch!r}`" if ch == "\n" else f"`{ch}`"
         elif ch.isspace():
@@ -174,7 +234,7 @@ def words_of(text):
             word, seen = [], False
         else:
             word.append(ch)
-    if quoted:
+    if quote:
         return "an unclosed quote"
     if word or seen:
         words.append("".join(word))
@@ -235,18 +295,30 @@ def form_of(words):
     return None
 
 
-def partition_unquoted(text, marker):
-    """`str.partition`, blind inside single quotes.
+def unquoted(text):
+    """Each index and character of `text` that bash would read unquoted.
 
-    `git log --grep='a<<b'` is one plain command to bash and was two halves
-    of a heredoc to a raw split (solorepo's #87). Double quotes need no case: they are
-    refused before anything is read.
+    One scan for the two places that ask where a command ends, so a quote
+    admitted in `words_of` is a quote to both. Either kind opens, and only its
+    own kind closes: `git log --grep='a<<b'` is one plain command to bash and
+    was two halves of a heredoc to a raw split (solorepo's #87), and `"a|b"` is
+    a pattern rather than a pipe for the same reason (solorepo's #197).
     """
-    quoted = False
+    quote = ""
     for i, ch in enumerate(text):
-        if ch == "'":
-            quoted = not quoted
-        elif not quoted and text.startswith(marker, i):
+        if quote:
+            if ch == quote:
+                quote = ""
+        elif ch in QUOTES:
+            quote = ch
+        else:
+            yield i, ch
+
+
+def partition_unquoted(text, marker):
+    """`str.partition`, blind inside quotes."""
+    for i, _ in unquoted(text):
+        if text.startswith(marker, i):
             return text[:i], marker, text[i + len(marker):]
     return text, "", ""
 
@@ -290,8 +362,26 @@ def command_allowed(command):
         offset, what, allowed, takes_value = form
         return options_allowed(what, words[offset:], allowed, takes_value)
     if program == "git":
-        return f"`git {words[1] if len(words) > 1 else ''}` is not a subcommand the reviewer runs"
-    instead = INSTEAD.get(tuple(words[:2]))
+        subcommand = words[1] if len(words) > 1 else ""
+        if subcommand.startswith("-"):
+            # Not a subcommand at all, and worth saying so rather than reading
+            # as one: the reviewer spelled the worktree it was already in
+            # (solorepo's #197). Every one of git's own options arrives here,
+            # `--no-pager` and `--version` as much as `-C`, so the reason is
+            # written as what it is about — the three that were asked for, and
+            # why none of the rest is vetted either — rather than as a claim
+            # about the option typed. Nothing is derived by dropping one,
+            # because `git -C /elsewhere log` without its `-C` is a different
+            # repository's answer to the same words (solorepo's #146), and for
+            # an option that owns no word the drop is the guess `owns` makes.
+            return (f"`git {subcommand}` is one of git's own options, and none of them is "
+                    "carried. The three asked for are why: `-C` and `--git-dir` point git at "
+                    "another repository, which the worktree already is, and `-c` sets a "
+                    "configuration that runs a program — so carrying any would put the "
+                    "boundary in git's own option list rather than this one. The subcommand "
+                    "comes first")
+        return f"`git {subcommand}` is not a subcommand the reviewer runs"
+    instead = INSTEAD.get(tuple(words[:2])) or INSTEAD.get(tuple(words[:1]))
     return (f"`{' '.join(words[:3])}` is not a program the reviewer runs"
             + (f", and is not coming: {instead}" if instead else ""))
 
@@ -303,21 +393,33 @@ def before_operator(text):
     `gh pr diff 86`, which is the command the reviewer wanted and the one this
     hook takes. `CHAINS` and not `SHELL`, because only those characters drop a
     second command; the rest would truncate this one's argument silently.
+
+    A redirect's file descriptor goes with the redirect. Bash's reference: where
+    a redirection operator is preceded by digits with no blank between them, the
+    digits are the descriptor rather than a word — so `git show x:y 2>/dev/null`
+    cut at the `>` alone offered `git show x:y 2`, which is accepted,
+    well-formed, and a different question, the shape solorepo's #146 closed twice
+    already. Five of the fifty-four refusals on solorepo's #117 were that
+    (solorepo's #197). A blank before it makes it an argument again — `git log -n
+    2 > f` is a count — and the pattern will not match across one.
     """
-    quoted = False
-    for i, ch in enumerate(text):
-        if ch == "'":
-            quoted = not quoted
-        elif not quoted and ch in CHAINS:
-            return text[:i]
+    for i, ch in unquoted(text):
+        if ch in CHAINS:
+            head = text[:i]
+            if ch in "<>":
+                descriptor = DESCRIPTOR.search(head)
+                if descriptor:
+                    head = head[:descriptor.start()]
+            return head
     return text
 
 
 def requote(word):
     """One word of a derived command, spelled so bash gives it back whole.
 
-    Single quotes always, because a word here cannot contain one: `\\` and `"`
-    are refused, so there is no other way to have written it.
+    Single quotes always, which is why `plain_form` drops a word holding one:
+    there is no spelling of `it's` this splitter reads back the same way, and a
+    `"it's"` is a word since solorepo's #197.
     """
     return word if word and not (set(word) & SHELL) and not any(c.isspace() for c in word) else f"'{word}'"
 
@@ -353,6 +455,11 @@ def plain_form(command):
         return None
     words = words_of(before_operator(command))
     if isinstance(words, str) or not words:
+        return None
+    if any("'" in word for word in words):
+        # `requote` has only single quotes to spell a word with, so a word
+        # carrying one — which a double-quoted word may, since solorepo's #197
+        # — has no offer rather than a mangled one.
         return None
     if re.fullmatch(r"\.meta/say/[a-z]+", words[0]):
         return None
@@ -393,9 +500,13 @@ def blocked(tool, tool_input):
                 # for (solorepo's #144).
                 plain = plain_form(command)
                 return (f"Blocked: {problem}. The reviewer runs one plain command at a time: "
-                        "`git log|show|diff|status|grep|ls-files` with plain options, `gh pr view|diff|checks`, "
+                        "`git log|show|diff|status|grep|ls-files|ls-tree` with plain options, "
+                        "`gh pr view|diff|checks`, "
                         "`python3 .meta/check_pr.py`, or a program of `.meta/say/` with a quoted heredoc. "
-                        "No pipes, redirects, expansions or chaining."
+                        "No pipes, redirects, chaining, or anything the shell would expand — "
+                        "quoting is what stops it, and the four a double quote does not stop "
+                        "here are `$`, a backtick, `\\` and `!`: a pattern holding one of them "
+                        "goes in single quotes, which is most regexes — `'\\bdef\\b'`."
                         + (f" This one would be taken as: {plain}" if plain else ""))
         return None
     except Exception as exc:  # noqa: BLE001 — refusing is the safe answer to anything

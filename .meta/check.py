@@ -1575,6 +1575,47 @@ def hook_probes():
         ("allow", not worktree.blocked("Bash", {"command": "git ls-files -- '*.md'"})),
         ("allow", not worktree.blocked("Bash", {"command": "git grep -n -A 2 -i 'def blocked' -- .meta"})),
         ("allow", not worktree.blocked("Bash", {"command": ".meta/say/post --role reviewer raise 1 .meta/say/post 12 <<'BODY'\nfinding; see `git log $x` and <(x)\nBODY"})),
+        # worktree_only: a double quote is a quote, and what bash still expands
+        # inside one is refused there (solorepo's #197). The reviewer types a
+        # pattern in whichever pair comes to hand, and thirteen refusals a
+        # review were the pair rather than the pattern.
+        ("allow", not worktree.blocked("Bash", {"command": 'git grep -n "say issue" 0123abc'})),
+        ("allow", not worktree.blocked("Bash", {"command": 'git grep -n -E "^[a-zA-Z_]" HEAD -- .meta/check_pr.py'})),
+        ("allow", not worktree.blocked("Bash", {"command": 'git log --grep="a<<b" -1'})),
+        ("allow", not worktree.blocked("Bash", {"command": 'git grep -n "it\'s" -- README.md'})),
+        ("refuse", bool(worktree.blocked("Bash", {"command": 'git grep -n "$(id)" -- README.md'}))),
+        ("refuse", bool(worktree.blocked("Bash", {"command": 'git grep -n "`id`" -- README.md'}))),
+        ("refuse", bool(worktree.blocked("Bash", {"command": 'git grep -n "a\\"b" -- README.md'}))),
+        # A `\` is the one of the four a reviewer types without meaning the
+        # shell: it is `\s` and `\b` in most regexes. So the pair the refusal
+        # names is probed on the side the reviewer is sent to, and not only on
+        # the side that is refused.
+        ("allow", not worktree.blocked("Bash", {"command": "git grep -n -E '^\\s*def blocked' -- .meta"})),
+        # `!` is the fourth character of `EXPANDS` and the only one refused by
+        # a decision about this harness rather than by bash's reference, where
+        # history expansion is off in a non-interactive shell. Read the
+        # reference alone and dropping it looks right, so the probe is what
+        # holds the boundary at `EXPANDS` rather than at how the container
+        # spawns bash, which is the dependency the set exists to remove.
+        ("refuse", bool(worktree.blocked("Bash", {"command": 'git log --grep="fix!" -1'}))),
+        ("allow", not worktree.blocked("Bash", {"command": "git log --grep='fix!' -1"})),
+        ("refuse", bool(worktree.blocked("Bash", {"command": 'git log -1 "--output=.meta/say"'}))),
+        # A quoted operator is an argument and not an operator, which is what
+        # quoting is: `gh` gets three words and errors on two of them.
+        ("allow", not worktree.blocked("Bash", {"command": 'gh pr diff 86 "|" head'})),
+        # worktree_only: the other reads solorepo's #197 found refused and let
+        # through — a commit's files, context glued to its number, a program's
+        # own usage, a count per path — and the shapes next to each that are
+        # still nobody's to run.
+        ("allow", not worktree.blocked("Bash", {"command": "git ls-tree -r --name-only HEAD -- .meta/assertions"})),
+        ("allow", not worktree.blocked("Bash", {"command": "git diff -U2 0123abc 4567def -- .meta/say"})),
+        ("allow", not worktree.blocked("Bash", {"command": "python3 .meta/check_pr.py --help"})),
+        ("allow", not worktree.blocked("Bash", {"command": "git show HEAD --numstat"})),
+        ("refuse", bool(worktree.blocked("Bash", {"command": "git ls-tree -r --format='%(path)' HEAD"}))),
+        ("refuse", bool(worktree.blocked("Bash", {"command": "git log --help"}))),
+        ("refuse", bool(worktree.blocked("Bash", {"command": "git -C /elsewhere log -1"}))),
+        ("refuse", bool(worktree.blocked("Bash", {"command": "wc -l README.md"}))),
+        ("refuse", bool(worktree.blocked("Bash", {"command": "grep -n x README.md"}))),
     ]
     problems = [f"probe {n}: the hook should {want} it and did not"
                 for n, (want, held) in enumerate(cases, 1) if not held]
@@ -1605,6 +1646,18 @@ def hook_probes():
         (".meta/say/post --role reviewer review 146 --approve < body.md", None),
         ("git show HEAD~1:.meta/hooks/worktree_only.py", None),
         ("git log HEAD~5..HEAD", None),
+        # A redirect's file descriptor is the redirect's, so it goes with it:
+        # cut at the `>` alone these offered a stray `2` as a ref, a path or a
+        # positional, which every one of the five on solorepo's #117 would have
+        # taken and answered wrong (solorepo's #197). A blank before the digits
+        # makes them an argument again, and `-n 2` is a count that stays.
+        ("git show main:.meta/say 2>/dev/null", "git show main:.meta/say"),
+        ("gh pr view 117 --json files,commits 2>&1 | head -100", "gh pr view 117 --json files,commits"),
+        ("git log -n 2 > /tmp/out", "git log -n 2"),
+        ("git ls-files .meta | head -30", "git ls-files .meta"),
+        # A word carrying a single quote has only `requote`'s single quotes to
+        # be spelled with, so it has no offer rather than a mangled one.
+        ('git grep -n "it\'s" -- README.md | wc -l', None),
     ]
     for command, want in forms:
         got = worktree.plain_form(command)
@@ -1612,9 +1665,15 @@ def hook_probes():
             problems.append(f"the refusal for {command!r} should offer {want!r} and offered {got!r}")
         elif got is not None and worktree.command_allowed(got):
             problems.append(f"the refusal for {command!r} offers {got!r}, which the hook itself refuses")
-    # The gate has no nearest command, so its refusal says where its result is.
-    if "gh pr checks" not in (worktree.command_allowed("python3 .meta/check.py") or ""):
-        problems.append("the refusal for the gate should say where what it found is instead")
+    # A program off the list has no nearest command, so its refusal says where
+    # what it wanted is instead: the gate's result, and the tools that read and
+    # search a file, which the reviewer reached for `grep` and `wc` to do seven
+    # times on solorepo's #117 (solorepo's #144, #197).
+    for command, name in [("python3 .meta/check.py", "gh pr checks"),
+                          ("grep -n x README.md", "Grep"),
+                          ("wc -l README.md", "Read")]:
+        if name not in (worktree.command_allowed(command) or ""):
+            problems.append(f"the refusal for {command!r} should name {name} as what to use instead")
     return problems
 
 
