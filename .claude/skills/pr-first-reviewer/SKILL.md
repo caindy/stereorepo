@@ -78,7 +78,7 @@ heading added here is required by that act alone.
 ```markdown
 ## <a title someone would search for>
 
-**What changed.** The shape of the change. Not the file list; the diff has that.
+**What this changes.** The shape of the change. Not the file list; the diff has that.
 
 **What the ground looked like.** The context that will not be visible from the
 code afterwards — what was already true, what was tried and abandoned, what
