@@ -344,6 +344,7 @@ class FakeGitHub:
     def __init__(self, pulls, no_rebase=(), no_arm=(), no_stick=(), lands=(), blip=(),
                  no_dispatch=()):
         self.pulls = {str(n): dict(p) for n, p in pulls.items()}
+        self.reads = {}
         for number, pull in self.pulls.items():
             # The commit the head is on. Derived before, because nothing read
             # it; it is a value the fake holds now because GitHub moves it when
@@ -379,6 +380,7 @@ class FakeGitHub:
         self.dispatched = []
 
     def view(self, number):
+        self.reads[str(number)] = self.reads.get(str(number), 0) + 1
         pull = self.pulls[str(number)]
         # `mergeable` is computed in the background, so a read can answer
         # `UNKNOWN` and a later one answer properly; `unknown` is how many of
@@ -625,6 +627,9 @@ def advance_probes():
         problems.append(f"advance: a re-arming that merged reported {said!r}")
     if fake.pulls["7"]["state"] != "MERGED":
         problems.append("advance: the case that models a merge in the window did not merge")
+    if fake.reads.get("7", 0) != 7:
+        problems.append("advance: the wait for merge in the window did not stop early, "
+                        f"costing {fake.reads.get('7', 0)} reads")
 
     # A rebase GitHub has taken and not yet performed (solorepo's #245).
     # `update-branch` returns when the work is queued, so a read that follows
