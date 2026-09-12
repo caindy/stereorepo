@@ -625,15 +625,11 @@ jobs:
                           fallback = True
                   except Exception as e:
                       print(f"Error reading {file}: {e}", file=sys.stderr)
-          print(f"Claude quota error detected: {fallback}")
+          print(f"Claude failure detected (quota={fallback}); activating Gemini fallback.")
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("fallback=" + ("true" if fallback else "false") + "\n")
-          if fallback:
-              with open(os.environ["GITHUB_ENV"], "a") as f:
-                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
-          else:
-              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
-              sys.exit(1)
+              f.write("fallback=true\n")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
           '
 
       - name: take the Issue (gemini)
@@ -1090,15 +1086,11 @@ jobs:
                           fallback = True
                   except Exception as e:
                       print(f"Error reading {file}: {e}", file=sys.stderr)
-          print(f"Claude quota error detected: {fallback}")
+          print(f"Claude failure detected (quota={fallback}); activating Gemini fallback.")
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("fallback=" + ("true" if fallback else "false") + "\n")
-          if fallback:
-              with open(os.environ["GITHUB_ENV"], "a") as f:
-                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
-          else:
-              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
-              sys.exit(1)
+              f.write("fallback=true\n")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
           '
 
       - name: rebase onto the base (gemini)
@@ -1292,15 +1284,11 @@ jobs:
                           fallback = True
                   except Exception as e:
                       print(f"Error reading {file}: {e}", file=sys.stderr)
-          print(f"Claude quota error detected: {fallback}")
+          print(f"Claude failure detected (quota={fallback}); activating Gemini fallback.")
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("fallback=" + ("true" if fallback else "false") + "\n")
-          if fallback:
-              with open(os.environ["GITHUB_ENV"], "a") as f:
-                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
-          else:
-              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
-              sys.exit(1)
+              f.write("fallback=true\n")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
           '
 
       - name: answer the review (gemini)
@@ -1470,15 +1458,11 @@ jobs:
                           fallback = True
                   except Exception as e:
                       print(f"Error reading {file}: {e}", file=sys.stderr)
-          print(f"Claude quota error detected: {fallback}")
+          print(f"Claude failure detected (quota={fallback}); activating Gemini fallback.")
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("fallback=" + ("true" if fallback else "false") + "\n")
-          if fallback:
-              with open(os.environ["GITHUB_ENV"], "a") as f:
-                  f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
-          else:
-              print("Claude failed with a non-quota error; not falling back to Gemini.", file=sys.stderr)
-              sys.exit(1)
+              f.write("fallback=true\n")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
           '
 
       - name: promote on approval (gemini)

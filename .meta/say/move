@@ -671,7 +671,25 @@ def dispatch(pulls):
             waiting.append("armed")
         if is_approved_pull(pull, reviewer_login=reviewer_login):
             waiting.append("approved")
-        if waiting:
+        # A stranded review request where reviewer check failed without a verdict (solorepo's DR-178):
+        if reviewer_login in asked and not pull.get("isDraft") and mergeability(pull) != "CONFLICTING":
+            checks = pull.get("statusCheckRollup")
+            if checks is None:
+                try:
+                    view_res = channel.gh("pr", "view", number, "--json", "statusCheckRollup")
+                    checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
+                except SystemExit:
+                    checks = []
+            contexts = deduplicate_checks(checks or [])
+            reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
+            if reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE":
+                try:
+                    request_review(number, "reviewer")
+                except SystemExit as exc:
+                    failed.append(f"#{number} review request stranded and could not be re-requested — {exc.code}")
+                continue
+
+        if waiting and mergeability(pull) == "CONFLICTING":
             waits = " and ".join(waiting)
             if pull["headRefName"] in below:
                 print(f"left #{number} alone: another open pull request is based on "
@@ -680,8 +698,6 @@ def dispatch(pulls):
                       f"by the solo — {pull['title']}")
                 continue
             try:
-                if mergeability(pull) != "CONFLICTING":
-                    continue
                 # Its own refusal, and not the dispatch's below: an Issue deleted
                 # or transferred under its branch fails this read the same way on
                 # every push to trunk, and a red sweep each time is the repetition
@@ -708,6 +724,40 @@ def dispatch(pulls):
             print(f"dispatched the coder for #{number}: {waits}, and conflicting with "
                   f"{pull['baseRefName']}, so GitHub builds no merge ref and will not update "
                   f"the branch — {pull['title']}")
+            continue
+
+        # An approved PR with failing checks is dispatched for review (solorepo's DR-178):
+        if is_approved_pull(pull, reviewer_login=reviewer_login) and not pull.get("isDraft") and mergeability(pull) != "CONFLICTING":
+            checks = pull.get("statusCheckRollup")
+            if checks is None:
+                try:
+                    view_res = channel.gh("pr", "view", number, "--json", "statusCheckRollup")
+                    checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
+                except SystemExit:
+                    checks = []
+            ok, msg = check_green({"statusCheckRollup": checks})
+            if not ok and "failing" in msg:
+                try:
+                    try:
+                        issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
+                    except SystemExit:
+                        print(f"left #{number} alone: #{challenge} cannot be read, so the review "
+                              f"is the solo's, and the sweep names it — {pull['title']}")
+                        continue
+                    levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
+                    if issue["state"] != "OPEN" or not levels:
+                        print(f"left #{number} alone: #{challenge} is "
+                              f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
+                              f"so the review is the solo's, and the sweep names it — "
+                              f"{pull['title']}")
+                        continue
+                    run_coder(number, "review")
+                    print(f"dispatched the coder for #{number}: approved, with failing checks ({msg}) — {pull['title']}")
+                except SystemExit as exc:
+                    failed.append(f"#{number} is approved with failing checks and the coder could not be "
+                                  f"dispatched for it — {exc.code}")
+                continue
+
         elif is_changes_requested_pull(pull, reviewer_login=reviewer_login):
             # An unanswered review changes request where the webhook was spent or the run crashed.
             # Only re-deliver when the branch does not conflict and has been idle for longer than
@@ -818,6 +868,8 @@ def dispatch_pass(pr, task):
     going rather than racing it. What is printed is where the run will appear.
     """
     pull = channel.gh("pr", "view", str(pr), "--json", f"{ADVANCE},reviews")
+    if task is None:
+        task = "rebase" if pull.get("mergeable") == "CONFLICTING" else "review"
     if task == "rebase":
         # The branch's shape first, because it is free and it is the commonest
         # thing this verb is typed against: `advance` never dispatches for the
@@ -862,10 +914,24 @@ def dispatch_pass(pr, task):
                      "verdict; a verdict answered and handed back is not one to answer again.")
         given = [r["state"] for r in pull.get("reviews") or []
                  if (r.get("author") or {}).get("login") == reviewer and r["state"] in VERDICTS]
-        if not given or given[-1] != "CHANGES_REQUESTED":
+        if given and given[-1] == "APPROVED":
+            checks = pull.get("statusCheckRollup")
+            if checks is None:
+                try:
+                    view_res = channel.gh("pr", "view", str(pr), "--json", "statusCheckRollup")
+                    checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
+                except SystemExit:
+                    checks = []
+            ok, msg = check_green({"statusCheckRollup": checks})
+            if not ok and "failing" in msg:
+                pass
+            else:
+                sys.exit(f"say: the last verdict {reviewer} left on #{pr} is APPROVED, "
+                         f"and the review pass is for a request for changes or an approved PR with failing checks ({msg})")
+        elif not given or given[-1] != "CHANGES_REQUESTED":
             sys.exit(f"say: the last verdict {reviewer} left on #{pr} is "
                      f"{given[-1] if given else 'nothing'}, and the review pass is for a request "
-                     f"for changes: it reads the threads and answers them. `move request-review "
+                     f"for changes or an approved pull request with failing checks: `move request-review "
                      f"{pr}` asks for a verdict; this dispatches the pass that answers one.")
     run_coder(pr, task)
     print(f"dispatched the coder's {task} pass for #{pr} — {pull['title']}. GitHub creates the "

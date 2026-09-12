@@ -1602,9 +1602,22 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
             stuck.append("GitHub will not merge it and will not update the branch, so the "
                          "approval waits on a rebase nothing performs")
         if waiting and pr.get("mergeable") == "CONFLICTING":
+            hard_remedy = ""
+            branch_match = LOOPS_BRANCH.match(pr["headRefName"])
+            if branch_match:
+                try:
+                    issue = gh("issue", "view", branch_match.group(1), "--json", "state,labels")
+                    level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in ("human", "hard")), None)
+                    if level:
+                        hard_remedy = (f". Challenge #{branch_match.group(1)} is {level} so the loop stands down "
+                                       f"(solorepo's DR-142): rebase by hand, or dispatch with "
+                                       f".meta/say/move dispatch {pr['number']} --task rebase, or "
+                                       f".meta/say/move difficulty {branch_match.group(1)} medium")
+                except SystemExit:
+                    pass
             out.append(f"#{pr['number']} {pr['title'][:60]} — {' and '.join(waiting)}, on a "
                        f"branch that conflicts: {'; and '.join(stuck)}. Rebase "
-                       f"{pr['headRefName']} onto {pr['baseRefName']}")
+                       f"{pr['headRefName']} onto {pr['baseRefName']}{hard_remedy}")
         moved = (datetime.datetime.fromisoformat(pr["updatedAt"].replace("Z", "+00:00"))
                  if pr.get("updatedAt") else None)
         idle = (now - moved).total_seconds() / 60 if moved else float("inf")
@@ -1620,6 +1633,15 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
                            f"answer is already posted with .meta/say/post resolve, or answer with "
                            f".meta/say/post answer")
         branch = LOOPS_BRANCH.match(pr["headRefName"])
+        # A review requested of reviewer where the reviewer run failed without submitting a verdict (solorepo's DR-178).
+        if reviewer_login in asked and not pr["isDraft"] and pr.get("mergeable") != "CONFLICTING" and branch and idle >= minutes:
+            contexts = deduplicate_checks(pr.get("statusCheckRollup") or [])
+            reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
+            if reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE":
+                out.append(f"#{pr['number']} {pr['title'][:60]} — review requested of {reviewer_login}, "
+                           f"but reviewer check failed without a verdict: no run is answering it and "
+                           f"nothing has moved on it for {int(idle)} minutes. Re-request review with "
+                           f".meta/say/move request-review {pr['number']}")
         # An unanswered review changes request where the webhook was spent or the run crashed.
         if is_changes_requested_pull(pr, reviewer_login=reviewer_login) and not asked and branch and idle >= minutes:
             threads_unresolved = (unresolved.get(pr["number"]) if unresolved is not None
@@ -1632,14 +1654,14 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
                                f"reviewer, and unanswered: no run is answering it and nothing "
                                f"has moved on it for {int(idle)} minutes, while #{branch.group(1)} "
                                f"is still {level}. A review event was dropped or a run ended "
-                               f"without answering: .meta/say/move dispatch {pr['number']}")
+                               f"without answering: .meta/say/move dispatch {pr['number']} --task review")
         # An approved pull request with failing checks where the webhook was spent or the run crashed.
         if is_approved_pull(pr, reviewer_login=reviewer_login) and not asked and not pr["isDraft"] and not green(pr) and pr.get("mergeable") != "CONFLICTING" and branch and idle >= minutes:
             issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
             level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in TAKEN or lbl["name"] in ("human", "hard")), None)
             if issue["state"] == "OPEN" and level:
                 if level in TAKEN:
-                    remedy = f".meta/say/move dispatch {pr['number']}"
+                    remedy = f".meta/say/move dispatch {pr['number']} --task review"
                 else:
                     remedy = f"fix the failing checks (or move difficulty {branch.group(1)} medium)"
                 idle_mins = int(idle) if idle != float("inf") else 0

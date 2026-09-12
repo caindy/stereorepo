@@ -438,7 +438,8 @@ class FakeGitHub:
         if head == ("repo", "view"):
             return {"nameWithOwner": "o/r", "deleteBranchOnMerge": True}
         if head == ("pr", "list"):
-            return [self.view(n) for n in self.pulls]
+            # Real gh pr list --json ADVANCE does not return statusCheckRollup (solorepo's DR-153)
+            return [{k: v for k, v in self.view(n).items() if k != "statusCheckRollup"} for n in self.pulls]
         if head == ("pr", "view"):
             return self.view(args[2])
         if head == ("pr", "update-branch"):
@@ -461,13 +462,18 @@ class FakeGitHub:
             # withdrawn, and the reviewer asked. Held in the same `requested`
             # the view reports, so what a probe reads back is what GitHub would
             # be holding rather than the call the verb made.
-            pull = self.pulls[str(args[2])]
+            number = str(args[2])
+            self.edited.append(number)
+            pull = self.pulls[number]
             asked = list(pull.get("requested") or [])
-            for flag, edit in (("--remove-reviewer", asked.remove), ("--add-reviewer", asked.append)):
+            for flag in ("--remove-reviewer", "--add-reviewer"):
                 if flag in args:
-                    edit(args[args.index(flag) + 1])
+                    who = args[args.index(flag) + 1]
+                    if flag == "--remove-reviewer" and who in asked:
+                        asked.remove(who)
+                    elif flag == "--add-reviewer" and who not in asked:
+                        asked.append(who)
             pull["requested"] = asked
-            self.edited.append(str(args[2]))
             return ""
         if head == ("pr", "merge"):
             number = str(args[2])
@@ -842,6 +848,26 @@ def advance_probes():
     if said:
         problems.append(f"advance: recent changes requested PR exited with {said!r}")
 
+    # An approved PR with failing checks is dispatched for review (solorepo's DR-178):
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
+                           "checks": [{"name": "gate", "conclusion": "FAILURE"}],
+                           "verdicts": [("o-r-reviewer", "APPROVED")]}})
+    said = run(fake, lambda: move.advance())
+    if fake.dispatched != [("7", "review")]:
+        problems.append(f"advance: approved PR with failing checks dispatched {fake.dispatched!r}")
+    if said:
+        problems.append(f"advance: approved PR with failing checks exited with {said!r}")
+
+    # A stranded review request where reviewer check failed without a verdict is re-requested (solorepo's DR-178):
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
+                           "requested": ["o-r-reviewer"],
+                           "checks": [{"name": "reviewer", "conclusion": "FAILURE"}]}})
+    said = run(fake, lambda: move.advance())
+    if "o-r-reviewer" not in fake.pulls["7"]["requested"] or "7" not in fake.edited:
+        problems.append(f"advance: stranded review request was not re-requested: {fake.pulls['7']!r}")
+    if said:
+        problems.append(f"advance: stranded review request exited with {said!r}")
+
 
 
     # Asked for something, and a loop's branch only. Nobody has asked to review
@@ -962,6 +988,16 @@ def advance_probes():
         problems.append(f"dispatch: a verdict standing dispatched {fake.dispatched!r}")
     if said:
         problems.append(f"dispatch: the pass it should have started exited with {said!r}")
+
+    # An approved PR with failing checks is dispatched for review (solorepo's DR-178):
+    fake = FakeGitHub({7: {"behind": 0, "armed": False,
+                           "checks": [{"name": "gate", "conclusion": "FAILURE"}],
+                           "verdicts": [(reviewer, "APPROVED")]}})
+    said = run(fake, lambda: move.dispatch_pass("7", "review"))
+    if fake.dispatched != [("7", "review")]:
+        problems.append(f"dispatch: approved PR with failing checks dispatched {fake.dispatched!r}")
+    if said:
+        problems.append(f"dispatch: approved PR with failing checks exited with {said!r}")
 
     # And a pass with no verdict to answer is refused. An approval is not a
     # request for changes; a request for changes from anyone but the reviewer's
@@ -1309,6 +1345,31 @@ def handoff_probes():
             if len(approved_failing_human) != 1 or "approved, with failing checks" not in approved_failing_human[0] or "fix the failing checks" not in approved_failing_human[0]:
                 problems.append(f"unheld: approved failing human PR reported {approved_failing_human!r}")
 
+            # Stranded reviewer PR (solorepo's DR-178):
+            check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "medium"}]}
+            stranded_owed = check_pr.unheld(
+                [{"number": 18, "title": "Stranded reviewer PR", "headRefName": "claude/issue-18",
+                  "baseRefName": "main", "isDraft": False, "mergeable": "MERGEABLE",
+                  "reviewRequests": [{"login": reviewer_name}],
+                  "statusCheckRollup": [{"name": "reviewer", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z"}],
+                  "updatedAt": old_time}],
+                minutes=30, clean=set()
+            )
+            if len(stranded_owed) != 1 or "reviewer check failed without a verdict" not in stranded_owed[0] or ".meta/say/move request-review 18" not in stranded_owed[0]:
+                problems.append(f"unheld: stranded reviewer PR reported {stranded_owed!r}")
+
+            # Approved conflicting PR on hard challenge prescribes loop stand-down (solorepo's DR-178):
+            check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "hard"}]}
+            approved_conflicting_hard = check_pr.unheld(
+                [{"number": 19, "title": "Approved conflicting hard PR", "headRefName": "claude/issue-19",
+                  "baseRefName": "main", "isDraft": False, "mergeable": "CONFLICTING",
+                  "reviewRequests": [],
+                  "latestReviews": [{"author": {"login": reviewer_name}, "state": "APPROVED"}],
+                  "updatedAt": old_time}],
+                minutes=30, clean=set()
+            )
+            if len(approved_conflicting_hard) != 1 or f"Challenge #{"19"} is hard so the loop stands down" not in approved_conflicting_hard[0]:
+                problems.append(f"unheld: approved conflicting hard PR reported {approved_conflicting_hard!r}")
         finally:
             check_pr.gh = orig_gh
     finally:

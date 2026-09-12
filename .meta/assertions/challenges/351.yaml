@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/351
+    name: "Remediate silent loop stalls: handle post-rebase gate failures and reviewer verdict crashes"
+    challenge_type: DEFECT
+    description: >-
+      Analysis of stalled pull requests #324, #330, and #331 revealed structural
+      deadlocks where autonomous loops stall silently across webhook event
+      boundaries with no agent or workflow awake to advance them: approved PRs
+      left red by post-rebase gate checks, reviewer workflow crashes that fail
+      checks without posting verdicts, and dirty/conflicting loop branches on
+      hard challenges.
