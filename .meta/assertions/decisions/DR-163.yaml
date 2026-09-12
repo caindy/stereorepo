@@ -64,7 +64,9 @@ decisions:
         names; the hand-back step, which requests review for a run that died at
         its budget, cannot have it, because no session survives there to spawn a
         reader and the reviewer is the first reader by default — which is the
-        state the pass exists to improve on, not one it can reach.
+        state the pass exists to improve on, not one it can reach. Nor is it owed on
+        `.meta/say/move stop`, since a run that cannot finish hands the Issue back
+        rather than the branch over.
     falsifier: >-
       A run that hands the branch over as finished with no pass having run,
       which would mean a sentence naming the act is not read as covering the
