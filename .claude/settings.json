@@ -9,6 +9,7 @@
       "Bash(gh issue create:*)",
       "Bash(gh issue comment:*)",
       "Bash(gh issue edit:*)",
+      "Bash(gh workflow run:*)",
       "Bash(gh stack link:*)",
       "Bash(gh stack merge:*)",
       "Bash(gh stack submit:*)",
