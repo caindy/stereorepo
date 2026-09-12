@@ -125,9 +125,8 @@ def actor():
 
     Fail closed. An unsigned comment should be unrepresentable, not discouraged.
     """
-    run_session = os.environ.get("ACTOR_SESSION", "")
-    if run_session.startswith(RUN_MARK):
-        return run_session
+    if in_a_run():
+        return os.environ["ACTOR_SESSION"]
     session = next((os.environ[k] for k in ENV_SESSION if os.environ.get(k)), None)
     if not session:
         sys.exit("say: the environment does not say who is speaking "
