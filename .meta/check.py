@@ -20,7 +20,8 @@ in the registry, so the order of these imports is the order the steps register.
 rest in that same registration order. What that comes to: `duplicate keys` and
 the five probes, then the tree, then what prose claims about it, then the graph.
 The imports are written in dependency order so that the registration order is
-the one stated here and not one a transitive import decided.
+the one stated here and not one a transitive import decided. History in
+check.history.md (solorepo's DR-171).
 """
 import pathlib
 import sys

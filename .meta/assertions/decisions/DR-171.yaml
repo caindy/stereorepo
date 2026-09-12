@@ -1,0 +1,97 @@
+decisions:
+  - id: work:decision/171
+    name: "DR-171 · History logs under .meta/ use check and probe symbols as receipts, and companion scripts name them to prevent orphans"
+    challenge: work:challenge/190
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-graph
+      - work:artifact/meta-check
+      - work:artifact/meta-check-pr
+      - work:artifact/meta-say
+      - work:artifact/specialize
+      - work:artifact/meta-disciplines
+    context: >-
+      Step 5 of Literate Programming routes what happened, this once, out of the
+      code and into `<module>.history.md`. While the seed packages hold history
+      logs, `.meta/` accumulated 74 issue citations and narrative commentary of
+      past runs directly inside its code. The Python Bootstrap's `receipts` gate
+      expects pytest test IDs via `pytest --collect-only`, but `.meta/` has no
+      pytest harness — its gate is `check.py` and its tests are probes in
+      `.meta/checks/probes.py`. Adopting history logs under `.meta/` required
+      deciding what a receipt is here and how to prevent history files from
+      becoming unread orphans.
+    alternatives:
+      - name: Add pytest and a package structure to .meta/
+        chosen: false
+        reason: >-
+          It turns `.meta/` into a package when it is explicitly a collection of
+          scripts and gate checks invoked via `uvx`. Bringing pytest into `.meta/`
+          expands the gate's dependencies and runtime surface solely to reuse the
+          bootstrap's test collector, when `.meta/` already has a working test
+          suite in `checks/probes.py`.
+      - name: Commit hashes or pull request citations as receipts
+        chosen: false
+        reason: >-
+          A receipt in Nothing Unconsumed is the test that would fail if the
+          change were undone. A commit hash or pull request number records where a
+          change happened, but is not mechanically falsifiable: if a past bug
+          resurfaces or code is undone, the commit hash remains unchanged, so the
+          gate cannot detect staleness.
+      - name: Unchecked history logs beside .meta/ modules
+        chosen: false
+        reason: >-
+          Prose beside code that nothing names and nothing checks is an orphan
+          waiting to drift. Without gate enforcement, history files would quickly
+          decay into stale documentation that subsequent agents and human
+          maintainers cannot rely on.
+      - name: Check and probe symbols as receipts, verified statically by check.py, with companion docstring naming
+        chosen: true
+        reason: >-
+          The probes in `.meta/checks/probes.py` and step definitions in
+          `.meta/checks/` are `.meta/`'s regression tests, written specifically
+          against past bugs and reviewer refusals. A receipt naming
+          `<path>::<symbol>` can be verified statically via `ast.parse` without
+          executing arbitrary code or requiring pytest. Companion script
+          resolution identifies both `.py` files and extensionless CLI entrypoints
+          in `.meta/say/` and `.meta/`, ensuring every `.history.md` is named in
+          its companion's module docstring.
+    consequences:
+      - >-
+        `.meta/checks/files.py` adds `meta history orphans` and `meta history receipts`
+        checks. Every `.history.md` under `.meta/` must have a companion `.py` or
+        executable script that names it in its module docstring, and every
+        `Receipt:` entry in a history log must resolve to a valid symbol in the
+        referenced file.
+      - >-
+        Executable scripts without file extensions in `.meta/say/` (`move`,
+        `commit`, `post`, `whoami`) and `.meta/` (`gate`) are recognized as valid
+        companions when resolving `<module>.history.md`.
+      - >-
+        Past run narratives, superseded implementation details, and historical
+        incident accounts in `.meta/` files are routed to `<module>.history.md`
+        beside the corresponding module, leaving only load-bearing *why* and
+        interface documentation in source docstrings.
+    falsifier: >-
+      A history entry under `.meta/` whose receipt requires pytest to express, or
+      a companion script under `.meta/` whose docstring cannot be parsed by
+      Python's `ast`.
+    rationale: |-
+      The Python Bootstrap's Literate Programming discipline divides prose into
+      what to do (item docstrings), why it is this way (module docstrings), and
+      what happened, this once (`<module>.history.md`). In `.meta/`, the lack of
+      a history log mechanism caused historical incident narratives and past-run
+      details to accumulate inside source files and docstrings.
+
+      The two obstacles to applying Step 5 to `.meta/` were the absence of pytest
+      to check receipts and the absence of an orphan check to ensure logs stay
+      consumed. Both are answered by using what `.meta/` already has:
+      `.meta/checks/probes.py` holds regression probes for historical defects,
+      and `check.py` already checks file relationships and AST properties across
+      the repository.
+
+      Static AST validation of `Receipt: <path>::<symbol>` preserves the invariant
+      that when a probe or check function is removed or renamed, stale history
+      entries fail the gate immediately, matching the exact semantics of the
+      Python seed's pytest receipts without importing a test harness into `.meta/`.

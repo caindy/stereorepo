@@ -2,16 +2,12 @@
 """The channel: the credential and the Trailer, and nothing else.
 
 Every comment an agent writes here is posted under its Role's account, so which
-Job wrote it is carried by an `Actor:` Trailer and by nothing else. A Trailer
-that the writer types is a Trailer the writer can forget — and one was forgotten
-on this repository's own pull request, where it read as the solo and
-manufactured the second party A16 asks for. That defect is not an oversight to
-remember harder about; it is what happens when signing is an act rather than a
-property of the channel.
+Job wrote it is carried by an `Actor:` Trailer and by nothing else. The channel
+composes and appends the Trailer itself from the environment, ensuring signing
+is an intrinsic property of the channel rather than a manual act that can be
+omitted (solorepo's DR-069). History in channel.history.md.
 
-So this is the channel (solorepo's DR-069). It appends the Trailer itself, from the
-environment, and refuses to speak when the environment does not say who is
-speaking. There is no argument for the identity, deliberately: what a caller can
+There is no argument for the identity, deliberately: what a caller can
 pass, a caller can pass wrongly.
 
 It is a module, not a verb surface. The programs beside it import it, and each

@@ -3,7 +3,7 @@
 What the schemas state and LinkML cannot check: a reference that resolves to
 nothing, a cycle a path cannot traverse, a membership that crosses a file
 boundary, and the three counts over the Decision record that a rule cannot make
-(solorepo's DR-150).
+(solorepo's DR-150). History in graph.history.md.
 """
 import re
 import subprocess
@@ -420,11 +420,8 @@ def decision_numbering(index, reserved=reserved_decision_numbers,
             return shown + (f" and {len(numbers) - 10} more" if len(numbers) > 10 else "")
 
         # The commits decide the holes they can, and the tags decide what is
-        # left. Asking the remote first threw the deletion read away on every
-        # run where it would not answer — which is every run in a portfolio
-        # with no `origin`, the install that read is local for, so the one
-        # sentence saying what to do was withheld exactly where it was the only
-        # one available (solorepo's #152).
+        # left. Local commit history is checked first so that clones without an
+        # origin remote still receive actionable guidance for local deletions.
         removed = deleted(missing)
         gone = [] if removed is None else [n for n in missing if n in removed]
         rest = [n for n in missing if n not in gone]
@@ -432,13 +429,9 @@ def decision_numbering(index, reserved=reserved_decision_numbers,
             problems.append(f"the record held {listed(gone)} and a commit here removed it, "
                             "tag or no tag; a number withdrawn stays in the record as a hole")
         if rest:
-            # Each sentence claims only what the run it is printed on actually
-            # read, and by here the holes it speaks about are the ones no read
-            # has explained. One sentence with the unreadable case bolted onto
-            # its end said "no tag reserving it" on runs where no tag was read,
-            # and then advised writing the number back as WITHDRAWN — which is
-            # how a session takes a number another branch is holding by
-            # following the check's own advice (solorepo's #152).
+            # Holes that neither commits nor tags have explained. Unreachable
+            # remotes are treated as unknown rather than vacant, so in-flight
+            # numbers are never advised as available.
             held = reserved()
             if held is None and removed is None:
                 problems.append(f"no entry for {listed(rest)}; the remote would not say which "

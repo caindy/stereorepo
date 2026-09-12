@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/190
+    name: "What happened, this once, is in the code: .meta/ has no history logs"
+    challenge_type: GAP
+    description: >-
+      Step 5 routes what happened, this once, out of the code and into a log
+      named for what it holds; the Python Bootstrap names that log
+      `<module>.history.md`. There are history logs in the seeds, but none under
+      `.meta/`, where the history went into the source instead in the form of
+      citations and commentary narrating past runs.

@@ -4,10 +4,10 @@ quarter of A12 whose target is an Issue rather than a file.
 
 `check.py` reads files and this repository's own commits, and reaches the remote
 for one thing only — which Decision numbers are reserved, and only when the
-record has a hole to explain (solorepo's DR-128). This reads GitHub for
-everything it does, so it is a separate command with a separate lifecycle — it
-runs when a pull request opens or changes, and there is nothing for it to say
-the rest of the time.
+record has a hole to explain (solorepo's DR-128). History in check_pr.history.md.
+This reads GitHub for everything it does, so it is a separate command with a
+separate lifecycle — it runs when a pull request opens or changes, and there is
+nothing for it to say the rest of the time.
 
     python .meta/check_pr.py 12          # what CI runs
     python .meta/check_pr.py --file b.md # a body on disk, for watching it fail
@@ -1276,10 +1276,8 @@ WORKFLOW = META.parent / ".github" / "workflows" / "gate.yml"
 def required_contexts():
     """The status checks `main`'s ruleset waits for, and the jobs that report them.
 
-    A comment used to say "rename in both places or in neither", which is not a
-    control: renaming a job leaves the ruleset waiting on a context nothing
-    produces, and every merge blocks with no clue why. The ruleset is readable,
-    so it is read.
+    Status checks required by `main`'s branch ruleset are read directly to
+    ensure workflow jobs produce every context `main` requires before merging.
 
     Loud and unmarked when it cannot run — a fork, or a token without
     `administration: read`, sees no rulesets and is told so rather than passed.

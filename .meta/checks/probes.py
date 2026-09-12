@@ -2371,3 +2371,32 @@ def merge_manager_probes():
 
     return problems
 
+
+@check("history probes", pre=True)
+def history_probes():
+    """History parsing and verification of .meta/ receipts and orphans (solorepo's DR-171)."""
+    import files
+    problems = []
+
+    # Comment stripping: an entry inside HTML comments is ignored
+    sample = (
+        "### Live Entry\n\n"
+        "Receipt: `.meta/check.py::main`\n\n"
+        "<!--\n"
+        "### Commented Entry\n\n"
+        "Receipt: `.meta/checks/probes.py::no_such_probe`\n"
+        "-->"
+    )
+    entries = files.history_entries_of(sample)
+    if len(entries) != 1:
+        problems.append(f"history probes: expected 1 entry, got {len(entries)}")
+    elif entries[0] != ("Live Entry", ".meta/check.py::main"):
+        problems.append(f"history probes: unexpected entry {entries[0]}")
+
+    # Receipt without backticks or missing receipt line
+    no_receipt = files.history_entries_of("### Broken Entry\n\nNo receipt line here\n")
+    if len(no_receipt) != 1 or no_receipt[0][1] is not None:
+        problems.append(f"history probes: expected None receipt, got {no_receipt}")
+
+    return problems
+
