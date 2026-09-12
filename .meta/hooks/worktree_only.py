@@ -534,7 +534,9 @@ def plain_form(command):
             i += offset
             # An option with no `=` may own the word after it: `--repo other/repo`
             # goes whole, or the repository is left behind as a positional.
-            owns = "=" not in words[i] and i + 1 < len(words) and not words[i + 1].startswith("-")
+            # A long option (starts with "--") can own the next word, but a short
+            # option (starts with a single "-") cannot (solorepo's #243).
+            owns = words[i].startswith("--") and "=" not in words[i] and i + 1 < len(words) and not words[i + 1].startswith("-")
             words = words[:i] + words[i + (2 if owns else 1):]
     candidate = " ".join(requote(word) for word in words)
     return candidate if command_allowed(candidate) is None else None

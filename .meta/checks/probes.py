@@ -217,6 +217,7 @@ def hook_probes():
         ("git log -1&&git -c core.pager=id log", "git log -1"),
         ("git log -1 --output=.meta/say", "git log -1"),
         ("gh pr view 87 --repo other/repo --json body", "gh pr view 87 --json body"),
+        ("git grep -rn 'authority.yaml' 0123abc -- .meta/", "git grep authority.yaml 0123abc -- .meta/"),
         ("python3 .meta/check_pr.py 87 --watch", "python3 .meta/check_pr.py 87"),
         ("git grep -n 'a.*' -- README.md | wc -l", "git grep -n 'a.*' -- README.md"),
         ("python3 .meta/check.py", None),
