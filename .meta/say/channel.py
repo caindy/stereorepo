@@ -7,8 +7,8 @@ composes and appends the Trailer itself from the environment, ensuring signing
 is an intrinsic property of the channel rather than a manual act that can be
 omitted (solorepo's DR-069). History in channel.history.md.
 
-There is no argument for the identity, deliberately: what a caller can
-pass, a caller can pass wrongly.
+Identity is derived directly from the environment; callers do not supply
+identity arguments manually (solorepo's DR-175).
 
 It is a module, not a verb surface. The programs beside it import it, and each
 holds one concern (solorepo's DR-117): `post` says things — comments, threads, answers,
@@ -25,8 +25,8 @@ First is compiled from it, so `/pr-first` lists the coder's verbs and
 Role is one word said once (solorepo's DR-107). `SOLOREPO_ROLE_ENV` names a file outright
 and wins.
 
-Bodies come from stdin rather than the command line: the text is usually long,
-often has quotes in it, and a shell is the wrong place to keep an artifact.
+Bodies are read from stdin rather than command-line arguments to preserve
+multiline text and quotes without shell escaping issues.
 """
 import argparse
 import json

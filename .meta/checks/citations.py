@@ -226,24 +226,12 @@ BLOCK = re.compile(r"```.*?```", re.S)
 SPAN = re.compile(r"`[^`\n]*`")
 ARTICLE = re.compile(r"\bA(\d{1,2})\b")
 CITE = r"(?:DR-\d{3}|A\d{1,2})"
-# What a citation and its claim may have between them. Short, and stopped by
-# every mark a claim does not run across: the sentence's own punctuation, and
-# the brackets and pipes that make a link or a table cell. `decisions.md` lists
-# every entry in a table, and a row whose title contains "applies" sits between
-# two links to entries — a sentence to a regular expression and to nobody else.
-# Lazy, so that a relation names the citation next to it on the object side:
-# read greedily, a sentence of the form `X supersedes Y, and Z applies` reaches
-# past its object to the last number in the sentence and reports a relation
-# nobody stated. Laziness reaches no further than that, and the subject side
-# needs the same thing said the other way: `finditer` returns the leftmost
-# match, so the subject would be the first citation before the verb rather than
-# the one the sentence attaches it to, and the scan then resumes past the object
-# so the nearer citation is never tried. `Unlike X, Y applies Z` would read X's
-# `applies` for a relation Y holds, and `W and Y applies Z`, with W an Article,
-# would bind a subject that is no Decision and stop there. `NEAREST` is the gap
-# with no citation in it, which makes the anchor the nearest citation in both
-# directions.
+# Punctuation and markup boundaries that delimit citation scopes (sentence punctuation,
+# markdown link brackets, and table cell pipes).
 GAP = r"[^.;:|\[\]()\n]{0,30}?"
+
+# Bounded non-citation span ensuring relation verbs bind to the nearest adjacent citation
+# anchor in either direction without spanning intervening citations (solorepo's DR-175).
 NEAREST = rf"(?:(?!{CITE})[^.;:|\[\]()\n]){{0,30}}?"
 # Attribution: the words that turn a quotation into a claim about the entry
 # beside it. Deliberately not `is` or `was`, which put a quotation next to a

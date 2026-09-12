@@ -6,11 +6,9 @@ A PreToolUse hook, so the harness runs it rather than the agent remembering to.
 ones; this catches everything else that can reach the same endpoint — `curl`, `python`, `wget`, a language's
 HTTP client — because a deny list over one binary is not a boundary.
 
-It is a string match over a command line, and string matches lose eventually.
-What it buys is that the cheap paths are shut and the remaining ones are
-deliberate. The boundary that would actually hold is the credential: a token
-reachable only by `.meta/say/` makes the channel the only path by construction rather
-than by inspection. That is solorepo's #21 (solorepo's DR-174), and this stands in until it is built.
+Inspects commands before execution and blocks unsanctioned access to GitHub
+endpoints, ensuring operations route through the signing channel until credential-level
+isolation is enforced (solorepo's DR-174, solorepo's DR-175).
 
     echo '{"tool_name":"Bash","tool_input":{"command":"..."}}' | .meta/hooks/signed_channel.py
 
@@ -22,25 +20,12 @@ import re
 import sys
 
 # The endpoint, however it is spelled, and the writing verbs of the CLI that
-# wraps it. Reading is not the concern: an unsigned `gh pr view` costs nothing.
-#
-# `merge` and `close` are here although neither posts text. They are acts by an
-# Actor, and GitHub records who performed them — so they go through the channel
-# for the same reason a comment does, which is that the record should say which
-# Role did it rather than which human owns the credential. `update-branch` is
-# the same kind and one further: by hand it defaults to a merge commit GitHub
-# authors, which names no Actor at all and fails A19 on the branch it moved
-# (solorepo's DR-113). The stack extension's verbs that write — link, merge, submit and
-# the rest — are acts of the same kind (solorepo's DR-100); `submit` also opens pull
-# requests unsigned. Its views stay open.
-#
-# `workflow run` is the newest of them and the same kind again: it starts a Job,
-# which GitHub records as dispatched by an account, and the Job then writes with
-# a credential of its own. `.meta/say/move dispatch` is the verb for it
-# (solorepo's DR-151), and the refusal of the raw spelling is the other half of
-# that pattern — a verb supplied while the raw path stays one keystroke away
-# leaves the act attributable to whoever holds `gh`. `gh run list` and
-# `gh workflow view` read and stay open.
+# wraps it. Reading is permitted; mutating actions must pass through the channel:
+# - merge, close, update-branch: mutating operations that record an actor and require
+#   proper attribution (solorepo's DR-113).
+# - stack commands (link, merge, submit): commands that create or mutate pull requests (solorepo's DR-100).
+# - workflow run: dispatches GitHub Actions jobs; must use .meta/say/move dispatch (solorepo's DR-151).
+# Read-only operations (such as gh run list and gh workflow view) remain open.
 ENDPOINT = re.compile(r"api\.github\.com|graphql\.github\.com")
 GH_WRITES = re.compile(r"\bgh\s+(api|pr\s+(comment|review|create|edit|merge|close|update-branch)"
                        r"|issue\s+(create|comment|edit|close)"

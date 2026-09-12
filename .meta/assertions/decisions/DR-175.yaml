@@ -1,0 +1,74 @@
+decisions:
+  - id: work:decision/175
+    name: "DR-175 · Reader-facing literate programming rubric: docstrings state what to do without litigating against a reviewer"
+    challenge: work:challenge/191
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/bootstraps-python-literate-programming
+      - work:artifact/bootstraps-rust-literate-programming
+      - work:artifact/meta-checks-citations
+      - work:artifact/meta-say
+      - work:artifact/meta-hooks-signed-channel
+    context: >-
+      Step 5 of Literate Programming requires prose in a source file to be sorted
+      by what it tells the reader: what to do (item docstring), why it is the way
+      it is (module docstrings and Decision Records), and what happened, this
+      once (`<module>.history.md`). Under `.meta/`, docstrings and comments
+      frequently litigated design choices: anticipating hypothetical challenges,
+      narrating discarded alternatives, and defending decisions inside item
+      docstrings rather than stating usage contracts directly. Issue #191
+      asked whether register is sayable beyond taste, recognizing that a target
+      prose-to-code ratio is an easily gamed instrument while an objective
+      reader's test provides actionable guidance.
+    alternatives:
+      - name: Target prose-to-code ratio enforced by a gate check
+        chosen: false
+        reason: >-
+          A ratio is arbitrary and easily gamed by writers padding code or
+          trimming essential documentation, without improving the clarity or
+          usability of docstrings.
+      - name: Rely on ad-hoc reviewer taste during pull request reviews
+        chosen: false
+        reason: >-
+          Without an explicit rubric in the Bootstrap and ontology, reviewer
+          feedback varies unpredictably across reviewers and sessions, allowing
+          defensive litigation to re-accumulate across changes.
+      - name: Reader-facing literate programming rubric in Bootstrap guidance, with concise docstrings and dereferenced rationale
+        chosen: true
+        reason: >-
+          The reader's test ("could someone use this item from its docstring
+          alone, without reading the argument for it?") provides an objective,
+          actionable rubric. Item docstrings state what to do, arguments, return
+          values, and invariants without litigating against a reviewer; module
+          docstrings and Decision Records carry the why; and history logs carry
+          what happened.
+    consequences:
+      - >-
+        `bootstraps/python/literate-programming.md` and
+        `bootstraps/rust/literate-programming.md` establish the Reader's Rubric for
+        literate programming, clarifying that docstrings address a user of the
+        code rather than a reviewer who might object.
+      - >-
+        Item docstrings and comments across `.meta/` (such as
+        `.meta/checks/citations.py`, `.meta/say/channel.py`, and
+        `.meta/hooks/signed_channel.py`) are refactored to remove litigious
+        justifications and defensive arguments, presenting direct usage contracts.
+      - >-
+        Establishes the rubric required by the technical writer review pass (#346)
+        to hold prose and docstrings to the reader-facing literate programming register.
+    falsifier: >-
+      A docstring under `.meta/` or in a bootstrap package whose primary content
+      argues against a rejected alternative or defends a design choice rather
+      than stating what the item does and how to call it.
+    rationale: |-
+      Literate Programming requires an exposition addressed to a human reader.
+      When docstrings litigate against hypothetical reviewer objections, they
+      impose cognitive bulk on every reader who arrives merely seeking to use the
+      item.
+
+      The sorting principle already separates what to do, why, and what happened.
+      Enforcing this principle means that defensive argumentation, rejected
+      alternatives, and historical debates belong in Decision Records or history
+      logs, never in item docstrings. A reader arriving at an item docstring needs
+      the contract and usage rules; the why is searchable in module docstrings or
+      ADRs, and the historical incident is isolated in `.history.md`.

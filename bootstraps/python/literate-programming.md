@@ -70,3 +70,23 @@ Each is a step of `uv run gate`, and each can fail and says what it checked:
   `pytest --collect-only` reports. The form of an entry can sit in the log as
   an HTML comment without counting as one, which is how the seed's log says
   what an entry looks like before it has any.
+
+## The reader's test and register
+
+Docstrings are addressed to a reader who wants to use the item, not to a
+reviewer who might object (DR-175).
+
+Docstrings litigate when they anticipate objections, debate discarded
+alternatives, or narrate past bugs. A reader arriving at an item docstring needs
+its contract: what it does, how to use it, parameters, return values, errors,
+and invariants.
+
+The test for any docstring is the **reader's test**:
+
+> *Could someone use this item from its docstring alone, without reading the argument for it?*
+
+If a docstring must explain *why* an invariant exists or why an alternative was
+rejected, that rationale belongs in the module docstring or a Decision Record,
+cited by number. If it narrates what failed in a past run or incident, that
+narrative belongs in `<module>.history.md` with a receipt.
+
