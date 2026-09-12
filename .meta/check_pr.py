@@ -76,7 +76,17 @@ ACTOR = re.compile(r"^Actor:\s*(\S+)", re.M)
 # (`channel.py`'s `RUN_MARK`, solorepo's DR-148); `mine()` below resolves the
 # session the same way `channel.actor()` does, so the two never disagree
 # about which id the Trailer signed with.
-RUN_MARK = "gha-"
+def _load_run_mark():
+    from importlib.machinery import SourceFileLoader
+    import importlib.util
+    loader = SourceFileLoader("channel", str(pathlib.Path(__file__).resolve().parent / "say" / "channel.py"))
+    spec = importlib.util.spec_from_loader("channel", loader)
+    channel = importlib.util.module_from_spec(spec)
+    loader.exec_module(channel)
+    return channel.RUN_MARK
+
+
+RUN_MARK = _load_run_mark()
 NOTICED = re.compile(r"^\W*\*\*Noticed and not done\.?\*\*", re.M)
 PROMOTED = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/issues/\d+")
 HEADING = re.compile(r"^\*\*(.+?)\.\*\*", re.M)
