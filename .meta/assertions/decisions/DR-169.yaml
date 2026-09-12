@@ -1,0 +1,40 @@
+decisions:
+  - id: work:decision/169
+    name: "DR-169 · Three outcomes and scope reporting for the .meta Project's check.py gate"
+    challenge: work:challenge/292
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-check
+      - work:artifact/meta-checks-collect
+      - work:artifact/meta-checks-files
+    context: >-
+      Article A6 requires that every gate step has three outcomes: could not run (loud, unmarked, exits zero);
+      passed (marked with scope); and found something (non-zero). Article A7 states that a check-mark is a
+      claim about scope, so a step must state what it checked.
+      The .meta Project's gate check.py and report did not have a way for steps to return "could not run"
+      or report their scope. As a result, in a portfolio, "scaffold-only paths" and "gate workflows agree"
+      both returned [] because they had nothing to read. The gate reported them as "ok", claiming coverage
+      over an empty scope, which violates Articles A6 and A7.
+    alternatives:
+      - name: Return empty list and report ok on empty scope
+        chosen: false
+        reason: >-
+          This claims coverage over an empty scope, violating A6 and A7, and misleading the user into
+          believing that the checks ran successfully in a portfolio.
+      - name: Change the registry contract to allow CouldNotRun, Passed, and Found outcomes
+        chosen: true
+        reason: >-
+          Aligns check.py with the standard Python and Rust bootstrap gates' three-outcome contract. It
+          defines CouldNotRun, Passed, and Found classes in collect.py. Backward compatibility is preserved by
+          treating list returns as either Found (if non-empty) or a standard ok (if empty).
+    consequences:
+      - >-
+        check.py's report() is updated to print ? on CouldNotRun, ok with scope on Passed, and x with problems on Found.
+      - >-
+        scaffold-only paths is updated to return CouldNotRun when there are no files to scan, and Passed with the count of scanned files otherwise.
+      - >-
+        gate workflows agree is updated to return CouldNotRun when either of the workflow files is missing, and Passed otherwise.
+    falsifier: >-
+      A check running in a portfolio over an empty scope that reports "ok" instead of "?" or "?  scaffold-only paths: no inherited paths or template to scan".
+    rationale: |-
+      This enforces A6 and A7 properly across the .meta Project's gate, preventing false confidence when checks did not run.

@@ -35,12 +35,27 @@ import probes
 from collect import STEPS, views
 
 
-def report(label, problems):
-    """One step, one line, in the shape A21 names (solorepo's DR-092), and its problems under it."""
-    print(("x  " if problems else "ok ") + label + (f" ({len(problems)})" if problems else ""))
-    for p in problems:
-        print(f"     {p}")
-    return bool(problems)
+def report(label, outcome):
+    """One step, one line, in the shape A21 names (solorepo's DR-092), and its problems or status."""
+    if isinstance(outcome, collect.CouldNotRun):
+        print(f"?  {label}: {outcome.why}")
+        return False
+    elif isinstance(outcome, collect.Passed):
+        print(f"ok {label}" + (f" — {outcome.scope}" if outcome.scope else ""))
+        return False
+    elif isinstance(outcome, collect.Found):
+        problems = outcome.problems
+    else:
+        problems = outcome
+
+    if problems:
+        print(f"x  {label} ({len(problems)})")
+        for p in problems:
+            print(f"     {p}")
+        return True
+    else:
+        print(f"ok {label}")
+        return False
 
 
 def main():

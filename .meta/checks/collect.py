@@ -41,6 +41,24 @@ Step = collections.namedtuple("Step", "label run pre sources")
 SOURCES = ("index", "refs", "views", "asked", "pages")
 
 
+class CouldNotRun:
+    """The step did not run. Loud, unmarked, and exits zero."""
+    def __init__(self, why):
+        self.why = why
+
+
+class Passed:
+    """The step ran and found nothing. Carries what it checked (its scope)."""
+    def __init__(self, scope):
+        self.scope = scope
+
+
+class Found:
+    """The step found problems. One line per problem."""
+    def __init__(self, problems):
+        self.problems = problems
+
+
 def check(label, pre=False):
     """Register a step under the label the gate prints, at its definition.
 

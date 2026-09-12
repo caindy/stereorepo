@@ -17,7 +17,7 @@ import sys
 
 import yaml
 
-from collect import META, ROOT, TEMPLATE, TOKEN, check, view_for
+from collect import META, ROOT, TEMPLATE, TOKEN, check, view_for, CouldNotRun, Passed, Found
 
 
 class Strict(yaml.SafeLoader):
@@ -239,11 +239,13 @@ def scaffold_only_paths():
     next `bootstraps/` render would be typed (solorepo's DR-115).
     """
     problems = []
+    scanned = set()
 
     def scan(paths, names):
         for path in paths:
             if path.suffix not in (".md", ".yaml", ".yml") or not path.is_file():
                 continue
+            scanned.add(path)
             for number, line in enumerate(path.read_text().splitlines(), 1):
                 if "solorepo" in line.lower():
                     continue
@@ -257,7 +259,12 @@ def scaffold_only_paths():
         paths = [base] if base.is_file() else sorted(base.rglob("*")) if base.is_dir() else []
         scan(paths, SCAFFOLD_ONLY)
     scan(sorted(TEMPLATE.rglob("*")), tuple(n for n in SCAFFOLD_ONLY if n != "template/"))
-    return problems
+
+    if not scanned:
+        return CouldNotRun("no inherited paths or template/ to scan")
+    if problems:
+        return Found(problems)
+    return Passed(f"{len(scanned)} file{'s' if len(scanned) != 1 else ''}")
 
 
 # The half the two gate workflows share, by job (solorepo's DR-119): each of these is in
@@ -337,7 +344,7 @@ def gate_workflows_agree():
     ours = ROOT / ".github" / "workflows" / "gate.yml"
     seed = TEMPLATE / ".github" / "workflows" / "gate.yml"
     if not (ours.is_file() and seed.is_file()):
-        return []
+        return CouldNotRun("either ours or template workflow is absent")
     a = yaml.safe_load(ours.read_text()) or {}
     b = yaml.safe_load(seed.read_text()) or {}
     # YAML 1.1 reads the bare key `on` as the boolean True, and pyyaml is 1.1.
@@ -365,7 +372,9 @@ def gate_workflows_agree():
             where, how = found
             problems.append(f"{where}: {how} — {ours.relative_to(ROOT)} and "
                             f"{seed.relative_to(ROOT)} share this half, and it is held equal")
-    return problems
+    if problems:
+        return Found(problems)
+    return Passed(f"{ours.relative_to(ROOT)} and {seed.relative_to(ROOT)} agree")
 
 
 @functools.cache

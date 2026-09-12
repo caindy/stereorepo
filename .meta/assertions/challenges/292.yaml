@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/292
+    name: "Two steps mark ok over a scope of nothing, which is the green a portfolio's first gate run prints"
+    challenge_type: DEFECT
+    description: >-
+      scaffold-only paths and gate workflows agree both return [] in a portfolio
+      for the same reason: there is nothing there for them to read. check.py's
+      report turns [] into ok, so a portfolio's gate prints green marks having
+      checked nothing at all, violating Articles A6 and A7.
