@@ -252,12 +252,31 @@ def role_credential():
     return {"GH_TOKEN": found["GH_TOKEN"]}
 
 
-def gh(*args, parse=True):
+def gh(*args, parse=True, tolerate_fail=False):
     out = subprocess.run(["gh", *args], capture_output=True, text=True,
                          env={**os.environ, **role_credential()})
     if out.returncode:
+        if tolerate_fail:
+            raise subprocess.CalledProcessError(out.returncode, ["gh"] + list(args), output=out.stdout, stderr=out.stderr)
         sys.exit(f"gh: {out.stderr.strip()}")
     return json.loads(out.stdout) if parse and out.stdout.strip() else out.stdout.strip()
+
+
+def gh_with_retry(*args, parse=True, tries=3, delay=2, backoff=2, tolerate_fail=False):
+    """Run gh, retrying on subprocess/API failure with exponential backoff."""
+    import time
+    current_delay = delay
+    for attempt in range(tries):
+        try:
+            return gh(*args, parse=parse, tolerate_fail=True)
+        except subprocess.CalledProcessError as exc:
+            if attempt == tries - 1:
+                if tolerate_fail:
+                    raise
+                sys.exit(f"gh: {exc.stderr.strip()}")
+            print(f"warning: gh {' '.join(args)} failed (attempt {attempt + 1}/{tries}): {exc.stderr.strip()}. Retrying in {current_delay}s...", file=sys.stderr)
+            time.sleep(current_delay)
+            current_delay *= backoff
 
 
 def graphql(query, **variables):

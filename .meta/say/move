@@ -225,11 +225,66 @@ def stop(issue, body):
     claimed, the one state the coder loop's guard reads as a run still
     standing (solorepo's #117). The pull request stays open — merged, never abandoned —
     for the run that takes the Issue up again.
+
+    Tolerant of its own read/write failures: if the Issue is persistently
+    unreadable or unwritable (e.g. deleted/transferred, rate limited, or token
+    scope failure), it retries and falls back gracefully, printing warnings to
+    stderr without crashing (exiting non-zero).
     """
-    challenge_labels(issue)
-    channel.sibling("post").conversation_comment(issue, body)
-    release(issue)
-    difficulty(issue, "human")
+    # 1. Best-effort label check (retrying and tolerating failures).
+    try:
+        res = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
+        if res is not None:
+            now = [l["name"] for l in res["labels"]]
+            if "challenge" not in now:
+                sys.exit(f"say: #{issue} is not a Challenge (labelled {now or 'nothing'}); a difficulty "
+                         "is a Challenge's, and a loop reads it only beside `challenge`. "
+                         "`move triage` makes it one, at a level, in one act.")
+    except SystemExit:
+        # Re-raise the sys.exit from inside the label check block
+        raise
+    except Exception as exc:
+        print(f"warning: could not read labels of #{issue} to verify Challenge: {exc}", file=sys.stderr)
+
+    # 2. Best-effort comment.
+    try:
+        made = channel.gh_with_retry("api", f"repos/{channel.repo()}/issues/{issue}/comments", "-f", f"body={body}", tolerate_fail=True)
+        if made and "html_url" in made:
+            print(made["html_url"])
+    except Exception as exc:
+        print(f"warning: could not post comment on #{issue}: {exc}", file=sys.stderr)
+
+    # 3. Best-effort release assignee.
+    try:
+        login = channel.login()
+        channel.gh_with_retry("issue", "edit", str(issue), "--remove-assignee", login, parse=False, tolerate_fail=True)
+        who_res = channel.gh_with_retry("issue", "view", str(issue), "--json", "assignees", tolerate_fail=True)
+        if who_res is not None:
+            who = [a["login"] for a in who_res["assignees"]]
+            if login in who:
+                print(f"warning: GitHub shows #{issue} still assigned to {login} after release", file=sys.stderr)
+            else:
+                print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
+    except Exception as exc:
+        print(f"warning: could not release assignee on #{issue}: {exc}", file=sys.stderr)
+
+    # 4. Best-effort difficulty move to human.
+    try:
+        res_diff = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
+        if res_diff is not None:
+            now = [l["name"] for l in res_diff["labels"]]
+            stale = [l for l in now if l in DIFFICULTIES and l != "human"]
+            cmd = ["issue", "edit", str(issue)]
+            cmd += ["--add-label", "human"]
+            for name in stale:
+                cmd += ["--remove-label", name]
+            channel.gh_with_retry(*cmd, parse=False, tolerate_fail=True)
+            res_back = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
+            if res_back is not None:
+                now_back = [l["name"] for l in res_back["labels"]]
+                print(f"#{issue} is labelled {', '.join(now_back)}")
+    except Exception as exc:
+        print(f"warning: could not set difficulty of #{issue} to human: {exc}", file=sys.stderr)
 
 
 def milestone(issue, title, clear=False):

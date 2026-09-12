@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/274
+    name: The coder's stop fallback re-reads the Issue it could not read, and fails the same way
+    challenge_type: DEFECT
+    description: >-
+      #272 guards `coder.yml`'s hand-back step's `gh issue view` and `gh pr list --state merged`
+      reads with `if ! X=$(...); then .meta/say/move stop "$ISSUE" ...; fi`, so a failed
+      read hands the Issue to the solo instead of taking the whole step down under `bash -e`.
+      But the fallback itself opens with `challenge_labels(issue)` → `labels_of(issue)` →
+      `channel.gh("issue", "view", ...)` which `sys.exit`s on any non-zero `gh` exit with no
+      retry. If the Issue is unreadable for a persistent reason, the fallback's own read
+      fails the same way `move stop` exits non-zero, reproducing the silent-death failure.

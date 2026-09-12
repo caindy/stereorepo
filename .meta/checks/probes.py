@@ -432,7 +432,7 @@ class FakeGitHub:
                 pull["behind"] = pull.get("leaves", pull["behind"])
         return answer
 
-    def __call__(self, *args, parse=True):
+    def __call__(self, *args, parse=True, **kwargs):
         head = args[:2]
         if head == ("repo", "view"):
             return {"nameWithOwner": "o/r", "deleteBranchOnMerge": True}
@@ -1656,7 +1656,7 @@ def channel_table_probes():
 
 
 class FakeIssue:
-    """As much of GitHub as `claim` asks about: an Issue's labels, the
+    """As much of GitHub as `claim` and `stop` ask about: an Issue's labels, the
     assignment, and the read-back of it.
 
     One Issue, because the verb takes one. `views` counts the reads of the
@@ -1665,10 +1665,15 @@ class FakeIssue:
     in the assignees.
     """
 
-    def __init__(self, labels):
-        self.labels, self.assignees, self.views = list(labels), [], 0
+    def __init__(self, labels, fail=False, assignees=None):
+        self.labels, self.assignees, self.views = list(labels), list(assignees or []), 0
+        self.fail = fail
 
-    def __call__(self, *args, parse=True):
+    def __call__(self, *args, parse=True, **kwargs):
+        if self.fail:
+            raise subprocess.CalledProcessError(1, ["gh"] + list(args), output="", stderr="mock API error")
+        if args[:2] == ("repo", "view"):
+            return {"nameWithOwner": "o/r"}
         if args[:2] == ("issue", "view") and "labels" in args:
             self.views += 1
             return {"labels": [{"name": name} for name in self.labels]}
@@ -1677,8 +1682,25 @@ class FakeIssue:
         if args[:2] == ("issue", "edit") and "--add-assignee" in args:
             self.assignees.append(args[args.index("--add-assignee") + 1])
             return ""
+        if args[:2] == ("issue", "edit") and "--remove-assignee" in args:
+            login = args[args.index("--remove-assignee") + 1]
+            if login in self.assignees:
+                self.assignees.remove(login)
+            return ""
+        if args[:2] == ("issue", "edit") and "--add-label" in args:
+            label_to_add = args[args.index("--add-label") + 1]
+            if label_to_add not in self.labels:
+                self.labels.append(label_to_add)
+            for i, arg in enumerate(args):
+                if arg == "--remove-label":
+                    val = args[i + 1]
+                    if val in self.labels:
+                        self.labels.remove(val)
+            return ""
         if args[:2] == ("api", "user"):
             return "o-r-coder"
+        if args[:1] == ("api",) and len(args) > 1 and "comments" in args[1]:
+            return {"html_url": "https://github.com/o/r/issues/1/comments/1"}
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
 
@@ -1866,6 +1888,61 @@ def actor_probes():
         set_env(was_actor, was_claude)
 
     return problems
+
+
+@check("stop probes", pre=True)
+def stop_probes():
+    """`move stop` robust behavior: retries, and tolerates persistent failures gracefully."""
+    import contextlib
+    import io
+
+    channel, _, programs = load_channel()
+    move = programs["move"]
+    problems = []
+
+    def run_stop(fake, issue, body):
+        original, channel.gh = channel.gh, fake
+        try:
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                move.stop(issue, body)
+            return None, stdout.getvalue(), stderr.getvalue()
+        except SystemExit as exc:
+            return str(exc.code), "", ""
+        except Exception as exc:
+            return f"{type(exc).__name__}: {exc}", "", ""
+        finally:
+            channel.gh = original
+
+    # Case 1: Normal stop on a Challenge
+    fake = FakeIssue(["challenge", "medium"], assignees=["o-r-coder"])
+    err, out, serr = run_stop(fake, "7", "stopped working")
+    if err is not None:
+        problems.append(f"stop: normal stop failed with error: {err}")
+    if "human" not in fake.labels:
+        problems.append("stop: normal stop did not label issue as `human`")
+    if "medium" in fake.labels:
+        problems.append("stop: normal stop did not remove the stale level label")
+    if "o-r-coder" in fake.assignees:
+        problems.append("stop: normal stop did not release the assignee")
+
+    # Case 2: Stop on a non-Challenge
+    fake = FakeIssue(["medium"], assignees=["o-r-coder"])
+    err, out, serr = run_stop(fake, "7", "stopped working")
+    if err is None or "not a Challenge" not in err:
+        problems.append(f"stop: stopping on a non-Challenge should refuse with label error, got: {err}")
+
+    # Case 3: Persistent API failure (e.g. deleted issue / token scope)
+    fake = FakeIssue(["challenge", "medium"], fail=True)
+    err, out, serr = run_stop(fake, "7", "stopped working")
+    if err is not None:
+        problems.append(f"stop: persistent API failure should be tolerated without crashing, but got: {err}")
+    if "warning" not in serr:
+        problems.append("stop: persistent API failure should print warnings to stderr")
+
+    return problems
+
 
 
 @check("timing probes", pre=True)
