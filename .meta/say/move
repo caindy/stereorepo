@@ -1077,8 +1077,8 @@ def advance(pr=None, held=False):
                     # false report's mirror, a branch GitHub is holding armed
                     # called unarmed, and the wait costs a sleep only on the
                     # branch this is about to report as broken anyway.
-                    # And an arming that took is not the only end to the wait.
-                    # Arming is an intent GitHub holds until it acts on it, so
+                    # And an arming that took is not the only end to the wait
+                    # (solorepo's #253). Arming is an intent GitHub holds until it acts on it, so
                     # the checks going green in this window merge the pull
                     # request and clear the `autoMergeRequest` that did it —
                     # which is the arming having worked, read a moment too late
