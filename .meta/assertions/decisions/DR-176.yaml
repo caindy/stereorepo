@@ -1,0 +1,76 @@
+decisions:
+  - id: work:decision/176
+    name: "DR-176 · Technical writer review pass in the review workflow enforces reader-facing literate programming register"
+    challenge: work:challenge/346
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/github-workflows-review
+      - work:artifact/github-workflows-coder
+      - work:artifact/bootstraps-python-literate-programming
+      - work:artifact/bootstraps-rust-literate-programming
+    context: >-
+      Issue #262 asserted `work:role/technical-writer` and
+      `work:personality/technical-writer` to define the technical writing
+      character: spelled out for an audience it names, with every citation
+      dereferenced. What remained open in Issue #346 was establishing the
+      enforcement pass in the loop workflow. Without an automated review pass,
+      the declared Role and Personality remain assertions that no loop executes
+      or verifies. The coder role is designed for concision ("Recommendation
+      before survey, decision before rationale"), while durable artifacts and
+      source docstrings require reader-facing exposition. A dedicated technical
+      writer review pass allows the coder loop to remain fast and concise in pass
+      1, while ensuring docstrings and explanations across .meta/ and generated
+      artifacts satisfy the literate programming rubric (solorepo's DR-175) before landing.
+    alternatives:
+      - name: Require coder agents to perform heavy literate exposition in pass 1
+        chosen: false
+        reason: >-
+          Forcing the coder to draft extensive narrative expositions during initial
+          implementation slows down task turnaround, increases turn consumption,
+          and conflicts with the coder's concision directive.
+      - name: Separate technical writer loop workflow with a third Role account
+        chosen: false
+        reason: >-
+          A distinct third workflow job introduces orchestration overhead,
+          additional queue latency, extra GitHub account management, and
+          inter-workflow coordination complexity when the review workflow is
+          already the established gate for examining diff quality and compliance.
+      - name: Technical writer review pass integrated into the reviewer workflow
+        chosen: true
+        reason: >-
+          The reviewer workflow already scopes review dimensions and evaluates
+          diffs against repository disciplines. Integrating the technical writer
+          review pass into the review workflow (via constraints and dimension
+          scoping) ensures prose, docstrings, and artifacts are evaluated against
+          `work:personality/technical-writer` and solorepo's DR-175 before approval, without
+          adding another workflow hop.
+    consequences:
+      - >-
+        `.github/workflows/review.yml` establishes the Technical Writer pass:
+        reviewers evaluate changes to prose, docstrings, and durable artifacts
+        against `work:personality/technical-writer` and the Literate Programming
+        rubric (solorepo's DR-175).
+      - >-
+        `.github/workflows/coder.yml` clarifies that the coder pass (pass 1)
+        focuses on concise implementation and unit verification, while docstrings
+        and durable artifacts are held to the reader-facing register by the
+        technical writer review pass.
+      - >-
+        `bootstraps/python/literate-programming.md` and
+        `bootstraps/rust/literate-programming.md` cite the technical writer review
+        pass as the enforcement mechanism for the reader's test.
+    falsifier: >-
+      A pull request modifying source docstrings or durable artifacts that is
+      approved by the reviewer workflow without checking compliance with the
+      reader-facing literate programming register.
+    rationale: |-
+      Separating implementation from technical writing review preserves the
+      advantages of specialized Roles. The coder can move decisively to solve a
+      Challenge, writing minimal necessary code and draft docstrings. The
+      reviewer workflow, equipped with the technical writer rubric, checks that
+      the resulting exposition is reader-facing, fully dereferenced, and free
+      from reviewer litigation.
+
+      Embedding this pass into the reviewer's dimension scoping avoids extra
+      workflow latencies while guaranteeing that every merged change satisfies
+      the Literate Programming discipline.

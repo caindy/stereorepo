@@ -90,3 +90,7 @@ rejected, that rationale belongs in the module docstring or a Decision Record,
 cited by number. If it narrates what failed in a past run or incident, that
 narrative belongs in `<module>.history.md` with a receipt.
 
+The Technical Writer review pass (DR-176) holds prose, docstrings, and durable
+artifacts to this register during review, allowing implementation passes to
+remain concise while guaranteeing reader-facing exposition before landing.
+

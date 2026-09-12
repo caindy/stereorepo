@@ -558,6 +558,10 @@ jobs:
             not seen the argument is a different reader. What comes back is
             yours to act on or not, exactly as anything you spot yourself is,
             and what you decide not to do you raise as a notice on the diff.
+            Your initial pass (pass 1) remains concise and direct, adhering to work:personality/coder.
+            Durable artifacts and source docstrings must satisfy the reader-facing literate
+            programming rubric (solorepo's DR-175), which the technical writer review pass (solorepo's DR-176)
+            verifies before landing.
             The pass itself says nothing and changes no state: no comment that
             it ran, no verb of its own. A notice is about a finding rather than
             about the pass, and it is the only sign on GitHub that the pass

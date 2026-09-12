@@ -348,6 +348,14 @@ jobs:
           for one thing, is the same diff read again for what the session or
           another agent already holds — and every agent here runs in the
           foreground, so the run waits on it while it does.
+
+          **The Technical Writer pass holds prose to the Literate Programming register.**
+          When the diff touches documentation, docstrings, Decision Records, or markdown artifacts, evaluate
+          them under `work:personality/technical-writer` and the Literate Programming rubric (solorepo's DR-175, solorepo's DR-176):
+          - Spelled out, for an audience it names. Every citation dereferenced.
+          - Assume a reader who was not in the conversation and arrives by search years later.
+          - Apply the reader's test: could someone use this item from its docstring alone without reading the argument for it?
+          - Verify that item docstrings state what to do and invariants without litigating against a reviewer; why belongs in module docstrings or Decision Records, and past incident narratives belong in `<module>.history.md` (solorepo's DR-171).
           BODY
           cat .review/constraints.md
 
@@ -463,7 +471,10 @@ jobs:
             go (solorepo's #303). Name
             the dimensions this diff actually has, from `.review/diff.patch`
             which you have already read, and spawn no more than
-            ${{ steps.depth.outputs.agents }} of them, one to a dimension. A
+            ${{ steps.depth.outputs.agents }} of them, one to a dimension. If the diff
+            modifies docstrings, comments, Decision Records, or markdown files, include
+            the Technical Writer pass (evaluating against `work:personality/technical-writer`
+            and the Literate Programming rubric of solorepo's DR-175, solorepo's DR-176). A
             dimension this diff does not touch is not reviewed by an agent
             that finds nothing in it; one you can settle from the diff
             yourself does not need an agent either; and no two agents get the
@@ -677,6 +688,10 @@ jobs:
             compliance with `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`.
 
             Read the diff at `.review/diff.patch` and evaluate the change against repo conventions and assertions.
+            If the diff touches docstrings, comments, Decision Records, or markdown files, execute
+            the Technical Writer pass: hold prose to `work:personality/technical-writer` and the Literate
+            Programming rubric (solorepo's DR-175, solorepo's DR-176). Raise findings on litigious docstrings,
+            missing usage contracts, or undereferenced citations before approving.
 
             Post only through the channel, so every word carries the Trailer.
             Every posting command begins with `.meta/say/post` and takes its

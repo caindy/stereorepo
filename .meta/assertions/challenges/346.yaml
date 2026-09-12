@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/346
+    name: "A technical writer review pass to hold prose and docstrings to the literate programming register"
+    challenge_type: GAP
+    description: >-
+      PR #336 resolved Issue #262 by asserting `work:role/technical-writer` and
+      `work:personality/technical-writer`. What remained open was establishing
+      the technical writer review pass in the loop workflow to enforce the
+      literate programming rubric (DR-175) without encumbering the coder loop's
+      initial pass.
