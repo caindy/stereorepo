@@ -43,8 +43,10 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   here would drift the moment a recipe did (DR-106). Run it before reaching
   for a raw script, an ad-hoc API call, or a human. Not installed? `uvx
   --from rust-just just`.
-- A pull request this session opened is watched until it closes: `just watch <n>`
-  under a persistent Monitor, started the moment it is open, so a review is
+- A pull request this session opened is handed off and watched until it closes:
+  the handoff is an active semaphore, so request review with
+  `.meta/say/move request-review <n>` the moment the pull request is open and
+  clean; then start `just watch <n>` under a persistent Monitor, so a review is
   answered when it lands and not when someone looks. When one closes, `just
   sweep` names the branches whose remote is gone and the command that removes
   each; run them. Both are the harness's business, not a Discipline's step.
