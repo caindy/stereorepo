@@ -1,0 +1,58 @@
+decisions:
+  - id: work:decision/168
+    name: "DR-168 · Drop incorrect A6 citations for read-backs of state-changing verbs and let each state its own reason"
+    challenge: work:challenge/293
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-say-move
+    context: >-
+      Six docstrings and comments inside `.meta/say/move` and the Decision DR-133
+      cited Article A6 to justify the read-back of actions on GitHub. However, A6
+      states that "Every gate step has three outcomes — could not run, which is
+      loud and unmarked and exits zero; passed, which is marked; found something,
+      which is non-zero," which is strictly about gate step exit codes and reports.
+
+      The read-back idiom — verifying that state-changing operations actually took effect on
+      the remote before proceeding — is a different property entirely, aiming for
+      robustness and attributing state to what GitHub shows afterwards rather than
+      the raw exit code of the CLI command. It is not stated by any Article, making
+      the citations false.
+    alternatives:
+      - name: Create a new Charter Article stating the read-back rule
+        chosen: false
+        reason: >-
+          Adding a new Article would make the citations true, but the Charter is
+          for working agreements checked by the gate. A rule requiring all channel
+          verbs to read back their remote state is hard to check programmatically.
+          Moreover, some verbs (like `dispatch_pass` starting a run) cannot read
+          back immediately because the run is created asynchronously, requiring
+          different local handlings rather than a single unified rule.
+      - name: Drop the citations and let each read-back state its own local reason
+        chosen: true
+        reason: >-
+          This aligns with the precedent set by `supersede` in DR-164. Dropping the
+          unsupported A6 citations and rewriting the sentences to describe the actual
+          reason for the read-back makes the prose true, readable, and clear to
+          anyone following the code.
+    consequences:
+      - >-
+        The citations to A6 or "per A6" for read-backs are removed from five docstrings,
+        one comment in `.meta/say/move`, and the Decision DR-133.
+      - >-
+        Each modified site is rewritten to explain the local reason for the read-back,
+        such as why the verification of tags, reviews, or branches is necessary.
+    falsifier: >-
+      Any remaining citation of A6 in `.meta/say/move` or any other file that uses A6
+      to justify a remote read-back of a state-changing verb rather than a gate step's
+      exit code.
+    rationale: |-
+      A6 is about the exit code and reporting structure of a gate step. It does not
+      require or describe read-backs of API operations. Citing it for read-backs
+      confuses readers who follow the citation expecting to find an Article about
+      remote verification.
+
+      Dropping the incorrect citations and replacing them with local explanations
+      improves code readability. Each site now explains exactly why checking the
+      remote state is important (e.g. avoiding tag collisions in `mint`, ensuring reviews
+      were actually requested in `request_review`, or waiting for the rebase to complete
+      in `advance`), which is more educational and precise.

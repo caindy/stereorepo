@@ -140,9 +140,9 @@ decisions:
         keeps each commit's message and so its Trailers, and that is the whole
         of why the branch stays attributable across the move.
       - >-
-        What stands in for the read-back A6 asks for: GitHub answers a dispatch
-        with no content and creates the run afterwards, so there is nothing to
-        ask it about in the moment. `coder.yml` groups the rebase pass by pull
+        What stands in for the read-back verification: starting a run is
+        asynchronous and returns no immediate run ID, so there is nothing to
+        ask GitHub about in the moment. `coder.yml` groups the rebase pass by pull
         request with `cancel-in-progress: false`, so two merges in quick
         succession leave one run standing and one waiting rather than two
         rebasing one branch; and the pass begins by asking whether the branch

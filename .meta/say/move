@@ -11,7 +11,7 @@ difficulty in one act, `stop` asks its refusal before it posts, `claim` refuses
 a session at a level a loop takes, `open --on` links the layer it opens, `merge
 --auto` advances before it arms, `supersede` refuses unless the body closes a
 Challenge and that Challenge is closed, `mint` takes no number to reserve. Every
-outcome is read back from GitHub, per A6: the act is what GitHub shows
+outcome is read back from GitHub to verify it took effect on the remote: the act is what GitHub shows
 afterwards, not what `gh` returned. What is *said* — a comment, a thread, an
 answer, a verdict — is `post`'s.
 """
@@ -745,8 +745,7 @@ def dispatch_pass(pr, task):
     about the stack rather than about any one of its pull requests, which is
     why this declines a layer wherever it sits rather than asking which.
 
-    **What stands in for the read-back** (A6). The same thing as above, which
-    is to say nothing GitHub will answer now: a dispatch returns no content and
+    **What stands in for the read-back.** Starting a run is asynchronous and returns no immediate run ID, so there is nothing to verify on the remote in the moment: a dispatch returns no content and
     the run is created afterwards, so a `run list` a moment later asks about a
     run that may not exist yet. `coder.yml` groups both passes by pull request
     with `cancel-in-progress: false`, and the review pass takes the verdict's
@@ -854,8 +853,7 @@ def advance(pr=None, held=False):
     commits move onto the base with their messages, and so with their Trailers,
     intact.
 
-    Read back, per A6: the outcome is what GitHub holds afterwards, not what
-    `gh` returned. Three things are asked, and they are asked independently.
+    Read back from GitHub afterwards: we must verify that the remote branch has actually been updated, and that auto-merge is still armed if it was. Three things are asked, and they are asked independently.
     Whether the head is current now — the base can move again while this runs,
     and a second push is a second run's business, not a silent pass. Whether
     the arming survived the head moving: GitHub drops auto-merge on some pushes
@@ -1132,8 +1130,7 @@ def merge(pr, stack=False, auto=False):
     landed, which is the defect it was written to remove wearing a new coat. So
     the setting is read, and the verb deletes nothing the repository will.
 
-    The outcome is read back from GitHub, per A6: a step's result is what it
-    found, not what its last subprocess returned.
+    The outcome is read back from GitHub to verify whether the branch was successfully merged or armed, independent of the CLI exit code.
 
     `--auto` is "when green" (solorepo's #79). A merge refused for pending checks was one
     somebody had to remember to retry, and on solorepo's #76 the retry came thirty-six
@@ -1480,8 +1477,7 @@ def request_review(pr, to):
 
     A semaphore, not a message. GitHub holds the request and reports it, so the
     arriving Job finds its work by asking what has been requested of its login.
-    Read back afterwards, per A6: the act is what GitHub shows, not what `gh`
-    returned.
+    Read back from GitHub afterwards to verify the request was successfully updated on the remote, independent of the CLI exit code.
 
     A request already pending is withdrawn first. GitHub emits no event for
     a reviewer it already lists, so a Job whose run answered nothing left the
@@ -1654,9 +1650,9 @@ def mint():
                 raise
             print(f"{name} is taken; asking for the next", file=sys.stderr)
             continue
-        # Read back, per A6: the act is the ref GitHub holds afterwards. A ref
-        # created and pointing elsewhere is a reservation somebody else's, and
-        # this Job would otherwise go and write the entry under it.
+        # Read back from GitHub afterwards to verify the tag actually points to
+        # our commit. A ref created and pointing elsewhere is a reservation
+        # somebody else's, and this Job would otherwise go and write the entry under it.
         now = channel.gh("api", f"repos/{channel.repo()}/git/ref/tags/{name}")["object"]["sha"]
         if now != tag["sha"]:
             sys.exit(f"say: GitHub shows tag {name} at {now[:7]} after the call, not {tag['sha'][:7]}")

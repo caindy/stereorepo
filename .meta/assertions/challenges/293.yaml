@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/293
+    name: "Six read-backs in the channel cite A6, which is about a gate step's exit code and says nothing about them"
+    challenge_type: DEFECT
+    description: >-
+      `.meta/say/move` and Decision DR-133 cited Article A6 six times for a rule
+      A6 does not state: that a verb's outcome is read back from GitHub afterwards,
+      not what its last subprocess returned. A6 actually defines the three gate step
+      outcomes (could not run, passed, found something). This makes the citations
+      false and confusing to readers following the citations.
