@@ -18,6 +18,7 @@ CLUSTER = "solorepo-arc"
 
 
 def existing_clusters():
+    """Returns the list of existing kind cluster names found on the local host."""
     if not shutil.which("kind"):
         sys.exit("arc-cluster: kind is not on PATH — install it, or point kubectl "
                  "at a cluster you already have and run `just arc` directly")
@@ -28,6 +29,7 @@ def existing_clusters():
 
 
 def main():
+    """CLI entry point for creating the local kind cluster for Actions Runner Controller."""
     if CLUSTER in existing_clusters():
         print(f"arc-cluster: {CLUSTER} already exists; nothing to do", file=sys.stderr)
         return

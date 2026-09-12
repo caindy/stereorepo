@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/189
+    name: "The doc gate does not reach .meta/, so the repository's own Python is held to nothing"
+    challenge_type: GAP
+    description: >-
+      The Python Bootstrap's doc gate holds every module, and every public
+      function, class, and method under a package's src/. `.meta/` is not a package
+      and has no src/, leaving repository tooling and scripts held to no documentation
+      standard while example boilerplate in the seed was strictly checked. 49 of 188
+      definitions across .meta/ carried no docstring. Extending the doc gate to check
+      all Python modules and executable scripts under .meta/ and documenting all public
+      functions and classes closes the gap.

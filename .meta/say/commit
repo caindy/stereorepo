@@ -29,6 +29,7 @@ import channel  # noqa: E402
 
 
 def commit(subject):
+    """Creates a git commit signed with Actor and Agent trailers."""
     body = channel.piped()
     message = f"{subject}\n\n{body}\n" if body else f"{subject}\n"
     message += f"\n{channel.trailers()}\n"
@@ -38,12 +39,14 @@ def commit(subject):
 
 
 def build_parser():
+    """Builds the argument parser for the commit tool."""
     ap = channel.parser(__doc__)
     ap.add_argument("-m", "--message", required=True, help="the subject: a label, not an account (A14)")
     return ap
 
 
 def main():
+    """Parses arguments and commits staged changes with signed trailers."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)
     commit(args.message)

@@ -43,6 +43,7 @@ CLUSTER = "solorepo-arc"
 
 
 def require(*tools):
+    """Verifies that all specified CLI tools exist on PATH or exits with an error."""
     missing = [t for t in tools if not shutil.which(t)]
     if missing:
         sys.exit(f"arc-teardown: {', '.join(missing)} not on PATH — install "
@@ -50,6 +51,7 @@ def require(*tools):
 
 
 def current_context():
+    """Returns the active kubectl context name or a fallback string if unset."""
     out = subprocess.run(["kubectl", "config", "current-context"],
                          capture_output=True, text=True)
     return out.stdout.strip() if out.returncode == 0 else "(none set)"
@@ -88,6 +90,7 @@ def helm_uninstall(release, namespace, wait=False):
 
 
 def delete_namespace(namespace):
+    """Deletes a Kubernetes namespace with a 60-second timeout ignoring not found."""
     out = subprocess.run(["kubectl", "delete", "namespace", namespace,
                           "--ignore-not-found", "--timeout", "60s"])
     if out.returncode:
@@ -97,6 +100,7 @@ def delete_namespace(namespace):
 
 
 def main():
+    """CLI entry point for tearing down ARC controller and runner scale set releases."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cluster", action="store_true",

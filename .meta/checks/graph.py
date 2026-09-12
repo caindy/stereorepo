@@ -16,6 +16,7 @@ from collect import META, ROOT, check
 
 @check("unresolved references")
 def unresolved_references(index, refs):
+    """Every URI referenced in an assertion slot exists as an identified object in the index."""
     return [f"{site} -> {target} '{ref}' does not exist"
             for ref, target, site in refs if ref not in index]
 

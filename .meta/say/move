@@ -37,6 +37,7 @@ LOOP_LEVELS = ("easy", "medium")
 # --- An Issue's life: filed, triaged, its level moved, claimed, handed back.
 
 def labels_of(issue):
+    """Returns the names of all labels attached to an issue."""
     return [l["name"] for l in channel.gh("issue", "view", str(issue), "--json", "labels")["labels"]]
 
 
@@ -384,6 +385,7 @@ def link(below, above):
 
 
 def head_branch(pr):
+    """Returns the head branch name for a pull request."""
     return channel.gh("pr", "view", str(pr), "--json", "headRefName")["headRefName"]
 
 
@@ -2085,6 +2087,7 @@ def build_parser():
 
 
 def main():
+    """Parses arguments and dispatches state transition verbs on GitHub."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)
 

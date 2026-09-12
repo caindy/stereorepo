@@ -250,6 +250,7 @@ def accounted_by(target):
 
 
 def disciplines():
+    """Renders the disciplines catalog markdown from declared and imported disciplines."""
     tbox = load("work/disciplines.yaml")
     abox = {"disciplines": []}
     for rel in ("assertions/disciplines.yaml", "assertions/imported/disciplines.yaml"):
@@ -416,14 +417,17 @@ def form(name):
 
 
 def pull_request_template():
+    """Renders the GitHub pull request markdown template form."""
     return form("pull-request.md")
 
 
 def issue_template():
+    """Renders the GitHub issue markdown template form."""
     return form("issue.md")
 
 
 def roadmap_template():
+    """Renders the GitHub roadmap item markdown template form."""
     return form("roadmap.md")
 
 

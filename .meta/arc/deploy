@@ -66,6 +66,7 @@ SECRET_NAME = "arc-github-token"
 
 
 def require(*tools):
+    """Verifies that all specified CLI executable tools exist on PATH or exits with instructions."""
     missing = [t for t in tools if not shutil.which(t)]
     if missing:
         sys.exit(f"arc: {', '.join(missing)} not on PATH — install "
@@ -104,6 +105,7 @@ def token():
 
 
 def current_context():
+    """Returns the active kubectl context name or exits if none is configured."""
     out = subprocess.run(["kubectl", "config", "current-context"],
                          capture_output=True, text=True)
     if out.returncode:
@@ -131,6 +133,7 @@ def apply_secret(pat):
 
 
 def helm_upgrade(release, namespace, chart, values):
+    """Installs or upgrades a Helm release chart with specified values in the target namespace."""
     subprocess.run([
         "helm", "upgrade", "--install", release,
         "--namespace", namespace, "--create-namespace",
@@ -261,6 +264,7 @@ def reset_stale_registration(start_time=None):
 
 
 def main():
+    """CLI entry point for deploying the Actions Runner Controller and runner scale sets."""
     argparse.ArgumentParser(description=__doc__,
                             formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     require("kubectl", "helm")

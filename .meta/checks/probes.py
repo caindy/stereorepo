@@ -380,6 +380,7 @@ class FakeGitHub:
         self.edited = []
 
     def view(self, number):
+        """Simulates reading pull request metadata from GitHub, tracking read counts and handling simulated latency states."""
         self.reads[str(number)] = self.reads.get(str(number), 0) + 1
         pull = self.pulls[str(number)]
         # `mergeable` is computed in the background, so a read can answer

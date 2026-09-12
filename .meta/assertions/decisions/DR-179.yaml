@@ -1,0 +1,80 @@
+decisions:
+  - id: work:decision/179
+    name: "DR-179 · Extend docstring gate to inherited repository tooling and scripts (.meta/)"
+    challenge: work:challenge/189
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-arc-cluster
+      - work:artifact/meta-arc-deploy
+      - work:artifact/meta-arc-teardown
+      - work:artifact/meta-check-pr
+      - work:artifact/meta-checks-citations
+      - work:artifact/meta-checks-collect
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-graph
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-dereference
+      - work:artifact/meta-gate
+      - work:artifact/meta-hooks-signed-channel
+      - work:artifact/meta-next
+      - work:artifact/meta-reading-pass
+      - work:artifact/meta-render
+      - work:artifact/meta-say
+      - work:artifact/meta-say-commit
+      - work:artifact/meta-say-move
+      - work:artifact/meta-say-post
+      - work:artifact/meta-say-whoami
+      - work:artifact/meta-timing
+    context: >-
+      The Python Bootstrap's doc gate checks every module and every public
+      function, class, and method under a package's src/. However, `.meta/` is not
+      a package and has no src/, leaving repository tooling and CLI scripts held
+      to no documentation requirement at all. 49 of 188 definitions across
+      `.meta/` lacked docstrings, leaving key utility functions unaddressed.
+      Literate Programming requires reasoning at every unit, yet the gate
+      demonstrated on placeholder examples was unenforced on the scaffold's own
+      corpus.
+    alternatives:
+      - name: Package .meta/ as an installable Python package under src/
+        chosen: false
+        reason: >-
+          .meta/ consists of distinct operational CLI tools (gate, next, timing,
+          render, say/*) and check modules designed to run directly from the
+          repository root with lightweight dependencies. Packaging them adds
+          scaffolding overhead without improving documentation or ergonomics.
+      - name: Rely solely on code review without an automated gate check
+        chosen: false
+        reason: >-
+          Unchecked disciplines silently drift. Human review without an automated
+          verifier would allow newly added functions or scripts under .meta/ to omit
+          docstrings over time.
+      - name: Define public items by non-underscore names and enforce docstrings across .meta/ via gate check
+        chosen: true
+        reason: >-
+          Treating the module itself plus any top-level or class member whose name
+          does not start with an underscore as public establishes a clear, consistent
+          boundary without package machinery. Adding the `meta doc` gate check in
+          `.meta/checks/files.py` automates verification across all 24 Python modules
+          and shebang scripts under `.meta/`.
+    consequences:
+      - >-
+        Every Python module and executable shebang script under `.meta/` carries a
+        module docstring.
+      - >-
+        All public functions, classes, and methods across `.meta/` (367 items)
+        carry docstrings explaining their purpose and constraints.
+      - >-
+        `.meta/checks/files.py` defines `@check("meta doc")`, failing if any module
+        or public function/class/method under `.meta/` lacks a docstring.
+    falsifier: >-
+      A Python module or script under `.meta/` containing a public class, function,
+      or method without a docstring that passes `.meta/check.py`.
+    rationale: |-
+      Tools and scripts inherited by every specialized portfolio must meet the same
+      rigorous literate programming standards enforced on product code. In scripts
+      without formal package exports, prefixing internal helpers with an underscore
+      cleanly distinguishes private implementation from the public interface.
+
+      Enforcing this via an automated check in the meta project's gate ensures that
+      future modifications to repository tooling cannot silently regress into
+      undocumented code.

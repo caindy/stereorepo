@@ -116,11 +116,13 @@ def classify(issue, open_numbers, closing):
 
 
 def row(i):
+    """Formats one issue summary line for the next screen."""
     level = i["level"] or ("roadmap" if i["kind"] == "roadmap" else "untriaged")
     return f"  #{i['number']:<4} {level:<10} {i['note']:<24} {i['title'][:70]}"
 
 
 def issues(closing=None):
+    """Lists open issues and classifies each by blocker state and in-progress assignment."""
     found = gh("issue", "list", "--state", "open", "--limit", "200",
                "--json", "number,title,labels,body,milestone,blockedBy", default=[])
     numbers = {i["number"] for i in found}
@@ -163,6 +165,7 @@ def pull_requests():
 
 
 def loops():
+    """Prints the status and timestamp of the most recent run for each loop workflow."""
     print("loops — last run of each")
     for wf in LOOPS:
         runs = gh("run", "list", "--workflow", wf, "--limit", "1",
@@ -201,6 +204,7 @@ def sweep_row():
 
 
 def milestones(rows):
+    """Prints open milestones in ascending numerical order along with their associated issues."""
     found = gh("api", "repos/{owner}/{repo}/milestones?state=open&per_page=20", default=[])
     print("milestones — the lowest number is next")
     if not found:
@@ -214,6 +218,7 @@ def milestones(rows):
 
 
 def screen():
+    """Renders the comprehensive next-actions overview screen."""
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     print(f"next — {now}\n")
     closing = pull_requests()
@@ -246,6 +251,7 @@ def screen():
 
 
 def check():
+    """Verifies that every open Challenge has an assigned difficulty label."""
     missing = untriaged(issues())
     if missing:
         print(f"x  triage — {len(missing)} Challenge(s) carry no difficulty; "

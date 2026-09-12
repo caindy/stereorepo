@@ -96,6 +96,7 @@ def citations():
 
 
 def git(*args, default=None):
+    """Executes a git command in the repository root and returns its stdout."""
     out = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
     if out.returncode:
         if default is None:
@@ -416,6 +417,7 @@ def report(answers, pairs, where, everything):
 
 
 def main(argv=None):
+    """Parses arguments and checks cited sentences against the entries they cite."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--all", action="store_true",
                     help="every citation in the durable set, not only this branch's")

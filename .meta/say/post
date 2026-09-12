@@ -178,16 +178,19 @@ def refuse_if_sole_author(thread_id, promotion=False):
 
 
 def reply(thread_id, body):
+    """Posts a reply to a pull request review thread."""
     print(channel.graphql(REPLY, t=thread_id, b=body)
           ["data"]["addPullRequestReviewThreadReply"]["comment"]["url"])
 
 
 def resolve(thread_id):
+    """Resolves a pull request review thread."""
     channel.graphql(RESOLVE, t=thread_id)
     print("resolved")
 
 
 def comment_party(c):
+    """Identifies the author and optional actor trailer of a thread comment."""
     login = (c.get("author") or {}).get("login", "someone")
     actor = check_pr.ACTOR.search(c.get("body") or "")
     return f"{login}/{actor.group(1)}" if actor else login
@@ -381,6 +384,7 @@ def build_parser():
 
 
 def main():
+    """Parses arguments and dispatches commenting and thread verbs on GitHub."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)
 

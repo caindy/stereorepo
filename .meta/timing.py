@@ -277,6 +277,7 @@ def difficulty_of(run):
 
 
 def stratify_run(workflow, run, stratify):
+    """Categorizes a workflow run by model or difficulty when requested."""
     if stratify == "model" and workflow == "review.yml":
         return model_of(run)
     if stratify == "difficulty" and workflow in ("review.yml", "coder.yml"):
@@ -349,6 +350,7 @@ def summarise(workflow, limit, deep, stratify=None):
 
 
 def row(name, seen):
+    """Formats one workflow summary row displaying runtime and wait percentiles."""
     return (f"  {name[:-4]:<9} {seen['n']:>3}  "
             f"{clock(pick(seen['total'], 0.5))} {clock(pick(seen['total'], 0.95))} "
             f"{clock(max(seen['total']) if seen['total'] else None)}  "
@@ -357,6 +359,7 @@ def row(name, seen):
 
 
 def subrow(tag, seen):
+    """Formats a stratified breakdown subrow under a workflow row."""
     label = f"  {tag}"
     return (f"  {label:<9} {seen['n']:>3}  "
             f"{clock(pick(seen['total'], 0.5))} {clock(pick(seen['total'], 0.95))} "
@@ -389,6 +392,7 @@ def steps(opened, show):
 
 
 def screen(names, limit, deep, show, want_steps, stratify=None):
+    """Renders the workflow timing summary screen."""
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     print(f"\nworkflow runtimes — {now}, last {limit} completed runs each\n")
     print(f"  {'workflow':<9} {'n':>3}  {'total':>7} {'p95':>7} {'max':>7}  "
@@ -426,6 +430,7 @@ def screen(names, limit, deep, show, want_steps, stratify=None):
 
 
 def main():
+    """Parses arguments and outputs workflow timing statistics."""
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("workflow", nargs="*", default=None,

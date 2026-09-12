@@ -87,6 +87,7 @@ def check(label, pre=False):
 
 
 def tree_root(sv):
+    """Returns the class designated as tree_root in the schema view, or None."""
     for name, cls in sv.all_classes().items():
         if cls.tree_root:
             return name
@@ -128,10 +129,12 @@ def walk(obj, cls, sv, index, refs, where):
 
 
 def views():
+    """Loads LinkML SchemaView instances for all schemas declared in SCHEMAS."""
     return [SchemaView(str(META / s)) for s in SCHEMAS]
 
 
 def collect(views):
+    """Scans all YAML assertions under .meta/assertions/, indexing entities and references."""
     index, refs, skipped = {}, [], []
     for path in sorted((META / "assertions").rglob("*.yaml")):
         data = yaml.safe_load(path.read_text())

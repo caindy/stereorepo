@@ -16,6 +16,7 @@ import channel  # noqa: E402
 
 
 def whoami():
+    """Prints the authenticated user login, email, role, and repo permissions."""
     who = channel.gh("api", "user", "--jq", ".login,.id", parse=False).split("\n")
     print("login:", who[0])
     print("email:", f"{who[1]}+{who[0]}@users.noreply.github.com")
@@ -31,10 +32,12 @@ def whoami():
 
 
 def build_parser():
+    """Builds the argument parser for whoami."""
     return channel.parser(__doc__)
 
 
 def main():
+    """Parses arguments and displays role and account identity."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)
     whoami()

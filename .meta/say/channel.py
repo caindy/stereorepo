@@ -186,6 +186,7 @@ def trailers():
 
 
 def signed(text):
+    """Appends Actor and Agent attribution trailers to a comment or issue body."""
     body = text.rstrip("\n")
     block = trailers()
     return body if body.endswith(block) else f"{body}\n\n{block}\n"
@@ -207,6 +208,7 @@ def piped(timeout=0.5):
 
 
 def stdin_body():
+    """Reads non-empty body text from piped stdin or exits with an error."""
     text = piped()
     if not text:
         sys.exit("say: nothing on stdin — pipe the body in, or redirect a file")
@@ -253,6 +255,7 @@ def role_credential():
 
 
 def gh(*args, parse=True, tolerate_fail=False):
+    """Executes a gh CLI command using the role credential and parses JSON output."""
     out = subprocess.run(["gh", *args], capture_output=True, text=True,
                          env={**os.environ, **role_credential()})
     if out.returncode:
@@ -280,6 +283,7 @@ def gh_with_retry(*args, parse=True, tries=3, delay=2, backoff=2, tolerate_fail=
 
 
 def graphql(query, **variables):
+    """Executes a GitHub GraphQL query with provided variables."""
     args = ["api", "graphql", "-f", f"query={query}"]
     for key, value in variables.items():
         args += ["-F", f"{key}={value}"]
@@ -287,6 +291,7 @@ def graphql(query, **variables):
 
 
 def repo():
+    """Returns the nameWithOwner repository identifier for the current repo."""
     return gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
 
 

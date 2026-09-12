@@ -116,6 +116,7 @@ def reading(messages, model, reader):
 
 
 def main():
+    """Inspects an execution file's model usage breakdown to verify whether the reading pass ran."""
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("execution_file",

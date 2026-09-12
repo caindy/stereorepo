@@ -127,6 +127,7 @@ RENDER = ["uvx", "--with", "pyyaml", "python", str(META.resolve() / "render.py")
 
 
 def fence(path):
+    """Extracts markdown body content from the first code block fence in a template file."""
     return path.read_text().split("```markdown\n", 1)[1].split("\n```", 1)[0]
 
 
@@ -153,6 +154,7 @@ def sections(body):
 
 
 def check(title, body):
+    """Validates a pull request title and body against the required form sections."""
     problems = []
     required = [m.group(1) for m in HEADING.finditer(fence(FORM))]
     found = sections(body)
@@ -287,6 +289,7 @@ def _role_token():
 
 
 def gh(*args):
+    """Invokes the GitHub CLI with the role credential and parses JSON output."""
     env = None
     if "GH_TOKEN" not in os.environ:
         token = _role_token()
@@ -946,6 +949,7 @@ def mine(body):
 
 
 def said(body, limit=300):
+    """Truncates and collapses whitespace in a comment or text string for display."""
     return " ".join((body or "").split())[:limit]
 
 
@@ -1146,6 +1150,7 @@ def unanswered(nodes):
 
 
 def repo():
+    """Determines the current GitHub repository slug from environment, CLI, or git remote."""
     repo_name = os.environ.get("GITHUB_REPOSITORY")
     if repo_name:
         return repo_name
@@ -1300,6 +1305,7 @@ def required_contexts():
 
 
 def from_github(ref):
+    """Fetches the title and body of a pull request from GitHub."""
     data = gh("pr", "view", ref, "--json", "title,body")
     return data["title"], data["body"] or ""
 
@@ -1371,6 +1377,7 @@ def longest_run():
 
 
 def asked_of(pr):
+    """Names or logins of reviewers currently requested on a pull request."""
     return [r.get("login") or r.get("name") or "someone" for r in pr["reviewRequests"]]
 
 
@@ -1462,6 +1469,7 @@ def hand_back(issue):
 
 
 def is_approved_pull(pr, reviewer_login=None):
+    """Whether the reviewer's most recent review on this pull request is an approval."""
     if not (pr.get("latestReviews") or pr.get("reviews")):
         return False
     if reviewer_login is None:
@@ -1472,6 +1480,7 @@ def is_approved_pull(pr, reviewer_login=None):
 
 
 def is_changes_requested_pull(pr, reviewer_login=None):
+    """Whether the reviewer's most recent review on this pull request requests changes."""
     if not (pr.get("latestReviews") or pr.get("reviews")):
         return False
     if reviewer_login is None:

@@ -683,6 +683,70 @@ def meta_ruff():
     return Found(tuple(lines))
 
 
+@check("meta doc")
+def meta_doc():
+    """Every module and script under .meta/, and every public function, class and method, has a docstring (A2, solorepo's DR-179).
+
+    Extends the Python Bootstrap's missing_docs requirement to the repository's
+    own tooling and scripts under .meta/. Holds inherited and scaffolding Python
+    to the same literate programming standards enforced on product code.
+    """
+    problems = []
+    counted = 0
+    modules = 0
+
+    def is_py(path: pathlib.Path) -> bool:
+        if any(part.startswith(".") and part != "." for part in path.relative_to(META).parts):
+            return False
+        if "__pycache__" in path.parts:
+            return False
+        if path.suffix == ".py":
+            return True
+        if not path.suffix and path.is_file():
+            try:
+                with path.open("rb") as handle:
+                    first = handle.readline().decode("latin1", "ignore")
+                    return first.startswith("#!") and "python" in first
+            except OSError:
+                pass
+        return False
+
+    sources = sorted(p for p in META.rglob("*") if is_py(p))
+    for source in sources:
+        modules += 1
+        try:
+            tree = ast.parse(source.read_text(encoding="utf-8"))
+        except SyntaxError as error:
+            problems.append(f"{source.relative_to(ROOT)}: does not parse — {error}")
+            continue
+        counted += 1
+        if ast.get_docstring(tree) is None:
+            problems.append(f"{source.relative_to(ROOT)}: module has no docstring")
+        for node in tree.body:
+            if (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                and not node.name.startswith("_")
+            ):
+                counted += 1
+                if ast.get_docstring(node) is None:
+                    problems.append(f"{source.relative_to(ROOT)}:{node.lineno}: `{node.name}` has no docstring")
+                if isinstance(node, ast.ClassDef):
+                    for member in node.body:
+                        if (
+                            isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
+                            and not member.name.startswith("_")
+                        ):
+                            counted += 1
+                            if ast.get_docstring(member) is None:
+                                problems.append(
+                                    f"{source.relative_to(ROOT)}:{member.lineno}: `{node.name}.{member.name}` has no docstring"
+                                )
+
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{counted} public items across {modules} files, each with a docstring")
+
+
 # Registered last, because this is the one step that reads what the others'
 # subject is rendered into, and a reader watching the gate wants it under them.
 @check("rendered prose")

@@ -290,6 +290,7 @@ def prose(path):
 
 
 def flat(text):
+    """Normalizes arbitrary sequences of whitespace in text into a single space."""
     return re.sub(r"\s+", " ", text)
 
 

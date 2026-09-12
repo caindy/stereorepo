@@ -55,6 +55,7 @@ def blocked(command):
 
 
 def main():
+    """Validates incoming pre-tool-use events to ensure mutating GitHub calls route through the signed channel."""
     try:
         event = json.load(sys.stdin)
     except json.JSONDecodeError:
