@@ -247,6 +247,23 @@ def decision_level(index):
             if cls == "Decision" and obj.get("product") and obj.get("project")]
 
 
+@check("withdrawn decisions")
+def withdrawn_decisions(index):
+    """A withdrawn Decision says why it is a hole (solorepo's DR-112).
+
+    LinkML requires `withdrawn_because` when `status` is `WITHDRAWN`, but since
+    nothing runs `linkml-validate` against these entries, we enforce this rule
+    here.
+    """
+    problems = []
+    for did, (cls, obj, _) in index.items():
+        if cls != "Decision":
+            continue
+        if obj.get("status") == "WITHDRAWN" and not obj.get("withdrawn_because"):
+            problems.append(f"{did}: status is WITHDRAWN but lacks 'withdrawn_because'")
+    return problems
+
+
 # One line of `git ls-remote`: the object, a tab, the ref. Anchored at the end
 # because an annotated tag is advertised twice, `refs/tags/DR-nnn` and the
 # `^{}` line that dereferences it to the commit, and counting both would say

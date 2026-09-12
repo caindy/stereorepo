@@ -2400,3 +2400,34 @@ def history_probes():
 
     return problems
 
+
+@check("withdrawn decisions probes", pre=True)
+def withdrawn_decisions_probes():
+    """`withdrawn_decisions` check on WITHDRAWN status lacking withdrawn_because."""
+    problems = []
+    # Case 1: WITHDRAWN lacking withdrawn_because (should fail)
+    index = {
+        "work:decision/001": ("Decision", {"status": "WITHDRAWN"}, "a probe")
+    }
+    said = graph.withdrawn_decisions(index)
+    if not any("status is WITHDRAWN but lacks 'withdrawn_because'" in s for s in said):
+        problems.append(f"withdrawn decisions: expected error for WITHDRAWN lacking explanation, got {said!r}")
+
+    # Case 2: WITHDRAWN with withdrawn_because (should pass)
+    index = {
+        "work:decision/002": ("Decision", {"status": "WITHDRAWN", "withdrawn_because": "Some reason"}, "a probe")
+    }
+    said = graph.withdrawn_decisions(index)
+    if said:
+        problems.append(f"withdrawn decisions: expected no error for WITHDRAWN with explanation, got {said!r}")
+
+    # Case 3: ADOPTED lacking withdrawn_because (should pass)
+    index = {
+        "work:decision/003": ("Decision", {"status": "ADOPTED"}, "a probe")
+    }
+    said = graph.withdrawn_decisions(index)
+    if said:
+        problems.append(f"withdrawn decisions: expected no error for ADOPTED lacking explanation, got {said!r}")
+
+    return problems
+
