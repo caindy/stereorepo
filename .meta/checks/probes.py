@@ -1271,6 +1271,34 @@ def handoff_probes():
             )
             if len(hard_owed) != 1 or "while #15 is at hard" not in hard_owed[0]:
                 problems.append(f"unheld: green PR with hard challenge reported {hard_owed!r}")
+
+            # Approved PR with failing checks whose challenge is at medium (loop-owned):
+            check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "medium"}]}
+            approved_failing_loop = check_pr.unheld(
+                [{"number": 16, "title": "Approved failing loop PR", "headRefName": "claude/issue-16",
+                  "baseRefName": "main", "isDraft": False, "mergeable": "MERGEABLE",
+                  "reviewRequests": [],
+                  "statusCheckRollup": [{"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z"}],
+                  "latestReviews": [{"author": {"login": reviewer_name}, "state": "APPROVED"}],
+                  "updatedAt": old_time}],
+                minutes=30, clean=set()
+            )
+            if len(approved_failing_loop) != 1 or "approved, with failing checks" not in approved_failing_loop[0] or ".meta/say/move dispatch 16" not in approved_failing_loop[0]:
+                problems.append(f"unheld: approved failing loop PR reported {approved_failing_loop!r}")
+
+            # Approved PR with failing checks whose challenge is at hard (human-owned):
+            check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "hard"}]}
+            approved_failing_human = check_pr.unheld(
+                [{"number": 17, "title": "Approved failing human PR", "headRefName": "claude/issue-17",
+                  "baseRefName": "main", "isDraft": False, "mergeable": "MERGEABLE",
+                  "reviewRequests": [],
+                  "statusCheckRollup": [{"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z"}],
+                  "latestReviews": [{"author": {"login": reviewer_name}, "state": "APPROVED"}],
+                  "updatedAt": old_time}],
+                minutes=30, clean=set()
+            )
+            if len(approved_failing_human) != 1 or "approved, with failing checks" not in approved_failing_human[0] or "fix the failing checks" not in approved_failing_human[0]:
+                problems.append(f"unheld: approved failing human PR reported {approved_failing_human!r}")
         finally:
             check_pr.gh = orig_gh
     finally:

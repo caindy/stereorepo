@@ -1635,6 +1635,20 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
                                f"has moved on it for {int(idle)} minutes, while #{branch.group(1)} "
                                f"is still {level}. A review event was dropped or a run ended "
                                f"without answering: .meta/say/move dispatch {pr['number']}")
+        # An approved pull request with failing checks where the webhook was spent or the run crashed.
+        if is_approved_pull(pr, reviewer_login=reviewer_login) and not asked and not pr["isDraft"] and not green(pr) and pr.get("mergeable") != "CONFLICTING" and branch and idle >= minutes:
+            issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
+            level = next((l["name"] for l in issue["labels"] if l["name"] in TAKEN or l["name"] in ("human", "hard")), None)
+            if issue["state"] == "OPEN" and level:
+                if level in TAKEN:
+                    remedy = f".meta/say/move dispatch {pr['number']}"
+                else:
+                    remedy = f"fix the failing checks (or move difficulty {branch.group(1)} medium)"
+                idle_mins = int(idle) if idle != float("inf") else 0
+                out.append(f"#{pr['number']} {pr['title'][:60]} — approved, with failing checks: "
+                           f"no review requested, no merge armed, and nothing has moved on it for "
+                           f"{idle_mins} minutes, while #{branch.group(1)} is still {level}. "
+                           f"A check failed after approval, and no Job is standing to fix it: {remedy}")
         if asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr):
             continue
         if pr["number"] not in clean:
