@@ -45,7 +45,7 @@ import math
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 # The same four `next.py` reads, and for the same reason: they are the
 # workflows a portfolio inherits or writes its own of. `gate.yml` is not in
@@ -105,7 +105,7 @@ def clock(seconds):
     present and the field is a fixed width."""
     if seconds is None:
         return "     —"
-    seconds = int(round(seconds))
+    seconds = round(seconds)
     if seconds < 60:
         return f"{seconds:>6}s"
     if seconds < 3600:
@@ -224,9 +224,9 @@ def _ensure_issues_loaded():
         try:
             for item in json.loads(res.stdout):
                 diff = "unknown"
-                for l in item.get("labels", []):
-                    if l.get("name") in ("easy", "medium", "hard", "human"):
-                        diff = l["name"]
+                for lbl in item.get("labels", []):
+                    if lbl.get("name") in ("easy", "medium", "hard", "human"):
+                        diff = lbl["name"]
                         break
                 ISSUE_DIFF_BY_NUM[str(item["number"])] = diff
                 ISSUE_DIFF_BY_TITLE[item.get("title", "").strip().lower()] = diff
@@ -251,7 +251,7 @@ def difficulty_of(run):
             if res.returncode == 0:
                 try:
                     data = json.loads(res.stdout)
-                    labels = {l.get("name") for l in data.get("labels", [])}
+                    labels = {lbl.get("name") for lbl in data.get("labels", [])}
                     for cand in ("easy", "medium", "hard", "human"):
                         if cand in labels:
                             diff = cand
@@ -277,12 +277,10 @@ def difficulty_of(run):
 
 
 def stratify_run(workflow, run, stratify):
-    if stratify == "model":
-        if workflow == "review.yml":
-            return model_of(run)
-    elif stratify == "difficulty":
-        if workflow in ("review.yml", "coder.yml"):
-            return difficulty_of(run)
+    if stratify == "model" and workflow == "review.yml":
+        return model_of(run)
+    if stratify == "difficulty" and workflow in ("review.yml", "coder.yml"):
+        return difficulty_of(run)
     return None
 
 
@@ -391,7 +389,7 @@ def steps(opened, show):
 
 
 def screen(names, limit, deep, show, want_steps, stratify=None):
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     print(f"\nworkflow runtimes — {now}, last {limit} completed runs each\n")
     print(f"  {'workflow':<9} {'n':>3}  {'total':>7} {'p95':>7} {'max':>7}  "
           f"{'wait':>7} {'p95':>7}  {'run':>7} {'p95':>7}")

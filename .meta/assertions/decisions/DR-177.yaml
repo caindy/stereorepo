@@ -1,0 +1,84 @@
+decisions:
+  - id: work:decision/177
+    name: "DR-177 · Guardrails for inherited repository tooling (.meta/): ruff ruleset, ignore-free configuration, and gate enforcement"
+    challenge: work:challenge/260
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-ruff-toml
+      - work:artifact/github-workflows-gate
+      - work:artifact/meta-check
+      - work:artifact/meta-check-pr
+      - work:artifact/meta-checks-citations
+      - work:artifact/meta-checks-collect
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-graph
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-dereference
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-hooks-worktree-only
+      - work:artifact/meta-next
+      - work:artifact/meta-render
+      - work:artifact/meta-say
+      - work:artifact/meta-timing
+      - work:artifact/specialize
+    context: >-
+      The Python bootstrap holds portfolio code to strict guardrails
+      (`bootstraps/python/seed/pyproject.toml`), including `ruff` with `ignore = []`,
+      `max-complexity = 12`, and `mypy --strict`. Yet `.meta/`, which every
+      portfolio inherits via Specialization, was held to no lint or style gate.
+      Evaluating `.meta/` against the seed's ruleset produced 504 findings across
+      24 rules, 404 of which were `E501` line-length noise over literate docstrings,
+      plus bandit `S` false alarms on CLI subprocess invocations. Furthermore,
+      running `ruff check --fix` naively removed registration imports in
+      `.meta/check.py`, silently disabling 28 gate steps.
+    alternatives:
+      - name: Adopt the seed's pyproject.toml directly with hundreds of site suppressions
+        chosen: false
+        reason: >-
+          Literate docstrings naturally exceed standard 88-character line limits
+          with expository prose, and repository CLIs intentionally invoke subprocesses.
+          Generating hundreds of inline suppressions for line length and subprocess
+          invocations produces noise rather than guardrails.
+      - name: Defer linting .meta/ until mypy strict is implemented
+        chosen: false
+        reason: >-
+          Mypy strict over 7,600 untyped lines is a separate, larger undertaking.
+          Deferring all guardrails leaves the gate runner and tooling vulnerable
+          to syntax regressions, unused imports, and silent gate step disablement.
+      - name: Standalone .meta/ruff.toml with selected rules, empty ignore, explicit registration noqa annotations, and gate enforcement
+        chosen: true
+        reason: >-
+          A dedicated `.meta/ruff.toml` selects repository-appropriate rules
+          (`E4, E7, E9, W, F, I, N, UP, B, C4, SIM, RUF, PTH`), keeps `ignore = []`
+          strictly empty (Article 2), and travels with `.meta/` into every portfolio.
+          Protecting `check.py`'s registration imports with reasoned `# noqa: F401`
+          annotations prevents silent gate disabling, while gate steps (`meta lints`
+          and `meta ruff`) enforce compliance on every run.
+    consequences:
+      - >-
+        `.meta/ruff.toml` configures ruff specifically for `.meta/` tooling with
+        `target-version = "py313"`, selected rule sets, and empty `ignore = []`.
+      - >-
+        `.meta/check.py` annotates registration imports with `# noqa: F401 # reason: registers check steps`
+        so automated tools cannot delete them.
+      - >-
+        `.meta/checks/files.py` adds gate steps `meta lints` (verifying empty configuration ignores
+        and site-local reasons) and `meta ruff` (running ruff check over `.meta/`).
+      - >-
+        Specialization copies `.meta/ruff.toml` into every portfolio, ensuring
+        inherited tooling meets the same standard as product code.
+    falsifier: >-
+      A Python file under `.meta/` containing a lint violation from the selected
+      ruleset, an `ignore` entry in `.meta/ruff.toml`, or an inline `# noqa` or
+      `# type: ignore` lacking a `# reason:` that passes `.meta/check.py`.
+    rationale: |-
+      Code inherited by every specialized portfolio must adhere to the same
+      zero-configuration-ignore principle (Article 2) enforced on portfolio code.
+      Selecting rules appropriate to repository tooling rather than blindly
+      applying package rules prevents noise while catching real syntax, unused
+      import, and structural defects.
+
+      Protecting load-bearing registration imports in `check.py` with explicit,
+      reasoned `# noqa: F401` annotations ensures automated linters cannot
+      silently disable gate checks. Adding `meta lints` and `meta ruff` to the
+      gate ensures the standard is checked on every run rather than remembered.

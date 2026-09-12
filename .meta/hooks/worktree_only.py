@@ -45,7 +45,7 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()).resolve()
+ROOT = pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR") or pathlib.Path.cwd()).resolve()
 
 READERS = {"Read": "file_path", "Grep": "path", "Glob": "path"}
 
@@ -217,7 +217,7 @@ def outside(path):
         return None
     if target != ROOT and ROOT not in target.parents:
         return f"{path} is outside the worktree {ROOT}"
-    if (ROOT / ".git") == target or (ROOT / ".git") in target.parents:
+    if target == (ROOT / ".git") or (ROOT / ".git") in target.parents:
         return f"{path} is inside .git/, where the action keeps a token"
     return None
 
@@ -575,7 +575,7 @@ def blocked(tool, tool_input):
                         "goes in single quotes, which is most regexes — `'\\bdef\\b'`."
                         + (f" This one would be taken as: {plain}" if plain else ""))
         return None
-    except Exception as exc:  # noqa: BLE001 — refusing is the safe answer to anything
+    except Exception as exc:  # refusing is the safe answer to anything
         return f"Blocked: the hook could not read this call ({type(exc).__name__}: {exc}); refusing rather than guessing."
 
 
@@ -587,7 +587,7 @@ def main():
         return 0
     try:
         problem = blocked(event.get("tool_name"), event.get("tool_input") or {})
-    except BaseException as exc:  # noqa: BLE001
+    except BaseException as exc:
         problem = f"Blocked: the hook failed ({type(exc).__name__}); refusing rather than guessing."
     if problem:
         print(problem, file=sys.stderr)

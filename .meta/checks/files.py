@@ -13,12 +13,24 @@ import functools
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
+import tomllib
 
 import yaml
 
-from collect import META, ROOT, TEMPLATE, TOKEN, check, view_for, CouldNotRun, Passed, Found
+from collect import (
+    META,
+    ROOT,
+    TEMPLATE,
+    TOKEN,
+    CouldNotRun,
+    Found,
+    Passed,
+    check,
+    view_for,
+)
 
 
 class Strict(yaml.SafeLoader):
@@ -292,7 +304,7 @@ def _first_difference(a, b, path):
                 return found
         return None
     if isinstance(a, list) and isinstance(b, list):
-        for i, (x, y) in enumerate(zip(a, b)):
+        for i, (x, y) in enumerate(zip(a, b, strict=False)):
             found = _first_difference(x, y, f"{path}[{i}]")
             if found:
                 return found
@@ -588,6 +600,87 @@ def meta_history_receipts():
     if problems:
         return Found(problems)
     return Passed(f"{entries} entries across {logs} history logs, each naming a receipt that exists")
+
+
+NOQA = re.compile(r"#\s*noqa(?::\s*[A-Z0-9,\s]+)?(?P<rest>.*)$")
+TYPE_IGNORE = re.compile(r"#\s*type:\s*ignore(?:\[[^\]]*\])?(?P<rest>.*)$")
+REASON = re.compile(r"#\s*reason:\s*\S")
+
+
+@check("meta lints")
+def meta_lints():
+    """No linter rule is switched off in configuration, and every site suppression carries a reason (A2, solorepo's DR-177).
+
+    An `ignore` in `.meta/ruff.toml` switches a rule off where nobody reads it.
+    At a site, a `# noqa` or `# type: ignore` without an explanatory `# reason:`
+    is a configuration ignore with extra steps. This holds .meta/ tooling to the
+    same discipline the Python bootstrap enforces on portfolio code.
+    """
+    config = META / "ruff.toml"
+    if not config.is_file():
+        return CouldNotRun(".meta/ruff.toml is missing")
+    try:
+        data = tomllib.loads(config.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as error:
+        return Found((f".meta/ruff.toml: does not parse — {error}",))
+    problems = []
+    lint = data.get("lint", {})
+    for key in ("ignore", "extend-ignore"):
+        if lint.get(key):
+            problems.append(f".meta/ruff.toml: `{key}` switches {len(lint[key])} rules off in configuration")
+    sources = [
+        p for p in META.rglob("*.py")
+        if not any(part.startswith(".") and part != "." for part in p.relative_to(META).parts)
+        and "__pycache__" not in p.parts
+    ]
+    suppressions = 0
+    for source in sorted(sources):
+        for number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
+            for pattern, what in ((NOQA, "noqa"), (TYPE_IGNORE, "type: ignore")):
+                match = pattern.search(line)
+                if match is None:
+                    continue
+                suppressions += 1
+                if not REASON.search(match.group("rest")):
+                    problems.append(f"{source.relative_to(ROOT).as_posix()}:{number}: `{what}` gives no reason")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(
+        f"{suppressions} suppressions across {len(sources)} files, each with a reason; "
+        ".meta/ruff.toml switches no rule off"
+    )
+
+
+@check("meta ruff")
+def meta_ruff():
+    """Ruff check over .meta/ against the ruleset declared in .meta/ruff.toml (solorepo's DR-177).
+
+    Runs `ruff check` on the repository staging directory using the configured
+    ruleset. A violation fails the gate with the offending rule and location.
+    """
+    config = META / "ruff.toml"
+    if not config.is_file():
+        return CouldNotRun(".meta/ruff.toml is missing")
+    ruff_bin = shutil.which("ruff")
+    cmd = [ruff_bin, "check", "--config", str(config), str(META)] if ruff_bin else None
+    if not cmd:
+        try:
+            res = subprocess.run([sys.executable, "-m", "ruff", "--version"], capture_output=True, text=True, check=False)
+            if res.returncode == 0:
+                cmd = [sys.executable, "-m", "ruff", "check", "--config", str(config), str(META)]
+        except OSError:
+            pass
+    if not cmd:
+        uvx = shutil.which("uvx")
+        if uvx:
+            cmd = [uvx, "--from", "ruff==0.14.0", "ruff", "check", "--config", str(config), str(META)]
+    if not cmd:
+        return CouldNotRun("neither ruff nor uvx is installed")
+    out = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if out.returncode == 0:
+        return Passed("ruff check passed over .meta/")
+    lines = [line.strip() for line in (out.stdout + "\n" + out.stderr).splitlines() if line.strip()]
+    return Found(tuple(lines))
 
 
 # Registered last, because this is the one step that reads what the others'

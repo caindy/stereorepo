@@ -23,7 +23,6 @@ import re
 import yaml
 from linkml_runtime import SchemaView
 
-
 META = pathlib.Path(__file__).resolve().parent.parent
 ROOT = META.parent
 TEMPLATE = ROOT / "template"

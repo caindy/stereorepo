@@ -40,7 +40,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 DIFFICULTY = ("easy", "medium", "hard", "human")
 LOOPS = ("coder.yml", "review.yml", "merge.yml", "advance.yml", "gate.yml")
@@ -89,7 +89,7 @@ def waits_on(issue):
 def classify(issue, open_numbers, closing):
     """Where an Issue sits: what blocks it, whether an open pull request
     already closes it, and otherwise whether it is ripe."""
-    labels = {l["name"] for l in issue["labels"]}
+    labels = {lbl["name"] for lbl in issue["labels"]}
     level = next((d for d in DIFFICULTY if d in labels), None)
     waits = waits_on(issue)
     taken = closing.get(issue["number"])
@@ -214,7 +214,7 @@ def milestones(rows):
 
 
 def screen():
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     print(f"next — {now}\n")
     closing = pull_requests()
     loops()

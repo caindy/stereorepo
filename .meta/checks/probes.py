@@ -11,7 +11,6 @@ import argparse
 import datetime
 import os
 import pathlib
-import re
 import subprocess
 import sys
 
@@ -291,8 +290,8 @@ def load_channel():
     Importing runs nothing: everything each does is under `main()`, and
     `main()` is under `__name__`.
     """
-    from importlib.machinery import SourceFileLoader
     import importlib.util
+    from importlib.machinery import SourceFileLoader
 
     loader = SourceFileLoader("channel", str(META / "say" / "channel.py"))
     spec = importlib.util.spec_from_loader("channel", loader)
@@ -378,6 +377,7 @@ class FakeGitHub:
         # alone cannot see. The workflow file is checked by the fake having no
         # answer for any other, which `run` reports.
         self.dispatched = []
+        self.edited = []
 
     def view(self, number):
         self.reads[str(number)] = self.reads.get(str(number), 0) + 1
@@ -412,7 +412,8 @@ class FakeGitHub:
                               for who, state in pull.get("verdicts") or []],
                   "mergeable": mergeable,
                   "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None,
-                  "updatedAt": pull.get("updatedAt", (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=2)).isoformat())}
+                  "statusCheckRollup": pull.get("checks", []),
+                  "updatedAt": pull.get("updatedAt", (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=2)).isoformat())}
         # A push to the head branch from outside this run. `pushed` is how many
         # reads answer before it lands, so a case counts the sweep's opening
         # `pr list` and puts the push after it, and `leaves` is what the branch
@@ -466,6 +467,7 @@ class FakeGitHub:
                 if flag in args:
                     edit(args[args.index(flag) + 1])
             pull["requested"] = asked
+            self.edited.append(str(args[2]))
             return ""
         if head == ("pr", "merge"):
             number = str(args[2])
@@ -830,7 +832,7 @@ def advance_probes():
         problems.append(f"advance: unanswered changes requested one exited with {said!r}")
 
     # An unanswered review changes request that is recent is NOT re-dispatched (waits out active run):
-    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    now_iso = datetime.datetime.now(datetime.UTC).isoformat()
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "updatedAt": now_iso,
                            "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
@@ -839,6 +841,7 @@ def advance_probes():
         problems.append(f"advance: recent changes requested PR dispatched {fake.dispatched!r} during active run window")
     if said:
         problems.append(f"advance: recent changes requested PR exited with {said!r}")
+
 
 
     # Asked for something, and a loop's branch only. Nobody has asked to review
@@ -974,6 +977,7 @@ def advance_probes():
             problems.append(f"dispatch: {case} dispatched {fake.dispatched!r}")
         if not said or "last verdict" not in said:
             problems.append(f"dispatch: {case} was refused with {said!r}")
+
 
     # A review outstanding of the reviewer is the coder having answered the
     # verdict and handed back, whatever verdict is newest in the history: the
@@ -1203,7 +1207,7 @@ def handoff_probes():
             [{"number": 10, "title": "Stuck armed PR", "headRefName": "claude/issue-10",
               "baseRefName": "main", "isDraft": False, "autoMergeRequest": {"enabledAt": "2026-09-11"},
               "mergeable": "MERGEABLE", "reviewRequests": [],
-              "updatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat()}],
+              "updatedAt": datetime.datetime.now(datetime.UTC).isoformat()}],
             minutes=30, clean={10}, unresolved={10: [{"id": "t1", "isResolved": False}]}
         )
         if recent_owed:
@@ -1222,7 +1226,7 @@ def handoff_probes():
             problems.append(f"unheld: approved conflicting PR reported {approved_conflicting!r}")
 
         # Unanswered changes requested on an idle loop branch is unheld (solorepo's DR-167 / solorepo's #316):
-        old_time = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=60)).isoformat()
+        old_time = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=60)).isoformat()
         orig_gh = getattr(check_pr, "gh", None)
         try:
             check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "medium"}]}
@@ -1304,6 +1308,7 @@ def handoff_probes():
             )
             if len(approved_failing_human) != 1 or "approved, with failing checks" not in approved_failing_human[0] or "fix the failing checks" not in approved_failing_human[0]:
                 problems.append(f"unheld: approved failing human PR reported {approved_failing_human!r}")
+
         finally:
             check_pr.gh = orig_gh
     finally:
@@ -1398,7 +1403,7 @@ def enacted_probes():
         render, step = check_pr.RENDER, check_pr.unenacted
         check_pr.RENDER = [sys.executable, "-c",
                            f"import sys; print({answer!r}); sys.exit(1)"]
-        check_pr.unenacted = lambda base: (asked.append(base), ([], ""))[1]
+        check_pr.unenacted = lambda base, asked=asked: (asked.append(base), ([], ""))[1]
         try:
             with contextlib.redirect_stdout(said):
                 check_pr.handoff("origin/main")
@@ -1452,7 +1457,7 @@ def channel_parser_probes():
     import contextlib
     import io
 
-    channel, table, programs = load_channel()
+    _channel, _table, programs = load_channel()
 
     cases = {
         "post": [
@@ -1618,7 +1623,7 @@ def channel_table_probes():
     steps type no command — the verbs are the steps, and a step that spelled
     one would be the second copy the reviewer found drifting on solorepo's #117.
     """
-    channel, table, programs = load_channel()
+    _, table, programs = load_channel()
     problems = []
     # The Roles are the channel's, so they live with it under `imported/`; a
     # portfolio's own `authority.yaml` holds the accounts they use (solorepo's DR-123).
@@ -1671,7 +1676,7 @@ class FakeIssue:
 
     def __call__(self, *args, parse=True, **kwargs):
         if self.fail:
-            raise subprocess.CalledProcessError(1, ["gh"] + list(args), output="", stderr="mock API error")
+            raise subprocess.CalledProcessError(1, ["gh", *list(args)], output="", stderr="mock API error")
         if args[:2] == ("repo", "view"):
             return {"nameWithOwner": "o/r"}
         if args[:2] == ("issue", "view") and "labels" in args:
@@ -1810,8 +1815,8 @@ def actor_probes():
 
     channel, _, _ = load_channel()
 
-    from importlib.machinery import SourceFileLoader
     import importlib.util
+    from importlib.machinery import SourceFileLoader
     loader_pr = SourceFileLoader("check_pr", str(META / "check_pr.py"))
     spec_pr = importlib.util.spec_from_loader("check_pr", loader_pr)
     check_pr = importlib.util.module_from_spec(spec_pr)
@@ -1917,7 +1922,7 @@ def stop_probes():
 
     # Case 1: Normal stop on a Challenge
     fake = FakeIssue(["challenge", "medium"], assignees=["o-r-coder"])
-    err, out, serr = run_stop(fake, "7", "stopped working")
+    err, _out, serr = run_stop(fake, "7", "stopped working")
     if err is not None:
         problems.append(f"stop: normal stop failed with error: {err}")
     if "human" not in fake.labels:
@@ -1929,13 +1934,13 @@ def stop_probes():
 
     # Case 2: Stop on a non-Challenge
     fake = FakeIssue(["medium"], assignees=["o-r-coder"])
-    err, out, serr = run_stop(fake, "7", "stopped working")
+    err, _out, serr = run_stop(fake, "7", "stopped working")
     if err is None or "not a Challenge" not in err:
         problems.append(f"stop: stopping on a non-Challenge should refuse with label error, got: {err}")
 
     # Case 3: Persistent API failure (e.g. deleted issue / token scope)
     fake = FakeIssue(["challenge", "medium"], fail=True)
-    err, out, serr = run_stop(fake, "7", "stopped working")
+    err, _out, serr = run_stop(fake, "7", "stopped working")
     if err is not None:
         problems.append(f"stop: persistent API failure should be tolerated without crashing, but got: {err}")
     if "warning" not in serr:

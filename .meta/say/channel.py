@@ -82,8 +82,8 @@ def sibling(name):
     here, so two programs that import each other — `move stop` posts a
     comment, `post promote` files an Issue — share one copy.
     """
-    from importlib.machinery import SourceFileLoader
     import importlib.util
+    from importlib.machinery import SourceFileLoader
 
     if name in _siblings:
         return _siblings[name]
@@ -257,7 +257,7 @@ def gh(*args, parse=True, tolerate_fail=False):
                          env={**os.environ, **role_credential()})
     if out.returncode:
         if tolerate_fail:
-            raise subprocess.CalledProcessError(out.returncode, ["gh"] + list(args), output=out.stdout, stderr=out.stderr)
+            raise subprocess.CalledProcessError(out.returncode, ["gh", *list(args)], output=out.stdout, stderr=out.stderr)
         sys.exit(f"gh: {out.stderr.strip()}")
     return json.loads(out.stdout) if parse and out.stdout.strip() else out.stdout.strip()
 

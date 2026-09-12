@@ -19,7 +19,7 @@ projects:
       The staging ground: the ontologies, the assertions, and the tooling that
       renders and checks them.
     language: LinkML YAML, with Python for rendering and the gate
-    gate: uvx --with linkml --with pyyaml python .meta/check.py
+    gate: uvx --with linkml --with pyyaml --with ruff==0.14.0 python .meta/check.py
 
   # A second Project, in a second language: the monorepo claim as a build unit
   # rather than a word. Its gate is written in Rust (DR-090), and the Project
@@ -241,6 +241,9 @@ artifacts:
   - id: work:artifact/meta-render
     name: .meta/render.py
     path: .meta/render.py
+  - id: work:artifact/meta-ruff-toml
+    name: .meta/ruff.toml
+    path: .meta/ruff.toml
   - id: work:artifact/meta-say
     name: .meta/say/channel.py
     path: .meta/say/channel.py

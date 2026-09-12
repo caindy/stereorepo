@@ -28,11 +28,11 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "checks"))
 
-import collect
+import collect  # noqa: I001  # reason: sys.path modified above and registration order is deliberate
 import files
-import citations
-import graph
-import probes
+import citations  # noqa: F401  # reason: registers check steps
+import graph  # noqa: F401  # reason: registers check steps
+import probes  # noqa: F401  # reason: registers check steps
 from collect import STEPS, views
 
 

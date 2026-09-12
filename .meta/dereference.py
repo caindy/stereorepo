@@ -393,8 +393,8 @@ def report(answers, pairs, where, everything):
     that answered none of its pairs has found nothing.
     """
     scoped = "the durable set" if everything else f"what this branch wrote over {where}"
-    bad = [(p, why) for (mark, why), p in zip(answers, pairs) if mark == "x"]
-    held = [(p, why) for (mark, why), p in zip(answers, pairs) if mark == "?"]
+    bad = [(p, why) for (mark, why), p in zip(answers, pairs, strict=True) if mark == "x"]
+    held = [(p, why) for (mark, why), p in zip(answers, pairs, strict=True) if mark == "?"]
 
     def lines(items, mark):
         for pair, why in items:

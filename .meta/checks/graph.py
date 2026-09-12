@@ -30,11 +30,11 @@ def composed_of_cycles(index):
         if state.get(node) == "done":
             return
         if state.get(node) == "open":
-            problems.append("composed_of cycle: " + " -> ".join(trail + [node]))
+            problems.append("composed_of cycle: " + " -> ".join([*trail, node]))
             return
         state[node] = "open"
         for nxt in graph.get(node, []):
-            visit(nxt, trail + [node])
+            visit(nxt, [*trail, node])
         state[node] = "done"
 
     for node in graph:
@@ -218,11 +218,11 @@ def decision_supersession(index):
         if state.get(node) == "done":
             return
         if state.get(node) == "open":
-            problems.append("supersedes cycle: " + " -> ".join(trail + [node]))
+            problems.append("supersedes cycle: " + " -> ".join([*trail, node]))
             return
         state[node] = "open"
         for nxt in graph.get(node, []):
-            visit(nxt, trail + [node])
+            visit(nxt, [*trail, node])
         state[node] = "done"
 
     for node in graph:
@@ -338,7 +338,7 @@ def deleted_decision_numbers(numbers):
     where = (META / "assertions" / "decisions").relative_to(ROOT)
     argv = ["git", "-C", str(ROOT)]
     try:
-        shallow = subprocess.run(argv + ["rev-parse", "--is-shallow-repository"],
+        shallow = subprocess.run([*argv, "rev-parse", "--is-shallow-repository"],
                                  capture_output=True, text=True, timeout=30)
         if shallow.returncode or shallow.stdout.strip() != "false":
             return None

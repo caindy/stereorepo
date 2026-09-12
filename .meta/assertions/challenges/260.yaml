@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/260
+    name: "The Python bootstrap's guardrails hold a portfolio's code and none of them run over .meta/, which every portfolio inherits"
+    challenge_type: GAP
+    description: >-
+      The Python bootstrap holds a portfolio's code to strict guardrails (ruff
+      with empty ignore, mccabe complexity, mypy in strict), but none of them
+      ran over .meta/, which every portfolio inherits via Specialization.
+      Evaluating .meta/ against the seed's ruleset produced 504 findings across
+      24 rules, largely line-length noise over literate docstrings and bandit
+      warnings on CLI subprocess invocations. Establishing a dedicated
+      .meta/ruff.toml with selected rules, keeping ignore empty, requiring
+      site-local reasons for suppressions, and adding gate checks closes the gap.

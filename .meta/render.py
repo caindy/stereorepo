@@ -15,7 +15,14 @@ Definitions in the vocabulary are one-line glosses. The full reasoning stays on
 the class, per Literate Programming; these are for recognising a term, not for
 applying it.
 """
-import ast, posixpath, re, sys, pathlib, textwrap, yaml
+import ast
+import pathlib
+import posixpath
+import re
+import sys
+import textwrap
+
+import yaml
 
 META = pathlib.Path(__file__).parent
 # An entry *is* its assertion file. Two spellings of the same path: one from the
@@ -741,7 +748,10 @@ def justfile():
     seed: a verb in every Project is what solorepo's DR-092 rejected.
     """
     structure = load("assertions/structure.yaml") or {}
-    tail = lambda p: p["id"].rsplit("/", 1)[-1]
+
+    def tail(p):
+        return p["id"].rsplit("/", 1)[-1]
+
     projects = ", ".join(tail(p) for p in structure.get("projects") or [])
     products = ", ".join(tail(p) for p in structure.get("products") or [])
     takes = (f"one Project: {projects}" if projects else "no Project is asserted yet")

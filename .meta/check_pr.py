@@ -77,8 +77,8 @@ ACTOR = re.compile(r"^Actor:\s*(\S+)", re.M)
 # session the same way `channel.actor()` does, so the two never disagree
 # about which id the Trailer signed with.
 def _load_run_mark():
-    from importlib.machinery import SourceFileLoader
     import importlib.util
+    from importlib.machinery import SourceFileLoader
     loader = SourceFileLoader("channel", str(pathlib.Path(__file__).resolve().parent / "say" / "channel.py"))
     spec = importlib.util.spec_from_loader("channel", loader)
     channel = importlib.util.module_from_spec(spec)
@@ -251,7 +251,7 @@ query($owner: String!, $name: String!, $number: Int!) {
     pullRequest(number: $number) {%s}
   }
 }
-""" % ROLLUP
+""" % ROLLUP  # noqa: UP031  # reason: GraphQL query templates have literal curly braces
 
 # Every open pull request's head, the first hundred most recently touched.
 # Which hundred those are is not necessarily the hundred `gh pr list` returns:
@@ -269,7 +269,7 @@ query($owner: String!, $name: String!) {
     }
   }
 }
-""" % ROLLUP
+""" % ROLLUP  # noqa: UP031  # reason: GraphQL query templates have literal curly braces
 
 
 def _role_token():
@@ -584,7 +584,7 @@ def unpushed():
         return problems
     code, ahead, err = git("rev-list", f"{upstream}..HEAD")
     if code:
-        return problems + [f"git rev-list failed, so pushed state is unknown: {err}"]
+        return [*problems, f"git rev-list failed, so pushed state is unknown: {err}"]
     if ahead:
         problems.append(f"{len(ahead.splitlines())} commit(s) not pushed; the branch is the handoff")
     return problems
@@ -828,7 +828,7 @@ def handoff(base):
     # the record's table and this file's own reads are keyed on.
     unnamed = [] if stale is None else stale + orphans
     unsure = stale is None or INDEX in {
-        os.path.normpath(os.path.join(".meta", name)).replace(os.sep, "/") for name in unnamed}
+        (pathlib.Path(".meta") / name).as_posix() for name in unnamed}
     if unsure:
         print(f"?  enacted — {INDEX} is "
               + ("unread, " if stale is None else "a page the render could not call current, ")
@@ -1584,7 +1584,7 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
     """
     if reviewer_login is None:
         reviewer_login = role_login("reviewer")
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     out = []
     for pr in prs:
         asked = asked_of(pr)
@@ -1626,7 +1626,7 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
                                   else [t for t in threads(str(pr["number"])) if not t["isResolved"]])
             if threads_unresolved or not green(pr):
                 issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
-                level = next((l["name"] for l in issue["labels"] if l["name"] in TAKEN), None)
+                level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in TAKEN), None)
                 if issue["state"] == "OPEN" and level:
                     out.append(f"#{pr['number']} {pr['title'][:60]} — changes requested by "
                                f"reviewer, and unanswered: no run is answering it and nothing "
@@ -1636,7 +1636,7 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
         # An approved pull request with failing checks where the webhook was spent or the run crashed.
         if is_approved_pull(pr, reviewer_login=reviewer_login) and not asked and not pr["isDraft"] and not green(pr) and pr.get("mergeable") != "CONFLICTING" and branch and idle >= minutes:
             issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
-            level = next((l["name"] for l in issue["labels"] if l["name"] in TAKEN or l["name"] in ("human", "hard")), None)
+            level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in TAKEN or lbl["name"] in ("human", "hard")), None)
             if issue["state"] == "OPEN" and level:
                 if level in TAKEN:
                     remedy = f".meta/say/move dispatch {pr['number']}"
@@ -1656,7 +1656,7 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
         if idle < minutes:
             continue
         issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
-        level = next((l["name"] for l in issue["labels"] if l["name"] in TAKEN or l["name"] in ("human", "hard")), None)
+        level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in TAKEN or lbl["name"] in ("human", "hard")), None)
         if issue["state"] != "OPEN" or not level:
             continue
         if level in ("human", "hard"):
@@ -1828,7 +1828,7 @@ if __name__ == "__main__":
                 print(item)
         left = residue()
         if left:
-            print(f"\n--- residue: {sum(1 for l in left if not l.startswith('    '))} "
+            print(f"\n--- residue: {sum(1 for line in left if not line.startswith('    '))} "
                   "branch(es) outlived their pull request ---")
             print("\n".join(left))
         sys.exit(0)

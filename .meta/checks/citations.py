@@ -18,7 +18,6 @@ import yaml
 from collect import META, ROOT, TEMPLATE, check
 from files import FENCED, inherited, tree
 
-
 DR = re.compile(r"\bDR-(\d{3})\b")
 # A citation of solorepo's record, in the form the material a portfolio inherits
 # writes one: the possessive, then a run, so `solorepo's DR-073, DR-107` names two.
@@ -58,8 +57,8 @@ def load_timing():
     — which is what lets the probe below exercise its arithmetic without a
     token or a run to read.
     """
-    from importlib.machinery import SourceFileLoader
     import importlib.util
+    from importlib.machinery import SourceFileLoader
 
     loader = SourceFileLoader("timing", str(META / "timing.py"))
     spec = importlib.util.spec_from_loader("timing", loader)
@@ -77,8 +76,8 @@ def load_reading_pass():
     which needs the module and not the command, since the command's whole answer
     is an exit status.
     """
-    from importlib.machinery import SourceFileLoader
     import importlib.util
+    from importlib.machinery import SourceFileLoader
 
     loader = SourceFileLoader("reading_pass", str(META / "reading_pass.py"))
     spec = importlib.util.spec_from_loader("reading_pass", loader)
@@ -95,8 +94,8 @@ def load_check_pr():
     it does is under `main()` — which is what lets a check read its patterns and
     a probe stand GitHub in behind them.
     """
-    from importlib.machinery import SourceFileLoader
     import importlib.util
+    from importlib.machinery import SourceFileLoader
 
     loader = SourceFileLoader("check_pr", str(META / "check_pr.py"))
     spec = importlib.util.spec_from_loader("check_pr", loader)
@@ -335,7 +334,7 @@ def normalise(text):
     because a sentence quoted from the middle of another is capitalised at its
     new start and nowhere else.
     """
-    text = flat(text.replace("’", "'").replace("‘", "'")
+    text = flat(text.replace("’", "'").replace("‘", "'")  # noqa: RUF001  # reason: normalising unicode smart quotes to ascii quotes
                 .replace("“", '"').replace("”", '"'))
     return re.sub(r"[`*_]", "", text).lower()
 
