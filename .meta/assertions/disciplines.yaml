@@ -23,7 +23,7 @@ disciplines:
       - >-
         Copy what is inherited — `.meta/work/`, `.meta/ddd/`, `.meta/work_ontology.yaml`, `.meta/ddd_ontology.yaml`,
         `render.py`, `check.py`, `check_pr.py`, `.meta/dereference.py`, `.meta/gate`, `.meta/next.py`, `.meta/timing.py`, `.meta/reading_pass.py`, `.meta/actions/`, `.meta/say/`,
-        `.meta/hooks/`, `.claude/settings.json`, `.meta/assertions/imported/`,
+        `.meta/hooks/`, `.meta/checks/`, `.claude/settings.json`, `.meta/assertions/imported/`,
         `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`,
         `.meta/templates/`, `.meta/arc/Dockerfile`, `.github/workflows/coder.yml`,
         `.github/workflows/review.yml`, `.github/workflows/merge.yml`, `.github/workflows/advance.yml`,

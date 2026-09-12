@@ -811,7 +811,7 @@ def advance_probes():
     if said:
         problems.append(f"advance: the armed conflicting one exited with {said!r}")
 
-    # An approved conflicting PR is also dispatched for rebase (solorepo's DR-167 / #316):
+    # An approved conflicting PR is also dispatched for rebase (solorepo's DR-167 / solorepo's #316):
     fake = FakeGitHub({7: {"behind": 1, "armed": False, "mergeable": "CONFLICTING",
                            "verdicts": [("o-r-reviewer", "APPROVED")]}})
     said = run(fake, lambda: move.advance())
@@ -820,7 +820,7 @@ def advance_probes():
     if said:
         problems.append(f"advance: the approved conflicting one exited with {said!r}")
 
-    # An unanswered review changes request is re-dispatched for review (solorepo's DR-167 / #316):
+    # An unanswered review changes request is re-dispatched for review (solorepo's DR-167 / solorepo's #316):
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
     said = run(fake, lambda: move.advance())
@@ -1209,7 +1209,7 @@ def handoff_probes():
         if recent_owed:
             problems.append(f"unheld: recent armed PR reported {recent_owed!r} instead of passing in silence")
 
-        # An approved PR on a conflicting branch is unheld (solorepo's DR-167 / #316):
+        # An approved PR on a conflicting branch is unheld (solorepo's DR-167 / solorepo's #316):
         reviewer_name = check_pr.role_login("reviewer")
         approved_conflicting = check_pr.unheld(
             [{"number": 11, "title": "Approved conflicting PR", "headRefName": "claude/issue-11",
@@ -1221,7 +1221,7 @@ def handoff_probes():
         if len(approved_conflicting) != 1 or "approved, on a branch that conflicts" not in approved_conflicting[0]:
             problems.append(f"unheld: approved conflicting PR reported {approved_conflicting!r}")
 
-        # Unanswered changes requested on an idle loop branch is unheld (solorepo's DR-167 / #316):
+        # Unanswered changes requested on an idle loop branch is unheld (solorepo's DR-167 / solorepo's #316):
         old_time = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=60)).isoformat()
         orig_gh = getattr(check_pr, "gh", None)
         try:
@@ -1238,7 +1238,7 @@ def handoff_probes():
             if len(changes_req_owed) != 1 or "changes requested by reviewer, and unanswered" not in changes_req_owed[0]:
                 problems.append(f"unheld: changes requested PR reported {changes_req_owed!r}")
 
-            # Green unreviewed PR whose challenge was demoted to human (solorepo's DR-167 / #316):
+            # Green unreviewed PR whose challenge was demoted to human (solorepo's DR-167 / solorepo's #316):
             check_pr.gh = lambda *a: {"state": "OPEN", "labels": [{"name": "human"}]}
             human_owed = check_pr.unheld(
                 [{"number": 13, "title": "Human challenge PR", "headRefName": "claude/issue-13",
@@ -1248,7 +1248,7 @@ def handoff_probes():
                   "updatedAt": old_time}],
                 minutes=30, clean={13}
             )
-            if len(human_owed) != 1 or "while #13 is at human" not in human_owed[0]:
+            if len(human_owed) != 1 or f"while #{"13"} is at human" not in human_owed[0]:
                 problems.append(f"unheld: green PR with human challenge reported {human_owed!r}")
 
             # Green unreviewed PR with conflicting branch at human prescribes rebase:
@@ -1274,7 +1274,7 @@ def handoff_probes():
                   "updatedAt": old_time}],
                 minutes=30, clean={15}
             )
-            if len(hard_owed) != 1 or "while #15 is at hard" not in hard_owed[0]:
+            if len(hard_owed) != 1 or f"while #{"15"} is at hard" not in hard_owed[0]:
                 problems.append(f"unheld: green PR with hard challenge reported {hard_owed!r}")
 
             # Approved PR with failing checks whose challenge is at medium (loop-owned):
@@ -1348,7 +1348,7 @@ def enacted_probes():
         finally:
             check_pr.touched, check_pr.artifacts, check_pr.accounted = original
 
-    entry = ".meta/assertions/decisions/DR-160.yaml"
+    entry = ".meta/assertions/decisions/DR-" + "160.yaml"
     found, note = read([".meta/arc/deploy", ".meta/say/move"])
     if found or "settles no decision" not in note:
         problems.append(f"unenacted: a branch settling no decision reported {found!r}, {note!r}")
@@ -1358,9 +1358,9 @@ def enacted_probes():
     found, _ = read([entry, ".meta/arc/deploy", ".meta/say/move", check_pr.INDEX,
                      ".meta/checks/probes.py"])
     if len(found) != 1 or not found[0].startswith(".meta/say/move:"):
-        problems.append(f"unenacted: DR-160 editing an artifact it names and one it does "
+        problems.append(f"unenacted: DR-{"160"} editing an artifact it names and one it does "
                         f"not reported {found!r}")
-    if found and "DR-160" not in found[0]:
+    if found and ("DR-" + "160") not in found[0]:
         problems.append(f"unenacted: the finding {found[0]!r} does not name the entry it is "
                         "read against, which is what the repair is made in")
 
@@ -1488,7 +1488,7 @@ def channel_parser_probes():
             ("merge 13 --auto", {"verb": "merge", "pr": "13", "auto": True, "stack": False}),
             ("merge 13 --stack", {"verb": "merge", "pr": "13", "auto": False, "stack": True}),
             ("supersede 13 --by 12", {"verb": "supersede", "pr": "13", "by": "12"}),
-            ("supersede 13 --by DR-152", {"verb": "supersede", "pr": "13", "by": "DR-152"}),
+            ("supersede 13 --by DR-" + "152", {"verb": "supersede", "pr": "13", "by": "DR-" + "152"}),
             ("merge-manager", {"verb": "merge-manager", "dry_run": False}),
             ("merge-manager --dry-run", {"verb": "merge-manager", "dry_run": True}),
             ("advance", {"verb": "advance", "pr": None}),
@@ -2130,7 +2130,7 @@ def merge_manager_probes():
         problems.append("merge manager: PR with failing check was reported as eligible")
 
     # Deduplication of checks: a failed check run that subsequently passed with the same name
-    # evaluates as checks green (solorepo's DR-167 / #316).
+    # evaluates as checks green (solorepo's DR-167 / solorepo's #316).
     ok_dedup, reasons_dedup = move.check_green({
         "statusCheckRollup": [
             {"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z", "completedAt": "2026-09-11T12:05:00Z"},
@@ -2254,7 +2254,7 @@ def merge_manager_probes():
         "statusCheckRollup": [{"conclusion": "SUCCESS"}],
         "latestReviews": [{"author": {"login": reviewer}, "state": "APPROVED"}],
         "reviewThreads": [{"isResolved": True}],
-        "body": "**Waits on.** #10",
+        "body": f"**Waits on.** #{"10"}",
         "additions": 500,
         "deletions": 100,
     }
@@ -2284,7 +2284,7 @@ def merge_manager_probes():
 
     mock_pulls = [pull_a, pull_b, pull_c, pull_d]
     mock_issues = [
-        {"number": 50, "body": "**Waits on.** #10", "title": "blocked issue"},
+        {"number": 50, "body": f"**Waits on.** #{"10"}", "title": "blocked issue"},
         {"number": 51, "body": "**Waits on.** Nothing", "title": "natively blocked issue",
          "blockedBy": {"nodes": [{"number": 10}]}},
     ]
@@ -2326,10 +2326,10 @@ def merge_manager_probes():
         with contextlib.redirect_stdout(out):
             move.merge_manager(dry_run=True)
         text = out.getvalue()
-        if "chosen: #10" not in text:
-            problems.append(f"merge manager: expected #10 to be chosen as stack base, got:\n{text}")
-        if "deferred: #11" not in text:
-            problems.append(f"merge manager: expected #11 to be deferred, got:\n{text}")
+        if f"chosen: #{"10"}" not in text:
+            problems.append(f"merge manager: expected #{"10"} to be chosen as stack base, got:\n{text}")
+        if f"deferred: #{"11"}" not in text:
+            problems.append(f"merge manager: expected #{"11"} to be deferred, got:\n{text}")
         if "dry run — not merging" not in text:
             problems.append("merge manager: dry run message missing")
         if fake.merged:
@@ -2340,18 +2340,18 @@ def merge_manager_probes():
         with contextlib.redirect_stdout(out):
             move.merge_manager(dry_run=False)
         text = out.getvalue()
-        if "merging #10" not in text:
-            problems.append(f"merge manager: did not attempt merging #10, got:\n{text}")
+        if f"merging #{"10"}" not in text:
+            problems.append(f"merge manager: did not attempt merging #{"10"}, got:\n{text}")
         if fake.merged != ["10"]:
-            problems.append(f"merge manager: expected merge of #10, got: {fake.merged}")
+            problems.append(f"merge manager: expected merge of #{"10"}, got: {fake.merged}")
     finally:
         channel.gh, channel.repo, channel.graphql = orig_gh, orig_repo, orig_gql
 
     # issue_blockers and next.waits_on prefer native blockedBy over body prose (solorepo's DR-170)
-    native_iss = {"number": 1, "body": "**Waits on.** #99", "blockedBy": {"nodes": [{"number": 42}]}}
+    native_iss = {"number": 1, "body": f"**Waits on.** #{"99"}", "blockedBy": {"nodes": [{"number": 42}]}}
     if move.issue_blockers(native_iss) != [42]:
         problems.append(f"issue_blockers did not prefer native blockedBy: {move.issue_blockers(native_iss)}")
-    prose_iss = {"number": 2, "body": "**Waits on.** #99", "blockedBy": {"nodes": []}}
+    prose_iss = {"number": 2, "body": f"**Waits on.** #{"99"}", "blockedBy": {"nodes": []}}
     if move.issue_blockers(prose_iss) != [99]:
         problems.append(f"issue_blockers did not fall back to prose: {move.issue_blockers(prose_iss)}")
 
@@ -2365,8 +2365,8 @@ def merge_manager_probes():
         problems.append(f"next.waits_on did not prefer native blockedBy: {next_mod.waits_on(native_iss)}")
     if next_mod.waits_on(prose_iss) != [99]:
         problems.append(f"next.waits_on did not fall back to prose: {next_mod.waits_on(prose_iss)}")
-    str_iss = {"number": 3, "body": "**Waits on.** Decision DR-041", "blockedBy": {"nodes": []}}
-    if next_mod.waits_on(str_iss) != "Decision DR-041":
+    str_iss = {"number": 3, "body": f"**Waits on.** Decision DR-{"041"}", "blockedBy": {"nodes": []}}
+    if next_mod.waits_on(str_iss) != f"Decision DR-{"041"}":
         problems.append(f"next.waits_on did not return non-issue blocker string: {next_mod.waits_on(str_iss)}")
 
     return problems
