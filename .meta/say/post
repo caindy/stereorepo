@@ -328,7 +328,10 @@ def landed(pr):
         if not (root / ".meta" / "assertions" / "challenges" / f"{number}.yaml").exists():
             print(f"#{number} is not asserted as a Challenge; nothing to post for it")
             continue
-        out = subprocess.run(command + [number], cwd=root, capture_output=True, text=True)
+        try:
+            out = subprocess.run(command + [number], cwd=root, capture_output=True, text=True)
+        except FileNotFoundError:
+            sys.exit(f"say: render.py --landed {number} failed: `{command[0]}` is not on PATH")
         if out.returncode:
             sys.exit(f"say: render.py --landed {number} failed: {out.stderr.strip()}")
         conversation_comment(pr, channel.signed(out.stdout))
