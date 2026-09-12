@@ -1053,7 +1053,7 @@ def advance(pr=None, held=False):
                 # rebase would have left, and reading `before` would leave it
                 # there on the ground that this run was not the one that
                 # dropped it.
-                if pull.get("autoMergeRequest") and not after.get("autoMergeRequest"):
+                if pull.get("autoMergeRequest") and not after.get("autoMergeRequest") and after.get("state") != "MERGED":
                     arm(number, f"{pull['title']} (#{number})")
                     # Read back, like the two above and for the same reason. This
                     # was the one act in the function whose outcome was `gh`'s exit
