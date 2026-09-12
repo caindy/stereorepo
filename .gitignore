@@ -11,3 +11,7 @@ __pycache__/
 # Tokens live outside the tree — see .meta/say/channel.py, which reads
 # ~/.config/solorepo/coder.env. Nothing here should ever hold one.
 .env
+
+# Gemini CLI scratch and settings.
+.gemini/
+

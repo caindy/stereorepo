@@ -260,7 +260,7 @@ jobs:
             echo "::error::.review/ is tracked in this tree, and this step writes the reviewer's scratch there"
             exit 1
           fi
-          rm -rf .review
+          rm -rf .review .gemini
           install -d .review/head
           gh pr diff "$PR" > .review/diff.patch
           mapfile -d '' -t paths < <(git ls-tree -r -z --name-only "$HEAD" -- $TRUNK)
@@ -584,6 +584,52 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          settings: |
+            {
+              "modelConfigs": {
+                "customAliases": {
+                  "${{ steps.depth.outputs.gemini_model }}": {
+                    "extends": "chat-base-3",
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "HIGH",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "overrides": [
+                  {
+                    "match": {
+                      "overrideScope": "core"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "HIGH",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "match": {
+                      "model": "${{ steps.depth.outputs.gemini_model }}"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "HIGH",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
           prompt: |
             Your Personality is work:personality/reviewer: Analytical and thorough. Holds the diff to the Disciplines and the Charter strictly. Clear and precise in identification of issues; concise yet unambiguous in argument.
 
