@@ -12,11 +12,12 @@ screen. It decides nothing: which ripe Issue to take is the solo's.
 
 What it reads, and from where:
 
-- **Waits on.** The first line of both Issue forms. `#<n>` per blocker, or
-  `Nothing`. A blocker that is closed no longer blocks, and a blocker written
-  as prose — a Decision, an account — keeps the Issue waiting until somebody
-  rewrites the line. An Issue with no such line is shown as `?`, which is the
-  form asking for it.
+- **Waits on.** The first line of both Issue forms, and GitHub's native
+  `blockedBy` relationship (solorepo's DR-170). `#<n>` per blocker seeds the
+  native relationship on GitHub, or `Nothing`. A blocker that is closed no
+  longer blocks, and a blocker written as prose — a Decision, an account —
+  keeps the Issue waiting until somebody rewrites the line. An Issue with no
+  such line is shown as `?`, which is the form asking for it.
 - **Difficulty.** The label solorepo's DR-112 made the raiser's estimate. A Challenge
   without one is invisible to the coder, and `--check` refuses that so the
   queue cannot empty without anyone noticing.
@@ -61,12 +62,18 @@ def gh(*args, default=None):
     return json.loads(out.stdout) if out.stdout.strip() else default
 
 
-def waits_on(body):
+def waits_on(issue):
     """The blockers an Issue declares: a list of numbers, or a string when the
     line names something that is not an Issue, or None when there is no line.
 
-    The roadmap form carried the same fact as a paragraph before solorepo's DR-114, so
-    that paragraph is read too, for the Issues filed under it."""
+    Prefers GitHub's native blockedBy relationship (solorepo's DR-170), falling back to
+    reading the markdown line. The roadmap form carried the same fact as a
+    paragraph before solorepo's DR-114, so that paragraph is read too, for the Issues
+    filed under it."""
+    native = [n["number"] for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n] if isinstance(issue, dict) else []
+    if native:
+        return native
+    body = issue.get("body") if isinstance(issue, dict) else issue
     m = WAITS.search(body or "") or OLD_WAITS.search(body or "")
     if not m:
         return None
@@ -84,7 +91,7 @@ def classify(issue, open_numbers, closing):
     already closes it, and otherwise whether it is ripe."""
     labels = {l["name"] for l in issue["labels"]}
     level = next((d for d in DIFFICULTY if d in labels), None)
-    waits = waits_on(issue["body"])
+    waits = waits_on(issue)
     taken = closing.get(issue["number"])
     if taken:
         blocked, note = True, f"in #{taken}"
@@ -115,7 +122,7 @@ def row(i):
 
 def issues(closing=None):
     found = gh("issue", "list", "--state", "open", "--limit", "200",
-               "--json", "number,title,labels,body,milestone", default=[])
+               "--json", "number,title,labels,body,milestone,blockedBy", default=[])
     numbers = {i["number"] for i in found}
     return sorted((classify(i, numbers, closing or {}) for i in found),
                   key=lambda i: i["number"])

@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/166
+    name: "A blocker that is an Issue is a relationship on GitHub, not a line of prose only"
+    challenge_type: FEATURE
+    description: >-
+      The Challenge and roadmap forms open with **Waits on.**, where blockers
+      are written as prose. GitHub has native issue relationships (blocked-by and
+      blocking). Using GitHub's native issue relationships for Issue blockers
+      allows GitHub and tools to track dependency graphs natively, while
+      retaining the prose line for non-issue blockers (Decisions, accounts, solo).

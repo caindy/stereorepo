@@ -6,8 +6,9 @@ labels: challenge
 ---
 
 **Waits on.** Nothing — or `#<n>` per Issue that has to close first. One line,
-first, because `just next` reads it to say what is ripe; a blocker that is not
-an Issue keeps this waiting until the line is rewritten.
+first, because `move file` sets `#<n>` as GitHub's native blocked-by relationship
+and `just next` reads it to say what is ripe; a blocker that is not an Issue
+keeps this waiting until the line is rewritten.
 
 **What was noticed.** The thing itself, and where. A path and a line if it has
 one.

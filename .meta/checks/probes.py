@@ -2283,7 +2283,11 @@ def merge_manager_probes():
     }
 
     mock_pulls = [pull_a, pull_b, pull_c, pull_d]
-    mock_issues = [{"number": 50, "body": "**Waits on.** #10", "title": "blocked issue"}]
+    mock_issues = [
+        {"number": 50, "body": "**Waits on.** #10", "title": "blocked issue"},
+        {"number": 51, "body": "**Waits on.** Nothing", "title": "natively blocked issue",
+         "blockedBy": {"nodes": [{"number": 10}]}},
+    ]
 
     class ManagerFake:
         def __init__(self):
@@ -2342,6 +2346,28 @@ def merge_manager_probes():
             problems.append(f"merge manager: expected merge of #10, got: {fake.merged}")
     finally:
         channel.gh, channel.repo, channel.graphql = orig_gh, orig_repo, orig_gql
+
+    # issue_blockers and next.waits_on prefer native blockedBy over body prose (solorepo's DR-170)
+    native_iss = {"number": 1, "body": "**Waits on.** #99", "blockedBy": {"nodes": [{"number": 42}]}}
+    if move.issue_blockers(native_iss) != [42]:
+        problems.append(f"issue_blockers did not prefer native blockedBy: {move.issue_blockers(native_iss)}")
+    prose_iss = {"number": 2, "body": "**Waits on.** #99", "blockedBy": {"nodes": []}}
+    if move.issue_blockers(prose_iss) != [99]:
+        problems.append(f"issue_blockers did not fall back to prose: {move.issue_blockers(prose_iss)}")
+
+    import importlib.util
+    next_path = ROOT / ".meta" / "next.py"
+    spec = importlib.util.spec_from_file_location("next_screen", next_path)
+    next_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(next_mod)
+
+    if next_mod.waits_on(native_iss) != [42]:
+        problems.append(f"next.waits_on did not prefer native blockedBy: {next_mod.waits_on(native_iss)}")
+    if next_mod.waits_on(prose_iss) != [99]:
+        problems.append(f"next.waits_on did not fall back to prose: {next_mod.waits_on(prose_iss)}")
+    str_iss = {"number": 3, "body": "**Waits on.** Decision DR-041", "blockedBy": {"nodes": []}}
+    if next_mod.waits_on(str_iss) != "Decision DR-041":
+        problems.append(f"next.waits_on did not return non-issue blocker string: {next_mod.waits_on(str_iss)}")
 
     return problems
 

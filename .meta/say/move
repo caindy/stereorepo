@@ -131,7 +131,8 @@ def file_issue(title, body, level=None, roadmap=False):
 
     The first line is read before anything is created. `just next` reads
     `**Waits on.**` from the first line of both forms (solorepo's DR-114), and an Issue
-    filed without it waits on nothing anyone can see.
+    filed without it waits on nothing anyone can see. Any `#<n>` blockers seed
+    GitHub's native blocked-by relationship (solorepo's DR-170).
     """
     first = body.lstrip().split("\n", 1)[0]
     if not first.startswith("**Waits on.**"):
@@ -141,11 +142,20 @@ def file_issue(title, body, level=None, roadmap=False):
     cmd = ["issue", "create", "--title", title, "--body", body]
     for name in labels:
         cmd += ["--label", name]
+    refs = sorted(set(int(n) for n in re.findall(r"#(\d+)", first)))
+    if refs:
+        cmd += ["--blocked-by", ",".join(str(n) for n in refs)]
     url = channel.gh(*cmd, parse=False)
     number = url.rstrip("/").rsplit("/", 1)[-1]
     now = labels_of(number)
     if any(l not in now for l in labels):
         sys.exit(f"say: GitHub shows #{number} labelled {now} after the call, not {labels}")
+    if refs:
+        view = channel.gh("issue", "view", str(number), "--json", "blockedBy")
+        recorded = {n["number"] for n in (view.get("blockedBy") or {}).get("nodes", []) if "number" in n}
+        missing = set(refs) - recorded
+        if missing:
+            sys.exit(f"say: GitHub shows #{number} missing blocked-by relationship for {sorted(missing)}")
     print(url)
     return number, url
 
@@ -1700,6 +1710,12 @@ def parse_waits_on(body):
     return [int(n) for n in re.findall(r"#(\d+)", text)]
 
 
+def issue_blockers(issue):
+    """Numbers that block an Issue: native blockedBy first, then body prose (solorepo's DR-170)."""
+    native = [n["number"] for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n]
+    return native if native else parse_waits_on(issue.get("body"))
+
+
 deduplicate_checks = check_pr.deduplicate_checks
 
 
@@ -1841,7 +1857,7 @@ def merge_manager(dry_run=False):
 
     try:
         issues = channel.gh("issue", "list", "--state", "open", "--limit", "100",
-                            "--json", "number,title,body")
+                            "--json", "number,title,body,blockedBy")
     except Exception:
         issues = []
 
@@ -1851,7 +1867,7 @@ def merge_manager(dry_run=False):
         is_base = any(other.get("baseRefName") == pull.get("headRefName")
                       for other in pulls if other.get("number") != num)
         targets = {num} | {ref["number"] for ref in (pull.get("closingIssuesReferences") or [])}
-        unblocks_issues = sum(1 for iss in issues if any(t in targets for t in parse_waits_on(iss.get("body"))))
+        unblocks_issues = sum(1 for iss in issues if any(t in targets for t in issue_blockers(iss)))
         unblocks_prs = sum(1 for other in pulls if other.get("baseRefName") == pull.get("headRefName")
                            or any(t in targets for t in parse_waits_on(other.get("body"))))
         total_unblocks = unblocks_issues + unblocks_prs
