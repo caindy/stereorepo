@@ -34,7 +34,8 @@ disciplines:
         `.claude/settings.json` is the one place the hook is invoked and the
         unsigned `gh` verbs denied (DR-069) — a hook file that nothing invokes
         is the channel as a rule to remember, which is what it exists not to be.
-        A portfolio without them has a coder that cannot commit, a gate that
+        The schemas and the channel stay in this copy set rather than riding inside APM
+        skills (DR-173). A portfolio without them has a coder that cannot commit, a gate that
         cannot run its own first steps, and a channel nothing enforces. Not the
         generated pages, and not the
         two Issue forms or the pull request form; step five writes all of those
