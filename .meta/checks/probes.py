@@ -1746,6 +1746,94 @@ def claim_probes():
     return problems
 
 
+@check("actor probes", pre=True)
+def actor_probes():
+    """`channel.actor()` and `check_pr.mine()` precedence and fallback behavior (solorepo's #301)."""
+    import contextlib
+    import io
+
+    channel, _, _ = load_channel()
+
+    from importlib.machinery import SourceFileLoader
+    import importlib.util
+    loader_pr = SourceFileLoader("check_pr", str(META / "check_pr.py"))
+    spec_pr = importlib.util.spec_from_loader("check_pr", loader_pr)
+    check_pr = importlib.util.module_from_spec(spec_pr)
+    sys.modules["check_pr"] = check_pr
+    loader_pr.exec_module(check_pr)
+
+    problems = []
+
+    # Save original environment variables
+    was_actor = os.environ.get("ACTOR_SESSION")
+    was_claude = os.environ.get("CLAUDE_CODE_SESSION_ID")
+
+    def set_env(actor_session, claude_session):
+        if actor_session is None:
+            os.environ.pop("ACTOR_SESSION", None)
+        else:
+            os.environ["ACTOR_SESSION"] = actor_session
+        if claude_session is None:
+            os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+        else:
+            os.environ["CLAUDE_CODE_SESSION_ID"] = claude_session
+
+    try:
+        # Case 1: both set, uuid and `gha-7`, where `actor()` answers `gha-7`
+        # and `mine()` reads the `gha-7` Trailer as its own and the uuid one as not;
+        set_env("gha-7", "uuid-123")
+        try:
+            got_actor = channel.actor()
+            if got_actor != "gha-7":
+                problems.append(f"actor: expected 'gha-7' when both are set, got {got_actor!r}")
+        except SystemExit as exc:
+            problems.append(f"actor: exited with {exc.code} when both are set")
+        except Exception as exc:
+            problems.append(f"actor: raised {type(exc).__name__}: {exc} when both are set")
+
+        if not check_pr.mine("Actor: gha-7\nAgent: cli"):
+            problems.append("mine: expected True for 'gha-7' Trailer when both are set")
+        if check_pr.mine("Actor: uuid-123\nAgent: cli"):
+            problems.append("mine: expected False for 'uuid-123' Trailer when both are set")
+
+        # Case 2: `ACTOR_SESSION` set to something unmarked with the uuid beside it,
+        # where `actor()` answers the uuid — the mark winning, not mere presence, which is
+        # the half of the rule the code does not say out loud;
+        set_env("not-marked-session", "uuid-456")
+        try:
+            got_actor = channel.actor()
+            if got_actor != "uuid-456":
+                problems.append(f"actor: expected 'uuid-456' when unmarked, got {got_actor!r}")
+        except SystemExit as exc:
+            problems.append(f"actor: exited with {exc.code} when unmarked")
+        except Exception as exc:
+            problems.append(f"actor: raised {type(exc).__name__}: {exc} when unmarked")
+
+        if not check_pr.mine("Actor: uuid-456\nAgent: cli"):
+            problems.append("mine: expected True for 'uuid-456' Trailer when unmarked")
+        if check_pr.mine("Actor: not-marked-session\nAgent: cli"):
+            problems.append("mine: expected False for 'not-marked-session' Trailer when unmarked")
+
+        # Case 3: and neither set, where `actor()` exits and `mine()` answers `False`.
+        set_env(None, None)
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):
+                channel.actor()
+            problems.append("actor: expected SystemExit when neither environment variable is set")
+        except SystemExit:
+            pass
+        except Exception as exc:
+            problems.append(f"actor: expected SystemExit, got {type(exc).__name__}: {exc}")
+
+        if check_pr.mine("Actor: uuid-123\nAgent: cli"):
+            problems.append("mine: expected False when neither environment variable is set")
+
+    finally:
+        set_env(was_actor, was_claude)
+
+    return problems
+
+
 @check("timing probes", pre=True)
 def timing_probes():
     """`pick` over the lengths where nearest-rank ties, and `gh` over the one
