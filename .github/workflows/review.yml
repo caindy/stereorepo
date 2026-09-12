@@ -396,6 +396,8 @@ jobs:
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           prompt: |
+            Your Personality is work:personality/reviewer: Analytical and thorough. Holds the diff to the Disciplines and the Charter strictly. Clear and precise in identification of issues; concise yet unambiguous in argument.
+
             You are the reviewer Role (solorepo's DR-107), answering a review request on
             pull request #${{ github.event.pull_request.number }} of
             ${{ github.repository }}. Read /pr-first-reviewer first: it is
@@ -583,6 +585,8 @@ jobs:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
           prompt: |
+            Your Personality is work:personality/reviewer: Analytical and thorough. Holds the diff to the Disciplines and the Charter strictly. Clear and precise in identification of issues; concise yet unambiguous in argument.
+
             You are the reviewer Role (solorepo's DR-107), answering a review request on
             pull request #${{ github.event.pull_request.number }} of
             ${{ github.repository }}. Read /pr-first-reviewer first: it is

@@ -511,6 +511,8 @@ jobs:
           # reader at all (solorepo's #256) until solorepo's DR-161 ended that
           # arming: both levels hand off by requesting review below.
           prompt: |
+            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
+
             You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}
             of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
             Read /pr-first: it is the coder's reading of PR First, and lists
@@ -642,6 +644,8 @@ jobs:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
           prompt: |
+            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
+
             You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}
             of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
             Read /pr-first: it is the coder's reading of PR First, and lists
@@ -966,6 +970,8 @@ jobs:
           github_token: ${{ secrets.CODER_GH_TOKEN }}
           show_full_output: "true"
           prompt: |
+            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
+
             You are the coder Role (solorepo's DR-107), on pull request
             #${{ steps.pr.outputs.number }} of ${{ github.repository }}, whose
             branch `${{ steps.pr.outputs.branch }}` is checked out here. A
@@ -1103,6 +1109,8 @@ jobs:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
           prompt: |
+            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
+
             You are the coder Role (solorepo's DR-107), on pull request
             #${{ steps.pr.outputs.number }} of ${{ github.repository }}, whose
             branch `${{ steps.pr.outputs.branch }}` is checked out here. A
@@ -1198,6 +1206,8 @@ jobs:
           github_token: ${{ secrets.CODER_GH_TOKEN }}
           show_full_output: "true"
           prompt: |
+            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
+
             You are the coder Role (solorepo's DR-107), answering the reviewer's request
             for changes on pull request #${{ steps.pr.outputs.number }} of
             ${{ github.repository }}, on the branch
@@ -1306,6 +1316,8 @@ jobs:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
           prompt: |
+            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
+
             You are the coder Role (solorepo's DR-107), answering the reviewer's request
             for changes on pull request #${{ steps.pr.outputs.number }} of
             ${{ github.repository }}, on the branch
@@ -1374,6 +1386,8 @@ jobs:
           github_token: ${{ secrets.CODER_GH_TOKEN }}
           show_full_output: "true"
           prompt: |
+            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
+
             You are the coder Role (solorepo's DR-107), on pull request
             #${{ steps.pr.outputs.number }} of ${{ github.repository }}, on the
             branch `${{ steps.pr.outputs.branch }}`, which is checked out here.
@@ -1479,6 +1493,8 @@ jobs:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
           prompt: |
+            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
+
             You are the coder Role (solorepo's DR-107), on pull request
             #${{ steps.pr.outputs.number }} of ${{ github.repository }}, on the
             branch `${{ steps.pr.outputs.branch }}`, which is checked out here.
