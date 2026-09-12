@@ -1420,8 +1420,8 @@ def supersede(pr, by, reason):
     """
     before = channel.gh("pr", "view", str(pr), "--json",
                         "state,title,headRefName,closingIssuesReferences")
-    if before["state"] != "OPEN":
-        sys.exit(f"say: #{pr} is {before['state'].lower()}, not open")
+    if before["state"] not in ("OPEN", "CLOSED"):
+        sys.exit(f"say: #{pr} is {before['state'].lower()}, not open or closed")
     # Nothing here refuses a pull request named as its own superseder, because
     # nothing can reach that state: this one is open, and `superseder` takes
     # only what has landed.

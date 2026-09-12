@@ -190,6 +190,7 @@ true because it turned out to foreclose nothing.
 - [DR-036](assertions/decisions/DR-036.yaml) — withdrawn. An audit report.
 - [DR-045](assertions/decisions/DR-045.yaml) — withdrawn. A run report.
 - [DR-058](assertions/decisions/DR-058.yaml) — withdrawn. The number was cited in `roadmap.md` for a decision nobody wrote down — the A17 word-counting gate, built and removed in the same change.
+- [DR-146](assertions/decisions/DR-146.yaml) — withdrawn. The change proposing this decision (PR #206) was superseded by DR-152 (PR #227).
 
 ## By artifact
 

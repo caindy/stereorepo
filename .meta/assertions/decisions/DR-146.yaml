@@ -1,0 +1,13 @@
+decisions:
+  - id: work:decision/146
+    name: "DR-146 · Where a generated page's framing prose lives, now that authoring it in the generator is what #11 named first"
+    status: WITHDRAWN
+    withdrawn_because: >-
+      The change proposing this decision (PR #206) was superseded by DR-152 (PR #227).
+      Two other changes landed prose mechanisms over the same ground first, so PR #202
+      closed as COMPLETED, and merging #206 would install a third mechanism over two
+      working ones.
+    rationale: |-
+      The prose that frames a generated page is moved out of render.py into a separate
+      file, keyed by the page it lands in. This separates content from code and avoids
+      having to edit the generator to change page text.
