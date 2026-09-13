@@ -465,6 +465,31 @@ concept_set:
       Borrowed rather than metaphorical. A charter grants and binds; what this
       one adds is that its clauses are empirical, so it can be argued with on
       evidence rather than only amended.
+  - id: work:concept/citation
+    pref_label: Citation
+    definition: >-
+      A formal reference in a durable artifact to an upstream authority — an Article,
+      Decision Record, or Challenge — asserting that the target supports or governs
+      the statement.
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    scope_note: >-
+      A citation is composed of an identifier (number), the claim it names, and a link
+      where one is possible (Article 12, solorepo's DR-182). Evaluated at three progressive depths:
+      target existence, structural correspondence of the claim, and semantic support
+      by the target authority.
+    avoid: [reference, link, mention]
+  - id: work:concept/dereference
+    pref_label: Dereference
+    definition: >-
+      To resolve and evaluate a citation against what the referenced authority asserts.
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    scope_note: >-
+      The verb Article 12 binds to citation. Checked mechanically for target existence
+      and structural claims by check.py, and evaluated for semantic support by
+      dereference.py before handoff.
+    avoid: [resolve, verify link]
   - id: work:concept/nothing-unconsumed
     pref_label: Nothing Unconsumed
     definition: >-

@@ -1,0 +1,46 @@
+decisions:
+  - id: work:decision/182
+    name: "DR-182 · Mint Citation and Dereference in the ubiquitous language ontology"
+    challenge: work:challenge/170
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/meta-vocabulary
+    context: >-
+      The word `citation` entered the repository on 2026-09-03 in commit `42e14d9`
+      alongside Article 12, but was never formally declared as a Concept in
+      `.meta/assertions/imported/vocabulary.yaml`. It has since become load-bearing across
+      Article 12, DR-121, DR-124, DR-125, DR-130, DR-132, and DR-134.
+
+      Issue #170 asked whether `citation` was overloaded across three operational layers
+      (identifier existence, structural claim correspondence, and semantic support warrant),
+      or whether it is a single concept.
+    alternatives:
+      - name: Split citation into three distinct concepts sharing a stem
+        chosen: false
+        reason: >-
+          Confuses tool verification depth with domain meaning. Identifier existence,
+          claim correspondence, and semantic warrant are progressive verification stages
+          of a single citation, not three different concepts.
+      - name: Mint Citation as a single Concept with Dereference as its companion verb in imported vocabulary
+        chosen: true
+        reason: >-
+          Matches Article 12, which already treats a citation as a unified object composed of
+          a number, a claim, and a link, and `dereference` as the action of evaluating it.
+          Placing them in `imported/vocabulary.yaml` allows portfolios to inherit these concepts
+          when citing shared articles and decisions.
+    consequences:
+      - >-
+        `work:concept/citation` and `work:concept/dereference` are formally minted in
+        `.meta/assertions/imported/vocabulary.yaml` under `work:scheme/solorepo` and broader `work:concept/g-recorded`.
+      - >-
+        `.meta/vocabulary.md` is re-rendered to include both concepts in the index.
+      - >-
+        `avoid:` lists `[reference, link, mention]` for citation and `[resolve, verify link]` for dereference.
+    falsifier: >-
+      An artifact or tool using the terms `citation` or `dereference` in a sense that cannot be
+      resolved to an upstream authority reference or its evaluation.
+    rationale: |-
+      Formalizing `citation` and `dereference` closes the gap where a core ubiquitous language term
+      operated without an assertion definition since repository inception. Unifying the three operational
+      layers under one Concept preserves conceptual simplicity while respecting Article 12.

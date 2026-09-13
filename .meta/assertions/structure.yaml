@@ -154,6 +154,9 @@ artifacts:
   - id: work:artifact/meta-assertions-imported-readme
     name: .meta/assertions/imported/README.md
     path: .meta/assertions/imported/README.md
+  - id: work:artifact/meta-assertions-imported-vocabulary
+    name: .meta/assertions/imported/vocabulary.yaml
+    path: .meta/assertions/imported/vocabulary.yaml
   - id: work:artifact/meta-assertions-vocabulary
     name: .meta/assertions/vocabulary.yaml
     path: .meta/assertions/vocabulary.yaml

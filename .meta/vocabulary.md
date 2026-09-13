@@ -108,6 +108,8 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Trailer** | A `Key: value` line at the end of a commit message or a comment, naming the Actor that wrote it. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
 | **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
+| **Citation** | A formal reference in a durable artifact to an upstream authority — an Article, Decision Record, or Challenge — asserting that the target supports or governs the statement. | reference, link, mention |
+| **Dereference** | To resolve and evaluate a citation against what the referenced authority asserts. | resolve, verify link |
 
 #### The Disciplines
 
@@ -172,6 +174,10 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Charter.** Borrowed rather than metaphorical. A charter grants and binds; what this one adds is that its clauses are empirical, so it can be argued with on evidence rather than only amended.
 
+**Citation.** A citation is composed of an identifier (number), the claim it names, and a link where one is possible (Article 12, solorepo's DR-182). Evaluated at three progressive depths: target existence, structural correspondence of the claim, and semantic support by the target authority.
+
+**Dereference.** The verb Article 12 binds to citation. Checked mechanically for target existence and structural claims by check.py, and evaluated for semantic support by dereference.py before handoff.
+
 ### APM primitives
 
 _Authority: Microsoft APM._
@@ -210,4 +216,4 @@ more often a collision than a gap.
 
 ---
 
-**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml)
+**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-182](assertions/decisions/DR-182.yaml)
