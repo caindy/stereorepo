@@ -1,0 +1,15 @@
+challenges:
+  - id: work:challenge/372
+    name: Extract reviewer depth heuristics into a template method supporting declarative and scripted portfolio extensions
+    challenge_type: ENHANCEMENT
+    description: >-
+      In `.github/workflows/review.yml`, `choose the depth` hardcoded thirty lines
+      of inline bash to determine reviewer depth against scaffold boundary paths
+      (`\.meta/say`, `\.meta/hooks/`, `\.meta/check_pr\.py`, `\.claude/`,
+      `\.github/workflows/`). In a specialized repository, this hardcoding forced
+      all product domain code into the standard review path while offering no
+      mechanism for a portfolio to declare its own critical domain boundaries.
+      Extracted into a 4-layer template method pipeline in `.meta/depth.py`
+      combining scaffold security invariants, declarative assertions via
+      `critical_paths` in `structure.yaml`, and an optional programmatic hook in
+      `.meta/hooks/depth.py`.

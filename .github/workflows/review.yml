@@ -177,34 +177,12 @@ jobs:
       # decision record, a page, a script has one dimension, and a second
       # agent on it reads the same diff for the same thing. The number is a
       # ceiling on what the session spawns and not a quota to fill, so a
-      # one-dimension diff gets one agent on either path.
+      # Evaluated via .meta/depth.py under a 4-layer template method pipeline (solorepo's DR-188):
+      # scaffold security baseline, declarative assertions, programmatic hook, standard default.
       - name: choose the depth
         id: depth
         run: |
-          LOGIN="${{ format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name) }}"
-          LAST_VERDICT_HEAD=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews?per_page=100" --paginate \
-            --jq "[.[] | select(.user.login == \"$LOGIN\") | select(.state != \"COMMENTED\" or (.body // \"\") != \"\")] | last | .commit_id" 2>/dev/null || true)
-
-          incremental=false
-          if [ -n "$LAST_VERDICT_HEAD" ] && [ "$LAST_VERDICT_HEAD" != "null" ]; then
-            if git cat-file -e "$LAST_VERDICT_HEAD" 2>/dev/null; then
-              incremental=true
-            fi
-          fi
-
-          if [ "$incremental" = true ]; then
-            echo "Checking incremental delta diff since last verdict head: $LAST_VERDICT_HEAD"
-            files_to_check=$(git diff --name-only "$LAST_VERDICT_HEAD" HEAD)
-          else
-            echo "Checking cumulative PR files (no previous verdict found or reachable)"
-            files_to_check=$(gh pr view "$PR" --json files -q '.files[].path')
-          fi
-
-          if echo "$files_to_check" | grep -qE '^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)'; then
-            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\neffort=high\nturns=120\nminutes=45\nagents=3\n' >> "$GITHUB_OUTPUT"
-          else
-            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\neffort=medium\nturns=120\nminutes=15\nagents=1\n' >> "$GITHUB_OUTPUT"
-          fi
+          python3 .meta/depth.py "$PR" >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}

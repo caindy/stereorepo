@@ -2722,4 +2722,83 @@ def wikisplain_probes():
     return problems
 
 
+@check("depth probes", pre=True)
+def depth_probes():
+    """Reviewer depth evaluation 4-layer template method pipeline (solorepo's DR-188)."""
+    import importlib.util
+    import tempfile
 
+    spec = importlib.util.spec_from_file_location("depth_module", META / "depth.py")
+    if not spec or not spec.loader:
+        return ["depth probes: could not load .meta/depth.py"]
+    depth = importlib.util.module_from_spec(spec)
+    sys.modules["depth_module"] = depth
+    spec.loader.exec_module(depth)
+
+    problems = []
+
+    # Layer 1: Invariant scaffold boundary files trigger deep path
+    for boundary_file in [".meta/say/post", ".meta/hooks/worktree_only.py", ".claude/settings.json", ".github/workflows/gate.yml"]:
+        cfg = depth.evaluate([boundary_file])
+        if cfg.model != "claude-opus-5" or cfg.agents != 3:
+            problems.append(f"depth: {boundary_file} expected deep (opus/3), got {cfg.model}/{cfg.agents}")
+        if "scaffold boundary" not in cfg.reason:
+            problems.append(f"depth: {boundary_file} reason missing 'scaffold boundary', got {cfg.reason!r}")
+
+    # Layer 4: Standard files with no matching assertions or hook trigger standard path
+    cfg_std = depth.evaluate(["src/main.rs", "docs/guide.md"])
+    if cfg_std.model != "claude-sonnet-5" or cfg_std.agents != 1:
+        problems.append(f"depth: standard files expected sonnet/1, got {cfg_std.model}/{cfg_std.agents}")
+    if cfg_std.reason != "standard path":
+        problems.append(f"depth: standard files expected 'standard path', got {cfg_std.reason!r}")
+
+    # Layer 2: Declarative assertions in structure.yaml match critical_paths
+    with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
+        f.write(
+            "projects:\n"
+            "  - id: work:project/billing\n"
+            "    critical_paths:\n"
+            "      - 'services/billing/**'\n"
+            "      - 'migrations/*.sql'\n"
+        )
+        fake_structure = pathlib.Path(f.name)
+
+    try:
+        # Matches declared critical glob
+        cfg_decl = depth.evaluate(["services/billing/ledger.rs"], structure_file=fake_structure)
+        if cfg_decl.model != "claude-opus-5" or cfg_decl.agents != 3:
+            problems.append(f"depth: declared critical path expected deep (opus/3), got {cfg_decl.model}/{cfg_decl.agents}")
+        if "declared critical path" not in cfg_decl.reason:
+            problems.append(f"depth: declared critical path reason missing prefix, got {cfg_decl.reason!r}")
+
+        # Non-matching file in declarative repo falls back to standard
+        cfg_other = depth.evaluate(["services/auth/token.rs"], structure_file=fake_structure)
+        if cfg_other.model != "claude-sonnet-5" or cfg_other.agents != 1:
+            problems.append(f"depth: non-matching file expected standard, got {cfg_other.model}/{cfg_other.agents}")
+    finally:
+        fake_structure.unlink(missing_ok=True)
+
+    # Layer 3: Programmatic hook evaluation
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
+        f.write(
+            "def evaluate_depth(pr_meta, files, diff):\n"
+            "    if any('custom_trigger' in f for f in files):\n"
+            "        return {'model': 'claude-opus-5', 'gemini_model': 'gemini-3.8-flash', "
+            "'effort': 'high', 'turns': 90, 'minutes': 30, 'agents': 2, 'reason': 'custom rule'}\n"
+            "    return None\n"
+        )
+        fake_hook = pathlib.Path(f.name)
+
+    try:
+        cfg_hook = depth.evaluate(["apps/custom_trigger.py"], hook_file=fake_hook)
+        if cfg_hook.agents != 2 or cfg_hook.turns != 90 or cfg_hook.reason != "custom rule":
+            problems.append(f"depth: programmatic hook expected agents=2 turns=90, got {cfg_hook}")
+
+        # Layer 1 hard invariant overrides programmatic hook even if hook tries to return something else
+        cfg_override = depth.evaluate([".meta/say/post", "apps/custom_trigger.py"], hook_file=fake_hook)
+        if cfg_override.agents != 3 or "scaffold boundary" not in cfg_override.reason:
+            problems.append(f"depth: scaffold boundary must override hook, got {cfg_override}")
+    finally:
+        fake_hook.unlink(missing_ok=True)
+
+    return problems

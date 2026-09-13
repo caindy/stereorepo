@@ -238,6 +238,9 @@ artifacts:
   - id: work:artifact/meta-next
     name: .meta/next.py
     path: .meta/next.py
+  - id: work:artifact/meta-depth
+    name: .meta/depth.py
+    path: .meta/depth.py
   - id: work:artifact/meta-timing
     name: .meta/timing.py
     path: .meta/timing.py

@@ -96,6 +96,11 @@ slots:
       The command that must pass before work on this Project is claimed done.
       One per Project, and green before anything is called finished.
 
+  critical_paths:
+    description: >-
+      File glob patterns within this Project that require deep reviewer auditing (solorepo's DR-188).
+    multivalued: true
+
 classes:
 
   Portfolio:
@@ -166,6 +171,7 @@ classes:
     slots:
       - language
       - gate
+      - critical_paths
     slot_usage:
       name:
         required: true
