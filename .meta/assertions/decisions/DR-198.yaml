@@ -1,0 +1,84 @@
+decisions:
+  - id: work:decision/198
+    name: "DR-198 · Two-regime technical writing: conversational register versus durable Diátaxis authoring"
+    challenge: work:challenge/393
+    status: ADOPTED
+    applies:
+      - work:article/1
+      - work:article/12
+      - work:article/15
+    enacted_in:
+      - work:artifact/skill-technical-writing
+      - work:artifact/github-workflows-coder
+      - work:artifact/agents
+    context: >-
+      While solorepo established the layered technical writing standard
+      (solorepo's DR-194) and elevated the Diátaxis Compass to Knowledge Management
+      (solorepo's DR-196), practice revealed a fundamental category mistake across
+      agent loops. The Coder personality's directive ("Concise. Recommendation
+      before survey, decision before rationale. Cite an Article by number and move
+      on. Err toward concision rather than tedium...") was imported into
+      conversational dialogue, resulting in overly concise, abstruse shorthand that
+      forced maintainers and collaborators to interrogate agents across multiple turns
+      to extract basic context. Conversely, the Technical Writer character ("Spelled
+      out, for an audience it names. Every citation dereferenced. Length is not the
+      cost here; ambiguity is") was misconstrued by agents as an authoring license
+      to inflate durable source code docstrings with defensive litigation,
+      speculative commentary, and historical narratives, generating the cognitive
+      bulk targeted by Challenge 393.
+    alternatives:
+      - name: Rewrite the Coder personality to enforce verbose exposition across all tasks
+        chosen: false
+        reason: >-
+          Blurs role boundaries, slows turnaround on initial implementation, and
+          burdens the fast loop with narrative drag during active coding.
+      - name: Retain implicit conventions without separating conversational and authoring regimes
+        chosen: false
+        reason: >-
+          Leaves agents oscillating between abstruse conversational shorthand and
+          bloated, litigious source code docstrings, continuing to violate solorepo's DR-175.
+      - name: Separate conversational register from durable Diátaxis authoring with skill-based coder cleanup
+        chosen: true
+        reason: >-
+          Disentangles communication from file authoring: conversational dialogue
+          (session turns, PR review threads, issue discussions) follows the
+          Technical Writer register (clear, spelled out, citations dereferenced,
+          naming context, eliminating shorthand), while durable files follow the
+          Diátaxis compass (Reference docstrings dry and concise; Explanation in
+          DRs and wiki; Defect history in companion logs). The Coder implements
+          naturally in pass 1, adopts the clean prose style of rewritten artifacts
+          via in-context priming, and applies the `/technical-writing` skill to
+          audit and clean up docstrings, comments, and documentation before handoff.
+    consequences:
+      - >-
+        .meta/render.py updates .claude/skills/technical-writing/SKILL.md to
+        explicitly distinguish the conversational communication register from the
+        durable Diátaxis authoring regime.
+      - >-
+        AGENTS.md and template/AGENTS.md record the two regimes convention,
+        directing coder agents to apply the /technical-writing skill when authoring
+        or revising docstrings, comments, or documentation.
+      - >-
+        .github/workflows/coder.yml instructs coder agents to apply the
+        /technical-writing skill during their pre-handoff pass to ensure code
+        docstrings satisfy Diátaxis Reference contracts without reviewer litigation.
+      - >-
+        Affirms that the Technical Writer Role acts as the independent Diátaxis
+        quality check during review (solorepo's DR-176) rather than an unexecuted third loop.
+    falsifier: >-
+      An agent communicating in conversation with abstruse, undecoded shorthand,
+      or an agent authoring durable code docstrings that import conversational
+      expansiveness or reviewer litigation instead of dry Diátaxis Reference
+      contracts.
+    rationale: |-
+      The character of an Actor governs its voice in conversation; the Diátaxis
+      coordinate system governs the structure of its durable output. Conflating the
+      two damaged both: it made conversations cryptic and code docstrings verbose.
+
+      Separating the regimes restores sanity: in dialogue, clarity and
+      dereferencing take precedence over brevity because ambiguity costs turns and
+      collaborative alignment. In durable code, the Diátaxis Reference quadrant
+      demands dry, complete, sure usage contracts because cognitive bulk obscures
+      APIs. By allowing the coder to write implementation naturally and then
+      prompting it to audit prose against the `/technical-writing` skill, agents
+      produce pristine literate artifacts without degrading coding velocity.

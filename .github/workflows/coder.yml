@@ -557,6 +557,12 @@ jobs:
             so answer its `x` by fixing the sentence, or by leaving it and
             saying why on the pull request (solorepo's DR-134).
 
+            When authoring or modifying docstrings, comments, or documentation,
+            apply the /technical-writing skill (solorepo's DR-194, solorepo's DR-198):
+            ensure item docstrings are Diátaxis Reference contracts without reviewer
+            litigation, route defect/workaround narratives to companion <module>.history.md
+            logs (solorepo's DR-171), and dereference all citations.
+
             Before you hand the branch over as finished, reread your diff
             against origin/main to verify quality and consistency.
             What you spot is yours to act on or not; what you decide not to
@@ -712,6 +718,12 @@ jobs:
             against the entries they name; it is not a gate and blocks nothing,
             so answer its `x` by fixing the sentence, or by leaving it and
             saying why on the pull request (solorepo's DR-134).
+
+            When authoring or modifying docstrings, comments, or documentation,
+            apply the /technical-writing skill (solorepo's DR-194, solorepo's DR-198):
+            ensure item docstrings are Diátaxis Reference contracts without reviewer
+            litigation, route defect/workaround narratives to companion <module>.history.md
+            logs (solorepo's DR-171), and dereference all citations.
 
             Before you hand the branch over as finished, reread your diff
             against origin/main to verify quality and consistency.
