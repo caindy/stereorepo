@@ -44,6 +44,10 @@ next:
 timing *args:
     python3 .meta/timing.py {{args}}
 
+# count review subagent invocations against the fan-out ceiling (solorepo's DR-191)
+agents *args:
+    python3 .meta/agents.py {{args}}
+
 # explain or scaffold a wiki concept following Knowledge Management conventions (solorepo's DR-187)
 wikisplain *args:
     python3 .meta/wikisplain.py {{args}}

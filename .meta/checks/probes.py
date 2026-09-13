@@ -2815,3 +2815,147 @@ def depth_probes():
 
     return problems
 
+
+@check("agents probes", pre=True)
+def agents_probes():
+    """Review subagent counting against the fan-out ceiling (solorepo's DR-191)."""
+    import importlib.util
+    import json
+    import tempfile
+
+    spec = importlib.util.spec_from_file_location("agents_module", META / "agents.py")
+    if not spec or not spec.loader:
+        return ["agents probes: could not load .meta/agents.py"]
+    agents = importlib.util.module_from_spec(spec)
+    sys.modules["agents_module"] = agents
+    spec.loader.exec_module(agents)
+
+    problems = []
+
+    # 1. Empty or blank inputs
+    if agents.parse_agents("") != []:
+        problems.append("agents: expected [] for empty string")
+    if agents.parse_agents("   \n\t  ") != []:
+        problems.append("agents: expected [] for whitespace string")
+    if agents.parse_agents({}) != []:
+        problems.append("agents: expected [] for empty dict")
+    if agents.parse_agents([]) != []:
+        problems.append("agents: expected [] for empty list")
+
+    # 2. Structured JSON with Claude tool_use format
+    single_turn = {
+        "role": "assistant",
+        "content": [
+            {"type": "text", "text": "Dispatching agents"},
+            {
+                "type": "tool_use",
+                "id": "toolu_01",
+                "name": "Agent",
+                "input": {"description": "Review boundary path", "subagent_type": "general-purpose"},
+            },
+            {
+                "type": "tool_use",
+                "id": "toolu_02",
+                "name": "Read",
+                "input": {"file_path": "README.md"},
+            },
+        ],
+    }
+    found = agents.parse_agents(single_turn)
+    if len(found) != 1 or found[0].id != "toolu_01" or found[0].name != "Agent":
+        problems.append(f"agents: expected 1 agent for single_turn, got {found}")
+
+    # 3. Concurrent foreground dispatch in a single turn (solorepo's DR-189)
+    concurrent_turn = [
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_01",
+                    "name": "Agent",
+                    "input": {"description": "Review boundary hooks"},
+                },
+                {
+                    "type": "tool_use",
+                    "id": "toolu_02",
+                    "name": "Agent",
+                    "input": {"description": "Review timing metrics"},
+                },
+                {
+                    "type": "tool_use",
+                    "id": "toolu_03",
+                    "name": "Agent",
+                    "input": {"description": "Review assertions"},
+                },
+            ],
+        }
+    ]
+    found_concurrent = agents.parse_agents(concurrent_turn)
+    if len(found_concurrent) != 3:
+        problems.append(f"agents: expected 3 agents for concurrent_turn, got {len(found_concurrent)}")
+
+    # 4. Deduplication of identical tool use IDs
+    duplicate_turn = [
+        {"type": "tool_use", "id": "toolu_dup", "name": "Agent", "input": {"description": "First emission"}},
+        {"type": "tool_use", "id": "toolu_dup", "name": "Agent", "input": {"description": "Stream update"}},
+        {"type": "tool_use", "id": "toolu_other", "name": "Agent", "input": {"description": "Distinct agent"}},
+    ]
+    found_dup = agents.parse_agents(duplicate_turn)
+    if len(found_dup) != 2:
+        problems.append(f"agents: expected 2 deduplicated agents, got {len(found_dup)}")
+
+    # 5. JSON Lines / NDJSON stream
+    ndjson_data = (
+        '{"event": "start"}\n'
+        '{"type": "tool_use", "id": "toolu_ndjson_1", "name": "Agent", "input": {"description": "Line 1"}}\n'
+        '{"type": "tool_use", "id": "toolu_ndjson_2", "name": "Agent", "input": {"description": "Line 2"}}\n'
+    )
+    found_ndjson = agents.parse_agents(ndjson_data)
+    if len(found_ndjson) != 2:
+        problems.append(f"agents: expected 2 agents for NDJSON stream, got {len(found_ndjson)}")
+
+    # 6. Fallback regex extraction from non-JSON log text
+    raw_log = (
+        "Runner log output:\n"
+        '{"type": "tool_use", "id": "toolu_log_1", "name": "Agent"}\n'
+        "Some intervening non-json log lines\n"
+        '{"type": "tool_use", "id": "toolu_log_2", "name": "Agent"}\n'
+    )
+    found_raw = agents.parse_agents(raw_log)
+    if len(found_raw) != 2:
+        problems.append(f"agents: expected 2 agents for raw log, got {len(found_raw)}")
+
+    # 7. Evaluate ceiling behavior
+    ok, _ = agents.evaluate_ceiling(2, 3)
+    if not ok:
+        problems.append("agents: evaluate_ceiling(2, 3) expected True, got False")
+    ok, _ = agents.evaluate_ceiling(3, 3)
+    if not ok:
+        problems.append("agents: evaluate_ceiling(3, 3) expected True, got False")
+    ok, err_msg = agents.evaluate_ceiling(4, 3)
+    if ok or "breaching the fan-out ceiling of 3" not in err_msg:
+        problems.append(f"agents: evaluate_ceiling(4, 3) expected False with breach message, got {ok}, {err_msg}")
+    ok, _ = agents.evaluate_ceiling(5, None)
+    if not ok:
+        problems.append("agents: evaluate_ceiling(5, None) expected True when no ceiling")
+
+    # 8. Missing file handling
+    missing_content = agents.read_content("/nonexistent/file/path/here.json", quiet=True)
+    if missing_content != "":
+        problems.append(f"agents: read_content on missing file expected '', got {missing_content!r}")
+
+    # 9. File read integration with tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        f.write(json.dumps(single_turn))
+        temp_path = pathlib.Path(f.name)
+    try:
+        content = agents.read_content(str(temp_path))
+        file_agents = agents.parse_agents(content)
+        if len(file_agents) != 1:
+            problems.append(f"agents: read_content from temp file expected 1 agent, got {len(file_agents)}")
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+    return problems
+

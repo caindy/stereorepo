@@ -747,3 +747,11 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           BEFORE: ${{ steps.before.outputs.count }}
           AFTER: ${{ steps.after.outputs.count }}
+
+      # A review that exceeded its fan-out ceiling has breached the depth contract
+      # (solorepo's DR-166, solorepo's DR-191). The tool counts spawned subagent invocations
+      # from the execution output and fails closed (exit code 1) on any breach.
+      - name: the fan-out ceiling was kept
+        if: ${{ !cancelled() }}
+        run: |
+          python3 .meta/agents.py --ceiling "${{ steps.depth.outputs.agents }}" --file "${{ steps.review_claude.outputs.execution_file }}"

@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/307
+    name: "Count the agents a review spawns, so the fan-out ceiling is a fact and not a claim"
+    challenge_type: DEFECT
+    description: >-
+      DR-166 established an agent fan-out ceiling chosen with review depth (3 on the boundary
+      path, 1 elsewhere), but left the ceiling unenforced. Allowed tools granted Agent without limit,
+      leaving passes that exceeded the ceiling detectable only through manual transcript inspection.
+      Following DR-122's principle of verifying execution facts rather than accepting prompt claims,
+      review execution requires an automated post-session gate step that counts spawned subagents
+      from the session transcript and fails closed (red run) if the fan-out ceiling is breached.
