@@ -56,6 +56,10 @@ wikisplain *args:
 dereference *args:
     uvx --with linkml --with pyyaml python .meta/dereference.py {{args}}
 
+# search assertions, decisions, and wiki by meaning (solorepo's DR-103)
+search *args:
+    uvx --with linkml --with pyyaml python .meta/search.py {{args}}
+
 # the optional local cluster this repo's self-hosted runner can use
 arc-cluster:
     .meta/arc/cluster

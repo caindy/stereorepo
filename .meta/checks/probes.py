@@ -3014,3 +3014,51 @@ def dereference_probes():
 
     return problems
 
+
+@check("search probes", pre=True)
+def search_probes():
+    """`search.py` indexes assertions and wiki, evaluates Okapi BM25F multi-field scoring, and satisfies the retrieval benchmark (solorepo's DR-103, solorepo's DR-194)."""
+    import contextlib
+    import importlib.util
+    import io
+    from importlib.machinery import SourceFileLoader
+
+    checks_dir = META / "checks"
+    if str(checks_dir) not in sys.path:
+        sys.path.insert(0, str(checks_dir))
+    if str(META) not in sys.path:
+        sys.path.insert(0, str(META))
+
+    loader = SourceFileLoader("search", str(META / "search.py"))
+    spec = importlib.util.spec_from_loader("search", loader)
+    search_mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(search_mod)
+
+    problems = []
+
+    # 1. Build index over assertions and wiki pages
+    index = search_mod.build_index(META, ROOT)
+    if len(index.docs) < 100:
+        problems.append(f"search: index populated too few documents ({len(index.docs)})")
+
+    # 2. Multi-field BM25F ranking on a known query
+    results = index.search("who is allowed to push to trunk", top_k=5)
+    result_ids = [res.identifier for res in results]
+    if "work:decision/100" not in result_ids and "work:decision/072" not in result_ids:
+        problems.append(f"search: 'who is allowed to push to trunk' expected solorepo's DR-100 or solorepo's DR-072 in top 5, got {result_ids}")
+
+    # 3. Evaluation benchmark (threshold: hit@5 >= 15/18)
+    bench_out = io.StringIO()
+    with contextlib.redirect_stdout(bench_out):
+        failed = search_mod.run_benchmark(index)
+    if failed != 0:
+        problems.append(f"search: solorepo's DR-103 benchmark failed {failed} queries below threshold (hit@5 >= 15/18)")
+
+    # 4. SearchResult formatting
+    if results:
+        res_dict = results[0].to_dict()
+        if not ("id" in res_dict and "score" in res_dict and "source_file" in res_dict):
+            problems.append(f"search: SearchResult dictionary missing expected fields: {res_dict}")
+
+    return problems
+

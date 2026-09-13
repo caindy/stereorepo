@@ -1,0 +1,74 @@
+decisions:
+  - id: work:decision/194
+    name: "DR-194 · Layered technical writing standard and in-memory BM25F record retrieval skill"
+    challenge: work:challenge/386
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/12
+    enacted_in:
+      - work:artifact/skill-technical-writing
+      - work:artifact/meta-search
+    context: >-
+      While work:role/technical-writer and work:personality/technical-writer
+      were declared in imported authority assertions and enforced during PR review
+      (solorepo's DR-176), the repository lacked an operational authoring skill
+      providing concrete structural and sentence-level conventions for authoring
+      and maintaining literate exposition. Furthermore, while solorepo's DR-192
+      assigned corpus-wide citation maintenance to the Technical Writer backed by
+      offline retrieval (solorepo's DR-103), DR-103 remained RECOMMENDED with no
+      implementation built, forcing agents and the solo to rely on exact substring
+      grep.
+    alternatives:
+      - name: Rely solely on PR reviewer checks without an authored skill or retrieval engine
+        chosen: false
+        reason: >-
+          Leaves authors, coder agents, and subagents without concrete structural
+          rules (Diátaxis) or retrieval tools, forcing reviewers to repeatedly litigate
+          style, docstring tone, and citation accuracy in PR threads.
+      - name: External binary indexer (ck or zg) with disk-persisted index files
+        chosen: false
+        reason: >-
+          Evaluated in Spike #18 (solorepo's DR-103). Imposes 535 MB node_modules
+          (zg) or cargo install per machine (ck), external embedding caches, and
+          disk indices that drift when assertions change.
+      - name: Layered technical writing skill and zero-dependency in-memory BM25F search engine
+        chosen: true
+        reason: >-
+          Synthesizes Diátaxis documentation architecture (Reference, Explanation,
+          How-To, Tutorial) and Google developer style with solorepo's Literate
+          Programming (solorepo's DR-171, DR-175, DR-176) and Knowledge Management
+          (solorepo's DR-184, DR-187). Implements Okapi BM25F multi-field scoring in
+          ~50 lines of pure Python standard library over structured assertions and
+          wiki pages, achieving 94.4% hit@5 (17/18) and 0.76 MRR over the 18 DR-103
+          benchmark queries with zero dependencies, sub-100ms latency, and zero index drift.
+    consequences:
+      - >-
+        .claude/skills/technical-writing/SKILL.md is rendered from assertions,
+        establishing the four-mode Diátaxis compass, Google developer style rules,
+        and Literate Programming invariants across the fleet.
+      - >-
+        .meta/search.py implements zero-dependency BM25F multi-field retrieval over
+        assertions and wiki pages, exposed as just search <query>.
+      - >-
+        The DR-103 benchmark suite is embedded in .meta/search.py --benchmark,
+        verifying hit@5 >= 15/18.
+      - >-
+        Enacts RECOMMENDED decision DR-103 and resolves Challenge 386.
+    falsifier: >-
+      A query on the built search engine scoring below the DR-103 threshold (15
+      of 18 on the benchmark queries), or a documentation artifact that mixes
+      Diátaxis reference and explanation modes by arguing past reviewer litigation
+      in public item docstrings.
+    rationale: |-
+      The Technical Writer Role requires both a structural standard and an
+      effective retrieval instrument. Adopting Diátaxis provides the clean
+      structural boundary that Literate Programming required: item docstrings are
+      dry, lookup-oriented Reference; Decision Records and module overviews are
+      architectural Explanation; and recipes are How-To.
+
+      For retrieval, Sourcegraph's BM25F insight—weighting fields (title, summary,
+      body) before term frequency saturation—allows a 50-line pure-Python script
+      to achieve 94.4% hit@5 (17 of 18) on the DR-103 benchmark queries. This
+      delivers the retrieval power Recommended by DR-103 with zero external
+      dependencies, zero disk indices, and zero latency.

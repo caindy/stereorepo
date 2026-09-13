@@ -205,6 +205,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-191](assertions/decisions/DR-191.yaml) | Spawned review subagents are counted and bounded by the fan-out ceiling, failing closed on breach | Adopted |
 | [DR-192](assertions/decisions/DR-192.yaml) | Ground-moved branch scoping and technical writer retrieval remit for durable citation maintenance | Adopted |
 | [DR-193](assertions/decisions/DR-193.yaml) | Retire mechanical formatting (fmt) from the Python bootstrap gate · The Python standard | Adopted |
+| [DR-194](assertions/decisions/DR-194.yaml) | Layered technical writing standard and in-memory BM25F record retrieval skill | Adopted |
 
 ## Holes
 
@@ -226,6 +227,7 @@ and the query a reader in a file actually has.
 | :-- | :-- |
 | [`.claude/skills/pr-first-reviewer/SKILL.md`](../.claude/skills/pr-first-reviewer/SKILL.md) | [DR-159](assertions/decisions/DR-159.yaml), [DR-164](assertions/decisions/DR-164.yaml), [DR-190](assertions/decisions/DR-190.yaml) |
 | [`.claude/skills/pr-first/SKILL.md`](../.claude/skills/pr-first/SKILL.md) | [DR-159](assertions/decisions/DR-159.yaml), [DR-164](assertions/decisions/DR-164.yaml), [DR-190](assertions/decisions/DR-190.yaml) |
+| [`.claude/skills/technical-writing/SKILL.md`](../.claude/skills/technical-writing/SKILL.md) | [DR-194](assertions/decisions/DR-194.yaml) |
 | [`.claude/skills/wikisplain/SKILL.md`](../.claude/skills/wikisplain/SKILL.md) | [DR-187](assertions/decisions/DR-187.yaml) |
 | [`.gitattributes`](../.gitattributes) | [DR-143](assertions/decisions/DR-143.yaml) |
 | [`.github/workflows/advance.yml`](../.github/workflows/advance.yml) | [DR-113](assertions/decisions/DR-113.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-161](assertions/decisions/DR-161.yaml) |
@@ -280,6 +282,7 @@ and the query a reader in a file actually has.
 | [`.meta/say/verbs.yaml`](say/verbs.yaml) | [DR-117](assertions/decisions/DR-117.yaml), [DR-127](assertions/decisions/DR-127.yaml), [DR-133](assertions/decisions/DR-133.yaml), [DR-145](assertions/decisions/DR-145.yaml), [DR-148](assertions/decisions/DR-148.yaml), [DR-149](assertions/decisions/DR-149.yaml), [DR-151](assertions/decisions/DR-151.yaml), [DR-159](assertions/decisions/DR-159.yaml), [DR-161](assertions/decisions/DR-161.yaml), [DR-164](assertions/decisions/DR-164.yaml) |
 | [`.meta/say/whoami`](say/whoami) | [DR-117](assertions/decisions/DR-117.yaml), [DR-179](assertions/decisions/DR-179.yaml) |
 | [`.meta/schemas.md`](schemas.md) | [DR-003](assertions/decisions/DR-003.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-183](assertions/decisions/DR-183.yaml) |
+| [`.meta/search.py`](search.py) | [DR-194](assertions/decisions/DR-194.yaml) |
 | [`.meta/templates/issue.md`](templates/issue.md) | [DR-112](assertions/decisions/DR-112.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-170](assertions/decisions/DR-170.yaml) |
 | [`.meta/templates/pull-request.md`](templates/pull-request.md) | [DR-055](assertions/decisions/DR-055.yaml), [DR-076](assertions/decisions/DR-076.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-159](assertions/decisions/DR-159.yaml) |
 | [`.meta/templates/roadmap.md`](templates/roadmap.md) | [DR-088](assertions/decisions/DR-088.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-170](assertions/decisions/DR-170.yaml) |
