@@ -337,6 +337,15 @@ artifacts:
   - id: work:artifact/wiki-solorepo-readme
     name: wiki/solorepo/README.md
     path: wiki/solorepo/README.md
+  - id: work:artifact/wiki-solorepo-knowledge-management
+    name: wiki/solorepo/knowledge-management.md
+    path: wiki/solorepo/knowledge-management.md
+  - id: work:artifact/wiki-solorepo-pr-first
+    name: wiki/solorepo/pr-first.md
+    path: wiki/solorepo/pr-first.md
+  - id: work:artifact/wiki-solorepo-ubiquitous-language
+    name: wiki/solorepo/ubiquitous-language.md
+    path: wiki/solorepo/ubiquitous-language.md
   - id: work:artifact/template-github-workflows-gate
     name: template/.github/workflows/gate.yml
     path: template/.github/workflows/gate.yml

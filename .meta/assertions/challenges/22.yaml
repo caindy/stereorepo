@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/22
+    name: Wikipedia conventions for Knowledge Management
+    challenge_type: FEATURE
+    description: >-
+      Treating knowledge management like a hyperlinked encyclopedia combats semantic
+      drift across autonomous loops. Implementing closed-world wikilink resolution
+      and MOS:LEAD bold copular lead sentence concordance gives deterministic referential
+      integrity and leverages LLM training priors without custom prompt engineering.

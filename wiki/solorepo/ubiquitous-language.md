@@ -2,12 +2,12 @@
 
 **Ubiquitous Language** is the discipline that ensures every concept within a
 Bounded Context carries exactly one unambiguous name shared by human and agents
-alike.
+alike (solorepo's DR-184, solorepo's DR-185).
 
 In an agentic development environment where autonomous loops author and review
 code at high velocity, semantic drift is an acute failure mode. When different
 agents invent ad-hoc synonyms for the same concept (for example, referring to a
-Challenge alternately as a "ticket", "story", or "task"), the mental model
+[[Challenge]] alternately as a "ticket", "story", or "task"), the mental model
 fractures. The Ubiquitous Language discipline eliminates floating signifiers by
 forcing every domain concept through an explicit vocabulary contract.
 
@@ -23,8 +23,9 @@ The Ubiquitous Language operates across two complementary substrates:
    exposition explaining the concept's mechanics, edge cases, and design
    trade-offs in human-readable prose.
 
-The lead sentence of the wiki page concurs with the machine gloss in the schema,
-guaranteeing that human exposition and machine verification never diverge.
+The lead sentence of the wiki page concurs with the machine gloss in the schema
+(solorepo's DR-185), guaranteeing that human exposition and machine
+verification never diverge.
 
 ## Bounded Contexts
 
@@ -42,4 +43,5 @@ Writing explains; deciding decides.
 
 ---
 
-**See also:** [Knowledge Management](knowledge-management.md), [PR First](pr-first.md), solorepo's DR-041, solorepo's DR-184.
+**See also:** [[knowledge-management]], [[pr-first]], solorepo's DR-041, solorepo's DR-184, solorepo's DR-185.
+

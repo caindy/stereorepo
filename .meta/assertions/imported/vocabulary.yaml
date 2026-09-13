@@ -385,6 +385,18 @@ concept_set:
     scope_note: >-
       It stands in for the tracker a team would have, and is the only
       Collaboration point available to agents that share no filesystem.
+  - id: work:concept/knowledge-management
+    pref_label: Knowledge Management
+    definition: >-
+      Organizing maintainer-facing exposition into an encyclopedic wiki
+      partitioned by Bounded Context.
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-disciplines
+    scope_note: >-
+      Prose addressed to a maintainer who arrives cold and seeks to understand an
+      architecture or domain concept. Every concept in a Bounded Context's
+      Ubiquitous Language has a corresponding wiki page adhering to MOS:LEAD
+      conventions and closed-world wikilinks (solorepo's DR-184, solorepo's DR-185).
   - id: work:concept/trailer
     pref_label: Trailer
     definition: >-

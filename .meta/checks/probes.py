@@ -17,6 +17,7 @@ import sys
 import yaml
 
 import citations
+import files
 import graph
 from collect import META, ROOT, check
 
@@ -2502,4 +2503,153 @@ def withdrawn_decisions_probes():
         problems.append(f"withdrawn decisions: expected no error for ADOPTED lacking explanation, got {said!r}")
 
     return problems
+
+
+class _FakeWikiPath:
+    """A minimal fake Path for probing wikilink and lead paragraph checks."""
+
+    def __init__(self, rel_str: str, text: str):
+        self._path = ROOT / rel_str
+        self._text = text
+
+    @property
+    def suffix(self):
+        return self._path.suffix
+
+    @property
+    def name(self):
+        return self._path.name
+
+    @property
+    def stem(self):
+        return self._path.stem
+
+    @property
+    def parts(self):
+        return self._path.parts
+
+    @property
+    def parent(self):
+        return self._path.parent
+
+    def is_symlink(self):
+        return False
+
+    def is_file(self):
+        return True
+
+    def read_text(self, encoding="utf-8"):
+        return self._text
+
+    def relative_to(self, other):
+        return self._path.relative_to(other)
+
+    def __str__(self):
+        return str(self._path)
+
+
+@check("wiki probes", pre=True)
+def wiki_probes():
+    """Observed failure and concordance for wikilinks and MOS:LEAD lead paragraphs (A2, solorepo's DR-185)."""
+    problems = []
+
+    index = {
+        "work:concept/ubiquitous-language": (
+            "Concept",
+            {"id": "work:concept/ubiquitous-language", "pref_label": "Ubiquitous Language"},
+            "vocabulary.yaml",
+        ),
+        "work:discipline/knowledge-management": (
+            "Discipline",
+            {"id": "work:discipline/knowledge-management", "name": "Knowledge Management"},
+            "disciplines.yaml",
+        ),
+        "work:decision/185": (
+            "Decision",
+            {"id": "work:decision/185", "number": 185, "name": "DR-" + "185 · Wikipedia conventions"},
+            "DR-" + "185.yaml",
+        ),
+    }
+
+    # Case 1: Unregistered wikilink fails
+    fake_bad_link = _FakeWikiPath(
+        "wiki/solorepo/test.md",
+        "# Test\n\n**Test** is a probe referencing [[unregistered-floating-term]].\n",
+    )
+    res = files.wikilinks(index, md_files=[fake_bad_link])
+    if not any("[[unregistered-floating-term]] resolves to nothing" in p for p in res):
+        problems.append(f"wikilinks: expected failure for unregistered term, got {res!r}")
+
+    # Case 2: Valid wikilinks (concept, discipline, DR, scoped wiki page) pass
+    fake_good_links = [
+        _FakeWikiPath(
+            "wiki/solorepo/knowledge-management.md",
+            "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n",
+        ),
+        _FakeWikiPath(
+            "wiki/solorepo/test.md",
+            "# Test\n\n**Test** is a test referencing [[knowledge-management]], "
+            "[[solorepo/knowledge-management]], [[Ubiquitous Language]], and [[" + "DR-" + "185]].\n",
+        ),
+    ]
+    res = files.wikilinks(index, md_files=fake_good_links)
+    if res:
+        problems.append(f"wikilinks: expected all valid targets to pass, got {res!r}")
+
+    # Case 3: Code-fenced and inline backticked wikilinks are ignored
+    fake_fenced = _FakeWikiPath(
+        "wiki/solorepo/test.md",
+        "# Test\n\n**Test** is a test showing `[[unregistered-inline]]` and:\n```\n[[unregistered-block]]\n```\n",
+    )
+    res = files.wikilinks(index, md_files=[fake_fenced])
+    if res:
+        problems.append(f"wikilinks: expected fenced code to be ignored, got {res!r}")
+
+    # Case 4: Missing top-level heading fails
+    fake_no_h1 = _FakeWikiPath(
+        "wiki/solorepo/test.md",
+        "## Subheading\n\n**Test** is a test page.\n",
+    )
+    res = files.wiki_lead_paragraphs(index, md_files=[fake_no_h1])
+    if not any("must begin with a top-level heading" in p for p in res):
+        problems.append(f"wiki_lead_paragraphs: expected failure for missing # H1, got {res!r}")
+
+    # Case 5: Missing bold copular lead fails
+    fake_no_copula = _FakeWikiPath(
+        "wiki/solorepo/test.md",
+        "# Test\n\nTest is a test page without bold formatting.\n",
+    )
+    res = files.wiki_lead_paragraphs(index, md_files=[fake_no_copula])
+    if not any("first paragraph must open with bold copular definition" in p for p in res):
+        problems.append(f"wiki_lead_paragraphs: expected failure for missing bold copula, got {res!r}")
+
+    # Case 6: Bold subject mismatch with title fails
+    fake_mismatch = _FakeWikiPath(
+        "wiki/solorepo/test.md",
+        "# Test\n\n**Different Subject** is a test page.\n",
+    )
+    res = files.wiki_lead_paragraphs(index, md_files=[fake_mismatch])
+    if not any("does not match title" in p for p in res):
+        problems.append(f"wiki_lead_paragraphs: expected failure for subject/title mismatch, got {res!r}")
+
+    # Case 7: Subject discordance with minted vocabulary label fails
+    fake_label_discord = _FakeWikiPath(
+        "wiki/solorepo/ubiquitous-language.md",
+        "# Ubiquitous Language Alternate\n\n**Ubiquitous Language Alternate** is a discipline.\n",
+    )
+    res = files.wiki_lead_paragraphs(index, md_files=[fake_label_discord])
+    if not any("disagrees with minted label" in p for p in res):
+        problems.append(f"wiki_lead_paragraphs: expected failure for vocabulary discordance, got {res!r}")
+
+    # Case 8: README.md is exempt from MOS:LEAD
+    fake_readme = _FakeWikiPath(
+        "wiki/solorepo/README.md",
+        "# Context Index\n\nAn index of pages without bold copular lead.\n",
+    )
+    res = files.wiki_lead_paragraphs(index, md_files=[fake_readme])
+    if res:
+        problems.append(f"wiki_lead_paragraphs: expected README.md to be exempt, got {res!r}")
+
+    return problems
+
 

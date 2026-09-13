@@ -202,6 +202,262 @@ def markdown_links():
     return problems
 
 
+WIKILINK = re.compile(r"\[\[(.*?)\]\]")
+LEAD_COPULA = re.compile(
+    r"^\*\*(?:`(?P<backticked>[^`]+)`|(?P<plain>[^*]+))\*\*\s+"
+    r"(?P<copula>is|are|was|were|refers to|serves as|organizes|provides|names|represents)\b",
+    re.IGNORECASE,
+)
+
+
+def _strip_fenced(text: str) -> str:
+    """Strips fenced code blocks and inline backticks while preserving line count."""
+    return FENCED.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+
+
+def _build_ontology_lookup(index):
+    """Builds a case-insensitive lookup set of valid ontology entities from index."""
+    lookup = set()
+    for ident, (cls, obj, _) in index.items():
+        lookup.add(ident.lower())
+        tail = ident.rsplit("/", 1)[-1].lower()
+        lookup.add(tail)
+        # Handle decision notation e.g. dr-185, dr-085, 185
+        if cls == "Decision" or ident.startswith("work:decision/"):
+            num = tail.lstrip("0") or "0"
+            lookup.add(f"dr-{num}".lower())
+            if num.isdigit():
+                lookup.add(f"dr-{int(num):03d}".lower())
+            lookup.add(num)
+        # Handle article notation e.g. A8, 8
+        if cls == "Article" or ident.startswith("work:article/"):
+            lookup.add(f"a{tail}".lower())
+            lookup.add(tail)
+        pref = obj.get("pref_label")
+        if pref:
+            lookup.add(pref.lower())
+            lookup.add(pref.lower().replace(" ", "-").replace("_", "-"))
+        name = obj.get("name")
+        if name:
+            lookup.add(name.lower())
+            lookup.add(name.lower().replace(" ", "-").replace("_", "-"))
+        for alt in obj.get("alt_labels") or []:
+            lookup.add(alt.lower())
+            lookup.add(alt.lower().replace(" ", "-").replace("_", "-"))
+    return lookup
+
+
+def _build_wiki_files_map(file_list):
+    """Builds lookup mapping of wiki files from a list of paths."""
+    wiki_map = {}
+    for f in file_list:
+        try:
+            rel = f.relative_to(ROOT)
+        except ValueError:
+            rel = f
+        if len(rel.parts) >= 2 and rel.parts[0] == "wiki" and rel.suffix == ".md":
+            if len(rel.parts) == 3:
+                # e.g. wiki/solorepo/knowledge-management.md
+                ctx = rel.parts[1].lower()
+                stem = rel.stem.lower()
+                wiki_map.setdefault((ctx, stem), f)
+            elif len(rel.parts) == 2:
+                # e.g. wiki/README.md
+                wiki_map.setdefault(("", rel.stem.lower()), f)
+    return wiki_map
+
+
+def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict, ontology_lookup: set) -> bool:
+    """Determines whether a wikilink target resolves to a wiki page or ontology entity."""
+    clean = target.strip()
+    if not clean:
+        return False
+
+    # 1. Check ontology lookup first (handles concepts, disciplines, decisions, articles)
+    norm = clean.lower()
+    norm_slug = norm.replace(" ", "-").replace("_", "-")
+    if norm in ontology_lookup or norm_slug in ontology_lookup:
+        return True
+
+    # Check CURIE forms e.g. concept/pr-first -> work:concept/pr-first
+    for prefix in ("work:", "ddd:"):
+        if (prefix + norm) in ontology_lookup or (prefix + norm_slug) in ontology_lookup:
+            return True
+
+    # 2. Check wiki files
+    # Scoped target e.g. solorepo/knowledge-management or wiki/solorepo/knowledge-management
+    test_target = clean
+    if test_target.lower().startswith("wiki/"):
+        test_target = test_target[5:]
+
+    if "/" in test_target:
+        ctx_part, slug_part = test_target.split("/", 1)
+        ctx_k = ctx_part.lower().replace(" ", "-").replace("_", "-")
+        slug_k = slug_part.lower().replace(" ", "-").replace("_", "-").removesuffix(".md")
+        if (ctx_k, slug_k) in wiki_map:
+            return True
+        # Direct relative path check
+        rel_candidate = source_path.parent / f"{test_target}.md"
+        if rel_candidate.is_file() or (ROOT / "wiki" / f"{test_target}.md").is_file():
+            return True
+    else:
+        # Unscoped target e.g. [[knowledge-management]]
+        # (a) Check in current context if source is under wiki/<ctx>/
+        try:
+            rel = source_path.relative_to(ROOT)
+        except ValueError:
+            rel = source_path
+        if len(rel.parts) >= 3 and rel.parts[0] == "wiki":
+            current_ctx = rel.parts[1].lower()
+            if (current_ctx, norm_slug) in wiki_map:
+                return True
+        # (b) Check in scaffold context ("solorepo")
+        if ("solorepo", norm_slug) in wiki_map:
+            return True
+        # (c) Check root wiki files (e.g. README)
+        if ("", norm_slug) in wiki_map:
+            return True
+        # (d) Check any context in wiki_map
+        if any(s == norm_slug for (c, s) in wiki_map):
+            return True
+
+    return False
+
+
+@check("wikilinks")
+def wikilinks(index, md_files=None):
+    """Internal concept references use closed-world wikilinks (A2, solorepo's DR-185).
+
+    Every wikilink ([[concept]] or scoped [[context/concept]]) must resolve
+    deterministically against either an existing wiki page in the repository
+    (under wiki/<context>/<slug>.md) or a minted concept, discipline, decision,
+    or article in the repository index. A reference to an unregistered term or
+    missing page is red and fails verification.
+    """
+    problems = []
+    tree_files = md_files if md_files is not None else tree()
+    wiki_map = _build_wiki_files_map(tree_files)
+    ontology_lookup = _build_ontology_lookup(index)
+
+    for path in tree_files:
+        try:
+            rel = path.relative_to(ROOT)
+        except ValueError:
+            rel = path
+        if (
+            rel.suffix != ".md"
+            or path.is_symlink()
+            or "template" in rel.parts
+            or ".git" in rel.parts
+        ):
+            continue
+        try:
+            raw_text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+
+        stripped = _strip_fenced(raw_text)
+        for line_no, line in enumerate(stripped.splitlines(), 1):
+            for match in WIKILINK.finditer(line):
+                raw = match.group(1).strip()
+                if not raw:
+                    continue
+                target = raw.split("|", 1)[0].split("#", 1)[0].strip()
+                if not target:
+                    continue
+                if not _resolves_wikilink(target, path, wiki_map, ontology_lookup):
+                    problems.append(
+                        f"{rel}:{line_no}: [[{raw}]] resolves to nothing; "
+                        f"closed-world wikilinks must name an existing wiki page or minted concept"
+                    )
+    return problems
+
+
+@check("wiki lead paragraphs")
+def wiki_lead_paragraphs(index, md_files=None):
+    """Every wiki page opens with a bold copular lead definition (MOS:LEAD) concurring with the vocabulary (A2, solorepo's DR-185).
+
+    Maintainer-facing exposition under wiki/<context>/ (excluding index READMEs)
+    must open with a top-level heading (# <Title>) and a lead sentence defining
+    the subject in bold copular phrasing (**Subject** is a ...). When the subject
+    corresponds to a minted concept or discipline in the index, the lead subject
+    must concur with the minted preferred label.
+    """
+    problems = []
+    tree_files = md_files if md_files is not None else tree()
+
+    for path in tree_files:
+        try:
+            rel = path.relative_to(ROOT)
+        except ValueError:
+            rel = path
+        if (
+            rel.suffix != ".md"
+            or path.is_symlink()
+            or "template" in rel.parts
+            or ".git" in rel.parts
+            or len(rel.parts) < 2
+            or rel.parts[0] != "wiki"
+            or rel.name == "README.md"
+        ):
+            continue
+        try:
+            raw_text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+
+        lines = [line.strip() for line in without_comments(raw_text).splitlines()]
+        while lines and not lines[0]:
+            lines.pop(0)
+
+        if not lines or not lines[0].startswith("# "):
+            problems.append(f"{rel}: must begin with a top-level heading (# <Title>)")
+            continue
+
+        title = lines[0][2:].strip()
+        title_clean = title.strip("`").strip()
+
+        lines.pop(0)
+        while lines and not lines[0]:
+            lines.pop(0)
+
+        if not lines:
+            problems.append(f"{rel}: empty wiki page after title")
+            continue
+
+        lead_line = lines[0]
+        match = LEAD_COPULA.match(lead_line)
+        if not match:
+            problems.append(
+                f"{rel}: first paragraph must open with bold copular definition "
+                f"(MOS:LEAD: '**Subject** is ...')"
+            )
+            continue
+
+        subject = (match.group("backticked") or match.group("plain") or "").strip()
+        subject_clean = subject.strip("`").strip()
+        if subject_clean.lower() != title_clean.lower():
+            problems.append(
+                f"{rel}: lead bold subject '{subject}' does not match title '{title}'"
+            )
+            continue
+
+        slug = path.stem.lower()
+        concept_entry = (
+            index.get(f"work:concept/{slug}")
+            or index.get(f"work:discipline/{slug}")
+            or index.get(f"ddd:concept/{slug}")
+        )
+        if concept_entry:
+            pref = concept_entry[1].get("pref_label") or concept_entry[1].get("name")
+            if pref and pref.strip("`").strip().lower() != subject_clean.lower():
+                problems.append(
+                    f"{rel}: subject '{subject}' disagrees with minted label '{pref}' in {concept_entry[2]}"
+                )
+
+    return problems
+
+
 SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/")
 
 

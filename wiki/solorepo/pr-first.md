@@ -2,7 +2,7 @@
 
 **PR First** is the discipline that organizes all changes as an open pull request
 from inception, advancing through autonomous review, automated testing, and
-auto-merge loops.
+auto-merge loops (solorepo's DR-184, solorepo's DR-185).
 
 Rather than developing features in private long-lived branches and opening a
 pull request only when finished, work is visible to the harness from the moment
@@ -32,4 +32,5 @@ immediately rather than after an arbitrary delay (solorepo's DR-102, solorepo's 
 
 ---
 
-**See also:** [Knowledge Management](knowledge-management.md), [Ubiquitous Language](ubiquitous-language.md), solorepo's DR-062, solorepo's DR-117, solorepo's DR-184.
+**See also:** [[knowledge-management]], [[ubiquitous-language]], solorepo's DR-062, solorepo's DR-117, solorepo's DR-184, solorepo's DR-185.
+

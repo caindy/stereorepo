@@ -1,7 +1,7 @@
 # Knowledge Base (Wiki)
 
 The repository's home for maintainer-facing exposition, structured under the
-[Knowledge Management](solorepo/knowledge-management.md) discipline (solorepo's DR-184).
+[[solorepo/knowledge-management|Knowledge Management]] discipline (solorepo's DR-184, solorepo's DR-185).
 
 Where Decision Records capture *why a choice was made* (solorepo's DR-065) and
 LinkML vocabularies capture *machine definitions and glosses*, the wiki captures
@@ -26,7 +26,7 @@ partitioned accordingly:
 
 ## Editorial Conventions
 
-Pages in this wiki adhere to Wikipedia-style conventions:
+Pages in this wiki adhere to Wikipedia-style conventions (solorepo's DR-185):
 
 1. **The Lead Sentence (MOS:LEAD):** Every page opens with a bolded subject
    followed by a copular definition stating what the concept is:
@@ -40,5 +40,6 @@ Pages in this wiki adhere to Wikipedia-style conventions:
    exposition. Narrative histories of specific past runs belong in
    `<module>.history.md`, not in the wiki.
 4. **Dereferenced Citations:** Citations to Articles and Decision Records
-   point directly to their identifiers (e.g. `A8`, `DR-184`) rather than
+   point directly to their identifiers (e.g. `A8`, `DR-184`, `DR-185`) rather than
    re-litigating rationale inline.
+

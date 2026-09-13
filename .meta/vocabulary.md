@@ -121,6 +121,7 @@ _The named ways of working, each adhered to because it is not a program._
 | **Progressive Disclosure** | One small thing loads always; everything else loads on demand, routed by a load map that is deliberately insufficient. | — |
 | **Journaling** | Routing narrative to the artifact that owns it, and the residue to the Pull Request — never to a commit message. | — |
 | **PR First** | Opening the Pull Request when the work starts, so it is where the work is argued rather than a wrapper round a finished branch. | — |
+| **Knowledge Management** | Organizing maintainer-facing exposition into an encyclopedic wiki partitioned by Bounded Context. | — |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
 | **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
 | **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
@@ -157,6 +158,8 @@ _The named ways of working, each adhered to because it is not a program._
 **Journaling.** The routing practice, not a place. What it routes goes to the artifact that owns it, and the residue to the Pull Request.
 
 **PR First.** It stands in for the tracker a team would have, and is the only Collaboration point available to agents that share no filesystem.
+
+**Knowledge Management.** Prose addressed to a maintainer who arrives cold and seeks to understand an architecture or domain concept. Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page adhering to MOS:LEAD conventions and closed-world wikilinks (solorepo's DR-184, solorepo's DR-185).
 
 **Trailer.** Borrowed from git, which already parses these. It carries what no other part of the record can: every commit and comment here is made under the solo's account, so identity is asserted by the writer or it is absent. A Role's machine account would say which Role; the trailer says which Actor within it, and the two do not substitute for each other.
 

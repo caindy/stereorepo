@@ -1,0 +1,75 @@
+decisions:
+  - id: work:decision/185
+    name: "DR-185 · Wikipedia conventions: closed-world wikilinks and MOS:LEAD concordance"
+    challenge: work:challenge/22
+    status: ADOPTED
+    applies:
+      - work:article/2
+      - work:article/8
+      - work:article/17
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/wiki-readme
+      - work:artifact/wiki-solorepo-readme
+      - work:artifact/wiki-solorepo-knowledge-management
+      - work:artifact/wiki-solorepo-ubiquitous-language
+      - work:artifact/wiki-solorepo-pr-first
+    context: >-
+      When autonomous agents generate architectural prose and domain explanations
+      without deterministic syntactic grounding, they coin floating signifiers and
+      ad-hoc terminology that fractures mental models. System prompt instructions
+      asking models to "remember to define terms" degrade under context pressure,
+      whereas deterministic linter gates and schemas do not (#22). Wikipedia solved
+      knowledge management at scale through well-established information architecture
+      primitives: closed-world wikilinks forcing an entity registry and MOS:LEAD bold
+      copular lead sentences providing concise standalone digests.
+    alternatives:
+      - name: Open-world Markdown links without entity resolution
+        chosen: false
+        reason: >-
+          Standard relative markdown links verify file existence but do not anchor
+          domain terminology to the LinkML Ubiquitous Language ontology. Unregistered
+          concepts continue to circulate without triggering minting ceremonies.
+      - name: Prompt-only terminology enforcement
+        chosen: false
+        reason: >-
+          Advising agents to adhere to terminology in instructions fails because
+          prompts degrade under context pressure. Verification must be enforced by
+          deterministic gate checks.
+      - name: Closed-world wikilinks and MOS:LEAD concordance gate
+        chosen: true
+        reason: >-
+          Closed-world wikilinks ([[concept]] and [[context/concept]]) resolve
+          deterministically against wiki pages and the LinkML ontology index, making
+          unregistered terms fail gate verification. Enforcing MOS:LEAD bold copular
+          lead sentences ensures every wiki page opens with a standalone summary that
+          concurs with the ontology schema.
+    consequences:
+      - >-
+        .meta/checks/files.py enforces the `wikilinks` and `wiki lead paragraphs`
+        gate checks.
+      - >-
+        Probes in .meta/checks/probes.py verify both passing and observed failure modes.
+      - >-
+        Knowledge Management wiki pages are linked via wikilinks and verified for
+        MOS:LEAD concordance.
+      - >-
+        Resolves Challenge 22.
+    falsifier: >-
+      A markdown file in the tree carrying a wikilink that resolves to no wiki page
+      or ontology entity, or a wiki page under wiki/<context>/ lacking a MOS:LEAD
+      bold copular definition that passes gate verification.
+    rationale: |-
+      Borrowing Wikipedia's native conventions directly exploits the strongest priors
+      of large language models, which have trained on hundreds of millions of tokens
+      of MediaWiki syntax and MOS:LEAD patterns.
+
+      By checking wikilinks against a closed world consisting of the wiki directory
+      and the LinkML assertion index, an agent cannot coin shorthand or floating
+      signifiers in maintainer documentation: any term mentioned must either resolve
+      to an existing node or fail the gate until minted. Furthermore, enforcing
+      MOS:LEAD concordance guarantees that narrative exposition in the wiki and
+      formal machine glosses in the schema reinforce each other without semantic drift.

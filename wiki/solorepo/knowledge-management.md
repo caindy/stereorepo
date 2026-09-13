@@ -1,7 +1,7 @@
 # Knowledge Management
 
 **Knowledge Management** is the discipline that organizes maintainer-facing
-exposition into an encyclopedic wiki partitioned by Bounded Context.
+exposition into an encyclopedic wiki partitioned by Bounded Context (solorepo's DR-184, solorepo's DR-185).
 
 It provides a durable home for explanations addressed to human or agent
 maintainers who arrive cold seeking to understand a subsystem or domain concept.
@@ -28,13 +28,13 @@ immediate digest suitable for hover previews and automated summarization.
 
 ### 3. Closed-World Wikilinks
 Internal concept references use wikilinks (`[[concept]]` or scoped
-`[[context/concept]]`). Every link must resolve to a valid concept page or
+`[[context/concept]]`, solorepo's DR-185). Every link must resolve to a valid concept page or
 vocabulary term. A link to an unminted concept or missing page is red and fails
 gate verification.
 
 ## Relationship to Other Disciplines
 
-- **Ubiquitous Language:** The vocabulary schema holds the one-sentence machine
+- **[[Ubiquitous Language]]:** The vocabulary schema holds the one-sentence machine
   gloss; the Knowledge Management wiki holds the encyclopedic narrative
   exposition.
 - **Literate Programming:** Source code docstrings state *what to do*; Decision
@@ -45,4 +45,5 @@ gate verification.
 
 ---
 
-**See also:** [Ubiquitous Language](ubiquitous-language.md), [PR First](pr-first.md), solorepo's DR-184.
+**See also:** [[ubiquitous-language]], [[pr-first]], solorepo's DR-184, solorepo's DR-185.
+
