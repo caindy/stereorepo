@@ -1,0 +1,87 @@
+decisions:
+  - id: work:decision/190
+    name: "DR-190 · The Ubiquitous Language regime: 1:1 wiki parity gate and ambient harness conventions"
+    challenge: work:challenge/37
+    status: ADOPTED
+    applies:
+      - work:article/17
+      - work:article/2
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-charter
+      - work:artifact/meta-disciplines
+      - work:artifact/skill-pr-first
+      - work:artifact/skill-pr-first-reviewer
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-probes
+      - work:artifact/agents
+      - work:artifact/template-agents
+    context: >-
+      Article 17 states that a term that arrived by use has not been agreed,
+      enforcing the Ubiquitous Language discipline. Previously, A17 was checked
+      by nothing (#37), relying on human restraint that degrades under agentic
+      maintenance (#35). Early experiments attempting to count word repetition
+      across diffs produced noisy false positives (DR-058) because whether a
+      word is acting as a domain term requires semantic judgement.
+
+      With Knowledge Management (solorepo's DR-184), closed-world wikilinks
+      (solorepo's DR-185), and /wikisplain (solorepo's DR-187) in place, the
+      regime for Ubiquitous Language can now be enforced cleanly through a
+      two-part mechanism: a deterministic gate verifying 1:1 parity between LinkML
+      vocabulary assertions and wiki pages, and ambient reviewer role instructions
+      demanding closed-world wikilinks or minting ceremonies for emerging terms.
+    alternatives:
+      - name: Pure mechanical diff word-frequency heuristics
+        chosen: false
+        reason: >-
+          Attempted in DR-058. Counting word repetition across files fails because
+          distinguishing domain terms from standard English vocabulary requires
+          semantic evaluation, leading to high noise and triage fatigue.
+      - name: Pure prompt instruction without deterministic parity checking
+        chosen: false
+        reason: >-
+          Instruction-only enforcement degrades under context pressure. Autonomous
+          loops coin terms silently unless backed by a deterministic gate that
+          refuses unminted concepts or orphaned pages.
+      - name: "Two-part regime: deterministic 1:1 wiki parity gate and reviewer role enforcement"
+        chosen: true
+        reason: >-
+          Combining mechanical closed-world parity checking in `check.py` with
+          ambient reviewer guidance closes the loop: any term marked at write
+          time resolves deterministically, any domain concept requires a
+          corresponding wiki page, and the reviewer catches floating signifiers
+          before merge.
+    consequences:
+      - >-
+        .meta/checks/files.py introduces `ubiquitous language wiki parity`,
+        enforcing 1:1 correspondence between LinkML vocabulary assertions and
+        Knowledge Management wiki concept pages.
+      - >-
+        .meta/checks/probes.py adds precheck coverage verifying passing and
+        failing parity modes.
+      - >-
+        Article 17 in .meta/assertions/imported/charter.yaml is updated with its
+        verifying check and reviewer instructions.
+      - >-
+        PR First reviewer role judgement and Ubiquitous Language discipline steps
+        in .meta/assertions/imported/disciplines.yaml require grounding domain terms.
+      - >-
+        AGENTS.md and template/AGENTS.md record ambient conventions for 1:1 parity.
+      - >-
+        Resolves Challenge 37 and Challenge 35.
+    falsifier: >-
+      A concept minted in domain vocabulary lacking a corresponding wiki page,
+      a domain wiki page lacking a corresponding vocabulary concept, or an
+      unminted domain noun acting as a term that passes gate verification.
+    rationale: |-
+      Syntactic gates and semantic agents each hold what the other cannot. A
+      Python check can trivially verify that a LinkML concept schema and a
+      markdown wiki page share an identifier, that the lead definition concurs,
+      and that internal links resolve against a closed set of minted entities.
+      What a Python script cannot do is decide whether an arbitrary English noun
+      in a pull request is behaving as a domain term.
+
+      Equipping the reviewer role with explicit judgement criteria to question
+      unlinked domain nouns, backed by `ubiquitous language wiki parity` and
+      closed-world wikilinks, fulfills Evans' Ubiquitous Language discipline
+      in a multi-agent setting without manual triage overhead.

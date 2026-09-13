@@ -98,6 +98,10 @@ disciplines:
         including in the schemas. A collision found afterwards is a rename.
       - Mark a confusable in both directions, at the moment the collision is noticed.
       - Bias every output toward the vocabulary — code, prose and conversation alike.
+      - >-
+        Maintain 1:1 parity with the Knowledge Management wiki: every minted
+        concept carries a corresponding wiki page explaining its domain
+        context (solorepo's DR-190).
     produces:
       - A language the repository and everyone working in it actually share.
   - id: work:discipline/dogfooding
@@ -383,6 +387,13 @@ disciplines:
       quote from that system's own reference or a test run against it, and a
       reading is not an answer whichever way it falls. solorepo's #117 closed
       one on recall twice, once each way, and the documentation took one fetch.
+
+      Whether a word in the change is doing the work of a domain term (per A17,
+      solorepo's DR-190). If it is, it belongs in closed-world wikilinks `[[concept]]`
+      and must resolve to an existing concept or wiki page, or be minted with the
+      solo into the Ubiquitous Language with a corresponding Knowledge
+      Management wiki entry. A word that arrived by use without minting is an
+      objection to raise.
     steps:
       - >-
         Open it when the work starts, not when it is finished. Written at the

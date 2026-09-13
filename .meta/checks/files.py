@@ -468,6 +468,67 @@ def wiki_lead_paragraphs(index, md_files=None):
     return problems
 
 
+@check("ubiquitous language wiki parity")
+def ubiquitous_language_wiki_parity(index, md_files=None):
+    """Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page, and vice versa (A17, solorepo's DR-184, solorepo's DR-190).
+
+    Enforces 1:1 parity between LinkML vocabulary assertions and Knowledge Management
+    wiki pages within each Bounded Context. A domain concept without a wiki page, or
+    a domain wiki page without a corresponding concept entry, fails gate verification.
+    """
+    problems = []
+    tree_files = md_files if md_files is not None else tree()
+    wiki_map = _build_wiki_files_map(tree_files)
+
+    # 1. Check domain vocabulary concepts have corresponding wiki pages
+    domain_vocab = ROOT / ".meta" / "assertions" / "domain_vocabulary.yaml"
+    if domain_vocab.is_file():
+        try:
+            data = yaml.safe_load(domain_vocab.read_text(encoding="utf-8")) or {}
+            for item in data.get("concept_set") or []:
+                item_id = str(item.get("id") or "")
+                slug = item_id.rsplit("/", 1)[-1].lower()
+                found = any(s == slug for (c, s) in wiki_map if c != "solorepo")
+                if not found:
+                    problems.append(
+                        f"domain_vocabulary.yaml: concept '{item_id}' has no corresponding wiki page (solorepo's DR-190)"
+                    )
+        except Exception as e:
+            problems.append(f"domain_vocabulary.yaml: failed to parse for parity check: {e}")
+
+    # 2. Check that non-solorepo wiki pages correspond to minted concepts in index
+    for (ctx, slug), path in wiki_map.items():
+        if not ctx or ctx == "solorepo" or slug == "readme":
+            continue
+        concept_ident = f"ddd:concept/{slug}"
+        work_ident = f"work:concept/{slug}"
+        if concept_ident not in index and work_ident not in index:
+            try:
+                rel = path.relative_to(ROOT)
+            except ValueError:
+                rel = path
+            problems.append(
+                f"{rel}: wiki page '{slug}' has no corresponding concept in vocabulary schema (solorepo's DR-190)"
+            )
+
+    # 3. Check solorepo core wiki pages have matching concepts or disciplines in index
+    for (ctx, slug), path in wiki_map.items():
+        if ctx != "solorepo" or slug == "readme":
+            continue
+        concept_ident = f"work:concept/{slug}"
+        discipline_ident = f"work:discipline/{slug}"
+        if concept_ident not in index and discipline_ident not in index:
+            try:
+                rel = path.relative_to(ROOT)
+            except ValueError:
+                rel = path
+            problems.append(
+                f"{rel}: solorepo wiki page '{slug}' has no corresponding concept or discipline in index (solorepo's DR-190)"
+            )
+
+    return problems
+
+
 SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/")
 
 

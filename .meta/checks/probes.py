@@ -2659,6 +2659,30 @@ def wiki_probes():
     if res:
         problems.append(f"wiki_lead_paragraphs: expected frontmatter page to pass, got {res!r}")
 
+    # Case 10: Unminted domain wiki page fails parity (solorepo's DR-190)
+    fake_orphan_domain = _FakeWikiPath(
+        "wiki/billing/unminted-term.md",
+        "# Unminted Term\n\n**Unminted Term** is a term.\n",
+    )
+    res = files.ubiquitous_language_wiki_parity(index, md_files=[fake_orphan_domain])
+    if not any("has no corresponding concept in vocabulary schema" in p for p in res):
+        problems.append(f"ubiquitous_language_wiki_parity: expected error for unminted domain page, got {res!r}")
+
+    # Case 11: Valid solorepo wiki page passes parity (solorepo's DR-190)
+    fake_valid_parity = [
+        _FakeWikiPath(
+            "wiki/solorepo/knowledge-management.md",
+            "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n",
+        ),
+        _FakeWikiPath(
+            "wiki/solorepo/ubiquitous-language.md",
+            "# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n",
+        ),
+    ]
+    res = files.ubiquitous_language_wiki_parity(index, md_files=fake_valid_parity)
+    if res:
+        problems.append(f"ubiquitous_language_wiki_parity: expected valid concepts to pass, got {res!r}")
+
     return problems
 
 

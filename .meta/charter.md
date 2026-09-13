@@ -135,7 +135,7 @@ _Retired when:_ A review thread only the Actor who raised it can resolve, so res
 
 ### A17. A term that arrived by use has not been agreed.
 
-**Enforces** Ubiquitous Language. **Checked by** Nothing yet.
+**Enforces** Ubiquitous Language. **Checked by** The reviewer Role checking that any word doing the work of a term is enclosed in closed-world wikilinks or minted with the solo, and `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity between vocabulary concepts and wiki pages (solorepo's DR-190).
 
 _In practice:_ `Challenge` is used because it is a Concept in the vocabulary. A word that is not gets minted with the solo before it is used again.
 
@@ -173,4 +173,4 @@ _Retired when:_ A Project whose toolchain reports in a form this shape cannot ca
 
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml)

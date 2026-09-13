@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/35
+    name: "The Ubiquitous Language regime: an invoked prompt and ambient instructions"
+    challenge_type: FEATURE
+    description: >-
+      The regime for the Ubiquitous Language Discipline comprising ambient harness
+      conventions, reviewer role enforcement of term boundaries, and the invoked
+      /wikisplain authoring workflow maintaining 1:1 parity with the Knowledge
+      Management wiki.
