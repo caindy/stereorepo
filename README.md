@@ -28,9 +28,9 @@ judgement about one specific portfolio.
 
 ## Working on the scaffold itself
 
-[`AGENTS.md`](AGENTS.md) — and `CLAUDE.md`, which is a symlink to it — orients an
-agent working on solorepo rather than on a portfolio made from it. From there,
-[`.meta/README.md`](.meta/README.md) is the load map.
+[`AGENTS.md`](AGENTS.md) — and `CLAUDE.md` and `GEMINI.md`, which are symlinks
+to it — orients an agent working on solorepo rather than on a portfolio made
+from it. From there, [`.meta/README.md`](.meta/README.md) is the load map.
 
 ## Provenance
 

@@ -57,8 +57,8 @@ disciplines:
         gives the portfolio the recipe to rebuild, customize, or bump the image.
       - >-
         Copy every file under `template/` to its matching path, then link
-        `CLAUDE.md` to `AGENTS.md`. These are the replacements: the files that
-        must carry none of the scaffold's content.
+        `CLAUDE.md` and `GEMINI.md` to `AGENTS.md`. These are the replacements:
+        the files that must carry none of the scaffold's content.
       - >-
         Fill in every placeholder, and write the portfolio's own assertions —
         its Portfolio, Products and Projects; its Personas, once there is

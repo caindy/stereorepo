@@ -390,6 +390,75 @@ def gate_workflows_agree():
     return Passed(f"{ours.relative_to(ROOT)} and {seed.relative_to(ROOT)} agree")
 
 
+@check("template conventions agree")
+def template_conventions_agree():
+    """The scaffold's root instructions and the seeded template instructions agree on core conventions (solorepo's DR-183).
+
+    solorepo's #11 establishes that an edit to one statement cannot leave
+    another behind — either the second copy derives, or the gate names it.
+    `template/AGENTS.md` and `template/.meta/README.md` are the seed files
+    copied into new portfolios by Specialization. When operational conventions
+    evolved at the root (`CLAUDE.md` and `GEMINI.md` symlinks, `move mint` for
+    settling decisions, `just --list` as operator surface, PR First
+    handoff/watch/sweep semaphores, `just next` for finding ripe work, and the
+    ban on harness memory files), the template copies drifted.
+
+    This step checks that the essential operational conventions present in root
+    `AGENTS.md` and `.meta/README.md` are also stated in `template/AGENTS.md` and
+    `template/.meta/README.md`. A portfolio has no `template/`, so there it
+    passes on an empty scope.
+    """
+    if not TEMPLATE.is_dir():
+        return Passed("no template/ in portfolio")
+
+    ours_agents = ROOT / "AGENTS.md"
+    seed_agents = TEMPLATE / "AGENTS.md"
+    ours_readme = META / "README.md"
+    seed_readme = TEMPLATE / ".meta" / "README.md"
+
+    if not (ours_agents.is_file() and seed_agents.is_file() and
+            ours_readme.is_file() and seed_readme.is_file()):
+        return CouldNotRun("one or more required convention files are absent")
+
+    agents_conventions = (
+        ("symlinks to AGENTS.md", ("`CLAUDE.md` and `GEMINI.md` are symlinks",)),
+        ("minting decisions", (".meta/say/move mint",)),
+        ("operator surface", ("`just --list`",)),
+        ("review handoff", (".meta/say/move request-review",)),
+        ("watch semaphore", ("just watch",)),
+        ("sweep semaphore", ("just sweep",)),
+        ("next issue", ("`just next`",)),
+        ("harness memory prohibition", ("harness's memory",)),
+        ("empty directory README", ("empty directory carries a README",)),
+    )
+
+    readme_conventions = (
+        ("next issue", ("`just next`",)),
+        ("minting decisions", (".meta/say/move mint",)),
+        ("operator surface", ("`just --list`",)),
+    )
+
+    problems = []
+
+    def _check_file(path, conventions):
+        """Verifies that all specified convention phrases exist in a file."""
+        text = re.sub(r"\s+", " ", path.read_text(encoding="utf-8"))
+        rel = path.relative_to(ROOT)
+        for label, phrases in conventions:
+            if not any(phrase in text for phrase in phrases):
+                problems.append(f"{rel}: missing convention for '{label}' (expected {phrases[0]!r})")
+
+    for path, convs in ((ours_agents, agents_conventions),
+                        (seed_agents, agents_conventions),
+                        (ours_readme, readme_conventions),
+                        (seed_readme, readme_conventions)):
+        _check_file(path, convs)
+
+    if problems:
+        return Found(problems)
+    return Passed(f"{seed_agents.relative_to(ROOT)} and {seed_readme.relative_to(ROOT)} agree with root conventions")
+
+
 @functools.cache
 def rendering():
     """The render the three steps below read, run once and shared between them.

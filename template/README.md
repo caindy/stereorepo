@@ -10,8 +10,8 @@ _None yet._
 
 ## Working here
 
-[`AGENTS.md`](AGENTS.md) — and `CLAUDE.md`, which is a symlink to it — orients an
-agent working in this repository. From there,
+[`AGENTS.md`](AGENTS.md) — and `CLAUDE.md` and `GEMINI.md`, which are symlinks
+to it — orients an agent working in this repository. From there,
 [`.meta/README.md`](.meta/README.md) is the load map.
 
 Specialized from [solorepo](https://github.com/caindy/solorepo). The vocabulary,

@@ -1,0 +1,55 @@
+decisions:
+  - id: work:decision/183
+    name: "DR-183 · Dedupe repository conventions and align template seeds"
+    challenge: work:challenge/11
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/template-agents
+      - work:artifact/template-meta-readme
+      - work:artifact/meta-schemas
+      - work:artifact/meta-checks-files
+    context: >-
+      Challenge #11 directs: "Changing one rule meant editing it in five places by hand,
+      and nothing would have failed if one had been missed. The measure of done is not that
+      copies are removed: it is that an edit to one statement cannot leave another behind —
+      either the second copy derives, or the gate names it."
+
+      Over time, root conventions in `AGENTS.md` and `.meta/README.md` advanced with new
+      operational tooling and disciplines (such as `CLAUDE.md` and `GEMINI.md` symlinks,
+      `move mint`, `just --list` as operator surface, PR First handoff/watch/sweep semaphores,
+      `just next`, and prohibitions on harness memory files), while the corresponding template
+      files (`template/AGENTS.md` and `template/.meta/README.md`) lagged behind.
+      In addition, `.meta/schemas.md` retained obsolete day-one claims that no instance data
+      existed in the repository, and lacked inventory rows for several assertion sets.
+    alternatives:
+      - name: Update template files manually without adding an automated check
+        chosen: false
+        reason: >-
+          Leaves the template files vulnerable to future drift whenever root conventions
+          change, violating Challenge #11's requirement that an edit cannot leave a copy behind.
+      - name: Align template files, modernize schemas.md, and enforce convention agreement in the gate
+        chosen: true
+        reason: >-
+          Aligns `template/AGENTS.md` and `template/.meta/README.md` with root conventions,
+          modernizes `schemas.md` to document the ABox assertions, and establishes the
+          `template conventions agree` check in `.meta/checks/files.py` so drift fails CI.
+    consequences:
+      - >-
+        `template/AGENTS.md` reflects root conventions while preserving portfolio-specific
+        placeholders and vocabulary rules.
+      - >-
+        `template/.meta/README.md` routes to `just next`, `.meta/say/move mint`, and documents
+        the `just` operator surface.
+      - >-
+        `.meta/schemas.md` accurately documents the ABox assertion instances and maintains a
+        complete assertion file inventory.
+      - >-
+        `.meta/checks/files.py` adds `template conventions agree`, checking that essential
+        operational conventions are present in both root and template seed files.
+    falsifier: >-
+      A convention update made to root `AGENTS.md` or `.meta/README.md` that does not cause
+      `template conventions agree` to fail when omitted from the corresponding `template/` files.
+    rationale: |-
+      Ensures that new portfolios initialized from `template/` inherit the same agent conventions,
+      operator tooling, and lifecycle disciplines practiced in the scaffold itself. Automating
+      this verification in the gate guarantees single-home consistency across the repository.

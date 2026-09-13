@@ -26,9 +26,9 @@ uvx --from linkml linkml-lint .meta/work_ontology.yaml       # style only
 `linkml-lint` reports warnings for uppercase enum values. That is the common
 LinkML convention and they are left as they are.
 
-There is **no instance data in the repo**. Every change so far was validated
-against a throwaway example covering all classes, including negative cases for
-each rule, but that example was never committed.
+The repository's instance data is the **ABox** in `assertions/` (solorepo's DR-183).
+Every assertion file is an instance document validated against the TBox schemas
+before compiling to APM primitives or generating derived prose.
 
 ### Assertions
 
@@ -42,12 +42,20 @@ differently: it pulls `imported/` forward and never touches anything beside it.
 
 | File | Owner | Validates against |
 |---|---|---|
+| `assertions/imported/actors.yaml` | solorepo | `work_ontology.yaml` |
+| `assertions/imported/authority.yaml` | solorepo | `work_ontology.yaml` |
+| `assertions/imported/charter.yaml` | solorepo | `work_ontology.yaml` |
 | `assertions/imported/disciplines.yaml` | solorepo | `work_ontology.yaml` |
+| `assertions/imported/structure.yaml` | solorepo | `work_ontology.yaml` |
 | `assertions/imported/vocabulary.yaml` | solorepo | `ddd_ontology.yaml` |
-| `assertions/domain_vocabulary.yaml` | this portfolio | `ddd_ontology.yaml` |
-| `assertions/structure.yaml` | this portfolio | `work_ontology.yaml` |
-| `assertions/personas.yaml` | this portfolio | `work_ontology.yaml` |
+| `assertions/authority.yaml` | this portfolio | `work_ontology.yaml` |
+| `assertions/challenges/` | this portfolio, one file per entry | `work_ontology.yaml` |
 | `assertions/decisions/` | this portfolio, one file per entry | `work_ontology.yaml` |
+| `assertions/disciplines.yaml` | this portfolio | `work_ontology.yaml` |
+| `assertions/domain_vocabulary.yaml` | this portfolio | `ddd_ontology.yaml` |
+| `assertions/personas.yaml` | this portfolio | `work_ontology.yaml` |
+| `assertions/structure.yaml` | this portfolio | `work_ontology.yaml` |
+| `assertions/vocabulary.yaml` | this portfolio | `ddd_ontology.yaml` |
 
 Fictional instances — a made-up portfolio, an invented persona — are fixtures,
 not assertions, and do not belong here.

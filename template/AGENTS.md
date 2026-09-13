@@ -21,7 +21,7 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 
 ## Conventions
 
-- `CLAUDE.md` is a symlink to this file. Edit `AGENTS.md`.
+- `CLAUDE.md` and `GEMINI.md` are symlinks to this file. Edit `AGENTS.md`.
 - Use the vocabulary in `.meta/vocabulary.md` in preference to synonyms, and do
   not mint a term without an explicit decision. Check DDD first, then the
   inherited vocabulary, then ask.
@@ -29,8 +29,34 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   derive from `.meta/assertions/`. Edit the assertion and re-render.
 - Never edit `.meta/assertions/imported/`. It is the scaffold's, and a sync
   overwrites it. Your terms go in `domain_vocabulary.yaml`.
-- When a question that demanded an answer is settled, add an entry to
-  `.meta/assertions/decisions/DR-0nn.yaml`, re-render, and commit it together with
-  the change. `.meta/decisions.md` is an index generated from them.
-- The gate is `.meta/gate`: every Project's, or one by name — `.meta/gate meta`
-  runs `check.py` alone. Green before anything is called done.
+- When a question that demanded an answer is settled, mint its number with
+  `.meta/say/move mint`, which reserves it on GitHub so that two branches
+  cannot take the same one; reading the record for the next free number is what
+  every open branch does alike. Write it as
+  `.meta/assertions/decisions/DR-0nn.yaml`, re-render, and commit it with the
+  change — one commit per settled decision. `.meta/decisions.md` is an index
+  generated from them; the entry itself is the assertion file.
+- An empty directory carries a README saying what will live there.
+- The full repository operator surface is `just --list`, run at the root:
+  every recipe invokes one tool under `.meta/`, is self-documented by its own
+  comment, and the file is rendered from the assertions, so a second list kept
+  here would drift the moment a recipe did. Run it before reaching for a raw
+  script, an ad-hoc API call, or a human. Not installed? `uvx --from rust-just
+  just`.
+- A pull request this session opened is handed off and watched until it closes:
+  the handoff is an active semaphore, so request review with
+  `.meta/say/move request-review <n>` the moment the pull request is open and
+  clean; then start `just watch <n>` under a persistent Monitor, so a review is
+  answered when it lands and not when someone looks. When one closes, `just
+  sweep` names the branches whose remote is gone and the command that removes
+  each; run them. Both are the harness's business, not a Discipline's step.
+- Asked what to work on next, run `just next` and read the screen. The answer is
+  an Issue: the next Milestone, then the ripe list. An open pull request on
+  that screen is the loops' work in progress, not the answer; do not go and read
+  its threads. Do not read Issue bodies to find out what waits on what: their
+  first line says.
+- Nothing about this repository is written to the harness's memory. What a
+  session needs remembered goes into an artifact that already exists: the Python
+  script whose behaviour it changes; failing that, the skill that wraps the
+  script; failing that, the prompt hierarchy, this file being its top. A memory
+  file is a fact only one session can read.

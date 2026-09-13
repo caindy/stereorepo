@@ -18,3 +18,13 @@ reality. Established: checks register themselves at definition via `@check`
 (solorepo's DR-150) and reports reflect the live registry.
 
 Receipt: `.meta/checks/files.py::meta_history_receipts`
+
+### Template seed instructions drifted from root agent conventions
+
+When operational conventions evolved at the root (`CLAUDE.md` and `GEMINI.md` symlinks,
+`move mint`, `just --list` operator surface, PR First semaphores, `just next`, and
+the ban on harness memory files), `template/AGENTS.md` and `template/.meta/README.md`
+lagged behind. Established: `template conventions agree` verifies that root and
+template files both declare the core operational conventions (solorepo's DR-183).
+
+Receipt: `.meta/checks/files.py::template_conventions_agree`

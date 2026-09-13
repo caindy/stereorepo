@@ -28,7 +28,7 @@ for what it owns. This file routes. It does not restate.
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
 | changing or defending a rule | its DR in `assertions/decisions/`, **and** the file that states it |
 | an id you need to resolve — `work:persona/the-solo`, say | `grep -rn -A2 "id: <the curie>" .meta/assertions/`. Every identified object is declared once, there |
-| what to work on next, or what is intended but unbuilt | `python3 .meta/next.py` — one screen: pull requests, the loops, the Milestone, and every Issue by what it waits on. A `roadmap` Issue looks forward; a `challenge` Issue looks back |
+| what to work on next, or what is intended but unbuilt | `just next` — one screen: pull requests, the loops, the Milestone, and every Issue by what it waits on. A `roadmap` Issue looks forward; a `challenge` Issue looks back |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 | opening a pull request, or filing an Issue | [`templates/`](templates/) — the forms; `.github/` is generated from them |
 
@@ -42,7 +42,7 @@ is sufficient to apply it.** This map is deliberately insufficient.
 | a word, and what it means | `assertions/vocabulary.yaml`, then re-render |
 | what **happened** on this change | the pull request body, using `.meta/templates/pull-request.md` |
 | work **noticed and not done** | a linked Issue, before review — never a summary or a file |
-| **why** a decision was taken | a new `assertions/decisions/DR-0nn.yaml`, then re-render — and name in `enacted_in` where its rule now lives |
+| **why** a decision was taken | a new `assertions/decisions/DR-0nn.yaml`, its number from `.meta/say/move mint`, then re-render — and name in `enacted_in` where its rule now lives |
 | a **mandate** — what someone must do | the Discipline or Article that owns it, never the DR. A20: a rule that lives only in the record is not in force |
 | **how** work must proceed, always | `assertions/disciplines.yaml`, then re-render |
 | a checkable one-line rule | `assertions/imported/charter.yaml`, then re-render |
@@ -65,6 +65,11 @@ class itself. Edit the source and re-render:
 ```bash
 uvx --with pyyaml python .meta/render.py
 ```
+
+**The verbs are `just` recipes, at the root.** `just --list` names them; each
+invokes a tool under `.meta/` and implements nothing, and the file is rendered
+from the assertions. `just` is installed per machine, or run as
+`uvx --from rust-just just`.
 
 **The gate for `.meta` is `check.py`.** Green before anything here is called
 done. It enforces the invariants the schemas state and cannot check, and
