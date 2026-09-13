@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/345
+    name: Add cryptographic git commit signing keys to the coder Role
+    challenge_type: FEATURE
+    description: >-
+      Commits made by .meta/say/commit are cryptographically unsigned. While
+      say/commit injects the coder's git identity via channel.role_identity()
+      (caindy-solorepo-coder) and appends Actor and Agent trailers (solorepo's DR-062,
+      solorepo's DR-074), git commit signing is not configured for the coder Role.
+      Provide SSH key management, secret propagation through GitHub Actions and
+      ~/.config/solorepo/, and dynamic git commit signing via channel.py and
+      say/commit.

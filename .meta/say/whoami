@@ -21,6 +21,8 @@ def whoami():
     print("login:", who[0])
     print("email:", f"{who[1]}+{who[0]}@users.noreply.github.com")
     print("role: ", channel.ROLE_ENV.stem if channel.role_credential() else "none, the solo's own auth")
+    key = channel.role_signing_key()
+    print("sign: ", key if key else "none")
     try:
         print("repo: ", channel.gh("repo", "view", "--json", "nameWithOwner,viewerPermission",
                                    "--jq", '"\\(.nameWithOwner), \\(.viewerPermission)"', parse=False))

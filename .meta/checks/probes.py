@@ -1959,6 +1959,85 @@ def actor_probes():
     return problems
 
 
+@check("signing key probes", pre=True)
+def signing_key_probes():
+    """`channel.role_signing_key()` discovery, permissions, and fallback behavior (solorepo's DR-197)."""
+    import contextlib
+    import io
+    import tempfile
+
+    channel, _, _ = load_channel()
+    problems = []
+
+    orig_role_env = channel.ROLE_ENV
+    was_signing_env = os.environ.get("SOLOREPO_SIGNING_KEY")
+
+    try:
+        with contextlib.redirect_stderr(io.StringIO()), tempfile.TemporaryDirectory() as tmpdir:
+            tmppath = pathlib.Path(tmpdir)
+            fake_env = tmppath / "empty.env"
+            channel.ROLE_ENV = fake_env
+
+            key = channel.role_signing_key()
+            if key is not None:
+                problems.append(f"signing_key: expected None in solo mode, got {key!r}")
+
+            role_env = tmppath / "coder.env"
+            role_env.write_text("GH_TOKEN=fake_token_for_test\n")
+            role_env.chmod(0o600)
+            channel.ROLE_ENV = role_env
+
+            key_file = tmppath / "coder_signing.key"
+            key_file.write_text("dummy-key\n")
+            key_file.chmod(0o600)
+
+            orig_role_dir = channel.ROLE_DIR
+            channel.ROLE_DIR = tmppath
+            try:
+                got = channel.role_signing_key()
+                if got != key_file:
+                    problems.append(f"signing_key: expected {key_file}, got {got}")
+
+                key_file.chmod(0o644)
+                try:
+                    channel.role_signing_key()
+                    problems.append("signing_key: expected SystemExit for mode 0644 key")
+                except SystemExit:
+                    pass
+                except Exception as exc:
+                    problems.append(f"signing_key: expected SystemExit for mode 0644, got {type(exc).__name__}: {exc}")
+
+                key_file.chmod(0o600)
+
+                custom_key = tmppath / "custom.key"
+                custom_key.write_text("custom-dummy-key\n")
+                custom_key.chmod(0o600)
+                role_env.write_text(f"GH_TOKEN=fake_token_for_test\nGIT_SIGNING_KEY={custom_key}\n")
+
+                got = channel.role_signing_key()
+                if got != custom_key:
+                    problems.append(f"signing_key: expected {custom_key} from GIT_SIGNING_KEY, got {got}")
+
+                env_key = tmppath / "env.key"
+                env_key.write_text("env-dummy-key\n")
+                env_key.chmod(0o600)
+                os.environ["SOLOREPO_SIGNING_KEY"] = str(env_key)
+
+                got = channel.role_signing_key()
+                if got != env_key:
+                    problems.append(f"signing_key: expected {env_key} from env var, got {got}")
+            finally:
+                channel.ROLE_DIR = orig_role_dir
+    finally:
+        channel.ROLE_ENV = orig_role_env
+        if was_signing_env is not None:
+            os.environ["SOLOREPO_SIGNING_KEY"] = was_signing_env
+        else:
+            os.environ.pop("SOLOREPO_SIGNING_KEY", None)
+
+    return problems
+
+
 @check("stop probes", pre=True)
 def stop_probes():
     """`move stop` robust behavior: retries, and tolerates persistent failures gracefully."""

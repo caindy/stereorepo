@@ -323,3 +323,35 @@ def role_identity():
     email = f"{ident}+{who}@users.noreply.github.com"
     return {"GIT_AUTHOR_NAME": who, "GIT_AUTHOR_EMAIL": email,
             "GIT_COMMITTER_NAME": who, "GIT_COMMITTER_EMAIL": email}
+
+
+def role_signing_key():
+    """The path to the Role's SSH signing key, or None if speaking as solo.
+
+    A key is read from ~/.config/solorepo/<role>_signing.key (or GIT_SIGNING_KEY in
+    <role>.env, or SOLOREPO_SIGNING_KEY in the environment). The file must not be
+    readable by others (mode 0600) (solorepo's DR-073, DR-197).
+    """
+    if not role_credential():
+        return None
+    key_path = None
+    if os.environ.get("SOLOREPO_SIGNING_KEY"):
+        key_path = pathlib.Path(os.environ["SOLOREPO_SIGNING_KEY"]).expanduser()
+    elif ROLE_ENV.exists():
+        for line in ROLE_ENV.read_text().splitlines():
+            line = line.strip().removeprefix("export ").strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            if key.strip() == "GIT_SIGNING_KEY":
+                key_path = pathlib.Path(value.strip().strip("\"'")).expanduser()
+                break
+    if not key_path:
+        key_path = ROLE_DIR / f"{ROLE_ENV.stem}_signing.key"
+    if not key_path.exists():
+        return None
+    mode = key_path.stat().st_mode
+    if mode & 0o077:
+        sys.exit(f"say: {key_path} is readable by others (mode {mode & 0o777:o}); "
+                 f"refusing to use it. chmod 600 it.")
+    return key_path

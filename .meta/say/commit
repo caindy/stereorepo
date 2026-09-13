@@ -33,7 +33,18 @@ def commit(subject):
     body = channel.piped()
     message = f"{subject}\n\n{body}\n" if body else f"{subject}\n"
     message += f"\n{channel.trailers()}\n"
-    out = subprocess.run(["git", "commit", "-F", "-"], input=message, text=True,
+    signing_args = []
+    key = channel.role_signing_key()
+    if key:
+        signing_args = [
+            "-c", "gpg.format=ssh",
+            "-c", f"user.signingkey={key}",
+            "-c", "commit.gpgsign=true",
+        ]
+    elif channel.role_credential():
+        print("say: speaking as role without signing key; commit is cryptographically unsigned",
+              file=sys.stderr)
+    out = subprocess.run(["git", *signing_args, "commit", "-F", "-"], input=message, text=True,
                          env={**os.environ, **channel.role_identity()})
     sys.exit(out.returncode)
 

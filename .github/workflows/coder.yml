@@ -249,19 +249,24 @@ jobs:
 
 
       # The Role's credential, where `.meta/say/` expects it by default
-      # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
+      # (solorepo's DR-073, DR-107, DR-197): outside the tree, mode 600, one token in the
       # container. The same channel and the same rules as on a laptop.
       - name: hold the coder's credential
         run: |
           install -d -m 700 ~/.config/solorepo
           install -m 600 /dev/null ~/.config/solorepo/coder.env
           printf 'GH_TOKEN=%s\n' "$CODER_GH_TOKEN" > ~/.config/solorepo/coder.env
+          if [ -n "$CODER_SIGNING_KEY" ]; then
+            install -m 600 /dev/null ~/.config/solorepo/coder_signing.key
+            printf '%s\n' "$CODER_SIGNING_KEY" > ~/.config/solorepo/coder_signing.key
+          fi
           git config --global credential.helper store
           install -m 600 /dev/null ~/.git-credentials
           printf 'https://x-access-token:%s@github.com\n' "$CODER_GH_TOKEN" > ~/.git-credentials
           .meta/say/whoami
         env:
           CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
+          CODER_SIGNING_KEY: ${{ secrets.CODER_SIGNING_KEY }}
 
       # The model credential, on the same terms and for a harder reason
       # (solorepo's DR-134). `dereference` asks through the `claude` on PATH,
