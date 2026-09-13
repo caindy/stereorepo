@@ -827,7 +827,7 @@ def technical_writing_skill():
         "|---|---|---|---|",
         "| **Reference** | Facts for lookup (Understanding + Work) | Public function, class, and method docstrings, LinkML schemas | Dry, complete, sure. Describe parameters, invariants, exceptions. No opinions, no tutorials, no past debate. |",
         "| **Explanation** | Understanding & why (Understanding + Learning) | Decision Records (`DR-nnn.yaml`), module overviews, wiki pages | Anchor on a real 'why' question. Context, constraints, alternatives, trade-offs. |",
-        "| **How-To** | Steps to a goal (Action + Work) | `just` recipes, `SPECIALIZE.md`, workflow guides | Task-oriented, assume competence, action only. No digressions. 'Do X to achieve Y.' |",
+        "| **How-To** | Steps to a goal (Action + Work) | `just` recipes, solorepo's `SPECIALIZE.md`, workflow guides | Task-oriented, assume competence, action only. No digressions. 'Do X to achieve Y.' |",
         "| **Tutorial** | Learning by doing (Action + Learning) | Quickstarts, onboarding lessons | Guided, step-by-step, visible results at each step. |",
         "",
         "## Pre-Writing Routing: Where to Write",
@@ -1022,6 +1022,12 @@ def gitattributes():
     ] + [f"{path} merge=union" for path in paths]) + "\n"
 
 
+def apm_primitives():
+    """Compiles .meta/assertions/ into .meta/.apm/ primitives and .meta/apm.yml (solorepo's DR-172, solorepo's DR-173, solorepo's DR-174)."""
+    import apm_compile
+    return apm_compile.rendered_primitives(META)
+
+
 TARGETS = {"disciplines.md": disciplines,
            "decisions.md": decisions,
            "templates/decision.md": decision_form,
@@ -1036,6 +1042,7 @@ TARGETS = {"disciplines.md": disciplines,
            "../.claude/skills/pr-first-reviewer/SKILL.md": pr_first_reviewer_skill,
            "../.claude/skills/wikisplain/SKILL.md": wikisplain_skill,
            "../.claude/skills/technical-writing/SKILL.md": technical_writing_skill,
+           "apm_primitives": apm_primitives,
            "../.gitattributes": gitattributes}
 
 def rendered():
@@ -1086,6 +1093,9 @@ if __name__ == "__main__":
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(want)
+    if not check:
+        import apm_compile
+        apm_compile.reconcile_root(META.parent)
     if check:
         # Two answers under two prefixes, because they are not the same answer
         # and neither is the other's repair. A stale page is made current by

@@ -67,15 +67,19 @@ slots:
 
   communication_style:
     description: >-
-      How the Persona expresses itself, e.g. tone, register, verbosity, channel
-      conventions. The source ontology marks this element as provisional.
+      How the Actor expresses itself in conversation, e.g. tone, register,
+      verbosity, channel conventions. A directive to the Actor on its conversational
+      voice in dialogue (turn responses, PR review threads, issue discussions), distinct
+      from durable artifact authoring governed by repository Disciplines (solorepo's DR-198,
+      solorepo's DR-199).
 
   # Persona
 
   personality:
     description: >-
       The character presented — by an Actor doing work, or by a Persona when an
-      Actor adopts one to be interrogated.
+      Actor adopts it as a temporary Personality to be interrogated during collaborative
+      feature design (solorepo's DR-200).
     range: Personality
 
   identity:
@@ -199,7 +203,10 @@ classes:
 
   Actor:
     is_a: WorkEntity
-    description: A Personality with an Identity and a Memory.
+    description: >-
+      A design-time prototype in the division of labor: a Personality with an Identity
+      and a Memory. Decoupled from execution models, which bind dynamically at runtime
+      via workflows and depth evaluation (solorepo's DR-188, solorepo's DR-199).
     slots:
       - personality
       - identity

@@ -139,6 +139,12 @@ artifacts:
   - id: work:artifact/justfile
     name: justfile
     path: justfile
+  - id: work:artifact/meta-apm-compile
+    name: .meta/apm_compile.py
+    path: .meta/apm_compile.py
+  - id: work:artifact/meta-apm-manifest
+    name: .meta/apm.yml
+    path: .meta/apm.yml
   - id: work:artifact/meta-apm-readme
     name: .meta/.apm/README.md
     path: .meta/.apm/README.md

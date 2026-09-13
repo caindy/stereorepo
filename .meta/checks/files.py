@@ -1161,4 +1161,6 @@ def rendered_prose(pages):
     stale += [name for name, text in pages.items()
               if not (META / name).exists()
               or (META / name).read_text() != text.rstrip("\n") + "\n"]
+    import apm_compile
+    stale += apm_compile.check_root_symlinks(ROOT)
     return stale

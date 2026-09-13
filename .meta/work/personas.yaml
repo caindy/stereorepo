@@ -8,7 +8,10 @@ description: >-
   product is designed for, first-class here rather than a borrowed metaphor.
   Distinct from Personality, which is the character an Actor presents while
   working — and the two connect, because interrogating a Persona means an Actor
-  adopts its Personality.
+  adopts it as a temporary Personality. In collaborative product and feature design,
+  an Actor holding an assigned Stakeholder Surrogate Role assumes the Persona's
+  context, goal hierarchy, behaviors, and frustrations, evaluating design proposals
+  strictly against the user archetype's rejection boundaries (solorepo's DR-200).
 
   **The detail is the discipline.** A sketch answers questions differently from a
   rigorously modelled figure, which is why Cooper insists on research over
@@ -183,7 +186,9 @@ classes:
         Interrogation needs no new machinery: an Actor adopts the Persona's
         Personality and holds a Job to be questioned. The Persona is worn, never
         authenticated, so an AuditRecord still attributes to the workload
-        identity rather than to a fictional person.
+        identity rather than to a fictional person. In collaborative feature
+        design, the Actor evaluates proposals against the Persona's 3-tier goal
+        hierarchy and rejection boundaries (solorepo's DR-200).
       - >-
         A JobToBeDone names the Persona whose need it is (solorepo's DR-021). Interrogating
         a Persona to surface one is the intended path from user research into

@@ -32,9 +32,10 @@ Primitives are **derived from `.meta/assertions/`**, never authored twice:
 | a Capability of kind SKILL | `skills` |
 | the gate | `hooks` |
 
-**Nothing is here yet, deliberately.** The compile step from assertions to
-primitives is unbuilt (see [solorepo's #28](https://github.com/caindy/solorepo/issues/28)), and hand-writing primitives that a
-compiler will later generate is the duplication that step exists to remove.
+**Compiled by `.meta/apm_compile.py` / `.meta/render.py` from `.meta/assertions/` (solorepo's DR-172, solorepo's DR-173, solorepo's DR-174, solorepo's DR-199, solorepo's DR-200, solorepo's #28, solorepo's #342).**
+The primitives are generated derived artifacts rather than hand-written files.
+Running `just render` re-compiles them from the assertions and verifies that no
+drift has occurred.
 
 ## What the canon says, settled in solorepo's DR-172, DR-173, and DR-174
 

@@ -3,8 +3,8 @@
 # dialogue, PR review threads, and discussions. The structure and register of
 # durable files are governed by the Diátaxis compass and repository disciplines
 # (solorepo's DR-194, solorepo's DR-198).
-# Actors here are aligned to the Roles they play, each carrying a singular,
-# required Personality defining their intrinsic register.
+# Actors here are prototypes defining division of labor (Personality + Identity),
+# decoupled from execution models which bind dynamically at runtime (solorepo's DR-188, solorepo's DR-199).
 
 personalities:
   - id: work:personality/coder

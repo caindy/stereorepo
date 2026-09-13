@@ -1,0 +1,72 @@
+decisions:
+  - id: work:decision/200
+    name: "DR-200 · Actors adopt Personas as temporary Personalities for goal-directed collaborative design"
+    challenge: work:challenge/342
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/15
+    enacted_in:
+      - work:artifact/meta-work-personas
+      - work:artifact/meta-work-actors
+      - work:artifact/meta-apm-readme
+      - work:artifact/meta-assertions-imported-vocabulary
+    context: >-
+      In a team of one, product and feature design requires rigorous critique and
+      friction before code is committed. While solorepo adopted Alan Cooper's
+      Goal-Directed Personas (solorepo's DR-019, solorepo's DR-041) to model who
+      the work is for, and noted that interrogating a Persona involves an Actor
+      adopting its character (.meta/work/personas.yaml), the operational mechanics
+      of interactive collaborative design with an agent remained unformalized.
+      Furthermore, under #342 and #28, compiling Personas to APM agent primitives
+      (.apm/agents/<persona>.agent.md) required clarifying how a human user
+      archetype can be compiled into an executable agent definition without
+      violating the boundary between human models and machine actors.
+    alternatives:
+      - name: Conflate Personas with system Actors or bot personas
+        chosen: false
+        reason: >-
+          Conflating user models with system actors pollutes the user model with
+          machine mechanics, violates Cooper's Goal-Directed Design canon, and
+          breaks provenance attribution by treating a fictional persona as an
+          authenticated actor.
+      - name: Treat Personas as passive documentation referenced only in specifications
+        chosen: false
+        reason: >-
+          Leaves user archetypes as dead prose. A solo developer cannot interactively
+          stress-test feature proposals, interface designs, or CLI ergonomics against
+          the user model during active design sessions.
+      - name: Formally operationalize Persona interrogation as an Actor adopting a temporary Personality
+        chosen: true
+        reason: >-
+          An Actor is assigned a Stakeholder Surrogate Role on a design Remit,
+          temporarily adopting the Persona's structured worldview (context, proficiencies,
+          behaviors), 3-tier goal hierarchy (End, Experience, Life), and rejection
+          boundaries (frustrations) as its prompt Personality. In turn dialogue,
+          the Actor evaluates proposals strictly through this lens, resisting convenient
+          compromises and providing authentic design friction. For APM compilation (#342),
+          this grounds .apm/agents/<persona>.agent.md as an Interrogation Surrogate.
+    consequences:
+      - >-
+        .meta/work/personas.yaml and .meta/work/actors.yaml formally specify that
+        an Actor assumes a Persona by adopting its worldview and goals as a temporary
+        Personality to perform interactive design interrogation.
+      - >-
+        .meta/assertions/imported/vocabulary.yaml updates definitions to articulate
+        the Interrogated Persona and Stakeholder Surrogate design pattern.
+      - >-
+        .meta/apm_compile.py under #342 compiles declared Personas into
+        .apm/agents/<persona>.agent.md with instructions synthesizing the Persona's
+        context, goals, and frustrations into an interrogation prompt.
+    falsifier: >-
+      An agent assuming a Persona that behaves as an agreeable, generic coding
+      assistant rather than holding steadfast to the Persona's explicit goals,
+      proficiencies, and frustrations during feature design.
+    rationale: |-
+      A solo maintainer has no human product manager or customer beside them to
+      dispute premature architectural choices or cumbersome UX.
+
+      Interrogating a Persona turns a passive design archetype into an active
+      collaborative partner: the Persona is worn by an Actor as a temporary
+      Personality, holding the human developer to the user's actual goals and
+      frustrations before implementation begins.

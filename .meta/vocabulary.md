@@ -32,7 +32,7 @@ Adopted here as a Discipline of the same name — DDD names the thing, and solor
 
 **Published Language.** What solorepo offers a portfolio, and what DDD offers solorepo.
 
-**Persona.** Cooper's sense. What solorepo's original sketch called a Persona is a Personality; the two are not the same thing.
+**Persona.** Cooper's sense. What solorepo's original sketch called a Persona is a Personality; the two are not the same thing. Worn by an Actor as a temporary Personality during collaborative feature design interrogation (solorepo's DR-200).
 
 **Business goal.** Named in *About Face* and deliberately kept out of the Persona so it cannot pollute the user model. It justifies a Goal instead.
 
@@ -48,14 +48,14 @@ _Who does work, what they may do, and what they are given to do it with._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Personality** | The character an Actor presents — a SOUL.md plus a communication style. | persona |
+| **Personality** | The character an Actor presents — a SOUL.md plus a communication style directing its conversational voice. | persona |
 | **Capability** | A kind of thing that can be done or used. Never names an object. | permission, tool access |
 | **Securable** | A set of objects, by enumeration or by a selector rule. | — |
 | **Permission** | The authority to employ a Capability on a Securable. | — |
 | **Role** | A named set of Capabilities. | — |
 | **Remit** | Permissions plus a Goal — what may be done, and what it is to be done for. | — |
 | **Agency** | A Role plus a Remit. | — |
-| **Actor** | A Personality with an Identity and a Memory. | user, bot |
+| **Actor** | A prototype in the division of labor: a Personality with an Identity and a Memory. | user, bot |
 | **Job** | An Actor given an Agency. An assignment. | — |
 | **Collaboration** | The Jobs that meet on one Challenge. Two is the minimum. | — |
 | **Handoff** | The seam where one Job stops and another takes the same Challenge up, sharing no filesystem, no shell and no conversation. | — |
@@ -136,7 +136,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Concept.** The semantic unit of maintainer knowledge. Where a Concept lands in the artifact hierarchy — whether as a schema gloss, a section, or a dedicated markdown file — is subordinate to the authoring agent's structural judgement under the Diátaxis Compass. "Article" is strictly avoided to protect the Charter's empirical clauses (solorepo's Article 1, solorepo's Article 15).
 
-**Personality.** Called Persona in the original sketch, until Cooper's Persona took the word back.
+**Personality.** Called Persona in the original sketch, until Cooper's Persona took the word back. Governs conversational voice; durable code is governed by Disciplines (solorepo's DR-198, solorepo's DR-199).
 
 **Challenge.** The work itself, which two artifacts hold in turn: an Issue before it is taken up, a Pull Request while it is being done.
 
@@ -147,6 +147,8 @@ _The named ways of working, each adhered to because it is not a program._
 **Project.** Products are composed from Projects, many-to-many. Not a piece of work, which is a Challenge; and not a whole repository, which is what python_bootstrap means by the word.
 
 **Persona goal.** An END goal is Goal-shaped but has no Deadline: it is standing rather than a bounded commitment, so it is not a Goal.
+
+**Actor.** Decoupled from execution models, which bind dynamically at runtime (solorepo's DR-188, solorepo's DR-199).
 
 **Discipline.** Not a Capability, not a Permission, and not a characterisation such as a communication style.
 

@@ -85,7 +85,8 @@ concept_set:
     broader: work:concept/g-for
     scope_note: >-
       Cooper's sense. What solorepo's original sketch called a Persona is a
-      Personality; the two are not the same thing.
+      Personality; the two are not the same thing. Worn by an Actor as a temporary
+      Personality during collaborative feature design interrogation (solorepo's DR-200).
     confusable_with:
       - work:concept/personality
   - id: work:concept/business-goal
@@ -134,10 +135,10 @@ concept_set:
 
   - id: work:concept/personality
     pref_label: Personality
-    definition: The character an Actor presents — a SOUL.md plus a communication style.
+    definition: The character an Actor presents — a SOUL.md plus a communication style directing its conversational voice.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-doing
-    scope_note: Called Persona in the original sketch, until Cooper's Persona took the word back.
+    scope_note: Called Persona in the original sketch, until Cooper's Persona took the word back. Governs conversational voice; durable code is governed by Disciplines (solorepo's DR-198, solorepo's DR-199).
     avoid: [persona]
     confusable_with:
       - work:concept/persona
@@ -256,7 +257,8 @@ concept_set:
     broader: work:concept/g-doing
   - id: work:concept/actor
     pref_label: Actor
-    definition: A Personality with an Identity and a Memory.
+    definition: "A prototype in the division of labor: a Personality with an Identity and a Memory."
+    scope_note: Decoupled from execution models, which bind dynamically at runtime (solorepo's DR-188, solorepo's DR-199).
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-doing
     avoid: [user, bot]
