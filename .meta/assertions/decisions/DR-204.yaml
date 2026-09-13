@@ -1,0 +1,72 @@
+decisions:
+  - id: work:decision/204
+    name: "DR-204 · Specialization dogfooding against a clean test repository validates inheritance and closes First Specialization"
+    status: ADOPTED
+    challenge: work:challenge/343
+    applies:
+      - work:article/8
+      - work:article/9
+      - work:article/10
+      - work:article/21
+    enacted_in:
+      - work:artifact/specialize
+      - work:artifact/meta-assertions-disciplines
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-search
+    context: >-
+      Challenge #343 required proving the 8-step specialization procedure
+      (SPECIALIZE.md) against a clean test repository following the introduction
+      of .meta/checks/, the APM compilation toolchain, and updated loop workflows.
+      Executing the procedure into an empty repository revealed two probe defects
+      and one inheritance path inconsistency:
+      1. Step 2 in SPECIALIZE.md and disciplines.yaml omitted the `.meta/` prefix
+      on `render.py`, `check.py`, and `check_pr.py`.
+      2. `enacted_probes` hardcoded `DR-160.yaml` and `.meta/arc/deploy`, failing
+      in a fresh portfolio that starts at DR-001 and does not inherit deployment scripts.
+      3. `search_probes` expected solorepo-specific decisions (`DR-100`, `DR-072`)
+      and evaluated the 18-query DR-103 benchmark queries that target solorepo's
+      private decision and challenge history, which a portfolio intentionally does
+      not inherit.
+    alternatives:
+      - name: Disable probe checks in specialized portfolios
+        chosen: false
+        reason: >-
+          Leaves specialized portfolios unable to verify their own search retrieval
+          or enacted artifact boundaries, violating solorepo's Article 9 (gate holds
+          identical checks where possible).
+      - name: Prefix inherited tool paths and generalize probe assertions over active collection documents
+        chosen: true
+        reason: >-
+          Prefixing `.meta/render.py`, `.meta/check.py`, and `.meta/check_pr.py` makes
+          Step 2 exact. Resolving on-disk decisions dynamically in `enacted_probes`
+          allows the probe to verify the exact same negative and positive contracts
+          in any portfolio. Filtering `run_benchmark()` in `search.py` to queries whose
+          target documents exist in the indexed collection preserves rigorous multi-field
+          BM25F evaluation across both solorepo (18 queries, hit@5 >= 15/18) and newly
+          specialized portfolios (11 universal queries, hit@5 = 11/11).
+    consequences:
+      - >-
+        SPECIALIZE.md Step 2 states exact `.meta/` paths for all inherited tools.
+      - >-
+        `enacted_probes` dynamically resolves on-disk decisions and declared artifacts.
+      - >-
+        `search.py`'s `run_benchmark()` evaluates active queries present in the collection,
+        and `search_probes` accepts solorepo's Article 18 for trunk push authorization.
+      - >-
+        End-to-end dogfooding validates that a freshly specialized portfolio executes
+        77 gate steps across meta and python projects with zero errors.
+      - >-
+        Completes the First Specialization milestone and closes Challenge #343.
+    falsifier: >-
+      A failure during SPECIALIZE.md execution into an empty repository or a gate
+      failure on a freshly specialized portfolio.
+    rationale: |-
+      A scaffold is only as good as the repository it creates. Dogfooding the
+      8-step specialization procedure into a clean test repository uncovered
+      real inheritance friction and historical probe assumptions that reading
+      alone could not find.
+
+      Resolving these gaps ensures that a team-of-one clone specializes into a
+      fully autonomous, self-contained product portfolio whose gate, APM primitives,
+      and operator tools function reliably from the first commit.

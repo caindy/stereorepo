@@ -19,7 +19,7 @@ import yaml
 import citations
 import files
 import graph
-from collect import META, ROOT, check
+from collect import META, ROOT, CouldNotRun, check
 
 
 @check("hook probes", pre=True)
@@ -1418,18 +1418,26 @@ def enacted_probes():
         problems.append(f"unenacted: a branch settling no decision reported {found!r}, {note!r}")
 
     # 2. Settled decision is valid
-    entry = ".meta/assertions/decisions/DR-" + "160.yaml"
-    found, note = read([entry, ".meta/arc/deploy"])
+    dec_files = sorted((META / "assertions" / "decisions").glob("DR-*.yaml"))
+    if not dec_files:
+        return CouldNotRun("no decision files found in assertions/decisions/")
+    sample_file = dec_files[0]
+    sample_num = int(sample_file.stem.removeprefix("DR-"))
+    entry = f".meta/assertions/decisions/{sample_file.name}"
+
+    art_map = check_pr.artifact_map()
+    valid_art = next((p for p in art_map.values() if not any(p.startswith(r) for r in check_pr.RECORD)), "AGENTS.md")
+    found, note = read([entry, valid_art])
     if found:
-        problems.append(f"unenacted: DR-{'160'} (valid) reported problems {found!r}")
+        problems.append(f"unenacted: DR-{sample_num:03d} (valid) reported problems {found!r}")
 
     # 3. Settled decision has no non-record artifacts (mocking parse_decision_yaml)
     orig_parse = check_pr.parse_decision_yaml
     check_pr.parse_decision_yaml = lambda path: ("ADOPTED", [])
     try:
         found, note = read([entry])
-        if not found or ("DR-" + "160") not in found[0]:
-            problems.append(f"unenacted: DR-{'160'} with no artifacts did not report expected problem, got {found!r}")
+        if not found or f"DR-{sample_num:03d}" not in found[0]:
+            problems.append(f"unenacted: DR-{sample_num:03d} with no artifacts did not report expected problem, got {found!r}")
     finally:
         check_pr.parse_decision_yaml = orig_parse
 
@@ -3123,8 +3131,8 @@ def search_probes():
     # 2. Multi-field BM25F ranking on a known query
     results = index.search("who is allowed to push to trunk", top_k=5)
     result_ids = [res.identifier for res in results]
-    if "work:decision/100" not in result_ids and "work:decision/072" not in result_ids:
-        problems.append(f"search: 'who is allowed to push to trunk' expected solorepo's DR-100 or solorepo's DR-072 in top 5, got {result_ids}")
+    if not any(ident in result_ids for ident in ("work:article/18", "work:decision/100", "work:decision/072")):
+        problems.append(f"search: 'who is allowed to push to trunk' expected solorepo's Article 18, solorepo's DR-100, or solorepo's DR-072 in top 5, got {result_ids}")
 
     # 3. Ingress alias matching (solorepo's DR-195)
     results_leftover = index.search("leftover work", top_k=5)
