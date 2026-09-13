@@ -63,7 +63,14 @@ disciplines:
         Fill in every placeholder, and write the portfolio's own assertions —
         its Portfolio, Products and Projects; its Personas, once there is
         research to draw them from; its Bounded Context and the words its domain
-        experts actually use.
+        experts actually use. When asserting Projects in `assertions/structure.yaml`,
+        optionally declare `critical_paths` (globs for security boundaries,
+        public contracts, or migrations) to route changes on them to deep reviewer
+        auditing under the 4-layer template method pipeline (solorepo's DR-188).
+        If the portfolio requires dynamic heuristics (such as AST inspections,
+        complexity thresholds, or sensitive metadata), provide an executable hook at
+        `.meta/hooks/depth.py` implementing `evaluate_depth(pr_meta, files, diff_patch)`
+        (an annotated example sits at `.meta/hooks/depth.py.example`).
       - >-
         Choose the languages the portfolio will use, from those `bootstraps/`
         supports, and copy each Bootstrap's applied disciplines in — its gates,

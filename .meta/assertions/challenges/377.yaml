@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/377
+    name: Guide specialized portfolios on configuring reviewer depth via critical_paths and depth hooks
+    challenge_type: ENHANCEMENT
+    description: >-
+      Provides operational breadcrumbs across documentation and scaffolding
+      for specialized child portfolios adopting the 4-layer reviewer depth template
+      method pipeline (solorepo's DR-188). Enriches Specialization Step 4 with guidance
+      on declaring `critical_paths` on Projects and providing an optional `.meta/hooks/depth.py`,
+      adds a runnable `.meta/hooks/depth.py.example` hook demonstrating custom depth
+      evaluations, and documents reviewer depth and concurrency in `wiki/solorepo/pr-first.md`.

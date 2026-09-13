@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import importlib.machinery
 import importlib.util
 import json
 import os
@@ -181,7 +182,8 @@ def check_programmatic_hook(
     if not hook_file.is_file():
         return None
     try:
-        spec = importlib.util.spec_from_file_location("custom_depth_hook", hook_file)
+        loader = importlib.machinery.SourceFileLoader("custom_depth_hook", str(hook_file))
+        spec = importlib.util.spec_from_file_location("custom_depth_hook", hook_file, loader=loader)
         if not spec or not spec.loader:
             return None
         hook_mod = importlib.util.module_from_spec(spec)
@@ -191,6 +193,10 @@ def check_programmatic_hook(
         res = hook_mod.evaluate_depth(pr_meta, files, diff_patch)
         if isinstance(res, DepthConfig):
             return res
+        if hasattr(res, "_asdict") and callable(res._asdict):
+            res = res._asdict()
+        elif hasattr(res, "__dict__") and not isinstance(res, dict):
+            res = res.__dict__
         if isinstance(res, dict):
             return DepthConfig(
                 model=res.get("model", DEEP_CONFIG.model),

@@ -2801,4 +2801,17 @@ def depth_probes():
     finally:
         fake_hook.unlink(missing_ok=True)
 
+    # Verify .meta/hooks/depth.py.example is present and callable
+    example_hook = ROOT / ".meta" / "hooks" / "depth.py.example"
+    if not example_hook.is_file():
+        problems.append("depth: .meta/hooks/depth.py.example is missing")
+    else:
+        cfg_ex_deep = depth.evaluate(["migrations/001_initial.sql"], hook_file=example_hook)
+        if cfg_ex_deep.model != "claude-opus-5" or cfg_ex_deep.agents != 3:
+            problems.append(f"depth: example hook expected opus/3 on migration, got {cfg_ex_deep}")
+        cfg_ex_std = depth.evaluate(["README.md"], hook_file=example_hook)
+        if cfg_ex_std.model != "claude-sonnet-5" or cfg_ex_std.agents != 1:
+            problems.append(f"depth: example hook expected sonnet/1 on README, got {cfg_ex_std}")
+
     return problems
+
