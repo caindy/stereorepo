@@ -1,0 +1,85 @@
+decisions:
+  - id: work:decision/192
+    name: "DR-192 · Ground-moved branch scoping and technical writer retrieval remit for durable citation maintenance"
+    challenge: work:challenge/291
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-dereference
+      - work:artifact/meta-checks-probes
+    context: >-
+      Issue #291 noticed that dereference scopes only to the sentences a branch
+      wrote over its merge base, while --all is uncapped (~1,140 questions) and
+      run by nobody. A citation inaccurate when typed remains unverified
+      indefinitely (Issue #251). More critically, when an entry is superseded or
+      amended, the ground moves under all prose citing it across the durable set
+      without triggering any re-reading. The issue examined whether a third scope
+      could maintain read state in git blame or whether a second place for state
+      can be avoided.
+    alternatives:
+      - name: Store citation read timestamps in a repository state file
+        chosen: false
+        reason: >-
+          Violates the core rule of DR-052 and DR-088: state about the record that
+          nothing else consumes churns commits, creates merge conflicts between
+          concurrent branches, and rots silently.
+      - name: Use git blame author date as read state to sample oldest-written first
+        chosen: false
+        reason: >-
+          Git blame records when a line was written, not when it was read. Reading
+          does not and must not modify line blame without artificial file touching
+          and commit churn. Sampling by oldest git blame selects the exact same
+          sentences on every run, never advancing through the rest of the corpus.
+      - name: Force arbitrary rotating citation samples onto the coder loop during standard PRs
+        chosen: false
+        reason: >-
+          The coder role is governed by concision and single-concern focus ("Do what
+          the Issue asks and no more"). Forcing a coder implementing an unrelated
+          feature or fix to triage rotted citations across historical decisions
+          pollutes PR diffs, increases turn consumption, and blurs role
+          responsibilities.
+      - name: Ground-moved branch scoping in dereference and technical writer offline retrieval remit
+        chosen: true
+        reason: >-
+          A clean two-part separation of concerns. First, dereference.py extends
+          its branch scope to detect ground-movement: when a branch modifies a
+          Decision or Article assertion, any durable sentence citing that modified
+          entry is brought into scope on that branch, catching the moving-target
+          trigger at the exact moment the entry changes. Second, repository-wide
+          citation debt and semantic drift maintenance is assigned to the Technical
+          Writer Role (work:role/technical-writer, whose character explicitly demands
+          'Every citation dereferenced'). Rather than brute-forcing 1,140 expensive
+          LLM calls, the Technical Writer is augmented with an offline indexed
+          retrieval skill (enacting RECOMMENDED decision DR-103 with offline semantic
+          search / vector grep like zg or zvec-grep) to detect semantic drift
+          locally and target high-drift candidates for dereferencing.
+    consequences:
+      - >-
+        dereference.py gains ground-moved scoping: modifying a Decision or Article
+        assertion brings all durable sentences citing that entry into the branch's
+        dereference scope.
+      - >-
+        dereference.py adds --sample [N] (default 20) for spot-checking or rotating
+        sample invocation without external state.
+      - >-
+        .meta/checks/probes.py gains dereference probes testing ground-moved
+        scoping and sample rotation.
+      - >-
+        Corpus-wide citation debt maintenance is assigned to the Technical Writer
+        Role backed by offline semantic retrieval (DR-103).
+      - >-
+        Resolves Challenge 291.
+    falsifier: >-
+      A pull request modifying a Decision or Article whose citing sentences across
+      the durable set are omitted from dereference's scope on that branch, or
+      whole-corpus citation maintenance requiring an unindexed 1,140-call LLM
+      brute-force run.
+    rationale: |-
+      Separates change-local ground movement from whole-corpus debt. When an entry
+      moves, the author who moved it is best positioned to update the prose citing
+      it; ground-moved scoping brings those citations into scope immediately with
+      zero state. Meanwhile, whole-corpus citation maintenance belongs to the
+      Technical Writer Role equipped with offline semantic retrieval (DR-103),
+      keeping the coder's PR diffs small and focused while eliminating unmaintainable
+      state files.

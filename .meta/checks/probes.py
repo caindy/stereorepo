@@ -2959,3 +2959,58 @@ def agents_probes():
 
     return problems
 
+
+@check("dereference probes", pre=True)
+def dereference_probes():
+    """`dereference.py` extracts citations across diff, sample, and ground-moved scopes (solorepo's DR-134, solorepo's DR-192)."""
+    import contextlib
+    import importlib.util
+    import io
+    from importlib.machinery import SourceFileLoader
+
+    checks_dir = META / "checks"
+    if str(checks_dir) not in sys.path:
+        sys.path.insert(0, str(checks_dir))
+    if str(META) not in sys.path:
+        sys.path.insert(0, str(META))
+
+    loader = SourceFileLoader("dereference", str(META / "dereference.py"))
+    spec = importlib.util.spec_from_loader("dereference", loader)
+    deref = importlib.util.module_from_spec(spec)
+    loader.exec_module(deref)
+
+    citations_mod = deref.citations()
+    problems = []
+
+    # 1. Sample scope extracts bounded deterministic pairs
+    sample_pairs = deref.scope(citations_mod, "origin/main", False, sample=4)
+    if len(sample_pairs) != 4:
+        problems.append(f"dereference: sample=4 expected 4 pairs, got {len(sample_pairs)}")
+    for p in sample_pairs:
+        if not ("path" in p and "cite" in p and "sentence" in p and "body" in p):
+            problems.append(f"dereference: sample pair missing required keys: {p}")
+
+    # 2. Sample rotation wraps and stays deterministic
+    sample_a = deref.scope(citations_mod, "origin/main", False, sample=3)
+    sample_b = deref.scope(citations_mod, "origin/main", False, sample=3)
+    if [p["sentence"] for p in sample_a] != [p["sentence"] for p in sample_b]:
+        problems.append("dereference: identical sample queries produced different results")
+
+    # 3. Report formatting across scopes
+    fake_pairs = [
+        {"path": "foo.md", "cite": "solorepo's DR-001", "sentence": "Testing claim.", "context": "Span", "body": "Body", "ground_moved": True}
+    ]
+    out_ground = io.StringIO()
+    with contextlib.redirect_stdout(out_ground):
+        deref.report([("ok", "claim")], fake_pairs, "origin/main", False)
+    if "what this branch wrote or affected" not in out_ground.getvalue():
+        problems.append(f"dereference: expected ground_moved report header, got {out_ground.getvalue()!r}")
+
+    out_sample = io.StringIO()
+    with contextlib.redirect_stdout(out_sample):
+        deref.report([("ok", "claim")], fake_pairs, "origin/main", False, sample=True)
+    if "a rotating sample" not in out_sample.getvalue():
+        problems.append(f"dereference: expected sample report header, got {out_sample.getvalue()!r}")
+
+    return problems
+

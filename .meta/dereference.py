@@ -1,7 +1,8 @@
 #!/usr/bin/env -S uvx --with linkml --with pyyaml python
-"""The reading of a citation, run before the hand-off (solorepo's DR-134).
+"""The reading of a citation, run before the hand-off (solorepo's DR-134, DR-192).
 
-    just dereference                 what this branch wrote, against origin/main
+    just dereference                 what this branch wrote or affected, against origin/main
+    just dereference --sample        a rotating sample of 20 citations from the durable set
     just dereference --all           every citation in the durable set: uncapped,
                                      and about fifteen hundred questions
     .meta/dereference.py --pairs     the deterministic half alone, asking nothing
@@ -30,11 +31,12 @@ is made in, where `check.py` needs a whole file flattened to one string. A citat
 `check_pr.py` resolves the number — because every paraphrase failure this was
 built for named an entry, and a step that reaches two systems fails in two ways.
 
-The scope is the diff. About fifteen hundred citations stand in the durable set,
-and reading them all is a bill nobody wants twice a day; what anyone wants read
-is what this branch wrote. So a changed file's citation-bearing sentences are
-taken, the ones its merge base already held are subtracted, and the remainder is
-the scope. `--all` is there for the run that wants the record.
+The scope is the diff and the ground that moved. About fifteen hundred citations
+stand in the durable set, and reading them all is a bill nobody wants twice a
+day; what anyone wants read is what this branch wrote, plus any existing
+citation whose target entry moved under it (solorepo's DR-192). `--sample` offers
+a deterministic rotating window across the durable set without adding an
+external state file, and `--all` is there for the run that wants the record.
 """
 import argparse
 import concurrent.futures
@@ -215,15 +217,18 @@ def as_it_was(chk, path, text):
         was.unlink()
 
 
-def scope(chk, base, everything):
+def scope(chk, base, everything, sample=None):
     """The pairs to ask about: a sentence, the span it sits in, the citation and
     what the citation names.
 
-    Everything, or what this branch wrote. The second is a set difference over
-    sentences rather than a read of the diff's line numbers: a folded scalar
-    wraps where the line ended and not where the sentence did, so a line-based
-    scope would report a claim whose only change was the width of its wrap, and
-    would miss one edited across a fold.
+    Everything, what this branch wrote or affected, or a rotating sample
+    (solorepo's DR-192). The branch scope is a set difference over sentences
+    rather than a read of the diff's line numbers: a folded scalar wraps where
+    the line ended and not where the sentence did, so a line-based scope would
+    report a claim whose only change was the width of its wrap, and would miss
+    one edited across a fold. When this branch modifies an entry (a Decision or
+    Article assertion), all durable sentences citing that modified entry are
+    also included, catching the ground that moved under them.
 
     A pair is asked once. The same sentence citing the same entry in two files
     is one question with one answer, and paying twice for it is paying for the
@@ -236,6 +241,27 @@ def scope(chk, base, everything):
     targets = { (meta_dir / name).resolve() for name in render.rendered() }
     skip = { p for p in targets if p.name != "justfile" }
     durable = { p for p in durable if p.suffix != ".py" and p.resolve() not in skip }
+
+    if sample:
+        all_pairs = []
+        seen = set()
+        for path in sorted(durable):
+            for sentence, around, named in sentences(chk, path):
+                for cite in named:
+                    body = target(cite, index)
+                    if body is None or (cite, sentence) in seen:
+                        continue
+                    seen.add((cite, sentence))
+                    all_pairs.append({"path": str(path.relative_to(ROOT)), "cite": cite,
+                                      "sentence": sentence, "context": around, "body": body})
+        if not all_pairs:
+            return []
+        commit_str = git("rev-list", "--count", "HEAD", default="0").strip()
+        count = int(commit_str) if commit_str.isdigit() else 0
+        offset = (count * sample) % len(all_pairs)
+        return (all_pairs + all_pairs)[offset:offset + sample]
+
+    modified_entries = set()
     if everything:
         paths, before = sorted(durable), {}
     else:
@@ -248,6 +274,25 @@ def scope(chk, base, everything):
         changed = [(ROOT / name) for name in dict.fromkeys(named)]
         paths = sorted(p for p in changed if p in durable and p.is_file())
         before = {p: git("show", f"{base}:{p.relative_to(ROOT)}", default="") for p in paths}
+
+        # Track which Decision or Article entries moved on this branch (solorepo's DR-192)
+        for p in changed:
+            try:
+                rel = p.relative_to(ROOT)
+            except ValueError:
+                rel = p
+            if len(rel.parts) >= 4 and rel.parts[:3] == (".meta", "assertions", "decisions") and rel.name.startswith("DR-") and rel.suffix in (".yaml", ".yml"):
+                modified_entries.add(rel.stem)
+            elif rel == pathlib.Path(".meta/assertions/imported/charter.yaml"):
+                was_text = git("show", f"{base}:{rel}", default="")
+                was_charter = yaml.safe_load(was_text) or {} if was_text else {}
+                now_charter = yaml.safe_load(p.read_text()) or {} if p.is_file() else {}
+                was_art = {int(a["id"].rsplit("/", 1)[-1]): a for a in was_charter.get("articles") or []}
+                now_art = {int(a["id"].rsplit("/", 1)[-1]): a for a in now_charter.get("articles") or []}
+                for num, art in now_art.items():
+                    if num not in was_art or was_art[num] != art:
+                        modified_entries.add(f"A{num}")
+
     pairs, seen = [], set()
     for path in paths:
         held = set() if everything else as_it_was(chk, path, before[path])
@@ -261,6 +306,20 @@ def scope(chk, base, everything):
                 seen.add((cite, sentence))
                 pairs.append({"path": str(path.relative_to(ROOT)), "cite": cite,
                               "sentence": sentence, "context": around, "body": body})
+
+    # Include durable sentences citing entries modified on this branch (ground moved)
+    if modified_entries:
+        for path in sorted(durable):
+            for sentence, around, named in sentences(chk, path):
+                for cite in named:
+                    if cite in modified_entries:
+                        body = target(cite, index)
+                        if body is None or (cite, sentence) in seen:
+                            continue
+                        seen.add((cite, sentence))
+                        pairs.append({"path": str(path.relative_to(ROOT)), "cite": cite,
+                                      "sentence": sentence, "context": around, "body": body,
+                                      "ground_moved": True})
     return pairs
 
 
@@ -388,7 +447,7 @@ def ask(pair, token, model, seconds=120):
     return "?", f"the answer was not one of the three marks: {line[:120]!r}"
 
 
-def report(answers, pairs, where, everything):
+def report(answers, pairs, where, everything, sample=False):
     """A21's three lines, from a step that is not a gate.
 
     One step, one mark. `x` where any pair failed, and the undecided are listed
@@ -398,7 +457,15 @@ def report(answers, pairs, where, everything):
     leaves unmarked is what a step says when it could not answer, and a step
     that answered none of its pairs has found nothing.
     """
-    scoped = "the durable set" if everything else f"what this branch wrote over {where}"
+    has_ground_moved = any(p.get("ground_moved") for p in pairs)
+    if sample:
+        scoped = f"a rotating sample of {len(pairs)} citation(s) from the durable set"
+    elif everything:
+        scoped = "the durable set"
+    elif has_ground_moved:
+        scoped = f"what this branch wrote or affected over {where}"
+    else:
+        scoped = f"what this branch wrote over {where}"
     bad = [(p, why) for (mark, why), p in zip(answers, pairs, strict=True) if mark == "x"]
     held = [(p, why) for (mark, why), p in zip(answers, pairs, strict=True) if mark == "?"]
 
@@ -426,6 +493,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--all", action="store_true",
                     help="every citation in the durable set, not only this branch's")
+    ap.add_argument("--sample", nargs="?", const=20, type=int, default=None,
+                    help="a rotating sample of N citations from the durable set (default 20)")
     ap.add_argument("--base", default="origin/main",
                     help="what this branch is read against (default origin/main)")
     ap.add_argument("--model", default=MODEL, help=f"the model asked (default {MODEL})")
@@ -441,14 +510,15 @@ def main(argv=None):
 
     chk = citations()
     base = git("merge-base", "HEAD", args.base, default="").strip() or args.base
-    pairs = scope(chk, base, args.all)
+    pairs = scope(chk, base, args.all, sample=args.sample)
     if args.pairs:
         for pair in pairs:
             print(f"{pair['path']}: {pair['cite']} — {pair['sentence'][:160]}")
         print(f"{len(pairs)} pair(s)")
         return 0
     if not pairs:
-        print("ok dereference — no citation written on this branch")
+        print("ok dereference — no citation written or affected on this branch" if not args.sample
+              else "ok dereference — no citations in durable set")
         return 0
     # Could not run, in both of the ways that happens here: too much to ask, and
     # nothing to ask through. Loud, unmarked and exiting zero, which is what A6
@@ -458,7 +528,7 @@ def main(argv=None):
     # The cap guards a bill nobody meant to run up, and `--all` is nobody's
     # accident: it is the word for asking the whole record, so it is not capped
     # by a number chosen for a branch. The usage block says what that costs.
-    limit = args.limit if args.limit is not None else (None if args.all else 60)
+    limit = args.limit if args.limit is not None else (None if (args.all or args.sample) else 60)
     if limit is not None and len(pairs) > limit:
         print(f"?  dereference: {len(pairs)} pairs in scope, above the limit of {limit}; "
               "narrow the scope with --base, raise --limit, or ask the record with --all")
@@ -470,7 +540,7 @@ def main(argv=None):
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
         answers = list(pool.map(
             lambda pair: ask(pair, token, args.model, args.timeout), pairs))
-    return report(answers, pairs, base, args.all)
+    return report(answers, pairs, base, args.all, sample=bool(args.sample))
 
 
 if __name__ == "__main__":
