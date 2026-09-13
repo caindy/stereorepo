@@ -376,7 +376,7 @@ def steps(opened, show):
     those would describe no step anybody could go and look at.
     """
     seen = {}
-    for _, jobs in opened:
+    for _, jobs, *_ in opened:
         for job in jobs:
             for step in job.get("steps") or []:
                 cost = span(step.get("startedAt"), step.get("completedAt"))

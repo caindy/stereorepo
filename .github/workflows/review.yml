@@ -376,6 +376,8 @@ jobs:
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS: ${{ steps.depth.outputs.agents }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The action's own GitHub calls as the Role too, so nothing in the
@@ -471,7 +473,12 @@ jobs:
             go (solorepo's #303). Name
             the dimensions this diff actually has, from `.review/diff.patch`
             which you have already read, and spawn no more than
-            ${{ steps.depth.outputs.agents }} of them, one to a dimension. If the diff
+            ${{ steps.depth.outputs.agents }} of them, one to a dimension. When
+            launching multiple agents for independent work, send them in a
+            single message with multiple tool uses so they execute concurrently
+            in the foreground, returning together in the same turn rather than
+            costing the sum of their sequential executions (solorepo's DR-189).
+            If the diff
             modifies docstrings, comments, Decision Records, or markdown files, include
             the Technical Writer pass (evaluating against `work:personality/technical-writer`
             and the Literate Programming rubric of solorepo's DR-175, solorepo's DR-176). A
