@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/388
+    name: "Canonize Noticed and Not Done and Concept in Ubiquitous Language with ingress search aliases"
+    challenge_type: FEATURE
+    description: >-
+      Canonize Noticed and Not Done and Concept in imported/vocabulary.yaml with
+      ingress search aliases, establish 1:1 wiki parity with MOS:LEAD entries in
+      wiki/solorepo/, subordinate container placement to Diátaxis, and upgrade
+      .meta/search.py to index LinkML concept labels and definitions into BM25F
+      title and summary fields.

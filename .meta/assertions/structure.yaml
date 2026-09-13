@@ -355,6 +355,12 @@ artifacts:
   - id: work:artifact/wiki-solorepo-ubiquitous-language
     name: wiki/solorepo/ubiquitous-language.md
     path: wiki/solorepo/ubiquitous-language.md
+  - id: work:artifact/wiki-solorepo-noticed-and-not-done
+    name: wiki/solorepo/noticed-and-not-done.md
+    path: wiki/solorepo/noticed-and-not-done.md
+  - id: work:artifact/wiki-solorepo-concept
+    name: wiki/solorepo/concept.md
+    path: wiki/solorepo/concept.md
   - id: work:artifact/meta-wikisplain
     name: .meta/wikisplain.py
     path: .meta/wikisplain.py

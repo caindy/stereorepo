@@ -10,29 +10,60 @@ minted: 2026-09-13
 
 # Noticed and Not Done
 
-**Noticed and Not Done** is work observed but left unexecuted during a change, formally parked as an unresolved review thread or a linked Issue to preserve its context without blocking delivery.
+**Noticed and Not Done** is the practice and protocol for handling work or
+observations encountered during the execution of a change that fall outside its
+remit (solorepo's Article 15, solorepo's DR-064, solorepo's DR-195).
 
-Rather than letting passive observations drift into a private backlog, a file of bullet points, or a generic "todo" comment within the source code, observations made during development are immediately committed to the review process. This discipline guarantees that every item seen and left alone is explicitly tracked, evaluated, and resolved without delaying the parent pull request (solorepo's DR-064, solorepo's DR-159).
+In an autonomous or agentic codebase, an agent or engineer frequently spots
+unrelated flaws, missing test coverage, or potential refactors while implementing
+a focused [[challenge]]. Bundling these opportunistic changes into the
+active branch expands the scope, delays review loops, and entangles unrelated
+intent. Conversely, ignoring them or writing ad-hoc reminders in commit messages
+guarantees they will be lost.
 
-## Handling Leftover Work
+The [[ubiquitous-language]] establishes *noticed and not done* as the sole
+legitimate mechanism for capturing this work.
 
-When a developer finishes a task and there is leftover work, the question of what to do with it is answered by this discipline. Instead of ignoring the leftover work, archiving it in a private todo file, or committing unfinished changes, the leftover work is explicitly parked as a noticed and not done item. This preserves the context and allows the current pull request to land clean.
+## Contrast with Industry Synonyms
 
-## The Life of an Observation
+In standard software engineering discourse, this concept is commonly described
+using disparate terms:
+- **Leftover work** or **remainder:** Colloquial descriptions for items left
+  unfinished when a sprint, task, or pull request terminates.
+- **Technical debt backlog:** Accumulation of recognized deficiencies deferred to
+  future planning sessions.
+- **Punch list** or **follow-up tickets:** Ephemeral to-do notes drafted during
+  final review passes.
 
-Under the [[pr-first|PR First]] discipline, work noticed and not done adheres to a strict, lifecycle-enforced pipeline:
+Solorepo avoids these labels because they treat deferred work as an amorphous pile
+without provenance or accountability. *Noticed and not done* requires that the
+observation keep the concrete context in which it was discovered.
 
-1. **Discovery & Placement (A15):** The observation must be raised immediately as an active conversation on the diff of the pull request at the precise line where it was noticed, using the `.meta/say/post notice` tool (solorepo's DR-064). Raising it inside a summary or an isolated file is forbidden, as these lack temporal and spatial context.
-2. **Review & Evaluation:** A thread opened as a notice is held open and marked with `**Noticed and not done.**`. This distinguishes it from an active review comment that requires a code change before merging. The conversation blocks the merge until the solo developer decides how to handle it.
-3. **Promotion on Approval:** At approval, any surviving noticed-and-not-done thread is promoted to a tracked [[issue|Issue]] with the original context preserved. The pull request's body is revised to list the promoted Issue under **What was noticed and not done.**, and the original review thread is resolved.
+## The Parking and Promotion Lifecycle
 
-## Structural Advantages
+Work noticed during a change follows a deterministic three-stage lifecycle:
 
-By keeping unfinished residue bound to the active review thread, the solorepo harness avoids the typical pitfalls of task tracking:
-- **No Lost Context:** The item keeps the exact git diff and code context it was noticed during. Anyone reviewing the Issue later can immediately understand the original situation.
-- **Controlled Queue Growth:** Because creating an Issue requires the deliberate act of promoting an unresolved thread, the backlog remains a clean queue rather than a passive pile of forgotten points.
-- **Unambiguous Resolution:** Unlike a file of notes where a deleted line is indistinguishable from an abandoned or resolved item, Issues carry clear open/closed states.
+1. **Parked on the Diff:** The observation is raised immediately as a
+   [[review-thread]] anchored to the specific line or file where it was observed
+   (solorepo's DR-064). The comment carries the heading `**Noticed and not done.**`.
+   This keeps the context intact and visible to all reviewers.
+2. **Survival to Approval:** An item the branch overtakes or settles during its own
+   review is answered and cleared. An observation that survives the review is
+   an enduring [[challenge]] candidate.
+3. **Promotion at Merge:** When the pull request is approved and merged, every
+   surviving noticed-and-not-done thread is promoted to a tracked [[issue]]
+   (solorepo's DR-054). The issue records where the problem was found and what
+   makes it worth doing.
+
+## Verification & Invariants
+
+- **Charter Binding (solorepo's Article 15):** *Work noticed and not done,
+  recorded only in a summary, has not been noticed.* A bullet point in a PR body
+  or a note in a commit message fails gate verification.
+- **No Floating Signifiers:** Every item listed under `What was noticed and not done`
+  in a pull request form must be an explicit link to a surviving review thread
+  or promoted issue.
 
 ---
 
-**See also:** [[knowledge-management]], [[ubiquitous-language]], [[pr-first]], [[issue]], solorepo's DR-064, solorepo's DR-159.
+**See also:** [[pr-first]], [[ubiquitous-language]], [[knowledge-management]], solorepo's Article 15, solorepo's DR-054, solorepo's DR-064, solorepo's DR-195.

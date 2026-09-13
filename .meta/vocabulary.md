@@ -100,11 +100,13 @@ _The kinds of thing written down, and which of them is authoritative._
 
 | Term | Means | Do not say |
 |---|---|---|
+| **Concept** | The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language (solorepo's DR-184, solorepo's DR-190, solorepo's DR-195). | wiki article, term, entity |
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
 | **Issue** | Where a Challenge lives before it is taken up — including work noticed during other work and deliberately not done. | tech debt, backlog item |
 | **Noticed and Not Done** | Work observed but left unexecuted during a change, formally parked as an unresolved review thread or a linked Issue to preserve its context without blocking delivery. | — |
 | **Pull Request** | Where a Challenge is taken in, argued and recorded — the Collaboration point, and the searchable account of why each change was made. | changelog, ticket |
 | **Review Thread** | One conversation on a Pull Request, opened against a line or against the change as a whole, and closed by being answered and resolved. | comment, conversation |
+| **Noticed and Not Done** | Work or observations encountered during the execution of a change that fall outside its remit, parked on the diff as a review thread, and promoted to an Issue at merge (solorepo's Article 15, solorepo's DR-064, solorepo's DR-195). | backlog, technical debt, punch list, follow-up ticket |
 | **Decision record** | The record of decisions at every level — the Portfolio's, a Product's or a Project's, told apart by which the entry names. One sequence, numbered DR-nnn, newest last. | ADR, architecture decision record |
 | **Trailer** | A `Key: value` line at the end of a commit message or a comment, naming the Actor that wrote it. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
@@ -132,6 +134,8 @@ _The named ways of working, each adhered to because it is not a program._
 | **Written Decisions** | A decision that lives only in a transcript has not been made. | — |
 | **Specialization** | Turning a fresh clone of solorepo into a new portfolio repo. | bootstrap, init, scaffolding step |
 
+**Concept.** The semantic unit of maintainer knowledge. Where a Concept lands in the artifact hierarchy — whether as a schema gloss, a section, or a dedicated markdown file — is subordinate to the authoring agent's structural judgement under the Diátaxis Compass. "Article" is strictly avoided to protect the Charter's empirical clauses (solorepo's Article 1, solorepo's Article 15).
+
 **Personality.** Called Persona in the original sketch, until Cooper's Persona took the word back.
 
 **Challenge.** The work itself, which two artifacts hold in turn: an Issue before it is taken up, a Pull Request while it is being done.
@@ -151,6 +155,8 @@ _The named ways of working, each adhered to because it is not a program._
 **Pull Request.** `journal` is the same thing under its older name, kept because it says what the pull request is *for*. Not authoritative, which is the trap: it looks like a record, so findings that stop here give a repository the appearance of having decided things and the substance of having noticed them.
 
 **Review Thread.** **Outdated is not resolved.** GitHub collapses a thread whose anchor moved and leaves it open, and the two states are independent — an objection can outlive the line it was written against. A16 turns on that distinction.
+
+**Noticed and Not Done.** Recorded only in an Issue or parked review thread, never buried in a commit message or lost in PR summaries (solorepo's Article 15).
 
 **Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until solorepo's DR-093, and imported a qualifier the record never used.
 

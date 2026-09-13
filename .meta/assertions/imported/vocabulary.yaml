@@ -50,6 +50,25 @@ concept_set:
 
       Adopted here as a Discipline of the same name — DDD names the thing, and
       solorepo names the practice of defining, maintaining and adhering to one.
+  - id: work:concept/concept
+    pref_label: Concept
+    definition: >-
+      The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language
+      (solorepo's DR-184, solorepo's DR-190, solorepo's DR-195).
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    alt_labels:
+      - wiki entry
+      - wiki page
+      - domain concept
+      - topic
+    avoid: [wiki article, term, entity]
+    scope_note: >-
+      The semantic unit of maintainer knowledge. Where a Concept lands in the
+      artifact hierarchy — whether as a schema gloss, a section, or a dedicated
+      markdown file — is subordinate to the authoring agent's structural
+      judgement under the Diátaxis Compass. "Article" is strictly avoided to
+      protect the Charter's empirical clauses (solorepo's Article 1, solorepo's Article 15).
   - id: work:concept/published-language
     pref_label: Published Language
     definition: A well-documented shared language that contexts translate into and out of.
@@ -332,6 +351,24 @@ concept_set:
     confusable_with:
       - work:concept/pull-request
     avoid: [comment, conversation]
+  - id: work:concept/noticed-and-not-done
+    pref_label: Noticed and Not Done
+    definition: >-
+      Work or observations encountered during the execution of a change that
+      fall outside its remit, parked on the diff as a review thread, and
+      promoted to an Issue at merge (solorepo's Article 15, solorepo's DR-064, solorepo's DR-195).
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    alt_labels:
+      - leftover work
+      - remainder
+      - follow-up work
+      - deferred work
+      - unfinished work
+    avoid: [backlog, technical debt, punch list, follow-up ticket]
+    scope_note: >-
+      Recorded only in an Issue or parked review thread, never buried in a commit
+      message or lost in PR summaries (solorepo's Article 15).
   - id: work:concept/decision-record
     pref_label: Decision record
     definition: >-

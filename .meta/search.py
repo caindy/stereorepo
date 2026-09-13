@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retrieval over the repository assertions, decisions, and wiki by meaning (solorepo's DR-103, solorepo's DR-192, solorepo's DR-194).
+"""Retrieval over the repository assertions, decisions, and wiki by meaning (solorepo's DR-103, solorepo's DR-192, solorepo's DR-194, solorepo's DR-195).
 
 Provides an in-memory Okapi BM25 search index over all identified objects
 declared in .meta/assertions/*.yaml and concepts defined in wiki/**/*.md.
@@ -32,9 +32,16 @@ except ImportError:
     collect = None
 
 
+STOPWORDS: frozenset[str] = frozenset({
+    "a", "an", "the", "and", "or", "of", "to", "in", "for", "with",
+    "on", "at", "by", "from", "is", "it", "its", "i", "do", "does",
+    "did", "there", "this", "that", "was", "were", "be", "been", "as",
+})
+
+
 def tokenize(text: str) -> list[str]:
-    """Split text into lowercase alphanumeric tokens."""
-    return re.findall(r"[a-zA-Z0-9_\-]+", text.lower())
+    """Split text into lowercase alphanumeric tokens, filtering common syntactic stop words."""
+    return [t for t in re.findall(r"[a-zA-Z0-9_\-]+", text.lower()) if t not in STOPWORDS]
 
 
 def extract_strings(val: Any) -> list[str]:
@@ -174,7 +181,13 @@ class SearchIndex:
             kind, payload, source_file = self.docs[identifier]
             title = str(payload.get("name", payload.get("title", payload.get("pref_label", identifier))))
             snippet = str(
-                payload.get("context", payload.get("description", payload.get("rationale", payload.get("definition", ""))))
+                payload.get(
+                    "context",
+                    payload.get(
+                        "description",
+                        payload.get("rationale", payload.get("definition", "")),
+                    ),
+                )
             )
             raw_clean = " ".join(snippet.split())
             snippet_clean = raw_clean[:177] + "..." if len(raw_clean) > 180 else raw_clean
@@ -208,20 +221,36 @@ def build_index(meta_dir: Path, root_dir: Path) -> SearchIndex:
             for entity_id, (cls, obj, file_path) in entities.items():
                 pref_label = obj.get("pref_label", "")
                 alt_labels_list = obj.get("alt_labels", [])
-                alt_labels_str = " ".join(alt_labels_list) if isinstance(alt_labels_list, list) else str(alt_labels_list)
+                alt_labels_str = " ".join(str(a) for a in alt_labels_list) if isinstance(alt_labels_list, list) else str(alt_labels_list)
                 definition = obj.get("definition", "")
 
                 name = obj.get("name", "") or obj.get("title", "") or pref_label
-                title_text = f"{name} {alt_labels_str} {entity_id} {file_path}"
+                title_text = f"{name} {alt_labels_str} {entity_id} {file_path}".strip()
                 summary_text = str(
-                    obj.get("context", obj.get("description", obj.get("rationale", definition)))
+                    obj.get(
+                        "context",
+                        obj.get(
+                            "description",
+                            obj.get("rationale", definition),
+                        ),
+                    )
                 )
                 other_text = " ".join(
                     extract_strings(
                         {
                             k: v
                             for k, v in obj.items()
-                            if k not in ("name", "title", "context", "description", "rationale", "pref_label", "alt_labels", "definition")
+                            if k
+                            not in (
+                                "name",
+                                "title",
+                                "pref_label",
+                                "alt_labels",
+                                "context",
+                                "description",
+                                "rationale",
+                                "definition",
+                            )
                         }
                     )
                 )
@@ -253,12 +282,23 @@ def build_index(meta_dir: Path, root_dir: Path) -> SearchIndex:
             title = title_match.group(1).strip() if title_match else path.stem
             rel_path = path.relative_to(root_dir).as_posix()
 
-            paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+            content_text = text
+            synonyms_text = ""
+            if content_text.startswith("---"):
+                parts = content_text.split("---", 2)
+                if len(parts) >= 3:
+                    fm = parts[1]
+                    content_text = parts[2]
+                    syn_match = re.findall(r"^\s*-\s+(.+)$", fm, re.MULTILINE)
+                    if syn_match:
+                        synonyms_text = " ".join(syn_match)
+
+            paragraphs = [p.strip() for p in content_text.split("\n\n") if p.strip()]
             summary = paragraphs[0] if paragraphs else ""
             body = "\n\n".join(paragraphs[1:]) if len(paragraphs) > 1 else ""
 
             field_tokens = {
-                "title": tokenize(f"{title} {path.stem}"),
+                "title": tokenize(f"{title} {synonyms_text} {path.stem}"),
                 "summary": tokenize(summary),
                 "body": tokenize(body),
             }
@@ -323,7 +363,12 @@ def run_benchmark(index: SearchIndex) -> int:
         ),
         (
             "where do things noticed but not done go",
-            ["work:article/15", "work:discipline/pr-first", "work:decision/064"],
+            [
+                "work:article/15",
+                "work:discipline/pr-first",
+                "work:decision/064",
+                "work:concept/noticed-and-not-done",
+            ],
         ),
         (
             "why is there a stakeholders directory",
@@ -397,7 +442,7 @@ def run_benchmark(index: SearchIndex) -> int:
 def main() -> None:
     """CLI entrypoint for search and benchmark evaluation."""
     parser = argparse.ArgumentParser(
-        description="Search repository assertions, decisions, and wiki by meaning (BM25, solorepo's DR-103, solorepo's DR-194)."
+        description="Search repository assertions, decisions, and wiki by meaning (BM25, solorepo's DR-103, solorepo's DR-194, solorepo's DR-195)."
     )
     parser.add_argument("query", nargs="*", help="Query terms to search for")
     parser.add_argument("--limit", type=int, default=5, help="Number of results to return (default 5)")
