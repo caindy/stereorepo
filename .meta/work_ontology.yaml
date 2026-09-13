@@ -28,7 +28,6 @@ license: https://creativecommons.org/licenses/by/4.0/
 #   who is assigned what, and where work meets      work/assignment.yaml
 #   how work must proceed, and what is checkable     work/disciplines.yaml
 #   what was foreclosed, and why                    work/decisions.yaml
-#   what was actually done, and by whom             work/provenance.yaml
 #   how the repo is divided into Products/Projects  work/structure.yaml
 #   the base every module shares                    work/core.yaml
 #
@@ -55,7 +54,6 @@ imports:
   - work/disciplines
   - work/decisions
   - work/structure
-  - work/provenance
 
 slots:
 

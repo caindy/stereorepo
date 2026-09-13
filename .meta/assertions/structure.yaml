@@ -316,9 +316,6 @@ artifacts:
   - id: work:artifact/meta-work-personas
     name: .meta/work/personas.yaml
     path: .meta/work/personas.yaml
-  - id: work:artifact/meta-work-provenance
-    name: .meta/work/provenance.yaml
-    path: .meta/work/provenance.yaml
   - id: work:artifact/meta-work-purpose
     name: .meta/work/purpose.yaml
     path: .meta/work/purpose.yaml

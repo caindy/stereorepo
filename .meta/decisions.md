@@ -213,6 +213,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-199](assertions/decisions/DR-199.yaml) | Actor prototypes decouple from execution models, reserving Personality for conversational register | Adopted |
 | [DR-200](assertions/decisions/DR-200.yaml) | Actors adopt Personas as temporary Personalities for goal-directed collaborative design | Adopted |
 | [DR-201](assertions/decisions/DR-201.yaml) | APM package validation, distribution packing, and multi-harness compilation integrate into the operator surface and gate | Adopted |
+| [DR-203](assertions/decisions/DR-203.yaml) | Retire unconsumed provenance metamodel schemas from the active work ontology | Adopted |
 
 ## Holes
 
@@ -303,10 +304,9 @@ and the query a reader in a file actually has.
 | [`.meta/work/decisions.yaml`](work/decisions.yaml) | [DR-049](assertions/decisions/DR-049.yaml), [DR-065](assertions/decisions/DR-065.yaml), [DR-081](assertions/decisions/DR-081.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/work/disciplines.yaml`](work/disciplines.yaml) | [DR-025](assertions/decisions/DR-025.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-152](assertions/decisions/DR-152.yaml) |
 | [`.meta/work/personas.yaml`](work/personas.yaml) | [DR-020](assertions/decisions/DR-020.yaml), [DR-021](assertions/decisions/DR-021.yaml), [DR-200](assertions/decisions/DR-200.yaml) |
-| [`.meta/work/provenance.yaml`](work/provenance.yaml) | [DR-004](assertions/decisions/DR-004.yaml) |
 | [`.meta/work/purpose.yaml`](work/purpose.yaml) | [DR-031](assertions/decisions/DR-031.yaml), [DR-038](assertions/decisions/DR-038.yaml), [DR-039](assertions/decisions/DR-039.yaml), [DR-084](assertions/decisions/DR-084.yaml) |
-| [`.meta/work/structure.yaml`](work/structure.yaml) | [DR-027](assertions/decisions/DR-027.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-144](assertions/decisions/DR-144.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-188](assertions/decisions/DR-188.yaml) |
-| [`.meta/work_ontology.yaml`](work_ontology.yaml) | [DR-002](assertions/decisions/DR-002.yaml), [DR-023](assertions/decisions/DR-023.yaml) |
+| [`.meta/work/structure.yaml`](work/structure.yaml) | [DR-027](assertions/decisions/DR-027.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-144](assertions/decisions/DR-144.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-188](assertions/decisions/DR-188.yaml), [DR-203](assertions/decisions/DR-203.yaml) |
+| [`.meta/work_ontology.yaml`](work_ontology.yaml) | [DR-002](assertions/decisions/DR-002.yaml), [DR-004](assertions/decisions/DR-004.yaml), [DR-023](assertions/decisions/DR-023.yaml), [DR-203](assertions/decisions/DR-203.yaml) |
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-128](assertions/decisions/DR-128.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-198](assertions/decisions/DR-198.yaml) |
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml) |
 | [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-160](assertions/decisions/DR-160.yaml), [DR-161](assertions/decisions/DR-161.yaml), [DR-165](assertions/decisions/DR-165.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-181](assertions/decisions/DR-181.yaml), [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml) |
