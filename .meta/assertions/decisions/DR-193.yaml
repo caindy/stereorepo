@@ -1,0 +1,71 @@
+decisions:
+  - id: work:decision/193
+    name: "DR-193 · Retire mechanical formatting (fmt) from the Python bootstrap gate"
+    challenge: work:challenge/383
+    product: work:product/python-standard
+    status: ADOPTED
+    supersedes:
+      - work:decision/096
+    applies:
+      - work:article/2
+      - work:article/5
+    enacted_in:
+      - work:artifact/bootstraps-python-gate
+      - work:artifact/bootstraps-python-readme
+    context: >-
+      The Python bootstrap standard originally included a mandatory `fmt` gate
+      check (`ruff format --check .`) to verify that code was formatted by `ruff
+      format` before commit (DR-096). While auto-formatting was designed for human
+      teams to eliminate review bikeshedding, in an agentic AI repository with
+      autonomous loops, mechanical formatters produce substantial friction without
+      semantic benefit: (1) strict auto-formatters enforce rigid single-element
+      vertical cascades whenever lines exceed length limits, inflating prompt token
+      counts by 30–50% in agent context windows and destroying dense, scannable table
+      layouts; (2) in multi-agent autonomous loops, wholesale whitespace formatting
+      creates gratuitous merge conflicts and rebase churn across concurrent branches;
+      and (3) quality in the agentic era is held by deterministic semantic linters
+      (`ruff check`), type checking (`mypy --strict`), test coverage (`mutmut`), and
+      literate docstrings (`doc`), with reason-backed suppressions (`lints`),
+      rendering mechanical formatting unnecessary as a gate requirement.
+    alternatives:
+      - name: Retain fmt as a blocking gate check
+        chosen: false
+        reason: >-
+          Forces rigid single-element vertical cascades on data structures, needlessly
+          inflates prompt token counts in agent context windows, and causes continuous
+          rebase churn across concurrent agent loop branches for zero semantic gain.
+      - name: Auto-format during gate runs
+        chosen: false
+        reason: >-
+          Directly violates Article 5 (no gate step rewrites the tree), leaving authors
+          and agents unsure what was committed and introducing invisible tree mutations.
+      - name: Retire fmt from the gate and rely on semantic linting to hold the ratchet
+        chosen: true
+        reason: >-
+          Removes `fmt` from the Python seed gate and documentation, allowing authors
+          and agents to keep compact, literate layouts without token inflation or
+          spurious rebase churn, while semantic linters (`ruff check`), strict types
+          (`mypy`), and test suites (`mutmut`) hold code quality.
+    consequences:
+      - >-
+        `bootstraps/python/seed/gate/src/gate/__init__.py` removes the `fmt` step from `STEPS` and deletes `def fmt`.
+      - >-
+        `bootstraps/python/seed/gate/tests/test_probes.py` updates the usage probe assertion.
+      - >-
+        `bootstraps/python/README.md`, `bootstraps/python/ratchet.md`, and `bootstraps/python/seed/gate/README.md`
+        remove `fmt` and record that formatting is not a gate check.
+      - >-
+        Resolves Challenge 383.
+    falsifier: >-
+      A formatting check failing the Python seed gate, or a semantic defect passing
+      the gate because formatting was retired.
+    rationale: |-
+      Mechanical auto-formatters solve human team coordination problems by standardizing
+      visual appearance. In a repository designed for a team of one and autonomous agent
+      fleets, the human manages intent and invariants rather than line-by-line formatting.
+
+      Exploding compact, table-like structures into vertical cascades harms LLMs by inflating
+      context token consumption and forcing vital reasoning out of context windows. By
+      relying on semantic linting (`ruff check`), type checking (`mypy`), and literate
+      documentation (`doc`), the Python standard preserves code density and eliminates
+      rebase friction while maintaining uncompromising quality standards.

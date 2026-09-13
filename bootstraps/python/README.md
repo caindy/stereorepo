@@ -9,7 +9,7 @@ satisfied in Python and which step of the gate holds it there.
 | Discipline | How, in Python | Held by |
 |---|---|---|
 | Literate Programming | [`literate-programming.md`](literate-programming.md) | `doc`, `test`, `orphans` |
-| Ratchet | [`ratchet.md`](ratchet.md) | `fmt`, `lints`, `ruff`, `types` |
+| Ratchet | [`ratchet.md`](ratchet.md) | `lints`, `ruff`, `types` |
 | Observed Failure | [`observed-failure.md`](observed-failure.md) | `mutants`, and the gate's own probes |
 | Nothing Unconsumed | [`nothing-unconsumed.md`](nothing-unconsumed.md) | `orphans`, `receipts` |
 | Seeded Artifacts | [`seeded-artifacts.md`](seeded-artifacts.md) | [`render`](render), and the `python seed` job in the workflow |
@@ -52,7 +52,7 @@ out, because that architecture is the Portfolio's `.meta/` here: its charter
 is `AGENTS.md`, its decision tracks are the record with `product` or
 `project` set, its bets are each entry's falsifier, and its journal is what
 Journaling routes. DR-094 is the account of what came and what stayed, and
-DR-095, DR-096 and DR-097 are its decisions about the standard, filed at the
+DR-095, DR-096, DR-097 and DR-193 are its decisions about the standard, filed at the
 level they bind. The generator stays behind (DR-099): its `new` is [`render`](render),
 and its sync, never built, is kept there as the shape a portfolio's sync
 will take.

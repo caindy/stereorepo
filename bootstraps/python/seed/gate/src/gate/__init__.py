@@ -154,17 +154,6 @@ def each_package(root: Path, step: Callable[[Path], Outcome], scope: str) -> Out
     return Passed(f"{scope} over {len(members)} packages")
 
 
-def fmt(root: Path) -> Outcome:
-    """`ruff format --check`. Never `ruff format`: a gate step that rewrites the
-    tree leaves the author unsure what they committed (A5)."""
-    return tool(
-        root,
-        "ruff",
-        ["format", "--check", "."],
-        "ruff format --check over the workspace",
-    )
-
-
 def ruff(root: Path) -> Outcome:
     """`ruff check`, with the rule set the workspace manifest selects."""
     return tool(root, "ruff", ["check", "."], "ruff check over the workspace")
@@ -522,9 +511,8 @@ def without_comments(text: str) -> str:
 # --- the gate -----------------------------------------------------------------
 
 #: Every step, in the order the gate runs them. Cheap and pure first, so a
-#: formatting slip is reported before a type check is paid for.
+#: manifest or syntax slip is reported before a type check is paid for.
 STEPS: tuple[Step, ...] = (
-    ("fmt", fmt),
     ("lints", lints),
     ("ruff", ruff),
     ("types", types),

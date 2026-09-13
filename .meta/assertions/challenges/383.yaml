@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/383
+    name: "Retire mechanical formatting (fmt) from the Python bootstrap gate"
+    challenge_type: FEATURE
+    description: >-
+      Retire the mechanical formatting check (`fmt`) from the Python bootstrap
+      standard gate (`bootstraps/python/seed/gate/src/gate/__init__.py`), relying on
+      semantic linting (`ruff check`) and reason-backed suppressions to hold code
+      quality without vertical cascade token inflation and rebase churn across
+      autonomous agent branches.

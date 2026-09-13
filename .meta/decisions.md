@@ -204,6 +204,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-190](assertions/decisions/DR-190.yaml) | The Ubiquitous Language regime: 1:1 wiki parity gate and ambient harness conventions | Adopted |
 | [DR-191](assertions/decisions/DR-191.yaml) | Spawned review subagents are counted and bounded by the fan-out ceiling, failing closed on breach | Adopted |
 | [DR-192](assertions/decisions/DR-192.yaml) | Ground-moved branch scoping and technical writer retrieval remit for durable citation maintenance | Adopted |
+| [DR-193](assertions/decisions/DR-193.yaml) | Retire mechanical formatting (fmt) from the Python bootstrap gate · The Python standard | Adopted |
 
 ## Holes
 
@@ -298,10 +299,10 @@ and the query a reader in a file actually has.
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-128](assertions/decisions/DR-128.yaml), [DR-190](assertions/decisions/DR-190.yaml) |
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml) |
 | [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-160](assertions/decisions/DR-160.yaml), [DR-161](assertions/decisions/DR-161.yaml), [DR-165](assertions/decisions/DR-165.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-181](assertions/decisions/DR-181.yaml), [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml) |
-| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
+| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml), [DR-101](assertions/decisions/DR-101.yaml), [DR-193](assertions/decisions/DR-193.yaml) |
 | [`bootstraps/python/literate-programming.md`](../bootstraps/python/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-176](assertions/decisions/DR-176.yaml) |
 | [`bootstraps/python/render`](../bootstraps/python/render) | [DR-094](assertions/decisions/DR-094.yaml) |
-| [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
+| [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml), [DR-193](assertions/decisions/DR-193.yaml) |
 | [`bootstraps/python/seed/pyproject.toml`](../bootstraps/python/seed/pyproject.toml) | [DR-095](assertions/decisions/DR-095.yaml), [DR-096](assertions/decisions/DR-096.yaml), [DR-097](assertions/decisions/DR-097.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
 | [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/rust/literate-programming.md`](../bootstraps/rust/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-176](assertions/decisions/DR-176.yaml) |

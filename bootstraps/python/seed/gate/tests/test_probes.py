@@ -219,7 +219,7 @@ def test_only_a_finding_fails(tree: Tree, capsys: pytest.CaptureFixture[str]) ->
     assert "?  could: no tool\n" in out.out
     assert "ok ok — all\n" in out.out
     assert "x  bad (1)\n     x\n" in out.out
-    assert out.err.startswith("usage: uv run gate [gate | fmt | lints")
+    assert out.err.startswith("usage: uv run gate [gate | lints")
 
 
 def test_a_word_selects_one_step_at_most() -> None:

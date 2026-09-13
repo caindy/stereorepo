@@ -7,8 +7,8 @@ standard.
 Every step answers to four rules, and they are the whole contract:
 
 - **A5 — no gate step rewrites the tree.** Every tool invocation here is a
-  `--check`, a type check or a test. Fixing is `ruff format` and
-  `ruff check --fix`, run by a person, never from here.
+  type check, linter or a test. Fixing is `ruff check --fix`, run by a person,
+  never from here.
 - **A6 — every step has three outcomes.** `CouldNotRun` is loud, unmarked and
   exits zero, so a missing tool is reported rather than passed. `Passed` is
   marked. `Found` is non-zero.
@@ -24,7 +24,6 @@ The steps, in the order they run:
 
 | Step | What it holds | Discipline |
 |---|---|---|
-| `fmt` | `ruff format --check` | Ratchet |
 | `lints` | no rule switched off in a manifest; every `noqa` and `type: ignore` carries a reason | Ratchet |
 | `ruff` | `ruff check`, with the rule set the workspace manifest selects | Ratchet |
 | `types` | `mypy --strict` over each package's source and tests | Ratchet |

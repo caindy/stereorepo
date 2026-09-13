@@ -26,11 +26,16 @@ the ratchet running forward on its own. `# type: ignore[code]  # reason: …`
 is held the same way, and mypy's `warn_unused_ignores`, on under strict,
 does for it what `RUF100` does for `noqa`.
 
-## Formatting is checked, never applied
+## Mechanical formatting is not a gate check
 
-**`uv run gate fmt`** is `ruff format --check`. A gate step that rewrites the
-tree leaves the author unsure what they committed (A5). Formatting is
-`ruff format`, run by a person.
+Formatting is not a gate check (DR-193). Auto-formatters that enforce rigid
+single-element-per-line cascades whenever lines exceed length limits inflate
+prompt token counts in agent context windows and create gratuitous rebase churn
+across concurrent branches without adding semantic value.
+
+Code quality is held by semantic linting (`ruff check`), type checking
+(`mypy --strict`), test coverage (`mutmut`), and literate docstrings (`doc`),
+with reason-backed suppressions (`lints`).
 
 ## The tools and the interpreter are pinned
 
