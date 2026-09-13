@@ -36,7 +36,7 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
   `.meta/assertions/decisions/DR-0nn.yaml`, re-render, and commit it with the
   change — one commit per settled decision. `.meta/decisions.md` is an index
   generated from them; the entry itself is the assertion file.
-- Maintainer-facing exposition lives in `wiki/<context>/` following the Knowledge Management discipline (solorepo's DR-184) and Wikipedia editorial conventions (MOS:LEAD bold lead definitions, closed-world wikilinks, solorepo's DR-185). Every concept in the Ubiquitous Language carries a corresponding wiki entry maintaining 1:1 parity (A17, solorepo's DR-190). Use `just wikisplain <concept>` or `.meta/wikisplain.py` to scaffold and check wiki pages (solorepo's DR-187).
+- Maintainer-facing exposition lives in `wiki/<context>/` following the Knowledge Management discipline (solorepo's DR-184, solorepo's DR-196) and the Diátaxis Compass (solorepo's DR-194). Route prose before writing: Reference in docstrings, Explanation in `wiki/` and DRs, How-To in `justfile` recipes, and unrouted residue in PR bodies (Article 15). Storage placement (gloss, section, page, or folder) is subordinate to reader posture. Every concept in the Ubiquitous Language carries a corresponding wiki entry maintaining 1:1 parity (A17, solorepo's DR-190). Use `just wikisplain <concept>` or `.meta/wikisplain.py` to scaffold and check wiki pages (solorepo's DR-187).
 - An empty directory carries a README saying what will live there.
 - The full repository operator surface is `just --list`, run at the root:
   every recipe invokes one tool under `.meta/`, is self-documented by its own

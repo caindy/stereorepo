@@ -207,6 +207,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-193](assertions/decisions/DR-193.yaml) | Retire mechanical formatting (fmt) from the Python bootstrap gate · The Python standard | Adopted |
 | [DR-194](assertions/decisions/DR-194.yaml) | Layered technical writing standard and in-memory BM25F record retrieval skill | Adopted |
 | [DR-195](assertions/decisions/DR-195.yaml) | Canonize Noticed and Not Done and Concept in Ubiquitous Language with ingress search aliases | Adopted |
+| [DR-196](assertions/decisions/DR-196.yaml) | Elevate Diátaxis Compass to Knowledge Management discipline for prose routing and container subordination | Adopted |
 
 ## Holes
 
@@ -228,7 +229,7 @@ and the query a reader in a file actually has.
 | :-- | :-- |
 | [`.claude/skills/pr-first-reviewer/SKILL.md`](../.claude/skills/pr-first-reviewer/SKILL.md) | [DR-159](assertions/decisions/DR-159.yaml), [DR-164](assertions/decisions/DR-164.yaml), [DR-190](assertions/decisions/DR-190.yaml) |
 | [`.claude/skills/pr-first/SKILL.md`](../.claude/skills/pr-first/SKILL.md) | [DR-159](assertions/decisions/DR-159.yaml), [DR-164](assertions/decisions/DR-164.yaml), [DR-190](assertions/decisions/DR-190.yaml) |
-| [`.claude/skills/technical-writing/SKILL.md`](../.claude/skills/technical-writing/SKILL.md) | [DR-194](assertions/decisions/DR-194.yaml) |
+| [`.claude/skills/technical-writing/SKILL.md`](../.claude/skills/technical-writing/SKILL.md) | [DR-194](assertions/decisions/DR-194.yaml), [DR-196](assertions/decisions/DR-196.yaml) |
 | [`.claude/skills/wikisplain/SKILL.md`](../.claude/skills/wikisplain/SKILL.md) | [DR-187](assertions/decisions/DR-187.yaml) |
 | [`.gitattributes`](../.gitattributes) | [DR-143](assertions/decisions/DR-143.yaml) |
 | [`.github/workflows/advance.yml`](../.github/workflows/advance.yml) | [DR-113](assertions/decisions/DR-113.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-161](assertions/decisions/DR-161.yaml) |
@@ -254,7 +255,7 @@ and the query a reader in a file actually has.
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
 | [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/assertions/imported/authority.yaml`](assertions/imported/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-123](assertions/decisions/DR-123.yaml) |
-| [`.meta/assertions/imported/disciplines.yaml`](assertions/imported/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml) |
+| [`.meta/assertions/imported/disciplines.yaml`](assertions/imported/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-196](assertions/decisions/DR-196.yaml) |
 | [`.meta/assertions/imported/vocabulary.yaml`](assertions/imported/vocabulary.yaml) | [DR-182](assertions/decisions/DR-182.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-195](assertions/decisions/DR-195.yaml) |
 | [`.meta/assertions/vocabulary.yaml`](assertions/vocabulary.yaml) | [DR-035](assertions/decisions/DR-035.yaml) |
 | [`.meta/charter.md`](charter.md) | [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml) |
@@ -322,7 +323,7 @@ and the query a reader in a file actually has.
 | [`wiki/README.md`](../wiki/README.md) | [DR-184](assertions/decisions/DR-184.yaml), [DR-185](assertions/decisions/DR-185.yaml) |
 | [`wiki/solorepo/README.md`](../wiki/solorepo/README.md) | [DR-184](assertions/decisions/DR-184.yaml), [DR-185](assertions/decisions/DR-185.yaml) |
 | [`wiki/solorepo/concept.md`](../wiki/solorepo/concept.md) | [DR-195](assertions/decisions/DR-195.yaml) |
-| [`wiki/solorepo/knowledge-management.md`](../wiki/solorepo/knowledge-management.md) | [DR-185](assertions/decisions/DR-185.yaml) |
+| [`wiki/solorepo/knowledge-management.md`](../wiki/solorepo/knowledge-management.md) | [DR-185](assertions/decisions/DR-185.yaml), [DR-196](assertions/decisions/DR-196.yaml) |
 | [`wiki/solorepo/noticed-and-not-done.md`](../wiki/solorepo/noticed-and-not-done.md) | [DR-195](assertions/decisions/DR-195.yaml) |
 | [`wiki/solorepo/pr-first.md`](../wiki/solorepo/pr-first.md) | [DR-185](assertions/decisions/DR-185.yaml) |
 | [`wiki/solorepo/ubiquitous-language.md`](../wiki/solorepo/ubiquitous-language.md) | [DR-185](assertions/decisions/DR-185.yaml) |

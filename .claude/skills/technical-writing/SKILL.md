@@ -12,17 +12,18 @@ description: >-
 
 # /technical-writing
 
-The `/technical-writing` skill operationalizes the character of `work:role/technical-writer` (`work:personality/technical-writer`) and enacts solorepo's DR-194:
+The `/technical-writing` skill operationalizes the character of `work:role/technical-writer` (`work:personality/technical-writer`) and enacts solorepo's DR-194 and solorepo's DR-196:
 *Spelled out, for an audience it names. Every citation dereferenced. Assume a reader who was not in the conversation, holds none of its shorthand, and arrives by search some years later. Length is not the cost here; ambiguity is.*
 
-This standard combines Diátaxis documentation architecture, Google developer style sentences, and solorepo's Literate Programming (solorepo's DR-171, solorepo's DR-175, solorepo's DR-176) and Knowledge Management (solorepo's DR-184, solorepo's DR-185, solorepo's DR-187) disciplines (solorepo's DR-194).
+This standard combines Diátaxis documentation architecture, Google developer style sentences, and solorepo's Literate Programming (solorepo's DR-171, solorepo's DR-175, solorepo's DR-176) and Knowledge Management (solorepo's DR-184, solorepo's DR-185, solorepo's DR-187, solorepo's DR-196) disciplines.
 
-## Four Overarching Invariants
+## Five Overarching Invariants
 
 1. **Every citation dereferenced (solorepo's DR-134, solorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`solorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search with `just search <query>` (solorepo's DR-103).
 2. **Use the Ubiquitous Language (solorepo's DR-190):** The codebase and LinkML ontologies are the word list. Write `Actor` (not user/bot), `Challenge` (not ticket/issue/story), `Role`, `Remit`, `Persona`.
 3. **The Reader's Test (solorepo's DR-175):** Can a reader use this item from its docstring alone without reading commit histories or PR threads?
 4. **No Reviewer Litigation in Code (solorepo's DR-171):** Docstrings state usage contracts, parameters, and invariants. They do not argue against past reviewers. The 'why' and trade-offs belong in Decision Records (`DR-nnn.yaml`) or module docstrings. Incident narratives belong in `<module>.history.md`.
+5. **The Residue Principle (solorepo's Article 15, solorepo's DR-196):** Pull request descriptions, issue comments, and commit messages are not documentation containers. What fits into any of the four Diátaxis quadrants belongs in a durable repository artifact. What remains is residue, and only residue belongs in a pull request body.
 
 ## The Diátaxis Compass
 
@@ -30,10 +31,31 @@ Select exactly one mode before writing:
 
 | Mode | Purpose | In Solorepo | Tone & Rules |
 |---|---|---|---|
-| **Reference** | Facts for lookup (Understanding + Work) | Public function, class, and method docstrings | Dry, complete, sure. Describe parameters, invariants, exceptions. No opinions, no tutorials, no past debate. |
+| **Reference** | Facts for lookup (Understanding + Work) | Public function, class, and method docstrings, LinkML schemas | Dry, complete, sure. Describe parameters, invariants, exceptions. No opinions, no tutorials, no past debate. |
 | **Explanation** | Understanding & why (Understanding + Learning) | Decision Records (`DR-nnn.yaml`), module overviews, wiki pages | Anchor on a real 'why' question. Context, constraints, alternatives, trade-offs. |
 | **How-To** | Steps to a goal (Action + Work) | `just` recipes, `SPECIALIZE.md`, workflow guides | Task-oriented, assume competence, action only. No digressions. 'Do X to achieve Y.' |
 | **Tutorial** | Learning by doing (Action + Learning) | Quickstarts, onboarding lessons | Guided, step-by-step, visible results at each step. |
+
+## Pre-Writing Routing: Where to Write
+
+Before typing prose for a change, execute this routing tree to select the container:
+
+1. **Task, recipe, or repeatable procedure:** `justfile` recipe or solorepo's `SPECIALIZE.md` (**How-To**).
+2. **Public function, class, schema, or API fact:** item docstring or LinkML schema (**Reference**, solorepo's DR-171, solorepo's DR-175).
+3. **Settled architectural choice between alternatives:** Decision Record in `.meta/assertions/decisions/DR-nnn.yaml` (**Explanation**).
+4. **Bug, incident, or regression history:** `<module>.history.md` with receipts (**Explanation**).
+5. **Enduring domain concept or subsystem overview:** `wiki/<context>/<concept>.md` via `just wikisplain` (**Explanation**, solorepo's DR-184, solorepo's DR-190).
+6. **Unrouted residue:** Pull request descriptions hold only transient reviewer handoff notes and links to surviving review threads or promoted Issues (solorepo's Article 15). Never summarize diffs.
+
+## Container Subordination
+
+The atomic semantic unit of domain knowledge is the Concept (solorepo's DR-195). Subordinate storage placement to the reader's posture:
+- **Schema Gloss:** `vocabulary.yaml` when machine checks and search aliases suffice.
+- **Section / Subsection:** `##` or `###` within an existing document when tightly bound to an aggregate.
+- **Dedicated Wiki Page:** `wiki/<context>/<concept>.md` when the concept has independent depth, invariants, or broad relevance.
+- **Subdirectory:** A folder grouping related concept pages for complex domain aggregates.
+
+Strictly avoid 'wiki article' (`avoid: [wiki article]`) to protect Charter Articles (solorepo's Article 1, solorepo's Article 15).
 
 ## Google Developer Style Sentences
 

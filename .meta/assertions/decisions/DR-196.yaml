@@ -1,0 +1,71 @@
+decisions:
+  - id: work:decision/196
+    name: "DR-196 · Elevate Diátaxis Compass to Knowledge Management discipline for prose routing and container subordination"
+    challenge: work:challenge/391
+    status: ADOPTED
+    applies:
+      - work:article/1
+      - work:article/15
+      - work:article/17
+    enacted_in:
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/wiki-solorepo-knowledge-management
+      - work:artifact/skill-technical-writing
+    context: >-
+      While solorepo established Wikipedia-style Knowledge Management (solorepo's DR-184)
+      and layered technical writing standards (solorepo's DR-194), arriving agents
+      frequently lacked an unambiguous, deterministic pre-writing entrypoint to decide
+      *where* to write for a given change and *how* to shape the prose. Consequently,
+      maintainers and autonomous loops suffered from cross-boundary mode-mixing (e.g.
+      arguing past debates in reference docstrings, placing imperative commands in wiki
+      expositions) or dumped unrouted knowledge into pull request descriptions in
+      violation of Article 15. Furthermore, domain knowledge required explicit guidance
+      subordinating physical storage container placement (schema gloss, section/subsection,
+      standalone wiki page, or subfolder) to reader posture under the Diátaxis Compass.
+    alternatives:
+      - name: Retain Diátaxis as an advisory guideline inside the technical writing skill only
+        chosen: false
+        reason: >-
+          Leaves the coordinate system as an informal practice rather than an asserted,
+          checkable repository discipline. Arriving agents on coding tasks would continue
+          to bypass the routing step and leak unrouted knowledge into PR summaries.
+      - name: Mint Diátaxis as a separate standalone discipline
+        chosen: false
+        reason: >-
+          Fragments Knowledge Management into competing disciplines. Knowledge
+          Management is inherently the governance of repository exposition; partitioning
+          its coordinate system into an isolated discipline creates jurisdictional
+          redundancy.
+      - name: Elevate Diátaxis Compass into Knowledge Management discipline
+        chosen: true
+        reason: >-
+          Broadens Knowledge Management from being solely 'the wiki discipline' to being
+          the overarching authority governing all maintainer knowledge routing and
+          exposition. Establishes the pre-writing decision tree, enshrines the Residue
+          Principle (Article 15), subordinates physical container selection to Diátaxis
+          judgement, and aligns prompt conventions across AGENTS.md.
+    consequences:
+      - >-
+        work:discipline/knowledge-management in imported/disciplines.yaml is updated to
+        incorporate the Diátaxis Compass coordinate system, the pre-writing routing
+        decision tree, container subordination, and residue exclusion.
+      - >-
+        wiki/solorepo/knowledge-management.md is updated to explain the four Diátaxis
+        quadrants, pre-writing routing, container subordination, and Google developer style
+        rules.
+      - >-
+        .meta/render.py updates .claude/skills/technical-writing/SKILL.md to include the
+        routing decision tree, container subordination, and residue principle.
+      - >-
+        AGENTS.md and template/AGENTS.md are updated with the pre-writing routing convention.
+    falsifier: >-
+      A pull request body that summarizes diffs or holds durable knowledge instead of
+      residue, or a reference docstring that contains historical litigation or how-to
+      steps rather than contract facts.
+    rationale: |-
+      In the agentic era, autonomous workers require deterministic coordinate systems.
+      The Diátaxis Compass solves both *where to write* and *how to write* by mapping
+      knowledge along the axes of Learning vs. Work and Understanding vs. Action.
+      Subordinating container selection to Diátaxis decouples the atomic Concept from
+      arbitrary file divisions and protects the pull request body as a container for
+      residue only.

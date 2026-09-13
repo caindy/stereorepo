@@ -281,18 +281,21 @@ _Produces: Artifacts that carry their own reasoning, and a pull request holding 
 
 ### Knowledge Management
 
-Prose addressed to a maintainer who arrives cold and seeks to understand an architecture, subsystem, or domain concept belongs in an encyclopedic wiki partitioned by Bounded Context (solorepo's DR-184). A maintainer-facing explanation is never lost to a pull request body or dumped as unrouted markdown.
-Every Concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page; every page follows Wikipedia editorial conventions (MOS:LEAD bold lead definition, neutral encyclopedic register, dereferenced citations); and internal concept references use closed-world wikilinks.
+The governance and routing of all maintainer-facing prose across the repository according to the Diátaxis Compass (solorepo's DR-184, solorepo's DR-194, solorepo's DR-196). Every unit of written knowledge is routed before writing to its authoritative container: Reference in public docstrings and schemas, Explanation in wiki pages and Decision Records, How-To in justfile recipes and specialization guides, and Tutorial in onboarding walkthroughs. What remains after routing is the residue, and only residue belongs in a pull request body (Article 15).
+Every Concept in a Bounded Context's Ubiquitous Language has an atomic definition; where it lands in the artifact hierarchy (schema gloss, section, standalone wiki page, or subfolder) is subordinate to the authoring agent's judgement under Diátaxis. Maintainer explanations follow Wikipedia editorial conventions (MOS:LEAD bold lead definitions, neutral register, closed-world wikilinks).
 
-**Where the judgement is.** Determining whether an explanation is an invariant (Article), an unbuilt intent (Roadmap Issue), an architectural choice (Decision Record), or an encyclopedic concept explanation (Wiki Page). Maintaining the balance between a concise machine gloss in the vocabulary schema and narrative exposition in the wiki.
+**Where the judgement is.** Executing the pre-writing routing decision tree before drafting prose: determining whether a unit of knowledge is an invariant (Charter Article), a settled architectural choice (Decision Record), a repeatable procedure (How-To Recipe), a contract fact (Reference Docstring), or an encyclopedic concept exposition (Wiki Page). Subordinating physical container depth to reader posture without mode-mixing across artifact boundaries.
 
-1. Structure documentation by Bounded Context (`wiki/<bounded-context>/`). Keep `wiki/solorepo/` hermetic to the scaffold, while specialized portfolios house their domain concepts under their own bounded context folders.
-2. Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within each Bounded Context.
-3. Open every wiki page with a MOS:LEAD first sentence that states what the concept is in bold, concurring with its vocabulary definition.
-4. Connect concepts using closed-world wikilinks (`[[concept]]` or scoped `[[context/concept]]`). A link to an unminted concept or dead target is red and fails verification.
-5. Dereference citations to Decision Records and Articles rather than re-litigating rationale inline.
+1. Route first via the Diátaxis Compass before typing prose. Match the knowledge to its quadrant: Reference (Work + Understanding), Explanation (Learning + Understanding), How-To (Work + Action), or Tutorial (Learning + Action).
+2. Subordinate container placement to reader posture. A Concept may reside in a schema gloss, an existing document section, a dedicated wiki page (`wiki/<context>/<concept>.md`), or a subsystem subdirectory.
+3. Structure documentation by Bounded Context (`wiki/<bounded-context>/`). Keep `wiki/solorepo/` hermetic to the scaffold, while specialized portfolios house their domain concepts under their own bounded context folders.
+4. Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within each Bounded Context (Article 17, solorepo's DR-190).
+5. Open every wiki page with a MOS:LEAD first sentence that states what the concept is in bold, concurring with its vocabulary definition.
+6. Connect concepts using closed-world wikilinks (`[[concept]]` or scoped `[[context/concept]]`). A link to an unminted concept or dead target is red and fails verification (solorepo's DR-185).
+7. Apply Google developer style rules: direct address in the present tense, active voice, elimination of filler words, and rhythmic variation.
+8. Dereference citations to Decision Records and Articles rather than re-litigating rationale inline.
 
-_Produces: An encyclopedic, browsable knowledge base partitioned by Bounded Context, free of orphaned prose or ungrounded terminology._
+_Produces: An encyclopedic, browsable knowledge base partitioned by Bounded Context, free of orphaned prose, mode-mixing, or ungrounded terminology._
 
 ---
 
