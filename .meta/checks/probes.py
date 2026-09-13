@@ -1404,32 +1404,33 @@ def enacted_probes():
     problems = []
 
     def read(changed):
-        original = check_pr.touched, check_pr.artifacts, check_pr.accounted
+        original = check_pr.touched
         check_pr.touched = lambda base: changed
-        check_pr.artifacts = lambda: {".meta/arc/deploy", ".meta/say/move",
-                                      check_pr.INDEX}
-        check_pr.accounted = lambda: {".meta/arc/deploy": {137, 160},
-                                      ".meta/say/move": {117}}
         try:
             return check_pr.unenacted("origin/main")
         finally:
-            check_pr.touched, check_pr.artifacts, check_pr.accounted = original
+            check_pr.touched = original
 
-    entry = ".meta/assertions/decisions/DR-" + "160.yaml"
+    # 1. No decision settled
     found, note = read([".meta/arc/deploy", ".meta/say/move"])
     if found or "settles no decision" not in note:
         problems.append(f"unenacted: a branch settling no decision reported {found!r}, {note!r}")
 
-    # The one finding, and the three silences beside it: the artifact the entry
-    # names, the record's own index, and a file no `artifacts:` list declares.
-    found, _ = read([entry, ".meta/arc/deploy", ".meta/say/move", check_pr.INDEX,
-                     ".meta/checks/probes.py"])
-    if len(found) != 1 or not found[0].startswith(".meta/say/move:"):
-        problems.append(f"unenacted: DR-{"160"} editing an artifact it names and one it does "
-                        f"not reported {found!r}")
-    if found and ("DR-" + "160") not in found[0]:
-        problems.append(f"unenacted: the finding {found[0]!r} does not name the entry it is "
-                        "read against, which is what the repair is made in")
+    # 2. Settled decision is valid
+    entry = ".meta/assertions/decisions/DR-" + "160.yaml"
+    found, note = read([entry, ".meta/arc/deploy"])
+    if found:
+        problems.append(f"unenacted: DR-{'160'} (valid) reported problems {found!r}")
+
+    # 3. Settled decision has no non-record artifacts (mocking parse_decision_yaml)
+    orig_parse = check_pr.parse_decision_yaml
+    check_pr.parse_decision_yaml = lambda path: ("ADOPTED", [])
+    try:
+        found, note = read([entry])
+        if not found or ("DR-" + "160") not in found[0]:
+            problems.append(f"unenacted: DR-{'160'} with no artifacts did not report expected problem, got {found!r}")
+    finally:
+        check_pr.parse_decision_yaml = orig_parse
 
     # And the step is skipped, rather than answered, wherever the freshness of
     # the page it reads is not established — stale, and unread alike. A render

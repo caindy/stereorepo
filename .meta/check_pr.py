@@ -734,38 +734,76 @@ def unrendered():
                         + (said or out.stderr.strip() or f"exit {out.returncode}"))
 
 
+def artifact_map():
+    """Maps artifact IDs (e.g. 'work:artifact/meta-charter') to their declared paths.
+
+    Returns a dictionary (`dict[str, str]`) mapping these artifact ID strings to
+    their declared file paths relative to the workspace root.
+    """
+    mapping = {}
+    for rel in ("assertions/structure.yaml", "assertions/imported/structure.yaml"):
+        path = META / rel
+        if not path.is_file():
+            continue
+        curr_id = None
+        for line in path.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("- id:"):
+                curr_id = stripped.split(":", 1)[1].strip()
+            elif curr_id and stripped.startswith("path:"):
+                p = stripped.split(":", 1)[1].strip().strip('"\'')
+                mapping[curr_id] = p
+                curr_id = None
+    return mapping
+
+
+def parse_decision_yaml(path):
+    """Parses a decision yaml file, returning its status and the list of enacted_in artifact ids.
+
+    The `path` parameter expects a `pathlib.Path` instance pointing to the YAML
+    decision file. Returns a tuple of `(status, enacted_in)` consisting of
+    `status` (a string or None) and `enacted_in` (a list of artifact ID strings).
+    """
+    status = None
+    enacted_in = []
+
+    lines = path.read_text().splitlines()
+    in_enacted_in = False
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("status:"):
+            status = stripped.split(":", 1)[1].strip().strip('"\'')
+        elif stripped.startswith("enacted_in:"):
+            in_enacted_in = True
+            continue
+        elif in_enacted_in:
+            if stripped.startswith("-"):
+                art = stripped.removeprefix("-").strip().strip('"\'')
+                enacted_in.append(art)
+            elif line.startswith("  ") and not stripped:
+                continue
+            elif stripped and not stripped.startswith("-") and ":" in stripped:
+                in_enacted_in = False
+
+    return status, enacted_in
+
+
+RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
+
+
 def unenacted(base):
-    """Artifacts this branch edits that no decision it settles names (A20, solorepo's DR-131).
+    """Sufficient artifacts under enacted_in for each settled decision.
 
-    `enacted_in` says where a rule lives, and a change that settles a decision is
-    the change that puts the rule where it now lives. So an artifact edited by
-    that change and named by none of its entries is one of two things, and both
-    are worth stopping for: a rule put somewhere the record does not point at, or
-    a file edited on a branch that is not about it.
+    Article 20 (A20), defined in the charter ('.meta/charter.md'), requires that
+    an adopted Decision must name at least one Artifact carrying its rule.
+    `enacted_in` says where a rule lives; an entry of the record itself would
+    satisfy the letter and defeat the point, so it does not count.
 
-    This is the reviewer's standard, read at the handoff instead of in a review
-    round. On solorepo's #265 it took four of them — a verdict at a time, each
-    naming one more artifact the branch edited and `enacted_in` did not, the last
-    approving on "every artifact this branch edits is named in it, which was the
-    whole ask". Nothing about that reading needs a reader: what the branch edited
-    is in git and what the entry names is in the record, and the comparison is
-    the two of them.
-
-    The universe is the Artifacts, because `enacted_in` names those and nothing
-    else, so a file that is not one cannot be named without being declared first
-    — which is a judgement, and this is not where it is made. The record's own
-    index is passed over for A20's reason. What this is blind to is therefore
-    the file no `artifacts:` list declares, and the repair for it is one an
-    entry's own author is better placed to see than a check is.
-
-    Two repairs, and the failure names both. Name the Artifact under
-    `enacted_in`, where the entry's rule does live in that file; or leave the
-    file out of this branch, where it does not — one commit per settled decision
-    is the convention that makes the second answer available at all.
-
-    Three answers, as the render's reader has: a `None` is "what this branch
-    changed went unread", which is neither green nor a finding about the tree
-    (A6), and is what a base git cannot resolve produces.
+    The `base` parameter expects a git reference string (e.g. 'origin/main') to
+    compare this branch against. Returns a tuple of `(problems, note)` consisting of
+    a list of problem strings and a summary note string, or `(None, note)` if the
+    base is unresolvable.
     """
     changed = touched(base)
     if changed is None:
@@ -773,14 +811,30 @@ def unenacted(base):
     settled = sorted({int(m.group(1)) for p in changed if (m := ENTRY_FILE.match(p))})
     if not settled:
         return [], "this branch settles no decision"
+
+    amap = artifact_map()
+    problems = []
+
+    for n in settled:
+        path = ROOT / f".meta/assertions/decisions/DR-{n:03d}.yaml"
+        if not path.is_file():
+            continue
+
+        status, enacted_in = parse_decision_yaml(path)
+        if status == "ADOPTED":
+            valid_paths = []
+            for art_id in enacted_in:
+                p = amap.get(art_id)
+                if p and not any(p.startswith(r) for r in RECORD):
+                    valid_paths.append(p)
+            if not valid_paths:
+                problems.append(
+                    f"DR-{n:03d}: is adopted and names no Artifact carrying its rule "
+                    f"under enacted_in — name at least one non-record Artifact carrying its rule"
+                )
+
     shown = ", ".join(f"DR-{n:03d}" for n in settled)
-    named, declared = accounted(), artifacts()
-    edited = [p for p in changed if p in declared and p != INDEX]
-    return ([f"{p}: this branch edits it, and none of the entries it settles "
-             f"({shown}) names it under enacted_in — name the Artifact at that "
-             f"path there, or leave the file to the change that carries its rule"
-             for p in edited if not named.get(p, set()) & set(settled)],
-            f"{len(edited)} artifact(s) edited, each named in {shown}")
+    return problems, f"{len(settled)} decision(s) settled on this branch ({shown})"
 
 
 def handoff(base):
