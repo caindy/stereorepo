@@ -7,7 +7,6 @@ decisions:
       - work:article/6
     enacted_in:
       - work:artifact/github-workflows-coder
-      - work:artifact/meta-reading-pass
       - work:artifact/meta-checks-probes
       - work:artifact/meta-checks-citations
       - work:artifact/meta-disciplines

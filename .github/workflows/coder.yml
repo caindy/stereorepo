@@ -449,7 +449,7 @@ jobs:
       - name: choose the depth
         id: depth
         run: |
-          printf 'level=%s\nreader=claude-sonnet-5\n' "$LEVEL" >> "$GITHUB_OUTPUT"
+          printf 'level=%s\n' "$LEVEL" >> "$GITHUB_OUTPUT"
           if [ "$TASK" = rebase ]; then
             printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
           elif [ "$EVENT" = pull_request_review ] && [ "$STATE" = approved ]; then
@@ -542,33 +542,10 @@ jobs:
             so answer its `x` by fixing the sentence, or by leaving it and
             saying why on the pull request (solorepo's DR-134).
 
-            Before you hand the branch over as finished — whatever the last
-            verb of that hand-off is at this level — have the diff read by
-            somebody who did not write it: spawn one subagent with `Agent` on the smaller
-            model — `sonnet`, which is `${{ steps.depth.outputs.reader }}` — tell it to read this
-            branch's diff against `origin/main` and report what it finds, and
-            tell it nothing of why you chose what you chose. Run it in the
-            foreground, never with `run_in_background`, so its report arrives
-            in the same turn (solorepo's DR-122): the run ends when your turn
-            ends, and your next act is the hand-off below that ends it, so a
-            backgrounded agent hands back an id and the reviewer gets the diff
-            unchanged. Nor could anything here read it later: TaskOutput is
-            not among this step's tools. You rereading your own diff is
-            the party with an interest reading its own work; a reader that has
-            not seen the argument is a different reader. What comes back is
-            yours to act on or not, exactly as anything you spot yourself is,
-            and what you decide not to do you raise as a notice on the diff.
-            Your initial pass (pass 1) remains concise and direct, adhering to work:personality/coder.
-            Durable artifacts and source docstrings must satisfy the reader-facing literate
-            programming rubric (solorepo's DR-175), which the technical writer review pass (solorepo's DR-176)
-            verifies before landing.
-            The pass itself says nothing and changes no state: no comment that
-            it ran, no verb of its own. A notice is about a finding rather than
-            about the pass, and it is the only sign on GitHub that the pass
-            happened at all. The run holds one more, which the step after this
-            one reads: your session's model breakdown, where a subagent's
-            tokens land under the model it ran on (solorepo's DR-165).
-            ${{ steps.depth.outputs.model == steps.depth.outputs.reader && format('This run is itself on `{0}`, the reader''s own model, so the breakdown cannot tell your reader''s call from your own. The answer on this level is `indistinguishable`, which is green whether you spawned anybody or not, so nothing counts this pass here. What it buys is what it buys anywhere — a diff read by somebody who did not write it — and on this level it is bought on your word.', steps.depth.outputs.reader) || format('Yours is `{0}` and the reader''s is `{1}`, so a run of yours that ends with no `{2}` call in it is red. It counts a call and cannot see what the call read, so a subagent spawned to satisfy it rather than to read the diff satisfies nothing and costs the run its reader.', steps.depth.outputs.model, steps.depth.outputs.reader, steps.depth.outputs.reader) }}
+            Before you hand the branch over as finished, reread your diff
+            against origin/main to verify quality and consistency.
+            What you spot is yours to act on or not; what you decide not to
+            do you raise as a notice on the diff with `.meta/say/post notice`.
 
             `easy` and `medium`: if you raised any notice on the diff, promote each
             surviving thread with `.meta/say/post promote <thread-id> --title T --difficulty hard < issue-body.md`
@@ -700,84 +677,7 @@ jobs:
             GitHub any other way: the hook refuses `gh pr create`, `gh pr
             comment`, `gh issue edit`, `gh issue comment` and `gh api`.
 
-      # The falsifier for the paragraph above (solorepo's DR-165). The reading
-      # pass is silent by design — no comment, no verb, no state — so GitHub
-      # holds nothing that tells a run which spawned the reader from one that
-      # read the sentence and went on to the hand-off. The run holds the fact
-      # instead: the action writes the session's SDK messages to the file its
-      # `execution_file` output names, and the `result` among them carries a
-      # per-model breakdown which the SDK declares to cover "main loop, Task
-      # subagents, sidechains", against a `usage` beside it declared "MAIN
-      # AGENT LOOP ONLY". So on a `medium` run — this one at Opus, the reader
-      # at Sonnet — a Sonnet call in the breakdown is one the main loop did not
-      # make. `reading_pass.py` holds what that means, including what it cannot
-      # tell; this step hands it the file and the two models.
-      #
-      # Red here is a run that handed an unread diff to the reviewer, and it is
-      # the whole of what is said about it: a comment would be the ceremony the
-      # pass was built without, and the pull request is handed off by the time
-      # this step runs either way.
-      #
-      # Only where the hand-off the pass binds actually happened, which the
-      # exit status does not say. A take that ends in `.meta/say/move stop` —
-      # the ending the paragraph above instructs, for a decision only the solo
-      # can take or a gate that will not go green — posts its account, releases
-      # the claim, moves the Challenge to `human` and returns, so the session
-      # ends normally and `outcome` is `success`. That run never reached "Before
-      # you request the review" and spawned no reader, and the mark it would
-      # earn here says the diff went to the reviewer unread when the Challenge
-      # went to the solo instead. Red marks the run, and a marked run is what
-      # the next entry on this is written from, so a population with every
-      # self-stopped `medium` run in it is the falsifier reporting on something
-      # else (solorepo's DR-165).
-      #
-      # So the fact asked for is the one the step below asks: `handed` from
-      # `check_pr.py --hand-back`, a review requested or a merge armed, which is
-      # the hand-off and not an inference from how the process exited. A run
-      # killed at its budget is `outcome != 'success'` and belongs to that step;
-      # where its hand-back requests review on a green unfinished run the diff
-      # does go unread, and what says so is the red on `take` itself.
-      #
-      # A read that cannot answer passes, which is the one place this differs
-      # from `reading_pass.py`'s own rule that a read that did not arrive is not
-      # a green. What is unknown there is the reader; what is unknown here is
-      # whether the pass was owed at all, and marking a run the check cannot
-      # place is the failure this guard was narrowed to stop.
-      #
-      # Three states of the world pass, and the line this step prints is the
-      # whole of what it says about which — it posts nothing and holds no verb,
-      # so a run that comes back to this has the log line and nothing else. So
-      # they are told apart here as the step below tells them apart, off the
-      # same JSON: `pr` empty is the read that failed and could place nothing,
-      # `number` empty is a Challenge with no pull request open, and the rest is
-      # a pull request nobody was asked to hold. Saying "no review requested" on
-      # the first would be this step asserting the fact it just failed to read.
-      - name: the reading pass ran
-        if: >-
-          !cancelled() && github.event_name == 'issues'
-          && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude'
-          && steps.take_claude.outcome == 'success'
-        run: |
-          pr=$(python3 .meta/check_pr.py --hand-back "$ISSUE") || pr=
-          number=$(jq -r '.number // empty' <<<"$pr")
-          handed=$(jq -r '.handed // empty' <<<"$pr")
-          if [ "$handed" != true ]; then
-            if [ -z "$pr" ]; then
-              echo "The hand-back could not read what this run left. check_pr.py --hand-back failed, so whether a pull request is open on #$ISSUE's branch, and whether anybody was asked to hold it, is unknown here; the run log above says why it failed. A run this check cannot place is not a run it marks. Nothing to falsify."
-            elif [ -z "$number" ]; then
-              echo "#$ISSUE has no open pull request, so this run reached no hand-off for the reading pass to bind. Nothing to falsify."
-            else
-              echo "#$ISSUE's pull request #$number has no review requested and no merge armed, so this run did not end at the hand-off the reading pass binds — a run that stopped itself ends here too, and it was told to. Nothing to falsify."
-            fi
-            exit 0
-          fi
-          python3 .meta/reading_pass.py "$EXECUTION" --model "$MODEL" --reader "$READER"
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number }}
-          EXECUTION: ${{ steps.take_claude.outputs.execution_file }}
-          MODEL: ${{ steps.depth.outputs.model }}
-          READER: ${{ steps.depth.outputs.reader }}
+
 
       # A run that ended without finishing — the step's timeout, the turn
       # limit, a crash — and without saying so has left the Issue claimed and

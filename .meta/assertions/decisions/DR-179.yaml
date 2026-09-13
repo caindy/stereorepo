@@ -17,7 +17,6 @@ decisions:
       - work:artifact/meta-gate
       - work:artifact/meta-hooks-signed-channel
       - work:artifact/meta-next
-      - work:artifact/meta-reading-pass
       - work:artifact/meta-render
       - work:artifact/meta-say
       - work:artifact/meta-say-commit

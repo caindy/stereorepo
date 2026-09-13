@@ -67,23 +67,7 @@ def load_timing():
     return module
 
 
-def load_reading_pass():
-    """`reading_pass.py` as a module: the coder's falsifier, read rather than run.
 
-    The same bargain a third time (solorepo's DR-165). This one is a step of
-    `coder.yml` and runs nowhere else, so the only way its predicate is exercised
-    before a run depends on it is a probe holding execution files up to it —
-    which needs the module and not the command, since the command's whole answer
-    is an exit status.
-    """
-    import importlib.util
-    from importlib.machinery import SourceFileLoader
-
-    loader = SourceFileLoader("reading_pass", str(META / "reading_pass.py"))
-    spec = importlib.util.spec_from_loader("reading_pass", loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
 
 
 def load_check_pr():

@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/362
+    name: "Align coder reading pass across harnesses to an in-session diff review prompt"
+    challenge_type: DEFECT
+    description: >-
+      Divergent pre-review behavior exists between Claude Code and Gemini CLI coder harnesses.
+      The Claude harness spawns a smaller-model subagent and relies on SDK-coupled files to verifycompliance,
+      while Gemini uses a lightweight in-session prompt to reread the diff. The subagent pass adds substantial
+      latency, cost, and fragile coupling.

@@ -1,0 +1,54 @@
+decisions:
+  - id: work:decision/181
+    name: "DR-181 · Align coder reading pass across harnesses to an in-session diff review prompt"
+    challenge: work:challenge/362
+    status: ADOPTED
+    supersedes:
+      - work:decision/165
+    enacted_in:
+      - work:artifact/github-workflows-coder
+      - work:artifact/specialize
+    context: >-
+      DR-165 introduced a pre-review reading pass for the Claude Code harness,
+      requiring the coder agent to spawn a foreground subagent on a smaller model (`claude-sonnet-5`)
+      to review the diff. The pass was falsified using a post-step `the reading pass ran`
+      calling `.meta/reading_pass.py` to inspect the SDK's `claude-execution-output.json`.
+
+      However, this subagent-based reading pass adds substantial turn latency, increases token cost,
+      and is deeply coupled to Claude's proprietary SDK message schema (Issue #295).
+      Furthermore, it is completely unsupported on non-Claude harnesses (such as Gemini CLI),
+      where the pre-review reading pass instead relies on an in-session prompt instruction to review `git diff origin/main`.
+      This divergence creates an inconsistent experience across harnesses and acts as an unproven, redundant
+      "reviewer before the reviewer" when an independent Reviewer Role already evaluates every pull request.
+    alternatives:
+      - name: Maintain divergent pre-review behaviors for Claude and Gemini
+        chosen: false
+        reason: >-
+          Keeping the Claude-specific subagent pass preserves a falsified check, but perpetuates severe SDK-level coupling,
+          increased token/time costs, and inconsistent developer experiences depending on the harness used.
+      - name: Generalize the subagent-based reading pass to all harnesses
+        chosen: false
+        reason: >-
+          Spawning subagents or secondary models is not uniformly supported across all CLI harnesses or run modes,
+          and would introduce unnecessary architectural complexity, API usage cost, and latency.
+      - name: Unify the reading pass using an in-session diff review prompt across all harnesses
+        chosen: true
+        reason: >-
+          Retiring the separate subagent model execution and relying on an in-session prompt instruction to reread
+          `git diff origin/main` simplifies `coder.yml`. This decouples the workflow from private SDK implementation details,
+          removes execution latency, and aligns Claude Code with Gemini CLI's existing model-agnostic behavior.
+    consequences:
+      - >-
+        Claude Code's prompt in `coder.yml` is updated to match Gemini's harness-agnostic diff review instruction.
+      - >-
+        The subagent requirement, model depth parameters, and the Claude-specific `the reading pass ran` workflow step are removed from `coder.yml`.
+      - >-
+        `.meta/reading_pass.py` is retired, removed from the `SPECIALIZE.md` copy set, and its corresponding tests/probes are removed from `.meta/checks/probes.py`.
+    falsifier: >-
+      A coder run on Claude Code that requests a review without having run the in-session `git diff` review,
+      meaning the prompt instruction was ignored or bypassed by the agent.
+    rationale: |-
+      Unifying the pre-review reading pass around a single, harness-agnostic in-session prompt instruction reduces
+      coupling, latency, and cost while ensuring a consistent developer experience across both Claude and Gemini.
+      Relying on the agent to read its own diff in-session before handoff is lightweight and robust, leaving full validation
+      to the independent Reviewer Role where it structurally belongs.
