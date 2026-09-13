@@ -1,0 +1,77 @@
+decisions:
+  - id: work:decision/184
+    name: "DR-184 · The Knowledge Management Discipline and hermetic wiki/solorepo/ layout"
+    challenge: work:challenge/24
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/17
+    enacted_in:
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-assertions-disciplines
+      - work:artifact/meta-disciplines
+      - work:artifact/specialize
+      - work:artifact/wiki-readme
+      - work:artifact/wiki-solorepo-readme
+    context: >-
+      The repository lacked a designated home for maintainer-facing exposition—prose
+      addressed to someone arriving cold who seeks to understand an architecture or
+      domain concept rather than checking an invariant or dereferencing a
+      decision. When explanations were authored in sessions or pull request reviews,
+      they were either lost in pull request bodies or dumped into unlinked markdown
+      that Nothing Unconsumed flags as debris. Furthermore, a portfolio had no
+      designated place for product/domain explanation material (#39).
+      Issue #22 proposed borrowing Wikipedia's native conventions (MOS:LEAD bold lead
+      definitions, closed-world wikilinks, encyclopedic tone) to leverage LLM priors.
+      Issue #24 originally coupled this with renaming Article to Steering, which
+      risked massive churn across established A<n> citations.
+    alternatives:
+      - name: Rename Article to Steering to avoid homonym collision with Wikipedia "articles"
+        chosen: false
+        reason: >-
+          Citations A1 through A21 are cemented across dozens of commits, Decision
+          Records, and gate checks. Renaming them would cause extensive churn and
+          break cognitive fluency. Wiki documents are named "Pages" rather than
+          "Articles", avoiding the homonym collision completely.
+      - name: Flat unpartitioned wiki directory at repository root
+        chosen: false
+        reason: >-
+          An unpartitioned directory causes scaffold tooling concepts to collide
+          with specialized product domain concepts when a repo is cloned and
+          specialized.
+      - name: Knowledge Management Discipline with hermetic Bounded Context partitioning (wiki/solorepo/)
+        chosen: true
+        reason: >-
+          Grounds the wiki directly in Domain-Driven Design. Solorepo's own
+          concepts reside hermetically in `wiki/solorepo/` matching its bounded
+          context (`ddd:context/solorepo`) and travel cleanly with the scaffold.
+          Specialized portfolios retain this directory intact and add their own
+          bounded context folders (e.g. `wiki/billing/`), preventing any domain
+          pollution.
+    consequences:
+      - >-
+        `.meta/assertions/imported/disciplines.yaml` adopts the Knowledge Management
+        Discipline, inherited by all specialized portfolios.
+      - >-
+        `wiki/solorepo/` is established as the hermetic home for scaffold
+        maintainer documentation, seeded with foundational pages adhering to
+        MOS:LEAD bold lead definitions.
+      - >-
+        Specialization step 2 copies `wiki/solorepo/` so portfolios inherit the
+        scaffold's operating documentation without namespace pollution.
+      - >-
+        Resolves Challenge 24 and Challenge 39.
+    falsifier: >-
+      A maintainer-facing explanation committed outside `wiki/`, or a wiki page
+      authored under `wiki/solorepo/` that defines a product-domain concept rather
+      than a scaffold/engineering concept.
+    rationale: |-
+      Exposition addressed to a human or agent maintainer requires an encyclopedic
+      genre distinct from decision records (which capture why a choice was made)
+      and vocabulary glosses (which capture concise machine definitions).
+
+      Partitioning the wiki by Bounded Context mirrors the domain model: solorepo's
+      own tooling lives in `wiki/solorepo/`, and specialized portfolios manage their
+      domain concepts under their own bounded context buckets. This preserves the
+      hermetic boundary of the scaffold while giving every specialization an
+      orderly home for product documentation.

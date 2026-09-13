@@ -550,3 +550,44 @@ disciplines:
       - Supersede by writing again and naming what is replaced. Never rewrite.
     produces:
       - Artifacts that carry their own reasoning, and a pull request holding what none of them owns.
+  - id: work:discipline/knowledge-management
+    name: Knowledge Management
+    description: >-
+      Prose addressed to a maintainer who arrives cold and seeks to understand
+      an architecture, subsystem, or domain concept belongs in an encyclopedic
+      wiki partitioned by Bounded Context (solorepo's DR-184). A maintainer-facing explanation is
+      never lost to a pull request body or dumped as unrouted markdown.
+
+      Every Concept in a Bounded Context's Ubiquitous Language has a
+      corresponding wiki page; every page follows Wikipedia editorial
+      conventions (MOS:LEAD bold lead definition, neutral encyclopedic register,
+      dereferenced citations); and internal concept references use closed-world
+      wikilinks.
+    judgement: >-
+      Determining whether an explanation is an invariant (Article), an
+      unbuilt intent (Roadmap Issue), an architectural choice (Decision Record),
+      or an encyclopedic concept explanation (Wiki Page). Maintaining the
+      balance between a concise machine gloss in the vocabulary schema and
+      narrative exposition in the wiki.
+    steps:
+      - >-
+        Structure documentation by Bounded Context (`wiki/<bounded-context>/`). Keep
+        `wiki/solorepo/` hermetic to the scaffold, while specialized portfolios house
+        their domain concepts under their own bounded context folders.
+      - >-
+        Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within
+        each Bounded Context.
+      - >-
+        Open every wiki page with a MOS:LEAD first sentence that states what the
+        concept is in bold, concurring with its vocabulary definition.
+      - >-
+        Connect concepts using closed-world wikilinks (`[[concept]]` or scoped
+        `[[context/concept]]`). A link to an unminted concept or dead target is red
+        and fails verification.
+      - >-
+        Dereference citations to Decision Records and Articles rather than re-litigating
+        rationale inline.
+    produces:
+      - >-
+        An encyclopedic, browsable knowledge base partitioned by Bounded Context, free
+        of orphaned prose or ungrounded terminology.
