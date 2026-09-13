@@ -7,6 +7,8 @@ portfolio would not inherit, and the half the two gate workflows hold equal.
 `tree()` is here because it is the tree as git sees it, which is the only list
 of files the gate trusts, and `citations.py` reads prose out of it
 (solorepo's DR-150).
+
+History in files.history.md (solorepo's DR-171).
 """
 import ast
 import functools
@@ -34,14 +36,7 @@ from collect import (
 
 
 class Strict(yaml.SafeLoader):
-    """A loader that notices a key written twice.
-
-    PyYAML takes the last of a repeated key without a word, so an editing slip
-    becomes a value that is right by luck rather than by construction (solorepo's DR-053). It was
-    right by luck once here — a script that added `broader` to concepts that
-    already had one left 29 duplicates, every pair identical, and the render was
-    correct for no reason anyone had checked.
-    """
+    """YAML SafeLoader subclass that intercepts and records duplicate mapping keys (solorepo's DR-053)."""
 
 
 _DUPLICATES = []
@@ -62,13 +57,14 @@ Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _note_dup
 
 @check("duplicate keys", pre=True)
 def duplicate_keys():
-    """Every YAML the gate reads, including the schemas and the seed — and the
-    seeded workflow, whose one typo `safe_load` will not report is this one: a
-    second `steps:` under a job parses, the last wins, and the block that
-    checks out the tree is dropped without a word. `.yml` under `.meta/` too,
-    since solorepo's DR-120 put the composite actions there: a second `steps:` in the
-    sweep's action takes the publish out of the sweep, and the two workflow
-    stubs stay identical, so nothing else would say (solorepo's #129)."""
+    """Validate that no YAML or YML file across `.meta/` and `template/` defines duplicate keys.
+
+    Enforces that all workflow and assertion YAML files parse without repeated keys,
+    preventing silent dictionary value overwrites during loading (solorepo's DR-053, solorepo's DR-120).
+
+    Returns:
+        list[str]: Validation problem messages identifying file, line number, and duplicate key name.
+    """
     problems = []
     for path in sorted([*META.rglob("*.yaml"), *META.rglob("*.yml"),
                         *TEMPLATE.rglob("*.yaml"), *TEMPLATE.rglob("*.yml")]):
@@ -167,18 +163,13 @@ FENCED = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 
 @check("markdown links")
 def markdown_links():
-    """A relative link in a page resolves to something in the tree (solorepo's #45).
+    """Validate that relative Markdown links in documentation resolve to existing files or directories.
 
-    A DR cited in prose has been checked since one dangled for a day; a markdown
-    link is the same failure with more syntax, and the audit solorepo's DR-036 recorded
-    found those by hand. `schemas.md` pointed at `decisions/DR-003.md` for as
-    long as the record had lived somewhere else, and nothing objected.
+    Scans Markdown documentation files outside `template/` and `.git/`, ensuring target paths
+    resolve within the git-tracked tree (solorepo's DR-036).
 
-    Resolution is against the tree as git sees it, not the filesystem: macOS
-    would find `Readme.md` where the runner in CI would not. `template/` is
-    exempt, because its pages link to the pages Specialization renders, which
-    do not exist until it has run. Fenced and inline code is stripped first,
-    since a form showing a link is not making one.
+    Returns:
+        list[str]: Validation problem messages for broken relative links.
     """
     problems = []
     files = {os.path.normpath(str(f)) for f in tree()}
@@ -553,30 +544,13 @@ def inherited():
 
 @check("scaffold-only paths")
 def scaffold_only_paths():
-    """A doc that Specialization copies does not name a path a portfolio lacks (solorepo's #45).
+    """Validate that documentation and workflows copied during Specialization contain no scaffold-only paths.
 
-    `template/`, `SPECIALIZE.md` and `bootstraps/` stay with the scaffold, and a
-    copied page that mentions one reads as true and is not. The audit solorepo's DR-036
-    recorded found the Specialization Discipline moved and its Concept left
-    behind — moving a thing, it says, leaves its name behind. A copy leaves one
-    the same way: prose that crosses into a portfolio still naming what stayed
-    with the scaffold.
+    Ensures that inherited files do not reference paths unique to solorepo (`template/`,
+    `SPECIALIZE.md`, `bootstraps/`) unless explicitly qualified with a `solorepo` owner reference (solorepo's DR-036, solorepo's DR-115).
 
-    A mention is allowed on a line that names `solorepo` as the owner, which is
-    how a portfolio's page refers to the scaffold's. The check reads the copied
-    set from the Specialization step, so in a portfolio — where the Discipline
-    is not carried — it has nothing to scan and says nothing, which is right:
-    the copy is the scaffold's to get right before it happens.
-
-    `.yml` is read as well as `.yaml`, because the copied set is not only prose:
-    a workflow is a copied file that names paths, and the gate workflow named
-    two `bootstraps/` renders for as long as it travelled (solorepo's #75) without this
-    check seeing a suffix it read.
-
-    `template/` is the copied set too — the replacements, which step three
-    copies whole — so it is walked here as well, for the two names it can
-    carry: it cannot name itself, and the seeded gate workflow is where the
-    next `bootstraps/` render would be typed (solorepo's DR-115).
+    Returns:
+        Passed | Found | CouldNotRun: Validation result listing occurrences of scaffold-only paths.
     """
     problems = []
     scanned = set()
@@ -643,43 +617,13 @@ def _first_difference(a, b, path):
 
 @check("gate workflows agree")
 def gate_workflows_agree():
-    """The scaffold's gate workflow and the seeded one differ in nothing the
-    runner reads of their shared half (solorepo's DR-119).
+    """Validate that the root gate workflow and seeded template workflow agree on shared jobs.
 
-    solorepo's DR-115 gave a portfolio a gate workflow of its own and named the cost: two
-    workflows that will drift in their shared half. The half is the triggers,
-    the permissions, and every job both files define under one name — `pull
-    request` and `sweep` — and what held it equal was a comment in the
-    scaffold's copy saying to change both, a reminder and not a control. solorepo's DR-114
-    then made the scheduled sweep fail on a Challenge with no difficulty, which
-    reached the scaffold's copy as a step and the `issues: read` that step needs,
-    and the seeded copy stayed a version behind (solorepo's #113).
+    Verifies structural and semantic parity across triggers, permissions, and shared jobs
+    (`pull-request`, `sweep`) between `.github/workflows/gate.yml` and `template/.github/workflows/gate.yml` (solorepo's DR-115, solorepo's DR-119, solorepo's DR-140).
 
-    Compared as loaded YAML, so each file keeps its own comments and differs in
-    nothing GitHub reads. The shared jobs are named here and not derived: an
-    intersection of the two files' job sets is forgiving on absence, and
-    cannot tell a job the seed never had from one the seed lost, so a shared
-    job deleted from the seed would have been invisible — the falsifier solorepo's DR-119
-    writes for itself, and the reviewer's point on solorepo's #125. So each shared job
-    must be in both files, and the seed defines exactly the shared jobs and
-    its own `gate` job, which solorepo's DR-115 fixed at that name so that a portfolio's
-    ruleset is set once. The scaffold's seed jobs are its alone and are not
-    compared. A portfolio has no `template/`, so there it compares nothing and
-    passes on an empty scope, as `scaffold-only paths` does for the same reason.
-
-    Since solorepo's DR-120 the two shared jobs run one composite action each, under
-    `.meta/actions/`, so their steps are typed once and cannot drift. What is
-    compared here is the residue no mechanism of GitHub's shares: the
-    triggers, the permissions, and the two stubs of checkout and `uses:`.
-
-    All of each stub but `runs-on:` (solorepo's DR-140). This repository's gate
-    runs on a self-hosted scale set named on one machine; a portfolio cloned
-    from the seed has no cluster and `ubuntu-latest`. Held equal, one of the two
-    would have to name a runner it does not have — and a job queued forever on a
-    scale set nobody deployed is the seeded gate silently never running, which is
-    not the drift this step was written against but is the same thing going wrong
-    in the same place. What the two still share is every step, which is what "a
-    version behind" meant in solorepo's #113.
+    Returns:
+        Passed | Found | CouldNotRun: Validation result detailing any discrepancy between shared workflow halves.
     """
     ours = ROOT / ".github" / "workflows" / "gate.yml"
     seed = TEMPLATE / ".github" / "workflows" / "gate.yml"
@@ -719,21 +663,13 @@ def gate_workflows_agree():
 
 @check("template conventions agree")
 def template_conventions_agree():
-    """The scaffold's root instructions and the seeded template instructions agree on core conventions (solorepo's DR-183).
+    """Validate that root agent instructions and seeded template instructions agree on core conventions.
 
-    solorepo's #11 establishes that an edit to one statement cannot leave
-    another behind — either the second copy derives, or the gate names it.
-    `template/AGENTS.md` and `template/.meta/README.md` are the seed files
-    copied into new portfolios by Specialization. When operational conventions
-    evolved at the root (`CLAUDE.md` and `GEMINI.md` symlinks, `move mint` for
-    settling decisions, `just --list` as operator surface, PR First
-    handoff/watch/sweep semaphores, `just next` for finding ripe work, and the
-    ban on harness memory files), the template copies drifted.
+    Verifies that operational conventions asserted in root `AGENTS.md` and `.meta/README.md`
+    are faithfully mirrored in `template/AGENTS.md` and `template/.meta/README.md` (solorepo's DR-183).
 
-    This step checks that the essential operational conventions present in root
-    `AGENTS.md` and `.meta/README.md` are also stated in `template/AGENTS.md` and
-    `template/.meta/README.md`. A portfolio has no `template/`, so there it
-    passes on an empty scope.
+    Returns:
+        Passed | Found | CouldNotRun: Validation result reporting missing convention phrases in template files.
     """
     if not TEMPLATE.is_dir():
         return Passed("no template/ in portfolio")

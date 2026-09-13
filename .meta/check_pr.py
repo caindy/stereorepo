@@ -4,7 +4,7 @@ quarter of A12 whose target is an Issue rather than a file.
 
 `check.py` reads files and this repository's own commits, and reaches the remote
 for one thing only — which Decision numbers are reserved, and only when the
-record has a hole to explain (solorepo's DR-128). History in check_pr.history.md.
+record has a hole to explain (solorepo's DR-128). History in check_pr.history.md (solorepo's DR-171).
 This reads GitHub for everything it does, so it is a separate command with a
 separate lifecycle — it runs when a pull request opens or changes, and there is
 nothing for it to say the rest of the time.
@@ -45,9 +45,7 @@ step's shell (solorepo's DR-155).
 `--handoff` is the one mode that reads the tree rather than GitHub, because what
 it holds is about the branch: A18, and what a branch that changes the record owes
 along with it — a render that is current, and a decision that names the artifacts
-the branch edits while settling it. Both are deterministic, both were costing
-review rounds that found them by reading, and a review round is the most expensive
-place to discover either (solorepo's #302).
+the branch edits while settling it (solorepo's DR-175).
 """
 import argparse
 import datetime
@@ -132,19 +130,27 @@ def fence(path):
 
 
 def uncoded(text):
-    """The text with code fences and inline spans removed.
+    """Strip code fences and inline backtick spans from text.
 
-    `Map<K, V>` is a generic, not an unfilled slot, and a placeholder rule that
-    flagged it in a repository with a Rust bootstrap would be switched off within
-    a week — which Ratchet says is the worse outcome. Code belongs in backticks,
-    so dropping what is in backticks costs nothing and buys the rule its life.
+    Parameters:
+        text (str): Raw markdown text.
+
+    Returns:
+        str: Text with markdown code blocks and inline code spans removed.
     """
     text = re.sub(r"```.*?```", "", text, flags=re.S)
     return re.sub(r"`[^`\n]*`", "", text)
 
 
 def sections(body):
-    """Body text split at each `**Heading.**`, in order, as {heading: text}."""
+    """Splits pull request markdown body text at bold section headings.
+
+    Args:
+        body: Raw markdown body string.
+
+    Returns:
+        dict[str, str]: Mapping of heading names to their corresponding body text.
+    """
     marks = list(HEADING.finditer(body))
     out = {}
     for i, m in enumerate(marks):
@@ -154,7 +160,15 @@ def sections(body):
 
 
 def check(title, body):
-    """Validates a pull request title and body against the required form sections."""
+    """Validates pull request title and body against template requirements.
+
+    Args:
+        title: Pull request title string.
+        body: Pull request markdown body string.
+
+    Returns:
+        list[str]: Validation error messages.
+    """
     problems = []
     required = [m.group(1) for m in HEADING.finditer(fence(FORM))]
     found = sections(body)
@@ -165,11 +179,7 @@ def check(title, body):
         elif not found[heading]:
             problems.append(f"empty section: **{heading}.** — the form was submitted blank")
 
-    # `.meta/templates/` fills with <angle brackets>, so one surviving in a
-    # submitted body is the form itself showing through. The form's own
-    # placeholders are matched exactly, because `<details>` and `<br>` are
-    # legitimate in a body and a rule that flagged them would be switched off.
-    # Anything bracketing a phrase is caught too — that shape is never markup.
+    # Form placeholders in angle brackets indicate incomplete sections.
     form = fence(FORM)
     literal = set(PLACEHOLDER.findall(form)) | set(re.findall(r"<[^<>\s]+>", form))
     for where, raw in (("title", title), ("body", body)):
@@ -178,9 +188,7 @@ def check(title, body):
         for m in sorted(seen):
             problems.append(f"unfilled placeholder in {where}: {m}")
 
-    # What the merge closes. The heading's items carry a closing keyword or the
-    # Issue stays open after the pull request that finished it has merged —
-    # which is how solorepo's #26 sat open until a verb was written to close it (solorepo's DR-089).
+    # Closing keyword ensures merging PR closes referenced issues (solorepo's DR-089).
     closing = found.get(CLOSES, "")
     if closing and not NONE.match(closing):
         items = [m.group(1).strip() for m in BULLET.finditer(closing)]
@@ -302,12 +310,13 @@ def gh(*args):
 
 
 def unsigned_commits(ref):
-    """A19. Every commit on the branch names the Actor that wrote it.
+    """Validates that every commit on the pull request contains an Actor trailer.
 
-    The git hook appends the Trailer, and a hook lives in a worktree — so an
-    agent in a fresh sandbox has none, and the one thing that cannot be forgotten
-    is a check that runs on the pull request. The hook saves the trip; this is
-    the guarantee.
+    Args:
+        ref: Pull request number, URL, or head branch reference.
+
+    Returns:
+        list[str]: Validation messages for commits missing an Actor trailer.
     """
     commits = gh("pr", "view", ref, "--json", "commits")["commits"]
     return [f"{c['oid'][:8]} names no Actor: {c['messageHeadline'][:60]}"
@@ -316,14 +325,13 @@ def unsigned_commits(ref):
 
 
 def pull(ref):
-    """Every review thread and every review on a pull request, fetched once.
+    """Fetches all review threads and reviews for a pull request via GraphQL.
 
-    Split from the readers below because the fetch is the slow, networked,
-    untestable half and no predicate should own it. It is also what makes
-    the threads readable at all: A16 only ever answered pass or fail, so the
-    thing that knows how to ask GitHub what was said could not be asked to say
-    it. The reviews ride in the same query because a verdict is the other half
-    of what was said, and the one half that names a head (solorepo's DR-118).
+    Args:
+        ref: Pull request number, URL, or head branch reference.
+
+    Returns:
+        dict: Pull request GraphQL node containing reviewThreads and reviews.
     """
     owner, name = gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"].split("/")
     number = gh("pr", "view", ref, "--json", "number")["number"]
@@ -333,17 +341,25 @@ def pull(ref):
 
 
 def threads(ref):
-    """Every review thread on a pull request."""
+    """Fetches all review thread nodes for a pull request.
+
+    Args:
+        ref: Pull request number, URL, or head branch reference.
+
+    Returns:
+        list[dict]: Review thread nodes from GraphQL.
+    """
     return pull(ref)["reviewThreads"]["nodes"]
 
 
 def checks_of(node):
-    """A pull request's rollup contexts, flattened as the readers expect them.
+    """Extracts status check contexts from a pull request commit GraphQL node.
 
-    `ROLLUP` reaches the rollup where GitHub keeps it — on the head commit —
-    and the readers want the list of contexts, which is what `gh --json
-    statusCheckRollup` used to hand them. An empty list is a real answer: a
-    head with no checks on it yet.
+    Args:
+        node: Pull request dictionary containing commits nodes.
+
+    Returns:
+        list[dict]: Flattened check run or status check context dictionaries.
     """
     commits = (node.get("commits") or {}).get("nodes") or []
     if not commits:
@@ -353,7 +369,14 @@ def checks_of(node):
 
 
 def rollup_of(number):
-    """The check states on one pull request's head."""
+    """Fetches status check contexts for the head commit of a specific pull request.
+
+    Args:
+        number: Pull request number.
+
+    Returns:
+        list[dict]: Check run or status context nodes.
+    """
     owner, name = repo().split("/")
     data = gh("api", "graphql", "-f", f"query={ROLLUP_ONE}",
               "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}")
@@ -361,8 +384,11 @@ def rollup_of(number):
 
 
 def rollups():
-    """The check states on every open pull request's head, by number, in one
-    query — which is what the sweep needs and what `gh pr list` was carrying."""
+    """Fetches status check contexts across all open pull requests in a single GraphQL query.
+
+    Returns:
+        dict[int, list[dict]]: Mapping of pull request numbers to their check context lists.
+    """
     owner, name = repo().split("/")
     data = gh("api", "graphql", "-f", f"query={ROLLUP_ALL}",
               "-F", f"owner={owner}", "-F", f"name={name}")
@@ -381,13 +407,15 @@ def where_of(thread, owed=True):
 
 
 def shown(thread, where, limit=600):
-    """A thread as the listing prints it: its id, where it sits, who said what.
+    """Format a review thread for display with identifier, location, and comments.
 
-    `limit` cuts each comment at that many characters; `None` prints it whole.
-    The sweep's per-item line stays cut — its job is to say a thread is owed,
-    not to be read — but `--threads` and `--resume`, which are how a thread
-    gets read and answered, pass `None`: a comment cut mid-point reads as the
-    whole of it, and a reader who trusts that has answered half a point (solorepo's #126).
+    Parameters:
+        thread (dict): Thread node payload from GitHub GraphQL query.
+        where (str): Human-readable location description.
+        limit (int, optional): Maximum characters per comment, or None for full text.
+
+    Returns:
+        str: Formatted multi-line thread summary.
     """
     spoke = []
     for c in thread["comments"]["nodes"]:
@@ -432,15 +460,14 @@ def unaddressed(nodes, parked=False, limit=600):
 
 
 def settled(nodes, limit=600):
-    """What was answered and resolved, in the shape of what is owed.
+    """Format resolved review threads for reviewer re-inspection.
 
-    `unaddressed` hides these on purpose: unresolved is the test, and a
-    listing that counted the resolved would wake someone for nothing. Hidden
-    from an arriving reviewer they cost a full review (solorepo's #122): its reading says
-    a re-review reads each answer against the diff it claims, and a listing
-    that shows only what is unresolved shows a re-review nothing, so every
-    pass on solorepo's #117 ran the whole review again. So they are printed, after what
-    is owed and apart from it, with who resolved each; nothing counts them.
+    Parameters:
+        nodes (list[dict]): Review thread nodes from GitHub.
+        limit (int, optional): Maximum characters per comment, or None for full text.
+
+    Returns:
+        list[str]: Formatted summaries of resolved threads with resolver logins.
     """
     out = []
     for t in nodes:
@@ -452,19 +479,13 @@ def settled(nodes, limit=600):
 
 
 def verdicts(reviews):
-    """Each verdict, newest first, on the head GitHub recorded it against.
+    """Format review verdicts in reverse chronological order against head commits.
 
-    A body that says which head it reviewed is a convention the next run has
-    to trust; the commit a review was submitted on is a fact GitHub holds, and
-    it is what a re-review reads to know what it has already seen (solorepo's DR-118).
-    The review a `raise` posts under — no verdict, no body — says nothing and
-    is left out; there is one per raise and per reply, which is why the query
-    asks for the newest hundred and not the oldest (solorepo's #123). Newest first, and
-    printed before everything else, so the verdict a re-review needs is inside
-    the 2 KB preview a long listing is cut to; the owed section alone on solorepo's #117
-    was 2.7 KB. The login is on each line and nothing here says whose Role a
-    verdict is: the reader knows its own login, and the solo's approval and a
-    dismissed verdict print as what they are.
+    Parameters:
+        reviews (list[dict]): Review nodes from GitHub GraphQL query (solorepo's DR-118).
+
+    Returns:
+        list[str]: Formatted review verdicts with author, state, commit SHA, and timestamp.
     """
     out = []
     for r in reversed(reviews):
@@ -479,23 +500,11 @@ def verdicts(reviews):
 
 
 def owned_and_open():
-    """The pull request this worktree is working on, and what it still owes.
+    """Identify the pull request associated with the current branch or list open ones.
 
-    Resolved by **branch**, because the branch is where the Job already is: one
-    branch, one pull request, by construction, and it is what an agent wakes up
-    on — whoever authored it. Authorship cannot do this job — since solorepo's DR-107 a
-    pull request is authored by the Role's account, not the solo's, so
-    `--author @me` only narrows to this Role's own pull requests and says
-    nothing about which one this thread is answerable for.
-
-    No local state. A background task dies with the session that started it and
-    a branch note would have to be found before it could be read; the checkout
-    is the token, and GitHub resolves it.
-
-    Where the branch has no pull request, every open one is listed instead —
-    without pretending that ownership was established. Which of them is this
-    thread's is a question the listing cannot answer, and saying so is the
-    honest output.
+    Returns:
+        tuple[str, list[tuple[int, str, list[str] | None]]]: Current branch name and
+            list of tuples containing PR number, title, and unaddressed thread summaries.
     """
     branch = subprocess.run(["git", "branch", "--show-current"],
                             capture_output=True, text=True).stdout.strip()
@@ -511,17 +520,10 @@ def owned_and_open():
 
 
 def residue():
-    """Local branches that outlived their pull request, and the worktrees on them.
+    """Identifies local branches and worktrees whose remote tracking branches are gone.
 
-    GitHub deletes a merged branch and nothing deletes the local one, so every
-    checkout accumulates them (solorepo's DR-108): a branch per pull request, a worktree
-    per session, and a listing the next Job reads through before finding its
-    own. The predicate is the remote being gone after a prune — a branch that
-    was never pushed is work in progress and is not named here.
-
-    Naming is this tool's whole part. Removing is one command per branch, and
-    it is printed rather than run, because a worktree may be the one this
-    process stands in, or another session's.
+    Returns:
+        list[str]: Descriptions and git cleanup commands for orphaned branches and worktrees.
     """
     def git(*args):
         return subprocess.run(["git", *args], capture_output=True, text=True).stdout
@@ -556,21 +558,16 @@ def residue():
 
 
 def unpushed():
-    """A18. Work in a worktree the successor will never see has not been done.
+    """Verifies that the working tree has no uncommitted changes and all commits are pushed.
 
-    Two conditions, and neither needs judgement: nothing uncommitted, and nothing
-    committed that has not been pushed. It is the one step of a Handoff a machine
-    can own outright, which is exactly why it is an Article and not a step
-    carrying advice.
+    Returns:
+        list[str]: Validation error messages for uncommitted or unpushed modifications.
     """
     def git(*args):
-        """Failure is a finding here, not a zero.
+        """Executes a git command and returns its status code, stdout, and stderr.
 
-        The first version returned stdout and dropped the exit code, so
-        `rev-list @{u}..HEAD` on a branch with no upstream printed nothing to
-        stdout, failed, and read as "nothing ahead". A18 then passed on a branch
-        that had never been pushed — which is the exact case it exists to catch,
-        and the one where a silent pass costs the whole afternoon.
+        Returns:
+            tuple[int, str, str]: Return code, stripped stdout, and stripped stderr.
         """
         out = subprocess.run(["git", *args], capture_output=True, text=True)
         return out.returncode, out.stdout.strip(), out.stderr.strip()
@@ -594,50 +591,40 @@ def unpushed():
 
 
 def git_read(*args):
-    """git, as an exit code beside what it printed.
+    """Executes a git command in ROOT, returning its return code and stdout.
 
-    Whether a failure is a finding is the caller's to say, and both answers are
-    wanted below, so the two are kept apart here rather than collapsed into one
-    of them. `unpushed` above keeps its own for the same reason it always did.
+    Args:
+        *args: Command arguments passed to git.
+
+    Returns:
+        tuple[int, str]: Git return code and raw standard output string.
     """
     out = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
     return out.returncode, out.stdout
 
 
 def git_text(*args, default=""):
-    """git, as text, with a failure answered rather than raised.
+    """Executes a git command in ROOT, returning stdout on success or default on failure.
 
-    For the reads that have somewhere to go when the command fails: a branch
-    with no merge base is read against its base, and a tree with no untracked
-    files is read as having none. The read that has nowhere to go — the diff the
-    whole `enacted` step turns on — takes `git_read` instead.
+    Args:
+        *args: Command arguments passed to git.
+        default: Fallback string to return if the command exits non-zero.
+
+    Returns:
+        str: Output text on success, or the default fallback string.
     """
     code, out = git_read(*args)
     return default if code else out
 
 
 def touched(base):
-    """Every path this branch changed, committed or not; or why git could not say.
+    """Returns all paths modified on this branch against the merge base, including untracked files.
 
-    Against the merge base and not against the base's head: a landing on the
-    trunk while this branch was open is not this branch's work, and reading it
-    as such would name files nobody here edited. The same scope
-    `dereference.py` takes, for the same reason, and read the same way.
+    Args:
+        base: Target branch or commit ref to compute the merge base against.
 
-    Uncommitted and untracked alike. A decision entry is a new file, and a
-    handoff check that read only what git had already been told about would pass
-    over the file the branch exists to add — which is the one file both steps
-    below turn on.
-
-    A base git cannot resolve returns `None` rather than an empty list, because
-    those are different answers and the step below reports the emptier one. The
-    first version swallowed the diff's exit code: `merge-base` failed, `merge`
-    fell back to the literal `base`, `git diff` against it failed too, and a
-    branch that settles a decision and edits an Artifact read as one that
-    settles none. The `--base` flag's own help invites the ref that does it —
-    a bare `claude/issue-nnn` resolves for neither command in a checkout
-    holding only the remote-tracking form — and the default does the same
-    wherever `origin/main` is absent, which is any `--single-branch` clone.
+    Returns:
+        list[str] | None: Unique relative paths modified or added, or None if git diff failed.
     """
     merge = git_text("merge-base", "HEAD", base).strip() or base
     code, diffed = git_read("diff", "--name-only", merge)
@@ -649,12 +636,10 @@ def touched(base):
 
 
 def artifacts():
-    """The paths that are Artifacts, from the two files that declare one.
+    """Extracts declared artifact paths from structure assertions.
 
-    `assertions/structure.yaml` says what an Artifact is for: the things a
-    Decision names under `enacted_in`, and nothing else. So the set of them is
-    the universe the step below asks its question over, and a file that is not
-    one is not a file an entry could name.
+    Returns:
+        set[str]: Set of artifact path strings declared in structure assertions.
     """
     found = set()
     for rel in ("assertions/structure.yaml", "assertions/imported/structure.yaml"):
@@ -665,13 +650,10 @@ def artifacts():
 
 
 def accounted():
-    """Which entries name each file under `enacted_in`, read from the record's index.
+    """Maps artifact file paths to the set of decision numbers that enact them.
 
-    `decisions.md`'s by-artifact table is `enacted_in` rendered the other way
-    round — "which entries account for a file", as the page says of itself — and
-    the step before this one holds the page current. So the record is read here
-    through its own render, rather than through a second reader of the entries
-    that would drift from the first the day either moved.
+    Returns:
+        dict[str, set[int]]: Mapping of artifact file paths to decision ID numbers.
     """
     path = ROOT / INDEX
     if not path.is_file():
@@ -681,40 +663,13 @@ def accounted():
 
 
 def unrendered():
-    """Whether every generated page is the render of what this branch now asserts.
+    """Checks whether generated documentation pages match their source assertions.
 
-    The render's own answer, asked of it. `render.py --check` compares each
-    target against a fresh render and names what differs, which is the same
-    question `check.py`'s `rendered prose` step asks; asking it again here is
-    not a second copy of the rule but the same command, run where the coder is
-    rather than where the gate is.
-
-    It is asked at the handoff because that is where it is cheap. A stale
-    `decisions.md` is a page asserting something the assertions no longer say,
-    and every reader of it downstream — a reviewer, and the step below — is
-    reading the record as it was before this branch touched it.
-
-    Three answers, and the third is why this returns what it does: a `None` is
-    "the render could not run", which is neither green nor a finding about the
-    tree (A6). `uvx` is how the render is invoked everywhere, and a machine
-    without it can still hand off — with this unread and saying so.
-
-    The render itself has two findings, not one, and they are kept apart here
-    because their repairs differ and the step after this one asks which page
-    each names. A page that differs from its render is made current by running
-    the render; a page no target renders at all is not, and `just render`
-    writes nothing for it. Read under a single prefix, the second arrived as a
-    sentence rather than a name — a finding whose named repair could not work,
-    and one that could never match `INDEX`, so the one page whose freshness the
-    render had just said it could not establish was the one the step below read
-    on anyway. Not reachable on this tree, where every target renders; reachable
-    in a portfolio that keeps a generated page after dropping the assertions it
-    came from, and `check_pr.py` is in the copy set Specialization's step two
-    names.
-
-    The pages are returned by the names the render gives them, rather than as
-    sentences about them, because the step after this one asks which page went
-    stale and not how many.
+    Returns:
+        tuple[list[str] | None, list[str] | None, str]: A 3-tuple containing:
+            - stale: Names of pages differing from rendered output, or None on failure.
+            - unrendered: Names of pages missing generated output, or None on failure.
+            - error: Descriptive error message if the render command could not run.
     """
     try:
         out = subprocess.run(RENDER, capture_output=True, text=True, cwd=ROOT)
@@ -793,17 +748,14 @@ RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
 
 
 def unenacted(base):
-    """Sufficient artifacts under enacted_in for each settled decision.
+    """Verifies that every adopted decision settled on this branch enacts non-record artifacts.
 
-    Article 20 (A20), defined in the charter ('.meta/charter.md'), requires that
-    an adopted Decision must name at least one Artifact carrying its rule.
-    `enacted_in` says where a rule lives; an entry of the record itself would
-    satisfy the letter and defeat the point, so it does not count.
+    Args:
+        base: Git ref string to compare against (e.g. 'origin/main').
 
-    The `base` parameter expects a git reference string (e.g. 'origin/main') to
-    compare this branch against. Returns a tuple of `(problems, note)` consisting of
-    a list of problem strings and a summary note string, or `(None, note)` if the
-    base is unresolvable.
+    Returns:
+        tuple[list[str] | None, str]: Problem descriptions (or None if base cannot resolve)
+            and a summary note string.
     """
     changed = touched(base)
     if changed is None:
@@ -838,28 +790,13 @@ def unenacted(base):
 
 
 def handoff(base):
-    """A18, and what a branch that changes the record owes along with it.
+    """Executes handoff validation checking unpushed commits, stale renders, and enacted artifacts.
 
-    Three steps, each a line in A21's shape and each refusing the handoff on its
-    own. They are ordered so that a reader repairs them in the order that works:
-    a push is what makes the branch the handoff at all, a render is what makes
-    the record's index readable, and the index is what the third step reads.
+    Args:
+        base: Git ref (e.g. 'origin/main') to evaluate branch changes against.
 
-    So the third runs only where its source is known current, and otherwise says
-    it did not. Read against a stale index it would ask what names each file of a
-    page written before this branch existed, and answer with findings about
-    entries the branch has already added — a step that is wrong rather than
-    silent when its source is, which is the failure A6 asks a step not to have.
-    An unread index is that same failure and not a milder one: a render that
-    could not run leaves the page's freshness unknown, and a step that reports
-    `ok` over an unknown says it checked something it did not. A page nothing
-    renders is the same unknown by a different road, and counts alike. Only that
-    page, though: a stale `justfile` says nothing about what an entry names, and
-    skipping the third step over it would withhold a reading that is sound.
-
-    The third step has the same three answers for the same reason, and its own
-    unknown is a base git cannot resolve. `ok` over that would be `ok` over a
-    diff nobody read.
+    Returns:
+        int: 0 if all handoff checks pass; 1 if any check fails.
     """
     def mark(label, problems, note=""):
         for p in problems:
@@ -900,11 +837,13 @@ def handoff(base):
 
 
 def resume(ref):
-    """What GitHub holds about a pull request, for an arriving Job.
+    """Formats pull request status, check rollups, reviews, and unaddressed threads for resuming work.
 
-    This is the whole briefing. A handoff carries no prose — it is a review
-    request, which is a state rather than a message — so what an arriving Job
-    knows is what GitHub holds, and there is nothing else to go stale.
+    Args:
+        ref: Pull request number, URL, or head branch reference.
+
+    Returns:
+        str: Formatted briefing summary of pull request state.
     """
     pr = gh("pr", "view", ref, "--json", "number,title,body,headRefName")
     out = [f"#{pr['number']} {pr['title']}",
@@ -948,18 +887,13 @@ def deduplicate_checks(contexts):
 
 
 def snapshot(ref):
-    """Everything on a pull request that a watcher compares between polls.
+    """Queries pull request metadata, comments, reviews, threads, and check rollups.
 
-    Keyed so that a change is a set difference and not a diff of text: a
-    comment or review by its id, a thread by its id and how many comments it
-    holds, a check by its name and state. The keys are what GitHub already
-    holds, so nothing is written locally and a watch restarted from scratch
-    reports the same events a continuous one would have.
+    Args:
+        ref: Pull request number, URL, or head branch reference.
 
-    `mergeable` rides along because a branch that goes conflicting under a
-    standing review request is a change on the pull request that produces no
-    thread, no review and no check, and so was the one thing a watch could not
-    see (solorepo's #192).
+    Returns:
+        tuple: (number, state, comments_dict, reviews_dict, threads_dict, checks_dict, mergeable).
     """
     pr = gh("pr", "view", ref, "--json", "number,state,comments,reviews,mergeable")
     comments = {c["id"]: c for c in pr["comments"]}
@@ -968,11 +902,7 @@ def snapshot(ref):
     # When multiple check runs share a name (e.g. repeated dispatches or cancelled runs),
     # order by startedAt so the latest run wins.
     sorted_checks = deduplicate_checks(rollup_of(pr["number"]))
-    # A check still running has no conclusion; its status says so, which reads
-    # better than a `None` beside a result and is a change worth a line. The
-    # run's url rides beside the verdict: a re-run that ends where it started
-    # is the same verdict from a different run, and keyed on the verdict alone
-    # it was invisible (solorepo's #79).
+    # Include detailsUrl so rerun checks producing identical conclusions register as distinct events.
     checks = {c.get("name") or c.get("context"):
               (c.get("conclusion") or c.get("state") or c.get("status") or "PENDING",
                c.get("detailsUrl") or c.get("targetUrl"))
@@ -982,17 +912,13 @@ def snapshot(ref):
 
 
 def mine(body):
-    """Whether this session wrote a comment, read from the Trailer it carries.
+    """Determines whether a comment was authored by the current session.
 
-    A watch that reported the watcher's own comments back to it would wake a
-    conversation for every line it posted. The login cannot say — every agent
-    posts under one account — but the channel signs each comment with the
-    session's id, and that is what is compared.
+    Args:
+        body: Text content of the comment or review.
 
-    Resolved the same way `channel.actor()` resolves it: `ACTOR_SESSION` wins
-    when it carries the run's mark (`gha-`), since inside a container run
-    `CLAUDE_CODE_SESSION_ID` is also set and is not what the Trailer signed
-    with. Otherwise the first of the two sets `me`.
+    Returns:
+        bool: True if the comment trailer matches the active session identifier.
     """
     run_session = os.environ.get("ACTOR_SESSION", "")
     me = (run_session if run_session.startswith(RUN_MARK) else
@@ -1008,38 +934,14 @@ def said(body, limit=300):
 
 
 def watch(ref, every=60):
-    """One line per change on a pull request, exiting on actionable events or when it closes.
+    """Monitors a pull request for changes, printing events and exiting on actionable signals.
 
-    PR First's fourteenth step is to stay subscribed, and until this existed it
-    was the one step in the skill with no command behind it — so a session
-    improvised a poll, or reported that it could not hold one without having
-    tried (solorepo's DR-102). This is the subscription. Keeping it running is the
-    harness's business: it is a process that prints, and any harness that can
-    keep a process alive and be woken by a line it prints can hold it.
+    Args:
+        ref: Pull request number, URL, or head branch reference.
+        every: Polling frequency in seconds (default: 60).
 
-    It polls, because GitHub pushes nothing to a session without a webhook and
-    a webhook needs somewhere to land. The interval is a minute, which is the
-    rate limit's comfort and well inside "a review lands minutes after a push".
-
-    Each line is one event, a change in whether GitHub can still merge the
-    branch among them (solorepo's DR-145): a merge on the base while a review
-    is requested makes the request unanswerable, and that produces no thread,
-    no review and no check, so the silence read as a review in progress
-    (solorepo's #192). The
-    heading carries the state a watch starts on, since a branch already
-    conflicting when the watch begins never changes into it — and when the
-    watch begins while GitHub is still computing one, the heading carries
-    `UNKNOWN` and the first answer that follows is printed instead, since a
-    state never said is not one a reader can be left to infer. Nothing else is
-    emitted for the first poll, so a watch started on a busy pull request does
-    not replay it; a poll that fails is skipped and the next one compares
-    against the last that did not, so nothing is lost across a transient
-    failure. Exits 0 when the
-    subscription ends (the pull request merges or closes) or when an actionable
-    event arrives (a new review from another author, a new unaddressed comment or
-    thread, or a check failure). Exiting on actionable events completes the
-    background process, waking any harness that resumes on command completion
-    (solorepo's DR-138).
+    Returns:
+        int: Exit status code (0 on actionable completion or closure, non-zero on error).
     """
     import time
     previous = None
@@ -1073,15 +975,23 @@ def watch(ref, every=60):
                     actionable.append(f"comment by {c['author']['login']}")
             for rid in reviews.keys() - p_reviews.keys():
                 r = reviews[rid]
-                if not mine(r["body"]):
-                    print(f"review by {r['author']['login']}: {r['state']} {said(r['body'])}",
+                if not mine(r.get("body", "")):
+                    print(f"review by {r['author']['login']}: {r['state']} {said(r.get('body', ''))}",
                           flush=True)
                     actionable.append(f"review by {r['author']['login']} ({r['state']})")
+            for tid in threads_.keys() - p_threads.keys():
+                t = threads_[tid]
+                where = (t["path"] or "the pull request") + (f":{t['line']}" if t.get("line") else "")
+                first_author = (t["comments"]["nodes"][0]["author"] or {}).get("login", "someone") if t["comments"]["nodes"] else "someone"
+                first_body = t["comments"]["nodes"][0]["body"] if t["comments"]["nodes"] else ""
+                print(f"new thread on {where} by {first_author}: {said(first_body)}", flush=True)
+                actionable.append(f"new thread on {where}")
             for tid, t in threads_.items():
                 where = (t["path"] or "the pull request") + (f":{t['line']}" if t.get("line") else "")
                 before = p_threads.get(tid)
                 nodes = t["comments"]["nodes"]
-                if before is None or len(nodes) > len(before["comments"]["nodes"]):
+                before_len = len(before["comments"]["nodes"]) if before else 0
+                if before is None or len(nodes) > before_len:
                     last = nodes[-1] if nodes else None
                     if last and not mine(last["body"]):
                         who = (last["author"] or {}).get("login", "someone")
@@ -1102,11 +1012,7 @@ def watch(ref, every=60):
                     print(f"check {name}: {value} again, from a re-run", flush=True)
                     if is_failure:
                         actionable.append(f"check {name} ({value})")
-            # Said and not exited on. A conflict under a standing request
-            # already dispatches the coder's rebase pass off the merge that
-            # caused it (solorepo's DR-133), so waking this session to rebase
-            # would put two Actors on one branch; what the session watching
-            # lacked was the reason the review was silent, which is the line.
+            # Merge conflicts trigger coder rebase passes; inform watcher without exiting.
             if mergeable != "UNKNOWN" and mergeable != merges:
                 print(f"mergeable: {mergeable}" + (
                     " — GitHub builds no merge ref for a branch that conflicts, so no review "
@@ -1124,40 +1030,26 @@ def watch(ref, every=60):
 
 
 def resolved_without_an_answer(ref, thread_nodes=None):
-    """A16. Requiring resolution is what makes this check necessary.
+    """Identifies resolved review threads that lack an answer from a distinct participant.
 
-    GitHub can insist every thread be resolved, and that insistence teaches
-    the shortcut: resolve it and merge. A thread closed that way looks identical
-    afterwards to one that was answered, which makes the merge gate a control
-    whose passing carries no information — so the gate on the gate is that a
-    resolved thread carries a reply from someone other than whoever opened it.
+    Args:
+        ref: Pull request number, URL, or head branch reference.
+        thread_nodes: Optional pre-fetched review thread dictionaries.
 
-    Nothing here objects to an *unresolved* thread. The ruleset already blocks
-    the merge for those, and a check saying the same thing twice is one of them
-    drifting.
+    Returns:
+        list[str]: Validation error messages for threads resolved without independent response.
     """
     return unanswered(threads(ref) if thread_nodes is None else thread_nodes)
 
 
 def parties(thread):
-    """Who took part: the login and the Actor Trailer, plus whoever resolved it.
+    """Extracts the set of distinct participants in a review thread.
 
-    Resolving is an act, not a silence. A solo who reads an agent's answer and
-    marks the thread resolved has taken part — that is assent, and it is what
-    A16 asks for. Requiring a reply as well would make the Article cost a
-    sentence of theatre per thread, which is how a rule gets routed around.
+    Args:
+        thread: Review thread dictionary containing comments and optional resolution metadata.
 
-    It is trustworthy only while an agent does not resolve a thread it is the
-    sole author of. Each Role has an account (solorepo's DR-066, DR-107), so `resolvedBy`
-    tells a Role from the solo and from another Role; within one Role two Jobs
-    share a login and only the Trailer tells them apart, which is why the
-    channel refuses on the Trailer rather than the login.
-
-    A16 asks for a second party. Every comment an agent writes is posted under
-    its Role's account, so a login shows a Role and never a Job — and the
-    Article would be unsatisfiable exactly where it matters, between two Jobs of
-    one Role. An unsigned comment is the human; a signed one is the Job that
-    signed it.
+    Returns:
+        set[str]: Set of participant identifiers (logins or actor trailers).
     """
     seen = set()
     resolver = (thread.get("resolvedBy") or {}).get("login")
@@ -1255,44 +1147,13 @@ LIMIT = 1000
 
 
 def cited_issues():
-    """A12: every `#<n>` in an assertion resolves to an Issue (solorepo's DR-130).
+    """Validates that issue references in assertions resolve to existing GitHub issues or PRs.
 
-    An Issue number is the one citation form here whose target is not in the
-    repository. A `DR-nnn` resolves against the record and an `A<n>` against
-    the Charter, both of which `check.py` reads off disk; a number GitHub never
-    issued reads in a paragraph exactly like one it did, and nothing looked. So
-    this quarter of A12 lives with the half of the gate that reads GitHub, and
-    the other three-quarters are in `check.py`, which reads files and needs no
-    network.
+    Scans YAML assertion files for bare and solorepo-qualified issue citations and
+    queries GitHub to ensure they exist.
 
-    Issues and pull requests share one sequence and the prose here cites both —
-    a Challenge by its Issue, a precedent by the pull request that set it — so
-    the two lists are read as one set.
-
-    The assertions and no wider, which is where solorepo's #147 scopes it and as far as a
-    glob reaches. The set `check.py` scans is read out of the Specialization
-    step that lists what a portfolio inherits, and reading that here would put
-    a YAML parser into a checker that is stdlib only and stays that way.
-
-    Whose Issues. `.meta/assertions/imported/` is copied into every portfolio
-    and cites solorepo's Issues; a portfolio's own sequence starts again at one,
-    so a number cited bare there comes to mean an Issue of the portfolio's — the
-    citation the Charter holds worse than one that dangles. That half of the
-    rule is not held here. It is `check.py`'s `inherited citations`, over the
-    whole copy list rather than the single entry of it that is an assertion, and
-    this check held a second copy of it for as long as it took solorepo's #160 to
-    draw the seam: one bare number in an imported assertion, reported twice, by
-    two gates (solorepo's DR-132). What is left here is the number, which is the
-    half only GitHub can answer. `solorepo's #11` resolves against this
-    repository's lists only where this repository is solorepo, and is passed
-    over where it is not, since the Issues it names are not there to resolve
-    against — `cited decisions`'s answer to solorepo's #114, over the other
-    sequence.
-
-    `gh` answers newest first, so a list that comes back at the limit is
-    truncated at the bottom and says nothing about the numbers below it. Those
-    are passed over rather than reported: "cited and does not exist" has to
-    keep its one meaning.
+    Returns:
+        list[str]: Validation error messages for non-existent cited issue numbers.
     """
     bare, foreign, problems, home = {}, {}, [], False
     for path in sorted(ASSERTIONS.rglob("*.yaml")):
@@ -1333,13 +1194,10 @@ WORKFLOW = META.parent / ".github" / "workflows" / "gate.yml"
 
 
 def required_contexts():
-    """The status checks `main`'s ruleset waits for, and the jobs that report them.
+    """Verifies that gate workflow jobs produce every status check required by main.
 
-    Status checks required by `main`'s branch ruleset are read directly to
-    ensure workflow jobs produce every context `main` requires before merging.
-
-    Loud and unmarked when it cannot run — a fork, or a token without
-    `administration: read`, sees no rulesets and is told so rather than passed.
+    Returns:
+        list[str]: Descriptions of required status checks missing from workflow definitions.
     """
     jobs = re.findall(r"^    name: (.+)$", WORKFLOW.read_text(), re.M)
     try:
@@ -1365,9 +1223,15 @@ def from_github(ref):
 
 
 def gate(ref, thread_nodes=None):
-    """The pull request check, whole: the body against the form, A16, A19 and
-    the required contexts. One function because it is run from two places —
-    on the push, and on the clock (solorepo's DR-105) — and two copies would be two gates."""
+    """Executes gate checks on a pull request: title/body form, threads, signoffs, and contexts.
+
+    Args:
+        ref: Pull request number, URL, or head branch reference.
+        thread_nodes: Optional pre-fetched review thread dictionaries.
+
+    Returns:
+        list[str]: Problem descriptions across all gate checks.
+    """
     title, body = from_github(ref)
     return (check(title, body) + resolved_without_an_answer(ref, thread_nodes=thread_nodes)
             + unsigned_commits(ref) + required_contexts() + cited_issues())
@@ -1377,10 +1241,13 @@ CONTEXT = "pull request"
 
 
 def publish(number, head, problems):
-    """Post the result as the check run `main`'s ruleset waits on, on the pull
-    request's head commit, so a sweep's finding blocks the merge the way the
-    push's did. Needs a token that can create check runs, which is the
-    workflow's and not a person's — run by hand, this is where it stops."""
+    """Publishes gate validation results as a completed GitHub check run.
+
+    Args:
+        number: Pull request number.
+        head: Commit SHA of the pull request head.
+        problems: List of problem descriptions; empty indicates success.
+    """
     summary = "\n".join(f"- {p}" for p in problems) or "nothing owed"
     gh("api", f"repos/{repo()}/check-runs",
        "-f", f"name={CONTEXT}", "-f", f"head_sha={head}", "-f", "status=completed",
@@ -1404,21 +1271,10 @@ SWEEP_FIELDS = ("number,title,headRefOid,headRefName,baseRefName,isDraft,updated
 
 
 def longest_run():
-    """How long a loop's run may hold a pull request without touching it.
+    """Reads the maximum job timeout in minutes configured for the coder workflow.
 
-    The coder job's own `timeout-minutes`, read rather than copied. A run that
-    is working pushes and comments, and GitHub moves `updatedAt` when it does;
-    one that has not moved for longer than a run may last has no run standing
-    on it. A number restated here would drift the first time the budget moved,
-    and the drift reads either as a sweep that had quietly stopped noticing or
-    as one that names a pull request somebody is in the middle of.
-
-    Loud and unmarked when it cannot be read, like `required_contexts`: a
-    checkout without the workflow is told so rather than passed. Absent is one
-    of the ways it cannot be read, and the likeliest one — `check_pr.py` and
-    `.github/workflows/` are separate lines in Specialization's copy step, so a
-    portfolio that took one and not the other gets this line rather than a
-    traceback out of its gate every half hour.
+    Returns:
+        int | None: Configured timeout in minutes, or None if unreadable.
     """
     if not CODER.exists():
         print(f"?  no {CODER.name} in this checkout; who holds each pull request is unchecked")
@@ -1465,39 +1321,13 @@ def wait_for_checks(pr_number, timeout=120, interval=5):
 
 
 def hand_back(issue):
-    """What `coder.yml`'s hand-back handler needs about a Challenge's pull
-    request, so that green is read here and not written out a second time.
+    """Provides pull request status metrics for challenge hand-back automation.
 
-    That step decides which verb a run killed at its budget owes its Challenge,
-    and its predicate is already this file's: `green` above is the same
-    question, and the step asked `gh pr list` for `statusCheckRollup` and then
-    wrote `green` out again in jq beside it. The copy could not run. `gh`
-    answers that field with GraphQL of its own that traverses
-    `checkSuite.workflowRun`, an Actions resource, and the step's
-    `permissions:` block holds no `actions` scope — so the whole query failed,
-    and on `bash -e` the failed assignment took the step with it: the one
-    handler written so that a dead run still names a successor named none, and
-    left the pull request to nobody (solorepo's #233).
+    Args:
+        issue: Challenge issue number string or integer.
 
-    Asked for here instead, the fetch names its own fields and the rollup
-    arrives through `ROLLUP`, as it does everywhere else in this file since
-    solorepo's DR-153. Three facts come back, each the reader of one
-    condition the step's branches turn on:
-
-    `handed` — somebody already holds it, by a review requested or a merge
-    armed, which means the run reached its own last step and only then ran out.
-
-    `green` — every check concluded and none failed, which is `green` above and
-    so is pending-is-not-green with it.
-
-    `conflicting` — `CONFLICTING` and not `UNKNOWN`, which is GitHub still
-    computing: refusing a handoff on that would refuse it on timing. `base` is
-    the pull request's own, because a layer is based on the layer below (PR
-    First's twelfth step) and the rebase the step prescribes has to name the
-    branch `mergeable` was computed against.
-
-    JSON, because the reader is a shell. Scalars a step lifts out one at a
-    time, with no predicate left in jq to drift from the ones here.
+    Returns:
+        dict[str, Any]: Status summary containing handed, green, conflicting, number, base.
     """
     found = []
     for prefix in ("gemini", "claude", "codex"):
@@ -1545,105 +1375,17 @@ def is_changes_requested_pull(pr, reviewer_login=None):
 
 
 def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
-    """Pull requests nobody holds, and requests nobody can answer (solorepo's #154).
+    """Identifies open pull requests lacking an active owner, review request, or remediation.
 
-    A handoff here is a semaphore: GitHub holds a review request and reports
-    it, and an arriving Job finds its work by asking what has been requested of
-    its login. That makes two states invisible to everyone, because nothing
-    about either is a fact GitHub reports.
+    Args:
+        prs: Sequence of pull request metadata dictionaries from GitHub.
+        minutes: Inactivity threshold in minutes before flagging unheld work.
+        clean: Set of pull request numbers verified as passing gate checks in the current run.
+        unresolved: Optional mapping of pull request numbers to unresolved review threads.
+        reviewer_login: Optional reviewer handle; defaults to the configured reviewer role.
 
-    The first is a pull request that names no successor at all. A run that dies
-    at its budget with the work pushed and green has not reached the step that
-    requests review, so no Job's question — what has been requested of me —
-    ever has this pull request as its answer, and no event fires to ask it
-    again. `coder.yml` now hands off from its own hand-back handler, which
-    covers the deaths GitHub reports as failures; a run whose turn cap ends it
-    reports success, so the handler never runs, and this is what is left to
-    catch that. Four conditions, and each one is a way somebody *does* hold it:
-    a review requested, a merge armed, checks that are not green — a red gate
-    is not a handoff but a mess, and the mess is the solo's — and a head that
-    has moved recently enough that a run may still be standing on it. Greenness
-    is read twice over: the rollup GitHub reported before this sweep began, and
-    `clean`, the pull requests this same sweep found nothing on. The second is
-    this run's verdict rather than the last one's, and without it a sweep can
-    mark a head red on its gate line and then, three lines later, prescribe a
-    handoff onto it. Only a loop's branch is read: `claude/issue-<n>` is a
-    Challenge a loop took, and the solo's own pull request is held by the solo
-    whatever it looks like from here. Only while the Challenge is still a
-    loop's, or when a loop handed back to `human` or `hard` while checks were
-    still in flight (solorepo's DR-167). A `stop` at `human` on a broken or
-    incomplete branch is the solo holding the work and passes in silence; but
-    a green head left unreviewed and unrequested at `human` or `hard` is a
-    handoff stall where work completed before checks settled, and the sweep
-    surfaces it with the remedy to request review or return it to an agent loop.
-
-    What a candidate is owed is not always the request. A branch GitHub reports
-    as `CONFLICTING` is one no review can be requested on, for the reason the
-    second half of this reader exists, so naming it and prescribing
-    `request-review` would prescribe the act that creates the other finding:
-    the next sweep would print the same pull request as a request nobody can
-    answer. It is still nobody's — the sweep says so — but what it needs first
-    is the rebase. Onto its base and not onto trunk: PR First's twelfth step
-    makes a layer its own branch and pull request based on the layer below, so
-    a `claude/issue-<n>` branch is not always cut from `main`, and rebasing a
-    layer onto trunk while the layer below is open drops that layer's commits
-    off the head and shows its work as a removal. `mergeable` is computed
-    against the base, so the branch the remedy names is the one the finding was
-    read against.
-
-    The second is a wait that cannot end, and it is one reading and not two
-    (solorepo's DR-149). A request that exists and cannot be answered: GitHub
-    builds no merge ref for a branch that conflicts, and the review workflow
-    runs on `pull_request`, so there is nothing for it to check out and no run
-    is created; GitHub reports the request as outstanding and says nothing
-    about its being unanswerable. solorepo's #141 sat that way for three hours.
-    And an arming that cannot be honoured, which is the same shape one
-    Discipline-step later: GitHub will not merge a branch it reports as
-    `CONFLICTING` and will not update one either, so an armed pull request that
-    conflicts is waiting on an act nothing performs; and because arming is one
-    of the four ways somebody *does* hold a pull request, the reader below
-    skips it by name. On solorepo's #201 that left no line anywhere — the
-    request had been answered, so no request was pending, and the arming hid it
-    from the reader below — and the only sign was `advance.yml` red on every
-    push to trunk. A push to trunk now dispatches the coder for it, so this is
-    the floor under that and not the mechanism: what it catches is the conflict
-    no push to trunk caused, the dispatch that declined, and the dispatched run
-    that died with its force-push still to come.
-
-    And an armed pull request carrying unresolved conversations: GitHub refuses
-    the merge with "A conversation must be resolved before this pull request can
-    be merged", and auto-merge honours the requirement, so an armed pull request
-    with a noticed-and-not-done thread waits on an act no standing Job performs
-    (solorepo's #232, solorepo's DR-159). Once idle for longer than a run may last,
-    the reader names this rather than counting it as handled, giving the promotion
-    or answering remedy, while a recently touched head is passed over in silence so
-    an active promotion pass can run.
-
-    Not the one that died after it. A rebase pass that pushes and then ends
-    before it re-arms leaves a pull request neither armed nor requested and no
-    longer conflicting, and this reading wants a wait, so it passes over it in
-    silence; the reader below names it only once the new head is green and the
-    pull request idle, and prescribes a review of a change already approved.
-    Nothing else reaches it either — `advance` sweeps the armed, and a second
-    dispatch declines on an empty wait. So the pass says on the pull request
-    that it found the arming *before* it pushes, which is a record and not a
-    floor: restoring the arming is a person's (solorepo's DR-149).
-
-    One line whether it is waiting on one of those or on both, which is the
-    same collapse `dispatch()` makes with the same words: a pull request whose
-    request GitHub still shows outstanding *and* whose merge somebody has armed
-    — the solo approving and arming a review requested of the reviewer's
-    account — is one pull request stuck on one conflict, with one remedy, and
-    the floor and the mechanism should say the same thing about it. Two lines
-    would also make `len(owed)` a count of findings where the sweep prints it
-    as a count of pull requests.
-
-    This one is read on every open pull request, whoever opened it: a wait on a
-    conflicting branch cannot end for whoever it names.
-
-    The Challenge behind a candidate is read here rather than fetched with the
-    rest, because only a candidate needs it — the read is the judgement's, not
-    the sweep's, and on a quiet sweep there are none to make.
+    Returns:
+        list[str]: Remediation messages for each unheld or stalled pull request.
     """
     if reviewer_login is None:
         reviewer_login = role_login("reviewer")
@@ -1773,37 +1515,20 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
 
 
 def sweep_all(publishing):
-    """A16 between the last push and the merge (solorepo's #5). Resolving a thread fires
-    no event, so the check that ran on the push is stale the moment one is
-    resolved, and a schedule is the only thing left to run it. Every open pull
-    request, one line each in A21's shape, and the result published as the
-    check when asked.
+    """Evaluates gate checks and ownership across all open pull requests.
 
-    Then who holds each one, which is the same question asked of the handoff
-    rather than of the body. It is printed as its own step and is never
-    published: the finding *is* that the checks are green, so folding it into
-    the check the ruleset waits on would turn every pull request it named red
-    and unname it (solorepo's #154).
+    Args:
+        publishing: Whether to publish check runs to GitHub for each pull request.
 
-    The pull requests this loop found nothing on are carried into that reader.
-    The rollup it would otherwise trust was fetched before the loop ran, so it
-    is the last sweep's `pull request` check and not this one's, and a head
-    whose gate has just gone red — a closing keyword edited out of the body, a
-    job renamed on `main` under `required_contexts` — would be marked `x` above
-    and then handed over below, which is the handoff onto a red gate that the
-    reader exists to refuse.
+    Returns:
+        int: 0 if all checks succeed or no PRs are open; 1 if any check or fetch failed.
     """
     try:
         found = gh("pr", "list", "--state", "open", "--json", SWEEP_FIELDS)
         rolled = rollups()
     except SystemExit as unreachable:
-        # A sweep that could not fetch and a sweep that found nothing to say
-        # read the same everywhere downstream: no verdict is published either
-        # way, and every open pull request keeps the one its last push left.
-        # So the fetch says which it was, in the sweep's own voice rather than
-        # as a `gh` error the job's tail then prints `ok triage` over
-        # (solorepo's #229). Still red — but red here now names a broken
-        # checker rather than the queue state the job's other findings are.
+        # Surfacing API fetch failures prevents downstream triage steps from treating
+        # unread pull requests as clean.
         print("x  sweep — could not ask GitHub for the open pull requests, so no "
               "verdict was published and every one keeps the verdict its last "
               f"push left: {unreachable.code}")
@@ -1811,14 +1536,8 @@ def sweep_all(publishing):
     if not found:
         print("ok sweep — no open pull requests")
         return 0
-    # A pull request `gh pr list` returned that the rollup query did not answer
-    # for is a fetch that did not happen, and `rolled.get(n, [])` would hand it
-    # to `green` as a head with no checks on it: not green, so `unheld` passes
-    # over it without a word and its line above says nothing either. That is
-    # the collapse the failure path just above refuses, kept for one pull
-    # request instead of for the run, so it is named in the same voice and
-    # carried no further. It bites only past a hundred open pull requests,
-    # where the two calls need not have taken the same ones.
+    # Pull requests missing from rollup results are treated as unfetched failures
+    # rather than passing them to unheld evaluation with empty check suites.
     unfetched = [pr for pr in found if pr["number"] not in rolled]
     if unfetched:
         print(f"x  sweep — GitHub answered for {len(rolled)} open pull request(s) "

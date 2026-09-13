@@ -3,13 +3,9 @@
 A12 asks three things of a citation, and the steps here resolve them in turn:
 the number it names, and then the claim it goes on to make — an Article that
 resolves, a quotation that appears where it is attributed, a relation that is
-the slot it claims to be, and a line that reads what it is cited for.
+the slot it claims to be, and a line that reads what it is cited for (solorepo's DR-150).
 
-The regular expressions below are a small grammar, and the commentary on each
-is the design: what may stand in a gap, why a match is lazy, and which innocent
-sentence a wider pattern would catch. They are gathered here so that a reader
-amending one meets the rest, and so that a reader who came for something else
-does not (solorepo's DR-150).
+History in citations.history.md (solorepo's DR-171).
 """
 import re
 
@@ -26,36 +22,21 @@ SCAFFOLD = "work:portfolio/solorepo"
 
 
 def issue_citation():
-    """The same two, one sequence over: an Issue number, and the possessive run
-    that names it as solorepo's, so `solorepo's #138, #140 and #142` names three.
+    """Load compiled regular expressions for Issue citations from `check_pr.py`.
 
-    Read from `check_pr.py` rather than written here, because A12 hands that
-    gate "the number whose target is an Issue" and leaves the rest to this one,
-    so the Issue citation is split across the two gates and the predicate is not
-    split with it: this file holds the owner over the copy set and that one
-    resolves the number,
-    and a string one of them reads as a citation and the other does not is the
-    two disagreeing about what they are each holding half of (solorepo's DR-132).
-    Written twice they had already drifted — this copy bounded no number and
-    read `&#39;`, an HTML numeric entity, as a citation of thirty-nine, and
-    neither difference was visible from either file.
-
-    That direction, because `check_pr.py` imports the standard library alone
-    and this one needs LinkML: it can be read from here and not the reverse.
-    Importing runs nothing — everything it does is under `main()` — and reaches
-    no network, which is the property that lets this check stay offline.
+    Returns:
+        tuple[re.Pattern, re.Pattern]: A tuple of `(ISSUE, FOREIGN)` patterns
+        matching bare Issue numbers and possessive `solorepo's #n` runs (solorepo's DR-132).
     """
     module = load_check_pr()
     return module.ISSUE, module.FOREIGN
 
 
 def load_timing():
-    """`timing.py` as a module: the runtime screen, read rather than run.
+    """Load `timing.py` as an isolated module object without executing top-level scripts.
 
-    Same bargain as `load_check_pr` below and for the same reason — importing
-    runs nothing and reaches no network, everything it does is under `main()`
-    — which is what lets the probe below exercise its arithmetic without a
-    token or a run to read.
+    Returns:
+        types.ModuleType: The imported timing module object.
     """
     import importlib.util
     from importlib.machinery import SourceFileLoader
@@ -71,12 +52,10 @@ def load_timing():
 
 
 def load_check_pr():
-    """`check_pr.py` as a module: the pull request gate, read rather than run.
+    """Load `check_pr.py` as an isolated module object without executing network calls.
 
-    The loader the channel's programs get, for the one file beside them that is
-    a program too. Importing runs nothing and reaches no network — everything
-    it does is under `main()` — which is what lets a check read its patterns and
-    a probe stand GitHub in behind them.
+    Returns:
+        types.ModuleType: The imported check_pr module object.
     """
     import importlib.util
     from importlib.machinery import SourceFileLoader
@@ -89,15 +68,10 @@ def load_check_pr():
 
 
 def copied_files():
-    """What Specialization copies into a portfolio, as paths.
+    """Determine the absolute paths of all files copied into a specialized portfolio.
 
-    One set, so that the checks holding what a copied file owes cannot disagree
-    about which files those are: a copied file is copied whatever the check
-    reading it, and a second scope written out beside this one would be a second
-    answer to the same question.
-
-    `justfile` is not on the copy list: `render.py` writes it into a portfolio
-    from its own literals, which is the same arrival by another door.
+    Returns:
+        set[pathlib.Path]: File paths copied into a new portfolio via specialization.
     """
     copied = {ROOT / "justfile"}
     for token in inherited():
@@ -107,25 +81,16 @@ def copied_files():
 
 
 def durable(copied):
-    """The files a citation is durable in: every page, every file a portfolio
-    inherits, the seed, and the assertions.
+    """Yield all durable repository files subject to citation validation.
 
-    One set for the six checks in this file, because a citation is a citation
-    wherever it was typed, and checks that each chose their own scope would
-    disagree about which files A12 covers. The reasons for the set are `cited
-    decisions`'s, which drew it: a `rationale` block is a paragraph a reader
-    reaches directly, and a docstring in a file a portfolio copies is the prose
-    a reader of that file reaches first (solorepo's DR-124).
+    Covers documentation pages, inherited portfolio files, template files,
+    and assertion files under `.meta/assertions/`.
 
-    One set of files, not one text. `cited decisions` and `enacting citations`
-    read each of them as text; the four below read a document's scalars where it
-    has them, for the reason `prose` gives, so a citation written in a YAML
-    comment has its number resolved and its claim not. Two checks of A12 are
-    outside this set altogether. `inherited citations` reads `copied_files`
-    unwrapped, because what a portfolio inherits is the whole of its question and
-    the pages and the seed are not copied. And `cited issues`, the eighth, scans
-    the assertions from `check_pr.py`, being in a checker that holds no YAML
-    parser and so cannot read the copy list this set is drawn from.
+    Parameters:
+        copied (set[pathlib.Path]): Set of file paths copied into specialized portfolios.
+
+    Yields:
+        pathlib.Path: Next durable file path to inspect for citations.
     """
     for path in tree():
         if path.is_symlink() or not path.is_file() or ".git" in path.parts:
@@ -137,37 +102,17 @@ def durable(copied):
 
 @check("cited decisions")
 def cited_decisions(index):
-    """A DR cited in prose resolves to an entry of the record it names (solorepo's DR-121).
+    """Validate that every Decision Record cited in durable prose resolves in the index.
 
-    An Article citation is a typed reference and has been checked since the
-    references check existed; a DR citation is plain text in a paragraph, and
-    nothing looked at it. `roadmap.md` cited solorepo's DR-058 for a decision
-    nobody wrote down, and the number stays issued and unused so that the
-    citation resolves to what it is — a hole nothing here reported.
+    Ensures that Decision citations (`DR-nnn`) in durable files resolve to known Decision
+    records in `index` (or the template seed), and enforces that files inherited by
+    specialized portfolios use the qualified `solorepo's DR-nnn` form (solorepo's DR-121, solorepo's DR-124).
 
-    The assertions are scanned along with the prose. A citation inside a
-    `rationale` block is a paragraph that a reader reaches directly, now that the
-    entry is its own file, so it is held to the same rule rather than exempted
-    for being stored as YAML. So is every file a portfolio copies, whatever its
-    suffix — the schemas, the workflows, the actions, and the Python, whose
-    docstrings are the prose a reader of `check.py` reaches first (solorepo's DR-124) —
-    because what it copies is scanned for the reason below. A code span is a
-    path or a form, not a citation.
+    Parameters:
+        index (dict): LinkML model index mapping URI identifiers to entity tuples.
 
-    Whose record. The Charter, the schemas, the templates and the pages rendered
-    from them are copied into every portfolio, and a portfolio's record starts
-    again at `DR-001` — the seed's own entry says so. A bare `DR-104` in a copied
-    file is solorepo's where it was written and reads as the portfolio's on the
-    day its record reaches a hundred and four: the citation that silently comes
-    to mean something else, which the Charter holds worse than one that dangles,
-    and which this check would pass. So a copied file cites solorepo's record as
-    solorepo's, and a bare number in one fails here, where the copy is made from.
-    A citation of solorepo's record resolves against this one when this
-    Portfolio is solorepo, and is passed over where it is not: the record it
-    names is not there to resolve against, and "cited and does not exist" keeps
-    its one meaning. Under `template/` a bare number is the seed's record, which
-    is the portfolio's, and resolves against that. solorepo's #114 found a portfolio red on
-    thirteen of these on its first pull request.
+    Returns:
+        list[str]: Validation problem messages for dangling or unqualified DR citations.
     """
     known = {d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"}
     if not known:
@@ -226,8 +171,14 @@ HEDGED = re.compile(r"\b(not|never|no longer|would|could|should|might|may|cannot
 
 
 def scalars(node):
-    """Every string in a loaded document, keys excluded: a key is a slot name
-    and the prose is what it holds."""
+    """Recursively traverse a YAML document node and yield all leaf scalar string values.
+
+    Parameters:
+        node (object): Parsed YAML object (dict, list, or scalar).
+
+    Yields:
+        str: Next scalar string found within the node.
+    """
     if isinstance(node, str):
         yield node
     elif isinstance(node, dict):
@@ -239,27 +190,15 @@ def scalars(node):
 
 
 def prose(path):
-    """The prose in a file, as spans no claim runs across.
+    """Extract prose spans from a file, excluding code blocks and structural comments.
 
-    A page is one span with its fenced blocks removed. An assertion is one span
-    per string scalar, because YAML's own quotation marks delimit a scalar and
-    are not a quotation inside one: read as text, every entry's `name` — a
-    quoted title that opens with its own number — is a quotation attributed to
-    the entry it names, and the first thing this check found was itself.
+    For Markdown, strips fenced code blocks; for YAML, extracts flattened scalar strings.
 
-    What the parser drops, these checks drop with it: a YAML comment is not a
-    scalar, so a citation written in one is read by `cited decisions`, which
-    takes the whole file as text, and by none of the four below. The assertions
-    do carry such citations — `.meta/assertions/structure.yaml:25` is one,
-    naming solorepo's DR-090 in a comment above the Project it explains.
-    Closing the gap means tokenising the file to tell a comment from a `#`
-    inside a scalar, and what it buys is the claim on a line whose number is
-    resolved already; the narrower reading is the one taken, and is written here
-    rather than left for a reader to infer from `safe_load`.
+    Parameters:
+        path (pathlib.Path): Path of file to extract prose from.
 
-    Whitespace is flattened. A folded scalar wraps where the line ended rather
-    than where the sentence did, so a quotation that crossed the fold would
-    otherwise match nothing and a relation stated across it would be invisible.
+    Returns:
+        list[str]: List of flattened whitespace-normalized prose spans.
     """
     try:
         text = path.read_text()
@@ -280,20 +219,12 @@ def flat(text):
 
 @check("cited articles")
 def cited_articles():
-    """Every `A<n>` cited resolves to an Article, live or reserved (solorepo's #147).
+    """Validate that every Article number cited in prose resolves in the Charter.
 
-    An Article citation is a typed reference where a slot holds it, and most of
-    them are not: the Charter is cited in a paragraph, a docstring, a template
-    and a workflow comment, and a number nobody issued reads in all four exactly
-    like one somebody did. `cited decisions` covers the same failure for the
-    record and stops at `DR-`.
+    Ensures `An` references outside code spans match live or reserved articles in `charter.yaml`.
 
-    A retired number resolves. The reservation is the whole of what a retirement
-    leaves behind, and a citation written before it is still about something —
-    which is the point `reserved article numbers` defends from the other end.
-
-    A code span is excluded, as it is there: `` `A12` `` in a form or a path is
-    the shape of a citation and not one.
+    Returns:
+        list[str]: Validation problem messages for unresolved Article citations.
     """
     charter = yaml.safe_load(
         (META / "assertions" / "imported" / "charter.yaml").read_text()) or {}
@@ -312,12 +243,13 @@ def cited_articles():
 
 
 def normalise(text):
-    """A quotation and the entry it is taken from, reduced to what they say.
+    """Normalize text for quotation matching by folding case, quotes, and typography.
 
-    Emphasis, backticks and the two shapes of quotation mark are typography: a
-    quotation that adds a `*` around a word is still the words. Case goes too,
-    because a sentence quoted from the middle of another is capitalised at its
-    new start and nowhere else.
+    Parameters:
+        text (str): Raw quotation or source text.
+
+    Returns:
+        str: Normalized lowercase text with typography and formatting stripped.
     """
     text = flat(text.replace("’", "'").replace("‘", "'")  # noqa: RUF001  # reason: normalising unicode smart quotes to ascii quotes
                 .replace("“", '"').replace("”", '"'))
@@ -325,11 +257,15 @@ def normalise(text):
 
 
 def entry_text(cite, charter):
-    """Everything the entry a citation names says, as one string, or None where
-    the citation names nothing here. A Decision is its file and an Article is its
-    entry, every scalar of either: the first version of this enumerated an
-    Article's slots and left out `falsifier`, so A12's own falsifier, quoted
-    verbatim, was reported as absent from A12."""
+    """Retrieve the complete normalized text of a Decision Record or Article entry.
+
+    Parameters:
+        cite (str): Citation identifier (`DR-nnn` or `An`).
+        charter (dict[int, dict]): Charter article definitions indexed by article number.
+
+    Returns:
+        str | None: Normalized concatenated text of all entry scalars, or None if not found.
+    """
     if cite.startswith("DR-"):
         path = META / "assertions" / "decisions" / f"{cite}.yaml"
         if not path.is_file():
@@ -366,25 +302,13 @@ ELISION = re.compile(r"…|\.\.\.|\[[^\]]*\]")
 
 @check("quoted claims")
 def quoted_claims():
-    """A quotation attributed to an entry appears in that entry (solorepo's #147).
+    """Validate that quotations attributed to an Article or Decision appear in that entry.
 
-    A citation carries the claim it names (A12), and the strongest form of that
-    claim is the entry's own words. It is also the form that goes wrong
-    silently: quoting from memory produces a sentence the entry would have been
-    happy to contain, and only opening the entry says otherwise. Three of the
-    threads on solorepo's #138, #140 and #142 turned on exactly that, and each cost a
-    reviewer round.
+    Matches attributed quotations in prose against the normalized text of cited entries,
+    accounting for elisions and bracketed interpolations.
 
-    Only an attributed quotation is checked. `SAYS` is the attribution, and it
-    is what separates a claim about an entry from a quotation that merely stands
-    near a citation — the Charter's own `"A9 — a seed is data, gated by
-    rendering it"` is an example of the citation form, attributed to nothing,
-    and passes because nothing says it was said.
-
-    An elision is honoured: `…`, `...` and a bracketed interpolation split the
-    quotation, and each side of the split is looked for on its own. So the check
-    is on the words claimed rather than on their contiguity, and a quotation
-    that shortens an entry honestly still passes.
+    Returns:
+        list[str]: Validation problem messages for unattributed or mismatched quotations.
     """
     charter = {int(a["id"].rsplit("/", 1)[-1]): a for a in (yaml.safe_load(
         (META / "assertions" / "imported" / "charter.yaml").read_text()) or {}
@@ -431,23 +355,16 @@ STATED = re.compile(rf"(?P<subject>{CITE})(?P<before>{NEAREST})"
 
 @check("stated relations")
 def stated_relations(index):
-    """A relation stated in prose is set as the slot it names (solorepo's #147).
+    """Validate that semantic relationships between entries stated in prose match assertion slots.
 
-    A relation here is a slot and not a paragraph — the schema says so of
-    `departs_from` in as many words, because a departure marked nowhere breaks
-    transitive conformity silently. A sentence claiming one is therefore either
-    true and redundant or false and unfalsifiable, and solorepo's #142 carried the second:
-    a `supersedes` between solorepo's DR-078 and DR-079 that neither entry
-    sets, which took a reviewer round to find and a reader of the record would
-    never have found at all.
+    Checks indicative statements using relational verbs (`supersedes`, `applies`, `departs_from`)
+    against explicit relation slots in Decision Record definitions (solorepo's DR-175).
 
-    Only the indicative is a claim. A relation denied, or one weighed and not
-    taken — the sentence a rejected alternative is made of — is passed over,
-    which `HEDGED` does by looking at the words on either side of the verb.
+    Parameters:
+        index (dict): LinkML model index mapping URI identifiers to entity tuples.
 
-    The subject must be a Decision, because all four slots are a Decision's. An
-    Article does not apply anything to anybody, so `A21 applies DR-092` is a
-    sentence this check has no opinion about.
+    Returns:
+        list[str]: Validation problem messages for relations stated in prose but unset in the model.
     """
     problems = []
     decisions = {ident.rsplit("/", 1)[-1]: obj
@@ -486,32 +403,14 @@ PATH_LINE = re.compile(r"`(?P<path>[^`\s:]*[./][^`\s:]*):(?P<line>\d+)`")
 
 @check("path and line claims")
 def path_and_line_claims():
-    """A `path:line` cited beside a code span reads that span on that line (solorepo's #147).
+    """Validate that `path:line` citations point to existing lines containing adjacent code spans.
 
-    The form is a precedent: this was decided here, and here is the line. It is
-    the citation most worth having and the one that decays fastest, because the
-    line number is right until anybody edits above it and nothing re-reads it
-    afterwards. solorepo's #142 cited line 23 of `.meta/actions/sweep/action.yml` for
-    `!cancelled()` where that line reads `always()` — the precedent was real,
-    the line was not, and reading it was the reviewer's round. Written here in
-    the form the check does not read, because a docstring that quoted the
-    failure would be making it.
+    Ensures that file line references cited beside code snippets in prose exist and contain
+    the referenced tokens.
 
-    The neighbouring span on either side counts, since prose puts the line
-    before what is on it as readily as after, and either of them being on the
-    line is enough. The neighbourhood stops at the sentence: a page is read
-    here as one flattened span, so a window of characters alone would reach
-    back into an unrelated paragraph and judge the citation against a code
-    span nobody put beside it. A citation with no span in its sentence claims
-    only that the file and the line exist, and is held to that.
-
-    The look-back is cut out of the middle of a flattened span and so is not
-    backtick-balanced: where the cut lands inside a code span, the surviving
-    closing backtick pairs with the next opening one and the "neighbouring
-    span" is the ordinary prose between two real ones. An unbalanced leading
-    fragment is dropped. The forward window needs no equivalent, because it
-    starts immediately after a closing backtick, so a span the window truncates
-    simply fails to match and the citation is passed over.
+    Returns:
+        list[str]: Validation problem messages for nonexistent paths, out-of-range lines,
+        or mismatched line contents.
     """
     problems = []
     for path in durable(copied_files()):
@@ -547,52 +446,16 @@ def path_and_line_claims():
 
 @check("enacting citations")
 def enacting_citations(index):
-    """A file the record names cites at least one entry that names it (solorepo's DR-131).
+    """Validate that files named in Decision `enacted_in` slots cite at least one enacting entry.
 
-    A renumber leaves a residue nothing sees. `cited decisions` asks whether a
-    cited number resolves, so an entry rebuilt under the next free number leaves
-    every citation of the old one resolving — to the neighbouring entry, which
-    is a citation that has silently come to mean something else and the one the
-    Charter holds worse than one that dangles. Two of those went into solorepo's #152 and
-    were caught by a reviewer reading, one of them in `AGENTS.md`.
+    Enforces bidirectional consistency between Decision enactment metadata and the citations
+    carried in durable file prose (solorepo's DR-131).
 
-    What was already in the tree was the disagreement: `decisions.md` listed the
-    new entry against the file, generated from `enacted_in`, while the prose in
-    the file said the old one. So the check reads the two together, and fails a
-    file the record names whose citations name no entry that names it — the
-    index says this file is where some rule was put, the prose says its rules
-    came from somewhere else, and one of them is wrong.
+    Parameters:
+        index (dict): LinkML model index mapping URI identifiers to entity tuples.
 
-    Neither half of that is a rule on its own, and the counts are why. They are
-    in solorepo's DR-131's alternatives and only there: a measurement of a moving
-    tree has one home, and the copy that stood here had drifted from the entry's
-    before either was a day old, a rebase having moved the ground under both.
-    **Every enacting entry is cited** fails in file after file, and often did so
-    from the commit that added the entry: a file carries a rule, not the account
-    of every entry that moved it. **Every citation's entry names this file** fails
-    hundreds of sites, because a citation is ordinarily a cross-reference to
-    reasoning enacted elsewhere. Neither is what the record means, and a step
-    that fails hundreds of true lines is a step somebody turns off.
-
-    So the conjunction, which is the smallest claim both halves support: where a
-    file speaks about the record at all, it agrees with the index once. A file
-    that cites nothing is silent rather than wrong, and a file that cites one
-    naming entry among several is passed — which is what this is blind to. Of
-    the two sites in solorepo's #152 it would have caught `AGENTS.md`, whose only other
-    citation named another file, and not
-    `template/.github/workflows/gate.yml`, which cited solorepo's DR-119, DR-120
-    already. It is a floor under the residue, not a sieve for it.
-
-    Both repairs are honest and the failure names both: cite, where the rule is
-    stated, the entry that put it there; or name this file in the entry whose
-    rule it actually carries. What that trades is that the first can be done
-    without reading either, and the falsifier of solorepo's DR-131 says so.
-
-    Whose citations. `cited decisions`'s rule, for its reasons: under
-    `template/` a bare number is the seed's record and says nothing about this
-    one, and a citation of solorepo's record counts only where this Portfolio is
-    solorepo. A number that resolves to no entry is `cited decisions`'s to
-    report and is passed over here, so one mistyped digit is one failure.
+    Returns:
+        list[str]: Validation problem messages for files where citations disagree with enactment slots.
     """
     known = {d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"}
     if not known:
@@ -636,45 +499,13 @@ def enacting_citations(index):
 
 @check("inherited citations")
 def inherited_citations():
-    """An Issue cited in a file a portfolio inherits is cited as solorepo's (solorepo's DR-132).
+    """Validate that Issue references in files inherited by portfolios use qualified citations.
 
-    The failure `cited decisions` holds for the record's numbers, one sequence
-    over. A bare `#98` in `check.py` is solorepo's where it was written and
-    reads as the portfolio's own on the day that portfolio's Issues reach
-    ninety-eight — the citation that comes silently to mean something else,
-    which is worse than one that dangles. solorepo's #114 is that failure landed once
-    already, for the DR numbers, and it took a portfolio red on its first pull
-    request to find.
+    Enforces that Issue citations in files copied during specialization use `solorepo's #n`
+    rather than bare `#n` syntax to prevent collision with portfolio issue trackers (solorepo's DR-132).
 
-    Only the form is held here, and that is the whole of the split solorepo's DR-132
-    settled. Whether solorepo's #98 exists is a question only GitHub can answer,
-    and `check.py` reaches no network — which is what makes it the gate a
-    portfolio runs on a laptop and in CI with the same result. So the owner is
-    checked over the copy set, and resolving the number stays with
-    `check_pr.py`. That file scans the assertions, which the copy set overlaps
-    in `imported/`; what it no longer does there is hold the form as well, which
-    is the second answer to one question `copied_files` is a single set to
-    avoid, and was a bare number in an imported assertion reported twice by two
-    gates until solorepo's DR-132 drew the seam. The predicate is read from
-    that file too, by `issue_citation`, so the two halves cannot part company
-    about what a citation is.
-
-    Where it is enforced, and where it is not. The copy set is the scaffold's:
-    `copied_files` reads `inherited()`, which reads the Specialization
-    Discipline, and a portfolio carries no Specialization Discipline. So the
-    rule is enforced where the copy is made *from*, and a portfolio's own gate
-    is silent on it — `copied_files()` there is `{justfile}` and this check has
-    nothing to scan, exactly as `scaffold_only_paths` says of itself. A
-    portfolio that types a bare `#7` into its inherited `check.py` is not caught
-    by the check it inherited, and that is the cost the chosen alternative
-    names, not an oversight.
-
-    What is passed over. A code span is a path or a form, and `FENCED` strips
-    it before the scan. So is a number in quotes: `"#7"` in a fixture is the
-    string a probe greps its own output for, not a citation of solorepo's #7,
-    and a check that reported it would be teaching the next author to rephrase
-    working code. `template/` is not on the copy list — a bare number in the
-    seed is the portfolio's, which is what it will be.
+    Returns:
+        list[str]: Validation problem messages for bare Issue citations in inherited files.
     """
     problems = []
     issue, foreign = issue_citation()

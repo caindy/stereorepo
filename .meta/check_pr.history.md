@@ -17,4 +17,95 @@ produced, blocking merges without explanation. Established: required status
 checks are read directly from branch rulesets and verified against workflow
 job definitions.
 
-Receipt: `.meta/checks/files.py::gate_workflows_agree`
+Receipt: `.meta/check_pr.py::required_contexts`
+
+### Unpushed commit detection failing silently on missing upstream
+
+Executing `git rev-list @{u}..HEAD` on a branch without an upstream tracking
+configuration failed non-zero with empty stdout, causing unpushed checks to pass
+silently. Established: `unpushed()` verifies exit codes and explicit status so
+unpushed branches fail as actionable findings.
+
+Receipt: `.meta/check_pr.py::unpushed`
+
+### Merge base diff swallows exit codes on unresolvable base references
+
+Failing `git merge-base` or `git diff` operations on unresolvable base references
+returned empty outputs, causing handoff checks to treat unparsed branches as clean.
+Established: `touched()` returns `None` on non-zero exit codes to distinguish
+unresolvable bases from empty diffs.
+
+Receipt: `.meta/check_pr.py::touched`
+
+### Render check distinguishes stale generated targets from unrendered files
+
+Reporting unrendered files as plain sentences caused them to bypass index target
+checks, allowing stale generated documentation to pass undetected. Established:
+`unrendered()` categorizes stale targets and orphaned files into distinct collections.
+
+Receipt: `.meta/check_pr.py::unrendered`
+
+### Thread inspection truncation in interactive review resumes
+
+Clipping discussion threads mid-paragraph in review summaries led autonomous agents
+to reply to incomplete feedback (solorepo's #126). Established: `shown()` accepts
+an optional character limit and preserves complete thread text during review resumes.
+
+Receipt: `.meta/check_pr.py::shown`
+
+### Resolved review threads excluded from reviewer inspection
+
+Excluding resolved review threads from reviewer inspection prevented arriving agents
+from verifying whether claimed fixes matched discussion feedback (solorepo's #117,
+solorepo's #122). Established: `settled()` surfaces resolved discussions with their
+resolving login alongside open review items.
+
+Receipt: `.meta/check_pr.py::settled`
+
+### Review verdict query ordering and preview truncation
+
+Querying review records without reverse ordering omitted the most recent verdict
+submitted against the active head commit (solorepo's DR-118, solorepo's #123).
+Established: `verdicts()` inspects the newest review records and formats them
+newest-first.
+
+Receipt: `.meta/check_pr.py::verdicts`
+
+### Status check query permission failure on Actions resources
+
+Using `gh pr view --json statusCheckRollup` executed GraphQL queries traversing
+workflow run resources requiring `actions:read` permissions not held by gate
+tokens (solorepo's DR-153, solorepo's DR-155, solorepo's #233). Established:
+`rollup_of()` and `rollups()` query specific check context nodes directly.
+
+Receipt: `.meta/check_pr.py::rollup_of`
+
+### Branch conflicts under standing review requests silently stalling
+
+Merge conflicts arising on base branches after review requests were posted
+suppressed notification events and prevented review workflows from running
+(solorepo's DR-145, solorepo's DR-149, solorepo's #141, solorepo's #192).
+Established: `watch()` and `unheld()` monitor mergeability transitions and prescribe
+explicit rebase remedies.
+
+Receipt: `.meta/check_pr.py::watch`
+
+### Armed auto-merge blocked by unresolved review conversations
+
+Auto-merge remained armed indefinitely on pull requests carrying unresolved
+review conversations, with no standing job acting to resolve threads or unblock
+merges (solorepo's DR-159, solorepo's #232). Established: `unheld()` identifies
+idle armed pull requests blocked by unresolved threads and prescribes the required
+promotion or reply action.
+
+Receipt: `.meta/check_pr.py::unheld`
+
+### Sweep fetch failure silently masked as clean triage
+
+A GitHub API fetch failure during `sweep_all` exited with an unhandled error
+that parent jobs masked as an empty clean queue, leaving stale check statuses
+unreported (solorepo's #229). Established: `sweep_all` handles CLI failures explicitly,
+surfacing unreachable GitHub states as check failures.
+
+Receipt: `.meta/check_pr.py::sweep_all`
+

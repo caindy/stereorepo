@@ -4,16 +4,9 @@
 An Issue filed, triaged, moved between levels, claimed or handed back; a pull
 request opened, layered, revised, merged, superseded or advanced; a review
 requested; a coder pass dispatched; a Milestone set; a Decision's number
-reserved. Each is one step of a Discipline
-and refuses its own misuse, which solorepo's DR-116 asked of the verbs it then
-had and every verb since has been written to: `file` lands `challenge` and the
-difficulty in one act, `stop` asks its refusal before it posts, `claim` refuses
-a session at a level a loop takes, `open --on` links the layer it opens, `merge
---auto` advances before it arms, `supersede` refuses unless the body closes a
-Challenge and that Challenge is closed, `mint` takes no number to reserve. Every
-outcome is read back from GitHub to verify it took effect on the remote: the act is what GitHub shows
-afterwards, not what `gh` returned. What is *said* — a comment, a thread, an
-answer, a verdict — is `post`'s.
+reserved (solorepo's DR-116).
+
+History in move.history.md (solorepo's DR-171).
 """
 import datetime
 import pathlib
@@ -37,16 +30,27 @@ LOOP_LEVELS = ("easy", "medium")
 # --- An Issue's life: filed, triaged, its level moved, claimed, handed back.
 
 def labels_of(issue):
-    """Returns the names of all labels attached to an issue."""
+    """Retrieve the set of label names attached to an Issue.
+
+    Parameters:
+        issue (int | str): Issue number to inspect.
+
+    Returns:
+        list[str]: List of label names attached to the issue.
+    """
     return [l["name"] for l in channel.gh("issue", "view", str(issue), "--json", "labels")["labels"]]
 
 
 def relabel(issue, add=(), remove=()):
-    """Move an Issue's labels, and read back what it carries.
+    """Update an Issue's labels and verify the resulting state remotely on GitHub.
 
-    Not a verb. The labels an agent moves are the difficulty and nothing else,
-    and `difficulty` says what a legal move is; a verb that took any label
-    took `medium` without `challenge`, which is solorepo's #113 (solorepo's DR-116).
+    Parameters:
+        issue (int | str): Issue number to update.
+        add (tuple[str, ...]): Labels to attach to the issue.
+        remove (tuple[str, ...]): Labels to detach from the issue.
+
+    Returns:
+        list[str]: Verified current list of label names on the issue.
     """
     cmd = ["issue", "edit", str(issue)]
     for name in add:
@@ -62,11 +66,13 @@ def relabel(issue, add=(), remove=()):
 
 
 def challenge_labels(issue):
-    """An Issue's labels, if it is a Challenge; a refusal if it is not.
+    """Validate that an Issue carries the `challenge` label and return its labels.
 
-    Asked before anything is posted or moved, by every verb whose second half
-    needs it: a difficulty on anything but a Challenge is a label no loop will
-    ever read, and a comment posted before the refusal is a step half done.
+    Parameters:
+        issue (int | str): Issue number to validate.
+
+    Returns:
+        list[str]: Current labels attached to the challenge issue.
     """
     now = labels_of(issue)
     if "challenge" not in now:
@@ -77,13 +83,11 @@ def challenge_labels(issue):
 
 
 def difficulty(issue, level):
-    """Set a Challenge's difficulty: the raiser's estimate, moved by the raiser
-    downward or by a loop to `human` (solorepo's DR-112).
+    """Set the difficulty estimate label on an existing Challenge issue.
 
-    One level at a time, so the Issue never carries two, and never on an Issue
-    that is not a Challenge: the coder loop takes an Issue on the event of its
-    difficulty landing and reads `challenge` beside it, so a difficulty on
-    anything else is a label nothing will ever read (solorepo's #113).
+    Parameters:
+        issue (int | str): Challenge issue number.
+        level (str): Difficulty level to apply (`easy`, `medium`, `hard`, `human`).
     """
     now = challenge_labels(issue)
     stale = [l for l in now if l in DIFFICULTIES and l != level]
@@ -92,19 +96,14 @@ def difficulty(issue, level):
 
 
 def triage(issue, level):
-    """Make an Issue a Challenge at a level: `challenge` and the difficulty in
-    one act, and `roadmap` off it.
+    """Convert an existing Issue into a Challenge with an assigned difficulty level.
 
-    The door `file` opens at creation, for an Issue that exists already: one
-    the solo opened from the web with no form and no labels, which `just next`
-    lists as neither kind; or a roadmap Issue whose blocker has closed, which
-    the roadmap form says is usually a Challenge and which closing and refiling
-    would strip of its number, its thread and the reason it was deferred.
+    Strips any prior roadmap label and applies `challenge` and the target difficulty
+    level in a single update (solorepo's DR-112).
 
-    A difficulty already on the Issue — the state of solorepo's #113, the level with no
-    `challenge` beside it — is taken off first and put back with `challenge`,
-    so the event the coder loop reads fires: GitHub emits nothing for a label
-    an Issue already carries.
+    Parameters:
+        issue (int | str): Issue number to triage.
+        level (str): Initial difficulty level (`easy`, `medium`, `hard`, `human`).
     """
     now = labels_of(issue)
     if "challenge" in now:
@@ -118,22 +117,19 @@ def triage(issue, level):
 
 
 def file_issue(title, body, level=None, roadmap=False):
-    """File a Challenge or a roadmap Issue the way the form does.
+    """File a new Challenge or Roadmap Issue with required structural metadata.
 
-    The form's front matter applies `challenge` at creation and the raiser adds
-    a difficulty; through the channel both land in one `create`, so there is
-    no moment when the difficulty is on an Issue that is not yet a Challenge —
-    the moment the coder loop's event fell into on solorepo's #113. A roadmap Issue takes
-    `roadmap` and no difficulty, since it is deferred by definition.
+    Enforces that the issue body opens with `**Waits on.**`, sets appropriate initial
+    labels, establishes native blocked-by relationships, and verifies remote state (solorepo's DR-114, solorepo's DR-170).
 
-    A label supplied at creation fires `labeled` like any other, one delivery
-    per label beside `opened` — GitHub's workflow reference says so in as many
-    words — so one act here is the one event `coder.yml` watches.
+    Parameters:
+        title (str): Issue title string.
+        body (str): Issue body Markdown text.
+        level (str | None): Difficulty level for Challenges.
+        roadmap (bool): When True, creates a deferred roadmap issue instead of a Challenge.
 
-    The first line is read before anything is created. `just next` reads
-    `**Waits on.**` from the first line of both forms (solorepo's DR-114), and an Issue
-    filed without it waits on nothing anyone can see. Any `#<n>` blockers seed
-    GitHub's native blocked-by relationship (solorepo's DR-170).
+    Returns:
+        tuple[str, str]: Issue number and GitHub issue URL.
     """
     first = body.lstrip().split("\n", 1)[0]
     if not first.startswith("**Waits on.**"):
@@ -162,23 +158,13 @@ def file_issue(title, body, level=None, roadmap=False):
 
 
 def claim(issue):
-    """Take an Issue: assign it to this Role's account, and read back.
+    """Assign an Issue to the authenticated Role account and verify assignment.
 
-    A loop claims by assignment (solorepo's DR-112). It is an act GitHub records, so it
-    goes through here, as the Role whose token this is.
+    Refuses claims by interactive sessions on `easy` or `medium` Challenges to preserve
+    autonomous coder loop dispatch boundaries (solorepo's DR-112, solorepo's DR-148).
 
-    Refused to a session at `easy` or `medium` (solorepo's DR-148). Those levels are the
-    loop's from the moment the label lands, so a session that claims one is
-    standing beside a run that was started for it — the collision solorepo's #115 recorded
-    on solorepo's #110, where six threads were answered twice and a push dismissed the
-    other coder's approval. The act that makes such a Challenge a session's is
-    moving it to `hard`, which is the fact the loop's own guard reads, so the
-    refusal names that move rather than a way round itself.
-
-    Only a Challenge is refused: the level the loop takes an Issue on is read
-    beside `challenge` (solorepo's #113), and a bare `medium` starts no run. The labels
-    are read only where the refusal could apply, so the loop's own claim is the
-    one call it always was.
+    Parameters:
+        issue (int | str): Issue number to claim.
     """
     if not channel.in_a_run():
         now = labels_of(issue)
@@ -198,12 +184,10 @@ def claim(issue):
 
 
 def release(issue):
-    """Take this Role's assignment off an Issue, and read back.
+    """Remove the authenticated Role's assignment from an Issue and verify removal.
 
-    The claim says a run is standing on this. The coder loop's guard reads it
-    beside the open pull request to tell a level moved under a run from a
-    hand-back the solo has answered (solorepo's #117); a claim left standing after a
-    hand-back is the loop saying it has stopped and is still working at once.
+    Parameters:
+        issue (int | str): Issue number to release.
     """
     login = channel.login()
     channel.gh("issue", "edit", str(issue), "--remove-assignee", login, parse=False)
@@ -214,23 +198,14 @@ def release(issue):
 
 
 def stop(issue, body):
-    """Where a loop stopped and why, handed to the solo (solorepo's DR-112): the refusal,
-    the comment, the release, the move to `human`.
+    """Execute graceful loop hand-back to the human maintainer (solorepo's DR-112).
 
-    The order is by what a failure after each act leaves behind. The refusal
-    before anything is posted, or a retry posts the comment twice. The comment
-    before the rest, so the Issue carries an account of where the loop stopped
-    whatever fails next. The release before the move: a failed move leaves an
-    unclaimed Issue at its old level, which the comment explains and a raiser
-    can re-deliver; a failed release after the move would leave `human` and
-    claimed, the one state the coder loop's guard reads as a run still
-    standing (solorepo's #117). The pull request stays open — merged, never abandoned —
-    for the run that takes the Issue up again.
+    Posts the explanatory hand-back comment, releases issue assignment, and adjusts
+    difficulty to `human` while handling potential GitHub API transient errors gracefully.
 
-    Tolerant of its own read/write failures: if the Issue is persistently
-    unreadable or unwritable (e.g. deleted/transferred, rate limited, or token
-    scope failure), it retries and falls back gracefully, printing warnings to
-    stderr without crashing (exiting non-zero).
+    Parameters:
+        issue (int | str): Issue number to hand back.
+        body (str): Explanatory markdown body detailing why the run stopped.
     """
     # 1. Best-effort label check (retrying and tolerating failures).
     try:
@@ -561,92 +536,14 @@ def run_coder(pr, task):
 
 
 def dispatch(pulls):
-    """Hand back to the coder a pull request this push has left conflicting
-    while it was waiting to land (solorepo's DR-133, solorepo's DR-149).
+    """Dispatch coder rebase passes for pull requests left conflicting by recent merges.
 
-    The other thing a merge on `main` does. A review request is a semaphore
-    GitHub holds and reports, and a branch that conflicts has no merge ref, so
-    `review.yml`'s `pull_request` trigger has nothing to check out: no run is
-    created, GitHub goes on reporting the request as outstanding, and the Job
-    it names never learns it was asked. solorepo's #159 and solorepo's #161 each stood that way
-    with not one review run between them.
+    Identifies loop-owned pull requests with outstanding review requests or auto-merge
+    intents that are in CONFLICTING merge state, excluding stacked base layers, and triggers
+    workflow dispatch for rebase passes (solorepo's DR-129, solorepo's DR-133, solorepo's DR-149).
 
-    **Or armed**, which is the same conflict at the other end of the Discipline
-    (solorepo's DR-149). The rebase above is what an armed pull request gets
-    when it has merely fallen behind, and it is not available here either:
-    GitHub refuses `update-branch` on a `CONFLICTING` branch, so on
-    solorepo's #201 every push to `main` after solorepo's #194 landed collected
-    the same refusal and nothing moved. What the two states share is the fact
-    this reading is about — the branch conflicts, and the Job that did the work
-    has ended — and what the filter is for is the branch nobody has handed over
-    yet, which is neither requested nor armed. A pull request asked for a review is waiting
-    on the review; one that is armed is waiting on the merge; one asked for
-    neither may still have a Job standing on it, and a dispatched pass would
-    force-push under it.
-
-    **Dispatched, not rebased.** The rebase above is not the remedy here and
-    cannot be: GitHub refuses to update a branch it reports as `CONFLICTING`,
-    and what a conflict needs is the change made again over what landed, which
-    is authoring. So what this moves is a Job and not a branch — `coder.yml`'s
-    rebase pass, on the pull request, which is the same act the sweep already
-    prescribes to a reader (solorepo's DR-129) and the same one that was
-    performed by hand on solorepo's #141, solorepo's #150 and solorepo's #156 in one evening.
-
-    Which is also why the filter above stays as it is. Widening it to every
-    pull request with a request outstanding would rebase the ones that merely
-    fell behind, and those are the ones nothing is wrong with: their merge ref
-    exists, so the review runs, and `merge --auto` advances the branch before
-    it arms. What the rebase would cost them is the review itself.
-    `review.yml` cancels a review in progress on a `synchronize` by anyone but
-    the reviewer, so on an evening where `main` merges more often than a review
-    takes, every review would be restarted by the next merge and none would
-    finish.
-
-    A loop's branch only. A conflict on the solo's own branch is the solo's,
-    and the sweep names it for a reader either way.
-
-    **And only a Challenge the loop holds.** The branch shape says which
-    Issue and nothing about whose it is (solorepo's DR-142): a `hard` Issue is
-    the solo's with a session beside him, and `human` is where a pass that
-    could not settle a conflict left it, through `stop`, with the request
-    still outstanding and the branch still conflicting — which is this
-    reading's four facts exactly, on every push to `main` after it. Without
-    this read each of those pushes dispatched a pass that stood down at
-    `coder.yml`'s guard and said so on the pull request, one copy per merge,
-    until the solo got to the branch. So the Issue's state and level are read
-    here, before the dispatch, and a Challenge the loop does not hold is
-    named on the way past: the sweep already names a pull request stuck on a
-    conflict, requested or armed (solorepo's DR-129, solorepo's DR-149), and
-    that is the reader's line, not this one's.
-
-    **And never the lower layer of a stack**, which is the third thing
-    solorepo's DR-133 rejected the wider filter for and so a thing this reading
-    has to answer too. The armed filter above is what keeps the rebase off a
-    stack, because GitHub arms no layer of one (solorepo's DR-100); dropping it
-    here would put the bottom layer back in reach, since `layer` and
-    `open --on` retarget only the layer above, so the bottom keeps `main` as
-    its base and a `claude/issue-<n>` head, a `medium` layer requests review,
-    and a merge on `main` is exactly what conflicts it. Rebasing it rewrites
-    the commits the layer above is based on, and the harm is silent: the upper
-    layer's head never moves, so no event fires and the next reader of it sees
-    the lower layer's work shown as its own. Which pull requests those are is
-    already in hand — a branch that is another open pull request's base is a
-    layer below it — so the answer costs a set comprehension rather than a
-    read, and the one it declines is named on the way past rather than
-    skipped in silence. A conflicting stack is the solo's: the layers have to
-    be resolved from the bottom, and that is a judgement about the stack and
-    not about any one of its pull requests.
-
-    **What stands in for the read-back.** GitHub answers a dispatch with no
-    content and creates the run afterwards, so there is nothing here to ask it
-    for, and a `run list` a moment later answers about a run that may not exist
-    yet. Two things carry it instead. `coder.yml` groups the rebase pass by
-    pull request with `cancel-in-progress: false`, so two pushes in quick
-    succession leave one run standing and one waiting rather than two rebasing
-    the same branch. And the pass begins by asking whether the branch is
-    current with its base, so a run that arrives after the work is done says so
-    and stops — which is what makes a dispatch that was one too many cost a
-    minute rather than a mess.
+    Parameters:
+        pulls (list[dict]): Open pull request objects returned from GitHub API view.
     """
     failed = []
     # Every branch an open pull request is based on, which is the lower layer
@@ -942,135 +839,22 @@ def dispatch_pass(pr, task):
 
 
 def advance(pr=None, held=False):
-    """Bring armed pull requests that have fallen behind their base back onto it,
-    and, on the push to trunk, give the coder back the ones that merge left
-    unreviewable.
+    """Rebase armed or approved pull requests onto their base branch and dispatch coder tasks.
 
-    An armed merge does not update its own branch, and `main` requires a pull
-    request to be current before it merges. So when two are green at once the
-    first lands and the second goes behind, armed, waiting for a Job that ended
-    when it armed — and nobody is told, because there is nobody left to tell
-    (solorepo's #93). This is the step that moves it. `merge --auto` runs it before
-    arming, since a branch can be behind before it is armed as easily as
-    after; the other edge is `.github/workflows/advance.yml`, which runs this
-    on every push to trunk, the one event that puts a pull request in that
-    state (solorepo's DR-113). Both edges are covered, so nobody should have to type this
-    — it takes a pull request number for the day one is behind for a reason
-    neither edge saw.
+    Rebases armed or approved pull requests that are behind their base branch,
+    verifying that the update settles and that auto-merge status is preserved
+    (solorepo's DR-113, solorepo's DR-158). Excludes pull requests acting as bases for
+    other open pull requests in a stack (solorepo's DR-133). When invoked as a general
+    sweep (pr=None), delegates conflicting branches to autonomous coder dispatch passes.
 
-    **Armed or approved, and not another open pull request's base** (solorepo's DR-133, solorepo's DR-161).
-    A pull request nobody has asked to land is not waiting on anything, and the
-    rebase below rewrites commits under whatever session still holds the branch.
-    Arming was historically the last act of the Job that did the work (solorepo's DR-112);
-    with a standing merge manager (solorepo's DR-161), reviewer approval is what frees
-    a pull request to land. Both are swept, but crucially excluding any branch
-    that is another open pull request's base: as solorepo's DR-133 noted, rebasing a lower layer
-    rewrites the commits the layer above is based on, causing it to conflict.
-    Excluding bases keeps the stack intact while keeping ready pull requests
-    current with their base. The filter used to be the sweep's
-    alone and the explicit argument rebased whatever it was handed — which left
-    the property holding on the path nothing calls and not on the one
-    `merge --auto` uses (solorepo's #98).
+    Parameters:
+        pr (int or str, optional): Specific pull request number to advance. When None,
+            sweeps all open pull requests.
+        held (bool): If True, bypasses the armed/approved check for the caller's held branch.
 
-    `held` is the one exemption, and it is the caller saying which branch it is
-    standing on: `merge --auto` is the Job that did the work, arming in a moment,
-    so for that call the question the arming answers is already answered. It is
-    an argument of the function and not of the verb, because what a caller can
-    pass a typed command can pass wrongly, and by hand this is only ever wanted
-    for a pull request that stalled — which is to say an armed or approved one.
-
-    **By rebase, not by a merge commit.** GitHub authors the merge commit
-    itself and it carries no `Actor` Trailer, so A19 would turn the required
-    check red on the very branch this is unblocking — the fix would be the
-    defect wearing a new coat. A rebase writes no new commit: the branch's own
-    commits move onto the base with their messages, and so with their Trailers,
-    intact.
-
-    Read back from GitHub afterwards: we must verify that the remote branch has actually been updated, and that auto-merge is still armed if it was. Three things are asked, and they are asked independently.
-    Whether the head is current now — the base can move again while this runs,
-    and a second push is a second run's business, not a silent pass. Whether
-    the arming survived the head moving: GitHub drops auto-merge on some pushes
-    to a head branch, and an update that disarmed what it was unblocking would
-    leave the pull request exactly where it was found, with the sole witness
-    gone. The second used to hang off the first as an `elif`, so the one state
-    it exists to repair — moved, disarmed, and behind again — was the one state
-    it never looked at (solorepo's #98). And whether re-arming took, which is the same
-    question `merge --auto` asks of its own arming and the one this path was
-    still answering from an exit code.
-
-    **And "afterwards" is waited for** (solorepo's DR-158). `gh pr
-    update-branch --rebase` returns when GitHub has taken the rebase, not when
-    it has performed it, so the read that followed it answered about the head
-    the branch still had — every `advance` on 2026-09-11 concluded failure
-    while doing its work correctly, and a workflow that is always red cannot
-    report the one case it exists to catch. The head moving off the commit it
-    was on is the rebase landing, so that is what the read-back waits for,
-    bounded by `SETTLES`; both of the questions above are then asked of a pull
-    request GitHub has finished moving. A head that has not moved when the wait
-    runs out is its own line, because it is a different fact from a branch that
-    is behind: the rebase may still land, and dropping the arming as it does.
-
-    **And the commit the head questions are about is read beside them, not off
-    the sweep's opening list.** "Behind" and "moved" are both facts about a
-    named commit, and the one that matters is the commit GitHub is handed. The
-    list this sweep opens with is as old as every pull request ahead of this one
-    in `found` — each of which may have paid `MERGEABILITY`'s poll or `SETTLES`'
-    wait — so a push to this branch inside that window moves the head before
-    this run asks anything of it, and both questions asked of the listed commit
-    answer about one GitHub is no longer on. The wait is satisfied by the push
-    rather than by the rebase, and answers with the pre-rebase pull request:
-    behind by what it was behind by, which is reported as a rebase that did not
-    take, and carrying an arming the rebase is about to drop, which is the
-    arming never restored. And the decision to rebase is taken on how far behind
-    an orphaned commit was, so a push that brought the branch current is
-    rebased anyway — `update-branch` on nothing, and then whatever GitHub does
-    with that read as the rebase that did not land. A `pr view` beside the call
-    answers both questions about the commit GitHub is on, needs no answer about
-    what GitHub does with a no-op rebase because it stops asking for one, and
-    makes the `advanced #N: N commit(s) behind` line say a number that is true
-    when it is printed.
-
-    **And "beside" means after the poll, not before it.** `mergeability` stands
-    between the two, and on this trigger it is a wait and not a question:
-    `MERGEABILITY`'s own reasoning is that the push to trunk invalidates every
-    cached answer, so the listed `mergeable` reads `UNKNOWN` for every pull
-    request waiting on one and the poll sleeps five seconds at least and thirty
-    at most. A read taken above it and used below it would leave a window of
-    that length, on exactly the pull requests this runs for. So the reading is
-    taken twice: once at the top, which costs the one read the sweep was always
-    going to pay and says whether there is work here and what the `left #N`
-    line counts; and once after the poll has answered, which is the one the
-    rebase is decided on and measured against. The second costs a `pr view` on
-    the branches being rebased and on no others, and with nothing between it
-    and `update-branch` the window that is left is the round trip.
-
-    **One pull request's refusal is not the sweep's.** `gh()` reports by ending
-    the process, so a branch GitHub will not rebase, or will not arm, used to
-    take every other pull request down with it and swallow what had already been
-    collected. Each is caught where it happens and joins `failed`, which is what
-    the accumulator was for.
-
-    **And the armed are not everything a merge on trunk leaves behind.** A pull
-    request waiting on its first review cannot be armed — GitHub refuses
-    auto-merge on a stacked one, and request-then-arm is not the order the
-    Discipline gives — so nothing above this paragraph is about it, and a merge
-    can leave it conflicting with the request still outstanding and nobody
-    able to answer. That one is handed to the coder rather than rebased here,
-    which is `dispatch` below and solorepo's DR-133. It runs on the sweep only,
-    and it is why the list is filtered into `found` rather than over itself:
-    what the rebase may touch is the armed, and what the dispatch reads is
-    every open pull request.
-
-    **And a rebase is not what an armed pull request that conflicts needs
-    either** (solorepo's DR-149). GitHub refuses `update-branch` on a branch it
-    reports as `CONFLICTING`, so on the sweep that branch is left to the
-    dispatch, which now takes an armed pull request as well as a requested
-    one; the rebase attempted anyway is a refusal known before it is made, and
-    it took `advance.yml` red on every push to trunk while the branch
-    conflicted (solorepo's #201). Only on the sweep, because only there is
-    there a dispatch behind the skip. A typed `advance <pr>` and
-    `merge --auto`'s call are somebody asking about one branch, and to them
-    GitHub's refusal is the answer.
+    Raises:
+        SystemExit: If an explicit pull request cannot be advanced, or if any rebase,
+            settlement wait, or dispatch operation reports failure.
     """
     if pr is not None:
         open_now = [channel.gh("pr", "view", pr, "--json", ADVANCE)]
@@ -1083,20 +867,8 @@ def advance(pr=None, held=False):
         p for p in open_now
         if (p.get("autoMergeRequest") or is_approved_pull(p, reviewer_login=reviewer_login)) and p.get("headRefName") not in bases
     ]
-    # `left` is counted out of the summary below and not into `moved`: a branch
-    # left to the dispatch is neither advanced nor current with its base, and the
-    # line that says how many were current is the one place this run says
-    # nothing happened. It has already said what happened to that one.
     moved, left, failed = 0, 0, []
     if not found:
-        # Two answers, and only one of them is "nothing to do". A sweep with
-        # nothing armed open did its whole job and exits 0. A named pull request
-        # that is not armed is a *refusal* — the caller asked for one thing and
-        # the verb declined it — and every other refusal in this file exits
-        # non-zero. `main()` passes no `held`, so for a typed `advance <pr>`
-        # this is the terminal answer; sharing an exit code with the sweep is
-        # how `move advance 92 && <next>` carries on as though the branch
-        # had moved.
         if pr is not None:
             pull = open_now[0]
             if pull.get("headRefName") in bases:
@@ -1107,52 +879,18 @@ def advance(pr=None, held=False):
         for pull in found:
             number = str(pull["number"])
             try:
-                # Read here rather than taken off the `pr list` this sweep
-                # opened with: that list is as old as every pull request ahead
-                # of this one in `found`, each of which may have waited on
-                # `mergeability` or on `settled`, and a push to this branch
-                # inside that window moves the head before this run asks
-                # anything of it. It costs one read per pull request the sweep
-                # selected, and it answers the two cheap questions: whether
-                # there is anything to do here at all, and what the `left #N`
-                # line below counts.
+                # Query head commit state directly to account for preceding wait times.
                 before, behind = head_now(number)
                 if not behind:
                     continue
                 if pr is None and mergeability(pull) == "CONFLICTING":
-                    # Left to the dispatch below (solorepo's DR-149). GitHub
-                    # refuses `update-branch` on a branch it reports as
-                    # `CONFLICTING`, so the call would be a refusal known in
-                    # advance, collected into `failed` and exited on — which is
-                    # `advance.yml` red on every push to trunk for as long as
-                    # the branch conflicts, and a red that says nothing is how
-                    # the next refusal goes unread. Said on the way past rather
-                    # than skipped in silence, because the dispatch may decline
-                    # it for a reason of its own and then nothing else would —
-                    # and named for the dispatch rather than for the coder,
-                    # since in every case that sentence anticipates there is no
-                    # coder, and a line claiming a handoff that did not happen
-                    # is worse in the log than no line at all.
+                    # Conflicting branches cannot be rebased cleanly via API; delegate to dispatch.
                     print(f"left #{number} to the dispatch below: {behind} commit(s) behind "
                           f"{pull['baseRefName']} and conflicting with it, which GitHub "
                           f"will not rebase — {pull['title']}")
                     left += 1
                     continue
-                # And asked again, because what stands between the read above
-                # and the call below is a poll rather than a round trip.
-                # `mergeability` sleeps `MERGEABILITY` — five seconds at least
-                # and thirty at most — whenever the value it is handed reads
-                # `UNKNOWN`, and its own constant says that is the normal state
-                # on this trigger and not a corner: the push to trunk this
-                # sweep runs on invalidates every cached answer, so the listed
-                # `mergeable` is `UNKNOWN` for every pull request waiting on
-                # one. A push landing inside that sleep is the whole defect
-                # again — the rebase asked for on a commit GitHub has moved
-                # off, and asked for at all on a branch the push brought
-                # current — so the reading the call is made against is the one
-                # taken after the waiting is over. It costs a second `pr view`
-                # on the branches actually being rebased, and on those alone,
-                # and it is what makes the residual window a round trip.
+                # Re-query head state following mergeability polling to avoid stale references.
                 before, behind = head_now(number)
                 if not behind:
                     continue
@@ -1160,12 +898,7 @@ def advance(pr=None, held=False):
                 moved += 1
                 print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
                       f"— {pull['title']}")
-                # The head moving is the rebase happening, so it is what this
-                # waits for rather than asks about once (solorepo's DR-158).
-                # Both questions below are about a pull request GitHub has
-                # finished rebasing, and asked of one it has not they read the
-                # state it is being moved out of: how far behind the old head
-                # was, and the arming that head still carries.
+                # Wait for remote rebase operation to settle asynchronously (solorepo's DR-158).
                 after = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
                                 lambda now: now["headRefOid"] != before["headRefOid"])
                 if after["headRefOid"] == before["headRefOid"]:
@@ -1176,40 +909,10 @@ def advance(pr=None, held=False):
                 elif behind_by(after):
                     failed.append(f"#{number} is still behind {pull['baseRefName']} "
                                   "after the update")
-                # And this one is anchored to the sweep's own reading rather
-                # than to `before`, deliberately. The question above is which
-                # commit the rebase moved the branch off, and only the read
-                # taken beside the call answers it. The question here is
-                # whether the pull request ends armed, and what it was armed at
-                # is what the sweep selected it on: a push that dropped the
-                # arming inside the window is the same solorepo's #93 the
-                # rebase would have left, and reading `before` would leave it
-                # there on the ground that this run was not the one that
-                # dropped it.
+                # Re-arm auto-merge if head movement cleared the existing request.
                 if pull.get("autoMergeRequest") and not after.get("autoMergeRequest") and after.get("state") != "MERGED":
                     arm(number, f"{pull['title']} (#{number})")
-                    # Read back, like the two above and for the same reason. This
-                    # was the one act in the function whose outcome was `gh`'s exit
-                    # status: `gh pr merge --auto` exits 0, the enablement does not
-                    # stick, and the line below claimed an arming GitHub does not
-                    # hold. That leaves the pull request rebased and unarmed, which
-                    # is solorepo's #93 — and unreachable by any later sweep, because the sweep
-                    # filters on `autoMergeRequest` and there is no longer one to
-                    # filter on. Waited for, like the read above and unlike it on
-                    # no measurement: what an early read here would produce is the
-                    # false report's mirror, a branch GitHub is holding armed
-                    # called unarmed, and the wait costs a sleep only on the
-                    # branch this is about to report as broken anyway.
-                    # And an arming that took is not the only end to the wait
-                    # (solorepo's #253). Arming is an intent GitHub holds until it acts on it, so
-                    # the checks going green in this window merge the pull
-                    # request and clear the `autoMergeRequest` that did it —
-                    # which is the arming having worked, read a moment too late
-                    # to see. Waited for on the predicate alone, that is the
-                    # full bound spent and then the line below on a pull request
-                    # that is on trunk: `merge` reads `MERGED` for the same
-                    # reason and says so, and this is the same state reached
-                    # from the other side.
+                    # Poll until auto-merge is restored or PR completes merge.
                     now = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
                                   lambda seen: seen.get("autoMergeRequest")
                                   or seen["state"] == "MERGED")
@@ -1224,13 +927,7 @@ def advance(pr=None, held=False):
                 failed.append(f"#{number}: {exc.code}")
         if not moved and not failed and len(found) > left:
             print(f"advance: {len(found) - left} pull request(s) current with their base")
-    # The second reading, and the sweep's alone. `merge --auto` calls this with
-    # one pull request and its own branch in hand, and a typed `advance <pr>`
-    # names a branch somebody is asking about; neither is the push to trunk
-    # that leaves a review request unanswerable, which is what `dispatch`
-    # answers. Its refusals join the same accumulator, so a pull request the
-    # coder could not be dispatched for is reported with the rest and takes
-    # none of them down with it.
+    # Sweep-level pass: dispatch review or rebase tasks for open pull requests.
     if pr is None:
         failed += dispatch(open_now)
     if failed:
@@ -1238,40 +935,22 @@ def advance(pr=None, held=False):
 
 
 def merge(pr, stack=False, auto=False):
-    """Merge as the Role, label trunk with the pull request's title, and report
-    what GitHub holds afterwards. With `stack`, merge every layer up to and
-    including this one, atomically, and let GitHub rebase the rest.
+    """Squash-merge a pull request using its title as the commit subject.
 
-    Not an utterance, and still the channel's. Merging is an act by the Role —
-    solorepo's DR-072 puts it in an agent's hands and solorepo's DR-075 puts the act through here — so
-    it is the Role that GitHub should record as having done it, and the squash
-    commit that lands on trunk carries that account rather than the solo's.
+    Executes a squash merge on the specified pull request, attributing the merge to
+    the active Role (solorepo's DR-072, solorepo's DR-075). If `stack` is True, merges
+    all dependent pull requests in the stack recursively. If `auto` is True, arms
+    auto-merge once required checks pass. Deletes the remote branch unless the
+    repository is configured to delete head branches automatically.
 
-    The subject is passed rather than left to GitHub. Left to it, GitHub labels
-    the squash from the commits, and solorepo's #27 landed on `main` under a subject that
-    was not its title (solorepo's #26), which is the label the index carries — and a label
-    on trunk cannot be rewritten. The body is left to GitHub, so the Trailers on
-    the branch's commits ride into the squash as before (solorepo's DR-062).
+    Parameters:
+        pr (int or str): Pull request number to merge.
+        stack (bool): If True, merges all pull request layers up to this one.
+        auto (bool): If True, enables GitHub auto-merge to land when checks turn green.
 
-    `--delete-branch` is not used. It makes `gh` check out `main` locally after
-    the merge, which fails from a worktree because `main` is already checked out
-    elsewhere — and it fails *after* the merge, so the exit code said the act
-    had failed when it had not. The remote branch is deleted here instead, and
-    the local checkout is left alone — unless the repository deletes head
-    branches itself, which this one does. The first run of this verb (solorepo's #46)
-    deleted a ref GitHub had already removed, and exited 1 on a merge that had
-    landed, which is the defect it was written to remove wearing a new coat. So
-    the setting is read, and the verb deletes nothing the repository will.
-
-    The outcome is read back from GitHub to verify whether the branch was successfully merged or armed, independent of the CLI exit code.
-
-    `--auto` is "when green" (solorepo's #79). A merge refused for pending checks was one
-    somebody had to remember to retry, and on solorepo's #76 the retry came thirty-six
-    minutes after the checks passed. GitHub holds the intent instead: the
-    squash and its subject are handed over now, and the merge happens the
-    moment the ruleset is satisfied, watched or not. Not on a layer of a stack:
-    a layer's base is the layer below, and armed early it would merge into
-    that branch the moment it was green rather than into trunk after it.
+    Raises:
+        SystemExit: If the pull request is not open, is an unsupported stacked auto-merge,
+            or if the merge or arming operation fails on GitHub.
     """
     before = channel.gh("pr", "view", pr, "--json", "title,state,headRefName")
     if before["state"] != "OPEN":
@@ -1279,35 +958,14 @@ def merge(pr, stack=False, auto=False):
     subject = f"{before['title']} (#{pr})"
     if auto:
         if stack or stacked(pr):
-            # The bottom included: GitHub refuses auto-merge on any stacked
-            # pull request ("Auto-merge is not supported for stacked pull
-            # requests"), so a stack lands by `merge --stack`, by hand, when
-            # its bottom is green (solorepo's #117).
+            # GitHub does not support auto-merge on stacked pull requests.
             sys.exit(f"say: #{pr} is in a stack, and GitHub does not arm a stacked pull request, "
                      "bottom included. Merge it with --stack when it is green, and GitHub "
                      "retargets the layers above as it lands.")
         if not channel.gh("api", f"repos/{channel.repo()}").get("allow_auto_merge"):
             sys.exit("say: this repository does not allow auto-merge; that is a setting on "
                      "GitHub, not a line here")
-        # Arming a branch that is already behind arms something that cannot
-        # merge, and the push to trunk that would have advanced it has already
-        # happened (solorepo's #93). The other edge — falling behind after arming — is
-        # the workflow's. `held`, because this is the Job that did the work and
-        # the branch is its own; nothing else may rebase an unarmed branch.
-        #
-        # And the arming happens whether or not that worked. `advance` ends in
-        # `sys.exit` on a read-back that failed and on any refusal `gh` made,
-        # and outside this `try` every one of those exits left the branch
-        # rebased and never armed — the state of solorepo's #93, reached by the
-        # fix for it, with no second run coming because arming is where the Job
-        # ends (solorepo's #98).
-        # Armed and behind is the recoverable half: the next push to trunk
-        # sweeps it up, precisely because it is armed. So the stall is carried
-        # to the end and reported there, after the arming it must not prevent —
-        # and it is carried as a *reason*, not as a state. What state the pull
-        # request ended in is asked of GitHub at each of the three places
-        # below, because the stall is the exit code of a verb that makes four
-        # or five calls and says nothing about which of them refused.
+        # Attempt to advance branch to base head before arming; catch failures to avoid disarming.
         stalled = None
         try:
             advance(pr, held=True)
@@ -1316,43 +974,16 @@ def merge(pr, stack=False, auto=False):
         try:
             arm(pr, subject)
         except SystemExit as exc:
-            # Already mergeable: GitHub refuses to arm what it could just do,
-            # in these words, and the plain merge below is the right act. A
-            # stall recorded above goes no further from here, and cannot
-            # survive: clean is GitHub saying the branch is current, which is
-            # the opposite of what stalled would claim.
+            # If the branch is already mergeable, proceed to immediate merge.
             if "clean status" not in str(exc.code):
                 raise
         else:
             after = channel.gh("pr", "view", pr, "--json", "state,mergeCommit,autoMergeRequest")
             if after["state"] == "MERGED":
-                # A stall recorded above is moot here and dies with this branch.
-                # Not every refusal `advance` collects is a branch that is
-                # genuinely behind — an API blip on a `pr view` or a `compare`
-                # is one too — and GitHub having merged the pull request is the
-                # end of the question either way. Reported here it would print
-                # `merged #<n> as <sha>` and then exit 1 saying the pull request
-                # is armed and not current with its base, both clauses false:
-                # the defect of solorepo's #46 wearing a new coat, which is what
-                # this verb was written to remove.
                 print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
             elif after.get("autoMergeRequest"):
                 print(f"armed: #{pr} merges as a squash when green — {before['title']}")
-                # Armed and behind is the one state the message describes, and
-                # reaching this branch establishes only its first half:
-                # `after.get("autoMergeRequest")` is GitHub saying it is armed,
-                # and nothing since `advance` failed has asked whether the head
-                # is current. `stalled` cannot answer it — it is every refusal
-                # `advance` collected, and most of them say nothing about the
-                # head: a `gh` blip on the read-back `compare`, one HTTP error
-                # away out of the four or five calls that verb makes, or an
-                # arming that did not stick and that the `arm` above has since
-                # made take. Both leave the branch armed and current, and the
-                # exit code here is the last thing the Job says — a non-zero
-                # over a pull request GitHub is holding correctly armed tells
-                # the loop the landing failed when it did not. So the currency
-                # is re-asked, one `compare`, and the exit is conditional on
-                # the answer rather than on how the stall was reached.
+                # If advancing stalled, check whether the branch is currently behind trunk.
                 if stalled:
                     try:
                         current = channel.gh("pr", "view", pr, "--json", ADVANCE)
@@ -1364,20 +995,13 @@ def merge(pr, stack=False, auto=False):
                     if behind:
                         sys.exit(f"say: #{pr} is armed and {behind} commit(s) behind "
                                  f"{current['baseRefName']} — {stalled}")
-                    # Armed and current is the state the Job was for, so the
-                    # stall is reported and not exited on: it is a reason
-                    # something took two attempts, not a landing that failed.
                     print(f"#{pr} is armed and current with {current['baseRefName']}; "
                           f"advancing it did not finish — {stalled}")
             else:
                 sys.exit(f"say: GitHub shows #{pr} neither merged nor armed after the call")
             return
     if stack:
-        # GitHub's stack merge: everything up to and including this layer, all
-        # or nothing, and the layers above are rebased by GitHub rather than by
-        # hand (solorepo's DR-100). It takes no subject; trunk's label rests on the
-        # repository's squash-title setting, which is why the label is read
-        # back below rather than assumed.
+        # Recursively merge stacked PR layers up to and including this branch.
         channel.gh("stack", "merge", pr, "--squash", "--yes", parse=False)
     elif stacked(pr):
         sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
@@ -1406,42 +1030,35 @@ STATUS = re.compile(r"^\s+status:\s*(\S+)\s*$", re.M)
 
 
 def entry_status(raw):
-    """The status a Decision's entry gives itself, or None where the text is
-    not one entry with one status in it.
+    """Parse declared decision status from raw Decision Record YAML.
 
-    What the match assumes — one entry to a file, one `status` in it — is what
-    every entry in the record is, and `channel status probes` holds it against
-    `yaml` over all of them, so an entry written some other way makes that
-    probe red and makes this None. None is not a status: the caller refuses
-    loudly rather than reading whichever line matched.
+    Parameters:
+        raw (str): Raw YAML string of a single Decision Record file.
+
+    Returns:
+        str or None: The declared status (e.g. 'ADOPTED', 'SUPERSEDED'), or None if
+            not exactly one status line is matched.
     """
     found = STATUS.findall(raw)
     return found[0] if len(found) == 1 else None
 
 
 def superseder(what):
-    """What `--by` names, and whether it has landed: a merged pull request, or
-    a Decision the record on the trunk adopted. The name to print, and the line
-    to cite it by.
+    """Validate that a superseding reference has merged or been adopted.
 
-    `supersede` claims the tree already holds another answer, and this is where
-    that claim is checked rather than taken. A pull request still open is not
-    another answer yet — it is a second one in flight, and which of two in
-    flight is the wrong one is not settled by closing the other. A Decision is
-    read off the trunk for the same reason: an entry on a branch is one that
-    branch is proposing (solorepo's DR-164).
+    Checks whether the argument refers to a merged pull request or an adopted
+    Decision Record on the trunk (solorepo's DR-164).
 
-    For a Decision the entry is read and not the listing, because the listing
-    cannot tell an answer from a hole. A number written back into the record as
-    WITHDRAWN is a file at that path like any other — which is how a
-    reservation nobody spent is closed (solorepo's DR-128), including the ones
-    this verb names as it closes — so a listing answers `mint`'s question,
-    whether the number is taken, and not this one. `decision supersession` puts the
-    distinction in the repository's own words: withdrawn and superseded are
-    different states, and a hole is not a replacement. So the status is asked
-    for, and only ADOPTED is an answer the tree holds: PROPOSED and RECOMMENDED
-    are decisions nobody has taken yet, and SUPERSEDED is one the tree has
-    already replaced.
+    Parameters:
+        what (str): Pull request reference (e.g. '123', '#123') or Decision identifier
+            (e.g. 'DR-nnn').
+
+    Returns:
+        tuple[str, str]: Short name and markdown reference string for the superseder.
+
+    Raises:
+        SystemExit: If the format is invalid, if a PR is unmerged, or if a decision
+            is not yet adopted on the main branch.
     """
     found = SUPERSEDER.match(what.strip())
     if not found:
@@ -1481,20 +1098,14 @@ def superseder(what):
 
 
 def minted_for(branch):
-    """The Decision numbers reserved for a branch that the record on the trunk
-    does not hold: numbers spent on a decision nobody took.
+    """Identify Decision Record numbers reserved for a branch that have not landed on trunk.
 
-    A hole in the sequence is a reservation somebody is still keeping or an
-    entry somebody dropped, and `decision numbering` tells those apart without
-    knowing whose the reservation is. Here the branch is known, so the tag's
-    message answers it: `mint` writes `DR-nnn reserved for <branch>.` into the
-    annotation, and that is the only record of who took a number.
+    Parameters:
+        branch (str): Branch name to inspect.
 
-    Only the holes are read, which is the numbers in flight and no more. A
-    lightweight ref carries no message and so names no branch; `mint` writes an
-    annotated tag and nothing else here writes one at all, so one that is not
-    annotated is not this verb's to attribute. Nor is a number minted before
-    the branch existed, which records `reserved for main` (solorepo's DR-128).
+    Returns:
+        list[str]: Unredeemed Decision Record identifiers (e.g. ['DR-nnn']) reserved
+            for the specified branch.
     """
     mine = []
     for number in sorted(reserved() - numbers_on("main")):
@@ -1509,60 +1120,27 @@ def minted_for(branch):
 
 
 def supersede(pr, by, reason):
-    """Close a pull request another answer to its Challenge has overtaken: the
-    one exit that is not a merge (solorepo's DR-164).
+    """Close a pull request that has been superseded by another merged change or adopted decision.
 
-    PR First's tenth step is *merged, never abandoned*, and the channel holds
-    it by construction — there is no `close` verb, so `merge` is how a pull
-    request ends. The step is written for a change that was tried and did not
-    work: merging records the attempt, and the record is worth the diff. It
-    assumes merging is available and merely unappealing, and that is what fails
-    here. A change the tree has already answered elsewhere cannot merge at all
-    — the diff would install a second mechanism over a working one — so step
-    ten cannot be followed, and without this verb nothing else can be either,
-    which leaves the act to `gh pr close` typed by hand, unsigned, which is the
-    defect solorepo's DR-069 exists to make unrepresentable.
+    Closes an open pull request whose associated challenges have already been resolved
+    by an alternative landed change (solorepo's DR-164). Posts an explanatory signed
+    comment citing the superseding artifact and any unredeemed decision numbers
+    minted on the branch, then closes the pull request.
 
-    What makes this an exception rather than a repeal is the refusals, and each
-    is a read rather than a question to the caller. The pull request is open.
-    What `--by` names has landed: a merged pull request, or a Decision the
-    record on the trunk adopted rather than merely holds a number for. And the
-    body closes a Challenge, and every Challenge it closes is closed already —
-    which is the whole of what tells superseded from abandoned, since the
-    Challenge being closed is the evidence that another answer landed. A change
-    nobody superseded still has merge as its only exit.
+    Parameters:
+        pr (int or str): Pull request number to supersede.
+        by (str): Superseding reference (merged PR number or adopted DR identifier).
+        reason (str): Explanatory text justifying the closure.
 
-    The body closing none is refused for the same reason and not waved through
-    it. The form allows "None." and means it as a question, so that shape
-    reaches here; what the verb would have established about such a pull
-    request is that it is open, since `--by` is satisfied by any merged pull
-    request in the repository and says nothing about this one. Closing it would
-    be the general `close` step ten refuses to have, reached through a heading.
-
-    The order is `stop`'s, and for the same reason: the comment before the
-    state, so the record carries an account of why whatever fails next. The
-    reason is the caller's and arrives on stdin; what the verb renders beside
-    it is what it read — where the answer landed, which Challenges are closed,
-    and which Decision numbers this branch minted and will never redeem. Those
-    are not released: the tag is the allocation, so deleting it would let a
-    number be issued twice while a citation of the first minting stands in a
-    closed pull request's body, and solorepo's DR-128 closes such a hole by
-    writing the number back into the record as WITHDRAWN. It also says nothing
-    prompts that; this is the moment somebody knows the number will never be
-    redeemed, so the prompt goes here.
+    Raises:
+        SystemExit: If the PR is not open, if any referenced challenge remains open,
+            or if the close operation fails to register on GitHub.
     """
     before = channel.gh("pr", "view", str(pr), "--json",
                         "state,title,headRefName,closingIssuesReferences")
     if before["state"] not in ("OPEN", "CLOSED"):
         sys.exit(f"say: #{pr} is {before['state'].lower()}, not open or closed")
-    # Nothing here refuses a pull request named as its own superseder, because
-    # nothing can reach that state: this one is open, and `superseder` takes
-    # only what has landed.
     name, cited = superseder(by)
-    # The Challenges the body closes, and each one's state. `gh pr view` does
-    # not report the state with the reference — it gives the number, the
-    # repository and the url and nothing else — so it is asked for, per
-    # Challenge, and there are never many.
     closes = [c["number"] for c in before["closingIssuesReferences"]]
     if not closes:
         sys.exit(f"say: #{pr} closes no Challenge, so there is nothing here another answer "
@@ -1594,9 +1172,7 @@ def supersede(pr, by, reason):
                  "back into the record as WITHDRAWN, not by releasing it (solorepo's DR-128)."]
     channel.sibling("post").conversation_comment(pr, channel.signed("\n".join(said)))
     channel.gh("pr", "close", str(pr), parse=False)
-    # Read back: the act is what GitHub shows afterwards, not what `gh`
-    # returned. A close that did not take leaves a pull request this Job has
-    # already announced dead, with the comment saying so standing on it.
+    # Verify the pull request reflects CLOSED state on GitHub.
     after = channel.gh("pr", "view", str(pr), "--json", "state")["state"]
     if after != "CLOSED":
         sys.exit(f"say: GitHub shows #{pr} {after.lower()} after the call, not closed")
@@ -1606,37 +1182,21 @@ def supersede(pr, by, reason):
 
 
 def request_review(pr, to):
-    """The handoff: request review from the next Role's account.
+    """Request pull request review from a designated Role account.
 
-    A semaphore, not a message. GitHub holds the request and reports it, so the
-    arriving Job finds its work by asking what has been requested of its login.
-    Read back from GitHub afterwards to verify the request was successfully updated on the remote, independent of the CLI exit code.
+    Signals a role handoff by requesting review on GitHub. If a review request
+    is already pending for the designated login, it is withdrawn and re-requested
+    to trigger notification events. Polls branch mergeability and refuses review
+    requests if the branch is conflicting (solorepo's DR-145). Reads back requested
+    reviewers to verify the assignment took effect.
 
-    A request already pending is withdrawn first. GitHub emits no event for
-    a reviewer it already lists, so a Job whose run answered nothing left the
-    request standing and a second ask went nowhere (solorepo's #87). Withdrawing and
-    asking again is the same semaphore raised twice, and the event fires.
+    Parameters:
+        pr (int or str): Pull request number.
+        to (str): Target Role name (e.g., 'reviewer').
 
-    **Refused on a branch GitHub reports as `CONFLICTING`** (solorepo's DR-145).
-    The semaphore is raised and nothing can answer it: GitHub builds
-    no merge ref for a branch that conflicts, `review.yml` runs on
-    `pull_request`, and so the request creates no run while GitHub goes on
-    reporting it as outstanding — which reads, from the pull request and from
-    a watch alike, exactly like a review in progress. `coder.yml`'s hand-back step reads `mergeable` for this reason
-    already (solorepo's DR-129) and the verb a session types did not, so
-    solorepo's #192 was opened conflicting, requested three minutes later, and
-    answered by nobody until the solo looked. The remedy is the one the
-    hand-back step names: the branch rebased onto its own base, which is not
-    always `main`, and pushed — a `synchronize` on a head that merges is what
-    starts the review.
-
-    Only `CONFLICTING`, for the reason the hand-back step gives: `UNKNOWN` is
-    GitHub still computing, and refusing on that would refuse on timing. Which
-    is what the wait is for, and it is a wait: a push is what invalidates the
-    cached answer and a request follows a push, so the read this verb makes is
-    the one GitHub's reference says to poll. Bounded at half a minute by
-    `mergeability`, and it is the branch being asked about rather than the
-    checks, which a handoff does not wait for (solorepo's #102).
+    Raises:
+        SystemExit: If the branch conflicts with its base, or if GitHub fails to
+            register the reviewer request.
     """
     login = channel.role_login(to)
     pull = channel.gh("pr", "view", pr, "--json", ADVANCE)
@@ -1665,9 +1225,6 @@ ROOT = channel.HERE.parent.parent
 DECISIONS = ROOT / ".meta" / "assertions" / "decisions"
 ENTRY = re.compile(r"^DR-(\d+)$")
 RESERVATION = re.compile(r"^refs/tags/DR-(\d+)$")
-# Enough to outlast a burst of sessions minting at once and no more: each turn
-# of the loop is a refusal GitHub made, so a hundred would be a hundred writes
-# against a repository that is answering "taken" to every one.
 ATTEMPTS = 20
 
 
@@ -1678,12 +1235,13 @@ def numbers_here():
 
 
 def numbers_on(branch):
-    """The numbers the record holds on a branch of the remote.
+    """Query Decision Record numbers present on a specified remote branch.
 
-    Asked because this working tree is not the record: a branch cut a week ago
-    has main's entries as they were, and a number issued from it would be one
-    main has already used. The listing is one call and it is the truth about
-    the trunk at this moment, which is what the number has to clear.
+    Parameters:
+        branch (str): Remote branch name to inspect.
+
+    Returns:
+        set[int]: Set of Decision Record numbers committed to the branch.
     """
     where = DECISIONS.relative_to(ROOT)
     listing = channel.gh("api", f"repos/{channel.repo()}/contents/{where}?ref={branch}")
@@ -1692,30 +1250,20 @@ def numbers_on(branch):
 
 
 def reserved():
-    """The numbers GitHub holds a tag for: every number issued and not yet
-    withdrawn, whether its pull request has landed or is still open.
+    """Query all Decision Record numbers reserved via git tags on GitHub.
 
-    All of them, in one call. `GET /repos/{owner}/{repo}/git/matching-refs/{ref}`
-    does not paginate: its reference lists an `accept` header and three path
-    parameters under "Parameters for 'List matching references'" and no query
-    parameters at all, where a listing beside it that does paginate — `GET
-    /repos/{owner}/{repo}/tags` — lists "per_page ... The number of results per
-    page (max 100). Default: 30" and `page`. So the thirty-first reservation is
-    returned like the first, which is what `mint` below means by the tags being
-    the authoritative source (solorepo's #152).
+    Returns:
+        set[int]: Set of Decision numbers corresponding to refs/tags/DR-* tags.
     """
     refs = channel.gh("api", f"repos/{channel.repo()}/git/matching-refs/tags/DR-")
     return {int(m.group(1)) for ref in refs if (m := RESERVATION.match(ref["ref"]))}
 
 
 def branch_here():
-    """The branch a reservation is taken for, or that there was no branch.
+    """Return the short branch name of the active checkout, or 'an unnamed branch' if detached.
 
-    `symbolic-ref`, not `rev-parse --abbrev-ref HEAD`, which prints `HEAD` and
-    exits 0 on a detached checkout — so the fallback was unreachable in the one
-    state it names, and a mint from a detached HEAD wrote `reserved for HEAD`
-    into a tag nothing ever deletes. `symbolic-ref -q` exits non-zero there,
-    which is the question being asked (solorepo's #152).
+    Returns:
+        str: Current git branch name, or 'an unnamed branch' on detached HEAD.
     """
     found = subprocess.run(["git", "-C", str(ROOT), "symbolic-ref", "-q", "--short", "HEAD"],
                            capture_output=True, text=True)
@@ -1723,43 +1271,22 @@ def branch_here():
 
 
 def mint():
-    """Issue the next Decision number and reserve it on GitHub, as a tag
-    (solorepo's DR-128).
+    """Allocate and reserve the next sequential Decision Record identifier via an annotated tag (solorepo's DR-128).
 
-    A number is fixed the moment it is first cited (solorepo's DR-125), and
-    citations in pull request bodies, Issues and commits are never rewritten.
-    Until this verb the number was chosen by reading the record on a branch,
-    which is a read of a value two branches read alike: on one evening in
-    September 2026 four open pull requests took two numbers between them, and
-    the repair was a rebase with conflicts, two renames and a body edit on
-    every pull request that had cited one.
+    Queries the repository tree, trunk history, and existing DR-* git tags to identify
+    the next available Decision number, then creates an annotated tag refs/tags/DR-<n>
+    pointing to main's head commit. Retries on 422 conflicts up to ATTEMPTS times to
+    resolve concurrent allocations safely.
 
-    So the number is issued by the one participant both branches share.
-    `POST /git/refs` fails with "Reference already exists" when the ref is
-    held — GitHub's REST reference says so, and it is the same 422 whichever
-    session asks second — so creating `refs/tags/DR-nnn` is a compare-and-set
-    over the number, and the loser is told, in the one call, that it lost. It
-    then asks for the next one.
+    Returns:
+        int: The allocated Decision number.
 
-    The candidate clears three sources before the first attempt: the record in
-    this tree, the record on the trunk, and the tags. The first two are the
-    numbers already spent, the last is the numbers spent or promised, and only
-    the last is authoritative — the other two are there because the tags begin
-    where this verb does, and everything below that was issued by hand.
-
-    The tag is annotated rather than lightweight, and stays after the entry
-    lands. The object records who issued the number and when; the message
-    records which branch it was issued for, which is what a reader needs when
-    they find a reservation nobody redeemed. Deleting it at merge would save a
-    ref and lose the only evidence that the number was ever issued, which is
-    what a reservation is for (solorepo's DR-125).
+    Raises:
+        SystemExit: If allocation fails after ATTEMPTS iterations.
     """
     branch = branch_here()
     taken = numbers_here() | numbers_on("main") | reserved()
     at = max(taken, default=0) + 1
-    # The trunk's head, because a tag object has to point at something and the
-    # commit the entry will be written in does not exist yet. What it points at
-    # says when the number was issued, which is the only thing being recorded.
     head = channel.gh("api", f"repos/{channel.repo()}/commits/main", "--jq", ".sha", parse=False)
     for number in range(at, at + ATTEMPTS):
         name = f"DR-{number:03d}"
@@ -2027,8 +1554,11 @@ def merge_manager(dry_run=False):
 
 
 def build_parser():
-    """The parser alone, so a probe can check what each verb accepts without
-    running what it dispatches to (solorepo's #95)."""
+    """Construct and return the command-line argument parser for state transition verbs.
+
+    Returns:
+        argparse.ArgumentParser: Configured parser for issues, pull requests, and decisions.
+    """
     ap = channel.parser(__doc__)
     sub = ap.add_subparsers(dest="verb", required=True)
 
@@ -2060,28 +1590,15 @@ def build_parser():
     p = sub.add_parser("advance")
     p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
     p = sub.add_parser("dispatch"); p.add_argument("pr")
-    # Required, and with no default, although `coder.yml` defaults its own
-    # input to `review`: the two passes do opposite things to a branch, and a
-    # default here would make the commoner mistake the silent one.
     p.add_argument("--task", required=True, choices=("review", "rebase"),
                    help="which pass: `review` answers a verdict that stands, `rebase` puts a "
                         "conflicting branch back where a review can run")
-    # The one exit that is not a merge. `--by` is required because the closing
-    # comment cites it — a close that names nowhere the answer landed is the
-    # `close` verb step ten refuses to have — and not because it is the
-    # evidence: any merged pull request satisfies it and it says nothing about
-    # the one being closed, so the Challenge the body closes is read too
-    # (solorepo's DR-164).
     p = sub.add_parser("supersede"); p.add_argument("pr")
     p.add_argument("--by", required=True,
                    help="what answered the Challenge already: a merged pull request, or a "
                         "landed Decision as DR-nnn")
     p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
 
-    # A Decision's: the number, issued by GitHub and reserved from then on. It
-    # takes nothing — a number a caller could pass is a number a caller could
-    # pass wrongly, which is the read of a shared value this verb exists to
-    # replace.
     sub.add_parser("mint")
     return ap
 
@@ -2114,9 +1631,6 @@ def main():
     elif args.verb == "mint":
         mint()
     elif args.verb == "revise":
-        # A title says everything it has to say in an argument, so the body
-        # is optional here and nowhere else; reading a body a rename will not
-        # use turned a rename into a refusal, twice.
         text = channel.piped()
         revise(args.number, body=channel.signed(text) if text else None, title=args.title)
     elif args.verb == "file":
@@ -2124,9 +1638,6 @@ def main():
     elif args.verb == "stop":
         stop(args.issue, channel.signed(channel.stdin_body()))
     elif args.verb == "supersede":
-        # Signed after the body is assembled rather than here: the Trailer
-        # block closes the comment, and what this verb renders from the record
-        # goes between the caller's reason and it.
         supersede(args.pr, args.by, channel.stdin_body())
     elif args.verb == "open":
         open_pull_request(args.title, channel.signed(channel.stdin_body()), base=args.base, on=args.on)

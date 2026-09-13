@@ -70,9 +70,15 @@ UNSET = object()
 
 
 def gh(*args, default=UNSET):
-    """One `gh` call, parsed. A read that fails degrades to `default` rather
-    than taking the screen down — the same bargain `next.py` makes, for the
-    same token."""
+    """Executes a GitHub CLI command and parses its JSON output.
+
+    Args:
+        *args: Command arguments passed to gh.
+        default: Fallback value returned if the command fails.
+
+    Returns:
+        Any: Parsed JSON data or default value on error.
+    """
     out = subprocess.run(["gh", *args], capture_output=True, text=True)
     if out.returncode:
         if default is not UNSET:
@@ -82,18 +88,29 @@ def gh(*args, default=UNSET):
 
 
 def at(stamp):
-    """GitHub's timestamps, as an aware datetime. An absent one is `None`: a
-    step that never ran has no start, and the caller decides what that means
-    rather than getting an epoch that sorts first."""
+    """Parses an ISO 8601 UTC timestamp string into a timezone-aware datetime object.
+
+    Args:
+        stamp: ISO 8601 timestamp string or None.
+
+    Returns:
+        datetime | None: Timezone-aware datetime in UTC, or None if stamp is missing.
+    """
     if not stamp:
         return None
     return datetime.fromisoformat(stamp.replace("Z", "+00:00"))
 
 
 def span(start, end):
-    """Seconds between two of GitHub's timestamps, or `None` where either is
-    missing. Negative is possible and is GitHub's clock, not an error worth
-    dying on — it is clamped, so a skew cannot make a step look instant."""
+    """Computes the elapsed time in seconds between two ISO 8601 timestamps.
+
+    Args:
+        start: Beginning timestamp string.
+        end: Ending timestamp string.
+
+    Returns:
+        float | None: Non-negative elapsed seconds, or None if either timestamp is missing.
+    """
     a, b = at(start), at(end)
     if a is None or b is None:
         return None
@@ -101,8 +118,14 @@ def span(start, end):
 
 
 def clock(seconds):
-    """`3m12s`, `42s`, `1h04m`. Read down a column, so the unit is always
-    present and the field is a fixed width."""
+    """Formats a duration in seconds into human-readable fixed-width units.
+
+    Args:
+        seconds: Duration in seconds, or None.
+
+    Returns:
+        str: Formatted duration string (e.g. ' 42s', ' 3m12s', ' 1h04m', or ' —').
+    """
     if seconds is None:
         return "     —"
     seconds = round(seconds)
@@ -114,27 +137,32 @@ def clock(seconds):
 
 
 def pick(values, fraction):
-    """The nearest-rank percentile, which is a value that actually occurred.
+    """Calculates the nearest-rank percentile value from a sequence of numbers.
 
-    Interpolating between two runs would report a duration no run had, and the
-    reason to read this is to go and look at the run — so every figure printed
-    is one there is a run to open.
+    Args:
+        values: Sequence of numeric values.
+        fraction: Percentile fraction between 0.0 and 1.0 (e.g. 0.5 for median).
+
+    Returns:
+        float | int | None: Nearest-rank percentile value, or None if values is empty.
     """
     if not values:
         return None
     ordered = sorted(values)
-    # `ceil`, which is the nearest-rank formula, and not `round`, which is not.
-    # Python rounds halves to even, so `round(0.5 * 5)` is 2 and the median of
-    # five runs was the second smallest. The tie lands whenever the product is
-    # a half with an even integer part — five runs, nine, thirteen — and five
-    # is `--deep`'s default, so it was the ordinary reading and not an edge.
     rank = max(1, math.ceil(fraction * len(ordered)))
     return ordered[min(rank, len(ordered)) - 1]
 
 
 def runs_of(workflow, limit):
-    """Completed runs of one workflow, newest first, with the ones GitHub
-    never started removed."""
+    """Fetches completed workflow runs, filtering out skipped or cancelled deliveries.
+
+    Args:
+        workflow: Workflow filename (e.g. 'gate.yml').
+        limit: Maximum number of runs to retrieve.
+
+    Returns:
+        list[dict] | None: List of completed run dictionaries, or None on fetch failure.
+    """
     found = gh("run", "list", "--workflow", workflow, "--limit", str(limit),
                "--json", RUN_FIELDS, default=None)
     if found is None:
@@ -144,32 +172,27 @@ def runs_of(workflow, limit):
 
 
 def jobs_of(run_id):
-    """Every job of one run, with its steps. One call per run, which is why
-    the step report is opt-in and samples fewer runs than the summary."""
+    """Fetches job definitions and step timings for a specific workflow run.
+
+    Args:
+        run_id: GitHub Actions workflow run database ID.
+
+    Returns:
+        list[dict]: List of job dictionaries including step timing metadata.
+    """
     found = gh("run", "view", str(run_id), "--json", "jobs", default={})
     return found.get("jobs") or []
 
 
 def critical(run, jobs):
-    """The job the run actually waited on, and its two costs.
+    """Determines the critical-path job for a run and calculates queue wait and active work duration.
 
-    Not the earliest job and not the sum. The jobs of one run neither start
-    together nor run together: on run 34561479681 `python seed` had a runner
-    five seconds in while `files` and `rust seed` waited two minutes
-    forty-nine for a pod, and the run was not over until those finished. The
-    earliest start reports the luckiest job and hides exactly the cost that
-    made the run long; the sum reports a wall clock nobody waited.
+    Args:
+        run: Workflow run dictionary containing createdAt timestamp.
+        jobs: List of job dictionaries associated with the run.
 
-    So the run is decomposed along the job that finished last: its wait is
-    what the run spent getting a runner, and its duration is what the run
-    spent working. Those two add up to the run, which is the property that
-    makes the columns readable across a row.
-
-    A job GitHub never ran is skipped rather than clamped. Its timestamps are
-    not merely absent: a skipped job carries a `completedAt` *before* its
-    `startedAt` — `sweep` on that run completed at 04:14:46 having started at
-    04:17:30 — so it is excluded by having no first step rather than by
-    arithmetic that would quietly call it instant.
+    Returns:
+        tuple[float | None, float | None]: Queue wait duration and active execution duration in seconds.
     """
     created = at(run["createdAt"])
     if created is None:
@@ -192,8 +215,14 @@ DIFFICULTY_CACHE = {}
 
 
 def model_of(run):
-    """Determine the model used for a review run (opus vs sonnet).
-    Checks if any file touched by the PR matches boundary paths as in review.yml."""
+    """Infers the model family ('opus' vs 'sonnet') used for a review workflow run.
+
+    Args:
+        run: Workflow run dictionary containing headSha commit ref.
+
+    Returns:
+        str: 'opus', 'sonnet', or 'unknown'.
+    """
     sha = run.get("headSha")
     if not sha:
         return "unknown"
@@ -236,7 +265,14 @@ def _ensure_issues_loaded():
 
 
 def difficulty_of(run):
-    """Determine the challenge difficulty label from the run's branch name or issue title."""
+    """Determines challenge difficulty label associated with a workflow run.
+
+    Args:
+        run: Workflow run dictionary.
+
+    Returns:
+        str: Difficulty label ('easy', 'medium', 'hard', 'human', or 'unknown').
+    """
     branch = run.get("headBranch") or ""
     m = re.search(r"issue-(\d+)", branch)
     if m:
@@ -277,7 +313,16 @@ def difficulty_of(run):
 
 
 def stratify_run(workflow, run, stratify):
-    """Categorizes a workflow run by model or difficulty when requested."""
+    """Categorizes a workflow run by model or difficulty when requested.
+
+    Args:
+        workflow: Workflow filename.
+        run: Workflow run dictionary.
+        stratify: Grouping dimension ('model' or 'difficulty').
+
+    Returns:
+        str | None: Category tag or None.
+    """
     if stratify == "model" and workflow == "review.yml":
         return model_of(run)
     if stratify == "difficulty" and workflow in ("review.yml", "coder.yml"):
@@ -286,11 +331,16 @@ def stratify_run(workflow, run, stratify):
 
 
 def summarise(workflow, limit, deep, stratify=None):
-    """One row per workflow: how many runs, and what they cost.
+    """Aggregates runtime and wait percentiles across workflow runs.
 
-    `deep` is how many of those runs to open for the waiting/running split.
-    Zero reads none, and the row then carries total wall clock only — one call
-    per workflow instead of one per run.
+    Args:
+        workflow: Workflow filename.
+        limit: Number of recent runs to inspect.
+        deep: Number of recent runs to open for job-level wait and runtime analysis.
+        stratify: Optional grouping dimension ('model' or 'difficulty').
+
+    Returns:
+        tuple[dict | None, list]: Aggregate statistics dictionary and list of opened run tuples.
     """
     found = runs_of(workflow, limit)
     if found is None:
@@ -369,11 +419,11 @@ def subrow(tag, seen):
 
 
 def steps(opened, show):
-    """The slowest steps across the runs that were opened.
+    """Identifies and displays the slowest workflow steps across opened runs.
 
-    Keyed by job and step name together, because the same step name appears in
-    several jobs — `Set up job` is in all of them — and a figure that averaged
-    those would describe no step anybody could go and look at.
+    Args:
+        opened: Sequence of opened run tuples containing job step timings.
+        show: Maximum number of slowest steps to display.
     """
     seen = {}
     for _, jobs, *_ in opened:

@@ -51,9 +51,15 @@ REF = re.compile(r"#(\d+)")
 
 
 def gh(*args, default=None):
-    """One `gh` call, parsed. A read that fails degrades to `default` rather
-    than taking the screen down: the sweep's token cannot list runs, and the
-    screen is still worth printing without that section."""
+    """Executes a GitHub CLI command and parses its JSON output.
+
+    Args:
+        *args: Command arguments passed to gh.
+        default: Fallback value returned if the command fails.
+
+    Returns:
+        Any: Parsed JSON data or default value on error.
+    """
     out = subprocess.run(["gh", *args], capture_output=True, text=True)
     if out.returncode:
         if default is not None:
@@ -63,13 +69,18 @@ def gh(*args, default=None):
 
 
 def waits_on(issue):
-    """The blockers an Issue declares: a list of numbers, or a string when the
-    line names something that is not an Issue, or None when there is no line.
+    """Extracts blocker issue numbers declared by an issue.
 
-    Prefers GitHub's native blockedBy relationship (solorepo's DR-170), falling back to
-    reading the markdown line. The roadmap form carried the same fact as a
-    paragraph before solorepo's DR-114, so that paragraph is read too, for the Issues
-    filed under it."""
+    Inspects GitHub's native `blockedBy` relation (solorepo's DR-170) before
+    falling back to markdown regex parsing.
+
+    Args:
+        issue: Issue dictionary or raw markdown body string.
+
+    Returns:
+        list[int] | str | None: List of blocker issue numbers, prose explanation string,
+            or None if no blocker section is declared.
+    """
     native = [n["number"] for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n] if isinstance(issue, dict) else []
     if native:
         return native
@@ -87,8 +98,16 @@ def waits_on(issue):
 
 
 def classify(issue, open_numbers, closing):
-    """Where an Issue sits: what blocks it, whether an open pull request
-    already closes it, and otherwise whether it is ripe."""
+    """Classifies an issue by blocker status, in-progress state, and difficulty level.
+
+    Args:
+        issue: Issue dictionary from GitHub API.
+        open_numbers: Set of currently open issue numbers.
+        closing: Mapping of issue numbers to PR numbers closing them.
+
+    Returns:
+        dict[str, Any]: Classified issue metadata dictionary.
+    """
     labels = {lbl["name"] for lbl in issue["labels"]}
     level = next((d for d in DIFFICULTY if d in labels), None)
     waits = waits_on(issue)
@@ -131,15 +150,23 @@ def issues(closing=None):
 
 
 def untriaged(rows):
-    """A Challenge with no difficulty: the coder cannot see it, so nobody can
-    tell an empty queue from an untriaged one."""
+    """Filters challenge issues lacking an assigned difficulty label.
+
+    Args:
+        rows: Sequence of classified issue dictionaries.
+
+    Returns:
+        list[dict[str, Any]]: Untriaged challenge issues.
+    """
     return [i for i in rows if i["kind"] == "challenge" and not i["level"]]
 
 
 def pull_requests():
-    """Print the open pull requests, and return which Issues they close:
-    Issue number to pull request number, read from the closing keywords
-    GitHub resolved in each body."""
+    """Prints open pull requests and returns mapping of closed issue numbers to PR numbers.
+
+    Returns:
+        dict[int, int]: Mapping of closed issue numbers to closing pull request numbers.
+    """
     prs = gh("pr", "list", "--state", "open", "--json",
              "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,latestReviews,reviewRequests,isDraft,headRefName,"
              "closingIssuesReferences",
@@ -182,14 +209,7 @@ def loops():
 
 
 def sweep_row():
-    """The half-hourly sweep, apart from the row above: gate.yml's last
-    *scheduled* run and its last *successful* one. The `gate` row above reads
-    gate.yml's last run whatever the event, and a push or pull request touches
-    gate.yml on nearly every commit here, so a scheduled failure sits behind a
-    green row until one goes a full cycle with neither (solorepo's #235). The
-    two times answer different questions: a gap between them and now means
-    GitHub is throttling the schedule; a recent run with an old success means
-    the checker itself is broken."""
+    """Prints status and timestamps for the last scheduled and last successful gate sweep runs."""
     runs = gh("run", "list", "--workflow", "gate.yml", "--event", "schedule",
               "--limit", "50", "--json", "status,conclusion,createdAt", default=[])
     if not runs:
@@ -204,7 +224,11 @@ def sweep_row():
 
 
 def milestones(rows):
-    """Prints open milestones in ascending numerical order along with their associated issues."""
+    """Prints open milestones in ascending numerical order along with their associated issues.
+
+    Args:
+        rows: Sequence of classified issue dictionaries.
+    """
     found = gh("api", "repos/{owner}/{repo}/milestones?state=open&per_page=20", default=[])
     print("milestones — the lowest number is next")
     if not found:
