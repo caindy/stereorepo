@@ -172,9 +172,9 @@ class SearchIndex:
         results = []
         for identifier, score in ranked:
             kind, payload, source_file = self.docs[identifier]
-            title = str(payload.get("name", payload.get("title", identifier)))
+            title = str(payload.get("name", payload.get("title", payload.get("pref_label", identifier))))
             snippet = str(
-                payload.get("context", payload.get("description", payload.get("rationale", "")))
+                payload.get("context", payload.get("description", payload.get("rationale", payload.get("definition", ""))))
             )
             raw_clean = " ".join(snippet.split())
             snippet_clean = raw_clean[:177] + "..." if len(raw_clean) > 180 else raw_clean
@@ -206,17 +206,22 @@ def build_index(meta_dir: Path, root_dir: Path) -> SearchIndex:
             views = collect.views()
             entities, _, _ = collect.collect(views)
             for entity_id, (cls, obj, file_path) in entities.items():
-                name = obj.get("name", "") or obj.get("title", "")
-                title_text = f"{name} {entity_id} {file_path}"
+                pref_label = obj.get("pref_label", "")
+                alt_labels_list = obj.get("alt_labels", [])
+                alt_labels_str = " ".join(alt_labels_list) if isinstance(alt_labels_list, list) else str(alt_labels_list)
+                definition = obj.get("definition", "")
+
+                name = obj.get("name", "") or obj.get("title", "") or pref_label
+                title_text = f"{name} {alt_labels_str} {entity_id} {file_path}"
                 summary_text = str(
-                    obj.get("context", obj.get("description", obj.get("rationale", "")))
+                    obj.get("context", obj.get("description", obj.get("rationale", definition)))
                 )
                 other_text = " ".join(
                     extract_strings(
                         {
                             k: v
                             for k, v in obj.items()
-                            if k not in ("name", "title", "context", "description", "rationale")
+                            if k not in ("name", "title", "context", "description", "rationale", "pref_label", "alt_labels", "definition")
                         }
                     )
                 )
@@ -334,7 +339,13 @@ def run_benchmark(index: SearchIndex) -> int:
         ),
         (
             "I finished a task and there is leftover work, what do I do with it",
-            ["work:decision/054", "work:discipline/journaling", "work:discipline/pr-first"],
+            [
+                "work:decision/054",
+                "work:discipline/journaling",
+                "work:discipline/pr-first",
+                "work:concept/noticed-and-not-done",
+                "wiki:noticed-and-not-done",
+            ],
         ),
         (
             "an old rule no longer applies, how is it retired",

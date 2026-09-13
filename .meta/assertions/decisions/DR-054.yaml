@@ -17,6 +17,7 @@ decisions:
     consequences:
       - "A15 is mechanically checkable, unlike A13 and A14."
       - "`issue` is minted as a Concept and leaves Challenge's avoid list."
+      - "Leftover work (unfinished residue) is filed as a linked Issue."
     enacted_in:
       - work:artifact/meta-disciplines
     rationale: |-

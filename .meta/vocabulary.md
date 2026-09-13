@@ -102,6 +102,7 @@ _The kinds of thing written down, and which of them is authoritative._
 |---|---|---|
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
 | **Issue** | Where a Challenge lives before it is taken up — including work noticed during other work and deliberately not done. | tech debt, backlog item |
+| **Noticed and Not Done** | Work observed but left unexecuted during a change, formally parked as an unresolved review thread or a linked Issue to preserve its context without blocking delivery. | — |
 | **Pull Request** | Where a Challenge is taken in, argued and recorded — the Collaboration point, and the searchable account of why each change was made. | changelog, ticket |
 | **Review Thread** | One conversation on a Pull Request, opened against a line or against the change as a whole, and closed by being answered and resolved. | comment, conversation |
 | **Decision record** | The record of decisions at every level — the Portfolio's, a Product's or a Project's, told apart by which the entry names. One sequence, numbered DR-nnn, newest last. | ADR, architecture decision record |
