@@ -2650,6 +2650,52 @@ def wiki_probes():
     if res:
         problems.append(f"wiki_lead_paragraphs: expected README.md to be exempt, got {res!r}")
 
+    # Case 9: Frontmatter with MOS:LEAD passes (solorepo's DR-187)
+    fake_frontmatter = _FakeWikiPath(
+        "wiki/solorepo/test-frontmatter.md",
+        "---\nslug: test-frontmatter\ncontext: solorepo\nminted: 2026-09-12\n---\n\n# Test Frontmatter\n\n**Test Frontmatter** is a test page.\n",
+    )
+    res = files.wiki_lead_paragraphs(index, md_files=[fake_frontmatter])
+    if res:
+        problems.append(f"wiki_lead_paragraphs: expected frontmatter page to pass, got {res!r}")
+
     return problems
+
+
+@check("wikisplain probes", pre=True)
+def wikisplain_probes():
+    """Operational authoring skill /wikisplain verifies duplicate checking, MOS:LEAD generation, and wikilink embedding (solorepo's DR-187)."""
+    from importlib.machinery import SourceFileLoader
+
+    wikisplain = SourceFileLoader("wikisplain", str(META / "wikisplain.py")).load_module()
+    problems = []
+
+    # 1. Slugification
+    if wikisplain.slugify("Domain Storytelling") != "domain-storytelling":
+        problems.append(f"slugify: expected 'domain-storytelling', got {wikisplain.slugify('Domain Storytelling')!r}")
+
+    # 2. Lead sentence formatting
+    lead = wikisplain.format_lead_sentence("Domain Storytelling", "a visual modeling method")
+    if lead != "**Domain Storytelling** is a visual modeling method.":
+        problems.append(f"format_lead_sentence: unexpected result {lead!r}")
+
+    # 3. Duplicate detection
+    dups = wikisplain.find_duplicates("Knowledge Management", root=ROOT)
+    if not any(d["source"] == "wiki" for d in dups):
+        problems.append(f"find_duplicates: expected wiki duplicate for 'Knowledge Management', got {dups!r}")
+
+    # 4. Page generation and verification
+    content = wikisplain.generate_page(
+        title="Test Wiki Concept",
+        context="solorepo",
+        definition="a synthetic concept for gate validation",
+        root=ROOT,
+    )
+    verif = wikisplain.verify_page(content, "wiki/solorepo/test-wiki-concept.md", root=ROOT)
+    if verif:
+        problems.append(f"verify_page: generated page produced validation warnings: {verif!r}")
+
+    return problems
+
 
 

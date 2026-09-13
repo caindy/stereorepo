@@ -375,7 +375,7 @@ def wikilinks(index, md_files=None):
 
 @check("wiki lead paragraphs")
 def wiki_lead_paragraphs(index, md_files=None):
-    """Every wiki page opens with a bold copular lead definition (MOS:LEAD) concurring with the vocabulary (A2, solorepo's DR-185).
+    """Every wiki page opens with a bold copular lead definition (MOS:LEAD) concurring with the vocabulary (A2, solorepo's DR-185, solorepo's DR-187).
 
     Maintainer-facing exposition under wiki/<context>/ (excluding index READMEs)
     must open with a top-level heading (# <Title>) and a lead sentence defining
@@ -409,6 +409,16 @@ def wiki_lead_paragraphs(index, md_files=None):
         lines = [line.strip() for line in without_comments(raw_text).splitlines()]
         while lines and not lines[0]:
             lines.pop(0)
+
+        # Allow optional YAML frontmatter block (solorepo's DR-187)
+        if lines and lines[0] == "---":
+            lines.pop(0)
+            while lines and lines[0] != "---":
+                lines.pop(0)
+            if lines and lines[0] == "---":
+                lines.pop(0)
+            while lines and not lines[0]:
+                lines.pop(0)
 
         if not lines or not lines[0].startswith("# "):
             problems.append(f"{rel}: must begin with a top-level heading (# <Title>)")

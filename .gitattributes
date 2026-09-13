@@ -8,6 +8,7 @@
 
 /.claude/skills/pr-first-reviewer/SKILL.md merge=union
 /.claude/skills/pr-first/SKILL.md merge=union
+/.claude/skills/wikisplain/SKILL.md merge=union
 /.gitattributes merge=union
 /.github/ISSUE_TEMPLATE/challenge.md merge=union
 /.github/ISSUE_TEMPLATE/roadmap.md merge=union

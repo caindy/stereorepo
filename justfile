@@ -44,6 +44,10 @@ next:
 timing *args:
     python3 .meta/timing.py {{args}}
 
+# explain or scaffold a wiki concept following Knowledge Management conventions (solorepo's DR-187)
+wikisplain *args:
+    python3 .meta/wikisplain.py {{args}}
+
 # the citations this branch wrote, read against what they name; not a gate
 dereference *args:
     uvx --with linkml --with pyyaml python .meta/dereference.py {{args}}

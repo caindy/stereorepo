@@ -98,3 +98,12 @@ artifacts:
       Role: the verbs the reviewer holds, what a pull request here must hold,
       and what a reviewer's point owes. Use when a review has been requested of
       the reviewer's account.
+  - id: work:artifact/skill-wikisplain
+    name: .claude/skills/wikisplain/SKILL.md
+    path: .claude/skills/wikisplain/SKILL.md
+    description: >-
+      Author or explain an encyclopedic concept page in the wiki
+      (wiki/<context>/<concept>.md) following Knowledge Management conventions
+      (MOS:LEAD bold lead definition, closed-world wikilinks, semantic duplicate
+      prevention, and vocabulary alignment, solorepo's DR-187).
+

@@ -346,6 +346,12 @@ artifacts:
   - id: work:artifact/wiki-solorepo-ubiquitous-language
     name: wiki/solorepo/ubiquitous-language.md
     path: wiki/solorepo/ubiquitous-language.md
+  - id: work:artifact/meta-wikisplain
+    name: .meta/wikisplain.py
+    path: .meta/wikisplain.py
+    description: >-
+      Operational authoring tool for creating and explaining concepts in the
+      Knowledge Management wiki (solorepo's DR-187).
   - id: work:artifact/template-github-workflows-gate
     name: template/.github/workflows/gate.yml
     path: template/.github/workflows/gate.yml

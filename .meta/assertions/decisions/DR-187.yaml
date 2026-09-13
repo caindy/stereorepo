@@ -1,0 +1,81 @@
+decisions:
+  - id: work:decision/187
+    name: "DR-187 · Operational authoring skill /wikisplain for Knowledge Management"
+    challenge: work:challenge/371
+    status: ADOPTED
+    applies:
+      - work:article/2
+      - work:article/8
+      - work:article/17
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-wikisplain
+      - work:artifact/meta-render
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-assertions-disciplines
+      - work:artifact/meta-disciplines
+      - work:artifact/skill-wikisplain
+      - work:artifact/justfile
+      - work:artifact/specialize
+    context: >-
+      With the Knowledge Management discipline (solorepo's DR-184) and Wikipedia editorial
+      conventions (solorepo's DR-185) landed, maintainer-facing exposition belongs in
+      `wiki/<context>/` adhering to MOS:LEAD bold lead definitions and closed-world
+      wikilinks. However, authoring new wiki pages previously required manual file
+      creation, manual frontmatter composition, manual duplicate checking against
+      LinkML vocabulary schemas, and manual gate verification (#371).
+
+      Without a deterministic authoring skill, agents and maintainers face friction
+      scaffolding wiki pages when minting domain terms or explaining subsystems,
+      increasing the risk of semantic drift or formatting divergence.
+    alternatives:
+      - name: Manual wiki page authoring with prompt reminders
+        chosen: false
+        reason: >-
+          Relying on maintainers and agents to manually compose frontmatter and
+          MOS:LEAD definitions invites subtle syntax errors, unregistered links,
+          and duplicate concepts that only surface when running the full gate.
+      - name: Automatic generation on vocabulary schema edits
+        chosen: false
+        reason: >-
+          Automatically generating wiki files on every LinkML vocabulary edit couples
+          the machine-readable schema definition with narrative exposition, preventing
+          independent authoring of conceptual overviews and architectural guides.
+      - name: Operational authoring tool and skill /wikisplain
+        chosen: true
+        reason: >-
+          A deterministic CLI tool `.meta/wikisplain.py` and operational skill
+          `/wikisplain` checks for collisions against existing vocabulary and wiki
+          pages, scaffolds canonical MOS:LEAD pages with optional frontmatter,
+          automatically embeds closed-world wikilinks, and verifies compliance.
+    consequences:
+      - >-
+        .meta/wikisplain.py provides CLI commands for checking duplicates,
+        scaffolding wiki pages, embedding wikilinks, and verifying MOS:LEAD rules.
+      - >-
+        .meta/checks/files.py allows optional YAML frontmatter on wiki concept pages.
+      - >-
+        .meta/checks/probes.py includes precheck probes verifying wikisplain functionality.
+      - >-
+        .claude/skills/wikisplain/SKILL.md is rendered from structure assertions.
+      - >-
+        justfile provides the `just wikisplain` recipe.
+      - >-
+        SPECIALIZE.md copies .meta/wikisplain.py forward into specialized portfolios.
+      - >-
+        Resolves Challenge 371.
+    falsifier: >-
+      A wiki page scaffolded by wikisplain that fails `wiki lead paragraphs` or
+      `wikilinks` verification, or a concept that collides with an existing
+      vocabulary entry without being detected by `find_duplicates`.
+    rationale: |-
+      Operational skills bridge the gap between static repository rules and the
+      authoring habits of agents and maintainers. By packaging collision detection,
+      frontmatter generation, MOS:LEAD copular structuring, and closed-world
+      wikilink embedding into an atomic tool `/wikisplain`, solorepo provides a
+      frictionless path to creating high-quality, gate-compliant documentation.
+
+      Copying `.meta/wikisplain.py` forward into specialized portfolios ensures that
+      every specialized team of one retains the exact same encyclopedic authoring
+      discipline and tooling for its own bounded contexts.
