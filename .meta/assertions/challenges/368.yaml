@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/368
+    name: "Configure thinking depth across coder harnesses by difficulty level"
+    challenge_type: GAP
+    description: >-
+      Coder workflow execution lacks differentiated thinking and reasoning depth across difficulty
+      levels and harnesses. Gemini CLI runs easy and medium challenges with unconfigured default
+      thinking, while Claude Code steps do not explicitly export extended thinking tokens.
+      Enacting low thinking for easy challenges and high thinking for medium and rebase challenges on
+      Gemini CLI, alongside full extended thinking tokens on Claude Code (Sonnet and Opus),
+      aligns cognitive effort with problem complexity, saves tokens and latency on deterministic fixes,
+      and provides reasoning headroom on subtle architectural changes.

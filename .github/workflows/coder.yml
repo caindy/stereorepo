@@ -131,6 +131,9 @@ jobs:
       # GitHub attests for this run and no other; the harness is the action,
       # recorded as the environment names it.
       ACTOR_SESSION: gha-${{ github.run_id }}
+      # Differentiated thinking depth across harnesses (solorepo's DR-186): Sonnet and Opus
+      # always run high extended thinking to prevent regressions and hallucinations.
+      MAX_THINKING_TOKENS: "32000"
     steps:
       # Full history so the coder can read what was already true, and no
       # token in `.git/config` from the checkout: the action writes the
@@ -429,6 +432,11 @@ jobs:
       # Depth by the label. `easy` is the smaller model and an hour at most;
       # `medium` is the larger and the whole budget. The guess is the
       # raiser's, and a wrong one costs a run before anyone relabels.
+      # Differentiated thinking depth across harnesses (solorepo's DR-186):
+      # For Gemini CLI, `easy` runs `gemini-3.8-flash` with low thinking (`ThinkingLevel.LOW`)
+      # to minimize latency and token consumption, while `medium` and `rebase` run `gemini-3.8-flash`
+      # with high thinking (`ThinkingLevel.HIGH`) for extended architectural reasoning.
+      # For Claude Code, Sonnet and Opus always run with full extended thinking (MAX_THINKING_TOKENS=32000).
       # A rebase is bounded by what it is: one branch's commits moved onto what
       # landed under them, and whatever of that landing they collided with.
       # The larger model, because a conflict in this repository is prose as
@@ -451,13 +459,13 @@ jobs:
         run: |
           printf 'level=%s\n' "$LEVEL" >> "$GITHUB_OUTPUT"
           if [ "$TASK" = rebase ]; then
-            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\ngemini_thinking=high\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
           elif [ "$EVENT" = pull_request_review ] && [ "$STATE" = approved ]; then
-            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\nturns=30\nminutes=15\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\ngemini_thinking=low\nturns=30\nminutes=15\n' >> "$GITHUB_OUTPUT"
           elif [ "$LEVEL" = medium ]; then
-            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\ngemini_thinking=high\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
           else
-            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
+            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\ngemini_thinking=low\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
         env:
@@ -479,6 +487,8 @@ jobs:
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          MAX_THINKING_TOKENS: "32000"
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The action's own GitHub calls and the push as the Role too, so
@@ -620,6 +630,52 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          settings: |
+            {
+              "modelConfigs": {
+                "customAliases": {
+                  "${{ steps.depth.outputs.gemini_model }}": {
+                    "extends": "chat-base-3",
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "overrides": [
+                  {
+                    "match": {
+                      "overrideScope": "core"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "match": {
+                      "model": "${{ steps.depth.outputs.gemini_model }}"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
@@ -865,6 +921,8 @@ jobs:
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          MAX_THINKING_TOKENS: "32000"
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.CODER_GH_TOKEN }}
@@ -1004,6 +1062,52 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          settings: |
+            {
+              "modelConfigs": {
+                "customAliases": {
+                  "${{ steps.depth.outputs.gemini_model }}": {
+                    "extends": "chat-base-3",
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "overrides": [
+                  {
+                    "match": {
+                      "overrideScope": "core"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "match": {
+                      "model": "${{ steps.depth.outputs.gemini_model }}"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
@@ -1097,6 +1201,8 @@ jobs:
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          MAX_THINKING_TOKENS: "32000"
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.CODER_GH_TOKEN }}
@@ -1207,6 +1313,52 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          settings: |
+            {
+              "modelConfigs": {
+                "customAliases": {
+                  "${{ steps.depth.outputs.gemini_model }}": {
+                    "extends": "chat-base-3",
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "overrides": [
+                  {
+                    "match": {
+                      "overrideScope": "core"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "match": {
+                      "model": "${{ steps.depth.outputs.gemini_model }}"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
@@ -1273,6 +1425,8 @@ jobs:
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          MAX_THINKING_TOKENS: "32000"
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.CODER_GH_TOKEN }}
@@ -1380,6 +1534,52 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          settings: |
+            {
+              "modelConfigs": {
+                "customAliases": {
+                  "${{ steps.depth.outputs.gemini_model }}": {
+                    "extends": "chat-base-3",
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "overrides": [
+                  {
+                    "match": {
+                      "overrideScope": "core"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "match": {
+                      "model": "${{ steps.depth.outputs.gemini_model }}"
+                    },
+                    "modelConfig": {
+                      "generateContentConfig": {
+                        "thinkingConfig": {
+                          "thinkingLevel": "${{ steps.depth.outputs.gemini_thinking == 'low' && 'LOW' || 'HIGH' }}",
+                          "includeThoughts": true
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
