@@ -60,6 +60,10 @@ dereference *args:
 search *args:
     uvx --with linkml --with pyyaml python .meta/search.py {{args}}
 
+# validate, pack, or compile the APM package via .meta/apm_compile.py (solorepo's DR-201)
+apm *args:
+    python3 .meta/apm_compile.py {{args}}
+
 # the optional local cluster this repo's self-hosted runner can use
 arc-cluster:
     .meta/arc/cluster

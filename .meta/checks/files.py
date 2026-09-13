@@ -1143,6 +1143,19 @@ def meta_doc():
     return Passed(f"{counted} public items across {modules} files, each with a docstring")
 
 
+@check("apm package")
+def apm_package():
+    """Verifies that .meta/.apm/ passes APM CLI compilation validation when apm is available (solorepo's DR-201)."""
+    apm_bin = shutil.which("apm")
+    if not apm_bin:
+        return CouldNotRun("apm is not installed (install via 'brew install apm' or 'curl -sSL https://aka.ms/apm-unix | sh')")
+    res = subprocess.run([apm_bin, "compile", "--validate"], cwd=str(META), capture_output=True, text=True)
+    if res.returncode != 0:
+        lines = [line.strip() for line in (res.stdout + "\n" + res.stderr).splitlines() if line.strip()]
+        return Found(tuple(lines))
+    return Passed("all primitives validated successfully via apm compile --validate")
+
+
 # Registered last, because this is the one step that reads what the others'
 # subject is rendered into, and a reader watching the gate wants it under them.
 @check("rendered prose")

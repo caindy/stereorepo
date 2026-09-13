@@ -16,6 +16,8 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import shutil
+import subprocess
 import sys
 import textwrap
 from typing import Any
@@ -452,11 +454,62 @@ def check_primitives(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROO
     return stale
 
 
+def run_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
+    """Runs the apm CLI inside meta_dir, passing args (solorepo's DR-201)."""
+    apm_bin = shutil.which("apm")
+    if not apm_bin:
+        print(
+            "apm is not installed. Install via 'brew install apm' or "
+            "'curl -sSL https://aka.ms/apm-unix | sh'",
+            file=sys.stderr,
+        )
+        return 1
+    res = subprocess.run([apm_bin, *args], cwd=str(meta_dir))
+    return res.returncode
+
+
+def validate_apm(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROOT) -> int:
+    """Validates APM primitives against LinkML assertions and APM CLI schema (solorepo's DR-201)."""
+    stale = check_primitives(meta_dir, root_dir)
+    if stale:
+        print("Internal assertion-to-primitive drift detected:", file=sys.stderr)
+        for item in stale:
+            print(f"  {item}", file=sys.stderr)
+        return 1
+    print("Internal assertion-to-primitive projection is up to date.")
+    apm_bin = shutil.which("apm")
+    if not apm_bin:
+        print("Note: apm CLI is not installed; skipping downstream APM engine validation.")
+        return 0
+    return run_apm(["compile", "--validate"], meta_dir=meta_dir)
+
+
+def pack_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
+    """Packs the APM project into distributable plugin/bundle artifacts (solorepo's DR-201)."""
+    return run_apm(["pack", *args], meta_dir=meta_dir)
+
+
+def compile_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
+    """Compiles the APM project into target harness directories redirected to root (solorepo's DR-172, solorepo's DR-201)."""
+    cmd_args = ["compile", "--root", ".."]
+    if not any(a.startswith("-t") or a.startswith("--target") or a == "--all" for a in args):
+        cmd_args.extend(["-t", "claude,gemini,copilot"])
+    cmd_args.extend(args)
+    return run_apm(cmd_args, meta_dir=meta_dir)
+
+
 def main() -> None:
-    """CLI entrypoint for APM compiler and root reconciliation."""
+    """CLI entrypoint for APM compiler, packaging, and root reconciliation (solorepo's DR-201)."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Fail if generated primitives are stale")
     parser.add_argument("--reconcile", action="store_true", help="Reconcile harness root symlinks only")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=["validate", "pack", "compile", "audit", "doctor", "preview"],
+        help="APM operation to perform",
+    )
+    parser.add_argument("extra_args", nargs=argparse.REMAINDER, help="Additional arguments forwarded to apm")
     args = parser.parse_args()
 
     if args.reconcile:
@@ -476,6 +529,15 @@ def main() -> None:
             sys.exit(1)
         print("APM primitives are up to date.")
         sys.exit(0)
+
+    if args.command == "validate":
+        sys.exit(validate_apm())
+    elif args.command == "pack":
+        sys.exit(pack_apm(args.extra_args))
+    elif args.command == "compile":
+        sys.exit(compile_apm(args.extra_args))
+    elif args.command in ("audit", "doctor", "preview"):
+        sys.exit(run_apm([args.command, *args.extra_args]))
 
     count = write_primitives()
     print(f"Compiled {count} APM primitives.")

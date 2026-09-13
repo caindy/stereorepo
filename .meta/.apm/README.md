@@ -72,3 +72,13 @@ per the rule that an adopted convention is defined by its canon and not by us.
   for scoped rules; `agents` defines name, description, model, and tools; `skills`
   conforms to `agentskills.io` standard matching parent directory name; `prompts`
   defines input parameters and double as slash commands; `hooks` defines lifecycle handlers.
+
+## APM Toolchain Integration (solorepo's DR-201)
+
+The APM package is integrated into the repository operator surface (`just`) via `.meta/apm_compile.py`:
+
+- **Validation:** `just apm validate` verifies assertion-to-primitive alignment and runs downstream `apm compile --validate`.
+- **Packaging:** `just apm pack` runs `apm pack` to bundle the package into distributable plugin artifacts (`plugin.json`, `.github/plugin/plugin.json`).
+- **Compilation:** `just apm compile` compiles primitives across target harnesses (`claude`, `gemini`, `copilot`), redirecting output to the repository root via `--root ..`.
+- **Gate Check:** The repository gate (`just gate meta` / `.meta/gate meta`) runs `@check("apm package")`, executing `apm compile --validate` whenever the `apm` binary is installed. When `apm` is absent, the gate cleanly skips the check per solorepo's Article 6.
+

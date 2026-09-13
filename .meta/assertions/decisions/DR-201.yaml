@@ -1,0 +1,69 @@
+decisions:
+  - id: work:decision/201
+    name: "DR-201 · APM package validation, distribution packing, and multi-harness compilation integrate into the operator surface and gate"
+    status: ADOPTED
+    applies:
+      - work:article/6
+      - work:article/8
+      - work:article/10
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-apm-compile
+      - work:artifact/justfile
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-apm-readme
+    context: >-
+      DR-172 established that APM packages are nested under .meta/ and compile to
+      the repository root via `apm compile --root ..`. Challenge #342 implemented
+      the assertion-to-APM compiler generator (.meta/apm_compile.py), projecting
+      LinkML assertions into .meta/.apm/ primitives and .meta/apm.yml. However, the
+      repository operator surface (`just`) lacked recipes to validate, pack, or
+      compile the generated package using Microsoft's `apm` CLI, and the repository
+      gate did not verify that downstream APM compilation succeeded when `apm` was
+      available.
+    alternatives:
+      - name: Stop at internal LinkML-to-primitive generation without invoking the APM toolchain
+        chosen: false
+        reason: >-
+          Leaves the repository producing APM source files that have never been
+          validated by the APM engine or packed into distributable artifacts. Breaking
+          syntax or frontmatter changes in the primitives would go undetected until
+          an external consumer attempted installation.
+      - name: Force `apm` as a hard prerequisite for every local gate check and CI run
+        chosen: false
+        reason: >-
+          Violates solorepo's lean bootstrapping principles: a developer or runner
+          without Homebrew or the native APM binary installed would be blocked from
+          verifying core repository assertions.
+      - name: Integrate APM operations through .meta/apm_compile.py into `just apm` and add an optional-run gate check
+        chosen: true
+        reason: >-
+          Expanding .meta/apm_compile.py with pass-through and lifecycle actions
+          (validate, pack, compile, audit) surfaces the entire APM toolchain cleanly
+          through `just apm *args` per DR-106. In the gate, `@check("apm package")`
+          runs `apm compile --validate` whenever `apm` is present, while cleanly
+          skipping with CouldNotRun under Article 6 when it is absent.
+    consequences:
+      - >-
+        .meta/apm_compile.py supports `validate`, `pack`, `compile`, and general
+        APM CLI pass-through with automatic directory routing and `--root ..` redirection.
+      - >-
+        `just apm *args` is added to justfile via .meta/render.py, providing the
+        single-source operator surface for all APM packaging tasks.
+      - >-
+        .meta/checks/files.py gains `@check("apm package")` executing `apm compile --validate`
+        when `apm` is installed.
+      - >-
+        .meta/.apm/README.md is updated with the concrete validation, packing, and
+        compilation workflows.
+    falsifier: >-
+      A change to .meta/.apm/ primitives or .meta/apm.yml that breaks `apm compile --validate`
+      or `apm pack` while `apm package` reports passing.
+    rationale: |-
+      Generating package sources is only half the contract: verifying that the
+      official package manager accepts them and can pack distributable bundles
+      closes the loop.
+
+      Integrating the APM CLI via the single-source operator surface and gate
+      ensures that solorepo's multi-harness agent projections remain verifiable,
+      packageable, and compliant across all supported AI harnesses.

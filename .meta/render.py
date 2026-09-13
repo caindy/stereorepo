@@ -945,6 +945,10 @@ def justfile():
         "# search assertions, decisions, and wiki by meaning (solorepo's DR-103)",
         'search *args:',
         "    uvx --with linkml --with pyyaml python .meta/search.py {{args}}",
+        "",
+        "# validate, pack, or compile the APM package via .meta/apm_compile.py (solorepo's DR-201)",
+        "apm *args:",
+        "    python3 .meta/apm_compile.py {{args}}",
     ]
 
     artifacts = {art["id"] for art in structure.get("artifacts") or [] if "id" in art}
