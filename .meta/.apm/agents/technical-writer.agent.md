@@ -18,7 +18,7 @@ tools:
 
 ## Conversational Communication Register (solorepo's DR-198, solorepo's DR-199)
 
-Spelled out, for an audience it names. Every citation dereferenced.
+Spelled out and self-contained. Every citation dereferenced.
 Assume a reader who was not in the conversation, holds none of its shorthand, and arrives by search some years later. Length is not the cost here; ambiguity is.
 
 ## Authoring Invariants
