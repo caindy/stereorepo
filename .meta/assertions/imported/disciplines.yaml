@@ -215,11 +215,22 @@ disciplines:
 
       A configuration key nothing reads, a document nothing links to, a test
       suite nothing runs — each looks like a control and is none.
+
+      The rule binds in both directions: after the fact, deleting unconsumed
+      debris; and at the **creation boundary** (popularly known as YAGNI), refusing
+      speculative coordinate systems, schemas, and metamodels ahead of an active
+      consumer. As solorepo's DR-008 observed, a coordinate system invented ahead of its
+      consumer is one that will be wrong.
     judgement: >-
-      Whether a consumer actually checks the artifact or merely loads it.
-      Something reading a file and ignoring its contents satisfies the letter of
-      this and none of its point.
+      Whether a consumer actually checks the artifact or merely loads it, and
+      whether a proposed abstraction is required by an existing caller or by
+      speculative foresight. An abstraction built for a hypothetical future
+      consumer is debris at the moment of creation.
     steps:
+      - >-
+        Refuse speculative abstractions at the creation boundary: do not introduce
+        schemas, coordinate systems, or metamodels ahead of concrete producers and
+        consumers (solorepo's DR-008, solorepo's DR-203).
       - For each artifact, name what consumes it, and what that consumer checks it against.
       - Delete what nothing consumes. An unread artifact is not documentation, it is debris.
       - >-

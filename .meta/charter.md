@@ -71,9 +71,11 @@ _Retired when:_ A step whose scope is printed from what its run collected, so no
 
 ### A8. An artifact prevents drift only if something consumes it — and consumption is not sufficient. Ask what it is checked against.
 
-**Enforces** Nothing Unconsumed. **Checked by** Orphan detection, which enforces the necessary half only.
+**Enforces** Nothing Unconsumed. **Checked by** Orphan detection, which enforces the necessary half only, and PR review inspecting the creation boundary against speculative abstractions ahead of a consumer (solorepo's DR-008, solorepo's DR-203).
 
-_In practice:_ `.github/PULL_REQUEST_TEMPLATE.md` is consumed by GitHub, and checked against the form's own fence by `check.py`.
+_In practice:_ `.github/PULL_REQUEST_TEMPLATE.md` is consumed by GitHub, and checked against the form's own fence by `check.py`. At the creation boundary, capability reification on the schema was reverted in solorepo's DR-008 and provenance schemas deferred to the roadmap in solorepo's DR-203 because a coordinate system invented ahead of its consumer is debris before it is written.
+
+_Retired when:_ An artifact whose future requirements and downstream consumers are proven so invariant that building speculative coordinate systems ahead of consumption demonstrably prevents more rework than it introduces.
 
 ### A9. A seed is data. Linting it in place is not proof; it is gated by rendering it and running the real gates on the result.
 
@@ -173,4 +175,4 @@ _Retired when:_ A Project whose toolchain reports in a form this shape cannot ca
 
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml)

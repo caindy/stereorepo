@@ -1,0 +1,69 @@
+decisions:
+  - id: work:decision/205
+    name: "DR-205 · Anchor YAGNI at creation boundary in Article A8 and Nothing Unconsumed"
+    status: ADOPTED
+    challenge: work:challenge/400
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-charter
+      - work:artifact/meta-disciplines
+    context: >-
+      Challenge #396 proposed canonizing YAGNI as a standalone Discipline alongside
+      Literate Programming and Progressive Disclosure. Analysis of the bright line
+      between Articles and Disciplines (solorepo's DR-025, solorepo's DR-047, solorepo's DR-048) revealed a category
+      mistake: a Discipline prescribes an ordered procedural method requiring
+      judgement that resists automation, while an Article asserts a checkable
+      claim held against artifacts with zero judgement in its verification.
+      YAGNI lacks procedural steps and ordered human discretion; forcing it into a
+      Discipline produces contrived judgement and procedural boilerplate.
+
+      Furthermore, solorepo already formalizes this principle as the Discipline
+      Nothing Unconsumed (work:discipline/nothing-unconsumed). Minting a competing
+      Discipline or a redundant Article violates solorepo's DR-101 and Ubiquitous Language.
+      However, Article A8 previously focused on retrospective drift prevention and
+      orphan detection, omitting the creation boundary articulated in solorepo's DR-008
+      ("a coordinate system invented ahead of its consumer is one that will be wrong").
+    alternatives:
+      - name: Canonize YAGNI as a standalone Discipline
+        chosen: false
+        reason: >-
+          Violates solorepo's DR-025 and solorepo's DR-047. YAGNI has no ordered procedural steps or
+          distinct human judgement. Solorepo already has Nothing Unconsumed; minting
+          a duplicate Discipline introduces synonym drift forbidden by solorepo's DR-101.
+      - name: Mint YAGNI as a separate Article in the Charter
+        chosen: false
+        reason: >-
+          Splits the unconsumed-artifact invariant across two Articles. Article A8
+          already enforces Nothing Unconsumed; clarifying that A8 governs both the
+          creation boundary (speculative models) and retrospective drift (orphans)
+          keeps the Charter cohesive.
+      - name: Anchor YAGNI at the creation boundary of Article A8 and Nothing Unconsumed
+        chosen: true
+        reason: >-
+          Integrates YAGNI directly into its canonical ontological home in Nothing
+          Unconsumed and Article A8, citing solorepo's DR-008 and solorepo's DR-203.
+    consequences:
+      - >-
+        Article A8 in `.meta/assertions/imported/charter.yaml` explicitly cites
+        the creation boundary, solorepo's DR-008, and solorepo's DR-203.
+      - >-
+        `work:discipline/nothing-unconsumed` in `.meta/assertions/imported/disciplines.yaml`
+        incorporates the creation boundary into its description, judgement, and steps.
+      - >-
+        Re-rendering updates `.meta/charter.md` and `.meta/disciplines.md`.
+      - >-
+        Closes Challenge #400 and resolves the YAGNI question on parent Issue #396.
+    falsifier: >-
+      An artifact, schema, or coordinate system admitted to the active ontology
+      or tree with no active consumer, or a candidate Discipline minted for a rule
+      that has no procedural steps and requires zero judgement in its checking.
+    rationale: |-
+      The bright line between an Article and a Discipline is settled: a Discipline is
+      followed and requires judgement; an Article is checked and requires zero
+      judgement. YAGNI is the software-engineering aphorism for the creation boundary
+      of Nothing Unconsumed.
+
+      Rather than bloating the ontology with synonyms or forcing an invariant into
+      procedural steps, anchoring YAGNI at the creation boundary of Article A8 and
+      Nothing Unconsumed preserves conceptual parsimony.

@@ -1,0 +1,8 @@
+challenges:
+  - id: work:challenge/400
+    name: "Ground YAGNI at creation boundary in Article A8 and Nothing Unconsumed"
+    challenge_type: REFACTOR
+    description: >-
+      Anchor YAGNI in Article A8 and Nothing Unconsumed by expanding Article A8's
+      scope to the creation boundary and citing DR-008 against speculative design-time
+      coordinate systems and metamodels.

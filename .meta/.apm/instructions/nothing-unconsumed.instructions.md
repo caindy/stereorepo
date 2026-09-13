@@ -11,13 +11,15 @@ applyTo: "**/*"
 
 An artifact prevents drift only if something consumes it — and consumption is necessary, not sufficient. The question after "what reads this?" is always "and what is it checked **against**?"
 A configuration key nothing reads, a document nothing links to, a test suite nothing runs — each looks like a control and is none.
+The rule binds in both directions: after the fact, deleting unconsumed debris; and at the **creation boundary** (popularly known as YAGNI), refusing speculative coordinate systems, schemas, and metamodels ahead of an active consumer. As solorepo's DR-008 observed, a coordinate system invented ahead of its consumer is one that will be wrong.
 
 ## Judgement
 
-Whether a consumer actually checks the artifact or merely loads it. Something reading a file and ignoring its contents satisfies the letter of this and none of its point.
+Whether a consumer actually checks the artifact or merely loads it, and whether a proposed abstraction is required by an existing caller or by speculative foresight. An abstraction built for a hypothetical future consumer is debris at the moment of creation.
 
 ## Steps
 
+- Refuse speculative abstractions at the creation boundary: do not introduce schemas, coordinate systems, or metamodels ahead of concrete producers and consumers (solorepo's DR-008, solorepo's DR-203).
 - For each artifact, name what consumes it, and what that consumer checks it against.
 - Delete what nothing consumes. An unread artifact is not documentation, it is debris.
 - Hold a history log to its receipts. An entry says what failed and what the change established — not what changed, which the diff already says — and names its **receipt**: the test that would fail if the change were undone. The entry is consumed by a reader; what it is checked against is the test suite, so an entry whose test is gone is stale and goes with it, and the log prunes itself. Observed Failure's argument, applied to prose: an entry naming no test is debris for the same reason a guardrail never seen to fail is evidence of nothing.
