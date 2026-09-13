@@ -231,6 +231,11 @@ def scope(chk, base, everything):
     """
     index = articles()
     durable = set(chk.durable(chk.copied_files()))
+    import render
+    meta_dir = pathlib.Path(render.__file__).resolve().parent
+    targets = { (meta_dir / name).resolve() for name in render.rendered() }
+    skip = { p for p in targets if p.name != "justfile" }
+    durable = { p for p in durable if p.suffix != ".py" and p.resolve() not in skip }
     if everything:
         paths, before = sorted(durable), {}
     else:

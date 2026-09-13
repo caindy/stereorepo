@@ -1,0 +1,57 @@
+decisions:
+  - id: work:decision/180
+    name: "DR-180 · Deduplicate citation checks by skipping generated render targets in dereference.py"
+    challenge: work:challenge/172
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-dereference
+    context: >-
+      `.meta/dereference.py` reads the durable set, which includes both generated files and
+      the source files they are generated from. Consequently, the same citations are scanned,
+      sent to Claude, and billed twice: once in the source file (such as YAML assertions under
+      `.meta/assertions/`) and again in the generated target file (such as markdown pages under
+      `.meta/` or `justfile`).
+
+      Furthermore, because source and target representations differ (e.g., Python string literals in
+      `.meta/render.py` vs comments in `justfile`, or YAML scalars vs Markdown paragraphs),
+      the two readings can disagree. Handing python source to a model expecting prose can result in false
+      positives/findings (`x` results) on correct prose.
+    alternatives:
+      - name: Skip render targets and always scan the source files
+        chosen: false
+        reason: >-
+          Skipping all render targets would mean scanning `.meta/render.py` for citations that render
+          into `justfile`. However, the citations inside `render.py` exist as Python string literals,
+          which are not plain prose. Claude often flags these Python source representations with false positive
+          `x` verdicts.
+      - name: Skip source files and always scan the generated target files
+        chosen: false
+        reason: >-
+          Scanning only generated target files would report issues against files that are generated and
+          must not be edited by hand (e.g. `charter.md`, `SPECIALIZE.md`, `decisions.md`). The user would
+          have to manually map the finding back to the actual source file (such as a YAML assertion) to make
+          the fix, creating cognitive overhead.
+      - name: Skip generated targets and scan sources, except for the Python-to-prose/justfile case
+        chosen: true
+        reason: >-
+          By dynamically excluding all generated target files from the scanned set, we skip redundant scans.
+          To solve the Python-literal issue, we skip Python files (ending in `.py`) as they are source code rather
+          than prose, and allow `justfile` (which contains plain text comments rather than code string literals) to remain
+          in the scanned set. This perfectly matches where a user would edit to fix a citation (the YAML/Markdown source
+          files) while ensuring Python code is never parsed as prose.
+    consequences:
+      - >-
+        Duplicate scanning of citations in generated files and their sources is eliminated.
+      - >-
+        False positives on Python string literals are avoided by skipping `.py` files.
+      - >-
+        Generated target markdown files are dynamically filtered out of `dereference.py`'s scope using
+        `render.rendered().keys()`, while `justfile` remains as the target for `render.py`'s literals.
+    falsifier: >-
+      A citation-bearing sentence that is present in both a source file and its generated Markdown target
+      being asked twice during a `--all` run of `.meta/dereference.py`.
+    rationale: |-
+      Deduplicating the dereference scan directly reduces model usage costs and execution time.
+      Furthermore, separating prose from source code prevents false positive model findings
+      on string literals. Dynamically reading the generated target list from `render.py` ensures that
+      the deduplication rules remain completely in sync with any future page target additions.
