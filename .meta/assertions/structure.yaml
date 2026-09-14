@@ -118,6 +118,15 @@ artifacts:
   - id: work:artifact/bootstraps-python-seed-manifest
     name: bootstraps/python/seed/pyproject.toml
     path: bootstraps/python/seed/pyproject.toml
+  - id: work:artifact/bootstraps-python-capabilities
+    name: bootstraps/python/assertions/capabilities.yaml
+    path: bootstraps/python/assertions/capabilities.yaml
+  - id: work:artifact/bootstraps-python-apm-manifest
+    name: bootstraps/python/apm.yml
+    path: bootstraps/python/apm.yml
+  - id: work:artifact/bootstraps-python-provenance
+    name: bootstraps/python/PROVENANCE.md
+    path: bootstraps/python/PROVENANCE.md
   - id: work:artifact/github-workflows-gate
     name: .github/workflows/gate.yml
     path: .github/workflows/gate.yml

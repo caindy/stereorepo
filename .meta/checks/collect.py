@@ -134,9 +134,13 @@ def views():
 
 
 def collect(views):
-    """Scans all YAML assertions under .meta/assertions/, indexing entities and references."""
+    """Scans all YAML assertions under .meta/assertions/ and bootstraps/*/assertions/, indexing entities and references."""
     index, refs, skipped = {}, [], []
-    for path in sorted((META / "assertions").rglob("*.yaml")):
+    paths = sorted((META / "assertions").rglob("*.yaml"))
+    bootstraps_dir = ROOT / "bootstraps"
+    if bootstraps_dir.is_dir():
+        paths.extend(sorted(bootstraps_dir.glob("*/assertions/*.yaml")))
+    for path in paths:
         data = yaml.safe_load(path.read_text())
         if not data:
             continue
@@ -149,3 +153,4 @@ def collect(views):
             for item in (val if isinstance(val, list) else [val]):
                 walk(item, slot.range, sv, index, refs, path.name)
     return index, refs, skipped
+

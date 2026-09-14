@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/59
+    name: The sixteen skills python_bootstrap vendored have no home in the Python Bootstrap
+    challenge_type: FEATURE
+    description: >-
+      `python_bootstrap` vendors sixteen agent skills into every generated
+      project — eight `py-*` skills byte-identical from `l-mb/python-refactoring-skills`
+      and eight lifecycle skills adapted from `obra/superpowers` — with both MIT
+      notices and a `PROVENANCE.md` recording each local change. None of them
+      came with the seed in `bootstraps/python/` (DR-094). They are Capabilities
+      rather than boilerplate a seed holds, and are declared in the bootstrap
+      and compiled into an APM package brought in when a portfolio adopts
+      Python.

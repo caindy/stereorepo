@@ -128,6 +128,44 @@ def register_project(
     return True
 
 
+def install_bootstrap_apm_package(lang: str) -> None:
+    """Brings in the language bootstrap APM package when a project is bootstrapped (solorepo's DR-208)."""
+    if lang != "python":
+        return
+    bootstrap_dir = find_bootstrap_dir("python")
+    if not bootstrap_dir:
+        return
+    python_skills_dir = bootstrap_dir / ".apm" / "skills"
+    if not python_skills_dir.is_dir():
+        return
+
+    apm_manifest_file = ROOT / ".meta" / "apm.yml"
+    if apm_manifest_file.is_file():
+        raw_text = apm_manifest_file.read_text(encoding="utf-8")
+        if "solorepo-python" not in raw_text:
+            dep_block = "dependencies:\n  solorepo-python:\n    path: ../bootstraps/python\n"
+            if "dependencies:" in raw_text:
+                dep_block = "  solorepo-python:\n    path: ../bootstraps/python\n"
+                raw_text = raw_text.replace("dependencies:\n", "dependencies:\n" + dep_block)
+            else:
+                raw_text = raw_text.rstrip() + "\n" + dep_block
+            apm_manifest_file.write_text(raw_text, encoding="utf-8")
+            print(f"[*] Registered 'solorepo-python' APM package dependency in {apm_manifest_file.relative_to(ROOT)}.")
+
+    for harness_skills in [ROOT / ".claude" / "skills", ROOT / ".gemini" / "skills"]:
+        if harness_skills.parent.is_dir():
+            harness_skills.mkdir(parents=True, exist_ok=True)
+            for skill_dir in python_skills_dir.iterdir():
+                if not skill_dir.is_dir():
+                    continue
+                target = harness_skills / skill_dir.name
+                if not target.exists():
+                    import shutil
+                    shutil.copytree(skill_dir, target)
+                    print(f"[*] Projected skill '{skill_dir.name}' into {target.relative_to(ROOT)}.")
+
+
+
 def bootstrap(lang: str, destination: str, name: str | None = None) -> int:
     """Executes on-demand bootstrapping for a specified language and path."""
     lang = lang.lower().strip()
@@ -195,6 +233,8 @@ def bootstrap(lang: str, destination: str, name: str | None = None) -> int:
             subprocess.run(["python3", str(render_py)], capture_output=True, text=True)
     else:
         print("[!] Warning: structure.yaml not found; skipping project registration.")
+
+    install_bootstrap_apm_package(lang)
 
     print(f"\n[+] Successfully bootstrapped {lang.capitalize()} Project '{package_name}' at '{dest_rel}'.")
     gate_cmd = "uv run gate" if lang == "python" else "cargo xtask gate"

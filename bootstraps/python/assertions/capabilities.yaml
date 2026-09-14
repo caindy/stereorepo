@@ -1,0 +1,128 @@
+# Agent capabilities declared by the Python Bootstrap (solorepo's DR-208, solorepo's #59).
+#
+# These sixteen skills are Capabilities rather than seed boilerplate. They originate
+# from upstream python_bootstrap (DR-094), eight sourced byte-identical from
+# l-mb/python-refactoring-skills and eight lifecycle skills adapted from obra/superpowers.
+#
+# Retains LICENSE-python-refactoring-skills, LICENSE-superpowers, and PROVENANCE.md.
+# Compiled into an APM package at bootstraps/python/apm.yml and brought into
+# portfolios that adopt the Python bootstrap.
+
+capability_set:
+  - id: work:capability/py-code-health
+    name: Python code health
+    description: >-
+      Detect and remove dead code, duplicate code, and unused imports. Consolidate
+      similar code patterns into clean, maintainable abstractions. Sourced from
+      l-mb/python-refactoring-skills under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/py-complexity
+    name: Python complexity reduction
+    description: >-
+      Reduce cyclomatic and cognitive complexity in Python code. Break down complex
+      functions, simplify conditional branching, and extract helper routines. Sourced
+      from l-mb/python-refactoring-skills under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/py-git-hooks
+    name: Python git hooks setup
+    description: >-
+      Configure git pre-commit hooks to run ruff, mypy, and type checking before commits.
+      Sourced from l-mb/python-refactoring-skills under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/py-modernize
+    name: Python modernize
+    description: >-
+      Modernize Python codebases: migrate dependencies to uv, upgrade syntax to modern
+      Python idioms, and replace deprecated patterns with current standard library alternatives.
+      Sourced from l-mb/python-refactoring-skills under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/py-quality-setup
+    name: Python quality setup
+    description: >-
+      Configure ruff, mypy, and static analysis tooling for Python projects. Sets up
+      standard configurations and quality baselines. Sourced from
+      l-mb/python-refactoring-skills under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/py-refactor
+    name: Python refactor orchestrator
+    description: >-
+      Orchestrate comprehensive Python refactoring by coordinating security, complexity,
+      test quality, code health, and modernization routines. Sourced from
+      l-mb/python-refactoring-skills under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/py-security
+    name: Python security audit and remediation
+    description: >-
+      Detect and remediate security vulnerabilities in Python codebases, including injection
+      hazards, hardcoded secrets, unsafe deserialization, and dangerous API usages. Sourced
+      from l-mb/python-refactoring-skills under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/py-test-quality
+    name: Python test quality improvement
+    description: >-
+      Measure and improve test coverage and test suite quality using coverage metrics
+      and mutation testing. Sourced from l-mb/python-refactoring-skills under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/brainstorming
+    name: Brainstorming
+    description: >-
+      Refine a rough idea into a structured design through targeted inquiry and
+      alternative analysis before code is written. Adapted from obra/superpowers under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/executing-plans
+    name: Executing plans
+    description: >-
+      Execute agreed implementation plans in batches with checkpoints, verifying the
+      working tree and gate at each step. Adapted from obra/superpowers under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/finishing-a-development-branch
+    name: Finishing a development branch
+    description: >-
+      Verify the gate, close out documentation, clean working tree state, and prepare a
+      branch for review and handoff. Adapted from obra/superpowers under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/systematic-debugging
+    name: Systematic debugging
+    description: >-
+      Investigate non-obvious defects by isolating reproduction cases, diagnosing failure
+      layers, and verifying fixes with automated probes. Adapted from obra/superpowers under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/using-git-worktrees
+    name: Using git worktrees
+    description: >-
+      Create isolated worktrees on dedicated branches with clean environments for safe,
+      concurrent task development. Adapted from obra/superpowers under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/verification-before-completion
+    name: Verification before completion
+    description: >-
+      Enforce independent gate and behavioral verification before claiming work is
+      complete, fixed, or passing. Adapted from obra/superpowers under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/writing-plans
+    name: Writing plans
+    description: >-
+      Break down agreed designs into bite-sized, sequential tasks with exact file paths
+      and observable test verifications. Adapted from obra/superpowers under MIT license.
+    capability_kind: SKILL
+
+  - id: work:capability/writing-skills
+    name: Writing skills
+    description: >-
+      Author and refine agent skills with clear trigger descriptions, progressive disclosure,
+      and concise procedural guidance. Adapted from obra/superpowers under MIT license.
+    capability_kind: SKILL

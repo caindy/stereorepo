@@ -45,6 +45,21 @@ The seed is a real workspace named `seed`, not a tree of placeholder tokens,
 so that its own gate can run on it where it sits (DR-091). The one placeholder
 is the package's name, and `render` is the one copy of how it is substituted.
 
+## Capabilities and the APM Package
+
+The Python standard declares sixteen agent skills as Capabilities in
+[`assertions/capabilities.yaml`](assertions/capabilities.yaml) (solorepo's DR-208, solorepo's #59): eight refactoring
+skills (`py-*`) from `l-mb/python-refactoring-skills` and eight lifecycle skills adapted from `obra/superpowers`.
+
+Rather than vendoring raw skills into the project seed, they are compiled into
+an APM package at [`apm.yml`](apm.yml) under `.apm/skills/`. When a portfolio
+adopts Python (`just bootstrap python <dest>` or Specialization), the package is
+brought in as an APM dependency and projected into the active agent harnesses,
+keeping the seed workspace minimal and unencumbered. Upstream attribution and
+modifications are preserved in [`PROVENANCE.md`](PROVENANCE.md),
+[`LICENSE-python-refactoring-skills`](LICENSE-python-refactoring-skills), and
+[`LICENSE-superpowers`](LICENSE-superpowers).
+
 ## Where it came from
 
 The seed is `python_bootstrap`'s template with its memory architecture taken
@@ -52,7 +67,8 @@ out, because that architecture is the Portfolio's `.meta/` here: its charter
 is `AGENTS.md`, its decision tracks are the record with `product` or
 `project` set, its bets are each entry's falsifier, and its journal is what
 Journaling routes. DR-094 is the account of what came and what stayed, and
-DR-095, DR-096, DR-097 and DR-193 are its decisions about the standard, filed at the
+DR-095, DR-096, DR-097, DR-193 and DR-208 are its decisions about the standard, filed at the
 level they bind. The generator stays behind (DR-099): its `new` is [`render`](render),
 and its sync, never built, is kept there as the shape a portfolio's sync
 will take.
+

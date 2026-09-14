@@ -1,0 +1,85 @@
+decisions:
+  - id: work:decision/208
+    name: "DR-208 · Python Bootstrap declares its sixteen capabilities and compiles them into an APM package"
+    challenge: work:challenge/59
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/10
+      - work:article/17
+      - work:article/21
+    enacted_in:
+      - work:artifact/bootstraps-python-capabilities
+      - work:artifact/bootstraps-python-apm-manifest
+      - work:artifact/bootstraps-python-provenance
+      - work:artifact/meta-apm-compile
+      - work:artifact/meta-bootstrap
+      - work:artifact/bootstraps-python-readme
+    context: >-
+      When python_bootstrap was pulled in under DR-094, sixteen agent skills
+      (eight py-* refactoring skills from l-mb/python-refactoring-skills and eight
+      lifecycle skills adapted from obra/superpowers) were intentionally left
+      behind rather than copied into the seed. DR-094 established that skills are
+      Capabilities rather than seed boilerplate, and where a Capability is packaged
+      is APM's question (#28).
+      
+      Challenge #28 and DR-206 established solorepo's APM primitive compilation
+      and multi-harness distribution architecture. However, the sixteen skills
+      still lacked an asserted home in the repository (Challenge #59).
+      Declaring them globally in .meta/assertions/imported/authority.yaml would pollute
+      non-Python portfolios with Python-specific refactoring routines. Conversely,
+      copying raw markdown skill files directly into bootstraps/python/seed/ would
+      violate DR-094 and clutter every instantiated project workspace with
+      unmanaged files.
+    alternatives:
+      - name: Copy raw skill folders directly into bootstraps/python/seed/
+        chosen: false
+        reason: >-
+          Re-creates the two-rulebooks failure DR-094 rejected: vendoring agent
+          cognitive primitives inside seed workspaces duplicates files across
+          every project, drops them from APM's content-hashed dependency graph,
+          and drifts from upstream updates.
+      - name: Declare the sixteen skills as global Capabilities in .meta/assertions/imported/authority.yaml
+        chosen: false
+        reason: >-
+          Forces Python refactoring skills into portfolios and harnesses that do
+          not use Python (such as pure Rust or polyglot repositories), bloating
+          agent context windows and violating bounded context scoping.
+      - name: Declare Capabilities in the bootstrap and compile into an APM package brought in on adoption
+        chosen: true
+        reason: >-
+          Declares each of the sixteen skills as a LinkML Capability entity of kind
+          SKILL inside bootstraps/python/assertions/capabilities.yaml, preserving MIT
+          licenses and PROVENANCE.md. An APM package manifest at bootstraps/python/apm.yml
+          compiles the declared capabilities into standard APM primitives under
+          bootstraps/python/.apm/skills/. When a portfolio adopts Python (via just
+          bootstrap python or specialization), the portfolio brings in the bootstrap's
+          APM package, late-binding the skills to active harnesses without polluting
+          the clean seed or non-Python portfolios.
+    consequences:
+      - >-
+        bootstraps/python/assertions/capabilities.yaml asserts the sixteen skills
+        as LinkML Capability entities, validated by the repository gate.
+      - >-
+        bootstraps/python/apm.yml defines the solorepo-python APM package, and
+        .meta/apm_compile.py compiles its primitives into bootstraps/python/.apm/skills/.
+      - >-
+        MIT license notices (LICENSE-python-refactoring-skills, LICENSE-superpowers)
+        and PROVENANCE.md are maintained in bootstraps/python/ ensuring license compliance.
+      - >-
+        .meta/bootstrap.py wires the Python APM dependency into a portfolio upon
+        bootstrapping a Python project.
+      - >-
+        bootstraps/python/seed/ remains clean, containing only the minimal workspace,
+        example package, and verification gate.
+    falsifier: >-
+      A Python project in a portfolio that requires the sixteen skills and must
+      copy raw skill files by hand because APM failed to project the bootstrap
+      primitives into the active harness.
+    rationale: |-
+      Language-specific agent capabilities belong to the standard of the language,
+      not to the core ontology of work and not to the filesystem of a project seed.
+      
+      By declaring capabilities in the bootstrap itself and leveraging APM's
+      subdirectory package semantics, solorepo keeps seeds lightweight and
+      hermetic while providing agents with rich, stack-specific skills on demand.
