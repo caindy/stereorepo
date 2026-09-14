@@ -9,4 +9,3 @@
 # Written by `comments.py`, which names the file and the number in the failure.
 # The sweep that empties it is caindy/solorepo#412.
 .meta/checks/files.py: 17
-.meta/checks/probes.py: 129

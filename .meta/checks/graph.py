@@ -254,11 +254,11 @@ def decision_level(index):
 
 @check("withdrawn decisions")
 def withdrawn_decisions(index):
-    """A withdrawn Decision says why it is a hole (solorepo's DR-112).
+    """A withdrawn Decision says why it is a hole.
 
-    LinkML requires `withdrawn_because` when `status` is `WITHDRAWN`, but since
-    nothing runs `linkml-validate` against these entries, we enforce this rule
-    here.
+    The `Decision` rule in `.meta/work/decisions.yaml` requires
+    `withdrawn_because` when `status` is `WITHDRAWN`, but since nothing runs
+    `linkml-validate` against these entries, we enforce this rule here.
     """
     problems = []
     for did, (cls, obj, _) in index.items():

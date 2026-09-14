@@ -7,7 +7,7 @@ decisions:
       - work:artifact/github-workflows-review
       - work:artifact/meta-agents
       - work:artifact/meta-disciplines
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-render
     context: >-
       DR-166 established an agent fan-out ceiling chosen with review depth (3 on the boundary

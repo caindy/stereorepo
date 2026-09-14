@@ -18,8 +18,8 @@ so there is no table here naming them. Importing a module is what puts its steps
 in the registry, so the order of these imports is the order the steps register.
 `main()` then prints every precheck first, whatever module it came from, and the
 rest in that same registration order. What that comes to: `duplicate keys` and
-the five probes, then the tree, then what prose claims about it, then what its
-comments hold, then the graph.
+the probes under `.meta/checks/probes/` (solorepo's DR-209), then the tree, then
+what prose claims about it, then what its comments hold, then the graph.
 The imports are written in dependency order so that the registration order is
 the one stated here and not one a transitive import decided. History in
 check.history.md (solorepo's DR-171).

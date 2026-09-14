@@ -206,8 +206,26 @@ artifacts:
     name: .meta/checks/comments.baseline.yaml
     path: .meta/checks/comments.baseline.yaml
   - id: work:artifact/meta-checks-probes
-    name: .meta/checks/probes.py
-    path: .meta/checks/probes.py
+    name: .meta/checks/probes/__init__.py
+    path: .meta/checks/probes/__init__.py
+  - id: work:artifact/meta-checks-probes-harness
+    name: .meta/checks/probes/harness.py
+    path: .meta/checks/probes/harness.py
+  - id: work:artifact/meta-checks-probes-git
+    name: .meta/checks/probes/git.py
+    path: .meta/checks/probes/git.py
+  - id: work:artifact/meta-checks-probes-channel
+    name: .meta/checks/probes/channel.py
+    path: .meta/checks/probes/channel.py
+  - id: work:artifact/meta-checks-probes-loops
+    name: .meta/checks/probes/loops.py
+    path: .meta/checks/probes/loops.py
+  - id: work:artifact/meta-checks-probes-knowledge
+    name: .meta/checks/probes/knowledge.py
+    path: .meta/checks/probes/knowledge.py
+  - id: work:artifact/meta-checks-probes-tools
+    name: .meta/checks/probes/tools.py
+    path: .meta/checks/probes/tools.py
   - id: work:artifact/meta-check-pr
     name: .meta/check_pr.py
     path: .meta/check_pr.py

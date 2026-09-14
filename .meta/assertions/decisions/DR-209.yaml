@@ -1,0 +1,198 @@
+decisions:
+  - id: work:decision/209
+    name: "DR-209 · The probes are a package under `.meta/checks/probes/`, one module per subject under test, with the harness in a module of its own"
+    challenge: work:challenge/426
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/12
+      - work:article/20
+    enacted_in:
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-harness
+      - work:artifact/meta-checks-probes-git
+      - work:artifact/meta-checks-probes-channel
+      - work:artifact/meta-checks-probes-loops
+      - work:artifact/meta-checks-probes-knowledge
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-check
+      - work:artifact/meta-render
+      - work:artifact/skill-technical-writing
+    context: >-
+      solorepo's DR-150 lifted the probes — about 830 lines of them — out of
+      `check.py` into `.meta/checks/probes.py` so that the gate over assertions
+      would not take its imports from a test suite, and named as its falsifier a module that
+      becomes the second grab-bag — one that stops having a one-line description
+      true of everything in it. Eighteen suites later the file held twenty-three
+      probes over 3,278 lines: the two hooks, the channel's parsers and table,
+      claims and the Actor and signing keys, the loops' verbs from `advance` to
+      `merge-manager`, the handoff's reading of the record, history logs and
+      the wiki, and the tools beside the gate — timing, reviewer depth, agent
+      counting, dereference, search and the comment checks. The fakes and loaders
+      they share — GitHub answered from a dict, an Issue answered from its
+      labels, the channel loaded as modules — were interleaved with the cases
+      that use them, and four probes carried their own copy of the same
+      ten-line `run` helper.
+
+      Two further costs followed from the one file. solorepo's DR-171 makes a
+      history log's receipt a `<path>::<symbol>` that the gate resolves, so that
+      a defect's regression test is named where the defect is narrated; with
+      every probe in one file, every receipt across `.meta/say/`,
+      `.meta/hooks/` and `.meta/checks/` named the same path, and the receipt
+      said nothing about which subsystem a defect belonged to. And the file held
+      129 body comment blocks, 88% of the 146 that `comments.baseline.yaml`
+      still allowed after the sweep of solorepo's #412 — case headers,
+      narration of fixture state, and defect stories with no container but the
+      line they sat on. Pull request 419 tried to sweep those comments in place
+      and was refused for pruning the only explanation six constructor
+      parameters had; the knowledge had nowhere to go because the fake that
+      owned it had no module of its own.
+    alternatives:
+      - name: Leave it one module and sweep the comments in place
+        chosen: false
+        reason: >-
+          The position pull request 419 took, and the one that produced the
+          refusal. A comment routed nowhere is deleted, not moved; and the
+          file's size is what left the fakes' contracts as comments in the
+          first place, since a class docstring three thousand lines from the
+          cases that read it is written by nobody. Nothing about this gets
+          better by waiting: most Decisions that change a verb add a probe.
+      - name: Flat subject modules beside the other checks
+        chosen: false
+        reason: >-
+          `.meta/checks/git.py`, `.meta/checks/channel.py` and the rest would
+          sit beside `files.py` and `graph.py` as though they were invariants
+          over the record, which they are not — they load programs and run
+          them. The line solorepo's DR-150 drew between the gate's subjects and
+          its test suite would be erased by the directory listing, and
+          `channel.py` under `.meta/checks/` reads as a second channel. The
+          harness would need a name that says it is the probes', which the flat
+          layout has no way to give it.
+      - name: pytest under `.meta/`, one test module per subject
+        chosen: false
+        reason: >-
+          Rejected once already, for the same reasons (solorepo's DR-171): it
+          makes `.meta/` a package with a test runner when it is a collection of
+          scripts and gate checks, and the receipts would need `pytest
+          --collect-only` to verify where a `<path>::<symbol>` is read by `ast`
+          today. The probes are steps of the gate, and they print in the one shape
+          every gate here prints (A21).
+      - name: >-
+          A package `.meta/checks/probes/`, one module per subject under test,
+          the shared fakes and loaders in `harness.py`, and `__init__.py`
+          stating the registration order
+        chosen: true
+        reason: >-
+          The subjects are what the probes load: the hooks (`git.py`), the
+          channel (`channel.py`), the loops' verbs (`loops.py`), what the
+          repository writes down about itself (`knowledge.py`) and the tools
+          beside the gate (`tools.py`). Each module has a one-line description
+          true of everything in it, which is the test solorepo's DR-150 set —
+          `knowledge.py`'s subject being the knowledge Knowledge Management
+          governs, held in three containers the gate reads alike: the history
+          logs, the record, and the wiki with the tool that scaffolds a page of
+          it. The harness is the module every
+          other one imports and that imports none of them, so the package's
+          import graph is a tree with the harness at its root, as `collect.py`
+          is for the gate — and a fake's contract now sits where it is read.
+          `check.py` still says `import probes`, and the package's `__init__.py`
+          imports the five modules in a stated order, so the prechecks still
+          run first and nothing about what runs changes. What the split costs is
+          the print order within the probes group, which now follows the
+          package's import order rather than the old file's line order, and one
+          more directory under the copy set, which already names `.meta/checks/`
+          whole.
+    consequences:
+      - >-
+        `.meta/checks/probes/` holds `__init__.py`, `harness.py`, `git.py`,
+        `channel.py`, `loops.py`, `knowledge.py` and `tools.py`. Every
+        `@check(..., pre=True)` label and function name is unchanged, so prose
+        that names a probe and every receipt that names one still resolve, once
+        the receipt's path is the module's.
+      - >-
+        `harness.py` holds `load_module`, `load_hook`, `load_channel`,
+        `stood_in`, `environment`, `outcome`, `run_verb`, and the
+        four fakes — `FakeGitHub`, `WatchGitHub`, `FakeIssue`, `FakeWikiPath`.
+        `FakeGitHub`'s per-pull-request fields and its six keyword sets are its
+        class docstring's contract, which is the explanation pull request 419
+        pruned.
+      - >-
+        The probes report in the order `probes/__init__.py` imports their
+        modules — the hooks, the channel, the loops, what the repository writes
+        down about itself, the tools — and within a module in definition order. Prechecks still print
+        before every other step, whatever module they came from.
+      - >-
+        Every receipt under `.meta/` that named `.meta/checks/probes.py` now
+        names the module that holds the probe: `probes/git.py` for the hooks,
+        `probes/channel.py` for the channel's verbs and reservations,
+        `probes/loops.py` for `advance`, `stop` and `merge-manager`. The `meta
+        history receipts` check resolves each.
+      - >-
+        `.meta/checks/probes.py` leaves `comments.baseline.yaml`. The new
+        modules carry no body commentary: what the 186 comment blocks knew is
+        in the docstring of the item that embodies it, in the case name the
+        failure message carries, or in a history-log entry with a receipt
+        (solorepo's DR-207).
+      - >-
+        `render.py` reads prechecks off `.meta/checks/**/*.py` rather than
+        `.meta/checks/*.py`, so the count prose cites still counts the probes
+        where they now live, and the `/technical-writing` skill's routing names
+        `.meta/checks/probes/` as where a regression probe goes. The rule that
+        routing is derived from is amended in the same breath: the consequence
+        of DR-207 that routes a mechanized constraint to a probe names
+        `.meta/checks/probes/` rather than the file this change deletes. A path
+        inside an adopted Decision is a pointer, not a finding, so it is
+        repointed where the file it names moves, as this change repoints every
+        receipt; what DR-207 settled is untouched.
+      - >-
+        `structure.yaml` declares the package's `__init__.py` under the
+        Artifact id the old file had, and each module as an Artifact of its
+        own. An Artifact is a file, so `work:artifact/meta-checks-probes` is
+        the module object `import probes` gives and not the package: an
+        `enacted_in` naming it names a docstring and five imports. Each adopted
+        Decision that was enacted in the old file is therefore repointed at the
+        module that now holds what it enacted — `probes/loops.py` for DR-161's
+        `merge_manager_probes`, `probes/knowledge.py` for DR-187's,
+        `probes/harness.py` and `probes/loops.py` for DR-158's `FakeGitHub` and
+        the probes that ride on it — so that a dereference lands on the probe.
+        Four keep the id they had, each for its own reason: DR-150, whose
+        subject is that the probes are imported by nothing the gate over
+        assertions imports, which `__init__.py` is what embodies; DR-177 and
+        DR-179, which name the scripts under `.meta/` file by file and now name
+        every module of the package beside it; and DR-165, whose `reading pass
+        probes` no longer exists, so no module holds it to point at.
+    falsifier: >-
+      A probe whose subject under test is plainly none of the five modules, or
+      one that has to be written in two of them; or a `harness.py` that comes
+      to hold one subject's own material — a table of the channel's verbs, the
+      text of a wiki page, the rows a hook is asked — rather than a loader or a
+      stand-in for something outside this repository, a module, `gh` or a path,
+      which is what any subject's probes reach for and what the fakes here are.
+      The count of a symbol's call sites is not the test: `FakeWikiPath` has
+      one and belongs, because what it fakes is `pathlib.Path`.
+    rationale: |-
+      solorepo's DR-150 settled where the gate's steps live by asking what each
+      step is a step of, and the answer for the probes then was "the test
+      suite", which was true and was one thing. It stopped being one thing the
+      day the suite held five subjects, and the symptoms were the ones that
+      decision predicted for a grab-bag: receipts that named a file rather than
+      a subject, a fake whose contract lived in comments beside its callers,
+      and a sweep that could not route what it pruned because the knowledge had
+      no owner.
+
+      The same question, asked again one level down, gives the same shape of
+      answer. What a probe is a probe of is the program it loads and runs, and
+      those programs are already grouped — `.meta/hooks/`, `.meta/say/`, the
+      loops' verbs within it, the readers and the authoring tool of what the
+      repository writes down about itself, and the scripts beside the gate. Naming the modules after those groups is what
+      makes a receipt say something: `probes/loops.py::advance_probes` tells a
+      reader of `move.history.md` which subsystem the defect was in before they
+      open anything.
+
+      The harness is the part that had to exist before the comments could be
+      swept, and it is why this is one change and not two. A comment explaining
+      what `no_stick` models is a Reference contract for `FakeGitHub`, and a
+      Reference contract belongs in the docstring of the item — which is
+      writable only once the item has a module whose reader is the one who
+      needs it. Routing first and pruning second is the order solorepo's DR-207
+      prescribes, and the package is what gives the routing a destination.

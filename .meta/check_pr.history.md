@@ -109,3 +109,16 @@ surfacing unreachable GitHub states as check failures.
 
 Receipt: `.meta/check_pr.py::sweep_all`
 
+
+### Dropped webhooks left loop pull requests unheld with nobody standing on them
+
+A review event was spent or a run ended without answering, leaving a request
+for changes unanswered, an approved pull request with red checks, a review
+request whose reviewer check failed with no verdict, and a green pull request
+whose Challenge had been moved to `human` or `hard`, each idle with no Job
+standing on it (solorepo's DR-167, solorepo's DR-178, solorepo's #316).
+Established: `unheld()` reports each shape once it has been idle longer than a
+run may last, reads the Challenge's level to say whether the loop or the solo
+holds the remedy, and prescribes the verb that re-delivers it.
+
+Receipt: `.meta/checks/probes/loops.py::handoff_probes`

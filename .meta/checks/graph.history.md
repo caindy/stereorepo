@@ -18,7 +18,7 @@ actionable guidance explaining how to handle missing entries was withheld
 where it was most needed. Established: commit history is checked first for
 local deletions before falling back to remote tag reservations.
 
-Receipt: `.meta/checks/probes.py::reservation_probes`
+Receipt: `.meta/checks/probes/channel.py::reservation_probes`
 
 ### Unreadable remote tags advised taking reserved decision numbers
 
@@ -28,4 +28,20 @@ sessions to inadvertently claim numbers already reserved by active branches.
 Established: an unreadable remote is explicitly reported as an unknown
 state rather than an unreserved hole.
 
-Receipt: `.meta/checks/probes.py::reservation_probes`
+Receipt: `.meta/checks/probes/channel.py::reservation_probes`
+
+### Reservation pattern anchored at line start matched no advertised tag
+
+`git ls-remote --tags` prints the object, a tab, then the ref, with a second
+line per annotated tag dereferencing it to the commit, and an annotated tag is
+how a Decision number is reserved (solorepo's DR-128). A first draft of
+`graph.RESERVATION` anchored at the start of the line, so it matched none of what
+the remote advertised and every hole would have read as a deletion, which no
+other case in `reservation_probes` could have seen, since each stands the
+remote's read in for. Established: the pattern is held to reading exactly one
+reservation off a verbatim two-line fixture, one annotated tag and its
+dereference, because a branch is worth probing where its input comes from
+somewhere else. The pattern, the fixture and the assertion landed together on
+solorepo's #152, and the start-anchored version never reached `main`.
+
+Receipt: `.meta/checks/probes/channel.py::reservation_probes`

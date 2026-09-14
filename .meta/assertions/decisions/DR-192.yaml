@@ -7,7 +7,7 @@ decisions:
       - work:article/12
     enacted_in:
       - work:artifact/meta-dereference
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-tools
     context: >-
       Issue #291 noticed that dereference scopes only to the sentences a branch
       wrote over its merge base, while --all is uncapped (~1,140 questions) and

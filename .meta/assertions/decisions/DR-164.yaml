@@ -7,7 +7,7 @@ decisions:
       - work:artifact/meta-say-move
       - work:artifact/meta-say-verbs
       - work:artifact/meta-disciplines
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-channel
       - work:artifact/meta-checks-graph
       - work:artifact/skill-pr-first
       - work:artifact/skill-pr-first-reviewer

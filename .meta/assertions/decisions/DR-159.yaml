@@ -12,7 +12,7 @@ decisions:
       - work:artifact/meta-say-verbs
       - work:artifact/meta-say-post
       - work:artifact/meta-disciplines
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-loops
       - work:artifact/skill-pr-first
       - work:artifact/skill-pr-first-reviewer
       - work:artifact/meta-templates-pull-request

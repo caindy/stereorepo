@@ -13,6 +13,12 @@ decisions:
       - work:artifact/meta-checks-files
       - work:artifact/meta-checks-graph
       - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-harness
+      - work:artifact/meta-checks-probes-git
+      - work:artifact/meta-checks-probes-channel
+      - work:artifact/meta-checks-probes-loops
+      - work:artifact/meta-checks-probes-knowledge
+      - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-dereference
       - work:artifact/meta-gate
       - work:artifact/meta-hooks-signed-channel

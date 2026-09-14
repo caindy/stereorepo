@@ -7,7 +7,7 @@ decisions:
       - work:artifact/meta-say-move
       - work:artifact/meta-check-pr
       - work:artifact/github-workflows-coder
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-loops
     context: >-
       Five control plane loopholes across move, check_pr, and coder.yml caused pull requests
       to stall silently without autonomous resolution:

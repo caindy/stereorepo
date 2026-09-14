@@ -12,7 +12,8 @@ decisions:
       - work:artifact/specialize
       - work:artifact/meta-assertions-disciplines
       - work:artifact/meta-disciplines
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-loops
+      - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-search
     context: >-
       Challenge #343 required proving the 8-step specialization procedure

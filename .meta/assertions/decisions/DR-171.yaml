@@ -5,7 +5,7 @@ decisions:
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-checks-files
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-knowledge
       - work:artifact/meta-checks-graph
       - work:artifact/meta-check
       - work:artifact/meta-check-pr

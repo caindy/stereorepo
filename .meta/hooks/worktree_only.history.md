@@ -16,7 +16,7 @@ abbreviated options, command substitution, process substitution, and semicolons
 glued to words (solorepo's #87). Established: replaced the token blocklist with a positive grammar
 of allowed commands and exact per-subcommand option tables (solorepo's DR-110).
 
-Receipt: `.meta/checks/probes.py::hook_probes`
+Receipt: `.meta/checks/probes/git.py::hook_probes`
 
 ### Review subagent scratch files blocked outside the worktree
 
@@ -26,7 +26,7 @@ directory, causing reviews to stall (solorepo's #99). Established: `outside()` e
 reads within the harness project directory (`~/.claude/projects/`) while continuing
 to guard `~/.config` and `.git/`.
 
-Receipt: `.meta/checks/probes.py::hook_probes`
+Receipt: `.meta/checks/probes/git.py::hook_probes`
 
 ### Subcommand option leakage across git subcommands
 
@@ -35,7 +35,7 @@ risk of being accepted for subcommands where they had dangerous side effects
 (such as `git -C <dir>` repointing the working tree). Established: options are
 declared and validated per subcommand via `GIT` and `TAKES_VALUE`.
 
-Receipt: `.meta/checks/probes.py::hook_probes`
+Receipt: `.meta/checks/probes/git.py::hook_probes`
 
 ### Double-quoted regex patterns and escape sequences failed grammar
 
@@ -45,7 +45,7 @@ refusals across review runs (solorepo's #117, solorepo's #197, solorepo's #242).
 literal quote contents from active expansions, and `plain_form()` derives valid
 single-quoted alternatives.
 
-Receipt: `.meta/checks/probes.py::hook_probes`
+Receipt: `.meta/checks/probes/git.py::hook_probes`
 
 ### Redirection file descriptors corrupted nearest-command suggestions
 
@@ -55,7 +55,7 @@ yielding valid but semantically unintended command suggestions (solorepo's #117,
 Established: `before_operator()` strips attached file descriptor digits when truncating
 at redirection boundaries.
 
-Receipt: `.meta/checks/probes.py::hook_probes`
+Receipt: `.meta/checks/probes/git.py::hook_probes`
 
 ### Generic refusals caused multi-turn reviewer command guessing
 
@@ -65,4 +65,33 @@ caused autonomous reviewers to spend multiple turns guessing acceptable syntax
 nearest conforming command by stripping unauthorized options, normalizing quotes, and
 dropping operators.
 
-Receipt: `.meta/checks/probes.py::hook_probes`
+Receipt: `.meta/checks/probes/git.py::hook_probes`
+
+### Nearest-command offers that were a different command from the one refused
+
+On solorepo's #146 the refusal's nearest command was twice well-formed, accepted
+by the hook, and a different command from the one refused: the channel reached
+with an operator (`.meta/say/post --role reviewer review 146 --approve < body.md`),
+cut at the operator, was offered as the review without its body; and a command
+holding a character that expands inside an argument rather than ending it
+(`git show HEAD~1:.meta/hooks/worktree_only.py`, `git log HEAD~5..HEAD`), cut at
+the `~`, was offered with the argument truncated. Established: `plain_form()`
+offers nothing for a channel program, whose options are its own, and nothing for
+a command `words_of()` refuses on a character inside a word, so an offer is only
+ever the refused command with an operator's tail or an option off the list
+removed and its words respelled by `requote`, in single quotes where a word needs
+quoting at all (solorepo's #144, solorepo's #242).
+
+Receipt: `.meta/checks/probes/git.py::hook_probes`
+
+### Programs off the list refused without naming the tool in their place
+
+A program off the list has no nearest command, so its refusal offered nothing,
+and on solorepo's #117 the reviewer reached for `grep` and `wc` seven times to
+search and count a file before turning to the tools that do (solorepo's #144,
+solorepo's #197). Established: `INSTEAD` maps `python3 .meta/check.py`, `grep`
+and `wc` to where what each wanted is — the gate's result at `gh pr checks`, the
+Grep tool for a search of the worktree, the Read tool for a file and a count —
+and `command_allowed()` appends it to the refusal.
+
+Receipt: `.meta/checks/probes/git.py::hook_probes`

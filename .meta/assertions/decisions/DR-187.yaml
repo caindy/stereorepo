@@ -12,7 +12,7 @@ decisions:
       - work:artifact/meta-wikisplain
       - work:artifact/meta-render
       - work:artifact/meta-checks-files
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-knowledge
       - work:artifact/meta-assertions-disciplines
       - work:artifact/meta-disciplines
       - work:artifact/skill-wikisplain

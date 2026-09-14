@@ -138,16 +138,18 @@ def prechecks():
     declaration, and `ast` reads it without running anything.
 
     The steps live in `.meta/checks/`, one module per subject
-    (solorepo's DR-150), so the whole directory is read rather than one file:
-    which module a precheck is written in is that split's business, and a count
-    of them should not move when one is carried from one subject to another.
+    (solorepo's DR-150), and the probes one level further down in
+    `.meta/checks/probes/`, one module per subject under test (solorepo's DR-209),
+    so the whole tree is read rather than one file: which module a precheck is
+    written in is those splits' business, and a count of them should not move
+    when one is carried from one subject to another.
 
     Empty is an error and not a count of none. A rewrite that registers steps
     some other way says so here, rather than leaving the prose that cites this
     to assert there are no prechecks at all.
     """
     found = []
-    for path in sorted((META / "checks").glob("*.py")):
+    for path in sorted((META / "checks").rglob("*.py")):
         for node in ast.parse(path.read_text()).body:
             for decorator in getattr(node, "decorator_list", []):
                 if not (isinstance(decorator, ast.Call)
@@ -874,7 +876,7 @@ def technical_writing_skill():
         "",
         "A comment worth deleting is rarely a comment worth losing. Before removing non-trivial commentary, send what it knows down the routing tree in **Pre-Writing Routing: Where to Write** above:",
         "",
-        "- **Defect narrative, incident, or regression history:** `<module>.history.md`, each account carrying an executable receipt — the check or probe symbol in `.meta/checks/probes.py` that fails if the defect returns (solorepo's DR-171).",
+        "- **Defect narrative, incident, or regression history:** `<module>.history.md`, each account carrying an executable receipt — the check or probe symbol under `.meta/checks/probes/` that fails if the defect returns (solorepo's DR-171, solorepo's DR-209).",
         "- **Architectural rationale, or an alternative weighed and rejected:** a Decision Record in `.meta/assertions/decisions/DR-nnn.yaml`, or an enduring concept page under `wiki/<context>/` (solorepo's DR-184, solorepo's DR-196).",
         "- **An operational instruction — how to run, rebuild, or verify something:** a `justfile` recipe, self-documented by its own comment (solorepo's DR-106).",
         "- **Nothing a reader needs:** delete it. Narration of self-evident steps and commented-out dead code have no destination, and git holds the corpse.",
@@ -889,7 +891,7 @@ def technical_writing_skill():
         "",
         "1. **A type or schema invariant,** when the wrong state can be made unrepresentable.",
         "2. **A runtime precondition** that raises where the assumption is made and names what it expected, so the error message carries what the comment said.",
-        "3. **A regression probe** in `.meta/checks/probes.py`, or a check under `.meta/checks/`, when the ordering or precondition spans call sites.",
+        "3. **A regression probe** under `.meta/checks/probes/`, or a check under `.meta/checks/`, when the ordering or precondition spans call sites.",
         "",
         "An invariant that resists all three is a rule something outside this repository forces on the code, so it stays as an immutable external boundary constraint (exception 3 of The Four Permissible Comment Exceptions above) with its citation.",
         "",

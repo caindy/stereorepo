@@ -18,7 +18,7 @@ resulted in duplicate runs and concurrent conflicting review answers
 refuses claims by interactive sessions on `easy` or `medium` issues, preserving
 loop boundaries.
 
-Receipt: `.meta/checks/probes.py::claim_probes`
+Receipt: `.meta/checks/probes/channel.py::claim_probes`
 
 ### Unclaimed challenges remaining assigned to inactive sessions
 
@@ -27,7 +27,7 @@ issues, blocking other actors or loops from claiming them (solorepo's #117).
 Established: `unclaim()` and `stop()` synchronize GitHub issue assignees and
 state transitions atomically before posting hand-back commentary.
 
-Receipt: `.meta/checks/probes.py::stop_probes`
+Receipt: `.meta/checks/probes/loops.py::stop_probes`
 
 ### Auto-merge arming on out-of-date branch heads
 
@@ -37,7 +37,7 @@ solorepo's #93, solorepo's #98, solorepo's #201). Established: `advance()` and
 `merge()` verify that pull requests are synchronized with trunk, disarm stale
 auto-merge states during updates, and re-arm only once clean.
 
-Receipt: `.meta/checks/probes.py::advance_probes`
+Receipt: `.meta/checks/probes/loops.py::advance_probes`
 
 ### Pull request squashing using arbitrary commit messages
 
@@ -46,7 +46,7 @@ than PR titles, leading to discrepancies between the git log and repository
 issue index (solorepo's #26, solorepo's #27). Established: `merge()` explicitly
 derives the squash commit title and subject from the validated PR title.
 
-Receipt: `.meta/checks/probes.py::merge_manager_probes`
+Receipt: `.meta/checks/probes/loops.py::merge_manager_probes`
 
 ### Review requests submitted for conflicting branches
 
@@ -103,3 +103,89 @@ workflow runs.
 
 Receipt: `.meta/say/move::dispatch`
 
+
+### Re-arming read back as a lost arming when GitHub merged inside the window
+
+After a rebase dropped the arming, `advance` re-armed the pull request and
+waited for GitHub to show the arming. When the last check went green between the
+arming and the read-back, GitHub merged the pull request and cleared the
+`autoMergeRequest` that merged it, so the wait spent its whole bound and then
+reported that the branch had lost its arming, over one that was already on trunk
+(solorepo's #253). Established: the read-back after a re-arming ends on either
+an arming shown or a `MERGED` state, and a merge in the window is reported as a
+merge; the waiting itself is what solorepo's DR-158 requires of a read GitHub
+may answer stale.
+
+Receipt: `.meta/checks/probes/loops.py::advance_probes`
+
+### Rebase read back off the commit the sweep listed rather than the one it asked GitHub to rebase
+
+On 2026-09-11 every `advance` concluded failure while rebasing correctly each
+time: `update-branch` returns when the rebase is queued, and a read that follows
+it answers about the head the branch is being moved off, behind by what it was
+behind by and still carrying the arming the move was about to drop
+(solorepo's #245). Anchored to the commit listed by the opening `pr list`, a
+push landing before the rebase satisfied the wait on its first read and answered
+for the rebase, so a failure was reported that did not happen and a re-arming
+was skipped that was needed; and a push that was itself a rebase, arranged by
+this verb's own dispatch, left the sweep asking GitHub to rebase a branch with
+nothing to rebase (solorepo's #252). Established: `head_now` reads the head and
+its distance behind together, `advance` asks it again after the `mergeability`
+wait and immediately before the call (solorepo's #252), and the settle wait and
+the compare are anchored to that commit (solorepo's DR-158).
+
+Receipt: `.meta/checks/probes/loops.py::advance_probes`
+
+### Stall reported over a merge that had landed or a branch already current
+
+`merge --auto` collected the refusal `advance` exited with and reported it after
+the arming, so a pull request GitHub had merged in the meantime was announced as
+merged and then exited on as armed and behind, the defect of solorepo's #46 in a
+new coat. One HTTP blip on the `compare` that reads a rebase back was reported
+the same way over a branch the rebase had already fixed, and the exit code is
+the last thing the Job says. Established: `merge --auto` reads the pull request
+back after arming, reports a merge as a merge, and reports a stall only over a
+branch that is still behind its base.
+
+Receipt: `.meta/checks/probes/loops.py::advance_probes`
+
+### Review request stranded by a merge on trunk went undispatched
+
+A merge on trunk that left a waiting review request on a branch GitHub reported
+`CONFLICTING` left it answerable by nobody: GitHub builds no merge ref, so
+`review.yml` creates no run, and the sweep returned before it read the unarmed
+pull requests at all (solorepo's #159, solorepo's #161). Read once, `mergeable`
+answered `UNKNOWN` on the very push that invalidated it, so nothing would ever
+have been dispatched. Established: `advance`'s sweep reads every open pull
+request, waits out `UNKNOWN`, and dispatches the coder's rebase pass by task name
+for a loop's branch that conflicts while a review is requested of it
+(solorepo's DR-133), while it is armed (solorepo's DR-149), or once it is
+approved (solorepo's DR-167); it leaves the lower layer of a stack alone, and
+one refused dispatch is one pull request's problem.
+
+Receipt: `.meta/checks/probes/loops.py::advance_probes`
+
+### Sweep went red on every push for a Challenge the loop no longer held
+
+After `stop` moved a Challenge to `human`, every push to trunk dispatched for or
+failed on the same conflicting pull request again, a red sweep each time over a
+conflict that was the solo's; an Issue deleted or transferred under its branch
+failed the read the same way on every push. Established: `dispatch` reads the
+Challenge before dispatching (solorepo's DR-142), leaves a closed one, one at a
+level no loop takes, and one it cannot read alone by name in a printed line, and
+exits 0 over them.
+
+Receipt: `.meta/checks/probes/loops.py::advance_probes`
+
+### Superseded check runs read as failing
+
+`statusCheckRollup` lists every run of a check on the head, so a gate run that
+failed and was re-run green under the same name was read as a failing check by
+the merge manager and by the sweep alike, holding an approved pull request out
+of eligibility (solorepo's DR-167) and dispatching the coder over checks that
+were green (solorepo's #316). Established: `deduplicate_checks` keeps the
+latest run per name, ordered by `startedAt`, then `completedAt` unless it is
+GitHub's year-one placeholder, then `createdAt`, and `check_green` and
+`check_pr.green` read the deduplicated list.
+
+Receipt: `.meta/checks/probes/loops.py::merge_manager_probes`

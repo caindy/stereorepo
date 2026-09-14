@@ -13,7 +13,7 @@ decisions:
       - work:artifact/github-workflows-merge
       - work:artifact/meta-say-move
       - work:artifact/meta-say-verbs
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-next
       - work:artifact/meta-timing
       - work:artifact/meta-render

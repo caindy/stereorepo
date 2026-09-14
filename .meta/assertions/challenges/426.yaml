@@ -1,0 +1,16 @@
+challenges:
+  - id: work:challenge/426
+    name: Decompose probes.py into domain-specific probe suites and eliminate test comment debt
+    challenge_type: REFACTOR
+    description: >-
+      `.meta/checks/probes.py` grew from the 830 lines of probes solorepo's DR-150
+      moved out of `check.py` to twenty-three suites over 3,278 lines, holding the
+      hooks, the channel, the loops' verbs, the record's readers and the tools
+      in one file. Every receipt in every history log under `.meta/` routed to
+      that one path, so the receipts said nothing about which subsystem a defect
+      belonged to; the fakes and loaders the suites share were interleaved with
+      the cases that use them; and the file held 129 body comment blocks, more
+      than four fifths of the inline commentary the ratchet baseline still
+      allowed. Partition the suites by the subject under test, lift the shared
+      harness out, route what the comments knew to the containers solorepo's
+      DR-207 names, and move the receipts to the module that holds each probe.

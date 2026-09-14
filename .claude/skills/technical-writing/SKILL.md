@@ -81,7 +81,7 @@ A comment annotating a module-level constant is not a fifth exception. Say what 
 
 A comment worth deleting is rarely a comment worth losing. Before removing non-trivial commentary, send what it knows down the routing tree in **Pre-Writing Routing: Where to Write** above:
 
-- **Defect narrative, incident, or regression history:** `<module>.history.md`, each account carrying an executable receipt — the check or probe symbol in `.meta/checks/probes.py` that fails if the defect returns (solorepo's DR-171).
+- **Defect narrative, incident, or regression history:** `<module>.history.md`, each account carrying an executable receipt — the check or probe symbol under `.meta/checks/probes/` that fails if the defect returns (solorepo's DR-171, solorepo's DR-209).
 - **Architectural rationale, or an alternative weighed and rejected:** a Decision Record in `.meta/assertions/decisions/DR-nnn.yaml`, or an enduring concept page under `wiki/<context>/` (solorepo's DR-184, solorepo's DR-196).
 - **An operational instruction — how to run, rebuild, or verify something:** a `justfile` recipe, self-documented by its own comment (solorepo's DR-106).
 - **Nothing a reader needs:** delete it. Narration of self-evident steps and commented-out dead code have no destination, and git holds the corpse.
@@ -96,7 +96,7 @@ Convert the claim into the cheapest mechanism that fails when it is violated, th
 
 1. **A type or schema invariant,** when the wrong state can be made unrepresentable.
 2. **A runtime precondition** that raises where the assumption is made and names what it expected, so the error message carries what the comment said.
-3. **A regression probe** in `.meta/checks/probes.py`, or a check under `.meta/checks/`, when the ordering or precondition spans call sites.
+3. **A regression probe** under `.meta/checks/probes/`, or a check under `.meta/checks/`, when the ordering or precondition spans call sites.
 
 An invariant that resists all three is a rule something outside this repository forces on the code, so it stays as an immutable external boundary constraint (exception 3 of The Four Permissible Comment Exceptions above) with its citation.
 

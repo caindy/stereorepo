@@ -10,7 +10,7 @@ decisions:
       - work:article/21
     enacted_in:
       - work:artifact/meta-checks-files
-      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-knowledge
       - work:artifact/meta-assertions-imported-vocabulary
       - work:artifact/wiki-readme
       - work:artifact/wiki-solorepo-readme

@@ -73,7 +73,7 @@ decisions:
       - >-
         A constraint comment is pruned only after the invariant it states is
         held by a type, a runtime precondition, or a probe in
-        `.meta/checks/probes.py`, so the claim survives the prose
+        `.meta/checks/probes/`, so the claim survives the prose
         (solorepo's DR-171).
       - >-
         A lint or type suppression bypassing safety, correctness, or type
