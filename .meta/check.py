@@ -62,15 +62,24 @@ def report(label, outcome):
 
 
 def main():
-    """The prechecks, then the schemas, then every other step the registry holds."""
+    """The prechecks, then the schemas, then every other step the registry holds.
+
+    Nothing here dies where it can report instead: a step that cannot run says
+    so, and says why, rather than printing a stack trace (Article 6). That
+    holds three times over, once at each point where the gate is asked for
+    something it may not be able to produce.
+
+    A precheck exists so that one broken thing does not take the gate down
+    before the step that names it runs, so a precheck that dies uncaught is
+    that same failure with the roles swapped. A schema load that fails names
+    how many steps did not run, counted off the registry, because a gate that
+    stops early otherwise looks like one that passed. And a step's sources are
+    built on first demand rather than up front: the render is the costly one
+    and only the last steps read it, so a gate going red on the record does not
+    pay for pages nothing asked about.
+    """
     failed = False
     for step in [s for s in STEPS if s.pre]:
-        # The guard the schemas load has, for the same reason and stated there:
-        # a step that cannot run says so rather than dying (A6), and says why
-        # rather than printing a stack trace. A precheck exists so that one
-        # broken thing does not take the gate down before the check that names
-        # it runs; a precheck that dies uncaught is that failure with the roles
-        # swapped.
         try:
             problems = step.run()
         except Exception as exc:
@@ -81,24 +90,12 @@ def main():
         schemas = views()
         index, refs, skipped = collect.collect(schemas)
     except Exception as exc:
-        # A step that cannot run says so rather than dying (A6), and says why
-        # rather than printing a stack trace. What did not run is named,
-        # because a gate that stops early looks like one that passed — and it is
-        # counted off the registry, so a step added moves it and no arithmetic
-        # here is maintained by hand.
         print(f"?  schemas: could not load — {type(exc).__name__}: {exc}")
         print(f"     {len(rest)} steps did not run")
         return 1
     for name in skipped:
         print(f"?  {name}: no container accepts its top-level keys")
     failed |= bool(skipped)
-    # Built when a step first names one, and not before: the render is the
-    # costly source and only the last two steps read it, so a gate that goes
-    # red on the record does not pay for pages nothing asked about. It is also
-    # where the render's guard now lives — a step whose source cannot be built
-    # says so rather than dying (A6), and says why. Written by hand, that
-    # pairing named the two steps in one message and would have gone stale the
-    # moment the render found a third reader.
     sources = {"index": lambda: index, "refs": lambda: refs, "views": lambda: schemas,
                "asked": lambda: files.rendering()[0].ASKED,
                "pages": lambda: files.rendering()[1]}

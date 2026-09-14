@@ -100,6 +100,10 @@ def served_goals(index):
     the subtraction it allows — an END goal with no Job to be Done is a need
     nobody is serving — and a wrongly-tiered or borrowed goal quietly corrupts
     that arithmetic.
+
+    A `serves` naming nothing in the index is passed over: `unresolved
+    references` has already reported it, and the tier of a goal that is not
+    there cannot be read anyway.
     """
     problems = []
     for jid, (cls, obj, _) in index.items():
@@ -110,7 +114,7 @@ def served_goals(index):
             if persona in index else set()
         for gid in obj.get("serves", []):
             if gid not in index:
-                continue  # already reported as an unresolved reference
+                continue
             tier = index[gid][1].get("goal_type")
             if tier != "END":
                 problems.append(f"{jid}: serves '{gid}', which is {tier}, not END")
@@ -412,6 +416,12 @@ def decision_numbering(index, reserved=reserved_decision_numbers,
     deletion is the failure this check exists for, kept quiet by a network that
     was down or a clone with no history behind it.
 
+    The commits decide the holes they can and the tags decide what is left,
+    in that order, so a clone with no `origin` still names its local deletions.
+    What neither read explains is reported as unexplained, and a read that
+    could not be made is unknown rather than vacant: a remote nobody could
+    reach never makes a number in flight look available.
+
     Both reads are parameters, defaulting to the two functions above, so that
     `reservation_probes` stands them in by passing arguments. It used to rebind
     them on the module and restore them in a `finally`, which a probe needs only
@@ -430,16 +440,16 @@ def decision_numbering(index, reserved=reserved_decision_numbers,
     numbers = sorted(int(n) for n in seen)
     missing = sorted(set(range(1, numbers[-1] + 1)) - set(numbers))
     if missing:
-        # Truncated, because one mistyped number makes every number after it
-        # missing, and a check that answers with nine hundred lines is one
-        # nobody reads to the end of.
         def listed(numbers):
+            """The numbers as `DR-nnn`, at most ten of them and then a count of the rest.
+
+            Truncated because one mistyped number makes every number after it
+            missing, and a check that answers with nine hundred lines is one
+            nobody reads to the end of.
+            """
             shown = ", ".join(f"DR-{n:03d}" for n in numbers[:10])
             return shown + (f" and {len(numbers) - 10} more" if len(numbers) > 10 else "")
 
-        # The commits decide the holes they can, and the tags decide what is
-        # left. Local commit history is checked first so that clones without an
-        # origin remote still receive actionable guidance for local deletions.
         removed = deleted(missing)
         gone = [] if removed is None else [n for n in missing if n in removed]
         rest = [n for n in missing if n not in gone]
@@ -447,9 +457,6 @@ def decision_numbering(index, reserved=reserved_decision_numbers,
             problems.append(f"the record held {listed(gone)} and a commit here removed it, "
                             "tag or no tag; a number withdrawn stays in the record as a hole")
         if rest:
-            # Holes that neither commits nor tags have explained. Unreachable
-            # remotes are treated as unknown rather than vacant, so in-flight
-            # numbers are never advised as available.
             held = reserved()
             if held is None and removed is None:
                 problems.append(f"no entry for {listed(rest)}; the remote would not say which "

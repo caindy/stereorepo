@@ -37,43 +37,53 @@ class SpawnedAgent:
     subagent_type: str = ""
 
 
+def _claude_tool_use(node: dict[str, Any]) -> SpawnedAgent | None:
+    """The `Agent` call a Claude Code `tool_use` block records, or `None` for any other block.
+
+    The tool's name is read from `name`, falling back to `tool`, and matched
+    case-insensitively. The description is the call's `description`, falling
+    back to its `prompt`, truncated to 120 characters.
+    """
+    if node.get("type") != "tool_use":
+        return None
+    if str(node.get("name") or node.get("tool")).strip().lower() != "agent":
+        return None
+    supplied = node.get("input") if isinstance(node.get("input"), dict) else {}
+    return SpawnedAgent(
+        id=node.get("id"),
+        name="Agent",
+        description=str(supplied.get("description") or supplied.get("prompt") or "")[:120].strip(),
+        subagent_type=str(supplied.get("subagent_type") or supplied.get("type") or "").strip(),
+    )
+
+
+def _openai_function_call(node: dict[str, Any]) -> SpawnedAgent | None:
+    """The `Agent` call an OpenAI-style function block records, or `None` for any other block.
+
+    Carries neither description nor subagent type: the representation holds a
+    call's arguments as a JSON string rather than a mapping, and the ceiling
+    counts calls rather than reading them.
+    """
+    if node.get("type") != "function" or not isinstance(node.get("function"), dict):
+        return None
+    if str(node["function"].get("name")).strip().lower() != "agent":
+        return None
+    return SpawnedAgent(id=node.get("id"), name="Agent")
+
+
 def _extract_from_dict(d: dict[str, Any], seen_ids: set[str], agents: list[SpawnedAgent]) -> None:
-    """Recursively extracts Agent tool use calls from a JSON dictionary."""
-    tool_type = d.get("type")
-    tool_name = d.get("name") or d.get("tool")
+    """Appends the `Agent` call a JSON dictionary records, if any, then walks its values.
 
-    # Claude Code tool_use invocation
-    if tool_type == "tool_use" and str(tool_name).strip().lower() == "agent":
-        call_id = d.get("id")
-        if not call_id or call_id not in seen_ids:
-            if call_id:
-                seen_ids.add(call_id)
-            inp = d.get("input") if isinstance(d.get("input"), dict) else {}
-            desc = inp.get("description") or inp.get("prompt") or ""
-            sub_type = inp.get("subagent_type") or inp.get("type") or ""
-            agents.append(SpawnedAgent(
-                id=call_id,
-                name="Agent",
-                description=str(desc)[:120].strip(),
-                subagent_type=str(sub_type).strip(),
-            ))
+    A call carrying an `id` is appended once and its id added to `seen_ids`, so
+    a block a stream emits twice counts once. A call with no id is appended
+    every time, having nothing to be recognised by.
+    """
+    spawned = _claude_tool_use(d) or _openai_function_call(d)
+    if spawned and not (spawned.id and spawned.id in seen_ids):
+        if spawned.id:
+            seen_ids.add(spawned.id)
+        agents.append(spawned)
 
-    # OpenAI-style function call representation
-    elif tool_type == "function" and isinstance(d.get("function"), dict):
-        fn = d["function"]
-        if str(fn.get("name")).strip().lower() == "agent":
-            call_id = d.get("id")
-            if not call_id or call_id not in seen_ids:
-                if call_id:
-                    seen_ids.add(call_id)
-                agents.append(SpawnedAgent(
-                    id=call_id,
-                    name="Agent",
-                    description="",
-                    subagent_type="",
-                ))
-
-    # Recurse into all dictionary values
     for val in d.values():
         _walk(val, seen_ids, agents)
 
@@ -87,6 +97,64 @@ def _walk(node: Any, seen_ids: set[str], agents: list[SpawnedAgent]) -> None:
             _walk(item, seen_ids, agents)
 
 
+def _from_document(text: str) -> list[SpawnedAgent] | None:
+    """The agents of a transcript that is one JSON document, or `None` when it is not one."""
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    seen_ids: set[str] = set()
+    agents: list[SpawnedAgent] = []
+    _walk(data, seen_ids, agents)
+    return agents
+
+
+def _from_ndjson(text: str) -> list[SpawnedAgent] | None:
+    """The agents of a transcript that is a JSON Lines event stream, or `None` when no line parses.
+
+    A line that is not a self-contained object is skipped rather than fatal: a
+    harness writes its events interleaved with plain log output.
+    """
+    seen_ids: set[str] = set()
+    agents: list[SpawnedAgent] = []
+    parsed_a_line = False
+    for line in text.splitlines():
+        candidate = line.strip()
+        if not (candidate.startswith("{") and candidate.endswith("}")):
+            continue
+        try:
+            data = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        parsed_a_line = True
+        _walk(data, seen_ids, agents)
+    return agents if parsed_a_line else None
+
+
+def _from_log(text: str) -> list[SpawnedAgent]:
+    """The agents named by the `tool_use` blocks a raw log transcript quotes.
+
+    The last reader, for a transcript that parses neither as a document nor as
+    a stream. It matches only blocks holding no nested object, so a call whose
+    `input` survived into the log is not found; what is left of the transcript
+    at this point is text a runner wrapped, and the count is a floor.
+    """
+    seen_ids: set[str] = set()
+    agents: list[SpawnedAgent] = []
+    for match in re.finditer(
+        r'\{[^{}]*?"type"\s*:\s*"tool_use"[^{}]*?"name"\s*:\s*"Agent"[^{}]*?\}',
+        text,
+        re.DOTALL | re.IGNORECASE,
+    ):
+        found = re.search(r'"id"\s*:\s*"([^"]+)"', match.group(0))
+        call_id = found.group(1) if found else None
+        if not (call_id and call_id in seen_ids):
+            if call_id:
+                seen_ids.add(call_id)
+            agents.append(SpawnedAgent(id=call_id, name="Agent"))
+    return agents
+
+
 def parse_agents(content: str | bytes | dict[str, Any] | list[Any]) -> list[SpawnedAgent]:
     """Parses raw text, JSON data, or message event streams to extract spawned agents.
 
@@ -95,6 +163,10 @@ def parse_agents(content: str | bytes | dict[str, Any] | list[Any]) -> list[Spaw
     - Full JSON documents (single object or array).
     - JSON Lines (NDJSON) event streams.
     - Fallback regex extraction from raw log transcripts.
+
+    The three text readers are tried in that order and the first that recognises
+    the transcript answers it, so a stream of events is never re-read as the log
+    text it also is.
     """
     if isinstance(content, (dict, list)):
         seen_ids: set[str] = set()
@@ -110,50 +182,11 @@ def parse_agents(content: str | bytes | dict[str, Any] | list[Any]) -> list[Spaw
     if not text.strip():
         return []
 
-    # 1. Attempt full document JSON parse
-    try:
-        data = json.loads(text)
-        seen_ids = set()
-        agents = []
-        _walk(data, seen_ids, agents)
-        return agents
-    except json.JSONDecodeError:
-        pass
-
-    # 2. Attempt line-by-line JSON parsing (NDJSON)
-    seen_ids = set()
-    agents = []
-    has_valid_json_line = False
-    for line in text.splitlines():
-        line_clean = line.strip()
-        if not line_clean or not (line_clean.startswith("{") and line_clean.endswith("}")):
-            continue
-        try:
-            line_data = json.loads(line_clean)
-            has_valid_json_line = True
-            _walk(line_data, seen_ids, agents)
-        except json.JSONDecodeError:
-            continue
-
-    if has_valid_json_line:
-        return agents
-
-    # 3. Fallback regex search for tool_use blocks referencing Agent
-    tool_use_matches = re.finditer(
-        r'\{[^{}]*?"type"\s*:\s*"tool_use"[^{}]*?"name"\s*:\s*"Agent"[^{}]*?\}',
-        text,
-        re.DOTALL | re.IGNORECASE,
-    )
-    for m in tool_use_matches:
-        block = m.group(0)
-        id_match = re.search(r'"id"\s*:\s*"([^"]+)"', block)
-        call_id = id_match.group(1) if id_match else None
-        if not call_id or call_id not in seen_ids:
-            if call_id:
-                seen_ids.add(call_id)
-            agents.append(SpawnedAgent(id=call_id, name="Agent"))
-
-    return agents
+    for reader in (_from_document, _from_ndjson):
+        found = reader(text)
+        if found is not None:
+            return found
+    return _from_log(text)
 
 
 def evaluate_ceiling(count: int, ceiling: int | None) -> tuple[bool, str]:

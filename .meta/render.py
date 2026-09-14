@@ -346,6 +346,11 @@ def charter():
     Rendered flat and in order rather than grouped by Discipline: the number is
     the identifier, and a reader arriving from a citation wants to find it by
     counting, not by guessing which Discipline it belongs to.
+
+    A retired number sits in that sequence, one line reading `Retired.` and no
+    more. A reader scanning the Charter needs to know the gap is a gap; why it
+    is one belongs to the retiring entry, and reaching it costs a grep, which
+    is the point.
     """
     abox = load("assertions/imported/charter.yaml") or {}
     rows = abox.get("articles") or []
@@ -356,9 +361,6 @@ def charter():
                    for d in ((load(rel) or {}).get("disciplines") or [])}
     out = [BANNER.format(src="assertions/imported/charter.yaml"),
            authored("charter.md")]
-    # Retired numbers sit in sequence, one line each. A reader scanning the
-    # Charter needs to know the gap is a gap; why it is one is the retiring
-    # entry's, and reaching it costs a grep, which is the point.
     holes = {h["number"]: h for h in abox.get("retired_articles") or []}
     live = {int(a["id"].rsplit("/", 1)[-1]): a for a in rows}
     for num in sorted(live | holes):
@@ -388,11 +390,15 @@ def specialize():
     Generated from the Specialization Discipline, so the steps exist once. A
     procedure copied into a second file is a procedure that will disagree with
     itself.
+
+    Answers `None` where the assertions hold no Specialization Discipline,
+    which is every portfolio: a portfolio specializes nothing, so it has no
+    such page.
     """
     abox = load("assertions/disciplines.yaml") or {}
     d = next((x for x in abox.get("disciplines", []) if x["name"] == "Specialization"), None)
     if d is None:
-        return None   # a portfolio specializes nothing, so it has no such page
+        return None
     out = [BANNER.format(src="assertions/disciplines.yaml"),
            authored("../SPECIALIZE.md"),
            d["description"].strip() + "\n",

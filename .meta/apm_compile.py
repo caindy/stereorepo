@@ -147,7 +147,15 @@ def discipline_instructions(meta_dir: pathlib.Path = META) -> dict[str, str]:
 
 
 def agent_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
-    """Compiles Roles, Personalities, and Personas into agent primitives (solorepo's DR-199, solorepo's DR-200)."""
+    """Compiles Roles, Personalities, and Personas into agent primitives (solorepo's DR-199, solorepo's DR-200).
+
+    Two kinds of agent, written into one directory. An operational Role — the
+    coder, the reviewer, the technical writer — takes the communication style
+    of the Personality sharing its slug, and is given write access only where
+    the Role writes. A stakeholder Persona compiles to an interrogation
+    surrogate for collaborative product and feature design (solorepo's DR-200),
+    which reads and never writes.
+    """
     authority_file = meta_dir / "assertions" / "imported" / "authority.yaml"
     actors_file = meta_dir / "assertions" / "imported" / "actors.yaml"
     personas_file = meta_dir / "assertions" / "personas.yaml"
@@ -160,7 +168,6 @@ def agent_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
     roles = {r["id"]: r for r in auth_data.get("roles") or []}
     out = {}
 
-    # 1. Operational Roles (coder, reviewer, technical-writer)
     for role_id, r in roles.items():
         role_slug = role_id.rsplit("/", 1)[-1]
         personality_id = f"work:personality/{role_slug}"
@@ -209,7 +216,6 @@ def agent_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
         lines.append("")
         out[f".apm/agents/{role_slug}.agent.md"] = "\n".join(lines).strip() + "\n"
 
-    # 2. Stakeholder Personas as Interrogation Surrogates (solorepo's DR-200)
     for p in personas_data.get("personas") or []:
         persona_slug = p.get("id", "").rsplit("/", 1)[-1]
         name = p.get("name", persona_slug)
@@ -272,7 +278,15 @@ def agent_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
 
 
 def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
-    """Compiles Capabilities of kind SKILL and operational skills into skills/ primitives."""
+    """Compiles Capabilities of kind SKILL and operational skills into skills/ primitives.
+
+    Three sources, each yielding only what the ones before it did not: the
+    Capabilities the authority asserts, then the operational skills `render`
+    generates, then whatever `.claude/skills/` still holds that neither
+    produced. The order is the precedence — an asserted Capability is the
+    authority on its own slug — and the mirror exists so that a skill written
+    for the harness before it was asserted still reaches the package.
+    """
     authority_file = meta_dir / "assertions" / "imported" / "authority.yaml"
     auth_data = _load_yaml(authority_file) or {}
     capabilities = auth_data.get("capability_set") or []
@@ -300,7 +314,6 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
         ]
         out[f".apm/skills/{slug}/SKILL.md"] = "\n".join(lines).strip() + "\n"
 
-    # Resolve rendered operational skills directly from render module if available
     try:
         import render
         skill_gens = {
@@ -318,7 +331,6 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
     except (ImportError, Exception):
         pass
 
-    # Mirror any remaining operational skills from .claude/skills/ into .apm/skills/
     claude_skills = meta_dir.parent / ".claude" / "skills"
     if claude_skills.is_dir():
         for skill_dir in sorted(claude_skills.iterdir()):
@@ -327,7 +339,6 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
             skill_md = skill_dir / "SKILL.md"
             if skill_md.is_file():
                 rel_path = f".apm/skills/{skill_dir.name}/SKILL.md"
-                # Keep authority if not already populated
                 if rel_path not in out:
                     out[rel_path] = skill_md.read_text(encoding="utf-8")
 
@@ -406,7 +417,13 @@ def check_root_symlinks(root_dir: pathlib.Path = ROOT) -> list[str]:
 
 
 def reconcile_root(root_dir: pathlib.Path = ROOT) -> list[str]:
-    """Reconciles harness root files ensuring AGENTS.md single-source invariance."""
+    """Reconciles harness root files ensuring AGENTS.md single-source invariance.
+
+    `CLAUDE.md` and `GEMINI.md` are symlinks to `AGENTS.md` and this restores
+    them as such, including where one has been replaced by a regular file: an
+    external compiler that writes its own copy is the way that happens, and a
+    copy is the drift the symlink exists to rule out.
+    """
     actions = []
     agents_md = root_dir / "AGENTS.md"
     claude_md = root_dir / "CLAUDE.md"
@@ -424,7 +441,6 @@ def reconcile_root(root_dir: pathlib.Path = ROOT) -> list[str]:
                 link_path.symlink_to("AGENTS.md")
                 actions.append(f"Fixed symlink {link_path.name} -> AGENTS.md")
         elif link_path.exists():
-            # If an external compiler replaced symlink with a regular file, restore symlink
             link_path.unlink()
             link_path.symlink_to("AGENTS.md")
             actions.append(f"Restored symlink {link_path.name} -> AGENTS.md from file")

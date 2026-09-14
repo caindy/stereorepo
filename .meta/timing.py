@@ -272,6 +272,12 @@ def difficulty_of(run):
 
     Returns:
         str: Difficulty label ('easy', 'medium', 'hard', 'human', or 'unknown').
+
+    The run's head branch names its Issue, and the label is read from there. A
+    run whose head branch is `main` — an `issues: labeled` trigger, or a
+    `workflow_dispatch` — names no Issue that way, so the number is taken from
+    its display title instead, and failing that the title is matched against
+    the Issue titles the run listing carries.
     """
     branch = run.get("headBranch") or ""
     m = re.search(r"issue-(\d+)", branch)
@@ -298,8 +304,6 @@ def difficulty_of(run):
         DIFFICULTY_CACHE[issue_num] = diff
         return diff
 
-    # When headBranch is main (e.g. issues: labeled or workflow_dispatch),
-    # resolve difficulty from the Issue's title or displayTitle.
     title = (run.get("displayTitle") or "").strip()
     if title:
         m = re.search(r"#(\d+)", title)
@@ -341,6 +345,11 @@ def summarise(workflow, limit, deep, stratify=None):
 
     Returns:
         tuple[dict | None, list]: Aggregate statistics dictionary and list of opened run tuples.
+
+    The three series — total, waiting and running — are drawn from one sample,
+    preferring the opened runs whose wait and work could both be determined.
+    Drawn from three samples the percentiles do not compose: a total taken over
+    runs a wait was never read for is not the sum of the other two.
     """
     found = runs_of(workflow, limit)
     if found is None:
@@ -353,9 +362,6 @@ def summarise(workflow, limit, deep, stratify=None):
         w, x = critical(run, jobs)
         opened.append((run, jobs, w, x))
 
-    # Rectify sample mismatch: when deep > 0 and runs were opened, calculate
-    # total, waiting, and running over the runs where both wait and work could be
-    # determined, so all three metrics share the exact same sample.
     valid_runs = [(r, w, x) for r, _, w, x in opened if w is not None and x is not None]
     if deep > 0 and valid_runs:
         total = [span(r["createdAt"], r["updatedAt"]) for r, _, _ in valid_runs]

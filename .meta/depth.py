@@ -93,7 +93,13 @@ STANDARD_CONFIG = DepthConfig(
 
 
 def load_structure_projects(structure_file: pathlib.Path = STRUCTURE_PATH) -> list[dict[str, Any]]:
-    """Loads declared projects from structure.yaml, handling pyyaml or minimal fallback."""
+    """Loads declared projects from structure.yaml, handling pyyaml or minimal fallback.
+
+    The fallback reads `critical_paths` and nothing else, by indentation, and
+    exists because this tool runs in the review workflow's container before any
+    dependency is installed. A project's other slots are not read there, so the
+    parser that would read them is not written.
+    """
     if not structure_file.is_file():
         return []
     text = structure_file.read_text(encoding="utf-8")
@@ -102,7 +108,6 @@ def load_structure_projects(structure_file: pathlib.Path = STRUCTURE_PATH) -> li
         data = yaml.safe_load(text) or {}
         return list(data.get("projects") or [])
     except ImportError:
-        # Minimal parser for critical_paths in environments lacking pyyaml
         projects = []
         curr_project: dict[str, Any] | None = None
         in_critical_paths = False
@@ -219,31 +224,39 @@ def evaluate(
     structure_file: pathlib.Path = STRUCTURE_PATH,
     hook_file: pathlib.Path = HOOK_PATH,
 ) -> DepthConfig:
-    """Executes the 4-layer template method pipeline over a list of changed files."""
+    """Executes the 4-layer template method pipeline over a list of changed files.
+
+    The layers answer in order and the first that answers wins, so the scaffold
+    boundary cannot be talked out of deep review by an assertion or a hook
+    beneath it: the invariant boundary, then the `critical_paths` a project
+    declares, then the portfolio's own hook, then the standard default.
+    """
     meta = pr_meta or {}
 
-    # Layer 1: Invariant scaffold security boundary
     cfg = check_scaffold_boundary(files)
     if cfg:
         return cfg
 
-    # Layer 2: Declarative assertions from structure.yaml
     projects = load_structure_projects(structure_file)
     cfg = check_declarative_assertions(files, projects)
     if cfg:
         return cfg
 
-    # Layer 3: Programmatic hook
     cfg = check_programmatic_hook(meta, files, diff_patch, hook_file)
     if cfg:
         return cfg
 
-    # Layer 4: Standard default
     return STANDARD_CONFIG
 
 
 def resolve_files_for_pr(pr: str, repo: str | None = None) -> tuple[list[str], dict[str, Any], str]:
-    """Resolves changed files and metadata for a pull request, accounting for re-reviews."""
+    """Resolves changed files and metadata for a pull request, accounting for re-reviews.
+
+    The metadata — labels, title and author — is what a portfolio's programmatic
+    hook is given to judge on, and a read of it that fails leaves the number and
+    the repository alone rather than stopping the evaluation: a hook that sees
+    less falls through to the layer beneath it.
+    """
     repo_target = repo or os.environ.get("GITHUB_REPOSITORY")
     if not repo_target:
         try:
@@ -302,7 +315,6 @@ def resolve_files_for_pr(pr: str, repo: str | None = None) -> tuple[list[str], d
         out = subprocess.check_output(view_cmd, text=True)
         files = [line.strip() for line in out.splitlines() if line.strip()]
 
-    # Fetch basic PR metadata for programmatic hooks
     meta: dict[str, Any] = {"number": pr, "repo": repo_target, "incremental": incremental}
     try:
         meta_cmd = ["gh", "pr", "view", pr]
@@ -339,7 +351,6 @@ def main(argv: list[str]) -> int:
     elif args.pr:
         files, pr_meta, diff_patch = resolve_files_for_pr(args.pr, repo=args.repo)
     else:
-        # If PR is present in environment (e.g. from GitHub Actions)
         env_pr = os.environ.get("PR")
         if env_pr:
             files, pr_meta, diff_patch = resolve_files_for_pr(env_pr, repo=args.repo)

@@ -147,7 +147,15 @@ class SearchIndex:
                 self.field_avg_len[f] = total_len / self.total_docs if total_len > 0 else 1.0
 
     def search(self, query: str, top_k: int = 5) -> list[SearchResult]:
-        """Rank documents against a query using the BM25F multi-field scoring algorithm."""
+        """Rank documents against a query using the BM25F multi-field scoring algorithm.
+
+        Each query token contributes its Robertson-Sparck Jones inverse document
+        frequency, smoothed by add-one, times a saturation curve over one
+        weighted term frequency. That frequency is combined across the fields
+        before saturating rather than after: BM25F normalizes each field by its
+        own average length and `b` parameter, then sums, so a term in a short
+        title and a term in a long body saturate together rather than twice.
+        """
         q_tokens = tokenize(query)
         if not q_tokens or self.total_docs == 0:
             return []
@@ -157,10 +165,8 @@ class SearchIndex:
             if token not in self.doc_freqs:
                 continue
             df = self.doc_freqs[token]
-            # Robertson-Spärck Jones IDF formula with add-1 smoothing
             idf = math.log((self.total_docs - df + 0.5) / (df + 0.5) + 1.0)
             for identifier in self.docs:
-                # BM25F: compute length-normalized weighted term frequency across fields
                 tf_tilde = 0.0
                 for f in self.FIELDS:
                     raw_tf = self.doc_field_tokens[identifier][f].count(token)
@@ -171,7 +177,6 @@ class SearchIndex:
                         len_norm = 1.0 - b + b * (doc_l / avg_l)
                         tf_tilde += self.weights[f] * (raw_tf / len_norm)
 
-                # Apply saturation curve over the combined weighted term frequency
                 if tf_tilde > 0:
                     scores[identifier] += idf * ((tf_tilde * (self.k1 + 1.0)) / (tf_tilde + self.k1))
 
@@ -206,10 +211,14 @@ class SearchIndex:
 
 
 def build_index(meta_dir: Path, root_dir: Path) -> SearchIndex:
-    """Build a BM25F search index from .meta/assertions/*.yaml and wiki/**/*.md."""
+    """Build a BM25F search index from .meta/assertions/*.yaml and wiki/**/*.md.
+
+    The assertions are indexed through `collect`, and are skipped with a warning
+    on stderr where LinkML is not installed, so a search still answers over the
+    wiki alone. The wiki is indexed from its Markdown, `README.md` aside.
+    """
     index = SearchIndex()
 
-    # 1. Index assertions via collect if LinkML is available
     if collect is not None:
         try:
             assertion_files = {
@@ -271,7 +280,6 @@ def build_index(meta_dir: Path, root_dir: Path) -> SearchIndex:
         except Exception as err:
             print(f"Warning: collect could not load LinkML schemas: {err}", file=sys.stderr)
 
-    # 2. Index wiki pages
     wiki_dir = root_dir / "wiki"
     if wiki_dir.is_dir():
         for path in sorted(wiki_dir.rglob("*.md")):
@@ -315,7 +323,13 @@ def build_index(meta_dir: Path, root_dir: Path) -> SearchIndex:
 
 
 def run_benchmark(index: SearchIndex) -> int:
-    """Run the 18 evaluation benchmark queries from Challenge 18 and solorepo's DR-103."""
+    """Run the 18 evaluation benchmark queries from Challenge 18 and solorepo's DR-103.
+
+    Returns 0 where hit@5 reaches 15 of the 18 queries. A portfolio holds a
+    different record and so a different subset of the targets, and a query whose
+    targets are all absent is dropped rather than counted as a miss; the
+    threshold there is 80% of what remains.
+    """
     queries: list[tuple[str, list[str]]] = [
         (
             "what has been decided about naming",
@@ -440,7 +454,6 @@ def run_benchmark(index: SearchIndex) -> int:
     print(f"  hit@10: {hits_10 / n:.2f} ({hits_10}/{n})")
     print(f"  MRR:    {mrr:.2f}")
 
-    # Passes if hit@5 is at least 15 of 18 (in solorepo) or 80% of active queries (in specialized portfolio)
     min_hits = 15 if n >= 18 else int(0.8 * n)
     return 0 if hits_5 >= min_hits else 1
 

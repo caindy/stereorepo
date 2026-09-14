@@ -168,6 +168,14 @@ def check(title, body):
 
     Returns:
         list[str]: Validation error messages.
+
+    Four things are asked of a body, in order. Every heading the form declares
+    is present and not blank. No placeholder the form spells in angle brackets
+    survives into the title or the body. Each item under **What it closes**
+    carries a closing keyword, so the merge closes the Issue and nobody has to
+    remember to (solorepo's DR-089). And each item under **What was noticed and
+    not done** is a link, which is Article 15 itself: everything before it is
+    the form being present, and this is the rule the form exists to carry.
     """
     problems = []
     required = [m.group(1) for m in HEADING.finditer(fence(FORM))]
@@ -179,7 +187,6 @@ def check(title, body):
         elif not found[heading]:
             problems.append(f"empty section: **{heading}.** — the form was submitted blank")
 
-    # Form placeholders in angle brackets indicate incomplete sections.
     form = fence(FORM)
     literal = set(PLACEHOLDER.findall(form)) | set(re.findall(r"<[^<>\s]+>", form))
     for where, raw in (("title", title), ("body", body)):
@@ -188,7 +195,6 @@ def check(title, body):
         for m in sorted(seen):
             problems.append(f"unfilled placeholder in {where}: {m}")
 
-    # Closing keyword ensures merging PR closes referenced issues (solorepo's DR-089).
     closing = found.get(CLOSES, "")
     if closing and not NONE.match(closing):
         items = [m.group(1).strip() for m in BULLET.finditer(closing)]
@@ -200,8 +206,6 @@ def check(title, body):
             if not KEYWORD.search(item):
                 problems.append(f"no closing keyword, so the merge leaves it open: {item}")
 
-    # A15 proper. Everything else above is the form being present; this is the
-    # rule the form exists to carry.
     deferred = found.get(DEFERRED, "")
     if deferred and not NONE.match(deferred):
         items = [m.group(1).strip() for m in BULLET.finditer(deferred)]
@@ -797,6 +801,11 @@ def handoff(base):
 
     Returns:
         int: 0 if all handoff checks pass; 1 if any check fails.
+
+    The render names a page relative to `.meta/`, which is how the Artifact
+    asserting its prose is found too, so a name the render answered with is
+    turned back into the repository-relative path the record's table and this
+    file's own reads are keyed on.
     """
     def mark(label, problems, note=""):
         for p in problems:
@@ -817,9 +826,6 @@ def handoff(base):
                           f"nothing for it — restore the target, or drop the page"
                           for name in orphans],
                        "every generated page is the render of what it asserts")
-    # The render names a page relative to `.meta/`, which is how the Artifact
-    # that asserts its prose is found too; here it is turned back into the path
-    # the record's table and this file's own reads are keyed on.
     unnamed = [] if stale is None else stale + orphans
     unsure = stale is None or INDEX in {
         (pathlib.Path(".meta") / name).as_posix() for name in unnamed}
@@ -894,15 +900,19 @@ def snapshot(ref):
 
     Returns:
         tuple: (number, state, comments_dict, reviews_dict, threads_dict, checks_dict, mergeable).
+
+    Checks are keyed by name, so the several runs a name accumulates — a
+    repeated dispatch, a cancelled run — are reduced to the latest by
+    `deduplicate_checks` before the key is taken. Each answers with its
+    conclusion and the URL of the run that reached it: a rerun concluding as
+    its predecessor did is otherwise indistinguishable from no rerun at all,
+    and the watcher would sit on it.
     """
     pr = gh("pr", "view", ref, "--json", "number,state,comments,reviews,mergeable")
     comments = {c["id"]: c for c in pr["comments"]}
     reviews = {r["id"]: r for r in pr["reviews"]}
     threads_ = {t["id"]: t for t in threads(ref)}
-    # When multiple check runs share a name (e.g. repeated dispatches or cancelled runs),
-    # order by startedAt so the latest run wins.
     sorted_checks = deduplicate_checks(rollup_of(pr["number"]))
-    # Include detailsUrl so rerun checks producing identical conclusions register as distinct events.
     checks = {c.get("name") or c.get("context"):
               (c.get("conclusion") or c.get("state") or c.get("status") or "PENDING",
                c.get("detailsUrl") or c.get("targetUrl"))
@@ -942,16 +952,20 @@ def watch(ref, every=60):
 
     Returns:
         int: Exit status code (0 on actionable completion or closure, non-zero on error).
+
+    Mergeability is remembered as the last answer GitHub gave, apart from the
+    snapshot, because `UNKNOWN` is not a state of the branch but GitHub
+    computing one and every push sets it: compared snapshot to snapshot, a push
+    would report `UNKNOWN` and then the value the branch already had, which is
+    two lines for no change. Nothing said yet — including by the heading — is
+    a change from nothing, and is printed.
+
+    A conflicting branch is reported and not exited on. It is what the coder's
+    rebase pass is dispatched for, and a watcher that exited would stop
+    watching the branch about to move under it.
     """
     import time
     previous = None
-    # The last thing GitHub said about merging this branch that was an answer.
-    # Held apart from the snapshot because `UNKNOWN` is not a state of the
-    # branch but GitHub computing one, and every push sets it: compared
-    # snapshot to snapshot, a push would report `UNKNOWN` and then the value it
-    # already had, which is two lines for no change. `None` means nothing has
-    # been said yet, including by the heading, so the first answer is a change
-    # from nothing and is printed.
     merges = None
     while True:
         try:
@@ -1012,7 +1026,6 @@ def watch(ref, every=60):
                     print(f"check {name}: {value} again, from a re-run", flush=True)
                     if is_failure:
                         actionable.append(f"check {name} ({value})")
-            # Merge conflicts trigger coder rebase passes; inform watcher without exiting.
             if mergeable != "UNKNOWN" and mergeable != merges:
                 print(f"mergeable: {mergeable}" + (
                     " — GitHub builds no merge ref for a branch that conflicts, so no review "
@@ -1386,6 +1399,14 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
 
     Returns:
         list[str]: Remediation messages for each unheld or stalled pull request.
+
+    Each shape reported here is one a webhook should have carried and did not:
+    the event was spent, or the run that took it ended without answering. A
+    review requested of the reviewer whose check failed with no verdict
+    (solorepo's DR-178); a request for changes nobody is answering; an approved
+    pull request whose checks are red; and one that is green with nobody
+    holding it. Every one is qualified by `minutes` of silence, so a pass that
+    is merely still running is not mistaken for one that stopped.
     """
     if reviewer_login is None:
         reviewer_login = role_login("reviewer")
@@ -1438,7 +1459,6 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
                            f"answer is already posted with .meta/say/post resolve, or answer with "
                            f".meta/say/post answer")
         branch = LOOPS_BRANCH.match(pr["headRefName"])
-        # A review requested of reviewer where the reviewer run failed without submitting a verdict (solorepo's DR-178).
         if reviewer_login in asked and not pr["isDraft"] and pr.get("mergeable") != "CONFLICTING" and branch and idle >= minutes:
             contexts = deduplicate_checks(pr.get("statusCheckRollup") or [])
             reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
@@ -1447,7 +1467,6 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
                            f"but reviewer check failed without a verdict: no run is answering it and "
                            f"nothing has moved on it for {int(idle)} minutes. Re-request review with "
                            f".meta/say/move request-review {pr['number']}")
-        # An unanswered review changes request where the webhook was spent or the run crashed.
         if is_changes_requested_pull(pr, reviewer_login=reviewer_login) and not asked and branch and idle >= minutes:
             threads_unresolved = (unresolved.get(pr["number"]) if unresolved is not None
                                   else [t for t in threads(str(pr["number"])) if not t["isResolved"]])
@@ -1460,7 +1479,6 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
                                f"has moved on it for {int(idle)} minutes, while #{branch.group(1)} "
                                f"is still {level}. A review event was dropped or a run ended "
                                f"without answering: .meta/say/move dispatch {pr['number']} --task review")
-        # An approved pull request with failing checks where the webhook was spent or the run crashed.
         if is_approved_pull(pr, reviewer_login=reviewer_login) and not asked and not pr["isDraft"] and not green(pr) and pr.get("mergeable") != "CONFLICTING" and branch and idle >= minutes:
             issue = gh("issue", "view", branch.group(1), "--json", "state,labels")
             level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in TAKEN or lbl["name"] in ("human", "hard")), None)
@@ -1522,13 +1540,17 @@ def sweep_all(publishing):
 
     Returns:
         int: 0 if all checks succeed or no PRs are open; 1 if any check or fetch failed.
+
+    A pull request GitHub would not answer for — the listing that failed, or
+    the one missing from the rollup — is reported as unread and keeps the
+    verdict its last push left. It is not passed on to `unheld`, where an empty
+    check suite is indistinguishable from a green one, and a run that could not
+    ask would otherwise report the whole tree as clean.
     """
     try:
         found = gh("pr", "list", "--state", "open", "--json", SWEEP_FIELDS)
         rolled = rollups()
     except SystemExit as unreachable:
-        # Surfacing API fetch failures prevents downstream triage steps from treating
-        # unread pull requests as clean.
         print("x  sweep — could not ask GitHub for the open pull requests, so no "
               "verdict was published and every one keeps the verdict its last "
               f"push left: {unreachable.code}")
@@ -1536,8 +1558,6 @@ def sweep_all(publishing):
     if not found:
         print("ok sweep — no open pull requests")
         return 0
-    # Pull requests missing from rollup results are treated as unfetched failures
-    # rather than passing them to unheld evaluation with empty check suites.
     unfetched = [pr for pr in found if pr["number"] not in rolled]
     if unfetched:
         print(f"x  sweep — GitHub answered for {len(rolled)} open pull request(s) "

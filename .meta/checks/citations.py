@@ -309,6 +309,10 @@ def quoted_claims():
 
     Returns:
         list[str]: Validation problem messages for unattributed or mismatched quotations.
+
+    A quotation attributed to an entry that does not exist is passed over
+    rather than reported: `cited decisions` and `cited articles` own the
+    citation that names nothing, and reporting it twice reports it twice.
     """
     charter = {int(a["id"].rsplit("/", 1)[-1]): a for a in (yaml.safe_load(
         (META / "assertions" / "imported" / "charter.yaml").read_text()) or {}
@@ -320,7 +324,7 @@ def quoted_claims():
                 for m in pattern.finditer(span):
                     entry = entry_text(m["cite"], charter)
                     if entry is None:
-                        continue  # `cited decisions` and `cited articles` own that
+                        continue
                     claimed = [part.strip(" ,.;:—-")
                                for part in ELISION.split(normalise(m["quote"]))]
                     missing = [part for part in claimed
@@ -456,6 +460,11 @@ def enacting_citations(index):
 
     Returns:
         list[str]: Validation problem messages for files where citations disagree with enactment slots.
+
+    Only an `enacted_in` slot resolving to an Artifact contributes a path. A
+    slot naming nothing is `unresolved references`' finding, and one resolving
+    to something other than an Artifact is the schema's; either way there is no
+    path here for a citation to be held against.
     """
     known = {d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"}
     if not known:
@@ -467,9 +476,6 @@ def enacting_citations(index):
             continue
         for ref in obj.get("enacted_in") or []:
             target = index.get(ref)
-            # An `enacted_in` naming nothing is the references check's, and a
-            # slot that resolves to something other than an Artifact the
-            # schema's; either way there is no path here to hold to anything.
             if target and target[0] == "Artifact":
                 named.setdefault(target[1]["path"], set()).add(ident.rsplit("/", 1)[-1])
 

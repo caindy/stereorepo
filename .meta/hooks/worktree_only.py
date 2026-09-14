@@ -150,13 +150,14 @@ def words_of(text, literal=False):
         list[str] | str: List of tokenized string arguments if parsing succeeds;
         otherwise an explanatory string indicating which active shell expansion
         character or unclosed quote triggered refusal.
+
+    A backslash inside a double quote escapes one of `ESCAPES` and is dropped,
+    taking a newline with it; before anything else it stands for itself, which
+    is what `\\s` and `\\b` want of it.
     """
     words, word, quote, seen, escaped = [], [], "", False, False
     for ch in text:
         if escaped:
-            # A `\` inside a double quote escapes one of `ESCAPES` and is
-            # dropped, taking a newline with it; before anything else it stands
-            # for itself, which is what `\s` and `\b` want of it.
             escaped = False
             if ch not in ESCAPES:
                 word.append("\\")
@@ -310,6 +311,11 @@ def command_allowed(command):
     Returns:
         str | None: An explanatory refusal message describing why the command is
         disallowed; None if the command is authorized.
+
+    A channel program is recognised by the directory that sanctions it
+    (solorepo's DR-117) and carries no option list of its own. Git's top-level
+    options carry none either, and the refusal says why: the subcommand comes
+    first.
     """
     head, marker, body = partition_unquoted(command, "<<")
     if marker:
@@ -331,7 +337,6 @@ def command_allowed(command):
         return "an empty command"
     program = words[0]
     if re.fullmatch(r"\.meta/say/[a-z]+", program):
-        # The channel's programs, by the directory that sanctions them (solorepo's DR-117).
         return None
     form = form_of(words)
     if form:
@@ -340,7 +345,6 @@ def command_allowed(command):
     if program == "git":
         subcommand = words[1] if len(words) > 1 else ""
         if subcommand.startswith("-"):
-            # Git top-level options (e.g. -C, --git-dir, -c) are disallowed to preserve worktree isolation.
             return (f"`git {subcommand}` is one of git's own options, and none of them is "
                     "carried. The three asked for are why: `-C` and `--git-dir` point git at "
                     "another repository, which the worktree already is, and `-c` sets a "
@@ -401,6 +405,11 @@ def plain_form(command):
     Returns:
         str | None: Candidate conforming command string if validation succeeds under
         `command_allowed`; None if no conforming candidate can be derived.
+
+    A word holding a single quote has no candidate: `requote` spells a word in
+    single quotes and has nothing else to spell that one with. A long option
+    written without `=` takes the word after it as its value, unless that word
+    is itself an option, so stripping the option strips both.
     """
     if partition_unquoted(command, "<<")[1]:
         return None
@@ -408,7 +417,6 @@ def plain_form(command):
     if isinstance(words, str) or not words:
         return None
     if any("'" in word for word in words):
-        # Requoting uses single quotes; words containing single quotes cannot be cleanly requoted.
         return None
     if re.fullmatch(r"\.meta/say/[a-z]+", words[0]):
         return None
@@ -417,7 +425,6 @@ def plain_form(command):
         offset, _, allowed, takes_value = form
         while (i := refused_option(words[offset:], allowed, takes_value)) is not None:
             i += offset
-            # Long options without '=' may consume the subsequent word as a value argument.
             owns = words[i].startswith("--") and "=" not in words[i] and i + 1 < len(words) and not words[i + 1].startswith("-")
             words = words[:i] + words[i + (2 if owns else 1):]
     candidate = " ".join(requote(word) for word in words)
@@ -436,7 +443,6 @@ def blocked(tool, tool_input):
     """
     try:
         if tool in READERS:
-            # Readers defaulting to empty path inspect the working directory root.
             problem = outside(tool_input.get(READERS[tool]) or ".")
             if problem:
                 return f"Blocked: {problem}. The reviewer reads the worktree and nothing else."
@@ -456,7 +462,7 @@ def blocked(tool, tool_input):
                         "goes in single quotes, which is most regexes — `'\\bdef\\b'`."
                         + (f" This one would be taken as: {plain}" if plain else ""))
         return None
-    except Exception as exc:  # refusing is the safe answer to anything
+    except Exception as exc:
         return f"Blocked: the hook could not read this call ({type(exc).__name__}: {exc}); refusing rather than guessing."
 
 

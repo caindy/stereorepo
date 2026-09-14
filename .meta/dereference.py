@@ -233,6 +233,11 @@ def scope(chk, base, everything, sample=None):
     A pair is asked once. The same sentence citing the same entry in two files
     is one question with one answer, and paying twice for it is paying for the
     copy rather than the claim.
+
+    The branch scope reads what git has been told about and what it has not,
+    both: a new file is the normal shape of a decision entry, and a run before
+    the hand-off that read only the committed diff would skip the file the
+    branch exists to add.
     """
     index = articles()
     durable = set(chk.durable(chk.copied_files()))
@@ -265,10 +270,6 @@ def scope(chk, base, everything, sample=None):
     if everything:
         paths, before = sorted(durable), {}
     else:
-        # Changed and not yet committed both. A new file is the normal shape of
-        # a decision entry, and a run before the hand-off that read only what
-        # git had already been told about would skip the file the branch exists
-        # to add.
         named = git("diff", "--name-only", base).split()
         named += git("ls-files", "--others", "--exclude-standard", default="").split()
         changed = [(ROOT / name) for name in dict.fromkeys(named)]
@@ -307,7 +308,6 @@ def scope(chk, base, everything, sample=None):
                 pairs.append({"path": str(path.relative_to(ROOT)), "cite": cite,
                               "sentence": sentence, "context": around, "body": body})
 
-    # Include durable sentences citing entries modified on this branch (ground moved)
     if modified_entries:
         for path in sorted(durable):
             for sentence, around, named in sentences(chk, path):
@@ -489,7 +489,19 @@ def report(answers, pairs, where, everything, sample=False):
 
 
 def main(argv=None):
-    """Parses arguments and checks cited sentences against the entries they cite."""
+    """Parses arguments and checks cited sentences against the entries they cite.
+
+    Answers `could not run` in both of the ways that happens here — too much to
+    ask, and nothing to ask through — loudly, unmarked, and exiting zero, which
+    is what Article 6 asks of that outcome; a step that blocks nothing must not
+    be able to fail the run that holds it either. There is no third way:
+    `credential` always returns something to ask with, and says on stderr which.
+
+    The default cap of 60 pairs guards a bill nobody meant to run up. `--all`
+    is nobody's accident — it is the word for asking the whole record — so it
+    is not capped by a number chosen for a branch, and the usage block says
+    what that costs.
+    """
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--all", action="store_true",
                     help="every citation in the durable set, not only this branch's")
@@ -520,14 +532,6 @@ def main(argv=None):
         print("ok dereference — no citation written or affected on this branch" if not args.sample
               else "ok dereference — no citations in durable set")
         return 0
-    # Could not run, in both of the ways that happens here: too much to ask, and
-    # nothing to ask through. Loud, unmarked and exiting zero, which is what A6
-    # asks of that outcome — and a step that blocks nothing must not be able to
-    # fail the run that holds it either. There is no third: `credential` always
-    # returns something to ask with, and says on stderr which.
-    # The cap guards a bill nobody meant to run up, and `--all` is nobody's
-    # accident: it is the word for asking the whole record, so it is not capped
-    # by a number chosen for a branch. The usage block says what that costs.
     limit = args.limit if args.limit is not None else (None if (args.all or args.sample) else 60)
     if limit is not None and len(pairs) > limit:
         print(f"?  dereference: {len(pairs)} pairs in scope, above the limit of {limit}; "

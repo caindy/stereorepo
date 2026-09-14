@@ -44,14 +44,19 @@ def slugify(text: str) -> str:
 
 
 def format_lead_sentence(title: str, definition: str) -> str:
-    """Format a MOS:LEAD compliant bold copular lead sentence for a concept (solorepo's DR-187)."""
+    """Format a MOS:LEAD compliant bold copular lead sentence for a concept (solorepo's DR-187).
+
+    The definition supplies its own copula where it opens with one — `is`,
+    `are`, `refers to` and the rest — and is given `is` where it does not, so
+    the lead reads as one sentence either way. An empty definition is led with
+    a placeholder rather than left bare.
+    """
     title_clean = title.strip()
     def_clean = definition.strip()
 
     if not def_clean:
         def_clean = "a concept within maintainer exposition"
 
-    # Match existing copula at start of definition if present
     match = re.match(
         r"^(?:is|are|was|were|refers to|serves as|organizes|provides|names|represents)\b\s*",
         def_clean,
@@ -68,13 +73,19 @@ def format_lead_sentence(title: str, definition: str) -> str:
 def find_duplicates(
     query: str, context: str = "solorepo", root: pathlib.Path | None = None
 ) -> list[dict[str, Any]]:
-    """Search for colliding concepts in vocabulary, disciplines, and wiki pages (solorepo's DR-187)."""
+    """Search for colliding concepts in vocabulary, disciplines, and wiki pages (solorepo's DR-187).
+
+    Three sources are read in turn — the wiki pages, then the vocabulary
+    assertions, then the disciplines — and each is matched on slug and on
+    label, so a page named for a concept and a concept named for a page collide
+    whichever was written first. A source that is absent or will not parse
+    contributes nothing rather than stopping the search.
+    """
     root_path = root or pathlib.Path(__file__).resolve().parent.parent
     target_slug = slugify(query)
     target_norm = query.strip().lower()
     duplicates: list[dict[str, Any]] = []
 
-    # 1. Search existing wiki pages
     wiki_dir = root_path / "wiki"
     if wiki_dir.is_dir():
         for path in wiki_dir.glob("*/*.md"):
@@ -111,7 +122,6 @@ def find_duplicates(
                         })
                     break
 
-    # 2. Search vocabulary assertions
     vocab_files = [
         root_path / ".meta" / "assertions" / "imported" / "vocabulary.yaml",
         root_path / ".meta" / "assertions" / "vocabulary.yaml",
@@ -147,7 +157,6 @@ def find_duplicates(
                     "details": f"Concept synonym in vocabulary schema ({alt_labels})",
                 })
 
-    # 3. Search disciplines assertions
     discipline_files = [
         root_path / ".meta" / "assertions" / "imported" / "disciplines.yaml",
         root_path / ".meta" / "assertions" / "disciplines.yaml",
@@ -176,11 +185,16 @@ def find_duplicates(
 
 
 def extract_known_concepts(root: pathlib.Path | None = None) -> dict[str, str]:
-    """Extract known vocabulary and wiki concepts as a mapping of term to canonical target (solorepo's DR-187)."""
+    """Extract known vocabulary and wiki concepts as a mapping of term to canonical target (solorepo's DR-187).
+
+    Reads the same three sources as `find_duplicates` and in the same order,
+    so a term a search collides against is a term this map resolves. A
+    vocabulary concept contributes its slug and its preferred label, and a
+    discipline its slug and its name, each pointing at the slug.
+    """
     root_path = root or pathlib.Path(__file__).resolve().parent.parent
     known: dict[str, str] = {}
 
-    # From wiki pages
     wiki_dir = root_path / "wiki"
     if wiki_dir.is_dir():
         for path in wiki_dir.glob("*/*.md"):
@@ -189,7 +203,6 @@ def extract_known_concepts(root: pathlib.Path | None = None) -> dict[str, str]:
             stem = path.stem.lower()
             known[stem] = stem
 
-    # From vocabulary
     vocab_files = [
         root_path / ".meta" / "assertions" / "imported" / "vocabulary.yaml",
         root_path / ".meta" / "assertions" / "vocabulary.yaml",
@@ -210,7 +223,6 @@ def extract_known_concepts(root: pathlib.Path | None = None) -> dict[str, str]:
             if pref_label:
                 known[pref_label.lower()] = item_slug
 
-    # From disciplines
     discipline_files = [
         root_path / ".meta" / "assertions" / "imported" / "disciplines.yaml",
         root_path / ".meta" / "assertions" / "disciplines.yaml",
