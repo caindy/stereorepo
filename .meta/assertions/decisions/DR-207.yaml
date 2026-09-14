@@ -1,0 +1,103 @@
+decisions:
+  - id: work:decision/207
+    name: "DR-207 · Four permissible comment exceptions, with routing, mechanization, and suppression audit as the alternatives to prose"
+    challenge: work:challenge/409
+    status: ADOPTED
+    applies:
+      - work:article/12
+      - work:article/15
+    enacted_in:
+      - work:artifact/skill-technical-writing
+      - work:artifact/meta-render
+    context: >-
+      solorepo's DR-175 established the reader's rubric for item docstrings and
+      solorepo's DR-198 separated the conversational register from durable
+      Diátaxis authoring, but both govern docstrings. Neither says what may
+      appear as a comment anywhere else in a source file — at module scope, in
+      a class body, or inside a function or method — so source modules kept
+      accumulating line-by-line narration of mechanical steps, commented-out
+      dead code, apologetic explanations of awkward local logic, informal
+      constraint notes (`# must run before X`, `# do not reorder`) that no gate
+      can fail on, and lint and type suppressions nobody had read.
+
+      The `/technical-writing` skill, compiled by `.meta/render.py` into
+      `.claude/skills/technical-writing/SKILL.md`, therefore carried a rubric
+      covering docstring register, Diátaxis quadrant routing, Google developer
+      style, and closed-world citations, and stopped at the docstring. An agent
+      applying it before handoff had nothing to apply to the comments around
+      the docstrings, which is where the debris was.
+
+      Three of the four kinds of debris are not prose problems at all. An
+      informal constraint is an unchecked invariant; a suppression over a real
+      finding is an open defect; a defect narrative in a body is knowledge
+      filed in the wrong container. Only the fourth — narration of self-evident
+      steps — is answered by deletion alone.
+    alternatives:
+      - name: Leave inline commentary to reviewer judgement
+        chosen: false
+        reason: >-
+          A rubric that stops at the docstring gives the pre-handoff pass
+          nothing to check a body against, so each session re-derives the line
+          and the debris returns at the rate agents write it.
+      - name: Ban comments in source bodies outright
+        chosen: false
+        reason: >-
+          Destroys knowledge rather than routing it, and has no answer for
+          constraints a foreign platform or wire protocol forces on the code,
+          which cannot be reshaped from inside this repository.
+      - name: Enumerate four permissible exceptions, and name the destination for everything else
+        chosen: true
+        reason: >-
+          Makes the keep-list finite and checkable — legal notices, Reference
+          docstrings, dereferenced external boundary constraints, and tool
+          formatting directives — while giving each excluded kind a
+          destination: knowledge routes down the pre-writing routing tree of
+          `/technical-writing`, which maps each kind of knowledge to its
+          Diátaxis quadrant and its container;
+          constraints convert to the cheapest machine-checked mechanism; and
+          suppressions are audited as defects. Pruning becomes a move, not a
+          deletion.
+    consequences:
+      - >-
+        `.meta/render.py` compiles four further sections into
+        `.claude/skills/technical-writing/SKILL.md`: the four permissible
+        comment exceptions, knowledge routing over destruction, the constraint
+        mechanization protocol, and the suppression audit protocol.
+      - >-
+        The Artifact description in
+        `.meta/assertions/imported/structure.yaml` names inline comments and
+        suppressions, so the skill is selected when a comment is being pruned
+        and not only when a docstring is being written.
+      - >-
+        A constraint comment is pruned only after the invariant it states is
+        held by a type, a runtime precondition, or a probe in
+        `.meta/checks/probes.py`, so the claim survives the prose
+        (solorepo's DR-171).
+      - >-
+        A lint or type suppression bypassing safety, correctness, or type
+        soundness is an actionable defect rather than a permanent comment.
+      - >-
+        Establishes the rubric that the static checks of Challenge #410, the
+        pre-handoff workflow wiring of Challenge #411, and the `.meta/` sweep
+        of Challenge #412 are held against.
+    falsifier: >-
+      A comment anywhere in a source file that is none of the four
+      exceptions and whose content has no destination among a history log, a
+      Decision Record, a wiki concept, a `justfile` recipe, or a machine-checked
+      mechanism — so pruning it would lose knowledge no container will hold.
+    rationale: |-
+      A comment is a claim with no reader downstream and no check
+      behind it, and the scope it sits at changes nothing about that. Its
+      content is almost always one of four things wearing the
+      same clothes: a fact about the code's surface, a fact about the world
+      outside the repository, an invariant, or a story about a past defect.
+      Only the first two belong in the source, and only in the shapes
+      solorepo's DR-175 and Article 12 already hold to a standard.
+
+      The other two have better homes that already exist. An invariant becomes
+      a type, a precondition, or a probe — a form that fails when it is
+      violated, which prose never does. A story becomes a `<module>.history.md`
+      entry with a receipt, which solorepo's DR-171 built for exactly this.
+      Naming the destination is what makes the prune safe: the objection to
+      deleting a comment is always that it knows something, and the answer is
+      to move what it knows rather than to argue about the line.

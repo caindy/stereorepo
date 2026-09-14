@@ -111,6 +111,9 @@ artifacts:
     path: .claude/skills/technical-writing/SKILL.md
     description: >-
       Apply the layered technical writing standard (Diátaxis structure, Google developer style,
-      literate programming register, closed-world dereferencing, and Ubiquitous Language alignment).
-      Use when writing or auditing docstrings, Decision Records, wiki pages, or pull request prose.
+      literate programming register, closed-world dereferencing, and Ubiquitous Language alignment),
+      with the four permissible comment exceptions, knowledge routing, constraint mechanization,
+      and suppression auditing that govern every comment in a source file (solorepo's DR-207).
+      Use when writing or auditing docstrings, inline comments, lint or type suppressions,
+      Decision Records, wiki pages, or pull request prose.
 

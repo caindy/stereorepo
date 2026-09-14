@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/409
+    name: "Codify inline comment pruning, suppression auditing, and constraint mechanization in /technical-writing"
+    challenge_type: REFACTOR
+    description: >-
+      Expand the /technical-writing rubric beyond the docstring to every comment in a
+      source file: enumerate the four permissible comment exceptions, route pruned
+      knowledge down the skill's pre-writing routing tree, which maps each kind of
+      knowledge to its container, rather than deleting it, convert informal constraint
+      comments into machine-checked mechanisms, and audit lint and type suppressions
+      as defects rather than permanent comments.
