@@ -197,8 +197,16 @@ def agent_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
             "",
             "When authoring durable repository files (code docstrings, Decision Records, wiki pages),",
             "follow the Diátaxis quadrant being authored rather than conversational voice.",
-            "",
         ]
+        if role_slug == "coder":
+            lines.extend([
+                "Apply the /technical-writing skill before handoff (solorepo's DR-194, solorepo's DR-198, solorepo's DR-207):",
+                "keep item docstrings dry Reference contracts without reviewer litigation (solorepo's DR-175),",
+                "hold source comments to the four permissible exceptions, mechanize constraints before pruning,",
+                "route defect narratives to <module>.history.md with probe receipts (solorepo's DR-171), and audit",
+                "suppressions as defects.",
+            ])
+        lines.append("")
         out[f".apm/agents/{role_slug}.agent.md"] = "\n".join(lines).strip() + "\n"
 
     # 2. Stakeholder Personas as Interrogation Surrogates (solorepo's DR-200)

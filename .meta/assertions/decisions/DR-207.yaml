@@ -9,6 +9,8 @@ decisions:
     enacted_in:
       - work:artifact/skill-technical-writing
       - work:artifact/meta-render
+      - work:artifact/github-workflows-coder
+      - work:artifact/agents
     context: >-
       solorepo's DR-175 established the reader's rubric for item docstrings and
       solorepo's DR-198 separated the conversational register from durable

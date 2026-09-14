@@ -558,10 +558,14 @@ jobs:
             saying why on the pull request (solorepo's DR-134).
 
             When authoring or modifying docstrings, comments, or documentation,
-            apply the /technical-writing skill (solorepo's DR-194, solorepo's DR-198):
-            ensure item docstrings are Diátaxis Reference contracts without reviewer
-            litigation, route defect/workaround narratives to companion <module>.history.md
-            logs (solorepo's DR-171), and dereference all citations.
+            apply the /technical-writing skill (solorepo's DR-194, solorepo's DR-198,
+            solorepo's DR-207): ensure item docstrings are Diátaxis Reference
+            contracts without reviewer litigation (solorepo's DR-175), hold source
+            comments to the four permissible exceptions (pruning inline narration,
+            routing defect narratives to companion <module>.history.md logs with probe
+            receipts under solorepo's DR-171, and mechanizing informal constraints
+            before pruning), audit lint and type suppressions as defects, and
+            dereference all citations.
 
             Before you hand the branch over as finished, reread your diff
             against origin/main to verify quality and consistency.
@@ -720,10 +724,14 @@ jobs:
             saying why on the pull request (solorepo's DR-134).
 
             When authoring or modifying docstrings, comments, or documentation,
-            apply the /technical-writing skill (solorepo's DR-194, solorepo's DR-198):
-            ensure item docstrings are Diátaxis Reference contracts without reviewer
-            litigation, route defect/workaround narratives to companion <module>.history.md
-            logs (solorepo's DR-171), and dereference all citations.
+            apply the /technical-writing skill (solorepo's DR-194, solorepo's DR-198,
+            solorepo's DR-207): ensure item docstrings are Diátaxis Reference
+            contracts without reviewer litigation (solorepo's DR-175), hold source
+            comments to the four permissible exceptions (pruning inline narration,
+            routing defect narratives to companion <module>.history.md logs with probe
+            receipts under solorepo's DR-171, and mechanizing informal constraints
+            before pruning), audit lint and type suppressions as defects, and
+            dereference all citations.
 
             Before you hand the branch over as finished, reread your diff
             against origin/main to verify quality and consistency.
