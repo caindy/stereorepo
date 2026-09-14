@@ -18,3 +18,13 @@ __pycache__/
 # Virtual environments
 .venv/
 
+# APM installation runtime artifacts (solorepo's DR-172, solorepo's #430)
+apm.yml
+apm.lock.yaml
+# APM dependencies
+apm_modules/
+
+# Multi-harness compiled target directories (solorepo's DR-172, solorepo's #430)
+.agents/
+.codex/
+

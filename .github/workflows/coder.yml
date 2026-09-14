@@ -147,6 +147,13 @@ jobs:
       # and write, and the composite action tests `type -p gh` before anything else.
       - uses: ./.meta/actions/gh
 
+      # Materialize single-source APM cognitive assets (.agents/skills, .gemini/, .codex/)
+      # so Gemini CLI, Codex, and Antigravity find identical skills as Claude Code (solorepo's DR-172, solorepo's DR-201, solorepo's #430).
+      - name: reconcile multi-harness cognitive assets
+        run: |
+          git config core.hooksPath .meta/hooks
+          python3 .meta/apm_compile.py --reconcile
+
       # Which pull request a second pass answers: the event's, or the
       # dispatch's. Its branch is checked out below so the work continues
       # where the first pass left it. The base is read too, and not assumed to

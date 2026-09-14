@@ -506,6 +506,49 @@ def reconcile_root(root_dir: pathlib.Path = ROOT) -> list[str]:
             link_path.symlink_to("AGENTS.md")
             actions.append(f"Created symlink {link_path.name} -> AGENTS.md")
 
+    meta_path = root_dir / ".meta"
+    if not meta_path.is_dir():
+        meta_path = META
+    actions.extend(reconcile_harnesses(meta_path, root_dir))
+
+    return actions
+
+
+def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROOT) -> list[str]:
+    """Projects single-source APM cognitive assets to multi-harness target directories (solorepo's DR-172, solorepo's DR-201, solorepo's #430).
+
+    When Microsoft APM CLI is present, invokes `apm install ./.meta --target antigravity,codex,gemini`
+    to deploy skills, agents, and hooks into `.agents/`, `.gemini/`, and `.codex/`.
+    When APM CLI is absent, projects `.meta/.apm/skills/` into `.agents/skills/` directly.
+    """
+    actions = []
+    apm_bin = shutil.which("apm")
+    if apm_bin:
+        res = subprocess.run(
+            [apm_bin, "install", "./.meta", "--target", "antigravity,codex,gemini"],
+            cwd=str(root_dir),
+            capture_output=True,
+            text=True,
+        )
+        if res.returncode == 0:
+            actions.append("Materialized multi-harness cognitive assets via APM CLI (.agents/, .gemini/, .codex/)")
+            return actions
+
+    src_skills = meta_dir / ".apm" / "skills"
+    dest_skills = root_dir / ".agents" / "skills"
+    if src_skills.is_dir():
+        dest_skills.mkdir(parents=True, exist_ok=True)
+        for item in sorted(src_skills.iterdir()):
+            if not item.is_dir():
+                continue
+            dest_skill_dir = dest_skills / item.name
+            dest_skill_dir.mkdir(parents=True, exist_ok=True)
+            for skill_file in item.iterdir():
+                if skill_file.is_file():
+                    target_file = dest_skill_dir / skill_file.name
+                    target_file.write_text(skill_file.read_text(encoding="utf-8"), encoding="utf-8")
+        actions.append("Projected skills from .meta/.apm/skills/ into .agents/skills/")
+
     return actions
 
 

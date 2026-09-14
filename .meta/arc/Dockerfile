@@ -4,7 +4,7 @@ FROM ghcr.io/actions/actions-runner:2.337.0
 
 USER root
 
-# Install C toolchain (build-essential), git, curl, jq, GitHub CLI (gh), and xz-utils
+# Install C toolchain (build-essential), git, curl, jq, GitHub CLI (gh), libsqlite3-0, and xz-utils
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -12,6 +12,7 @@ RUN apt-get update -qq && \
         curl \
         git \
         jq \
+        libsqlite3-0 \
         xz-utils && \
     mkdir -p -m 755 /etc/apt/keyrings && \
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -36,6 +37,19 @@ RUN curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz |
     tar -xJ -C /usr/local --strip-components=1 && \
     npm install -g @google/gemini-cli@0.59.0 && \
     chown -R runner:runner /usr/local/lib/node_modules /usr/local/bin
+
+# Install pinned APM CLI (0.30.0)
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64) APM_ARCH="x86_64" ;; \
+        arm64) APM_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;; \
+    esac && \
+    mkdir -p /usr/local/lib/apm && \
+    curl -fsSL "https://github.com/microsoft/apm/releases/download/v0.30.0/apm-linux-${APM_ARCH}.tar.gz" | \
+    tar -xz -C /usr/local/lib/apm --strip-components=1 && \
+    ln -s /usr/local/lib/apm/apm /usr/local/bin/apm && \
+    chown -R runner:runner /usr/local/lib/apm /usr/local/bin/apm
 
 # Install rustup for the runner user
 USER runner

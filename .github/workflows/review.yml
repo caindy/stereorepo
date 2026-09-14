@@ -135,6 +135,12 @@ jobs:
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 
+      # Materialize single-source APM cognitive assets (.agents/skills, .gemini/, .codex/)
+      # so Gemini CLI and other harnesses find identical skills as Claude Code (solorepo's DR-172, solorepo's DR-201, solorepo's #430).
+      - name: reconcile multi-harness cognitive assets
+        run: |
+          python3 .meta/apm_compile.py --reconcile
+
       # The Role's credential, where `.meta/say/<program> --role reviewer` expects it
       # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
       # container. The same channel and the same rules as on a laptop.

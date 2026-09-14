@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Git post-checkout lifecycle hook (solorepo's DR-172, solorepo's DR-201, solorepo's #430).
+# Materializes single-source APM cognitive assets into multi-harness target directories
+# (.agents/skills, .gemini/, .codex/) on branch switches and new worktree creation.
+
+set -e
+
+# Only run on branch/worktree checkouts, not file checkouts ($3 == 1)
+if [ "$3" != "1" ]; then
+    exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$REPO_ROOT"
+
+if [ -f ".meta/apm_compile.py" ]; then
+    python3 .meta/apm_compile.py --reconcile >/dev/null 2>&1 || true
+fi

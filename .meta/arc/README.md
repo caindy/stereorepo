@@ -72,7 +72,7 @@ Windows 11 Home has no Hyper-V, so `kind` needs Docker under WSL2:
 `ghcr.io/caindy/solorepo-runner:2.337.0-2` (solorepo's DR-156, solorepo's DR-160).
 Defined in `.meta/arc/Dockerfile` on top of `ghcr.io/actions/actions-runner:2.337.0`
 (which carries `python3` `3.12.3`), it pre-bakes `build-essential`, `gh`,
-`jq`, `just`, `uv`, `rustup`, `node` / `npm`, and `gemini`.
+`jq`, `just`, `uv`, `apm`, `rustup`, `node` / `npm`, and `gemini`.
 
 To build, load into a local `kind` cluster, and publish to GHCR:
 ```bash
