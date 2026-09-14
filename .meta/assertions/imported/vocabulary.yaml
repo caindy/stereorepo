@@ -599,6 +599,26 @@ concept_set:
     confusable_with:
       - work:concept/apm-skill
       - work:concept/apm-prompt
+  - id: work:concept/dev-loop
+    pref_label: Dev Loop
+    definition: >-
+      The event-driven autonomous execution cycle that advances a Challenge from
+      triage to merged pull request through decoupled coder, reviewer, and merge
+      manager passes without continuous human supervision (solorepo's DR-111,
+      solorepo's DR-112, solorepo's DR-178).
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-doing
+    alt_labels:
+      - development loop
+      - autonomous loop
+      - loop machinery
+    confusable_with:
+      - work:concept/pr-first
+    scope_note: >-
+      The runtime orchestration engine realizing PR First. Operates across GitHub
+      events using pull requests and branch prefixes as stateless semaphores,
+      coordinating multi-harness dispatch, resilient failure fallback, and graceful
+      hand-backs to the solo maintainer.
   # ---- APM's, named here only so the collisions can be stated ----
   - id: work:concept/apm-skill
     pref_label: Skill (APM primitive)

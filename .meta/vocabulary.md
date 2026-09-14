@@ -60,6 +60,7 @@ _Who does work, what they may do, and what they are given to do it with._
 | **Collaboration** | The Jobs that meet on one Challenge. Two is the minimum. | — |
 | **Handoff** | The seam where one Job stops and another takes the same Challenge up, sharing no filesystem, no shell and no conversation. | — |
 | **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
+| **Dev Loop** | The event-driven autonomous execution cycle that advances a Challenge from triage to merged pull request through decoupled coder, reviewer, and merge manager passes without continuous human supervision (solorepo's DR-111, solorepo's DR-112, solorepo's DR-178). | — |
 
 #### What the work is for
 
@@ -193,6 +194,8 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Dereference.** The verb Article 12 binds to citation. Checked mechanically for target existence and structural claims by check.py, and evaluated for semantic support by dereference.py before handoff.
 
+**Dev Loop.** The runtime orchestration engine realizing PR First. Operates across GitHub events using pull requests and branch prefixes as stateless semaphores, coordinating multi-harness dispatch, resilient failure fallback, and graceful hand-backs to the solo maintainer.
+
 ### APM primitives
 
 _Authority: Microsoft APM._
@@ -227,6 +230,7 @@ more often a collision than a gap.
 | **Review Thread** | Pull Request |
 | **Journaling** | Pull Request |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
+| **Dev Loop** | PR First |
 | **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
 | **Prompt (APM primitive)** | Skill (solorepo Capability kind), Skill (APM primitive) |
 

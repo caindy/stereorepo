@@ -11,7 +11,7 @@ background coder loops, and automated reviewer passes.
 
 ## The Loop Machinery
 
-Work flows through a series of specialized loop workflows triggered by GitHub
+Work flows through the [[dev-loop]], a series of specialized loop workflows triggered by GitHub
 events:
 
 1. **Coder Pass:** Dispatched to implement a Challenge or respond to reviewer
@@ -52,4 +52,4 @@ immediately rather than after an arbitrary delay (solorepo's DR-102, solorepo's 
 
 ---
 
-**See also:** [[knowledge-management]], [[ubiquitous-language]], solorepo's DR-062, solorepo's DR-117, solorepo's DR-184, solorepo's DR-185, solorepo's DR-188, solorepo's DR-189.
+**See also:** [[dev-loop]], [[knowledge-management]], [[ubiquitous-language]], solorepo's DR-062, solorepo's DR-117, solorepo's DR-184, solorepo's DR-185, solorepo's DR-188, solorepo's DR-189.
