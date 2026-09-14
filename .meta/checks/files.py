@@ -18,6 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tokenize
 import tomllib
 
 import yaml
@@ -934,20 +935,23 @@ def meta_history_receipts():
     return Passed(f"{entries} entries across {logs} history logs, each naming a receipt that exists")
 
 
-NOQA = re.compile(r"#\s*noqa(?::\s*[A-Z0-9,\s]+)?(?P<rest>.*)$")
-TYPE_IGNORE = re.compile(r"#\s*type:\s*ignore(?:\[[^\]]*\])?(?P<rest>.*)$")
-REASON = re.compile(r"#\s*reason:\s*\S")
-
-
 @check("meta lints")
 def meta_lints():
     """No linter rule is switched off in configuration, and every site suppression carries a reason (A2, solorepo's DR-177).
 
     An `ignore` in `.meta/ruff.toml` switches a rule off where nobody reads it.
-    At a site, a `# noqa` or `# type: ignore` without an explanatory `# reason:`
-    is a configuration ignore with extra steps. This holds .meta/ tooling to the
-    same discipline the Python bootstrap enforces on portfolio code.
+    At a site, a `noqa` or `type: ignore` comment without an explanatory
+    `reason:` is a configuration ignore with extra steps. This holds .meta/
+    tooling to the same discipline the Python bootstrap enforces on portfolio
+    code.
+
+    Read from comment tokens, so a suppression quoted in a string or a docstring
+    is the text of one rather than one: `comments.py` states every pattern here
+    and passes each to a probe as a literal, and a line scan reports both. The
+    patterns are `comments.py`'s too, so that the rule a suppression names and
+    the reason it gives are read off one parse (solorepo's DR-150).
     """
+    import comments
     config = META / "ruff.toml"
     if not config.is_file():
         return CouldNotRun(".meta/ruff.toml is missing")
@@ -967,14 +971,20 @@ def meta_lints():
     ]
     suppressions = 0
     for source in sorted(sources):
-        for number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
-            for pattern, what in ((NOQA, "noqa"), (TYPE_IGNORE, "type: ignore")):
-                match = pattern.search(line)
+        relative = source.relative_to(ROOT).as_posix()
+        try:
+            found = comments.python_comments(source.read_text(encoding="utf-8"))
+        except (SyntaxError, tokenize.TokenError) as error:
+            problems.append(f"{relative}: does not parse — {error}")
+            continue
+        for comment in found:
+            for pattern, what in ((comments.NOQA, "noqa"), (comments.TYPE_IGNORE, "type: ignore")):
+                match = pattern.search(f"#{comment.text}")
                 if match is None:
                     continue
                 suppressions += 1
-                if not REASON.search(match.group("rest")):
-                    problems.append(f"{source.relative_to(ROOT).as_posix()}:{number}: `{what}` gives no reason")
+                if not comments.REASON.search(match.group("rest")):
+                    problems.append(f"{relative}:{comment.line}: `{what}` gives no reason")
     if problems:
         return Found(tuple(problems))
     return Passed(

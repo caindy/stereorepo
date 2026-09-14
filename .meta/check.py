@@ -18,7 +18,8 @@ so there is no table here naming them. Importing a module is what puts its steps
 in the registry, so the order of these imports is the order the steps register.
 `main()` then prints every precheck first, whatever module it came from, and the
 rest in that same registration order. What that comes to: `duplicate keys` and
-the five probes, then the tree, then what prose claims about it, then the graph.
+the five probes, then the tree, then what prose claims about it, then what its
+comments hold, then the graph.
 The imports are written in dependency order so that the registration order is
 the one stated here and not one a transitive import decided. History in
 check.history.md (solorepo's DR-171).
@@ -31,6 +32,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "checks"))
 import collect  # noqa: I001  # reason: sys.path modified above and registration order is deliberate
 import files
 import citations  # noqa: F401  # reason: registers check steps
+import comments  # noqa: F401  # reason: registers check steps
 import graph  # noqa: F401  # reason: registers check steps
 import probes  # noqa: F401  # reason: registers check steps
 from collect import STEPS, views

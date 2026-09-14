@@ -1,0 +1,25 @@
+# The ratchet baseline for the `inline commentary` step of `.meta/check.py`.
+#
+# One entry per file, holding the body comment blocks it may still carry. The
+# Ratchet Discipline is what a checker that cannot be clean at once does: a
+# baseline that may fall and may not rise. A file absent from this map may hold
+# none, and the step fails a file on either side of its number — over, because
+# the debt grew; under, because a baseline nobody lowers has stopped being one.
+#
+# Written by `comments.py`, which names the file and the number in the failure.
+# The sweep that empties it is caindy/solorepo#412.
+.meta/agents.py: 6
+.meta/apm_compile.py: 5
+.meta/check.py: 3
+.meta/check_pr.py: 11
+.meta/checks/citations.py: 2
+.meta/checks/files.py: 17
+.meta/checks/graph.py: 4
+.meta/checks/probes.py: 129
+.meta/depth.py: 7
+.meta/dereference.py: 3
+.meta/hooks/worktree_only.py: 6
+.meta/render.py: 2
+.meta/search.py: 6
+.meta/timing.py: 2
+.meta/wikisplain.py: 7

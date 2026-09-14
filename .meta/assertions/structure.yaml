@@ -187,6 +187,12 @@ artifacts:
   - id: work:artifact/meta-checks-citations
     name: .meta/checks/citations.py
     path: .meta/checks/citations.py
+  - id: work:artifact/meta-checks-comments
+    name: .meta/checks/comments.py
+    path: .meta/checks/comments.py
+  - id: work:artifact/meta-checks-comments-baseline
+    name: .meta/checks/comments.baseline.yaml
+    path: .meta/checks/comments.baseline.yaml
   - id: work:artifact/meta-checks-probes
     name: .meta/checks/probes.py
     path: .meta/checks/probes.py
