@@ -90,6 +90,7 @@ _The units a solorepo is made of._
 | Term | Means | Do not say |
 |---|---|---|
 | **Portfolio** | Everything one solo builds inside one Bounded Context. One per repo. | — |
+| **Client Repo** | A software repository that specializes solorepo by adopting its cognitive operating layer via the APM package, inheriting its SDLC and verification gates, and instantiating language Projects from Bootstraps on demand. | — |
 | **Product** | Something delivered to users, with its own interface and therefore its own primary Persona. The unit of value. | — |
 | **Project** | A unit of build — one toolchain, one language, its own tests and gate. The unit of construction. | workstream |
 | **Bootstrap** | The standard for one language, together with the gates that hold a project to it. | starter, boilerplate, scaffold |
@@ -141,6 +142,8 @@ _The named ways of working, each adhered to because it is not a program._
 **Challenge.** The work itself, which two artifacts hold in turn: an Issue before it is taken up, a Pull Request while it is being done.
 
 **Portfolio.** One repo, one Bounded Context, one Ubiquitous Language. The repo boundary and the language boundary are the same boundary, which is why a portfolio is a monorepo.
+
+**Client Repo.** A downstream repository consuming solorepo's cognitive primitives (`.meta/`) via APM. While a Portfolio names the monorepo boundary for one Bounded Context, a Client Repo names the physical git repository that specializes the scaffold, inheriting its disciplines, verification gate, and language bootstraps.
 
 **Product.** Cooper's rule is the test for one Product against two: a primary persona's goals cannot be met by an interface aimed at another without unacceptable compromise.
 
@@ -211,7 +214,8 @@ more often a collision than a gap.
 | **Persona** | Personality |
 | **Personality** | Persona |
 | **Challenge** | Project, Issue |
-| **Portfolio** | Product |
+| **Portfolio** | Product, Client Repo |
+| **Client Repo** | Portfolio, Project |
 | **Product** | Portfolio, Project |
 | **Project** | Challenge, Product |
 | **Job to be Done** | Job |

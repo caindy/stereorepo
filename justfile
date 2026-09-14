@@ -64,6 +64,10 @@ search *args:
 apm *args:
     python3 .meta/apm_compile.py {{args}}
 
+# instantiate a Project from a language Bootstrap on demand (solorepo's DR-206)
+bootstrap *args:
+    uvx --with pyyaml python .meta/bootstrap.py {{args}}
+
 # the optional local cluster this repo's self-hosted runner can use
 arc-cluster:
     .meta/arc/cluster

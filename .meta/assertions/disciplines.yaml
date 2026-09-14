@@ -22,7 +22,7 @@ disciplines:
         to a portfolio.
       - >-
         Copy what is inherited — `.meta/work/`, `.meta/ddd/`, `.meta/work_ontology.yaml`, `.meta/ddd_ontology.yaml`,
-        `.meta/render.py`, `.meta/check.py`, `.meta/check_pr.py`, `.meta/apm_compile.py`, `.meta/agents.py` (solorepo's DR-191), `.meta/dereference.py`, `.meta/depth.py` (solorepo's DR-188), `.meta/gate`, `.meta/next.py`, `.meta/search.py` (solorepo's DR-194), `.meta/timing.py`, `.meta/wikisplain.py` (solorepo's DR-187), `.meta/ruff.toml`, `.meta/actions/`, `.meta/say/`,
+        `.meta/render.py`, `.meta/check.py`, `.meta/check_pr.py`, `.meta/apm_compile.py`, `.meta/agents.py` (solorepo's DR-191), `.meta/dereference.py`, `.meta/depth.py` (solorepo's DR-188), `.meta/gate`, `.meta/next.py`, `.meta/search.py` (solorepo's DR-194), `.meta/timing.py`, `.meta/wikisplain.py` (solorepo's DR-187), `.meta/bootstrap.py` (solorepo's DR-206), `.meta/ruff.toml`, `.meta/actions/`, `.meta/say/`,
         `.meta/hooks/`, `.meta/checks/`, `.claude/settings.json`, `.meta/assertions/imported/`,
         `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`,
         `.meta/templates/`, `.meta/arc/Dockerfile`, `.github/workflows/coder.yml`,
@@ -72,11 +72,10 @@ disciplines:
         `.meta/hooks/depth.py` implementing `evaluate_depth(pr_meta, files, diff_patch)`
         (an annotated example sits at `.meta/hooks/depth.py.example`).
       - >-
-        Choose the languages the portfolio will use, from those `bootstraps/`
-        supports, and copy each Bootstrap's applied disciplines in — its gates,
-        its documentation layout, its seed project. The Bootstraps themselves
-        stay with the scaffold and are maintained there; what travels is what
-        they apply.
+        Choose the languages the portfolio will use, from those solorepo's `bootstraps/`
+        supports, and bring them to hand: running `just bootstrap <lang> <path>`
+        instantiates a seed project and registers it in `assertions/structure.yaml` (solorepo's DR-206).
+        Language adoption can happen now or be deferred to any point in the portfolio lifecycle.
       - >-
         Re-render, then run the gate. It fails on any placeholder left behind, so
         run it before removing anything. Both green before going on.

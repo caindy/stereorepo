@@ -82,3 +82,12 @@ The APM package is integrated into the repository operator surface (`just`) via 
 - **Compilation:** `just apm compile` compiles primitives across target harnesses (`claude`, `gemini`, `copilot`), redirecting output to the repository root via `--root ..`.
 - **Gate Check:** The repository gate (`just gate meta` / `.meta/gate meta`) runs `@check("apm package")`, executing `apm compile --validate` whenever the `apm` binary is installed. When `apm` is absent, the gate cleanly skips the check per solorepo's Article 6.
 
+## APM Distribution & Upstream Synchronization (solorepo's DR-206)
+
+To enable downstream specialized portfolios, client repos, and external consumers to install and synchronize solorepo's cognitive layer:
+
+- **Subdirectory Packaging & Root Cleanliness:** The APM CLI natively consumes virtual subdirectory packages (`apm install caindy/solorepo/.meta` or `{git: caindy/solorepo, path: .meta}`). The repository root remains completely clean, preserving the staging boundary rule that `.meta/` is the staging ground (solorepo's DR-001) and that APM packages nest under `.meta/` (solorepo's DR-172) without requiring root symlinks.
+- **Multi-Harness Authorization:** The package manifest authorizes `claude`, `gemini`, `copilot`, `codex`, and `kiro`. When installed with multi-target flags (e.g. `--target claude,codex,kiro`), APM projects primitives natively into `.claude/`, `.codex/`, and `.kiro/` without bespoke per-vendor compilers.
+- **Release Pipeline:** `.github/workflows/release.yml` triggers on version tags (`v*`), verifies gate and APM package conformance, and publishes a versioned GitHub Release.
+- **Downstream Synchronization:** Specialized client repos declare `caindy/solorepo/.meta@^0.1.0` in their `apm.yml`. Running `apm outdated` inspects upstream tags, and `apm update` applies updates, prunes deleted disciplines, and updates `apm.lock.yaml`.
+

@@ -186,6 +186,27 @@ concept_set:
       is a monorepo.
     confusable_with:
       - work:concept/product
+      - work:concept/client-repo
+  - id: work:concept/client-repo
+    pref_label: Client Repo
+    definition: >-
+      A software repository that specializes solorepo by adopting its cognitive
+      operating layer via the APM package, inheriting its SDLC and verification gates,
+      and instantiating language Projects from Bootstraps on demand.
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-divided
+    alt_labels:
+      - Specialization
+      - Child Repo
+      - Specialized Portfolio
+    confusable_with:
+      - work:concept/portfolio
+      - work:concept/project
+    scope_note: >-
+      A downstream repository consuming solorepo's cognitive primitives (`.meta/`)
+      via APM. While a Portfolio names the monorepo boundary for one Bounded Context,
+      a Client Repo names the physical git repository that specializes the scaffold,
+      inheriting its disciplines, verification gate, and language bootstraps.
   - id: work:concept/product
     pref_label: Product
     definition: >-

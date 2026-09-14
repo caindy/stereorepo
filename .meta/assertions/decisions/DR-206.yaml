@@ -1,0 +1,88 @@
+decisions:
+  - id: work:decision/206
+    name: "DR-206 · Solorepo packages its cognitive layer for APM distribution via GitHub Releases"
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/10
+      - work:article/17
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-apm-compile
+      - work:artifact/meta-apm-manifest
+      - work:artifact/meta-apm-readme
+      - work:artifact/meta-bootstrap
+      - work:artifact/wiki-solorepo-client-repo
+    context: >-
+      DR-172, DR-173, and DR-201 established internal APM compilation and validation
+      under `.meta/`, projecting LinkML assertions into .meta/.apm/ primitives and
+      validating them against Microsoft's `apm` CLI in the repository gate. However,
+      solorepo lacked a distribution and synchronization mechanism for specialized
+      portfolios and external consumers.
+      
+      Specialization (SPECIALIZE.md) previously relied on static, manual file-copying
+      of `.meta/.apm/` and `.claude/settings.json`, severing git history and orphaning
+      specialized portfolios from upstream improvements. When solorepo refines its
+      disciplines, role definitions, or capability skills, existing portfolios had no
+      native mechanism to discover or apply updates (Challenge #61, Challenge #344).
+      Furthermore, Challenge #112 requires solorepo's disciplines and roles to reach
+      OpenAI Codex and Kiro in addition to Claude Code and Gemini CLI, which APM's
+      target adapters natively support if authorized in the manifest.
+    alternatives:
+      - name: Retain manual file-copying during Specialization with unversioned local path linking
+        chosen: false
+        reason: >-
+          Tightly couples portfolios to arbitrary uncommitted working-tree edits on
+          a specific workstation disk path, fails across different machines or CI runners,
+          provides no release signaling, and prevents portfolios from using `apm outdated`
+          or semantic version pinning.
+      - name: Relocate or symlink apm.yml and .apm/ to the repository root
+        chosen: false
+        reason: >-
+          Violates the rule that `.meta/` is the staging ground (solorepo's DR-001),
+          where structure-explaining tooling and Specialization machinery live in `.meta/`
+          and product material lives everywhere else. Testing confirms APM CLI 0.30.0 natively supports
+          virtual subdirectory packages (`caindy/solorepo/.meta`), making root entry point
+          symlinks completely unnecessary.
+      - name: Package and distribute cognitive layer via APM subdirectory support and GitHub Releases
+        chosen: true
+        reason: >-
+          Distributes solorepo's cognitive layer directly from its `.meta/` boundary
+          via APM's native virtual subdirectory support (`caindy/solorepo/.meta` or packaged release
+          archives) and GitHub Releases. Preserves the nested package layout under `.meta/` (solorepo's DR-172)
+          and the staging boundary rule that `.meta/` is the staging ground (solorepo's DR-001).
+          Expanding `target:` in `.meta/apm.yml` authorizes `codex` and `kiro` alongside
+          `claude`, `copilot`, and `gemini` (resolving #112). Publishing versioned releases (`v*`)
+          via GitHub Actions provides an explicit, auditable signal enabling downstream portfolios
+          to discover and apply updates cleanly via `apm outdated` and `apm update` (resolving #61 and #344).
+    consequences:
+      - >-
+        `.meta/apm.yml` and `.meta/.apm/` remain hermetically bounded inside `.meta/`, preserving
+        the staging ground separability rule (solorepo's DR-001) without requiring root symlinks.
+      - >-
+        `.meta/apm_compile.py` expands the manifest target set to `["claude", "gemini", "copilot", "codex", "kiro"]`,
+        enabling multi-harness projection for OpenAI Codex (`.codex/`) and Kiro (`.kiro/`).
+      - >-
+        `.github/workflows/release.yml` triggers on version tags (`v*`), verifies the full gate
+        and APM package conformance, and publishes a versioned GitHub Release.
+      - >-
+        Downstream client repos specialize solorepo by adopting its cognitive operating layer via APM
+        (`caindy/solorepo/.meta@^0.1.0`), inheriting its SDLC and verification gates (`.meta/gate`
+        per solorepo's DR-104), and bringing language bootstraps to hand via `just bootstrap <lang> <path>`.
+      - >-
+        `.meta/bootstrap.py` provides on-demand Project instantiation from language Bootstraps,
+        rendering seed projects and wiring them into `structure.yaml`.
+      - >-
+        `.meta/.apm/README.md` documents the release, distribution, and subdirectory packaging architecture.
+    falsifier: >-
+      An APM CLI version or target harness that fails to resolve subdirectory packages
+      during remote git package resolution, or an update mechanism that introduces silent prompt drift
+      without updating `apm.lock.yaml`.
+    rationale: |-
+      Treating an agent operating model as an isolated, unversioned copy creates orphaned
+      portfolios that inevitably suffer from discipline drift and configuration rot.
+
+      By packaging the cognitive layer through APM's native subdirectory support and
+      publishing versioned GitHub Releases, solorepo preserves its internal architectural
+      staging ground separability (solorepo's DR-001) while embracing standard package management semantics for distribution,
+      heterogeneous harness reach, and downstream lifecycle synchronization.

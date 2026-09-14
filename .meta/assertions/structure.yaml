@@ -148,6 +148,9 @@ artifacts:
   - id: work:artifact/meta-apm-readme
     name: .meta/.apm/README.md
     path: .meta/.apm/README.md
+  - id: work:artifact/meta-bootstrap
+    name: .meta/bootstrap.py
+    path: .meta/bootstrap.py
   - id: work:artifact/meta-assertions-authority
     name: .meta/assertions/authority.yaml
     path: .meta/assertions/authority.yaml
@@ -370,6 +373,9 @@ artifacts:
   - id: work:artifact/wiki-solorepo-concept
     name: wiki/solorepo/concept.md
     path: wiki/solorepo/concept.md
+  - id: work:artifact/wiki-solorepo-client-repo
+    name: wiki/solorepo/client-repo.md
+    path: wiki/solorepo/client-repo.md
   - id: work:artifact/meta-wikisplain
     name: .meta/wikisplain.py
     path: .meta/wikisplain.py

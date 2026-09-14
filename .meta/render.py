@@ -1001,6 +1001,10 @@ def justfile():
         "# validate, pack, or compile the APM package via .meta/apm_compile.py (solorepo's DR-201)",
         "apm *args:",
         "    python3 .meta/apm_compile.py {{args}}",
+        "",
+        "# instantiate a Project from a language Bootstrap on demand (solorepo's DR-206)",
+        "bootstrap *args:",
+        "    uvx --with pyyaml python .meta/bootstrap.py {{args}}",
     ]
 
     artifacts = {art["id"] for art in structure.get("artifacts") or [] if "id" in art}
