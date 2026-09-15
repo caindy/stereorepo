@@ -415,12 +415,18 @@ def python_bootstrap_instructions() -> str:
     )
 
 
-def python_bootstrap_primitives(root_dir: pathlib.Path = ROOT) -> dict[str, str]:
-    """Compiles bootstraps/python/ assertions and skills into APM primitives (solorepo's DR-208)."""
+def python_bootstrap_primitives(root_dir: pathlib.Path = ROOT) -> dict[str, str | bytes]:
+    """Compiles bootstraps/python/ assertions and skills into APM primitives (solorepo's DR-208).
+
+    A skill file that is not UTF-8 text — a diagram beside its markdown, a
+    stray `__pycache__/*.pyc` left by importing a skill's script — is copied
+    as bytes rather than decoded, named on stderr so the compile still says
+    what it carried rather than only reporting how many primitives it wrote.
+    """
     py_dir = root_dir / "bootstraps" / "python"
     if not py_dir.is_dir():
         return {}
-    out: dict[str, str] = {}
+    out: dict[str, str | bytes] = {}
     out["../bootstraps/python/apm.yml"] = python_bootstrap_manifest()
     out["../bootstraps/python/.apm/instructions/python-standard.instructions.md"] = python_bootstrap_instructions()
 
@@ -431,14 +437,21 @@ def python_bootstrap_primitives(root_dir: pathlib.Path = ROOT) -> dict[str, str]
                 continue
             rel_within_skills = item.relative_to(skills_dir)
             if len(rel_within_skills.parts) >= 2:
-                out[f"../bootstraps/python/.apm/skills/{rel_within_skills}"] = item.read_text(encoding="utf-8")
+                rel_path = f"../bootstraps/python/.apm/skills/{rel_within_skills}"
+                raw = item.read_bytes()
+                try:
+                    out[rel_path] = raw.decode("utf-8")
+                except UnicodeDecodeError:
+                    print(f"apm_compile: {item.relative_to(root_dir)} is not UTF-8 text; "
+                          "copying as bytes", file=sys.stderr)
+                    out[rel_path] = raw
 
     return out
 
 
-def rendered_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
+def rendered_primitives(meta_dir: pathlib.Path = META) -> dict[str, str | bytes]:
     """All generated APM primitive paths relative to .meta/, mapped to content."""
-    primitives: dict[str, str] = {}
+    primitives: dict[str, str | bytes] = {}
     primitives["apm.yml"] = apm_manifest()
     primitives[".apm/instructions/ubiquitous-language.instructions.md"] = ubiquitous_language_instructions(meta_dir)
     primitives.update(discipline_instructions(meta_dir))
@@ -546,7 +559,7 @@ def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = 
             for skill_file in item.iterdir():
                 if skill_file.is_file():
                     target_file = dest_skill_dir / skill_file.name
-                    target_file.write_text(skill_file.read_text(encoding="utf-8"), encoding="utf-8")
+                    target_file.write_bytes(skill_file.read_bytes())
         actions.append("Projected skills from .meta/.apm/skills/ into .agents/skills/")
 
     return actions
@@ -558,7 +571,10 @@ def write_primitives(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROO
     for rel_path, content in prims.items():
         full_path = meta_dir / rel_path
         full_path.parent.mkdir(parents=True, exist_ok=True)
-        full_path.write_text(content, encoding="utf-8")
+        if isinstance(content, bytes):
+            full_path.write_bytes(content)
+        else:
+            full_path.write_text(content, encoding="utf-8")
 
     reconcile_root(root_dir)
     return len(prims)
@@ -572,6 +588,9 @@ def check_primitives(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROO
         full_path = meta_dir / rel_path
         if not full_path.is_file():
             stale.append(f"{rel_path} is missing")
+        elif isinstance(content, bytes):
+            if full_path.read_bytes() != content:
+                stale.append(f"{rel_path} has drifted from assertions")
         elif full_path.read_text(encoding="utf-8") != content:
             stale.append(f"{rel_path} has drifted from assertions")
 

@@ -4,11 +4,13 @@
 four layers (solorepo's DR-188), `agents.py`'s count against the fan-out
 ceiling (solorepo's DR-191), `dereference.py`'s scopes and report
 (solorepo's DR-134, solorepo's DR-192), `search.py`'s index and benchmark
-(solorepo's DR-103), and the detectors of `comments.py` that the comment
-steps read through (solorepo's DR-207). Five are scripts under `.meta/` that
-no step of the gate runs, so a wrong answer from one shows nowhere else; the
-sixth is read by those steps, so a wrong answer from it shows as a wrong
-verdict rather than as a failure. Each is loaded and asked one case at a
+(solorepo's DR-103), `apm_compile.py`'s byte fallback for a skill file that
+is not UTF-8 text (solorepo's DR-208), and the detectors of `comments.py`
+that the comment steps read through (solorepo's DR-207). Six are scripts
+under `.meta/` that no step of the gate runs, so a wrong answer from one
+shows nowhere else; the seventh is read by those steps, so a wrong answer
+from it shows as a wrong verdict rather than as a failure. Each is loaded
+and asked one case at a
 time, and a failure names the case. The steps register here rather than
 beside the tools they exercise, because the gate over assertions should not
 take its imports from a test suite (solorepo's DR-150).
@@ -345,6 +347,42 @@ def search_probes():
         shown = results[0].to_dict()
         if not ("id" in shown and "score" in shown and "source_file" in shown):
             problems.append(f"search: SearchResult dictionary missing expected fields: {shown}")
+    return problems
+
+
+@check("apm compile probes", pre=True)
+def apm_compile_probes():
+    """`apm_compile.python_bootstrap_primitives` over a skill file that is not UTF-8 text (solorepo's DR-208).
+
+    One byte that does not decode — the shape a `__pycache__/*.pyc` beside a
+    skill's script and a shipped diagram both take — used to end the compile
+    in a traceback (solorepo's #450). Written two levels below `skills/`, so
+    the check that only a nested file compiles still applies, the compiled
+    entry for that file holds its own bytes unchanged, and the file is named
+    on stderr rather than swapped in silently.
+    """
+    apm_compile = load_module(META / "apm_compile.py", "apm_compile_module", register=False)
+    problems = []
+    rel_path = "../bootstraps/python/.apm/skills/sample-skill/diagram.png"
+    binary = b"\xf3\x00not valid utf-8"
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        skill_dir = root / "bootstraps" / "python" / "skills" / "sample-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "diagram.png").write_bytes(binary)
+        stderr = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(stderr):
+                prims = apm_compile.python_bootstrap_primitives(root)
+        except UnicodeDecodeError as exc:
+            return [f"apm_compile: a non-UTF-8 skill file raised {exc} instead of "
+                    "being copied as bytes"]
+    if prims.get(rel_path) != binary:
+        problems.append(f"apm_compile: expected {rel_path} to hold the file's own bytes, "
+                        f"got {prims.get(rel_path)!r}")
+    if "diagram.png" not in stderr.getvalue():
+        problems.append("apm_compile: expected the non-UTF-8 file named on stderr, "
+                        f"got {stderr.getvalue()!r}")
     return problems
 
 
