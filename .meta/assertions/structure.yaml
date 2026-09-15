@@ -19,7 +19,11 @@ projects:
       The staging ground: the ontologies, the assertions, and the tooling that
       renders and checks them.
     language: LinkML YAML, with Python for rendering and the gate
-    gate: uvx --with linkml --with pyyaml --with ruff==0.14.0 python .meta/check.py
+    # Both checkers are pinned exactly. `meta ruff` reads a violation and
+    # `meta types` reads a count against a baseline (DR-177, DR-210), and a
+    # release that gains or loses a diagnostic would move a count the tree did
+    # not move.
+    gate: uvx --with linkml --with pyyaml --with ruff==0.14.0 --with mypy==2.3.1 --with types-pyyaml python .meta/check.py
 
   # A second Project, in a second language: the monorepo claim as a build unit
   # rather than a word. Its gate is written in Rust (DR-090), and the Project
@@ -181,6 +185,9 @@ artifacts:
   - id: work:artifact/meta-assertions-imported-vocabulary
     name: .meta/assertions/imported/vocabulary.yaml
     path: .meta/assertions/imported/vocabulary.yaml
+  - id: work:artifact/meta-assertions-structure
+    name: .meta/assertions/structure.yaml
+    path: .meta/assertions/structure.yaml
   - id: work:artifact/meta-assertions-vocabulary
     name: .meta/assertions/vocabulary.yaml
     path: .meta/assertions/vocabulary.yaml
@@ -205,6 +212,9 @@ artifacts:
   - id: work:artifact/meta-checks-comments-baseline
     name: .meta/checks/comments.baseline.yaml
     path: .meta/checks/comments.baseline.yaml
+  - id: work:artifact/meta-checks-types-baseline
+    name: .meta/checks/types.baseline.yaml
+    path: .meta/checks/types.baseline.yaml
   - id: work:artifact/meta-checks-probes
     name: .meta/checks/probes/__init__.py
     path: .meta/checks/probes/__init__.py
@@ -301,6 +311,9 @@ artifacts:
   - id: work:artifact/meta-ruff-toml
     name: .meta/ruff.toml
     path: .meta/ruff.toml
+  - id: work:artifact/meta-mypy-ini
+    name: .meta/mypy.ini
+    path: .meta/mypy.ini
   - id: work:artifact/meta-say
     name: .meta/say/channel.py
     path: .meta/say/channel.py

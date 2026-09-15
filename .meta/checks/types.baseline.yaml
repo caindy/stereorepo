@@ -1,0 +1,37 @@
+# The ratchet baseline for the `meta types` step of `.meta/check.py`.
+#
+# One entry per file, holding the floor of `mypy --strict --ignore-missing-imports`
+# errors it may still carry. Gate-internal imports resolve to `Any` when flat sibling
+# imports do not resolve, so each number is a floor rather than the resolving debt
+# (solorepo's DR-210, caindy/solorepo#435). The Ratchet Discipline is what a checker
+# that cannot be clean at once does: a baseline that may fall and may not rise. A file
+# absent from this map may hold none, and the step fails a file on either side of its
+# number — over, because the debt grew; under, because a baseline nobody lowers has
+# stopped being one.
+#
+# Written by `files.py`, which names the file and the number in the failure.
+# Over nine tenths of what is recorded here is a missing annotation rather than
+# a defect, so a module is annotated and its number lowered in the same change,
+# one module at a time (solorepo's DR-210).
+# The sweep that empties it is caindy/solorepo#438.
+.meta/apm_compile.py: 1
+.meta/check.py: 5
+.meta/check_pr.py: 196
+.meta/checks/citations.py: 56
+.meta/checks/collect.py: 16
+.meta/checks/comments.py: 3
+.meta/checks/files.py: 57
+.meta/checks/graph.py: 33
+.meta/checks/probes/channel.py: 29
+.meta/checks/probes/git.py: 7
+.meta/checks/probes/harness.py: 36
+.meta/checks/probes/knowledge.py: 4
+.meta/checks/probes/loops.py: 45
+.meta/checks/probes/tools.py: 42
+.meta/dereference.py: 41
+.meta/hooks/signed_channel.py: 4
+.meta/hooks/worktree_only.py: 32
+.meta/next.py: 38
+.meta/render.py: 129
+.meta/say/channel.py: 34
+.meta/timing.py: 65

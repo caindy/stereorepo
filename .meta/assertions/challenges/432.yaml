@@ -1,0 +1,19 @@
+challenges:
+  - id: work:challenge/432
+    name: Hold .meta/ to mypy strict typing through a two-sided ratchet baseline
+    challenge_type: REFACTOR
+    description: >-
+      Product code instantiated from `bootstraps/python/seed/` is held to
+      `mypy --strict` with no configuration ignores, while the tooling under
+      `.meta/` that every portfolio inherits through Specialization was held to
+      no type checking at all: solorepo's DR-177 brought it a ruff ruleset and
+      deferred typing, on the ground that annotating some 7,600 lines was larger
+      than that change. Standard `mypy` over the 28 Python sources in `.meta/`
+      reported eleven errors across eight files, and `mypy --strict` reported
+      873 across 21, over nine tenths of them missing annotations rather than
+      defects. So a type regression could enter `.meta/` unseen, and a type
+      constraint on anything under `.meta/` could only be stated in prose,
+      because there was no checker to state it to.
+      Fix what standard mypy finds, put `mypy --strict` in the gate behind a
+      per-file baseline that may fall and may not rise, and leave the tree ready
+      for a module to be annotated and its number lowered in one change.

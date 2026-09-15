@@ -211,7 +211,7 @@ def critical(run, jobs):
 BOUNDARY_PATTERN = re.compile(
     r"^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)"
 )
-DIFFICULTY_CACHE = {}
+DIFFICULTY_CACHE: dict[str, str] = {}
 
 
 def model_of(run):
@@ -238,8 +238,8 @@ def model_of(run):
     return "unknown"
 
 
-ISSUE_DIFF_BY_NUM = {}
-ISSUE_DIFF_BY_TITLE = {}
+ISSUE_DIFF_BY_NUM: dict[str, str] = {}
+ISSUE_DIFF_BY_TITLE: dict[str, str] = {}
 ISSUES_FETCHED = False
 
 

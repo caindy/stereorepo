@@ -1,5 +1,7 @@
 __pycache__/
 *.py[cod]
+.mypy_cache/
+.ruff_cache/
 
 # The reviewer's scratch. `.github/workflows/review.yml` writes the pull
 # request's diff, the head's version of the six paths it restores from trunk,

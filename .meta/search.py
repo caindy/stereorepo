@@ -17,6 +17,7 @@ import json
 import math
 import re
 import sys
+import types
 from pathlib import Path
 from typing import Any
 
@@ -26,10 +27,13 @@ ROOT = META.parent
 if str(META) not in sys.path:
     sys.path.insert(0, str(META))
 
+collect: types.ModuleType | None = None
 try:
-    from checks import collect
+    from checks import collect as _collect
 except ImportError:
-    collect = None
+    pass
+else:
+    collect = _collect
 
 
 STOPWORDS: frozenset[str] = frozenset({

@@ -35,6 +35,7 @@ import pathlib
 import select
 import subprocess
 import sys
+import types
 
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -97,7 +98,7 @@ def sibling(name):
 
 # Kept on this module and not in `sys.modules`, so a probe that loads the
 # channel afresh gets programs bound to that copy and not to an earlier one.
-_siblings = {}
+_siblings: dict[str, types.ModuleType] = {}
 
 
 def actor():

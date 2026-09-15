@@ -1,0 +1,112 @@
+decisions:
+  - id: work:decision/210
+    name: "DR-210 · Strict type checking over .meta/, ratcheted per file against a two-sided baseline"
+    challenge: work:challenge/432
+    status: ADOPTED
+    applies:
+      - work:article/2
+    enacted_in:
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-collect
+      - work:artifact/meta-checks-comments
+      - work:artifact/meta-checks-types-baseline
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/github-workflows-gate
+      - work:artifact/meta-assertions-structure
+      - work:artifact/meta-mypy-ini
+    context: >-
+      Product code instantiated from `bootstraps/python/seed/` is held to
+      `mypy --strict` (solorepo's DR-193) with an `ignore` list that stays
+      empty (solorepo's DR-096). The tooling under `.meta/`, which every portfolio
+      inherits through Specialization, was held to no type checking at all:
+      solorepo's DR-177 brought it a ruff ruleset and two gate steps and
+      deferred typing outright, on the ground that annotating some 7,600 lines
+      was larger than that change.
+
+      The deferral outlived its measurement. Standard `mypy` over the 28 Python
+      sources in `.meta/` reported eleven errors across eight files — missing
+      annotations on empty containers, two nullable reads, and one `None`
+      assigned to a module-typed name. `mypy --strict` reported 873 errors
+      across 21 files, of which over nine tenths were `no-untyped-def` and
+      `no-untyped-call`: signatures nobody had written down rather than defects.
+
+      Two costs were being paid for the gap. A type regression could enter
+      `.meta/` silently, and a type constraint on anything under `.meta/` could
+      only be stated in prose, because there was no checker to state it to.
+    alternatives:
+      - name: Keep deferring until .meta/ can pass mypy --strict outright
+        chosen: false
+        reason: >-
+          The deferral is what produced the debt, and nothing about it expires.
+          A standard waiting on one large change is a standard that is not in
+          the gate, so every regression that lands between now and then lands
+          unseen.
+      - name: Add mypy --strict as a flat check with per-file configuration overrides
+        chosen: false
+        reason: >-
+          An override in configuration is Article 2's prohibition with a
+          different file extension: nothing downstream can tell a module that
+          was never typed from one whose rule was switched off, and an override
+          has no direction, so removing one is indistinguishable from never
+          having needed it.
+      - name: Fix what standard mypy finds, then ratchet mypy --strict per file against a two-sided baseline
+        chosen: true
+        reason: >-
+          The eleven semantic errors are a day's work and they go outright, so a
+          real type error entering `.meta/` fails the gate on the day it lands.
+          What remains is missing annotation, which is debt rather than defect,
+          and the Ratchet Discipline is what a checker that cannot be clean at
+          once does. The baseline is two-sided, as `inline commentary`'s is: a
+          file over its number fails because the debt grew, and a file under it
+          fails because progress nobody banks is progress the next regression
+          spends.
+    consequences:
+      - >-
+        `.meta/checks/files.py` adds the gate step `meta types`, which runs
+        `mypy --strict --ignore-missing-imports` over `.meta/` and compares the
+        error count of each file against `.meta/checks/types.baseline.yaml`.
+      - >-
+        The comparison that decides a ratchet moved the wrong way is
+        `collect.against_baseline`, shared by `meta types` and
+        `inline commentary`. It sits in `collect.py` because a checker
+        importing another checker for it would be an edge back up the gate's
+        import graph (solorepo's DR-150).
+      - >-
+        The `work:project/meta` gate and `.github/workflows/gate.yml` carry
+        `--with mypy==2.3.1 --with types-pyyaml`. The pin is exact for the same
+        reason every other tool in a gate here is (solorepo's DR-097): a ratchet
+        reads a tool's count as a fact about the tree, so a release that gains
+        or loses a diagnostic would fail every file it newly speaks about or has
+        gone quiet on.
+      - >-
+        Eleven type errors were fixed across `.meta/agents.py`,
+        `.meta/render.py`, `.meta/search.py`, `.meta/timing.py`,
+        `.meta/say/channel.py`, `.meta/checks/collect.py`,
+        `.meta/checks/comments.py` and `.meta/checks/files.py`, so what
+        non-strict mypy finds is not ratcheted and is simply absent.
+      - >-
+        A module is annotated and its baseline number lowered in the same
+        change, one module at a time, until the map is empty and the step can
+        be made flat.
+    falsifier: >-
+      A Python file under `.meta/` whose `mypy --strict --ignore-missing-imports`
+      error count differs from its entry in `.meta/checks/types.baseline.yaml`,
+      in either direction, that passes `.meta/check.py`.
+    rationale: |-
+      A ratchet is the honest shape for a standard that is right and not yet
+      met. It records the debt rather than hiding it, it refuses the next
+      increment, and it makes progress arithmetic instead of argument: the
+      number in the file is what the tree holds, and lowering it is the only
+      way to change it.
+
+      The two-sided half is what distinguishes it from a high-water mark. A
+      baseline that only refuses growth drifts above the tree and stops
+      describing anything, so a later regression can spend the slack without
+      failing. Failing a file that has improved forces the improvement into the
+      record in the same commit that made it, which is also where a reader will
+      look for it.
+
+      Fixing the eleven semantic errors outright, rather than folding them into
+      the baseline, is what keeps the step worth running today. Ratcheting
+      everything would have meant the first thing a real type error did was
+      raise a number nobody reads past.

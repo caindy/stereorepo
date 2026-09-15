@@ -48,7 +48,8 @@ def _claude_tool_use(node: dict[str, Any]) -> SpawnedAgent | None:
         return None
     if str(node.get("name") or node.get("tool")).strip().lower() != "agent":
         return None
-    supplied = node.get("input") if isinstance(node.get("input"), dict) else {}
+    given = node.get("input")
+    supplied: dict[str, Any] = given if isinstance(given, dict) else {}
     return SpawnedAgent(
         id=node.get("id"),
         name="Agent",

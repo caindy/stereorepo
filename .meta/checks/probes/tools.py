@@ -20,7 +20,7 @@ import pathlib
 import tempfile
 
 import citations
-from collect import META, ROOT, check
+from collect import META, ROOT, against_baseline, check
 from probes.harness import load_module, outcome
 
 
@@ -357,6 +357,13 @@ def comment_probes():
     of Reference prose. Every keep-exception has a case, and every detector has
     the innocent neighbour it must not catch (solorepo's DR-110,
     solorepo's DR-207).
+
+    The ratchet the `inline commentary` step reads through is asked the same
+    way: a count at its baseline, over it, under it, and an entry naming a file
+    the tree no longer has. It is `collect.against_baseline` and is shared with
+    the `meta types` step (solorepo's DR-210); both callers' site formatting
+    (`comments.comment_site` and `files.mypy_errors`) and their baseline
+    parameters are probed.
     """
     import comments
     problems = []
@@ -437,22 +444,44 @@ def comment_probes():
         problems.append("comment probes: a false positive for commented-out code in the sample")
 
     here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
-    one = [comments.Block(7, "narration", True)]
-    if comments.against_baseline({here: 1}, {here: one}, {here: 1}):
+    one = [comments.comment_site(here, found[0])]
+    if one[0] != f"{here}:5: `narration, on two lines that is one block`":
+        problems.append(f"comment probes: comment_site gave {one[0]!r}")
+
+    def ratcheted(counts, sites, recorded):
+        """The shared ratchet, asked about counts under the `inline commentary` step's baseline."""
+        return against_baseline(counts, sites, recorded, "body comments", comments.BASELINE)
+
+    if ratcheted({here: 1}, {here: one}, {here: 1}):
         problems.append("comment probes: a file at its baseline should pass")
-    grew = comments.against_baseline({here: 2}, {here: one}, {here: 1})
+    grew = ratcheted({here: 2}, {here: one}, {here: 1})
     if not any("over its baseline of 1" in line for line in grew):
         problems.append(f"comment probes: a file over its baseline should fail, got {grew!r}")
-    fell = comments.against_baseline({here: 1}, {here: one}, {here: 2})
+    fell = ratcheted({here: 1}, {here: one}, {here: 2})
     if not any("under its baseline of 2" in line for line in fell):
         problems.append(f"comment probes: a file under its baseline should fail, got {fell!r}")
-    if not any(f"{here}:7" in line for line in grew):
+    if not any(f"     {one[0]}" in line for line in grew):
         problems.append(f"comment probes: a failing file should list its sites, got {grew!r}")
-    stale = comments.against_baseline({}, {}, {"no/such/file.py": 3})
+    stale = ratcheted({}, {}, {"no/such/file.py": 3})
     if not any("does not exist" in line for line in stale):
         problems.append(f"comment probes: a baseline entry for a missing file should fail, got {stale!r}")
-    if comments.against_baseline({}, {}, {}):
+    if ratcheted({}, {}, {}):
         problems.append("comment probes: an empty baseline over a clean tree should pass")
+
+    import files
+    mypy_sample = f"{here}:42: error: Need type annotation  [var-annotated]\n"
+    type_counts, type_sites = files.mypy_errors(mypy_sample)
+    if type_counts != {here: 1}:
+        problems.append(f"comment probes: mypy_errors counts gave {type_counts!r}")
+    expected_site = f"{here}:42: Need type annotation  [var-annotated]"
+    if type_sites != {here: [expected_site]}:
+        problems.append(f"comment probes: mypy_errors sites gave {type_sites!r}")
+    type_grew = against_baseline({here: 1}, type_sites, {here: 0},
+                                 "type errors", files.TYPES_BASELINE)
+    if not any("1 type errors, over its baseline of 0" in line for line in type_grew):
+        problems.append(f"comment probes: type errors over baseline should fail, got {type_grew!r}")
+    if not any(f"     {expected_site}" in line for line in type_grew):
+        problems.append(f"comment probes: type error site not formatted, got {type_grew!r}")
 
     rust = (
         "// A plain line comment.\n"

@@ -29,12 +29,12 @@ TEMPLATE = ROOT / "template"
 TOKEN = re.compile(r"__[A-Z][A-Z0-9_]*__")
 SCHEMAS = ("work_ontology.yaml", "ddd_ontology.yaml")
 
+Step = collections.namedtuple("Step", "label run pre sources")
 # Every step of the gate, in the order they are defined. A table of labels kept
 # somewhere else is a second place to edit for every step, and it sits far from
 # the function it names, so the label and the docstring that explains the step
 # are never read together; the decorator puts them together.
-STEPS = []
-Step = collections.namedtuple("Step", "label run pre sources")
+STEPS: list[Step] = []
 # What `main` has to give a step, and the only parameter names a step may
 # require. A step takes the ones it names, in the order it names them.
 SOURCES = ("index", "refs", "views", "asked", "pages")
@@ -84,6 +84,61 @@ def check(label, pre=False):
         return fn
 
     return register
+
+
+def recorded_baseline(path: pathlib.Path) -> dict[str, int]:
+    """A ratchet baseline read off disk: repository-relative path to the debt it may still hold.
+
+    Args:
+        path: The baseline file, a YAML mapping of path to count.
+
+    Returns:
+        dict[str, int]: The recorded counts, empty where the file is absent.
+    """
+    if not path.is_file():
+        return {}
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def against_baseline(counts: dict[str, int], sites: dict[str, list[str]],
+                     recorded: dict[str, int], noun: str,
+                     baseline: pathlib.Path) -> list[str]:
+    """What a ratchet has to say about the counts it found, against the counts it recorded.
+
+    The comparison the Ratchet Discipline turns on: a baseline that may fall
+    and may not rise, so a file is failed on either side of its number — over,
+    because the debt grew; under, because a baseline nobody lowers has stopped
+    being one. It lives here rather than beside either step that reads it, because a
+    checker importing another checker for it would be an edge back up the
+    gate's import graph (solorepo's DR-150).
+
+    Args:
+        counts: Repository-relative path to the debt the tree holds.
+        sites: Repository-relative path to the detail lines listed under a
+            failing file, each already formatted.
+        recorded: Repository-relative path to the debt the baseline allows.
+        noun: What is being counted, as it reads in the failure sentence.
+        baseline: The baseline file, named in the failure so the edit is stated.
+
+    Returns:
+        list[str]: One line per file whose count is not its recorded number,
+        naming the number to write, and then one line per site in that file.
+        A file the baseline holds and the tree no longer has is a stale entry
+        and says so instead.
+    """
+    problems = []
+    for relative in sorted(set(counts) | set(recorded)):
+        count, allowed = counts.get(relative, 0), recorded.get(relative, 0)
+        if count == allowed:
+            continue
+        if not (ROOT / relative).is_file():
+            problems.append(f"{relative}: baseline holds a file that does not exist")
+            continue
+        direction = "over" if count > allowed else "under"
+        problems.append(f"{relative}: {count} {noun}, {direction} its baseline of "
+                        f"{allowed} — write {count} in {baseline.relative_to(ROOT).as_posix()}")
+        problems.extend(f"     {line}" for line in sites.get(relative, []))
+    return problems
 
 
 def tree_root(sv):

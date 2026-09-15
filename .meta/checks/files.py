@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tokenize
 import tomllib
+from collections.abc import Sequence
 
 import yaml
 
@@ -31,7 +32,9 @@ from collect import (
     CouldNotRun,
     Found,
     Passed,
+    against_baseline,
     check,
+    recorded_baseline,
     view_for,
 )
 
@@ -40,7 +43,7 @@ class Strict(yaml.SafeLoader):
     """YAML SafeLoader subclass that intercepts and records duplicate mapping keys (solorepo's DR-053)."""
 
 
-_DUPLICATES = []
+_DUPLICATES: list[tuple[object, int]] = []
 
 
 def _note_duplicates(loader, node, deep=False):
@@ -993,6 +996,53 @@ def meta_lints():
     )
 
 
+RUFF = "ruff==0.14.0"
+MYPY = "mypy==2.3.1"
+TYPES_BASELINE = META / "checks" / "types.baseline.yaml"
+# A mypy diagnostic, which is `<path>:<line>: error: <message>  [<rule>]`. Only
+# `error` is counted: `note` lines elaborate the error above them and would
+# count one diagnostic twice (solorepo's DR-210).
+MYPY_ERROR = re.compile(r"^(?P<path>[^\s:][^:]*):(?P<line>\d+):(?:\d+:)? error: (?P<message>.*)$")
+
+
+def tool_command(name: str, pin: str, args: Sequence[str],
+                 deps: Sequence[str] = ()) -> list[str] | None:
+    """The command that runs a pinned Python tool, by whichever of three routes this machine has.
+
+    An executable on `PATH` first, because the gate's own `uvx` environment puts
+    one there; then the module in this interpreter; then `uvx`, which fetches
+    the pin. A portfolio's contributor has one of the three and should not have
+    to know which.
+
+    Args:
+        name: The executable and module name, which are the same for both tools here.
+        pin: The requirement passed to `uvx --from` when falling back to the `uvx`
+            route, exact so that a release cannot move a ratcheted count under the
+            baseline that recorded it.
+        args: The arguments after the tool's own name.
+        deps: Further requirements the `uvx` route needs in the environment.
+
+    Returns:
+        list[str] | None: The command to run, or `None` where none of the three
+        routes is available.
+    """
+    found = shutil.which(name)
+    if found:
+        return [found, *args]
+    try:
+        res = subprocess.run([sys.executable, "-m", name, "--version"],
+                             capture_output=True, text=True, check=False)
+        if res.returncode == 0:
+            return [sys.executable, "-m", name, *args]
+    except OSError:
+        pass
+    uvx = shutil.which("uvx")
+    if uvx:
+        supplied = [word for dep in deps for word in ("--with", dep)]
+        return [uvx, "--from", pin, *supplied, name, *args]
+    return None
+
+
 @check("meta ruff")
 def meta_ruff():
     """Ruff check over .meta/ against the ruleset declared in .meta/ruff.toml (solorepo's DR-177).
@@ -1003,19 +1053,7 @@ def meta_ruff():
     config = META / "ruff.toml"
     if not config.is_file():
         return CouldNotRun(".meta/ruff.toml is missing")
-    ruff_bin = shutil.which("ruff")
-    cmd = [ruff_bin, "check", "--config", str(config), str(META)] if ruff_bin else None
-    if not cmd:
-        try:
-            res = subprocess.run([sys.executable, "-m", "ruff", "--version"], capture_output=True, text=True, check=False)
-            if res.returncode == 0:
-                cmd = [sys.executable, "-m", "ruff", "check", "--config", str(config), str(META)]
-        except OSError:
-            pass
-    if not cmd:
-        uvx = shutil.which("uvx")
-        if uvx:
-            cmd = [uvx, "--from", "ruff==0.14.0", "ruff", "check", "--config", str(config), str(META)]
+    cmd = tool_command("ruff", RUFF, ["check", "--config", str(config), str(META)])
     if not cmd:
         return CouldNotRun("neither ruff nor uvx is installed")
     out = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -1023,6 +1061,79 @@ def meta_ruff():
         return Passed("ruff check passed over .meta/")
     lines = [line.strip() for line in (out.stdout + "\n" + out.stderr).splitlines() if line.strip()]
     return Found(tuple(lines))
+
+
+def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
+    """The strict-mode type errors a mypy run reported, by repository-relative path.
+
+    Args:
+        output: The tool's combined standard output and standard error.
+
+    Returns:
+        tuple[dict[str, int], dict[str, list[str]]]: How many errors each file
+        holds, and the diagnostic lines behind each count, in the order mypy
+        reported them.
+    """
+    counts: dict[str, int] = {}
+    sites: dict[str, list[str]] = {}
+    for line in output.splitlines():
+        match = MYPY_ERROR.match(line.strip())
+        if match is None:
+            continue
+        relative = match.group("path")
+        counts[relative] = counts.get(relative, 0) + 1
+        sites.setdefault(relative, []).append(
+            f"{relative}:{match.group('line')}: {match.group('message')}")
+    return counts, sites
+
+
+@check("meta types")
+def meta_types():
+    """`mypy --strict` over .meta/, ratcheted against types.baseline.yaml (solorepo's DR-210).
+
+    Product code instantiated from the Python bootstrap's seed is held to
+    `mypy --strict` outright, and the tooling under `.meta/` that every
+    portfolio inherits was held to nothing. It cannot be held to strict typing
+    outright either: the tree carried 873 strict errors across 21 files when
+    this step was written, over nine tenths of them missing annotations rather
+    than defects. So it ratchets, as `inline commentary` does — the baseline may
+    fall and may not rise, and a file under its recorded number fails until the
+    number is lowered, because progress nobody banks is progress the next
+    regression spends.
+
+    What non-strict mypy finds is not ratcheted and is simply absent: those
+    eleven errors were fixed in the change that added this step, so a semantic
+    type error entering `.meta/` raises a file over its baseline on the day it
+    lands.
+
+    The pin is exact on the `uvx` route, matching the gate environment's own
+    top-level requirements in `.meta/assertions/structure.yaml` and
+    `.github/workflows/gate.yml`. A ratchet reads a tool's count as a fact about
+    the tree, and an unpinned checker that gains a diagnostic in a patch release
+    would fail the gate on every file it newly speaks about, while one that loses
+    a diagnostic would fail every file it has gone quiet on.
+    """
+    if not TYPES_BASELINE.is_file():
+        return CouldNotRun(f"{TYPES_BASELINE.relative_to(ROOT).as_posix()} is missing")
+    config = META / "mypy.ini"
+    if not config.is_file():
+        return CouldNotRun(".meta/mypy.ini is missing")
+    cmd = tool_command("mypy", MYPY, ["--config-file", str(config), "--strict",
+                                       "--ignore-missing-imports", str(META)],
+                       deps=("types-pyyaml",))
+    if not cmd:
+        return CouldNotRun("neither mypy nor uvx is installed")
+    out = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=str(ROOT))
+    counts, sites = mypy_errors(out.stdout + "\n" + out.stderr)
+    if out.returncode not in (0, 1) or (out.returncode != 0 and not counts):
+        lines = [line.strip() for line in (out.stdout + "\n" + out.stderr).splitlines() if line.strip()]
+        return Found(tuple(lines) or ("mypy failed and reported nothing",))
+    problems = against_baseline(counts, sites, recorded_baseline(TYPES_BASELINE),
+                                "type errors", TYPES_BASELINE)
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{sum(counts.values())} strict type errors across {len(counts)} files, "
+                  f"each file at its baseline")
 
 
 @check("meta doc")

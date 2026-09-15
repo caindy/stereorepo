@@ -20,7 +20,9 @@ are decidable from the token stream alone.
 `inline commentary` is ratcheted rather than flat: the tree held 210 body
 comment blocks across 15 files when the step was written, and the Ratchet
 Discipline is what a checker that cannot be clean at once does. The baseline is
-`.meta/checks/comments.baseline.yaml` and it may fall and may not rise.
+`.meta/checks/comments.baseline.yaml` and it may fall and may not rise. The
+comparison itself is `collect.against_baseline`, shared with the `meta types`
+step of `files.py` (solorepo's DR-210).
 
 Scope: every Python file under `.meta/`, which is the Project this gate is for,
 and every Rust file git lists, because `.meta/` holds none and the seed crates
@@ -33,9 +35,16 @@ import pathlib
 import re
 import tokenize
 
-import yaml
-
-from collect import META, ROOT, CouldNotRun, Found, Passed, check
+from collect import (
+    META,
+    ROOT,
+    CouldNotRun,
+    Found,
+    Passed,
+    against_baseline,
+    check,
+    recorded_baseline,
+)
 from files import tree
 
 BASELINE = META / "checks" / "comments.baseline.yaml"
@@ -110,7 +119,8 @@ def python_comments(source: str) -> list[Comment]:
     spans = [
         (node.body[0].lineno, node.end_lineno)
         for node in ast.walk(ast.parse(source))
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.body and node.end_lineno is not None
     ]
     found = []
     for token in tokenize.generate_tokens(io.StringIO(source).readline):
@@ -295,13 +305,6 @@ def suppressions(source: str, rust: bool = False) -> list[tuple[int, str]]:
     return found
 
 
-def baseline() -> dict[str, int]:
-    """The ratchet baseline: repository-relative path to the body comments it may still hold."""
-    if not BASELINE.is_file():
-        return {}
-    return yaml.safe_load(BASELINE.read_text(encoding="utf-8")) or {}
-
-
 @check("commented-out code")
 def commented_out_code():
     """No comment under `.meta/` or in a Rust source is a line of code left behind (solorepo's DR-171).
@@ -373,29 +376,9 @@ def broad_suppressions():
     return Passed(f"no bare suppression across {len(python)} Python and "
                   f"{len(rust)} Rust files")
 
-
-def against_baseline(counts: dict[str, int], sites: dict[str, list[Block]],
-                     recorded: dict[str, int]) -> list[str]:
-    """What a ratchet has to say about the counts it found, against the counts it recorded.
-
-    One line per file whose count is not its recorded number, naming the number
-    to write, and then one line per site in that file. A file the baseline holds
-    and the tree no longer has is a stale entry and says so instead.
-    """
-    problems = []
-    for relative in sorted(set(counts) | set(recorded)):
-        count, allowed = counts.get(relative, 0), recorded.get(relative, 0)
-        if count == allowed:
-            continue
-        if not (ROOT / relative).is_file():
-            problems.append(f"{relative}: baseline holds a file that does not exist")
-            continue
-        direction = "over" if count > allowed else "under"
-        problems.append(f"{relative}: {count} body comments, {direction} its baseline of "
-                        f"{allowed} — write {count} in {BASELINE.relative_to(ROOT).as_posix()}")
-        for block in sites.get(relative, []):
-            problems.append(f"     {relative}:{block.line}: `{block.text[:70]}`")
-    return problems
+def comment_site(relative: str, block: Block) -> str:
+    """Formats an inline commentary block as a site line for against_baseline."""
+    return f"{relative}:{block.line}: `{block.text[:70]}`"
 
 
 @check("inline commentary")
@@ -416,7 +399,7 @@ def inline_commentary():
     """
     if not BASELINE.is_file():
         return CouldNotRun(f"{BASELINE.relative_to(ROOT).as_posix()} is missing")
-    recorded = baseline()
+    recorded = recorded_baseline(BASELINE)
     counts, sites = {}, {}
     for source in sources():
         relative = source.relative_to(ROOT).as_posix()
@@ -428,8 +411,8 @@ def inline_commentary():
                  if block.inline and keep_exception(block.text) is None]
         if found:
             counts[relative] = len(found)
-            sites[relative] = found
-    problems = against_baseline(counts, sites, recorded)
+            sites[relative] = [comment_site(relative, block) for block in found]
+    problems = against_baseline(counts, sites, recorded, "body comments", BASELINE)
     if problems:
         return Found(tuple(problems))
     return Passed(f"{sum(counts.values())} body comments across {len(counts)} files, "
