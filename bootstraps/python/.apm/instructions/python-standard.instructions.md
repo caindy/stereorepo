@@ -8,7 +8,24 @@ applyTo: "**/*.py"
 
 # Python Standard Guidance
 
-When developing Python projects in solorepo:
-- Satisfy the six project-level disciplines: Literate Programming, Ratchet, Observed Failure, Nothing Unconsumed, Seeded Artifacts, and Written Decisions.
-- Verification is held by `uv run gate` within the project directory.
-- Utilize the sixteen Python refactoring and lifecycle skills provided in this package for clean code, mutation testing, and structured workflows.
+A portfolio holds two kinds of Python target. Settle which one a file belongs to
+before running any checker over it; `assertions/structure.yaml` is what settles it,
+since every Project declares the `gate:` that holds it and a Project is instantiated
+wherever it was asked for.
+
+**Repository tooling — `.meta/`.** Inherited by every portfolio. Configured by
+`.meta/ruff.toml` and `.meta/mypy.ini`, run through `python3` and `uvx`, verified by
+`just gate meta`. It has no `pyproject.toml`, no `[dependency-groups]` and no
+`tests/`; its behavioural tests are the probes under `.meta/checks/probes/`. Never
+create a `pyproject.toml` at the repository root, and never delete an import
+carrying `# noqa: F401  # reason: ...` — it registers gate steps.
+
+**A Project workspace.** Owns its `pyproject.toml` and its dependency groups, and is
+verified by `uv run gate` typed in its own directory. It must satisfy the six
+project-level disciplines: Literate Programming, Ratchet, Observed Failure, Nothing
+Unconsumed, Seeded Artifacts, and Written Decisions.
+
+Give every checker its target's configuration by name; a bare `ruff check .` or
+`mypy .` at the repository root sweeps both targets under one configuration, which is
+right for neither. The sixteen skills in this package carry the rest, and
+`py-quality-setup` holds the contract in full.

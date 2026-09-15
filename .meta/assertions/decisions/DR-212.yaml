@@ -1,0 +1,100 @@
+decisions:
+  - id: work:decision/212
+    name: "DR-212 · Vendored skills carrying a solorepo guard are adapted in place and become locally owned"
+    challenge: work:challenge/446
+    status: ADOPTED
+    applies:
+      - work:article/2
+      - work:article/8
+      - work:article/19
+    enacted_in:
+      - work:artifact/bootstraps-python-provenance
+      - work:artifact/bootstraps-python-skill-quality-setup
+      - work:artifact/bootstraps-python-lint-gate
+      - work:artifact/meta-apm-compile
+    context: >-
+      The eight `py-*` refactoring skills are declared as Capabilities and
+      compiled into the `solorepo-python` APM package by DR-208.
+      `bootstraps/python/PROVENANCE.md` records them as byte-identical to
+      `l-mb/python-refactoring-skills` and refreshable for exactly that reason: an
+      unmodified vendored file can be re-copied from upstream without losing
+      anything.
+
+      They assume a standalone Python application package. A solorepo portfolio
+      holds two kinds of Python target instead: inherited repository tooling under
+      `.meta/`, configured by `.meta/ruff.toml` and `.meta/mypy.ini` and gated by
+      `just gate meta` (DR-177, DR-210), and Project workspaces that own a
+      `pyproject.toml` and assert `uv run gate` as what holds them. The skills
+      name neither, so an agent following them at the repository root creates a
+      root `pyproject.toml` that does not belong there, runs `mypy .` past
+      `.meta/mypy.ini` and DR-210's baseline, and follows `pre-commit install`'s
+      own refusal hint to unset `core.hooksPath`, which detaches
+      `.meta/hooks/post-checkout` (solorepo's #430).
+
+      The guard therefore has to sit inside the skill that carries the hazard,
+      because a skill is loaded by its own trigger and by nothing else. That is
+      what forces the question: an adaptation at the point of use cannot be an
+      overlay, and so it costs the refresh contract the byte-identical copy bought.
+    alternatives:
+      - name: Keep py-* byte-identical and state the contract in one solorepo-owned overlay skill
+        chosen: false
+        reason: >-
+          Preserves cheap refresh and defeats the purpose. A skill is disclosed
+          when its own description matches the request: `py-git-hooks` loads
+          because someone asked for pre-commit hooks, and nothing in that request
+          reaches an overlay. The guard would be absent at precisely the moment it
+          is needed, which is Article 8 — an artifact prevents drift only if
+          something consumes it.
+      - name: Keep py-* byte-identical and state the contract only in the APM instructions primitive
+        chosen: false
+        reason: >-
+          The instructions primitive is ambient where a harness consumes
+          instructions, and the package targets five harnesses of which the skill
+          is the portable unit. It also leaves the eight skills asserting the
+          wrong thing in their own text, and a reader who opens a skill follows
+          what the skill says.
+      - name: Adapt the skills in place, and move py-* from refreshable to locally owned
+        chosen: true
+        reason: >-
+          Puts each guard where the hazard is: the target-context contract in
+          full in `py-quality-setup`, which every other `py-*` skill already
+          declares as its prerequisite, and the short form plus the
+          skill-specific prohibition in the other seven. PROVENANCE.md records
+          `py-*` as locally owned, so a refresh diffs rather than overwrites, the
+          way the eight lifecycle skills adapted from `obra/superpowers` are
+          already carried.
+    consequences:
+      - >-
+        `bootstraps/python/PROVENANCE.md` moves `py-*` out of the byte-identical
+        row: a refresh prints a diff for them rather than overwriting, and the MIT
+        notice still travels with them.
+      - >-
+        Every `py-*` skill opens with a Target contexts block naming which of the
+        two targets it stands in, what it must not do there, and which gate
+        verifies it. `py-quality-setup` holds the contract in full.
+      - >-
+        `lint-gate.py` routes its tool invocations by target rather than assuming
+        one, pins `--config` on every ruff and mypy call so no fixer runs under a
+        ruleset the target did not declare, and drops `basedpyright`, which
+        nothing in this repository uses.
+      - >-
+        The generated APM instructions primitive states the same split, so the
+        guidance that applies to every `*.py` file stops naming `uv run gate` as
+        the verification for files under `.meta/`, which has no uv workspace.
+    falsifier: >-
+      An agent that loads one `py-*` skill alone, follows it against a path under
+      `.meta/`, and creates a root `pyproject.toml`, unsets `core.hooksPath`, runs
+      a checker without the target's own configuration, or deletes a registration
+      import — without the skill it loaded having said not to.
+    rationale: |-
+      Vendoring buys a known version and an offline copy; it does not buy
+      correctness in a repository the upstream has never seen. Where the
+      difference is cosmetic, the byte-identical copy is worth keeping. Where the
+      difference is a guard against damage to inherited tooling, the copy has to
+      change, because the reader of a skill reads the skill and not a register of
+      what the skill got wrong.
+
+      Placing each guard at its own point of use is the same reasoning Article 2
+      applies to suppressions: a rule switched off in configuration is switched
+      off where nobody reads it, and a caution kept in an overlay is a caution
+      nobody loads.

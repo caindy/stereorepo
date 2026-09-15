@@ -8,6 +8,71 @@ status: stable
 
 Remove dead code and consolidate duplication to keep codebase clean and maintainable.
 
+## Target contexts
+
+A solorepo portfolio holds two kinds of Python target, and this skill behaves
+differently in each.
+
+- **Repository tooling — `.meta/`.** Inherited by every portfolio through
+  Specialization. Configured by `.meta/ruff.toml` and `.meta/mypy.ini`, run
+  through `python3` and `uvx`, held by `just gate meta`. It has no
+  `pyproject.toml`, no `[dependency-groups]`, and no `tests/`.
+- **A Project workspace** — the directory of any Project that
+  `assertions/structure.yaml` declares with a `gate:` of its own, such as
+  `bootstraps/python/seed`. It owns its `pyproject.toml` and its dependency
+  groups, and is held by `uv run gate` run from its own directory.
+
+Which one you are in is settled by `assertions/structure.yaml`, not by the path:
+`just bootstrap python products/api` puts a Project at `products/api`. Anything
+under `.meta/` is repository tooling. **py-quality-setup** holds the contract in
+full, including why every checker must be given its target's configuration by
+name.
+
+### Dynamic registration is not dead code
+
+`.meta/` builds its gate from a registry. `.meta/check.py` imports its step
+modules for their side effect, each import annotated so no automated fixer can
+take it:
+
+```python
+import citations  # noqa: F401  # reason: registers check steps
+import comments   # noqa: F401  # reason: registers check steps
+import graph      # noqa: F401  # reason: registers check steps
+import probes     # noqa: F401  # reason: registers check steps
+```
+
+Each module then registers its steps at their definitions with `@check`, so no
+table anywhere names them and nothing calls them by name. Sixty-seven steps are
+registered this way across `.meta/checks/` and `.meta/checks/probes/`. Removing
+one import silently disables every step behind it, which is what happened under
+DR-177 before the annotations existed: `ruff check --fix` took the imports and 28
+gate steps went quiet while the gate stayed green.
+
+**What the tools actually report.** At this skill's own recommended threshold
+`vulture --min-confidence 80 .meta/` is clean — four findings, all parameters on
+test doubles that exist to match a real signature (`**kwargs`,
+`encoding="utf-8"`), and none of them dead. Drop to 60, which this skill
+documents below as a level worth inspecting, and 74 findings appear: the `@check`
+functions, essentially the whole registry, read as unused because nothing calls
+them.
+
+So in `.meta/`:
+
+- Stay at `--min-confidence 80`, or exclude the registries:
+  `vulture --min-confidence 60 --exclude=.meta/check.py,.meta/checks/ .meta/`
+- **Never delete an import carrying `# noqa: F401  # reason: ...`**, and never
+  delete the annotation either. A `noqa` whose rule stops firing is itself an
+  error under `RUF100`, so stripping the comment does not make the import safe —
+  it arms the next fixer to remove the import (solorepo's DR-177).
+- **Never delete a function decorated with `@check`.** It is called by the
+  registry, not by a caller vulture can see.
+- Verify with `just gate meta` and read the step count, not just the colour. A
+  registration import removed takes its steps out of the report without turning
+  anything red.
+
+In a Project workspace the ordinary rules apply, and the safety net is
+`uv run gate` — `test`, `mutants` and `orphans` together, not `pytest` alone.
+
 ## Objectives
 
 1. Detect unused code (functions, classes, variables)
@@ -18,7 +83,9 @@ Remove dead code and consolidate duplication to keep codebase clean and maintain
 
 ## Required Tools
 
-**Add to `[dependency-groups]` dev**: `"vulture"`, `"pylint"`
+**In a Project workspace**, add to `[dependency-groups]` dev: `"vulture"`, `"pylint"`.
+**In `.meta/`** there is no manifest; reach both through `uvx`, which is how every
+other tool `.meta/` uses is reached.
 
 - **vulture**: AST-based dead code detection
 - **pylint**: Duplicate code detection
@@ -278,9 +345,18 @@ def calculate_total(items: list) -> float:
 - [ ] `vulture . --min-confidence 80` reports no dead code (or only accepted false positives)
 - [ ] `pylint --disable=all --enable=duplicate-code` reports no duplicate blocks >6 lines
 - [ ] No commented-out code blocks remain
-- [ ] All tests pass after removals
-- [ ] Code coverage maintained or improved
 - [ ] Whitelist file created for intentional false positives (if needed)
+
+**Repository tooling (`.meta/`)**
+
+- [ ] Every `# noqa: F401  # reason: ...` registration import is still present, annotation intact
+- [ ] Every `@check`-decorated function is still present
+- [ ] `just gate meta` is green **and reports the same number of steps as before**
+
+**A Project workspace**
+
+- [ ] `uv run gate` is green from the Project's directory: `test`, `mutants` and `orphans` included
+- [ ] Coverage maintained or improved
 
 ## Examples
 

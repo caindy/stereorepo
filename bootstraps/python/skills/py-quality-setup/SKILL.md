@@ -1,12 +1,91 @@
 ---
 name: py-quality-setup
-description: Configure ruff, mypy, and basedpyright for Python 3.13 projects. Use when setting up linters and type checkers in pyproject.toml and pyrightconfig.json.
+description: Configure ruff and mypy for Python 3.13 targets, and hold the target-context contract the other py-* skills defer to. Use when setting up linters or type checkers, and when any py-* skill needs to know whether it is standing in inherited `.meta/` tooling or in a Project workspace.
 status: stable
 ---
 
 # Python Quality Tooling Setup
 
 Configure comprehensive linting and type checking for Python 3.13 projects following Engineering Charter standards.
+
+## Target contexts
+
+A solorepo portfolio holds two kinds of Python target. They carry different
+configuration, run through different interpreters, and are held by different
+gates. Settle which one you are standing in before running anything: the setup
+this skill performs is right in one of them and damaging in the other.
+
+This section, and the short form the other seven `py-*` skills carry, is
+solorepo's own (solorepo's DR-212). Upstream has no equivalent, because upstream
+has one target.
+
+| | Repository tooling | A Project workspace |
+|---|---|---|
+| Where | `.meta/`, and nowhere else | wherever the Project was instantiated |
+| Ruff | `.meta/ruff.toml` (solorepo's DR-177) | the Project's own `pyproject.toml` (solorepo's DR-096) |
+| Mypy | `.meta/mypy.ini`, ratcheted against `.meta/checks/types.baseline.yaml` (solorepo's DR-210) | the Project's own `pyproject.toml` |
+| Run through | `python3` and `uvx` | `uv run`, from the Project's directory |
+| Dependencies | none: no manifest, so no `[dependency-groups]` to add to | `[dependency-groups] dev` in the Project's manifest |
+| Tests | none: no `pytest`, no `tests/` | `tests/` beside each package |
+| Gate | `just gate meta` | `uv run gate`, from the Project's directory |
+
+**Which one am I in.** Read `assertions/structure.yaml`. Every Project declares a
+`gate:` — the command that must pass, typed at the root of the repository — and
+the Project you are in is the one whose directory contains the path you are about
+to change. The path alone settles nothing, because a Project is instantiated
+wherever it was asked for: `just bootstrap python products/api` puts one at
+`products/api`. Anything under `.meta/` is repository tooling, whatever else is
+true of it.
+
+### Three things this skill must not do
+
+**Never write a `pyproject.toml` at the repository root.** A portfolio root has
+no manifest and wants none. `.meta/` is configured by `.meta/ruff.toml` and
+`.meta/mypy.ini`, which are inherited rather than generated; a Project is
+configured by its own manifest, which arrives with the seed. A root manifest is a
+third configuration that nothing declared, and every root-level `ruff check .`
+would obey it.
+
+**Never run a checker without naming the target's configuration.** `mypy` reads
+its configuration from the working directory rather than per file, so `mypy .` at
+the root runs past `.meta/mypy.ini` and past DR-210's baseline without reporting
+that it did. `ruff` resolves configuration per file and does find `.meta/ruff.toml`
+by proximity — but an explicit `--config` naming a ruleset that selects `RUF`
+without `F` makes `RUF100` read `# noqa: F401  # reason: registers check steps`
+as an unused suppression and strip the comment, after which the next `--fix` run
+with `F` enabled deletes the import. Two runs, neither wrong on its own, and a
+gate step goes silent. Name the configuration every time:
+
+```bash
+# Repository tooling
+uvx ruff@0.14.0 check --config .meta/ruff.toml .meta/
+uvx mypy@2.3.1 --config-file .meta/mypy.ini --strict --ignore-missing-imports .meta/
+
+# A Project workspace, from the Project's own directory
+uv run ruff check .
+uv run mypy .
+```
+
+**Never grant `Bash(git commit *)`.** The permissions block below is upstream's,
+and that entry is wrong here: A19 says a commit that does not name its Actor is
+unattributable, and `git commit` names none. Commits go through
+`.meta/say/commit`, which appends the Actor Trailer. The same applies to `gh`'s
+writing verbs, which `.claude/settings.json` already denies in favour of
+`.meta/say/post` and `.meta/say/move` (solorepo's DR-069); do not add them back
+in `.claude/settings.local.json`.
+
+### Verifying, by target
+
+```bash
+just gate meta      # repository tooling: ruff, mypy, and the rest of .meta/'s gate
+just gate           # every Project the assertions declare
+cd <project> && uv run gate    # one Project workspace
+```
+
+`.meta/` has no `pytest` and no `tests/`. Its behavioural tests are the probes
+under `.meta/checks/probes/` (solorepo's DR-209), which run as steps of
+`just gate meta`.
+
 
 ## Objectives
 
@@ -18,19 +97,45 @@ Configure comprehensive linting and type checking for Python 3.13 projects follo
 
 ## Required Tools
 
-**Add to `[dependency-groups]` dev**: `"ruff"`, `"mypy"`, `"basedpyright"`, `"pytest"`, `"pytest-cov"`
+**In a Project workspace**, add to `[dependency-groups]` dev: `"ruff"`, `"mypy"`, `"pytest"`.
 
-- **ruff**: Fast linter and formatter (Rust-based, replaces black, isort, flake8)
+**In `.meta/`**, add nothing. There is no manifest to add to. Its checkers are
+pinned in the Project's `gate:` string in `assertions/structure.yaml` and reached
+through `uvx`, which is what keeps `.meta/` runnable in a portfolio that has not
+adopted Python at all.
+
+- **ruff**: Fast linter (Rust-based, replaces isort and flake8)
 - **mypy**: Standard Python type checker
-- **basedpyright**: Enhanced Pyright fork with additional type analysis
+- **basedpyright**: upstream's third checker, and **not part of this standard**.
+  Nothing in solorepo runs it, `uv run gate` has no step for it, and the seed's
+  dev group does not carry it. Leave it out rather than adding a checker whose
+  findings no gate reads.
 
 ## Required Configuration Files
 
 ### pyproject.toml (Canonical Reference)
 
-This skill provides the **canonical pyproject.toml configuration** for all quality tools. Other skills reference this configuration.
+**Not in `.meta/`, and not at the repository root** — see Target contexts above.
+This section describes a Project workspace, and only a Project workspace.
 
-Must include these sections:
+**In a solorepo portfolio the canonical configuration is the seed's**
+(`bootstraps/python/seed/pyproject.toml`), which arrives with the Project and
+already selects the rule set DR-096 settled, pins the gate's tools exactly while
+letting the test tools float (DR-097), and targets the support floor rather than
+the development interpreter (DR-095). Under Ratchet it is raised and never
+lowered, so this skill's job in an existing Project is to read that manifest and
+verify it, not to overwrite it with the reference below. `ignore` stays empty:
+A2 says a suppression names its rule and its reason at the site, never in
+configuration, and `uv run gate lints` refuses an entry.
+
+Two differences from the reference below are deliberate and not drift.
+`ruff format` is absent, because mechanical formatting was retired from this
+gate (DR-193): it inflates agent context windows and manufactures rebase churn
+across concurrent branches for no semantic gain. `basedpyright` is absent for
+the reason given under Required Tools.
+
+The reference below is upstream's, and is what a Project outside a solorepo
+portfolio should hold. It must include these sections:
 
 ```toml
 [project]
@@ -123,12 +228,13 @@ A.When using `pyrightconfig.json` for multi-package projects, REMOVE the `tool.b
    - Check if dev dependencies exist
    - Verify Python version requirement
 
-2. **Update or create configuration**
+2. **Update or create configuration** — in a Project workspace only. In `.meta/`
+   there is nothing to create: `.meta/ruff.toml` and `.meta/mypy.ini` are
+   inherited, and a `pyproject.toml` written anywhere near them is the failure
+   this skill's Target contexts section names.
    - Add dev dependencies if missing
    - Add/update [tool.ruff] section
    - Add/update [tool.mypy] section
-   - Add/update [tool.basedpyright] section
-   - Create pyrightconfig.json if needed (multi-package projects)
 
 3. **Install tools in venv**
    ```bash
@@ -154,11 +260,17 @@ A.When using `pyrightconfig.json` for multi-package projects, REMOVE the `tool.b
    basedpyright --version
    ```
 
-5. **Run initial checks**
+5. **Run initial checks**, naming the target's configuration. A bare `ruff
+   check .` or `mypy .` at the repository root sweeps both targets under one
+   configuration, which is right for neither.
    ```bash
-   ruff check .
-   mypy .
-   basedpyright .
+   # Repository tooling
+   uvx ruff@0.14.0 check --config .meta/ruff.toml .meta/
+   uvx mypy@2.3.1 --config-file .meta/mypy.ini --strict --ignore-missing-imports .meta/
+
+   # A Project workspace, from the Project's own directory
+   uv run ruff check .
+   uv run mypy .
    ```
 
 6. **Configure Claude Code permissions**
@@ -200,18 +312,35 @@ A.When using `pyrightconfig.json` for multi-package projects, REMOVE the `tool.b
          "Bash(git ls-files *)",
          "Bash(git checkout *)",
          "Bash(git branch *)",
-         "Bash(git commit *)"
+         "Bash(.meta/say/commit *)"
        ],
        "deny": []
      }
    }
    ```
 
+   `Bash(git commit *)` is upstream's entry and is **not** in the list above. A19
+   says a commit that does not name its Actor is unattributable, and `git commit`
+   names none; `.meta/say/commit` appends the Actor Trailer. Do not add `gh`'s
+   writing verbs either: `.claude/settings.json` denies them so that
+   everything reaching GitHub passes through `.meta/say/post` and `.meta/say/move`
+   and is signed (solorepo's DR-069), and a `local` file that allowed them back
+   would be reopening a boundary rather than granting a convenience.
+
    **Merge logic**: Read existing file, parse JSON, take union of `allow` lists, write back. Create `.claude/` directory if needed.
 
 7. **Install Stop hook lint gate**
 
-   Symlink the lint gate script so Claude Code runs the full lint suite (ruff, mypy, basedpyright) on modified files before returning to the user. If any linter reports errors, Claude is blocked from stopping and must fix them first.
+   Symlink the lint gate script so Claude Code runs ruff and mypy on modified
+   files before returning to the user. If either reports errors, Claude is
+   blocked from stopping and must fix them first.
+
+   The copy in this package routes by target: a file under `.meta/` is checked
+   against `.meta/ruff.toml` and `.meta/mypy.ini`, a file in a Project workspace
+   through that Project's `uv run`. It runs no formatter, because DR-193 retired
+   mechanical formatting from this standard, and it does not invoke
+   `basedpyright`. Point the symlink at this package's `lint-gate.py` rather than
+   an upstream copy, which does all three of those things.
 
    ```bash
    mkdir -p ~/.claude/hooks
@@ -238,8 +367,9 @@ A.When using `pyrightconfig.json` for multi-package projects, REMOVE the `tool.b
    ```
 
 8. **Configure git hooks** (if requested)
-   - Set up pre-commit hook to run linters
-   - See py-git-hooks skill
+   - See py-git-hooks skill, and read its Target contexts section first: in a
+     repository that sets `core.hooksPath`, `pre-commit install` refuses, and the
+     remedy it prints is destructive here.
 
 ## Tool-Specific Notes
 
@@ -281,17 +411,28 @@ ignore_missing_imports = true
 
 ## Verification Checklist
 
+**Both targets**
+
+- [ ] The target was identified from `assertions/structure.yaml` before anything ran
+- [ ] No `pyproject.toml` was created at the repository root
+- [ ] `.claude/settings.local.json` grants the quality tools and **not** `Bash(git commit *)` or any `gh` writing verb
+- [ ] `~/.claude/hooks/lint-gate.py` points at this package's copy, and the Stop hook is configured in `~/.claude/settings.json`
+
+**Repository tooling (`.meta/`)**
+
+- [ ] `.meta/ruff.toml` is unchanged, and its `ignore` is still `[]`
+- [ ] `uvx ruff@0.14.0 check --config .meta/ruff.toml .meta/` passes
+- [ ] Every `# noqa` under `.meta/` still carries its `# reason:`
+- [ ] `just gate meta` is green
+
+**A Project workspace**
+
 - [ ] pyproject.toml has requires-python = ">=3.13"
-- [ ] dev dependencies include ruff, mypy, basedpyright
-- [ ] [tool.ruff] configured with target-version = "py313"
-- [ ] [tool.mypy] configured with python_version = "3.13"
-- [ ] [tool.basedpyright] configured with pythonVersion = "3.13"
-- [ ] All tools installed in venv
-- [ ] ruff check passes (or only expected errors)
-- [ ] mypy . passes (or only expected errors)
-- [ ] basedpyright . passes (or only expected errors)
-- [ ] `.claude/settings.local.json` exists with permissions for all quality tools
-- [ ] `~/.claude/hooks/lint-gate.py` symlinked and Stop hook configured in `~/.claude/settings.json`
+- [ ] dev dependencies include ruff and mypy, pinned exactly (DR-097)
+- [ ] [tool.ruff] configured with target-version = "py313", and `ignore = []`
+- [ ] [tool.mypy] configured with python_version = "3.13" and strict = true
+- [ ] `uv run ruff check .` and `uv run mypy .` pass from the Project's directory
+- [ ] `uv run gate` is green
 
 ## Examples
 
@@ -330,6 +471,9 @@ ignore_missing_imports = true
 
 ## Related Skills
 
-- **Foundation**: This skill is the foundation for all other skills
+- **Foundation**: This skill is the foundation for all other skills, and holds
+  the Target contexts contract in full. The other `py-*` skills carry the short
+  form and their own hazard; when one of them is ambiguous about which target it
+  is addressing, this section settles it.
 - **Next steps**: py-git-hooks (automate enforcement of configured tools)
 - **See also**: py-modernize (for uv migration and syntax upgrades)

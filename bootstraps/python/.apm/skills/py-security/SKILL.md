@@ -8,6 +8,57 @@ status: stable
 
 Find and fix security vulnerabilities in Python code following Engineering Charter security principles.
 
+## Target contexts
+
+A solorepo portfolio holds two kinds of Python target, and this skill behaves
+differently in each.
+
+- **Repository tooling — `.meta/`.** Inherited by every portfolio through
+  Specialization. Configured by `.meta/ruff.toml` and `.meta/mypy.ini`, run
+  through `python3` and `uvx`, held by `just gate meta`. It has no
+  `pyproject.toml`, no `[dependency-groups]`, and no `tests/`.
+- **A Project workspace** — the directory of any Project that
+  `assertions/structure.yaml` declares with a `gate:` of its own, such as
+  `bootstraps/python/seed`. It owns its `pyproject.toml` and its dependency
+  groups, and is held by `uv run gate` run from its own directory.
+
+Which one you are in is settled by `assertions/structure.yaml`, not by the path:
+`just bootstrap python products/api` puts a Project at `products/api`. Anything
+under `.meta/` is repository tooling. **py-quality-setup** holds the contract in
+full, including why every checker must be given its target's configuration by
+name.
+
+### The `S` ruleset is on in one target and not the other
+
+- **A Project workspace** selects `S` (bandit's rules) in its `pyproject.toml`
+  (solorepo's DR-096), so `uv run gate ruff` already runs this skill's primary
+  scanner on every gate run. Its one `per-file-ignores` entry —
+  `"**/tests/**" = ["S101"]  # reason: assert is the point of a test` — carries
+  its reason on the line, which is what `uv run gate lints` requires.
+- **`.meta/`** does not select `S` in `.meta/ruff.toml`. That is deliberate:
+  `.meta/` is a directory of command-line programs that invoke subprocesses on
+  purpose, and evaluating it against `S` under DR-177 produced false alarms on
+  exactly those calls. Scanning `.meta/` for security findings is still worth
+  doing; it is a read, and the findings are judged rather than suppressed.
+
+**Never answer a finding by adding to `ignore`.** In both targets the `ignore`
+list is empty and stays empty: A2 says a suppression names its rule and its
+reason at the site, and `uv run gate lints` fails on an entry in configuration.
+The site-local form is `# noqa: S603  # reason: fixed argv, no shell, no input`,
+which is how `.meta/` and the seed each carry the subprocess calls they mean.
+
+Scanning, per target:
+
+```bash
+# Repository tooling — an advisory read; S is not in its gate ruleset
+uvx ruff@0.14.0 check --config .meta/ruff.toml --select S .meta/
+uvx bandit -r .meta/ -ll
+
+# A Project workspace, from the Project's own directory
+uv run ruff check . --select S
+uv run gate ruff
+```
+
 ## Objectives
 
 1. Detect security vulnerabilities using automated scanners
@@ -19,7 +70,9 @@ Find and fix security vulnerabilities in Python code following Engineering Chart
 
 ## Required Tools
 
-**Add to `[dependency-groups]` dev**: `"bandit"`, `"ruff"`
+**In a Project workspace**, `ruff` is already in the dev group and already
+selects `S`; add `"bandit"` only if its report format is wanted.
+**In `.meta/`** there is no manifest; reach both through `uvx`.
 
 - **bandit**: AST-based security scanner
 - **ruff --select S**: Built-in Bandit rules (faster alternative)
@@ -182,7 +235,12 @@ with open(filename) as f:
 
 ## Git Hooks Integration
 
-Add secret detection to git hooks (complement to py-git-hooks):
+**Not where `core.hooksPath` is set** — solorepo sets it to `.meta/hooks`, so
+`.git/hooks/` is dead and `.meta/hooks/` is tracked and inherited by every
+portfolio. See py-git-hooks' Target contexts section. Secret detection there
+belongs in the gate, or in the Stop hook lint gate, not in a committed hook.
+
+Elsewhere, add secret detection to git hooks (complement to py-git-hooks):
 
 ```bash
 # In .git/hooks/pre-commit, add before other checks:
@@ -201,13 +259,14 @@ fi
 
 ## Verification Checklist
 
-- [ ] `ruff check . --select S` reports no security issues
+- [ ] `ruff check . --select S` reports no security issues, under the target's own config
 - [ ] `bandit -r . -ll` reports no medium/high severity issues
 - [ ] No hardcoded secrets in codebase (grep for password, secret, api_key, token)
 - [ ] Secrets loaded from environment variables or .env file
 - [ ] .env file is in .gitignore
 - [ ] All SQL queries use parametrized queries
-- [ ] All tests pass after security fixes
+- [ ] No finding was answered by an entry in `ignore`: every suppression is `# noqa: RULE  # reason: ...` at the site
+- [ ] The target's gate is green — `just gate meta`, or `uv run gate` from the Project's directory
 
 ## Examples
 

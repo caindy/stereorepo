@@ -8,6 +8,47 @@ status: stable
 
 Comprehensive refactoring workflow coordinating specialized skills to improve Python code quality.
 
+## Target contexts
+
+A solorepo portfolio holds two kinds of Python target, and this skill behaves
+differently in each.
+
+- **Repository tooling — `.meta/`.** Inherited by every portfolio through
+  Specialization. Configured by `.meta/ruff.toml` and `.meta/mypy.ini`, run
+  through `python3` and `uvx`, held by `just gate meta`. It has no
+  `pyproject.toml`, no `[dependency-groups]`, and no `tests/`.
+- **A Project workspace** — the directory of any Project that
+  `assertions/structure.yaml` declares with a `gate:` of its own, such as
+  `bootstraps/python/seed`. It owns its `pyproject.toml` and its dependency
+  groups, and is held by `uv run gate` run from its own directory.
+
+Which one you are in is settled by `assertions/structure.yaml`, not by the path:
+`just bootstrap python products/api` puts a Project at `products/api`. Anything
+under `.meta/` is repository tooling. **py-quality-setup** holds the contract in
+full, including why every checker must be given its target's configuration by
+name.
+
+### Settle the target before Phase 1, and route every phase through it
+
+This skill invokes the others, so it carries their hazards at once. Identify the
+target first; each skill it dispatches to states its own prohibition, and
+**py-quality-setup** holds the contract in full.
+
+| Phase | In `.meta/` | In a Project workspace |
+|---|---|---|
+| Setup | nothing to set up: configuration is inherited, and no `pyproject.toml` is created | `uv sync`; the seed's manifest already carries the configuration |
+| Analysis | `uvx` each tool, ruff with `--config .meta/ruff.toml` | `uv run`, from the Project's directory |
+| Test quality | probes under `.meta/checks/probes/`; no `pytest`, no `mutmut`, no coverage figure | `uv run gate test` and `uv run gate mutants` |
+| Code health | never delete a `# noqa: F401  # reason: ...` import or an `@check` function | the ordinary rules |
+| Modernization | ruff `UP` under the pinned config; never `pyupgrade` | as written |
+| Automation | never `pre-commit install`: `core.hooksPath` is set | as written |
+| Validation | `just gate meta` | `uv run gate` |
+
+Phase 2 writes scanner output to `reports/`. Write it outside the repository
+instead — the scratch directory the harness gives the session. `reports/` is in
+no `.gitignore` here, so it lands in `git status` and goes into the commit behind
+the next `git add -A`; a run that analyses the tree should not also add to it.
+
 ## Overview
 
 This skill orchestrates multiple focused skills to perform systematic refactoring:
@@ -36,13 +77,17 @@ Follow this impact-based prioritization:
 ### Phase 1: Setup (if needed)
 
 ```
+0. Settle the target (see Target contexts above). In .meta/ steps 1 to 3 are
+   skipped entirely: the configuration is inherited, there is no manifest to add
+   to, and the analysis tools are reached through uvx.
+
 1. If quality tools not configured (pyproject.toml):
    → Invoke: py-quality-setup
    (also configures .claude/settings.local.json permissions for all tools)
 
-2. Add analysis tools to [dependency-groups] dev in pyproject.toml:
+2. Add analysis tools to [dependency-groups] dev in the Project's pyproject.toml:
    "radon", "vulture", "pylint", "bandit", "lizard",
-   "pytest-cov", "mutmut", "wily", "ruff", "mypy", "basedpyright"
+   "pytest-cov", "mutmut", "wily", "ruff", "mypy"
 
 3. Install and activate:
    uv sync && source .venv/bin/activate
@@ -127,23 +172,45 @@ If project uses old patterns or pip:
 ### Phase 4: Automation
 
 ```
-Set up git hooks to prevent regressions:
-→ Invoke: py-git-hooks
-   - Pre-commit hooks run ruff, mypy, basedpyright
-   - Optionally add security checks (bandit)
-   - Test hook works correctly
+Set up enforcement to prevent regressions:
+→ Invoke: py-git-hooks, and read its Target contexts section first
+
+   Where core.hooksPath is set — solorepo sets it to .meta/hooks — there are no
+   pre-commit hooks to install, and the enforcement point is the gate:
+   `just gate meta`, and `uv run gate` in each Project. What does apply in both
+   targets is the Stop hook lint gate, which routes ruff and mypy by target.
 ```
 
 ### Phase 5: Final Validation
 
+The gate is the validation suite. A bare `ruff check .` or `mypy .` at the
+repository root sweeps both targets under one configuration, which is right for
+neither.
+
 ```bash
-# Run complete validation suite
-ruff check .
-mypy . && basedpyright .
-ruff check . --select S
-radon cc . -n C
-vulture . --min-confidence 80
-pytest --cov=. --cov-fail-under=80
+# Repository tooling
+just gate meta
+
+# A Project workspace, from the Project's own directory
+uv run gate
+
+# Everything the assertions declare
+just gate
+```
+
+The scanners this skill adds on top of the gate — the ones no gate step reads —
+run per target:
+
+```bash
+# Repository tooling
+uvx ruff@0.14.0 check --config .meta/ruff.toml --select S .meta/
+uvx radon cc .meta/ -n C
+uvx vulture --min-confidence 80 .meta/
+
+# A Project workspace, from the Project's own directory
+uv run ruff check . --select S
+uvx radon cc . -n C
+uvx vulture --min-confidence 80 .
 
 # Track overall improvement
 wily diff HEAD~1

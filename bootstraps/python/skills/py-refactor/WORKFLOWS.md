@@ -1,6 +1,25 @@
 # Quick Workflows
 
-Targeted workflows for specific refactoring scenarios. For comprehensive refactoring, see SKILL.md.
+Targeted workflows for specific refactoring scenarios. For comprehensive
+refactoring, see SKILL.md.
+
+**Read SKILL.md's Target contexts section first.** Each workflow below is written
+for a Project workspace. In `.meta/` three of the steps change and one does not
+apply at all:
+
+- Verification is `just gate meta`, never `pytest` or `uv run gate`.
+- Coverage and mutation thresholds have nothing to measure: `.meta/` has no
+  pytest suite, and its behavioural tests are the probes under
+  `.meta/checks/probes/`. A workflow step gated on "≥80% coverage" is satisfied
+  by the probes covering the behaviour, not by a number.
+- Scanners take the target's own configuration:
+  `uvx ruff@0.14.0 check --config .meta/ruff.toml ... .meta/`.
+- **New Project Bootstrap does not apply.** A Project is instantiated by
+  `just bootstrap python <path>`, which renders the seed and wires the new
+  Project into `assertions/structure.yaml` (solorepo's DR-206). The seed it
+  renders already holds the manifest, the pinned tools and the gate. Setting one
+  up by hand from py-quality-setup and py-git-hooks produces a directory the
+  assertions do not declare, which no gate runs.
 
 ## Security-Only Sweep
 
@@ -49,9 +68,19 @@ Targeted workflows for specific refactoring scenarios. For comprehensive refacto
 
 **Use case**: Set up quality tools for new project
 
+**In a solorepo portfolio, do not follow this workflow.** Run
+`just bootstrap python <path> [name]` instead: it renders the seed, names its
+package, and wires the new Project into `assertions/structure.yaml` so the gate
+runner knows to run it (solorepo's DR-206). The manifest, the pinned tools, the
+rule set and the gate all arrive with the seed. Assembling the same thing by hand
+leaves a directory that is not a declared Project, which `just gate` will not
+run and which therefore is not held to anything.
+
+Elsewhere:
+
 ```
 1. → Invoke: py-quality-setup
-   - Configure ruff, mypy, basedpyright
+   - Configure ruff and mypy
 
 2. → Invoke: py-modernize
    - Set up uv instead of pip

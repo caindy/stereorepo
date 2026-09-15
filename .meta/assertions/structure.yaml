@@ -131,6 +131,12 @@ artifacts:
   - id: work:artifact/bootstraps-python-provenance
     name: bootstraps/python/PROVENANCE.md
     path: bootstraps/python/PROVENANCE.md
+  - id: work:artifact/bootstraps-python-skill-quality-setup
+    name: bootstraps/python/skills/py-quality-setup/SKILL.md
+    path: bootstraps/python/skills/py-quality-setup/SKILL.md
+  - id: work:artifact/bootstraps-python-lint-gate
+    name: bootstraps/python/skills/py-git-hooks/lint-gate.py
+    path: bootstraps/python/skills/py-git-hooks/lint-gate.py
   - id: work:artifact/github-workflows-gate
     name: .github/workflows/gate.yml
     path: .github/workflows/gate.yml

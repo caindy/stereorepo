@@ -8,6 +8,59 @@ status: stable
 
 Measure test coverage and verify test suite effectiveness using coverage analysis and mutation testing.
 
+## Target contexts
+
+A solorepo portfolio holds two kinds of Python target, and this skill behaves
+differently in each.
+
+- **Repository tooling — `.meta/`.** Inherited by every portfolio through
+  Specialization. Configured by `.meta/ruff.toml` and `.meta/mypy.ini`, run
+  through `python3` and `uvx`, held by `just gate meta`. It has no
+  `pyproject.toml`, no `[dependency-groups]`, and no `tests/`.
+- **A Project workspace** — the directory of any Project that
+  `assertions/structure.yaml` declares with a `gate:` of its own, such as
+  `bootstraps/python/seed`. It owns its `pyproject.toml` and its dependency
+  groups, and is held by `uv run gate` run from its own directory.
+
+Which one you are in is settled by `assertions/structure.yaml`, not by the path:
+`just bootstrap python products/api` puts a Project at `products/api`. Anything
+under `.meta/` is repository tooling. **py-quality-setup** holds the contract in
+full, including why every checker must be given its target's configuration by
+name.
+
+### `.meta/` has no pytest suite, and is not missing one
+
+Everything below — `pytest --cov`, `mutmut run`, a coverage threshold, a
+`tests/` directory — describes a Project workspace. `.meta/` has none of it, and
+that is by construction rather than neglect.
+
+Its behavioural tests are the **probes** under `.meta/checks/probes/`
+(solorepo's DR-209): one module per subject under test — the hooks, the channel,
+the loops' verbs, what the repository writes down about itself, and the tools
+beside the gate. Each loads the real programs it covers and runs them against the
+calls they exist to refuse and the states reviewers found them wrong in, and each
+registers its steps with the gate, so they run whenever the gate runs. There is
+no separate runner to invoke and no coverage number to read.
+
+| | `.meta/` | A Project workspace |
+|---|---|---|
+| Behavioural tests | probes under `.meta/checks/probes/` | `tests/` beside each package |
+| Run them by | `just gate meta` | `uv run gate test`, from the Project's directory |
+| Mutation testing | none | `uv run gate mutants` |
+| Coverage | not measured | `pytest --cov`, as below |
+
+So in `.meta/`: add a probe to the module for its subject, and run
+`just gate meta`. Do not create a `tests/` directory, do not add `pytest` or
+`mutmut` — there is no manifest to add them to — and do not report a coverage
+figure, which would be a number about a suite that does not exist.
+
+In a Project workspace, mutation testing is reached through the gate rather than
+run bare: `uv run gate mutants` runs `mutmut` in each package under `packages/`
+and reads `mutmut results`, because the run's exit code says nothing about
+survivors. **Every mutant must be killed** — that gate step has no threshold and
+no survivor budget, so the ≥75% mutation score discussed below is upstream's
+target and not this standard's.
+
 ## Objectives
 
 1. Measure code coverage comprehensively
@@ -18,7 +71,11 @@ Measure test coverage and verify test suite effectiveness using coverage analysi
 
 ## Required Tools
 
-**Add to `[dependency-groups]` dev**: `"pytest"`, `"pytest-cov"`, `"mutmut"`, `"coverage"`
+**In a Project workspace**, add to `[dependency-groups]` dev: `"pytest"`,
+`"pytest-cov"`, `"mutmut"`, `"coverage"`. The seed already carries `pytest` and
+`mutmut`, with the gate's tools pinned exactly and the test tools floating
+(solorepo's DR-097).
+**In `.meta/`**, add nothing — none of these apply there. See Target contexts above.
 **Optional**: `"cosmic-ray"` (advanced mutation testing)
 
 - **pytest-cov**: Code coverage measurement
@@ -248,12 +305,20 @@ Add coverage enforcement to CI:
 
 ## Verification Checklist
 
+**Repository tooling (`.meta/`)**
+
+- [ ] The behaviour is covered by a probe in the `.meta/checks/probes/` module for its subject
+- [ ] No `tests/` directory, `pytest` dependency or coverage figure was introduced
+- [ ] `just gate meta` is green, and the new probe appears as a step in its report
+
+**A Project workspace**
+
 - [ ] `pytest --cov=. --cov-fail-under=80` passes
 - [ ] Coverage report reviewed (`htmlcov/index.html`)
 - [ ] Critical paths have test coverage
-- [ ] Mutation testing run on critical modules (`mutmut run`)
-- [ ] Mutation score ≥75% for critical code
+- [ ] `uv run gate mutants` passes: every mutant killed, not merely a score above a threshold
 - [ ] Coverage configuration in pyproject.toml
+- [ ] `uv run gate` is green from the Project's directory
 
 ## Examples
 

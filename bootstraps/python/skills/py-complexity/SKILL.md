@@ -8,6 +8,51 @@ status: stable
 
 Reduce code complexity to improve maintainability and understandability.
 
+## Target contexts
+
+A solorepo portfolio holds two kinds of Python target, and this skill behaves
+differently in each.
+
+- **Repository tooling — `.meta/`.** Inherited by every portfolio through
+  Specialization. Configured by `.meta/ruff.toml` and `.meta/mypy.ini`, run
+  through `python3` and `uvx`, held by `just gate meta`. It has no
+  `pyproject.toml`, no `[dependency-groups]`, and no `tests/`.
+- **A Project workspace** — the directory of any Project that
+  `assertions/structure.yaml` declares with a `gate:` of its own, such as
+  `bootstraps/python/seed`. It owns its `pyproject.toml` and its dependency
+  groups, and is held by `uv run gate` run from its own directory.
+
+Which one you are in is settled by `assertions/structure.yaml`, not by the path:
+`just bootstrap python products/api` puts a Project at `products/api`. Anything
+under `.meta/` is repository tooling. **py-quality-setup** holds the contract in
+full, including why every checker must be given its target's configuration by
+name.
+
+### What actually holds complexity in each target
+
+The measurement tools below are advisory in both targets: `radon`, `lizard`,
+`xenon` and `wily` are reached through `uvx`, no gate step reads any of them, and
+no threshold they report blocks a merge here.
+
+What does hold is ruff's `C90`:
+
+- **A Project workspace** selects `C90` with `max-complexity = 12` in its
+  `pyproject.toml` (solorepo's DR-096), and `uv run gate ruff` enforces it.
+- **`.meta/`** does not select `C90` in `.meta/ruff.toml`, so complexity there is
+  unmeasured by the gate. Reducing it is still worth doing; claiming a gate holds
+  it is not. Raising `.meta/`'s rule set is an edit to `.meta/ruff.toml` reviewed
+  like any other, not something this skill does in passing.
+
+Two prohibitions carry over from the other skills, because extraction touches
+what they protect. **Never remove an import carrying
+`# noqa: F401  # reason: ...`** while reorganizing a module, and **never rename
+or remove an `@check`-decorated function** in `.meta/`: the registry calls it,
+and nothing else does (see py-code-health). Verify with `just gate meta` and read
+the step count, not only the colour.
+
+Objective 6 below — enforce thresholds in CI — has no counterpart here. The gate
+is the CI, and it holds what `.meta/ruff.toml` and the Project's manifest select.
+
 Effective use of context windows.
 
 ## Objectives
@@ -21,7 +66,10 @@ Effective use of context windows.
 
 ## Required Tools
 
-**Add to `[dependency-groups]` dev**: `"radon"`, `"lizard"`, `"xenon"`, `"wily"`
+**In a Project workspace**, add to `[dependency-groups]` dev: `"radon"`,
+`"lizard"`, `"xenon"`, `"wily"` — or reach them through `uvx` and add nothing,
+since no gate step reads them.
+**In `.meta/`** there is no manifest; `uvx` is the only route.
 
 - **radon**: Cyclomatic complexity & maintainability index
 - **lizard**: Cognitive complexity (better for readability)
@@ -204,8 +252,18 @@ cache_mode: CacheModeOptional
 - [ ] `radon mi . -n B` reports no modules with maintainability index <65
 - [ ] No code files >500 lines (unless unavoidable)
 - [ ] `wily build .` initialized for tracking
-- [ ] All tests pass after refactoring
-- [ ] Code coverage maintained or improved
+
+**Repository tooling (`.meta/`)**
+
+- [ ] Every `# noqa: F401  # reason: ...` import and `@check` function survived the extraction
+- [ ] `just gate meta` is green **and reports the same number of steps as before**
+- [ ] No complexity threshold was claimed to be gate-enforced: `.meta/ruff.toml` does not select `C90`
+
+**A Project workspace**
+
+- [ ] `uv run gate ruff` passes, `C90` included, at `max-complexity = 12`
+- [ ] `uv run gate` is green from the Project's directory: `test` and `mutants` included
+- [ ] Coverage maintained or improved
 
 ## Examples
 

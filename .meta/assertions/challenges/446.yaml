@@ -1,0 +1,20 @@
+challenges:
+  - id: work:challenge/446
+    name: "Adapt the vendored py-* refactoring skills to solorepo's repository tooling contracts"
+    challenge_type: DEFECT
+    description: >-
+      The eight `py-*` refactoring skills, declared as Capabilities and compiled
+      into the `solorepo-python` APM package by solorepo's DR-208 and recorded by
+      `bootstraps/python/PROVENANCE.md` as byte-identical to
+      `l-mb/python-refactoring-skills`, assume a standalone
+      Python application package: a root `pyproject.toml` managing
+      `[dependency-groups]`, a `tests/` directory run by `pytest`, and
+      `.git/hooks/` under the repository's own control. A portfolio holds two
+      kinds of Python target instead — inherited tooling under `.meta/`,
+      configured by `.meta/ruff.toml` and `.meta/mypy.ini` and gated by
+      `just gate meta` (solorepo's DR-177, solorepo's DR-210), and Project
+      workspaces gated by `uv run gate` — and the skills name neither. An agent
+      following one against `.meta/` creates a root manifest that does not belong
+      there, runs checkers past the configuration and baseline that govern the
+      target, and takes `pre-commit install`'s refusal hint to unset
+      `core.hooksPath`, detaching the hook architecture every portfolio inherits.

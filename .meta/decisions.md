@@ -221,6 +221,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-208](assertions/decisions/DR-208.yaml) | Python Bootstrap declares its sixteen capabilities and compiles them into an APM package | Adopted |
 | [DR-209](assertions/decisions/DR-209.yaml) | The probes are a package under `.meta/checks/probes/`, one module per subject under test, with the harness in a module of its own | Adopted |
 | [DR-210](assertions/decisions/DR-210.yaml) | Strict type checking over .meta/, ratcheted per file against a two-sided baseline | Adopted |
+| [DR-212](assertions/decisions/DR-212.yaml) | Vendored skills carrying a solorepo guard are adapted in place and become locally owned | Adopted |
 
 ## Holes
 
@@ -258,7 +259,7 @@ and the query a reader in a file actually has.
 | [`.meta/actions/verdicts/action.yml`](actions/verdicts/action.yml) | [DR-122](assertions/decisions/DR-122.yaml) |
 | [`.meta/agents.py`](agents.py) | [DR-191](assertions/decisions/DR-191.yaml) |
 | [`.meta/apm.yml`](apm.yml) | [DR-206](assertions/decisions/DR-206.yaml) |
-| [`.meta/apm_compile.py`](apm_compile.py) | [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml) |
+| [`.meta/apm_compile.py`](apm_compile.py) | [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-212](assertions/decisions/DR-212.yaml) |
 | [`.meta/arc/Dockerfile`](arc/Dockerfile) | [DR-156](assertions/decisions/DR-156.yaml), [DR-160](assertions/decisions/DR-160.yaml) |
 | [`.meta/arc/README.md`](arc/README.md) | [DR-137](assertions/decisions/DR-137.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-156](assertions/decisions/DR-156.yaml), [DR-160](assertions/decisions/DR-160.yaml) |
 | [`.meta/arc/cluster`](arc/cluster) | [DR-137](assertions/decisions/DR-137.yaml), [DR-179](assertions/decisions/DR-179.yaml) |
@@ -329,7 +330,7 @@ and the query a reader in a file actually has.
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-128](assertions/decisions/DR-128.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-198](assertions/decisions/DR-198.yaml), [DR-207](assertions/decisions/DR-207.yaml) |
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml) |
 | [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-160](assertions/decisions/DR-160.yaml), [DR-161](assertions/decisions/DR-161.yaml), [DR-165](assertions/decisions/DR-165.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-181](assertions/decisions/DR-181.yaml), [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-204](assertions/decisions/DR-204.yaml) |
-| [`bootstraps/python/PROVENANCE.md`](../bootstraps/python/PROVENANCE.md) | [DR-208](assertions/decisions/DR-208.yaml) |
+| [`bootstraps/python/PROVENANCE.md`](../bootstraps/python/PROVENANCE.md) | [DR-208](assertions/decisions/DR-208.yaml), [DR-212](assertions/decisions/DR-212.yaml) |
 | [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml), [DR-101](assertions/decisions/DR-101.yaml), [DR-193](assertions/decisions/DR-193.yaml), [DR-208](assertions/decisions/DR-208.yaml) |
 | [`bootstraps/python/apm.yml`](../bootstraps/python/apm.yml) | [DR-208](assertions/decisions/DR-208.yaml) |
 | [`bootstraps/python/assertions/capabilities.yaml`](../bootstraps/python/assertions/capabilities.yaml) | [DR-208](assertions/decisions/DR-208.yaml) |
@@ -337,6 +338,8 @@ and the query a reader in a file actually has.
 | [`bootstraps/python/render`](../bootstraps/python/render) | [DR-094](assertions/decisions/DR-094.yaml) |
 | [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml), [DR-193](assertions/decisions/DR-193.yaml) |
 | [`bootstraps/python/seed/pyproject.toml`](../bootstraps/python/seed/pyproject.toml) | [DR-095](assertions/decisions/DR-095.yaml), [DR-096](assertions/decisions/DR-096.yaml), [DR-097](assertions/decisions/DR-097.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
+| [`bootstraps/python/skills/py-git-hooks/lint-gate.py`](../bootstraps/python/skills/py-git-hooks/lint-gate.py) | [DR-212](assertions/decisions/DR-212.yaml) |
+| [`bootstraps/python/skills/py-quality-setup/SKILL.md`](../bootstraps/python/skills/py-quality-setup/SKILL.md) | [DR-212](assertions/decisions/DR-212.yaml) |
 | [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/rust/literate-programming.md`](../bootstraps/rust/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-176](assertions/decisions/DR-176.yaml) |
 | [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
