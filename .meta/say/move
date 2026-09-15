@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import time
+from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
@@ -838,7 +839,7 @@ def dispatch_pass(pr, task):
           "`gh run list --workflow coder.yml` names it once it exists.")
 
 
-def advance(pr=None, held=False):
+def advance(pr: int | str | None = None, held: bool = False) -> None:
     """Rebase armed or approved pull requests onto their base branch and dispatch coder tasks.
 
     Rebases armed or approved pull requests that are behind their base branch,
@@ -1431,6 +1432,11 @@ def check_threads(pull, owner, name):
     return True, "0 unresolved conversations"
 
 
+# The reason a branch that has fallen behind its base is given. Named rather
+# than spelled twice, because `advance_stranded` decides on the exact string.
+BEHIND_BASE = "branch is behind base"
+
+
 def check_mergeable_clean(pull):
     """Whether branch is mergeable and not behind or dirty."""
     mergeable = pull.get("mergeable")
@@ -1438,7 +1444,7 @@ def check_mergeable_clean(pull):
     if mergeable == "CONFLICTING":
         return False, "branch conflicts with base"
     if status == "BEHIND":
-        return False, "branch is behind base"
+        return False, BEHIND_BASE
     if status == "DIRTY":
         return False, "branch has dirty merge state"
     if mergeable not in (None, "MERGEABLE"):
@@ -1471,10 +1477,87 @@ def evaluate_pr(pull, reviewer_login, owner, name):
     return True, ["eligible"]
 
 
-def merge_manager(dry_run=False):
+def advance_stranded(pulls: list[dict[str, Any]],
+                     evaluations: dict[int, tuple[bool, list[str]]],
+                     owner: str, name: str,
+                     dry_run: bool = False) -> None:
+    """Rebase the approved pull requests that nothing but a stale branch holds back.
+
+    Read when no open pull request is eligible, and on no event `advance.yml`
+    already answers. A pull request whose only failing semaphore is
+    `BEHIND_BASE` is approved and green, and with its conversations resolved it
+    is one rebase from landing — and until this the rebase had a single trigger,
+    `advance.yml` on a push to `main` (solorepo's DR-113). A pull request
+    approved *after* the push that put it behind is reached by no event at all,
+    so with nothing else eligible to move trunk the repository sat idle holding
+    work that was approved and green (solorepo's #452, stranded behind
+    solorepo's #447). `merge.yml` reaches this on its schedule and on a gate or
+    review completion, so the rebase no longer waits on an unrelated merge
+    (solorepo's DR-161).
+
+    Two filters decide a candidate, and they have different owners. The
+    readiness one is this function's. A reason list of exactly `[BEHIND_BASE]`
+    is what keeps out a pull request that is behind *and* red, since a second
+    failure puts a second reason in the list and `advance`'s own filter reads
+    no check run. The conversations are read here too: `evaluate_pr` consults
+    them only while nothing else has failed, so `BEHIND_BASE` arrives with the
+    threads unread, and `MERGE_MANAGER_FIELDS` does not ask `pr list` for them.
+    Rebasing on an unresolved conversation outdates the anchored comment PR
+    First's seventh step parks work on, and a pull request holding one cannot
+    merge until it is resolved anyway.
+
+    The branch-safety refusals are `advance`'s, because this calls that verb by
+    number rather than repeating its filter: a branch that is the base of
+    another open pull request is refused (solorepo's DR-133), and one that is
+    neither armed nor approved is refused. A branch that conflicts never
+    reaches here, since `check_mergeable_clean` gives a conflict its own reason
+    and this reads for the one. A refusal is printed rather than exited on:
+    `merge.yml` runs on a fifteen-minute schedule, and a stack base that stays
+    behind would otherwise paint the workflow red on the clock over a state
+    only the solo settles.
+
+    Parameters:
+        pulls (list): The open pull requests `merge_manager` evaluated.
+        evaluations (dict): Pull request number to the `(eligible, reasons)`
+            pair `evaluate_pr` answered with.
+        owner (str): The repository's owner, for the conversations query.
+        name (str): The repository's name, for the conversations query.
+        dry_run (bool): If True, name what would be rebased and rebase nothing.
+    """
+    for pull in pulls:
+        if evaluations[pull["number"]][1] != [BEHIND_BASE]:
+            continue
+        number = str(pull["number"])
+        threads_ok, threads_msg = check_threads(pull, owner, name)
+        if not threads_ok:
+            print(f"merge-manager: not advancing #{number} — {threads_msg}")
+            continue
+        if dry_run:
+            print(f"merge-manager: dry run — not advancing #{number} — {pull.get('title', '')[:50]}")
+            continue
+        try:
+            advance(number)
+        except SystemExit as exc:
+            print(f"merge-manager: could not advance #{number} — {exc.code}")
+
+
+def merge_manager(dry_run=False, stranded=True):
     """Evaluate open pull requests against semaphores, rank eligible candidates
     by leverage, assert choices and deferrals out loud, and squash-merge the top
     candidate (solorepo's DR-161).
+
+    Idle with nothing eligible, it hands the open pull requests to
+    `advance_stranded`, so an approved one that has merely fallen behind trunk
+    is rebased here rather than waiting for a push to `main` that may never come.
+
+    Parameters:
+        dry_run (bool): If True, name the winner and merge nothing.
+        stranded (bool): If False, leave a stranded pull request alone. The
+            caller passes False on the one event `advance.yml` also runs on, a
+            push to `main`: the two workflows are in different concurrency
+            groups, so nothing holds them apart, and `update-branch` returns
+            before GitHub has performed the rebase, so both would issue one for
+            the same branch.
     """
     try:
         repo = channel.repo()
@@ -1503,6 +1586,8 @@ def merge_manager(dry_run=False):
             num = pull["number"]
             _, reasons = evaluations[num]
             print(f"  #{num} ({pull.get('title', '')[:50]}): {'; '.join(reasons)}")
+        if stranded:
+            advance_stranded(pulls, evaluations, owner, name, dry_run)
         return
 
     try:
@@ -1587,6 +1672,9 @@ def build_parser():
     p.add_argument("--auto", action="store_true", help="arm GitHub to merge when green")
     p = sub.add_parser("merge-manager")
     p.add_argument("--dry-run", action="store_true", help="evaluate eligibility and leverage order without merging")
+    p.add_argument("--no-advance", action="store_true",
+                   help="leave a pull request stranded behind trunk to `advance.yml`, which a "
+                        "push to `main` runs alongside this")
     p = sub.add_parser("advance")
     p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
     p = sub.add_parser("dispatch"); p.add_argument("pr")
@@ -1621,7 +1709,7 @@ def main():
     elif args.verb == "merge":
         merge(args.pr, stack=args.stack, auto=args.auto)
     elif args.verb == "merge-manager":
-        merge_manager(dry_run=args.dry_run)
+        merge_manager(dry_run=args.dry_run, stranded=not args.no_advance)
     elif args.verb == "advance":
         advance(args.pr)
     elif args.verb == "dispatch":

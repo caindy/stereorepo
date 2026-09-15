@@ -79,10 +79,22 @@ jobs:
         env:
           CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
 
+      # `--no-advance` on a push to `main`, because that push is `advance.yml`'s
+      # own and only trigger, and it sweeps the same branches by the same test.
+      # The two workflows are in different concurrency groups, which hold runs
+      # of each apart and not a run of one from a run of the other, so both are
+      # in flight seconds after the push. `pr update-branch --rebase` returns
+      # when GitHub has taken the rebase and not when it has done it — the
+      # reason `settled` polls at all — so inside that window both callers read
+      # a branch still behind and both issue one. The stranded sweep is wanted
+      # where `advance.yml`'s trigger is absent: the schedule, and the gate and
+      # review completions.
       - name: run merge manager
         run: |
+          stranded=""
+          if [ "${{ github.event_name }}" = "push" ]; then stranded="--no-advance"; fi
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            .meta/say/move merge-manager --dry-run
+            .meta/say/move merge-manager --dry-run $stranded
           else
-            .meta/say/move merge-manager
+            .meta/say/move merge-manager $stranded
           fi

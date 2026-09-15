@@ -189,3 +189,36 @@ GitHub's year-one placeholder, then `createdAt`, and `check_green` and
 `check_pr.green` read the deduplicated list.
 
 Receipt: `.meta/checks/probes/loops.py::merge_manager_probes`
+
+### Approved pull request left stranded behind trunk with nothing to move it
+
+`advance.yml` triggers on a push to `main` and on nothing else
+(solorepo's DR-113), so a pull request that goes behind trunk while it is in
+review is skipped by that run and reached by no later one: the approval it
+receives afterwards is not a push. The merge manager then read
+`mergeStateStatus: BEHIND`, called the pull request ineligible and went idle,
+and with no other candidate to move trunk nothing pushed — approved and green
+work sat stranded until it was rebased by hand (solorepo's #452, behind
+solorepo's #447). Established: `merge_manager`, idle with nothing eligible,
+hands the open pull requests to `advance_stranded`, which calls `advance <n>`
+on each whose only failing semaphore is `BEHIND_BASE`. The branch-safety
+refusals stay `advance`'s own — the exclusion of a branch that is the base of
+another open pull request is solorepo's DR-133's, and the refusal of one
+nothing has asked to land is the verb's — while the readiness filter is
+`advance_stranded`'s: a reason list of exactly `[BEHIND_BASE]` is what keeps
+out a pull request that is behind *and* red, since `advance` reads no check
+run, and the conversations are read here because `evaluate_pr` consults them
+only while nothing else has failed. A refusal is printed rather than exited on,
+and `--dry-run` rebases nothing.
+
+Not on a push to `main`. `advance.yml` runs on that push and on nothing else,
+and it sweeps the same branches by the same test under a concurrency group
+`merge.yml` does not share, so both were in flight seconds after the push;
+`pr update-branch --rebase` returns when GitHub has taken the rebase and not
+when it has done it, so inside that window both read a branch still behind and
+both issued one — a second gate restart on a branch already current, or a
+refusal that paints `advance.yml` red on an ordinary push. `merge.yml` passes
+`--no-advance` there, and the stranded sweep keeps the events `advance.yml`
+does not see: the schedule, and the gate and review completions.
+
+Receipt: `.meta/checks/probes/loops.py::merge_manager_advance_probes`
