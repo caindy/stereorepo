@@ -95,3 +95,59 @@ Grep tool for a search of the worktree, the Read tool for a file and a count —
 and `command_allowed()` appends it to the refusal.
 
 Receipt: `.meta/checks/probes/git.py::hook_probes`
+
+### A reader input the hook did not recognise was a permit
+
+On solorepo's #452 `targets()` answered `["."]` — the worktree — for a reader
+input naming none of the keys it knew, so `glob` carrying only `pattern` was
+allowed whatever the pattern said, `~/.gemini/oauth_creds.json` among them, the
+file the boundary exists to keep out. The same default made every future
+spelling a permit: `google-github-actions/run-gemini-cli@v0` floats, so a
+renamed or added path argument reopened the boundary with no symptom, and no
+probe could notice, every row being written in the spellings the hook already
+checked. Established: `READERS` names `pattern` and pairs each key with the tool
+that sends it, and a reader naming none of its keys is refused rather than
+resolved to the worktree — `SEARCHES` is the one exception, a search with no
+path searching the worktree the bound permits anyway.
+
+Receipt: `.meta/checks/probes/git.py::hook_probes`
+
+### A glob pattern was resolved as the path it is not
+
+`outside()` handed a pattern to `pathlib`, where every matcher metacharacter is
+an inert literal component, so on solorepo's #452 an `include` of
+`**/.git/config` passed both clauses: the literal `**` stood between the root
+and `.git`, while a matcher for which `**` spans no directory reads
+`.git/config`. Established: `outside_pattern()` bounds a pattern by the
+components before its first metacharacter — the deepest directory every match
+lies under — and refuses a component named `.git` outright.
+
+Receipt: `.meta/checks/probes/git.py::hook_probes`
+
+### A working directory was checked by the predicate written for reads
+
+The `dir_path` check reused `outside()` on solorepo's #452, so it carried two
+clauses a working directory has no business with: a command ran in a harness
+scratch directory while the refusal beside it said the reviewer runs its
+commands in the worktree and nowhere else, and a `dir_path` of `.git` was
+refused for holding a token the allowed grammar reads nothing of from there.
+Established: `elsewhere()` is the working directory's own predicate — inside the
+root, no scratch exemption, no `.git` clause.
+
+Receipt: `.meta/checks/probes/git.py::hook_probes`
+
+### A pattern beginning with a metacharacter was bounded by nothing
+
+The prefix rule stops at the first component holding a metacharacter, so on
+solorepo's #452 a pattern whose *first* component held one had an empty literal
+prefix, which `outside(".")` read as the worktree and allowed whatever followed:
+an `include` of `**/../../etc/passwd` on `read_many_files`, and a `pattern` of
+`{/etc,.}/passwd` on `glob`, one of whose alternatives is a root of its own. The
+prose said the same gap — the components before the first metacharacter are "the
+deepest directory every match lies under", which for `**/../x` is no directory at
+all. Established: what the prefix rule cannot see past is refused wherever it
+appears, as `.git` already was — a component that can match `..` (`ascends`,
+which reads the wildcard spellings `..*` and `.?` as the ascent they can match),
+and brace alternation, whose grammar this hook does not hold.
+
+Receipt: `.meta/checks/probes/git.py::hook_probes`

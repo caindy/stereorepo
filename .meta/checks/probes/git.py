@@ -13,10 +13,13 @@ One step is registered here, and the loader comes from `probes.harness`, which
 imports no sibling under `probes/`: the gate over assertions takes no import
 from a probe, and a probe takes none from another subject's (solorepo's DR-150).
 """
+import io
+import json
 import pathlib
+import sys
 
 from collect import ROOT, check
-from probes.harness import load_hook
+from probes.harness import exit_of, load_hook, stood_in
 
 VERDICTS = (
     ("signed_channel: reaching GitHub without signing", "signed_channel", (
@@ -184,6 +187,55 @@ VERDICTS = (
         ("refuse", "Bash", {"command": "wc -l README.md"}),
         ("refuse", "Bash", {"command": "grep -n x README.md"}),
     )),
+    ("worktree_only: Gemini CLI's tool names reach the same four checks as Claude Code's, "
+     "including the legacy alias the search tool still answers to (solorepo's #451)",
+     "worktree_only", (
+        ("refuse", "run_shell_command", {"command": "curl https://example.com"}),
+        ("refuse", "read_file", {"file_path": "/etc/passwd"}),
+        ("refuse", "grep_search", {"pattern": "x", "path": "/etc"}),
+        ("refuse", "search_file_content", {"pattern": "x", "path": "/etc"}),
+        ("refuse", "glob", {"pattern": "*", "path": "/etc"}),
+        ("refuse", "list_directory", {"dir_path": "/etc"}),
+        ("refuse", "read_many_files", {"include": ["**/*.md", "/etc/**"]}),
+        ("refuse", "run_shell_command", {"command": "git log -1", "dir_path": "/elsewhere"}),
+        ("allow", "run_shell_command", {"command": "git log --oneline -5"}),
+        ("allow", "run_shell_command", {"command": "git log -1", "dir_path": ".meta"}),
+        ("allow", "read_file", {"file_path": f"{ROOT}/README.md"}),
+        ("allow", "grep_search", {"pattern": "x", "include": "*.md"}),
+        ("allow", "glob", {"pattern": "*.md"}),
+        ("allow", "list_directory", {"dir_path": ".meta"}),
+        ("allow", "read_many_files", {"include": [".meta/**/*.py"]}),
+    )),
+    ("worktree_only: a glob pattern is bounded by the literal path its matches lie under, refused "
+     "where it can leave that bound by ascent or alternation, and a reader naming no key of "
+     "`READERS` is refused rather than read as the worktree (solorepo's #452)",
+     "worktree_only", (
+        ("refuse", "glob", {"pattern": "/etc/**"}),
+        ("refuse", "glob", {"pattern": "../../**/*.pem"}),
+        ("refuse", "glob", {"pattern": str(pathlib.Path.home() / ".gemini/oauth_creds.json")}),
+        ("refuse", "read_many_files", {"include": ["**/.git/config"]}),
+        ("refuse", "read_many_files", {"include": ["**/../../etc/passwd"]}),
+        ("refuse", "glob", {"pattern": "*/..*/id_rsa"}),
+        ("refuse", "glob", {"pattern": "{/etc,.}/passwd"}),
+        ("refuse", "Glob", {"globPattern": "*.md"}),
+        ("refuse", "read_file", {"absolute_path": "/etc/passwd"}),
+        ("allow", "glob", {"pattern": ".meta/**/*.py"}),
+        ("allow", "Grep", {"pattern": "def blocked"}),
+    )),
+    ("worktree_only: a working directory is not a read, so the exemptions a read carries are not "
+     "the shell tool's (solorepo's #452)",
+     "worktree_only", (
+        ("refuse", "run_shell_command",
+         {"command": "git log -1", "dir_path": str(pathlib.Path.home() / ".claude/projects/ab12")}),
+        ("allow", "run_shell_command", {"command": "git log -1", "dir_path": ".git"}),
+    )),
+    ("worktree_only: Gemini CLI's scratch is readable where Claude Code's is, and the "
+     "configuration directory holding its credentials is not (solorepo's #99, solorepo's #451)",
+     "worktree_only", (
+        ("allow", "read_file", {"file_path": str(pathlib.Path.home() / ".gemini/tmp/ab12/shell_history")}),
+        ("refuse", "read_file", {"file_path": str(pathlib.Path.home() / ".gemini/settings.json")}),
+        ("refuse", "read_file", {"file_path": str(pathlib.Path.home() / ".gemini/oauth_creds.json")}),
+    )),
 )
 """Each call with the verdict its hook owes it, grouped under the name of what the group probes.
 
@@ -196,6 +248,33 @@ would catch (solorepo's #98); `gh run list`, the read a dispatcher makes a
 moment later, and `gh workflow view` beside `gh workflow run`. What is
 sanctioned is the channel's directory, so a program beside `post` is sanctioned
 by where it lives and the old one-file name is not (solorepo's DR-117).
+
+A tool name is a harness's spelling of one of the four checks, so Gemini CLI's
+names sit beside Claude Code's on the same boundaries: a read past the worktree,
+a command off the grammar, the scratch directory that is readable and the
+configuration directory beside it that is not (solorepo's #99). `read_many_files`
+is probed because under Claude Code every file read is `Read` and under Gemini
+CLI the bulk read is a second tool, and it is the list-valued one: one pattern
+inside the worktree and one outside is refused on the second. `dir_path` is the
+shell tool's working directory, which Claude Code's `Bash` has no argument for:
+an allowed command run outside the worktree reads what `git -C` is refused for
+pointing at, so it sits beside the same command run under `.meta`. It is not a
+read, so the two exemptions a read carries are probed as not being its: a
+harness scratch directory is where artifacts go and not where commands run, and
+`.git` is a working directory the allowed grammar reads nothing from that the
+root does not hold.
+
+A pattern is not the path it reads (solorepo's #452). `pathlib` takes a matcher
+metacharacter for an inert component, so the group probing patterns holds the
+two halves that costs: a pattern reaching past the worktree — absolute,
+ascending, or under a harness configuration directory — is refused on the
+literal path its matches lie under, and `**/.git/config` is refused on the
+component rather than on a resolution in which the literal `**` stands between
+the root and `.git`. Beside them sit the shapes a reviewer types, `.meta/**/*.py`
+and a search naming no path, which mean the worktree and stay allowed. The two
+refusals of a key spelled otherwise are the structural row: `run-gemini-cli@v0`
+floats, so a renamed or added argument is a spelling this hook does not know,
+and it refuses rather than resolving to the worktree.
 
 `signed_channel.blocked()` answers on the channel's prefix before it reads a
 verb, so one channel call stands for every spelling of a verb, and a row per
@@ -291,6 +370,34 @@ itself pass `command_allowed`, or the refusal sends the reviewer to a second
 refusal.
 """
 
+EVENTS = (
+    ("both harnesses' before-tool payloads are read as one, and refused with the exit code each "
+     "reads as a block (solorepo's #451)", (
+        ("refuse", {"session_id": "s", "transcript_path": "/tmp/session.json", "cwd": str(ROOT),
+                    "hook_event_name": "PreToolUse",
+                    "tool_name": "Read", "tool_input": {"file_path": "/etc/passwd"}}),
+        ("refuse", {"session_id": "s", "transcript_path": "/tmp/session.json", "cwd": str(ROOT),
+                    "hook_event_name": "BeforeTool", "timestamp": "2026-09-15T00:00:00Z",
+                    "tool_name": "read_file", "tool_input": {"file_path": "/etc/passwd"}}),
+        ("allow", {"session_id": "s", "transcript_path": "/tmp/session.json", "cwd": str(ROOT),
+                   "hook_event_name": "BeforeTool", "timestamp": "2026-09-15T00:00:00Z",
+                   "tool_name": "run_shell_command", "tool_input": {"command": "git status --porcelain"}}),
+        ("allow", {"session_id": "s", "transcript_path": "/tmp/session.json", "cwd": str(ROOT),
+                   "hook_event_name": "BeforeTool", "timestamp": "2026-09-15T00:00:00Z",
+                   "tool_name": "write_todos", "tool_input": {"todos": []}}),
+    )),
+)
+"""Each before-tool event with the verdict the hook's entry point owes it (solorepo's #451).
+
+A group is `(name, rows)` and a row is `(want, event)`: the event as a harness
+writes it to the hook's stdin, whole rather than as `blocked()`'s two arguments.
+Claude Code's `PreToolUse` and Gemini CLI's `BeforeTool` carry the same
+`tool_name` and `tool_input` beside different envelopes, and both read exit code
+2 as a block with stderr as the reason, so the rows stand for the claim that one
+reader serves both. A tool neither harness's matcher should send here is allowed
+rather than refused: the hook answers on the tools it knows and does not guess.
+"""
+
 INSTEAD = (
     ("python3 .meta/check.py", "gh pr checks"),
     ("grep -n x README.md", "Grep"),
@@ -331,6 +438,24 @@ def _offers(worktree):
     return problems
 
 
+def _events(worktree):
+    """The rows of `EVENTS` whose payload the hook's entry point did not exit as the row says.
+
+    `main()` returns the code rather than exiting with it, so the call is wrapped
+    in the `sys.exit` the program's last line performs, which is what `exit_of`
+    reads.
+    """
+    problems = []
+    for group, rows in EVENTS:
+        for want, event in rows:
+            with stood_in(sys, stdin=io.StringIO(json.dumps(event))):
+                code = exit_of(lambda: sys.exit(worktree.main()))
+            if code != ("2" if want == "refuse" else "0"):
+                problems.append(f"{group}: a {event['hook_event_name']} for {event['tool_name']} "
+                                f"should {want} and exited {code}")
+    return problems
+
+
 def _instead(worktree):
     """The rows of `INSTEAD` whose refusal does not name the tool the row says."""
     return [f"the refusal for {command!r} should name {name} as what to use instead"
@@ -342,10 +467,12 @@ def _instead(worktree):
 def hook_probes():
     """Both hooks' predicates against the calls they exist to refuse and the calls they must let through, and what a `worktree_only` refusal offers instead.
 
-    Loads `signed_channel` and `worktree_only` afresh and runs three tables in
+    Loads `signed_channel` and `worktree_only` afresh and runs four tables in
     order: `VERDICTS`, each call with the verdict its hook owes it; `OFFERS`,
     each refused command with the nearest command its refusal names, or `None`
-    where none is derivable; `INSTEAD`, each program off the list with the tool
+    where none is derivable; `EVENTS`, each before-tool payload with the code
+    the entry point owes it, Claude Code's envelope beside Gemini CLI's;
+    `INSTEAD`, each program off the list with the tool
     its refusal names in its place. A line names the group and the call that
     gave way, so the report says which case a predicate no longer holds. Each
     refused call sits beside the innocent neighbour the predicate must not
@@ -354,4 +481,4 @@ def hook_probes():
     """
     hooks = {name: load_hook(name) for name in ("signed_channel", "worktree_only")}
     worktree = hooks["worktree_only"]
-    return _verdicts(hooks) + _offers(worktree) + _instead(worktree)
+    return _verdicts(hooks) + _offers(worktree) + _events(worktree) + _instead(worktree)

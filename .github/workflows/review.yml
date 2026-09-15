@@ -579,11 +579,44 @@ jobs:
         env:
           GEMINI_CLI_TRUST_WORKSPACE: "true"
           GH_TOKEN: ${{ secrets.REVIEWER_GH_TOKEN }}
+          # Set here rather than relied on from the harness, because two things
+          # read it and both fail open if it is unset: the `command` below
+          # would name a path that does not exist, and a hook that is missing
+          # does not block; and `ROOT` in `worktree_only.py` falls back to the
+          # process working directory, which re-roots every refusal in the file.
+          GEMINI_PROJECT_DIR: ${{ github.workspace }}
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          # The same bound on reading as the Claude path above, in this
+          # harness's spelling (solorepo's DR-110). Gemini CLI's `BeforeTool`
+          # fires before a tool runs, carries the same `tool_name` and
+          # `tool_input` as Claude Code's `PreToolUse`, and reads exit code 2
+          # with a reason on stderr as a block, so one hook serves both and
+          # `worktree_only.py` maps the names. The matcher is a regular
+          # expression over the tool's name, anchored so that it is these
+          # seven and nothing whose name merely holds one of them: the shell,
+          # the two spellings of the search, the two file reads, the glob and
+          # the directory listing. The script is one of the seven paths
+          # restored above, so it is trunk's; the settings this block writes
+          # are `.gemini/settings.json`, which is the pull request's like the
+          # Claude path's, and read by the solo before it merges.
           settings: |
             {
+              "hooks": {
+                "BeforeTool": [
+                  {
+                    "matcher": "^(run_shell_command|read_file|read_many_files|grep_search|search_file_content|glob|list_directory)$",
+                    "hooks": [
+                      {
+                        "type": "command",
+                        "name": "worktree-only",
+                        "command": "$GEMINI_PROJECT_DIR/.meta/hooks/worktree_only.py"
+                      }
+                    ]
+                  }
+                ]
+              },
               "modelConfigs": {
                 "customAliases": {
                   "${{ steps.depth.outputs.gemini_model }}": {
