@@ -51,3 +51,19 @@ and solorepo's `template/.meta/README.md`, causing clones to start with divergen
 that key operational conventions are mirrored in template seed files.
 
 Receipt: `.meta/checks/files.py::template_conventions_agree`
+
+### Type checking blind to the extension-less programs under `.meta/`
+
+`meta_types` handed mypy the `.meta/` directory, and a directory walk collects
+`*.py` and nothing else, so the eight programs that carry a Python shebang in
+place of a suffix — `.meta/gate`, the channel's four verbs and the three
+programs under `.meta/arc/` — were outside the step while `meta_doc`, in the
+same module, saw all thirty-six (solorepo's DR-210, solorepo's #436). The
+channel is where the credential is read and the `Actor:` Trailer composed, and
+it is the part of the tree a test run does not cover. Established: `is_py` is
+module-level and both steps ask it what Python under `.meta/` is, `meta_types`
+names the suffix-less programs on the command line under
+`--scripts-are-modules`, which keeps mypy from calling every script `__main__`
+and aborting on the duplicate, and the baseline gained an entry for each.
+
+Receipt: `.meta/checks/files.py::is_py`

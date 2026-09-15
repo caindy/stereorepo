@@ -1064,21 +1064,21 @@ def meta_ruff():
 
 
 def is_py(path: pathlib.Path) -> bool:
-    """Whether a path under `.meta/` is a Python source the gate owns.
+    """Whether a path under `.meta/` is Python source the gate's Python steps own.
 
-    A `.py` file, or an extension-less file whose first line is a shebang
-    naming python — which is what the channel's verbs, the gate's entry point
-    and the arc's programs are. A hidden directory and a `__pycache__` are not
-    the tree.
+    A `.py` file, or a file with no suffix at all whose first line is a Python
+    shebang — `.meta/gate` and the channel's verbs are typed at a shell, so they
+    carry the interpreter in line one instead of in a suffix. Hidden directories
+    and `__pycache__` are not source.
+
+    Every step that asks what Python lives under `.meta/` asks here, so that the
+    answer is one answer.
 
     Args:
-        path: An absolute path under `.meta/`.
+        path: An existing path under `META`.
 
     Returns:
-        bool: True where the file is Python.
-
-    Raises:
-        ValueError: Where the path is not under `.meta/`.
+        bool: True where the file is Python source under `.meta/`.
     """
     if any(part.startswith(".") and part != "." for part in path.relative_to(META).parts):
         return False
@@ -1097,17 +1097,10 @@ def is_py(path: pathlib.Path) -> bool:
 
 
 def meta_sources() -> list[pathlib.Path]:
-    """Every Python source under `.meta/`, in path order.
-
-    `meta doc` and `meta types` both read this, so the two steps cannot
-    disagree about what a Python file under `.meta/` is: `meta doc` found the
-    extension-less programs from the first and `meta types` did not, because it
-    handed mypy a directory and mypy collects `*.py` from one
-    (solorepo's DR-210).
+    """Every Python source file under `.meta/`, in path order.
 
     Returns:
-        list[pathlib.Path]: Absolute paths, `.py` files and extension-less
-        programs alike.
+        list[pathlib.Path]: The absolute paths `is_py` accepts.
     """
     return sorted(p for p in META.rglob("*") if is_py(p))
 
