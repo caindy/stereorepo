@@ -68,6 +68,10 @@ def duplicate_keys():
 
     Returns:
         list[str]: Validation problem messages identifying file, line number, and duplicate key name.
+
+    A document that will not parse at all is passed over rather than reported:
+    `template parses` owns the malformed document, and a key cannot be written
+    twice in a file with no keys.
     """
     problems = []
     for path in sorted([*META.rglob("*.yaml"), *META.rglob("*.yml"),
@@ -76,7 +80,7 @@ def duplicate_keys():
         try:
             yaml.load(path.read_text(), Loader=Strict)
         except yaml.YAMLError:
-            continue  # `template parses` owns malformed documents.
+            continue
         problems += [f"{path.relative_to(ROOT)}:{line} '{key}' written twice"
                      for key, line in _DUPLICATES]
     return problems
@@ -211,20 +215,25 @@ def _strip_fenced(text: str) -> str:
 
 
 def _build_ontology_lookup(index):
-    """Builds a case-insensitive lookup set of valid ontology entities from index."""
+    """Builds a case-insensitive lookup set of valid ontology entities from index.
+
+    Every spelling a writer reasonably reaches for is a key: the full
+    identifier and its tail, the preferred label, the name and the alternative
+    labels, each also slugified. A Decision is additionally keyed by its number
+    in the three forms citations take — `dr-85`, `dr-085` and `85` — and an
+    Article by `a8` and `8`.
+    """
     lookup = set()
     for ident, (cls, obj, _) in index.items():
         lookup.add(ident.lower())
         tail = ident.rsplit("/", 1)[-1].lower()
         lookup.add(tail)
-        # Handle decision notation e.g. dr-185, dr-085, 185
         if cls == "Decision" or ident.startswith("work:decision/"):
             num = tail.lstrip("0") or "0"
             lookup.add(f"dr-{num}".lower())
             if num.isdigit():
                 lookup.add(f"dr-{int(num):03d}".lower())
             lookup.add(num)
-        # Handle article notation e.g. A8, 8
         if cls == "Article" or ident.startswith("work:article/"):
             lookup.add(f"a{tail}".lower())
             lookup.add(tail)
@@ -243,7 +252,12 @@ def _build_ontology_lookup(index):
 
 
 def _build_wiki_files_map(file_list):
-    """Builds lookup mapping of wiki files from a list of paths."""
+    """Builds lookup mapping of wiki files from a list of paths.
+
+    Keyed by `(context, slug)`, both lowercased: a page under `wiki/<ctx>/` is
+    keyed by its directory, and a page directly under `wiki/` by the empty
+    context.
+    """
     wiki_map = {}
     for f in file_list:
         try:
@@ -252,35 +266,39 @@ def _build_wiki_files_map(file_list):
             rel = f
         if len(rel.parts) >= 2 and rel.parts[0] == "wiki" and rel.suffix == ".md":
             if len(rel.parts) == 3:
-                # e.g. wiki/solorepo/knowledge-management.md
                 ctx = rel.parts[1].lower()
                 stem = rel.stem.lower()
                 wiki_map.setdefault((ctx, stem), f)
             elif len(rel.parts) == 2:
-                # e.g. wiki/README.md
                 wiki_map.setdefault(("", rel.stem.lower()), f)
     return wiki_map
 
 
 def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict, ontology_lookup: set) -> bool:
-    """Determines whether a wikilink target resolves to a wiki page or ontology entity."""
+    """Determines whether a wikilink target resolves to a wiki page or ontology entity.
+
+    The ontology answers first, by the target and by its slug, and then by the
+    same two under each CURIE prefix. What it does not answer is looked for
+    among the wiki pages. A target naming its context — `solorepo/knowledge-
+    management`, with or without a leading `wiki/` — is resolved against that
+    context and then as a path relative to the page that wrote it. A target
+    naming none is tried in the page's own context, then in the scaffold's,
+    then at the root of the wiki, and last in any context at all, so a link
+    written before the page found its folder still resolves.
+    """
     clean = target.strip()
     if not clean:
         return False
 
-    # 1. Check ontology lookup first (handles concepts, disciplines, decisions, articles)
     norm = clean.lower()
     norm_slug = norm.replace(" ", "-").replace("_", "-")
     if norm in ontology_lookup or norm_slug in ontology_lookup:
         return True
 
-    # Check CURIE forms e.g. concept/pr-first -> work:concept/pr-first
     for prefix in ("work:", "ddd:"):
         if (prefix + norm) in ontology_lookup or (prefix + norm_slug) in ontology_lookup:
             return True
 
-    # 2. Check wiki files
-    # Scoped target e.g. solorepo/knowledge-management or wiki/solorepo/knowledge-management
     test_target = clean
     if test_target.lower().startswith("wiki/"):
         test_target = test_target[5:]
@@ -291,13 +309,10 @@ def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict, o
         slug_k = slug_part.lower().replace(" ", "-").replace("_", "-").removesuffix(".md")
         if (ctx_k, slug_k) in wiki_map:
             return True
-        # Direct relative path check
         rel_candidate = source_path.parent / f"{test_target}.md"
         if rel_candidate.is_file() or (ROOT / "wiki" / f"{test_target}.md").is_file():
             return True
     else:
-        # Unscoped target e.g. [[knowledge-management]]
-        # (a) Check in current context if source is under wiki/<ctx>/
         try:
             rel = source_path.relative_to(ROOT)
         except ValueError:
@@ -306,13 +321,10 @@ def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict, o
             current_ctx = rel.parts[1].lower()
             if (current_ctx, norm_slug) in wiki_map:
                 return True
-        # (b) Check in scaffold context ("solorepo")
         if ("solorepo", norm_slug) in wiki_map:
             return True
-        # (c) Check root wiki files (e.g. README)
         if ("", norm_slug) in wiki_map:
             return True
-        # (d) Check any context in wiki_map
         if any(s == norm_slug for (c, s) in wiki_map):
             return True
 
@@ -470,12 +482,18 @@ def ubiquitous_language_wiki_parity(index, md_files=None):
     Enforces 1:1 parity between LinkML vocabulary assertions and Knowledge Management
     wiki pages within each Bounded Context. A domain concept without a wiki page, or
     a domain wiki page without a corresponding concept entry, fails gate verification.
+
+    Parity is read in both directions and in three passes: every domain
+    vocabulary concept has its page, every page outside the scaffold's own
+    context has its minted concept, and every page in the scaffold's context
+    has a concept or a Discipline. The scaffold is separated because its wiki
+    explains Disciplines as well as concepts, and a Discipline is not minted
+    into the vocabulary.
     """
     problems = []
     tree_files = md_files if md_files is not None else tree()
     wiki_map = _build_wiki_files_map(tree_files)
 
-    # 1. Check domain vocabulary concepts have corresponding wiki pages
     domain_vocab = ROOT / ".meta" / "assertions" / "domain_vocabulary.yaml"
     if domain_vocab.is_file():
         try:
@@ -491,7 +509,6 @@ def ubiquitous_language_wiki_parity(index, md_files=None):
         except Exception as e:
             problems.append(f"domain_vocabulary.yaml: failed to parse for parity check: {e}")
 
-    # 2. Check that non-solorepo wiki pages correspond to minted concepts in index
     for (ctx, slug), path in wiki_map.items():
         if not ctx or ctx == "solorepo" or slug == "readme":
             continue
@@ -506,7 +523,6 @@ def ubiquitous_language_wiki_parity(index, md_files=None):
                 f"{rel}: wiki page '{slug}' has no corresponding concept in vocabulary schema (solorepo's DR-190)"
             )
 
-    # 3. Check solorepo core wiki pages have matching concepts or disciplines in index
     for (ctx, slug), path in wiki_map.items():
         if ctx != "solorepo" or slug == "readme":
             continue
@@ -628,6 +644,10 @@ def gate_workflows_agree():
 
     Returns:
         Passed | Found | CouldNotRun: Validation result detailing any discrepancy between shared workflow halves.
+
+    The `on` key is read under the boolean `True` before its own name: YAML 1.1
+    reads a bare `on` as a boolean and pyyaml is a 1.1 parser, so a workflow
+    written the ordinary way arrives with `True` for a key.
     """
     ours = ROOT / ".github" / "workflows" / "gate.yml"
     seed = TEMPLATE / ".github" / "workflows" / "gate.yml"
@@ -635,7 +655,6 @@ def gate_workflows_agree():
         return CouldNotRun("either ours or template workflow is absent")
     a = yaml.safe_load(ours.read_text()) or {}
     b = yaml.safe_load(seed.read_text()) or {}
-    # YAML 1.1 reads the bare key `on` as the boolean True, and pyyaml is 1.1.
     shared = {"on": (a.get(True, a.get("on")), b.get(True, b.get("on"))),
               "permissions": (a.get("permissions"), b.get("permissions"))}
     jobs_a, jobs_b = a.get("jobs") or {}, b.get("jobs") or {}
@@ -1261,10 +1280,12 @@ def rendered_prose(pages):
     reader opens; stale, it is prose asserting something the record no longer
     says. What is compared is every target `render.py` names, including the
     templates, so the mark says what it covered.
+
+    `unrendered` answers with page names, so the sentence saying what is wrong
+    with a page is written here rather than carried out of the render, which
+    has no business holding this step's wording.
     """
     render, _ = rendering()
-    # `unrendered` answers by page name, so the sentence that says what is wrong
-    # with that page is written here rather than carried out of the render.
     stale = [f"{name} exists but nothing renders it" for name in render.unrendered()]
     stale += [name for name, text in pages.items()
               if not (META / name).exists()
