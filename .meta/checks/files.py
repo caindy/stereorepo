@@ -1063,6 +1063,55 @@ def meta_ruff():
     return Found(tuple(lines))
 
 
+def is_py(path: pathlib.Path) -> bool:
+    """Whether a path under `.meta/` is a Python source the gate owns.
+
+    A `.py` file, or an extension-less file whose first line is a shebang
+    naming python — which is what the channel's verbs, the gate's entry point
+    and the arc's programs are. A hidden directory and a `__pycache__` are not
+    the tree.
+
+    Args:
+        path: An absolute path under `.meta/`.
+
+    Returns:
+        bool: True where the file is Python.
+
+    Raises:
+        ValueError: Where the path is not under `.meta/`.
+    """
+    if any(part.startswith(".") and part != "." for part in path.relative_to(META).parts):
+        return False
+    if "__pycache__" in path.parts:
+        return False
+    if path.suffix == ".py":
+        return True
+    if not path.suffix and path.is_file():
+        try:
+            with path.open("rb") as handle:
+                first = handle.readline().decode("latin1", "ignore")
+                return first.startswith("#!") and "python" in first
+        except OSError:
+            pass
+    return False
+
+
+def meta_sources() -> list[pathlib.Path]:
+    """Every Python source under `.meta/`, in path order.
+
+    `meta doc` and `meta types` both read this, so the two steps cannot
+    disagree about what a Python file under `.meta/` is: `meta doc` found the
+    extension-less programs from the first and `meta types` did not, because it
+    handed mypy a directory and mypy collects `*.py` from one
+    (solorepo's DR-210).
+
+    Returns:
+        list[pathlib.Path]: Absolute paths, `.py` files and extension-less
+        programs alike.
+    """
+    return sorted(p for p in META.rglob("*") if is_py(p))
+
+
 def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
     """The strict-mode type errors a mypy run reported, by repository-relative path.
 
@@ -1112,14 +1161,26 @@ def meta_types():
     the tree, and an unpinned checker that gains a diagnostic in a patch release
     would fail the gate on every file it newly speaks about, while one that loses
     a diagnostic would fail every file it has gone quiet on.
+
+    The extension-less programs are named on the command line beside the
+    directory, because mypy collects `*.py` from a directory and would
+    otherwise skip the channel, the gate's own entry point and the arc — the
+    programs that read the credential, compose the `Actor:` Trailer and decide
+    which verb a Role may type. `--scripts-are-modules` is what lets more than
+    one of them be named at once: a file with no suffix is a script, every
+    script is the module `__main__`, and two `__main__` modules in one run is a
+    duplicate-module error that stops the run before it checks anything.
     """
     if not TYPES_BASELINE.is_file():
         return CouldNotRun(f"{TYPES_BASELINE.relative_to(ROOT).as_posix()} is missing")
     config = META / "mypy.ini"
     if not config.is_file():
         return CouldNotRun(".meta/mypy.ini is missing")
-    cmd = tool_command("mypy", MYPY, ["--config-file", str(config), "--strict",
-                                       "--ignore-missing-imports", str(META)],
+    scripts = [str(p) for p in meta_sources() if p.suffix != ".py"]
+    cmd = tool_command("mypy", MYPY,
+                       ["--config-file", str(config), "--strict",
+                        "--ignore-missing-imports", "--scripts-are-modules",
+                        str(META), *scripts],
                        deps=("types-pyyaml",))
     if not cmd:
         return CouldNotRun("neither mypy nor uvx is installed")
@@ -1148,23 +1209,7 @@ def meta_doc():
     counted = 0
     modules = 0
 
-    def is_py(path: pathlib.Path) -> bool:
-        if any(part.startswith(".") and part != "." for part in path.relative_to(META).parts):
-            return False
-        if "__pycache__" in path.parts:
-            return False
-        if path.suffix == ".py":
-            return True
-        if not path.suffix and path.is_file():
-            try:
-                with path.open("rb") as handle:
-                    first = handle.readline().decode("latin1", "ignore")
-                    return first.startswith("#!") and "python" in first
-            except OSError:
-                pass
-        return False
-
-    sources = sorted(p for p in META.rglob("*") if is_py(p))
+    sources = meta_sources()
     for source in sources:
         modules += 1
         try:
