@@ -222,3 +222,20 @@ refusal that paints `advance.yml` red on an ordinary push. `merge.yml` passes
 does not see: the schedule, and the gate and review completions.
 
 Receipt: `.meta/checks/probes/loops.py::merge_manager_advance_probes`
+
+### Review answer pass on solorepo's #361 stayed dormant after solorepo's #311 was relabelled easy
+
+When Challenge solorepo's #311 had its difficulty lowered from `hard` to `easy`
+after a review verdict stood down, the review answer pass on open pull request
+solorepo's #361 was not triggered: a relabel fires the Issue door and starts a
+take pass rather than re-delivering a review, so a standing verdict stayed
+dormant until the solo found the pull request and invoked
+`move dispatch --task review <pr>` by hand (solorepo's #366). Established:
+`delegate()` accepts either the Challenge number or pull request number,
+verifies or ensures an autonomous difficulty (`easy` or `medium`) while
+refusing `hard` or `human` without `--level`, dispatches `rebase` if
+conflicting or `review` for a verdict standing unanswered on an open pull
+request, refuses clean pull requests with no changes requested, or assigns
+the coder and triggers the loop on an unstarted Challenge.
+
+Receipt: `.meta/checks/probes/loops.py::delegate_probes`

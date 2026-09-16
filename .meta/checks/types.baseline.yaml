@@ -29,7 +29,7 @@
 .meta/checks/probes/git.py: 9
 .meta/checks/probes/harness.py: 36
 .meta/checks/probes/knowledge.py: 4
-.meta/checks/probes/loops.py: 46
+.meta/checks/probes/loops.py: 47
 .meta/checks/probes/tools.py: 43
 .meta/dereference.py: 41
 .meta/gate: 16
@@ -38,7 +38,7 @@
 .meta/render.py: 129
 .meta/say/channel.py: 34
 .meta/say/commit: 13
-.meta/say/move: 259
+.meta/say/move: 277
 .meta/say/post: 75
 .meta/say/whoami: 12
 .meta/timing.py: 65

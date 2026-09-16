@@ -133,6 +133,16 @@ programs:
           start a coder pass on a pull request by hand: `review` for a verdict
           standing unanswered, `rebase` for a branch that conflicts
         held_by: [solo]
+      - name: delegate
+        usage: "<issue|pr> [--level easy|medium]"
+        does: >-
+          hand a Challenge or pull request to the coder loop: sets an autonomous
+          difficulty (`easy` or `medium`), refusing a `hard` or `human` Challenge
+          unless `--level` is passed; dispatches `rebase` if conflicting, dispatches
+          `review` for a verdict standing unanswered, refuses a clean pull
+          request with no changes requested, or assigns the coder and triggers
+          the loop on an unstarted Challenge
+        held_by: [solo]
       - name: request-review
         usage: "<pr> [--to R]"
         does: >-

@@ -453,7 +453,7 @@ is_changes_requested_pull = check_pr.is_changes_requested_pull
 # A loop's branch, and nothing else. `(claude|gemini|codex)/issue-<n>` is the shape `coder.yml`
 # cuts, so it is the shape a dispatched coder can be sent back to; the solo's
 # own pull request is the solo's to rebase, whatever it looks like from here.
-LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-\d+$")
+LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-(\d+)$")
 # How long to wait for GitHub to say whether a branch still merges. `mergeable`
 # is computed in the background when it is asked for, and GitHub's reference
 # for it says to poll until the value is no longer null — which `gh` spells
@@ -1638,6 +1638,129 @@ def merge_manager(dry_run=False, stranded=True):
     merge(str(winner["number"]), stack=stacked(winner["number"]), auto=False)
 
 
+def ensure_autonomous_level(issue_number, requested_level=None):
+    """Ensure an Issue carries the `challenge` label and an autonomous difficulty.
+
+    Strips any prior `roadmap` label and conflicting difficulty labels. If no explicit
+    level is passed, retains an existing autonomous difficulty (`easy` or `medium`),
+    defaults an unestimated Issue to `medium`, and refuses an Issue labelled `hard` or
+    `human` without explicit confirmation. If the `challenge` label is missing, applies
+    it alongside the difficulty.
+
+    Parameters:
+        issue_number (int | str): Issue number to inspect and update.
+        requested_level (str | None): Explicit difficulty level requested by caller.
+
+    Returns:
+        tuple[str, bool]: Target difficulty level and whether labels were changed.
+
+    Raises:
+        SystemExit: If the Issue is labelled `hard` or `human` and no explicit level was given.
+    """
+    now_labels = labels_of(issue_number)
+    current_level = next((l for l in now_labels if l in DIFFICULTIES), None)
+
+    if requested_level:
+        target_level = requested_level
+    elif current_level in LOOP_LEVELS:
+        target_level = current_level
+    elif current_level in ("hard", "human"):
+        sys.exit(f"say: #{issue_number} is labelled '{current_level}'; pass --level to explicitly delegate")
+    else:
+        target_level = "medium"
+
+    stale = [l for l in now_labels if l == "roadmap" or (l in DIFFICULTIES and l != target_level)]
+    changed = False
+    if "challenge" not in now_labels or current_level != target_level:
+        relabel(issue_number, add=["challenge", target_level], remove=stale)
+        print(f"#{issue_number} difficulty set/ensured to {target_level}")
+        changed = True
+    else:
+        print(f"#{issue_number} already at autonomous-capable difficulty {target_level}")
+
+    return target_level, changed
+
+
+def delegate(number, level=None):
+    """Hand a Challenge or pull request to the autonomous coder loop.
+
+    Ensures the associated Challenge carries the `challenge` label and an autonomous
+    difficulty (`easy` or `medium`), refusing a `hard` or `human` Challenge unless
+    `--level` is passed. For a pull request, or an Issue with an open pull request,
+    dispatches `rebase` if conflicting, or `review` for a verdict standing unanswered;
+    refuses a clean pull request with no changes requested. For an Issue without an
+    open pull request, assigns the coder Role and triggers the coder loop.
+
+    Parameters:
+        number (int | str): Issue number or pull request number.
+        level (str | None): Target autonomous difficulty level (`easy` or `medium`).
+
+    Raises:
+        SystemExit: If the Challenge is labelled `hard` or `human` and no explicit level
+            was given, the pull request head branch is not a recognized loop branch, the
+            pull request is clean with no standing changes requested, or the Issue cannot
+            be assigned to the coder Role.
+    """
+    is_pr_num = False
+    pull = None
+
+    try:
+        pull = channel.gh("pr", "view", str(number), "--json", f"{ADVANCE},reviews", tolerate_fail=True)
+        is_pr_num = True
+        print(f"#{number} identified as a pull request.")
+    except Exception:
+        pass
+
+    if is_pr_num:
+        assert isinstance(pull, dict)
+        head_ref = pull["headRefName"]
+        m = LOOPS_BRANCH.match(head_ref)
+        if m:
+            issue_number = m.group(1)
+        else:
+            sys.exit(f"say: #{number} head ref {head_ref} is not a loop branch; cannot determine associated issue")
+    else:
+        issue_number = str(number)
+        print(f"#{number} identified as an issue.")
+        open_now = channel.gh("pr", "list", "--state", "open", "--json", f"{ADVANCE},reviews")
+        if isinstance(open_now, list):
+            for p in open_now:
+                m = LOOPS_BRANCH.match(p["headRefName"])
+                if m and m.group(1) == str(number):
+                    pull = p
+                    break
+
+    target_level, changed = ensure_autonomous_level(issue_number, requested_level=level)
+
+    if pull:
+        pr_number = pull["number"]
+        merges = mergeability(pull)
+        reviewer_login = channel.role_login("reviewer")
+        is_changes_requested = is_changes_requested_pull(pull, reviewer_login=reviewer_login)
+
+        if merges == "CONFLICTING":
+            run_coder(pr_number, "rebase")
+            print(f"delegated #{pr_number} (Issue #{issue_number}): open with merge conflicts; dispatched rebase pass.")
+        elif is_changes_requested:
+            run_coder(pr_number, "review")
+            print(f"delegated #{pr_number} (Issue #{issue_number}): open with changes requested; dispatched review pass.")
+        else:
+            sys.exit(f"say: #{pr_number} is clean and has no standing changes requested; nothing to delegate to coder loop")
+    else:
+        coder_login = channel.role_login("coder")
+        channel.gh("issue", "edit", str(issue_number), "--add-assignee", coder_login, parse=False)
+        assigned = [a["login"] for a in channel.gh("issue", "view", str(issue_number), "--json", "assignees")["assignees"]]
+        if coder_login not in assigned:
+            sys.exit(f"say: #{issue_number} could not be assigned to {coder_login}")
+
+        if not changed:
+            relabel(issue_number, remove=[target_level])
+            relabel(issue_number, add=[target_level])
+            print(f"delegated Issue #{issue_number}: assigned to {coder_login} and triggered coder loop via label re-addition.")
+        else:
+            print(f"delegated Issue #{issue_number}: assigned to {coder_login} and triggered coder loop via label change.")
+
+
 def build_parser():
     """Construct and return the command-line argument parser for state transition verbs.
 
@@ -1660,6 +1783,9 @@ def build_parser():
     target = p.add_mutually_exclusive_group(required=True)
     target.add_argument("--set", dest="title", help="the Milestone's title; created if new")
     target.add_argument("--clear", action="store_true", help="take the Issue out of its Milestone")
+
+    p = sub.add_parser("delegate"); p.add_argument("number")
+    p.add_argument("--level", choices=LOOP_LEVELS, help="ensure Challenge difficulty level")
 
     # A pull request's: opened, layered, revised, merged, advanced, handed off.
     p = sub.add_parser("open"); p.add_argument("--title", required=True)
@@ -1702,6 +1828,8 @@ def main():
         difficulty(args.issue, args.level)
     elif args.verb == "claim":
         claim(args.issue)
+    elif args.verb == "delegate":
+        delegate(args.number, level=args.level)
     elif args.verb == "milestone":
         milestone(args.issue, args.title, clear=args.clear)
     elif args.verb == "layer":
