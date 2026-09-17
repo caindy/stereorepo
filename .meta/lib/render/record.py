@@ -14,8 +14,6 @@ from lib.render import META
 # An entry *is* its assertion file. Two spellings of the same path: one from the
 # repository root, one from `.meta/`, where `decisions.md` sits.
 RECORD = ".meta/assertions/decisions/DR-{}.yaml"
-
-
 ENTRY = "assertions/decisions/DR-{}.yaml"
 
 

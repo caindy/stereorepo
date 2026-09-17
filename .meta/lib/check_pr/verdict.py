@@ -49,7 +49,6 @@ FOREIGN = re.compile(r"solorepo's #\d{1,4}\b(?:(?:,| and|, and) #\d{1,4}\b)*")
 # `cited decisions` asks its index; a checker with no YAML parser asks for the
 # line, which is the same answer by a string search.
 SCAFFOLD = re.compile(r"^\s*id:\s*work:portfolio/solorepo\s*$", re.M)
-
 LIMIT = 1000
 
 

@@ -30,7 +30,6 @@ ARTIFACT = re.compile(r"^    path: (\S+)$", re.M)
 # it. The record's other tables key on an entry rather than on a backticked
 # path, so none of them match.
 ROW = re.compile(r"^\| \[`([^`]+)`\][^|]*\|([^|]*)\|", re.M)
-
 DR = re.compile(r"DR-(\d+)")
 
 # The render, invoked as `just render` invokes it. Naming what it is run with is
