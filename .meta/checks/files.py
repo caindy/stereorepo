@@ -1062,6 +1062,76 @@ def tool_command(name: str, pin: str, args: Sequence[str],
     return None
 
 
+REVIEW_WORKFLOW = ROOT / ".github" / "workflows" / "review.yml"
+"""The reviewer workflow, which restores the control plane from trunk before a reviewer reads anything."""
+RESTORE_LINE = re.compile(r"^\s+(?:\.claude|TRUNK:)[^\n]*$", re.M)
+"""A line of `review.yml` listing the trunk-restore set as paths: the pathspec line under
+`git restore`, which begins with `.claude`, or the `TRUNK` environment variable."""
+RESTORE_COUNT = re.compile(r"^\s+(?:# |\*\*)(\w+) paths (?:are|in the worktree are) trunk's", re.M)
+"""A line of `review.yml` stating how many paths are trunk's, in the step's comment and in the
+constraints every agent is bound by; the number is a word, which the step reads back."""
+RESTORE_PROSE = re.compile(r"\*\*\w+ paths in the worktree are trunk's[^\n]*\n(.*?`)\.(?=\s)", re.S)
+"""The sentence after the constraints' count that enumerates the paths in backticks: everything
+up to the full stop that closes the last backticked path."""
+NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+                "ten", "eleven", "twelve")
+"""The number words the workflow's prose may spell a count with."""
+
+
+@check("control plane restore")
+def control_plane_restore() -> Passed | Found | CouldNotRun:
+    """The reviewer workflow restores exactly the control plane from trunk, in every place it states the set (solorepo's DR-217).
+
+    `depth.CONTROL_PLANE` is the one statement of what the control plane is.
+    `.github/workflows/review.yml` states the trunk-restore set four times: as
+    the pathspec of the `run trunk's channel` step, as the `TRUNK` variable that
+    builds `.review/head/`, as a count in that step's comment, and as a count
+    and an enumeration in the constraints every agent the review spawns is
+    bound by. This step fails when the two path lists are not the control plane
+    less the workflows' own directory, in either direction; when either count
+    is not their length; or when the enumeration names a different set.
+    """
+    if not REVIEW_WORKFLOW.is_file():
+        return CouldNotRun(f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
+    sys.path.insert(0, str(META))
+    import depth
+    text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
+    lists = []
+    for line in RESTORE_LINE.findall(text):
+        words = line.split()
+        lists.append(tuple(words[1:] if words[0] == "TRUNK:" else words))
+    if len(lists) != 2:
+        return Found((f"review.yml: expected two trunk-restore lists and found {len(lists)}",))
+    problems = []
+    if lists[0] != lists[1]:
+        problems.append("review.yml: the `git restore` pathspec and `TRUNK` differ: "
+                        f"{' '.join(lists[0])} against {' '.join(lists[1])}")
+    restored = {entry.rstrip("/") for entry in lists[0]}
+    expected = {prefix.rstrip("/") for prefix in depth.CONTROL_PLANE
+                if not prefix.startswith(".github/workflows")}
+    for missing in sorted(expected - restored):
+        problems.append(f"review.yml: `{missing}` is control plane in depth.CONTROL_PLANE and "
+                        "the trunk-restore lists do not carry it; add it to both")
+    for extra in sorted(restored - expected):
+        problems.append(f"review.yml: the trunk-restore lists carry `{extra}`, which "
+                        "depth.CONTROL_PLANE does not name; add it there or drop it here")
+    counts = RESTORE_COUNT.findall(text)
+    if len(counts) != 2:
+        problems.append(f"review.yml: expected the count of trunk's paths stated twice and found {len(counts)}")
+    for word in counts:
+        if word.lower() not in NUMBER_WORDS or NUMBER_WORDS.index(word.lower()) != len(lists[0]):
+            problems.append(f"review.yml: says {word!r} paths are trunk's and the pathspec lists {len(lists[0])}")
+    prose = RESTORE_PROSE.search(text)
+    named = {entry.rstrip("/") for entry in re.findall(r"`([^`]+)`", prose.group(1))} if prose else set()
+    if named != restored:
+        problems.append("review.yml: the constraints enumerate "
+                        f"{' '.join(sorted(named)) or 'nothing'} and the pathspec restores "
+                        f"{' '.join(sorted(restored))}")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{len(restored)} paths restored from trunk, stated four ways, all the control plane")
+
+
 @check("meta ruff")
 def meta_ruff():
     """Ruff check over .meta/ against the ruleset declared in .meta/ruff.toml (solorepo's DR-177).

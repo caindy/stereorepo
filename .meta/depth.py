@@ -41,10 +41,18 @@ ROOT = META.parent
 STRUCTURE_PATH = META / "assertions" / "structure.yaml"
 HOOK_PATH = META / "hooks" / "depth.py"
 
-# Layer 1: Invariant security envelope protecting the agent loop harness.
-SCAFFOLD_BOUNDARY = re.compile(
-    r"^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)"
+CONTROL_PLANE: tuple[str, ...] = (
+    ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/", ".claude/",
+    "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/",
 )
+"""The path prefixes of the control plane: the channel, the hooks, the pull request gate and its
+body, the settings that register them, the instructions every session loads before it reads
+anything, and the workflows. A change under one is routed to the deepest review (Layer 1 of the
+template method) and `.meta/timing.py` reports it as the critical path. `.github/workflows/review.yml`
+restores every prefix but the workflows' from trunk before a reviewer reads anything, and the gate
+step `control plane restore` holds each statement of that set in the workflow to this one."""
+SCAFFOLD_BOUNDARY = re.compile("^(" + "|".join(re.escape(prefix) for prefix in CONTROL_PLANE) + ")")
+"""Matches a repository-relative path inside the control plane."""
 
 
 class DepthConfig(NamedTuple):

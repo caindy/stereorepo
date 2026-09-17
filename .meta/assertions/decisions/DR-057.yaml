@@ -17,6 +17,7 @@ decisions:
       - "The ruleset lists required status checks by job name, so renaming a job removes a required check silently."
     enacted_in:
       - work:artifact/meta-check-pr
+      - work:artifact/meta-lib-check-pr-review
     rationale: |-
       Christopher's ruling: unresolved conversations block, and they are
       resolved cogently *even when subsequent changes have removed their

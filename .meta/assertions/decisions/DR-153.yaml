@@ -5,6 +5,8 @@ decisions:
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-check-pr
+      - work:artifact/meta-lib-check-pr-github
+      - work:artifact/meta-lib-check-pr-sweep
     context: >-
       `check_pr.py` read a pull request's check states through `gh`'s
       `--json statusCheckRollup`, at three call sites: the hand-off reader's

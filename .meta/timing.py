@@ -47,6 +47,8 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 
+from depth import CONTROL_PLANE
+
 # The same four `next.py` reads, and for the same reason: they are the
 # workflows a portfolio inherits or writes its own of. `gate.yml` is not in
 # Specialization's copied set — a portfolio writes one whose jobs are its own
@@ -208,9 +210,8 @@ def critical(run, jobs):
     return wait, span(last["startedAt"], last["completedAt"])
 
 
-BOUNDARY_PATTERN = re.compile(
-    r"^(\.meta/say|\.meta/hooks/|\.meta/check_pr\.py|\.claude/|\.github/workflows/)"
-)
+BOUNDARY_PATTERN = re.compile("^(" + "|".join(re.escape(prefix) for prefix in CONTROL_PLANE) + ")")
+"""Matches a repository-relative path inside the control plane, as `depth.CONTROL_PLANE` lists it."""
 DIFFICULTY_CACHE: dict[str, str] = {}
 
 

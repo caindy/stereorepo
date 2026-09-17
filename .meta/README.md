@@ -94,7 +94,8 @@ happened, and a gate that prints no step in A21's shape fails (DR-104).
 the tree, so it is a separate command with a separate lifecycle — nothing to say
 except on a pull request. It holds A15: every item under *what was noticed and
 not done* is a link, so the body cannot close over an observation that has
-nowhere to live afterwards.
+nowhere to live afterwards. The script is what a shell runs; its body is the
+package `lib/check_pr/`, eight modules in dependency order (solorepo's DR-217).
 
 ```bash
 python3 .meta/check_pr.py 12

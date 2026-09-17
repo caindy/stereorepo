@@ -10,6 +10,7 @@ decisions:
       - work:artifact/github-workflows-coder
       - work:artifact/meta-check-pr
       - work:artifact/meta-actions-sweep
+      - work:artifact/meta-lib-check-pr-sweep
     alternatives:
       - name: Leave it to the solo — the hand-back already says where the run stopped
         chosen: false

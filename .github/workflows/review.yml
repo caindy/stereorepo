@@ -114,9 +114,11 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
 
 
-      # Seven paths are trunk's, not the pull request's: the channel, the
-      # hooks, the checker, the settings that register them, and the
-      # instructions the session loads before it reads anything. The action
+      # Eight paths are trunk's, not the pull request's: the channel, the
+      # hooks, the checker and its body under `.meta/lib/`, the settings that
+      # register them, and the instructions the session loads before it reads
+      # anything. The gate step `control plane restore` holds this list, and
+      # `TRUNK` below, to `depth.CONTROL_PLANE`. The action
       # restores `.claude/` from `main` on its own and its log says so; the
       # restore is done here too, because a property this file enforces
       # beats one it hopes for from a floating `@v1`. Index and worktree
@@ -131,7 +133,7 @@ jobs:
       - name: run trunk's channel
         run: |
           git restore --quiet --source=origin/main --staged --worktree -- \
-            .claude .meta/say .meta/hooks .meta/check_pr.py AGENTS.md CLAUDE.md GEMINI.md
+            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib AGENTS.md CLAUDE.md GEMINI.md
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 
@@ -258,7 +260,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py AGENTS.md CLAUDE.md GEMINI.md
+          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib AGENTS.md CLAUDE.md GEMINI.md
 
       # The paragraphs that bound every agent, in a file rather than in the
       # prompt (solorepo's #196). They used to end "every agent the review spawns gets
@@ -282,8 +284,8 @@ jobs:
           tool, which takes an offset and a limit. `gh pr diff` says the same
           thing and arrives as its first 2 KB and a path when the diff is large.
 
-          **Seven paths in the worktree are trunk's, not this pull request's:**
-          `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`,
+          **Eight paths in the worktree are trunk's, not this pull request's:**
+          `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`, `.meta/lib/`,
           `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`. They were replaced with `origin/main`'s
           copies before the session, so that what runs here is trunk's. You run
           and read them as trunk's; you do not review them by reading them.

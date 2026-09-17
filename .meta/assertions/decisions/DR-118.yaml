@@ -9,6 +9,7 @@ decisions:
       - work:artifact/meta-check-pr
       - work:artifact/github-workflows-review
       - work:artifact/meta-render
+      - work:artifact/meta-lib-check-pr-review
     alternatives:
       - name: Keep the listing to what is unresolved, and have the reviewer read the reviews itself
         chosen: false

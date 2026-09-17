@@ -1,0 +1,127 @@
+decisions:
+  - id: work:decision/217
+    name: "DR-217 · A script under .meta/ keeps its path as the entry point and its body lives in .meta/lib/<script>/, whose modules import each other as modules"
+    challenge: work:challenge/489
+    status: ADOPTED
+    applies:
+      - work:article/2
+    enacted_in:
+      - work:artifact/meta-lib
+      - work:artifact/meta-check-pr
+      - work:artifact/meta-lib-check-pr
+      - work:artifact/meta-lib-check-pr-branch
+      - work:artifact/meta-lib-check-pr-cli
+      - work:artifact/meta-lib-check-pr-form
+      - work:artifact/meta-lib-check-pr-github
+      - work:artifact/meta-lib-check-pr-polling
+      - work:artifact/meta-lib-check-pr-review
+      - work:artifact/meta-lib-check-pr-sweep
+      - work:artifact/meta-lib-check-pr-verdict
+      - work:artifact/meta-checks-probes-loops
+      - work:artifact/meta-ruff-toml
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-assertions-structure
+      - work:artifact/meta-depth
+      - work:artifact/meta-timing
+      - work:artifact/meta-checks-files
+      - work:artifact/github-workflows-review
+      - work:artifact/meta-readme
+    context: >-
+      Nothing in either ruleset limits how long a Python file may be, and
+      `.meta/` holds four scripts over a thousand lines: `check_pr.py` at
+      1709, `checks/probes/loops.py` at 1320, `checks/files.py` at 1295 and
+      `render.py` at 1175. The seed's complexity ceiling (`C90`,
+      `max-complexity = 12`), which solorepo's DR-177 left out of `.meta/`,
+      would report 71 findings over the tree today, three quarters of them in
+      those four files. Applied to a module of that shape, every finding lands
+      in one file and the refactor that answers them cannot be reviewed
+      piecewise.
+
+      Splitting is constrained from three sides. Each script's path is what the
+      justfile, the workflows, `.meta/assertions/structure.yaml` and the other
+      scripts invoke, so the path has to stay. A Python package cannot share a
+      name with a module beside it — `check_pr/` next to `check_pr.py` shadows
+      the script the moment anything imports it — so the package cannot sit
+      beside the script under the script's name. And the gate's probes stand a
+      script's collaborators in by assignment on the module that defines them
+      (`stood_in(check_pr, gh=...)`), which only reaches a caller that looks the
+      name up at call time in the same namespace: a module that imported the
+      name binds it once and never sees the stand-in.
+    alternatives:
+      - name: Convert each script into a package of the same name
+        chosen: false
+        reason: >-
+          `.meta/checks/files.py` is imported as `files` from `check.py`, and a
+          `files/` package beside it wins the import and leaves the file dead.
+          For the top-level scripts the shadowing runs the other way and the
+          entry point stops being importable. The name is spoken for.
+      - name: Split the scripts and leave the probes to patch every importer
+        chosen: false
+        reason: >-
+          A probe that has to know which modules imported `gh` in order to stand
+          it in is coupled to the split, and a module added later that imports
+          the name silently escapes the probe. The seam has to be one place.
+      - name: A thin entry script at the old path, a package under .meta/lib/<script>/, and modules that import sibling modules rather than names
+        chosen: true
+        reason: >-
+          The path stays, so nothing that invokes the script moves. `.meta/lib/`
+          is one directory added to the Specialization copy set, so every later
+          package travels without another edit. Inside a package a module writes
+          `from lib.check_pr import github` and calls `github.gh(...)`, so the
+          name is looked up at call time on the module that defines it and a
+          probe stands it in there, once, and every caller sees it. The entry
+          script re-exports the package's public names and its modules, so
+          `import check_pr` finds what it always did. What it costs is a
+          qualified call at every cross-module site, and an entry script whose
+          only body is imports.
+    consequences:
+      - >-
+        `.meta/check_pr.py` holds no logic: its docstring, the imports that
+        re-export the package's surface, and the `__main__` guard. The body is
+        `.meta/lib/check_pr/`: `form`, `github`, `review`, `branch`, `polling`,
+        `verdict`, `sweep` and `cli`, in dependency order, none over four
+        hundred lines.
+      - >-
+        `.meta/lib/` is in the Specialization copy set, so a portfolio inherits
+        every package a script under `.meta/` delegates to.
+      - >-
+        The probes stand `gh` and `threads` in on `check_pr.github`, and
+        `touched`, `parse_decision_yaml`, `RENDER` and `unenacted` on
+        `check_pr.branch`, where they are defined.
+      - >-
+        The type ratchet in `.meta/checks/types.baseline.yaml` holds one number
+        per package module in place of the script's, each failing on either
+        side of it (solorepo's DR-210).
+      - >-
+        The control plane is stated once, as `depth.CONTROL_PLANE`, and both
+        boundary patterns are built from it, so `.meta/lib/` is inside the
+        envelope as a directory and every later package with it, and so are
+        `AGENTS.md` and its two symlinks, the instructions every session
+        loads. `.github/workflows/review.yml` restores `.meta/lib` from trunk
+        beside `.meta/check_pr.py`, and the gate step `control plane restore`
+        holds every statement of the restore set in that workflow, two path
+        lists, two counts and an enumeration, equal to that constant less the
+        workflows' own directory, in both directions.
+      - >-
+        The remaining scripts over five hundred lines are split the same way,
+        one pull request each, before the complexity ceiling is turned on.
+    falsifier: >-
+      A script under `.meta/` whose body lives in a package the Specialization
+      copy set does not carry; a module under `.meta/lib/` that imports a
+      sibling's name rather than the sibling; or a probe that stands a
+      collaborator in on the entry script and passes while the caller runs the
+      real one.
+    rationale: |-
+      The split is a move and not a redesign. Every function keeps its body;
+      what changes is where it lives and how it names a collaborator in another
+      module. The module-import convention is Google's Python style rule for
+      the same reason Google gives — the namespace says where a name came from —
+      and here it carries a second load, because it is what makes the gate's
+      probes able to stand a collaborator in at one site.
+
+      `.meta/lib/` rather than a package beside each script, because a package
+      cannot take a module's name and the copy set should grow by one entry
+      rather than one per script. The entry script keeps the docstring, since
+      `--help` prints it, and re-exports the package's whole surface, since the
+      channel's verbs and the probes read the script by name and should not
+      have to know it was split.

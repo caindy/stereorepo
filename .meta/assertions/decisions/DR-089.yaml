@@ -8,6 +8,7 @@ decisions:
       - work:artifact/meta-templates-pull-request
       - work:artifact/meta-check-pr
       - work:artifact/meta-disciplines
+      - work:artifact/meta-lib-check-pr-form
     alternatives:
       - name: A channel verb that closes the Issue
         chosen: false

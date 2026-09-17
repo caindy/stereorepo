@@ -555,7 +555,7 @@ def handoff_probes():
 
     def watched(polls):
         """What `--watch` printed on pull request 7, GitHub answering one poll at a time from `polls`."""
-        with stood_in(check_pr, gh=WatchGitHub(polls)):
+        with stood_in(check_pr.github, gh=WatchGitHub(polls)):
             return outcome(lambda: check_pr.watch("7", every=0)).out.splitlines()
 
     lines = watched([("OPEN", "MERGEABLE"), ("OPEN", "UNKNOWN"), ("OPEN", "MERGEABLE"),
@@ -584,12 +584,12 @@ def handoff_probes():
 
     armed = pull_of(10, "Stuck armed PR", autoMergeRequest={"enabledAt": "2026-09-11"},
                     mergeable="MERGEABLE")
-    with stood_in(check_pr, threads=lambda n: [{"id": "t1", "isResolved": False}]):
+    with stood_in(check_pr.github, threads=lambda n: [{"id": "t1", "isResolved": False}]):
         owed = check_pr.unheld([armed], minutes=30, clean={10})
     if len(owed) != 1 or "unresolved conversation" not in owed[0]:
         problems.append(f"unheld: an armed PR with unresolved threads reported {owed!r}")
 
-    with stood_in(check_pr, threads=lambda n: [{"id": "t1", "isResolved": True}]):
+    with stood_in(check_pr.github, threads=lambda n: [{"id": "t1", "isResolved": True}]):
         clean_owed = check_pr.unheld([armed], minutes=30, clean={10})
         if clean_owed:
             problems.append(f"unheld: an armed PR with no unresolved threads reported {clean_owed!r}")
@@ -650,7 +650,7 @@ def handoff_probes():
                      latestReviews=approved, updatedAt=old_time)),
         )
         for case, level, clean, phrases, pull in idle:
-            with stood_in(check_pr, gh=lambda *a, level=level: {"state": "OPEN", "labels": [{"name": level}]}):
+            with stood_in(check_pr.github, gh=lambda *a, level=level: {"state": "OPEN", "labels": [{"name": level}]}):
                 owed = check_pr.unheld([pull], minutes=30, clean=clean)
             if len(owed) != 1 or any(phrase not in owed[0] for phrase in phrases):
                 problems.append(f"unheld: {case} reported {owed!r}")
@@ -692,7 +692,7 @@ def enacted_probes():
 
     def read(changed):
         """`unenacted("origin/main")` with the branch's diff stood in for by `changed`."""
-        with stood_in(check_pr, touched=lambda base: changed):
+        with stood_in(check_pr.branch, touched=lambda base: changed):
             return check_pr.unenacted("origin/main")
 
     found, note = read([".meta/arc/deploy", ".meta/say/move"])
@@ -711,7 +711,7 @@ def enacted_probes():
     if found:
         problems.append(f"unenacted: DR-{number:03d} (valid) reported problems {found!r}")
 
-    with stood_in(check_pr, parse_decision_yaml=lambda path: ("ADOPTED", [])):
+    with stood_in(check_pr.branch, parse_decision_yaml=lambda path: ("ADOPTED", [])):
         found, note = read([entry])
     if not found or f"DR-{number:03d}" not in found[0]:
         problems.append(f"unenacted: DR-{number:03d} with no artifacts did not report expected problem, got {found!r}")
@@ -719,7 +719,7 @@ def enacted_probes():
     def handed_off(render):
         """What `handoff("origin/main")` printed with `RENDER` stood in for by the command `render`, and the bases the enacted step was asked about, the step itself answering nothing."""
         asked = []
-        with stood_in(check_pr, RENDER=render,
+        with stood_in(check_pr.branch, RENDER=render,
                       unenacted=lambda base: (asked.append(base), ([], ""))[1]):
             said = outcome(lambda: check_pr.handoff("origin/main")).out
         return asked, said.splitlines()

@@ -6,6 +6,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-check-pr
       - work:artifact/github-workflows-coder
+      - work:artifact/meta-lib-check-pr-sweep
     context: >-
       The *hand back what the run did not finish* step in
       `.github/workflows/coder.yml` is the handler that exists so a run killed

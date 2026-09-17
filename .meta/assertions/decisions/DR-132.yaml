@@ -7,6 +7,7 @@ decisions:
       - work:article/12
     enacted_in:
       - work:artifact/meta-check
+      - work:artifact/meta-lib-check-pr-verdict
     alternatives:
       - name: Leave Issue numbers bare and hold only the record's
         chosen: false

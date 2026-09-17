@@ -19,4 +19,4 @@ select = [
 ignore = []
 
 [lint.isort]
-known-first-party = ["citations", "graph", "probes", "collect", "files", "check_pr", "channel"]
+known-first-party = ["citations", "graph", "probes", "collect", "files", "check_pr", "channel", "lib", "depth"]
