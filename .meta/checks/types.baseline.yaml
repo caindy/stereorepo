@@ -33,7 +33,6 @@
 .meta/checks/probes/tools.py: 43
 .meta/dereference.py: 41
 .meta/gate: 16
-.meta/hooks/signed_channel.py: 4
 .meta/next.py: 38
 .meta/render.py: 129
 .meta/say/channel.py: 34

@@ -16,10 +16,27 @@ from a probe, and a probe takes none from another subject's (solorepo's DR-150).
 import io
 import json
 import pathlib
+import shlex
 import sys
 
 from collect import ROOT, check
 from probes.harness import exit_of, load_hook, stood_in
+
+
+def nested(line: str, depth: int) -> str:
+    """One command line behind `depth` shell interpreters, each handed the next as its `-c` argument.
+
+    Parameters:
+        line: The command line the innermost interpreter runs.
+        depth: How many interpreters to wrap it in.
+
+    Returns:
+        str: The wrapped command line, quoted at each layer as the shell needs.
+    """
+    for _ in range(depth):
+        line = "sh -c " + shlex.quote(line)
+    return line
+
 
 VERDICTS = (
     ("signed_channel: reaching GitHub without signing", "signed_channel", (
@@ -33,6 +50,7 @@ VERDICTS = (
         ("allow", ".meta/say/post comment 1"),
         ("allow", ".meta/say/move merge 1 --auto"),
         ("refuse", ".meta/say comment 1 && gh api repos/x"),
+        ("refuse", ".meta/say comment 1 <<'EOF'\napi.github.com\nEOF\n"),
         ("allow", "gh pr view 1"),
     )),
     ("signed_channel: starting a Job is recorded against an account, so the raw `gh workflow run` "
@@ -43,6 +61,112 @@ VERDICTS = (
         ("allow", "gh run list --workflow coder.yml"),
         ("allow", "gh workflow view coder.yml"),
         ("allow", ".meta/say/move dispatch 219 --task rebase"),
+    )),
+    ("signed_channel: a word searched for is not a word run, so a read whose pattern names the "
+     "endpoint or a writing verb passes beside the call that makes it (solorepo's #463); the "
+     "verbs are read as adjacent words on a carrier `READING` does not clear, and `git` prints "
+     "what it is given under a subcommand rather than under its own name",
+     "signed_channel", (
+        ("allow", r'grep -ril "gh pr|github\.com/repos|pull request|gh api" swarmforge/'),
+        ("allow", "grep -rn 'api.github.com' .meta/"),
+        ("allow", "sed -n 's|api.github.com|the endpoint|p' notes.md"),
+        ("allow", 'echo "never reach api.github.com by hand"'),
+        ("allow", "python3 .meta/render.py --note 'gh pr merge 1'"),
+        ("allow", "git grep -n 'api.github.com' -- .meta"),
+        ("allow", "git commit -m 'gh pr merge is refused here'"),
+        ("refuse", "gh api repos/x/y"),
+    )),
+    ("signed_channel: running the channel clears the segment that runs it and not its "
+     "neighbours, and a mention of it clears nothing, so a line passes only where every segment "
+     "passes on its own (solorepo's #463)",
+     "signed_channel", (
+        ("refuse", 'echo "use .meta/say/post instead" && curl -X POST https://api.github.com/repos/x'),
+        ("refuse", ".meta/say/post comment 1 && gh pr merge 1"),
+        ("refuse", "python3 .meta/check_pr.py 87 --threads; gh pr merge 87"),
+        ("refuse", "echo hi | gh api repos/x/y --input -"),
+    )),
+    ("signed_channel: a heredoc body is data the segment that opened it carries, so the channel's "
+     "prose is not read as the commands its lines spell and a body handed to a client still "
+     "reaches what it names (solorepo's #463)",
+     "signed_channel", (
+        ("allow", ".meta/say/post comment 1 <<'EOF'\n"
+                  "don't use `curl https://api.github.com/x`; `gh api` is refused too\nEOF\n"),
+        ("refuse", ".meta/say/post comment 1 <<'EOF'\nbody\nEOF\ncurl https://api.github.com/x"),
+        ("refuse", "curl -X POST -d @- https://example.test <<'EOF'\n"
+                   "api.github.com/repos/x\nEOF\n"),
+    )),
+    ("signed_channel: the spellings that run a program of the channel, the line an interpreter is "
+     "handed however its options are written, followed to a fixed depth and refused past it, "
+     "and what this hook refuses rather than guessing what it runs (solorepo's #463)",
+     "signed_channel", (
+        ("allow", "uv run .meta/say/post comment 1"),
+        ("allow", "python3 .meta/check_pr.py 87 --threads"),
+        ("allow", "/home/runner/work/solorepo/.meta/say/move claim 463"),
+        ("allow", "$CLAUDE_PROJECT_DIR/.meta/say/post landed 1"),
+        ("refuse", "$TOOL api repos/x/y"),
+        ("refuse", "gh pr view 'unbalanced"),
+        ("refuse", "bash -c 'gh pr merge 1'"),
+        ("refuse", "bash -lc 'curl -X POST https://api.github.com/repos/x'"),
+        ("refuse", "bash -c -x 'gh pr merge 1'"),
+        ("refuse", "bash -c -o pipefail 'gh api repos/x'"),
+        ("refuse", ".meta/say/post comment 1 <<\"E O F\"\nbody\nE O F"),
+        ("refuse", "echo x\\"),
+        ("refuse", nested("gh api repos/x", 2)),
+        ("refuse", nested("echo hi", 6)),
+        ("allow", nested("echo hi", 2)),
+        ("allow", "bash -c 'git status --porcelain'"),
+    )),
+    ("signed_channel: a substitution names its program at run time, so a segment holding one is "
+     "refused wherever it sits rather than only where it is the program itself (solorepo's #467)",
+     "signed_channel", (
+        ("refuse", "ls $(gh pr merge 467)"),
+        ("refuse", "ls `gh pr merge 467`"),
+        ("refuse", "cat <(gh api repos/x/y -f body=hi)"),
+        ("refuse", 'echo "$(curl -X POST -d @body https://api.github.com/x)"'),
+        ("allow", "$CLAUDE_PROJECT_DIR/.meta/say/post landed 1"),
+    )),
+    ("signed_channel: an interpreter runs the script in the one argument position that names one, "
+     "so a channel path written anywhere else is a mention; code given on the command line names "
+     "no script at all, attached to its option or apart from it (solorepo's #467)",
+     "signed_channel", (
+        ("refuse", "python3 fetch.py --log .meta/say/post https://api.github.com/x"),
+        ("refuse", "python3 \"-cimport urllib.request as u;u.urlopen('https://api.github.com/x')\" "
+                   ".meta/say/post"),
+        ("refuse", "python3 -m http.client .meta/say/post https://api.github.com/x"),
+        ("allow", "uv run .meta/say/post comment 1"),
+        ("allow", "python3 .meta/check_pr.py 87 --threads"),
+    )),
+    ("signed_channel: a shell handed no command line is about to run text this hook has not read, "
+     "and a command line it is handed is judged beside the segment that handed it over rather "
+     "than instead of it (solorepo's #467)",
+     "signed_channel", (
+        ("refuse", "echo 'gh pr merge 467' | bash"),
+        ("refuse", "bash <<'EOF'\ngh pr merge 467\nEOF\n"),
+        ("refuse", "sh -c 'curl -X POST -d @body \"$1\"' _ https://api.github.com/x"),
+        ("allow", "bash -c 'git status --porcelain'"),
+    )),
+    ("signed_channel: the shell expands a heredoc body written under an unquoted delimiter before "
+     "the segment carrying it runs, so a substitution in one is refused where the quoted spelling "
+     "the channel writes its bodies in carries the same characters as text (solorepo's #467)",
+     "signed_channel", (
+        ("refuse", "python3 - <<EOF\n$(gh pr merge 467)\nEOF\n"),
+        ("refuse", "cat <<EOF\n$(curl -X POST -d @body https://api.github.com/x)\nEOF\n"),
+        ("allow", ".meta/say/post comment 1 <<'EOF'\nsee `$(gh pr merge 1)` above\nEOF\n"),
+    )),
+    ("signed_channel: a program that execs the rest of its words does the work of none, so the "
+     "shell behind one is read as the shell it is and the read behind one is read as the read; "
+     "one handed its command line as an option's value instead names no program, and is refused "
+     "rather than read as a segment that runs nothing (solorepo's #467)",
+     "signed_channel", (
+        ("refuse", "env -S 'curl -X POST -d @body https://api.github.com/x'"),
+        ("refuse", "env --split-string='curl -X POST https://api.github.com/x'"),
+        ("refuse", "timeout 5 bash -c 'gh pr merge 467'"),
+        ("refuse", "env bash -c 'gh pr merge 467'"),
+        ("refuse", "nohup sh -c 'gh api repos/x/y -f body=hi'"),
+        ("refuse", "timeout -k 5 10 bash -c 'curl -X POST https://api.github.com/x'"),
+        ("refuse", "echo x | xargs -I{} sh -c 'gh pr merge 467'"),
+        ("allow", "timeout 30 grep -rn 'api.github.com' .meta/"),
+        ("allow", "env FOO=1 timeout 5 .meta/say/post comment 1"),
     )),
     ("worktree_only: reading past the worktree", "worktree_only", (
         ("refuse", "Grep", {"path": "/etc"}),
@@ -276,9 +400,19 @@ refusals of a key spelled otherwise are the structural row: `run-gemini-cli@v0`
 floats, so a renamed or added argument is a spelling this hook does not know,
 and it refuses rather than resolving to the worktree.
 
-`signed_channel.blocked()` answers on the channel's prefix before it reads a
-verb, so one channel call stands for every spelling of a verb, and a row per
-verb would hold on the prefix alone. `!` is the one character of
+`signed_channel.blocked()` judges each segment of a command line on its own, so
+a row there is a line rather than a call, and the two directions one regex over
+one flat string was wrong in both are rows beside each other: a search whose
+pattern names the verbs, which reaches nothing, and a mention of the channel
+beside an unsigned call, which reaches GitHub (solorepo's #463). One channel
+call still stands for every spelling of a verb, the segment being sanctioned by
+the program it runs before any verb is read; what earns a row of its own is each
+spelling that runs one — bare, absolute, `$CLAUDE_PROJECT_DIR`-prefixed, behind
+an interpreter — and each line the hook reads other than as a sequence of
+commands: a heredoc body, which is the prose this repository types every comment
+and pull request body as, and the command line a shell interpreter is handed.
+Beside them are the lines the hook refuses for being unreadable rather than
+guessing what they run. `!` is the one character of
 `worktree_only.EXPANDS` that bash's reference does not expand in a
 non-interactive shell, where history expansion is off; the row refusing it
 inside double quotes holds the boundary at `EXPANDS` rather than at how the
