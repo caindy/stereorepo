@@ -173,7 +173,9 @@ NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "
 def control_plane_restore() -> Passed | Found | CouldNotRun:
     """The reviewer workflow restores exactly the control plane from trunk, in every place it states the set (solorepo's DR-217).
 
-    `depth.CONTROL_PLANE` is the one statement of what the control plane is.
+    `depth.CONTROL_PLANE` is the one statement of what the control plane is,
+    and under `.meta/lib/` it names the initialiser and the packages of
+    control-plane scripts rather than the directory (solorepo's DR-219).
     `.github/workflows/review.yml` states the trunk-restore set four times: as
     the pathspec of the `run trunk's channel` step, as the `TRUNK` variable that
     builds `.review/head/`, as a count in that step's comment, and as a count

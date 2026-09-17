@@ -42,15 +42,20 @@ STRUCTURE_PATH = META / "assertions" / "structure.yaml"
 HOOK_PATH = META / "hooks" / "depth.py"
 
 CONTROL_PLANE: tuple[str, ...] = (
-    ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/", ".claude/",
-    "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/",
+    ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/__init__.py", ".meta/lib/check_pr/",
+    ".claude/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/",
 )
 """The path prefixes of the control plane: the channel, the hooks, the pull request gate and its
-body, the settings that register them, the instructions every session loads before it reads
-anything, and the workflows. A change under one is routed to the deepest review (Layer 1 of the
-template method) and `.meta/timing.py` reports it as the critical path. `.github/workflows/review.yml`
-restores every prefix but the workflows' from trunk before a reviewer reads anything, and the gate
-step `control plane restore` holds each statement of that set in the workflow to this one."""
+body under `.meta/lib/`, the settings that register them, the instructions every session loads
+before it reads anything, and the workflows. A change under one is routed to the deepest review
+(Layer 1 of the template method) and `.meta/timing.py` reports it as the critical path.
+`.github/workflows/review.yml` restores every prefix but the workflows' from trunk before a
+reviewer reads anything, and the gate step `control plane restore` holds each statement of that
+set in the workflow to this one. Under `.meta/lib/`, the initialiser is always named, and a
+package is named when the script it is the body of is: trunk's `check_pr.py` imports its package
+through `lib/__init__.py`, so the initialiser is module-level code trunk's gate executes, and the
+restore is no-overlay, so a package restored wholesale deletes the body a pull request adds for a
+script outside the envelope (solorepo's DR-219)."""
 SCAFFOLD_BOUNDARY = re.compile("^(" + "|".join(re.escape(prefix) for prefix in CONTROL_PLANE) + ")")
 """Matches a repository-relative path inside the control plane."""
 

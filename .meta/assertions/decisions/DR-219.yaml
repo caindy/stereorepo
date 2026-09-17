@@ -1,0 +1,87 @@
+decisions:
+  - id: work:decision/219
+    name: "DR-219 · The control plane names the packages of control-plane scripts under .meta/lib/, not the directory"
+    challenge: work:challenge/503
+    status: ADOPTED
+    applies:
+      - work:article/2
+    supersedes:
+      - work:decision/217
+    enacted_in:
+      - work:artifact/meta-depth
+      - work:artifact/github-workflows-review
+      - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-timing
+    context: >-
+      Solorepo's DR-217 put `.meta/lib/` into `depth.CONTROL_PLANE` as a
+      directory, so that the package initialiser and every later package would
+      sit inside the envelope, and had `.github/workflows/review.yml` restore
+      `.meta/lib` from trunk beside `.meta/check_pr.py`. The restore is
+      no-overlay: a file a pull request adds under a restored path is gone
+      before the run reads anything. That is the point for the gate's own
+      body, and it is the wrong point for every other script's. The first pull
+      request to split a script outside the control plane, #501 for
+      `apm_compile.py`, could not be reviewed at all: the run restored trunk's
+      `.meta/lib`, which deleted `.meta/lib/apm_compile/`, and its own
+      reconcile step then ran the pull request's thin `apm_compile.py`, which
+      imports the package that had just been removed.
+    alternatives:
+      - name: Keep restoring .meta/lib wholesale and have every script under .meta/ keep a self-contained copy
+        chosen: false
+        reason: >-
+          A script whose body is a package cannot also be self-contained, and
+          the split is what DR-217 decided. Restoring the directory makes every
+          later split of a non-control-plane script unreviewable.
+      - name: Restore .meta/lib wholesale and overlay the pull request's packages back afterwards
+        chosen: false
+        reason: >-
+          An overlay is the mechanism the restore exists not to have: a file
+          the pull request adds under a control-plane path would come back
+          with the rest, and the boundary would depend on a second list of
+          exceptions.
+      - name: Name the packages of control-plane scripts in the constant, and let the restore follow it
+        chosen: true
+        reason: >-
+          `.meta/lib/__init__.py` and `.meta/lib/check_pr/` are the control
+          plane today; a hook's package joins the constant when a hook is
+          split. The restore lists, the counts and the enumeration in the
+          workflow already follow `depth.CONTROL_PLANE` through the
+          `control plane restore` step, so the change is one edit to the
+          constant and the four statements the step holds to it. What it costs
+          is that splitting a control-plane script becomes a two-place act:
+          the package, and the constant.
+    consequences:
+      - >-
+        `depth.CONTROL_PLANE` names `.meta/lib/__init__.py` and
+        `.meta/lib/check_pr/` in place of `.meta/lib/`, and the two boundary
+        patterns follow it. The initialiser is always named: trunk's
+        `check_pr.py` imports its package through it, so a pull request's copy
+        would be module-level code trunk's gate executes on import.
+      - >-
+        `.github/workflows/review.yml` restores those two paths from trunk
+        beside `.meta/check_pr.py`; nine paths are trunk's in the reviewer's
+        worktree. The two path lists, the two counts and the enumeration are
+        held equal by the gate; the prose elsewhere in the workflow names the
+        set without counting it.
+      - >-
+        DR-217's consequence that `.meta/lib/` is inside the envelope as a
+        directory, and every later package with it, is superseded: a package
+        is inside the envelope when the script it is the body of is.
+    falsifier: >-
+      A pull request adding a package under `.meta/lib/` for a script that is
+      not control plane whose reviewer run fails to import it; or a
+      control-plane script's package that the reviewer's worktree takes from
+      the pull request rather than from trunk.
+    rationale: |-
+      The envelope is a set of scripts, and a script's package belongs to the
+      script. Naming the directory was shorter and it overreached by exactly
+      the packages the Decision it came from planned to create. The constant
+      is where the set is stated once; the workflow and the gate already follow
+      it, so the correction is made there and lands everywhere it is read.
+
+      The set is listed rather than derived. Deriving it, by resolving each
+      package under `.meta/lib/` to its script and asking the boundary about
+      the script, would be the stronger statement, but the workflow restores
+      what a list says and cannot run the derivation; a check that holds the
+      list to the derivation is the mechanism for the two-place act this
+      Decision costs, and is its own change.

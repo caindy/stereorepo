@@ -211,7 +211,8 @@ def critical(run, jobs):
 
 
 BOUNDARY_PATTERN = re.compile("^(" + "|".join(re.escape(prefix) for prefix in CONTROL_PLANE) + ")")
-"""Matches a repository-relative path inside the control plane, as `depth.CONTROL_PLANE` lists it."""
+"""Matches a repository-relative path inside the control plane, as `depth.CONTROL_PLANE` lists it:
+under `.meta/lib/`, the initialiser and the packages of control-plane scripts (solorepo's DR-219)."""
 DIFFICULTY_CACHE: dict[str, str] = {}
 
 

@@ -114,9 +114,12 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
 
 
-      # Eight paths are trunk's, not the pull request's: the channel, the
-      # hooks, the checker and its body under `.meta/lib/`, the settings that
-      # register them, and the instructions the session loads before it reads
+      # Nine paths are trunk's, not the pull request's: the channel, the
+      # hooks, the checker, its package under `.meta/lib/` and the initialiser
+      # that package is imported through — that package and not the
+      # directory, whose other packages are the bodies of scripts the pull
+      # request may change (solorepo's DR-219) — the settings that register
+      # them, and the instructions the session loads before it reads
       # anything. The gate step `control plane restore` holds this list, and
       # `TRUNK` below, to `depth.CONTROL_PLANE`. The action
       # restores `.claude/` from `main` on its own and its log says so; the
@@ -133,7 +136,7 @@ jobs:
       - name: run trunk's channel
         run: |
           git restore --quiet --source=origin/main --staged --worktree -- \
-            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib AGENTS.md CLAUDE.md GEMINI.md
+            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr AGENTS.md CLAUDE.md GEMINI.md
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 
@@ -198,8 +201,8 @@ jobs:
 
       # What the session reads, written to files before it starts (solorepo's #196).
       # Two reads dominate an agent's turns and both exceed the tool-result
-      # cap: the pull request's diff, and the head's version of the six paths
-      # the step above replaced with trunk's. Past about 30 KB a shell result
+      # cap: the pull request's diff, and the head's version of the paths
+      # the step above replaced. Past about 30 KB a shell result
       # arrives as its first 2 KB and the path of a file holding the rest, so
       # an agent that runs `gh pr diff` reads a preview and then pages the
       # spill file, and one that wants the head's channel runs
@@ -230,7 +233,7 @@ jobs:
       # still trunk's, because the grammar in `worktree_only.py` admits a
       # program spelled `.meta/say/<name>` and nothing under `.review/` is
       # spelled that way. A path the pull request deletes is simply absent,
-      # and the diff says so; all six gone is this step failing, not a review.
+      # and the diff says so; every one gone is this step failing, not a review.
       # A `run:` block is `bash -e` and nothing more, so without the
       # `pipefail` below the pipeline's status is `tar`'s and an archive that
       # died after its first members would leave a partial `.review/head/`
@@ -260,7 +263,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib AGENTS.md CLAUDE.md GEMINI.md
+          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr AGENTS.md CLAUDE.md GEMINI.md
 
       # The paragraphs that bound every agent, in a file rather than in the
       # prompt (solorepo's #196). They used to end "every agent the review spawns gets
@@ -284,16 +287,19 @@ jobs:
           tool, which takes an offset and a limit. `gh pr diff` says the same
           thing and arrives as its first 2 KB and a path when the diff is large.
 
-          **Eight paths in the worktree are trunk's, not this pull request's:**
-          `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`, `.meta/lib/`,
-          `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`. They were replaced with `origin/main`'s
+          **Nine paths in the worktree are trunk's, not this pull request's:**
+          `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`, `.meta/lib/__init__.py`,
+          `.meta/lib/check_pr/`, `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`. They were replaced with `origin/main`'s
           copies before the session, so that what runs here is trunk's. You run
           and read them as trunk's; you do not review them by reading them.
           `git status` and `git diff` show nothing for a change the pull request
           makes to them; a file the pull request adds under them shows as a
           staged deletion, which is the restore and not the pull request.
+          Nothing else under `.meta/lib/` is trunk's: a package the pull request
+          adds or changes for any other script is in the worktree as the pull
+          request wrote it, and is reviewed by reading it there.
 
-          **The pull request's version of those six is under `.review/head/`,**
+          **The pull request's version of those trunk paths is under `.review/head/`,**
           at the same path: `.review/head/.meta/say/post` is what this pull
           request's `post` says. That copy is read and never run, and it is the
           version to review. `git show ${{ github.event.pull_request.head.sha }}:<path>`
@@ -384,7 +390,7 @@ jobs:
           # a program or writes a file. A hook, because it is the one layer
           # that sees an argument rather than a prefix: `git grep -O` runs a
           # shell and `git log --output=.meta/say` rewrites the channel, and
-          # no prefix list excludes an option. The script is one of the six
+          # no prefix list excludes an option. The script is one of the trunk
           # paths restored above, so it is trunk's.
           settings: |
             {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
