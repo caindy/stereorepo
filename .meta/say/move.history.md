@@ -239,3 +239,18 @@ request, refuses clean pull requests with no changes requested, or assigns
 the coder and triggers the loop on an unstarted Challenge.
 
 Receipt: `.meta/checks/probes/loops.py::delegate_probes`
+
+### Third layer of a stack left open and unlinked
+
+`gh stack link` takes either two pull requests, which starts a stack, or a
+stack's number and the layer to add, and refuses a call naming fewer pull
+requests than the stack already holds. `link` passed two pull requests every
+time, so `open --on` opened the third layer of a stack and left it unlinked,
+which the merge manager reads as an ordinary pull request on a branch
+(solorepo's #496). A first repair walked the open pull requests below by base
+branch and passed them all, and broke once the bottom layer merged, because
+the stack still counts a merged layer. Established: `link` names the stack's
+number, read off the pull request below, when that pull request is a layer,
+and the pull request itself when it is not.
+
+Receipt: `.meta/checks/probes/channel.py::layer_probes`

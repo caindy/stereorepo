@@ -200,6 +200,12 @@ class FakeGitHub:
       `claude/issue-<number>`.
     - `base`: the base's name, where it is not trunk — which is what a layer of
       a stack looks like from here. Default `main`.
+    - `layer`: whether the pull request is a layer of a stack, which the
+      `pulls/{number}` endpoint answers with a `stack` object. Default `False`.
+    - `stack`: the number of that stack, as the endpoint reports it. Default `1`.
+
+    `linked` collects the argument vector of every `stack link` call, so a
+    probe can read what the verb named.
     - `issue`: the Challenge the branch names, as `{state, level, unreadable}`,
       read before a dispatch (solorepo's DR-142). Open and `medium` unless set,
       since the branch's number is the Issue's here; `unreadable` makes
@@ -261,6 +267,7 @@ class FakeGitHub:
         self.lands = {str(n) for n in lands}
         self.no_dispatch = {str(n) for n in no_dispatch}
         self.dispatched = []
+        self.linked = []
         self.edited = []
 
     def view(self, number):
@@ -398,9 +405,12 @@ class FakeGitHub:
                 sys.exit("gh: Could not resolve to an issue or pull request")
             return {"state": issue.get("state", "OPEN"),
                     "labels": [{"name": "challenge"}, {"name": issue.get("level", "medium")}]}
+        if head == ("stack", "link"):
+            self.linked.append(tuple(args[2:]))
+            return ""
         if args[0] == "api" and "/pulls/" in args[1]:
-            return {"stack": {"id": 1}} if (self.pulls.get(args[1].rsplit("/", 1)[-1])
-                                            or {}).get("layer") else {}
+            pull = self.pulls.get(args[1].rsplit("/", 1)[-1]) or {}
+            return {"stack": {"id": 1, "number": pull.get("stack", 1)}} if pull.get("layer") else {}
         if args[0] == "api":
             return {"allow_auto_merge": True}
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")

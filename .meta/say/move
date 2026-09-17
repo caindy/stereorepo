@@ -337,13 +337,21 @@ def revise(number, body=None, title=None):
     print(f"{what} #{number}: {' and '.join(w for w, v in (('body', body), ('title', title)) if v is not None)} set")
 
 
-def stacked(pr):
-    """Whether a pull request is a layer of a stack, read from GitHub.
+def stacked(pr: str | int) -> str | None:
+    """The number of the stack a pull request is a layer of, read from GitHub, or None when it is not one.
 
     The pull request payload carries a `stack` object on a layer and nothing
     otherwise. `gh pr view` does not expose it, so the endpoint is read.
+
+    Parameters:
+        pr (str | int): Pull request number to inspect.
+
+    Returns:
+        str | None: The stack's number as GitHub reports it, or None.
     """
-    return bool(channel.gh("api", f"repos/{channel.repo()}/pulls/{pr}").get("stack"))
+    stack = channel.gh("api", f"repos/{channel.repo()}/pulls/{pr}").get("stack") or {}
+    number = stack.get("number")
+    return None if number is None else str(number)
 
 
 def link(below, above):
@@ -356,8 +364,14 @@ def link(below, above):
     `gh stack submit` opens pull requests unsigned and stays blocked. After a
     layer merges, GitHub rebases the layers above it, which is the whole reason
     for a stack over a hand-built one (solorepo's DR-100).
+
+    `gh stack link` takes either two pull requests, which starts a stack, or a
+    stack's number and the layer to add, and refuses a call naming fewer pull
+    requests than the stack already holds. So when `below` is already a layer,
+    the call names its stack's number in place of `below` (solorepo's #496).
     """
-    print(channel.gh("stack", "link", str(below), str(above), parse=False))
+    stack = stacked(below)
+    print(channel.gh("stack", "link", stack if stack else str(below), str(above), parse=False))
 
 
 def head_branch(pr):
