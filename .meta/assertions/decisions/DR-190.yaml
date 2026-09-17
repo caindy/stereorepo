@@ -17,6 +17,7 @@ decisions:
       - work:artifact/agents
       - work:artifact/template-agents
       - work:artifact/meta-checks-files-wiki
+      - work:artifact/meta-lib-render-skills
     context: >-
       Article 17 states that a term that arrived by use has not been agreed,
       enforcing the Ubiquitous Language discipline. Previously, A17 was checked

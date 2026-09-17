@@ -4,6 +4,7 @@ decisions:
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-render
+      - work:artifact/meta-lib-render-skills
     rationale: |-
       `.agents/` got the producer/consumer split backwards. `.apm/` is
       where primitives are authored; `.agents/` is somewhere they land,

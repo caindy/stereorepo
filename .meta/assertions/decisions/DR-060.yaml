@@ -53,6 +53,7 @@ decisions:
       fact recoverable from GitHub alone.
     enacted_in:
       - work:artifact/meta-render
+      - work:artifact/meta-lib-render-skills
     rationale: |-
       DR-055 built the mechanics of PR First and left the trigger to
       whoever remembered. That held while one conversation opened a pull

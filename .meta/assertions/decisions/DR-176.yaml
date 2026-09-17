@@ -8,6 +8,7 @@ decisions:
       - work:artifact/github-workflows-coder
       - work:artifact/bootstraps-python-literate-programming
       - work:artifact/bootstraps-rust-literate-programming
+      - work:artifact/meta-lib-render-skills
     context: >-
       Issue #262 asserted `work:role/technical-writer` and
       `work:personality/technical-writer` to define the technical writing

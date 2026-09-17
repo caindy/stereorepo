@@ -9,6 +9,8 @@ decisions:
       - work:artifact/meta-render
       - work:artifact/meta-readme
       - work:artifact/meta-disciplines
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-render-writers
     alternatives:
       - name: The commands as they are, typed from the load map
         chosen: false

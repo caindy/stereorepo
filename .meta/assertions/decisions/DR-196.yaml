@@ -11,6 +11,7 @@ decisions:
       - work:artifact/meta-assertions-imported-disciplines
       - work:artifact/wiki-solorepo-knowledge-management
       - work:artifact/skill-technical-writing
+      - work:artifact/meta-lib-render-skills
     context: >-
       While solorepo established Wikipedia-style Knowledge Management (solorepo's DR-184)
       and layered technical writing standards (solorepo's DR-194), arriving agents

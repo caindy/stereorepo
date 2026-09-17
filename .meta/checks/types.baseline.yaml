@@ -55,8 +55,15 @@
 .meta/lib/check_pr/review.py: 22
 .meta/lib/check_pr/sweep.py: 43
 .meta/lib/check_pr/verdict.py: 20
+.meta/lib/render/cli.py: 4
+.meta/lib/render/decisions.py: 31
+.meta/lib/render/pages.py: 36
+.meta/lib/render/record.py: 21
+.meta/lib/render/skills.py: 24
+.meta/lib/render/targets.py: 8
+.meta/lib/render/writers.py: 6
 .meta/next.py: 38
-.meta/render.py: 129
+.meta/render.py: 1
 .meta/say/channel.py: 34
 .meta/say/commit: 13
 .meta/say/move: 272

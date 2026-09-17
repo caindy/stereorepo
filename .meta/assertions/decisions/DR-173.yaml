@@ -8,6 +8,7 @@ decisions:
       - work:artifact/meta-apm-readme
       - work:artifact/meta-disciplines
       - work:artifact/specialize
+      - work:artifact/meta-lib-render-writers
     context: >-
       solorepo's #28 and #77 questioned whether non-primitive assets—specifically
       LinkML schemas (`.meta/work/`, `.meta/ddd/`) and executable Python tools

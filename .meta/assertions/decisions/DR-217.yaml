@@ -17,6 +17,13 @@ decisions:
       - work:artifact/meta-lib-check-pr-review
       - work:artifact/meta-lib-check-pr-sweep
       - work:artifact/meta-lib-check-pr-verdict
+      - work:artifact/meta-lib-render
+      - work:artifact/meta-lib-render-record
+      - work:artifact/meta-lib-render-pages
+      - work:artifact/meta-lib-render-decisions
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-render-targets
+      - work:artifact/meta-lib-render-cli
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-ruff-toml
       - work:artifact/meta-disciplines

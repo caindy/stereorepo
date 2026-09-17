@@ -18,6 +18,7 @@ decisions:
       - work:artifact/wiki-solorepo-ubiquitous-language
       - work:artifact/wiki-solorepo-pr-first
       - work:artifact/meta-checks-files-wiki
+      - work:artifact/meta-lib-render-skills
     context: >-
       When autonomous agents generate architectural prose and domain explanations
       without deterministic syntactic grounding, they coin floating signifiers and

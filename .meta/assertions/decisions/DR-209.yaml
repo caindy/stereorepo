@@ -25,6 +25,8 @@ decisions:
       - work:artifact/meta-checks-probes-loops-merge-manager
       - work:artifact/meta-checks-probes-loops-merge-manager-advance
       - work:artifact/meta-checks-probes-loops-stop
+      - work:artifact/meta-lib-render-record
+      - work:artifact/meta-lib-render-skills
     context: >-
       solorepo's DR-150 lifted the probes — about 830 lines of them — out of
       `check.py` into `.meta/checks/probes.py` so that the gate over assertions

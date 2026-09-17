@@ -10,6 +10,7 @@ decisions:
       - work:artifact/meta-charter
       - work:artifact/justfile
       - work:artifact/github-workflows-coder
+      - work:artifact/meta-lib-render-skills
     context: >-
       DR-130 split a citation's claim into the four shapes a string search
       reaches and left the rest, on the grounds that deciding whether a sentence

@@ -28,6 +28,7 @@ decisions:
       - work:artifact/meta-timing
       - work:artifact/specialize
       - work:artifact/meta-checks-files-python
+      - work:artifact/meta-lib-render-skills
     context: >-
       The Python bootstrap holds portfolio code to strict guardrails
       (`bootstraps/python/seed/pyproject.toml`), including `ruff` with `ignore = []`,

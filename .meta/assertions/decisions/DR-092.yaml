@@ -9,6 +9,7 @@ decisions:
       - work:article/7
     enacted_in:
       - work:artifact/meta-charter
+      - work:artifact/meta-lib-render-writers
     alternatives:
       - name: Leave the shape to imitation
         chosen: false

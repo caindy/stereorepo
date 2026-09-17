@@ -63,6 +63,7 @@ decisions:
       and the model is overhead.
     enacted_in:
       - work:artifact/meta-render
+      - work:artifact/meta-lib-render-decisions
     rationale: |-
       DR-049 ruled the record stays prose because modelling would wrap the
       paragraphs without gaining a check. That was true when written. What

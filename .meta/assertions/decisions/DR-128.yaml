@@ -16,6 +16,7 @@ decisions:
       - work:artifact/template-github-workflows-gate
       - work:artifact/agents
       - work:artifact/meta-readme
+      - work:artifact/meta-lib-render-targets
     alternatives:
       - name: Read the record on main and take the next number
         chosen: false

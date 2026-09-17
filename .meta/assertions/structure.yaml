@@ -389,6 +389,30 @@ artifacts:
   - id: work:artifact/meta-render
     name: .meta/render.py
     path: .meta/render.py
+  - id: work:artifact/meta-lib-render
+    name: .meta/lib/render/__init__.py
+    path: .meta/lib/render/__init__.py
+  - id: work:artifact/meta-lib-render-record
+    name: .meta/lib/render/record.py
+    path: .meta/lib/render/record.py
+  - id: work:artifact/meta-lib-render-pages
+    name: .meta/lib/render/pages.py
+    path: .meta/lib/render/pages.py
+  - id: work:artifact/meta-lib-render-decisions
+    name: .meta/lib/render/decisions.py
+    path: .meta/lib/render/decisions.py
+  - id: work:artifact/meta-lib-render-skills
+    name: .meta/lib/render/skills.py
+    path: .meta/lib/render/skills.py
+  - id: work:artifact/meta-lib-render-writers
+    name: .meta/lib/render/writers.py
+    path: .meta/lib/render/writers.py
+  - id: work:artifact/meta-lib-render-targets
+    name: .meta/lib/render/targets.py
+    path: .meta/lib/render/targets.py
+  - id: work:artifact/meta-lib-render-cli
+    name: .meta/lib/render/cli.py
+    path: .meta/lib/render/cli.py
   - id: work:artifact/meta-search
     name: .meta/search.py
     path: .meta/search.py

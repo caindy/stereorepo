@@ -6,6 +6,7 @@ decisions:
     enacted_in:
       - work:artifact/gitattributes
       - work:artifact/meta-render
+      - work:artifact/meta-lib-render-targets
     context: >-
       `check.py` byte-compares every page `render.py` writes against a fresh
       render and fails the gate on any difference, so a committed generated

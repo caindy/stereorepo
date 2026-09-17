@@ -19,6 +19,7 @@ decisions:
       - work:artifact/justfile
       - work:artifact/meta-assertions-imported-authority
       - work:artifact/meta-templates-roadmap
+      - work:artifact/meta-lib-render-pages
     alternatives:
       - name: A rule about the order, in a prompt, a step or a memory
         chosen: false

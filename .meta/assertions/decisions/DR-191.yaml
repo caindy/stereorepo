@@ -9,6 +9,7 @@ decisions:
       - work:artifact/meta-disciplines
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-render
+      - work:artifact/meta-lib-render-writers
     context: >-
       DR-166 established an agent fan-out ceiling chosen with review depth (3 on the boundary
       path, 1 elsewhere) to bound wall-clock time and turn consumption, but left the ceiling

@@ -19,6 +19,8 @@ decisions:
       - work:artifact/justfile
       - work:artifact/specialize
       - work:artifact/meta-checks-files-wiki
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-render-writers
     context: >-
       With the Knowledge Management discipline (solorepo's DR-184) and Wikipedia editorial
       conventions (solorepo's DR-185) landed, maintainer-facing exposition belongs in

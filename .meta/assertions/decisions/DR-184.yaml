@@ -14,6 +14,7 @@ decisions:
       - work:artifact/wiki-readme
       - work:artifact/wiki-solorepo-readme
       - work:artifact/meta-checks-files-wiki
+      - work:artifact/meta-lib-render-skills
     context: >-
       The repository lacked a designated home for maintainer-facing exposition—prose
       addressed to someone arriving cold who seeks to understand an architecture or

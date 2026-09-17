@@ -7,6 +7,7 @@ decisions:
       - work:article/8
     enacted_in:
       - work:artifact/meta-render
+      - work:artifact/meta-lib-render-record
     context: >-
       Step two of Specialization argued that the channel, its hooks and
       `.claude/settings.json` travel into a portfolio with the loop workflows,
