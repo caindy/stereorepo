@@ -1,0 +1,99 @@
+decisions:
+  - id: work:decision/216
+    name: "DR-216 · The rule its seven instances share is stated as an Article of its own"
+    status: ADOPTED
+    applies:
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-charter
+    context: >-
+      Seven Articles say one thing in seven shapes. A decision that lives only in
+      a transcript has not been made (A11); reasoning that lives only in a commit
+      message is not recorded (A14); work noticed and recorded only in a summary
+      has not been noticed (A15); a thread resolved without an answer has not been
+      resolved (A16); a term that arrived by use has not been agreed (A17); work
+      not pushed has not been handed off (A18); a rule that lives only in the
+      decision record is not in force (A20).
+
+      Each states, of one artifact, that state held where the next participant
+      cannot observe it is state the system does not have — not that it should be
+      recorded, but that it did not happen. A9 supplies the method that follows
+      from it: a seed is not proved by linting it in place, but by rendering it
+      and making the ordinary gate face the result. A4 supplies the standard: a
+      guardrail never observed to fail is not evidence of anything.
+
+      The generalisation was never written, so it was available only by noticing
+      that seven Articles rhyme. #478 is what that costs: the rule governing a
+      session's branch existed in `.github/workflows/coder.yml`'s job condition
+      and nowhere else, so knowing it required a privileged read of the
+      implementation, and the session that needed it derived the right answer for
+      partly the wrong reason. Nothing surfaced the missing observation point
+      until an unprivileged participant had to reconstruct the state of things
+      and could not.
+    alternatives:
+      - name: Leave the rule implicit in the seven Articles that instantiate it
+        chosen: false
+        reason: >-
+          It is in force seven times over for seven named artifacts, and
+          unavailable for anything else. A Job meeting a case the seven do not
+          cover has nothing to cite and must re-derive the rule from the rhyme,
+          which is the failure this entry was written after rather than a
+          hypothetical one. It is also A20's own shape turned on the Charter: a
+          rule reachable only through its instances is not reachable.
+      - name: Write it as a Discipline
+        chosen: false
+        reason: >-
+          A Discipline is followed and has steps; an Article is checked and is one
+          line held against an artifact. This has no steps and no order — it is a
+          question asked of a thing that already exists, which is the test
+          `disciplines.md` itself gives for telling the two apart. Wrapping it in
+          steps would bury the claim, and a rule nobody can cite in one line is a
+          rule nobody cites.
+      - name: State it as an Article, cited by the seven rather than replacing them
+        chosen: true
+        reason: >-
+          The seven keep their own checks, which are the enforceable part, and
+          gain a general form for the cases they do not name. What it costs is an
+          Article nothing mechanical checks: its instances are checked and the
+          generalisation is held at review, which is weaker than every Article
+          beside it and is the honest position rather than a gate invented to
+          make it look otherwise.
+    consequences:
+      - >-
+        A22 states the rule the seven instantiate, and names them in `checked_by`
+        so a reader arriving at the general form finds the enforceable instances.
+      - >-
+        Nothing new is checked mechanically. A22's weight is at review, where the
+        question it puts is what a Job holding no privilege beyond the record
+        could reconstruct.
+      - >-
+        The observability of a rule becomes a thing a review may object to on its
+        own, rather than only where one of the seven named artifacts is involved.
+    falsifier: >-
+      A22 never cited in a review or a Decision Record over a run long enough to
+      have met a case outside the seven, which would mean the generalisation
+      stated something nobody needed and the instances were the whole rule.
+    rationale: |-
+      Two commitments in this repository turn out to be one commitment. Memory is
+      externalised so that what a session would otherwise remember is held where
+      the next participant reads it, and coordination is choreographed so that no
+      actor holds a process the others cannot see. Both give up a privilege, and
+      both buy the same thing: an agent that cannot carry state privately and
+      cannot ask a coordinator for it must reconstruct the state of things from
+      what is observable, and where it cannot, the missing observation point
+      fails loudly as a Job that cannot proceed rather than quietly as one that
+      improvised.
+
+      That is why the discipline is worth its cost. Building observation points
+      deliberately is difficult to verify, because a system with enough of them
+      and a system with too few look identical to a privileged reader. Removing
+      the privilege is what tells them apart, and it tells them apart the hard
+      way — by failing — which is the only way A4 accepts as evidence.
+
+      The Article is deliberately weaker than its instances. Each of the seven
+      names an artifact and a check that holds it; this names neither, because
+      the general case cannot be enumerated in advance. Stating it anyway is
+      worth more than the check it lacks: a reviewer with a one-line claim to
+      cite objects to an unobservable rule on the first occurrence, where a
+      reviewer who must first notice that seven Articles rhyme objects on the
+      eighth.

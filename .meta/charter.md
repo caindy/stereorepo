@@ -173,6 +173,14 @@ _In practice:_ `ok orphans — 5 markdown files under 2 packages, each included 
 
 _Retired when:_ A Project whose toolchain reports in a form this shape cannot carry without hiding what the tool found.
 
+### A22. State an unprivileged Job cannot observe is state the system does not have.
+
+**Checked by** Its instances, each of which carries its own check: A11, A14, A15, A16, A17, A18 and A20 say the same thing of a decision, of reasoning, of work noticed, of a thread, of a term, of work in a worktree and of a rule. The general claim is held at review, by asking what a Job with no privilege beyond the record could reconstruct (solorepo's DR-216).
+
+_In practice:_ The rule that a session's branch must not take the loop's shape existed only in `.github/workflows/coder.yml`'s job condition, so a session deriving it read the implementation and got the right answer for partly the wrong reason; solorepo's DR-215 moved it to PR First step 15, where an unprivileged reader meets it.
+
+_Retired when:_ A Job that proceeds correctly on state it could not observe, which would mean a privilege nobody declared.
+
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml)
