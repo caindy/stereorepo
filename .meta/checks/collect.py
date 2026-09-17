@@ -19,6 +19,8 @@ import collections
 import inspect
 import pathlib
 import re
+import typing
+from collections.abc import Callable
 
 import yaml
 from linkml_runtime import SchemaView
@@ -58,7 +60,16 @@ class Found:
         self.problems = problems
 
 
-def check(label, pre=False):
+StepOutcome = Passed | Found | CouldNotRun
+"""What a step comes to, and the only thing a step returns. Named apart from `probes.harness`'s
+`Outcome`, which is what a call under a probe exited with."""
+
+StepFunction = typing.TypeVar("StepFunction", bound=Callable[..., StepOutcome])
+"""A step, whatever sources it names. `check` hands back the same function, so a step keeps its
+own signature and whatever annotations it carries."""
+
+
+def check(label: str, pre: bool = False) -> Callable[[StepFunction], StepFunction]:
     """Register a step under the label the gate prints, at its definition.
 
     A parameter with a default is not a source: it is a seam a probe passes a
@@ -72,8 +83,17 @@ def check(label, pre=False):
     used to take the whole gate down before the check that names both had a
     chance to run (solorepo's #23). A precheck is a step that must not stand
     behind that door.
+
+    Args:
+        label: What the gate prints for this step.
+        pre: Whether the step runs before the schemas load.
+
+    Returns:
+        Callable[[StepFunction], StepFunction]: A decorator that appends the
+        step to `STEPS` and hands it back unchanged, and that raises `TypeError`
+        where the step requires a parameter `SOURCES` does not name.
     """
-    def register(fn):
+    def register(fn: StepFunction) -> StepFunction:
         sources = tuple(name for name, p in inspect.signature(fn).parameters.items()
                         if p.default is inspect.Parameter.empty)
         unknown = [name for name in sources if name not in SOURCES]

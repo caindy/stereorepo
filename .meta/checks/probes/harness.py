@@ -21,6 +21,7 @@ import os
 import pathlib
 import subprocess
 import sys
+from collections.abc import Iterator
 from importlib.machinery import SourceFileLoader
 
 import yaml
@@ -87,11 +88,18 @@ def load_channel():
 
 
 @contextlib.contextmanager
-def stood_in(target, **attributes):
+def stood_in(target: object, **attributes: object) -> Iterator[None]:
     """The named attributes of `target` replaced for the block, and put back after it, whatever the block did.
 
     An attribute the target did not have is removed again on the way out
     rather than left holding the stand-in.
+
+    Args:
+        target: The module or object whose attributes are replaced.
+        **attributes: The attribute names, each bound to the stand-in it takes.
+
+    Yields:
+        None: The block runs with the stand-ins in place.
     """
     held = {name: getattr(target, name, _ABSENT) for name in attributes}
     for name, value in attributes.items():

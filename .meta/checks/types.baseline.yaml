@@ -21,7 +21,7 @@
 .meta/check.py: 5
 .meta/check_pr.py: 1
 .meta/checks/citations.py: 56
-.meta/checks/collect.py: 16
+.meta/checks/collect.py: 14
 .meta/checks/comments.py: 3
 .meta/checks/files/history.py: 2
 .meta/checks/files/markdown.py: 1
@@ -35,7 +35,7 @@
 .meta/checks/graph.py: 33
 .meta/checks/probes/channel.py: 30
 .meta/checks/probes/git.py: 9
-.meta/checks/probes/harness.py: 36
+.meta/checks/probes/harness.py: 35
 .meta/checks/probes/knowledge.py: 4
 .meta/checks/probes/loops/advance.py: 3
 .meta/checks/probes/loops/delegate.py: 1
