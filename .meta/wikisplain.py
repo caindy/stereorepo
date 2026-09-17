@@ -425,6 +425,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "concept",
+        nargs="+",
         help="The name or title of the concept (e.g., 'Domain Storytelling').",
     )
     parser.add_argument(
@@ -465,26 +466,27 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     root = pathlib.Path(__file__).resolve().parent.parent
+    concept = " ".join(args.concept).strip()
 
-    dups = find_duplicates(args.concept, context=args.context, root=root)
+    dups = find_duplicates(concept, context=args.context, root=root)
 
     if args.check_duplicate:
         if dups:
-            print(f"Collision: concept '{args.concept}' already exists in:")
+            print(f"Collision: concept '{concept}' already exists in:")
             for d in dups:
                 print(f"  - [{d['source']}] {d['label']} ({d['id']}) in {d['path']}: {d['details']}")
             return 1
-        print(f"Clear: concept '{args.concept}' does not collide with vocabulary or wiki entities.")
+        print(f"Clear: concept '{concept}' does not collide with vocabulary or wiki entities.")
         return 0
 
     if dups and not args.force:
-        print(f"Error: concept '{args.concept}' collides with existing entities:")
+        print(f"Error: concept '{concept}' collides with existing entities:")
         for d in dups:
             print(f"  - [{d['source']}] {d['label']} ({d['id']}) in {d['path']}: {d['details']}")
         print("Pass --force to proceed with scaffolding anyway.")
         return 1
 
-    title = args.concept.strip()
+    title = concept
     slug = args.slug.strip() if args.slug.strip() else slugify(title)
     syn_list = [s.strip() for s in args.synonyms.split(",") if s.strip()] if args.synonyms else []
 
