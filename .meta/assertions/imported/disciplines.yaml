@@ -498,7 +498,16 @@ disciplines:
         design. Ask what this branch already owns: one branch is one pull
         request, so the checkout is the token and GitHub resolves it.
         Authorship cannot answer this, since every pull request here is the
-        solo's.
+        solo's. The shape of the branch is itself a claim: `<harness>/issue-<n>`
+        is the loop's, the number being how a later pass finds its Challenge
+        across an event it did not see, and a session names its branch
+        `<harness>/<slug>` instead, saying what the work is and never beginning
+        the slug `issue-`. A branch that takes the loop's shape asks the loop to
+        take the work, and it declines where the work is not its own — `held` at
+        `hard`, `closed` where the Challenge it names is closed already, `stale`
+        at no level a loop takes, `unnamed` where the ref names no Challenge —
+        but it declines out loud, on the pull request, and that
+        notice is a conversation the session then owns and its merge waits on.
     produces:
       - A searchable record of why each change was made, attached to the change.
       - A place two agents that share nothing else can meet.

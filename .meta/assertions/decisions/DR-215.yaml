@@ -1,0 +1,90 @@
+decisions:
+  - id: work:decision/215
+    name: "DR-215 · A session's branch keeps the harness and drops the Challenge number, so the loop's shape is claimed on purpose"
+    challenge: work:challenge/478
+    status: ADOPTED
+    applies:
+      - work:article/17
+    enacted_in:
+      - work:artifact/meta-disciplines
+    context: >-
+      `<harness>/issue-<n>` is the loop's branch shape, and the number in the ref
+      is how a later pass finds its Challenge across an event it did not see.
+      `.github/workflows/coder.yml` admits any branch of that shape at the verdict
+      door and then reads the Issue, standing the loop down where the work is not
+      its own: `held` at `hard`, `closed` where the Challenge it names is closed
+      already, `stale` at no level a loop takes, `unnamed` where the ref names no
+      Challenge at all.
+
+      That refusal works. What did not exist was any statement of what a session
+      should call its branch, so the answer was derived from the workflow's own
+      condition each time somebody needed it — once while opening #477, correctly
+      and for partly the wrong reason. The cost of getting it wrong is small and
+      real: the loop wakes, declines, and says so on the pull request, which
+      leaves a session holding a notice it did not want and a conversation its
+      merge waits on.
+
+      Session branches had meanwhile settled into `<harness>/<slug>` by use rather
+      than by agreement, which is the condition A17 names.
+    alternatives:
+      - name: Forbid the loop's shape and prescribe nothing
+        chosen: false
+        reason: >-
+          Smaller and sufficient to prevent the collision, and it leaves a reader
+          who has just been told what not to do with nothing to copy. A rule that
+          only forbids is answered correctly by a hundred different names, which
+          is how the convention arrived unagreed in the first place.
+      - name: A namespace of its own, such as session/<slug> or solo/<slug>
+        chosen: false
+        reason: >-
+          The clearest boundary: the two namespaces never touch, and no slug rule
+          is needed because no prefix is shared. It costs the harness in the ref,
+          which is the one durable thing a branch name carries when an event is
+          lost, and it invalidates every session branch already on the remote for
+          a collision that a slug rule prevents just as well.
+      - name: "`<harness>/<slug>`, with the slug never beginning `issue-`"
+        chosen: true
+        reason: >-
+          Keeps the harness where the loop's own recovery reads it, ratifies what
+          sessions already do rather than reopening it, and needs one clause. What
+          it costs is that the two namespaces share a prefix, so the separation is
+          a rule about slugs rather than a rule about namespaces, and a reader
+          skimming a branch list sees the distinction only at the segment after
+          the slash.
+    consequences:
+      - >-
+        PR First step 15 states the shape as a claim about whose the work is, so
+        a session choosing a name is told rather than deriving it from a workflow
+        condition.
+      - >-
+        The loop's stand-down vocabulary — `held`, `closed`, `stale`, `unnamed` —
+        is stated in the Discipline rather than living only inside a shell step in
+        `.github/workflows/coder.yml`.
+      - >-
+        Nothing checks the rule. A gate step would be a guardrail over a guardrail
+        that has not been observed to fail, which A4 refuses to treat as evidence
+        of anything; the refusal in the workflow remains the thing that holds.
+      - >-
+        Every session branch already on the remote conforms, so no migration and
+        no rename.
+    falsifier: >-
+      A session branch named `<harness>/issue-<n>` that the loop takes rather than
+      declines, or a pass that needs the Challenge number from a ref a session
+      wrote. Either would mean the shape is not the claim this says it is.
+    rationale: |-
+      The question was which signal says whose a branch is, and the answer was
+      already implemented: the difficulty label decides, and the branch shape only
+      says which Challenge a delivery is about. Writing that down is the whole
+      change, because the mechanism was sound and the rule was not stated.
+
+      Prescribing rather than forbidding is the part worth defending. A rule that
+      only says what not to do is satisfied by any name, which leaves the next
+      session inventing one and the one after that inventing another. Naming the
+      positive form makes the convention agreed rather than observed, which is
+      what A17 asks for, and it costs a clause.
+
+      The namespace alternative is the better boundary and was still refused. A
+      shared prefix is a weaker separation than two distinct ones, and the honest
+      reason for keeping it is that the harness in the ref is load-bearing where
+      an event goes missing, and that renaming live branches buys nothing the
+      slug rule does not already buy.
