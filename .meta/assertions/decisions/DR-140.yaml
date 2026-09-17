@@ -18,6 +18,7 @@ decisions:
       - work:artifact/meta-actions-sweep
       - work:artifact/meta-arc-readme
       - work:artifact/specialize
+      - work:artifact/meta-checks-files-workflows
     context: >-
       DR-137 moved `coder.yml` and `review.yml` to the scale set and deferred
       `gate.yml`, naming the risk it was avoiding: its jobs are required status

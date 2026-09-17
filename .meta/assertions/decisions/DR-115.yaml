@@ -16,6 +16,7 @@ decisions:
       - work:artifact/template-meta-readme
       - work:artifact/template-agents
       - work:artifact/specialize
+      - work:artifact/meta-checks-files-workflows
     alternatives:
       - name: Copy the scaffold's workflow and make it work everywhere
         chosen: false

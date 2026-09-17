@@ -11,6 +11,7 @@ decisions:
       - work:artifact/meta-work-core
       - work:artifact/meta-work-structure
       - work:artifact/meta-work-disciplines
+      - work:artifact/meta-checks-files-prose
     context: >-
       solorepo's DR-144 moved a generated page's framing prose onto the Artifact
       it is written to, and said in its own consequences what it could not

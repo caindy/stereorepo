@@ -13,6 +13,7 @@ decisions:
       - work:artifact/specialize
       - work:artifact/meta-disciplines
       - work:artifact/template-meta-readme
+      - work:artifact/meta-checks-files-workflows
     alternatives:
       - name: A comment in the scaffold's copy saying to change both
         chosen: false

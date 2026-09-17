@@ -23,7 +23,15 @@
 .meta/checks/citations.py: 56
 .meta/checks/collect.py: 16
 .meta/checks/comments.py: 3
-.meta/checks/files.py: 58
+.meta/checks/files/history.py: 2
+.meta/checks/files/markdown.py: 1
+.meta/checks/files/prose.py: 9
+.meta/checks/files/python.py: 4
+.meta/checks/files/rendered.py: 2
+.meta/checks/files/sources.py: 3
+.meta/checks/files/templates.py: 7
+.meta/checks/files/wiki.py: 12
+.meta/checks/files/workflows.py: 11
 .meta/checks/graph.py: 33
 .meta/checks/probes/channel.py: 30
 .meta/checks/probes/git.py: 9

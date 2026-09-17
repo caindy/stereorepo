@@ -12,6 +12,7 @@ decisions:
       - work:artifact/justfile
       - work:artifact/meta-checks-files
       - work:artifact/meta-apm-readme
+      - work:artifact/meta-checks-files-rendered
     context: >-
       DR-172 established that APM packages are nested under .meta/ and compile to
       the repository root via `apm compile --root ..`. Challenge #342 implemented

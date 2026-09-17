@@ -14,6 +14,7 @@ decisions:
       - "The skeletons carry two refusals: `products: []` and `personas: []` are truthful until there is research."
     enacted_in:
       - work:artifact/meta-check
+      - work:artifact/meta-checks-files-templates
     rationale: |-
       `template/` is not a full tree. `python_bootstrap` templates a whole
       repository because its root is a Python project and its template is

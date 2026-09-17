@@ -12,6 +12,7 @@ decisions:
       - work:artifact/meta-say
       - work:artifact/specialize
       - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-files-history
     context: >-
       Step 5 of Literate Programming routes what happened, this once, out of the
       code and into `<module>.history.md`. While the seed packages hold history

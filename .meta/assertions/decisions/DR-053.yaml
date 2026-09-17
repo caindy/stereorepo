@@ -6,6 +6,7 @@ decisions:
       - work:article/7
     enacted_in:
       - work:artifact/meta-check
+      - work:artifact/meta-checks-files-templates
     rationale: |-
       DR-051's line-walk fix wrote `broader` into every concept, including
       the twenty-nine that already had one. PyYAML takes the last of a

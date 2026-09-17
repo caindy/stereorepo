@@ -30,6 +30,7 @@ decisions:
       - work:artifact/meta-say-post
       - work:artifact/meta-say-whoami
       - work:artifact/meta-timing
+      - work:artifact/meta-checks-files-python
     context: >-
       The Python Bootstrap's doc gate checks every module and every public
       function, class, and method under a package's src/. However, `.meta/` is not

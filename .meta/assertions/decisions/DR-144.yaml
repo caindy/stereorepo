@@ -9,6 +9,7 @@ decisions:
       - work:artifact/meta-render
       - work:artifact/meta-check
       - work:artifact/meta-work-structure
+      - work:artifact/meta-checks-files-prose
     context: >-
       `render.py` exists because prose about the assertions drifts from them:
       DR-026 made the assertions the source and the satellites derive. It was

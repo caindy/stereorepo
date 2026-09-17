@@ -17,6 +17,7 @@ decisions:
       - work:artifact/specialize
       - work:artifact/meta-disciplines
       - work:artifact/meta-readme
+      - work:artifact/meta-checks-files-templates
     alternatives:
       - name: The comparison alone, as DR-119 left it
         chosen: false

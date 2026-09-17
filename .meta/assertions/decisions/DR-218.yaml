@@ -15,6 +15,7 @@ decisions:
       - work:artifact/meta-checks-probes-loops-merge-manager-advance
       - work:artifact/meta-checks-probes-loops-delegate
       - work:artifact/meta-assertions-structure
+      - work:artifact/meta-checks-files
     context: >-
       Solorepo's DR-217 settled where a script's body goes: the script stays at
       its path, because the justfile, the workflows and the structure

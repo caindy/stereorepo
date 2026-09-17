@@ -17,7 +17,7 @@ allowing steps to be registered without running or step counts to drift from
 reality. Established: checks register themselves at definition via `@check`
 (solorepo's DR-150) and reports reflect the live registry.
 
-Receipt: `.meta/checks/files.py::meta_history_receipts`
+Receipt: `.meta/checks/files/history.py::meta_history_receipts`
 
 ### Template seed instructions drifted from root agent conventions
 
@@ -27,4 +27,4 @@ the ban on harness memory files), `template/AGENTS.md` and `template/.meta/READM
 lagged behind. Established: `template conventions agree` verifies that root and
 template files both declare the core operational conventions (solorepo's DR-183).
 
-Receipt: `.meta/checks/files.py::template_conventions_agree`
+Receipt: `.meta/checks/files/templates.py::template_conventions_agree`
