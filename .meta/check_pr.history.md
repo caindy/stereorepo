@@ -121,4 +121,4 @@ Established: `unheld()` reports each shape once it has been idle longer than a
 run may last, reads the Challenge's level to say whether the loop or the solo
 holds the remedy, and prescribes the verb that re-delivers it.
 
-Receipt: `.meta/checks/probes/loops.py::handoff_probes`
+Receipt: `.meta/checks/probes/loops/handoff.py::handoff_probes`

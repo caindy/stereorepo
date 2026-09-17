@@ -234,8 +234,29 @@ artifacts:
     name: .meta/checks/probes/channel.py
     path: .meta/checks/probes/channel.py
   - id: work:artifact/meta-checks-probes-loops
-    name: .meta/checks/probes/loops.py
-    path: .meta/checks/probes/loops.py
+    name: .meta/checks/probes/loops/__init__.py
+    path: .meta/checks/probes/loops/__init__.py
+  - id: work:artifact/meta-checks-probes-loops-advance
+    name: .meta/checks/probes/loops/advance.py
+    path: .meta/checks/probes/loops/advance.py
+  - id: work:artifact/meta-checks-probes-loops-handoff
+    name: .meta/checks/probes/loops/handoff.py
+    path: .meta/checks/probes/loops/handoff.py
+  - id: work:artifact/meta-checks-probes-loops-enacted
+    name: .meta/checks/probes/loops/enacted.py
+    path: .meta/checks/probes/loops/enacted.py
+  - id: work:artifact/meta-checks-probes-loops-stop
+    name: .meta/checks/probes/loops/stop.py
+    path: .meta/checks/probes/loops/stop.py
+  - id: work:artifact/meta-checks-probes-loops-merge-manager
+    name: .meta/checks/probes/loops/merge_manager.py
+    path: .meta/checks/probes/loops/merge_manager.py
+  - id: work:artifact/meta-checks-probes-loops-merge-manager-advance
+    name: .meta/checks/probes/loops/merge_manager_advance.py
+    path: .meta/checks/probes/loops/merge_manager_advance.py
+  - id: work:artifact/meta-checks-probes-loops-delegate
+    name: .meta/checks/probes/loops/delegate.py
+    path: .meta/checks/probes/loops/delegate.py
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py

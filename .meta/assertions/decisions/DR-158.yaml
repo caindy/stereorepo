@@ -9,6 +9,7 @@ decisions:
       - work:artifact/meta-say-move
       - work:artifact/meta-checks-probes-harness
       - work:artifact/meta-checks-probes-loops
+      - work:artifact/meta-checks-probes-loops-advance
     context: >-
       `advance` reads back what GitHub holds after it rebases a branch, which
       is the property that makes it more than a call: whether the head is

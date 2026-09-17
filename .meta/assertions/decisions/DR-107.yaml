@@ -12,6 +12,7 @@ decisions:
       - work:artifact/meta-assertions-imported-authority
       - work:artifact/meta-disciplines
       - work:artifact/meta-lib-check-pr-github
+      - work:artifact/meta-checks-probes-loops-advance
     alternatives:
       - name: The reviewer stays Copilot
         chosen: false

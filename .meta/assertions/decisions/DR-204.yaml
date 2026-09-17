@@ -15,6 +15,7 @@ decisions:
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-search
+      - work:artifact/meta-checks-probes-loops-enacted
     context: >-
       Challenge #343 required proving the 8-step specialization procedure
       (SPECIALIZE.md) against a clean test repository following the introduction

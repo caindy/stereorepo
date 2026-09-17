@@ -20,6 +20,7 @@ decisions:
       - work:artifact/meta-disciplines
       - work:artifact/justfile
       - work:artifact/specialize
+      - work:artifact/meta-checks-probes-loops-merge-manager
     context: >-
       Today pull requests merge via GitHub auto-merge (DR-112), which lands
       whatever reaches green first. This first-come arming causes two structural

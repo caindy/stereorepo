@@ -27,7 +27,7 @@ issues, blocking other actors or loops from claiming them (solorepo's #117).
 Established: `unclaim()` and `stop()` synchronize GitHub issue assignees and
 state transitions atomically before posting hand-back commentary.
 
-Receipt: `.meta/checks/probes/loops.py::stop_probes`
+Receipt: `.meta/checks/probes/loops/stop.py::stop_probes`
 
 ### Auto-merge arming on out-of-date branch heads
 
@@ -37,7 +37,7 @@ solorepo's #93, solorepo's #98, solorepo's #201). Established: `advance()` and
 `merge()` verify that pull requests are synchronized with trunk, disarm stale
 auto-merge states during updates, and re-arm only once clean.
 
-Receipt: `.meta/checks/probes/loops.py::advance_probes`
+Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Pull request squashing using arbitrary commit messages
 
@@ -46,7 +46,7 @@ than PR titles, leading to discrepancies between the git log and repository
 issue index (solorepo's #26, solorepo's #27). Established: `merge()` explicitly
 derives the squash commit title and subject from the validated PR title.
 
-Receipt: `.meta/checks/probes/loops.py::merge_manager_probes`
+Receipt: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
 
 ### Review requests submitted for conflicting branches
 
@@ -116,7 +116,7 @@ an arming shown or a `MERGED` state, and a merge in the window is reported as a
 merge; the waiting itself is what solorepo's DR-158 requires of a read GitHub
 may answer stale.
 
-Receipt: `.meta/checks/probes/loops.py::advance_probes`
+Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Rebase read back off the commit the sweep listed rather than the one it asked GitHub to rebase
 
@@ -134,7 +134,7 @@ its distance behind together, `advance` asks it again after the `mergeability`
 wait and immediately before the call (solorepo's #252), and the settle wait and
 the compare are anchored to that commit (solorepo's DR-158).
 
-Receipt: `.meta/checks/probes/loops.py::advance_probes`
+Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Stall reported over a merge that had landed or a branch already current
 
@@ -147,7 +147,7 @@ the last thing the Job says. Established: `merge --auto` reads the pull request
 back after arming, reports a merge as a merge, and reports a stall only over a
 branch that is still behind its base.
 
-Receipt: `.meta/checks/probes/loops.py::advance_probes`
+Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Review request stranded by a merge on trunk went undispatched
 
@@ -163,7 +163,7 @@ for a loop's branch that conflicts while a review is requested of it
 approved (solorepo's DR-167); it leaves the lower layer of a stack alone, and
 one refused dispatch is one pull request's problem.
 
-Receipt: `.meta/checks/probes/loops.py::advance_probes`
+Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Sweep went red on every push for a Challenge the loop no longer held
 
@@ -175,7 +175,7 @@ Challenge before dispatching (solorepo's DR-142), leaves a closed one, one at a
 level no loop takes, and one it cannot read alone by name in a printed line, and
 exits 0 over them.
 
-Receipt: `.meta/checks/probes/loops.py::advance_probes`
+Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Superseded check runs read as failing
 
@@ -188,7 +188,7 @@ latest run per name, ordered by `startedAt`, then `completedAt` unless it is
 GitHub's year-one placeholder, then `createdAt`, and `check_green` and
 `check_pr.green` read the deduplicated list.
 
-Receipt: `.meta/checks/probes/loops.py::merge_manager_probes`
+Receipt: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
 
 ### Approved pull request left stranded behind trunk with nothing to move it
 
@@ -221,7 +221,7 @@ refusal that paints `advance.yml` red on an ordinary push. `merge.yml` passes
 `--no-advance` there, and the stranded sweep keeps the events `advance.yml`
 does not see: the schedule, and the gate and review completions.
 
-Receipt: `.meta/checks/probes/loops.py::merge_manager_advance_probes`
+Receipt: `.meta/checks/probes/loops/merge_manager_advance.py::merge_manager_advance_probes`
 
 ### Review answer pass on solorepo's #361 stayed dormant after solorepo's #311 was relabelled easy
 
@@ -238,7 +238,7 @@ conflicting or `review` for a verdict standing unanswered on an open pull
 request, refuses clean pull requests with no changes requested, or assigns
 the coder and triggers the loop on an unstarted Challenge.
 
-Receipt: `.meta/checks/probes/loops.py::delegate_probes`
+Receipt: `.meta/checks/probes/loops/delegate.py::delegate_probes`
 
 ### Third layer of a stack left open and unlinked
 

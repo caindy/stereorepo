@@ -18,6 +18,13 @@ decisions:
       - work:artifact/meta-check
       - work:artifact/meta-render
       - work:artifact/skill-technical-writing
+      - work:artifact/meta-checks-probes-loops-advance
+      - work:artifact/meta-checks-probes-loops-delegate
+      - work:artifact/meta-checks-probes-loops-enacted
+      - work:artifact/meta-checks-probes-loops-handoff
+      - work:artifact/meta-checks-probes-loops-merge-manager
+      - work:artifact/meta-checks-probes-loops-merge-manager-advance
+      - work:artifact/meta-checks-probes-loops-stop
     context: >-
       solorepo's DR-150 lifted the probes — about 830 lines of them — out of
       `check.py` into `.meta/checks/probes.py` so that the gate over assertions

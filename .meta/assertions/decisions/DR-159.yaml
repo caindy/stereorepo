@@ -18,6 +18,7 @@ decisions:
       - work:artifact/meta-templates-pull-request
       - work:artifact/meta-lib-check-pr-cli
       - work:artifact/meta-lib-check-pr-sweep
+      - work:artifact/meta-checks-probes-loops-handoff
     context: >-
       PR First's eighth step historically said to promote at merge. In an
       agentic loop, no Job is alive at merge: the coder's run ends when review

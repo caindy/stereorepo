@@ -1,0 +1,88 @@
+decisions:
+  - id: work:decision/218
+    name: "DR-218 · A module under .meta/ that is imported rather than run becomes a package of its own name in place, whose __init__ registers what its modules define"
+    challenge: work:challenge/491
+    status: ADOPTED
+    applies:
+      - work:article/2
+    enacted_in:
+      - work:artifact/meta-checks-probes-loops
+      - work:artifact/meta-checks-probes-loops-advance
+      - work:artifact/meta-checks-probes-loops-handoff
+      - work:artifact/meta-checks-probes-loops-enacted
+      - work:artifact/meta-checks-probes-loops-stop
+      - work:artifact/meta-checks-probes-loops-merge-manager
+      - work:artifact/meta-checks-probes-loops-merge-manager-advance
+      - work:artifact/meta-checks-probes-loops-delegate
+      - work:artifact/meta-assertions-structure
+    context: >-
+      Solorepo's DR-217 settled where a script's body goes: the script stays at
+      its path, because the justfile, the workflows and the structure
+      assertions invoke it there, and its body lives under `.meta/lib/`,
+      because a package cannot take the name of a module beside it. The same
+      question then arose for `.meta/checks/probes/loops.py`, at 1320 lines the
+      second largest Python file in the repository, and neither half of that
+      answer fits it. Nothing invokes a probe module by path: `check.py`
+      imports `probes`, whose `__init__` imports `probes.loops`, and the steps
+      register themselves on import. So the path is not spoken for: the module
+      is removed and a package named `loops` takes its name, and
+      `import probes.loops` resolves to the package because it is the only
+      `loops` on `probes.__path__`. Nothing coexists and nothing is shadowed.
+
+      Solorepo's DR-209 asks one module for one subject, so that a history
+      log's receipt names the file holding the probe it cites. Seven probes in
+      one file satisfied it at the module's grain; seven modules satisfy it at
+      the probe's.
+    alternatives:
+      - name: Move the probes' bodies under .meta/lib/ as DR-217 does for scripts
+        chosen: false
+        reason: >-
+          A probe is not a script. `.meta/lib/` exists because a script's path
+          is taken by the script; a module nothing runs by path has no such
+          claim on its name, and a package under `lib/` for it would put the
+          probes two directories from the harness they import and the package
+          that registers them, for a reason that does not apply.
+      - name: Leave a thin loops.py importing from a differently named sibling package
+        chosen: false
+        reason: >-
+          A module that exists only to re-export a package beside it is the
+          entry-script shape without an entry script. It costs a second name
+          for the same subject and a receipt that could name either.
+      - name: Replace the module with a package of the same name in place, one module per probe, the __init__ importing each
+        chosen: true
+        reason: >-
+          `import probes.loops` still registers every step, in the order the
+          `__init__` lists them, which is the parent package's own pattern. The
+          receipts in the history logs name the module holding the probe, as
+          DR-209 wants. What it costs is that the artifact's path moves to the
+          package's `__init__.py`, and each Decision a probe cites now names the
+          module that carries it.
+    consequences:
+      - >-
+        `.meta/checks/probes/loops/` holds `advance`, `handoff`, `enacted`,
+        `stop`, `merge_manager`, `merge_manager_advance` and `delegate`, one
+        `@check` step each, and its `__init__` imports them in the order the
+        module listed them.
+      - >-
+        The receipts in `.meta/check_pr.history.md` and
+        `.meta/say/move.history.md` name the module holding each probe.
+      - >-
+        The type ratchet holds one number per probe module in place of the
+        module's (solorepo's DR-210).
+      - >-
+        An imported module under `.meta/checks/` that outgrows one subject
+        splits the same way; a script splits as DR-217 says.
+    falsifier: >-
+      A probe under `.meta/checks/probes/loops/` that `python .meta/check.py`
+      does not run; or a receipt in a history log naming
+      `.meta/checks/probes/loops.py`, which no longer exists.
+    rationale: |-
+      Two conventions rather than one, because the constraint that shaped
+      DR-217 is a fact about scripts and not about Python. A script's path is
+      its interface; a module's name is. Where the path is taken the body moves
+      aside; where only the name is, the package takes the name and nothing
+      that imported the module notices — provided no caller imports a symbol
+      from it, since the old module bound every probe and helper at
+      `probes.loops` and the package binds only its submodules. That is the
+      thing to check before splitting, and it is checkable: at this commit
+      `probes/__init__.py` is the only importer.

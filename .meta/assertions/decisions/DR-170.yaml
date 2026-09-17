@@ -12,6 +12,7 @@ decisions:
       - work:artifact/meta-next
       - work:artifact/meta-templates-issue
       - work:artifact/meta-templates-roadmap
+      - work:artifact/meta-checks-probes-loops-merge-manager
     context: >-
       DR-114 rejected using GitHub's native issue dependencies for two reasons:
       "the channel has no verb to set one and the sweep none to read one."

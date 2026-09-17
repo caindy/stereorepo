@@ -10,6 +10,7 @@ decisions:
       - work:artifact/meta-say
       - work:artifact/meta-disciplines
       - work:artifact/meta-templates-issue
+      - work:artifact/meta-checks-probes-loops-stop
     alternatives:
       - name: A scheduled loop polling for labelled Issues
         chosen: false
