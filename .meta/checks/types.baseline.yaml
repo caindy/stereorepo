@@ -31,7 +31,7 @@
 .meta/checks/files/sources.py: 3
 .meta/checks/files/templates.py: 7
 .meta/checks/files/wiki.py: 12
-.meta/checks/files/workflows.py: 11
+.meta/checks/files/workflows.py: 12
 .meta/checks/graph.py: 33
 .meta/checks/probes/channel.py: 30
 .meta/checks/probes/git.py: 9

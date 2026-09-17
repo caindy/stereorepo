@@ -1,5 +1,6 @@
-"""What the workflows and the scaffold owe each other: no scaffold-only path in inherited files, the two gate workflows held equal, and the reviewer's trunk-restore set held to the control plane.
+"""What the workflows and the scaffold owe each other: no scaffold-only path in inherited files, the two gate workflows held equal, the reviewer's trunk-restore set held to the control plane, and the control plane held to the tree.
 """
+import pathlib
 import re
 import sys
 
@@ -223,3 +224,96 @@ def control_plane_restore() -> Passed | Found | CouldNotRun:
     if problems:
         return Found(tuple(problems))
     return Passed(f"{len(restored)} paths restored from trunk, stated four ways, all the control plane")
+
+
+LIB = META / "lib"
+"""Where a script under `.meta/` keeps its body, one package per script (solorepo's DR-217)."""
+
+
+def scripts_of(package: str) -> tuple[pathlib.Path, ...]:
+    """The scripts a package under `.meta/lib/` could be the body of.
+
+    The relationship is fixed by name (solorepo's DR-217), so a script is looked
+    up rather than declared: a package `<name>` is the body of `.meta/<name>.py`,
+    of the channel program `.meta/say/<name>`, or of the hook
+    `.meta/hooks/<name>.py`. More than one of those three can exist at once: a
+    portfolio that writes the depth hook `.meta/hooks/depth.py`, which
+    `.meta/hooks/depth.py.example` is the model for, has it beside `.meta/depth.py`
+    and only one of the two is control plane. So every script the tree holds
+    under the name is returned, and the caller says what a division between them
+    means.
+
+    Args:
+        package: A package directory's name under `.meta/lib/`.
+
+    Returns:
+        tuple[pathlib.Path, ...]: Each script's path, in the order the three
+        places are searched, and empty where the tree holds none of them.
+    """
+    candidates: tuple[pathlib.Path, ...] = (
+        META / f"{package}.py", META / "say" / package, META / "hooks" / f"{package}.py")
+    return tuple(candidate for candidate in candidates if candidate.is_file())
+
+
+@check("control plane packages")
+def control_plane_packages() -> Passed | Found | CouldNotRun:
+    """A package under `.meta/lib/` is control plane exactly when the script it is the body of is (solorepo's DR-219).
+
+    Those packages are listed in `depth.CONTROL_PLANE` rather than derived
+    (solorepo's DR-219), because the reviewer workflow restores what a list says
+    and cannot run a derivation. Splitting a control-plane script is therefore a
+    two-place act, the package and the constant, and this step is what holds the
+    second place to the first: it runs the derivation the constant cannot, and
+    fails where the two disagree.
+
+    Every child directory of `.meta/lib/` but the interpreter's caches is a
+    package, and each resolves through `scripts_of` to the scripts that take its
+    name. `depth.SCAFFOLD_BOUNDARY` is then asked about each of those paths:
+    where it matches, the boundary must also cover `.meta/lib/<name>/`; where it
+    does not, the boundary must leave the package outside, since the restore is
+    no-overlay and a package taken from trunk deletes the body the pull request
+    adds. Two scripts of one name that fall on opposite sides of the boundary
+    leave the package's side undecided, and that is reported rather than guessed.
+    A package the constant names and the tree does not hold fails too: the
+    restore would name a path that is gone.
+    """
+    if not LIB.is_dir():
+        return CouldNotRun(f"{LIB.relative_to(ROOT).as_posix()} is missing")
+    sys.path.insert(0, str(META))
+    import depth
+    lib = LIB.relative_to(ROOT).as_posix()
+    problems: list[str] = []
+    packages = sorted(entry.name for entry in LIB.iterdir()
+                      if entry.is_dir() and not entry.name.startswith((".", "__")))
+    for name in packages:
+        prefix = f"{lib}/{name}/"
+        covered = depth.SCAFFOLD_BOUNDARY.search(prefix) is not None
+        scripts = {path: depth.SCAFFOLD_BOUNDARY.search(path) is not None
+                   for path in (script.relative_to(ROOT).as_posix()
+                                for script in scripts_of(name))}
+        if not scripts:
+            problems.append(f"`{prefix}` is the body of no script: solorepo's DR-217 fixes one by "
+                            f"name at .meta/{name}.py, .meta/say/{name} or .meta/hooks/{name}.py, "
+                            "and until a script takes the name nothing says whether the package "
+                            "is control plane")
+            continue
+        named = " and ".join(f"`{path}`" for path in scripts)
+        if len(set(scripts.values())) > 1:
+            problems.append(f"`{prefix}` is the body of {named}, which the control plane divides; "
+                            "say which of them it is the body of before the boundary is derived "
+                            "from it")
+        elif all(scripts.values()) and not covered:
+            problems.append(f"`{prefix}` is the body of {named}, which is control plane, and the "
+                            f"boundary does not cover it; name `{prefix}` in depth.CONTROL_PLANE")
+        elif covered and not any(scripts.values()):
+            problems.append(f"`{prefix}` is control plane and {named}, which it is the body of, "
+                            "is not; drop it from depth.CONTROL_PLANE, or name the script there "
+                            "if the envelope is meant to hold it")
+    for listed in depth.CONTROL_PLANE:
+        if listed.startswith(f"{lib}/") and not (ROOT / listed.rstrip("/")).exists():
+            problems.append(f"depth.CONTROL_PLANE names `{listed}`, which the tree does not hold; "
+                            "the reviewer would restore a path that is gone")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{len(packages)} packages under .meta/lib/, each control plane exactly "
+                  "when its script is")

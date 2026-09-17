@@ -24,7 +24,7 @@ from files.sources import inherited, is_py, meta_sources, template_files, tree
 from files.templates import Strict, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
 from files.markdown import FENCED, LINK, markdown_links
 from files.wiki import LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wikilinks
-from files.workflows import NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, RESTORE_PROSE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_restore, gate_workflows_agree, scaffold_only_paths
+from files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, RESTORE_PROSE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
 from files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from files.history import history_entries_of, meta_history_orphans, meta_history_receipts, without_comments
 from files.python import MYPY, MYPY_ERROR, RUFF, TYPES_BASELINE, meta_doc, meta_lints, meta_ruff, meta_types, mypy_errors, tool_command
@@ -33,6 +33,7 @@ from files.rendered import apm_package, rendered_prose
 __all__ = [
     "FENCED",
     "LEAD_COPULA",
+    "LIB",
     "LINK",
     "MYPY",
     "MYPY_ERROR",
@@ -51,6 +52,7 @@ __all__ = [
     "Strict",
     "apm_package",
     "asserts",
+    "control_plane_packages",
     "control_plane_restore",
     "declared",
     "duplicate_keys",
@@ -76,6 +78,7 @@ __all__ = [
     "rendered_prose",
     "rendering",
     "scaffold_only_paths",
+    "scripts_of",
     "sources",
     "surviving_placeholders",
     "template_conventions_agree",
