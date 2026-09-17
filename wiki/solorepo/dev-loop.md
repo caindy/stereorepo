@@ -12,7 +12,7 @@ minted: 2026-09-14
 
 **Dev Loop** is the event-driven autonomous execution cycle that advances a [[challenge]] from triage to merged pull request through decoupled coder, reviewer, and merge manager passes without continuous human supervision (solorepo's Article 15, solorepo's DR-111, solorepo's DR-112, solorepo's DR-178).
 
-It is the operational engine realizing the [[pr-first]] discipline. Rather than relying on interactive hand-offs, manual review coordination, or continuous human intervention, the development loop orchestrates autonomous agents across GitHub webhook events. The repository itself acts as the single source of truth, using open pull requests, review verdicts, and branch naming conventions as stateful coordination semaphores.
+It is the operational engine realizing the [[pr-first]] discipline. Rather than relying on interactive hand-offs, manual review coordination, or continuous human intervention, the development loop advances work through autonomous agents that each react to GitHub webhook events under their own rules, with no coordinator holding the process (solorepo's DR-214). The repository itself acts as the single source of truth, using open pull requests, review verdicts, and branch naming conventions as stateful coordination semaphores.
 
 ## The Decoupled Pass Lifecycle
 
@@ -242,4 +242,4 @@ When a coder pass encounters conditions beyond its capability—such as an archi
 
 ---
 
-**See also:** [[pr-first]], [[knowledge-management]], [[ubiquitous-language]], [[challenge]], solorepo's DR-107, solorepo's DR-111, solorepo's DR-112, solorepo's DR-133, solorepo's DR-161, solorepo's DR-178, solorepo's DR-188.
+**See also:** [[pr-first]], [[knowledge-management]], [[ubiquitous-language]], [[challenge]], solorepo's DR-107, solorepo's DR-111, solorepo's DR-112, solorepo's DR-133, solorepo's DR-161, solorepo's DR-178, solorepo's DR-188, solorepo's DR-214.
