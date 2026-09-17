@@ -61,6 +61,7 @@ _Who does work, what they may do, and what they are given to do it with._
 | **Handoff** | The seam where one Job stops and another takes the same Challenge up, sharing no filesystem, no shell and no conversation. | — |
 | **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 | **Dev Loop** | The event-driven autonomous execution cycle that advances a Challenge from triage to merged pull request through decoupled coder, reviewer, and merge manager passes without continuous human supervision (solorepo's DR-111, solorepo's DR-112, solorepo's DR-178). | — |
+| **Choreography** | The coordination style in which each participant carries only its own rules and reacts to events on a shared substrate, so that no coordinator holds the process and the flow is what the local rules produce together (solorepo's DR-214, solorepo's DR-216). | — |
 
 #### What the work is for
 
@@ -115,6 +116,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
 | **Citation** | A formal reference in a durable artifact to an upstream authority — an Article, Decision Record, or Challenge — asserting that the target supports or governs the statement. | reference, link, mention |
 | **Dereference** | To resolve and evaluate a citation against what the referenced authority asserts. | resolve, verify link |
+| **Externalized Memory** | The practice of holding what a session would otherwise remember in artifacts the next participant reads, rather than in the agent that learned it (solorepo's DR-216, solorepo's Article 22). | — |
 
 #### The Disciplines
 
@@ -194,7 +196,11 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Dereference.** The verb Article 12 binds to citation. Checked mechanically for target existence and structural claims by check.py, and evaluated for semantic support by dereference.py before handoff.
 
-**Dev Loop.** The runtime orchestration engine realizing PR First. Operates across GitHub events using pull requests and branch prefixes as stateless semaphores, coordinating multi-harness dispatch, resilient failure fallback, and graceful hand-backs to the solo maintainer.
+**Dev Loop.** The runtime engine realizing PR First, and Choreography is the shape it takes: each pass reacts to a GitHub event under its own rules and no coordinator holds the process. Operates across those events using pull requests and branch prefixes as stateless semaphores, carrying multi-harness dispatch, resilient failure fallback, and graceful hand-backs to the solo maintainer.
+
+**Choreography.** The property; the Dev Loop is the engine that has it. Its opposite is orchestration, where one actor holds the process and tells each participant what to do next, which is what a fleet supervisor does and what this repository does not have.
+
+**Externalized Memory.** Not the absence of memory. The harness's own memory surfaces are tracked and generated from the assertions, so memory here is compiled rather than forbidden. What is given up is the private copy: state an unprivileged Job cannot observe is state the system does not have; solorepo's DR-214 records the substrate choice this rests on and explicitly leaves open whether the wider commitment is a Decision of its own or the premise that one rests on; naming the practice does not settle that.
 
 ### APM primitives
 
@@ -231,6 +237,8 @@ more often a collision than a gap.
 | **Journaling** | Pull Request |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Dev Loop** | PR First |
+| **Choreography** | Dev Loop |
+| **Externalized Memory** | Choreography |
 | **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
 | **Prompt (APM primitive)** | Skill (solorepo Capability kind), Skill (APM primitive) |
 

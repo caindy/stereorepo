@@ -615,10 +615,50 @@ concept_set:
     confusable_with:
       - work:concept/pr-first
     scope_note: >-
-      The runtime orchestration engine realizing PR First. Operates across GitHub
-      events using pull requests and branch prefixes as stateless semaphores,
-      coordinating multi-harness dispatch, resilient failure fallback, and graceful
+      The runtime engine realizing PR First, and Choreography is the shape it
+      takes: each pass reacts to a GitHub event under its own rules and no
+      coordinator holds the process. Operates across those events using pull
+      requests and branch prefixes as stateless semaphores, carrying
+      multi-harness dispatch, resilient failure fallback, and graceful
       hand-backs to the solo maintainer.
+  - id: work:concept/choreography
+    pref_label: Choreography
+    definition: >-
+      The coordination style in which each participant carries only its own rules
+      and reacts to events on a shared substrate, so that no coordinator holds the
+      process and the flow is what the local rules produce together
+      (solorepo's DR-214, solorepo's DR-216).
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-doing
+    alt_labels:
+      - choreographed coordination
+    confusable_with:
+      - work:concept/dev-loop
+    scope_note: >-
+      The property; the Dev Loop is the engine that has it. Its opposite is
+      orchestration, where one actor holds the process and tells each participant
+      what to do next, which is what a fleet supervisor does and what this
+      repository does not have.
+  - id: work:concept/externalized-memory
+    pref_label: Externalized Memory
+    definition: >-
+      The practice of holding what a session would otherwise remember in artifacts
+      the next participant reads, rather than in the agent that learned it
+      (solorepo's DR-216, solorepo's Article 22).
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    alt_labels:
+      - compiled memory
+    confusable_with:
+      - work:concept/choreography
+    scope_note: >-
+      Not the absence of memory. The harness's own memory surfaces are tracked and
+      generated from the assertions, so memory here is compiled rather than
+      forbidden. What is given up is the private copy: state an unprivileged Job
+      cannot observe is state the system does not have; solorepo's DR-214 records
+      the substrate choice this rests on and explicitly leaves open whether the
+      wider commitment is a Decision of its own or the premise that one rests on;
+      naming the practice does not settle that.
   # ---- APM's, named here only so the collisions can be stated ----
   - id: work:concept/apm-skill
     pref_label: Skill (APM primitive)

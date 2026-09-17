@@ -14,6 +14,10 @@ underlying loops, harnesses, and gate mechanisms.
   maintainer exposition, encyclopedic pages, and Bounded Context documentation.
 - **[[pr-first|PR First]]** — The operational workflow where work begins with
   a pull request and autonomous loops advance, review, and merge it.
+- **[[choreography|Choreography]]** — The coordination style the Dev Loop has:
+  each pass reacts to an event under its own rules and nothing holds the process.
+- **[[externalized-memory|Externalized Memory]]** — Why what a session would
+  remember is compiled into artifacts rather than held in the agent.
 - **[[ubiquitous-language|Ubiquitous Language]]** — How terms are defined,
   bounded, and checked to prevent semantic collision across agents and human.
 
