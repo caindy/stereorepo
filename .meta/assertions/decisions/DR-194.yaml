@@ -10,6 +10,7 @@ decisions:
       - work:artifact/skill-technical-writing
       - work:artifact/meta-search
       - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-apm-compile-agents
     context: >-
       While work:role/technical-writer and work:personality/technical-writer
       were declared in imported authority assertions and enforced during PR review

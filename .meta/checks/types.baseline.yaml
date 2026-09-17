@@ -14,7 +14,7 @@
 # a defect, so a module is annotated and its number lowered in the same change,
 # one module at a time (solorepo's DR-210).
 # The sweep that empties it is caindy/solorepo#438.
-.meta/apm_compile.py: 1
+.meta/apm_compile.py: 0
 .meta/arc/cluster: 4
 .meta/arc/deploy: 20
 .meta/arc/teardown: 12
@@ -47,6 +47,7 @@
 .meta/checks/probes/tools.py: 43
 .meta/dereference.py: 41
 .meta/gate: 16
+.meta/lib/apm_compile/skills.py: 1
 .meta/lib/check_pr/branch.py: 41
 .meta/lib/check_pr/cli.py: 16
 .meta/lib/check_pr/form.py: 8

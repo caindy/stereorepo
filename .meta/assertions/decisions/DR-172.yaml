@@ -7,6 +7,9 @@ decisions:
     enacted_in:
       - work:artifact/meta-apm-readme
       - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-apm-compile-apm
+      - work:artifact/meta-lib-apm-compile-harness
+      - work:artifact/meta-lib-apm-compile-instructions
     context: >-
       Microsoft APM is solorepo's target for packaging agent primitives (DR-007,
       solorepo's #28). While `.meta/.apm/` was designated as the producer staging

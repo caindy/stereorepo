@@ -161,6 +161,33 @@ artifacts:
   - id: work:artifact/meta-apm-compile
     name: .meta/apm_compile.py
     path: .meta/apm_compile.py
+  - id: work:artifact/meta-lib-apm-compile
+    name: .meta/lib/apm_compile/__init__.py
+    path: .meta/lib/apm_compile/__init__.py
+  - id: work:artifact/meta-lib-apm-compile-instructions
+    name: .meta/lib/apm_compile/instructions.py
+    path: .meta/lib/apm_compile/instructions.py
+  - id: work:artifact/meta-lib-apm-compile-agents
+    name: .meta/lib/apm_compile/agents.py
+    path: .meta/lib/apm_compile/agents.py
+  - id: work:artifact/meta-lib-apm-compile-skills
+    name: .meta/lib/apm_compile/skills.py
+    path: .meta/lib/apm_compile/skills.py
+  - id: work:artifact/meta-lib-apm-compile-bootstrap
+    name: .meta/lib/apm_compile/bootstrap.py
+    path: .meta/lib/apm_compile/bootstrap.py
+  - id: work:artifact/meta-lib-apm-compile-primitives
+    name: .meta/lib/apm_compile/primitives.py
+    path: .meta/lib/apm_compile/primitives.py
+  - id: work:artifact/meta-lib-apm-compile-harness
+    name: .meta/lib/apm_compile/harness.py
+    path: .meta/lib/apm_compile/harness.py
+  - id: work:artifact/meta-lib-apm-compile-apm
+    name: .meta/lib/apm_compile/apm.py
+    path: .meta/lib/apm_compile/apm.py
+  - id: work:artifact/meta-lib-apm-compile-cli
+    name: .meta/lib/apm_compile/cli.py
+    path: .meta/lib/apm_compile/cli.py
   - id: work:artifact/meta-apm-manifest
     name: .meta/apm.yml
     path: .meta/apm.yml

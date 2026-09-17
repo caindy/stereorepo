@@ -15,6 +15,8 @@ decisions:
       - work:artifact/meta-apm-compile
       - work:artifact/meta-bootstrap
       - work:artifact/bootstraps-python-readme
+      - work:artifact/meta-lib-apm-compile-apm
+      - work:artifact/meta-lib-apm-compile-bootstrap
     context: >-
       When python_bootstrap was pulled in under DR-094, sixteen agent skills
       (eight py-* refactoring skills from l-mb/python-refactoring-skills and eight

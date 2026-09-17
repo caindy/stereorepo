@@ -14,6 +14,9 @@ decisions:
       - work:artifact/meta-apm-readme
       - work:artifact/meta-checks-files-rendered
       - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-apm-compile-apm
+      - work:artifact/meta-lib-apm-compile-cli
+      - work:artifact/meta-lib-apm-compile-harness
     context: >-
       DR-172 established that APM packages are nested under .meta/ and compile to
       the repository root via `apm compile --root ..`. Challenge #342 implemented

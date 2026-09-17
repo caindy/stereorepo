@@ -322,6 +322,15 @@ and the query a reader in a file actually has.
 | [`.meta/hooks/signed_channel.py`](hooks/signed_channel.py) | [DR-069](assertions/decisions/DR-069.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-113](assertions/decisions/DR-113.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-151](assertions/decisions/DR-151.yaml), [DR-174](assertions/decisions/DR-174.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-179](assertions/decisions/DR-179.yaml) |
 | [`.meta/hooks/worktree_only.py`](hooks/worktree_only.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-177](assertions/decisions/DR-177.yaml) |
 | [`.meta/lib/__init__.py`](lib/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/__init__.py`](lib/apm_compile/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/agents.py`](lib/apm_compile/agents.py) | [DR-171](assertions/decisions/DR-171.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-194](assertions/decisions/DR-194.yaml), [DR-198](assertions/decisions/DR-198.yaml), [DR-199](assertions/decisions/DR-199.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/apm.py`](lib/apm_compile/apm.py) | [DR-172](assertions/decisions/DR-172.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/bootstrap.py`](lib/apm_compile/bootstrap.py) | [DR-208](assertions/decisions/DR-208.yaml), [DR-212](assertions/decisions/DR-212.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/cli.py`](lib/apm_compile/cli.py) | [DR-201](assertions/decisions/DR-201.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/harness.py`](lib/apm_compile/harness.py) | [DR-172](assertions/decisions/DR-172.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/instructions.py`](lib/apm_compile/instructions.py) | [DR-172](assertions/decisions/DR-172.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/primitives.py`](lib/apm_compile/primitives.py) | [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/apm_compile/skills.py`](lib/apm_compile/skills.py) | [DR-174](assertions/decisions/DR-174.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/check_pr/__init__.py`](lib/check_pr/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/check_pr/branch.py`](lib/check_pr/branch.py) | [DR-175](assertions/decisions/DR-175.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/check_pr/cli.py`](lib/check_pr/cli.py) | [DR-159](assertions/decisions/DR-159.yaml), [DR-217](assertions/decisions/DR-217.yaml) |

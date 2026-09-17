@@ -14,6 +14,7 @@ decisions:
       - work:artifact/meta-bootstrap
       - work:artifact/wiki-solorepo-client-repo
       - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-apm-compile-instructions
     context: >-
       DR-172, DR-173, and DR-201 established internal APM compilation and validation
       under `.meta/`, projecting LinkML assertions into .meta/.apm/ primitives and

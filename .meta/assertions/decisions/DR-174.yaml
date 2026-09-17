@@ -8,6 +8,7 @@ decisions:
       - work:artifact/meta-apm-readme
       - work:artifact/meta-hooks-signed-channel
       - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-apm-compile-skills
     context: >-
       solorepo's #341, #77, and #112 examined how tool permissions and channel
       guardrails are maintained when compiling hooks via APM. Currently, `.claude/settings.json`

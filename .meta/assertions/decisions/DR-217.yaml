@@ -24,6 +24,15 @@ decisions:
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-render-targets
       - work:artifact/meta-lib-render-cli
+      - work:artifact/meta-lib-apm-compile
+      - work:artifact/meta-lib-apm-compile-instructions
+      - work:artifact/meta-lib-apm-compile-agents
+      - work:artifact/meta-lib-apm-compile-skills
+      - work:artifact/meta-lib-apm-compile-bootstrap
+      - work:artifact/meta-lib-apm-compile-primitives
+      - work:artifact/meta-lib-apm-compile-harness
+      - work:artifact/meta-lib-apm-compile-apm
+      - work:artifact/meta-lib-apm-compile-cli
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-ruff-toml
       - work:artifact/meta-disciplines

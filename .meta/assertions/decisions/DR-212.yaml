@@ -12,6 +12,7 @@ decisions:
       - work:artifact/bootstraps-python-skill-quality-setup
       - work:artifact/bootstraps-python-lint-gate
       - work:artifact/meta-apm-compile
+      - work:artifact/meta-lib-apm-compile-bootstrap
     context: >-
       The eight `py-*` refactoring skills are declared as Capabilities and
       compiled into the `solorepo-python` APM package by DR-208.

@@ -10,6 +10,7 @@ decisions:
       - work:artifact/meta-work-actors
       - work:artifact/meta-apm-readme
       - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/meta-lib-apm-compile-agents
     context: >-
       While resolving APM agent primitive generation (.apm/agents/<name>.agent.md)
       under solorepo's #342 and #28, tension arose regarding where the inference

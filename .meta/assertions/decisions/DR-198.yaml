@@ -12,6 +12,7 @@ decisions:
       - work:artifact/github-workflows-coder
       - work:artifact/agents
       - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-apm-compile-agents
     context: >-
       While solorepo established the layered technical writing standard
       (solorepo's DR-194) and elevated the Diátaxis Compass to Knowledge Management

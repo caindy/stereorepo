@@ -11,6 +11,7 @@ decisions:
       - work:artifact/meta-work-actors
       - work:artifact/meta-apm-readme
       - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/meta-lib-apm-compile-agents
     context: >-
       In a team of one, product and feature design requires rigorous critique and
       friction before code is committed. While solorepo adopted Alan Cooper's
