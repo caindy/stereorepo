@@ -271,3 +271,41 @@ def wikisplain_probes():
             f"verify_page: self-reference under a custom --slug false-positived: {self_ref_verif!r}"
         )
     return problems
+
+
+@check("wikisplain argv probes", pre=True)
+def wikisplain_argv_probes() -> list[str]:
+    """`wikisplain.main` joins a shell-split multi-word concept before scaffolding, guarding the `nargs="+"` fix from solorepo's #483 against regressing.
+
+    A shell splits an unquoted `Test Wiki Concept Two` into four argv words;
+    driven through `wikisplain.main` with `--dry-run`, the generated page's
+    heading and MOS:LEAD lead must read the concept whole, not its first word
+    alone. Losing `nargs="+"` regresses to argparse rejecting the trailing
+    words as `unrecognized arguments`, which raises `SystemExit` rather than
+    returning — caught here and reported as the case's own finding, since
+    `check.py`'s precheck guard catches `Exception` and `SystemExit` is not
+    one.
+    """
+    import contextlib
+    import io
+    wikisplain = load_module(META / "wikisplain.py", "wikisplain")
+    problems = []
+    argv = ["Test", "Wiki", "Concept", "Two", "--definition", "a synthetic concept for regression coverage",
+            "--dry-run"]
+    out = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out):
+            rc = wikisplain.main(argv)
+    except SystemExit as exc:
+        problems.append(f"wikisplain argv: a shell-split concept raised SystemExit({exc.code}) "
+                        "instead of joining the words")
+        return problems
+    content = out.getvalue()
+    if rc != 0:
+        problems.append(f"wikisplain argv: expected exit 0 for a shell-split concept, got {rc}")
+    if "# Test Wiki Concept Two" not in content:
+        problems.append(f"wikisplain argv: expected heading 'Test Wiki Concept Two', got {content!r}")
+    if "**Test Wiki Concept Two** is a synthetic concept for regression coverage." not in content:
+        problems.append(f"wikisplain argv: expected the joined MOS:LEAD lead, got {content!r}")
+    return problems
+
