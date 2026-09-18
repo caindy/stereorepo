@@ -120,6 +120,14 @@ def justfile():
             "    .meta/arc/deploy",
         ]
 
+    if "work:artifact/meta-dogfood" in artifacts:
+        lines += [
+            "",
+            "# run automated Specialization dogfooding end-to-end (solorepo's DR-239)",
+            "dogfood *args:",
+            "    python3 .meta/dogfood.py {{args}}",
+        ]
+
     return "\n".join(lines) + "\n"
 
 

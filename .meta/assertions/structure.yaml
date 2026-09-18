@@ -155,6 +155,9 @@ artifacts:
   - id: work:artifact/github-workflows-merge
     name: .github/workflows/merge.yml
     path: .github/workflows/merge.yml
+  - id: work:artifact/github-workflows-dogfood
+    name: .github/workflows/dogfood.yml
+    path: .github/workflows/dogfood.yml
   - id: work:artifact/gitattributes
     name: .gitattributes
     path: .gitattributes
@@ -644,6 +647,18 @@ artifacts:
   - id: work:artifact/meta-terms
     name: .meta/terms.py
     path: .meta/terms.py
+  - id: work:artifact/meta-dogfood
+    name: .meta/dogfood.py
+    path: .meta/dogfood.py
+  - id: work:artifact/meta-fixtures-specialization-readme
+    name: .meta/fixtures/specialization/README.md
+    path: .meta/fixtures/specialization/README.md
+  - id: work:artifact/meta-fixtures-specialization-tokens
+    name: .meta/fixtures/specialization/tokens.json
+    path: .meta/fixtures/specialization/tokens.json
+  - id: work:artifact/meta-checks-probes-tools-dogfood
+    name: .meta/checks/probes/tools/dogfood.py
+    path: .meta/checks/probes/tools/dogfood.py
   - id: work:artifact/meta-ruff-toml
     name: .meta/ruff.toml
     path: .meta/ruff.toml

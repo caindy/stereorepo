@@ -46,6 +46,10 @@ jobs:
           export PATH="$HOME/.apm/bin:$PATH"
           python3 .meta/apm_compile.py validate
 
+      - name: Dogfood Specialization End-to-End
+        run: |
+          python3 .meta/dogfood.py
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

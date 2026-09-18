@@ -80,3 +80,7 @@ arc-cluster:
 # against whatever cluster kubectl is currently pointed at
 arc:
     .meta/arc/deploy
+
+# run automated Specialization dogfooding end-to-end (solorepo's DR-239)
+dogfood *args:
+    python3 .meta/dogfood.py {{args}}

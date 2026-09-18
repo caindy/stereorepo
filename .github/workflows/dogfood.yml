@@ -1,0 +1,30 @@
+# Automated Specialization dogfooding audit (solorepo's DR-239).
+#
+# Runs weekly on schedule and on manual workflow dispatch, verifying that
+# the 8-step Specialization discipline executes hermetically end-to-end
+# against pre-judged portfolio fixtures.
+name: dogfood
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dogfood:
+    name: specialization-dogfood
+    runs-on: arc-runner-set
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: ./.meta/actions/gh
+
+      - name: Run Specialization Dogfooding
+        run: |
+          python3 .meta/dogfood.py

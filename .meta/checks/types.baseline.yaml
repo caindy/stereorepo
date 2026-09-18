@@ -19,9 +19,6 @@
 # one module at a time (solorepo's DR-210).
 # The sweep that empties it is caindy/solorepo#438.
 .meta/apm_compile.py: 0
-.meta/arc/cluster: 4
-.meta/arc/deploy: 0
-.meta/arc/teardown: 12
 .meta/check.py: 6
 .meta/checks/citations/claims.py: 20
 .meta/checks/citations/loaders.py: 8

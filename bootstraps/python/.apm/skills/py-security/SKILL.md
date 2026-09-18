@@ -37,7 +37,7 @@ name.
   its reason on the line, which is what `uv run gate lints` requires.
 - **`.meta/`** does not select `S` in `.meta/ruff.toml`. That is deliberate:
   `.meta/` is a directory of command-line programs that invoke subprocesses on
-  purpose, and evaluating it against `S` under DR-177 produced false alarms on
+  purpose, and evaluating it against `S` under solorepo's DR-177 produced false alarms on
   exactly those calls. Scanning `.meta/` for security findings is still worth
   doing; it is a read, and the findings are judged rather than suppressed.
 

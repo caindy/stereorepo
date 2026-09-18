@@ -45,7 +45,7 @@ Each module then registers its steps at their definitions with `@check`, so no
 table anywhere names them and nothing calls them by name. Sixty-seven steps are
 registered this way across `.meta/checks/` and `.meta/checks/probes/`. Removing
 one import silently disables every step behind it, which is what happened under
-DR-177 before the annotations existed: `ruff check --fix` took the imports and 28
+solorepo's DR-177 before the annotations existed: `ruff check --fix` took the imports and 28
 gate steps went quiet while the gate stayed green.
 
 **What the tools actually report.** At this skill's own recommended threshold

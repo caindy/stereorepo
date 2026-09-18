@@ -115,11 +115,15 @@ def register_project(
         f"    gate: {gate_cmd}\n"
     )
 
-    if "\nproducts:" in raw_text:
-        idx = raw_text.index("\nproducts:")
-        updated_text = raw_text[:idx] + project_block + raw_text[idx:]
-    elif "\nprojects:" in raw_text:
-        updated_text = raw_text + project_block
+    if "\nprojects:" in raw_text:
+        proj_idx = raw_text.index("\nprojects:")
+        rest = raw_text[proj_idx + len("\nprojects:"):]
+        m = re.search(r"\n\n+(?=(?:#[^\n]*\n)*[a-z_]+:)", rest)
+        if m:
+            insert_pos = proj_idx + len("\nprojects:") + m.start()
+            updated_text = raw_text[:insert_pos] + project_block + raw_text[insert_pos:]
+        else:
+            updated_text = raw_text + project_block
     else:
         updated_text = raw_text + "\nprojects:" + project_block
 

@@ -42,7 +42,7 @@ CONTROLLER_RELEASE = "arc"
 CLUSTER = "solorepo-arc"
 
 
-def require(*tools):
+def require(*tools: str) -> None:
     """Verifies that all specified CLI tools exist on PATH or exits with an error."""
     missing = [t for t in tools if not shutil.which(t)]
     if missing:
@@ -50,14 +50,14 @@ def require(*tools):
                  f"{'it' if len(missing) == 1 else 'them'} first")
 
 
-def current_context():
+def current_context() -> str:
     """Returns the active kubectl context name or a fallback string if unset."""
     out = subprocess.run(["kubectl", "config", "current-context"],
                          capture_output=True, text=True)
     return out.stdout.strip() if out.returncode == 0 else "(none set)"
 
 
-def helm_uninstall(release, namespace, wait=False):
+def helm_uninstall(release: str, namespace: str, wait: bool = False) -> None:
     """A release that is already gone — ordinary on a second run, which the
     docstring above calls idempotent — exits non-zero from `helm uninstall`
     exactly like a genuinely stuck finalizer does, and the two are not the
@@ -89,7 +89,7 @@ def helm_uninstall(release, namespace, wait=False):
              f"all,ephemeralrunnerset -n {namespace}` before retrying", file=sys.stderr)
 
 
-def delete_namespace(namespace):
+def delete_namespace(namespace: str) -> None:
     """Deletes a Kubernetes namespace with a 60-second timeout ignoring not found."""
     out = subprocess.run(["kubectl", "delete", "namespace", namespace,
                           "--ignore-not-found", "--timeout", "60s"])
@@ -99,7 +99,7 @@ def delete_namespace(namespace):
              f"still waiting on", file=sys.stderr)
 
 
-def main():
+def main() -> None:
     """CLI entry point for tearing down ARC controller and runner scale set releases."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)

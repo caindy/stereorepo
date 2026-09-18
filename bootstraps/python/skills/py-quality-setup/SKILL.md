@@ -48,7 +48,7 @@ would obey it.
 
 **Never run a checker without naming the target's configuration.** `mypy` reads
 its configuration from the working directory rather than per file, so `mypy .` at
-the root runs past `.meta/mypy.ini` and past DR-210's baseline without reporting
+the root runs past `.meta/mypy.ini` and past solorepo's DR-210's baseline without reporting
 that it did. `ruff` resolves configuration per file and does find `.meta/ruff.toml`
 by proximity — but an explicit `--config` naming a ruleset that selects `RUF`
 without `F` makes `RUF100` read `# noqa: F401  # reason: registers check steps`
@@ -120,9 +120,9 @@ This section describes a Project workspace, and only a Project workspace.
 
 **In a solorepo portfolio the canonical configuration is the seed's**
 (`bootstraps/python/seed/pyproject.toml`), which arrives with the Project and
-already selects the rule set DR-096 settled, pins the gate's tools exactly while
-letting the test tools float (DR-097), and targets the support floor rather than
-the development interpreter (DR-095). Under Ratchet it is raised and never
+already selects the rule set solorepo's DR-096 settled, pins the gate's tools exactly while
+letting the test tools float (solorepo's DR-097), and targets the support floor rather than
+the development interpreter (solorepo's DR-095). Under Ratchet it is raised and never
 lowered, so this skill's job in an existing Project is to read that manifest and
 verify it, not to overwrite it with the reference below. `ignore` stays empty:
 A2 says a suppression names its rule and its reason at the site, never in
@@ -130,7 +130,7 @@ configuration, and `uv run gate lints` refuses an entry.
 
 Two differences from the reference below are deliberate and not drift.
 `ruff format` is absent, because mechanical formatting was retired from this
-gate (DR-193): it inflates agent context windows and manufactures rebase churn
+gate (solorepo's DR-193): it inflates agent context windows and manufactures rebase churn
 across concurrent branches for no semantic gain. `basedpyright` is absent for
 the reason given under Required Tools.
 
@@ -337,7 +337,7 @@ A.When using `pyrightconfig.json` for multi-package projects, REMOVE the `tool.b
 
    The copy in this package routes by target: a file under `.meta/` is checked
    against `.meta/ruff.toml` and `.meta/mypy.ini`, a file in a Project workspace
-   through that Project's `uv run`. It runs no formatter, because DR-193 retired
+   through that Project's `uv run`. It runs no formatter, because solorepo's DR-193 retired
    mechanical formatting from this standard, and it does not invoke
    `basedpyright`. Point the symlink at this package's `lint-gate.py` rather than
    an upstream copy, which does all three of those things.
@@ -428,7 +428,7 @@ ignore_missing_imports = true
 **A Project workspace**
 
 - [ ] pyproject.toml has requires-python = ">=3.13"
-- [ ] dev dependencies include ruff and mypy, pinned exactly (DR-097)
+- [ ] dev dependencies include ruff and mypy, pinned exactly (solorepo's DR-097)
 - [ ] [tool.ruff] configured with target-version = "py313", and `ignore = []`
 - [ ] [tool.mypy] configured with python_version = "3.13" and strict = true
 - [ ] `uv run ruff check .` and `uv run mypy .` pass from the Project's directory

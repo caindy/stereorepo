@@ -82,7 +82,7 @@ def terms_probes() -> list[str]:
         synth_candidates = terms.extract_candidates(
             corpus=synth_corpus,
             root_path=ROOT,
-            config=terms.TermsConfig(min_zipf=3.0, min_dp=0.50, min_g2=1.0, min_uses=3, limit=10),
+            config=terms.TermsConfig(min_zipf=3.0, min_dp=0.45, min_g2=1.0, min_uses=3, limit=10),
         )
         synth_terms = [c.term for c in synth_candidates]
         if "receipt" not in synth_terms:
