@@ -2,14 +2,17 @@
 """
 import pathlib
 import re
+from collections.abc import Sequence
 
 import yaml
 
 from collect import (
     ROOT,
+    Index,
     check,
 )
-from files import history, markdown, sources
+from files import history, sources
+from files.markdown import FENCED
 
 WIKILINK = re.compile(r"\[\[(.*?)\]\]")
 
@@ -23,10 +26,10 @@ LEAD_COPULA = re.compile(
 
 def _strip_fenced(text: str) -> str:
     """Strips fenced code blocks and inline backticks while preserving line count."""
-    return markdown.FENCED.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+    return str(FENCED.sub(lambda m: "\n" * m.group(0).count("\n"), text))
 
 
-def _build_ontology_lookup(index):
+def _build_ontology_lookup(index: Index) -> set[str]:
     """Builds a case-insensitive lookup set of valid ontology entities from index.
 
     Every spelling a writer reasonably reaches for is a key: the full
@@ -35,7 +38,7 @@ def _build_ontology_lookup(index):
     in the three forms citations take — `dr-85`, `dr-085` and `85` — and an
     Article by `a8` and `8`.
     """
-    lookup = set()
+    lookup: set[str] = set()
     for ident, (cls, obj, _) in index.items():
         lookup.add(ident.lower())
         tail = ident.rsplit("/", 1)[-1].lower()
@@ -63,14 +66,15 @@ def _build_ontology_lookup(index):
     return lookup
 
 
-def _build_wiki_files_map(file_list):
+def _build_wiki_files_map(
+        file_list: Sequence[pathlib.Path]) -> dict[tuple[str, str], pathlib.Path]:
     """Builds lookup mapping of wiki files from a list of paths.
 
     Keyed by `(context, slug)`, both lowercased: a page under `wiki/<ctx>/` is
     keyed by its directory, and a page directly under `wiki/` by the empty
     context.
     """
-    wiki_map = {}
+    wiki_map: dict[tuple[str, str], pathlib.Path] = {}
     for f in file_list:
         try:
             rel = f.relative_to(ROOT)
@@ -99,14 +103,14 @@ def _slugged(text: str) -> str:
     return text.lower().replace(" ", "-").replace("_", "-")
 
 
-def _in_ontology(norm: str, norm_slug: str, ontology_lookup: set) -> bool:
+def _in_ontology(norm: str, norm_slug: str, ontology_lookup: set[str]) -> bool:
     """Whether the ontology answers `norm` or its slug, bare or under either CURIE prefix."""
     return any(candidate in ontology_lookup
                for prefix in ("", "work:", "ddd:")
                for candidate in (prefix + norm, prefix + norm_slug))
 
 
-def _scoped_page(target: str, source_path: pathlib.Path, wiki_map: dict) -> bool:
+def _scoped_page(target: str, source_path: pathlib.Path, wiki_map: dict[tuple[str, str], pathlib.Path]) -> bool:
     """Whether a target naming its context, `<context>/<slug>`, is a page of that context or a file relative to the page that wrote it."""
     ctx_part, slug_part = target.split("/", 1)
     if (_slugged(ctx_part), _slugged(slug_part).removesuffix(".md")) in wiki_map:
@@ -114,7 +118,7 @@ def _scoped_page(target: str, source_path: pathlib.Path, wiki_map: dict) -> bool
     return (source_path.parent / f"{target}.md").is_file() or (ROOT / "wiki" / f"{target}.md").is_file()
 
 
-def _unscoped_page(norm_slug: str, source_path: pathlib.Path, wiki_map: dict) -> bool:
+def _unscoped_page(norm_slug: str, source_path: pathlib.Path, wiki_map: dict[tuple[str, str], pathlib.Path]) -> bool:
     """Whether a bare slug is a page in the writing page's own context, the scaffold's, the wiki's root, or any context at all."""
     rel = _rel(source_path)
     if len(rel.parts) >= 3 and rel.parts[0] == "wiki" and (rel.parts[1].lower(), norm_slug) in wiki_map:
@@ -124,7 +128,8 @@ def _unscoped_page(norm_slug: str, source_path: pathlib.Path, wiki_map: dict) ->
     return any(s == norm_slug for (c, s) in wiki_map)
 
 
-def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict, ontology_lookup: set) -> bool:
+def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict[tuple[str, str], pathlib.Path],
+                       ontology_lookup: set[str]) -> bool:
     """Determines whether a wikilink target resolves to a wiki page or ontology entity.
 
     The ontology answers first, by the target and by its slug, and then by the
@@ -150,8 +155,8 @@ def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict, o
 
 
 
-@check("wikilinks")
-def wikilinks(index, md_files=None):
+@check("wikilinks")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def wikilinks(index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
     """Internal concept references use closed-world wikilinks (A2, solorepo's DR-185).
 
     Every wikilink ([[concept]] or scoped [[context/concept]]) must resolve
@@ -160,7 +165,7 @@ def wikilinks(index, md_files=None):
     or article in the repository index. A reference to an unregistered term or
     missing page is red and fails verification.
     """
-    problems = []
+    problems: list[str] = []
     tree_files = md_files if md_files is not None else sources.tree()
     wiki_map = _build_wiki_files_map(tree_files)
     ontology_lookup = _build_ontology_lookup(index)
@@ -221,7 +226,7 @@ def _past_frontmatter(lines: list[str]) -> list[str]:
     return lines
 
 
-def _lead_problem(rel: pathlib.Path, lines: list[str], index, slug: str) -> str | None:
+def _lead_problem(rel: pathlib.Path, lines: list[str], index: Index, slug: str) -> str | None:
     """Why a page's lead fails MOS:LEAD, or None: no title, nothing after it, no bold copular lead, a subject that is not the title, or one that disagrees with the minted label."""
     if not lines or not lines[0].startswith("# "):
         return f"{rel}: must begin with a top-level heading (# <Title>)"
@@ -247,8 +252,9 @@ def _lead_problem(rel: pathlib.Path, lines: list[str], index, slug: str) -> str 
     return None
 
 
-@check("wiki lead paragraphs")
-def wiki_lead_paragraphs(index, md_files=None):
+@check("wiki lead paragraphs")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def wiki_lead_paragraphs(index: Index,
+                         md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
     """Every wiki page opens with a bold copular lead definition (MOS:LEAD) concurring with the vocabulary (A2, solorepo's DR-185, solorepo's DR-187).
 
     Maintainer-facing exposition under wiki/<context>/ (excluding index READMEs)
@@ -257,7 +263,7 @@ def wiki_lead_paragraphs(index, md_files=None):
     corresponds to a minted concept or discipline in the index, the lead subject
     must concur with the minted preferred label.
     """
-    problems = []
+    problems: list[str] = []
     tree_files = md_files if md_files is not None else sources.tree()
     for path in tree_files:
         rel = _rel(path)
@@ -274,12 +280,12 @@ def wiki_lead_paragraphs(index, md_files=None):
     return problems
 
 
-def _domain_vocabulary_problems(wiki_map: dict) -> list[str]:
+def _domain_vocabulary_problems(wiki_map: dict[tuple[str, str], pathlib.Path]) -> list[str]:
     """Every concept of `domain_vocabulary.yaml` with no page outside the scaffold's context, or one problem where the file will not parse or is not the shape a concept set has."""
     domain_vocab = ROOT / ".meta" / "assertions" / "domain_vocabulary.yaml"
     if not domain_vocab.is_file():
         return []
-    problems = []
+    problems: list[str] = []
     try:
         data = yaml.safe_load(domain_vocab.read_text(encoding="utf-8")) or {}
         for item in data.get("concept_set") or []:
@@ -292,8 +298,9 @@ def _domain_vocabulary_problems(wiki_map: dict) -> list[str]:
     return problems
 
 
-@check("ubiquitous language wiki parity")
-def ubiquitous_language_wiki_parity(index, md_files=None):
+@check("ubiquitous language wiki parity")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def ubiquitous_language_wiki_parity(
+        index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
     """Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page, and vice versa (A17, solorepo's DR-184, solorepo's DR-190).
 
     Enforces 1:1 parity between LinkML vocabulary assertions and Knowledge Management

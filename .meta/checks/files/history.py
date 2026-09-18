@@ -7,6 +7,7 @@ from collect import (
     ROOT,
     Found,
     Passed,
+    StepOutcome,
     check,
 )
 
@@ -29,15 +30,15 @@ def history_entries_of(text: str) -> list[tuple[str, str | None]]:
     return entries
 
 
-@check("meta history orphans")
-def meta_history_orphans():
+@check("meta history orphans")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def meta_history_orphans() -> StepOutcome:
     """Every .history.md under .meta/ has a companion module that names it in its docstring (solorepo's DR-171).
 
     The companion is the file of the same stem beside the log: `<stem>.py`, the
     extension-less program `<stem>`, or the package `<stem>/`, whose docstring
     is in its `__init__.py`.
     """
-    problems = []
+    problems: list[str] = []
     counted = 0
 
     for history in sorted(META.rglob("*.history.md")):
@@ -71,7 +72,7 @@ def meta_history_orphans():
 
 def receipt_symbols(tree: ast.Module) -> set[str]:
     """The names a receipt may cite in a parsed module: every top-level function and class, a class's methods as `Class.method`, and the label a decorator such as `@check` gives."""
-    symbols = set()
+    symbols: set[str] = set()
     for node in tree.body:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             continue
@@ -104,10 +105,10 @@ def receipt_problem(receipt: str | None) -> str | None:
     return None
 
 
-@check("meta history receipts")
-def meta_history_receipts():
+@check("meta history receipts")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def meta_history_receipts() -> StepOutcome:
     """Every entry in a .meta/ history log names a check or probe that exists (solorepo's DR-171)."""
-    problems = []
+    problems: list[str] = []
     logs = 0
     entries = 0
     for history in sorted(META.rglob("*.history.md")):

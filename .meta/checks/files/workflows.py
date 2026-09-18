@@ -3,6 +3,8 @@
 import pathlib
 import re
 import sys
+from collections.abc import Sequence
+from typing import Any
 
 import yaml
 
@@ -13,6 +15,7 @@ from collect import (
     CouldNotRun,
     Found,
     Passed,
+    StepOutcome,
     check,
 )
 from files import sources
@@ -20,8 +23,8 @@ from files import sources
 SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/")
 
 
-@check("scaffold-only paths")
-def scaffold_only_paths():
+@check("scaffold-only paths")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def scaffold_only_paths() -> StepOutcome:
     """Validate that documentation and workflows copied during Specialization contain no scaffold-only paths.
 
     Ensures that inherited files do not reference paths unique to solorepo (`template/`,
@@ -30,10 +33,10 @@ def scaffold_only_paths():
     Returns:
         Passed | Found | CouldNotRun: Validation result listing occurrences of scaffold-only paths.
     """
-    problems = []
-    scanned = set()
+    problems: list[str] = []
+    scanned: set[pathlib.Path] = set()
 
-    def scan(paths, names):
+    def scan(paths: Sequence[pathlib.Path], names: Sequence[str]) -> None:
         for path in paths:
             if path.suffix not in (".md", ".yaml", ".yml") or not path.is_file():
                 continue
@@ -76,7 +79,7 @@ SEED_OWN_JOBS = ("gate",)
 NOT_SHARED = ("runs-on",)
 
 
-def _first_difference(a, b, path):
+def _first_difference(a: Any, b: Any, path: str) -> tuple[str, str] | None:
     """Where two loaded YAML values first differ, as a dotted path, or None."""
     if isinstance(a, dict) and isinstance(b, dict):
         for key in list(a) + [k for k in b if k not in a]:
@@ -97,8 +100,8 @@ def _first_difference(a, b, path):
     return None if a == b else (path, f"{a!r} against {b!r}")
 
 
-@check("gate workflows agree")
-def gate_workflows_agree():
+@check("gate workflows agree")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def gate_workflows_agree() -> StepOutcome:
     """Validate that the root gate workflow and seeded template workflow agree on shared jobs.
 
     Verifies structural and semantic parity across triggers, permissions, and shared jobs
@@ -117,8 +120,9 @@ def gate_workflows_agree():
         return CouldNotRun("either ours or template workflow is absent")
     a = yaml.safe_load(ours.read_text()) or {}
     b = yaml.safe_load(seed.read_text()) or {}
-    shared = {"on": (a.get(True, a.get("on")), b.get(True, b.get("on"))),
-              "permissions": (a.get("permissions"), b.get("permissions"))}
+    shared: dict[str, tuple[Any, Any]] = {
+        "on": (a.get(True, a.get("on")), b.get(True, b.get("on"))),
+        "permissions": (a.get("permissions"), b.get("permissions"))}
     jobs_a, jobs_b = a.get("jobs") or {}, b.get("jobs") or {}
     problems = []
     for name in SHARED_JOBS:
@@ -127,9 +131,9 @@ def gate_workflows_agree():
                 problems.append(f"jobs.{name}: not in {path.relative_to(ROOT)}, "
                                 "and it is a job both gate workflows define")
         if name in jobs_a and name in jobs_b:
-            shared[f"jobs.{name}"] = tuple(
-                {k: v for k, v in jobs[name].items() if k not in NOT_SHARED}
-                for jobs in (jobs_a, jobs_b))
+            halves = [{k: v for k, v in jobs[name].items() if k not in NOT_SHARED}
+                      for jobs in (jobs_a, jobs_b)]
+            shared[f"jobs.{name}"] = (halves[0], halves[1])
     for name in jobs_b:
         if name not in SHARED_JOBS + SEED_OWN_JOBS:
             problems.append(f"jobs.{name}: in {seed.relative_to(ROOT)} and neither shared "
@@ -170,8 +174,8 @@ NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "
 """The number words the workflow's prose may spell a count with."""
 
 
-@check("control plane restore")
-def control_plane_restore() -> Passed | Found | CouldNotRun:
+@check("control plane restore")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def control_plane_restore() -> StepOutcome:
     """The reviewer workflow restores exactly the control plane from trunk, in every place it states the set (solorepo's DR-217).
 
     `depth.CONTROL_PLANE` is the one statement of what the control plane is,
@@ -190,7 +194,7 @@ def control_plane_restore() -> Passed | Found | CouldNotRun:
     sys.path.insert(0, str(META))
     import depth
     text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
-    lists = []
+    lists: list[tuple[str, ...]] = []
     for line in RESTORE_LINE.findall(text):
         words = line.split()
         lists.append(tuple(words[1:] if words[0] == "TRUNK:" else words))
@@ -255,8 +259,8 @@ def scripts_of(package: str) -> tuple[pathlib.Path, ...]:
     return tuple(candidate for candidate in candidates if candidate.is_file())
 
 
-@check("control plane packages")
-def control_plane_packages() -> Passed | Found | CouldNotRun:
+@check("control plane packages")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def control_plane_packages() -> StepOutcome:
     """A package under `.meta/lib/` is control plane exactly when the script it is the body of is (solorepo's DR-219).
 
     Those packages are listed in `depth.CONTROL_PLANE` rather than derived

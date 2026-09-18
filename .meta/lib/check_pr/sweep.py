@@ -7,7 +7,8 @@ request yet (solorepo's DR-155).
 import datetime
 import re
 import time
-from typing import NamedTuple
+from collections.abc import Collection, Mapping, Sequence
+from typing import Any, NamedTuple
 
 from lib.check_pr import META, github, polling, verdict
 
@@ -28,7 +29,7 @@ SWEEP_FIELDS = ("number,title,headRefOid,headRefName,baseRefName,isDraft,updated
                 "reviewRequests,autoMergeRequest,mergeable,latestReviews")
 
 
-def longest_run():
+def longest_run() -> int | None:
     """Reads the maximum job timeout in minutes configured for the coder workflow.
 
     Returns:
@@ -44,12 +45,12 @@ def longest_run():
     return int(found.group(1))
 
 
-def asked_of(pr):
+def asked_of(pr: dict[str, Any]) -> list[str]:
     """Names or logins of reviewers currently requested on a pull request."""
-    return [r.get("login") or r.get("name") or "someone" for r in pr["reviewRequests"]]
+    return [str(r.get("login") or r.get("name") or "someone") for r in pr["reviewRequests"]]
 
 
-def green(pr):
+def green(pr: dict[str, Any]) -> bool:
     """Whether every check on the head has concluded and none of them failed."""
     contexts = polling.deduplicate_checks(pr.get("statusCheckRollup") or [])
     states = [c.get("conclusion") or c.get("state") or c.get("status")
@@ -64,7 +65,8 @@ def green(pr):
 HANDBACK_FIELDS = "number,headRefName,baseRefName,reviewRequests,autoMergeRequest,mergeable"
 
 
-def wait_for_checks(pr_number, timeout=120, interval=5):
+def wait_for_checks(pr_number: int, timeout: int = 120,
+                    interval: int = 5) -> list[dict[str, Any]]:
     """Wait for in-progress or queued checks on the head to conclude."""
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -78,7 +80,7 @@ def wait_for_checks(pr_number, timeout=120, interval=5):
     return github.rollup_of(pr_number)
 
 
-def hand_back(issue):
+def hand_back(issue: str | int) -> dict[str, Any]:
     """Provides pull request status metrics for challenge hand-back automation.
 
     Args:
@@ -87,7 +89,7 @@ def hand_back(issue):
     Returns:
         dict[str, Any]: Status summary containing handed, green, conflicting, number, base.
     """
-    found = []
+    found: list[dict[str, Any]] = []
     for prefix in ("gemini", "claude", "codex"):
         found = github.gh("pr", "list", "--state", "open", "--head", f"{prefix}/issue-{issue}",
                    "--json", HANDBACK_FIELDS)
@@ -110,7 +112,7 @@ def hand_back(issue):
             "base": pr.get("baseRefName") or "main"}
 
 
-def is_approved_pull(pr, reviewer_login=None):
+def is_approved_pull(pr: dict[str, Any], reviewer_login: str | None = None) -> bool:
     """Whether the reviewer's most recent review on this pull request is an approval."""
     if not (pr.get("latestReviews") or pr.get("reviews")):
         return False
@@ -121,7 +123,8 @@ def is_approved_pull(pr, reviewer_login=None):
     return bool(revs and revs[-1].get("state") == "APPROVED")
 
 
-def is_changes_requested_pull(pr, reviewer_login=None):
+def is_changes_requested_pull(pr: dict[str, Any],
+                              reviewer_login: str | None = None) -> bool:
     """Whether the reviewer's most recent review on this pull request requests changes."""
     if not (pr.get("latestReviews") or pr.get("reviews")):
         return False
@@ -135,34 +138,43 @@ def is_changes_requested_pull(pr, reviewer_login=None):
 class Standing(NamedTuple):
     """One open pull request as `unheld` reads it: the request on it, the loop's branch match, how long it has sat, and the reviewer's login."""
 
-    pr: dict
-    asked: list
-    branch: re.Match | None
+    pr: dict[str, Any]
+    asked: list[str]
+    branch: re.Match[str] | None
     idle: float
     reviewer_login: str
 
-    def line(self):
+    def line(self) -> str:
         """`#<number> <title>`, the head of every remedy."""
         return f"#{self.pr['number']} {self.pr['title'][:60]}"
 
-    def challenge(self, levels):
-        """The branch's Challenge as `(state, level)`, the level being the first of `levels` among its labels, or None."""
+    def challenge(self, levels: Collection[str]) -> tuple[str | None, str | None]:
+        """The branch's Challenge as `(state, level)`, the level being the first of `levels` among its labels, or None.
+
+        `(None, None)` where the branch names no Challenge, which every caller
+        reads as it reads a Challenge that is closed or unlabelled.
+        """
+        if self.branch is None:
+            return None, None
         issue = github.gh("issue", "view", self.branch.group(1), "--json", "state,labels")
         level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in levels), None)
-        return issue["state"], level
+        return str(issue["state"]), level
 
 
-def unresolved_of(pr, unresolved):
+def unresolved_of(pr: dict[str, Any],
+                  unresolved: Mapping[int, list[dict[str, Any]]] | None
+                  ) -> list[dict[str, Any]] | None:
     """The unresolved threads of `pr`, from `unresolved` where the caller read them and from GitHub otherwise."""
     if unresolved is not None:
         return unresolved.get(pr["number"])
     return [t for t in github.threads(str(pr["number"])) if not t["isResolved"]]
 
 
-def waiting_on_conflict(standing):
+def waiting_on_conflict(standing: Standing) -> list[str]:
     """The remedy where a request, an arming or an approval waits on a branch that conflicts, and nothing where none does."""
     pr = standing.pr
-    waiting, stuck = [], []
+    waiting: list[str] = []
+    stuck: list[str] = []
     if standing.asked:
         waiting.append(f"requested of {', '.join(standing.asked)}")
         stuck.append("GitHub builds no merge ref, so the review workflow has nothing "
@@ -194,7 +206,8 @@ def waiting_on_conflict(standing):
             f"{pr['headRefName']} onto {pr['baseRefName']}{hard_remedy}"]
 
 
-def armed_over_conversations(standing, minutes, unresolved):
+def armed_over_conversations(standing: Standing, minutes: float,
+                             unresolved: Mapping[int, list[dict[str, Any]]] | None) -> list[str]:
     """The remedy where an arming waits on unresolved conversations nobody is standing to resolve (solorepo's DR-159)."""
     pr = standing.pr
     if not (pr.get("autoMergeRequest") and pr.get("mergeable") != "CONFLICTING" and standing.idle >= minutes):
@@ -211,7 +224,7 @@ def armed_over_conversations(standing, minutes, unresolved):
             f".meta/say/post answer"]
 
 
-def stranded_request(standing, minutes):
+def stranded_request(standing: Standing, minutes: float) -> list[str]:
     """The remedy where a review is requested of the reviewer whose check failed without a verdict (solorepo's DR-178)."""
     pr = standing.pr
     if not (standing.reviewer_login in standing.asked and not pr["isDraft"]
@@ -227,7 +240,8 @@ def stranded_request(standing, minutes):
             f".meta/say/move request-review {pr['number']}"]
 
 
-def unanswered_changes(standing, minutes, unresolved):
+def unanswered_changes(standing: Standing, minutes: float,
+                       unresolved: Mapping[int, list[dict[str, Any]]] | None) -> list[str]:
     """The remedy where the reviewer's request for changes stands unanswered on a Challenge the loop holds."""
     pr = standing.pr
     if not (is_changes_requested_pull(pr, reviewer_login=standing.reviewer_login) and not standing.asked
@@ -245,7 +259,7 @@ def unanswered_changes(standing, minutes, unresolved):
             f"without answering: .meta/say/move dispatch {pr['number']} --task review"]
 
 
-def approved_and_failing(standing, minutes):
+def approved_and_failing(standing: Standing, minutes: float) -> list[str]:
     """The remedy where an approved pull request's checks went red after the approval and no Job is standing to fix them."""
     pr = standing.pr
     if not (is_approved_pull(pr, reviewer_login=standing.reviewer_login) and not standing.asked
@@ -266,7 +280,8 @@ def approved_and_failing(standing, minutes):
             f"A check failed after approval, and no Job is standing to fix it: {remedy}"]
 
 
-def green_and_unheld(standing, minutes, clean):
+def green_and_unheld(standing: Standing, minutes: float,
+                     clean: Collection[int]) -> list[str]:
     """The remedy where a green pull request on a loop's branch has no request, no arming and nobody holding it."""
     pr = standing.pr
     if (standing.asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr)
@@ -299,7 +314,9 @@ def green_and_unheld(standing, minutes, clean):
             f"A run ended without handing it over, {remedy}"]
 
 
-def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
+def unheld(prs: Sequence[dict[str, Any]], minutes: float, clean: Collection[int],
+           unresolved: Mapping[int, list[dict[str, Any]]] | None = None,
+           reviewer_login: str | None = None) -> list[str]:
     """Identifies open pull requests lacking an active owner, review request, or remediation.
 
     Args:
@@ -323,7 +340,7 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
     if reviewer_login is None:
         reviewer_login = github.role_login("reviewer")
     now = datetime.datetime.now(datetime.UTC)
-    out = []
+    out: list[str] = []
     for pr in prs:
         moved = (datetime.datetime.fromisoformat(pr["updatedAt"].replace("Z", "+00:00"))
                  if pr.get("updatedAt") else None)
@@ -338,7 +355,7 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
     return out
 
 
-def sweep_all(publishing):
+def sweep_all(publishing: bool) -> int:
     """Evaluates gate checks and ownership across all open pull requests.
 
     Args:
@@ -374,8 +391,8 @@ def sweep_all(publishing):
     for pr in found:
         pr["statusCheckRollup"] = rolled[pr["number"]]
     failed = bool(unfetched)
-    clean = set()
-    unresolved = {}
+    clean: set[int] = set()
+    unresolved: dict[int, list[dict[str, Any]]] = {}
     for pr in found:
         number = str(pr["number"])
         pr_threads = github.threads(number)

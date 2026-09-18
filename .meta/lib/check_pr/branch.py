@@ -7,6 +7,7 @@ no Artifact that carries it (solorepo's DR-175).
 import pathlib
 import re
 import subprocess
+from collections.abc import Sequence
 
 from lib.check_pr import META, ROOT, github, review
 
@@ -39,7 +40,7 @@ RENDER = ["uvx", "--with", "pyyaml", "python", str(META.resolve() / "render.py")
 RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
 
 
-def owned_and_open():
+def owned_and_open() -> tuple[str, list[tuple[int, str, list[str] | None]]]:
     """Identify the pull request associated with the current branch or list open ones.
 
     Returns:
@@ -59,13 +60,13 @@ def owned_and_open():
                     for p in github.gh("pr", "list", "--state", "open", "--json", "number,title")]
 
 
-def residue():
+def residue() -> list[str]:
     """Identifies local branches and worktrees whose remote tracking branches are gone.
 
     Returns:
         list[str]: Descriptions and git cleanup commands for orphaned branches and worktrees.
     """
-    def git(*args):
+    def git(*args: str) -> str:
         return subprocess.run(["git", *args], capture_output=True, text=True).stdout
     git("fetch", "--prune", "--quiet", "origin")
     gone = [line.split()[0] for line in
@@ -74,14 +75,15 @@ def residue():
             if line.endswith(" gone")]
     if not gone:
         return []
-    worktrees, path = {}, None
+    worktrees: dict[str, str | None] = {}
+    path: str | None = None
     for line in git("worktree", "list", "--porcelain").splitlines():
         if line.startswith("worktree "):
             path = line[len("worktree "):]
         elif line.startswith("branch refs/heads/"):
             worktrees[line[len("branch refs/heads/"):]] = path
     here = git("rev-parse", "--show-toplevel").strip()
-    out = []
+    out: list[str] = []
     for branch in gone:
         found = github.gh("pr", "list", "--head", branch, "--state", "all", "--json", "number,state")
         state = f"#{found[0]['number']} {found[0]['state'].lower()}" if found else "no pull request"
@@ -97,13 +99,13 @@ def residue():
     return out
 
 
-def unpushed():
+def unpushed() -> list[str]:
     """Verifies that the working tree has no uncommitted changes and all commits are pushed.
 
     Returns:
         list[str]: Validation error messages for uncommitted or unpushed modifications.
     """
-    def git(*args):
+    def git(*args: str) -> tuple[int, str, str]:
         """Executes a git command and returns its status code, stdout, and stderr.
 
         Returns:
@@ -112,7 +114,7 @@ def unpushed():
         out = subprocess.run(["git", *args], capture_output=True, text=True)
         return out.returncode, out.stdout.strip(), out.stderr.strip()
 
-    problems = []
+    problems: list[str] = []
     code, dirty, err = git("status", "--porcelain")
     if code:
         return [f"git status failed, so nothing here was checked: {err}"]
@@ -130,7 +132,7 @@ def unpushed():
     return problems
 
 
-def git_read(*args):
+def git_read(*args: str) -> tuple[int, str]:
     """Executes a git command in ROOT, returning its return code and stdout.
 
     Args:
@@ -143,7 +145,7 @@ def git_read(*args):
     return out.returncode, out.stdout
 
 
-def git_text(*args, default=""):
+def git_text(*args: str, default: str = "") -> str:
     """Executes a git command in ROOT, returning stdout on success or default on failure.
 
     Args:
@@ -157,7 +159,7 @@ def git_text(*args, default=""):
     return default if code else out
 
 
-def touched(base):
+def touched(base: str) -> list[str] | None:
     """Returns all paths modified on this branch against the merge base, including untracked files.
 
     Args:
@@ -175,13 +177,13 @@ def touched(base):
     return list(dict.fromkeys(named))
 
 
-def artifacts():
+def artifacts() -> set[str]:
     """Extracts declared artifact paths from structure assertions.
 
     Returns:
         set[str]: Set of artifact path strings declared in structure assertions.
     """
-    found = set()
+    found: set[str] = set()
     for rel in ("assertions/structure.yaml", "assertions/imported/structure.yaml"):
         path = META / rel
         if path.is_file():
@@ -189,7 +191,7 @@ def artifacts():
     return found
 
 
-def accounted():
+def accounted() -> dict[str, set[int]]:
     """Maps artifact file paths to the set of decision numbers that enact them.
 
     Returns:
@@ -202,7 +204,7 @@ def accounted():
             for file, entries in ROW.findall(path.read_text())}
 
 
-def unrendered():
+def unrendered() -> tuple[list[str] | None, list[str] | None, str]:
     """Checks whether generated documentation pages match their source assertions.
 
     Returns:
@@ -218,7 +220,7 @@ def unrendered():
     said = out.stdout.strip()
     if out.returncode == 0 and said == "up to date":
         return [], [], ""
-    named = {}
+    named: dict[str, list[str]] = {}
     for line in said.splitlines():
         prefix, colon, rest = line.partition(":")
         if colon:
@@ -229,18 +231,18 @@ def unrendered():
                         + (said or out.stderr.strip() or f"exit {out.returncode}"))
 
 
-def artifact_map():
+def artifact_map() -> dict[str, str]:
     """Maps artifact IDs (e.g. 'work:artifact/meta-charter') to their declared paths.
 
     Returns a dictionary (`dict[str, str]`) mapping these artifact ID strings to
     their declared file paths relative to the workspace root.
     """
-    mapping = {}
+    mapping: dict[str, str] = {}
     for rel in ("assertions/structure.yaml", "assertions/imported/structure.yaml"):
         path = META / rel
         if not path.is_file():
             continue
-        curr_id = None
+        curr_id: str | None = None
         for line in path.read_text().splitlines():
             stripped = line.strip()
             if stripped.startswith("- id:"):
@@ -252,15 +254,15 @@ def artifact_map():
     return mapping
 
 
-def parse_decision_yaml(path):
+def parse_decision_yaml(path: pathlib.Path) -> tuple[str | None, list[str]]:
     """Parses a decision yaml file, returning its status and the list of enacted_in artifact ids.
 
     The `path` parameter expects a `pathlib.Path` instance pointing to the YAML
     decision file. Returns a tuple of `(status, enacted_in)` consisting of
     `status` (a string or None) and `enacted_in` (a list of artifact ID strings).
     """
-    status = None
-    enacted_in = []
+    status: str | None = None
+    enacted_in: list[str] = []
 
     lines = path.read_text().splitlines()
     in_enacted_in = False
@@ -284,7 +286,7 @@ def parse_decision_yaml(path):
     return status, enacted_in
 
 
-def unenacted(base):
+def unenacted(base: str) -> tuple[list[str] | None, str]:
     """Verifies that every adopted decision settled on this branch enacts non-record artifacts.
 
     Args:
@@ -302,7 +304,7 @@ def unenacted(base):
         return [], "this branch settles no decision"
 
     amap = artifact_map()
-    problems = []
+    problems: list[str] = []
 
     for n in settled:
         path = ROOT / f".meta/assertions/decisions/DR-{n:03d}.yaml"
@@ -311,7 +313,7 @@ def unenacted(base):
 
         status, enacted_in = parse_decision_yaml(path)
         if status == "ADOPTED":
-            valid_paths = []
+            valid_paths: list[str] = []
             for art_id in enacted_in:
                 p = amap.get(art_id)
                 if p and not any(p.startswith(r) for r in RECORD):
@@ -326,7 +328,7 @@ def unenacted(base):
     return problems, f"{len(settled)} decision(s) settled on this branch ({shown})"
 
 
-def handoff(base):
+def handoff(base: str) -> int:
     """Executes handoff validation checking unpushed commits, stale renders, and enacted artifacts.
 
     Args:
@@ -340,7 +342,7 @@ def handoff(base):
     turned back into the repository-relative path the record's table and this
     file's own reads are keyed on.
     """
-    def mark(label, problems, note=""):
+    def mark(label: str, problems: Sequence[str], note: str = "") -> bool:
         for p in problems:
             print(f"x  {p}")
         print(("x  " if problems else "ok ") + label
@@ -349,7 +351,7 @@ def handoff(base):
 
     failed = mark("handoff", unpushed())
     stale, orphans, unread = unrendered()
-    if stale is None:
+    if stale is None or orphans is None:
         print(f"?  rendered — {unread}")
     else:
         failed |= mark("rendered",
@@ -359,7 +361,7 @@ def handoff(base):
                           f"nothing for it — restore the target, or drop the page"
                           for name in orphans],
                        "every generated page is the render of what it asserts")
-    unnamed = [] if stale is None else stale + orphans
+    unnamed = [] if stale is None or orphans is None else stale + orphans
     unsure = stale is None or INDEX in {
         (pathlib.Path(".meta") / name).as_posix() for name in unnamed}
     if unsure:

@@ -11,6 +11,7 @@ import pathlib
 import re
 import subprocess
 import sys
+from typing import Any
 
 from lib.check_pr import ROOT
 
@@ -81,7 +82,7 @@ query($owner: String!, $name: String!) {
 """ % ROLLUP  # noqa: UP031  # reason: GraphQL query templates have literal curly braces
 
 
-def _role_token():
+def _role_token() -> str | None:
     for role in ("reviewer.env", "coder.env"):
         p = pathlib.Path("~/.config/solorepo").expanduser() / role
         if p.exists():
@@ -95,7 +96,7 @@ def _role_token():
     return None
 
 
-def gh(*args):
+def gh(*args: str) -> Any:
     """Invokes the GitHub CLI with the role credential and parses JSON output."""
     env = None
     if "GH_TOKEN" not in os.environ:
@@ -108,13 +109,13 @@ def gh(*args):
     return json.loads(out.stdout)
 
 
-def repo():
+def repo() -> str:
     """Determines the current GitHub repository slug from environment, CLI, or git remote."""
     repo_name = os.environ.get("GITHUB_REPOSITORY")
     if repo_name:
         return repo_name
     try:
-        return gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
+        return str(gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"])
     except (Exception, SystemExit):
         out = subprocess.run(["git", "remote", "get-url", "origin"],
                              capture_output=True, text=True, cwd=ROOT)
@@ -126,7 +127,7 @@ def repo():
         return "solo/repo"
 
 
-def role_login(role):
+def role_login(role: str) -> str:
     """The account a Role holds, by name and not by reading anything.
 
     `<owner>-<repo>-<role>` is the convention solorepo's DR-107 set.
@@ -134,7 +135,7 @@ def role_login(role):
     return f"{repo().replace('/', '-')}-{role}"
 
 
-def pull(ref):
+def pull(ref: str | int) -> dict[str, Any]:
     """Fetches all review threads and reviews for a pull request via GraphQL.
 
     Args:
@@ -144,13 +145,14 @@ def pull(ref):
         dict: Pull request GraphQL node containing reviewThreads and reviews.
     """
     owner, name = gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"].split("/")
-    number = gh("pr", "view", ref, "--json", "number")["number"]
+    number = gh("pr", "view", str(ref), "--json", "number")["number"]
     data = gh("api", "graphql", "-f", f"query={THREADS}",
               "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}")
-    return data["data"]["repository"]["pullRequest"]
+    node: dict[str, Any] = data["data"]["repository"]["pullRequest"]
+    return node
 
 
-def threads(ref):
+def threads(ref: str | int) -> list[dict[str, Any]]:
     """Fetches all review thread nodes for a pull request.
 
     Args:
@@ -159,10 +161,11 @@ def threads(ref):
     Returns:
         list[dict]: Review thread nodes from GraphQL.
     """
-    return pull(ref)["reviewThreads"]["nodes"]
+    nodes: list[dict[str, Any]] = pull(ref)["reviewThreads"]["nodes"]
+    return nodes
 
 
-def checks_of(node):
+def checks_of(node: dict[str, Any]) -> list[dict[str, Any]]:
     """Extracts status check contexts from a pull request commit GraphQL node.
 
     Args:
@@ -175,10 +178,11 @@ def checks_of(node):
     if not commits:
         return []
     rollup = commits[0]["commit"].get("statusCheckRollup") or {}
-    return (rollup.get("contexts") or {}).get("nodes") or []
+    nodes: list[dict[str, Any]] = (rollup.get("contexts") or {}).get("nodes") or []
+    return nodes
 
 
-def rollup_of(number):
+def rollup_of(number: int) -> list[dict[str, Any]]:
     """Fetches status check contexts for the head commit of a specific pull request.
 
     Args:
@@ -193,7 +197,7 @@ def rollup_of(number):
     return checks_of(data["data"]["repository"]["pullRequest"])
 
 
-def rollups():
+def rollups() -> dict[int, list[dict[str, Any]]]:
     """Fetches status check contexts across all open pull requests in a single GraphQL query.
 
     Returns:
@@ -202,11 +206,11 @@ def rollups():
     owner, name = repo().split("/")
     data = gh("api", "graphql", "-f", f"query={ROLLUP_ALL}",
               "-F", f"owner={owner}", "-F", f"name={name}")
-    return {pr["number"]: checks_of(pr)
+    return {int(pr["number"]): checks_of(pr)
             for pr in data["data"]["repository"]["pullRequests"]["nodes"]}
 
 
-def from_github(ref):
+def from_github(ref: str | int) -> tuple[str, str]:
     """Fetches the title and body of a pull request from GitHub."""
-    data = gh("pr", "view", ref, "--json", "title,body")
-    return data["title"], data["body"] or ""
+    data = gh("pr", "view", str(ref), "--json", "title,body")
+    return str(data["title"]), str(data["body"] or "")

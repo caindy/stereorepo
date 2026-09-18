@@ -4,11 +4,13 @@ The form (A15), the threads (A16), the commit Trailers (A19), the required
 status contexts, and the Issue citations that resolve to nothing (A12).
 """
 import re
+from collections.abc import Sequence
+from typing import Any
 
 from lib.check_pr import META, form, github, review
 
 
-def unsigned_commits(ref):
+def unsigned_commits(ref: str | int) -> list[str]:
     """Validates that every commit on the pull request contains an Actor trailer.
 
     Args:
@@ -17,7 +19,7 @@ def unsigned_commits(ref):
     Returns:
         list[str]: Validation messages for commits missing an Actor trailer.
     """
-    commits = github.gh("pr", "view", ref, "--json", "commits")["commits"]
+    commits = github.gh("pr", "view", str(ref), "--json", "commits")["commits"]
     return [f"{c['oid'][:8]} names no Actor: {c['messageHeadline'][:60]}"
             for c in commits
             if not review.ACTOR.search(c.get("messageBody") or "")]
@@ -52,7 +54,7 @@ SCAFFOLD = re.compile(r"^\s*id:\s*work:portfolio/solorepo\s*$", re.M)
 LIMIT = 1000
 
 
-def cited_issues():
+def cited_issues() -> list[str]:
     """Validates that issue references in assertions resolve to existing GitHub issues or PRs.
 
     Scans YAML assertion files for bare and solorepo-qualified issue citations and
@@ -61,7 +63,10 @@ def cited_issues():
     Returns:
         list[str]: Validation error messages for non-existent cited issue numbers.
     """
-    bare, foreign, problems, home = {}, {}, [], False
+    bare: dict[int, set[str]] = {}
+    foreign: dict[int, set[str]] = {}
+    problems: list[str] = []
+    home = False
     for path in sorted(ASSERTIONS.rglob("*.yaml")):
         try:
             text = FENCED.sub("", path.read_text())
@@ -77,7 +82,8 @@ def cited_issues():
             bare.setdefault(number, set()).add(where)
     if not (bare or foreign):
         return problems
-    known, floor = set(), 0
+    known: set[int] = set()
+    floor = 0
     for kind in ("issue", "pr"):
         try:
             found = github.gh(kind, "list", "--state", "all", "--limit", str(LIMIT), "--json", "number")
@@ -99,7 +105,7 @@ def cited_issues():
 WORKFLOW = META.parent / ".github" / "workflows" / "gate.yml"
 
 
-def required_contexts():
+def required_contexts() -> list[str]:
     """Verifies that gate workflow jobs produce every status check required by main.
 
     Returns:
@@ -122,7 +128,8 @@ def required_contexts():
             f"{WORKFLOW.name} reports" for c in missing]
 
 
-def gate(ref, thread_nodes=None):
+def gate(ref: str | int,
+         thread_nodes: Sequence[dict[str, Any]] | None = None) -> list[str]:
     """Executes gate checks on a pull request: title/body form, threads, signoffs, and contexts.
 
     Args:
@@ -140,7 +147,7 @@ def gate(ref, thread_nodes=None):
 CONTEXT = "pull request"
 
 
-def publish(number, head, problems):
+def publish(number: str | int, head: str, problems: Sequence[str]) -> None:
     """Publishes gate validation results as a completed GitHub check run.
 
     Args:

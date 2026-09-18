@@ -15,7 +15,7 @@ from collect import (
 )
 
 
-def template_files():
+def template_files() -> list[tuple[pathlib.Path, pathlib.Path]]:
     """Every file under `template/`, paired with the path it seeds at the repository root.
 
     Returns:
@@ -27,7 +27,7 @@ def template_files():
     return [(f, ROOT / f.relative_to(TEMPLATE)) for f in sorted(TEMPLATE.rglob("*")) if f.is_file()]
 
 
-def tree():
+def tree() -> list[pathlib.Path]:
     """Every file git would commit or is not ignoring, or every file at all
     where there is no git to ask."""
     listed = subprocess.run(["git", "-C", str(ROOT), "ls-files", "--cached", "--others",
@@ -37,7 +37,7 @@ def tree():
     return sorted(ROOT / name for name in listed.stdout.split("\0") if name)
 
 
-def inherited():
+def inherited() -> list[str]:
     """What Specialization copies into a portfolio, read from the step that
     lists it, so the copy set is stated once and this check follows it. A
     portfolio carries no Specialization Discipline — its Disciplines are under

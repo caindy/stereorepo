@@ -7,18 +7,23 @@ half done is not typeable here.
 
 History in move.history.md (solorepo's DR-171).
 """
+import argparse
 import datetime
 import pathlib
 import re
 import subprocess
 import sys
 import time
+from collections.abc import Callable, Sequence
 from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import channel  # noqa: E402
 import check_pr  # noqa: E402
+
+Pull = dict[str, Any]
+"""One pull request as GitHub answers for it, whichever fields were asked for."""
 
 DIFFICULTIES = ("easy", "medium", "hard", "human")
 
@@ -29,7 +34,7 @@ LOOP_LEVELS = ("easy", "medium")
 
 # --- An Issue's life: filed, triaged, its level moved, claimed, handed back.
 
-def labels_of(issue):
+def labels_of(issue: str | int) -> list[str]:
     """Retrieve the set of label names attached to an Issue.
 
     Parameters:
@@ -38,10 +43,11 @@ def labels_of(issue):
     Returns:
         list[str]: List of label names attached to the issue.
     """
-    return [l["name"] for l in channel.gh("issue", "view", str(issue), "--json", "labels")["labels"]]
+    return [str(l["name"]) for l in channel.gh("issue", "view", str(issue), "--json", "labels")["labels"]]
 
 
-def relabel(issue, add=(), remove=()):
+def relabel(issue: str | int, add: Sequence[str] = (),
+            remove: Sequence[str] = ()) -> list[str]:
     """Update an Issue's labels and verify the resulting state remotely on GitHub.
 
     Parameters:
@@ -65,7 +71,7 @@ def relabel(issue, add=(), remove=()):
     return now
 
 
-def challenge_labels(issue):
+def challenge_labels(issue: str | int) -> list[str]:
     """Validate that an Issue carries the `challenge` label and return its labels.
 
     Parameters:
@@ -82,7 +88,7 @@ def challenge_labels(issue):
     return now
 
 
-def difficulty(issue, level):
+def difficulty(issue: str | int, level: str) -> None:
     """Set the difficulty estimate label on an existing Challenge issue.
 
     Parameters:
@@ -95,7 +101,7 @@ def difficulty(issue, level):
     print(f"#{issue} is labelled {', '.join(now)}")
 
 
-def triage(issue, level):
+def triage(issue: str | int, level: str) -> None:
     """Convert an existing Issue into a Challenge with an assigned difficulty level.
 
     Strips any prior roadmap label and applies `challenge` and the target difficulty
@@ -116,7 +122,7 @@ def triage(issue, level):
     print(f"#{issue} is a Challenge, labelled {', '.join(now)}")
 
 
-def open_with_title(title):
+def open_with_title(title: str) -> tuple[str, str] | None:
     """The open Issue carrying exactly this title, as `(number, url)`, or `None`.
 
     Listed rather than searched. `gh issue list` reads the API, which answers
@@ -149,7 +155,8 @@ def open_with_title(title):
     return None
 
 
-def file_issue(title, body, level=None, roadmap=False):
+def file_issue(title: str, body: str, level: str | None = None,
+               roadmap: bool = False) -> tuple[str, str]:
     """File a new Challenge or Roadmap Issue with required structural metadata.
 
     Enforces that the issue body opens with `**Waits on.**`, sets appropriate initial
@@ -187,7 +194,7 @@ def file_issue(title, body, level=None, roadmap=False):
                  "unfinished: `post answer <thread-id>` with a body linking it, or "
                  "`post resolve <thread-id>` where the link is already posted. If this "
                  "Challenge is genuinely a second one, give it a title of its own.")
-    labels = ["roadmap"] if roadmap else ["challenge", level]
+    labels = ["roadmap"] if roadmap else ["challenge", level or ""]
     cmd = ["issue", "create", "--title", title, "--body", body]
     for name in labels:
         cmd += ["--label", name]
@@ -209,7 +216,7 @@ def file_issue(title, body, level=None, roadmap=False):
     return number, url
 
 
-def claim(issue):
+def claim(issue: str | int) -> None:
     """Assign an Issue to the authenticated Role account and verify assignment.
 
     Refuses claims by interactive sessions on `easy` or `medium` Challenges to preserve
@@ -228,14 +235,14 @@ def claim(issue):
                      "Challenge from the loop — the level is what says whose a branch is — and "
                      "it can be claimed then.")
     login = channel.login()
-    channel.gh("issue", "edit", issue, "--add-assignee", login, parse=False)
-    who = [a["login"] for a in channel.gh("issue", "view", issue, "--json", "assignees")["assignees"]]
+    channel.gh("issue", "edit", str(issue), "--add-assignee", login, parse=False)
+    who = [a["login"] for a in channel.gh("issue", "view", str(issue), "--json", "assignees")["assignees"]]
     if login not in who:
         sys.exit(f"say: GitHub shows #{issue} assigned to {who or 'nobody'} after the call, not {login}")
     print(f"claimed #{issue} as {login}")
 
 
-def release(issue):
+def release(issue: str | int) -> None:
     """Remove the authenticated Role's assignment from an Issue and verify removal.
 
     Parameters:
@@ -249,7 +256,7 @@ def release(issue):
     print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
 
 
-def stop(issue, body):
+def stop(issue: str | int, body: str) -> None:
     """Execute graceful loop hand-back to the human maintainer (solorepo's DR-112).
 
     Posts the explanatory hand-back comment, releases issue assignment, and adjusts
@@ -315,7 +322,7 @@ def stop(issue, body):
         print(f"warning: could not set difficulty of #{issue} to human: {exc}", file=sys.stderr)
 
 
-def milestone(issue, title, clear=False):
+def milestone(issue: str | int, title: str | None, clear: bool = False) -> None:
     """Put an Issue in a Milestone, creating the Milestone when it is new, and
     read back.
 
@@ -325,8 +332,8 @@ def milestone(issue, title, clear=False):
     goes through here like every other write.
     """
     if clear:
-        channel.gh("issue", "edit", issue, "--milestone", "", parse=False)
-        now = channel.gh("issue", "view", issue, "--json", "milestone")["milestone"]
+        channel.gh("issue", "edit", str(issue), "--milestone", "", parse=False)
+        now = channel.gh("issue", "view", str(issue), "--json", "milestone")["milestone"]
         if now:
             sys.exit(f"say: GitHub shows #{issue} still in {now['title']!r} after the call")
         print(f"#{issue} is in no Milestone")
@@ -335,8 +342,8 @@ def milestone(issue, title, clear=False):
     if title not in existing:
         channel.gh("api", "repos/{owner}/{repo}/milestones", "-f", f"title={title}", parse=False)
         print(f"created Milestone {title!r}")
-    channel.gh("issue", "edit", issue, "--milestone", title, parse=False)
-    now = channel.gh("issue", "view", issue, "--json", "milestone")["milestone"]
+    channel.gh("issue", "edit", str(issue), "--milestone", title or "", parse=False)
+    now = channel.gh("issue", "view", str(issue), "--json", "milestone")["milestone"]
     if not now or now["title"] != title:
         sys.exit(f"say: GitHub shows #{issue} in {now and now['title']!r} after the call, not {title!r}")
     print(f"#{issue} is in Milestone {title!r}")
@@ -344,7 +351,7 @@ def milestone(issue, title, clear=False):
 
 # --- A pull request's: opened, layered, revised, merged, advanced, handed off.
 
-def kind(number):
+def kind(number: str | int) -> str:
     """Pull request or Issue, asked of GitHub. The numbers are one sequence and
     the verbs that take either — `comment`, `revise` — should not make a
     caller say which."""
@@ -352,7 +359,7 @@ def kind(number):
     return "pull request" if found.get("pull_request") else "issue"
 
 
-def revise(number, body=None, title=None):
+def revise(number: str | int, body: str | None = None, title: str | None = None) -> None:
     """Replace a body or a title, on a pull request or an Issue.
 
     A body is signed at creation and nowhere afterwards, so an edit that
@@ -405,7 +412,7 @@ def stacked(pr: str | int) -> str | None:
     return None if number is None else str(number)
 
 
-def link(below, above):
+def link(below: str | int, above: str | int) -> None:
     """Link one pull request onto another as the layer above it, as the Role.
 
     Linking is an act GitHub records, like a merge (solorepo's DR-075), so it goes through
@@ -425,12 +432,12 @@ def link(below, above):
     print(channel.gh("stack", "link", stack if stack else str(below), str(above), parse=False))
 
 
-def head_branch(pr):
+def head_branch(pr: str | int) -> str:
     """Returns the head branch name for a pull request."""
-    return channel.gh("pr", "view", str(pr), "--json", "headRefName")["headRefName"]
+    return str(channel.gh("pr", "view", str(pr), "--json", "headRefName")["headRefName"])
 
 
-def layer(pr, below):
+def layer(pr: str | int, below: str | int) -> None:
     """Make an open pull request a layer on another: retarget its base onto the
     lower layer's branch, and link the two.
 
@@ -449,7 +456,8 @@ def layer(pr, below):
     print(f"#{pr} is a layer on #{below} ({base})")
 
 
-def open_pull_request(title, body, base="main", on=None):
+def open_pull_request(title: str, body: str, base: str = "main",
+                      on: str | int | None = None) -> None:
     """Open a pull request, signed; with `on`, open it as a layer on that one.
 
     The base is the lower layer's branch, read from GitHub rather than typed,
@@ -468,16 +476,16 @@ def open_pull_request(title, body, base="main", on=None):
         link(on, url.rstrip("/").rsplit("/", 1)[-1])
 
 
-def arm(pr, subject):
+def arm(pr: str | int, subject: str) -> None:
     """Hand GitHub the intent to merge when the ruleset is satisfied.
 
     One call, and two callers: the merge verb arming for the first time, and
     `advance` arming again where moving the branch dropped it.
     """
-    channel.gh("pr", "merge", pr, "--squash", "--auto", "--subject", subject, parse=False)
+    channel.gh("pr", "merge", str(pr), "--squash", "--auto", "--subject", subject, parse=False)
 
 
-def behind_by(pull):
+def behind_by(pull: Pull) -> int:
     """How many commits of its base a pull request's head is missing.
 
     `mergeStateStatus` is the obvious question and answers a different one.
@@ -489,15 +497,15 @@ def behind_by(pull):
     decided: whether the head is missing commits the base has. GitHub answers
     that the same way whatever else is outstanding.
     """
-    return channel.gh("api", f"repos/{channel.repo()}/compare/"
-                             f"{pull['baseRefName']}...{pull['headRefOid']}")["behind_by"]
+    return int(channel.gh("api", f"repos/{channel.repo()}/compare/"
+                               f"{pull['baseRefName']}...{pull['headRefOid']}")["behind_by"])
 
 
 ADVANCE = ("number,title,state,baseRefName,headRefName,headRefOid,autoMergeRequest,"
            "reviewRequests,mergeable,latestReviews,updatedAt")
 
 
-def head_now(number):
+def head_now(number: str | int) -> tuple[Pull, int]:
     """The commit GitHub has a pull request on, and what that commit is behind
     its base by — the two read beside each other, in that order.
 
@@ -528,7 +536,7 @@ LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-(\d+)$")
 MERGEABILITY = (6, 5)
 
 
-def mergeability(pull):
+def mergeability(pull: Pull) -> str | None:
     """Whether GitHub can still merge this branch into its base.
 
     Waited for rather than read once, for the reason above. The first read is
@@ -568,7 +576,7 @@ def mergeability(pull):
 SETTLES = (6, 5)
 
 
-def settled(read, shows):
+def settled(read: Callable[[], Pull], shows: Callable[[Pull], object]) -> Pull:
     """What GitHub holds once it shows the act asked of it — or what it still
     holds when the wait runs out, which is the caller's to report.
 
@@ -588,7 +596,7 @@ def settled(read, shows):
     return answer
 
 
-def run_coder(pr, task):
+def run_coder(pr: str | int, task: str) -> None:
     """Start one of `coder.yml`'s passes on a pull request: the dispatch itself.
 
     Written once because it has two callers — `dispatch` below, on the merge
@@ -601,7 +609,7 @@ def run_coder(pr, task):
                "-f", f"task={task}", parse=False)
 
 
-def dispatch(pulls):
+def dispatch(pulls: Sequence[Pull]) -> list[str]:
     """Dispatch coder rebase passes for pull requests left conflicting by recent merges.
 
     Identifies loop-owned pull requests with outstanding review requests or auto-merge
@@ -611,7 +619,7 @@ def dispatch(pulls):
     Parameters:
         pulls (list[dict]): Open pull request objects returned from GitHub API view.
     """
-    failed = []
+    failed: list[str] = []
     # Every branch an open pull request is based on, which is the lower layer
     # of every open stack. Read off the list already in hand: `open_now`
     # carries both refs of every open pull request, so no layer has to be
@@ -763,7 +771,7 @@ def dispatch(pulls):
 VERDICTS = ("APPROVED", "CHANGES_REQUESTED")
 
 
-def dispatch_pass(pr, task):
+def dispatch_pass(pr: str | int, task: str | None) -> None:
     """Start a coder pass on a pull request by hand: the act PR First's third
     step names, as a verb rather than as a command typed at GitHub.
 
@@ -923,7 +931,7 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
             settlement wait, or dispatch operation reports failure.
     """
     if pr is not None:
-        open_now = [channel.gh("pr", "view", pr, "--json", ADVANCE)]
+        open_now = [channel.gh("pr", "view", str(pr), "--json", ADVANCE)]
         bases = {p.get("baseRefName") for p in channel.gh("pr", "list", "--state", "open", "--json", "baseRefName") if p.get("baseRefName")}
     else:
         open_now = channel.gh("pr", "list", "--state", "open", "--json", ADVANCE)
@@ -933,7 +941,8 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
         p for p in open_now
         if (p.get("autoMergeRequest") or is_approved_pull(p, reviewer_login=reviewer_login)) and p.get("headRefName") not in bases
     ]
-    moved, left, failed = 0, 0, []
+    moved, left = 0, 0
+    failed: list[str] = []
     if not found:
         if pr is not None:
             pull = open_now[0]
@@ -1000,7 +1009,7 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
         sys.exit("say: " + "; ".join(failed))
 
 
-def merge(pr, stack=False, auto=False):
+def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
     """Squash-merge a pull request using its title as the commit subject.
 
     Executes a squash merge on the specified pull request, attributing the merge to
@@ -1018,7 +1027,7 @@ def merge(pr, stack=False, auto=False):
         SystemExit: If the pull request is not open, is an unsupported stacked auto-merge,
             or if the merge or arming operation fails on GitHub.
     """
-    before = channel.gh("pr", "view", pr, "--json", "title,state,headRefName")
+    before = channel.gh("pr", "view", str(pr), "--json", "title,state,headRefName")
     if before["state"] != "OPEN":
         sys.exit(f"say: #{pr} is {before['state'].lower()}, not open")
     subject = f"{before['title']} (#{pr})"
@@ -1044,7 +1053,7 @@ def merge(pr, stack=False, auto=False):
             if "clean status" not in str(exc.code):
                 raise
         else:
-            after = channel.gh("pr", "view", pr, "--json", "state,mergeCommit,autoMergeRequest")
+            after = channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit,autoMergeRequest")
             if after["state"] == "MERGED":
                 print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
             elif after.get("autoMergeRequest"):
@@ -1052,7 +1061,7 @@ def merge(pr, stack=False, auto=False):
                 # If advancing stalled, check whether the branch is currently behind trunk.
                 if stalled:
                     try:
-                        current = channel.gh("pr", "view", pr, "--json", ADVANCE)
+                        current = channel.gh("pr", "view", str(pr), "--json", ADVANCE)
                         behind = behind_by(current)
                     except SystemExit as exc:
                         sys.exit(f"say: #{pr} is armed, and advancing it did not finish — "
@@ -1068,13 +1077,13 @@ def merge(pr, stack=False, auto=False):
             return
     if stack:
         # Recursively merge stacked PR layers up to and including this branch.
-        channel.gh("stack", "merge", pr, "--squash", "--yes", parse=False)
+        channel.gh("stack", "merge", str(pr), "--squash", "--yes", parse=False)
     elif stacked(pr):
         sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
                  "Pass --stack to merge everything up to it.")
     else:
-        channel.gh("pr", "merge", pr, "--squash", "--subject", subject, parse=False)
-    after = channel.gh("pr", "view", pr, "--json", "state,mergeCommit")
+        channel.gh("pr", "merge", str(pr), "--squash", "--subject", subject, parse=False)
+    after = channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit")
     if after["state"] != "MERGED":
         sys.exit(f"say: #{pr} is {after['state'].lower()} after the merge call; not deleting the branch")
     print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
@@ -1095,7 +1104,7 @@ SUPERSEDER = re.compile(r"^(?:#?(\d+)|[Dd][Rr]-0*(\d+))$")
 STATUS = re.compile(r"^\s+status:\s*(\S+)\s*$", re.M)
 
 
-def entry_status(raw):
+def entry_status(raw: str) -> str | None:
     """Parse declared decision status from raw Decision Record YAML.
 
     Parameters:
@@ -1109,7 +1118,7 @@ def entry_status(raw):
     return found[0] if len(found) == 1 else None
 
 
-def superseder(what):
+def superseder(what: str) -> tuple[str, str]:
     """Validate that a superseding reference has merged or been adopted.
 
     Checks whether the argument refers to a merged pull request or an adopted
@@ -1155,7 +1164,7 @@ def superseder(what):
         sys.exit(f"say: #{number} is an Issue. A Challenge does not supersede a pull request; "
                  "the change that answered it does. Name that pull request, or the Decision "
                  "it landed.")
-    pull = channel.gh("pr", "view", number, "--json", "state,title")
+    pull = channel.gh("pr", "view", str(number), "--json", "state,title")
     if pull["state"] != "MERGED":
         sys.exit(f"say: #{number} is {pull['state'].lower()}, not merged, so the tree does not "
                  "hold its answer yet. Two open pull requests are two answers in flight, and "
@@ -1163,7 +1172,7 @@ def superseder(what):
     return f"#{number}", f"#{number} — {pull['title']}"
 
 
-def minted_for(branch):
+def minted_for(branch: str) -> list[str]:
     """Identify Decision Record numbers reserved for a branch that have not landed on trunk.
 
     Parameters:
@@ -1173,7 +1182,7 @@ def minted_for(branch):
         list[str]: Unredeemed Decision Record identifiers (e.g. ['DR-nnn']) reserved
             for the specified branch.
     """
-    mine = []
+    mine: list[str] = []
     for number in sorted(reserved() - numbers_on("main")):
         name = f"DR-{number:03d}"
         ref = channel.gh("api", f"repos/{channel.repo()}/git/ref/tags/{name}")["object"]
@@ -1185,7 +1194,7 @@ def minted_for(branch):
     return mine
 
 
-def supersede(pr, by, reason):
+def supersede(pr: str | int, by: str, reason: str) -> None:
     """Close a pull request that has been superseded by another merged change or adopted decision.
 
     Closes an open pull request whose associated challenges have already been resolved
@@ -1247,7 +1256,7 @@ def supersede(pr, by, reason):
         print(f"{hole} was minted here and never landed; write it back as WITHDRAWN")
 
 
-def request_review(pr, to):
+def request_review(pr: str | int, to: str) -> None:
     """Request pull request review from a designated Role account.
 
     Signals a role handoff by requesting review on GitHub. If a review request
@@ -1265,7 +1274,7 @@ def request_review(pr, to):
             register the reviewer request.
     """
     login = channel.role_login(to)
-    pull = channel.gh("pr", "view", pr, "--json", ADVANCE)
+    pull = channel.gh("pr", "view", str(pr), "--json", ADVANCE)
     if mergeability(pull) == "CONFLICTING":
         sys.exit(f"say: #{pr}'s branch {pull['headRefName']} conflicts with its base, "
                  f"{pull['baseRefName']}. GitHub builds no merge ref for one that does, "
@@ -1273,13 +1282,14 @@ def request_review(pr, to):
                  f"create no run and be answered by nobody. Rebase {pull['headRefName']} "
                  f"onto {pull['baseRefName']}, push, and the request can be made")
 
-    def asked():
-        return [r.get("login") for r in channel.gh("pr", "view", pr, "--json", "reviewRequests")["reviewRequests"]]
+    def asked() -> list[str]:
+        return [r.get("login") for r
+                in channel.gh("pr", "view", str(pr), "--json", "reviewRequests")["reviewRequests"]]
 
     again = login in asked()
     if again:
-        channel.gh("pr", "edit", pr, "--remove-reviewer", login, parse=False)
-    channel.gh("pr", "edit", pr, "--add-reviewer", login, parse=False)
+        channel.gh("pr", "edit", str(pr), "--remove-reviewer", login, parse=False)
+    channel.gh("pr", "edit", str(pr), "--add-reviewer", login, parse=False)
     if login not in asked():
         sys.exit(f"say: GitHub shows {asked() or 'nobody'} requested on #{pr} after the call, not {login}")
     print(f"{'requested again' if again else 'requested'} review of #{pr} from {login}")
@@ -1294,13 +1304,13 @@ RESERVATION = re.compile(r"^refs/tags/DR-(\d+)$")
 ATTEMPTS = 20
 
 
-def numbers_here():
+def numbers_here() -> set[int]:
     """The numbers the record in this working tree holds."""
     return {int(m.group(1)) for path in DECISIONS.glob("DR-*.yaml")
             if (m := ENTRY.match(path.stem))}
 
 
-def numbers_on(branch):
+def numbers_on(branch: str) -> set[int]:
     """Query Decision Record numbers present on a specified remote branch.
 
     Parameters:
@@ -1315,7 +1325,7 @@ def numbers_on(branch):
             if (m := ENTRY.match(pathlib.Path(entry["name"]).stem))}
 
 
-def reserved():
+def reserved() -> set[int]:
     """Query all Decision Record numbers reserved via git tags on GitHub.
 
     Returns:
@@ -1325,7 +1335,7 @@ def reserved():
     return {int(m.group(1)) for ref in refs if (m := RESERVATION.match(ref["ref"]))}
 
 
-def branch_here():
+def branch_here() -> str:
     """Return the short branch name of the active checkout, or 'an unnamed branch' if detached.
 
     Returns:
@@ -1336,7 +1346,7 @@ def branch_here():
     return found.stdout.strip() if not found.returncode else "an unnamed branch"
 
 
-def mint():
+def mint() -> int:
     """Allocate and reserve the next sequential Decision Record identifier via an annotated tag (solorepo's DR-128).
 
     Queries the repository tree, trunk history, and existing DR-* git tags to identify
@@ -1412,7 +1422,7 @@ query($owner: String!, $name: String!, $number: Int!) {
 """
 
 
-def parse_waits_on(body):
+def parse_waits_on(body: str | None) -> list[int]:
     """The blockers an Issue or PR declares: a list of numbers."""
     if not body:
         return []
@@ -1426,7 +1436,7 @@ def parse_waits_on(body):
     return [int(n) for n in re.findall(r"#(\d+)", text)]
 
 
-def issue_blockers(issue):
+def issue_blockers(issue: dict[str, Any]) -> list[int]:
     """Numbers that block an Issue: native blockedBy first, then body prose (solorepo's DR-170)."""
     native = [n["number"] for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n]
     return native if native else parse_waits_on(issue.get("body"))
@@ -1435,14 +1445,14 @@ def issue_blockers(issue):
 deduplicate_checks = check_pr.deduplicate_checks
 
 
-def check_green(pull):
+def check_green(pull: Pull) -> tuple[bool, str]:
     """Whether every check on the head has concluded and none failed."""
     contexts = deduplicate_checks(pull.get("statusCheckRollup") or [])
     if not contexts:
         return False, "checks pending (no checks concluded)"
     green_states = {"SUCCESS", "NEUTRAL", "SKIPPED"}
-    failed = []
-    pending = []
+    failed: list[str] = []
+    pending: list[str] = []
     for c in contexts:
         state = (c.get("conclusion") or c.get("state") or c.get("status") or "").upper()
         name = c.get("name") or c.get("context") or "check"
@@ -1458,7 +1468,7 @@ def check_green(pull):
     return True, "checks green"
 
 
-def check_reviewer_approval(pull, reviewer_login):
+def check_reviewer_approval(pull: Pull, reviewer_login: str) -> tuple[bool, str]:
     """Whether the reviewer account has approved."""
     reviews = pull.get("latestReviews") or pull.get("reviews") or []
     matching = [r for r in reviews if (r.get("author") or {}).get("login") == reviewer_login]
@@ -1476,7 +1486,7 @@ def check_reviewer_approval(pull, reviewer_login):
     return False, f"review from {reviewer_login} is {state.lower()}"
 
 
-def check_threads(pull, owner, name):
+def check_threads(pull: Pull, owner: str, name: str) -> tuple[bool, str]:
     """Whether all review conversations are resolved."""
     threads = pull.get("reviewThreads")
     if threads is None:
@@ -1502,7 +1512,7 @@ def check_threads(pull, owner, name):
 BEHIND_BASE = "branch is behind base"
 
 
-def check_mergeable_clean(pull):
+def check_mergeable_clean(pull: Pull) -> tuple[bool, str]:
     """Whether branch is mergeable and not behind or dirty."""
     mergeable = pull.get("mergeable")
     status = pull.get("mergeStateStatus")
@@ -1517,11 +1527,12 @@ def check_mergeable_clean(pull):
     return True, "mergeable clean"
 
 
-def evaluate_pr(pull, reviewer_login, owner, name):
+def evaluate_pr(pull: Pull, reviewer_login: str, owner: str,
+                name: str) -> tuple[bool, list[str]]:
     """Evaluate a pull request against all semaphores (solorepo's DR-161)."""
     if pull.get("isDraft"):
         return False, ["draft"]
-    reasons = []
+    reasons: list[str] = []
     if pull.get("baseRefName") and pull.get("baseRefName") != "main":
         reasons.append(f"base is {pull.get('baseRefName')}, not main")
     clean_ok, clean_msg = check_mergeable_clean(pull)
@@ -1606,7 +1617,7 @@ def advance_stranded(pulls: list[dict[str, Any]],
             print(f"merge-manager: could not advance #{number} — {exc.code}")
 
 
-def merge_manager(dry_run=False, stranded=True):
+def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
     """Evaluate open pull requests against semaphores, rank eligible candidates
     by leverage, assert choices and deferrals out loud, and squash-merge the top
     candidate (solorepo's DR-161).
@@ -1636,8 +1647,8 @@ def merge_manager(dry_run=False, stranded=True):
         print("merge-manager: idle — no open pull requests")
         return
 
-    evaluations = {}
-    eligible = []
+    evaluations: dict[int, tuple[bool, list[str]]] = {}
+    eligible: list[Pull] = []
     for pull in pulls:
         num = pull["number"]
         ok, reasons = evaluate_pr(pull, reviewer_login, owner, name)
@@ -1661,7 +1672,7 @@ def merge_manager(dry_run=False, stranded=True):
     except Exception:
         issues = []
 
-    metrics = {}
+    metrics: dict[int, dict[str, Any]] = {}
     for pull in eligible:
         num = pull["number"]
         is_base = any(other.get("baseRefName") == pull.get("headRefName")
@@ -1678,7 +1689,7 @@ def merge_manager(dry_run=False, stranded=True):
             "churn": churn,
         }
 
-    def leverage_key(pull):
+    def leverage_key(pull: Pull) -> tuple[int, int, int, int]:
         m = metrics[pull["number"]]
         return (1 if m["is_base"] else 0, m["unblocks"], m["churn"], -pull["number"])
 
@@ -1700,10 +1711,11 @@ def merge_manager(dry_run=False, stranded=True):
         return
 
     print(f"merge-manager: merging #{winner['number']}...")
-    merge(str(winner["number"]), stack=stacked(winner["number"]), auto=False)
+    merge(str(winner["number"]), stack=bool(stacked(winner["number"])), auto=False)
 
 
-def ensure_autonomous_level(issue_number, requested_level=None):
+def ensure_autonomous_level(issue_number: str | int,
+                            requested_level: str | None = None) -> tuple[str, bool]:
     """Ensure an Issue carries the `challenge` label and an autonomous difficulty.
 
     Strips any prior `roadmap` label and conflicting difficulty labels. If no explicit
@@ -1746,7 +1758,7 @@ def ensure_autonomous_level(issue_number, requested_level=None):
     return target_level, changed
 
 
-def delegate(number, level=None):
+def delegate(number: str | int, level: str | None = None) -> None:
     """Hand a Challenge or pull request to the autonomous coder loop.
 
     Ensures the associated Challenge carries the `challenge` label and an autonomous
@@ -1767,7 +1779,7 @@ def delegate(number, level=None):
             be assigned to the coder Role.
     """
     is_pr_num = False
-    pull = None
+    pull: Pull | None = None
 
     try:
         pull = channel.gh("pr", "view", str(number), "--json", f"{ADVANCE},reviews", tolerate_fail=True)
@@ -1826,7 +1838,7 @@ def delegate(number, level=None):
             print(f"delegated Issue #{issue_number}: assigned to {coder_login} and triggered coder loop via label change.")
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     """Construct and return the command-line argument parser for state transition verbs.
 
     Returns:
@@ -1882,7 +1894,7 @@ def build_parser():
     return ap
 
 
-def main():
+def main() -> None:
     """Parses arguments and dispatches state transition verbs on GitHub."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)

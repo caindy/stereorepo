@@ -8,6 +8,7 @@ credential *is*, which is the other half and the one that fails interestingly.
 A Role account that cannot see the repository looks exactly like a repository
 that does not exist.
 """
+import argparse
 import pathlib
 import sys
 
@@ -15,7 +16,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import channel  # noqa: E402
 
 
-def whoami():
+def whoami() -> None:
     """Prints the authenticated user login, email, role, and repo permissions."""
     who = channel.gh("api", "user", "--jq", ".login,.id", parse=False).split("\n")
     print("login:", who[0])
@@ -33,12 +34,12 @@ def whoami():
               "selection does not include it.")
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     """Builds the argument parser for whoami."""
     return channel.parser(__doc__)
 
 
-def main():
+def main() -> None:
     """Parses arguments and displays role and account identity."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)

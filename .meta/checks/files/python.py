@@ -15,6 +15,7 @@ from collect import (
     CouldNotRun,
     Found,
     Passed,
+    StepOutcome,
     against_baseline,
     check,
     recorded_baseline,
@@ -22,8 +23,8 @@ from collect import (
 from files import sources
 
 
-@check("meta lints")
-def meta_lints():
+@check("meta lints")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def meta_lints() -> StepOutcome:
     """No linter rule is switched off in configuration, and every site suppression carries a reason (A2, solorepo's DR-177).
 
     An `ignore` in `.meta/ruff.toml` switches a rule off where nobody reads it.
@@ -133,8 +134,8 @@ def tool_command(name: str, pin: str, args: Sequence[str],
     return None
 
 
-@check("meta ruff")
-def meta_ruff():
+@check("meta ruff")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def meta_ruff() -> StepOutcome:
     """Ruff check over .meta/ against the ruleset declared in .meta/ruff.toml (solorepo's DR-177).
 
     Runs `ruff check` on the repository staging directory using the configured
@@ -177,8 +178,8 @@ def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
     return counts, sites
 
 
-@check("meta types")
-def meta_types():
+@check("meta types")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def meta_types() -> StepOutcome:
     """`mypy --strict` over .meta/, ratcheted against types.baseline.yaml (solorepo's DR-210).
 
     Product code instantiated from the Python bootstrap's seed is held to
@@ -238,15 +239,15 @@ def meta_types():
                   f"each file at its baseline")
 
 
-@check("meta doc")
-def meta_doc():
+@check("meta doc")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def meta_doc() -> StepOutcome:
     """Every module and script under .meta/, and every public function, class and method, has a docstring (A2, solorepo's DR-179).
 
     Extends the Python Bootstrap's missing_docs requirement to the repository's
     own tooling and scripts under .meta/. Holds inherited and scaffolding Python
     to the same literate programming standards enforced on product code.
     """
-    problems = []
+    problems: list[str] = []
     counted = 0
     modules = 0
 

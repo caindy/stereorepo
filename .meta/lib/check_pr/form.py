@@ -4,6 +4,7 @@ The headings come out of the fence in `.meta/templates/pull-request.md`, so a
 heading added to the form is required by that act alone (A15, solorepo's DR-089).
 """
 
+import pathlib
 import re
 
 from lib.check_pr import META
@@ -31,12 +32,12 @@ KEYWORD = re.compile(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+"
                      r"(?:#\d+|[\w.-]+/[\w.-]+#\d+|https://github\.com/[\w.-]+/[\w.-]+/issues/\d+)", re.I)
 
 
-def fence(path):
+def fence(path: pathlib.Path) -> str:
     """Extracts markdown body content from the first code block fence in a template file."""
     return path.read_text().split("```markdown\n", 1)[1].split("\n```", 1)[0]
 
 
-def uncoded(text):
+def uncoded(text: str) -> str:
     """Strip code fences and inline backtick spans from text.
 
     Parameters:
@@ -49,7 +50,7 @@ def uncoded(text):
     return re.sub(r"`[^`\n]*`", "", text)
 
 
-def sections(body):
+def sections(body: str) -> dict[str, str]:
     """Splits pull request markdown body text at bold section headings.
 
     Args:
@@ -59,18 +60,18 @@ def sections(body):
         dict[str, str]: Mapping of heading names to their corresponding body text.
     """
     marks = list(HEADING.finditer(body))
-    out = {}
+    out: dict[str, str] = {}
     for i, m in enumerate(marks):
         end = marks[i + 1].start() if i + 1 < len(marks) else len(body)
         out[m.group(1)] = body[m.end():end].strip()
     return out
 
 
-def unfilled(title, body):
+def unfilled(title: str, body: str) -> list[str]:
     """Every placeholder the form spells in angle brackets that survives into `title` or `body`, as one problem each."""
     form = fence(FORM)
     literal = set(PLACEHOLDER.findall(form)) | set(re.findall(r"<[^<>\s]+>", form))
-    problems = []
+    problems: list[str] = []
     for where, raw in (("title", title), ("body", body)):
         text = uncoded(raw)
         seen = set(PLACEHOLDER.findall(text)) | (literal & set(re.findall(r"<[^<>\s]+>", text)))
@@ -78,7 +79,8 @@ def unfilled(title, body):
     return problems
 
 
-def listed(section, heading, takes, carries, otherwise):
+def listed(section: str, heading: str, takes: str, carries: re.Pattern[str],
+           otherwise: str) -> list[str]:
     """The problems with one list section: prose where items were wanted, or an item without what `carries` looks for, said as `otherwise`; nothing where the section is empty or an explicit 'None.'."""
     if not section or NONE.match(section):
         return []
@@ -88,7 +90,7 @@ def listed(section, heading, takes, carries, otherwise):
     return [f"{otherwise}: {item}" for item in items if not carries.search(item)]
 
 
-def check(title, body):
+def check(title: str, body: str) -> list[str]:
     """Validates pull request title and body against template requirements.
 
     Args:
@@ -108,7 +110,7 @@ def check(title, body):
     """
     required = [m.group(1) for m in HEADING.finditer(fence(FORM))]
     found = sections(body)
-    problems = []
+    problems: list[str] = []
     for heading in required:
         if heading not in found:
             problems.append(f"missing section: **{heading}.**")

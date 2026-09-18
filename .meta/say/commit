@@ -19,6 +19,7 @@ which is honest, and A19 catches it on the pull request — which was always
 where the guarantee lived. Git's, and not GitHub's, which is why it is a program
 of its own rather than a verb of `post` or `move` (solorepo's DR-117).
 """
+import argparse
 import os
 import pathlib
 import subprocess
@@ -28,7 +29,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import channel  # noqa: E402
 
 
-def commit(subject):
+def commit(subject: str) -> None:
     """Creates a git commit signed with Actor and Agent trailers."""
     body = channel.piped()
     message = f"{subject}\n\n{body}\n" if body else f"{subject}\n"
@@ -49,14 +50,14 @@ def commit(subject):
     sys.exit(out.returncode)
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     """Builds the argument parser for the commit tool."""
     ap = channel.parser(__doc__)
     ap.add_argument("-m", "--message", required=True, help="the subject: a label, not an account (A14)")
     return ap
 
 
-def main():
+def main() -> None:
     """Parses arguments and commits staged changes with signed trailers."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)

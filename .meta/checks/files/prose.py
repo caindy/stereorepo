@@ -2,6 +2,8 @@
 """
 import functools
 import sys
+from collections.abc import Collection
+from typing import Any
 
 import yaml
 
@@ -13,7 +15,7 @@ from files import workflows
 
 
 @functools.cache
-def rendering():
+def rendering() -> tuple[Any, Any]:
     """The render the three steps below read, run once and shared between them.
 
     `render.ASKED` is filled as the render runs, so what `inherited prose`
@@ -23,17 +25,17 @@ def rendering():
     """
     sys.path.insert(0, str(META))
     import render
-    return render, render.rendered()
+    return render, render.rendered()  # type: ignore[no-untyped-call]  # reason: `render.rendered()` carries no annotations — .meta/render.py re-exports it from .meta/lib/render/targets.py:77, where it is defined bare; removable when that module is annotated and its baseline entry falls
 
 
-def declared(rel):
+def declared(rel: str) -> dict[str, dict[str, Any]]:
     """The Artifacts one assertion file holds, by path."""
     path = META / "assertions" / rel
     data = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
     return {a["path"]: a for a in data.get("artifacts") or []}
 
 
-def asserts(entry, slot, block):
+def asserts(entry: dict[str, Any] | None, slot: str, block: str) -> bool:
     """Whether this entry carries that prose: the slot, or the named block in it."""
     if not entry or not entry.get(slot):
         return False
@@ -42,8 +44,8 @@ def asserts(entry, slot, block):
     return any(p.get("name") == block for p in entry[slot])
 
 
-@check("inherited prose")
-def inherited_prose(asked):
+@check("inherited prose")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def inherited_prose(asked: Collection[tuple[str, str, str]]) -> list[str]:
     """Prose a generator reads is asserted where Specialization copies it.
 
     `Artifact.preamble` moved the framing prose of the generated pages out of
@@ -75,8 +77,8 @@ def inherited_prose(asked):
             if asserts(own.get(rel), slot, block) and not rel.startswith(workflows.SCAFFOLD_ONLY)]
 
 
-@check("unread prose")
-def unread_prose(asked):
+@check("unread prose")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def unread_prose(asked: Collection[tuple[str, str, str]]) -> list[str]:
     """Prose asserted that no render asks for (solorepo's DR-152).
 
     A8's other half, for the prose solorepo's DR-144 and solorepo's DR-152 moved
@@ -93,14 +95,14 @@ def unread_prose(asked):
     `description`: that one is `WorkEntity`'s, and most of what `assertions/`
     declares carries one as documentation for a reader rather than for a render.
     """
-    entries = []
+    entries: list[dict[str, Any]] = []
     for rel in ("imported/structure.yaml", "structure.yaml"):
         entries.extend(declared(rel).values())
     for rel in ("imported/disciplines.yaml", "disciplines.yaml"):
         path = META / "assertions" / rel
         data = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
         entries.extend(data.get("disciplines") or [])
-    problems = []
+    problems: list[str] = []
     for entry in entries:
         host = entry.get("path") or entry.get("id")
         for slot in ("preamble", "postamble"):

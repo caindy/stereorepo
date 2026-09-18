@@ -10,9 +10,11 @@ files the Issue before the thread says it did; `landed` is rendered from the
 record and never typed. What changes state without saying anything — a claim, a
 level, a layer, a merge — is `move`'s.
 """
+import argparse
 import pathlib
 import re
 import sys
+from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import channel  # noqa: E402
@@ -53,20 +55,20 @@ mutation($t: ID!) { resolveReviewThread(input: {threadId: $t}) { thread { isReso
 """
 
 
-def solo():
+def solo() -> str:
     """The account the repository belongs to: the party a parked conversation
     is addressed to."""
-    return channel.gh("repo", "view", "--json", "owner")["owner"]["login"]
+    return str(channel.gh("repo", "view", "--json", "owner")["owner"]["login"])
 
 
-def conversation_comment(number, body):
+def conversation_comment(number: int | str, body: str) -> None:
     """A comment on a pull request's conversation or an Issue's — the same
     endpoint on GitHub, which is why one verb serves both."""
     made = channel.gh("api", f"repos/{channel.repo()}/issues/{number}/comments", "-f", f"body={body}")
     print(made["html_url"])
 
 
-def raise_thread(pr, path, line, body):
+def raise_thread(pr: int | str, path: str, line: int | str, body: str) -> None:
     """Open a thread on a line of the diff, at the pull request's head.
 
     The pull request's head, not this worktree's. They are usually the same
@@ -80,7 +82,7 @@ def raise_thread(pr, path, line, body):
     print(made["html_url"])
 
 
-def notice(pr, path, line, text):
+def notice(pr: int | str, path: str, line: int | str, text: str) -> None:
     """Work noticed and not done, as a conversation on the diff (A15).
 
     PR First's step: raise it where it was noticed, tagging the solo and
@@ -93,15 +95,15 @@ def notice(pr, path, line, text):
     raise_thread(pr, path, line, channel.signed(f"{NOTICED} @{solo()}\n\n{text}"))
 
 
-def thread_nodes(thread_id):
+def thread_nodes(thread_id: str) -> list[dict[str, Any]] | None:
     """Every comment node in one thread, asked for by id."""
     node = channel.graphql(THREAD, id=thread_id)["data"]["node"]
     if not node:
         return None
-    return node["comments"]["nodes"]
+    return list(node["comments"]["nodes"])
 
 
-def thread_comments(thread_id):
+def thread_comments(thread_id: str) -> list[str] | None:
     """Every comment body in one thread, asked for by id.
 
     The first version scanned every open pull request looking for the id, on the
@@ -112,10 +114,10 @@ def thread_comments(thread_id):
     nodes = thread_nodes(thread_id)
     if nodes is None:
         return None
-    return [c["body"] or "" for c in nodes]
+    return [str(c["body"] or "") for c in nodes]
 
 
-def sole_author(bodies):
+def sole_author(bodies: list[str]) -> bool:
     """True when every comment *ends with* this Actor's Trailer and no other voice.
 
     Ends with, rather than contains: a comment quoting the Trailer — a reply
@@ -143,7 +145,7 @@ the Challenge rather than a repeated URL (solorepo's DR-221).
 """
 
 
-def promotes(body):
+def promotes(body: str) -> bool:
     """True when a reply links an Issue, which is what a promotion looks like.
 
     `check_pr.PROMOTED` rather than a pattern of this program's, so the verb
@@ -161,7 +163,7 @@ def promotes(body):
     return bool(check_pr.PROMOTED.search(body))
 
 
-def refuse_if_sole_author(thread_id, promotion=False):
+def refuse_if_sole_author(thread_id: str, promotion: bool = False) -> list[str]:
     """The sole-author refusal, and the one case it stands aside for (solorepo's DR-127).
 
     A promotion is an answer: PR First's eighth step gives it to the coder, and
@@ -193,26 +195,26 @@ def refuse_if_sole_author(thread_id, promotion=False):
     return bodies
 
 
-def reply(thread_id, body):
+def reply(thread_id: str, body: str) -> None:
     """Posts a reply to a pull request review thread."""
     print(channel.graphql(REPLY, t=thread_id, b=body)
           ["data"]["addPullRequestReviewThreadReply"]["comment"]["url"])
 
 
-def resolve(thread_id):
+def resolve(thread_id: str) -> None:
     """Resolves a pull request review thread."""
     channel.graphql(RESOLVE, t=thread_id)
     print("resolved")
 
 
-def comment_party(c):
+def comment_party(c: dict[str, Any]) -> str:
     """Identifies the author and optional actor trailer of a thread comment."""
-    login = (c.get("author") or {}).get("login", "someone")
+    login = str((c.get("author") or {}).get("login", "someone"))
     actor = check_pr.ACTOR.search(c.get("body") or "")
     return f"{login}/{actor.group(1)}" if actor else login
 
 
-def resolve_verb(thread_id):
+def resolve_verb(thread_id: str) -> None:
     """Resolve a review thread whose answer or promotion link is already posted (A16).
 
     Stand aside when the thread already carries a promotion link or a comment
@@ -230,7 +232,7 @@ def resolve_verb(thread_id):
     resolve(thread_id)
 
 
-def answer(thread_id, body):
+def answer(thread_id: str, body: str) -> None:
     """Reply, then resolve: PR First's step, whole.
 
     A thread answered and left open reads as one still owed something, and
@@ -252,7 +254,7 @@ def answer(thread_id, body):
     resolve(thread_id)
 
 
-def promote(thread_id, title, body, level, resolve_thread=True):
+def promote(thread_id: str, title: str, body: str, level: str, resolve_thread: bool = True) -> None:
     """At approval: what survived the argument earns an Issue, and the thread is
     resolved with a link to it (PR First, solorepo's DR-159).
 
@@ -296,7 +298,7 @@ def promote(thread_id, title, body, level, resolve_thread=True):
         resolve(thread_id)
 
 
-def closed_by(pr):
+def closed_by(pr: int | str) -> list[str] | None:
     """The Challenges a pull request's body closes, by the gate's own rule.
 
     `check_pr.py` blesses the heading: one bullet per item, each carrying a
@@ -324,11 +326,13 @@ def closed_by(pr):
     for item in check_pr.BULLET.finditer(closing):
         ref = check_pr.KEYWORD.search(item.group(1))
         if ref:
-            numbers.append(re.search(r"(\d+)$", ref.group(0)).group(1))
+            match = re.search(r"(\d+)$", ref.group(0))
+            if match:
+                numbers.append(match.group(1))
     return list(dict.fromkeys(numbers))
 
 
-def landed(pr):
+def landed(pr: int | str) -> None:
     """Post what landed for every Challenge the pull request closes, rendered
     from the record and never typed (PR First, solorepo's DR-084).
 
@@ -374,7 +378,7 @@ def landed(pr):
         conversation_comment(pr, channel.signed(out.stdout))
 
 
-def review(pr, verdict):
+def review(pr: int | str, verdict: str) -> None:
     """The reviewer's answer, as the Role: approve, request changes, or comment.
 
     An approval may carry no body — the act is the answer — and the other two
@@ -384,15 +388,15 @@ def review(pr, verdict):
     body = channel.piped()
     if not body and verdict != "approve":
         sys.exit("say: nothing on stdin — a review that is not an approval says why")
-    cmd = ["pr", "review", pr, f"--{verdict}"]
+    cmd = ["pr", "review", str(pr), f"--{verdict}"]
     if body:
         cmd += ["--body", channel.signed(body)]
     channel.gh(*cmd, parse=False)
-    latest = channel.gh("pr", "view", pr, "--json", "reviews")["reviews"]
+    latest = channel.gh("pr", "view", str(pr), "--json", "reviews")["reviews"]
     print(f"reviewed #{pr}: {latest[-1]['state'].lower() if latest else 'GitHub shows no review'}")
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     """The parser alone, so a probe can check what each verb accepts without
     running what it dispatches to (solorepo's #95: the mutually exclusive verdict group
     landed on the wrong verb because both reused the loop variable `p`, and
@@ -417,7 +421,7 @@ def build_parser():
     return ap
 
 
-def main():
+def main() -> None:
     """Parses arguments and dispatches commenting and thread verbs on GitHub."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)

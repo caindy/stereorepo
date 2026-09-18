@@ -7,8 +7,15 @@ latest run of each, so a re-run concluding as its predecessor did is still a
 change. A third mode answering the same question belongs here.
 """
 import sys
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from lib.check_pr import github, review
+
+Snapshot = tuple[int, str, dict[str, Any], dict[str, Any], dict[str, Any],
+                 dict[str, tuple[str, str | None]], str]
+"""One reading of a pull request: number, state, comments, reviews and threads each by id,
+checks by name paired with the run that answered, and mergeability."""
 
 # A check that has concluded and did not fail. GitHub reports a check that has
 # not finished with no conclusion at all, and pending is not green: PR First
@@ -20,22 +27,22 @@ GREEN = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 UNCONCLUDED = {"PENDING", "IN_PROGRESS", "QUEUED", "WAITING", "REQUESTED", "EXPECTED"}
 
 
-def deduplicate_checks(contexts):
+def deduplicate_checks(contexts: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     """When multiple check runs share a name (e.g. repeated runs or body revisions),
     keep only the latest entry by startedAt / completedAt / createdAt."""
-    def timestamp(c):
+    def timestamp(c: dict[str, Any]) -> str:
         completed = c.get("completedAt") or ""
         if completed.startswith("0001"):
             completed = ""
-        return c.get("startedAt") or completed or c.get("createdAt") or ""
-    deduped = {}
+        return str(c.get("startedAt") or completed or c.get("createdAt") or "")
+    deduped: dict[str, dict[str, Any]] = {}
     for c in sorted(contexts, key=timestamp):
         name = c.get("name") or c.get("context") or "check"
         deduped[name] = c
     return list(deduped.values())
 
 
-def snapshot(ref):
+def snapshot(ref: str | int) -> Snapshot:
     """Queries pull request metadata, comments, reviews, threads, and check rollups.
 
     Args:
@@ -51,27 +58,27 @@ def snapshot(ref):
     its predecessor did is otherwise indistinguishable from no rerun at all,
     and the watcher would sit on it.
     """
-    pr = github.gh("pr", "view", ref, "--json", "number,state,comments,reviews,mergeable")
+    pr = github.gh("pr", "view", str(ref), "--json", "number,state,comments,reviews,mergeable")
     comments = {c["id"]: c for c in pr["comments"]}
     reviews = {r["id"]: r for r in pr["reviews"]}
     threads_ = {t["id"]: t for t in github.threads(ref)}
     sorted_checks = deduplicate_checks(github.rollup_of(pr["number"]))
-    checks = {c.get("name") or c.get("context"):
-              (c.get("conclusion") or c.get("state") or c.get("status") or "PENDING",
+    checks = {str(c.get("name") or c.get("context") or "check"):
+              (str(c.get("conclusion") or c.get("state") or c.get("status") or "PENDING"),
                c.get("detailsUrl") or c.get("targetUrl"))
               for c in sorted_checks}
-    return (pr["number"], pr["state"], comments, reviews, threads_, checks,
-            pr.get("mergeable") or "UNKNOWN")
+    return (int(pr["number"]), str(pr["state"]), comments, reviews, threads_, checks,
+            str(pr.get("mergeable") or "UNKNOWN"))
 
 
-def where_of(thread):
+def where_of(thread: dict[str, Any]) -> str:
     """The path and line a thread is anchored to, or `the pull request` for one on the conversation."""
-    return (thread["path"] or "the pull request") + (f":{thread['line']}" if thread.get("line") else "")
+    return str(thread["path"] or "the pull request") + (f":{thread['line']}" if thread.get("line") else "")
 
 
-def new_comments(comments, before):
+def new_comments(comments: Mapping[str, Any], before: Mapping[str, Any]) -> list[str]:
     """Print each comment not in `before` that is not this Actor's own; the actionable line for each."""
-    actionable = []
+    actionable: list[str] = []
     for cid in comments.keys() - before.keys():
         c = comments[cid]
         if not review.mine(c["body"]):
@@ -80,9 +87,9 @@ def new_comments(comments, before):
     return actionable
 
 
-def new_reviews(reviews, before):
+def new_reviews(reviews: Mapping[str, Any], before: Mapping[str, Any]) -> list[str]:
     """Print each review not in `before` that is not this Actor's own; the actionable line for each."""
-    actionable = []
+    actionable: list[str] = []
     for rid in reviews.keys() - before.keys():
         r = reviews[rid]
         if not review.mine(r.get("body", "")):
@@ -92,9 +99,9 @@ def new_reviews(reviews, before):
     return actionable
 
 
-def new_threads(threads_, before):
+def new_threads(threads_: Mapping[str, Any], before: Mapping[str, Any]) -> list[str]:
     """Print each thread not in `before` with its opening comment; the actionable line for each."""
-    actionable = []
+    actionable: list[str] = []
     for tid in threads_.keys() - before.keys():
         t = threads_[tid]
         nodes = t["comments"]["nodes"]
@@ -105,9 +112,9 @@ def new_threads(threads_, before):
     return actionable
 
 
-def thread_activity(threads_, before):
+def thread_activity(threads_: Mapping[str, Any], before: Mapping[str, Any]) -> list[str]:
     """Print each thread that grew by a comment not this Actor's own, and each thread resolved since `before`; the actionable line for each comment."""
-    actionable = []
+    actionable: list[str] = []
     for tid, t in threads_.items():
         was = before.get(tid)
         nodes = t["comments"]["nodes"]
@@ -124,9 +131,10 @@ def thread_activity(threads_, before):
     return actionable
 
 
-def check_changes(checks, before):
+def check_changes(checks: Mapping[str, tuple[str, str | None]],
+                  before: Mapping[str, tuple[str, str | None]]) -> list[str]:
     """Print each check whose value changed or that ran again since `before`; the actionable line for each that failed."""
-    actionable = []
+    actionable: list[str] = []
     for name, (value, run) in checks.items():
         was = before.get(name)
         is_failure = value not in GREEN and value not in UNCONCLUDED and value != "CANCELLED"
@@ -141,7 +149,7 @@ def check_changes(checks, before):
     return actionable
 
 
-def changes_since(current, previous, merges):
+def changes_since(current: Snapshot, previous: Snapshot, merges: str | None) -> list[str]:
     """Print every change from `previous` to `current` and answer the actionable lines among them; `merges` is the last mergeability GitHub answered."""
     _, _, comments, reviews, threads_, checks, mergeable = current
     _, _, p_comments, p_reviews, p_threads, p_checks, _ = previous
@@ -155,15 +163,12 @@ def changes_since(current, previous, merges):
     return actionable
 
 
-def watch(ref, every=60):
+def watch(ref: str | int, every: int = 60) -> None:
     """Monitors a pull request for changes, printing events and exiting on actionable signals.
 
     Args:
         ref: Pull request number, URL, or head branch reference.
         every: Polling frequency in seconds (default: 60).
-
-    Returns:
-        int: Exit status code (0 on actionable completion or closure, non-zero on error).
 
     Mergeability is remembered as the last answer GitHub gave, apart from the
     snapshot, because `UNKNOWN` is not a state of the branch but GitHub
@@ -177,8 +182,8 @@ def watch(ref, every=60):
     watching the branch about to move under it.
     """
     import time
-    previous = None
-    merges = None
+    previous: Snapshot | None = None
+    merges: str | None = None
     while True:
         try:
             current = snapshot(ref)
@@ -205,7 +210,7 @@ def watch(ref, every=60):
         time.sleep(every)
 
 
-def resume(ref):
+def resume(ref: str | int) -> str:
     """Formats pull request status, check rollups, reviews, and unaddressed threads for resuming work.
 
     Args:
@@ -214,7 +219,7 @@ def resume(ref):
     Returns:
         str: Formatted briefing summary of pull request state.
     """
-    pr = github.gh("pr", "view", ref, "--json", "number,title,body,headRefName")
+    pr = github.gh("pr", "view", str(ref), "--json", "number,title,body,headRefName")
     out = [f"#{pr['number']} {pr['title']}",
            f"branch: {pr['headRefName']}", "", "--- body ---", pr["body"] or "(empty)", ""]
     states = {c.get("name") or c.get("context"): c.get("conclusion") or c.get("state")

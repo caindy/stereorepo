@@ -1,6 +1,9 @@
 """The templates and the YAML they are written in: duplicate keys, surviving placeholders, a template that does not parse, and the conventions the seeded template must echo.
 """
+import pathlib
 import re
+from collections.abc import Sequence
+from typing import Any
 
 import yaml
 
@@ -12,6 +15,7 @@ from collect import (
     CouldNotRun,
     Found,
     Passed,
+    StepOutcome,
     check,
     view_for,
 )
@@ -25,8 +29,9 @@ class Strict(yaml.SafeLoader):
 _DUPLICATES: list[tuple[object, int]] = []
 
 
-def _note_duplicates(loader, node, deep=False):
-    seen = set()
+def _note_duplicates(loader: yaml.SafeLoader, node: yaml.MappingNode,
+                     deep: bool = False) -> dict[Any, Any]:
+    seen: set[Any] = set()
     for key_node, _ in node.value:
         key = loader.construct_object(key_node, deep=deep)
         if key in seen:
@@ -38,8 +43,8 @@ def _note_duplicates(loader, node, deep=False):
 Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _note_duplicates)
 
 
-@check("duplicate keys", pre=True)
-def duplicate_keys():
+@check("duplicate keys", pre=True)  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def duplicate_keys() -> list[str]:
     """Validate that no YAML or YML file across `.meta/` and `template/` defines duplicate keys.
 
     Enforces that all workflow and assertion YAML files parse without repeated keys,
@@ -52,7 +57,7 @@ def duplicate_keys():
     `template parses` owns the malformed document, and a key cannot be written
     twice in a file with no keys.
     """
-    problems = []
+    problems: list[str] = []
     for path in sorted([*META.rglob("*.yaml"), *META.rglob("*.yml"),
                         *TEMPLATE.rglob("*.yaml"), *TEMPLATE.rglob("*.yml")]):
         _DUPLICATES.clear()
@@ -65,8 +70,8 @@ def duplicate_keys():
     return problems
 
 
-@check("surviving placeholders")
-def surviving_placeholders():
+@check("surviving placeholders")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def surviving_placeholders() -> list[str]:
     """No template token survives anywhere outside `template/` (solorepo's DR-034).
 
     Scanning only the files `template/` shadows was exact and also useless:
@@ -84,7 +89,7 @@ def surviving_placeholders():
     and a scan that walked in there failed the gate for having built the Rust
     seed.
     """
-    problems = []
+    problems: list[str] = []
     for path in sources.tree():
         if path.is_symlink() or not path.is_file() \
                 or TEMPLATE in path.parents or ".git" in path.parts:
@@ -99,8 +104,8 @@ def surviving_placeholders():
     return problems
 
 
-@check("template parses")
-def template_parses(views):
+@check("template parses")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def template_parses(views: Sequence[Any]) -> list[str]:
     """The template is data and is not linted in place. It is checked by filling
     it in and testing the result, which is the only version anyone runs.
 
@@ -109,7 +114,7 @@ def template_parses(views):
     the alternative to parsing it is that a portfolio's first CI run is where a
     typo in it is found.
     """
-    problems = []
+    problems: list[str] = []
     for src, _ in sources.template_files():
         if src.suffix not in (".yaml", ".yml"):
             continue
@@ -128,8 +133,8 @@ def template_parses(views):
     return problems
 
 
-@check("template conventions agree")
-def template_conventions_agree():
+@check("template conventions agree")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def template_conventions_agree() -> StepOutcome:
     """Validate that root agent instructions and seeded template instructions agree on core conventions.
 
     Verifies that operational conventions asserted in root `AGENTS.md` and `.meta/README.md`
@@ -168,9 +173,10 @@ def template_conventions_agree():
         ("operator surface", ("`just --list`",)),
     )
 
-    problems = []
+    problems: list[str] = []
 
-    def _check_file(path, conventions):
+    def _check_file(path: pathlib.Path,
+                    conventions: Sequence[tuple[str, tuple[str, ...]]]) -> None:
         """Verifies that all specified convention phrases exist in a file."""
         text = re.sub(r"\s+", " ", path.read_text(encoding="utf-8"))
         rel = path.relative_to(ROOT)

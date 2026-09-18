@@ -9,13 +9,14 @@ from collect import (
     CouldNotRun,
     Found,
     Passed,
+    StepOutcome,
     check,
 )
 from files import prose
 
 
-@check("apm package")
-def apm_package():
+@check("apm package")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def apm_package() -> StepOutcome:
     """Verifies that .meta/.apm/ passes APM CLI compilation validation when apm is available (solorepo's DR-201)."""
     apm_bin = shutil.which("apm")
     if not apm_bin:
@@ -29,8 +30,8 @@ def apm_package():
 
 # Registered last, because this is the one step that reads what the others'
 # subject is rendered into, and a reader watching the gate wants it under them.
-@check("rendered prose")
-def rendered_prose(pages):
+@check("rendered prose")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+def rendered_prose(pages: dict[str, str]) -> list[str]:
     """Every page render.py writes is the render of what it is written from.
 
     A generated page is data twice over, and the copy in the tree is the one a

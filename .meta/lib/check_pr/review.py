@@ -6,6 +6,8 @@ Trailer, because every comment an agent posts is authored by the solo's account.
 """
 import os
 import re
+from collections.abc import Sequence
+from typing import Any
 
 from lib.check_pr import META, github
 
@@ -26,14 +28,16 @@ ACTOR = re.compile(r"^Actor:\s*(\S+)", re.M)
 # (`channel.py`'s `RUN_MARK`, solorepo's DR-148); `mine()` below resolves the
 # session the same way `channel.actor()` does, so the two never disagree
 # about which id the Trailer signed with.
-def _load_run_mark():
+def _load_run_mark() -> str:
     import importlib.util
     from importlib.machinery import SourceFileLoader
     loader = SourceFileLoader("channel", str(META / "say" / "channel.py"))
     spec = importlib.util.spec_from_loader("channel", loader)
+    if spec is None:
+        raise ImportError(f"no module spec for {loader.path}")
     channel = importlib.util.module_from_spec(spec)
     loader.exec_module(channel)
-    return channel.RUN_MARK
+    return str(channel.RUN_MARK)
 
 
 RUN_MARK = _load_run_mark()
@@ -43,7 +47,7 @@ NOTICED = re.compile(r"^\W*\*\*Noticed and not done\.?\*\*", re.M)
 PROMOTED = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/issues/\d+")
 
 
-def where_of(thread, owed=True):
+def where_of(thread: dict[str, Any], owed: bool = True) -> str:
     """Where a thread sits, as a reader would look for it."""
     where = thread["path"] or "the pull request"
     if thread.get("line"):
@@ -53,7 +57,7 @@ def where_of(thread, owed=True):
     return where
 
 
-def shown(thread, where, limit=600):
+def shown(thread: dict[str, Any], where: str, limit: int | None = 600) -> str:
     """Format a review thread for display with identifier, location, and comments.
 
     Parameters:
@@ -64,7 +68,7 @@ def shown(thread, where, limit=600):
     Returns:
         str: Formatted multi-line thread summary.
     """
-    spoke = []
+    spoke: list[str] = []
     for c in thread["comments"]["nodes"]:
         who = (c["author"] or {}).get("login", "someone")
         body = " ".join((c["body"] or "").split())
@@ -72,7 +76,8 @@ def shown(thread, where, limit=600):
     return f"  {thread['id']}\n  {where}\n" + "\n".join(spoke)
 
 
-def unaddressed(nodes, parked=False, limit=600):
+def unaddressed(nodes: Sequence[dict[str, Any]], parked: bool = False,
+                limit: int | None = 600) -> list[str]:
     """What is still owed an answer, in the order a reader should take them.
 
     Unresolved is the test, and it now covers two different things. A review
@@ -94,7 +99,7 @@ def unaddressed(nodes, parked=False, limit=600):
     An outdated thread is still unaddressed (solorepo's DR-057) and is marked rather than
     filtered: the anchor moving is the reader's context, not a reason to skip it.
     """
-    out = []
+    out: list[str] = []
     for t in nodes:
         if t["isResolved"]:
             continue
@@ -106,7 +111,7 @@ def unaddressed(nodes, parked=False, limit=600):
     return out
 
 
-def settled(nodes, limit=600):
+def settled(nodes: Sequence[dict[str, Any]], limit: int | None = 600) -> list[str]:
     """Format resolved review threads for reviewer re-inspection.
 
     Parameters:
@@ -116,7 +121,7 @@ def settled(nodes, limit=600):
     Returns:
         list[str]: Formatted summaries of resolved threads with resolver logins.
     """
-    out = []
+    out: list[str] = []
     for t in nodes:
         if not t["isResolved"]:
             continue
@@ -125,7 +130,7 @@ def settled(nodes, limit=600):
     return out
 
 
-def verdicts(reviews):
+def verdicts(reviews: Sequence[dict[str, Any]]) -> list[str]:
     """Format review verdicts in reverse chronological order against head commits.
 
     Parameters:
@@ -134,7 +139,7 @@ def verdicts(reviews):
     Returns:
         list[str]: Formatted review verdicts with author, state, commit SHA, and timestamp.
     """
-    out = []
+    out: list[str] = []
     for r in reversed(reviews):
         body = said(r.get("body"), 600)
         if r["state"] == "COMMENTED" and not body:
@@ -146,12 +151,12 @@ def verdicts(reviews):
     return out
 
 
-def said(body, limit=300):
+def said(body: str | None, limit: int = 300) -> str:
     """Truncates and collapses whitespace in a comment or text string for display."""
     return " ".join((body or "").split())[:limit]
 
 
-def mine(body):
+def mine(body: str | None) -> bool:
     """Determines whether a comment was authored by the current session.
 
     Args:
@@ -168,7 +173,7 @@ def mine(body):
     return bool(me and found and found.group(1) == me)
 
 
-def parties(thread):
+def parties(thread: dict[str, Any]) -> set[str]:
     """Extracts the set of distinct participants in a review thread.
 
     Args:
@@ -177,7 +182,7 @@ def parties(thread):
     Returns:
         set[str]: Set of participant identifiers (logins or actor trailers).
     """
-    seen = set()
+    seen: set[str] = set()
     resolver = (thread.get("resolvedBy") or {}).get("login")
     if resolver:
         seen.add(resolver)
@@ -188,7 +193,7 @@ def parties(thread):
     return seen
 
 
-def unanswered(nodes):
+def unanswered(nodes: Sequence[dict[str, Any]]) -> list[str]:
     """The predicate, apart from the fetching, so it can be watched failing.
 
     Three things count as an answer. A reply from someone other than whoever
@@ -205,7 +210,7 @@ def unanswered(nodes):
     party, and demanding a second one either manufactures a reply or teaches the
     shortcut A16 exists to catch.
     """
-    problems = []
+    problems: list[str] = []
     for t in nodes:
         if not t["isResolved"]:
             continue
@@ -221,7 +226,9 @@ def unanswered(nodes):
     return problems
 
 
-def resolved_without_an_answer(ref, thread_nodes=None):
+def resolved_without_an_answer(
+        ref: str | int,
+        thread_nodes: Sequence[dict[str, Any]] | None = None) -> list[str]:
     """Identifies resolved review threads that lack an answer from a distinct participant.
 
     Args:

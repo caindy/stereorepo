@@ -8,11 +8,12 @@ import argparse
 import json
 import pathlib
 import sys
+from collections.abc import Callable
 
 from lib.check_pr import branch, form, github, polling, review, sweep, verdict
 
 
-def parser(description):
+def parser(description: str) -> argparse.ArgumentParser:
     """The command line: one positional pull request and the flags that each name a mode.
 
     Args:
@@ -51,7 +52,7 @@ def parser(description):
     return ap
 
 
-def print_sweep():
+def print_sweep() -> None:
     """What this branch owns and what each open pull request still owes, then the branches that outlived their pull request."""
     head, found = branch.owned_and_open()
     if not found:
@@ -71,7 +72,7 @@ def print_sweep():
         print("\n".join(left))
 
 
-def print_threads(ref):
+def print_threads(ref: str) -> None:
     """The threads of `ref` owed, held for promotion and answered, under each verdict with the head it was given on."""
     held = github.pull(ref)
     nodes = held["reviewThreads"]["nodes"]
@@ -92,7 +93,7 @@ def print_threads(ref):
         print("\n".join(done))
 
 
-def main(description):
+def main(description: str) -> None:
     """Parses the command line and runs the one mode it names.
 
     Args:
@@ -100,7 +101,7 @@ def main(description):
     """
     ap = parser(description)
     args = ap.parse_args()
-    modes = (
+    modes: tuple[tuple[bool, str | bool, Callable[[], None]], ...] = (
         (args.all, False, lambda: sys.exit(sweep.sweep_all(args.publish))),
         (args.hand_back, False, lambda: print(json.dumps(sweep.hand_back(args.hand_back)))),
         (args.sweep, False, print_sweep),

@@ -16,12 +16,13 @@ inlined. Listing them by hand would drift from the schemas the moment either
 moved.
 """
 import collections
+import dataclasses
 import inspect
 import pathlib
 import re
 import typing
-from collections.abc import Callable
-from typing import NamedTuple
+from collections.abc import Callable, Sequence
+from typing import Any
 
 import yaml
 from linkml_runtime import SchemaView
@@ -42,30 +43,41 @@ STEPS: list[Step] = []
 # require. A step takes the ones it names, in the order it names them.
 SOURCES = ("index", "refs", "views", "asked", "pages")
 
+Index = dict[str, tuple[str, dict[str, Any], str]]
+"""The identified objects one pass over the assertions found: identifier to `(class, object, file)`."""
+
+Refs = list[tuple[str, str, str]]
+"""Every reference site one pass over the assertions found: `(identifier, class, where)`."""
+
 
 class CouldNotRun:
     """The step did not run. Loud, unmarked, and exits zero."""
-    def __init__(self, why):
+    def __init__(self, why: str) -> None:
         self.why = why
 
 
 class Passed:
     """The step ran and found nothing. Carries what it checked (its scope)."""
-    def __init__(self, scope):
+    def __init__(self, scope: str) -> None:
         self.scope = scope
 
 
 class Found:
     """The step found problems. One line per problem."""
-    def __init__(self, problems):
+    def __init__(self, problems: Sequence[str]) -> None:
         self.problems = problems
 
 
 StepOutcome = Passed | Found | CouldNotRun
-"""What a step comes to, and the only thing a step returns. Named apart from `probes.harness`'s
-`Outcome`, which is what a call under a probe exited with."""
+"""What a step comes to. Named apart from `probes.harness`'s `Outcome`, which is what a call
+under a probe exited with."""
 
-StepFunction = typing.TypeVar("StepFunction", bound=Callable[..., StepOutcome])
+StepResult = StepOutcome | Sequence[str]
+"""What a step returns: an outcome, or the bare sequence of problem lines that `report` reads as
+a `Found` with no scope to print. The bare shape is what every step returned before `Passed`
+carried a scope, and `check.py` still accepts it."""
+
+StepFunction = typing.TypeVar("StepFunction", bound=Callable[..., StepResult])
 """A step, whatever sources it names. `check` hands back the same function, so a step keeps its
 own signature and whatever annotations it carries."""
 
@@ -93,6 +105,18 @@ def check(label: str, pre: bool = False) -> Callable[[StepFunction], StepFunctio
         Callable[[StepFunction], StepFunction]: A decorator that appends the
         step to `STEPS` and hands it back unchanged, and that raises `TypeError`
         where the step requires a parameter `SOURCES` does not name.
+
+    Every decoration site suppresses `untyped-decorator`, and the reason is the
+    same one at all of them. This function is annotated; the step modules reach
+    it through a flat `from collect import check`, which resolves at runtime
+    through the `sys.path.insert` in `.meta/check.py:30` and not for mypy, whose
+    search root is `.meta/`. `--ignore-missing-imports` then types the decorator
+    as `Any`, and an `Any` decorator over an annotated function is the
+    diagnostic. `mypy_path` does not fix it: `.meta/checks/__init__.py` makes
+    that directory a package as well as a search root, so with both on the path
+    every module under it resolves twice under two names. The suppressions come
+    out together the day the step modules import `checks.collect`, and
+    `--strict` implies `warn_unused_ignores`, so mypy names them when they do.
     """
     def register(fn: StepFunction) -> StepFunction:
         sources = tuple(name for name, p in inspect.signature(fn).parameters.items()
@@ -162,15 +186,15 @@ def against_baseline(counts: dict[str, int], sites: dict[str, list[str]],
     return problems
 
 
-def tree_root(sv):
+def tree_root(sv: Any) -> str | None:
     """Returns the class designated as tree_root in the schema view, or None."""
     for name, cls in sv.all_classes().items():
         if cls.tree_root:
-            return name
+            return str(name)
     return None
 
 
-def view_for(data, views):
+def view_for(data: dict[str, Any], views: Sequence[Any]) -> tuple[Any | None, str | None]:
     """The schema whose container accepts every top-level key in this document."""
     for sv in views:
         root = tree_root(sv)
@@ -179,14 +203,15 @@ def view_for(data, views):
     return None, None
 
 
-class Collected(NamedTuple):
-    """What one pass over the assertions gathers: identified objects by identifier, and every reference site."""
+@dataclasses.dataclass
+class Collected:
+    """What one pass over the assertions gathers: the index, and every reference site."""
 
-    index: dict
-    refs: list
+    index: Index
+    refs: Refs
 
 
-def walk(obj, cls, sv, found, where):
+def walk(obj: Any, cls: str, sv: Any, found: Collected, where: str) -> None:
     """Collect identified objects into `found.index` and reference sites into `found.refs`."""
     if not isinstance(obj, dict):
         return
@@ -211,12 +236,12 @@ def walk(obj, cls, sv, found, where):
                 walk(v, target, sv, found, where)
 
 
-def views():
+def views() -> list[Any]:
     """Loads LinkML SchemaView instances for all schemas declared in SCHEMAS."""
     return [SchemaView(str(META / s)) for s in SCHEMAS]
 
 
-def collect(views):
+def collect(views: Sequence[Any]) -> tuple[Index, Refs, list[str]]:
     """Scans all YAML assertions under .meta/assertions/ and bootstraps/*/assertions/, indexing entities and references."""
     found, skipped = Collected({}, []), []
     paths = sorted((META / "assertions").rglob("*.yaml"))

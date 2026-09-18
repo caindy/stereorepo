@@ -36,6 +36,7 @@ import select
 import subprocess
 import sys
 import types
+from typing import Any
 
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -57,7 +58,7 @@ READING = ("`.meta/say/verbs.yaml` says what each verb does and which "
            "/pr-first-reviewer the reviewer's. Every body arrives on stdin.")
 
 
-def parser(doc):
+def parser(doc: str) -> argparse.ArgumentParser:
     """A program's parser: its docstring, and `--role`, the one option every
     program shares. The verbs are the caller's to add."""
     ap = argparse.ArgumentParser(description=doc, epilog=READING,
@@ -67,14 +68,14 @@ def parser(doc):
     return ap
 
 
-def speak_as(role):
+def speak_as(role: str) -> None:
     """Point the credential at a Role, unless the environment named a file."""
     global ROLE_ENV
     if not os.environ.get("SOLOREPO_ROLE_ENV"):
         ROLE_ENV = ROLE_DIR / f"{role}.env"
 
 
-def sibling(name):
+def sibling(name: str) -> types.ModuleType:
     """A program beside this one, as a module.
 
     The programs have no `.py` and are programs rather than libraries, so the
@@ -90,6 +91,8 @@ def sibling(name):
         return _siblings[name]
     loader = SourceFileLoader(name, str(HERE / name))
     spec = importlib.util.spec_from_loader(name, loader)
+    if spec is None:
+        raise ImportError(f"no module spec for {loader.path}")
     module = importlib.util.module_from_spec(spec)
     _siblings[name] = module
     loader.exec_module(module)
@@ -101,7 +104,7 @@ def sibling(name):
 _siblings: dict[str, types.ModuleType] = {}
 
 
-def actor():
+def actor() -> str:
     """**Who** is speaking: the session, and nothing else.
 
     A workload identity, attested for one run (solorepo's DR-086). A Role account will hold
@@ -131,7 +134,7 @@ def actor():
     return session
 
 
-def in_a_run():
+def in_a_run() -> bool:
     """**Where** it is speaking from: a workflow run, or a session beside it.
 
     A third question, and the one a verb asks when what it does depends on
@@ -159,7 +162,7 @@ def in_a_run():
     return (os.environ.get("ACTOR_SESSION") or "").startswith(RUN_MARK)
 
 
-def agent():
+def agent() -> str:
     """**What** is speaking: the harness build, verbatim.
 
     A different question from `actor`, and a different class — this is a
@@ -180,20 +183,20 @@ def agent():
     return who
 
 
-def trailers():
+def trailers() -> str:
     """The block this channel signs with, defined once because two readers need
     it: the one that writes it, and the one that recognises it."""
     return f"Actor: {actor()}\nAgent: {agent()}"
 
 
-def signed(text):
+def signed(text: str) -> str:
     """Appends Actor and Agent attribution trailers to a comment or issue body."""
     body = text.rstrip("\n")
     block = trailers()
     return body if body.endswith(block) else f"{body}\n\n{block}\n"
 
 
-def piped(timeout=0.5):
+def piped(timeout: float = 0.5) -> str:
     """Whatever was piped in, or nothing — but never a wait for input that will
     not come.
 
@@ -208,7 +211,7 @@ def piped(timeout=0.5):
     return sys.stdin.read().strip() if ready else ""
 
 
-def stdin_body():
+def stdin_body() -> str:
     """Reads non-empty body text from piped stdin or exits with an error."""
     text = piped()
     if not text:
@@ -216,7 +219,7 @@ def stdin_body():
     return text
 
 
-def role_credential():
+def role_credential() -> dict[str, str]:
     """The token for the Role this machine holds, from outside the working tree.
 
     Outside because a token in the tree is one `git add -A` from being published,
@@ -238,7 +241,7 @@ def role_credential():
     if mode & 0o077:
         sys.exit(f"say: {ROLE_ENV} is readable by others (mode {mode & 0o777:o}); "
                  f"refusing to use it. chmod 600 it.")
-    found = {}
+    found: dict[str, str] = {}
     for line in ROLE_ENV.read_text().splitlines():
         line = line.strip().removeprefix("export ").strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -255,7 +258,7 @@ def role_credential():
     return {"GH_TOKEN": found["GH_TOKEN"]}
 
 
-def gh(*args, parse=True, tolerate_fail=False):
+def gh(*args: str, parse: bool = True, tolerate_fail: bool = False) -> Any:
     """Executes a gh CLI command using the role credential and parses JSON output."""
     out = subprocess.run(["gh", *args], capture_output=True, text=True,
                          env={**os.environ, **role_credential()})
@@ -266,7 +269,8 @@ def gh(*args, parse=True, tolerate_fail=False):
     return json.loads(out.stdout) if parse and out.stdout.strip() else out.stdout.strip()
 
 
-def gh_with_retry(*args, parse=True, tries=3, delay=2, backoff=2, tolerate_fail=False):
+def gh_with_retry(*args: str, parse: bool = True, tries: int = 3, delay: float = 2,
+                  backoff: float = 2, tolerate_fail: bool = False) -> Any:
     """Run gh, retrying on subprocess/API failure with exponential backoff."""
     import time
     current_delay = delay
@@ -283,7 +287,7 @@ def gh_with_retry(*args, parse=True, tries=3, delay=2, backoff=2, tolerate_fail=
             current_delay *= backoff
 
 
-def graphql(query, **variables):
+def graphql(query: str, **variables: object) -> Any:
     """Executes a GitHub GraphQL query with provided variables."""
     args = ["api", "graphql", "-f", f"query={query}"]
     for key, value in variables.items():
@@ -291,17 +295,17 @@ def graphql(query, **variables):
     return gh(*args)
 
 
-def repo():
+def repo() -> str:
     """Returns the nameWithOwner repository identifier for the current repo."""
-    return gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
+    return str(gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"])
 
 
-def login():
+def login() -> str:
     """The account this credential is, asked of GitHub."""
-    return gh("api", "user", "--jq", ".login", parse=False)
+    return str(gh("api", "user", "--jq", ".login", parse=False))
 
 
-def role_login(role):
+def role_login(role: str) -> str:
     """The account a Role holds, by name and not by reading anything.
 
     `<owner>-<repo>-<role>` is the convention solorepo's DR-107 set, and it is what lets the
@@ -311,7 +315,7 @@ def role_login(role):
     return f"{repo().replace('/', '-')}-{role}"
 
 
-def role_identity():
+def role_identity() -> dict[str, str]:
     """The Role's git identity, or nothing at all.
 
     Only when a Role credential is in use. Without one the channel is speaking
@@ -326,7 +330,7 @@ def role_identity():
             "GIT_COMMITTER_NAME": who, "GIT_COMMITTER_EMAIL": email}
 
 
-def role_signing_key():
+def role_signing_key() -> pathlib.Path | None:
     """The path to the Role's SSH signing key, or None if speaking as solo.
 
     A key is read from ~/.config/solorepo/<role>_signing.key (or GIT_SIGNING_KEY in
@@ -335,7 +339,7 @@ def role_signing_key():
     """
     if not role_credential():
         return None
-    key_path = None
+    key_path: pathlib.Path | None = None
     if os.environ.get("SOLOREPO_SIGNING_KEY"):
         key_path = pathlib.Path(os.environ["SOLOREPO_SIGNING_KEY"]).expanduser()
     elif ROLE_ENV.exists():
