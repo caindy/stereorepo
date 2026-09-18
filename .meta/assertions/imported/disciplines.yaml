@@ -421,6 +421,18 @@ disciplines:
 
       A linked Issue answers each. It has state, it carries a backlink to the work
       that found it, its title is read by someone, and it can be picked up alone.
+
+      The prior question is whether to eject it at all. An Issue is for work that
+      is **not being done now** — out of scope, owed a decision, larger than the
+      change that found it. It is not a place to put a fix already within the
+      branch's reach. Ejection costs a pickup, and a pickup costs about the same
+      whether what waits is three lines or three hundred: a Job arriving holds
+      nothing and loads the problem from the record, which is the expense the
+      four failures above were weighed against and is paid here too. Where the
+      fix is mechanical and the branch can already reach it, the cheaper act is
+      the fix — in a commit of its own, saying what it is, so the diff still
+      reads as one change with a drive-by beside it rather than as two changes
+      wearing one title.
     judgement: >-
       What constitutes one pull request. Too coarse and an argument has no
       subject; too fine and the record narrates change by change without ever
@@ -438,6 +450,19 @@ disciplines:
       function is long" has neither. "This retry has no backoff, and it will
       matter the first time the endpoint is slow" has both. File everything and
       the tracker becomes the file it replaced, with better tooling.
+
+      And, before that, whether it earns an Issue rather than a commit. Topical
+      fit is the wrong test standing on its own, because it asks what the change
+      is about and not what ejecting will cost. solorepo's #624 was raised on a
+      branch that was already editing one of the two files it needed and already
+      re-rendering the other, and it was ejected because the record it had to
+      edit belonged to another Decision; its delivery, solorepo's #626, was
+      three additions and three deletions across those two files. An hour and a
+      loop to move an identifier. Weigh
+      the ejection against the impurity. The bound in the steps is a floor and
+      not a licence — an item that fails any part of it is still a notice and
+      still an Issue, and scope creep answered with "it was mechanical" is the
+      shortcut this test teaches.
 
       Whether a point turns on a fact about a system outside this repository —
       GitHub, a harness, a language, a library. If it does, the answer is a
@@ -532,12 +557,47 @@ disciplines:
         the change has overtaken stops being parked, and an unresolved
         conversation blocks the merge, so nothing is walked past without
         somebody deciding what it is.
+
+        What you notice and *can* do, do. A fix the branch can already reach
+        that is mechanical, owes no Decision, implies no Challenge of its own
+        and is proved by the gate this change is already running is not
+        noticed-and-not-done at all — it is a **drive-by**, and it goes in a
+        commit of its own whose subject begins `Drive-by:`, rather than into
+        a conversation that will cost a pickup to answer (solorepo's DR-236).
+        The prefix is the whole form and it is there to be counted: `git log
+        --grep '^Drive-by:'` is how a later reader tells whether this licence
+        is being taken.
+        All four parts hold or it is a notice: the bound is what keeps a
+        licence to fix from becoming a licence to wander, and the coder is
+        where that risk lives, since nobody else is reading yet.
       - >-
         Promote at approval, not before. What survives the argument earns an
         Issue and the thread is resolved with a link to it; what the change
         overtook is answered and resolved where it was raised. Filing at
         review time creates a tracker item with no relationship to the
         outcome, which goes stale the moment the approach moves under it.
+
+        A point **another party raised** that survives and meets the
+        drive-by bound can be paid for here rather than later, and at approval
+        that is the first thing to try: answer it with a **commit on this
+        branch** before the merge, the reply naming the commit, and file no
+        Issue (solorepo's DR-236). This adds no fourth answer to the three a
+        point can get — it changes what *right, and a change to make* may be
+        settled with when the point belongs to a different change.
+
+        Your own notice is not reachable by it, and the channel is what says
+        so: the sole-author refusal stands, with promotion as its one
+        exception (solorepo's DR-127), so a coder that decides its own notice
+        is moot still can only hand it on. That is a floor rather than an
+        obstacle — an item inside the bound should never have become a notice,
+        since the step above says to fix it — and the way in is the reviewer
+        saying on the thread that it is inside the bound, which makes the
+        point another party's and the judgement one two Roles have made. This is the cheap
+        case rather than the risky one — the reviewer is already reading, and
+        a commit pushed before merge is re-reviewable where an Issue is a
+        promise to reload the problem later. Promotion keeps everything the
+        bound excludes: work owed a Decision, work the branch cannot reach,
+        and anything whose size would make this change stop reading as one.
       - >-
         Post what landed for the Challenge before merging, generated and never
         typed: written by hand it is the copy that flatters, and complete
@@ -613,6 +673,7 @@ disciplines:
       - A place two agents that share nothing else can meet.
       - A successor that resumes rather than restarts.
       - Work noticed and not done, in a queue rather than a pile.
+      - A mechanical fix delivered where it was found, at the price of a commit.
     # What a reading of this Discipline says between the parts it is compiled
     # from: the verbs, the steps, the judgement and the form. Here rather than
     # on either skill's Artifact, because one Discipline compiles into a

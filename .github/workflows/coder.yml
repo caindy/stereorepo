@@ -1478,8 +1478,18 @@ jobs:
             and what survives the argument earns an Issue (solorepo's DR-159).
 
             Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`.
-            Every unresolved thread marked "Noticed and not done" (or any surviving notice)
-            is promoted now to an Issue, proposing a level under **Difficulty.** in the body
+            Try the drive-by first, on a thread the reviewer raised: if the surviving
+            point is mechanical, owes no Decision, implies no Challenge of its own and is
+            proved by the gate already running, fix it in a commit of its own whose subject
+            begins `Drive-by:`, answer the thread naming that commit, and file no Issue
+            (solorepo's DR-236). Ejecting a
+            fix this branch can already reach costs a whole pickup to deliver. Your own
+            "Noticed and not done" thread is not reachable by this — the sole-author
+            refusal stands and promotion is its one exception (solorepo's DR-127).
+
+            Every unresolved thread that is left — one outside that bound, and every
+            surviving notice of your own — is promoted now to an Issue, proposing a level
+            under **Difficulty.** in the body
             and landing none, since the reviewer reads it and its verdict is the label
             (solorepo's DR-230), with:
             `.meta/say/post promote <thread-id> --title "<title>" --no-resolve <<'BODY'`
@@ -1629,8 +1639,18 @@ jobs:
             and what survives the argument earns an Issue (solorepo's DR-159).
 
             Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`.
-            Every unresolved thread marked "Noticed and not done" (or any surviving notice)
-            is promoted now to an Issue, proposing a level under **Difficulty.** in the body
+            Try the drive-by first, on a thread the reviewer raised: if the surviving
+            point is mechanical, owes no Decision, implies no Challenge of its own and is
+            proved by the gate already running, fix it in a commit of its own whose subject
+            begins `Drive-by:`, answer the thread naming that commit, and file no Issue
+            (solorepo's DR-236). Ejecting a
+            fix this branch can already reach costs a whole pickup to deliver. Your own
+            "Noticed and not done" thread is not reachable by this — the sole-author
+            refusal stands and promotion is its one exception (solorepo's DR-127).
+
+            Every unresolved thread that is left — one outside that bound, and every
+            surviving notice of your own — is promoted now to an Issue, proposing a level
+            under **Difficulty.** in the body
             and landing none, since the reviewer reads it and its verdict is the label
             (solorepo's DR-230), with:
             `.meta/say/post promote <thread-id> --title "<title>" --no-resolve <<'BODY'`

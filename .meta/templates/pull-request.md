@@ -89,9 +89,14 @@ when the change has overtaken it. `.meta/say/post notice` signs it with the `Act
 commits carry — the marker says what kind of thread it is, `Actor` says who is
 speaking, and in a repository where every comment is posted under one account
 nothing else can. An unresolved conversation blocks the merge, so nothing is walked
-past silently, and the item keeps the context it was noticed in. Promote it to an
-Issue at approval if it survived the argument, and resolve the thread with the link
-— which is also what satisfies A16.
+past silently, and the item keeps the context it was noticed in. At approval, a surviving point the
+reviewer raised that is mechanical, owes no Decision, implies no Challenge of its own
+and is proved by the gate already running is answered with a commit on this branch whose
+subject begins `Drive-by:`, the reply naming it, and no Issue is filed — ejecting a fix the branch can reach costs a whole
+pickup (solorepo's DR-236). Your own notice is not reachable by that: the sole-author
+refusal stands, promotion being its one exception (solorepo's DR-127). Everything else
+that survived the argument is promoted to an Issue at approval, and the thread resolved
+with the link — which is also what satisfies A16.
 
 What earns an Issue is whether you can say **what would make it worth doing**. A
 trigger, or a cost that will land. That is the same question as *what would make

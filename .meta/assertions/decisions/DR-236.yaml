@@ -1,0 +1,235 @@
+decisions:
+  - id: work:decision/236
+    name: "DR-236 · A mechanical fix within the branch's reach is a drive-by commit, not an Issue"
+    challenge: work:challenge/631
+    status: ADOPTED
+    applies:
+      - work:article/15
+      - work:article/16
+    enacted_in:
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-templates-pull-request
+    context: >-
+      PR First routes what is noticed and not done to a conversation on the
+      diff, holds it to approval, and promotes what survives to a linked Issue.
+      The Discipline defends that route with four failures of the alternative —
+      a file of lines has no open and closed, loses the work it was noticed
+      during, only grows, and flushes as one unscoped batch — and the judgement
+      block gives one test for what earns an Issue: a trigger, or a cost that
+      will land.
+
+      Every part of that is about an item nobody is going to do now. Nothing in
+      it asks the prior question, which is whether the item should leave the
+      branch at all, and the answer has been taken topically: if the fix
+      belongs to a different change, it goes out.
+
+      solorepo's #624 is what that costs. Reviewing solorepo's #610, the
+      reviewer found that DR-230's `enacted_in` named
+      `work:artifact/meta-assertions-disciplines` where the rule it wrote lives
+      in the imported artifact — the state of that record before solorepo's
+      #626, which is what corrected it to
+      `work:artifact/meta-assertions-imported-disciplines`. That delivery was 3
+      additions and 3 deletions across 2 files. solorepo's #610 was already editing
+      `.meta/assertions/imported/disciplines.yaml` and already regenerating
+      `.meta/decisions.md` — the branch had the file open and the renderer
+      running. It was ejected anyway, because the record it had to edit
+      belonged to a Decision other than the one solorepo's #610 was about:
+      notice, hold to approval, promote, file, claim, branch, body, review,
+      merge. Over an hour from where it was noticed, and a full loop's tokens,
+      to move an identifier.
+
+      The pickup is what costs, and it is close to constant. A Job arriving
+      holds no filesystem, no shell and no conversation — the seam is the point
+      — so it loads the whole problem from the record whether three lines wait
+      or three hundred. That is the same expense the Discipline already names
+      when it calls a flushed batch "the worst possible shape to hand an agent
+      and the reason that follow-up run is expensive"; what it had not noticed
+      is that a single well-formed Issue pays most of it too.
+
+      The route was imported from a setting where it is cheap. On a team the
+      drive-by fix is a separate pull request because a colleague reads three
+      lines in thirty seconds and nobody reloads anything. Here the follow-up
+      is an agent starting from nothing, and the asymmetry inverts the advice.
+    alternatives:
+      - name: Leave the route as it is and file faster
+        chosen: false
+        reason: >-
+          Nothing on the expensive side of this is filing. `post promote` is
+          one act and it is already scripted. The hour is in the pickup, the
+          body, the review and the merge of a second pull request, none of
+          which filing faster touches. It also concedes the wrong premise:
+          that the item had to leave.
+      - name: Fold the fix into the change's own commit
+        chosen: false
+        reason: >-
+          This is the failure the topical test exists to prevent, and it is a
+          real one. A diff that answers its Challenge and also quietly edits
+          something else gives the reviewer no way to read either — the
+          argument loses its subject, which is the first thing the judgement
+          block warns about. The separate commit is what makes the drive-by
+          cheap without making the change unreadable: it is visible, it is
+          named, and a reviewer who objects to it objects to one commit rather
+          than to the change.
+      - name: Batch drive-bys into a periodic tidy-up change
+        chosen: false
+        reason: >-
+          That is the pile the Discipline already rejected, with a pull request
+          in place of a file. It loses the work each item was noticed during,
+          so nobody can tell later whether it still applies, and it arrives as
+          one unscoped batch of unrelated items — named in the same paragraph
+          as the worst possible shape to hand an agent.
+      - name: Mechanize the bound rather than writing it as a step
+        chosen: false
+        reason: >-
+          DR-230's rationale is the reason to want it — the solo's own
+          observation that coder agents keep ignoring clear directives in
+          prose and that the mitigation which works is a reader — and DR-235
+          is the precedent for acting on it in a verb. A20 is not that rule
+          and is not strained here: it says a rule living only in the decision
+          record is not in force, and its own example is satisfied by a prose
+          step of a Discipline whose Decision names an artifact, which is this
+          Decision's shape exactly. But the observation and the act this would
+          mechanize are not the same shape.
+          DR-235 forbade an act, and a refusal can sit in the verb that
+          performs it. This permits one, and nothing can be refused at the
+          moment a coder decides an item is mechanical — the judgement is the
+          whole content of the rule, and a script that could make it would be
+          making the fix. What is mechanizable is the outcome rather than the
+          decision, and that is where the falsifier puts it: a merged pull
+          request whose only Challenge came from a promoted thread and whose
+          diff is trivially small is an ejection that should not have
+          happened, and it is countable after the fact. Building that counter
+          is its own change and waits for evidence this one is needed.
+      - name: A four-part bound, the coder fixing in its own commit and the reviewer's
+          surviving point answered on the branch
+        chosen: true
+        reason: >-
+          Two clauses rather than one, because the two cases carry different
+          risk and only the second is the case that produced solorepo's #624.
+
+          The coder clause is where scope creep lives, since nobody else is
+          reading yet, so the bound is stated as four parts that all hold:
+          mechanical, no Decision owed, no Challenge of its own implied, and
+          proved by the gate the change is already running. The last is what
+          makes the other three checkable rather than asserted — a fix whose
+          correctness needs an argument is not mechanical, whatever its line
+          count, and the gate is already named as the completeness test for the
+          Agency a Job holds.
+
+          The reviewer clause is nearly free and is the one that pays. At
+          approval the reviewer is already reading, the branch already exists,
+          and a commit pushed before the merge is re-reviewable in the place
+          the objection was raised — where an Issue is a promise to reload the
+          problem later, reviewed again from nothing. The three answers a
+          review point can get were right, right about something else, and
+          overtaken; this adds no fourth answer but changes what the first can
+          be paid with, which is why A16 is untouched and the thread still owes
+          a reply either way.
+
+          Journaling needs no amendment. Its residue divides by tense and a
+          drive-by is finished work, which already goes to the body; what
+          changes is only how much reaches the unfinished half.
+    consequences:
+      - >-
+        PR First's description says the prior question is whether to eject at
+        all, names the pickup as the cost of ejection and states that it is
+        near-constant in the size of what waits, so the four failures of the
+        pile are read as an argument about work nobody is doing now rather than
+        as an argument for ejecting everything out of scope.
+      - >-
+        The step that raises a notice carries the coder clause and the bound:
+        a fix the branch can reach that is mechanical, owes no Decision,
+        implies no Challenge and is proved by the running gate is a drive-by in
+        a commit of its own, and all four parts hold or it stays a notice.
+      - >-
+        A drive-by commit's subject begins `Drive-by:`, in the step, in the
+        approval-pass prompt and on the pull request form. The prefix is not
+        decoration: the first direction of the falsifier below is a count of
+        these commits, and without a fixed form two Jobs write two subjects
+        and nobody can enumerate them. `git log --grep '^Drive-by:'` is the
+        query, which is the cheapest possible counter and the reason this
+        Decision can decline to build one and still be falsifiable at both
+        ends.
+      - >-
+        The step that promotes at approval carries the reviewer clause, and it
+        reaches only a point **another party raised**: such a point, surviving
+        and meeting the same bound, is answered by a commit on the branch
+        before the merge, with the reply naming the commit and no Issue filed.
+        Promotion keeps work owed a Decision, work the branch cannot reach, and
+        anything large enough that the change would stop reading as one.
+      - >-
+        A coder's own notice is outside the clause, which is the channel's
+        rule and not a new one. `answer` asks `refuse_if_sole_author` with
+        `promotion=promotes(body)`, where `promotes` is
+        `return bool(check_pr.PROMOTED.search(body))` at `.meta/say/post:174`
+        and `PROMOTED` matches an Issue URL, so a reply naming a commit is
+        refused; `post resolve` refuses the same thread for want of a second
+        party or a link.
+        DR-127 gave that refusal its one exception and said in terms that a
+        coder deciding its own notice is moot can only hand it on, so a clause
+        reaching sole-authored threads would have been a second exception the
+        program does not hold and a contradiction between two records. The
+        floor costs little, because an item inside the bound should never have
+        become a notice — the coder clause says to fix it — and the way in is
+        the reviewer saying on the thread that it is inside the bound, which
+        makes the point another party's and the judgement one two Roles have
+        made.
+      - >-
+        The rule is written where the promotion decision is actually taken, not
+        only where the Discipline records it. `.github/workflows/coder.yml`'s
+        approval pass — both copies — says to try the drive-by first on a
+        reviewer's point and promotes what is left, and
+        `.meta/templates/pull-request.md` says the same beside its marker. The
+        reason is not A20, which a prose step already satisfies, but the
+        failure DR-235 diagnosed: a record is worse than silent when an
+        artifact the coder reads says the opposite in the imperative. Both
+        artifacts did — "is promoted now to an Issue", with no other branch
+        offered — so a step saying otherwise would have been read against a
+        prompt telling the Job what to type, on the very path that produced
+        solorepo's #624. Both are named in `enacted_in`, which is
+        also what puts this Decision in `.meta/decisions.md` against the files
+        a reader of either would be looking at.
+      - >-
+        The judgement block gains the test the topical one was standing in for:
+        weigh what the ejection costs against what the impurity costs, with
+        solorepo's #624 as the worked case, and read the bound as a floor
+        rather than a licence.
+      - >-
+        No verb changes, and the clause is drawn to the program rather than
+        the program to the clause. `post notice` and `post promote` are still
+        the acts for everything the bound excludes, and `post answer` already
+        admits a reply from the coder to a thread the reviewer authored, which
+        is exactly the path the second clause takes and the whole of it.
+    falsifier: >-
+      The rule is falsified by drive-by commits that are not mechanical: a
+      commit under `git log --grep '^Drive-by:'` that a reviewer has to argue
+      about, or that carries a Decision nobody minted, says the bound is being
+      read as a licence and
+      the answer is to make the fourth part — proved by the running gate —
+      refuse rather than describe. It is falsified in the other direction, and
+      this is the reading worth counting, by follow-up pull requests that
+      should not exist: a merged change whose only Challenge was promoted from
+      a review thread and whose diff is under roughly ten lines is an ejection
+      the bound was written to prevent, and a queue of them says the clauses
+      are written where coders do not reach them, which is the case for
+      building the counter this Decision declined to build.
+    rationale: |-
+      Christopher, on solorepo's #624: over an hour and something like a
+      hundred dollars of tokens to deliver a simple reference change, which
+      he called unacceptable — and his own reading, that the coder should do
+      easy work at the moment it is noticed instead of deferring it, as any
+      but the most meticulous developer would.
+
+      The reading is right and the diagnosis needed one correction, which is
+      why the Decision has two clauses instead of one. The noticer on
+      solorepo's #624 was the reviewer, not the coder, so a rule aimed only at
+      coder deferral would not have caught it. What ejected it was the topical
+      test, applied to a branch that already had the file open.
+
+      The part worth being careful about is that this is a relaxation, and
+      relaxations are how disciplines rot. The separate commit is the guard
+      that makes it survivable: it is the meticulous version rather than the
+      sloppy one, and bundling the fix into the change's own commit would be
+      the sloppy one. The bound is the other guard, and the falsifier watches
+      both ends — a licence being taken, and the ejections continuing anyway.
