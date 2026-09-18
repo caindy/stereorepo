@@ -11,9 +11,10 @@ Nothing here is a step. A subject module imports what it needs from here and
 registers its own, and this package imports no sibling under `probes/`, so the
 package's import graph is a tree with this at its root, as `collect.py` is for
 the gate (solorepo's DR-150). One module per kind of stand-in (solorepo's DR-218);
-every name is re-exported here, so `from probes.harness import ...` finds what it did.
+every name is re-exported here, so `from checks.probes.harness import ...` finds what
+it did.
 """
-from probes.harness.acts import (
+from checks.probes.harness.acts import (
     Outcome,
     answered,
     environment,
@@ -23,9 +24,9 @@ from probes.harness.acts import (
     stood_in,
     written,
 )
-from probes.harness.fakes import FakeFiling, FakeIssue, FakeWikiPath
-from probes.harness.github import FakeGitHub, WatchGitHub
-from probes.harness.loaders import load_channel, load_hook, load_module
+from checks.probes.harness.fakes import FakeFiling, FakeIssue, FakeWikiPath
+from checks.probes.harness.github import FakeGitHub, WatchGitHub
+from checks.probes.harness.loaders import load_channel, load_hook, load_module
 
 __all__ = [
     "FakeFiling",
@@ -49,4 +50,4 @@ __all__ = [
     "stood_in",
     "written",
 ]
-"""The module's whole surface, so every probe's `from probes.harness import ...` still resolves."""
+"""The module's whole surface, so every probe's `from checks.probes.harness import ...` still resolves."""

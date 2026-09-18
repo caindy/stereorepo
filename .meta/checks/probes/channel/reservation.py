@@ -2,8 +2,8 @@
 """
 
 
-import graph
-from collect import check
+from checks import graph
+from checks.collect import check
 
 
 @check("reservation probes", pre=True)

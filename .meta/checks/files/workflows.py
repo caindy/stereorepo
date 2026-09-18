@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from collect import (
+from checks.collect import (
     META,
     ROOT,
     TEMPLATE,
@@ -18,12 +18,12 @@ from collect import (
     StepOutcome,
     check,
 )
-from files import sources
+from checks.files import sources
 
 SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/")
 
 
-@check("scaffold-only paths")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("scaffold-only paths")
 def scaffold_only_paths() -> StepOutcome:
     """Validate that documentation and workflows copied during Specialization contain no scaffold-only paths.
 
@@ -100,7 +100,7 @@ def _first_difference(a: Any, b: Any, path: str) -> tuple[str, str] | None:
     return None if a == b else (path, f"{a!r} against {b!r}")
 
 
-@check("gate workflows agree")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("gate workflows agree")
 def gate_workflows_agree() -> StepOutcome:
     """Validate that the root gate workflow and seeded template workflow agree on shared jobs.
 
@@ -174,7 +174,7 @@ NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "
 """The number words the workflow's prose may spell a count with."""
 
 
-@check("control plane restore")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("control plane restore")
 def control_plane_restore() -> StepOutcome:
     """The reviewer workflow restores exactly the control plane from trunk, in every place it states the set (solorepo's DR-217).
 
@@ -259,7 +259,7 @@ def scripts_of(package: str) -> tuple[pathlib.Path, ...]:
     return tuple(candidate for candidate in candidates if candidate.is_file())
 
 
-@check("control plane packages")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("control plane packages")
 def control_plane_packages() -> StepOutcome:
     """A package under `.meta/lib/` is control plane exactly when the script it is the body of is (solorepo's DR-219).
 

@@ -1,8 +1,8 @@
 """`timing.py`'s percentile and its degrade, one case at a time (solorepo's DR-157).
 """
 
-import citations
-from collect import check
+from checks import citations
+from checks.collect import check
 
 
 @check("timing probes", pre=True)

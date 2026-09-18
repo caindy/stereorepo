@@ -2,8 +2,8 @@
 """
 import json
 
-from collect import META, check
-from probes.harness import load_module, written
+from checks.collect import META, check
+from checks.probes.harness import load_module, written
 
 
 @check("agents probes", pre=True)

@@ -6,8 +6,8 @@ from typing import Any
 
 import yaml
 
-from collect import META, ROOT, check
-from probes.harness import (
+from checks.collect import META, ROOT, check
+from checks.probes.harness import (
     load_channel,
 )
 

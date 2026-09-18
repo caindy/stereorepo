@@ -3,7 +3,7 @@
 import pathlib
 import shlex
 
-from collect import ROOT
+from checks.collect import ROOT
 
 
 def nested(line: str, depth: int) -> str:

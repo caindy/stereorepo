@@ -1,13 +1,17 @@
 # The ratchet baseline for the `meta types` step of `.meta/check.py`.
 #
-# One entry per file, holding the floor of `mypy --strict --ignore-missing-imports`
-# errors it may still carry. Gate-internal imports resolve to `Any` when flat sibling
-# imports do not resolve, so each number is a floor rather than the resolving debt
-# (solorepo's DR-210, caindy/solorepo#435). The Ratchet Discipline is what a checker
-# that cannot be clean at once does: a baseline that may fall and may not rise. A file
-# absent from this map may hold none, and the step fails a file on either side of its
-# number — over, because the debt grew; under, because a baseline nobody lowers has
-# stopped being one.
+# One entry per file, holding the debt of `mypy --strict --ignore-missing-imports`
+# errors it may still carry. The numbers used to be a floor rather than the resolving
+# debt: the modules under `.meta/checks/` imported each other flat, mypy's search root
+# is `.meta/`, and what does not resolve is `Any` (solorepo's DR-210,
+# caindy/solorepo#435). caindy/solorepo#557 left one import spelling, so mypy now reads
+# across the package and the numbers are the debt. Twenty-eight of them rose that day,
+# and none of what they count is new code.
+#
+# The Ratchet Discipline is what a checker that cannot be clean at once does: a
+# baseline that may fall and may not rise. A file absent from this map may hold none,
+# and the step fails a file on either side of its number — over, because the debt grew;
+# under, because a baseline nobody lowers has stopped being one.
 #
 # Written by `files.py`, which names the file and the number in the failure.
 # Over nine tenths of what is recorded here is a missing annotation rather than
@@ -18,45 +22,45 @@
 .meta/arc/cluster: 4
 .meta/arc/deploy: 0
 .meta/arc/teardown: 12
-.meta/check.py: 5
-.meta/checks/citations/claims.py: 5
+.meta/check.py: 6
+.meta/checks/citations/claims.py: 20
 .meta/checks/citations/loaders.py: 8
 .meta/checks/citations/prose.py: 15
-.meta/checks/citations/record.py: 7
+.meta/checks/citations/record.py: 13
 .meta/checks/comments.py: 3
 .meta/checks/graph/artifacts.py: 3
 .meta/checks/graph/record.py: 17
 .meta/checks/graph/structure.py: 13
-.meta/checks/probes/channel/actor.py: 1
-.meta/checks/probes/channel/claim.py: 7
-.meta/checks/probes/channel/filing.py: 12
-.meta/checks/probes/channel/layer.py: 1
-.meta/checks/probes/channel/parser.py: 5
-.meta/checks/probes/channel/reservation.py: 4
-.meta/checks/probes/channel/signing_key.py: 1
-.meta/checks/probes/channel/status.py: 1
-.meta/checks/probes/channel/table.py: 1
-.meta/checks/probes/git/step.py: 9
+.meta/checks/probes/channel/actor.py: 4
+.meta/checks/probes/channel/claim.py: 10
+.meta/checks/probes/channel/filing.py: 21
+.meta/checks/probes/channel/layer.py: 4
+.meta/checks/probes/channel/parser.py: 7
+.meta/checks/probes/channel/reservation.py: 11
+.meta/checks/probes/channel/signing_key.py: 7
+.meta/checks/probes/channel/status.py: 2
+.meta/checks/probes/channel/table.py: 2
+.meta/checks/probes/git/step.py: 11
 .meta/checks/probes/harness/acts.py: 13
 .meta/checks/probes/harness/fakes.py: 23
 .meta/checks/probes/harness/github.py: 25
 .meta/checks/probes/harness/loaders.py: 6
-.meta/checks/probes/knowledge.py: 4
-.meta/checks/probes/loops/advance.py: 15
-.meta/checks/probes/loops/delegate.py: 10
-.meta/checks/probes/loops/dispatch.py: 21
-.meta/checks/probes/loops/enacted.py: 9
-.meta/checks/probes/loops/handoff.py: 7
-.meta/checks/probes/loops/merge_manager.py: 7
-.meta/checks/probes/loops/merge_manager_advance.py: 1
-.meta/checks/probes/loops/stop.py: 5
-.meta/checks/probes/tools/agents.py: 1
-.meta/checks/probes/tools/apm_compile.py: 1
+.meta/checks/probes/knowledge.py: 7
+.meta/checks/probes/loops/advance.py: 45
+.meta/checks/probes/loops/delegate.py: 19
+.meta/checks/probes/loops/dispatch.py: 65
+.meta/checks/probes/loops/enacted.py: 11
+.meta/checks/probes/loops/handoff.py: 17
+.meta/checks/probes/loops/merge_manager.py: 12
+.meta/checks/probes/loops/merge_manager_advance.py: 6
+.meta/checks/probes/loops/stop.py: 10
+.meta/checks/probes/tools/agents.py: 2
+.meta/checks/probes/tools/apm_compile.py: 2
 .meta/checks/probes/tools/comments.py: 8
-.meta/checks/probes/tools/depth.py: 13
-.meta/checks/probes/tools/dereference.py: 4
-.meta/checks/probes/tools/search.py: 1
-.meta/checks/probes/tools/timing.py: 3
+.meta/checks/probes/tools/depth.py: 14
+.meta/checks/probes/tools/dereference.py: 6
+.meta/checks/probes/tools/search.py: 2
+.meta/checks/probes/tools/timing.py: 4
 .meta/dereference.py: 1
 .meta/gate: 16
 .meta/lib/apm_compile/agents.py: 2

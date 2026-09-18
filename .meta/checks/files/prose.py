@@ -7,11 +7,11 @@ from typing import Any
 
 import yaml
 
-from collect import (
+from checks.collect import (
     META,
     check,
 )
-from files import workflows
+from checks.files import workflows
 
 
 @functools.cache
@@ -44,7 +44,7 @@ def asserts(entry: dict[str, Any] | None, slot: str, block: str) -> bool:
     return any(p.get("name") == block for p in entry[slot])
 
 
-@check("inherited prose")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("inherited prose")
 def inherited_prose(asked: Collection[tuple[str, str, str]]) -> list[str]:
     """Prose a generator reads is asserted where Specialization copies it.
 
@@ -77,7 +77,7 @@ def inherited_prose(asked: Collection[tuple[str, str, str]]) -> list[str]:
             if asserts(own.get(rel), slot, block) and not rel.startswith(workflows.SCAFFOLD_ONLY)]
 
 
-@check("unread prose")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("unread prose")
 def unread_prose(asked: Collection[tuple[str, str, str]]) -> list[str]:
     """Prose asserted that no render asks for (solorepo's DR-152).
 

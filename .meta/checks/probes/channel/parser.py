@@ -1,7 +1,7 @@
 """The channel's parsers: every verb of every program parses the flags its own branch in `main()` reads, refuses what is not typeable, and belongs to the program the table says (solorepo's DR-117).
 """
-from collect import check
-from probes.harness import (
+from checks.collect import check
+from checks.probes.harness import (
     answered,
     load_channel,
 )

@@ -4,8 +4,8 @@ import re
 
 import yaml
 
-from citations import loaders, prose
-from collect import META, ROOT, check
+from checks.citations import loaders, prose
+from checks.collect import META, ROOT, check
 
 
 @check("cited articles")

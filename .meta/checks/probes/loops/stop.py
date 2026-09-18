@@ -3,8 +3,8 @@
 One module for one probe, so a history log's receipt names the file holding it (solorepo's DR-209).
 """
 
-from collect import check
-from probes.harness import (
+from checks.collect import check
+from checks.probes.harness import (
     FakeIssue,
     load_channel,
     outcome,

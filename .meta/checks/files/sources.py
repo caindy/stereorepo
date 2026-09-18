@@ -8,7 +8,7 @@ import subprocess
 
 import yaml
 
-from collect import (
+from checks.collect import (
     META,
     ROOT,
     TEMPLATE,

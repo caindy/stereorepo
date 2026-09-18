@@ -5,8 +5,8 @@ import io
 import pathlib
 import tempfile
 
-from collect import META, check
-from probes.harness import load_module
+from checks.collect import META, check
+from checks.probes.harness import load_module
 
 
 @check("apm compile probes", pre=True)

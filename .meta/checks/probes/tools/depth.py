@@ -1,8 +1,8 @@
 """`depth.py`'s four layers, each answered by the paths a change touches (solorepo's DR-188).
 """
 
-from collect import META, ROOT, check
-from probes.harness import load_module, written
+from checks.collect import META, ROOT, check
+from checks.probes.harness import load_module, written
 
 
 @check("depth probes", pre=True)

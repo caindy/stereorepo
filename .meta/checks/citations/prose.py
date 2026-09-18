@@ -4,7 +4,7 @@ import re
 
 import yaml
 
-from collect import META
+from checks.collect import META
 
 # A12 asks three things of a citation and `cited decisions` resolves one of them:
 # the number. What follows resolves the rest — the claim the citation goes on to

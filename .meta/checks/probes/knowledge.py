@@ -16,10 +16,9 @@ gate over assertions should not take its imports from a test suite
 """
 import collections
 
-import files
-import graph
-from collect import META, ROOT, check
-from probes.harness import FakeWikiPath, load_module
+from checks import files, graph
+from checks.collect import META, ROOT, check
+from checks.probes.harness import FakeWikiPath, load_module
 
 WithdrawnCase = collections.namedtuple("WithdrawnCase", "name number decision refused")
 """One Decision put to `graph.withdrawn_decisions`: `number`, the last segment of its id; `decision`, its fields; `refused`, whether the check must name it."""

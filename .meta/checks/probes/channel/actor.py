@@ -2,8 +2,8 @@
 """
 import collections
 
-from collect import META, check
-from probes.harness import (
+from checks.collect import META, check
+from checks.probes.harness import (
     answered,
     environment,
     load_channel,

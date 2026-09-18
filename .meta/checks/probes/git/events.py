@@ -1,7 +1,7 @@
 """The before-tool events each harness sends, and which the worktree hook must refuse or permit from the payload alone.
 """
 
-from collect import ROOT
+from checks.collect import ROOT
 
 EVENTS = (
     ("both harnesses' before-tool payloads are read as one, and refused with the exit code each "

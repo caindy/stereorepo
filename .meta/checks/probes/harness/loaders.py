@@ -7,7 +7,7 @@ from importlib.machinery import SourceFileLoader
 
 import yaml
 
-from collect import META, ROOT
+from checks.collect import META, ROOT
 
 
 def load_module(path, name=None, register=True):

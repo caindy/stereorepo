@@ -4,9 +4,9 @@ import io
 import json
 import sys
 
-from collect import check
-from probes.git import events, offers, verdicts
-from probes.harness import exit_of, load_hook, stood_in
+from checks.collect import check
+from checks.probes.git import events, offers, verdicts
+from checks.probes.harness import exit_of, load_hook, stood_in
 
 
 def _verdicts(hooks):

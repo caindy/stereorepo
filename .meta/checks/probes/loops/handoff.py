@@ -5,9 +5,9 @@ One module for one probe, so a history log's receipt names the file holding it (
 import datetime
 from typing import Any
 
-import citations
-from collect import check
-from probes.harness import (
+from checks import citations
+from checks.collect import check
+from checks.probes.harness import (
     FakeGitHub,
     WatchGitHub,
     load_channel,

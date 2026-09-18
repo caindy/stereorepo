@@ -2,9 +2,9 @@
 """
 
 
-from citations import loaders
-from collect import ROOT, TEMPLATE, check
-from files import FENCED
+from checks.citations import loaders
+from checks.collect import ROOT, TEMPLATE, check
+from checks.files import FENCED
 
 
 @check("cited decisions")

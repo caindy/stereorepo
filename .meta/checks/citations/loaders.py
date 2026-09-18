@@ -2,8 +2,8 @@
 """
 import re
 
-from collect import META, ROOT, TEMPLATE
-from files import inherited, tree
+from checks.collect import META, ROOT, TEMPLATE
+from checks.files import inherited, tree
 
 DR = re.compile(r"\bDR-(\d{3})\b")
 

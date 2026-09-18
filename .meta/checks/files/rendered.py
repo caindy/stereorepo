@@ -3,7 +3,7 @@
 import shutil
 import subprocess
 
-from collect import (
+from checks.collect import (
     META,
     ROOT,
     CouldNotRun,
@@ -12,10 +12,10 @@ from collect import (
     StepOutcome,
     check,
 )
-from files import prose
+from checks.files import prose
 
 
-@check("apm package")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("apm package")
 def apm_package() -> StepOutcome:
     """Verifies that .meta/.apm/ passes APM CLI compilation validation when apm is available (solorepo's DR-201)."""
     apm_bin = shutil.which("apm")
@@ -30,7 +30,7 @@ def apm_package() -> StepOutcome:
 
 # Registered last, because this is the one step that reads what the others'
 # subject is rendered into, and a reader watching the gate wants it under them.
-@check("rendered prose")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("rendered prose")
 def rendered_prose(pages: dict[str, str]) -> list[str]:
     """Every page render.py writes is the render of what it is written from.
 

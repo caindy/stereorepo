@@ -2,8 +2,8 @@
 """
 
 
-from collect import check
-from probes.harness import (
+from checks.collect import check
+from checks.probes.harness import (
     FakeFiling,
     environment,
     load_channel,

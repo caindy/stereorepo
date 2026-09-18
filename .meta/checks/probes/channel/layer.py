@@ -2,8 +2,8 @@
 """
 
 
-from collect import Found, Passed, check
-from probes.harness import (
+from checks.collect import Found, Passed, check
+from checks.probes.harness import (
     FakeGitHub,
     load_channel,
     run_verb,

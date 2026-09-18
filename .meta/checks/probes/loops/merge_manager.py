@@ -5,9 +5,9 @@ One module for one probe, so a history log's receipt names the file holding it (
 
 from typing import Any
 
-import citations
-from collect import META, check
-from probes.harness import (
+from checks import citations
+from checks.collect import META, check
+from checks.probes.harness import (
     load_channel,
     load_module,
     outcome,

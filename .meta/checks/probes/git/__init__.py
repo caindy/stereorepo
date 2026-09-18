@@ -19,7 +19,7 @@ all three. The loader comes from
 assertions takes no import from a probe, and a probe takes none from another
 subject's (solorepo's DR-150). One module per table (solorepo's DR-218).
 """
-import probes.git.verdicts  # noqa: I001  # reason: the modules are listed in the order the step runs their tables
-import probes.git.offers
-import probes.git.events
-import probes.git.step  # noqa: F401  # reason: registers check steps
+import checks.probes.git.verdicts  # noqa: I001  # reason: the modules are listed in the order the step runs their tables
+import checks.probes.git.offers
+import checks.probes.git.events
+import checks.probes.git.step  # noqa: F401  # reason: registers check steps

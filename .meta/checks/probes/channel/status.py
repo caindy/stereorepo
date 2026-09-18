@@ -3,8 +3,8 @@
 
 import yaml
 
-from collect import META, check
-from probes.harness import (
+from checks.collect import META, check
+from checks.probes.harness import (
     load_channel,
 )
 

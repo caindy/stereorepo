@@ -2,7 +2,7 @@
 """
 
 
-from collect import check
+from checks.collect import check
 
 
 @check("unresolved references")

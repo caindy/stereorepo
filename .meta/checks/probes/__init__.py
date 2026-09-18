@@ -17,8 +17,8 @@ verbs, then what the repository writes down about itself, then the tools. `harne
 nothing and is what every subject module imports; it imports no sibling, so
 the package's import graph is a tree with the harness at its root.
 """
-import probes.git  # noqa: I001  # reason: registration order is deliberate
-import probes.channel
-import probes.loops
-import probes.knowledge
-import probes.tools  # noqa: F401  # reason: registers check steps
+import checks.probes.git  # noqa: I001  # reason: registration order is deliberate
+import checks.probes.channel
+import checks.probes.loops
+import checks.probes.knowledge
+import checks.probes.tools  # noqa: F401  # reason: registers check steps

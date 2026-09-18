@@ -21,21 +21,22 @@ rest in that same registration order. What that comes to: `duplicate keys` and
 the probes under `.meta/checks/probes/` (solorepo's DR-209), then the tree, then
 what prose claims about it, then what its comments hold, then the graph.
 The imports are written in dependency order so that the registration order is
-the one stated here and not one a transitive import decided. History in
+the one stated here and not one a transitive import decided. They spell the step
+modules `checks.*`, which is the one spelling the tree has: this script's own
+directory is `.meta/` and so `sys.path[0]`, and every module under
+`.meta/checks/` reaches its neighbours the same way, so no file is importable
+under two module names and no registry is built twice. History in
 check.history.md (solorepo's DR-171).
 """
-import pathlib
-import sys
+import sys  # noqa: I001  # reason: the step imports below stand in registration order, not sorted order
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "checks"))
-
-import collect  # noqa: I001  # reason: sys.path modified above and registration order is deliberate
-import files
-import citations  # noqa: F401  # reason: registers check steps
-import comments  # noqa: F401  # reason: registers check steps
-import graph  # noqa: F401  # reason: registers check steps
-import probes  # noqa: F401  # reason: registers check steps
-from collect import STEPS, views
+from checks import collect
+from checks import files
+from checks import citations  # noqa: F401  # reason: registers check steps
+from checks import comments  # noqa: F401  # reason: registers check steps
+from checks import graph  # noqa: F401  # reason: registers check steps
+from checks import probes  # noqa: F401  # reason: registers check steps
+from checks.collect import STEPS, views
 
 
 def report(label, outcome):

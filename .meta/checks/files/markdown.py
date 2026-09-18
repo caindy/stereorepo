@@ -4,12 +4,12 @@ import os
 import pathlib
 import re
 
-from collect import (
+from checks.collect import (
     ROOT,
     TEMPLATE,
     check,
 )
-from files import sources
+from checks.files import sources
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 
@@ -17,7 +17,7 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 FENCED = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 
 
-@check("markdown links")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("markdown links")
 def markdown_links() -> list[str]:
     """Validate that relative Markdown links in documentation resolve to existing files or directories.
 

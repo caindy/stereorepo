@@ -3,7 +3,7 @@
 import pathlib
 from typing import Any
 
-from collect import ROOT, against_baseline, check
+from checks.collect import ROOT, against_baseline, check
 
 
 @check("comment probes", pre=True)
@@ -23,7 +23,7 @@ def comment_probes():
     (`comments.comment_site` and `files.mypy_errors`) and their baseline
     parameters are probed.
     """
-    import comments
+    from checks import comments
     here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
     blocks_found, sites = _blocks_and_sites(comments, here)
     return (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
@@ -162,7 +162,7 @@ def _ratchet(comments: Any, here: Any, one: Any) -> list[str]:
 def _type_errors(here: Any) -> list[str]:
     """`files.mypy_errors` counting and siting one error, and the ratchet reading it over its baseline."""
     problems = []
-    import files
+    from checks import files
     mypy_sample = f"{here}:42: error: Need type annotation  [var-annotated]\n"
     type_counts, type_sites = files.mypy_errors(mypy_sample)
     if type_counts != {here: 1}:

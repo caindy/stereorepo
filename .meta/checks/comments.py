@@ -35,7 +35,7 @@ import pathlib
 import re
 import tokenize
 
-from collect import (
+from checks.collect import (
     META,
     ROOT,
     CouldNotRun,
@@ -45,7 +45,7 @@ from collect import (
     check,
     recorded_baseline,
 )
-from files import tree
+from checks.files import tree
 
 BASELINE = META / "checks" / "comments.baseline.yaml"
 

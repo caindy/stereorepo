@@ -7,7 +7,7 @@ from typing import Any
 
 import yaml
 
-from collect import (
+from checks.collect import (
     META,
     ROOT,
     TEMPLATE,
@@ -19,7 +19,7 @@ from collect import (
     check,
     view_for,
 )
-from files import sources
+from checks.files import sources
 
 
 class Strict(yaml.SafeLoader):
@@ -43,7 +43,7 @@ def _note_duplicates(loader: yaml.SafeLoader, node: yaml.MappingNode,
 Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _note_duplicates)
 
 
-@check("duplicate keys", pre=True)  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("duplicate keys", pre=True)
 def duplicate_keys() -> list[str]:
     """Validate that no YAML or YML file across `.meta/` and `template/` defines duplicate keys.
 
@@ -70,7 +70,7 @@ def duplicate_keys() -> list[str]:
     return problems
 
 
-@check("surviving placeholders")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("surviving placeholders")
 def surviving_placeholders() -> list[str]:
     """No template token survives anywhere outside `template/` (solorepo's DR-034).
 
@@ -104,7 +104,7 @@ def surviving_placeholders() -> list[str]:
     return problems
 
 
-@check("template parses")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("template parses")
 def template_parses(views: Sequence[Any]) -> list[str]:
     """The template is data and is not linted in place. It is checked by filling
     it in and testing the result, which is the only version anyone runs.
@@ -133,7 +133,7 @@ def template_parses(views: Sequence[Any]) -> list[str]:
     return problems
 
 
-@check("template conventions agree")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("template conventions agree")
 def template_conventions_agree() -> StepOutcome:
     """Validate that root agent instructions and seeded template instructions agree on core conventions.
 

@@ -2,7 +2,7 @@
 """
 import ast
 
-from collect import (
+from checks.collect import (
     META,
     ROOT,
     Found,
@@ -30,7 +30,7 @@ def history_entries_of(text: str) -> list[tuple[str, str | None]]:
     return entries
 
 
-@check("meta history orphans")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("meta history orphans")
 def meta_history_orphans() -> StepOutcome:
     """Every .history.md under .meta/ has a companion module that names it in its docstring (solorepo's DR-171).
 
@@ -105,7 +105,7 @@ def receipt_problem(receipt: str | None) -> str | None:
     return None
 
 
-@check("meta history receipts")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("meta history receipts")
 def meta_history_receipts() -> StepOutcome:
     """Every entry in a .meta/ history log names a check or probe that exists (solorepo's DR-171)."""
     problems: list[str] = []

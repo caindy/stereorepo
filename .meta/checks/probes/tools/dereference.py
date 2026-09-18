@@ -1,8 +1,8 @@
 """`dereference.py`'s scopes and its report (solorepo's DR-134, solorepo's DR-192).
 """
 
-from collect import META, check
-from probes.harness import load_module, outcome
+from checks.collect import META, check
+from checks.probes.harness import load_module, outcome
 
 
 @check("dereference probes", pre=True)

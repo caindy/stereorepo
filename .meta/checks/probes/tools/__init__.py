@@ -16,10 +16,10 @@ over assertions should not take its imports from a test suite
 (solorepo's DR-150). One module per probe, imported in the order the steps report in
 (solorepo's DR-218).
 """
-import probes.tools.timing  # noqa: I001  # reason: registration order is deliberate
-import probes.tools.depth
-import probes.tools.agents
-import probes.tools.dereference
-import probes.tools.search
-import probes.tools.apm_compile
-import probes.tools.comments  # noqa: F401  # reason: registers check steps
+import checks.probes.tools.timing  # noqa: I001  # reason: registration order is deliberate
+import checks.probes.tools.depth
+import checks.probes.tools.agents
+import checks.probes.tools.dereference
+import checks.probes.tools.search
+import checks.probes.tools.apm_compile
+import checks.probes.tools.comments  # noqa: F401  # reason: registers check steps

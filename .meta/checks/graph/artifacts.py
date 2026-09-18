@@ -3,8 +3,8 @@
 
 import yaml
 
-from citations import FOREIGN
-from collect import META, ROOT, check
+from checks.citations import FOREIGN
+from checks.collect import META, ROOT, check
 
 # The record itself: naming it under `enacted_in` satisfies the letter of A20 and
 # defeats the point, so it does not count. `.meta/work/decisions.yaml` is the

@@ -5,7 +5,7 @@ import subprocess
 
 import yaml
 
-from collect import META, ROOT, check
+from checks.collect import META, ROOT, check
 
 OPTIONS_REQUIRED_FROM = 60
 """The first number issued after the model existed.

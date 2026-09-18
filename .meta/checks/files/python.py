@@ -9,7 +9,7 @@ import tokenize
 import tomllib
 from collections.abc import Sequence
 
-from collect import (
+from checks.collect import (
     META,
     ROOT,
     CouldNotRun,
@@ -20,10 +20,10 @@ from collect import (
     check,
     recorded_baseline,
 )
-from files import sources
+from checks.files import sources
 
 
-@check("meta lints")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("meta lints")
 def meta_lints() -> StepOutcome:
     """No linter rule is switched off in configuration, and every site suppression carries a reason (A2, solorepo's DR-177).
 
@@ -39,7 +39,7 @@ def meta_lints() -> StepOutcome:
     patterns are `comments.py`'s too, so that the rule a suppression names and
     the reason it gives are read off one parse (solorepo's DR-150).
     """
-    import comments
+    from checks import comments
     config = META / "ruff.toml"
     if not config.is_file():
         return CouldNotRun(".meta/ruff.toml is missing")
@@ -134,7 +134,7 @@ def tool_command(name: str, pin: str, args: Sequence[str],
     return None
 
 
-@check("meta ruff")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("meta ruff")
 def meta_ruff() -> StepOutcome:
     """Ruff check over .meta/ against the ruleset declared in .meta/ruff.toml (solorepo's DR-177).
 
@@ -178,7 +178,7 @@ def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
     return counts, sites
 
 
-@check("meta types")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("meta types")
 def meta_types() -> StepOutcome:
     """`mypy --strict` over .meta/, ratcheted against types.baseline.yaml (solorepo's DR-210).
 
@@ -239,7 +239,7 @@ def meta_types() -> StepOutcome:
                   f"each file at its baseline")
 
 
-@check("meta doc")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("meta doc")
 def meta_doc() -> StepOutcome:
     """Every module and script under .meta/, and every public function, class and method, has a docstring (A2, solorepo's DR-179).
 

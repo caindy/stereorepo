@@ -3,8 +3,8 @@
 import contextlib
 import io
 
-from collect import META, ROOT, check
-from probes.harness import load_module
+from checks.collect import META, ROOT, check
+from checks.probes.harness import load_module
 
 
 @check("search probes", pre=True)

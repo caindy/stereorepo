@@ -35,10 +35,10 @@ modules for their side effect, each import annotated so no automated fixer can
 take it:
 
 ```python
-import citations  # noqa: F401  # reason: registers check steps
-import comments   # noqa: F401  # reason: registers check steps
-import graph      # noqa: F401  # reason: registers check steps
-import probes     # noqa: F401  # reason: registers check steps
+from checks import citations  # noqa: F401  # reason: registers check steps
+from checks import comments  # noqa: F401  # reason: registers check steps
+from checks import graph  # noqa: F401  # reason: registers check steps
+from checks import probes  # noqa: F401  # reason: registers check steps
 ```
 
 Each module then registers its steps at their definitions with `@check`, so no

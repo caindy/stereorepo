@@ -4,8 +4,8 @@ One module for one probe, so a history log's receipt names the file holding it (
 """
 from typing import Any
 
-from collect import check
-from probes.harness import (
+from checks.collect import check
+from checks.probes.harness import (
     FakeGitHub,
     load_channel,
     outcome,

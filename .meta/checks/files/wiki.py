@@ -6,13 +6,13 @@ from collections.abc import Sequence
 
 import yaml
 
-from collect import (
+from checks.collect import (
     ROOT,
     Index,
     check,
 )
-from files import history, sources
-from files.markdown import FENCED
+from checks.files import history, sources
+from checks.files.markdown import FENCED
 
 WIKILINK = re.compile(r"\[\[(.*?)\]\]")
 
@@ -155,7 +155,7 @@ def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict[tu
 
 
 
-@check("wikilinks")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("wikilinks")
 def wikilinks(index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
     """Internal concept references use closed-world wikilinks (A2, solorepo's DR-185).
 
@@ -252,7 +252,7 @@ def _lead_problem(rel: pathlib.Path, lines: list[str], index: Index, slug: str) 
     return None
 
 
-@check("wiki lead paragraphs")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("wiki lead paragraphs")
 def wiki_lead_paragraphs(index: Index,
                          md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
     """Every wiki page opens with a bold copular lead definition (MOS:LEAD) concurring with the vocabulary (A2, solorepo's DR-185, solorepo's DR-187).
@@ -298,7 +298,7 @@ def _domain_vocabulary_problems(wiki_map: dict[tuple[str, str], pathlib.Path]) -
     return problems
 
 
-@check("ubiquitous language wiki parity")  # type: ignore[untyped-decorator]  # reason: flat `collect` import makes this Any; see collect.check
+@check("ubiquitous language wiki parity")
 def ubiquitous_language_wiki_parity(
         index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
     """Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page, and vice versa (A17, solorepo's DR-184, solorepo's DR-190).

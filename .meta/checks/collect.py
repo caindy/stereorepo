@@ -105,18 +105,6 @@ def check(label: str, pre: bool = False) -> Callable[[StepFunction], StepFunctio
         Callable[[StepFunction], StepFunction]: A decorator that appends the
         step to `STEPS` and hands it back unchanged, and that raises `TypeError`
         where the step requires a parameter `SOURCES` does not name.
-
-    Every decoration site suppresses `untyped-decorator`, and the reason is the
-    same one at all of them. This function is annotated; the step modules reach
-    it through a flat `from collect import check`, which resolves at runtime
-    through the `sys.path.insert` in `.meta/check.py:30` and not for mypy, whose
-    search root is `.meta/`. `--ignore-missing-imports` then types the decorator
-    as `Any`, and an `Any` decorator over an annotated function is the
-    diagnostic. `mypy_path` does not fix it: `.meta/checks/__init__.py` makes
-    that directory a package as well as a search root, so with both on the path
-    every module under it resolves twice under two names. The suppressions come
-    out together the day the step modules import `checks.collect`, and
-    `--strict` implies `warn_unused_ignores`, so mypy names them when they do.
     """
     def register(fn: StepFunction) -> StepFunction:
         sources = tuple(name for name, p in inspect.signature(fn).parameters.items()

@@ -9,12 +9,12 @@ and runs it, which is why the probes are a package of their own rather than
 steps beside the checks over assertions (solorepo's DR-150). One module per
 probe, imported in the order the steps report in (solorepo's DR-218).
 """
-import probes.channel.parser  # noqa: I001  # reason: registration order is deliberate
-import probes.channel.status
-import probes.channel.table
-import probes.channel.layer
-import probes.channel.claim
-import probes.channel.filing
-import probes.channel.actor
-import probes.channel.signing_key
-import probes.channel.reservation  # noqa: F401  # reason: registers check steps
+import checks.probes.channel.parser  # noqa: I001  # reason: registration order is deliberate
+import checks.probes.channel.status
+import checks.probes.channel.table
+import checks.probes.channel.layer
+import checks.probes.channel.claim
+import checks.probes.channel.filing
+import checks.probes.channel.actor
+import checks.probes.channel.signing_key
+import checks.probes.channel.reservation  # noqa: F401  # reason: registers check steps

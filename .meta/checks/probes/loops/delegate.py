@@ -5,8 +5,8 @@ One module for one probe, so a history log's receipt names the file holding it (
 import subprocess
 from typing import Any
 
-from collect import check
-from probes.harness import (
+from checks.collect import check
+from checks.probes.harness import (
     load_channel,
     outcome,
     stood_in,

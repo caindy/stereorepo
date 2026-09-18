@@ -16,11 +16,11 @@ holding the probe it cites (solorepo's DR-209). The fakes and the loaders are
 the harness's, and the gate over assertions takes no import from a test suite
 (solorepo's DR-150).
 """
-import probes.loops.advance  # noqa: I001  # reason: registration order is deliberate
-import probes.loops.dispatch
-import probes.loops.handoff
-import probes.loops.enacted
-import probes.loops.stop
-import probes.loops.merge_manager
-import probes.loops.merge_manager_advance
-import probes.loops.delegate  # noqa: F401  # reason: registers check steps
+import checks.probes.loops.advance  # noqa: I001  # reason: registration order is deliberate
+import checks.probes.loops.dispatch
+import checks.probes.loops.handoff
+import checks.probes.loops.enacted
+import checks.probes.loops.stop
+import checks.probes.loops.merge_manager
+import checks.probes.loops.merge_manager_advance
+import checks.probes.loops.delegate  # noqa: F401  # reason: registers check steps
