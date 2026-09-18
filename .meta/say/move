@@ -148,8 +148,8 @@ def triage(issue: str | int, level: str, body: str) -> None:
     The two acts are not one transaction, so a verdict this Actor already
     posted is not posted again: a retry after the label failed to land posts
     nothing and lands the level, and one after the label did land is refused
-    saying nothing more is owed (solorepo's DR-221). A reading by another
-    Actor, which is what a Challenge handed back gets, posts its own verdict.
+    saying nothing more is owed. A reading by another Actor, which is what a
+    Challenge handed back gets, posts its own verdict.
 
     A Challenge with no level takes the one given. An Issue that is not a
     Challenge becomes one at that level, any prior roadmap label stripped, in a

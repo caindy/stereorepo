@@ -9,19 +9,23 @@ decisions:
       - work:artifact/meta-say-move
       - work:artifact/meta-say-post
     context: >-
-      `post promote` is `file`, `reply`, `resolve`, in that order, and the
-      three are not one transaction. `move.file_issue` created
-      unconditionally, so a `promote` whose `reply` or `resolve` failed left
-      the Issue filed and the retry filed a second one. Four pairs of open
-      Challenges were one Challenge filed twice — the Challenges #434/#435,
-      #440/#441, #443/#444 and #454/#455 — each pair byte-identical but for its
-      `**Waits on.**` paragraph and each carrying one `Actor:` trailer, so
-      one run filed each twice. Run `gha-34906343384` did it to two at once.
-      The cost was not shelf space: a fifth pair, the Challenges #436 and
-      #437, was doubled the same way and both halves were worked, so the
-      duplication cost two coder runs, two reviews and two pull requests. The
-      second of those, `#442`, landed docstring rewording and a history entry
-      with no logic in it, because `#439` had already landed the mechanism.
+      `move.file_issue` created unconditionally, and `post promote` checked no
+      prior promotion on the thread. The run log (`gha-34906343384`) shows that
+      nothing failed and no retry after a partial failure occurred; instead, the
+      run typed `.meta/say/post promote` twice on one thread, eleven seconds
+      apart, with a recomposed body, and both calls succeeded. Why it was typed
+      twice is not in the log — the calls and results are recorded, the intent
+      is not — and marking the intent as unknown is what Article 23 asks for.
+      Four pairs of open Challenges were one Challenge filed twice — the
+      Challenges #434/#435, #440/#441, #443/#444 and #454/#455. In each pair,
+      the recomposed body put the blocker in prose rather than in a first-line
+      reference, so GitHub recorded no native relationship and `just next`
+      reported the Issue as `waits, see body` (solorepo's #474). The cost was
+      not shelf space: a fifth pair, the Challenges #436 and #437, was doubled
+      the same way and both halves were worked, so the duplication cost two
+      coder runs, two reviews and two pull requests. The second of those,
+      `#442`, landed docstring rewording and a history entry with no logic in
+      it, because `#439` had already landed the mechanism.
     alternatives:
       - name: Key the identity on the promoting thread alone
         chosen: false

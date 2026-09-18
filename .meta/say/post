@@ -285,13 +285,12 @@ def promote(thread_id: str, title: str, body: str, level: str | None, resolve_th
     reviewer's verdict, and a raiser at approval proposes one in the body. A
     level given here is the solo's mandate (solorepo's DR-230).
 
-    A thread already carrying this channel's own promotion is refused: the three
-    acts are not one transaction, so a `promote` whose `resolve` failed leaves
-    the Issue filed and the link posted, and repeating the verb would file a
-    second Issue for one thread (solorepo's DR-221). The evidence is `PROMOTION`
-    and not `promotes()`: the gate's pattern matches any Issue URL any party
-    wrote, and a thread citing an Issue is a thread this verb must still be able
-    to promote.
+    A thread already carrying this channel's own promotion is refused, so
+    that repeating the verb on a thread already promoted does not file a second
+    Issue for one Challenge (solorepo's DR-221). The evidence is `PROMOTION` and
+    not `promotes()`: the gate's pattern matches any Issue URL any party wrote,
+    and a thread citing an Issue is a thread this verb must still be able to
+    promote.
 
     Raises:
         SystemExit: If GitHub has no such thread, or the thread already carries a
