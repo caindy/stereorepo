@@ -12,6 +12,7 @@ decisions:
       - work:artifact/github-workflows-coder
       - work:artifact/meta-checks-probes-loops-advance
       - work:artifact/meta-checks-probes-loops-merge-manager-advance
+      - work:artifact/meta-checks-probes-loops-dispatch
     alternatives:
       - name: Widen `advance` to every pull request with a review request outstanding
         chosen: false

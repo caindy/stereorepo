@@ -51,61 +51,72 @@ def merge_manager_advance_probes():
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    problems: list[str] = []
     move.SETTLES = (3, 0)
     move.MERGEABILITY = (3, 0)
-    reviewer = "o-r-reviewer"
-    green = [{"name": "gate", "conclusion": "SUCCESS"}]
-    red = [{"name": "gate", "conclusion": "FAILURE"}]
-    approved = [{"author": {"login": reviewer}, "state": "APPROVED"}]
-    talking = {24}
+    return _dry_run(channel, move) + _held_run(channel, move) + _real_run(channel, move)
 
-    def stranded(checks: Any = green, reviews: Any = approved, **fields: Any) -> dict[str, Any]:
-        """The fields `merge_manager` reads of a pull request that is behind its base."""
-        return {"isDraft": False, "mergeStateStatus": "BEHIND", "statusCheckRollup": checks,
-                "latestReviews": reviews, **fields}
 
-    def conversations(query: Any, number: int = 0, **_: Any) -> Any:
-        """The review threads GitHub answers for `number`: resolved, unless the case is talking."""
-        return {"data": {"repository": {"pullRequest": {
-            "reviewThreads": {"nodes": [{"isResolved": number not in talking}]}}}}}
+REVIEWER = "o-r-reviewer"
+GREEN = [{"name": "gate", "conclusion": "SUCCESS"}]
+RED = [{"name": "gate", "conclusion": "FAILURE"}]
+APPROVED = [{"author": {"login": REVIEWER}, "state": "APPROVED"}]
+TALKING = {24}
+"""The pull request whose conversation is unresolved."""
 
-    def github() -> Any:
-        """The five pull requests, fresh, so a dry run and a real run do not share a state."""
-        return FakeGitHub({
-            20: {"behind": 2, "armed": False, "verdicts": [(reviewer, "APPROVED")],
-                 "manager": stranded()},
-            21: {"behind": 2, "armed": False, "verdicts": [(reviewer, "APPROVED")],
-                 "manager": stranded()},
-            22: {"behind": 0, "armed": False, "base": "claude/issue-21",
-                 "manager": stranded(checks=[], reviews=[], mergeStateStatus=None)},
-            23: {"behind": 2, "armed": False, "verdicts": [(reviewer, "APPROVED")],
-                 "manager": stranded(checks=red)},
-            24: {"behind": 2, "armed": False, "verdicts": [(reviewer, "APPROVED")],
-                 "manager": stranded()},
-        })
 
-    def manager_github(fake: Any) -> Any:
-        """`fake`, with the fields `merge_manager` reads added to its `pr list`.
+def stranded(checks: Any = GREEN, reviews: Any = APPROVED, **fields: Any) -> dict[str, Any]:
+    """The fields `merge_manager` reads of a pull request that is behind its base."""
+    return {"isDraft": False, "mergeStateStatus": "BEHIND", "statusCheckRollup": checks,
+            "latestReviews": reviews, **fields}
 
-        The manager and `advance` ask two different `pr list` questions of the
-        same pull requests, and `FakeGitHub` answers only `advance`'s. Each pull
-        request's `manager` dict is merged into its listing, so one object
-        answers both and the rebase a case reads back is the one `advance`
-        performed. `issue list` answers empty: leverage is not what these cases
-        are about, and a manager that finds nothing eligible never asks.
-        """
-        def gh(*args: Any, parse: bool = True, **kwargs: Any) -> Any:
-            """One `gh` call, as `fake` answers it, with `pr list` enriched."""
-            if args[:2] == ("issue", "list"):
-                return []
-            answer = fake(*args, parse=parse, **kwargs)
-            if args[:2] == ("pr", "list"):
-                for listed in answer:
-                    listed.update(fake.pulls[str(listed["number"])].get("manager") or {})
-            return answer
-        return gh
 
+def conversations(query: Any, number: int = 0, **_: Any) -> Any:
+    """The review threads GitHub answers for `number`: resolved, unless the case is talking."""
+    return {"data": {"repository": {"pullRequest": {
+        "reviewThreads": {"nodes": [{"isResolved": number not in TALKING}]}}}}}
+
+
+def github() -> Any:
+    """The five pull requests, fresh, so a dry run and a real run do not share a state."""
+    return FakeGitHub({
+        20: {"behind": 2, "armed": False, "verdicts": [(REVIEWER, "APPROVED")],
+             "manager": stranded()},
+        21: {"behind": 2, "armed": False, "verdicts": [(REVIEWER, "APPROVED")],
+             "manager": stranded()},
+        22: {"behind": 0, "armed": False, "base": "claude/issue-21",
+             "manager": stranded(checks=[], reviews=[], mergeStateStatus=None)},
+        23: {"behind": 2, "armed": False, "verdicts": [(REVIEWER, "APPROVED")],
+             "manager": stranded(checks=RED)},
+        24: {"behind": 2, "armed": False, "verdicts": [(REVIEWER, "APPROVED")],
+             "manager": stranded()},
+    })
+
+
+def manager_github(fake: Any) -> Any:
+    """`fake`, with the fields `merge_manager` reads added to its `pr list`.
+
+    The manager and `advance` ask two different `pr list` questions of the
+    same pull requests, and `FakeGitHub` answers only `advance`'s. Each pull
+    request's `manager` dict is merged into its listing, so one object
+    answers both and the rebase a case reads back is the one `advance`
+    performed. `issue list` answers empty: leverage is not what these cases
+    are about, and a manager that finds nothing eligible never asks.
+    """
+    def gh(*args: Any, parse: bool = True, **kwargs: Any) -> Any:
+        """One `gh` call, as `fake` answers it, with `pr list` enriched."""
+        if args[:2] == ("issue", "list"):
+            return []
+        answer = fake(*args, parse=parse, **kwargs)
+        if args[:2] == ("pr", "list"):
+            for listed in answer:
+                listed.update(fake.pulls[str(listed["number"])].get("manager") or {})
+        return answer
+    return gh
+
+
+def _dry_run(channel: Any, move: Any) -> list[str]:
+    """A dry run names the stranded pull request and rebases nothing."""
+    problems: list[str] = []
     fake = github()
     with stood_in(channel, gh=manager_github(fake), graphql=conversations):
         dry = outcome(lambda: move.merge_manager(dry_run=True))
@@ -113,7 +124,12 @@ def merge_manager_advance_probes():
         problems.append(f"merge manager: a dry run did not name the stranded pull request:\n{dry.out}")
     if any(pull.get("rebased") for pull in fake.pulls.values()):
         problems.append("merge manager: a dry run rebased a branch")
+    return problems
 
+
+def _held_run(channel: Any, move: Any) -> list[str]:
+    """With `stranded=False`, the event `advance.yml` answers itself, nothing is named or touched."""
+    problems: list[str] = []
     fake = github()
     with stood_in(channel, gh=manager_github(fake), graphql=conversations):
         held = outcome(lambda: move.merge_manager(dry_run=False, stranded=False))
@@ -121,7 +137,12 @@ def merge_manager_advance_probes():
         problems.append("merge manager: it rebased a branch on the event advance.yml answers")
     if "advancing" in held.out:
         problems.append(f"merge manager: it named a stranded pull request it had left alone:\n{held.out}")
+    return problems
 
+
+def _real_run(channel: Any, move: Any) -> list[str]:
+    """The real run rebases the approved pull request behind its base and leaves the stack base, the red one and the one still talking alone, naming each."""
+    problems: list[str] = []
     fake = github()
     with stood_in(channel, gh=manager_github(fake), graphql=conversations):
         ran = outcome(lambda: move.merge_manager(dry_run=False))

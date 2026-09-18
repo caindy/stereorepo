@@ -5,7 +5,7 @@ from __future__ import annotations
 import pathlib
 import re
 
-import yaml
+from lib.wikisplain import duplicates
 
 WIKILINK_RE = re.compile(r"\[\[(.*?)\]\]")
 FENCED_RE = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
@@ -21,54 +21,26 @@ def extract_known_concepts(root: pathlib.Path | None = None) -> dict[str, str]:
     """
     root_path = root or pathlib.Path(__file__).resolve().parent.parent
     known: dict[str, str] = {}
-
     wiki_dir = root_path / "wiki"
     if wiki_dir.is_dir():
         for path in wiki_dir.glob("*/*.md"):
-            if path.name == "README.md":
-                continue
-            stem = path.stem.lower()
-            known[stem] = stem
-
-    vocab_files = [
-        root_path / ".meta" / "assertions" / "imported" / "vocabulary.yaml",
-        root_path / ".meta" / "assertions" / "vocabulary.yaml",
-        root_path / ".meta" / "assertions" / "domain_vocabulary.yaml",
-    ]
-    for v_path in vocab_files:
-        if not v_path.is_file():
-            continue
-        try:
-            data = yaml.safe_load(v_path.read_text(encoding="utf-8")) or {}
-        except Exception:
-            continue
-        for item in data.get("concept_set") or []:
-            item_id = str(item.get("id") or "")
-            item_slug = item_id.rsplit("/", 1)[-1].lower()
-            pref_label = str(item.get("pref_label") or "")
+            if path.name != "README.md":
+                known[path.stem.lower()] = path.stem.lower()
+    for v_path in (root_path / ".meta" / "assertions" / "imported" / "vocabulary.yaml",
+                   root_path / ".meta" / "assertions" / "vocabulary.yaml",
+                   root_path / ".meta" / "assertions" / "domain_vocabulary.yaml"):
+        for item in duplicates.loaded(v_path).get("concept_set") or []:
+            item_slug = str(item.get("id") or "").rsplit("/", 1)[-1].lower()
             known[item_slug] = item_slug
-            if pref_label:
-                known[pref_label.lower()] = item_slug
-
-    discipline_files = [
-        root_path / ".meta" / "assertions" / "imported" / "disciplines.yaml",
-        root_path / ".meta" / "assertions" / "disciplines.yaml",
-    ]
-    for d_path in discipline_files:
-        if not d_path.is_file():
-            continue
-        try:
-            d_data = yaml.safe_load(d_path.read_text(encoding="utf-8")) or {}
-        except Exception:
-            continue
-        for d in d_data.get("disciplines") or []:
-            d_id = str(d.get("id") or "")
-            d_slug = d_id.rsplit("/", 1)[-1].lower()
-            d_name = str(d.get("name") or "")
+            if item.get("pref_label"):
+                known[str(item["pref_label"]).lower()] = item_slug
+    for d_path in (root_path / ".meta" / "assertions" / "imported" / "disciplines.yaml",
+                   root_path / ".meta" / "assertions" / "disciplines.yaml"):
+        for d in duplicates.loaded(d_path).get("disciplines") or []:
+            d_slug = str(d.get("id") or "").rsplit("/", 1)[-1].lower()
             known[d_slug] = d_slug
-            if d_name:
-                known[d_name.lower()] = d_slug
-
+            if d.get("name"):
+                known[str(d["name"]).lower()] = d_slug
     return known
 
 

@@ -2,27 +2,34 @@
 """
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import pathlib
 
 from lib.wikisplain import lead, links
 
 
-def generate_page(
-    title: str,
-    context: str = "solorepo",
-    definition: str = "",
-    synonyms: list[str] | None = None,
-    body: str = "",
-    see_also: list[str] | None = None,
-    date_str: str | None = None,
-    root: pathlib.Path | None = None,
-) -> str:
-    """Generate canonical MOS:LEAD markdown content for a wiki concept page (solorepo's DR-187)."""
+@dataclasses.dataclass
+class Page:
+    """What a concept page is generated from: its title, bounded context, one-sentence definition, synonyms, body, see-also links and minting date, each but the title optional."""
+
+    title: str
+    context: str = "solorepo"
+    definition: str = ""
+    synonyms: list[str] | None = None
+    body: str = ""
+    see_also: list[str] | None = None
+    date_str: str | None = None
+
+
+def generate_page(page: Page, root: pathlib.Path | None = None) -> str:
+    """Generate canonical MOS:LEAD markdown content for the wiki concept `page` (solorepo's DR-187)."""
+    title, context, body = page.title, page.context, page.body
+    see_also = page.see_also
     slug = lead.slugify(title)
-    syn_list = synonyms or []
-    minted = date_str or datetime.date.today().isoformat()
-    lead_sentence = lead.format_lead_sentence(title, definition)
+    syn_list = page.synonyms or []
+    minted = page.date_str or datetime.date.today().isoformat()
+    lead_sentence = lead.format_lead_sentence(title, page.definition)
 
     frontmatter_lines = [
         "---",
@@ -77,13 +84,8 @@ def generate_page(
     return "\n".join(sections)
 
 
-def verify_page(
-    content: str, rel_path: str, root: pathlib.Path | None = None
-) -> list[str]:
-    """Verify generated page content against MOS:LEAD and closed-world wikilink rules (solorepo's DR-187)."""
-    problems: list[str] = []
-    lines = content.splitlines()
-
+def past_frontmatter(lines: list[str]) -> int:
+    """The index of the first line after any YAML frontmatter block and the blank lines that follow it."""
     idx = 0
     if idx < len(lines) and lines[idx].strip() == "---":
         idx += 1
@@ -91,44 +93,38 @@ def verify_page(
             idx += 1
         if idx < len(lines) and lines[idx].strip() == "---":
             idx += 1
-
     while idx < len(lines) and not lines[idx].strip():
         idx += 1
+    return idx
 
+
+def lead_problems(lines: list[str], rel_path: str) -> tuple[list[str], str | None]:
+    """The MOS:LEAD problems of a page and its title: no top-level heading, nothing after it, no bold copular lead, or a lead whose subject is not the title."""
+    idx = past_frontmatter(lines)
     if idx >= len(lines) or not lines[idx].strip().startswith("# "):
-        problems.append(f"{rel_path}: must begin with a top-level heading (# <Title>)")
-        return problems
-
+        return [f"{rel_path}: must begin with a top-level heading (# <Title>)"], None
     title = lines[idx].strip()[2:].strip()
     title_clean = title.strip("`").strip()
-    self_slug = lead.slugify(title_clean)
     idx += 1
-
     while idx < len(lines) and not lines[idx].strip():
         idx += 1
-
     if idx >= len(lines):
-        problems.append(f"{rel_path}: empty wiki page after title")
-        return problems
-
-    lead_line = lines[idx].strip()
-    match = lead.LEAD_COPULA.match(lead_line)
+        return [f"{rel_path}: empty wiki page after title"], title_clean
+    match = lead.LEAD_COPULA.match(lines[idx].strip())
     if not match:
-        problems.append(
-            f"{rel_path}: first paragraph must open with bold copular definition "
-            f"(MOS:LEAD: '**Subject** is ...')"
-        )
-    else:
-        subject = (match.group("backticked") or match.group("plain") or "").strip()
-        subject_clean = subject.strip("`").strip()
-        if subject_clean.lower() != title_clean.lower():
-            problems.append(
-                f"{rel_path}: lead bold subject '{subject}' does not match title '{title}'"
-            )
+        return [f"{rel_path}: first paragraph must open with bold copular definition "
+                f"(MOS:LEAD: '**Subject** is ...')"], title_clean
+    subject = (match.group("backticked") or match.group("plain") or "").strip()
+    if subject.strip("`").strip().lower() != title_clean.lower():
+        return [f"{rel_path}: lead bold subject '{subject}' does not match title '{title}'"], title_clean
+    return [], title_clean
 
+
+def wikilink_problems(content: str, rel_path: str, self_slug: str, root: pathlib.Path | None) -> list[str]:
+    """Every wikilink outside a fence that names neither a known concept nor the page itself, `DR-` targets excepted."""
     known = links.extract_known_concepts(root)
-    unfenced = links.FENCED_RE.sub("", content)
-    for w_match in links.WIKILINK_RE.finditer(unfenced):
+    problems = []
+    for w_match in links.WIKILINK_RE.finditer(links.FENCED_RE.sub("", content)):
         raw = w_match.group(1).strip()
         if not raw:
             continue
@@ -137,8 +133,15 @@ def verify_page(
         if target_slug == self_slug or target.lower() == self_slug:
             continue
         if target_slug not in known and target.lower() not in known and not target.startswith("DR-"):
-            problems.append(
-                f"{rel_path}: wikilink [[{raw}]] resolves to neither wiki page nor minted concept"
-            )
-
+            problems.append(f"{rel_path}: wikilink [[{raw}]] resolves to neither wiki page nor minted concept")
     return problems
+
+
+def verify_page(
+    content: str, rel_path: str, root: pathlib.Path | None = None
+) -> list[str]:
+    """Verify generated page content against MOS:LEAD and closed-world wikilink rules (solorepo's DR-187)."""
+    problems, title_clean = lead_problems(content.splitlines(), rel_path)
+    if title_clean is None or (problems and "after title" in problems[0]):
+        return problems
+    return problems + wikilink_problems(content, rel_path, lead.slugify(title_clean), root)

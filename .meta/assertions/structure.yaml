@@ -362,6 +362,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-advance
     name: .meta/checks/probes/loops/advance.py
     path: .meta/checks/probes/loops/advance.py
+  - id: work:artifact/meta-checks-probes-loops-dispatch
+    name: .meta/checks/probes/loops/dispatch.py
+    path: .meta/checks/probes/loops/dispatch.py
   - id: work:artifact/meta-checks-probes-loops-handoff
     name: .meta/checks/probes/loops/handoff.py
     path: .meta/checks/probes/loops/handoff.py

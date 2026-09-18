@@ -86,6 +86,44 @@ def _build_wiki_files_map(file_list):
     return wiki_map
 
 
+def _rel(path: pathlib.Path) -> pathlib.Path:
+    """`path` relative to the repository root, or as given where it is not under it."""
+    try:
+        return path.relative_to(ROOT)
+    except ValueError:
+        return path
+
+
+def _slugged(text: str) -> str:
+    """`text` lowercased with spaces and underscores as hyphens, which is how the wiki map and the ontology lookup are keyed."""
+    return text.lower().replace(" ", "-").replace("_", "-")
+
+
+def _in_ontology(norm: str, norm_slug: str, ontology_lookup: set) -> bool:
+    """Whether the ontology answers `norm` or its slug, bare or under either CURIE prefix."""
+    return any(candidate in ontology_lookup
+               for prefix in ("", "work:", "ddd:")
+               for candidate in (prefix + norm, prefix + norm_slug))
+
+
+def _scoped_page(target: str, source_path: pathlib.Path, wiki_map: dict) -> bool:
+    """Whether a target naming its context, `<context>/<slug>`, is a page of that context or a file relative to the page that wrote it."""
+    ctx_part, slug_part = target.split("/", 1)
+    if (_slugged(ctx_part), _slugged(slug_part).removesuffix(".md")) in wiki_map:
+        return True
+    return (source_path.parent / f"{target}.md").is_file() or (ROOT / "wiki" / f"{target}.md").is_file()
+
+
+def _unscoped_page(norm_slug: str, source_path: pathlib.Path, wiki_map: dict) -> bool:
+    """Whether a bare slug is a page in the writing page's own context, the scaffold's, the wiki's root, or any context at all."""
+    rel = _rel(source_path)
+    if len(rel.parts) >= 3 and rel.parts[0] == "wiki" and (rel.parts[1].lower(), norm_slug) in wiki_map:
+        return True
+    if ("solorepo", norm_slug) in wiki_map or ("", norm_slug) in wiki_map:
+        return True
+    return any(s == norm_slug for (c, s) in wiki_map)
+
+
 def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict, ontology_lookup: set) -> bool:
     """Determines whether a wikilink target resolves to a wiki page or ontology entity.
 
@@ -101,46 +139,15 @@ def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict, o
     clean = target.strip()
     if not clean:
         return False
-
     norm = clean.lower()
-    norm_slug = norm.replace(" ", "-").replace("_", "-")
-    if norm in ontology_lookup or norm_slug in ontology_lookup:
+    norm_slug = _slugged(norm)
+    if _in_ontology(norm, norm_slug, ontology_lookup):
         return True
-
-    for prefix in ("work:", "ddd:"):
-        if (prefix + norm) in ontology_lookup or (prefix + norm_slug) in ontology_lookup:
-            return True
-
-    test_target = clean
-    if test_target.lower().startswith("wiki/"):
-        test_target = test_target[5:]
-
+    test_target = clean[5:] if clean.lower().startswith("wiki/") else clean
     if "/" in test_target:
-        ctx_part, slug_part = test_target.split("/", 1)
-        ctx_k = ctx_part.lower().replace(" ", "-").replace("_", "-")
-        slug_k = slug_part.lower().replace(" ", "-").replace("_", "-").removesuffix(".md")
-        if (ctx_k, slug_k) in wiki_map:
-            return True
-        rel_candidate = source_path.parent / f"{test_target}.md"
-        if rel_candidate.is_file() or (ROOT / "wiki" / f"{test_target}.md").is_file():
-            return True
-    else:
-        try:
-            rel = source_path.relative_to(ROOT)
-        except ValueError:
-            rel = source_path
-        if len(rel.parts) >= 3 and rel.parts[0] == "wiki":
-            current_ctx = rel.parts[1].lower()
-            if (current_ctx, norm_slug) in wiki_map:
-                return True
-        if ("solorepo", norm_slug) in wiki_map:
-            return True
-        if ("", norm_slug) in wiki_map:
-            return True
-        if any(s == norm_slug for (c, s) in wiki_map):
-            return True
+        return _scoped_page(test_target, source_path, wiki_map)
+    return _unscoped_page(norm_slug, source_path, wiki_map)
 
-    return False
 
 
 @check("wikilinks")
@@ -192,6 +199,54 @@ def wikilinks(index, md_files=None):
     return problems
 
 
+def _is_wiki_page(path: pathlib.Path, rel: pathlib.Path) -> bool:
+    """Whether `path` is a page the lead rule holds: markdown under `wiki/`, not a symlink, not a template, not an index README."""
+    return not (rel.suffix != ".md" or path.is_symlink() or "template" in rel.parts
+                or ".git" in rel.parts or len(rel.parts) < 2 or rel.parts[0] != "wiki"
+                or rel.name == "README.md")
+
+
+def _past_frontmatter(lines: list[str]) -> list[str]:
+    """`lines` from the first line after any leading blank lines and any YAML frontmatter block (solorepo's DR-187)."""
+    while lines and not lines[0]:
+        lines.pop(0)
+    if lines and lines[0] == "---":
+        lines.pop(0)
+        while lines and lines[0] != "---":
+            lines.pop(0)
+        if lines and lines[0] == "---":
+            lines.pop(0)
+        while lines and not lines[0]:
+            lines.pop(0)
+    return lines
+
+
+def _lead_problem(rel: pathlib.Path, lines: list[str], index, slug: str) -> str | None:
+    """Why a page's lead fails MOS:LEAD, or None: no title, nothing after it, no bold copular lead, a subject that is not the title, or one that disagrees with the minted label."""
+    if not lines or not lines[0].startswith("# "):
+        return f"{rel}: must begin with a top-level heading (# <Title>)"
+    title = lines[0][2:].strip()
+    title_clean = title.strip("`").strip()
+    rest = [line for line in lines[1:] if line]
+    if not rest:
+        return f"{rel}: empty wiki page after title"
+    match = LEAD_COPULA.match(rest[0])
+    if not match:
+        return (f"{rel}: first paragraph must open with bold copular definition "
+                f"(MOS:LEAD: '**Subject** is ...')")
+    subject = (match.group("backticked") or match.group("plain") or "").strip()
+    subject_clean = subject.strip("`").strip()
+    if subject_clean.lower() != title_clean.lower():
+        return f"{rel}: lead bold subject '{subject}' does not match title '{title}'"
+    concept_entry = (index.get(f"work:concept/{slug}") or index.get(f"work:discipline/{slug}")
+                     or index.get(f"ddd:concept/{slug}"))
+    if concept_entry:
+        pref = concept_entry[1].get("pref_label") or concept_entry[1].get("name")
+        if pref and pref.strip("`").strip().lower() != subject_clean.lower():
+            return f"{rel}: subject '{subject}' disagrees with minted label '{pref}' in {concept_entry[2]}"
+    return None
+
+
 @check("wiki lead paragraphs")
 def wiki_lead_paragraphs(index, md_files=None):
     """Every wiki page opens with a bold copular lead definition (MOS:LEAD) concurring with the vocabulary (A2, solorepo's DR-185, solorepo's DR-187).
@@ -204,86 +259,36 @@ def wiki_lead_paragraphs(index, md_files=None):
     """
     problems = []
     tree_files = md_files if md_files is not None else sources.tree()
-
     for path in tree_files:
-        try:
-            rel = path.relative_to(ROOT)
-        except ValueError:
-            rel = path
-        if (
-            rel.suffix != ".md"
-            or path.is_symlink()
-            or "template" in rel.parts
-            or ".git" in rel.parts
-            or len(rel.parts) < 2
-            or rel.parts[0] != "wiki"
-            or rel.name == "README.md"
-        ):
+        rel = _rel(path)
+        if not _is_wiki_page(path, rel):
             continue
         try:
             raw_text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
+        lines = _past_frontmatter([line.strip() for line in history.without_comments(raw_text).splitlines()])
+        problem = _lead_problem(rel, lines, index, path.stem.lower())
+        if problem:
+            problems.append(problem)
+    return problems
 
-        lines = [line.strip() for line in history.without_comments(raw_text).splitlines()]
-        while lines and not lines[0]:
-            lines.pop(0)
 
-        # Allow optional YAML frontmatter block (solorepo's DR-187)
-        if lines and lines[0] == "---":
-            lines.pop(0)
-            while lines and lines[0] != "---":
-                lines.pop(0)
-            if lines and lines[0] == "---":
-                lines.pop(0)
-            while lines and not lines[0]:
-                lines.pop(0)
-
-        if not lines or not lines[0].startswith("# "):
-            problems.append(f"{rel}: must begin with a top-level heading (# <Title>)")
-            continue
-
-        title = lines[0][2:].strip()
-        title_clean = title.strip("`").strip()
-
-        lines.pop(0)
-        while lines and not lines[0]:
-            lines.pop(0)
-
-        if not lines:
-            problems.append(f"{rel}: empty wiki page after title")
-            continue
-
-        lead_line = lines[0]
-        match = LEAD_COPULA.match(lead_line)
-        if not match:
-            problems.append(
-                f"{rel}: first paragraph must open with bold copular definition "
-                f"(MOS:LEAD: '**Subject** is ...')"
-            )
-            continue
-
-        subject = (match.group("backticked") or match.group("plain") or "").strip()
-        subject_clean = subject.strip("`").strip()
-        if subject_clean.lower() != title_clean.lower():
-            problems.append(
-                f"{rel}: lead bold subject '{subject}' does not match title '{title}'"
-            )
-            continue
-
-        slug = path.stem.lower()
-        concept_entry = (
-            index.get(f"work:concept/{slug}")
-            or index.get(f"work:discipline/{slug}")
-            or index.get(f"ddd:concept/{slug}")
-        )
-        if concept_entry:
-            pref = concept_entry[1].get("pref_label") or concept_entry[1].get("name")
-            if pref and pref.strip("`").strip().lower() != subject_clean.lower():
-                problems.append(
-                    f"{rel}: subject '{subject}' disagrees with minted label '{pref}' in {concept_entry[2]}"
-                )
-
+def _domain_vocabulary_problems(wiki_map: dict) -> list[str]:
+    """Every concept of `domain_vocabulary.yaml` with no page outside the scaffold's context, or one problem where the file will not parse or is not the shape a concept set has."""
+    domain_vocab = ROOT / ".meta" / "assertions" / "domain_vocabulary.yaml"
+    if not domain_vocab.is_file():
+        return []
+    problems = []
+    try:
+        data = yaml.safe_load(domain_vocab.read_text(encoding="utf-8")) or {}
+        for item in data.get("concept_set") or []:
+            item_id = str(item.get("id") or "")
+            slug = item_id.rsplit("/", 1)[-1].lower()
+            if not any(s == slug for (c, s) in wiki_map if c != "solorepo"):
+                problems.append(f"domain_vocabulary.yaml: concept '{item_id}' has no corresponding wiki page (solorepo's DR-190)")
+    except Exception as e:
+        problems.append(f"domain_vocabulary.yaml: failed to parse for parity check: {e}")
     return problems
 
 
@@ -302,51 +307,18 @@ def ubiquitous_language_wiki_parity(index, md_files=None):
     explains Disciplines as well as concepts, and a Discipline is not minted
     into the vocabulary.
     """
-    problems = []
     tree_files = md_files if md_files is not None else sources.tree()
     wiki_map = _build_wiki_files_map(tree_files)
-
-    domain_vocab = ROOT / ".meta" / "assertions" / "domain_vocabulary.yaml"
-    if domain_vocab.is_file():
-        try:
-            data = yaml.safe_load(domain_vocab.read_text(encoding="utf-8")) or {}
-            for item in data.get("concept_set") or []:
-                item_id = str(item.get("id") or "")
-                slug = item_id.rsplit("/", 1)[-1].lower()
-                found = any(s == slug for (c, s) in wiki_map if c != "solorepo")
-                if not found:
-                    problems.append(
-                        f"domain_vocabulary.yaml: concept '{item_id}' has no corresponding wiki page (solorepo's DR-190)"
-                    )
-        except Exception as e:
-            problems.append(f"domain_vocabulary.yaml: failed to parse for parity check: {e}")
-
+    problems = _domain_vocabulary_problems(wiki_map)
     for (ctx, slug), path in wiki_map.items():
-        if not ctx or ctx == "solorepo" or slug == "readme":
+        if not ctx or slug == "readme":
             continue
-        concept_ident = f"ddd:concept/{slug}"
-        work_ident = f"work:concept/{slug}"
-        if concept_ident not in index and work_ident not in index:
-            try:
-                rel = path.relative_to(ROOT)
-            except ValueError:
-                rel = path
-            problems.append(
-                f"{rel}: wiki page '{slug}' has no corresponding concept in vocabulary schema (solorepo's DR-190)"
-            )
-
-    for (ctx, slug), path in wiki_map.items():
-        if ctx != "solorepo" or slug == "readme":
-            continue
-        concept_ident = f"work:concept/{slug}"
-        discipline_ident = f"work:discipline/{slug}"
-        if concept_ident not in index and discipline_ident not in index:
-            try:
-                rel = path.relative_to(ROOT)
-            except ValueError:
-                rel = path
-            problems.append(
-                f"{rel}: solorepo wiki page '{slug}' has no corresponding concept or discipline in index (solorepo's DR-190)"
-            )
-
+        if ctx == "solorepo":
+            minted = (f"work:concept/{slug}", f"work:discipline/{slug}")
+            missing = f"solorepo wiki page '{slug}' has no corresponding concept or discipline in index"
+        else:
+            minted = (f"ddd:concept/{slug}", f"work:concept/{slug}")
+            missing = f"wiki page '{slug}' has no corresponding concept in vocabulary schema"
+        if not any(ident in index for ident in minted):
+            problems.append(f"{_rel(path)}: {missing} (solorepo's DR-190)")
     return problems

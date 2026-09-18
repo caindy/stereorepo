@@ -39,4 +39,4 @@ def main(description):
             deep = max(0, int(args.deep))
         except ValueError:
             p.error(f"invalid --deep value: {args.deep!r}")
-    screen.screen(names, args.limit, deep, args.show, args.steps, stratify=args.by)
+    screen.screen(names, screen.Window(args.limit, deep, args.by), args.show, args.steps)

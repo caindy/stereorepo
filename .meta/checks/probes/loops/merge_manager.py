@@ -3,6 +3,8 @@
 One module for one probe, so a history log's receipt names the file holding it (solorepo's DR-209).
 """
 
+from typing import Any
+
 import citations
 from collect import META, check
 from probes.harness import (
@@ -38,45 +40,58 @@ def merge_manager_probes():
     """
     channel, _, programs = load_channel()
     move = programs["move"]
+    return (_semaphores(move) + _rerun_reads_green(move) + _threads_fail_closed(channel, move)
+            + _eligible(move) + _end_to_end(channel, move) + _blockers(move))
+
+
+REVIEWER = "owner-repo-reviewer"
+GREEN = [{"conclusion": "SUCCESS"}]
+APPROVED = [{"author": {"login": REVIEWER}, "state": "APPROVED"}]
+
+
+def _evaluated(move: Any, pull: Any) -> Any:
+    """`evaluate_pr` of `pull` as the reviewer's account over `owner/repo`."""
+    return move.evaluate_pr(pull, REVIEWER, "owner", "repo")
+
+
+def _semaphores(move: Any) -> list[str]:
+    """Each semaphore refuses in turn: a draft, then the eight shapes of `refused`."""
     problems = []
-    reviewer = "owner-repo-reviewer"
-
-    def evaluated(pull):
-        """`evaluate_pr` of `pull` as the reviewer's account over `owner/repo`."""
-        return move.evaluate_pr(pull, reviewer, "owner", "repo")
-
-    ok, reasons = evaluated({"number": 1, "isDraft": True})
+    ok, reasons = _evaluated(move, {"number": 1, "isDraft": True})
     if ok or "draft" not in reasons:
         problems.append("merge manager: draft PR was reported as eligible")
 
-    green = [{"conclusion": "SUCCESS"}]
-    approved = [{"author": {"login": reviewer}, "state": "APPROVED"}]
     refused = (
         ("PR with empty checks rollup", "checks pending",
          {"mergeable": "MERGEABLE", "statusCheckRollup": []}),
         ("PR with failing check", "checks failing",
          {"mergeable": "MERGEABLE", "statusCheckRollup": [{"name": "gate", "conclusion": "FAILURE"}]}),
         ("conflicting PR", "conflicts",
-         {"mergeable": "CONFLICTING", "statusCheckRollup": green}),
+         {"mergeable": "CONFLICTING", "statusCheckRollup": GREEN}),
         ("behind PR", "behind",
-         {"mergeable": "MERGEABLE", "mergeStateStatus": "BEHIND", "statusCheckRollup": green}),
+         {"mergeable": "MERGEABLE", "mergeStateStatus": "BEHIND", "statusCheckRollup": GREEN}),
         ("PR with changes requested", "changes requested",
-         {"mergeable": "MERGEABLE", "statusCheckRollup": green,
-          "latestReviews": [{"author": {"login": reviewer}, "state": "CHANGES_REQUESTED"}]}),
+         {"mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+          "latestReviews": [{"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"}]}),
         ("unreviewed PR", "no review",
-         {"mergeable": "MERGEABLE", "statusCheckRollup": green, "latestReviews": []}),
+         {"mergeable": "MERGEABLE", "statusCheckRollup": GREEN, "latestReviews": []}),
         ("PR with unresolved threads", "unresolved",
-         {"mergeable": "MERGEABLE", "statusCheckRollup": green, "latestReviews": approved,
+         {"mergeable": "MERGEABLE", "statusCheckRollup": GREEN, "latestReviews": APPROVED,
           "reviewThreads": [{"isResolved": False}]}),
         ("PR targeting non-main branch", "base is feature-branch, not main",
-         {"mergeable": "MERGEABLE", "baseRefName": "feature-branch", "statusCheckRollup": green,
-          "latestReviews": approved, "reviewThreads": [{"isResolved": True}]}),
+         {"mergeable": "MERGEABLE", "baseRefName": "feature-branch", "statusCheckRollup": GREEN,
+          "latestReviews": APPROVED, "reviewThreads": [{"isResolved": True}]}),
     )
     for case, phrase, pull in refused:
-        ok, reasons = evaluated({"number": 1, "isDraft": False, **pull})
+        ok, reasons = _evaluated(move, {"number": 1, "isDraft": False, **pull})
         if ok or not any(phrase in r for r in reasons):
             problems.append(f"merge manager: {case} was reported as eligible")
+    return problems
 
+
+def _rerun_reads_green(move: Any) -> list[str]:
+    """A check run that failed and then passed under the same name is green to `check_green` and `check_pr.green` alike, a year-one `completedAt` counting as none (solorepo's DR-167, solorepo's #316)."""
+    problems = []
     rerun = [
         {"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z",
          "completedAt": "2026-09-11T12:05:00Z"},
@@ -95,7 +110,12 @@ def merge_manager_probes():
         problems.append("merge manager: check_green did not handle 0001-01-01 completedAt timestamp")
     if not citations.load_check_pr().green({"statusCheckRollup": rerun}):
         problems.append("check_pr.green did not deduplicate check runs")
+    return problems
 
+
+def _threads_fail_closed(channel: Any, move: Any) -> list[str]:
+    """`check_threads` fails closed when GraphQL raises."""
+    problems = []
     def broken_graphql(*args, **kwargs):
         """A GraphQL that raises, whatever it is asked."""
         raise RuntimeError("GraphQL outage")
@@ -104,28 +124,37 @@ def merge_manager_probes():
         ok_th, msg_th = move.check_threads({"number": 99}, "owner", "repo")
     if ok_th or "could not read conversations" not in msg_th:
         problems.append(f"merge manager: check_threads did not fail closed on exception: {msg_th}")
+    return problems
 
-    ok, reasons = evaluated({"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
-                             "baseRefName": "main", "statusCheckRollup": green,
-                             "latestReviews": approved, "reviewThreads": [{"isResolved": True}]})
+
+def _eligible(move: Any) -> list[str]:
+    """With every semaphore satisfied the pull request is eligible."""
+    problems = []
+    ok, reasons = _evaluated(move, {"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
+                             "baseRefName": "main", "statusCheckRollup": GREEN,
+                             "latestReviews": APPROVED, "reviewThreads": [{"isResolved": True}]})
     if not ok or reasons != ["eligible"]:
         problems.append(f"merge manager: eligible PR failed evaluation: {reasons}")
+    return problems
 
+
+def _fixtures() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The four pull requests and two Issues the end-to-end run answers GitHub from: a stack base, a dependent that waits on it, an unreviewed one and a layer based on the first."""
     pulls = [
         {"number": 10, "title": "stack base PR", "headRefName": "branch-a", "baseRefName": "main",
-         "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": green,
-         "latestReviews": approved, "reviewThreads": [{"isResolved": True}],
+         "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+         "latestReviews": APPROVED, "reviewThreads": [{"isResolved": True}],
          "body": "implements base", "additions": 100, "deletions": 20},
         {"number": 11, "title": "dependent PR", "headRefName": "branch-b", "baseRefName": "main",
-         "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": green,
-         "latestReviews": approved, "reviewThreads": [{"isResolved": True}],
+         "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+         "latestReviews": APPROVED, "reviewThreads": [{"isResolved": True}],
          "body": f"**Waits on.** #{'10'}", "additions": 500, "deletions": 100},
         {"number": 12, "title": "unreviewed PR", "headRefName": "branch-c", "baseRefName": "main",
-         "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": green,
+         "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
          "latestReviews": [], "body": ""},
         {"number": 13, "title": "layered PR with non-main base", "headRefName": "branch-d",
          "baseRefName": "branch-a", "isDraft": False, "mergeable": "MERGEABLE",
-         "statusCheckRollup": green, "latestReviews": approved,
+         "statusCheckRollup": GREEN, "latestReviews": APPROVED,
          "reviewThreads": [{"isResolved": True}], "body": ""},
     ]
     issues = [
@@ -133,47 +162,53 @@ def merge_manager_probes():
         {"number": 51, "body": "**Waits on.** Nothing", "title": "natively blocked issue",
          "blockedBy": {"nodes": [{"number": 10}]}},
     ]
+    return pulls, issues
 
-    class ManagerFake:
-        """As much of GitHub as `merge_manager` asks about, over `owner/repo`: the four pull requests, the two Issues, every review thread resolved, and the merges asked for, recorded in `merged`.
 
-        `pr view` answers `MERGED` once anything has been merged, `api
-        .../pulls/10` answers a `stack` object so the winner is merged as a
-        stack, and any other call answers an empty dict.
-        """
+class ManagerFake:
+    """As much of GitHub as `merge_manager` asks about, over `owner/repo`: the `pulls` and `issues` given, every review thread resolved, and the merges asked for, recorded in `merged`.
 
-        def __init__(self):
-            self.merged = []
+    `pr view` answers `MERGED` once anything has been merged, `api
+    .../pulls/10` answers a `stack` object so the winner is merged as a
+    stack, and any other call answers an empty dict.
+    """
 
-        def gh(self, *args, parse=True):
-            """One `gh` call, answered as the class docstring says."""
-            head = args[:2]
-            if head == ("repo", "view") or args[0] == "repo":
-                return {"nameWithOwner": "owner/repo", "deleteBranchOnMerge": True}
-            if head == ("pr", "list"):
-                return list(pulls)
-            if head == ("issue", "list"):
-                return list(issues)
-            if head in (("pr", "merge"), ("stack", "merge")):
-                self.merged.append(args[2])
-                return {}
-            if head == ("pr", "view"):
-                state = "MERGED" if self.merged else "OPEN"
-                return {"number": int(args[2]), "title": "merged pr", "state": state,
-                        "mergeCommit": {"oid": "sha1234"}, "headRefName": "branch"}
-            if len(args) >= 2 and args[0] == "api" and str(args[1]).endswith("/pulls/10"):
-                return {"stack": {"id": "stack-1"}}
+    def __init__(self, pulls, issues):
+        self.pulls, self.issues, self.merged = pulls, issues, []
+
+    def gh(self, *args, parse=True):
+        """One `gh` call, answered as the class docstring says."""
+        head = args[:2]
+        if head == ("repo", "view") or args[0] == "repo":
+            return {"nameWithOwner": "owner/repo", "deleteBranchOnMerge": True}
+        if head == ("pr", "list"):
+            return list(self.pulls)
+        if head == ("issue", "list"):
+            return list(self.issues)
+        if head in (("pr", "merge"), ("stack", "merge")):
+            self.merged.append(args[2])
             return {}
+        if head == ("pr", "view"):
+            state = "MERGED" if self.merged else "OPEN"
+            return {"number": int(args[2]), "title": "merged pr", "state": state,
+                    "mergeCommit": {"oid": "sha1234"}, "headRefName": "branch"}
+        if len(args) >= 2 and args[0] == "api" and str(args[1]).endswith("/pulls/10"):
+            return {"stack": {"id": "stack-1"}}
+        return {}
 
-        def repo(self):
-            """`owner/repo`."""
-            return "owner/repo"
+    def repo(self):
+        """`owner/repo`."""
+        return "owner/repo"
 
-        def graphql(self, query, **variables):
-            """One resolved review thread, whatever is asked."""
-            return {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": [{"isResolved": True}]}}}}}
+    def graphql(self, query, **variables):
+        """One resolved review thread, whatever is asked."""
+        return {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": [{"isResolved": True}]}}}}}
 
-    fake = ManagerFake()
+
+def _end_to_end(channel: Any, move: Any) -> list[str]:
+    """The base is chosen and the dependent deferred; a dry run says so and merges nothing, and the real run merges the base and nothing else."""
+    problems = []
+    fake = ManagerFake(*_fixtures())
     with stood_in(channel, gh=fake.gh, repo=fake.repo, graphql=fake.graphql):
         text = outcome(lambda: move.merge_manager(dry_run=True)).out
         if f"chosen: #{'10'}" not in text:
@@ -190,7 +225,12 @@ def merge_manager_probes():
             problems.append(f"merge manager: did not attempt merging #{'10'}, got:\n{text}")
         if fake.merged != ["10"]:
             problems.append(f"merge manager: expected merge of #{'10'}, got: {fake.merged}")
+    return problems
 
+
+def _blockers(move: Any) -> list[str]:
+    """`issue_blockers` and `next.waits_on` prefer GitHub's native `blockedBy` over the body's prose, fall back to it, and return a blocker that is not an Issue as text (solorepo's DR-170)."""
+    problems = []
     native = {"number": 1, "body": f"**Waits on.** #{'99'}", "blockedBy": {"nodes": [{"number": 42}]}}
     if move.issue_blockers(native) != [42]:
         problems.append(f"issue_blockers did not prefer native blockedBy: {move.issue_blockers(native)}")

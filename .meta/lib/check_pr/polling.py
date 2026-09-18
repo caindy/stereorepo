@@ -64,6 +64,97 @@ def snapshot(ref):
             pr.get("mergeable") or "UNKNOWN")
 
 
+def where_of(thread):
+    """The path and line a thread is anchored to, or `the pull request` for one on the conversation."""
+    return (thread["path"] or "the pull request") + (f":{thread['line']}" if thread.get("line") else "")
+
+
+def new_comments(comments, before):
+    """Print each comment not in `before` that is not this Actor's own; the actionable line for each."""
+    actionable = []
+    for cid in comments.keys() - before.keys():
+        c = comments[cid]
+        if not review.mine(c["body"]):
+            print(f"comment by {c['author']['login']}: {review.said(c['body'])}", flush=True)
+            actionable.append(f"comment by {c['author']['login']}")
+    return actionable
+
+
+def new_reviews(reviews, before):
+    """Print each review not in `before` that is not this Actor's own; the actionable line for each."""
+    actionable = []
+    for rid in reviews.keys() - before.keys():
+        r = reviews[rid]
+        if not review.mine(r.get("body", "")):
+            print(f"review by {r['author']['login']}: {r['state']} {review.said(r.get('body', ''))}",
+                  flush=True)
+            actionable.append(f"review by {r['author']['login']} ({r['state']})")
+    return actionable
+
+
+def new_threads(threads_, before):
+    """Print each thread not in `before` with its opening comment; the actionable line for each."""
+    actionable = []
+    for tid in threads_.keys() - before.keys():
+        t = threads_[tid]
+        nodes = t["comments"]["nodes"]
+        first_author = (nodes[0]["author"] or {}).get("login", "someone") if nodes else "someone"
+        first_body = nodes[0]["body"] if nodes else ""
+        print(f"new thread on {where_of(t)} by {first_author}: {review.said(first_body)}", flush=True)
+        actionable.append(f"new thread on {where_of(t)}")
+    return actionable
+
+
+def thread_activity(threads_, before):
+    """Print each thread that grew by a comment not this Actor's own, and each thread resolved since `before`; the actionable line for each comment."""
+    actionable = []
+    for tid, t in threads_.items():
+        was = before.get(tid)
+        nodes = t["comments"]["nodes"]
+        was_len = len(was["comments"]["nodes"]) if was else 0
+        if was is None or len(nodes) > was_len:
+            last = nodes[-1] if nodes else None
+            if last and not review.mine(last["body"]):
+                who = (last["author"] or {}).get("login", "someone")
+                print(f"thread {tid} on {where_of(t)} by {who}: {review.said(last['body'])}", flush=True)
+                actionable.append(f"thread comment by {who}")
+        if was is not None and t["isResolved"] and not was["isResolved"]:
+            by = (t.get("resolvedBy") or {}).get("login", "someone")
+            print(f"thread {tid} on {where_of(t)} resolved by {by}", flush=True)
+    return actionable
+
+
+def check_changes(checks, before):
+    """Print each check whose value changed or that ran again since `before`; the actionable line for each that failed."""
+    actionable = []
+    for name, (value, run) in checks.items():
+        was = before.get(name)
+        is_failure = value not in GREEN and value not in UNCONCLUDED and value != "CANCELLED"
+        if was is None or was[0] != value:
+            print(f"check {name}: {value}", flush=True)
+        elif was[1] != run:
+            print(f"check {name}: {value} again, from a re-run", flush=True)
+        else:
+            continue
+        if is_failure:
+            actionable.append(f"check {name} ({value})")
+    return actionable
+
+
+def changes_since(current, previous, merges):
+    """Print every change from `previous` to `current` and answer the actionable lines among them; `merges` is the last mergeability GitHub answered."""
+    _, _, comments, reviews, threads_, checks, mergeable = current
+    _, _, p_comments, p_reviews, p_threads, p_checks, _ = previous
+    actionable = (new_comments(comments, p_comments) + new_reviews(reviews, p_reviews)
+                  + new_threads(threads_, p_threads) + thread_activity(threads_, p_threads)
+                  + check_changes(checks, p_checks))
+    if mergeable != "UNKNOWN" and mergeable != merges:
+        print(f"mergeable: {mergeable}" + (
+            " — GitHub builds no merge ref for a branch that conflicts, so no review "
+            "of this head can run" if mergeable == "CONFLICTING" else ""), flush=True)
+    return actionable
+
+
 def watch(ref, every=60):
     """Monitors a pull request for changes, printing events and exiting on actionable signals.
 
@@ -95,62 +186,13 @@ def watch(ref, every=60):
             print(f"? poll skipped: {e}", file=sys.stderr)
             time.sleep(every)
             continue
-        number, state, comments, reviews, threads_, checks, mergeable = current
+        number, state, _, _, threads_, checks, mergeable = current
         if previous is None:
             owed = len(review.unaddressed(list(threads_.values())))
             print(f"watching #{number}: {owed} thread(s) owed an answer, mergeable={mergeable}, "
                   + ", ".join(f"{k}={v}" for k, (v, _) in checks.items()), flush=True)
         else:
-            _, _, p_comments, p_reviews, p_threads, p_checks, _ = previous
-            actionable = []
-            for cid in comments.keys() - p_comments.keys():
-                c = comments[cid]
-                if not review.mine(c["body"]):
-                    print(f"comment by {c['author']['login']}: {review.said(c['body'])}", flush=True)
-                    actionable.append(f"comment by {c['author']['login']}")
-            for rid in reviews.keys() - p_reviews.keys():
-                r = reviews[rid]
-                if not review.mine(r.get("body", "")):
-                    print(f"review by {r['author']['login']}: {r['state']} {review.said(r.get('body', ''))}",
-                          flush=True)
-                    actionable.append(f"review by {r['author']['login']} ({r['state']})")
-            for tid in threads_.keys() - p_threads.keys():
-                t = threads_[tid]
-                where = (t["path"] or "the pull request") + (f":{t['line']}" if t.get("line") else "")
-                first_author = (t["comments"]["nodes"][0]["author"] or {}).get("login", "someone") if t["comments"]["nodes"] else "someone"
-                first_body = t["comments"]["nodes"][0]["body"] if t["comments"]["nodes"] else ""
-                print(f"new thread on {where} by {first_author}: {review.said(first_body)}", flush=True)
-                actionable.append(f"new thread on {where}")
-            for tid, t in threads_.items():
-                where = (t["path"] or "the pull request") + (f":{t['line']}" if t.get("line") else "")
-                before = p_threads.get(tid)
-                nodes = t["comments"]["nodes"]
-                before_len = len(before["comments"]["nodes"]) if before else 0
-                if before is None or len(nodes) > before_len:
-                    last = nodes[-1] if nodes else None
-                    if last and not review.mine(last["body"]):
-                        who = (last["author"] or {}).get("login", "someone")
-                        print(f"thread {tid} on {where} by {who}: {review.said(last['body'])}", flush=True)
-                        actionable.append(f"thread comment by {who}")
-                if before is not None and t["isResolved"] and not before["isResolved"]:
-                    by = (t.get("resolvedBy") or {}).get("login", "someone")
-                    print(f"thread {tid} on {where} resolved by {by}", flush=True)
-            for name, (value, run) in checks.items():
-                before = p_checks.get(name)
-                is_failure = (value not in GREEN and value not in UNCONCLUDED
-                              and value != "CANCELLED")
-                if before is None or before[0] != value:
-                    print(f"check {name}: {value}", flush=True)
-                    if is_failure:
-                        actionable.append(f"check {name} ({value})")
-                elif before[1] != run:
-                    print(f"check {name}: {value} again, from a re-run", flush=True)
-                    if is_failure:
-                        actionable.append(f"check {name} ({value})")
-            if mergeable != "UNKNOWN" and mergeable != merges:
-                print(f"mergeable: {mergeable}" + (
-                    " — GitHub builds no merge ref for a branch that conflicts, so no review "
-                    "of this head can run" if mergeable == "CONFLICTING" else ""), flush=True)
+            actionable = changes_since(current, previous, merges)
             if actionable:
                 print(f"watch exiting on #{number}: " + ", ".join(actionable), flush=True)
                 return

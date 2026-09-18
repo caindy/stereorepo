@@ -3,6 +3,7 @@
 One module for one probe, so a history log's receipt names the file holding it (solorepo's DR-209).
 """
 import datetime
+from typing import Any
 
 import citations
 from collect import check
@@ -67,9 +68,21 @@ def handoff_probes():
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    problems = []
     move.MERGEABILITY = (3, 0)
+    check_pr = citations.load_check_pr()
+    return (_request_review_cases(channel, move) + _watch_cases(check_pr)
+            + _unheld_armed_cases(check_pr) + _unheld_idle_cases(check_pr))
 
+
+def _pull_of(number: Any, title: Any, **fields) -> dict[str, Any]:
+    """A pull request on the loop's branch for `number`, based on trunk, not a draft, with no review requested, and `fields` over that."""
+    return {"number": number, "title": title, "headRefName": f"claude/issue-{number}",
+            "baseRefName": "main", "isDraft": False, "reviewRequests": [], **fields}
+
+
+def _request_review_cases(channel: Any, move: Any) -> list[str]:
+    """`request-review` refused on a conflicting branch, made on a mergeable one, and made after waiting out `UNKNOWN`."""
+    problems = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "base": "claude/issue-6",
                            "mergeable": "CONFLICTING"}})
     said = run_verb(channel, fake, lambda: move.request_review("7", "reviewer"))
@@ -95,9 +108,12 @@ def handoff_probes():
                         f"GitHub holding {fake.pulls['9'].get('requested')!r}")
     if said:
         problems.append(f"request-review: waiting out an `UNKNOWN` exited with {said!r}")
+    return problems
 
-    check_pr = citations.load_check_pr()
 
+def _watch_cases(check_pr: Any) -> list[str]:
+    """`--watch` reporting the one change that produces no event: a branch going conflicting, headed by what it started on."""
+    problems = []
     def watched(polls):
         """What `--watch` printed on pull request 7, GitHub answering one poll at a time from `polls`."""
         with stood_in(check_pr.github, gh=WatchGitHub(polls)):
@@ -121,13 +137,13 @@ def handoff_probes():
     if len(changes) != 1 or "CONFLICTING" not in changes[0]:
         problems.append(f"watch: a watch headed `UNKNOWN` reported {changes!r}, and the answer "
                         "that followed is the only one it could have said")
+    return problems
 
-    def pull_of(number, title, **fields):
-        """A pull request on the loop's branch for `number`, based on trunk, not a draft, with no review requested, and `fields` over that."""
-        return {"number": number, "title": title, "headRefName": f"claude/issue-{number}",
-                "baseRefName": "main", "isDraft": False, "reviewRequests": [], **fields}
 
-    armed = pull_of(10, "Stuck armed PR", autoMergeRequest={"enabledAt": "2026-09-11"},
+def _unheld_armed_cases(check_pr: Any) -> list[str]:
+    """`unheld` over an armed pull request: reported with unresolved threads, silent without them, and silent while it is recent."""
+    problems = []
+    armed = _pull_of(10, "Stuck armed PR", autoMergeRequest={"enabledAt": "2026-09-11"},
                     mergeable="MERGEABLE")
     with stood_in(check_pr.github, threads=lambda n: [{"id": "t1", "isResolved": False}]):
         owed = check_pr.unheld([armed], minutes=30, clean={10})
@@ -144,12 +160,18 @@ def handoff_probes():
                                       unresolved={10: [{"id": "t1", "isResolved": False}]})
         if recent_owed:
             problems.append(f"unheld: recent armed PR reported {recent_owed!r} instead of passing in silence")
+    return problems
 
+
+def _unheld_idle_cases(check_pr: Any) -> list[str]:
+    """`unheld` over each shape of idle pull request a webhook should have carried, the Challenge's labels answered by a `gh` stood in."""
+    problems = []
+    with stood_in(check_pr.github, threads=lambda n: [{"id": "t1", "isResolved": True}]):
         reviewer_name = check_pr.role_login("reviewer")
         approved = [{"author": {"login": reviewer_name}, "state": "APPROVED"}]
         changes_requested = [{"author": {"login": reviewer_name}, "state": "CHANGES_REQUESTED"}]
         approved_conflicting = check_pr.unheld(
-            [pull_of(11, "Approved conflicting PR", mergeable="CONFLICTING", latestReviews=approved)],
+            [_pull_of(11, "Approved conflicting PR", mergeable="CONFLICTING", latestReviews=approved)],
             minutes=30, clean={11})
         if len(approved_conflicting) != 1 or "approved, on a branch that conflicts" not in approved_conflicting[0]:
             problems.append(f"unheld: approved conflicting PR reported {approved_conflicting!r}")
@@ -160,38 +182,38 @@ def handoff_probes():
         idle = (
             ("changes requested PR", "medium", set(),
              ("changes requested by reviewer, and unanswered",),
-             pull_of(12, "Changes requested PR", mergeable="MERGEABLE", statusCheckRollup=gate_failed,
+             _pull_of(12, "Changes requested PR", mergeable="MERGEABLE", statusCheckRollup=gate_failed,
                      latestReviews=changes_requested, updatedAt=old_time)),
             ("green PR with human challenge", "human", {13},
              (f"while #{'13'} is at human",),
-             pull_of(13, "Human challenge PR", mergeable="MERGEABLE", statusCheckRollup=gate_passed,
+             _pull_of(13, "Human challenge PR", mergeable="MERGEABLE", statusCheckRollup=gate_passed,
                      updatedAt=old_time)),
             ("green conflicting PR with human challenge", "human", {14},
              ("rebase claude/issue-14 onto main",),
-             pull_of(14, "Human conflicting PR", mergeable="CONFLICTING", statusCheckRollup=gate_passed,
+             _pull_of(14, "Human conflicting PR", mergeable="CONFLICTING", statusCheckRollup=gate_passed,
                      updatedAt=old_time)),
             ("green PR with hard challenge", "hard", {15},
              (f"while #{'15'} is at hard",),
-             pull_of(15, "Hard challenge PR", mergeable="MERGEABLE", statusCheckRollup=gate_passed,
+             _pull_of(15, "Hard challenge PR", mergeable="MERGEABLE", statusCheckRollup=gate_passed,
                      updatedAt=old_time)),
             ("approved failing loop PR", "medium", set(),
              ("approved, with failing checks", ".meta/say/move dispatch 16"),
-             pull_of(16, "Approved failing loop PR", mergeable="MERGEABLE", statusCheckRollup=gate_failed,
+             _pull_of(16, "Approved failing loop PR", mergeable="MERGEABLE", statusCheckRollup=gate_failed,
                      latestReviews=approved, updatedAt=old_time)),
             ("approved failing human PR", "hard", set(),
              ("approved, with failing checks", "fix the failing checks"),
-             pull_of(17, "Approved failing human PR", mergeable="MERGEABLE", statusCheckRollup=gate_failed,
+             _pull_of(17, "Approved failing human PR", mergeable="MERGEABLE", statusCheckRollup=gate_failed,
                      latestReviews=approved, updatedAt=old_time)),
             ("stranded reviewer PR", "medium", set(),
              ("reviewer check failed without a verdict", ".meta/say/move request-review 18"),
-             pull_of(18, "Stranded reviewer PR", mergeable="MERGEABLE",
+             _pull_of(18, "Stranded reviewer PR", mergeable="MERGEABLE",
                      reviewRequests=[{"login": reviewer_name}],
                      statusCheckRollup=[{"name": "reviewer", "conclusion": "FAILURE",
                                          "startedAt": "2026-09-11T12:00:00Z"}],
                      updatedAt=old_time)),
             ("approved conflicting hard PR", "hard", set(),
              (f"Challenge #{'19'} is hard so the loop stands down",),
-             pull_of(19, "Approved conflicting hard PR", mergeable="CONFLICTING",
+             _pull_of(19, "Approved conflicting hard PR", mergeable="CONFLICTING",
                      latestReviews=approved, updatedAt=old_time)),
         )
         for case, level, clean, phrases, pull in idle:

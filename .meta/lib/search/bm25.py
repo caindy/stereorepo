@@ -1,6 +1,7 @@
 """The Okapi BM25 index: the tokens a text yields, the strings an assertion holds, and a result with its score.
 """
 import collections
+import dataclasses
 import math
 import re
 from typing import Any
@@ -35,27 +36,20 @@ def extract_strings(val: Any) -> list[str]:
     return []
 
 
+@dataclasses.dataclass
 class SearchResult:
-    """A scored document match from the search index."""
+    """A scored document match from the search index; `full_snippet` is the whole text where `snippet` was cut short."""
 
-    def __init__(
-        self,
-        identifier: str,
-        title: str,
-        kind: str,
-        source_file: str,
-        score: float,
-        snippet: str,
-        full_snippet: str = "",
-    ) -> None:
-        """Initialize a search result."""
-        self.identifier = identifier
-        self.title = title
-        self.kind = kind
-        self.source_file = source_file
-        self.score = score
-        self.snippet = snippet
-        self.full_snippet = full_snippet or snippet
+    identifier: str
+    title: str
+    kind: str
+    source_file: str
+    score: float
+    snippet: str
+    full_snippet: str = ""
+
+    def __post_init__(self) -> None:
+        self.full_snippet = self.full_snippet or self.snippet
 
     def to_dict(self) -> dict[str, Any]:
         """Convert result to a dictionary for JSON output."""

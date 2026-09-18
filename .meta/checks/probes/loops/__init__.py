@@ -17,6 +17,7 @@ the harness's, and the gate over assertions takes no import from a test suite
 (solorepo's DR-150).
 """
 import probes.loops.advance  # noqa: I001  # reason: registration order is deliberate
+import probes.loops.dispatch
 import probes.loops.handoff
 import probes.loops.enacted
 import probes.loops.stop

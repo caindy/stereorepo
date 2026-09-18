@@ -8,6 +8,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-checks-probes-loops-advance
+      - work:artifact/meta-checks-probes-loops-dispatch
       - work:artifact/meta-checks-probes-loops-handoff
       - work:artifact/meta-checks-probes-loops-enacted
       - work:artifact/meta-checks-probes-loops-stop

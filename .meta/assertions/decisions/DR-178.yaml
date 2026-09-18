@@ -10,8 +10,8 @@ decisions:
       - work:artifact/meta-check-pr
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-lib-check-pr-sweep
-      - work:artifact/meta-checks-probes-loops-advance
       - work:artifact/meta-checks-probes-loops-handoff
+      - work:artifact/meta-checks-probes-loops-dispatch
     context: >-
       Operational analysis of stalled pull requests (#324, #330, #331) revealed three
       structural deadlock patterns that silently halted loop automation across webhook boundaries:

@@ -69,60 +69,54 @@ def meta_history_orphans():
     return Passed(f"{counted} history files under .meta/, each named by companion module docstring")
 
 
+def receipt_symbols(tree: ast.Module) -> set[str]:
+    """The names a receipt may cite in a parsed module: every top-level function and class, a class's methods as `Class.method`, and the label a decorator such as `@check` gives."""
+    symbols = set()
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        symbols.add(node.name)
+        if isinstance(node, ast.ClassDef):
+            symbols.update(f"{node.name}.{sub.name}" for sub in node.body
+                           if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)))
+        for dec in node.decorator_list:
+            if isinstance(dec, ast.Call) and dec.args and isinstance(dec.args[0], ast.Constant):
+                symbols.add(str(dec.args[0].value))
+    return symbols
+
+
+def receipt_problem(receipt: str | None) -> str | None:
+    """Why `receipt` names nothing: no receipt, not `<path>::<symbol>`, a file that is not there or does not parse, or a symbol the file does not define; None where it resolves."""
+    if not receipt:
+        return "names no receipt"
+    if "::" not in receipt:
+        return f"receipt `{receipt}` does not have <path>::<symbol> format"
+    path_str, symbol = receipt.split("::", 1)
+    target = (ROOT / path_str).resolve() if (ROOT / path_str).is_file() else (META / path_str).resolve()
+    if not target.is_file():
+        return f"receipt `{receipt}` file '{path_str}' does not exist"
+    try:
+        tree = ast.parse(target.read_text(encoding="utf-8"))
+    except SyntaxError as e:
+        return f"receipt `{receipt}` failed to parse '{path_str}': {e}"
+    if symbol not in receipt_symbols(tree):
+        return f"names `{receipt}`, which does not exist in {path_str}"
+    return None
+
+
 @check("meta history receipts")
 def meta_history_receipts():
     """Every entry in a .meta/ history log names a check or probe that exists (solorepo's DR-171)."""
     problems = []
     logs = 0
     entries = 0
-
     for history in sorted(META.rglob("*.history.md")):
         logs += 1
-        text = history.read_text(encoding="utf-8")
-        for title, receipt in history_entries_of(text):
+        for title, receipt in history_entries_of(history.read_text(encoding="utf-8")):
             entries += 1
-            if not receipt:
-                problems.append(f"{history.relative_to(META)}: '{title}' names no receipt")
-                continue
-            if "::" not in receipt:
-                problems.append(
-                    f"{history.relative_to(META)}: '{title}' receipt `{receipt}` "
-                    "does not have <path>::<symbol> format"
-                )
-                continue
-            path_str, symbol = receipt.split("::", 1)
-            target = (ROOT / path_str).resolve() if (ROOT / path_str).is_file() else (META / path_str).resolve()
-            if not target.is_file():
-                problems.append(
-                    f"{history.relative_to(META)}: '{title}' receipt `{receipt}` "
-                    f"file '{path_str}' does not exist"
-                )
-                continue
-            try:
-                tree = ast.parse(target.read_text(encoding="utf-8"))
-            except SyntaxError as e:
-                problems.append(
-                    f"{history.relative_to(META)}: '{title}' receipt `{receipt}` "
-                    f"failed to parse '{path_str}': {e}"
-                )
-                continue
-            symbols = set()
-            for node in tree.body:
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                    symbols.add(node.name)
-                    if isinstance(node, ast.ClassDef):
-                        for sub in node.body:
-                            if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                                symbols.add(f"{node.name}.{sub.name}")
-                    for dec in getattr(node, "decorator_list", []):
-                        if isinstance(dec, ast.Call) and dec.args and isinstance(dec.args[0], ast.Constant):
-                            symbols.add(str(dec.args[0].value))
-            if symbol not in symbols:
-                problems.append(
-                    f"{history.relative_to(META)}: '{title}' names `{receipt}`, "
-                    f"which does not exist in {path_str}"
-                )
-
+            problem = receipt_problem(receipt)
+            if problem:
+                problems.append(f"{history.relative_to(META)}: '{title}' {problem}")
     if problems:
         return Found(problems)
     return Passed(f"{entries} entries across {logs} history logs, each naming a receipt that exists")

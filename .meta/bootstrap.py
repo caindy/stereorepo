@@ -166,6 +166,29 @@ def install_bootstrap_apm_package(lang: str) -> None:
 
 
 
+def resolve_destination(destination: str) -> tuple[pathlib.Path, str] | str:
+    """The absolute destination and its path relative to the repository root, or the error to print: a destination outside the root, or one that already exists."""
+    dest = pathlib.Path(destination)
+    if not dest.is_absolute():
+        dest = (ROOT / dest).resolve()
+    try:
+        dest_rel = str(dest.relative_to(ROOT))
+    except ValueError:
+        return f"error: destination '{destination}' must reside within repository root '{ROOT}'"
+    if dest.exists():
+        return f"error: destination '{dest_rel}' already exists; bootstraps only render into an empty place"
+    return dest, dest_rel
+
+
+def resolve_bootstrap_dir(lang: str) -> pathlib.Path | None:
+    """The bootstrap directory for `lang`, found locally or fetched from upstream into `.meta/bootstraps/`, or None where neither succeeds."""
+    bootstrap_dir = find_bootstrap_dir(lang)
+    if bootstrap_dir:
+        return bootstrap_dir
+    fetched_dir = ROOT / ".meta" / "bootstraps" / lang
+    return fetched_dir if fetch_upstream_bootstrap(lang, fetched_dir) else None
+
+
 def bootstrap(lang: str, destination: str, name: str | None = None) -> int:
     """Executes on-demand bootstrapping for a specified language and path."""
     lang = lang.lower().strip()
@@ -176,19 +199,11 @@ def bootstrap(lang: str, destination: str, name: str | None = None) -> int:
         )
         return 1
 
-    dest = pathlib.Path(destination)
-    if not dest.is_absolute():
-        dest = (ROOT / dest).resolve()
-
-    try:
-        dest_rel = str(dest.relative_to(ROOT))
-    except ValueError:
-        print(f"error: destination '{destination}' must reside within repository root '{ROOT}'", file=sys.stderr)
+    resolved = resolve_destination(destination)
+    if isinstance(resolved, str):
+        print(resolved, file=sys.stderr)
         return 1
-
-    if dest.exists():
-        print(f"error: destination '{dest_rel}' already exists; bootstraps only render into an empty place", file=sys.stderr)
-        return 1
+    dest, dest_rel = resolved
 
     package_name = name.strip() if name else sanitize_name(dest)
     if not NAME_RE.match(package_name) or package_name in ("seed", "gate"):
@@ -200,14 +215,10 @@ def bootstrap(lang: str, destination: str, name: str | None = None) -> int:
 
     project_slug = package_name.replace("_", "-")
 
-    bootstrap_dir = find_bootstrap_dir(lang)
+    bootstrap_dir = resolve_bootstrap_dir(lang)
     if not bootstrap_dir:
-        fetched_dir = ROOT / ".meta" / "bootstraps" / lang
-        if fetch_upstream_bootstrap(lang, fetched_dir):
-            bootstrap_dir = fetched_dir
-        else:
-            print(f"error: bootstrap for '{lang}' not found locally and could not be fetched from upstream", file=sys.stderr)
-            return 1
+        print(f"error: bootstrap for '{lang}' not found locally and could not be fetched from upstream", file=sys.stderr)
+        return 1
 
     render_script = bootstrap_dir / "render"
     if not render_script.is_file():

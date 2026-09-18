@@ -239,9 +239,8 @@ def wikisplain_probes():
     if not any(d["source"] == "wiki" for d in dups):
         problems.append(f"find_duplicates: expected wiki duplicate for 'Knowledge Management', got {dups!r}")
     content = wikisplain.generate_page(
-        title="Test Wiki Concept",
-        context="solorepo",
-        definition="a synthetic concept for gate validation",
+        wikisplain.Page(title="Test Wiki Concept", context="solorepo",
+                        definition="a synthetic concept for gate validation"),
         root=ROOT,
     )
     verif = wikisplain.verify_page(content, "wiki/solorepo/test-wiki-concept.md", root=ROOT)

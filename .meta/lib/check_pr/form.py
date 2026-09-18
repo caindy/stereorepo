@@ -66,6 +66,28 @@ def sections(body):
     return out
 
 
+def unfilled(title, body):
+    """Every placeholder the form spells in angle brackets that survives into `title` or `body`, as one problem each."""
+    form = fence(FORM)
+    literal = set(PLACEHOLDER.findall(form)) | set(re.findall(r"<[^<>\s]+>", form))
+    problems = []
+    for where, raw in (("title", title), ("body", body)):
+        text = uncoded(raw)
+        seen = set(PLACEHOLDER.findall(text)) | (literal & set(re.findall(r"<[^<>\s]+>", text)))
+        problems += [f"unfilled placeholder in {where}: {m}" for m in sorted(seen)]
+    return problems
+
+
+def listed(section, heading, takes, carries, otherwise):
+    """The problems with one list section: prose where items were wanted, or an item without what `carries` looks for, said as `otherwise`; nothing where the section is empty or an explicit 'None.'."""
+    if not section or NONE.match(section):
+        return []
+    items = [m.group(1).strip() for m in BULLET.finditer(section)]
+    if not items:
+        return [f"**{heading}.** is prose. It takes {takes}, or an explicit 'None.'"]
+    return [f"{otherwise}: {item}" for item in items if not carries.search(item)]
+
+
 def check(title, body):
     """Validates pull request title and body against template requirements.
 
@@ -84,43 +106,17 @@ def check(title, body):
     not done** is a link, which is Article 15 itself: everything before it is
     the form being present, and this is the rule the form exists to carry.
     """
-    problems = []
     required = [m.group(1) for m in HEADING.finditer(fence(FORM))]
     found = sections(body)
-
+    problems = []
     for heading in required:
         if heading not in found:
             problems.append(f"missing section: **{heading}.**")
         elif not found[heading]:
             problems.append(f"empty section: **{heading}.** — the form was submitted blank")
-
-    form = fence(FORM)
-    literal = set(PLACEHOLDER.findall(form)) | set(re.findall(r"<[^<>\s]+>", form))
-    for where, raw in (("title", title), ("body", body)):
-        text = uncoded(raw)
-        seen = set(PLACEHOLDER.findall(text)) | (literal & set(re.findall(r"<[^<>\s]+>", text)))
-        for m in sorted(seen):
-            problems.append(f"unfilled placeholder in {where}: {m}")
-
-    closing = found.get(CLOSES, "")
-    if closing and not NONE.match(closing):
-        items = [m.group(1).strip() for m in BULLET.finditer(closing)]
-        if not items:
-            problems.append(
-                f"**{CLOSES}.** is prose. It takes one `Closes #n` per item, or "
-                "an explicit 'None.'")
-        for item in items:
-            if not KEYWORD.search(item):
-                problems.append(f"no closing keyword, so the merge leaves it open: {item}")
-
-    deferred = found.get(DEFERRED, "")
-    if deferred and not NONE.match(deferred):
-        items = [m.group(1).strip() for m in BULLET.finditer(deferred)]
-        if not items:
-            problems.append(
-                f"**{DEFERRED}.** is prose. It takes one link per item, or "
-                "an explicit 'None.'")
-        for item in items:
-            if not LINK.search(item):
-                problems.append(f"not a link, so it closes with this pull request: {item}")
+    problems += unfilled(title, body)
+    problems += listed(found.get(CLOSES, ""), CLOSES, "one `Closes #n` per item", KEYWORD,
+                       "no closing keyword, so the merge leaves it open")
+    problems += listed(found.get(DEFERRED, ""), DEFERRED, "one link per item", LINK,
+                       "not a link, so it closes with this pull request")
     return problems

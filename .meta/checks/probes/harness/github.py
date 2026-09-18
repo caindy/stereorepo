@@ -100,17 +100,19 @@ class FakeGitHub:
     call, which `outcome` reports as text.
     """
 
-    def __init__(self, pulls, no_rebase=(), no_arm=(), no_stick=(), lands=(), blip=(),
-                 no_dispatch=()):
+    REFUSALS = ("no_rebase", "no_arm", "no_stick", "lands", "blip", "no_dispatch")
+    """The keywords `__init__` takes beside `pulls`, each the numbers one call answers as the class docstring says."""
+
+    def __init__(self, pulls, **refused):
+        unknown = set(refused) - set(self.REFUSALS)
+        if unknown:
+            raise TypeError(f"FakeGitHub takes {', '.join(self.REFUSALS)}, not {', '.join(sorted(unknown))}")
         self.pulls = {str(n): dict(p) for n, p in pulls.items()}
         self.reads = {}
         for number, pull in self.pulls.items():
             pull.setdefault("head", f"head{number}")
-        self.no_rebase, self.no_arm = {str(n) for n in no_rebase}, {str(n) for n in no_arm}
-        self.blip = {str(n) for n in blip}
-        self.no_stick = {str(n) for n in no_stick}
-        self.lands = {str(n) for n in lands}
-        self.no_dispatch = {str(n) for n in no_dispatch}
+        for name in self.REFUSALS:
+            setattr(self, name, {str(n) for n in refused.get(name, ())})
         self.dispatched = []
         self.linked = []
         self.edited = []
@@ -193,73 +195,96 @@ class FakeGitHub:
             return [{k: v for k, v in self.view(n).items() if k != "statusCheckRollup"} for n in self.pulls]
         if head == ("pr", "view"):
             return self.view(args[2])
-        if head == ("pr", "update-branch"):
-            number = str(args[2])
-            if number in self.no_rebase:
-                sys.exit("gh: the branch has conflicts that must be resolved")
-            pull = self.pulls[number]
-            pull["stale"] = (dict(pull), pull.get("slow", 0))
-            pull["behind"] = pull.get("again", 0)
-            pull["armed"] = pull["armed"] and not pull.get("drops")
-            pull["head"] = f"moved{number}"
-            pull["rebased"] = True
-            return ""
-        if head == ("pr", "edit"):
-            number = str(args[2])
-            self.edited.append(number)
-            pull = self.pulls[number]
-            asked = list(pull.get("requested") or [])
-            for flag in ("--remove-reviewer", "--add-reviewer"):
-                if flag in args:
-                    who = args[args.index(flag) + 1]
-                    if flag == "--remove-reviewer" and who in asked:
-                        asked.remove(who)
-                    elif flag == "--add-reviewer" and who not in asked:
-                        asked.append(who)
-            pull["requested"] = asked
-            return ""
-        if head == ("pr", "merge"):
-            number = str(args[2])
-            if number in self.no_arm:
-                sys.exit("gh: Pull request is in clean status")
-            pull = self.pulls[number]
-            pull["stale"] = (dict(pull), pull.get("slow", 0))
-            pull["armed"] = number not in self.no_stick
-            if number in self.lands:
-                pull.update(state="MERGED", armed=False)
-            return ""
-        if head == ("workflow", "run") and args[2] == "coder.yml":
-            number = next(a.split("=", 1)[1] for a in args if a.startswith("pull_request="))
-            task = next((a.split("=", 1)[1] for a in args if a.startswith("task=")), None)
-            if number in self.no_dispatch:
-                sys.exit("gh: Resource not accessible by personal access token")
-            self.dispatched.append((number, task))
-            return ""
-        if args[0] == "api" and "/compare/" in args[1]:
-            oid = args[1].rsplit("...", 1)[1]
-            number = oid.removeprefix("head").removeprefix("moved").removeprefix("pushed")
-            if number in self.blip and self.pulls[number].get("rebased"):
-                self.blip.discard(number)
-                sys.exit("gh: API rate limit exceeded")
-            pull = self.pulls[number]
-            was, _ = pull.get("stale") or (pull, 0)
-            return {"behind_by": pull["behind"] if oid == pull["head"] else was["behind"]}
-        if head == ("issue", "view"):
-            issue = self.pulls[str(args[2])].get("issue") or {}
-            if issue.get("unreadable"):
-                sys.exit("gh: Could not resolve to an issue or pull request")
-            return {"state": issue.get("state", "OPEN"),
-                    "labels": [{"name": "challenge"}, {"name": issue.get("level", "medium")}]}
         if head == ("stack", "link"):
             self.linked.append(tuple(args[2:]))
             return ""
-        if args[0] == "api" and "/pulls/" in args[1]:
-            pull = self.pulls.get(args[1].rsplit("/", 1)[-1]) or {}
-            return {"stack": {"id": 1, "number": pull.get("stack", 1)}} if pull.get("layer") else {}
+        if head == ("workflow", "run") and args[2] == "coder.yml":
+            return self.dispatch(args)
         if args[0] == "api":
-            return {"allow_auto_merge": True}
+            return self.api(args[1])
+        answered = {("pr", "update-branch"): self.update_branch, ("pr", "edit"): self.edit,
+                    ("pr", "merge"): self.merge, ("issue", "view"): self.issue}
+        if head in answered:
+            return answered[head](args)
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
+    def update_branch(self, args):
+        """`pr update-branch`: refused for a number in `no_rebase`; otherwise the rebase, shown after `slow` reads."""
+        number = str(args[2])
+        if number in self.no_rebase:
+            sys.exit("gh: the branch has conflicts that must be resolved")
+        pull = self.pulls[number]
+        pull["stale"] = (dict(pull), pull.get("slow", 0))
+        pull["behind"] = pull.get("again", 0)
+        pull["armed"] = pull["armed"] and not pull.get("drops")
+        pull["head"] = f"moved{number}"
+        pull["rebased"] = True
+        return ""
+
+    def edit(self, args):
+        """`pr edit`: `--remove-reviewer` and `--add-reviewer` applied to `requested`, the number recorded in `edited`."""
+        number = str(args[2])
+        self.edited.append(number)
+        pull = self.pulls[number]
+        asked = list(pull.get("requested") or [])
+        for flag in ("--remove-reviewer", "--add-reviewer"):
+            if flag in args:
+                who = args[args.index(flag) + 1]
+                if flag == "--remove-reviewer" and who in asked:
+                    asked.remove(who)
+                elif flag == "--add-reviewer" and who not in asked:
+                    asked.append(who)
+        pull["requested"] = asked
+        return ""
+
+    def merge(self, args):
+        """`pr merge --auto`: refused for a number in `no_arm`; otherwise armed unless in `no_stick`, and merged if in `lands`."""
+        number = str(args[2])
+        if number in self.no_arm:
+            sys.exit("gh: Pull request is in clean status")
+        pull = self.pulls[number]
+        pull["stale"] = (dict(pull), pull.get("slow", 0))
+        pull["armed"] = number not in self.no_stick
+        if number in self.lands:
+            pull.update(state="MERGED", armed=False)
+        return ""
+
+    def dispatch(self, args):
+        """`workflow run coder.yml`: refused for a number in `no_dispatch`; otherwise `(number, task)` recorded in `dispatched`."""
+        number = next(a.split("=", 1)[1] for a in args if a.startswith("pull_request="))
+        task = next((a.split("=", 1)[1] for a in args if a.startswith("task=")), None)
+        if number in self.no_dispatch:
+            sys.exit("gh: Resource not accessible by personal access token")
+        self.dispatched.append((number, task))
+        return ""
+
+    def compare(self, endpoint):
+        """`api .../compare/...`: how far behind the commit asked about is, with one rate-limit exit first for a number in `blip`."""
+        oid = endpoint.rsplit("...", 1)[1]
+        number = oid.removeprefix("head").removeprefix("moved").removeprefix("pushed")
+        if number in self.blip and self.pulls[number].get("rebased"):
+            self.blip.discard(number)
+            sys.exit("gh: API rate limit exceeded")
+        pull = self.pulls[number]
+        was, _ = pull.get("stale") or (pull, 0)
+        return {"behind_by": pull["behind"] if oid == pull["head"] else was["behind"]}
+
+    def issue(self, args):
+        """`issue view`: the branch's Challenge, or the CLI's exit where the case marks it unreadable."""
+        issue = self.pulls[str(args[2])].get("issue") or {}
+        if issue.get("unreadable"):
+            sys.exit("gh: Could not resolve to an issue or pull request")
+        return {"state": issue.get("state", "OPEN"),
+                "labels": [{"name": "challenge"}, {"name": issue.get("level", "medium")}]}
+
+    def api(self, endpoint):
+        """Any other `api` call: the compare, the `stack` object of a layer, or the repository's own settings."""
+        if "/compare/" in endpoint:
+            return self.compare(endpoint)
+        if "/pulls/" in endpoint:
+            pull = self.pulls.get(endpoint.rsplit("/", 1)[-1]) or {}
+            return {"stack": {"id": 1, "number": pull.get("stack", 1)}} if pull.get("layer") else {}
+        return {"allow_auto_merge": True}
 
 class WatchGitHub:
     """GitHub as `check_pr.py --watch` polls it: one answer per poll, off a list.

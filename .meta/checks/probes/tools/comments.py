@@ -1,6 +1,7 @@
 """The detectors of `comments.py` that the comment steps read through, so a wrong answer shows as a wrong verdict rather than a failure (solorepo's DR-207).
 """
 import pathlib
+from typing import Any
 
 from collect import ROOT, against_baseline, check
 
@@ -23,38 +24,61 @@ def comment_probes():
     parameters are probed.
     """
     import comments
+    here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
+    blocks_found, sites = _blocks_and_sites(comments, here)
+    return (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
+            + blocks_found + _ratchet(comments, here, sites) + _type_errors(here) + _rust_comments(comments))
+
+
+def _expecting(kind: Any) -> tuple[Any, list[str]]:
+    """A recorder for detector `kind`: `expect(want, got, case)` keeps one problem where `got` is not `want`, and `problems` is what it kept."""
     problems = []
 
-    def expect(kind, want, got, case):
-        """One problem naming the detector `kind` and `case` when `got` is not `want`."""
+    def expect(want, got, case):
         if want != got:
             problems.append(f"comment probes: {kind} answered {got!r} for {case!r}, expected {want!r}")
+    return expect, problems
 
+
+def _code_detectors(comments: Any) -> list[str]:
+    """`python_code` and `rust_code` against commented-out code and the prose they must let through."""
+    expect, problems = _expecting("python_code")
     for text in ("x = compute(1)", "return None", "import os", "del cache[key]",
                  "if ready: run()", "for item in rows:", "print(payload)",
                  "def helper(x):", "raise SystemExit(1)"):
-        expect("python_code", True, comments.python_code(text), text)
+        expect(True, comments.python_code(text), text)
     for text in ("the gate checks this", "TODO", "noqa: F401", "fmt: skip",
                  "type: ignore[attr-defined]", "reason: registration order is deliberate",
                  "Copyright 2026 the solo", "Registered last, and a reader wants it under them",
                  "one step, one line, in the shape A21 names", ""):
-        expect("python_code", False, comments.python_code(text), text)
+        expect(False, comments.python_code(text), text)
 
+    expect, rust_problems = _expecting("rust_code")
     for text in ("let x = 1;", "fn main() {", "}", "use std::io;",
                  "pub struct Seed {", "return value;"):
-        expect("rust_code", True, comments.rust_code(text), text)
+        expect(True, comments.rust_code(text), text)
     for text in ("The seed crate exposes one example", "SPDX-License-Identifier: MIT",
                  "#[allow] is refused by clippy::allow_attributes", "see the xtask crate"):
-        expect("rust_code", False, comments.rust_code(text), text)
+        expect(False, comments.rust_code(text), text)
+    return problems + rust_problems
 
-    expect("keep_exception", "directive", comments.keep_exception("noqa: F401"), "noqa")
-    expect("keep_exception", "notice", comments.keep_exception("Copyright 2026 the solo"), "copyright")
-    expect("keep_exception", "notice", comments.keep_exception("SPDX-License-Identifier: MIT"), "spdx")
-    expect("keep_exception", "citation", comments.keep_exception("GitHub collapses this, see solorepo's DR-171"), "DR")
-    expect("keep_exception", "citation", comments.keep_exception("the API caps a page at 100, see https://docs.github.com/x"), "url")
-    expect("keep_exception", "citation", comments.keep_exception("refused in the same words as A19, see Article 19"), "article")
-    expect("keep_exception", None, comments.keep_exception("build the list first, then sort it"), "narration")
 
+def _keep_exceptions(comments: Any) -> list[str]:
+    """`keep_exception` naming each permissible kind, and None for narration."""
+    expect, problems = _expecting("keep_exception")
+    expect("directive", comments.keep_exception("noqa: F401"), "noqa")
+    expect("notice", comments.keep_exception("Copyright 2026 the solo"), "copyright")
+    expect("notice", comments.keep_exception("SPDX-License-Identifier: MIT"), "spdx")
+    expect("citation", comments.keep_exception("GitHub collapses this, see solorepo's DR-171"), "DR")
+    expect("citation", comments.keep_exception("the API caps a page at 100, see https://docs.github.com/x"), "url")
+    expect("citation", comments.keep_exception("refused in the same words as A19, see Article 19"), "article")
+    expect(None, comments.keep_exception("build the list first, then sort it"), "narration")
+    return problems
+
+
+def _suppressions(comments: Any) -> list[str]:
+    """`suppressions` catching a bare `noqa`, a bare `type: ignore` and every `#[allow]`, and letting the coded, the expected and the quoted through."""
+    problems = []
     bare = comments.suppressions("value = call()  # noqa\n")
     if not (len(bare) == 1 and bare[0][0] == 1 and "noqa" in bare[0][1]):
         problems.append(f"comment probes: bare `noqa` not caught, got {bare!r}")
@@ -80,7 +104,12 @@ def comment_probes():
     beside = comments.suppressions("#[allow(dead_code)] // the trait is not built yet\n", rust=True)
     if not beside:
         problems.append("comment probes: an `#[allow(...)]` beside a comment is still a suppression")
+    return problems
 
+
+def _blocks_and_sites(comments: Any, here: Any) -> tuple[list[str], list[str]]:
+    """`blocks` finding the one body comment in a sample and `comment_site` naming it: the problems, and the site list the ratchet cases read."""
+    problems = []
     source = (
         "# a module-level comment, which is not body commentary\n"
         "URL = \"https://example.test/#not-a-comment\"\n"
@@ -99,12 +128,15 @@ def comment_probes():
                         f"{[(b.line, b.text) for b in found]!r}")
     if any(comments.python_code(c.text) for c in comments.python_comments(source)):
         problems.append("comment probes: a false positive for commented-out code in the sample")
-
-    here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
     one = [comments.comment_site(here, found[0])]
     if one[0] != f"{here}:5: `narration, on two lines that is one block`":
         problems.append(f"comment probes: comment_site gave {one[0]!r}")
+    return problems, one
 
+
+def _ratchet(comments: Any, here: Any, one: Any) -> list[str]:
+    """The shared ratchet at, over and under its baseline, and over an entry naming a file the tree no longer has (solorepo's DR-210)."""
+    problems = []
     def ratcheted(counts, sites, recorded):
         """The shared ratchet, asked about counts under the `inline commentary` step's baseline."""
         return against_baseline(counts, sites, recorded, "body comments", comments.BASELINE)
@@ -124,7 +156,12 @@ def comment_probes():
         problems.append(f"comment probes: a baseline entry for a missing file should fail, got {stale!r}")
     if ratcheted({}, {}, {}):
         problems.append("comment probes: an empty baseline over a clean tree should pass")
+    return problems
 
+
+def _type_errors(here: Any) -> list[str]:
+    """`files.mypy_errors` counting and siting one error, and the ratchet reading it over its baseline."""
+    problems = []
     import files
     mypy_sample = f"{here}:42: error: Need type annotation  [var-annotated]\n"
     type_counts, type_sites = files.mypy_errors(mypy_sample)
@@ -139,7 +176,12 @@ def comment_probes():
         problems.append(f"comment probes: type errors over baseline should fail, got {type_grew!r}")
     if not any(f"     {expected_site}" in line for line in type_grew):
         problems.append(f"comment probes: type error site not formatted, got {type_grew!r}")
+    return problems
 
+
+def _rust_comments(comments: Any) -> list[str]:
+    """`rust_comments` reading line, block and doc comments off a sample."""
+    problems = []
     rust = (
         "// A plain line comment.\n"
         "const URL: &str = \"https://example.test\";\n"

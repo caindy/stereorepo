@@ -171,6 +171,95 @@ def as_it_was(chk, path, text):
         was.unlink()
 
 
+def durable_prose(chk):
+    """The durable files the questions are asked of: what `chk.durable` names, less Python and less every rendered page but the justfile."""
+    import render
+    durable = set(chk.durable(chk.copied_files()))
+    meta_dir = pathlib.Path(render.__file__).resolve().parent
+    skip = {(meta_dir / name).resolve() for name in render.rendered()} - {(meta_dir / ".." / "justfile").resolve()}
+    return {p for p in durable if p.suffix != ".py" and p.resolve() not in skip}
+
+
+def pair(path, cite, sentence, around, body, **more):
+    """One question: the sentence at `path`, the citation, the span it sits in and what the citation names."""
+    return {"path": str(path.relative_to(ROOT)), "cite": cite, "sentence": sentence,
+            "context": around, "body": body, **more}
+
+
+def sampled(chk, index, durable, sample):
+    """A rotating sample of `sample` pairs over every durable file, the offset turning with the commit count (solorepo's DR-192)."""
+    all_pairs, seen = [], set()
+    for path in sorted(durable):
+        for sentence, around, named in sentences(chk, path):
+            for cite in named:
+                body = target(cite, index)
+                if body is None or (cite, sentence) in seen:
+                    continue
+                seen.add((cite, sentence))
+                all_pairs.append(pair(path, cite, sentence, around, body))
+    if not all_pairs:
+        return []
+    commit_str = git("rev-list", "--count", "HEAD", default="0").strip()
+    count = int(commit_str) if commit_str.isdigit() else 0
+    offset = (count * sample) % len(all_pairs)
+    return (all_pairs + all_pairs)[offset:offset + sample]
+
+
+def moved_articles(base, path):
+    """The Articles whose text differs between `base` and the charter at `path`, as `A<n>`."""
+    was_text = git("show", f"{base}:{path.relative_to(ROOT)}", default="")
+    was_charter = yaml.safe_load(was_text) or {} if was_text else {}
+    now_charter = yaml.safe_load(path.read_text()) or {} if path.is_file() else {}
+    was_art = {int(a["id"].rsplit("/", 1)[-1]): a for a in was_charter.get("articles") or []}
+    now_art = {int(a["id"].rsplit("/", 1)[-1]): a for a in now_charter.get("articles") or []}
+    return {f"A{num}" for num, art in now_art.items() if num not in was_art or was_art[num] != art}
+
+
+def modified_entries(base, changed):
+    """The Decisions and Articles this branch moved: every `DR-` assertion among `changed`, and each Article the charter's text changed (solorepo's DR-192)."""
+    entries = set()
+    for p in changed:
+        try:
+            rel = p.relative_to(ROOT)
+        except ValueError:
+            rel = p
+        if (len(rel.parts) >= 4 and rel.parts[:3] == (".meta", "assertions", "decisions")
+                and rel.name.startswith("DR-") and rel.suffix in (".yaml", ".yml")):
+            entries.add(rel.stem)
+        elif rel == pathlib.Path(".meta/assertions/imported/charter.yaml"):
+            entries |= moved_articles(base, p)
+    return entries
+
+
+def asked(chk, index, seen, readings):
+    """The pairs over `readings`, each `(path, held, only)`: sentences in `held` are skipped, and where `only` is given so is every citation outside it, which marks the pair as ground that moved; `seen` keeps a pair from being asked twice."""
+    pairs = []
+    for path, held, only in readings:
+        for sentence, around, named in sentences(chk, path):
+            if sentence in held:
+                continue
+            for cite in named:
+                if only is not None and cite not in only:
+                    continue
+                body = target(cite, index)
+                if body is None or (cite, sentence) in seen:
+                    continue
+                seen.add((cite, sentence))
+                more = {"ground_moved": True} if only is not None else {}
+                pairs.append(pair(path, cite, sentence, around, body, **more))
+    return pairs
+
+
+def branch_paths(base, durable):
+    """The durable files this branch changed, tracked or not, each with its text at `base`, and the entries the branch moved."""
+    named = git("diff", "--name-only", base).split()
+    named += git("ls-files", "--others", "--exclude-standard", default="").split()
+    changed = [(ROOT / name) for name in dict.fromkeys(named)]
+    paths = sorted(p for p in changed if p in durable and p.is_file())
+    before = {p: git("show", f"{base}:{p.relative_to(ROOT)}", default="") for p in paths}
+    return paths, before, modified_entries(base, changed)
+
+
 def scope(chk, base, everything, sample=None):
     """The pairs to ask about: a sentence, the span it sits in, the citation and
     what the citation names.
@@ -194,84 +283,16 @@ def scope(chk, base, everything, sample=None):
     branch exists to add.
     """
     index = articles()
-    durable = set(chk.durable(chk.copied_files()))
-    import render
-    meta_dir = pathlib.Path(render.__file__).resolve().parent
-    targets = { (meta_dir / name).resolve() for name in render.rendered() }
-    skip = { p for p in targets if p.name != "justfile" }
-    durable = { p for p in durable if p.suffix != ".py" and p.resolve() not in skip }
-
+    durable = durable_prose(chk)
     if sample:
-        all_pairs = []
-        seen = set()
-        for path in sorted(durable):
-            for sentence, around, named in sentences(chk, path):
-                for cite in named:
-                    body = target(cite, index)
-                    if body is None or (cite, sentence) in seen:
-                        continue
-                    seen.add((cite, sentence))
-                    all_pairs.append({"path": str(path.relative_to(ROOT)), "cite": cite,
-                                      "sentence": sentence, "context": around, "body": body})
-        if not all_pairs:
-            return []
-        commit_str = git("rev-list", "--count", "HEAD", default="0").strip()
-        count = int(commit_str) if commit_str.isdigit() else 0
-        offset = (count * sample) % len(all_pairs)
-        return (all_pairs + all_pairs)[offset:offset + sample]
-
-    modified_entries = set()
+        return sampled(chk, index, durable, sample)
     if everything:
-        paths, before = sorted(durable), {}
+        paths, before, moved = sorted(durable), {}, set()
     else:
-        named = git("diff", "--name-only", base).split()
-        named += git("ls-files", "--others", "--exclude-standard", default="").split()
-        changed = [(ROOT / name) for name in dict.fromkeys(named)]
-        paths = sorted(p for p in changed if p in durable and p.is_file())
-        before = {p: git("show", f"{base}:{p.relative_to(ROOT)}", default="") for p in paths}
+        paths, before, moved = branch_paths(base, durable)
 
-        # Track which Decision or Article entries moved on this branch (solorepo's DR-192)
-        for p in changed:
-            try:
-                rel = p.relative_to(ROOT)
-            except ValueError:
-                rel = p
-            if len(rel.parts) >= 4 and rel.parts[:3] == (".meta", "assertions", "decisions") and rel.name.startswith("DR-") and rel.suffix in (".yaml", ".yml"):
-                modified_entries.add(rel.stem)
-            elif rel == pathlib.Path(".meta/assertions/imported/charter.yaml"):
-                was_text = git("show", f"{base}:{rel}", default="")
-                was_charter = yaml.safe_load(was_text) or {} if was_text else {}
-                now_charter = yaml.safe_load(p.read_text()) or {} if p.is_file() else {}
-                was_art = {int(a["id"].rsplit("/", 1)[-1]): a for a in was_charter.get("articles") or []}
-                now_art = {int(a["id"].rsplit("/", 1)[-1]): a for a in now_charter.get("articles") or []}
-                for num, art in now_art.items():
-                    if num not in was_art or was_art[num] != art:
-                        modified_entries.add(f"A{num}")
-
-    pairs, seen = [], set()
-    for path in paths:
-        held = set() if everything else as_it_was(chk, path, before[path])
-        for sentence, around, named in sentences(chk, path):
-            if sentence in held:
-                continue
-            for cite in named:
-                body = target(cite, index)
-                if body is None or (cite, sentence) in seen:
-                    continue
-                seen.add((cite, sentence))
-                pairs.append({"path": str(path.relative_to(ROOT)), "cite": cite,
-                              "sentence": sentence, "context": around, "body": body})
-
-    if modified_entries:
-        for path in sorted(durable):
-            for sentence, around, named in sentences(chk, path):
-                for cite in named:
-                    if cite in modified_entries:
-                        body = target(cite, index)
-                        if body is None or (cite, sentence) in seen:
-                            continue
-                        seen.add((cite, sentence))
-                        pairs.append({"path": str(path.relative_to(ROOT)), "cite": cite,
-                                      "sentence": sentence, "context": around, "body": body,
-                                      "ground_moved": True})
+    seen = set()
+    pairs = asked(chk, index, seen, ((path, set() if everything else as_it_was(chk, path, before[path]), None)
+                                     for path in paths))
+    pairs += asked(chk, index, seen, ((path, set(), moved) for path in sorted(durable) if moved))
     return pairs

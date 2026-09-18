@@ -36,6 +36,52 @@ def disciplines():
     return "\n".join(out) + record.accounted_by("disciplines.md")
 
 
+def _term_table(rows):
+    """The `Term | Means | Do not say` table over `rows`, and a blank line after it."""
+    out = ["| Term | Means | Do not say |\n|---|---|---|"]
+    for c in rows:
+        avoid = ", ".join(c.get("avoid", [])) or "—"
+        out.append(f"| **{c['pref_label']}** | {c['definition'].strip()} | {avoid} |")
+    out.append("")
+    return out
+
+
+def _scheme(scheme, members, concepts):
+    """One scheme's section: its authority, the loose terms, a table under each hub, and every scope note."""
+    out = [f"### {scheme['name']}\n", f"_Authority: {scheme.get('authority', 'unstated')}._\n"]
+    hubs = [c for c in members if any(m.get("broader") == c["id"] for m in concepts)]
+    grouped = {h["id"]: [] for h in hubs}
+    loose = []
+    for c in members:
+        if c in hubs:
+            continue
+        (grouped[c["broader"]] if c.get("broader") in grouped else loose).append(c)
+    if loose:
+        out += _term_table(loose)
+    for h in hubs:
+        if grouped[h["id"]]:
+            out += [f"#### {h['pref_label']}\n", f"_{h['definition'].strip()}_\n", *_term_table(grouped[h["id"]])]
+    out += [f"**{c['pref_label']}.** {c['scope_note'].strip()}\n" for c in members if c.get("scope_note")]
+    return out
+
+
+def _confusables(concepts):
+    """The `Confusables` section, one row per concept with `confusable_with`, or nothing."""
+    collisions = [c for c in concepts if c.get("confusable_with")]
+    if not collisions:
+        return []
+    by_label = {c["id"]: c["pref_label"] for c in concepts}
+    out = ["### Confusables\n",
+           "One word, more than one meaning. The hazard a vocabulary "
+           "guards against is\nmore often a collision than a gap.\n",
+           "| This | Is not | \n|---|---|"]
+    for c in collisions:
+        others = ", ".join(by_label.get(o, o) for o in c["confusable_with"])
+        out.append(f"| **{c['pref_label']}** | {others} |")
+    out.append("")
+    return out
+
+
 def vocabulary():
     """Imported and domain terms render as one language, which is what a reader
     needs. They are separate files because sync treats them differently, not
@@ -46,52 +92,14 @@ def vocabulary():
         part = record.load(rel) or {}
         for key in abox:
             abox[key].extend(part.get(key) or [])
-    schemes = {s["id"]: s for s in abox["concept_schemes"]}
+    concepts = abox["concept_set"]
     out = [record.BANNER.format(src="assertions/*vocabulary.yaml"),
            record.authored("vocabulary.md")]
-    for sid, scheme in schemes.items():
-        members = [c for c in abox["concept_set"] if c.get("in_scheme") == sid]
-        if not members:
-            continue
-        out.append(f"### {scheme['name']}\n")
-        out.append(f"_Authority: {scheme.get('authority', 'unstated')}._\n")
-        hubs = [c for c in members
-                if any(m.get("broader") == c["id"] for m in abox["concept_set"])]
-        grouped = {h["id"]: [] for h in hubs}
-        loose = []
-        for c in members:
-            if c in hubs:
-                continue
-            (grouped[c["broader"]] if c.get("broader") in grouped else loose).append(c)
-
-        def table(rows):
-            out.append("| Term | Means | Do not say |\n|---|---|---|")
-            for c in rows:
-                avoid = ", ".join(c.get("avoid", [])) or "—"
-                out.append(f"| **{c['pref_label']}** | {c['definition'].strip()} | {avoid} |")
-            out.append("")
-
-        if loose:
-            table(loose)
-        for h in hubs:
-            if grouped[h["id"]]:
-                out.append(f"#### {h['pref_label']}\n")
-                out.append(f"_{h['definition'].strip()}_\n")
-                table(grouped[h["id"]])
-        for c in members:
-            if c.get("scope_note"):
-                out.append(f"**{c['pref_label']}.** {c['scope_note'].strip()}\n")
-    collisions = [c for c in abox["concept_set"] if c.get("confusable_with")]
-    if collisions:
-        by_label = {c["id"]: c["pref_label"] for c in abox["concept_set"]}
-        out.append("### Confusables\n")
-        out.append("One word, more than one meaning. The hazard a vocabulary "
-                   "guards against is\nmore often a collision than a gap.\n")
-        out.append("| This | Is not | \n|---|---|")
-        for c in collisions:
-            others = ", ".join(by_label.get(o, o) for o in c["confusable_with"])
-            out.append(f"| **{c['pref_label']}** | {others} |")
-        out.append("")
+    for sid, scheme in {s["id"]: s for s in abox["concept_schemes"]}.items():
+        members = [c for c in concepts if c.get("in_scheme") == sid]
+        if members:
+            out += _scheme(scheme, members, concepts)
+    out += _confusables(concepts)
     return "\n".join(out) + record.accounted_by("vocabulary.md")
 
 

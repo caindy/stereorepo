@@ -7,6 +7,7 @@ request yet (solorepo's DR-155).
 import datetime
 import re
 import time
+from typing import NamedTuple
 
 from lib.check_pr import META, github, polling, verdict
 
@@ -131,6 +132,173 @@ def is_changes_requested_pull(pr, reviewer_login=None):
     return bool(revs and revs[-1].get("state") == "CHANGES_REQUESTED")
 
 
+class Standing(NamedTuple):
+    """One open pull request as `unheld` reads it: the request on it, the loop's branch match, how long it has sat, and the reviewer's login."""
+
+    pr: dict
+    asked: list
+    branch: re.Match | None
+    idle: float
+    reviewer_login: str
+
+    def line(self):
+        """`#<number> <title>`, the head of every remedy."""
+        return f"#{self.pr['number']} {self.pr['title'][:60]}"
+
+    def challenge(self, levels):
+        """The branch's Challenge as `(state, level)`, the level being the first of `levels` among its labels, or None."""
+        issue = github.gh("issue", "view", self.branch.group(1), "--json", "state,labels")
+        level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in levels), None)
+        return issue["state"], level
+
+
+def unresolved_of(pr, unresolved):
+    """The unresolved threads of `pr`, from `unresolved` where the caller read them and from GitHub otherwise."""
+    if unresolved is not None:
+        return unresolved.get(pr["number"])
+    return [t for t in github.threads(str(pr["number"])) if not t["isResolved"]]
+
+
+def waiting_on_conflict(standing):
+    """The remedy where a request, an arming or an approval waits on a branch that conflicts, and nothing where none does."""
+    pr = standing.pr
+    waiting, stuck = [], []
+    if standing.asked:
+        waiting.append(f"requested of {', '.join(standing.asked)}")
+        stuck.append("GitHub builds no merge ref, so the review workflow has nothing "
+                     "to check out and the request cannot be answered")
+    if pr.get("autoMergeRequest"):
+        waiting.append("armed")
+        stuck.append("GitHub will not merge it and will not update the branch, so the "
+                     "arming waits on an act nothing performs")
+    if is_approved_pull(pr, reviewer_login=standing.reviewer_login):
+        waiting.append("approved")
+        stuck.append("GitHub will not merge it and will not update the branch, so the "
+                     "approval waits on a rebase nothing performs")
+    if not waiting or pr.get("mergeable") != "CONFLICTING":
+        return []
+    hard_remedy = ""
+    if standing.branch:
+        try:
+            _, level = standing.challenge(("human", "hard"))
+        except SystemExit:
+            level = None
+        if level:
+            number = standing.branch.group(1)
+            hard_remedy = (f". Challenge #{number} is {level} so the loop stands down "
+                           f"(solorepo's DR-142): rebase by hand, or dispatch with "
+                           f".meta/say/move dispatch {pr['number']} --task rebase, or "
+                           f".meta/say/move difficulty {number} medium")
+    return [f"{standing.line()} — {' and '.join(waiting)}, on a "
+            f"branch that conflicts: {'; and '.join(stuck)}. Rebase "
+            f"{pr['headRefName']} onto {pr['baseRefName']}{hard_remedy}"]
+
+
+def armed_over_conversations(standing, minutes, unresolved):
+    """The remedy where an arming waits on unresolved conversations nobody is standing to resolve (solorepo's DR-159)."""
+    pr = standing.pr
+    if not (pr.get("autoMergeRequest") and pr.get("mergeable") != "CONFLICTING" and standing.idle >= minutes):
+        return []
+    threads_unresolved = unresolved_of(pr, unresolved)
+    if not threads_unresolved:
+        return []
+    return [f"{standing.line()} — armed, with "
+            f"{len(threads_unresolved)} unresolved conversation(s): GitHub will "
+            f"not merge it while conversations are unresolved, and no Job is "
+            f"standing to resolve them (solorepo's DR-159). Promote surviving "
+            f"notices with .meta/say/post promote, resolve threads whose link or "
+            f"answer is already posted with .meta/say/post resolve, or answer with "
+            f".meta/say/post answer"]
+
+
+def stranded_request(standing, minutes):
+    """The remedy where a review is requested of the reviewer whose check failed without a verdict (solorepo's DR-178)."""
+    pr = standing.pr
+    if not (standing.reviewer_login in standing.asked and not pr["isDraft"]
+            and pr.get("mergeable") != "CONFLICTING" and standing.branch and standing.idle >= minutes):
+        return []
+    contexts = polling.deduplicate_checks(pr.get("statusCheckRollup") or [])
+    reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
+    if not (reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE"):
+        return []
+    return [f"{standing.line()} — review requested of {standing.reviewer_login}, "
+            f"but reviewer check failed without a verdict: no run is answering it and "
+            f"nothing has moved on it for {int(standing.idle)} minutes. Re-request review with "
+            f".meta/say/move request-review {pr['number']}"]
+
+
+def unanswered_changes(standing, minutes, unresolved):
+    """The remedy where the reviewer's request for changes stands unanswered on a Challenge the loop holds."""
+    pr = standing.pr
+    if not (is_changes_requested_pull(pr, reviewer_login=standing.reviewer_login) and not standing.asked
+            and standing.branch and standing.idle >= minutes):
+        return []
+    if not (unresolved_of(pr, unresolved) or not green(pr)):
+        return []
+    state, level = standing.challenge(TAKEN)
+    if state != "OPEN" or not level:
+        return []
+    return [f"{standing.line()} — changes requested by "
+            f"reviewer, and unanswered: no run is answering it and nothing "
+            f"has moved on it for {int(standing.idle)} minutes, while #{standing.branch.group(1)} "
+            f"is still {level}. A review event was dropped or a run ended "
+            f"without answering: .meta/say/move dispatch {pr['number']} --task review"]
+
+
+def approved_and_failing(standing, minutes):
+    """The remedy where an approved pull request's checks went red after the approval and no Job is standing to fix them."""
+    pr = standing.pr
+    if not (is_approved_pull(pr, reviewer_login=standing.reviewer_login) and not standing.asked
+            and not pr["isDraft"] and not green(pr) and pr.get("mergeable") != "CONFLICTING"
+            and standing.branch and standing.idle >= minutes):
+        return []
+    state, level = standing.challenge((*TAKEN, "human", "hard"))
+    if state != "OPEN" or not level:
+        return []
+    if level in TAKEN:
+        remedy = f".meta/say/move dispatch {pr['number']} --task review"
+    else:
+        remedy = f"fix the failing checks (or move difficulty {standing.branch.group(1)} medium)"
+    idle_mins = int(standing.idle) if standing.idle != float("inf") else 0
+    return [f"{standing.line()} — approved, with failing checks: "
+            f"no review requested, no merge armed, and nothing has moved on it for "
+            f"{idle_mins} minutes, while #{standing.branch.group(1)} is still {level}. "
+            f"A check failed after approval, and no Job is standing to fix it: {remedy}"]
+
+
+def green_and_unheld(standing, minutes, clean):
+    """The remedy where a green pull request on a loop's branch has no request, no arming and nobody holding it."""
+    pr = standing.pr
+    if (standing.asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr)
+            or pr["number"] not in clean or not standing.branch or standing.idle < minutes):
+        return []
+    state, level = standing.challenge((*TAKEN, "human", "hard"))
+    if state != "OPEN" or not level:
+        return []
+    number = standing.branch.group(1)
+    conflicting = pr.get("mergeable") == "CONFLICTING"
+    if level in ("human", "hard"):
+        remedy = (f"while #{number} is at {level} and its branch conflicts: "
+                  f"rebase {pr['headRefName']} onto {pr['baseRefName']}, then "
+                  f".meta/say/move request-review {pr['number']} "
+                  f"(or move difficulty {number} medium)" if conflicting else
+                  f"while #{number} is at {level} (a run stopped before checks were green): "
+                  f".meta/say/move request-review {pr['number']} "
+                  f"(or move difficulty {number} medium)")
+        return [f"{standing.line()} — green, and unreviewed: "
+                f"no review requested, no merge armed, and nothing has moved on it for "
+                f"{int(standing.idle)} minutes, {remedy}"]
+    remedy = (f"and its branch conflicts, so a review requested on it now could not "
+              f"be answered: rebase {pr['headRefName']} onto "
+              f"{pr['baseRefName']}, then "
+              f".meta/say/move request-review {pr['number']}" if conflicting else
+              f"and nobody has: .meta/say/move request-review {pr['number']}")
+    return [f"{standing.line()} — green, and nobody holds it: "
+            f"no review requested, no merge armed, and nothing has moved on it for "
+            f"{int(standing.idle)} minutes, while #{number} is still {level}. "
+            f"A run ended without handing it over, {remedy}"]
+
+
 def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
     """Identifies open pull requests lacking an active owner, review request, or remediation.
 
@@ -157,122 +325,16 @@ def unheld(prs, minutes, clean, unresolved=None, reviewer_login=None):
     now = datetime.datetime.now(datetime.UTC)
     out = []
     for pr in prs:
-        asked = asked_of(pr)
-        waiting, stuck = [], []
-        if asked:
-            waiting.append(f"requested of {', '.join(asked)}")
-            stuck.append("GitHub builds no merge ref, so the review workflow has nothing "
-                         "to check out and the request cannot be answered")
-        if pr.get("autoMergeRequest"):
-            waiting.append("armed")
-            stuck.append("GitHub will not merge it and will not update the branch, so the "
-                         "arming waits on an act nothing performs")
-        if is_approved_pull(pr, reviewer_login=reviewer_login):
-            waiting.append("approved")
-            stuck.append("GitHub will not merge it and will not update the branch, so the "
-                         "approval waits on a rebase nothing performs")
-        if waiting and pr.get("mergeable") == "CONFLICTING":
-            hard_remedy = ""
-            branch_match = LOOPS_BRANCH.match(pr["headRefName"])
-            if branch_match:
-                try:
-                    issue = github.gh("issue", "view", branch_match.group(1), "--json", "state,labels")
-                    level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in ("human", "hard")), None)
-                    if level:
-                        hard_remedy = (f". Challenge #{branch_match.group(1)} is {level} so the loop stands down "
-                                       f"(solorepo's DR-142): rebase by hand, or dispatch with "
-                                       f".meta/say/move dispatch {pr['number']} --task rebase, or "
-                                       f".meta/say/move difficulty {branch_match.group(1)} medium")
-                except SystemExit:
-                    pass
-            out.append(f"#{pr['number']} {pr['title'][:60]} — {' and '.join(waiting)}, on a "
-                       f"branch that conflicts: {'; and '.join(stuck)}. Rebase "
-                       f"{pr['headRefName']} onto {pr['baseRefName']}{hard_remedy}")
         moved = (datetime.datetime.fromisoformat(pr["updatedAt"].replace("Z", "+00:00"))
                  if pr.get("updatedAt") else None)
-        idle = (now - moved).total_seconds() / 60 if moved else float("inf")
-        if pr.get("autoMergeRequest") and pr.get("mergeable") != "CONFLICTING" and idle >= minutes:
-            threads_unresolved = (unresolved.get(pr["number"]) if unresolved is not None
-                                  else [t for t in github.threads(str(pr["number"])) if not t["isResolved"]])
-            if threads_unresolved:
-                out.append(f"#{pr['number']} {pr['title'][:60]} — armed, with "
-                           f"{len(threads_unresolved)} unresolved conversation(s): GitHub will "
-                           f"not merge it while conversations are unresolved, and no Job is "
-                           f"standing to resolve them (solorepo's DR-159). Promote surviving "
-                           f"notices with .meta/say/post promote, resolve threads whose link or "
-                           f"answer is already posted with .meta/say/post resolve, or answer with "
-                           f".meta/say/post answer")
-        branch = LOOPS_BRANCH.match(pr["headRefName"])
-        if reviewer_login in asked and not pr["isDraft"] and pr.get("mergeable") != "CONFLICTING" and branch and idle >= minutes:
-            contexts = polling.deduplicate_checks(pr.get("statusCheckRollup") or [])
-            reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
-            if reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE":
-                out.append(f"#{pr['number']} {pr['title'][:60]} — review requested of {reviewer_login}, "
-                           f"but reviewer check failed without a verdict: no run is answering it and "
-                           f"nothing has moved on it for {int(idle)} minutes. Re-request review with "
-                           f".meta/say/move request-review {pr['number']}")
-        if is_changes_requested_pull(pr, reviewer_login=reviewer_login) and not asked and branch and idle >= minutes:
-            threads_unresolved = (unresolved.get(pr["number"]) if unresolved is not None
-                                  else [t for t in github.threads(str(pr["number"])) if not t["isResolved"]])
-            if threads_unresolved or not green(pr):
-                issue = github.gh("issue", "view", branch.group(1), "--json", "state,labels")
-                level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in TAKEN), None)
-                if issue["state"] == "OPEN" and level:
-                    out.append(f"#{pr['number']} {pr['title'][:60]} — changes requested by "
-                               f"reviewer, and unanswered: no run is answering it and nothing "
-                               f"has moved on it for {int(idle)} minutes, while #{branch.group(1)} "
-                               f"is still {level}. A review event was dropped or a run ended "
-                               f"without answering: .meta/say/move dispatch {pr['number']} --task review")
-        if is_approved_pull(pr, reviewer_login=reviewer_login) and not asked and not pr["isDraft"] and not green(pr) and pr.get("mergeable") != "CONFLICTING" and branch and idle >= minutes:
-            issue = github.gh("issue", "view", branch.group(1), "--json", "state,labels")
-            level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in TAKEN or lbl["name"] in ("human", "hard")), None)
-            if issue["state"] == "OPEN" and level:
-                if level in TAKEN:
-                    remedy = f".meta/say/move dispatch {pr['number']} --task review"
-                else:
-                    remedy = f"fix the failing checks (or move difficulty {branch.group(1)} medium)"
-                idle_mins = int(idle) if idle != float("inf") else 0
-                out.append(f"#{pr['number']} {pr['title'][:60]} — approved, with failing checks: "
-                           f"no review requested, no merge armed, and nothing has moved on it for "
-                           f"{idle_mins} minutes, while #{branch.group(1)} is still {level}. "
-                           f"A check failed after approval, and no Job is standing to fix it: {remedy}")
-        if asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr):
-            continue
-        if pr["number"] not in clean:
-            continue
-        if not branch:
-            continue
-        if idle < minutes:
-            continue
-        issue = github.gh("issue", "view", branch.group(1), "--json", "state,labels")
-        level = next((lbl["name"] for lbl in issue["labels"] if lbl["name"] in TAKEN or lbl["name"] in ("human", "hard")), None)
-        if issue["state"] != "OPEN" or not level:
-            continue
-        if level in ("human", "hard"):
-            if pr.get("mergeable") == "CONFLICTING":
-                remedy = (f"while #{branch.group(1)} is at {level} and its branch conflicts: "
-                          f"rebase {pr['headRefName']} onto {pr['baseRefName']}, then "
-                          f".meta/say/move request-review {pr['number']} "
-                          f"(or move difficulty {branch.group(1)} medium)")
-            else:
-                remedy = (f"while #{branch.group(1)} is at {level} (a run stopped before checks were green): "
-                          f".meta/say/move request-review {pr['number']} "
-                          f"(or move difficulty {branch.group(1)} medium)")
-            out.append(f"#{pr['number']} {pr['title'][:60]} — green, and unreviewed: "
-                       f"no review requested, no merge armed, and nothing has moved on it for "
-                       f"{int(idle)} minutes, {remedy}")
-        else:
-            if pr.get("mergeable") == "CONFLICTING":
-                remedy = (f"and its branch conflicts, so a review requested on it now could not "
-                          f"be answered: rebase {pr['headRefName']} onto "
-                          f"{pr['baseRefName']}, then "
-                          f".meta/say/move request-review {pr['number']}")
-            else:
-                remedy = f"and nobody has: .meta/say/move request-review {pr['number']}"
-            out.append(f"#{pr['number']} {pr['title'][:60]} — green, and nobody holds it: "
-                       f"no review requested, no merge armed, and nothing has moved on it for "
-                       f"{int(idle)} minutes, while #{branch.group(1)} is still {level}. "
-                       f"A run ended without handing it over, {remedy}")
+        standing = Standing(pr, asked_of(pr), LOOPS_BRANCH.match(pr["headRefName"]),
+                            (now - moved).total_seconds() / 60 if moved else float("inf"), reviewer_login)
+        out += waiting_on_conflict(standing)
+        out += armed_over_conversations(standing, minutes, unresolved)
+        out += stranded_request(standing, minutes)
+        out += unanswered_changes(standing, minutes, unresolved)
+        out += approved_and_failing(standing, minutes)
+        out += green_and_unheld(standing, minutes, clean)
     return out
 
 

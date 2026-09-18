@@ -1,6 +1,7 @@
 """The screen: one row per workflow, its sub-rows by stratum, and the slowest steps under `--steps`.
 """
 from datetime import UTC, datetime
+from typing import NamedTuple
 
 from lib.timing import arithmetic, github, routing
 
@@ -118,8 +119,17 @@ def steps(opened, show):
               f"{job} / {step[:58]}")
 
 
-def screen(names, limit, deep, show, want_steps, stratify=None):
-    """Renders the workflow timing summary screen."""
+class Window(NamedTuple):
+    """Which runs a screen reads: the last `limit` completed, the `deep` most recent opened for their jobs, stratified by `stratify` where given."""
+
+    limit: int
+    deep: int
+    stratify: str | None = None
+
+
+def screen(names, window, show, want_steps):
+    """Renders the workflow timing summary screen over `window` for each of `names`."""
+    limit, deep, stratify = window
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     print(f"\nworkflow runtimes — {now}, last {limit} completed runs each\n")
     print(f"  {'workflow':<9} {'n':>3}  {'total':>7} {'p95':>7} {'max':>7}  "

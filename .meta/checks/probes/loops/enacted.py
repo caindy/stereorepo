@@ -3,6 +3,7 @@
 One module for one probe, so a history log's receipt names the file holding it (solorepo's DR-209).
 """
 import sys
+from typing import Any
 
 import citations
 from collect import META, CouldNotRun, check
@@ -43,6 +44,15 @@ def enacted_probes():
     claim a drift in either shape breaks first.
     """
     check_pr = citations.load_check_pr()
+    decisions = sorted((META / "assertions" / "decisions").glob("DR-*.yaml"))
+    if not decisions:
+        return CouldNotRun("no decision files found in assertions/decisions/")
+    return (_unenacted_cases(check_pr, decisions[0]) + _handoff_cases(check_pr)
+            + _unresolvable_base(check_pr) + _readers_agree(check_pr))
+
+
+def _unenacted_cases(check_pr: Any, sample: Any) -> list[str]:
+    """`unenacted` over a branch that settles nothing, one that settles `sample` and names an artifact, and one whose decision names none."""
     problems = []
 
     def read(changed):
@@ -54,10 +64,6 @@ def enacted_probes():
     if found or "settles no decision" not in note:
         problems.append(f"unenacted: a branch settling no decision reported {found!r}, {note!r}")
 
-    decisions = sorted((META / "assertions" / "decisions").glob("DR-*.yaml"))
-    if not decisions:
-        return CouldNotRun("no decision files found in assertions/decisions/")
-    sample = decisions[0]
     number = int(sample.stem.removeprefix("DR-"))
     entry = f".meta/assertions/decisions/{sample.name}"
     artifact = next((p for p in check_pr.artifact_map().values()
@@ -70,6 +76,12 @@ def enacted_probes():
         found, note = read([entry])
     if not found or f"DR-{number:03d}" not in found[0]:
         problems.append(f"unenacted: DR-{number:03d} with no artifacts did not report expected problem, got {found!r}")
+    return problems
+
+
+def _handoff_cases(check_pr: Any) -> list[str]:
+    """`handoff` with the render unrunnable, and with it answering each of the four pages it can name stale or unrendered."""
+    problems = []
 
     def handed_off(render):
         """What `handoff("origin/main")` printed with `RENDER` stood in for by the command `render`, and the bases the enacted step was asked about, the step itself answering nothing."""
@@ -102,12 +114,21 @@ def enacted_probes():
         if not any(line.startswith("x ") and page in line for line in lines):
             problems.append(f"handoff: the render answering {answer!r} produced no finding "
                             "naming the page, so the repair the coder needs is unsaid")
+    return problems
 
+
+def _unresolvable_base(check_pr: Any) -> list[str]:
+    """`unenacted` against a ref no checkout has says the diff went unread."""
     found, note = check_pr.unenacted("no-such-ref-on-any-checkout")
     if found is not None:
-        problems.append(f"unenacted: an unresolvable base answered {found!r}, {note!r}, "
-                        "rather than saying the diff went unread")
+        return [f"unenacted: an unresolvable base answered {found!r}, {note!r}, "
+                "rather than saying the diff went unread"]
+    return []
 
+
+def _readers_agree(check_pr: Any) -> list[str]:
+    """The two readers of the record find something and agree: every path the rendered table names is a declared Artifact."""
+    problems = []
     declared, named = check_pr.artifacts(), check_pr.accounted()
     if not declared or not named:
         problems.append(f"the handoff's readers found {len(declared)} declared artifact(s) and "

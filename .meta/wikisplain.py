@@ -30,12 +30,13 @@ from lib.wikisplain.links import (
     embed_wikilinks,
     extract_known_concepts,
 )
-from lib.wikisplain.pages import generate_page, verify_page
+from lib.wikisplain.pages import Page, generate_page, verify_page
 
 __all__ = [
     "FENCED_RE",
     "LEAD_COPULA",
     "WIKILINK_RE",
+    "Page",
     "cli",
     "embed_wikilinks",
     "extract_known_concepts",

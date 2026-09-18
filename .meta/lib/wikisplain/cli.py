@@ -81,10 +81,7 @@ def main(argv: list[str] | None = None) -> int:
     syn_list = [s.strip() for s in args.synonyms.split(",") if s.strip()] if args.synonyms else []
 
     content = pages.generate_page(
-        title=title,
-        context=args.context,
-        definition=args.definition,
-        synonyms=syn_list,
+        pages.Page(title=title, context=args.context, definition=args.definition, synonyms=syn_list),
         root=root,
     )
 

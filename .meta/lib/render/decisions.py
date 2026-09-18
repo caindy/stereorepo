@@ -87,21 +87,8 @@ def decisions():
            "| Entry | The question it settled | Status |",
            "| :-- | :-- | :-- |"]
     paths = record.artifacts()
-    holes = []
-    for d in rows:
-        num = d["id"].rsplit("/", 1)[-1]
-        if d.get("status") == "WITHDRAWN":
-            holes.append(d)
-            continue
-        status = (d.get("status") or "").capitalize()
-        if d.get("status") == "SUPERSEDED":
-            status = f"Superseded by {_link(rows, d['superseded_by'])}"
-        title = d["name"].split(" · ", 1)[-1]
-        # The level, where it is not the Portfolio's (solorepo's DR-093).
-        for level in ("product", "project"):
-            if d.get(level):
-                title += f" · {levels.get(d[level], d[level])}"
-        out.append(f"| [DR-{num}]({record.ENTRY.format(num)}) | {title} | {status} |")
+    holes = [d for d in rows if d.get("status") == "WITHDRAWN"]
+    out += [_row(rows, d, levels) for d in rows if d.get("status") != "WITHDRAWN"]
     out.append("")
     if holes:
         out.append("## Holes\n")
@@ -131,6 +118,19 @@ def decisions():
             out.append(f"| [`{path}`]({posixpath.relpath(path, '.meta')}) | {nums} |")
         out.append("")
     return "\n".join(out)
+
+
+def _row(rows, d, levels):
+    """One entry's line of the index: its number, the question it settled with its level where it is not the Portfolio's (solorepo's DR-093), and its status."""
+    num = d["id"].rsplit("/", 1)[-1]
+    status = (d.get("status") or "").capitalize()
+    if d.get("status") == "SUPERSEDED":
+        status = f"Superseded by {_link(rows, d['superseded_by'])}"
+    title = d["name"].split(" · ", 1)[-1]
+    for level in ("product", "project"):
+        if d.get(level):
+            title += f" · {levels.get(d[level], d[level])}"
+    return f"| [DR-{num}]({record.ENTRY.format(num)}) | {title} | {status} |"
 
 
 def _link(rows, ident):

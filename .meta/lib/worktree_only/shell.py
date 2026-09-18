@@ -39,6 +39,59 @@ CHAINS = set(";&|<>\n")
 DESCRIPTOR = re.compile(r"(?:^|\s)\d+$")
 
 
+class Lexer:
+    """The state of a walk over one command line: the words so far, the word being built, the quote open, whether the current word was quoted, and whether a backslash is pending."""
+
+    def __init__(self, literal: bool) -> None:
+        self.literal = literal
+        self.words: list[str] = []
+        self.word: list[str] = []
+        self.quote = ""
+        self.seen = False
+        self.escaped = False
+
+    def escape(self, ch: str) -> None:
+        """The character after a backslash inside double quotes: one of `ESCAPES` stands alone, a newline is dropped, anything else keeps its backslash."""
+        self.escaped = False
+        if ch not in ESCAPES:
+            self.word.append("\\")
+        if ch != "\n":
+            self.word.append(ch)
+
+    def quoted(self, ch: str) -> str | None:
+        """A character inside quotes: the closing quote, a character double quotes still expand, or text; the refusal where an expansion is not `literal`."""
+        if ch == self.quote:
+            self.quote = ""
+        elif self.quote == '"' and ch in EXPANDS:
+            if not self.literal or ch in SUBSTITUTES:
+                return f"`{ch}`"
+            if ch == "\\":
+                self.escaped = True
+            else:
+                self.word.append(ch)
+        else:
+            self.word.append(ch)
+        return None
+
+    def bare(self, ch: str) -> str | None:
+        """A character outside quotes: a quote opens, whitespace ends a word, one of `SHELL` is refused, and anything else is text."""
+        if ch in QUOTES:
+            self.quote, self.seen = ch, True
+        elif ch in SHELL:
+            return f"`{ch!r}`" if ch == "\n" else f"`{ch}`"
+        elif ch.isspace():
+            self.end_word()
+        else:
+            self.word.append(ch)
+        return None
+
+    def end_word(self) -> None:
+        """Close the word being built, keeping an empty one that was quoted."""
+        if self.word or self.seen:
+            self.words.append("".join(self.word))
+        self.word, self.seen = [], False
+
+
 def words_of(text: str, literal: bool = False) -> list[str] | str:
     """Tokenize a single shell command on whitespace respecting quoting rules.
 
@@ -56,41 +109,18 @@ def words_of(text: str, literal: bool = False) -> list[str] | str:
     taking a newline with it; before anything else it stands for itself, which
     is what `\\s` and `\\b` want of it.
     """
-    words, word, quote, seen, escaped = [], [], "", False, False
+    lexer = Lexer(literal)
     for ch in text:
-        if escaped:
-            escaped = False
-            if ch not in ESCAPES:
-                word.append("\\")
-            if ch != "\n":
-                word.append(ch)
-        elif quote:
-            if ch == quote:
-                quote = ""
-            elif quote == '"' and ch in EXPANDS:
-                if not literal or ch in SUBSTITUTES:
-                    return f"`{ch}`"
-                if ch == "\\":
-                    escaped = True
-                else:
-                    word.append(ch)
-            else:
-                word.append(ch)
-        elif ch in QUOTES:
-            quote, seen = ch, True
-        elif ch in SHELL:
-            return f"`{ch!r}`" if ch == "\n" else f"`{ch}`"
-        elif ch.isspace():
-            if word or seen:
-                words.append("".join(word))
-            word, seen = [], False
-        else:
-            word.append(ch)
-    if quote:
+        if lexer.escaped:
+            lexer.escape(ch)
+            continue
+        refused = lexer.quoted(ch) if lexer.quote else lexer.bare(ch)
+        if refused:
+            return refused
+    if lexer.quote:
         return "an unclosed quote"
-    if word or seen:
-        words.append("".join(word))
-    return words
+    lexer.end_word()
+    return lexer.words
 
 
 def unquoted(text: str) -> Iterator[tuple[int, str]]:

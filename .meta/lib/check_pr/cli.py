@@ -12,8 +12,8 @@ import sys
 from lib.check_pr import branch, form, github, polling, review, sweep, verdict
 
 
-def main(description):
-    """Parses the command line and runs the one mode it names.
+def parser(description):
+    """The command line: one positional pull request and the flags that each name a mode.
 
     Args:
         description: The script's docstring, shown by `--help`.
@@ -48,69 +48,73 @@ def main(description):
                          "holds each one next")
     ap.add_argument("--publish", action="store_true",
                     help="with --all: post each result as the required check run")
+    return ap
+
+
+def print_sweep():
+    """What this branch owns and what each open pull request still owes, then the branches that outlived their pull request."""
+    head, found = branch.owned_and_open()
+    if not found:
+        print(f"no open pull request for branch '{head}'" if head
+              else "no open pull requests")
+    for number, title, owed in found:
+        if owed is None:
+            print(f"#{number} {title} — open, and not this branch's")
+            continue
+        print(f"#{number} {title} — {len(owed)} unaddressed")
+        for item in owed:
+            print(item)
+    left = branch.residue()
+    if left:
+        print(f"\n--- residue: {sum(1 for line in left if not line.startswith('    '))} "
+              "branch(es) outlived their pull request ---")
+        print("\n".join(left))
+
+
+def print_threads(ref):
+    """The threads of `ref` owed, held for promotion and answered, under each verdict with the head it was given on."""
+    held = github.pull(ref)
+    nodes = held["reviewThreads"]["nodes"]
+    owed, parked, done = (review.unaddressed(nodes, limit=None),
+                           review.unaddressed(nodes, parked=True, limit=None),
+                           review.settled(nodes, limit=None))
+    given = review.verdicts(held["reviews"]["nodes"])
+    if given:
+        print(f"--- {len(given)} verdict(s), newest first, each on the head GitHub recorded it against ---")
+        print("\n".join(given))
+        print()
+    print("\n".join(owed) if owed else "nothing unaddressed")
+    if parked:
+        print(f"\n--- {len(parked)} noticed and not done, held for promotion at approval (solorepo's DR-159) ---")
+        print("\n".join(parked))
+    if done:
+        print(f"\n--- {len(done)} answered and resolved: a re-review reads each answer against the diff it claims ---")
+        print("\n".join(done))
+
+
+def main(description):
+    """Parses the command line and runs the one mode it names.
+
+    Args:
+        description: The script's docstring, shown by `--help`.
+    """
+    ap = parser(description)
     args = ap.parse_args()
-
-    if args.all:
-        sys.exit(sweep.sweep_all(args.publish))
-
-    if args.hand_back:
-        print(json.dumps(sweep.hand_back(args.hand_back)))
-        sys.exit(0)
-
-    if args.sweep:
-        head, found = branch.owned_and_open()
-        if not found:
-            print(f"no open pull request for branch '{head}'" if head
-                  else "no open pull requests")
-        for number, title, owed in found:
-            if owed is None:
-                print(f"#{number} {title} — open, and not this branch's")
-                continue
-            print(f"#{number} {title} — {len(owed)} unaddressed")
-            for item in owed:
-                print(item)
-        left = branch.residue()
-        if left:
-            print(f"\n--- residue: {sum(1 for line in left if not line.startswith('    '))} "
-                  "branch(es) outlived their pull request ---")
-            print("\n".join(left))
-        sys.exit(0)
-
-    if args.handoff:
-        sys.exit(branch.handoff(args.base))
-
-    if args.watch:
-        if not args.pr:
-            ap.error("--watch needs a pull request")
-        polling.watch(args.pr, args.every)
-        sys.exit(0)
-
-    if args.resume:
-        if not args.pr:
-            ap.error("--resume needs a pull request")
-        print(polling.resume(args.pr))
-        sys.exit(0)
-
-    if args.threads:
-        if not args.pr:
-            ap.error("--threads needs a pull request")
-        held = github.pull(args.pr)
-        nodes = held["reviewThreads"]["nodes"]
-        owed, parked, done = (review.unaddressed(nodes, limit=None),
-                               review.unaddressed(nodes, parked=True, limit=None),
-                               review.settled(nodes, limit=None))
-        given = review.verdicts(held["reviews"]["nodes"])
-        if given:
-            print(f"--- {len(given)} verdict(s), newest first, each on the head GitHub recorded it against ---")
-            print("\n".join(given))
-            print()
-        print("\n".join(owed) if owed else "nothing unaddressed")
-        if parked:
-            print(f"\n--- {len(parked)} noticed and not done, held for promotion at approval (solorepo's DR-159) ---")
-            print("\n".join(parked))
-        if done:
-            print(f"\n--- {len(done)} answered and resolved: a re-review reads each answer against the diff it claims ---")
-            print("\n".join(done))
+    modes = (
+        (args.all, False, lambda: sys.exit(sweep.sweep_all(args.publish))),
+        (args.hand_back, False, lambda: print(json.dumps(sweep.hand_back(args.hand_back)))),
+        (args.sweep, False, print_sweep),
+        (args.handoff, False, lambda: sys.exit(branch.handoff(args.base))),
+        (args.watch, "--watch", lambda: polling.watch(args.pr, args.every)),
+        (args.resume, "--resume", lambda: print(polling.resume(args.pr))),
+        (args.threads, "--threads", lambda: print_threads(args.pr)),
+    )
+    for chosen, needs_pr, run in modes:
+        if not chosen:
+            continue
+        if needs_pr and not args.pr:
+            ap.error(f"{needs_pr} needs a pull request")
+        run()
         sys.exit(0)
 
     if args.file:

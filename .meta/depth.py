@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import fnmatch
 import importlib.machinery
 import importlib.util
@@ -263,6 +264,61 @@ def evaluate(
     return STANDARD_CONFIG
 
 
+def repo_target(repo: str | None = None) -> str | None:
+    """The repository to read, as `owner/name`: `repo`, else `GITHUB_REPOSITORY`, else what `gh repo view` answers, else None."""
+    target = repo or os.environ.get("GITHUB_REPOSITORY")
+    if target:
+        return target
+    try:
+        out = subprocess.check_output(
+            ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+            text=True,
+        ).strip()
+    except Exception:
+        return None
+    return out or None
+
+
+def last_verdict_head(pr: str, target: str | None) -> str | None:
+    """The commit the reviewer Role's last verdict on `pr` was recorded against, or None where there is none or the reviews could not be read."""
+    owner, _, repo_name = (target or "").partition("/")
+    if not (owner and repo_name):
+        return None
+    reviewer_login = f"{owner}-{repo_name}-reviewer"
+    try:
+        head = subprocess.check_output([
+            "gh", "api", f"repos/{target}/pulls/{pr}/reviews?per_page=100", "--paginate", "--jq",
+            f'[.[] | select(.user.login == "{reviewer_login}") | '
+            'select(.state != "COMMENTED" or (.body // "") != "")] | last | .commit_id',
+        ], text=True).strip()
+    except Exception as err:
+        print(f"depth: notice: could not query prior reviews for {reviewer_login}: {err}", file=sys.stderr)
+        return None
+    return head if head and head != "null" else None
+
+
+def incremental_files(head: str | None) -> list[str] | None:
+    """The files changed since `head`, or None where there is no such commit here or the diff failed, in which case the cumulative reading is the one to take."""
+    if not head or subprocess.run(["git", "cat-file", "-e", head], capture_output=True).returncode != 0:
+        return None
+    print(f"depth: checking incremental delta diff since last verdict head: {head}", file=sys.stderr)
+    try:
+        diff_out = subprocess.check_output(["git", "diff", "--name-only", head, "HEAD"], text=True)
+    except Exception as err:
+        print(f"depth: git diff incremental failed ({err}); falling back to cumulative PR files", file=sys.stderr)
+        return None
+    return [line.strip() for line in diff_out.splitlines() if line.strip()]
+
+
+def pull_view(pr: str, target: str | None, fields: str, query: str) -> str:
+    """`gh pr view` of `pr` in `target`, asking for `fields` and reading them with the jq `query`."""
+    cmd = ["gh", "pr", "view", pr]
+    if target:
+        cmd.extend(["--repo", target])
+    cmd.extend(["--json", fields, "-q", query])
+    return subprocess.check_output(cmd, text=True)
+
+
 def resolve_files_for_pr(pr: str, repo: str | None = None) -> tuple[list[str], dict[str, Any], str]:
     """Resolves changed files and metadata for a pull request, accounting for re-reviews.
 
@@ -271,75 +327,17 @@ def resolve_files_for_pr(pr: str, repo: str | None = None) -> tuple[list[str], d
     the repository alone rather than stopping the evaluation: a hook that sees
     less falls through to the layer beneath it.
     """
-    repo_target = repo or os.environ.get("GITHUB_REPOSITORY")
-    if not repo_target:
-        try:
-            out = subprocess.check_output(
-                ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
-                text=True,
-            ).strip()
-            if out:
-                repo_target = out
-        except Exception:
-            pass
-
-    owner, _, repo_name = (repo_target or "").partition("/")
-    reviewer_login = f"{owner}-{repo_name}-reviewer" if owner and repo_name else None
-
-    last_verdict_head = None
-    if reviewer_login and repo_target:
-        try:
-            cmd = [
-                "gh",
-                "api",
-                f"repos/{repo_target}/pulls/{pr}/reviews?per_page=100",
-                "--paginate",
-                "--jq",
-                f'[.[] | select(.user.login == "{reviewer_login}") | '
-                'select(.state != "COMMENTED" or (.body // "") != "")] | last | .commit_id',
-            ]
-            head = subprocess.check_output(cmd, text=True).strip()
-            if head and head != "null":
-                last_verdict_head = head
-        except Exception as err:
-            print(f"depth: notice: could not query prior reviews for {reviewer_login}: {err}", file=sys.stderr)
-
-    incremental = False
-    if last_verdict_head:
-        ret = subprocess.run(["git", "cat-file", "-e", last_verdict_head], capture_output=True)
-        if ret.returncode == 0:
-            incremental = True
-
-    files: list[str] = []
-    if incremental and last_verdict_head:
-        print(f"depth: checking incremental delta diff since last verdict head: {last_verdict_head}", file=sys.stderr)
-        try:
-            diff_out = subprocess.check_output(["git", "diff", "--name-only", last_verdict_head, "HEAD"], text=True)
-            files = [line.strip() for line in diff_out.splitlines() if line.strip()]
-        except Exception as err:
-            print(f"depth: git diff incremental failed ({err}); falling back to cumulative PR files", file=sys.stderr)
-            incremental = False
-
-    if not incremental:
+    target = repo_target(repo)
+    files = incremental_files(last_verdict_head(pr, target))
+    incremental = files is not None
+    if files is None:
         print("depth: checking cumulative PR files", file=sys.stderr)
-        view_cmd = ["gh", "pr", "view", pr]
-        if repo_target:
-            view_cmd.extend(["--repo", repo_target])
-        view_cmd.extend(["--json", "files", "-q", ".files[].path"])
-        out = subprocess.check_output(view_cmd, text=True)
+        out = pull_view(pr, target, "files", ".files[].path")
         files = [line.strip() for line in out.splitlines() if line.strip()]
 
-    meta: dict[str, Any] = {"number": pr, "repo": repo_target, "incremental": incremental}
-    try:
-        meta_cmd = ["gh", "pr", "view", pr]
-        if repo_target:
-            meta_cmd.extend(["--repo", repo_target])
-        meta_cmd.extend(["--json", "labels,title,author", "-q", "."])
-        meta_raw = subprocess.check_output(meta_cmd, text=True)
-        meta.update(json.loads(meta_raw))
-    except Exception:
-        pass
-
+    meta: dict[str, Any] = {"number": pr, "repo": target, "incremental": incremental}
+    with contextlib.suppress(Exception):
+        meta.update(json.loads(pull_view(pr, target, "labels,title,author", ".")))
     return files, meta, ""
 
 

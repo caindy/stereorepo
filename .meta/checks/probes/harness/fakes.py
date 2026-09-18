@@ -30,35 +30,44 @@ class FakeIssue:
             raise subprocess.CalledProcessError(1, ["gh", *list(args)], output="", stderr="mock API error")
         if args[:2] == ("repo", "view"):
             return {"nameWithOwner": "o/r"}
-        if args[:2] == ("issue", "view") and "labels" in args:
-            self.views += 1
-            return {"labels": [{"name": name} for name in self.labels]}
-        if args[:2] == ("issue", "view") and "assignees" in args:
-            return {"assignees": [{"login": who} for who in self.assignees]}
-        if args[:2] == ("issue", "edit") and "--add-assignee" in args:
-            self.assignees.append(args[args.index("--add-assignee") + 1])
-            return ""
-        if args[:2] == ("issue", "edit") and "--remove-assignee" in args:
-            login = args[args.index("--remove-assignee") + 1]
-            if login in self.assignees:
-                self.assignees.remove(login)
-            return ""
-        if args[:2] == ("issue", "edit") and "--add-label" in args:
-            label_to_add = args[args.index("--add-label") + 1]
-            if label_to_add not in self.labels:
-                self.labels.append(label_to_add)
-            for i, arg in enumerate(args):
-                if arg == "--remove-label":
-                    val = args[i + 1]
-                    if val in self.labels:
-                        self.labels.remove(val)
-            return ""
+        if args[:2] == ("issue", "view"):
+            return self.view(args)
+        if args[:2] == ("issue", "edit"):
+            return self.edit(args)
         if args[:2] == ("api", "user"):
             return "o-r-coder"
         if args[:1] == ("api",) and len(args) > 1 and "comments" in args[1]:
             return {"html_url": "https://github.com/o/r/issues/1/comments/1"}
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
+    def view(self, args):
+        """`issue view` of the labels, counted in `views`, or of the assignees."""
+        if "labels" in args:
+            self.views += 1
+            return {"labels": [{"name": name} for name in self.labels]}
+        if "assignees" in args:
+            return {"assignees": [{"login": who} for who in self.assignees]}
+        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+
+    def edit(self, args):
+        """`issue edit`: an assignee added or removed, or a label added and any `--remove-label` beside it applied."""
+        if "--add-assignee" in args:
+            self.assignees.append(args[args.index("--add-assignee") + 1])
+            return ""
+        if "--remove-assignee" in args:
+            login = args[args.index("--remove-assignee") + 1]
+            if login in self.assignees:
+                self.assignees.remove(login)
+            return ""
+        if "--add-label" in args:
+            label_to_add = args[args.index("--add-label") + 1]
+            if label_to_add not in self.labels:
+                self.labels.append(label_to_add)
+            for i, arg in enumerate(args):
+                if arg == "--remove-label" and args[i + 1] in self.labels:
+                    self.labels.remove(args[i + 1])
+            return ""
+        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
 class FakeWikiPath:
     """A wiki page as the wiki checks read one: a repository-relative path whose text is given rather than read from disk.

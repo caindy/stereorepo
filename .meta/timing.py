@@ -58,7 +58,7 @@ from lib.timing.routing import (
     model_of,
     stratify_run,
 )
-from lib.timing.screen import row, screen, steps, subrow, summarise
+from lib.timing.screen import Window, row, screen, steps, subrow, summarise
 
 __all__ = [
     "BOUNDARY_PATTERN",
@@ -67,6 +67,7 @@ __all__ = [
     "RUN_FIELDS",
     "UNSET",
     "WORKFLOWS",
+    "Window",
     "at",
     "cli",
     "clock",

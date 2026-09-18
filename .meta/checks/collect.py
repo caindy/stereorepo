@@ -21,6 +21,7 @@ import pathlib
 import re
 import typing
 from collections.abc import Callable
+from typing import NamedTuple
 
 import yaml
 from linkml_runtime import SchemaView
@@ -178,13 +179,20 @@ def view_for(data, views):
     return None, None
 
 
-def walk(obj, cls, sv, index, refs, where):
-    """Collect identified objects into `index` and reference sites into `refs`."""
+class Collected(NamedTuple):
+    """What one pass over the assertions gathers: identified objects by identifier, and every reference site."""
+
+    index: dict
+    refs: list
+
+
+def walk(obj, cls, sv, found, where):
+    """Collect identified objects into `found.index` and reference sites into `found.refs`."""
     if not isinstance(obj, dict):
         return
     ident = sv.get_identifier_slot(cls)
     if ident and ident.name in obj:
-        index[obj[ident.name]] = (cls, obj, where)
+        found.index[obj[ident.name]] = (cls, obj, where)
     for key, val in obj.items():
         try:
             slot = sv.induced_slot(key, cls)
@@ -197,10 +205,10 @@ def walk(obj, cls, sv, index, refs, where):
         if sv.get_identifier_slot(target) and not (slot.inlined or slot.inlined_as_list):
             for v in values:
                 if isinstance(v, str):
-                    refs.append((v, target, f"{where}: {cls}.{key}"))
+                    found.refs.append((v, target, f"{where}: {cls}.{key}"))
         else:
             for v in values:
-                walk(v, target, sv, index, refs, where)
+                walk(v, target, sv, found, where)
 
 
 def views():
@@ -210,7 +218,7 @@ def views():
 
 def collect(views):
     """Scans all YAML assertions under .meta/assertions/ and bootstraps/*/assertions/, indexing entities and references."""
-    index, refs, skipped = {}, [], []
+    found, skipped = Collected({}, []), []
     paths = sorted((META / "assertions").rglob("*.yaml"))
     bootstraps_dir = ROOT / "bootstraps"
     if bootstraps_dir.is_dir():
@@ -226,6 +234,6 @@ def collect(views):
         for key, val in data.items():
             slot = sv.induced_slot(key, root)
             for item in (val if isinstance(val, list) else [val]):
-                walk(item, slot.range, sv, index, refs, path.name)
-    return index, refs, skipped
+                walk(item, slot.range, sv, found, path.name)
+    return found.index, found.refs, skipped
 

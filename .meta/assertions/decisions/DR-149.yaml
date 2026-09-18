@@ -13,7 +13,7 @@ decisions:
       - work:artifact/meta-check
       - work:artifact/meta-check-pr
       - work:artifact/github-workflows-coder
-      - work:artifact/meta-checks-probes-loops-advance
+      - work:artifact/meta-checks-probes-loops-dispatch
     context: >-
       DR-133 split what a merge on `main` does to an open pull request into two
       states and gave each its act: behind is mechanical, so `advance` rebases
