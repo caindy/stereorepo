@@ -65,6 +65,13 @@ def residue() -> list[str]:
 
     Returns:
         list[str]: Descriptions and git cleanup commands for orphaned branches and worktrees.
+
+    The pull request a gone branch carried names the line and nothing else, so
+    a branch GitHub will not answer for is reported as unreadable and still
+    carries its removal commands. What GitHub said in refusing goes on a
+    continuation line under the branch, where a message of any length costs the
+    listing no column: a credential that has expired fails every branch alike,
+    and that reads differently from one node GitHub declined to serve.
     """
     def git(*args: str) -> str:
         return subprocess.run(["git", *args], capture_output=True, text=True).stdout
@@ -85,10 +92,20 @@ def residue() -> list[str]:
     here = git("rev-parse", "--show-toplevel").strip()
     out: list[str] = []
     for branch in gone:
-        found = github.gh("pr", "list", "--head", branch, "--state", "all", "--json", "number,state")
-        state = f"#{found[0]['number']} {found[0]['state'].lower()}" if found else "no pull request"
+        refusal = ""
+        try:
+            found = github.gh("pr", "list", "--head", branch,
+                              "--state", "all", "--json", "number,state")
+        except SystemExit as unreadable:
+            state = "pull request unreadable"
+            refusal = " ".join(str(unreadable.code).split())
+        else:
+            state = (f"#{found[0]['number']} {found[0]['state'].lower()}"
+                     if found else "no pull request")
         tree = worktrees.get(branch)
         out.append(f"  {branch} — {state}" + (f"; worktree {tree}" if tree else ""))
+        if refusal:
+            out.append(f"    {refusal}")
         if tree == here:
             out.append("    this worktree stands on it: remove it from the main checkout, "
                        "or let the harness at exit")

@@ -122,3 +122,18 @@ run may last, reads the Challenge's level to say whether the loop or the solo
 holds the remedy, and prescribes the verb that re-delivers it.
 
 Receipt: `.meta/checks/probes/loops/handoff.py::handoff_probes`
+
+
+### One unreadable pull request node ended the whole residue listing
+
+`residue()` asks GitHub which pull request each gone branch carried, once per
+branch, and `github.gh` exits the process on a non-zero `gh`. One node GitHub
+answered with a server error under the role credential — and answered normally
+under the solo's own — ended the sweep before it printed any of the branches it
+had found, so the listing an operator runs the command for never appeared
+(solorepo's #578). Established: a branch GitHub will not answer for keeps its
+removal commands and reports what GitHub said in refusing, so an expired
+credential, which fails every branch alike, is legible on the screen.
+
+Receipt: `.meta/lib/check_pr/branch.py::residue`
+
