@@ -17,12 +17,21 @@ scanner in `rust_spans`, because there is no Rust parser in the gate's
 dependencies and the three things asked of it — `//`, `/* */` and `#[allow]` —
 are decidable from the token stream alone.
 
-`inline commentary` is ratcheted rather than flat: the tree held 210 body
-comment blocks across 15 files when the step was written, and the Ratchet
-Discipline is what a checker that cannot be clean at once does. The baseline is
-`.meta/checks/comments.baseline.yaml` and it may fall and may not rise. The
-comparison itself is `collect.against_baseline`, shared with the `meta types`
-step of `files.py` (solorepo's DR-210).
+A suppression owes three things and two steps elsewhere hold two of them: the
+rule it names, which `broad suppressions` here requires, and the reason it
+carries, which `meta lints` requires (solorepo's DR-177). `suppression causes`
+holds the third, reading that reason for a cause this repository can fix
+(solorepo's DR-225).
+
+`inline commentary` and `suppression causes` are ratcheted rather than flat:
+the tree held 210 body comment blocks across 15 files when the first was
+written, and one internally caused suppression when the second landed, and the
+Ratchet Discipline is what a checker that cannot be clean at once does. The
+baselines are
+`.meta/checks/comments.baseline.yaml` and
+`.meta/checks/suppressions.baseline.yaml`, and each may fall and may not rise.
+The comparison itself is `collect.against_baseline`, shared with the
+`meta types` step of `files.py` (solorepo's DR-210).
 
 Scope: every Python file under `.meta/`, which is the Project this gate is for,
 and every Rust file git lists, because `.meta/` holds none and the seed crates
@@ -41,6 +50,7 @@ from checks.collect import (
     CouldNotRun,
     Found,
     Passed,
+    StepOutcome,
     against_baseline,
     check,
     recorded_baseline,
@@ -48,6 +58,7 @@ from checks.collect import (
 from checks.files import tree
 
 BASELINE = META / "checks" / "comments.baseline.yaml"
+SUPPRESSIONS_BASELINE = META / "checks" / "suppressions.baseline.yaml"
 
 # A tool directive: the third keep-exception, and the one a linter or formatter
 # reads rather than a person. `reason:` is here because `meta lints` requires it
@@ -70,8 +81,23 @@ CITATION = re.compile(r"(DR-\d{3}|Article\s+\d+|#\d+|RFC\s*\d+|https?://|\[\[[^\
 # in two modules, drifting the moment either moved.
 NOQA = re.compile(r"#\s*noqa(?P<codes>:\s*[A-Z]+[0-9]*(?:\s*,\s*[A-Z]+[0-9]*)*)?(?P<rest>.*)$")
 TYPE_IGNORE = re.compile(r"#\s*type:\s*ignore(?P<codes>\[[^\]]*\])?(?P<rest>.*)$")
-REASON = re.compile(r"#\s*reason:\s*\S")
+REASON = re.compile(r"#\s*reason:\s*(?P<why>\S.*)$")
 ALLOW = re.compile(r"#!?\[\s*allow\s*\(")
+
+# A dereference of something outside this repository, blanked from a reason
+# before its cause is read: a foreign tracker's host spells a module name of
+# this one, so `https://github.com/python/mypy/issues/1` is the boundary
+# citation the clause asks for and not a reference to
+# `.meta/lib/check_pr/github.py` (solorepo's DR-225).
+UPSTREAM = re.compile(r"https?://\S+")
+# The four shapes a cause inside this repository takes, each resolved against
+# this tree rather than read: a path the repository holds, a dotted reference
+# whose head is a module under `.meta/`, an Issue number, and a Decision Record
+# number (solorepo's DR-225).
+REPO_PATH = re.compile(r"[\w.][\w./-]*\.(?:py|md|ya?ml|rs|toml|json|sh|txt)\b")
+DOTTED = re.compile(r"\b(\w+)\.\w+")
+ISSUE = re.compile(r"#\d+\b")
+DECISION = re.compile(r"\bDR-\d{3}\b")
 
 # The statement kinds a commented-out line is recognised by. A comment whose
 # text merely parses proves nothing — `TODO` is a Name and `fmt: skip` is an
@@ -305,6 +331,78 @@ def suppressions(source: str, rust: bool = False) -> list[tuple[int, str]]:
     return found
 
 
+def modules() -> set[str]:
+    """Every module name a Python file under `.meta/` defines, a package named by its directory."""
+    return {path.parent.name if path.stem == "__init__" else path.stem for path in sources()}
+
+
+def reasons(source: str) -> list[tuple[int, str]]:
+    """Every suppression's reason in a Python source, as `(line, reason)` pairs.
+
+    A suppression carrying no reason yields nothing: `meta lints` is the step
+    that refuses that one (solorepo's DR-177), and one defect reported by two
+    steps reads as two.
+
+    A line yields one reason at most, however many directives it carries.
+    `tokenize` emits one comment token per physical line, so a line spelling
+    both a `noqa` and a `type: ignore` matches both patterns against the same
+    text and both rests end at the same `# reason:` — counting that twice would
+    read one suppression as two and inflate the ratchet by the difference.
+
+    Raises `SyntaxError` or `tokenize.TokenError` when the source will not
+    parse; the caller names the file.
+    """
+    found = []
+    for comment in python_comments(source):
+        for pattern in (NOQA, TYPE_IGNORE):
+            match = pattern.search(f"#{comment.text}")
+            if match is None:
+                continue
+            why = REASON.search(match.group("rest"))
+            if why:
+                found.append((comment.line, why.group("why").strip()))
+                break
+    return found
+
+
+def internal_cause(reason: str, names: set[str]) -> str | None:
+    """What of this repository a suppression's reason names, or `None` where it names nothing here.
+
+    The half of the surviving-suppression clause that is decidable: that a cause
+    is foreign cannot be proved from a sentence, because a library name is a
+    word, but that a cause is local can be, because the thing named is in this
+    tree and the reader can open it (solorepo's DR-225).
+
+    Args:
+        reason: The text after `# reason:`, as `reasons` returns it.
+        names: The module names `modules` found under `.meta/`.
+
+    Returns:
+        str | None: What the reason names here, in the words the failure line
+        reads with, or `None` where nothing it names resolves to this
+        repository.
+    """
+    text = UPSTREAM.sub(" ", reason)
+    for match in REPO_PATH.finditer(text):
+        if (ROOT / match.group()).is_file():
+            return f"names `{match.group()}` of this repository"
+    for match in DOTTED.finditer(text):
+        if match.group(1) in names:
+            return f"names `{match.group()}` of this repository"
+    issue = ISSUE.search(text)
+    if issue:
+        return f"defers to {issue.group()}, an Issue of this repository"
+    decision = DECISION.search(text)
+    if decision:
+        return f"names {decision.group()}, a Decision of this repository"
+    return None
+
+
+def cause_site(relative: str, line: int, cause: str, reason: str) -> str:
+    """Formats an internal suppression cause as a site line for against_baseline."""
+    return f"{relative}:{line}: {cause} — `{reason[:60]}`"
+
+
 @check("commented-out code")
 def commented_out_code():
     """No comment under `.meta/` or in a Rust source is a line of code left behind (solorepo's DR-171).
@@ -375,6 +473,52 @@ def broad_suppressions():
         return Found(tuple(problems))
     return Passed(f"no bare suppression across {len(python)} Python and "
                   f"{len(rust)} Rust files")
+
+
+@check("suppression causes")
+def suppression_causes() -> StepOutcome:
+    """A suppression's reason names a cause outside this repository, ratcheted (A2, solorepo's DR-225).
+
+    The third thing a suppression owes, after the rule `broad suppressions`
+    requires and the reason `meta lints` requires. A suppression earns its keep
+    only as an immutable external boundary constraint, so a reason whose cause
+    is inside this repository fails by construction: an internal cause is one
+    this repository can fix, which is what solorepo's DR-207 says to do with it.
+    An Issue number is refused along with the rest, because deferring to an
+    Issue is the escape the clause exists to close.
+
+    What the step proves is the local half alone. It says nothing about a reason
+    that names no cause this tree holds, which stays with the suppression audit
+    solorepo's DR-207 requires before a handoff.
+
+    The tree is not clean, so the step ratchets against
+    `suppressions.baseline.yaml`, which may fall and may not rise. One entry is
+    left, and annotating `.meta/render.py` is what empties it.
+    """
+    if not SUPPRESSIONS_BASELINE.is_file():
+        return CouldNotRun(f"{SUPPRESSIONS_BASELINE.relative_to(ROOT).as_posix()} is missing")
+    recorded = recorded_baseline(SUPPRESSIONS_BASELINE)
+    names, counts, sites, read = modules(), {}, {}, 0
+    for source in sources():
+        relative = source.relative_to(ROOT).as_posix()
+        try:
+            found = reasons(source.read_text(encoding="utf-8"))
+        except (SyntaxError, tokenize.TokenError) as error:
+            return Found((f"{relative}: does not parse — {error}",))
+        read += len(found)
+        named = [(line, why, cause) for line, why in found
+                 if (cause := internal_cause(why, names))]
+        if named:
+            counts[relative] = len(named)
+            sites[relative] = [cause_site(relative, line, cause, why)
+                               for line, why, cause in named]
+    problems = against_baseline(counts, sites, recorded, "internal suppression causes",
+                                SUPPRESSIONS_BASELINE)
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{read} suppression reasons read, {sum(counts.values())} naming a cause "
+                  f"inside this repository, each file at its baseline")
+
 
 def comment_site(relative: str, block: Block) -> str:
     """Formats an inline commentary block as a site line for against_baseline."""

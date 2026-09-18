@@ -1,0 +1,16 @@
+# The ratchet baseline for the `suppression causes` step of `.meta/check.py`.
+#
+# One entry per file, holding the suppressions it may still carry whose
+# `# reason:` names a cause inside this repository. The Ratchet Discipline is
+# what a checker that cannot be clean at once does: a baseline that may fall and
+# may not rise. A file absent from this map may hold none, and the step fails a
+# file on either side of its number — over, because the debt grew; under,
+# because a baseline nobody lowers has stopped being one.
+#
+# Written by `comments.py`, which names the file, the number and every site in
+# the failure. One entry is left. Its cause is an unannotated re-export in
+# `.meta/render.py`, and it falls when that module is annotated and its own type
+# baseline entry falls with it. The twenty-two that blamed the flat `collect`
+# import of the gate's step modules came out on the trunk while this step was
+# being written, and caindy/solorepo#557 is the sweep that took them.
+.meta/checks/files/prose.py: 1

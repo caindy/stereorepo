@@ -1,0 +1,17 @@
+challenges:
+  - id: work:challenge/559
+    name: Refuse a suppression whose reason names an internal cause
+    challenge_type: GAP
+    description: >-
+      `.claude/skills/technical-writing/SKILL.md` holds that a surviving
+      suppression earns its keep only as an immutable external boundary
+      constraint with a dereferenced upstream issue or specification, and
+      nothing checked that clause. `broad suppressions` enforces the first
+      sentence alone — a suppression naming its rule passes — and `meta lints`
+      enforces that a `# reason:` exists, which the skill itself calls the
+      floor rather than the justification. Between them a suppression naming a
+      rule and carrying any reason at all was unrefusable, which is how
+      solorepo's #541 landed twenty-two `type: ignore[untyped-decorator]`
+      comments whose reason names a cause inside this repository. Read the
+      reason of every suppression under `.meta/` and refuse one whose cause is
+      internal, since an internal cause is one this repository can fix.

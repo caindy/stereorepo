@@ -1,0 +1,113 @@
+decisions:
+  - id: work:decision/225
+    name: "DR-225 · A suppression's reason names a cause outside this repository, and an internal Issue is not an escape"
+    challenge: work:challenge/559
+    status: ADOPTED
+    applies:
+      - work:article/2
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-checks-comments
+      - work:artifact/meta-checks-suppressions-baseline
+      - work:artifact/meta-checks-probes-tools-comments
+    context: >-
+      `.claude/skills/technical-writing/SKILL.md` says what a surviving
+      suppression must be: "A surviving suppression is narrow: the specific
+      rule or error code, never bare. It earns its keep only as an immutable
+      external boundary constraint — a rule a foreign platform, library, or
+      checker forces on the code — with a dereferenced upstream issue or
+      specification saying why the checker is wrong here." Nothing checked the
+      clause after the first sentence. The `broad suppressions` step of
+      `.meta/checks/comments.py` refuses a suppression that names no rule, and
+      the `meta lints` step refuses one that carries no `# reason:`
+      (solorepo's DR-177), which the same skill calls the floor rather than the
+      justification. Between them, a suppression naming a rule and carrying any
+      reason at all was unrefusable.
+
+      Solorepo's #541 is what that permits. It landed twenty-two
+      `# type: ignore[untyped-decorator]` comments whose reason reads "flat
+      `collect` import makes this Any; see collect.check", and `collect.check`
+      is a function of this repository whose docstring blames a `sys.path`
+      insertion of this repository. Both existing steps passed every one of
+      them. An internal cause is one this repository can fix, which is what
+      solorepo's DR-207 already says to do: "A lint or type suppression
+      bypassing safety, correctness, or type soundness is an actionable defect
+      rather than a permanent comment."
+    alternatives:
+      - name: Require every reason to dereference a foreign tracker or specification
+        chosen: false
+        reason: >-
+          The positive form of the clause fails every reason in `.meta/` at
+          once, including ones whose cause is plainly foreign and merely
+          unlinked — "GraphQL query templates have literal curly braces" names
+          a constraint nothing here can move. That makes the step a demand to
+          rewrite forty-nine sentences rather than a refusal of a defect, and
+          the sentences would be written to satisfy the pattern.
+      - name: Pass a reason that cites an internal Issue as an interim state
+        chosen: false
+        reason: >-
+          "The root cause is filed as #557" is the exact spelling
+          solorepo's #541 used, so a step that blesses it reopens the hole it
+          closes: any suppression becomes permissible by filing an Issue beside
+          it, and the Issue then has no deadline and no count. An interim state
+          needs a direction and an owner, which a ratchet baseline has and a
+          sentence does not.
+      - name: Refuse a reason that names an internal cause, ratcheted against a baseline
+        chosen: true
+        reason: >-
+          Internal is decidable closed-world against this tree — a path the
+          repository holds, a dotted reference whose head is a module under
+          `.meta/`, an Issue number, a Decision Record number — so the step
+          refuses what it can prove rather than judging prose. The tree is not
+          clean, so the count ratchets as `inline commentary` does
+          (solorepo's DR-210): the debt is named, listed and falling, which is
+          what it did while this was being written — solorepo's #557 took
+          twenty-three of the twenty-four out before the step landed.
+    consequences:
+      - >-
+        A `suppression causes` step in `.meta/checks/comments.py` reads the
+        `# reason:` of every `noqa` and `type: ignore` under `.meta/` and
+        reports one whose reason names an internal cause, counted per file
+        against `.meta/checks/suppressions.baseline.yaml` through
+        `collect.against_baseline` (solorepo's DR-210).
+      - >-
+        A URL is blanked before the scan, so a reason dereferencing
+        `https://github.com/python/mypy/issues/…` is a foreign dereference and
+        not a reference to `.meta/lib/check_pr/github.py`.
+      - >-
+        An Issue number or a Decision Record number in a reason is an internal
+        cause and is refused; the interim state a suppression is in is recorded
+        in the baseline, not in its sentence.
+      - >-
+        The baseline opens at one and may fall and may not rise. It was written
+        against `aeeea1c`, where it stood at twenty-four — the twenty-two
+        `untyped-decorator` suppressions of solorepo's #541, the step's own
+        registration, which took one from the same root cause, and the
+        `no-untyped-call` in `.meta/checks/files/prose.py`. The trunk then
+        landed solorepo's #561, which made `@check` resolve for mypy and took
+        the first twenty-three out, so what the step ships guarding is the
+        `no-untyped-call` alone.
+      - >-
+        A line yields one reason however many directives it carries, because
+        `tokenize` emits one comment token per physical line and both
+        suppression patterns then end at the same `# reason:`. Counting that
+        twice would read one suppression as two and put the ratchet over its
+        baseline on a line nobody added.
+    falsifier: >-
+      A suppression under `.meta/` whose reason names a path, a module, an
+      Issue or a Decision of this repository, and that `.meta/check.py` passes
+      without the baseline recording it.
+    rationale: |-
+      The clause turns on where the cause lives, and that is a fact about this
+      tree rather than a matter of taste. A rule a foreign platform forces on
+      the code cannot be fixed from inside the repository, which is the whole
+      reason the exception exists; a rule this repository forces on itself can,
+      which makes the suppression a defect wearing an exception's clothes.
+
+      Naming the cause is therefore the checkable half, and it is checkable in
+      one direction only. That a cause is foreign cannot be proved from a
+      sentence — a library name is a word — but that a cause is local can be,
+      because the thing named is in the tree and the checker can look. So the
+      step refuses what resolves here and says nothing about the rest, which
+      leaves the remainder to the suppression audit solorepo's DR-207 requires
+      before a handoff and takes away the one escape that was being used.

@@ -22,12 +22,17 @@ def comment_probes():
     the `meta types` step (solorepo's DR-210); both callers' site formatting
     (`comments.comment_site` and `files.mypy_errors`) and their baseline
     parameters are probed.
+
+    `internal_cause` is a fourth detector and carries the same cost both ways:
+    a false negative reopens the escape solorepo's DR-225 closes, and a false
+    positive refuses a reason whose cause is a foreign tracker.
     """
     from checks import comments
     here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
     blocks_found, sites = _blocks_and_sites(comments, here)
     return (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
-            + blocks_found + _ratchet(comments, here, sites) + _type_errors(here) + _rust_comments(comments))
+            + _causes(comments) + blocks_found + _ratchet(comments, here, sites)
+            + _type_errors(here) + _rust_comments(comments))
 
 
 def _expecting(kind: Any) -> tuple[Any, list[str]]:
@@ -105,6 +110,38 @@ def _suppressions(comments: Any) -> list[str]:
     if not beside:
         problems.append("comment probes: an `#[allow(...)]` beside a comment is still a suppression")
     return problems
+
+
+def _causes(comments: Any) -> list[str]:
+    """`reasons` reading a suppression's reason off a source — one per line, however many directives the line carries — and `internal_cause` refusing a cause this tree holds while letting a foreign one through (solorepo's DR-225)."""
+    problems = []
+    source = (
+        "value = call()  # noqa: F401  # reason: registers check steps\n"
+        "other = call()  # type: ignore[untyped-decorator]  # reason: see collect.check\n"
+        "bare = call()  # noqa: F401\n"
+        "both = call()  # noqa: F401  # type: ignore[union-attr]  # reason: one suppression\n"
+    )
+    read = comments.reasons(source)
+    if read != [(1, "registers check steps"), (2, "see collect.check"), (4, "one suppression")]:
+        problems.append(f"comment probes: reasons read {read!r}, expected the three that carry one")
+    names = comments.modules()
+    missing = [name for name in ("collect", "comments", "check", "citations") if name not in names]
+    if missing:
+        problems.append(f"comment probes: modules() missed {missing!r}, which are modules under .meta/")
+
+    expect, cause_problems = _expecting("internal_cause")
+    for text in ("flat `collect` import makes this Any; see collect.check",
+                 "the root cause is filed as solorepo's #557",
+                 "`render.rendered()` carries no annotations — .meta/render.py re-exports it",
+                 "the ordering solorepo's DR-207 settles"):
+        expect(True, comments.internal_cause(text, names) is not None, text)
+    for text in ("mypy does not narrow this, see https://github.com/python/mypy/issues/12345",
+                 "the import is the test of whether PyYAML is installed",
+                 "GraphQL query templates have literal curly braces",
+                 "normalising unicode smart quotes to ascii quotes",
+                 "registers check steps", "registration order is deliberate"):
+        expect(False, comments.internal_cause(text, names) is not None, text)
+    return problems + cause_problems
 
 
 def _blocks_and_sites(comments: Any, here: Any) -> tuple[list[str], list[str]]:
