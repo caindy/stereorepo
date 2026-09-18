@@ -29,6 +29,8 @@ the level — the entry names its Product or Project, or neither.
 
 <Why this option was taken, or why it was not. For the chosen one this includes what it costs: every choice costs something, and a record claiming otherwise is advertising.>
 
+<Whether this option was closed by being built rather than by being weighed. Absent is the ordinary case and what `alternatives` otherwise asserts: the option was on the table when the question was answered. Set where it was implemented and its failure observed afterwards — in review, or in use — which is a stronger foreclosure than argument and a different claim about when the question was settled. The slot exists so that such an option can stay in the record without the record claiming a deliberation that did not happen: dropping it instead leaves the next reader free to reach for the same option and re-make the mistake.>
+
 ### B: <alternative> — chosen
 
 <Why this option was taken, or why it was not. For the chosen one this includes what it costs: every choice costs something, and a record claiming otherwise is advertising.>

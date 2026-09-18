@@ -70,7 +70,7 @@
 .meta/lib/dereference/reading.py: 40
 .meta/lib/dereference/report.py: 5
 .meta/lib/render/cli.py: 4
-.meta/lib/render/decisions.py: 33
+.meta/lib/render/decisions.py: 21
 .meta/lib/render/pages.py: 40
 .meta/lib/render/record.py: 21
 .meta/lib/render/skills.py: 24

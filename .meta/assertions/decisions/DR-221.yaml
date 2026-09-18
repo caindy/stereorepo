@@ -18,9 +18,10 @@ decisions:
       `**Waits on.**` paragraph and each carrying one `Actor:` trailer, so
       one run filed each twice. Run `gha-34906343384` did it to two at once.
       The cost was not shelf space: a fifth pair, the Challenges #436 and
-      #437, was doubled the same way and both halves were worked, so their
-      pull requests #439 and #442 both merged and landed the same change on
-      `meta types` twice.
+      #437, was doubled the same way and both halves were worked, so the
+      duplication cost two coder runs, two reviews and two pull requests. The
+      second of those, `#442`, landed docstring rewording and a history entry
+      with no logic in it, because `#439` had already landed the mechanism.
     alternatives:
       - name: Key the identity on the promoting thread alone
         chosen: false
@@ -43,6 +44,7 @@ decisions:
           and a caller who cannot see that is a caller who will not finish it.
       - name: Key `promote` on the gate's own `PROMOTED` pattern
         chosen: false
+        tried: true
         reason: >-
           The gate reads any Issue URL from any party as evidence that a
           thread's item survives somewhere, which is the right reading for a

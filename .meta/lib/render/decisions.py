@@ -161,7 +161,7 @@ def decision_form():
     if not slots:
         return None
 
-    def guidance(name):
+    def guidance(name: str) -> str:
         return " ".join(slots[name]["description"].split())
 
     out = [record.BANNER.format(src="work/decisions.yaml"),
@@ -175,6 +175,7 @@ def decision_form():
            "## Alternatives considered\n",
            "<" + guidance("alternatives") + ">\n",
            "### A: <alternative> — rejected\n", "<" + guidance("reason") + ">\n",
+           "<" + guidance("tried") + ">\n",
            "### B: <alternative> — chosen\n", "<" + guidance("reason") + ">\n",
            "## Consequences\n", "<" + guidance("consequences") + ">\n",
            "## What would falsify this\n", "<" + guidance("falsifier") + ">\n",

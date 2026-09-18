@@ -1,0 +1,96 @@
+decisions:
+  - id: work:decision/227
+    name: "DR-227 · An option closed by being built stays in the record, marked `tried`"
+    challenge: work:challenge/550
+    status: PROPOSED
+    applies:
+      - work:article/11
+      - work:article/20
+    enacted_in:
+      - work:artifact/meta-work-decisions
+      - work:artifact/meta-assertions-disciplines
+      - work:artifact/meta-lib-render-decisions
+    context: >-
+      `alternatives` asserts what was on the table when the question was
+      answered, and `Alternative` carries `name`, `chosen` and `reason` — nothing
+      that says when an option closed. So an option that was implemented and then
+      found wrong has two places to go, and both lose something. Listed
+      unmarked it reads as deliberation, which is the reading Written Decisions'
+      first step warns about: an option nobody weighed is not an option. Dropped,
+      the entry is honest about what was weighed and silent about the thing that
+      was tried, so the next reader reaches for it again. Solorepo's DR-221 is
+      the case. Its fourth alternative, keying `promote` on the gate's own
+      `PROMOTED` pattern, is what #545 shipped; the reviewer's thread there
+      argued that the broad pattern's false positive costs the Challenge rather
+      than a repeated URL, the key was narrowed, and the closed option was
+      written into the entry afterwards with the reviewer's reason. It sits
+      beside three that were on the table when the question was answered, and
+      nothing tells them apart.
+    alternatives:
+      - name: Drop the option from the entry
+        chosen: false
+        reason: >-
+          It costs nothing to write and satisfies the first step exactly: what is
+          left is four options, all weighed before the answer. What it loses is
+          the only foreclosure in the entry backed by evidence rather than
+          argument, and it loses it to the reader most likely to need it — the
+          one reaching for the same pattern.
+      - name: Say it in the option's `reason`
+        chosen: false
+        reason: >-
+          Free prose in a slot that is already free, so it needs no model change,
+          and the honest sentence can be written today. But the claim is about
+          the list rather than about the option: `alternatives` says these were on
+          the table, and a qualifier buried in one entry's prose does not reach a
+          reader who read the list and not the entries. It is also unaskable —
+          nothing can find the options closed this way, which is the query a
+          Discipline would want.
+      - name: A status on the option, naming how each was closed
+        chosen: false
+        reason: >-
+          The general form, and it would carry a third case if one arrived. Every
+          option in the record but one would take the same value, which is a
+          boolean with more syntax, and it would make an entry that omits the
+          field ambiguous where absence is currently the plain ordinary reading.
+      - name: A flag on the option, absent for the ordinary case
+        chosen: true
+        reason: >-
+          `tried` on `Alternative`, absent where the option was weighed and set
+          where it was built and found wrong. It costs a slot on the form every
+          Decision is written on, and a reader who does not know the slot reads a
+          marked option as an ordinary rejection — the failure the entry had
+          already, so nothing is worse than before for that reader and better for
+          every other.
+    consequences:
+      - >-
+        `Alternative` carries `tried`, a boolean, absent by default. Absent means
+        the option was on the table when the question was answered, which is what
+        `alternatives` asserted all along; set means it was implemented and its
+        failure observed afterwards, in review or in use.
+      - >-
+        Written Decisions gains the step beside "Never invent a rejection", which
+        it qualifies: an option closed after the answer is kept and marked rather
+        than either dropped or listed as though it had been weighed.
+      - >-
+        The rendered form asks for it, under the rejected alternative, because the
+        form is a view of the class and a slot invisible there is a slot nobody
+        sets.
+      - >-
+        Nothing checks it. Whether an option was weighed or tried is not readable
+        from the entry, and a gate that could tell would have to know what
+        happened on a branch that has since merged. It is a step followed rather
+        than checked, like the one it sits beside.
+      - >-
+        Solorepo's DR-221's fourth alternative is marked, and the entries already on the
+        trunk are not re-read for others. An unmarked option means what it always
+        meant; the slot buys the distinction going forward.
+    falsifier: >-
+      An entry recording an option as weighed that was in fact built and found
+      wrong, written after this. Equally, `tried` set on an option that was
+      argued down before the answer, which would make the flag mean nothing.
+    rationale: |-
+      The record's value is the alternative it closes, and an option closed by
+      evidence is closed harder than one closed by argument. What the record had
+      no way to say was which, so the two honest moves available were to lose the
+      option or to misdescribe the list. The slot is the smallest thing that lets
+      the record keep both the option and the truth about when it closed.
