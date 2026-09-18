@@ -7,7 +7,7 @@ decisions:
       - work:article/8
       - work:article/22
     enacted_in:
-      - work:artifact/meta-assertions-disciplines
+      - work:artifact/meta-assertions-imported-disciplines
       - work:artifact/meta-say-verbs
       - work:artifact/meta-say-move
       - work:artifact/meta-say-post
