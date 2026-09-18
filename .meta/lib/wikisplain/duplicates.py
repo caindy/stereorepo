@@ -7,7 +7,7 @@ from typing import Any
 
 import yaml
 
-from lib.wikisplain import lead
+from lib.wikisplain import ROOT, lead
 
 
 def loaded(path: pathlib.Path) -> dict[str, Any]:
@@ -105,7 +105,7 @@ def find_duplicates(
     whichever was written first. A source that is absent or will not parse
     contributes nothing rather than stopping the search.
     """
-    root_path = root or pathlib.Path(__file__).resolve().parent.parent
+    root_path = root or ROOT
     target_slug = lead.slugify(query)
     target_norm = query.strip().lower()
     return (wiki_duplicates(root_path, target_slug, target_norm)

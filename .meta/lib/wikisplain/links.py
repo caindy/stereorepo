@@ -5,7 +5,7 @@ from __future__ import annotations
 import pathlib
 import re
 
-from lib.wikisplain import duplicates
+from lib.wikisplain import ROOT, duplicates
 
 WIKILINK_RE = re.compile(r"\[\[(.*?)\]\]")
 FENCED_RE = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
@@ -19,7 +19,7 @@ def extract_known_concepts(root: pathlib.Path | None = None) -> dict[str, str]:
     vocabulary concept contributes its slug and its preferred label, and a
     discipline its slug and its name, each pointing at the slug.
     """
-    root_path = root or pathlib.Path(__file__).resolve().parent.parent
+    root_path = root or ROOT
     known: dict[str, str] = {}
     wiki_dir = root_path / "wiki"
     if wiki_dir.is_dir():

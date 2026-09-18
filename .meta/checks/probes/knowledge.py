@@ -275,7 +275,7 @@ def wikisplain_probes():
 
 @check("wikisplain argv probes", pre=True)
 def wikisplain_argv_probes() -> list[str]:
-    """`wikisplain.main` joins a shell-split multi-word concept before scaffolding, guarding the `nargs="+"` fix from solorepo's #483 against regressing.
+    """`wikisplain.main` joins shell-split concepts and scaffolds beneath its resolved repository root (solorepo's #483).
 
     A shell splits an unquoted `Test Wiki Concept Two` into four argv words;
     driven through `wikisplain.main` with `--dry-run`, the generated page's
@@ -284,10 +284,13 @@ def wikisplain_argv_probes() -> list[str]:
     words as `unrecognized arguments`, which raises `SystemExit` rather than
     returning — caught here and reported as the case's own finding, since
     `check.py`'s precheck guard catches `Exception` and `SystemExit` is not
-    one.
+    one. A second invocation points `cli.ROOT` at a temporary repository and
+    asserts that `main` writes its scaffold under that root's `wiki/` tree.
     """
     import contextlib
     import io
+    import pathlib
+    import tempfile
     wikisplain = load_module(META / "wikisplain.py", "wikisplain")
     problems = []
     argv = ["Test", "Wiki", "Concept", "Two", "--definition", "a synthetic concept for regression coverage",
@@ -307,5 +310,22 @@ def wikisplain_argv_probes() -> list[str]:
         problems.append(f"wikisplain argv: expected heading 'Test Wiki Concept Two', got {content!r}")
     if "**Test Wiki Concept Two** is a synthetic concept for regression coverage." not in content:
         problems.append(f"wikisplain argv: expected the joined MOS:LEAD lead, got {content!r}")
-    return problems
 
+    with tempfile.TemporaryDirectory() as directory:
+        root = pathlib.Path(directory)
+        old_root = wikisplain.cli.ROOT
+        wikisplain.cli.ROOT = root
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = wikisplain.main([
+                    "Command Root Concept",
+                    "--definition", "a synthetic concept for command-line root coverage",
+                ])
+        finally:
+            wikisplain.cli.ROOT = old_root
+        target = root / "wiki" / "solorepo" / "command-root-concept.md"
+        if rc != 0:
+            problems.append(f"wikisplain argv: expected a successful scaffold, got {rc}")
+        if not target.is_file():
+            problems.append(f"wikisplain argv: expected scaffold at {target}, but it was not written")
+    return problems

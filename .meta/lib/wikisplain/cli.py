@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import argparse
-import pathlib
 
-from lib.wikisplain import duplicates, lead, pages
+from lib.wikisplain import ROOT, duplicates, lead, pages
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -55,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-    root = pathlib.Path(__file__).resolve().parent.parent
+    root = ROOT
     concept = " ".join(args.concept).strip()
 
     dups = duplicates.find_duplicates(concept, context=args.context, root=root)
