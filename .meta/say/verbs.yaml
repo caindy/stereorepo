@@ -78,8 +78,8 @@ programs:
         held_by: [solo]
       - name: triage
         usage: "<issue> <level>"
-        does: "make an Issue a Challenge at a level: one that arrived without the form, or a roadmap Issue whose blocker has closed"
-        held_by: [solo]
+        does: "the verdict on a Challenge read against the form and the tree: land the level found on one that has none; also makes a Challenge of an Issue that arrived without the form, or of a roadmap Issue whose blocker has closed; refused where a level already stands, which `difficulty` moves"
+        held_by: [reviewer, solo]
       - name: difficulty
         usage: "<issue> <level>"
         does: "move a Challenge's level: easy, medium, hard, human"

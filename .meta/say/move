@@ -102,19 +102,23 @@ def difficulty(issue: str | int, level: str) -> None:
 
 
 def triage(issue: str | int, level: str) -> None:
-    """Convert an existing Issue into a Challenge with an assigned difficulty level.
+    """Land the reviewer's verdict on a Challenge: the level it was read at.
 
-    Strips any prior roadmap label and applies `challenge` and the target difficulty
-    level in a single update (solorepo's DR-112).
+    A Challenge with no level takes the one given. An Issue that is not a
+    Challenge becomes one at that level, any prior roadmap label stripped, in a
+    single update (solorepo's DR-112). A Challenge whose level already stands is
+    refused, because a level standing is a verdict standing and `difficulty` is
+    the verb that moves one (solorepo's DR-230).
 
     Parameters:
         issue (int | str): Issue number to triage.
-        level (str): Initial difficulty level (`easy`, `medium`, `hard`, `human`).
+        level (str): Difficulty level (`easy`, `medium`, `hard`, `human`).
     """
     now = labels_of(issue)
-    if "challenge" in now:
-        sys.exit(f"say: #{issue} is a Challenge already (labelled {now}); "
-                 "`move difficulty` moves its level")
+    standing = [l for l in now if l in DIFFICULTIES]
+    if "challenge" in now and standing:
+        sys.exit(f"say: #{issue} is a Challenge at `{standing[0]}` already, which is a "
+                 "verdict standing; `move difficulty` moves its level")
     if level in now:
         relabel(issue, remove=[level])
     stale = [l for l in now if l == "roadmap" or (l in DIFFICULTIES and l != level)]
