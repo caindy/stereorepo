@@ -22,7 +22,8 @@ def channel_parser_probes():
     one program's (solorepo's DR-117), so what `post` says `move` does not, and
     the other way about; a close names what answered the Challenge, since the
     closing comment cites what `--by` names and PR First has no `close` verb
-    (solorepo's DR-164); a dispatch says which pass, `review` or `rebase`, and
+    for a pull request (solorepo's DR-164) or for an Issue
+    (solorepo's DR-232); a dispatch says which pass, `review` or `rebase`, and
     no other: the two do opposite things to a branch, and `coder.yml` defaults
     its own input to `review`, so a dispatch that named none would be a review
     by the workflow's silence; and `mint` takes no number, since the number is
@@ -68,6 +69,7 @@ def channel_parser_probes():
             ("merge 13 --stack", {"verb": "merge", "pr": "13", "auto": False, "stack": True}),
             ("supersede 13 --by 12", {"verb": "supersede", "pr": "13", "by": "12"}),
             ("supersede 13 --by DR-" + "152", {"verb": "supersede", "pr": "13", "by": "DR-" + "152"}),
+            ("obviate 93 --by 94", {"verb": "obviate", "issue": "93", "by": "94"}),
             ("merge-manager", {"verb": "merge-manager", "dry_run": False}),
             ("merge-manager --dry-run", {"verb": "merge-manager", "dry_run": True}),
             ("advance", {"verb": "advance", "pr": None}),
@@ -92,7 +94,7 @@ def channel_parser_probes():
             (withdrawn, ["review 1", "comment 93 --approve", "promote T_1",
                          "issue-comment 93", "resolve", "pr-body 1"]),
             (elsewhere, ["claim 93", "open --title t", "merge 13", "stop 93", "commit -m x",
-                         "mint", "supersede 13 --by 12"]),
+                         "mint", "supersede 13 --by 12", "obviate 93 --by 94"]),
         ),
         "move": (
             (withdrawn, ["milestone 75", "milestone 75 --set x --clear",
@@ -104,8 +106,8 @@ def channel_parser_probes():
                          "label 93 --add human", "stack 1 2"]),
             (elsewhere, ["comment 93", "answer T_1", "review 1 --approve", "landed 13"]),
             ("a close names what answered the Challenge, since the closing comment cites what "
-             "`--by` names (solorepo's DR-164)",
-             ["supersede 13", "close 13", "abandon 13"]),
+             "`--by` names (solorepo's DR-164, solorepo's DR-232)",
+             ["supersede 13", "close 13", "abandon 13", "obviate 93", "duplicate 93"]),
             ("a dispatch says which pass and no other, since `coder.yml` would otherwise "
              "default it to `review`",
              ["dispatch 13", "dispatch 13 --task answer", "dispatch --task review"]),

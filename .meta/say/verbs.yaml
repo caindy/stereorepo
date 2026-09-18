@@ -68,8 +68,8 @@ programs:
     path: .meta/say/move
     concern: >-
       What changes state on GitHub: an Issue filed, triaged, moved between
-      levels, claimed or handed back; a pull request opened, layered, revised,
-      merged, superseded or advanced; a review requested; a coder pass
+      levels, claimed, handed back or obviated; a pull request opened, layered,
+      revised, merged, superseded or advanced; a review requested; a coder pass
       dispatched; a Milestone set; a Decision's number reserved.
     verbs:
       - name: file
@@ -92,6 +92,15 @@ programs:
         usage: "<issue> < body.md"
         does: "where this Job stopped and why; the claim released, the Issue to the solo as `human`, the pull request left open"
         held_by: [coder, workflow]
+      - name: obviate
+        usage: "<issue> --by <issue|pr> < body.md"
+        does: >-
+          close an Issue another answer overtook, as not planned, where each
+          part of it went on stdin; the comment on the Issue and the backlink
+          on what answered it, and the claim on the Issue left as it stands;
+          refused unless `--by` names an open Challenge or a merged pull
+          request
+        held_by: [coder]
       - name: open
         usage: "--title T [--base B|--on <pr>] < body.md"
         does: "open a pull request, the form filled; --on opens a layer on that one and links the stack"

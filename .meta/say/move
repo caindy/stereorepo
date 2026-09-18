@@ -32,7 +32,8 @@ DIFFICULTIES = ("easy", "medium", "hard", "human")
 LOOP_LEVELS = ("easy", "medium")
 
 
-# --- An Issue's life: filed, triaged, its level moved, claimed, handed back.
+# --- An Issue's life: filed, triaged, its level moved, claimed, handed back,
+# --- closed against what answered it.
 
 def labels_of(issue: str | int) -> list[str]:
     """Retrieve the set of label names attached to an Issue.
@@ -401,6 +402,110 @@ def stop(issue: str | int, body: str) -> None:
                 print(f"#{issue} is labelled {', '.join(now_back)}")
     except Exception as exc:
         print(f"warning: could not set difficulty of #{issue} to human: {exc}", file=sys.stderr)
+
+
+OBVIATOR = re.compile(r"^#?(\d+)$")
+"""What `--by` may name: an Issue or a pull request, as `nnn` or `#nnn`."""
+
+
+def obviator(what: str, issue: str | int) -> tuple[str, str]:
+    """Validate what is offered as an Issue's answer, and name it for the closing comment.
+
+    An Issue is answered by an open Challenge that now owns its work, or by a pull
+    request GitHub reports as merged (solorepo's DR-232).
+
+    Parameters:
+        what (str): Issue or pull request reference, as `nnn` or `#nnn`.
+        issue (int | str): The Issue being closed, which nothing may name as its own answer.
+
+    Returns:
+        tuple[str, str]: The number, and the markdown reference the closing comment cites.
+
+    Raises:
+        SystemExit: If the reference does not parse, names the Issue itself, names an
+            unmerged pull request, or names an Issue that is closed or is not a Challenge.
+    """
+    found = OBVIATOR.match(what.strip())
+    if not found:
+        sys.exit(f"say: --by takes an Issue or a pull request, as `nnn` or `#nnn`; {what!r} is "
+                 "neither")
+    number = found.group(1)
+    if number == str(issue).strip().lstrip("#"):
+        sys.exit(f"say: #{issue} cannot be its own answer. `--by` names where the work went: "
+                 "the Challenge that owns it now, or the pull request that landed it.")
+    if kind(number) == "pull request":
+        pull = channel.gh("pr", "view", number, "--json", "state,title")
+        if pull["state"] != "MERGED":
+            sys.exit(f"say: #{number} is {pull['state'].lower()}, not merged, so the tree does "
+                     f"not hold its answer yet and #{issue} is the only open record of the "
+                     "need. A pull request still open closes an Issue by naming it with a "
+                     f"closing keyword in its body; one that never lands would leave #{issue} "
+                     "closed against nothing.")
+        return number, f"#{number} — {pull['title']}"
+    answer = channel.gh("issue", "view", number, "--json", "state,title,labels")
+    if answer["state"] != "OPEN":
+        sys.exit(f"say: #{number} is closed, so it owns nothing now and cannot be where "
+                 f"#{issue}'s work went. Name the Challenge that holds the work today, or the "
+                 "pull request that answered it.")
+    labels = [str(l["name"]) for l in answer["labels"]]
+    if "challenge" not in labels:
+        sys.exit(f"say: #{number} is labelled {labels or 'nothing'} and not `challenge`, so "
+                 "nothing is queued to answer it and no run will take it. Closing "
+                 f"#{issue} against it would move the work out of the queue rather than "
+                 f"across it. `move triage {number} <level>` makes it a Challenge, at a level.")
+    return number, f"#{number} — {answer['title']}"
+
+
+def obviate(issue: str | int, by: str, reason: str) -> None:
+    """Close an Issue another Issue or a merged pull request has already answered.
+
+    Posts the caller's account of where its work went as a signed comment on the
+    Issue naming what answered it, closes the Issue as not planned, reads the
+    state back from GitHub rather than taking it from what `gh` returned, and
+    only then posts the backlink on what `--by` names, so the link is on both
+    (solorepo's DR-232). In that order a close that fails leaves the Issue open
+    with one comment to remove, and a backlink that fails leaves a closed Issue
+    whose account is intact. The assignee is untouched: an Issue closed is
+    offered to nobody, and the claim is the record of who held it.
+
+    Parameters:
+        issue (int | str): Issue number to close.
+        by (str): What answered it: an open Challenge, or a merged pull request.
+        reason (str): What part of the Issue went where.
+
+    Raises:
+        SystemExit: If the number is a pull request or an Issue that is not open, if
+            what `--by` names does not qualify, or if the close does not register on
+            GitHub as closed and not planned.
+    """
+    if kind(issue) == "pull request":
+        sys.exit(f"say: #{issue} is a pull request, and a pull request another answer overtook "
+                 f"closes by `move supersede {issue} --by <pr|DR>`, which reads the Challenge it "
+                 "closes as the evidence that something else answered it.")
+    before = channel.gh("issue", "view", str(issue), "--json", "state,title")
+    if before["state"] != "OPEN":
+        sys.exit(f"say: #{issue} is closed already")
+    number, cited = obviator(by, issue)
+
+    said = [reason.rstrip("\n"), "",
+            f"**Obviated by {cited}.** Closed as not planned rather than by a merge, which is "
+            "PR First's other exit for an Issue: what this one asked for is owned by "
+            f"#{number} now, so no change of its own is owed and the queue should not "
+            "offer it as ripe."]
+    channel.sibling("post").conversation_comment(issue, channel.signed("\n".join(said)))
+    channel.gh("issue", "close", str(issue), "--reason", "not planned", parse=False)
+    after = channel.gh("issue", "view", str(issue), "--json", "state,stateReason")
+    if after["state"] != "CLOSED" or after["stateReason"] != "NOT_PLANNED":
+        sys.exit(f"say: GitHub shows #{issue} {after['state'].lower()} as "
+                 f"{(after['stateReason'] or 'nothing').lower()} after the call, not closed as "
+                 f"not planned. The comment saying it was obviated by #{number} is already "
+                 f"posted on #{issue} and now contradicts its state; delete it before trying "
+                 "again, since a second run posts a second one. No backlink was posted.")
+    channel.sibling("post").conversation_comment(
+        number, channel.signed(f"**#{issue} was obviated by this** — {before['title']}. It is "
+                               "closed as not planned, and where each part of it went is said "
+                               "there. This is the backlink, so the pair reads from either end."))
+    print(f"obviated #{issue} by #{number} — {before['title']}")
 
 
 def milestone(issue: str | int, title: str | None, clear: bool = False) -> None:
@@ -2008,7 +2113,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap = channel.parser(__doc__)
     sub = ap.add_subparsers(dest="verb", required=True)
 
-    # An Issue's life: filed, its difficulty moved, claimed, or handed back.
+    # An Issue's life: filed, its difficulty moved, claimed, handed back, or
+    # closed against what answered it.
     p = sub.add_parser("file"); p.add_argument("--title", required=True)
     what = p.add_mutually_exclusive_group()
     what.add_argument("--difficulty", choices=DIFFICULTIES, dest="level",
@@ -2019,6 +2125,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("difficulty"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
     p = sub.add_parser("claim"); p.add_argument("issue")
     p = sub.add_parser("stop"); p.add_argument("issue")
+    p = sub.add_parser("obviate"); p.add_argument("issue")
+    p.add_argument("--by", required=True,
+                   help="what answered it already: an open Challenge, or a merged pull request")
     p = sub.add_parser("milestone"); p.add_argument("issue")
     target = p.add_mutually_exclusive_group(required=True)
     target.add_argument("--set", dest="title", help="the Milestone's title; created if new")
@@ -2095,6 +2204,8 @@ def main() -> None:
         stop(args.issue, channel.signed(channel.stdin_body()))
     elif args.verb == "supersede":
         supersede(args.pr, args.by, channel.stdin_body())
+    elif args.verb == "obviate":
+        obviate(args.issue, args.by, channel.stdin_body())
     elif args.verb == "open":
         open_pull_request(args.title, channel.signed(channel.stdin_body()), base=args.base, on=args.on)
 

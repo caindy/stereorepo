@@ -353,6 +353,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-claim
     name: .meta/checks/probes/channel/claim.py
     path: .meta/checks/probes/channel/claim.py
+  - id: work:artifact/meta-checks-probes-channel-obviate
+    name: .meta/checks/probes/channel/obviate.py
+    path: .meta/checks/probes/channel/obviate.py
   - id: work:artifact/meta-checks-probes-channel-actor
     name: .meta/checks/probes/channel/actor.py
     path: .meta/checks/probes/channel/actor.py

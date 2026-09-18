@@ -2,6 +2,7 @@
 
 Its parsers and the verb table they are read against, a Decision's status as
 `move` reads it, `claim` at each level from a run and from a session, the
+refusals that keep an Issue's close an answer rather than a tidy-up, the
 refusals that keep one Challenge to one Issue, who the Actor is, where a
 Role's signing key is, the numbers `decision numbering` reads as reserved, and
 a verdict held to the head its run read. Not invariants over the record: each
@@ -15,6 +16,7 @@ import checks.probes.channel.status
 import checks.probes.channel.table
 import checks.probes.channel.layer
 import checks.probes.channel.claim
+import checks.probes.channel.obviate
 import checks.probes.channel.filing
 import checks.probes.channel.triage
 import checks.probes.channel.actor

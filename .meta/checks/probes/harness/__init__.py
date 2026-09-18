@@ -2,7 +2,8 @@
 
 The channel loaded as modules; GitHub answered from a dict, for the verbs that
 rebase, arm, hand off and dispatch; a watch answered from a list of polls; an
-Issue answered from its labels; a wiki page answered from a string. And the
+Issue answered from its labels; an obviation answered from what each number is;
+a wiki page answered from a string. And the
 small acts around a call: a script loaded without running its `main()`, an
 attribute or an environment variable stood in for the length of a block, and
 what a call exited with, read as text rather than allowed to end the step.
@@ -24,7 +25,12 @@ from checks.probes.harness.acts import (
     stood_in,
     written,
 )
-from checks.probes.harness.fakes import FakeFiling, FakeIssue, FakeWikiPath
+from checks.probes.harness.fakes import (
+    FakeFiling,
+    FakeIssue,
+    FakeObviation,
+    FakeWikiPath,
+)
 from checks.probes.harness.github import FakeGitHub, WatchGitHub
 from checks.probes.harness.loaders import load_channel, load_hook, load_module
 
@@ -32,6 +38,7 @@ __all__ = [
     "FakeFiling",
     "FakeGitHub",
     "FakeIssue",
+    "FakeObviation",
     "FakeWikiPath",
     "Outcome",
     "WatchGitHub",

@@ -1,0 +1,22 @@
+challenges:
+  - id: work:challenge/597
+    name: an Issue another Issue or a merged pull request answered has no signed exit
+    challenge_type: DEFECT
+    description: >-
+      A pull request another answer overtook closes by `move supersede`
+      (solorepo's DR-164), which is refused unless what `--by` names has
+      landed. Nothing does the same one level up. `.meta/say/verbs.yaml` names
+      no verb that closes an Issue, and the signing hook refuses
+      `gh issue close`, so an Issue that no merge names can only be closed by
+      the solo in the browser — unsigned, and unrecorded by the channel.
+
+      Two shapes produce one. A Challenge split into others: solorepo's #571
+      mixed a finding with a proposal, the finding became solorepo's #577 and
+      the proposal solorepo's #589, nothing of #571 remained unowned, and no
+      verb could close it. And a duplicate filed under different words, which
+      solorepo's #554 is about detecting and which, once detected, has the same
+      missing exit.
+
+      The cost is on the queue. Every split and every duplicate leaves an Issue
+      open that `just next` lists as ripe, so a run is dispatched to work that
+      is owned elsewhere, and the only remedy is an act the record cannot see.

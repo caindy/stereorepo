@@ -1,8 +1,8 @@
-"""An Issue answered from its labels, a filing answered from an open listing, and a wiki page answered from a string.
+"""An Issue answered from its labels, an obviation answered from what each number is, a filing answered from an open listing, and a wiki page answered from a string.
 """
 import re
 import subprocess
-from typing import Any
+from typing import Any, ClassVar
 
 from checks.collect import ROOT
 
@@ -77,6 +77,80 @@ class FakeIssue:
                     self.labels.remove(args[i + 1])
             return ""
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+
+
+class FakeObviation:
+    """As much of GitHub as `obviate` asks about: what each number is, and the close of the one being obviated.
+
+    `items` maps a number to what GitHub answers for it — `kind`, `"issue"` or
+    `"pull request"`; `state`; `title`; and `labels`, which only an Issue
+    carries. A number no case names is answered as an open Issue with no
+    labels, since a case says what it is about and nothing else.
+
+    `comments` collects `(number, body)` for every comment posted, the body
+    without the `body=` flag it was sent under, and `closed` every
+    `(number, reason)`, which is how a probe reads the backlink and the
+    not-planned reason rather than only the exit. A close takes only the three
+    reasons the GitHub CLI's reference for `gh issue close` lists —
+    `completed`, `not planned`, `duplicate` — and records each as GitHub
+    spells it in `stateReason`; any other spelling is the fake's own
+    `AssertionError`, so a changed reason is a failing probe rather than a
+    read-back that passes by construction (solorepo's DR-232).
+    """
+
+    def __init__(self, items: dict[str, dict[str, Any]] | None = None) -> None:
+        self.items = {str(n): dict(what) for n, what in (items or {}).items()}
+        self.comments: list[tuple[str, str]] = []
+        self.closed: list[tuple[str, str]] = []
+
+    def of(self, number: str | int) -> dict[str, Any]:
+        """What GitHub answers for one number, defaulted to an open Issue carrying no labels."""
+        return self.items.setdefault(str(number), {"kind": "issue", "state": "OPEN",
+                                                   "title": f"#{number}", "labels": []})
+
+    def __call__(self, *args: str, parse: bool = True, **kwargs: Any) -> Any:
+        """One `gh` call: the repository, what a number is, an `issue view` or a `pr view` of it, a comment posted, or an Issue closed."""
+        if args[:2] == ("repo", "view"):
+            return {"nameWithOwner": "o/r"}
+        if args[:2] == ("issue", "view") or args[:2] == ("pr", "view"):
+            return self.view(args)
+        if args[:2] == ("issue", "close"):
+            return self.close(args)
+        if args[:1] == ("api",) and len(args) > 1 and args[1].endswith("/comments"):
+            body = args[args.index("-f") + 1]
+            self.comments.append((args[1].rsplit("/", 2)[1], body.removeprefix("body=")))
+            return {"html_url": "https://github.com/o/r/issues/1#issuecomment-1"}
+        if args[:1] == ("api",) and len(args) == 2:
+            what = self.of(args[1].rsplit("/", 1)[1])
+            pull = {"url": f"https://api.github.com/repos/o/r/pulls/{args[1].rsplit('/', 1)[1]}"}
+            return {"pull_request": pull} if what["kind"] == "pull request" else {}
+        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+
+    def view(self, args: tuple[str, ...]) -> dict[str, Any]:
+        """`issue view` or `pr view` of the fields the `--json` beside it asked for."""
+        what = self.of(args[2])
+        fields = args[args.index("--json") + 1].split(",")
+        answer = {"state": what["state"], "title": what["title"],
+                  "labels": [{"name": name} for name in what.get("labels") or []],
+                  "stateReason": what.get("stateReason")}
+        if any(field not in answer for field in fields):
+            raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        return {field: answer[field] for field in fields}
+
+    REASONS: ClassVar[dict[str, str]] = {"completed": "COMPLETED", "not planned": "NOT_PLANNED",
+                                         "duplicate": "DUPLICATE"}
+    """What `--reason` accepts, per the CLI reference, and the `stateReason` GitHub records for each."""
+
+    def close(self, args: tuple[str, ...]) -> str:
+        """`issue close`: the reason recorded, and the Issue left closed as GitHub leaves it."""
+        what = self.of(args[2])
+        reason = args[args.index("--reason") + 1] if "--reason" in args else "completed"
+        if reason not in self.REASONS:
+            raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        self.closed.append((str(args[2]), reason))
+        what["state"], what["stateReason"] = "CLOSED", self.REASONS[reason]
+        return ""
+
 
 class FakeWikiPath:
     """A wiki page as the wiki checks read one: a repository-relative path whose text is given rather than read from disk.

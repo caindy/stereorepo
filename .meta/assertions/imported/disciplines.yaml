@@ -553,6 +553,20 @@ disciplines:
         issues a number twice — but written back into the record as WITHDRAWN,
         which `supersede` names as it closes.
       - >-
+        An Issue closes by the merge that names it, or by **obviate**, and
+        never by hand. A Challenge split into others, or filed a second time
+        under different words, is answered without a change of its own: the
+        work is owned elsewhere and nothing is left here to merge, so the
+        Issue sits open and `just next` keeps offering it as ripe. `move
+        obviate <issue> --by <what answered it>` closes it as not planned,
+        says on the Issue what part of it went where, and puts the backlink on
+        what answered it, so the pair reads from either end. It is refused
+        unless `--by` names an open Challenge or a merged pull request: an
+        answer nobody is queued to give and one that never landed both leave
+        the need with no open record, which is an Issue closed against
+        nothing. Closed in the browser instead it is an act the record cannot
+        see, which is what the signing hook refuses.
+      - >-
         Push before stopping, and stop at green. Work that exists only in a
         worktree the next Job will never see has not been handed off, and a red
         gate is not a handoff — it is a mess whose author is gone. The gate is

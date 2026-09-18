@@ -270,3 +270,18 @@ entry's `status` line as `PROPOSED`, which is a diff carrying a decision
 rather than one correcting an adopted entry's prose.
 
 Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+
+### An Issue answered elsewhere closed by hand or not at all
+
+Splitting solorepo's #571 left the parent answered — the finding had become
+solorepo's #577 and the proposal solorepo's #589, and nothing of it was
+unowned — and no verb could close it. `supersede` closes a pull request
+another answer overtook and nothing did the same one level up, so the close
+fell to the solo in the browser, unsigned and unrecorded by the channel, or
+did not happen and `just next` kept offering the Issue as ripe
+(solorepo's #597). Established: `obviate` closes the Issue as not planned
+against what answered it, refusing unless that is an open Challenge or a
+merged pull request, and posts the account of where the work went on the
+Issue and the backlink on what answered it.
+
+Evidence: `.meta/checks/probes/channel/obviate.py::obviate_probes`
