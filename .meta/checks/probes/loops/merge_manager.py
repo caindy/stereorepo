@@ -39,9 +39,9 @@ def merge_manager_probes():
 
     The end-to-end run answers GitHub from four pull requests and two Issues:
     a stack base, a dependent that waits on it, an unreviewed one and a layer
-    based on the first. The base is chosen and the dependent deferred; a dry
-    run says so and merges nothing; the real run merges the base and nothing
-    else. Last, `issue_blockers` and `next.waits_on` prefer GitHub's native
+    based on the first. The base is chosen, the dependent deferred, and the
+    unreviewed and layered candidates refused with their reasons; a dry run says
+    so and merges nothing; the real run merges the base and nothing else. Last, `issue_blockers` and `next.waits_on` prefer GitHub's native
     `blockedBy` over the body's prose and fall back to the prose, and
     `waits_on` returns a blocker that is not an Issue as the text it was
     (solorepo's DR-170).
@@ -296,7 +296,7 @@ class ManagerFake:
 
 
 def _end_to_end(channel: Any, move: Any) -> list[str]:
-    """The base is chosen and the dependent deferred; a dry run says so and merges nothing, and the real run merges the base and nothing else."""
+    """The base is chosen, the dependent deferred, and the refused candidates named with their reasons; a dry run says so and merges nothing, and the real run merges the base and nothing else."""
     problems = []
     fake = ManagerFake(*_fixtures())
     with stood_in(channel, gh=fake.gh, repo=fake.repo, graphql=fake.graphql):
@@ -305,6 +305,10 @@ def _end_to_end(channel: Any, move: Any) -> list[str]:
             problems.append(f"merge manager: expected #{'10'} to be chosen as stack base, got:\n{text}")
         if f"deferred: #{'11'}" not in text:
             problems.append(f"merge manager: expected #{'11'} to be deferred, got:\n{text}")
+        if f"  #{'12'} (unreviewed PR): no review from {REVIEWER}" not in text:
+            problems.append(f"merge manager: expected #{'12'} refusal reason, got:\n{text}")
+        if f"  #{'13'} (layered PR with non-main base): base is branch-a, not main" not in text:
+            problems.append(f"merge manager: expected #{'13'} refusal reason, got:\n{text}")
         if "dry run — not merging" not in text:
             problems.append("merge manager: dry run message missing")
         if fake.merged:

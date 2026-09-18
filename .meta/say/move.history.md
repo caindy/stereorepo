@@ -285,3 +285,16 @@ merged pull request, and posts the account of where the work went on the
 Issue and the backlink on what answered it.
 
 Evidence: `.meta/checks/probes/channel/obviate.py::obviate_probes`
+
+### A refused pull request remained silent on any pass with eligible candidates
+
+On passes where at least one pull request was eligible, `merge_manager()`
+printed `chosen:` and `deferred:` lines for eligible candidates but omitted
+evaluations for pull requests refused by semaphores, reporting refusal reasons
+only on completely idle passes (solorepo's #585). As a result, a candidate
+carrying a proposed decision or failing a check received no explanation for its
+omission while other work merged. Established: `merge_manager()` prints every
+refused pull request and its semaphore reasons across both idle and active
+passes.
+
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`

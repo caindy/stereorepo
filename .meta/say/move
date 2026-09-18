@@ -2030,10 +2030,26 @@ def advance_stranded(pulls: list[dict[str, Any]],
             print(f"merge-manager: could not advance #{number} — {exc.code}")
 
 
+def report_refusals(pulls: list[Pull],
+                    evaluations: dict[int, tuple[bool, list[str]]]) -> None:
+    """Print the refusal reasons for each non-eligible pull request.
+
+    Parameters:
+        pulls (list): The open pull requests to inspect.
+        evaluations (dict): Pull request number to the `(eligible, reasons)`
+            pair `evaluate_pr` answered with.
+    """
+    for pull in pulls:
+        num = pull["number"]
+        ok, reasons = evaluations[num]
+        if not ok:
+            print(f"  #{num} ({pull.get('title', '')[:50]}): {'; '.join(reasons)}")
+
+
 def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
     """Evaluate open pull requests against semaphores, rank eligible candidates
-    by leverage, assert choices and deferrals out loud, and squash-merge the top
-    candidate (solorepo's DR-161).
+    by leverage, assert choices, deferrals, and semaphore refusals out loud, and
+    squash-merge the top candidate (solorepo's DR-161).
 
     Idle with nothing eligible, it hands the open pull requests to
     `advance_stranded`, so an approved one that has merely fallen behind trunk
@@ -2071,10 +2087,7 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
 
     if not eligible:
         print(f"merge-manager: idle — 0 of {len(pulls)} open pull request(s) eligible")
-        for pull in pulls:
-            num = pull["number"]
-            _, reasons = evaluations[num]
-            print(f"  #{num} ({pull.get('title', '')[:50]}): {'; '.join(reasons)}")
+        report_refusals(pulls, evaluations)
         if stranded:
             advance_stranded(pulls, evaluations, owner, name, dry_run)
         return
@@ -2118,6 +2131,7 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
         dm = metrics[d["number"]]
         print(f"deferred: #{d['number']} — {d['title']} "
               f"(lower leverage: unblocks: {dm['unblocks']}, base: {dm['is_base']}, churn: +{d.get('additions', 0)}/-{d.get('deletions', 0)})")
+    report_refusals(pulls, evaluations)
 
     if dry_run:
         print(f"merge-manager: dry run — not merging #{winner['number']}")
