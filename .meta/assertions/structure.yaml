@@ -407,6 +407,21 @@ artifacts:
   - id: work:artifact/meta-dereference
     name: .meta/dereference.py
     path: .meta/dereference.py
+  - id: work:artifact/meta-lib-dereference
+    name: .meta/lib/dereference/__init__.py
+    path: .meta/lib/dereference/__init__.py
+  - id: work:artifact/meta-lib-dereference-reading
+    name: .meta/lib/dereference/reading.py
+    path: .meta/lib/dereference/reading.py
+  - id: work:artifact/meta-lib-dereference-asking
+    name: .meta/lib/dereference/asking.py
+    path: .meta/lib/dereference/asking.py
+  - id: work:artifact/meta-lib-dereference-report
+    name: .meta/lib/dereference/report.py
+    path: .meta/lib/dereference/report.py
+  - id: work:artifact/meta-lib-dereference-cli
+    name: .meta/lib/dereference/cli.py
+    path: .meta/lib/dereference/cli.py
   - id: work:artifact/meta-gate
     name: .meta/gate
     path: .meta/gate

@@ -38,6 +38,11 @@ decisions:
       - work:artifact/meta-lib-worktree-only-shell
       - work:artifact/meta-lib-worktree-only-grammar
       - work:artifact/meta-lib-worktree-only-verdict
+      - work:artifact/meta-lib-dereference
+      - work:artifact/meta-lib-dereference-reading
+      - work:artifact/meta-lib-dereference-asking
+      - work:artifact/meta-lib-dereference-report
+      - work:artifact/meta-lib-dereference-cli
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-ruff-toml
       - work:artifact/meta-disciplines

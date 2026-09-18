@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/519
+    name: Split .meta/dereference.py into a package behind a thin entry point
+    challenge_type: REFACTOR
+    description: >-
+      `.meta/dereference.py` was 551 lines: the reading of a citation before
+      the hand-off, holding the scopes a branch is read in, the extraction of
+      citation pairs, the model that answers each, the report and the command
+      line in one script, one of its functions over the seed's complexity
+      ceiling. The ceiling and the pylint size rules are to be applied to
+      `.meta/`, whose ruleset under solorepo's DR-177 selects neither. Split
+      first as moves into `.meta/lib/dereference/` under the convention
+      solorepo's DR-217 sets for a script, then refactor one module at a time.

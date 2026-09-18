@@ -13,6 +13,8 @@ decisions:
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-checks-probes-tools-dereference
+      - work:artifact/meta-lib-dereference-asking
+      - work:artifact/meta-lib-dereference-reading
     context: >-
       DR-130 split a citation's claim into the four shapes a string search
       reaches and left the rest, on the grounds that deciding whether a sentence

@@ -38,6 +38,7 @@ decisions:
       - work:artifact/meta-checks-citations-claims
       - work:artifact/meta-assertions-structure
       - work:artifact/meta-checks-files
+      - work:artifact/meta-lib-dereference-reading
     context: >-
       Solorepo's DR-217 settled where a script's body goes: the script stays at
       its path, because the justfile, the workflows and the structure

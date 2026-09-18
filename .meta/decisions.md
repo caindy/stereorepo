@@ -358,6 +358,11 @@ and the query a reader in a file actually has.
 | [`.meta/lib/check_pr/review.py`](lib/check_pr/review.py) | [DR-057](assertions/decisions/DR-057.yaml), [DR-118](assertions/decisions/DR-118.yaml), [DR-148](assertions/decisions/DR-148.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/check_pr/sweep.py`](lib/check_pr/sweep.py) | [DR-129](assertions/decisions/DR-129.yaml), [DR-142](assertions/decisions/DR-142.yaml), [DR-153](assertions/decisions/DR-153.yaml), [DR-155](assertions/decisions/DR-155.yaml), [DR-159](assertions/decisions/DR-159.yaml), [DR-178](assertions/decisions/DR-178.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/check_pr/verdict.py`](lib/check_pr/verdict.py) | [DR-132](assertions/decisions/DR-132.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/dereference/__init__.py`](lib/dereference/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/dereference/asking.py`](lib/dereference/asking.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/dereference/cli.py`](lib/dereference/cli.py) | [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/dereference/reading.py`](lib/dereference/reading.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-192](assertions/decisions/DR-192.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
+| [`.meta/lib/dereference/report.py`](lib/dereference/report.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/render/__init__.py`](lib/render/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/render/cli.py`](lib/render/cli.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/render/decisions.py`](lib/render/decisions.py) | [DR-059](assertions/decisions/DR-059.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
