@@ -10,11 +10,12 @@ solorepo's #98) is a row in `verdicts` beside the innocent neighbour the
 predicate must not catch, so the next edit to either predicate meets them
 before a run does.
 
-Four modules: `verdicts` holds the calls each hook must refuse beside their
+Five modules: `verdicts` holds the calls each hook must refuse beside their
 innocent neighbours; `offers` the nearest command a `worktree_only` refusal
 names, and the tool it names in a program's place; `events` the before-tool
-payloads each harness sends; and `step` the one registered check that runs
-all three. The loader comes from
+payloads each harness sends; `registration` each harness's own matcher and
+command line as `review.yml` registers them; and `step` the one registered
+check that runs all four. The loader comes from
 `probes.harness`, which imports no sibling under `probes/`: the gate over
 assertions takes no import from a probe, and a probe takes none from another
 subject's (solorepo's DR-150). One module per table (solorepo's DR-218).
@@ -22,4 +23,5 @@ subject's (solorepo's DR-150). One module per table (solorepo's DR-218).
 import checks.probes.git.verdicts  # noqa: I001  # reason: the modules are listed in the order the step runs their tables
 import checks.probes.git.offers
 import checks.probes.git.events
+import checks.probes.git.registration
 import checks.probes.git.step  # noqa: F401  # reason: registers check steps

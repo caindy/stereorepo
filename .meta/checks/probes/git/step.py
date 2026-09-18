@@ -2,15 +2,19 @@
 """
 import io
 import json
+import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 
-from checks.collect import check
-from checks.probes.git import events, offers, verdicts
+from checks.collect import ROOT, check
+from checks.probes.git import events, offers, registration, verdicts
 from checks.probes.harness import exit_of, load_hook, stood_in
+
+REVIEW_WORKFLOW = ROOT / ".github" / "workflows" / "review.yml"
 
 
 def _verdicts(hooks):
@@ -117,18 +121,61 @@ def _matchers() -> list[str]:
     return problems
 
 
+def _registration() -> list[str]:
+    """`REGISTRATIONS`, per harness: the registered matcher against the tool name its own event carries, and the registered command resolved and run as a real subprocess.
+
+    The why is `registration`'s own module docstring (solorepo's #456); this is
+    the invariant alone.
+    """
+    if not REVIEW_WORKFLOW.is_file():
+        return [f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing"]
+    text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
+    problems = []
+    for harness, variable, pattern, refuse_event, allow_event in registration.REGISTRATIONS:
+        match = pattern.search(text)
+        if not match:
+            problems.append(f"{harness}: no hook registration found in review.yml to resolve")
+            continue
+        matcher, command = match.groups()
+        tool_name = str(refuse_event["tool_name"])
+        if not re.fullmatch(matcher, tool_name):
+            problems.append(f"{harness}: the registered matcher {matcher!r} does not match "
+                            f"{tool_name!r}, the tool name its own before-tool event carries")
+            continue
+        resolved = pathlib.Path(command.replace(f"${variable}", str(ROOT)))
+        if not resolved.is_file():
+            problems.append(f"{harness}: the registered command resolves to {resolved}, "
+                            "which is not a file")
+            continue
+        if not os.access(resolved, os.X_OK):
+            problems.append(f"{harness}: the registered command {resolved} is not executable")
+            continue
+        env = {**os.environ, variable: str(ROOT)}
+        for want, event in (("refuse", refuse_event), ("allow", allow_event)):
+            proc = subprocess.run([str(resolved)], input=json.dumps(event),
+                                  capture_output=True, text=True, env=env)
+            code = str(proc.returncode)
+            if code != ("2" if want == "refuse" else "0"):
+                problems.append(f"{harness}: the registered command should {want} "
+                                f"{event['tool_input']!r} and exited {code}")
+    return problems
+
+
 @check("hook probes", pre=True)
 def hook_probes():
-    """Both hooks' predicates against the calls they exist to refuse and the calls they must let through, what a `worktree_only` refusal offers instead, and matcher invariants across harnesses.
+    """Both hooks' predicates against the calls they exist to refuse and the calls they must let through, what a `worktree_only` refusal offers instead, matcher invariants across harnesses, and each harness's own registration run as a real subprocess.
 
-    Loads `signed_channel` and `worktree_only` afresh and runs four tables in
+    Loads `signed_channel` and `worktree_only` afresh and runs five tables in
     order: `VERDICTS`, each call with the verdict its hook owes it; `OFFERS`,
     each refused command with the nearest command its refusal names, or `None`
     where none is derivable; `EVENTS`, each before-tool payload with the code
     the entry point owes it, Claude Code's envelope beside Gemini CLI's;
     `INSTEAD`, each program off the list with the tool
-    its refusal names in its place. Asserts that wildcard components do not match
-    parent directories across the harnesses' own matchers (solorepo's #457).
+    its refusal names in its place; `REGISTRATIONS`, each harness's own matcher
+    and command line as `review.yml` registers them, resolved against this
+    checkout and run as a subprocess rather than assumed (solorepo's #456).
+    Asserts that wildcard components do not match parent directories across
+    the harnesses' own matchers (solorepo's #457).
     A line names the group and the call that gave way, so the report says which
     case a predicate no longer holds. Each refused call sits beside the innocent
     neighbour the predicate must not catch (solorepo's #86, solorepo's #98), so an
@@ -136,4 +183,5 @@ def hook_probes():
     """
     hooks = {name: load_hook(name) for name in ("signed_channel", "worktree_only")}
     worktree = hooks["worktree_only"]
-    return _verdicts(hooks) + _offers(worktree) + _events(worktree) + _instead(worktree) + _matchers()
+    return (_verdicts(hooks) + _offers(worktree) + _events(worktree) + _instead(worktree)
+            + _matchers() + _registration())
