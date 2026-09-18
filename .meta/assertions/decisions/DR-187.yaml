@@ -21,6 +21,12 @@ decisions:
       - work:artifact/meta-checks-files-wiki
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-wikisplain
+      - work:artifact/meta-lib-wikisplain-cli
+      - work:artifact/meta-lib-wikisplain-duplicates
+      - work:artifact/meta-lib-wikisplain-lead
+      - work:artifact/meta-lib-wikisplain-links
+      - work:artifact/meta-lib-wikisplain-pages
     context: >-
       With the Knowledge Management discipline (solorepo's DR-184) and Wikipedia editorial
       conventions (solorepo's DR-185) landed, maintainer-facing exposition belongs in

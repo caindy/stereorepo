@@ -51,6 +51,12 @@ decisions:
       - work:artifact/meta-lib-timing-routing
       - work:artifact/meta-lib-timing-screen
       - work:artifact/meta-lib-timing-cli
+      - work:artifact/meta-lib-wikisplain
+      - work:artifact/meta-lib-wikisplain-lead
+      - work:artifact/meta-lib-wikisplain-duplicates
+      - work:artifact/meta-lib-wikisplain-links
+      - work:artifact/meta-lib-wikisplain-pages
+      - work:artifact/meta-lib-wikisplain-cli
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-ruff-toml
       - work:artifact/meta-disciplines

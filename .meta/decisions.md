@@ -377,6 +377,12 @@ and the query a reader in a file actually has.
 | [`.meta/lib/timing/github.py`](lib/timing/github.py) | [DR-153](assertions/decisions/DR-153.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/timing/routing.py`](lib/timing/routing.py) | [DR-188](assertions/decisions/DR-188.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-219](assertions/decisions/DR-219.yaml) |
 | [`.meta/lib/timing/screen.py`](lib/timing/screen.py) | [DR-153](assertions/decisions/DR-153.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/wikisplain/__init__.py`](lib/wikisplain/__init__.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/wikisplain/cli.py`](lib/wikisplain/cli.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/wikisplain/duplicates.py`](lib/wikisplain/duplicates.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/wikisplain/lead.py`](lib/wikisplain/lead.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/wikisplain/links.py`](lib/wikisplain/links.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/wikisplain/pages.py`](lib/wikisplain/pages.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/worktree_only/__init__.py`](lib/worktree_only/__init__.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/worktree_only/grammar.py`](lib/worktree_only/grammar.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/worktree_only/paths.py`](lib/worktree_only/paths.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-217](assertions/decisions/DR-217.yaml) |

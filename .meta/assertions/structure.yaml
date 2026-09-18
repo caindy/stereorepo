@@ -659,6 +659,24 @@ artifacts:
     description: >-
       Operational authoring tool for creating and explaining concepts in the
       Knowledge Management wiki (solorepo's DR-187).
+  - id: work:artifact/meta-lib-wikisplain
+    name: .meta/lib/wikisplain/__init__.py
+    path: .meta/lib/wikisplain/__init__.py
+  - id: work:artifact/meta-lib-wikisplain-lead
+    name: .meta/lib/wikisplain/lead.py
+    path: .meta/lib/wikisplain/lead.py
+  - id: work:artifact/meta-lib-wikisplain-duplicates
+    name: .meta/lib/wikisplain/duplicates.py
+    path: .meta/lib/wikisplain/duplicates.py
+  - id: work:artifact/meta-lib-wikisplain-links
+    name: .meta/lib/wikisplain/links.py
+    path: .meta/lib/wikisplain/links.py
+  - id: work:artifact/meta-lib-wikisplain-pages
+    name: .meta/lib/wikisplain/pages.py
+    path: .meta/lib/wikisplain/pages.py
+  - id: work:artifact/meta-lib-wikisplain-cli
+    name: .meta/lib/wikisplain/cli.py
+    path: .meta/lib/wikisplain/cli.py
   - id: work:artifact/template-github-workflows-gate
     name: template/.github/workflows/gate.yml
     path: template/.github/workflows/gate.yml
