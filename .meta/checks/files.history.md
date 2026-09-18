@@ -67,3 +67,29 @@ names the suffix-less programs on the command line under
 and aborting on the duplicate, and the baseline gained an entry for each.
 
 Evidence: `.meta/checks/files/sources.py::is_py`
+
+### Gemini CLI reviewer holding tools the Claude path never grants
+
+`.github/workflows/review.yml`'s Gemini CLI path named no `tools.core`, so
+where the Claude path's `--allowedTools` leaves `Write`, `Edit`, `WebFetch`
+and `WebSearch` simply absent, an unset `tools.core` left every one of
+Gemini CLI's counterparts — `write_file`, `replace`, `web_fetch`,
+`google_web_search` — reachable, the opposite default holding the boundary
+open rather than shut (solorepo's #452, solorepo's #454). Established:
+`gemini_allowlist_matches_claude` reads both paths' allowlists out of
+`review.yml` and fails when either names either half of a `DANGEROUS_TOOLS`
+pair, so the two cannot drift apart in that direction again unnoticed.
+
+Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
+
+### `tools.core` admitting a tool the `BeforeTool` matcher never guards
+
+This pull request's own first head named `activate_skill` in the Gemini path's
+`tools.core` without a place for it in the `BeforeTool` matcher `worktree_only.py`
+is registered against, so the one admitted tool's calls never reached the
+worktree-confinement hook — an invariant stated only in a comment, caught only
+by a review thread, with every other gate green (solorepo's #454). Established:
+`gemini_core_matches_hook_matcher` parses both lists out of `review.yml` and
+fails on any difference between them, in either direction.
+
+Evidence: `.meta/checks/files/workflows.py::gemini_core_matches_hook_matcher`

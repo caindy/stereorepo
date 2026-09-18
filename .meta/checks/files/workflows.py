@@ -321,3 +321,103 @@ def control_plane_packages() -> StepOutcome:
         return Found(tuple(problems))
     return Passed(f"{len(packages)} packages under .meta/lib/, each control plane exactly "
                   "when its script is")
+
+
+ALLOWED_TOOLS_LINE = re.compile(r'--allowedTools\s+"([^"]*)"')
+"""The Claude path's `--allowedTools` value, inside the `claude_args` block scalar."""
+
+
+CORE_TOOLS_LINE = re.compile(r'"core"\s*:\s*\[([^\]]*)\]')
+"""The Gemini path's `tools.core` array, inside the `settings` block scalar."""
+
+
+DANGEROUS_TOOLS = (
+    ("Write", "write_file"),
+    ("Edit", "replace"),
+    ("WebFetch", "web_fetch"),
+    ("WebSearch", "google_web_search"),
+)
+"""Each entry pairs Claude Code's name for one capability with Gemini CLI's; neither reviewer
+path's allowlist may name either half, on its own or alongside the other (solorepo's #454)."""
+
+
+@check("gemini reviewer allowlist matches claude's")
+def gemini_allowlist_matches_claude() -> StepOutcome:
+    """The reviewer workflow bounds Gemini CLI's tool registry the way it bounds Claude Code's (solorepo's #454).
+
+    The Claude path names what the model may call with `--allowedTools`, so a
+    tool it never names is simply not there for the model to reach. Gemini
+    CLI's default is the opposite: an unset `tools.core` holds the whole core
+    toolset, so the same bound has to be named rather than left absent. This
+    step fails when either path's list is missing, or when either path names
+    either half of a `DANGEROUS_TOOLS` pair — whether the other path names its
+    half too or not, since the invariant is that neither may.
+
+    History in files.history.md (solorepo's DR-171).
+    """
+    if not REVIEW_WORKFLOW.is_file():
+        return CouldNotRun(f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
+    text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
+    allowed_match = ALLOWED_TOOLS_LINE.search(text)
+    core_match = CORE_TOOLS_LINE.search(text)
+    if not allowed_match:
+        return Found(("review.yml: no `--allowedTools` value on the Claude path to compare against",))
+    if not core_match:
+        return Found(("review.yml: no `tools.core` value on the Gemini path; unset, it holds "
+                      "the whole core toolset, which is the bound solorepo's #454 found missing",))
+    problems: list[str] = []
+    claude_tools = {token.split("(", 1)[0] for token in allowed_match.group(1).split(",")}
+    gemini_tools = {token.strip().strip('"') for token in core_match.group(1).split(",")}
+    for claude_name, gemini_name in DANGEROUS_TOOLS:
+        if claude_name in claude_tools:
+            problems.append(f"review.yml: the Claude path names `{claude_name}`; no reviewer "
+                            f"path may name this pair, so drop it from `--allowedTools`")
+        if gemini_name in gemini_tools:
+            problems.append(f"review.yml: the Gemini path names `{gemini_name}`; no reviewer "
+                            f"path may name this pair, so drop it from `tools.core`")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{len(DANGEROUS_TOOLS)} tool pairs held out of both reviewer paths alike")
+
+
+BEFORE_TOOL_MATCHER = re.compile(r'"matcher"\s*:\s*"\^\(([^)]*)\)\$"')
+"""The Gemini path's `BeforeTool` matcher: the alternation of tool names `worktree_only.py`
+is registered against, inside the `settings` block scalar."""
+
+
+@check("gemini tools.core matches the BeforeTool matcher")
+def gemini_core_matches_hook_matcher() -> StepOutcome:
+    """`tools.core` and the `BeforeTool` matcher name the same tools, or a call reaches `worktree_only.py` never sees (solorepo's #454).
+
+    `tools.core` decides which tools the model may call at all; the `BeforeTool`
+    matcher decides which of those calls the worktree-confinement hook
+    inspects. The two are meant to name the same set, and this pull request's
+    own first head is the demonstration of what happens when they do not:
+    `activate_skill` sat in `tools.core` and outside the matcher, admitted and
+    unguarded, with every gate but a review thread green. This step fails when
+    the two sets differ, in either direction.
+
+    History in files.history.md (solorepo's DR-171).
+    """
+    if not REVIEW_WORKFLOW.is_file():
+        return CouldNotRun(f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
+    text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
+    core_match = CORE_TOOLS_LINE.search(text)
+    matcher_match = BEFORE_TOOL_MATCHER.search(text)
+    if not core_match:
+        return Found(("review.yml: no `tools.core` value on the Gemini path to compare against",))
+    if not matcher_match:
+        return Found(("review.yml: no `BeforeTool` matcher on the Gemini path to compare against",))
+    core_tools = {token.strip().strip('"') for token in core_match.group(1).split(",")}
+    matcher_tools = set(matcher_match.group(1).split("|"))
+    problems: list[str] = []
+    for extra in sorted(core_tools - matcher_tools):
+        problems.append(f"review.yml: `tools.core` names `{extra}`, which the `BeforeTool` "
+                        "matcher does not guard; add it there or drop it from `tools.core`")
+    for extra in sorted(matcher_tools - core_tools):
+        problems.append(f"review.yml: the `BeforeTool` matcher guards `{extra}`, which "
+                        "`tools.core` does not name; the matcher is guarding a tool the model "
+                        "cannot call, and the trunk comment's count is off by it")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{len(core_tools)} tools admitted, all and only the ones the BeforeTool matcher guards")

@@ -610,6 +610,15 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: ${{ steps.depth.outputs.gemini_model }}
+          # Pinned rather than the action's own `latest` default: this is the
+          # one surface `worktree_only.py`'s own comment on `SEARCHES` already
+          # names as floating (`.meta/lib/worktree_only/paths.py`), and an
+          # upstream rename or restructure of `tools.core` between runs would
+          # make the allowlist below inert with nothing here to notice —
+          # exactly the state solorepo's #454 raised, back with no run ever
+          # failing loud. Bumped by hand; `gemini --version` in the installed
+          # CLI's own log is where a bump is checked against what shipped.
+          gemini_cli_version: "0.60.0"
           # The same bound on reading as the Claude path above, in this
           # harness's spelling (solorepo's DR-110). Gemini CLI's `BeforeTool`
           # fires before a tool runs, carries the same `tool_name` and
@@ -623,8 +632,31 @@ jobs:
           # restored above, so it is trunk's; the settings this block writes
           # are `.gemini/settings.json`, which is the pull request's like the
           # Claude path's, and read by the solo before it merges.
+          #
+          # `tools.core` is this harness's `--allowedTools`: naming what the
+          # model may call is what leaves `write_file`, `replace`, `web_fetch`
+          # and `google_web_search` out rather than constrained, the same way
+          # the Claude path's list above (line 554) never names `Write`,
+          # `Edit`, `WebFetch` or `WebSearch`. `write_file` and `replace`
+          # matter because a write onto a path under `.meta/say/` or
+          # `.meta/hooks/` is read back by the run's own `run_shell_command`,
+          # which the restore above and the hook's grammar do not see as a
+          # write; `web_fetch` and `google_web_search` matter because the run
+          # holds a token and its input is a diff nobody has vetted, and
+          # `signed_channel.py` bounds only the paths to GitHub, not a request
+          # to anywhere else with the token file as its body. The seven named
+          # here are exactly the seven the `BeforeTool` matcher below guards,
+          # held equal by `gemini_core_matches_hook_matcher` rather than by a
+          # reader's attention, since a tool named here and not in that
+          # matcher is the one call `worktree_only.py` never sees.
+          # `DANGEROUS_TOOLS` in `.meta/checks/files/workflows.py` carries why
+          # this pairs with the Claude path's list the way it does, and both
+          # checks' history is in `.meta/checks/files.history.md`.
           settings: |
             {
+              "tools": {
+                "core": ["read_file", "read_many_files", "grep_search", "search_file_content", "glob", "list_directory", "run_shell_command"]
+              },
               "hooks": {
                 "BeforeTool": [
                   {
