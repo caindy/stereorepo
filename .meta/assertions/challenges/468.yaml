@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/468
+    name: Teach ARC deploy to detect RunnerScaleSetSessionConflictException and reset stale registration
+    challenge_type: DEFECT
+    description: >-
+      When the Kubernetes cluster, Docker daemon, or WSL host restarts
+      ungracefully, GitHub Actions message broker holds the stale session open
+      for ~35 minutes, causing ARC listener pods to crash-loop with HTTP 409
+      RunnerScaleSetSessionConflictException. In .meta/arc/deploy,
+      is_registration_stale() only inspects logs for HTTP 404
+      RunnerScaleSetNotFoundException, ignoring session conflicts. Teaching
+      deploy to recognize RunnerScaleSetSessionConflictException enables just arc
+      to reset stale registration immediately and self-heal without waiting 35
+      minutes for the broker reaper.

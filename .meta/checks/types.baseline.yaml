@@ -16,7 +16,7 @@
 # The sweep that empties it is caindy/solorepo#438.
 .meta/apm_compile.py: 0
 .meta/arc/cluster: 4
-.meta/arc/deploy: 20
+.meta/arc/deploy: 0
 .meta/arc/teardown: 12
 .meta/check.py: 5
 .meta/check_pr.py: 1

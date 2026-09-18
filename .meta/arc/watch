@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""Monitors Actions Runner Controller (ARC) workers in the cluster.
+
+    .meta/arc/watch [--once] [--title] [--namespace NAMESPACE]
+
+Watches `EphemeralRunner` custom resources in the runner namespace (default:
+`arc-runners`). When a worker is scheduled by ARC, GitHub sends the workflow run
+context to the listener, which populates the runner's status with its workflow
+ref, run ID, and job name.
+
+For pull request jobs, this script extracts and highlights the PR number
+(`refs/pull/<PR>/merge`).
+"""
+import argparse
+import datetime
+import json
+import re
+import shutil
+import subprocess
+import sys
+from typing import Any
+
+DEFAULT_NAMESPACE = "arc-runners"
+TITLE_CACHE: dict[int | str, str] = {}
+
+
+def require(tool: str) -> None:
+    """Verifies that the specified tool is available on PATH or exits."""
+    if not shutil.which(tool):
+        sys.exit(f"arc-watch: '{tool}' not found on PATH.")
+
+
+def current_context() -> str:
+    """Returns the active kubectl context name or a fallback indicator."""
+    out = subprocess.run(["kubectl", "config", "current-context"],
+                         capture_output=True, text=True)
+    return out.stdout.strip() if out.returncode == 0 else "(unknown)"
+
+
+def fetch_run_title(run_id: int | str) -> str:
+    """Optionally queries gh for the display title of a workflow run."""
+    if not run_id or not shutil.which("gh"):
+        return ""
+    if run_id in TITLE_CACHE:
+        return TITLE_CACHE[run_id]
+    try:
+        out = subprocess.run(
+            ["gh", "run", "view", str(run_id), "--json", "displayTitle"],
+            capture_output=True, text=True, timeout=5
+        )
+        if out.returncode == 0:
+            data = json.loads(out.stdout)
+            title = str(data.get("displayTitle", "")).strip()
+            if title:
+                TITLE_CACHE[run_id] = title
+            return title
+    except Exception:
+        pass
+    return ""
+
+
+def parse_runner(obj: dict[str, Any], fetch_titles: bool = False) -> dict[str, str]:
+    """Parses an EphemeralRunner custom resource JSON object into a summary record."""
+    metadata = obj.get("metadata", {})
+    status = obj.get("status", {})
+    name = metadata.get("name", "-")
+
+    phase = status.get("phase") or "Pending"
+    if metadata.get("deletionTimestamp"):
+        phase = "Terminating"
+
+    ref = status.get("jobWorkflowRef", "")
+    run_id = status.get("workflowRunId") or ""
+    job = status.get("jobDisplayName", "")
+
+    pr = "-"
+    workflow = "-"
+
+    if ref:
+        pr_match = re.search(r"refs/pull/(\d+)", ref)
+        if pr_match:
+            pr = f"#{pr_match.group(1)}"
+        elif "refs/heads/" in ref:
+            pr = ref.split("refs/heads/", 1)[1]
+
+        wf_match = re.search(r"\.github/workflows/([^@]+)", ref)
+        workflow = wf_match.group(1) if wf_match else ref
+
+    title = ""
+    if fetch_titles and run_id:
+        title = fetch_run_title(run_id)
+
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+
+    return {
+        "time": timestamp,
+        "name": name,
+        "phase": phase,
+        "pr": pr,
+        "run_id": str(run_id) if run_id else "-",
+        "workflow": workflow,
+        "job": job or "-",
+        "title": title,
+        "ref": ref,
+    }
+
+
+def print_row(r: dict[str, str], show_title: bool = False) -> None:
+    """Prints a single runner summary row formatted for tabular terminal output."""
+    if show_title and r["title"]:
+        print(f"{r['time']:<10} {r['name']:<34} {r['phase']:<12} {r['pr']:<10} {r['run_id']:<14} {r['workflow']:<14} {r['job']:<24} {r['title']}")
+    else:
+        print(f"{r['time']:<10} {r['name']:<34} {r['phase']:<12} {r['pr']:<10} {r['run_id']:<14} {r['workflow']:<14} {r['job']}")
+    sys.stdout.flush()
+
+
+def print_header(show_title: bool = False) -> None:
+    """Prints the column headers and separator line for runner tracking."""
+    header = f"{'TIME':<10} {'RUNNER':<34} {'STATUS':<12} {'PR':<10} {'RUN_ID':<14} {'WORKFLOW':<14} {'JOB':<24}"
+    if show_title:
+        header += " TITLE"
+    print(header)
+    print("-" * (len(header) + (20 if show_title else 0)))
+    sys.stdout.flush()
+
+
+def run_once(namespace: str, show_title: bool = False) -> None:
+    """Lists the current ephemeral runners in the namespace and exits."""
+    cmd = ["kubectl", "get", "ephemeralrunners", "-n", namespace, "-o", "json"]
+    out = subprocess.run(cmd, capture_output=True, text=True)
+    if out.returncode != 0:
+        sys.exit(f"arc-watch: failed to list ephemeralrunners: {out.stderr.strip()}")
+
+    try:
+        data = json.loads(out.stdout)
+    except json.JSONDecodeError:
+        sys.exit("arc-watch: failed to parse JSON from kubectl.")
+
+    items = data.get("items", [])
+    if not items:
+        print(f"arc-watch: no active runners in namespace '{namespace}' (context: {current_context()})")
+        return
+
+    print_header(show_title)
+    for item in items:
+        r = parse_runner(item, fetch_titles=show_title)
+        print_row(r, show_title)
+
+
+def run_watch(namespace: str, show_title: bool = False) -> None:
+    """Continuously streams runner status events from kubectl watch output."""
+    context = current_context()
+    print(f"arc-watch: watching '{namespace}' on context '{context}' (Ctrl+C to stop)...", file=sys.stderr)
+    print_header(show_title)
+
+    cmd = ["kubectl", "get", "ephemeralrunners", "-n", namespace, "-w", "-o", "json"]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    assert proc.stdout is not None
+
+    decoder = json.JSONDecoder()
+    buf = ""
+    last_state: dict[str, tuple[str, str, str, str, str]] = {}
+
+    try:
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                if proc.poll() is not None:
+                    break
+                continue
+            buf += line
+            while buf.strip():
+                try:
+                    obj, idx = decoder.raw_decode(buf.lstrip())
+                    buf = buf.lstrip()[idx:]
+                    r = parse_runner(obj, fetch_titles=show_title)
+                    state_key = (r["name"], r["phase"], r["pr"], r["run_id"], r["job"])
+                    if last_state.get(r["name"]) != state_key:
+                        last_state[r["name"]] = state_key
+                        print_row(r, show_title)
+                except json.JSONDecodeError:
+                    break
+    except KeyboardInterrupt:
+        pass
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+
+
+def main() -> None:
+    """CLI entry point for watching ARC runner pods and jobs."""
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("-n", "--namespace", default=DEFAULT_NAMESPACE,
+                        help=f"Kubernetes namespace for ARC runners (default: {DEFAULT_NAMESPACE})")
+    parser.add_argument("--once", action="store_true",
+                        help="List active runners once and exit instead of streaming")
+    parser.add_argument("-t", "--title", action="store_true",
+                        help="Enrich output with PR / run title using GitHub CLI (`gh`)")
+
+    args = parser.parse_args()
+    require("kubectl")
+
+    if args.once:
+        run_once(args.namespace, show_title=args.title)
+    else:
+        run_watch(args.namespace, show_title=args.title)
+
+
+if __name__ == "__main__":
+    main()
