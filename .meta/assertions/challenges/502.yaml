@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/502
+    name: Split .meta/hooks/worktree_only.py into a package behind a thin hook
+    challenge_type: REFACTOR
+    description: >-
+      `.meta/hooks/worktree_only.py` was 694 lines: the permission hook that
+      binds every harness to its worktree, holding the path rules, the shell
+      lexing, the command grammar and the verdict in one script, one of its
+      functions over the seed's complexity ceiling. The ceiling and the pylint
+      size rules are to be applied to `.meta/`, whose ruleset under solorepo's
+      DR-177 selects neither. Split first as moves into
+      `.meta/lib/worktree_only/` under the convention solorepo's DR-217 sets
+      for a script, then refactor one module at a time.

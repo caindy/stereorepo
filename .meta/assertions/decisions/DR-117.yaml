@@ -30,6 +30,7 @@ decisions:
       - work:artifact/agents
       - work:artifact/meta-lib-render-pages
       - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-worktree-only-grammar
     alternatives:
       - name: One program, with a banner compiled per Role
         chosen: false

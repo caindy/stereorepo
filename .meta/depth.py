@@ -43,6 +43,7 @@ HOOK_PATH = META / "hooks" / "depth.py"
 
 CONTROL_PLANE: tuple[str, ...] = (
     ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/__init__.py", ".meta/lib/check_pr/",
+    ".meta/lib/worktree_only/",
     ".claude/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/",
 )
 """The path prefixes of the control plane: the channel, the hooks, the pull request gate and its

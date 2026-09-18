@@ -13,6 +13,8 @@ decisions:
       - work:artifact/meta-checks-probes-loops-enacted
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-apm-compile-agents
+      - work:artifact/meta-lib-worktree-only-grammar
+      - work:artifact/meta-lib-worktree-only-verdict
     context: >-
       Step 5 of Literate Programming requires prose in a source file to be sorted
       by what it tells the reader: what to do (item docstring), why it is the way

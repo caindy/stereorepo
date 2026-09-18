@@ -7,6 +7,10 @@ decisions:
     enacted_in:
       - work:artifact/meta-hooks-worktree-only
       - work:artifact/github-workflows-review
+      - work:artifact/meta-lib-worktree-only
+      - work:artifact/meta-lib-worktree-only-grammar
+      - work:artifact/meta-lib-worktree-only-paths
+      - work:artifact/meta-lib-worktree-only-verdict
     alternatives:
       - name: A prefix list of shell commands, with the search tools denied
         chosen: false

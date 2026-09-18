@@ -33,6 +33,11 @@ decisions:
       - work:artifact/meta-lib-apm-compile-harness
       - work:artifact/meta-lib-apm-compile-apm
       - work:artifact/meta-lib-apm-compile-cli
+      - work:artifact/meta-lib-worktree-only
+      - work:artifact/meta-lib-worktree-only-paths
+      - work:artifact/meta-lib-worktree-only-shell
+      - work:artifact/meta-lib-worktree-only-grammar
+      - work:artifact/meta-lib-worktree-only-verdict
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-ruff-toml
       - work:artifact/meta-disciplines

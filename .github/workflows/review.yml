@@ -114,14 +114,15 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
 
 
-      # Nine paths are trunk's, not the pull request's: the channel, the
-      # hooks, the checker, its package under `.meta/lib/` and the initialiser
-      # that package is imported through — that package and not the
-      # directory, whose other packages are the bodies of scripts the pull
-      # request may change (solorepo's DR-219) — the settings that register
-      # them, and the instructions the session loads before it reads
-      # anything. The gate step `control plane restore` holds this list, and
-      # `TRUNK` below, to `depth.CONTROL_PLANE`. The action
+      # Ten paths are trunk's, not the pull request's: the channel, the
+      # hooks, the checker, the checker's package and the worktree hook's
+      # under `.meta/lib/` with the `.meta/lib/` initialiser both are imported
+      # through — these packages and not the directory, whose other packages
+      # are the bodies of scripts the pull request may change
+      # (solorepo's DR-219) — the settings that register them, and the
+      # instructions the session loads before it reads anything. The gate step `control plane
+      # restore` holds this list, and `TRUNK` below, to `depth.CONTROL_PLANE`.
+      # The action
       # restores `.claude/` from `main` on its own and its log says so; the
       # restore is done here too, because a property this file enforces
       # beats one it hopes for from a floating `@v1`. Index and worktree
@@ -136,7 +137,7 @@ jobs:
       - name: run trunk's channel
         run: |
           git restore --quiet --source=origin/main --staged --worktree -- \
-            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr AGENTS.md CLAUDE.md GEMINI.md
+            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr .meta/lib/worktree_only AGENTS.md CLAUDE.md GEMINI.md
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 
@@ -263,7 +264,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr AGENTS.md CLAUDE.md GEMINI.md
+          TRUNK: .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr .meta/lib/worktree_only AGENTS.md CLAUDE.md GEMINI.md
 
       # The paragraphs that bound every agent, in a file rather than in the
       # prompt (solorepo's #196). They used to end "every agent the review spawns gets
@@ -287,9 +288,10 @@ jobs:
           tool, which takes an offset and a limit. `gh pr diff` says the same
           thing and arrives as its first 2 KB and a path when the diff is large.
 
-          **Nine paths in the worktree are trunk's, not this pull request's:**
+          **Ten paths in the worktree are trunk's, not this pull request's:**
           `.claude/`, `.meta/say`, `.meta/hooks/`, `.meta/check_pr.py`, `.meta/lib/__init__.py`,
-          `.meta/lib/check_pr/`, `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`. They were replaced with `origin/main`'s
+          `.meta/lib/check_pr/`, `.meta/lib/worktree_only/`, `AGENTS.md`, `CLAUDE.md` and
+          `GEMINI.md`. They were replaced with `origin/main`'s
           copies before the session, so that what runs here is trunk's. You run
           and read them as trunk's; you do not review them by reading them.
           `git status` and `git diff` show nothing for a change the pull request
@@ -605,7 +607,7 @@ jobs:
           # expression over the tool's name, anchored so that it is these
           # seven and nothing whose name merely holds one of them: the shell,
           # the two spellings of the search, the two file reads, the glob and
-          # the directory listing. The script is one of the seven paths
+          # the directory listing. The script is one of the trunk paths
           # restored above, so it is trunk's; the settings this block writes
           # are `.gemini/settings.json`, which is the pull request's like the
           # Claude path's, and read by the solo before it merges.

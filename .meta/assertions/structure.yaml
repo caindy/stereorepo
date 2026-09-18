@@ -398,6 +398,21 @@ artifacts:
   - id: work:artifact/meta-hooks-worktree-only
     name: .meta/hooks/worktree_only.py
     path: .meta/hooks/worktree_only.py
+  - id: work:artifact/meta-lib-worktree-only
+    name: .meta/lib/worktree_only/__init__.py
+    path: .meta/lib/worktree_only/__init__.py
+  - id: work:artifact/meta-lib-worktree-only-paths
+    name: .meta/lib/worktree_only/paths.py
+    path: .meta/lib/worktree_only/paths.py
+  - id: work:artifact/meta-lib-worktree-only-shell
+    name: .meta/lib/worktree_only/shell.py
+    path: .meta/lib/worktree_only/shell.py
+  - id: work:artifact/meta-lib-worktree-only-grammar
+    name: .meta/lib/worktree_only/grammar.py
+    path: .meta/lib/worktree_only/grammar.py
+  - id: work:artifact/meta-lib-worktree-only-verdict
+    name: .meta/lib/worktree_only/verdict.py
+    path: .meta/lib/worktree_only/verdict.py
   - id: work:artifact/meta-next
     name: .meta/next.py
     path: .meta/next.py
