@@ -8,6 +8,8 @@ decisions:
       - work:artifact/meta-lib-check-pr-github
       - work:artifact/meta-lib-check-pr-sweep
       - work:artifact/meta-checks-probes-harness-github
+      - work:artifact/meta-lib-timing-github
+      - work:artifact/meta-lib-timing-screen
     context: >-
       `check_pr.py` read a pull request's check states through `gh`'s
       `--json statusCheckRollup`, at three call sites: the hand-off reader's

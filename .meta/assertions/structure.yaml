@@ -494,6 +494,24 @@ artifacts:
   - id: work:artifact/meta-timing
     name: .meta/timing.py
     path: .meta/timing.py
+  - id: work:artifact/meta-lib-timing
+    name: .meta/lib/timing/__init__.py
+    path: .meta/lib/timing/__init__.py
+  - id: work:artifact/meta-lib-timing-github
+    name: .meta/lib/timing/github.py
+    path: .meta/lib/timing/github.py
+  - id: work:artifact/meta-lib-timing-arithmetic
+    name: .meta/lib/timing/arithmetic.py
+    path: .meta/lib/timing/arithmetic.py
+  - id: work:artifact/meta-lib-timing-routing
+    name: .meta/lib/timing/routing.py
+    path: .meta/lib/timing/routing.py
+  - id: work:artifact/meta-lib-timing-screen
+    name: .meta/lib/timing/screen.py
+    path: .meta/lib/timing/screen.py
+  - id: work:artifact/meta-lib-timing-cli
+    name: .meta/lib/timing/cli.py
+    path: .meta/lib/timing/cli.py
   - id: work:artifact/meta-readme
     name: .meta/README.md
     path: .meta/README.md

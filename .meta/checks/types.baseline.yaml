@@ -81,6 +81,11 @@
 .meta/lib/render/skills.py: 24
 .meta/lib/render/targets.py: 8
 .meta/lib/render/writers.py: 6
+.meta/lib/timing/arithmetic.py: 11
+.meta/lib/timing/cli.py: 2
+.meta/lib/timing/github.py: 5
+.meta/lib/timing/routing.py: 9
+.meta/lib/timing/screen.py: 37
 .meta/next.py: 38
 .meta/render.py: 1
 .meta/say/channel.py: 34
@@ -88,4 +93,4 @@
 .meta/say/move: 272
 .meta/say/post: 75
 .meta/say/whoami: 12
-.meta/timing.py: 65
+.meta/timing.py: 1

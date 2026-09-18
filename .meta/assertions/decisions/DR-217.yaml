@@ -45,6 +45,12 @@ decisions:
       - work:artifact/meta-lib-dereference-asking
       - work:artifact/meta-lib-dereference-report
       - work:artifact/meta-lib-dereference-cli
+      - work:artifact/meta-lib-timing
+      - work:artifact/meta-lib-timing-github
+      - work:artifact/meta-lib-timing-arithmetic
+      - work:artifact/meta-lib-timing-routing
+      - work:artifact/meta-lib-timing-screen
+      - work:artifact/meta-lib-timing-cli
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-ruff-toml
       - work:artifact/meta-disciplines

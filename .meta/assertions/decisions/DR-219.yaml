@@ -12,6 +12,7 @@ decisions:
       - work:artifact/github-workflows-review
       - work:artifact/meta-checks-files-workflows
       - work:artifact/meta-timing
+      - work:artifact/meta-lib-timing-routing
     context: >-
       Solorepo's DR-217 put `.meta/lib/` into `depth.CONTROL_PLANE` as a
       directory, so that the package initialiser and every later package would
