@@ -10,6 +10,7 @@ decisions:
       - work:artifact/meta-say
       - work:artifact/meta-hooks-signed-channel
       - work:artifact/github-workflows-advance
+      - work:artifact/meta-lib-signed-channel-tables
     alternatives:
       - name: A merge queue
         chosen: false

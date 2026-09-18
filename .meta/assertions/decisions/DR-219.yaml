@@ -60,8 +60,8 @@ decisions:
         would be module-level code trunk's gate executes on import.
       - >-
         `.github/workflows/review.yml` restores those two paths from trunk
-        beside `.meta/check_pr.py`; nine paths are trunk's in the reviewer's
-        worktree. The two path lists, the two counts and the enumeration are
+        beside `.meta/check_pr.py`; the set that is trunk's in the reviewer's
+        worktree is `depth.CONTROL_PLANE` less the workflows. The two path lists, the two counts and the enumeration are
         held equal by the gate; the prose elsewhere in the workflow names the
         set without counting it.
       - >-

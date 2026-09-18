@@ -61,6 +61,8 @@ decisions:
     enacted_in:
       - work:artifact/meta-say
       - work:artifact/meta-hooks-signed-channel
+      - work:artifact/meta-lib-signed-channel
+      - work:artifact/meta-lib-signed-channel-verdict
     rationale: |-
       One comment went out on #9 without the Trailer. It read as the solo,
       manufactured the second party A16 asks for, and **passed** the gate

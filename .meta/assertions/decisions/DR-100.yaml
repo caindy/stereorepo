@@ -10,6 +10,7 @@ decisions:
       - work:artifact/meta-hooks-signed-channel
       - work:artifact/meta-disciplines
       - work:artifact/meta-checks-probes-tools-search
+      - work:artifact/meta-lib-signed-channel-tables
     alternatives:
       - name: Stack by hand, and rebase each layer after the squash beneath it
         chosen: false

@@ -388,6 +388,11 @@ and the query a reader in a file actually has.
 | [`.meta/lib/search/bm25.py`](lib/search/bm25.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/search/build.py`](lib/search/build.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/search/cli.py`](lib/search/cli.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/signed_channel/__init__.py`](lib/signed_channel/__init__.py) | [DR-069](assertions/decisions/DR-069.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/signed_channel/reach.py`](lib/signed_channel/reach.py) | [DR-117](assertions/decisions/DR-117.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/signed_channel/shell.py`](lib/signed_channel/shell.py) | [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/signed_channel/tables.py`](lib/signed_channel/tables.py) | [DR-100](assertions/decisions/DR-100.yaml), [DR-113](assertions/decisions/DR-113.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-151](assertions/decisions/DR-151.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/signed_channel/verdict.py`](lib/signed_channel/verdict.py) | [DR-069](assertions/decisions/DR-069.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/timing/__init__.py`](lib/timing/__init__.py) | [DR-157](assertions/decisions/DR-157.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/timing/arithmetic.py`](lib/timing/arithmetic.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/timing/cli.py`](lib/timing/cli.py) | [DR-217](assertions/decisions/DR-217.yaml) |

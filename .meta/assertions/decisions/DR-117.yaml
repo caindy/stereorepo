@@ -36,6 +36,8 @@ decisions:
       - work:artifact/meta-checks-probes-git-verdicts
       - work:artifact/meta-checks-probes-channel-parser
       - work:artifact/meta-checks-probes-channel-table
+      - work:artifact/meta-lib-signed-channel-reach
+      - work:artifact/meta-lib-signed-channel-tables
     alternatives:
       - name: One program, with a banner compiled per Role
         chosen: false

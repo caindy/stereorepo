@@ -43,11 +43,11 @@ HOOK_PATH = META / "hooks" / "depth.py"
 
 CONTROL_PLANE: tuple[str, ...] = (
     ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/__init__.py", ".meta/lib/check_pr/",
-    ".meta/lib/worktree_only/",
+    ".meta/lib/worktree_only/", ".meta/lib/signed_channel/",
     ".claude/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/",
 )
-"""The path prefixes of the control plane: the channel, the hooks, the pull request gate and its
-body under `.meta/lib/`, the settings that register them, the instructions every session loads
+"""The path prefixes of the control plane: the channel, the hooks, the pull request gate, and the
+bodies of the gate and the hooks under `.meta/lib/`, the settings that register them, the instructions every session loads
 before it reads anything, and the workflows. A change under one is routed to the deepest review
 (Layer 1 of the template method) and `.meta/timing.py` reports it as the critical path.
 `.github/workflows/review.yml` restores every prefix but the workflows' from trunk before a

@@ -500,6 +500,21 @@ artifacts:
   - id: work:artifact/meta-hooks-signed-channel
     name: .meta/hooks/signed_channel.py
     path: .meta/hooks/signed_channel.py
+  - id: work:artifact/meta-lib-signed-channel
+    name: .meta/lib/signed_channel/__init__.py
+    path: .meta/lib/signed_channel/__init__.py
+  - id: work:artifact/meta-lib-signed-channel-tables
+    name: .meta/lib/signed_channel/tables.py
+    path: .meta/lib/signed_channel/tables.py
+  - id: work:artifact/meta-lib-signed-channel-shell
+    name: .meta/lib/signed_channel/shell.py
+    path: .meta/lib/signed_channel/shell.py
+  - id: work:artifact/meta-lib-signed-channel-reach
+    name: .meta/lib/signed_channel/reach.py
+    path: .meta/lib/signed_channel/reach.py
+  - id: work:artifact/meta-lib-signed-channel-verdict
+    name: .meta/lib/signed_channel/verdict.py
+    path: .meta/lib/signed_channel/verdict.py
   - id: work:artifact/meta-hooks-worktree-only
     name: .meta/hooks/worktree_only.py
     path: .meta/hooks/worktree_only.py
