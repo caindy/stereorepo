@@ -545,6 +545,21 @@ artifacts:
   - id: work:artifact/meta-search
     name: .meta/search.py
     path: .meta/search.py
+  - id: work:artifact/meta-lib-search
+    name: .meta/lib/search/__init__.py
+    path: .meta/lib/search/__init__.py
+  - id: work:artifact/meta-lib-search-bm25
+    name: .meta/lib/search/bm25.py
+    path: .meta/lib/search/bm25.py
+  - id: work:artifact/meta-lib-search-build
+    name: .meta/lib/search/build.py
+    path: .meta/lib/search/build.py
+  - id: work:artifact/meta-lib-search-benchmark
+    name: .meta/lib/search/benchmark.py
+    path: .meta/lib/search/benchmark.py
+  - id: work:artifact/meta-lib-search-cli
+    name: .meta/lib/search/cli.py
+    path: .meta/lib/search/cli.py
   - id: work:artifact/meta-ruff-toml
     name: .meta/ruff.toml
     path: .meta/ruff.toml

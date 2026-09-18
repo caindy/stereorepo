@@ -57,6 +57,11 @@ decisions:
       - work:artifact/meta-lib-wikisplain-links
       - work:artifact/meta-lib-wikisplain-pages
       - work:artifact/meta-lib-wikisplain-cli
+      - work:artifact/meta-lib-search
+      - work:artifact/meta-lib-search-bm25
+      - work:artifact/meta-lib-search-build
+      - work:artifact/meta-lib-search-benchmark
+      - work:artifact/meta-lib-search-cli
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-ruff-toml
       - work:artifact/meta-disciplines

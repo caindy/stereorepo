@@ -12,6 +12,11 @@ decisions:
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-apm-compile-agents
       - work:artifact/meta-checks-probes-tools-search
+      - work:artifact/meta-lib-search-cli
+      - work:artifact/meta-lib-search-bm25
+      - work:artifact/meta-lib-search-build
+      - work:artifact/meta-lib-search
+      - work:artifact/meta-lib-search-benchmark
     context: >-
       While work:role/technical-writer and work:personality/technical-writer
       were declared in imported authority assertions and enforced during PR review
