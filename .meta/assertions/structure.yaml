@@ -368,6 +368,15 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-reservation
     name: .meta/checks/probes/channel/reservation.py
     path: .meta/checks/probes/channel/reservation.py
+  - id: work:artifact/meta-checks-probes-channel-filing
+    name: .meta/checks/probes/channel/filing.py
+    path: .meta/checks/probes/channel/filing.py
+  - id: work:artifact/meta-checks-probes-channel-triage
+    name: .meta/checks/probes/channel/triage.py
+    path: .meta/checks/probes/channel/triage.py
+  - id: work:artifact/meta-checks-probes-channel-verdict
+    name: .meta/checks/probes/channel/verdict.py
+    path: .meta/checks/probes/channel/verdict.py
   - id: work:artifact/meta-checks-probes-loops
     name: .meta/checks/probes/loops/__init__.py
     path: .meta/checks/probes/loops/__init__.py
