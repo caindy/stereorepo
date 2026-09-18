@@ -1,0 +1,105 @@
+decisions:
+  - id: work:decision/229
+    name: "DR-229 · Observed Failure covers Claims as well as guardrails, and Article 23 holds the author to checking one"
+    challenge: work:challenge/574
+    status: ADOPTED
+    applies:
+      - work:article/23
+    enacted_in:
+      - work:artifact/meta-charter
+      - work:artifact/meta-assertions-imported-disciplines
+    context: >-
+      A coder asserts what it has not checked, and the assertion is
+      indistinguishable from a checked one. In one session a coder produced
+      five: that two doubled pull requests had landed one change twice, which
+      `gh pr view` disproves in one call, which reached the trunk in an adopted
+      entry and which solorepo's #550 corrected; that two Decisions supported
+      statements they do not, which `just dereference` reported; that
+      `receipt` was an agreed word, which appears in no vocabulary across 151
+      uses; that a merge was the solo's to withhold, which `evaluate_pr`
+      disproves and which the merge manager had already disproved by merging;
+      and that a probe was verified by reverting, where the fake raised an
+      exception `channel.gh` never raises. None needed research. Each was one
+      command, and each was recognised the moment the solo asked for it to be
+      checked, which places the defect between forming a Claim and writing it
+      down rather than in what a coder can find out.
+    alternatives:
+      - name: State the rule as what a reviewer may accept as evidence
+        chosen: false
+        reason: >-
+          It makes the reviewer the control, and the reviewer half of exactly
+          this kind of control is the half already observed to fail: it accepted
+          five such Claims, and read `receipt` past 151 unminted uses. It also
+          leaves the coder shipping the defect and the reviewer paying for it.
+      - name: A gate over the diff, refusing a Claim with no citation
+        chosen: false
+        reason: >-
+          A gate sees a pull request and nothing else, so it would miss an
+          interactive session editing a record directly. Solorepo's DR-190
+          weighed a purely mechanical regime and a purely instructional one and
+          took neither, adopting a gate beside a reading — which is the shape
+          Article 23's own `checked_by` takes, and the reason its mechanical half
+          is not claimed to reach past a citation.
+      - name: A new Discipline for the epistemics of a Claim
+        chosen: false
+        reason: >-
+          Observed Failure already holds them, of checks: a test that passes
+          against broken code passed for the wrong reason, and no coverage
+          number distinguishes the two. Solorepo's DR-101 refused a Discipline
+          for the receipt rule on the ground that a Discipline is a name and the
+          idea already had two, calling that rule "Observed Failure and Nothing
+          Unconsumed applied to prose" — which is this widening, already stated
+          once.
+      - name: An Article under Observed Failure, and the Discipline widened to say so
+        chosen: true
+        reason: >-
+          The epistemics are identical rather than analogous, so the Discipline
+          is widened explicitly and the Article states the obligation. Widening
+          is written into the Discipline's description rather than implied by an
+          `enforces:` slot, because it changes what a Discipline means and every
+          portfolio inherits it.
+    consequences:
+      - >-
+        Article 23 has it that a Claim made without checking is a guess, however
+        it turns out; that the check belongs to its author at the moment of
+        writing and cannot be delegated to a reader; and that a Claim which
+        cannot be checked says so on itself. Its `checked_by` is two-part and
+        says so: `just dereference` resolves a Claim citing an Article, a
+        Decision or a Discipline, and nothing resolves a Claim about behaviour
+        or history.
+      - >-
+        The Article's falsifier names the hedge as a violation in its own right.
+        A Claim marked uncertain where the check was available and cheap is the
+        rule wearing its own remedy, and without that clause the marking
+        carve-out is a way past checking rather than an honest label.
+      - >-
+        Observed Failure's description says the same holds of a Claim as of a
+        check, and gains two steps: check a Claim before asserting it, and watch
+        a refusal stand aside rather than only fire. The second is the guardrail
+        instance of the same Article — a refusal probe with only true positives
+        has never been watched failing where it costs most — and closes
+        solorepo's #546.
+      - >-
+        `Claim` is minted into the inherited vocabulary as Toulmin's Claim, in
+        the shape `~/fitch-mvp` models it, with a page under `wiki/solorepo/`.
+        Only that term is taken: `Warrant`, `Grounds`, `Backing`, `Credence`,
+        `Rebuttal` and `Qualifier` wait for solorepo's #576, since a word with no
+        consumer here is what Nothing Unconsumed refuses.
+      - >-
+        A22 is named in the Article as its complement rather than its general
+        case: that Article has the record carry what an unprivileged Job needs,
+        this one has the author go and read it.
+    falsifier: >-
+      A merged Claim about behaviour or history that no party checked and no
+      citation resolves, or a refusal added under `.meta/say/` whose probe
+      asserts only that it fires.
+    rationale: |-
+      What makes an unchecked Claim dangerous is not that it is often wrong but
+      that it is shaped exactly like a checked one. Fluency is indistinguishable
+      from knowledge at the point of reading, which is why every control that
+      sits downstream of the author fails in the same way, and why the obligation
+      has to sit with whoever writes the sentence.
+      The cost is not carried by the Claim that is caught. It is carried by the
+      reader who catches one and can no longer tell which of the rest were
+      checked. That is what the entry solorepo's #550 corrects had done to its
+      own record.

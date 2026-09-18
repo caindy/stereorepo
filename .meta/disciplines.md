@@ -124,12 +124,15 @@ _Produces: A standard that cannot quietly fall._
 
 A guardrail never observed to fail is not evidence of anything.
 Coverage is a **floor, not evidence**: it reports what ran, never what was checked. A test that passes against broken code passed for the wrong reason, and no coverage number distinguishes the two. The only way to know a check works is to have watched it fail.
+The same holds of a Claim as of a check. A Claim reads the same whether its author checked it or not, exactly as a passing test reads the same whether or not it ever ran against broken code, so this Discipline covers what is asserted as well as what is guarded (A23).
 
 **Where the judgement is.** What a passing check actually covers — which is never what its name suggests, and rarely what its author intended.
 
 1. Watch every new guardrail fail before trusting it. Break the thing it guards, see red, then put it back.
-2. Treat a coverage figure as a floor beneath the tests, never as a claim about them.
-3. Use mutation testing, or its equivalent, as the signal behind the floor — it is the mechanised form of watching a check fail.
+2. Check a Claim before asserting it, and say so on the Claim where you cannot. An unchecked Claim is the prose form of a test that passes for the wrong reason: fluent, indistinguishable from a checked one, and evidence of nothing. Where it cites an Article, a Decision or a Discipline, `just dereference` is the mechanised form of watching it fail; where it is about behaviour or history, nothing resolves it and the author is the whole of the control.
+3. Watch a refusal stand aside, not only fire. A probe over a refusal carries at least one case asserting the nearest act the refusal must let through: the false positive is the expensive side, since refusing wrongly costs the act where failing to refuse costs a repeat.
+4. Treat a coverage figure as a floor beneath the tests, never as a claim about them.
+5. Use mutation testing, or its equivalent, as the signal behind the floor — it is the mechanised form of watching a check fail.
 
 _Produces: Checks whose passing means something._
 

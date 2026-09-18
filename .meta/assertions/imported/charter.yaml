@@ -317,3 +317,39 @@ articles:
     falsifier: >-
       A Job that proceeds correctly on state it could not observe, which would
       mean a privilege nobody declared.
+  - id: work:article/23
+    name: Article 23
+    statement: >-
+      A Claim made without checking is a guess, however it turns out. A Claim
+      reads exactly the same whether its author checked it or not, which is what
+      makes an unchecked one dangerous rather than merely weak: no reader,
+      reviewer or gate downstream can tell the two apart, so the check belongs to
+      whoever writes the Claim, at the moment of writing, and cannot be delegated
+      to anyone reading it later. Where the check is available — and it usually
+      is, and usually costs one command — make it before asserting. Where it is
+      not, say so on the Claim itself: a guess marked as a guess costs a reader
+      nothing, and an unmarked one costs them the whole record's credibility once
+      they find it.
+    enforces: work:discipline/observed-failure
+    checked_by: >-
+      `just dereference`, which reads the citations a branch wrote against what
+      they name, for a Claim citing an Article, a Decision or a Discipline.
+      Nothing resolves a Claim about behaviour or history: that half is held by
+      the author before it is written and by the reviewer after, by asking what
+      was consulted rather than whether it reads well. A22 is its complement and
+      not its general case — that Article has the record carry what a Job needs,
+      this one has the author go and read it.
+    example: >-
+      A Decision of this repository explained a defect by the shape of the code
+      that produced it: three acts that are not one transaction, so a failure
+      part-way through was retried and did the first act twice. The run's log
+      says otherwise — it concluded successfully and carries no error at all,
+      and the verb was simply typed twice, eleven seconds apart, with a
+      recomposed body. Nothing had failed. Reading the log took one call and was
+      done only when the solo asked why the stated mechanism would produce the
+      stated effect, by which point the Claim had survived a review and two
+      earlier corrections to the same paragraph (solorepo's #604).
+    falsifier: >-
+      A merged Claim about behaviour or history that no party checked and no
+      citation resolves, or a Claim hedged as uncertain where the check was
+      available and cheap.

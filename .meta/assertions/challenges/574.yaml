@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/574
+    name: A coder asserts what it has not checked, and Observed Failure holds the rule only of guardrails
+    challenge_type: DEFECT
+    description: >-
+      In one session a coder produced five Claims it had not checked, each
+      settled against the record in a single command the moment the solo asked:
+      that two doubled pull requests landed the same change twice, that two
+      Decisions supported statements they do not, that `receipt` was an agreed
+      word, that a merge was the solo's to withhold, and that a probe was
+      verified by reverting. None needed research. Observed Failure already
+      holds the epistemics — a test that passes against broken code passed for
+      the wrong reason — and holds them only of guardrails, so nothing states
+      the same of a Claim.
