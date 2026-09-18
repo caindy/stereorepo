@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """What changes state on GitHub: the transitions (solorepo's DR-117).
 
-An Issue filed, triaged, moved between levels, claimed or handed back; a pull
-request opened, layered, revised, merged, superseded or advanced; a review
-requested; a coder pass dispatched; a Milestone set; a Decision's number
-reserved (solorepo's DR-116).
+Each verb is a whole step of a Discipline and refuses its own misuse
+(solorepo's DR-116): a composition a caller could assemble by hand and leave
+half done is not typeable here.
 
 History in move.history.md (solorepo's DR-171).
 """
