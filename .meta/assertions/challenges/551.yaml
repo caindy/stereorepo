@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/551
+    name: Written Decisions does not say who may put a decision in force, so a coder adopts its own
+    challenge_type: DEFECT
+    description: >-
+      Written Decisions has the status carry whether a decision is recommended
+      or in force, and no step says whose act moves it. Of the 215 entries
+      under `.meta/assertions/decisions/` that preceded this one, 209 were
+      `ADOPTED`, four `WITHDRAWN`, and two had ever sat anywhere else: nothing
+      waits, because no step says it should. Solorepo's
+      DR-221 stands `ADOPTED` on the trunk. It was written, adopted and merged
+      inside one session, and #550 is open against a false claim in its
+      context.

@@ -230,6 +230,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-219](assertions/decisions/DR-219.yaml) | The control plane names the packages of control-plane scripts under .meta/lib/, not the directory | Adopted |
 | [DR-220](assertions/decisions/DR-220.yaml) | .meta/ holds the seed's complexity ceiling and pylint's size rules, with no suppression | Adopted |
 | [DR-221](assertions/decisions/DR-221.yaml) | One Challenge is one Issue, kept by the title at `file` and the promotion link at `promote` | Adopted |
+| [DR-222](assertions/decisions/DR-222.yaml) | Only the solo puts a decision in force, and a change carrying one waits for it | Adopted |
 
 ## Holes
 
@@ -275,7 +276,7 @@ and the query a reader in a file actually has.
 | [`.meta/arc/teardown`](arc/teardown) | [DR-137](assertions/decisions/DR-137.yaml), [DR-179](assertions/decisions/DR-179.yaml) |
 | [`.meta/arc/values-runnerset.yaml`](arc/values-runnerset.yaml) | [DR-137](assertions/decisions/DR-137.yaml), [DR-141](assertions/decisions/DR-141.yaml), [DR-147](assertions/decisions/DR-147.yaml), [DR-156](assertions/decisions/DR-156.yaml), [DR-160](assertions/decisions/DR-160.yaml) |
 | [`.meta/assertions/authority.yaml`](assertions/authority.yaml) | [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-123](assertions/decisions/DR-123.yaml) |
-| [`.meta/assertions/disciplines.yaml`](assertions/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-204](assertions/decisions/DR-204.yaml) |
+| [`.meta/assertions/disciplines.yaml`](assertions/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-204](assertions/decisions/DR-204.yaml), [DR-222](assertions/decisions/DR-222.yaml) |
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
 | [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/assertions/imported/authority.yaml`](assertions/imported/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-066](assertions/decisions/DR-066.yaml), [DR-107](assertions/decisions/DR-107.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-123](assertions/decisions/DR-123.yaml) |

@@ -1,0 +1,84 @@
+decisions:
+  - id: work:decision/222
+    name: "DR-222 · Only the solo puts a decision in force, and a change carrying one waits for it"
+    challenge: work:challenge/551
+    status: ADOPTED
+    applies:
+      - work:article/11
+      - work:article/20
+    enacted_in:
+      - work:artifact/meta-assertions-disciplines
+    context: >-
+      Written Decisions has the status carry whether a decision is recommended
+      or in force, and no step says whose act moves it. So a coder writes
+      `ADOPTED` on its own authority and the record binds every later reader
+      from the moment it merges. The practice shows it: of the 215 entries
+      under `.meta/assertions/decisions/` that preceded this one, 209 were
+      `ADOPTED`, four `WITHDRAWN`, and two had ever sat anywhere else. Nothing
+      waits, because no step says it should. Solorepo's DR-221 is the case: a hundred and seven lines
+      describing how the channel behaves, standing `ADOPTED`. It was minted,
+      adopted and merged inside one session, and #550 is open against a false
+      claim in its context that the agent reviewer read for its wording rather
+      than its truth.
+    alternatives:
+      - name: A gate on the status field, read against the diff
+        chosen: false
+        reason: >-
+          A gate fires on a pull request and reaches nothing else — not an
+          interactive session editing a record directly, and not a conversation
+          where a coder reads agreement as adoption — and it refuses the act
+          after it is taken rather than shaping it before.
+      - name: A solo Role with a signing key, so adoption is an attributable act
+        chosen: false
+        reason: >-
+          It would make adoption evidenced: solorepo's A19 has every commit
+          name its Actor, and the Trailer is written from the credential the
+          channel speaks with, so an agent holding only a Role's credential
+          could not sign as the solo. It also introduces an identity to the
+          channel for one act, and the solo is not a Role — the solo directs a
+          coder session rather than speaking as one.
+      - name: Adoption recorded as a second act on the mint reservation
+        chosen: false
+        reason: >-
+          Visible without reading the file, and it puts a network read behind
+          anything that wants to know, for a fact the entry already carries in
+          its status.
+      - name: A step of the Discipline, followed rather than checked, with the change waiting on it
+        chosen: true
+        reason: >-
+          The status field already distinguishes proposed from in force, so
+          nothing new has to be built for a coder to say what it means. What was
+          missing was the step saying whose act moves it, and a second saying
+          that the change enacting a decision does not land ahead of it.
+    consequences:
+      - >-
+        A coder writes a decision as `PROPOSED` and never as `ADOPTED`. Only
+        the solo adopts one, and a solo who sounds agreeable has not adopted
+        anything.
+      - >-
+        The first step is followed rather than checked. Nothing records who
+        adopted an entry, so nothing catches a coder that adopts its own, and
+        this Decision's falsifier reaches only its second step. That is the
+        choice rather than an omission: the alternatives that would leave a mark
+        were weighed and cost a new identity, or a network read for a fact the
+        record already carries.
+      - >-
+        A pull request carrying a decision merges once that decision is in
+        force: proposed on the branch, adopted by the solo, the status moved,
+        then merged. Decision-carrying work therefore blocks on the solo, which
+        is a gate on the merge path that no semaphore of `evaluate_pr` knows
+        about and that nothing enforces.
+      - >-
+        The entries already on the trunk are not re-opened. `ADOPTED` means two
+        things either side of this Decision — before it, that a coder wrote the
+        word; after it, that the solo said so — and saying that here is cheaper
+        than leaving a reader to find it.
+    falsifier: >-
+      A change merging while the decision it carries is still `PROPOSED`. The
+      other half of this Decision has no falsifier: a decision reaching the
+      trunk `ADOPTED` that the solo never adopted leaves no trace, so nothing
+      can establish it, and saying so here is the honest form of a step that is
+      followed rather than checked.
+    rationale: |-
+      The repository already draws this line on the way in, where a `hard`
+      Challenge waits for the solo, and drew it nowhere on the way out.
