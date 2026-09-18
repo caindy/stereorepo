@@ -16,6 +16,7 @@ decisions:
       - work:artifact/meta-checks-files-python
       - work:artifact/meta-checks-files-sources
       - work:artifact/meta-lib-render-record
+      - work:artifact/meta-checks-probes-harness
     context: >-
       `check.py` reached 2,592 lines holding four subjects and one thing that is
       not a subject at all. solorepo's #221 made each step register itself at

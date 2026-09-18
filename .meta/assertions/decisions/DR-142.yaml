@@ -13,6 +13,7 @@ decisions:
       - work:artifact/meta-check
       - work:artifact/meta-lib-check-pr-sweep
       - work:artifact/meta-checks-probes-loops-advance
+      - work:artifact/meta-checks-probes-harness-github
     context: >-
       `coder.yml` has two doors. The `issues` door reads four facts before any
       work — the Issue's state, its current difficulty, the open pull request

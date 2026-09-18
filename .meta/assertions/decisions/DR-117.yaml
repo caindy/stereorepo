@@ -31,6 +31,7 @@ decisions:
       - work:artifact/meta-lib-render-pages
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-worktree-only-grammar
+      - work:artifact/meta-checks-probes-harness-loaders
     alternatives:
       - name: One program, with a banner compiled per Role
         chosen: false

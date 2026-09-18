@@ -13,6 +13,8 @@ decisions:
       - work:artifact/meta-disciplines
       - work:artifact/meta-lib-check-pr-github
       - work:artifact/meta-checks-probes-loops-advance
+      - work:artifact/meta-checks-probes-harness-fakes
+      - work:artifact/meta-checks-probes-harness-github
     alternatives:
       - name: The reviewer stays Copilot
         chosen: false
