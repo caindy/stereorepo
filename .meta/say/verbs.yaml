@@ -45,15 +45,29 @@ programs:
         held_by: [reviewer]
       - name: answer
         usage: "<thread-id> < body.md"
-        does: "answer: reply, then resolve; refused when this Actor is the thread's sole author, unless the reply links the Issue the thread was promoted to"
+        does: >-
+          answer: reply, then resolve; refused when this Actor is the thread's
+          sole author, unless the reply links an Issue, which is what a
+          promotion looks like (solorepo's DR-127) — and then the reply goes
+          out and the thread is left open for a second Job
         held_by: [coder]
       - name: resolve
         usage: "<thread-id>"
-        does: "resolve a review thread whose answer or promotion link is already posted"
-        held_by: [coder, solo]
+        does: >-
+          resolve a review thread whose answer or promotion link is already
+          posted; refused for a thread only its caller's own Trailer speaks on,
+          promotion link included — a second Job's to close, ordinarily the
+          reviewer's run, which `move request-review` summons
+        held_by: [coder, reviewer, solo]
       - name: promote
         usage: "<thread-id> --title T [--difficulty D] [--no-resolve] < issue-body.md"
-        does: "at approval: file the Issue with the Issue form's body, `challenge` alone for the reviewer to read unless the solo mandates a level, which a run may not hold, reply with the link, resolve (or defer resolution)"
+        does: >-
+          at approval: file the Issue with the Issue form's body, `challenge`
+          alone for the reviewer to read unless the solo mandates a level, which
+          a run may not hold, reply with the link, resolve (or defer resolution) —
+          always deferred where the promoting Actor is the thread's sole author,
+          since resolving it too would be the only voice on the thread clearing
+          its own hold, and a second Job closes it instead
         held_by: [coder, solo]
       - name: landed
         usage: "<pr>"

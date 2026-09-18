@@ -1,8 +1,7 @@
 """`file_issue` and `promote` refusing a second Issue for one Challenge (solorepo's DR-221).
 """
 
-
-from typing import Any
+from types import ModuleType
 
 from checks.collect import check
 from checks.probes.harness import (
@@ -51,6 +50,14 @@ def filing_probes() -> list[str]:
     carrying someone else's Issue URL is ordinary, and refusing it would lose the
     Challenge rather than delay it.
 
+    The cases on the voices (solorepo's DR-224). Against a thread carrying one
+    Trailer, the caller's own, `promote` files and replies and leaves the thread
+    open, and both `post resolve` and `post answer` decline to close it — the
+    resolve refusing outright and the answer replying without resolving, each
+    with the Issue's link already on the thread, which is the case the code this
+    change replaces would have closed. Against a thread carrying a second Job's
+    Trailer all three behave as solorepo's DR-127 left them.
+
     A refusal's text is read, not just its presence: `run_verb` reports an
     exception as text rather than raising it, so a truthy answer alone cannot
     tell the refusal from the fake being asked something it has no answer for.
@@ -98,13 +105,175 @@ def filing_probes() -> list[str]:
     return problems
 
 
-def promotion_probes(channel: Any, post: Any) -> list[str]:
-    """`promote` against a thread that already carries a promotion link, and one that does not."""
-    problems: list[str] = []
+def read_bodies(bodies: list[str], reads: list[int]) -> list[str]:
+    """One thread read: records the read in `reads` and answers a copy of `bodies`."""
+    reads.append(1)
+    return list(bodies)
+
+
+ISSUE_LINK = "https://github.com/o/r/issues/900"
+
+
+def sole_author_probes(channel: ModuleType, post: ModuleType) -> list[str]:
+    """The three verbs against a thread carrying one Trailer, the caller's own (solorepo's DR-224).
+
+    A notice is this shape by construction, and A16's falsifier is the thread
+    only the Actor who raised it can resolve, so a resolve from that Actor is
+    what the decision closes — at every door, since the falsifier reads "by any
+    sequence of these verbs".
+
+    The cases. `promote` files once, replies with the Issue's link and the words
+    `Left open`, and does not resolve. `post resolve` on the same thread
+    *already carrying that link* refuses and leaves it unresolved: the link is
+    what makes this behavioural rather than a rewording, because the code this
+    change replaces read the link, skipped the party test and resolved. `post
+    answer` with a body repeating the link replies and does not resolve, which
+    is the verb the standing refusal points at and so the door that would leave
+    the hold decorative.
+
+    Both replies are read for the words `Left open`, and for the Trailer coming
+    last. The marker is what the arriving reviewer's prompt matches on, so a
+    door that leaves a thread open without it leaves one nobody closes; the
+    Trailer's position is what keeps `sole_author` true of the reply, so the
+    second Job the marker summons still reads a thread with one voice.
+    """
+    problems = []
+    replied_to: list[tuple[str, str]] = []
+    resolved: list[str] = []
+    filed: list[tuple[str, str | None]] = []
+    own_voice_body = "my notice\n\nActor: gha-1\nAgent: probe"
+    promoted_body = f"Promoted to {ISSUE_LINK}.\n\nActor: gha-1\nAgent: probe"
+
+    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+          stood_in(post, thread_comments=lambda _: [own_voice_body],
+                   reply=lambda t, b: replied_to.append((t, b)),
+                   resolve=lambda t: resolved.append(t)),
+          stood_in(channel, sibling=lambda _: Filer(filed))):
+        said = run_verb(channel, FakeFiling(),
+                        lambda: post.promote("t1", TITLE, BODY, "hard"))
+
+    if said:
+        problems.append(f"filing: promoting sole-authored thread exited with error: {said!r}")
+    if len(filed) != 1:
+        problems.append(f"filing: promoting sole-authored thread did not file exactly once: {filed!r}")
+    if (len(replied_to) != 1 or "Left open" not in replied_to[0][1]
+            or "900" not in replied_to[0][1]
+            or not replied_to[0][1].rstrip().endswith("Actor: gha-1\nAgent: probe")):
+        problems.append(f"filing: promoting sole-authored thread reply was incorrect: {replied_to!r}")
+    if resolved:
+        problems.append(f"filing: promoting sole-authored thread resolved the thread: {resolved!r}")
+
+    resolved.clear()
+    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+          stood_in(post, thread_nodes=lambda _: [
+                       {"body": own_voice_body, "author": {"login": "caindy-solorepo-coder"}},
+                       {"body": promoted_body, "author": {"login": "caindy-solorepo-coder"}},
+                   ],
+                   resolve=lambda t: resolved.append(t))):
+        said = run_verb(channel, FakeFiling(),
+                        lambda: post.resolve_verb("t1"))
+    if not said or "refusing" not in said or "yours" not in said:
+        problems.append(f"filing: post resolve on a promoted sole-authored thread did not "
+                        f"refuse as expected: {said!r}")
+    if resolved:
+        problems.append(f"filing: post resolve on a promoted sole-authored thread resolved it "
+                        f"anyway: {resolved!r}")
+
+    replied_to.clear()
+    resolved.clear()
+    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+          stood_in(post, thread_comments=lambda _: [own_voice_body, promoted_body],
+                   reply=lambda t, b: replied_to.append((t, b)),
+                   resolve=lambda t: resolved.append(t))):
+        said = run_verb(channel, FakeFiling(),
+                        lambda: post.answer("t1", f"Promoted to {ISSUE_LINK}."))
+    if (said or len(replied_to) != 1 or "Left open" not in replied_to[0][1]
+            or not replied_to[0][1].rstrip().endswith("Actor: gha-1\nAgent: probe")):
+        problems.append(f"filing: post answer with a link on a sole-authored thread said "
+                        f"{said!r} and replied {replied_to!r}")
+    if resolved:
+        problems.append(f"filing: post answer with a link on a sole-authored thread resolved "
+                        f"it: {resolved!r}")
+
+    return problems
+
+
+def multi_voice_probes(channel: ModuleType, post: ModuleType) -> list[str]:
+    """The same three verbs against a thread carrying a second Job's Trailer (solorepo's DR-224).
+
+    The control on `sole_author_probes`: what solorepo's DR-224 holds is a thread with one
+    voice, so a thread with two behaves as solorepo's DR-127 left it, and a failure here
+    says the decision widened past its own scope.
+
+    The cases. `promote` files once, replies `Promoted to <url>.` without the
+    words `Left open`, and resolves. `post resolve` resolves. `post answer`
+    replies without those words and resolves. The second voice carries
+    `Actor: gha-2` under the same login, because `sole_author` reads the Trailer
+    and on this repository the login never differs (solorepo's DR-068).
+    """
+    problems = []
+    replied_to: list[tuple[str, str]] = []
+    resolved: list[str] = []
+    filed: list[tuple[str, str | None]] = []
+    own_voice_body = "my notice\n\nActor: gha-1\nAgent: probe"
+    other_voice_body = "my reply\n\nActor: gha-2\nAgent: probe"
+
+    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+          stood_in(post, thread_comments=lambda _: [own_voice_body, other_voice_body],
+                   reply=lambda t, b: replied_to.append((t, b)),
+                   resolve=lambda t: resolved.append(t)),
+          stood_in(channel, sibling=lambda _: Filer(filed))):
+        said = run_verb(channel, FakeFiling(),
+                        lambda: post.promote("t1", TITLE, BODY, "hard"))
+
+    if said:
+        problems.append(f"filing: promoting multi-voice thread exited with error: {said!r}")
+    if len(filed) != 1:
+        problems.append(f"filing: promoting multi-voice thread did not file exactly once: {filed!r}")
+    if len(replied_to) != 1 or "Promoted to" not in replied_to[0][1] or "Left open" in replied_to[0][1]:
+        problems.append(f"filing: promoting multi-voice thread reply was incorrect: {replied_to!r}")
+    if len(resolved) != 1 or resolved[0] != "t1":
+        problems.append(f"filing: promoting multi-voice thread did not resolve: {resolved!r}")
+
+    resolved.clear()
+    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+          stood_in(post, thread_nodes=lambda _: [
+                       {"body": own_voice_body, "author": {"login": "caindy-solorepo-coder"}},
+                       {"body": other_voice_body, "author": {"login": "caindy-solorepo-coder"}}
+                   ],
+                   resolve=lambda t: resolved.append(t))):
+        said = run_verb(channel, FakeFiling(),
+                        lambda: post.resolve_verb("t1"))
+    if said or len(resolved) != 1:
+        problems.append(f"filing: post resolve on multi-voice thread did not succeed as expected: {said!r}, resolved: {resolved!r}")
+
+    replied_to.clear()
+    resolved.clear()
+    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+          stood_in(post, thread_comments=lambda _: [own_voice_body, other_voice_body],
+                   reply=lambda t, b: replied_to.append((t, b)),
+                   resolve=lambda t: resolved.append(t))):
+        said = run_verb(channel, FakeFiling(),
+                        lambda: post.answer("t1", "the point is met."))
+    if (said or len(replied_to) != 1 or len(resolved) != 1
+            or "Left open" in replied_to[0][1]):
+        problems.append(f"filing: post answer on multi-voice thread said {said!r}, replied "
+                        f"{replied_to!r} and resolved {resolved!r}")
+
+    return problems
+
+
+def promotion_probes(channel: ModuleType, post: ModuleType) -> list[str]:
+    """`promote` against a thread that already carries a promotion link, and one that does not (solorepo's DR-127); then every verb against one voice and two (solorepo's DR-224).
+
+    The cases on the standing link are below; `sole_author_probes` and
+    `multi_voice_probes` carry the rest, and each states its own.
+    """
+    problems = []
     filed: list[tuple[str, str | None]] = []
 
     def promoting(bodies: list[str]) -> tuple[str | None, int]:
-        """One `promote` of thread `t1` over a thread holding `bodies`, as `(what it exited with, thread reads)`.
+        """One `promote` of thread `t1` over a thread holding `bodies`, as `(what it exited with, thread reads)`; the exit is `None` where the verb returned.
 
         `channel.signed` is not stood in and is reached whichever way the verb
         goes, since `promote` composes its reply as an argument and Python
@@ -114,13 +283,8 @@ def promotion_probes(channel: Any, post: Any) -> list[str]:
         """
         filed.clear()
         reads: list[int] = []
-
-        def read(_: str) -> list[str]:
-            reads.append(1)
-            return list(bodies)
-
         with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
-              stood_in(post, thread_comments=read,
+              stood_in(post, thread_comments=lambda _: read_bodies(bodies, reads),
                        reply=lambda *a: None, resolve=lambda *a: None),
               stood_in(channel, sibling=lambda _: Filer(filed))):
             return run_verb(channel, FakeFiling(),
@@ -152,6 +316,9 @@ def promotion_probes(channel: Any, post: Any) -> list[str]:
     if said or filed != [(TITLE, None)]:
         problems.append(f"filing: promoting with no level said {said!r} and filed {filed!r}; "
                         "the Issue lands `challenge` alone (solorepo's DR-230)")
+
+    problems += sole_author_probes(channel, post)
+    problems += multi_voice_probes(channel, post)
     return problems
 
 
@@ -161,8 +328,7 @@ class Filer:
     def __init__(self, filed: list[tuple[str, str | None]]) -> None:
         self.filed = filed
 
-    def file_issue(self, title: str, body: str, level: str | None = None,
-                   roadmap: bool = False) -> tuple[str, str]:
+    def file_issue(self, title: str, body: str, level: str | None = None, roadmap: bool = False) -> tuple[str, str]:
         """The call recorded, answered with a number and URL as the real one answers."""
         self.filed.append((title, level))
-        return "900", "https://github.com/o/r/issues/900"
+        return "900", ISSUE_LINK

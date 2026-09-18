@@ -4,12 +4,14 @@
 A comment, a thread on the diff, a reply, an answer, a promotion, what landed,
 and the reviewer's verdict. Each is one step of a Discipline and refuses its own
 misuse (solorepo's DR-116): `answer` replies and resolves, and refuses when this Actor is
-the thread's sole author unless the reply links the Issue the thread became
-(solorepo's DR-127); `notice` supplies the marker and the mention; `promote`
-files the Issue before the thread says it did; `landed` is rendered from the
-record and never typed; `review` refuses a verdict whose head moved under the
-run, which GitHub would otherwise file against a commit the run never read
-(solorepo's #566). What changes state without saying anything — a claim, a
+the thread's sole author unless the reply links an Issue, which is what a
+promotion looks like (solorepo's DR-127) — and then replies without resolving, a thread
+with one voice being a second Job's to close (solorepo's DR-224); `notice` supplies the
+marker and the mention;
+`promote` files the Issue before the thread says it did; `landed` is rendered
+from the record and never typed; `review` refuses a verdict whose head moved
+under the run, which GitHub would otherwise file against a commit the run never
+read (solorepo's #566). What changes state without saying anything — a claim, a
 level, a layer, a merge — is `move`'s. History in post.history.md
 (solorepo's DR-171).
 """
@@ -185,6 +187,12 @@ def refuse_if_sole_author(thread_id: str, promotion: bool = False) -> list[str]:
     A reply with no link stays refused: that is the self-resolution solorepo's DR-068 and
     solorepo's DR-072 put the control on the thread for.
 
+    What stands aside is the reply, not the resolve. Its two callers, `promote`
+    and `answer`, ask `sole_author` again on the bodies this returns, and a
+    sole-authored thread is left open for a second Job however the link got
+    there (solorepo's DR-224). `resolve_verb` asks the same question of its own
+    fetch, having no reply to stand aside for.
+
     The thread is fetched whether or not the rule can bite, so a bad id stops
     the verb before anything is filed or posted rather than after. The bodies
     are returned so that a caller needing them again does not fetch twice.
@@ -201,8 +209,9 @@ def refuse_if_sole_author(thread_id: str, promotion: bool = False) -> list[str]:
         sys.exit("say: refusing — you are the sole author of this thread, and a reply from you "
                  "would not change that. A16 counts the resolver as a party, which means "
                  "nothing when it is you. Promote it, if it survived the argument, and answer "
-                 "with the Issue's link — that stands aside from this rule. Otherwise ask the "
-                 "solo to resolve it, or leave it for the next Job, whose Trailer differs.")
+                 "with the Issue's link — that stands aside from this rule, and posts the reply "
+                 "without resolving. Closing it is the next Job's, whose Trailer differs: "
+                 "`move request-review <pr>` summons one.")
     return bodies
 
 
@@ -228,14 +237,29 @@ def comment_party(c: dict[str, Any]) -> str:
 def resolve_verb(thread_id: str) -> None:
     """Resolve a review thread whose answer or promotion link is already posted (A16).
 
-    Stand aside when the thread already carries a promotion link or a comment
-    from a party other than whoever opened it; refuse otherwise, so resolving
-    without either cannot clear the gate.
+    Refuse first where every comment is this Actor's own — the promotion link
+    included, per `sole_author` (solorepo's DR-224). A16's falsifier is a thread only the
+    Actor who raised it can resolve, and a resolve only its sole author could
+    type is that thread. A second Job resolves it: `sole_author` reads
+    `channel.trailers()`, so a later run reads a different Trailer on the same
+    bodies and stands aside.
+
+    Otherwise stand aside when the thread already carries a promotion link or
+    a comment from a party other than whoever opened it; refuse otherwise, so
+    resolving without either cannot clear the gate.
     """
     nodes = thread_nodes(thread_id)
     if nodes is None:
         sys.exit(f"say: GitHub has no review thread {thread_id}")
-    has_promo = any(check_pr.PROMOTED.search(c.get("body") or "") for c in nodes)
+    bodies = [str(c.get("body") or "") for c in nodes]
+    if sole_author(bodies):
+        sys.exit("say: refusing — every comment on this thread is yours, promotion link "
+                 "included, and a resolve from you would not change that. A16 asks for a "
+                 "reply from a second party or a link, and this thread has the link with no "
+                 "second party. `--role` will not make one — it picks a credential, not a "
+                 "Trailer. A later Job resolves this; `move request-review <pr>` summons "
+                 "one.")
+    has_promo = any(check_pr.PROMOTED.search(b) for b in bodies)
     parties = {comment_party(c) for c in nodes}
     if not has_promo and len(parties) < 2:
         sys.exit("say: refusing — this thread has neither an answer from a second party nor a "
@@ -243,14 +267,38 @@ def resolve_verb(thread_id: str) -> None:
     resolve(thread_id)
 
 
-def answer(thread_id: str, body: str) -> None:
-    """Reply, then resolve: PR First's step, whole.
+def left_open(thread_id: str) -> str:
+    """The sentence a reply carries when the thread it answers is left open (solorepo's DR-224).
+
+    One wording for both doors, `promote` and `answer`, because what tells the
+    arriving reviewer which unresolved thread is its to close is a string it
+    reads: `review.yml`'s prompts say resolve only where the last comment
+    carries the Issue's URL and the words `Left open:`. A second wording is a
+    thread the arriving run is instructed to walk past, and the merge waits on
+    a thread with no one left to close it.
+
+    It goes in front of the Trailer rather than after, since `sole_author`
+    reads a comment by what it ends with: appended after, the marker would make
+    this Actor's own reply read as somebody else's and hand the thread the
+    second party it is waiting for.
+    """
+    return ("Left open: this thread has had one voice, mine. A16 accepts a second party's "
+            "reply or a link, and solorepo's DR-224 narrows the link limb, so a thread carrying "
+            "one Trailer waits for a second Job even with the link on it. "
+            f"`move request-review <pr>` summons one, and `post resolve {thread_id}` is what it "
+            "runs.")
+
+
+def answer(thread_id: str, text: str) -> None:
+    """Reply, then resolve: PR First's step, whole — except on a thread this
+    Actor is the sole author of, which is replied to and left open (solorepo's DR-224).
 
     A thread answered and left open reads as one still owed something, and
-    one resolved without an answer is A16's defect; the step is both, and
-    the verb is both. The sole-author refusal is asked before anything is
-    posted: a reply that goes out and a resolve that then refuses is the step
-    half done, which is the shape this verb exists to make untypeable.
+    one resolved without an answer is A16's defect; the step is both, and so
+    is the verb wherever the thread has two voices. The sole-author refusal is
+    asked before anything is posted: a reply that goes out and a resolve that
+    then refuses is the step half done, which is the shape this verb exists to
+    make untypeable.
 
     The body decides whether that refusal applies: one linking an Issue is the
     promotion PR First's eighth step names (solorepo's DR-127). `promote` below does the
@@ -259,9 +307,23 @@ def answer(thread_id: str, body: str) -> None:
     failed, or an Issue filed for the thread before it was answered. The link is
     what says the Issue exists, so a thread is never closed on a promotion that
     did not happen.
+
+    The reply goes out either way; the resolve waits where `sole_author` holds
+    on the bodies read before posting (solorepo's DR-224). The stand-aside above is why the
+    link reaches the thread at all, and it is about the reply: a thread every
+    word of which is this Actor's is left open for a second Job, the same as
+    `promote` leaves it — and carrying `left_open`'s sentence for the same
+    reason, so the arriving run reads one marker whichever door left the thread
+    open. The caller's words are signed here rather than in `main`, since that
+    sentence goes between them and the Trailer.
     """
-    refuse_if_sole_author(thread_id, promotion=promotes(body))
-    reply(thread_id, body)
+    bodies = refuse_if_sole_author(thread_id, promotion=promotes(text))
+    if sole_author(bodies):
+        reply(thread_id, channel.signed(f"{text}\n\n{left_open(thread_id)}"))
+        print(f"left open ({thread_id}): this thread has had one voice, yours. A later Job "
+              "resolves it; `move request-review <pr>` summons one.")
+        return
+    reply(thread_id, channel.signed(text))
     resolve(thread_id)
 
 
@@ -269,17 +331,25 @@ def promote(thread_id: str, title: str, body: str, level: str | None, resolve_th
     """At approval: what survived the argument earns an Issue, and the thread is
     resolved with a link to it (PR First, solorepo's DR-159).
 
-    File, reply, resolve, in that order, so the Issue exists before the thread
-    says it does. The body is the Issue form's, not the thread's: it opens with
+    Where `sole_author` holds on the thread's bodies, the Issue is filed and
+    the link posted and the thread is left open, whatever `resolve_thread`
+    asked for; the reply names what closes it (solorepo's DR-224). Where it does not, the
+    order is file, reply, resolve, so the Issue exists before the thread says
+    it does.
+
+    The body is the Issue form's, not the thread's: it opens with
     `**Waits on.**` like anything `file` takes, since what is promoted is an
-    Issue and the thread is where it was found. With `--no-resolve`, the thread
-    is replied to but left open so the PR body and what landed can be finalized
-    before resolving the thread to unblock the merge.
+    Issue and the thread is where it was found. `--no-resolve` replies and
+    leaves the thread open so the pull request's body and what landed can be
+    finalized first; a sole-authored thread is left open whether or not it was
+    passed.
 
     The sole-author refusal cannot bite here and is asked as `promotion=True`
     rather than dropped: this verb's reply carries the Issue's link by
     construction, which is the case solorepo's DR-127 has it stand aside for, and the call
-    is still what proves the thread exists before an Issue is filed for it.
+    is still what proves the thread exists before an Issue is filed for it. The
+    bodies it returns are then read twice, for the standing promotion and for
+    `sole_author`.
 
     The Issue lands `challenge` alone unless a level is given: the level is the
     reviewer's verdict, and a raiser at approval proposes one in the body. A
@@ -305,11 +375,15 @@ def promote(thread_id: str, title: str, body: str, level: str | None, resolve_th
         sys.exit(f"say: this thread was already promoted to {already.group(1)}, so repeating "
                  "`promote` would file a second Issue for one thread.\n"
                  "     Nothing was filed. The thread is what is unfinished: "
-                 f"`post resolve {thread_id}` closes it on the link already posted.")
+                 f"`post resolve {thread_id}` closes it on the link already posted, from a "
+                 "second Job where every comment on it is yours.")
     # The link, not the number: `check_pr.py` reads a promotion in the one
     # form it can check, the Issue's URL, and a bare `#n` is what someone types
     # when referring to an Issue rather than when filing one.
     _, url = channel.sibling("move").file_issue(title, body, level=level)
+    if sole_author(bodies):
+        reply(thread_id, channel.signed(f"Promoted to {url}. {left_open(thread_id)}"))
+        return
     reply(thread_id, channel.signed(f"Promoted to {url}."))
     if resolve_thread:
         resolve(thread_id)
@@ -496,6 +570,11 @@ def main() -> None:
     if args.verb == "resolve":
         resolve_verb(args.thread)
         return
+    if args.verb == "answer":
+        # Signed inside, after the sentence that leaves a sole-authored thread
+        # open is put behind the caller's words.
+        answer(args.thread, channel.stdin_body())
+        return
 
     body = channel.signed(channel.stdin_body())
     if args.verb == "comment":
@@ -504,8 +583,6 @@ def main() -> None:
         raise_thread(args.pr, args.path, args.line, body)
     elif args.verb == "reply":
         reply(args.thread, body)
-    elif args.verb == "answer":
-        answer(args.thread, body)
     elif args.verb == "promote":
         promote(args.thread, args.title, body, args.level, resolve_thread=not args.no_resolve)
 

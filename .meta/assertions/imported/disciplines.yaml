@@ -577,6 +577,13 @@ disciplines:
         review time creates a tracker item with no relationship to the
         outcome, which goes stale the moment the approach moves under it.
 
+        A thread every comment of which is this Job's own — which every notice
+        is — gets the Issue and the link and stays open, because a resolve from
+        its only voice is A16's falsifier rather than an answer to it
+        (solorepo's DR-224). Closing it is a second Job's, and the next step is
+        how one arrives: request review again, and the Job that answers it
+        resolves what the promotion left open.
+
         A point **another party raised** that survives and meets the
         drive-by bound can be paid for here rather than later, and at approval
         that is the first thing to try: answer it with a **commit on this
