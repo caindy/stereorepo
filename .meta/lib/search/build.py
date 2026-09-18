@@ -21,7 +21,11 @@ def build_index(meta_dir: Path, root_dir: Path) -> bm25.SearchIndex:
 
     The assertions are indexed through `collect`, and are skipped with a warning
     on stderr where LinkML is not installed, so a search still answers over the
-    wiki alone. The wiki is indexed from its Markdown, `README.md` aside.
+    wiki alone. The wiki is indexed from its Markdown, `README.md` aside: the
+    frontmatter is dropped first, so the heading read is the page's own and not
+    a YAML comment, and the heading is cut from what remains, so the summary
+    field holds the lead definition sentence a page opens with and the body the
+    prose after it.
     """
     index = bm25.SearchIndex()
 
@@ -91,12 +95,9 @@ def build_index(meta_dir: Path, root_dir: Path) -> bm25.SearchIndex:
         for path in sorted(wiki_dir.rglob("*.md")):
             if path.name == "README.md":
                 continue
-            text = path.read_text(encoding="utf-8")
-            title_match = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
-            title = title_match.group(1).strip() if title_match else path.stem
             rel_path = path.relative_to(root_dir).as_posix()
 
-            content_text = text
+            content_text = path.read_text(encoding="utf-8")
             synonyms_text = ""
             if content_text.startswith("---"):
                 parts = content_text.split("---", 2)
@@ -106,6 +107,13 @@ def build_index(meta_dir: Path, root_dir: Path) -> bm25.SearchIndex:
                     syn_match = re.findall(r"^\s*-\s+(.+)$", fm, re.MULTILINE)
                     if syn_match:
                         synonyms_text = " ".join(syn_match)
+
+            title_match = re.search(r"^#\s+(.+)$", content_text, re.MULTILINE)
+            if title_match:
+                title = title_match.group(1).strip()
+                content_text = content_text[: title_match.start()] + content_text[title_match.end() :]
+            else:
+                title = path.stem
 
             paragraphs = [p.strip() for p in content_text.split("\n\n") if p.strip()]
             summary = paragraphs[0] if paragraphs else ""

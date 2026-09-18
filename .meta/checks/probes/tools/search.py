@@ -2,9 +2,23 @@
 """
 import contextlib
 import io
+import pathlib
+import tempfile
 
 from checks.collect import META, ROOT, check
 from checks.probes.harness import load_module
+
+COMMENTED_PAGE = """---
+slug: probe
+# Rendered By A Comment
+synonyms:
+  - Beacon
+---
+
+# Probe
+
+**Probe** is the page a commented frontmatter block used to rename.
+"""
 
 
 @check("search probes", pre=True)
@@ -19,6 +33,10 @@ def search_probes():
     eighteen-query benchmark passes at hit@5 of fifteen or better; its
     printing is silenced, because its return value is the verdict. And a
     result's dictionary carries `id`, `score` and `source_file`.
+
+    A wiki page whose frontmatter carries a YAML comment is indexed under its
+    Markdown heading rather than under that comment, and its summary is the
+    lead definition sentence rather than the heading repeated.
     """
     search = load_module(META / "search.py", "search", register=False)
     problems = []
@@ -45,4 +63,17 @@ def search_probes():
         shown = results[0].to_dict()
         if not ("id" in shown and "score" in shown and "source_file" in shown):
             problems.append(f"search: SearchResult dictionary missing expected fields: {shown}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        (root / "wiki").mkdir()
+        (root / "wiki" / "probe.md").write_text(COMMENTED_PAGE, encoding="utf-8")
+        with contextlib.redirect_stderr(io.StringIO()):
+            _, payload, _ = search.build_index(root / ".meta", root).docs["wiki:probe"]
+    if payload.get("name") != "Probe":
+        problems.append("search: a commented frontmatter block renamed the page, expected "
+                        f"'Probe', got {payload.get('name')!r}")
+    if not payload.get("description", "").startswith("**Probe** is"):
+        problems.append("search: expected the lead definition sentence as the summary, got "
+                        f"{payload.get('description')!r}")
     return problems
