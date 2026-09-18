@@ -401,7 +401,7 @@ and the query a reader in a file actually has.
 | [`.meta/lib/search/__init__.py`](lib/search/__init__.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/search/benchmark.py`](lib/search/benchmark.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/search/bm25.py`](lib/search/bm25.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
-| [`.meta/lib/search/build.py`](lib/search/build.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/search/build.py`](lib/search/build.py) | [DR-171](assertions/decisions/DR-171.yaml), [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/search/cli.py`](lib/search/cli.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/signed_channel/__init__.py`](lib/signed_channel/__init__.py) | [DR-069](assertions/decisions/DR-069.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/signed_channel/reach.py`](lib/signed_channel/reach.py) | [DR-117](assertions/decisions/DR-117.yaml), [DR-217](assertions/decisions/DR-217.yaml) |

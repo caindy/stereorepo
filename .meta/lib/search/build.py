@@ -1,9 +1,13 @@
 """The index built over every identified object under `.meta/assertions/` and every concept under `wiki/`, through the gate's own collector when it can be imported.
+
+History in build.history.md (solorepo's DR-171).
 """
 import re
 import sys
 import types
 from pathlib import Path
+
+import yaml
 
 from lib.search import bm25
 
@@ -15,6 +19,42 @@ except ImportError:
 else:
     collect = _collect
 
+FRONTMATTER = re.compile(r"\A---\n(?P<block>.*?)\n---(?:\n|\Z)", re.DOTALL)
+"""A wiki page's opening YAML frontmatter block: the `---` fence the page starts with, and everything to the fence that closes it."""
+
+
+def wiki_frontmatter(text: str) -> tuple[dict[str, object], str]:
+    """A wiki page's frontmatter as a mapping, and the page with that block removed.
+
+    The mapping is empty where the page opens with no frontmatter, where the
+    block will not parse as YAML, or where it parses to anything but a mapping.
+    Only the first of those returns the page unchanged, there being no block to
+    cut; the other two return it with the fence and its contents removed, so a
+    block no reader of frontmatter can use is not indexed as prose either.
+    """
+    match = FRONTMATTER.match(text)
+    if not match:
+        return {}, text
+    try:
+        block = yaml.safe_load(match.group("block"))
+    except yaml.YAMLError:
+        return {}, text[match.end():]
+    return (block if isinstance(block, dict) else {}), text[match.end():]
+
+
+def wiki_synonyms(front: dict[str, object]) -> str:
+    """The synonyms a wiki page declares, space-joined for the title field, and empty where it declares none.
+
+    Only a list-valued `synonyms` counts, which is what `wikisplain` writes and
+    what the gate reads: an item under any other key is a word nobody declared
+    findable, and indexing it at title weight would put the two readers of the
+    same block at odds.
+    """
+    synonyms = front.get("synonyms")
+    if not isinstance(synonyms, list):
+        return ""
+    return " ".join(str(synonym) for synonym in synonyms)
+
 
 def build_index(meta_dir: Path, root_dir: Path) -> bm25.SearchIndex:
     """Build a BM25F search index from .meta/assertions/*.yaml and wiki/**/*.md.
@@ -25,7 +65,8 @@ def build_index(meta_dir: Path, root_dir: Path) -> bm25.SearchIndex:
     frontmatter is dropped first, so the heading read is the page's own and not
     a YAML comment, and the heading is cut from what remains, so the summary
     field holds the lead definition sentence a page opens with and the body the
-    prose after it.
+    prose after it. The heading, the page's declared `synonyms`, and its stem
+    make the title field.
     """
     index = bm25.SearchIndex()
 
@@ -97,16 +138,9 @@ def build_index(meta_dir: Path, root_dir: Path) -> bm25.SearchIndex:
                 continue
             rel_path = path.relative_to(root_dir).as_posix()
 
-            content_text = path.read_text(encoding="utf-8")
-            synonyms_text = ""
-            if content_text.startswith("---"):
-                parts = content_text.split("---", 2)
-                if len(parts) >= 3:
-                    fm = parts[1]
-                    content_text = parts[2]
-                    syn_match = re.findall(r"^\s*-\s+(.+)$", fm, re.MULTILINE)
-                    if syn_match:
-                        synonyms_text = " ".join(syn_match)
+            text = path.read_text(encoding="utf-8")
+            front, content_text = wiki_frontmatter(text)
+            synonyms_text = wiki_synonyms(front)
 
             title_match = re.search(r"^#\s+(.+)$", content_text, re.MULTILINE)
             if title_match:

@@ -17,6 +17,7 @@ decisions:
       - work:artifact/meta-lib-apm-compile-agents
       - work:artifact/meta-checks-probes-tools-comments
       - work:artifact/meta-checks-citations
+      - work:artifact/meta-lib-search-build
     context: >-
       Step 5 of Literate Programming routes what happened, this once, out of the
       code and into `<module>.history.md`. While the seed packages hold history
