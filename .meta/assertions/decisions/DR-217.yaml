@@ -17,6 +17,7 @@ decisions:
       - work:artifact/meta-lib-check-pr-review
       - work:artifact/meta-lib-check-pr-sweep
       - work:artifact/meta-lib-check-pr-verdict
+      - work:artifact/meta-render
       - work:artifact/meta-lib-render
       - work:artifact/meta-lib-render-record
       - work:artifact/meta-lib-render-pages
@@ -24,6 +25,7 @@ decisions:
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-render-targets
       - work:artifact/meta-lib-render-cli
+      - work:artifact/meta-apm-compile
       - work:artifact/meta-lib-apm-compile
       - work:artifact/meta-lib-apm-compile-instructions
       - work:artifact/meta-lib-apm-compile-agents
@@ -116,6 +118,18 @@ decisions:
         `touched`, `parse_decision_yaml`, `RENDER` and `unenacted` on
         `check_pr.branch`, where they are defined.
       - >-
+        The entry exports the package's modules beside its names, module by
+        module, so a probe reaches the stand-in seam through the script's own
+        name. The rule is per module, not per entry. Where a module's name is
+        also a name the package exports, the name wins and that one module is
+        left out: the name is what `import <script>` has always bound, and
+        rebinding it to a module breaks every caller of the name to buy a seam
+        a probe can already reach by the package path
+        (`from lib.render import record`). `.meta/render.py` is that case,
+        exporting the functions `decisions` and `record` rather than the
+        modules of those names, and exporting the modules beside them that
+        collide with nothing.
+      - >-
         The type ratchet in `.meta/checks/types.baseline.yaml` holds one number
         per package module in place of the script's, each failing on either
         side of it (solorepo's DR-210).
@@ -135,9 +149,10 @@ decisions:
     falsifier: >-
       A script under `.meta/` whose body lives in a package the Specialization
       copy set does not carry; a module under `.meta/lib/` that imports a
-      sibling's name rather than the sibling; or a probe that stands a
-      collaborator in on the entry script and passes while the caller runs the
-      real one.
+      sibling's name rather than the sibling; an entry that leaves out a module
+      whose name nothing in its surface holds, or that exports a module over a
+      name that surface already held; or a probe that stands a collaborator in
+      on the entry script and passes while the caller runs the real one.
     rationale: |-
       The split is a move and not a redesign. Every function keeps its body;
       what changes is where it lives and how it names a collaborator in another

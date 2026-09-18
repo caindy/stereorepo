@@ -15,7 +15,7 @@ Definitions in the vocabulary are one-line glosses. The full reasoning stays on
 the class, per Literate Programming; these are for recognising a term, not for
 applying it.
 """
-from lib.render import META, cli
+from lib.render import META, cli, pages, skills, targets, writers
 from lib.render.decisions import decision_form, decisions, landed
 from lib.render.pages import (
     charter,
@@ -91,6 +91,7 @@ __all__ = [
     "justfile",
     "landed",
     "load",
+    "pages",
     "pr_first_reviewer_skill",
     "pr_first_skill",
     "prechecks",
@@ -99,16 +100,23 @@ __all__ = [
     "rendered",
     "roadmap_template",
     "skill",
+    "skills",
     "specialize",
+    "targets",
     "technical_writing_skill",
     "unrendered",
     "verb_line",
     "vocabulary",
     "wikisplain_skill",
     "woven",
+    "writers",
 ]
 """The script's whole surface, so `import render` still finds every name it did: the gate reads
-`ASKED`, `rendered` and `unrendered`, and the skills' renderers, through this module's name."""
+`ASKED`, `rendered` and `unrendered`, and the skills' renderers, through this module's name.
+
+The modules are exported beside the names, so a probe stands a collaborator in at the module that
+defines it — except `decisions` and `record`, whose names the surface already holds as functions
+and which a probe reaches as `lib.render.decisions` and `lib.render.record` (solorepo's DR-217)."""
 
 if __name__ == "__main__":
     cli.main()
