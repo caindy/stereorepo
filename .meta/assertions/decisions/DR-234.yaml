@@ -1,0 +1,89 @@
+decisions:
+  - id: work:decision/234
+    name: "DR-234 · An audit instrument for unminted vocabulary candidates using keyness and Gries' DP dispersion"
+    challenge: work:challenge/589
+    status: ADOPTED
+    applies:
+      - work:article/17
+      - work:article/2
+    enacted_in:
+      - work:artifact/meta-terms
+      - work:artifact/justfile
+      - work:artifact/meta-checks-probes-tools-terms
+      - work:artifact/meta-assertions-disciplines
+    context: >-
+      Article 17 states that a term that arrived by use has not been agreed,
+      enforcing the Ubiquitous Language discipline. solorepo's DR-190 established a
+      two-part regime: a deterministic gate checking 1:1 parity between LinkML
+      vocabulary assertions and wiki pages, and ambient reviewer guidance
+      challenging unminted domain terms. That covers the direction from the
+      vocabulary outward.
+
+      The direction inward — identifying words that have arrived by use without
+      minting — had no mechanical instrument. When `receipt` arrived by use across
+      48 files and seven Decisions, four candidate instruments failed in principle:
+      BM25 retrieval against concept definitions produced lexical accidents;
+      document frequency produced schema field names and generic English; log-ratio
+      keyness surfaced novel coinages unbounded by English frequency; and
+      log-likelihood keyness (G²) alone elevated pervasive words like `rather`.
+      Frequency alone cannot identify domain terms because termhood is marked not
+      by high count, but by locality.
+
+      Combining keyness with Stefan Th. Gries' Deviation of Proportions (DP)
+      isolates words that are both statistically overused relative to general
+      English and concentrated within the specific files covering their subject.
+    alternatives:
+      - name: Pinned gate step running on every pull request
+        chosen: false
+        reason: >-
+          Dispersion is a corpus statistic. A word introduced in a single change is
+          concentrated in that change's files by construction, scoring artificially
+          high and triggering false alarms. Furthermore, an on-demand dependency
+          like `wordfreq` is inappropriate for a pinned CI gate. As solorepo's DR-190
+          recognized in rejecting mechanical diff word-frequency heuristics,
+          distinguishing domain terms requires semantic evaluation, and diff-level
+          candidate generation produces triage fatigue rather than deterministic
+          falsification.
+      - name: Single fitted product metric (log(G²) × DP) without parameter exposure
+        chosen: false
+        reason: >-
+          Combining keyness and dispersion into a single multiplying function
+          obscures the two independent statistical axes: statistical significance
+          versus document locality. Corpus linguistics treats them as separate
+          dimensions with explicit thresholds.
+      - name: "Two-axis operator audit on the just surface with Zipf and dispersion thresholds"
+        chosen: true
+        reason: >-
+          Placing `just terms` on the operator surface under `uvx --with wordfreq`
+          provides an on-demand audit read by the solo during minting ceremonies. It
+          evaluates keyness (G²) against general English and Gries' DP across
+          the repository's durable prose, governed by two fitted knobs: a Zipf floor
+          (≥ 3.0) to distinguish repurposed English words from coinages, and a
+          dispersion threshold (DP ≥ 0.70) to isolate localized technical usage
+          from ubiquitous prose. It excludes the vocabulary's preferred and
+          alternative labels before ranking candidates.
+    consequences:
+      - >-
+        .meta/terms.py implements candidate extraction and reporting over durable repository prose.
+      - >-
+        just terms exposes the audit recipe on the root operator surface.
+      - >-
+        Preferred and alternative labels from .meta/assertions/ imported/vocabulary.yaml
+        and vocabulary.yaml are excluded before candidate ranking.
+      - >-
+        Probes in .meta/checks/probes/tools/terms.py verify the positive fixture
+        (`receipt` in pre-#581 tree) and negative fixture (`evidence` excluded in post-#581 tree).
+      - >-
+        Resolves Challenge 589.
+    falsifier: >-
+      An unminted domain term with high dispersion (DP ≥ 0.70), high keyness
+      (G² ≥ 10.83), and English Zipf ≥ 3.0 that fails to surface in the
+      audit output, or a minted concept whose preferred or alternative label appears
+      in the candidate list.
+    rationale: |-
+      solorepo's DR-190 rejected mechanical diff word-frequency heuristics
+      because raw count does not distinguish domain terms from ordinary
+      vocabulary. Dispersion measures document locality, not count. Furthermore,
+      `just terms` produces a candidate list for human review rather than an
+      automated diff gate, following the division of labour in solorepo's DR-190's
+      rationale between mechanical tooling and human semantic judgement.

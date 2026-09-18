@@ -1,0 +1,23 @@
+challenges:
+  - id: work:challenge/589
+    name: An instrument that surfaces unminted terms by keyness and dispersion, as an audit the solo runs and never a gate
+    challenge_type: FEATURE
+    description: >-
+      caindy/solorepo#571 mixed a finding with a proposal. The finding, that
+      `receipt` arrived by use, is caindy/solorepo#577's and was answered by
+      caindy/solorepo#581. The proposal is an instrument that surfaces words
+      doing technical work that the Ubiquitous Language has not minted: keyness
+      by log-likelihood against general English, filtered to words English
+      genuinely has, and ranked by Gries' DP dispersion, since what marks a term
+      is not that it is frequent but that it is local to the files about its
+      subject.
+
+      The instrument sits as an operator audit on the `just` surface, beside
+      `search`, `dereference` and `wikisplain`: one recipe, one tool under
+      `.meta/` (solorepo's DR-106), producing a report read by a person. It is
+      never a gate: dispersion is a corpus statistic that scores any new word in
+      a single pull request as maximally concentrated, its fitted thresholds are
+      a candidate generator rather than a mechanical falsifier, and its
+      `wordfreq` dependency is acceptable on demand under `uvx` but not in CI.
+      It serves as a falsifier finder for solorepo's DR-190 and as a
+      reconciliation tool at vocabulary merges.

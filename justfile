@@ -60,6 +60,10 @@ dereference *args:
 search *args:
     uvx --with linkml --with pyyaml python .meta/search.py {{args}}
 
+# surface unminted candidate terms by keyness and dispersion (solorepo's DR-234)
+terms *args:
+    uvx --with wordfreq python .meta/terms.py {{args}}
+
 # validate, pack, or compile the APM package via .meta/apm_compile.py (solorepo's DR-201)
 apm *args:
     python3 .meta/apm_compile.py {{args}}

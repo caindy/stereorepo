@@ -22,4 +22,5 @@ import checks.probes.tools.agents
 import checks.probes.tools.dereference
 import checks.probes.tools.search
 import checks.probes.tools.apm_compile
+import checks.probes.tools.terms
 import checks.probes.tools.comments  # noqa: F401  # reason: registers check steps

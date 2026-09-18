@@ -416,6 +416,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-comments
     name: .meta/checks/probes/tools/comments.py
     path: .meta/checks/probes/tools/comments.py
+  - id: work:artifact/meta-checks-probes-tools-terms
+    name: .meta/checks/probes/tools/terms.py
+    path: .meta/checks/probes/tools/terms.py
   - id: work:artifact/meta-check-pr
     name: .meta/check_pr.py
     path: .meta/check_pr.py
@@ -620,6 +623,9 @@ artifacts:
   - id: work:artifact/meta-lib-search-cli
     name: .meta/lib/search/cli.py
     path: .meta/lib/search/cli.py
+  - id: work:artifact/meta-terms
+    name: .meta/terms.py
+    path: .meta/terms.py
   - id: work:artifact/meta-ruff-toml
     name: .meta/ruff.toml
     path: .meta/ruff.toml
