@@ -39,7 +39,7 @@
 .meta/checks/graph/record.py: 17
 .meta/checks/graph/structure.py: 13
 .meta/checks/probes/channel.py: 30
-.meta/checks/probes/git.py: 9
+.meta/checks/probes/git/step.py: 9
 .meta/checks/probes/harness/acts.py: 10
 .meta/checks/probes/harness/fakes.py: 13
 .meta/checks/probes/harness/github.py: 7

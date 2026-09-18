@@ -19,7 +19,7 @@ abbreviated options, command substitution, process substitution, and semicolons
 glued to words (solorepo's #87). Established: replaced the token blocklist with a positive grammar
 of allowed commands and exact per-subcommand option tables (solorepo's DR-110).
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### Review subagent scratch files blocked outside the worktree
 
@@ -29,7 +29,7 @@ directory, causing reviews to stall (solorepo's #99). Established: `paths.outsid
 reads within the harness project directory (`~/.claude/projects/`) while continuing
 to guard `~/.config` and `.git/`.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### Subcommand option leakage across git subcommands
 
@@ -38,7 +38,7 @@ risk of being accepted for subcommands where they had dangerous side effects
 (such as `git -C <dir>` repointing the working tree). Established: options are
 declared and validated per subcommand via `grammar.GIT` and `grammar.TAKES_VALUE`.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### Double-quoted regex patterns and escape sequences failed grammar
 
@@ -48,7 +48,7 @@ refusals across review runs (solorepo's #117, solorepo's #197, solorepo's #242).
 literal quote contents from active expansions, and `grammar.plain_form()` derives valid
 single-quoted alternatives.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### Redirection file descriptors corrupted nearest-command suggestions
 
@@ -58,7 +58,7 @@ yielding valid but semantically unintended command suggestions (solorepo's #117,
 Established: `shell.before_operator()` strips attached file descriptor digits when truncating
 at redirection boundaries.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### Generic refusals caused multi-turn reviewer command guessing
 
@@ -68,7 +68,7 @@ caused autonomous reviewers to spend multiple turns guessing acceptable syntax
 nearest conforming command by stripping unauthorized options, normalizing quotes, and
 dropping operators.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### Nearest-command offers that were a different command from the one refused
 
@@ -85,7 +85,7 @@ ever the refused command with an operator's tail or an option off the list
 removed and its words respelled by `shell.requote`, in single quotes where a word needs
 quoting at all (solorepo's #144, solorepo's #242).
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### Programs off the list refused without naming the tool in their place
 
@@ -97,7 +97,7 @@ and `wc` to where what each wanted is — the gate's result at `gh pr checks`, t
 Grep tool for a search of the worktree, the Read tool for a file and a count —
 and `grammar.command_allowed()` appends it to the refusal.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### A reader input the hook did not recognise was a permit
 
@@ -113,7 +113,7 @@ that sends it, and a reader naming none of its keys is refused rather than
 resolved to the worktree — `paths.SEARCHES` is the one exception, a search with no
 path searching the worktree the bound permits anyway.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### A glob pattern was resolved as the path it is not
 
@@ -125,7 +125,7 @@ and `.git`, while a matcher for which `**` spans no directory reads
 components before its first metacharacter — the deepest directory every match
 lies under — and refuses a component named `.git` outright.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### A working directory was checked by the predicate written for reads
 
@@ -137,7 +137,7 @@ refused for holding a token the allowed grammar reads nothing of from there.
 Established: `paths.elsewhere()` is the working directory's own predicate — inside the
 root, no scratch exemption, no `.git` clause.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### A pattern beginning with a metacharacter was bounded by nothing
 
@@ -153,4 +153,4 @@ appears, as `.git` already was — a component that can match `..` (`paths.ascen
 which reads the wildcard spellings `..*` and `.?` as the ascent they can match),
 and brace alternation, whose grammar this hook does not hold.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`

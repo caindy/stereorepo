@@ -36,6 +36,11 @@ decisions:
       - work:artifact/meta-checks-citations-prose
       - work:artifact/meta-checks-citations-record
       - work:artifact/meta-checks-citations-claims
+      - work:artifact/meta-checks-probes-git
+      - work:artifact/meta-checks-probes-git-verdicts
+      - work:artifact/meta-checks-probes-git-offers
+      - work:artifact/meta-checks-probes-git-events
+      - work:artifact/meta-checks-probes-git-step
       - work:artifact/meta-assertions-structure
       - work:artifact/meta-checks-files
       - work:artifact/meta-lib-dereference-reading

@@ -14,6 +14,7 @@ decisions:
       - work:artifact/meta-hooks-signed-channel
       - work:artifact/meta-disciplines
       - work:artifact/meta-check
+      - work:artifact/meta-checks-probes-git-verdicts
     context: >-
       Two places in the record prescribe an act the channel had no verb for.
       PR First's third step says a verdict a session leaves behind is "the

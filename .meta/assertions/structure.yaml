@@ -315,8 +315,20 @@ artifacts:
     name: .meta/checks/probes/harness/fakes.py
     path: .meta/checks/probes/harness/fakes.py
   - id: work:artifact/meta-checks-probes-git
-    name: .meta/checks/probes/git.py
-    path: .meta/checks/probes/git.py
+    name: .meta/checks/probes/git/__init__.py
+    path: .meta/checks/probes/git/__init__.py
+  - id: work:artifact/meta-checks-probes-git-verdicts
+    name: .meta/checks/probes/git/verdicts.py
+    path: .meta/checks/probes/git/verdicts.py
+  - id: work:artifact/meta-checks-probes-git-offers
+    name: .meta/checks/probes/git/offers.py
+    path: .meta/checks/probes/git/offers.py
+  - id: work:artifact/meta-checks-probes-git-events
+    name: .meta/checks/probes/git/events.py
+    path: .meta/checks/probes/git/events.py
+  - id: work:artifact/meta-checks-probes-git-step
+    name: .meta/checks/probes/git/step.py
+    path: .meta/checks/probes/git/step.py
   - id: work:artifact/meta-checks-probes-channel
     name: .meta/checks/probes/channel.py
     path: .meta/checks/probes/channel.py

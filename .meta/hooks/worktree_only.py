@@ -120,7 +120,7 @@ __all__ = [
 ]
 """The hook's whole surface: every public name of the package, and the four modules beside them.
 
-`hook_probes` in `.meta/checks/probes/git.py` loads this file by path and reads
+`hook_probes` in `.meta/checks/probes/git/step.py` loads this file by path and reads
 `blocked`, `command_allowed`, `plain_form` and `main` off it. The modules are
 exported so a probe can stand a collaborator in at the module that defines it,
 `worktree_only.paths.ROOT` rather than a name rebound here that nothing reads

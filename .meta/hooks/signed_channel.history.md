@@ -23,7 +23,7 @@ shell's own separators, each segment is lexed with `shlex` and judged on its own
 by the program it runs, and a segment being sanctioned says nothing about its
 neighbours.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### A heredoc body was read as the commands its lines spell
 
@@ -35,4 +35,4 @@ the line is split and hands it to the segment that opened it as text that
 segment carries, so a body the channel is given is data and a body piped into
 `curl` is still that call's.
 
-Receipt: `.meta/checks/probes/git.py::hook_probes`
+Receipt: `.meta/checks/probes/git/step.py::hook_probes`
