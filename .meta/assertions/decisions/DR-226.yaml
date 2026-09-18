@@ -1,0 +1,95 @@
+decisions:
+  - id: work:decision/226
+    name: "DR-226 · A difficulty label routes an Issue to whoever answers it, and a Job may hand a Challenge back at any point"
+    status: PROPOSED
+    applies:
+      - work:article/18
+    enacted_in:
+      - work:artifact/meta-disciplines
+    alternatives:
+      - name: Leave the levels as DR-112 minted them and rely on the raiser's judgement
+        chosen: false
+        reason: >-
+          The judgement was exercised and went wrong twice in one sitting,
+          which is the evidence the levels do not say enough. #559 was filed
+          `medium` with the question it turns on written into its body as a
+          thing to settle in the doing; a loop takes `medium` on the event,
+          so the question was not left open but handed to the next Job with
+          a note telling it to decide. Corrected to `hard` on the reading
+          that `hard` waits for the solo — which DR-112 says, and which is
+          true of a session doing coder work beside him rather than of a
+          question nobody has answered.
+      - name: Read `hard` as the label for a decision, since it already waits for the solo
+        chosen: false
+        reason: >-
+          It reaches the solo and arrives as the wrong kind of work. DR-112
+          made `hard` "a label with no loop, for the solo to take with an
+          agent beside him": a session runs, and what it does is implement.
+          A question nobody has settled put in front of a session is a
+          question that session answers to finish its work, which is the
+          delegation the routing exists to prevent. Effort and authority are
+          different axes, and `hard` is the effort one.
+      - name: The label says who answers, and `human` is reached by handing the Challenge back
+        chosen: true
+        reason: >-
+          A level says which party answers the Issue rather than how much
+          work it is, so the four are a router and not a scale. `easy` and
+          `medium` are the loop's, `hard` is the solo's with a session
+          beside him, and `human` is where what the Issue needs is the solo
+          rather than a Job at all. A decision is never coder work at any
+          size, so an Issue whose next step is a decision rather than an
+          implementation is `human` from the moment anyone notices one is
+          owed, whoever is holding it and whatever its effort.
+
+          Handing a Challenge back is then one act with open reasons rather
+          than a report of failure. `move stop` already did it — the claim
+          released, the Issue to `human`, the pull request left open — and
+          DR-112 described it only as what a loop does with work it cannot
+          finish, which is one occasion among many and the one that reads as
+          a confession. The bar is deliberately low because the costs are
+          asymmetric: this is one human and a fleet of Jobs, so the scarce
+          thing is the solo's attention and the cheap thing is a Job that
+          stops early, while a Job that carries on because stopping reads as
+          failure spends a whole budget on work built on a premise the solo
+          would have corrected in a sentence.
+    consequences:
+      - >-
+        PR First's third step says a level is who answers the Issue rather
+        than how big it is, and names `human` as where what the Issue needs
+        is the solo rather than a Job at all. The step that follows it is the
+        act: hand it back the moment the next step is not yours to take.
+      - >-
+        A loop that cannot finish and an Issue whose next step is a decision
+        are examples under that step rather than the whole of it, so a Job
+        with a reason of its own does not have to find itself in a list to
+        be allowed to stop. DR-112's reading of `human` survives as the first
+        of the two.
+      - >-
+        A Role holding no Challenge cannot type `move stop`, which releases a
+        claim it does not have: the reviewer holds `comment`, `raise`,
+        `reply`, `review` and `merge`. It says what it found where it is
+        standing, and the Issue reaches `human` through whoever holds the
+        Challenge. Whether that indirection is right is #564.
+      - >-
+        The meaning DR-148 located in PR First's third step and in DR-112 is
+        now here as well, and DR-112's own text is left as the record of what
+        was decided then.
+    falsifier: >-
+      An Issue at `easy` or `medium` whose pull request argues a question
+      rather than implementing an answer, or a Job that ran its budget out on
+      work the solo would have redirected. The first says the router sent a
+      decision to a loop; the second says the bar for stopping is still too
+      high to reach.
+    rationale: |-
+      Christopher, on an Issue filed `medium` carrying a question nobody had
+      settled, and then relabelled `hard`: `human` is what you should have
+      reached for. When you file an Issue and notice a decision needs making,
+      file it as human. And then: give the coder and any other agent using
+      the skill the option to bail to me in general, with the loop giving up
+      and a decision being needed as sharp examples rather than the rule.
+
+      DR-112 minted the levels as a raiser's estimate of effort, which is
+      what the coder workflow reads them as and still does. What that left
+      unsaid is who a level sends the Issue to, and the two are the same
+      field doing two jobs until an Issue arrives whose effort and whose
+      answerer disagree.

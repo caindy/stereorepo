@@ -435,17 +435,33 @@ disciplines:
       - >-
         Label an Issue's difficulty when raising it: `easy`, `medium`, `hard`
         or `human`, your guess at what it takes for the coder Role. A loop
-        takes `easy` and `medium` the moment the label lands; `hard` waits for
-        the solo; `human` is where a loop puts what it cannot finish, saying
-        where it stopped. The raiser guesses and the loop corrects, downward
-        only. The label is also what says whose a branch is: a session that
-        takes up a pull request the loop holds has the solo move the Issue to
-        `hard` first, and the loop's next pass stands down. Moved back, the loop
-        answers the next verdict and not one already standing — a relabel
-        fires the Issue door and re-delivers no review — so a verdict the
-        session leaves behind is the session's to answer, or the solo's to
-        dispatch, which is a verb of the channel like every other act GitHub
-        records.
+        takes `easy` and `medium` the moment the label lands; `hard` is coder
+        work too large for a loop, which waits for the solo and a session
+        beside him; `human` is where what the Issue needs is the solo rather
+        than a Job at all, which the next step is how to reach. A level says
+        who answers the Issue rather than how big it is (solorepo's DR-226).
+        The raiser guesses and the loop corrects, downward only. The label is
+        also what says whose a branch is: a session that takes up a pull request
+        the loop holds has the solo move the Issue to `hard` first, and the
+        loop's next pass stands down. Moved back, the loop answers the next
+        verdict and not one already standing — a relabel fires the Issue door
+        and re-delivers no review — so a verdict the session leaves behind is
+        the session's to answer, or the solo's to dispatch, which is a verb of
+        the channel like every other act GitHub records.
+      - >-
+        Hand it back the moment the next step is not yours to take. Any Role
+        holding a Challenge may stop and give it to the solo — `move stop`,
+        which says where this Job stopped and why, releases the claim, moves
+        the Issue to `human` and leaves the pull request open for whoever
+        takes it up. A Role that holds no Challenge says the same thing where
+        it is standing rather than staying silent — the reviewer in its
+        verdict or on the thread, naming what the solo must settle — and the
+        Issue reaches `human` through whoever does hold it. The reasons are
+        open and the bar is deliberately low (solorepo's DR-226). Two are
+        examples rather than the rule: a loop that cannot finish what it
+        took, and an Issue whose next step is a decision rather than an
+        implementation, which is `human` the moment anyone notices one is
+        owed, whoever is holding it and whatever its effort.
       - >-
         Argue there. Review, objection and answer belong where the next reader
         will look, not where one participant happens to be.
