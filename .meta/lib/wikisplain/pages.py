@@ -11,9 +11,15 @@ from lib.wikisplain import lead, links
 
 @dataclasses.dataclass
 class Page:
-    """What a concept page is generated from: its title, bounded context, one-sentence definition, synonyms, body, see-also links and minting date, each but the title optional."""
+    """What a concept page is generated from: its title, filed slug, bounded context, one-sentence definition, synonyms, body, see-also links and minting date, each but the title optional.
+
+    The slug is the page's filed identity — the stem of `wiki/<context>/<slug>.md`
+    and the `slug:` its frontmatter declares — and an empty one is the title
+    slugified, which is the identity of a page called what it is filed as.
+    """
 
     title: str
+    slug: str = ""
     context: str = "solorepo"
     definition: str = ""
     synonyms: list[str] | None = None
@@ -26,7 +32,7 @@ def generate_page(page: Page, root: pathlib.Path | None = None) -> str:
     """Generate canonical MOS:LEAD markdown content for the wiki concept `page` (solorepo's DR-187)."""
     title, context, body = page.title, page.context, page.body
     see_also = page.see_also
-    slug = lead.slugify(title)
+    slug = page.slug.strip() or lead.slugify(title)
     syn_list = page.synonyms or []
     minted = page.date_str or datetime.date.today().isoformat()
     lead_sentence = lead.format_lead_sentence(title, page.definition)

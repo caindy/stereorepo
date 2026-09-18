@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--slug",
         default="",
-        help="Optional slug override (default: slugified title).",
+        help="Slug to file the page under, naming both the file and the slug it declares (default: slugified title).",
     )
     parser.add_argument(
         "--dry-run",
@@ -77,11 +77,12 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     title = concept
-    slug = args.slug.strip() if args.slug.strip() else lead.slugify(title)
+    slug = args.slug.strip() or lead.slugify(title)
     syn_list = [s.strip() for s in args.synonyms.split(",") if s.strip()] if args.synonyms else []
 
     content = pages.generate_page(
-        pages.Page(title=title, context=args.context, definition=args.definition, synonyms=syn_list),
+        pages.Page(title=title, slug=slug, context=args.context,
+                   definition=args.definition, synonyms=syn_list),
         root=root,
     )
 

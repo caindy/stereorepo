@@ -217,14 +217,16 @@ def wiki_probes():
 def wikisplain_probes():
     """`.meta/wikisplain.py` slugifies a title, formats a MOS:LEAD lead, finds a duplicate, and scaffolds a page that passes its own verification (solorepo's DR-187).
 
-    Four of the tool's acts, each called directly:
+    Five of the tool's acts, each called directly:
     `slugify` on a two-word title; `format_lead_sentence` on a title and a
     definition, which must read as one bold copular sentence; `find_duplicates`
     on a discipline the wiki already holds a page for, which must be found
-    among the wiki pages; and `generate_page` followed by `verify_page` on a
-    synthetic concept, which must raise no warning. The last two read the tree
-    at `ROOT`, so they hold only while `wiki/solorepo/` holds the pages the
-    tool links a new page to by default.
+    among the wiki pages; `generate_page` followed by `verify_page` on a
+    synthetic concept, which must raise no warning; and `generate_page` on that
+    concept filed under a slug its title does not produce, which must declare
+    the slug it is filed under rather than the one its title implies. The last
+    three read the tree at `ROOT`, so they hold only while `wiki/solorepo/`
+    holds the pages the tool links a new page to by default.
     """
     wikisplain = load_module(META / "wikisplain.py", "wikisplain")
     problems = []
@@ -245,4 +247,11 @@ def wikisplain_probes():
     verif = wikisplain.verify_page(content, "wiki/solorepo/test-wiki-concept.md", root=ROOT)
     if verif:
         problems.append(f"verify_page: generated page produced validation warnings: {verif!r}")
+    filed = wikisplain.generate_page(
+        wikisplain.Page(title="Test Wiki Concept", slug="test-filed-elsewhere", context="solorepo",
+                        definition="a synthetic concept for gate validation"),
+        root=ROOT,
+    )
+    if "\nslug: test-filed-elsewhere\n" not in filed:
+        problems.append(f"generate_page: a Page filed under its own slug declared another: {filed[:120]!r}")
     return problems
