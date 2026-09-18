@@ -40,6 +40,7 @@
 .meta/checks/probes/channel/signing_key.py: 7
 .meta/checks/probes/channel/status.py: 2
 .meta/checks/probes/channel/table.py: 2
+.meta/checks/probes/channel/verdict.py: 2
 .meta/checks/probes/git/step.py: 11
 .meta/checks/probes/harness/acts.py: 13
 .meta/checks/probes/harness/fakes.py: 23

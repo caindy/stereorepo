@@ -64,6 +64,18 @@ jobs:
       # GitHub attests for this run and no other; the harness is the action,
       # recorded as the environment names it.
       ACTOR_SESSION: gha-${{ github.run_id }}
+      # The head this run reads, and the one its verdict must be recorded
+      # against (solorepo's #566). Two of the three things the run reads are
+      # pinned to it: the head's trunk paths under `.review/head/` and the
+      # commit the prompt names. The diff is not — `gh pr diff` below takes the
+      # pull request's number rather than a sha, so `.review/diff.patch` is
+      # whatever head GitHub holds when that step runs. GitHub likewise records
+      # a review against whatever the head is when the review lands. A push the
+      # cancel above did not reach in time moves those apart, and
+      # `.meta/say/post review` reads this to refuse rather than file the
+      # reading of one commit against another. Job-level, so it reaches the
+      # session's shell the way `ACTOR_SESSION` does.
+      SOLOREPO_REVIEW_HEAD: ${{ github.event.pull_request.head.sha }}
     steps:
       # No token left in `.git/config`: the transcript is in the run log, and
       # a read of that file would put the token there past the masking. Full
@@ -782,14 +794,17 @@ jobs:
 
       # Fails closed: the pass is the branch that has to be reached, so a
       # count that did not arrive — a renamed output, a skipped step — takes
-      # the error branch rather than a green it did not earn.
+      # the error branch rather than a green it did not earn. A verdict the
+      # head-moved refusal held back also lands here, since nothing the session
+      # can leave behind reaches this step; the message names both causes
+      # rather than reporting the refusal as a turn that never reviewed.
       - name: the verdict landed
         if: ${{ !cancelled() }}
         run: |
           if [ "$AFTER" -gt "$BEFORE" ]; then
             echo "a verdict landed on #$PR"
           else
-            echo "::error::no verdict landed on #$PR (before=$BEFORE after=$AFTER): the reviewer's turn ended without reviewing, and the request stands"
+            echo "::error::no verdict landed on #$PR (before=$BEFORE after=$AFTER): either the reviewer's turn ended without reviewing, or its verdict was refused because the head moved under the run (solorepo's #566). The request stands either way, and the run that reads the new head answers it."
             exit 1
           fi
         env:
