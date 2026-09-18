@@ -16,8 +16,9 @@ def channel_parser_probes():
     `accepted` is, per program, each line it parses and the attributes the line
     must set. `refused` is, per program, each line it rejects, grouped under the
     reason the report names: the withdrawn nouns are not verbs, and what they
-    allowed is not typeable (solorepo's DR-116) — a Challenge without a
-    difficulty, a difficulty that is not one, a layer with two bases; a verb is
+    allowed is not typeable (solorepo's DR-116) — a difficulty that is not
+    one, a layer with two bases; a Challenge without a difficulty parses, since
+    a filing with no level is the reviewer's to read (solorepo's DR-230); a verb is
     one program's (solorepo's DR-117), so what `post` says `move` does not, and
     the other way about; a close names what answered the Challenge, since the
     closing comment cites what `--by` names and PR First has no `close` verb
@@ -46,6 +47,7 @@ def channel_parser_probes():
              {"verb": "promote", "thread": "T_1", "title": "t", "level": "easy", "no_resolve": False}),
             ("promote T_1 --title t --difficulty hard --no-resolve",
              {"verb": "promote", "thread": "T_1", "title": "t", "level": "hard", "no_resolve": True}),
+            ("promote T_1 --title t", {"verb": "promote", "level": None, "no_resolve": False}),
             ("landed 13", {"verb": "landed", "pr": "13"}),
         ],
         "move": [
@@ -56,6 +58,7 @@ def channel_parser_probes():
             ("file --title t --difficulty medium",
              {"verb": "file", "title": "t", "level": "medium", "roadmap": False}),
             ("file --title t --roadmap", {"verb": "file", "level": None, "roadmap": True}),
+            ("file --title t", {"verb": "file", "title": "t", "level": None, "roadmap": False}),
             ("open --title t", {"verb": "open", "title": "t", "base": "main", "on": None}),
             ("open --title t --on 12", {"verb": "open", "on": "12"}),
             ("layer 13 --on 12", {"verb": "layer", "pr": "13", "on": "12"}),
@@ -86,14 +89,14 @@ def channel_parser_probes():
     elsewhere = "a verb is one program's (solorepo's DR-117)"
     refused = {
         "post": (
-            (withdrawn, ["review 1", "comment 93 --approve", "promote T_1 --title t",
+            (withdrawn, ["review 1", "comment 93 --approve", "promote T_1",
                          "issue-comment 93", "resolve", "pr-body 1"]),
             (elsewhere, ["claim 93", "open --title t", "merge 13", "stop 93", "commit -m x",
                          "mint", "supersede 13 --by 12"]),
         ),
         "move": (
             (withdrawn, ["milestone 75", "milestone 75 --set x --clear",
-                         "file --title t", "file --title t --difficulty huge",
+                         "file", "file --title t --difficulty huge",
                          "file --title t --difficulty easy --roadmap",
                          "difficulty 93 huge", "triage 93", "triage 93 huge",
                          "open --title t --base b --on 12",

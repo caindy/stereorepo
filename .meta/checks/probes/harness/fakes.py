@@ -2,31 +2,35 @@
 """
 import re
 import subprocess
+from typing import Any
 
 from checks.collect import ROOT
 
 
 class FakeIssue:
-    """As much of GitHub as `claim` and `stop` ask about: one Issue's labels, its assignees, and the read-back of both.
+    """As much of GitHub as `claim`, `stop` and `triage` ask about: one Issue's labels, its assignees, its comments, and the read-back of each.
 
-    One Issue, because the verb takes one. `labels` and `assignees` are as the
-    calls leave them; `views` counts the reads of the labels, which is the only
-    way from here to see the branch a run takes — a claim that refuses nobody
-    and a claim that never asked look identical in the assignees. `fail` makes
-    every call raise `subprocess.CalledProcessError`, which is what a deleted
-    Issue or a token without the scope looks like to the channel. `repo view`
-    answers `o/r` and `api user` answers `o-r-coder`, the coder Role's login
-    for that repository as `channel.role_login` composes it
-    (solorepo's DR-107), which is what a claim that went through leaves in
-    `assignees`.
+    One Issue, because the verb takes one. `labels`, `assignees` and
+    `comments` are as the calls leave them; `views` counts the reads of the
+    labels, which is the only way from here to see the branch a run takes — a
+    claim that refuses nobody and a claim that never asked look identical in
+    the assignees. `fail` makes every call raise
+    `subprocess.CalledProcessError`, which is what a deleted Issue or a token
+    without the scope looks like to the channel. `repo view` answers `o/r` and
+    `api user` answers `o-r-coder`, the coder Role's login for that repository
+    as `channel.role_login` composes it (solorepo's DR-107), which is what a
+    claim that went through leaves in `assignees` and a comment posted leaves
+    as its author.
     """
 
-    def __init__(self, labels, fail=False, assignees=None):
+    def __init__(self, labels: list[str], fail: bool = False, assignees: list[str] | None = None,
+                 comments: list[dict[str, Any]] | None = None) -> None:
         self.labels, self.assignees, self.views = list(labels), list(assignees or []), 0
+        self.comments: list[dict[str, Any]] = list(comments or [])
         self.fail = fail
 
-    def __call__(self, *args, parse=True, **kwargs):
-        """One `gh` call: `issue view` of the labels or the assignees, `issue edit` of either, the login, or a comment posted."""
+    def __call__(self, *args: str, parse: bool = True, **kwargs: Any) -> Any:
+        """One `gh` call: `issue view` of the labels or the assignees, `issue edit` of either, the login, or the comments listed or one posted."""
         if self.fail:
             raise subprocess.CalledProcessError(1, ["gh", *list(args)], output="", stderr="mock API error")
         if args[:2] == ("repo", "view"):
@@ -38,10 +42,14 @@ class FakeIssue:
         if args[:2] == ("api", "user"):
             return "o-r-coder"
         if args[:1] == ("api",) and len(args) > 1 and "comments" in args[1]:
-            return {"html_url": "https://github.com/o/r/issues/1/comments/1"}
+            if "-f" not in args:
+                return list(self.comments)
+            body = args[args.index("-f") + 1].removeprefix("body=")
+            self.comments.append({"body": body, "user": {"login": "o-r-coder"}})
+            return {"html_url": f"https://github.com/o/r/issues/1/comments/{len(self.comments)}"}
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
-    def view(self, args):
+    def view(self, args: tuple[str, ...]) -> dict[str, Any]:
         """`issue view` of the labels, counted in `views`, or of the assignees."""
         if "labels" in args:
             self.views += 1
@@ -50,8 +58,8 @@ class FakeIssue:
             return {"assignees": [{"login": who} for who in self.assignees]}
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
-    def edit(self, args):
-        """`issue edit`: an assignee added or removed, or a label added and any `--remove-label` beside it applied."""
+    def edit(self, args: tuple[str, ...]) -> str:
+        """`issue edit`: an assignee added or removed, or every `--add-label` and `--remove-label` applied."""
         if "--add-assignee" in args:
             self.assignees.append(args[args.index("--add-assignee") + 1])
             return ""
@@ -61,9 +69,9 @@ class FakeIssue:
                 self.assignees.remove(login)
             return ""
         if "--add-label" in args:
-            label_to_add = args[args.index("--add-label") + 1]
-            if label_to_add not in self.labels:
-                self.labels.append(label_to_add)
+            for i, arg in enumerate(args):
+                if arg == "--add-label" and args[i + 1] not in self.labels:
+                    self.labels.append(args[i + 1])
             for i, arg in enumerate(args):
                 if arg == "--remove-label" and args[i + 1] in self.labels:
                     self.labels.remove(args[i + 1])
@@ -145,14 +153,15 @@ class FakeFiling:
     than failing on the fake.
     """
 
-    def __init__(self, open_issues=None, list_fails=False):
+    def __init__(self, open_issues: list[tuple[int | str, str]] | None = None,
+                 list_fails: bool = False) -> None:
         self.open_issues = {str(n): t for n, t in (open_issues or [])}
-        self.created = {}
+        self.created: dict[str, tuple[str, str, list[str]]] = {}
         self.listings = 0
         self.list_fails = list_fails
         self.next_number = 900
 
-    def __call__(self, *args, parse=True, **kwargs):
+    def __call__(self, *args: str, parse: bool = True, **kwargs: Any) -> Any:
         """One `gh` call: the open listing, an `issue create`, or the `issue view` that verifies one."""
         if args[:2] == ("repo", "view"):
             return {"nameWithOwner": "o/r"}
@@ -172,7 +181,7 @@ class FakeFiling:
             return self.view(args)
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
-    def create(self, args):
+    def create(self, args: tuple[str, ...]) -> str:
         """`issue create`: the Issue recorded and added to the open listing, its URL answered."""
         title = args[args.index("--title") + 1]
         body = args[args.index("--body") + 1]
@@ -183,7 +192,7 @@ class FakeFiling:
         self.open_issues[number] = title
         return f"https://github.com/o/r/issues/{number}"
 
-    def view(self, args):
+    def view(self, args: tuple[str, ...]) -> dict[str, Any]:
         """`issue view` of a created Issue's labels, or of the blocked-by its body asked for."""
         number = str(args[2])
         _title, body, labels = self.created.get(number, ("", "", []))

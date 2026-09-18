@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/592
+    name: The mechanisms that make the reviewer's reading of a Challenge a gate rather than a step followed
+    challenge_type: FEATURE
+    description: >-
+      Solorepo's DR-230 puts a rule in force that the channel cannot yet run.
+      Its step says a raiser proposes a level in the body and the reviewer
+      lands the label, but `move file` and `post promote` refuse to file a
+      Challenge without a difficulty, `move claim` does not refuse a Challenge
+      no reviewer has read, no reviewer Job fires on the `challenge` label,
+      `move triage` posts no verdict body naming what it checked, and the
+      Challenge form and `just next` do not read a proposed level from the
+      body. Until these land the gate is not operable.

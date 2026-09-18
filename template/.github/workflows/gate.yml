@@ -41,6 +41,9 @@ permissions:
   pull-requests: read
   issues: read
   checks: write
+  # The sweep asks whether the reviewer's door fired on each unread Challenge,
+  # which is a listing of `triage.yml`'s runs (solorepo's DR-230).
+  actions: read
 
 # The job names below are what `main`'s ruleset should require as status checks
 # (a ruleset, not a hook — solorepo's DR-056). Rename one here and every merge blocks: the

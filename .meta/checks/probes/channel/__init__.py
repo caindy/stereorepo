@@ -16,6 +16,7 @@ import checks.probes.channel.table
 import checks.probes.channel.layer
 import checks.probes.channel.claim
 import checks.probes.channel.filing
+import checks.probes.channel.triage
 import checks.probes.channel.actor
 import checks.probes.channel.signing_key
 import checks.probes.channel.reservation

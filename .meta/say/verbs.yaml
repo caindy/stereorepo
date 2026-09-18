@@ -52,8 +52,8 @@ programs:
         does: "resolve a review thread whose answer or promotion link is already posted"
         held_by: [coder, solo]
       - name: promote
-        usage: "<thread-id> --title T --difficulty D [--no-resolve] < issue-body.md"
-        does: "at approval: file the Issue with the Issue form's body, reply with the link, resolve (or defer resolution)"
+        usage: "<thread-id> --title T [--difficulty D] [--no-resolve] < issue-body.md"
+        does: "at approval: file the Issue with the Issue form's body, `challenge` alone for the reviewer to read unless the solo mandates a level, reply with the link, resolve (or defer resolution)"
         held_by: [coder, solo]
       - name: landed
         usage: "<pr>"
@@ -73,12 +73,12 @@ programs:
       dispatched; a Milestone set; a Decision's number reserved.
     verbs:
       - name: file
-        usage: "--title T --difficulty D|--roadmap < body.md"
-        does: "file a Challenge the form's way, `challenge` and the difficulty in one act, or a roadmap Issue"
+        usage: "--title T [--difficulty D|--roadmap] < body.md"
+        does: "file a Challenge the form's way: `challenge` alone, for the reviewer to read and land a level on; with `--difficulty`, the solo's verdict given in advance, which skips the reviewer; or a roadmap Issue"
         held_by: [solo]
       - name: triage
-        usage: "<issue> <level>"
-        does: "the verdict on a Challenge read against the form and the tree: land the level found on one that has none; also makes a Challenge of an Issue that arrived without the form, or of a roadmap Issue whose blocker has closed; refused where a level already stands, which `difficulty` moves"
+        usage: "<issue> <level> < verdict.md"
+        does: "the verdict on a Challenge read against the form and the tree, the body naming what was checked: posted on the Issue, then the level landed; refused where the body names no check or a level already stands, which `difficulty` moves; also makes a Challenge of an Issue that arrived without the form, or of a roadmap Issue whose blocker has closed"
         held_by: [reviewer, solo]
       - name: difficulty
         usage: "<issue> <level>"
@@ -86,7 +86,7 @@ programs:
         held_by: [solo]
       - name: claim
         usage: "<issue>"
-        does: "take an Issue: assign it to this Role's account; refused to a session at `easy` or `medium`, which are the loop's until the Issue is moved to `hard`"
+        does: "take an Issue: assign it to this Role's account; refused to a session on a Challenge no reviewer has read, and at `easy` or `medium`, which are the loop's until the Issue is moved to `hard`"
         held_by: [coder]
       - name: stop
         usage: "<issue> < body.md"
@@ -102,8 +102,8 @@ programs:
         held_by: [coder]
       - name: revise
         usage: "<n> [--title T] [< body.md]"
-        does: replace a pull request's or an Issue's body, or its title
-        held_by: [coder]
+        does: "replace a pull request's or an Issue's body, or its title; the reviewer's for a Challenge whose first line it found wrong at reading"
+        held_by: [coder, reviewer]
       - name: supersede
         usage: "<pr> --by <pr|DR> < body.md"
         does: >-

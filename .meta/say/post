@@ -265,7 +265,7 @@ def answer(thread_id: str, body: str) -> None:
     resolve(thread_id)
 
 
-def promote(thread_id: str, title: str, body: str, level: str, resolve_thread: bool = True) -> None:
+def promote(thread_id: str, title: str, body: str, level: str | None, resolve_thread: bool = True) -> None:
     """At approval: what survived the argument earns an Issue, and the thread is
     resolved with a link to it (PR First, solorepo's DR-159).
 
@@ -280,6 +280,10 @@ def promote(thread_id: str, title: str, body: str, level: str, resolve_thread: b
     rather than dropped: this verb's reply carries the Issue's link by
     construction, which is the case solorepo's DR-127 has it stand aside for, and the call
     is still what proves the thread exists before an Issue is filed for it.
+
+    The Issue lands `challenge` alone unless a level is given: the level is the
+    reviewer's verdict, and a raiser at approval proposes one in the body. A
+    level given here is the solo's mandate (solorepo's DR-230).
 
     A thread already carrying this channel's own promotion is refused: the three
     acts are not one transaction, so a `promote` whose `resolve` failed leaves
@@ -458,7 +462,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("answer"); p.add_argument("thread")
     p = sub.add_parser("resolve"); p.add_argument("thread")
     p = sub.add_parser("promote"); p.add_argument("thread"); p.add_argument("--title", required=True)
-    p.add_argument("--difficulty", choices=channel.sibling("move").DIFFICULTIES, dest="level", required=True)
+    p.add_argument("--difficulty", choices=channel.sibling("move").DIFFICULTIES, dest="level",
+                   help="the solo's verdict given in advance, which skips the reviewer; without it, "
+                        "`challenge` alone, for the reviewer to read (solorepo's DR-230)")
     p.add_argument("--no-resolve", action="store_true", help="file and reply, but do not resolve the thread")
     p = sub.add_parser("landed"); p.add_argument("pr")
     p = sub.add_parser("review"); p.add_argument("pr")

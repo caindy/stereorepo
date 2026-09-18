@@ -51,6 +51,9 @@ permissions:
   pull-requests: read
   issues: read
   checks: write
+  # The sweep asks whether the reviewer's door fired on each unread Challenge,
+  # which is a listing of `triage.yml`'s runs (solorepo's DR-230).
+  actions: read
 
 env:
   CARGO_MUTANTS: "27.1.0"

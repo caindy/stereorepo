@@ -101,24 +101,88 @@ def difficulty(issue: str | int, level: str) -> None:
     print(f"#{issue} is labelled {', '.join(now)}")
 
 
-def triage(issue: str | int, level: str) -> None:
-    """Land the reviewer's verdict on a Challenge: the level it was read at.
+VERDICT = ("**Worth doing.**", "**Waits on.**", "**Already answered.**", "**Decision owed.**")
+"""The four headings a triage verdict carries, one per question the reviewer asks of a Challenge
+(solorepo's DR-230): a trigger or a cost that will land, the blockers on the first line, a
+mechanism already in the tree, and whether the next step is a decision rather than an
+implementation. A body lacking one is refused, so a level landed without a reading shows as one."""
+
+
+def verdict_posted(issue: str | int) -> bool:
+    """Whether this Actor has already posted a verdict on the Issue.
+
+    A verdict is a comment ending in this channel's Trailer and carrying every
+    heading in `VERDICT`. The Trailer names the run or session, so a retry
+    inside one run finds its own verdict and a later reading, which is another
+    Actor, does not. Every page of comments is read.
+
+    Parameters:
+        issue (int | str): Issue number to read.
+
+    Returns:
+        bool: True when such a comment stands on the Issue.
+    """
+    block = channel.trailers()
+    page = 1
+    while True:
+        batch = channel.gh("api", f"repos/{channel.repo()}/issues/{issue}/comments"
+                                  f"?per_page=100&page={page}") or []
+        for c in batch:
+            body = str(c.get("body") or "").rstrip()
+            if body.endswith(block) and all(h in body for h in VERDICT):
+                return True
+        if len(batch) < 100:
+            return False
+        page += 1
+
+
+def triage(issue: str | int, level: str, body: str) -> None:
+    """Land the reviewer's verdict on a Challenge: what it checked, then the level.
+
+    The body is posted on the Issue first and the level landed after, so the
+    coder loop's take door, which fires on the label, opens on an Issue that
+    already carries the reading. The body is held to `VERDICT`: a verdict
+    that names no check is refused before anything is written
+    (solorepo's DR-230).
+
+    The two acts are not one transaction, so a verdict this Actor already
+    posted is not posted again: a retry after the label failed to land posts
+    nothing and lands the level, and one after the label did land is refused
+    saying nothing more is owed (solorepo's DR-221). A reading by another
+    Actor, which is what a Challenge handed back gets, posts its own verdict.
 
     A Challenge with no level takes the one given. An Issue that is not a
     Challenge becomes one at that level, any prior roadmap label stripped, in a
     single update (solorepo's DR-112). A Challenge whose level already stands is
     refused, because a level standing is a verdict standing and `difficulty` is
-    the verb that moves one (solorepo's DR-230).
+    the verb that moves one.
 
     Parameters:
         issue (int | str): Issue number to triage.
         level (str): Difficulty level (`easy`, `medium`, `hard`, `human`).
+        body (str): The verdict, signed, carrying every heading in `VERDICT`.
+
+    Raises:
+        SystemExit: If the Challenge already carries a level, or the body lacks a
+            heading of the verdict form.
     """
     now = labels_of(issue)
     standing = [l for l in now if l in DIFFICULTIES]
     if "challenge" in now and standing:
+        if verdict_posted(issue):
+            sys.exit(f"say: #{issue} is read already: this Actor's verdict stands on it and "
+                     f"it is at `{standing[0]}`, so nothing more is owed")
         sys.exit(f"say: #{issue} is a Challenge at `{standing[0]}` already, which is a "
                  "verdict standing; `move difficulty` moves its level")
+    missing = [h for h in VERDICT if h not in body]
+    if missing:
+        sys.exit(f"say: the verdict names no check under {', '.join(missing)}; a level landed "
+                 "without a reading shows as one (solorepo's DR-230). The body carries one "
+                 "paragraph per heading, in the form's words.")
+    if verdict_posted(issue):
+        print(f"#{issue} already carries this Actor's verdict; landing the level only")
+    else:
+        channel.gh("api", f"repos/{channel.repo()}/issues/{issue}/comments", "-f", f"body={body}")
     if level in now:
         relabel(issue, remove=[level])
     stale = [l for l in now if l == "roadmap" or (l in DIFFICULTIES and l != level)]
@@ -166,6 +230,11 @@ def file_issue(title: str, body: str, level: str | None = None,
     Enforces that the issue body opens with `**Waits on.**`, sets appropriate initial
     labels, establishes native blocked-by relationships, and verifies remote state (solorepo's DR-114, solorepo's DR-170).
 
+    A Challenge filed with no level lands `challenge` alone, which is the
+    reviewer's queue: the raiser proposes a level in the body and the reviewer's
+    verdict lands the label. A level given here is the solo's verdict given in
+    advance, and skips the reviewer on purpose (solorepo's DR-230).
+
     Refuses when an open Issue already carries this title, so that a caller
     retried after a failure part-way through a larger act files nothing the
     first attempt already filed (solorepo's DR-221).
@@ -173,7 +242,7 @@ def file_issue(title: str, body: str, level: str | None = None,
     Parameters:
         title (str): Issue title string.
         body (str): Issue body Markdown text.
-        level (str | None): Difficulty level for Challenges.
+        level (str | None): Difficulty level for a Challenge, or None to leave it to the reviewer.
         roadmap (bool): When True, creates a deferred roadmap issue instead of a Challenge.
 
     Returns:
@@ -198,7 +267,7 @@ def file_issue(title: str, body: str, level: str | None = None,
                  "unfinished: `post answer <thread-id>` with a body linking it, or "
                  "`post resolve <thread-id>` where the link is already posted. If this "
                  "Challenge is genuinely a second one, give it a title of its own.")
-    labels = ["roadmap"] if roadmap else ["challenge", level or ""]
+    labels = ["roadmap"] if roadmap else ["challenge"] + ([level] if level else [])
     cmd = ["issue", "create", "--title", title, "--body", body]
     for name in labels:
         cmd += ["--label", name]
@@ -223,14 +292,22 @@ def file_issue(title: str, body: str, level: str | None = None,
 def claim(issue: str | int) -> None:
     """Assign an Issue to the authenticated Role account and verify assignment.
 
-    Refuses claims by interactive sessions on `easy` or `medium` Challenges to preserve
-    autonomous coder loop dispatch boundaries (solorepo's DR-112, solorepo's DR-148).
+    Refuses a session's claim on a Challenge no reviewer has read, which is one
+    carrying no level (solorepo's DR-230), and on an `easy` or `medium` Challenge,
+    which is a loop's from the moment the label landed (solorepo's DR-112,
+    solorepo's DR-148). A run reads no label: it arrives on the label's own
+    event, so the Challenge it claims has been read and is its own.
 
     Parameters:
         issue (int | str): Issue number to claim.
     """
     if not channel.in_a_run():
         now = labels_of(issue)
+        if "challenge" in now and not any(l in DIFFICULTIES for l in now):
+            sys.exit(f"say: #{issue} is a Challenge no reviewer has read: it carries no level, "
+                     "and the reviewer's verdict is what lands one (solorepo's DR-230). "
+                     f"`move --role reviewer triage {issue} <level>` with the verdict on stdin "
+                     f"reads it; a level the solo mandates is `move difficulty {issue} <level>`.")
         taken = next((l for l in now if l in LOOP_LEVELS), None)
         if taken and "challenge" in now:
             sys.exit(f"say: #{issue} is labelled `{taken}`, which is a loop's from the moment "
@@ -1933,8 +2010,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     # An Issue's life: filed, its difficulty moved, claimed, or handed back.
     p = sub.add_parser("file"); p.add_argument("--title", required=True)
-    what = p.add_mutually_exclusive_group(required=True)
-    what.add_argument("--difficulty", choices=DIFFICULTIES, dest="level", help="a Challenge, at this level")
+    what = p.add_mutually_exclusive_group()
+    what.add_argument("--difficulty", choices=DIFFICULTIES, dest="level",
+                      help="a Challenge at this level: the solo's verdict given in advance, which "
+                           "skips the reviewer; without it, `challenge` alone, for the reviewer to read")
     what.add_argument("--roadmap", action="store_true", help="a roadmap Issue: intended and deferred")
     p = sub.add_parser("triage"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
     p = sub.add_parser("difficulty"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
@@ -1984,7 +2063,7 @@ def main() -> None:
     channel.speak_as(args.role)
 
     if args.verb == "triage":
-        triage(args.issue, args.level)
+        triage(args.issue, args.level, channel.signed(channel.stdin_body()))
     elif args.verb == "difficulty":
         difficulty(args.issue, args.level)
     elif args.verb == "claim":

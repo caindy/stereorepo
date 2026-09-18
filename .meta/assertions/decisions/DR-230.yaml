@@ -10,6 +10,10 @@ decisions:
       - work:artifact/meta-assertions-disciplines
       - work:artifact/meta-say-verbs
       - work:artifact/meta-say-move
+      - work:artifact/meta-say-post
+      - work:artifact/github-workflows-triage
+      - work:artifact/meta-next
+      - work:artifact/meta-templates-issue
     context: >-
       DR-112 made the difficulty label the raiser's estimate and the event the
       coder loop takes an Issue on, and DR-226 made the level say who answers
@@ -105,26 +109,22 @@ decisions:
         to the solo by landing `human` with the question posted beside it,
         which is PR First's fourth step exercised from the reviewer's seat.
       - >-
-        The verdict is to name what it checked, the way `post landed` is
-        generated rather than typed, so that a rubber stamp shows as a verdict
-        with empty checks rather than as a plausible paragraph. Today the
-        label is the whole verdict: `move triage` takes a number and a level
-        and posts nothing, so a reading and a stamp look the same until the
-        verdict body arrives with the mechanisms below. A second reader is not
-        weakened by the naming; its work becomes auditable.
+        The verdict names what it checked. `move triage` takes the body on
+        stdin, holds it to four headings — worth doing, waits on, already
+        answered, decision owed — posts it on the Issue and then lands the
+        level, so a rubber stamp shows as a refused body or an empty check
+        rather than as a plausible paragraph. A second reader is not weakened
+        by the naming; its work becomes auditable.
       - >-
         The mechanisms that make the step a check rather than a step followed
-        are not built here: `move file` and `post promote` still land a
-        difficulty and no verb of the channel files a Challenge without one,
-        `move claim` does not yet refuse a Challenge with no level, no reviewer
-        Job fires on the `challenge` label, `move triage` posts no verdict body
-        naming what it checked, and the form and `just next` do not yet read a
-        proposed level from the body. Until they land the gate is not operable:
-        the raiser lands the level as before, `triage` refuses a Challenge whose
-        level stands, and a reviewer who disagrees with a raiser's level has
-        only `difficulty`, which is the solo's. What this change puts in force
-        is the rule and the verb's shape, and the step is followed from the
-        day `move file` can land `challenge` alone.
+        landed under #592, after the rule: `move file` and `post promote` land
+        `challenge` alone when no level is given, `move claim` refuses a
+        Challenge carrying no level, `triage.yml` runs the reviewer where
+        `challenge` lands on an Issue with no level or a level is taken off
+        one, `move triage` posts the verdict body before the label, the form
+        proposes a level rather than landing one, and `just next` lists an
+        unread Challenge as waiting for the reviewer and its sweep fails on one
+        nothing has touched for an hour, which is a door that did not fire.
       - >-
         Whether a reviewer verdict on a pull request's opening body, before
         code, is worth its own seam is left open.
@@ -137,8 +137,6 @@ decisions:
       the gate costs more than it catches. Nothing records whether a level was
       the solo's mandate or a Job's habit, so the second count includes the
       mandated filings and the solo reads it knowing how often he mandates.
-      Neither is measurable before the mechanisms land, and a reading taken
-      earlier reports on their absence.
     rationale: |-
       Christopher, on the prose guidance: try as I might, coder agents keep
       ignoring clear directives, and the only general mitigation I have seen is

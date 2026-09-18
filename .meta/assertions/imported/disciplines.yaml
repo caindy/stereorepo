@@ -459,16 +459,14 @@ disciplines:
         level says who answers the Issue rather than how big it is
         (solorepo's DR-226), and the reviewer says it rather than the raiser,
         who is the one reader with a stake in the answer; the loop still
-        corrects it downward only. The verdict is to name what it checked, so
-        that a level landed without a reading shows as one; today the label is
-        the whole verdict, since `triage` posts nothing, and the naming
-        arrives with the verdict body. Until `move file` can land `challenge`
-        alone, no verb files a Challenge without a level: the raiser lands the
-        level with the filing as before, and the reviewer's verdict is `move
-        difficulty`, in the solo's hands. Once it can, a level landed with the
-        filing on the solo's say-so is the solo's verdict given in advance and
-        skips the reviewer on purpose, and a Job with no such mandate leaves
-        the level to the reviewer. The label is
+        corrects it downward only. The verdict names what it checked — worth
+        doing, waits on, already answered, decision owed — and is posted on
+        the Issue before the level lands, so a level landed without a reading
+        shows as one. A level landed with the filing on the solo's say-so is
+        the solo's verdict given in advance and skips the reviewer on purpose;
+        a Job with no such mandate leaves the level to the reviewer, and a
+        Challenge nothing has touched for an hour unread is a reviewer door
+        that did not fire, which the sweep reports. The label is
         also what says whose a branch is: a session that takes up a pull request
         the loop holds has the solo move the Issue to `hard` first, and the
         loop's next pass stands down. Moved back, the loop answers the next

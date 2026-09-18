@@ -8,7 +8,7 @@ of those is a field a listing can read, so this reads them and prints one
 screen. It decides nothing: which ripe Issue to take is the solo's.
 
     python3 .meta/next.py            # the screen
-    python3 .meta/next.py --check    # the sweep: fail on a Challenge with no difficulty
+    python3 .meta/next.py --check    # the sweep: fail on a Challenge the reviewer's door did not read
 
 What it reads, and from where:
 
@@ -18,9 +18,14 @@ What it reads, and from where:
   longer blocks, and a blocker written as prose — a Decision, an account —
   keeps the Issue waiting until somebody rewrites the line. An Issue with no
   such line is shown as `?`, which is the form asking for it.
-- **Difficulty.** The label solorepo's DR-112 made the raiser's estimate. A Challenge
-  without one is invisible to the coder, and `--check` refuses that so the
-  queue cannot empty without anyone noticing.
+- **Difficulty.** The label the reviewer's verdict lands after reading the
+  Challenge (solorepo's DR-230), or the solo's mandate given with the filing. A
+  Challenge without one is unread and waits for the reviewer; `--check` asks
+  whether the reviewer's door fired, from `triage.yml`'s runs, and refuses one
+  with no run an hour after its filing or whose latest run ended red, so the
+  queue cannot stall without anyone noticing. Where the runs cannot be listed,
+  the hour is measured from the filing alone, since `updatedAt` moves on any
+  touch and would let a comment silence the check.
 - **Milestone.** GitHub's, with the lowest number next. The priority is
   written once there rather than inferred per session from which Issues
   happen to cite it.
@@ -40,9 +45,16 @@ import json
 import re
 import subprocess
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from lib.timing.github import NOT_RUN
 
 DIFFICULTY = ("easy", "medium", "hard", "human")
+UNREAD = timedelta(hours=1)
+"""How long after its filing a Challenge may carry no level with no triage run before `--check` reports it as stalled (solorepo's DR-230)."""
+RUN_ISSUE = re.compile(r"#(\d+)")
+"""The Issue number in a triage run's name, which `triage.yml` writes as `triage-issue-#<n>`."""
 LOOPS = ("coder.yml", "review.yml", "merge.yml", "advance.yml", "gate.yml")
 
 WAITS = re.compile(r"^\*\*Waits on\.\*\*\s*(.*?)\s*$", re.M)
@@ -50,7 +62,7 @@ OLD_WAITS = re.compile(r"\*\*What it waits on\.\*\*\s*(.*?)(?:\n\s*\n|\Z)", re.S
 REF = re.compile(r"#(\d+)")
 
 
-def gh(*args, default=None):
+def gh(*args: str, default: Any = None) -> Any:
     """Executes a GitHub CLI command and parses its JSON output.
 
     Args:
@@ -131,32 +143,33 @@ def classify(issue, open_numbers, closing):
         "note": note,
         "milestone": (issue.get("milestone") or {}).get("title"),
         "taken": taken,
+        "created": datetime.fromisoformat(issue.get("createdAt", "1970-01-01T00:00:00Z").replace("Z", "+00:00")),
     }
 
 
-def row(i):
+def row(i: dict[str, Any]) -> str:
     """Formats one issue summary line for the next screen."""
-    level = i["level"] or ("roadmap" if i["kind"] == "roadmap" else "untriaged")
+    level = i["level"] or ("roadmap" if i["kind"] == "roadmap" else "unread")
     return f"  #{i['number']:<4} {level:<10} {i['note']:<24} {i['title'][:70]}"
 
 
 def issues(closing=None):
     """Lists open issues and classifies each by blocker state and in-progress assignment."""
     found = gh("issue", "list", "--state", "open", "--limit", "200",
-               "--json", "number,title,labels,body,milestone,blockedBy", default=[])
+               "--json", "number,title,labels,body,milestone,blockedBy,createdAt", default=[])
     numbers = {i["number"] for i in found}
     return sorted((classify(i, numbers, closing or {}) for i in found),
                   key=lambda i: i["number"])
 
 
-def untriaged(rows):
-    """Filters challenge issues lacking an assigned difficulty label.
+def unread(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Filters Challenges carrying no difficulty label: filed, and waiting for the reviewer's verdict.
 
     Args:
         rows: Sequence of classified issue dictionaries.
 
     Returns:
-        list[dict[str, Any]]: Untriaged challenge issues.
+        list[dict[str, Any]]: Unread Challenges.
     """
     return [i for i in rows if i["kind"] == "challenge" and not i["level"]]
 
@@ -255,7 +268,7 @@ def screen():
     ripe = [i for i in challenges if i["level"] and i["blocked"] is False]
     waiting = [i for i in challenges if i["level"] and i["blocked"] and not i["taken"]]
     unknown = [i for i in challenges if i["level"] and i["blocked"] is None]
-    missing = untriaged(rows)
+    missing = unread(rows)
     roadmap = [i for i in rows if i["kind"] == "roadmap"]
 
     def section(name, items, empty="  none"):
@@ -270,20 +283,71 @@ def screen():
     section("ripe — a Challenge with a difficulty and no open blocker; "
             "easy and medium are the coder's the moment they are labelled", ripe)
     section("waiting", waiting + unknown)
-    section("untriaged — a Challenge with no difficulty; the sweep fails on these", missing)
+    section("unread — a Challenge with no difficulty, waiting for the reviewer's verdict; "
+            "the sweep fails on one untouched for an hour", missing)
     section("roadmap — deferred by definition, never queued", roadmap)
 
 
-def check():
-    """Verifies that every open Challenge has an assigned difficulty label."""
-    missing = untriaged(issues())
-    if missing:
-        print(f"x  triage — {len(missing)} Challenge(s) carry no difficulty; "
-              "the coder cannot see them (solorepo's DR-112)")
-        for i in missing:
-            print(row(i))
+def triage_runs() -> dict[int, dict[str, Any]] | None:
+    """The latest `triage.yml` run whose job ran, per Issue number, or None where the runs cannot be listed.
+
+    Every label change on an Issue creates a run named for it, and the job
+    declines all but the two deliveries that read; a completed run whose
+    conclusion is in `NOT_RUN` is one the job declined or one displaced before
+    it started, and is passed over so the run read is one that owed a reading.
+
+    Returns:
+        dict[int, dict[str, Any]] | None: The newest run for each Issue a run names,
+            or None when the listing failed, which a token without `actions: read`
+            looks like.
+    """
+    runs = gh("run", "list", "--workflow", "triage.yml", "--limit", "100",
+              "--json", "displayTitle,status,conclusion,createdAt", default=None)
+    if runs is None:
+        return None
+    latest: dict[int, dict[str, Any]] = {}
+    for r in runs:
+        if r.get("status") == "completed" and (r.get("conclusion") or "") in NOT_RUN:
+            continue
+        m = RUN_ISSUE.search(r.get("displayTitle") or "")
+        if m and int(m.group(1)) not in latest:
+            latest[int(m.group(1))] = r
+    return latest
+
+
+def stalled(rows: list[dict[str, Any]], runs: dict[int, dict[str, Any]] | None,
+            now: datetime) -> list[tuple[dict[str, Any], str]]:
+    """The unread Challenges the reviewer's door did not read, each with why.
+
+    Args:
+        rows: Classified issue dictionaries.
+        runs: The latest triage run per Issue, or None where runs cannot be listed.
+        now: The moment the check is made.
+
+    Returns:
+        list[tuple[dict[str, Any], str]]: Each stalled Challenge and the reason.
+    """
+    found: list[tuple[dict[str, Any], str]] = []
+    for i in unread(rows):
+        run = None if runs is None else runs.get(i["number"])
+        if run is None:
+            if i["created"] < now - UNREAD:
+                found.append((i, "no triage run" if runs is not None else "runs not listable"))
+        elif run["status"] == "completed" and run["conclusion"] != "success":
+            found.append((i, f"its triage run ended {run['conclusion']}"))
+    return found
+
+
+def check() -> int:
+    """Verifies that the reviewer's door read every open Challenge carrying no level."""
+    found = stalled(issues(), triage_runs(), datetime.now(UTC))
+    if found:
+        print(f"x  triage — {len(found)} Challenge(s) carry no difficulty and the reviewer's "
+              "door did not read them (solorepo's DR-230)")
+        for i, why in found:
+            print(row(i) + f"  ({why})")
         return 1
-    print("ok triage — every Challenge carries a difficulty")
+    print("ok triage — every Challenge carries a difficulty, or its triage run is under way")
     return 0
 
 
@@ -291,6 +355,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true",
-                    help="fail on a Challenge with no difficulty label, one line each")
+                    help="fail on a Challenge the reviewer's door did not read, one line each")
     args = ap.parse_args()
     sys.exit(check() if args.check else screen())

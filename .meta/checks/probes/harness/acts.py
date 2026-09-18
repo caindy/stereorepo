@@ -6,7 +6,8 @@ import io
 import os
 import pathlib
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from typing import Any
 
 Outcome = collections.namedtuple("Outcome", "code out err")
 """What a call came to: `code`, the text it exited with or `None` when it returned; `out` and `err`, what it printed."""
@@ -43,11 +44,11 @@ def stood_in(target: object, **attributes: object) -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def environment(**variables):
+def environment(**variables: str | None) -> Iterator[None]:
     """The named environment variables set for the block, `None` unsetting one, and put back after it."""
     held = {name: os.environ.get(name) for name in variables}
 
-    def apply(values):
+    def apply(values: dict[str, str | None]) -> None:
         for name, value in values.items():
             if value is None:
                 os.environ.pop(name, None)
@@ -61,7 +62,7 @@ def environment(**variables):
         apply(held)
 
 
-def outcome(call):
+def outcome(call: Callable[[], object]) -> Outcome:
     """What `call` came to, as an `Outcome`, with its printing captured rather than shown.
 
     Every way out is an answer. `sys.exit(text)` is `text`; a return is `None`;
@@ -84,19 +85,20 @@ def outcome(call):
     return Outcome(code, out.getvalue(), err.getvalue())
 
 
-def exit_of(call):
+def exit_of(call: Callable[[], object]) -> str | None:
     """What `call` exited with, as text, or `None` when it returned; see `outcome`."""
-    return outcome(call).code
+    code: str | None = outcome(call).code
+    return code
 
 
-def run_verb(channel, fake, call):
+def run_verb(channel: Any, fake: Any, call: Callable[[], object]) -> str | None:
     """`call` with the channel's `gh` stood in by `fake`, and what it exited with."""
     with stood_in(channel, gh=fake):
         return exit_of(call)
 
 
 @contextlib.contextmanager
-def written(suffix, text):
+def written(suffix: str, text: str) -> Iterator[pathlib.Path]:
     """A file holding `text` under a temporary name ending in `suffix`, closed before the block and deleted after it, whatever the block did."""
     with tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False) as handle:
         handle.write(text)
@@ -107,7 +109,7 @@ def written(suffix, text):
         path.unlink(missing_ok=True)
 
 
-def answered(call):
+def answered(call: Callable[[], Any]) -> tuple[Any, str | None, bool]:
     """`call`'s return value beside how it ended, as `(value, code, exited)`; see `outcome`.
 
     `outcome` reads a call's exit as text and drops what it returned, and once
@@ -124,9 +126,10 @@ def answered(call):
     refusals is not tested, since an exit carrying a number or nothing is as
     much a refusal as one carrying a sentence.
     """
-    held, exits = [], []
+    held: list[Any] = []
+    exits: list[bool] = []
 
-    def attempt():
+    def attempt() -> None:
         """`call`, its value kept in `held` and an exit noted in `exits` on its way out to `outcome`."""
         try:
             held.append(call())

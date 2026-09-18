@@ -12,7 +12,7 @@ from checks.probes.harness import (
 
 
 @check("claim probes", pre=True)
-def claim_probes():
+def claim_probes() -> list[str]:
     """`move claim` at each level, from a run and from a session (solorepo's DR-148).
 
     The whole of the refusal is a branch taken on the environment, which is the
@@ -33,8 +33,10 @@ def claim_probes():
     that asks. The levels no loop takes are claimed as before, `human` above
     all, since it is where a loop puts what it could not finish and picking
     that up is what a session is for. A level with no `challenge` beside it
-    starts no run (solorepo's #113), so it refuses nobody. And a run's own claim
-    is refused by nothing and reads the labels zero times.
+    starts no run (solorepo's #113), so it refuses nobody. A Challenge with no
+    level is one no reviewer has read, and a session's claim on it is refused
+    naming the reviewer's verb and the solo's (solorepo's DR-230). And a run's
+    own claim is refused by nothing and reads the labels zero times.
 
     A refusal's text is read, not just its presence: `run_verb` reports an
     exception as text rather than raising it, so a truthy answer alone cannot
@@ -42,9 +44,9 @@ def claim_probes():
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    problems = []
+    problems: list[str] = []
 
-    def claimed(labels, session):
+    def claimed(labels: list[str], session: str | None) -> tuple[str | None, FakeIssue]:
         """One claim of Issue 7 under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
         fake = FakeIssue(labels)
         with environment(ACTOR_SESSION=session):
@@ -69,6 +71,10 @@ def claim_probes():
     said, fake = claimed(["medium"], None)
     if said or not fake.assignees:
         problems.append(f"claim: a session claiming a bare `medium` Issue said {said!r}")
+    said, fake = claimed(["challenge"], None)
+    if not said or "reviewer" not in said or "triage" not in said or "difficulty" not in said or fake.assignees:
+        problems.append(f"claim: a session claiming an unread Challenge was told {said!r} "
+                        f"and left it assigned to {fake.assignees!r}")
     said, fake = claimed(["challenge", "medium"], "gha-1234")
     if said or fake.assignees != ["o-r-coder"]:
         problems.append(f"claim: a run claiming its own `medium` Challenge said {said!r} "

@@ -1,7 +1,8 @@
 # The coder Role, taking an Issue by its difficulty label (solorepo's DR-112).
 #
-# An Issue labelled `easy` or `medium` is a Challenge somebody has guessed a
-# loop can take. This is the loop. It runs where the label lands, in a
+# An Issue labelled `easy` or `medium` is a Challenge the reviewer has read
+# and landed at a level a loop takes, or one the solo filed at that level on
+# his own say-so (solorepo's DR-230). This is the loop. It runs where the label lands, in a
 # container that holds one token — the coder's — claims the Issue, does the
 # work under the Disciplines, and leaves a pull request ready for review:
 # gate green, branch pushed, body filled, what landed posted, and review
@@ -580,7 +581,9 @@ jobs:
             do you raise as a notice on the diff with `.meta/say/post notice`.
 
             `easy` and `medium`: if you raised any notice on the diff, promote each
-            surviving thread with `.meta/say/post promote <thread-id> --title T --difficulty hard < issue-body.md`
+            surviving thread with `.meta/say/post promote <thread-id> --title T < issue-body.md`,
+            proposing a level under **Difficulty.** in the body and landing none, since the
+            reviewer reads it and its verdict is the label (solorepo's DR-230),
             and revise the body with `.meta/say/move revise <n>` to list the promoted
             Issue(s) under `**What was noticed and not done.**`; then request review:
             `.meta/say/move request-review <n>` and stop. The reviewer approves when clean,
@@ -746,7 +749,9 @@ jobs:
             do you raise as a notice on the diff with `.meta/say/post notice`.
 
             `easy` and `medium`: if you raised any notice on the diff, promote each
-            surviving thread with `.meta/say/post promote <thread-id> --title T --difficulty hard < issue-body.md`
+            surviving thread with `.meta/say/post promote <thread-id> --title T < issue-body.md`,
+            proposing a level under **Difficulty.** in the body and landing none, since the
+            reviewer reads it and its verdict is the label (solorepo's DR-230),
             and revise the body with `.meta/say/move revise <n>` to list the promoted
             Issue(s) under `**What was noticed and not done.**`; then request review:
             `.meta/say/move request-review <n>` and stop. The reviewer approves when clean,
@@ -1474,8 +1479,10 @@ jobs:
 
             Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`.
             Every unresolved thread marked "Noticed and not done" (or any surviving notice)
-            is promoted now to an Issue with:
-            `.meta/say/post promote <thread-id> --title "<title>" --difficulty hard --no-resolve <<'BODY'`
+            is promoted now to an Issue, proposing a level under **Difficulty.** in the body
+            and landing none, since the reviewer reads it and its verdict is the label
+            (solorepo's DR-230), with:
+            `.meta/say/post promote <thread-id> --title "<title>" --no-resolve <<'BODY'`
             `...`
             `BODY`
             The body is the Issue form:
@@ -1483,7 +1490,7 @@ jobs:
             **What was noticed.** <describe what was noticed>
             **What would make this worth doing.** <rationale>
             **Where it was found.** On #${{ steps.pr.outputs.number }}.
-            **Difficulty.** hard
+            **Difficulty.** <easy, medium, hard or human: your guess at what it takes>
 
             Promoting with `--no-resolve` files the Issue and replies on the thread
             with the link, but leaves the thread open so the standing merge manager
@@ -1623,8 +1630,10 @@ jobs:
 
             Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`.
             Every unresolved thread marked "Noticed and not done" (or any surviving notice)
-            is promoted now to an Issue with:
-            `.meta/say/post promote <thread-id> --title "<title>" --difficulty hard --no-resolve <<'BODY'`
+            is promoted now to an Issue, proposing a level under **Difficulty.** in the body
+            and landing none, since the reviewer reads it and its verdict is the label
+            (solorepo's DR-230), with:
+            `.meta/say/post promote <thread-id> --title "<title>" --no-resolve <<'BODY'`
             `...`
             `BODY`
             The body is the Issue form:
@@ -1632,7 +1641,7 @@ jobs:
             **What was noticed.** <describe what was noticed>
             **What would make this worth doing.** <rationale>
             **Where it was found.** On #${{ steps.pr.outputs.number }}.
-            **Difficulty.** hard
+            **Difficulty.** <easy, medium, hard or human: your guess at what it takes>
 
             Promoting with `--no-resolve` files the Issue and replies on the thread
             with the link, but leaves the thread open so the standing merge manager

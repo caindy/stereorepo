@@ -7,10 +7,10 @@
 # The same step also says who takes each open pull request next, per solorepo's DR-129.
 # A handoff is a review request, which GitHub holds and reports; a pull
 # request with no request on it is a state GitHub reports nothing about, so
-# red here is a hand-off a run owed and did not make, like the untriaged
+# red here is a hand-off a run owed and did not make, like the unread
 # Challenge below and unlike a broken build.
 name: sweep
-description: Re-run the pull request gate on every open pull request and publish each result, name every one nobody can take up, then refuse an untriaged Challenge.
+description: Re-run the pull request gate on every open pull request and publish each result, name every one nobody can take up, then refuse a Challenge the reviewer's door did not read.
 inputs:
   token:
     description: a token that reads pull requests and Issues and writes checks; github.token is enough
@@ -26,9 +26,11 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
-    # And the queue: a Challenge with no difficulty is one the coder cannot
-    # see, and nothing else tells an empty queue from an untriaged one
-    # (solorepo's DR-114). Red here is a label the solo owes, not a broken build.
+    # And the queue: a Challenge with no difficulty is one waiting for the
+    # reviewer's verdict, and nothing else tells an empty queue from a stalled
+    # one (solorepo's DR-114, solorepo's DR-230). Red here is a reviewer door
+    # that did not fire — no triage run within an hour of the filing, or one
+    # that ended red — which is a Job to re-run, not a label the solo owes.
     - run: python3 .meta/next.py --check
       if: ${{ always() }}
       shell: bash

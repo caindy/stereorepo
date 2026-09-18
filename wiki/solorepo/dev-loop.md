@@ -16,8 +16,9 @@ It is the operational engine realizing the [[pr-first]] discipline. Rather than 
 
 ## The Decoupled Pass Lifecycle
 
-Work progresses through four specialized, asynchronous passes triggered by repository events:
+Work progresses through five specialized, asynchronous passes triggered by repository events:
 
+0. **Triage Pass:** Activated when `challenge` lands on an [[issue]] carrying no difficulty, or a difficulty is taken off one (solorepo's DR-230). The reviewer role reads the [[challenge]] against the form and the tree, posts a verdict naming what it checked, and lands the difficulty, which is the label the Coder Pass fires on. A level landed with the filing is the solo's verdict given in advance and skips this pass.
 1. **Coder Pass:** Activated when an [[issue]] is labeled with an autonomous difficulty (`easy` or `medium`), or when a pull request review requests changes (solorepo's DR-112). The coder role claims the [[challenge]], creates or updates the working branch, drives quality checks to green, records changes via signed channel commits, and requests review.
 2. **Reviewer Pass:** Activated when a pull request review is requested (solorepo's DR-109). The reviewer role performs an independent verification of the diff against repository disciplines, assertions, and conventions. The review depth pipeline dynamically calculates model capacity, extended thinking depth, and agent fan-out ceiling based on touched paths (solorepo's DR-188).
 3. **Advance & Merge Manager Pass:** Continuously evaluates open pull requests when `main` moves or auto-merge conditions are met. It automatically rebases clean branches onto updated trunk heads (solorepo's DR-133) and squashes and merges approved candidates in order of structural leverage (solorepo's DR-161).

@@ -1,0 +1,263 @@
+# The reviewer Role, reading a Challenge before any coder takes it (solorepo's DR-230).
+#
+# A Challenge filed without a level is one nobody but its raiser has read. This
+# is the reader. It runs where `challenge` lands on an Issue carrying no
+# difficulty, or where a difficulty is taken off one, in a container that holds
+# one token — the reviewer's — reads the Issue against what the form asks and
+# what only the tree can answer, and lands its verdict through
+# `.meta/say/move --role reviewer triage`, which posts what was checked and
+# then the level. The level is the label the coder loop's take door fires on
+# (solorepo's DR-112), so this Job's act is what opens that door; a level landed
+# with the filing is the solo's verdict given in advance, and this Job never
+# sees it.
+#
+# Nothing here restates how to read a Challenge. PR First's third step and the
+# reviewer's reading of it are the checkout's; this file decides when the
+# reviewer runs, as whom it speaks, and what it may read. An `issues` event runs
+# the workflow file from the default branch, so this is trunk's on every
+# delivery and no restore of the control plane is needed.
+name: triage
+run-name: triage-issue-#${{ github.event.issue.number }}
+
+on:
+  issues:
+    # `challenge` landing on an Issue with no level, which is what `move file`
+    # and `post promote` do when no level is given; and a level taken off a
+    # Challenge, which hands it back to the reader. A level supplied with the
+    # filing arrives in the same payload as `challenge`, and the job below
+    # declines it: that is the solo's mandate.
+    types: [labeled, unlabeled]
+
+# One run per Challenge per kind of delivery. Every label change on the Issue
+# creates a run that enters a group before the job's `if` is read, and GitHub
+# keeps one pending run per group: keyed by number alone, a delivery that will
+# skip — `harness:gemini` landing, say — would displace a pending delivery
+# that would have read, and leave the Challenge unread with nothing to
+# re-deliver it (the hazard `coder.yml`'s key records). The action and the
+# label are in the key, so a delivery can only displace another of its own
+# kind, and the one that would read is never behind one that would not.
+concurrency:
+  group: triage-${{ github.event.issue.number }}-${{ github.event.action }}-${{ github.event.label.name }}
+  cancel-in-progress: false
+
+# The workflow's own token reads. Every write goes through the reviewer's
+# credential, so what GitHub records is the Role and not the workflow.
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  reviewer:
+    name: reviewer
+    # An open Challenge carrying no level, on the delivery that made it one:
+    # `challenge` landing, or a level leaving. A `roadmap` Issue is deferred by
+    # definition and is not read; a Challenge whose payload already carries a
+    # level was filed on the solo's say-so and is not this Job's.
+    if: >-
+      github.event.issue.state == 'open'
+      && contains(github.event.issue.labels.*.name, 'challenge')
+      && !contains(github.event.issue.labels.*.name, 'easy')
+      && !contains(github.event.issue.labels.*.name, 'medium')
+      && !contains(github.event.issue.labels.*.name, 'hard')
+      && !contains(github.event.issue.labels.*.name, 'human')
+      && ((github.event.action == 'labeled' && github.event.label.name == 'challenge')
+          || (github.event.action == 'unlabeled'
+              && (github.event.label.name == 'easy' || github.event.label.name == 'medium'
+                  || github.event.label.name == 'hard' || github.event.label.name == 'human')))
+    runs-on: arc-runner-set
+    timeout-minutes: 25
+    env:
+      # The Trailer's two halves (solorepo's DR-086): the run id is a workload
+      # identity GitHub attests for this run and no other.
+      ACTOR_SESSION: gha-${{ github.run_id }}
+      ISSUE: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: ./.meta/actions/gh
+
+      # Materialize the single-source cognitive assets, so the reviewer's
+      # reading of PR First is where the skill loader looks (solorepo's DR-201).
+      - name: reconcile multi-harness cognitive assets
+        run: |
+          python3 .meta/apm_compile.py --reconcile
+
+      # The Role's credential, where `.meta/say/<program> --role reviewer`
+      # expects it (solorepo's DR-073, DR-107): outside the tree, mode 600.
+      - name: hold the reviewer's credential
+        run: |
+          install -d -m 700 ~/.config/solorepo
+          install -m 600 /dev/null ~/.config/solorepo/reviewer.env
+          printf 'GH_TOKEN=%s\n' "$REVIEWER_GH_TOKEN" > ~/.config/solorepo/reviewer.env
+          .meta/say/whoami --role reviewer
+        env:
+          REVIEWER_GH_TOKEN: ${{ secrets.REVIEWER_GH_TOKEN }}
+
+      # The payload is frozen at delivery. A level landed while this run
+      # waited — the solo's `difficulty`, or a run this one queued behind —
+      # is a verdict standing, and `triage` would refuse it; read the Issue
+      # now and stand down out loud rather than at the verb.
+      - name: is it still unread
+        id: unread
+        run: |
+          labels=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name] | join(",")')
+          level=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""')
+          if [ -n "$level" ]; then
+            echo "read=false" >> "$GITHUB_OUTPUT"
+            echo "#$ISSUE is labelled '$labels' now: a level stands, and this delivery is stale"
+          else
+            echo "read=true" >> "$GITHUB_OUTPUT"
+            echo "#$ISSUE is labelled '$labels': unread"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # What the session reads, written to files before it starts. The hook
+      # below confines the session's shell to a closed list of programs, and
+      # `gh issue` is not on it, so everything the reading needs from GitHub
+      # is gathered here under the workflow's own token and read with the
+      # Read tool: the Issue whole, and the open Issues and pull requests the
+      # "Waits on." question is answered against. `.review/` is the reviewer's
+      # scratch and `.gitignore` holds it (solorepo's #196).
+      - name: write the Challenge and what is open
+        if: steps.unread.outputs.read == 'true'
+        run: |
+          rm -rf .review
+          install -d .review
+          gh issue view "$ISSUE" --json number,title,url,labels,body,createdAt,author \
+            --jq '"# #\(.number) \(.title)\n\n\(.url)\nlabels: \([.labels[].name] | join(", "))\nfiled: \(.createdAt) by \(.author.login)\n\n---\n\n\(.body)"' \
+            > .review/challenge.md
+          {
+            echo "# Open Issues"
+            echo
+            gh issue list --state open --limit 200 --json number,title,labels \
+              --jq '.[] | "- #\(.number) [\([.labels[].name] | join(", "))] \(.title)"'
+            echo
+            echo "# Open pull requests"
+            echo
+            gh pr list --state open --limit 100 --json number,title,headRefName \
+              --jq '.[] | "- #\(.number) (\(.headRefName)) \(.title)"'
+          } > .review/open.md
+          cat .review/challenge.md
+          wc -l .review/open.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: read the Challenge (claude)
+        id: read_claude
+        if: steps.unread.outputs.read == 'true'
+        uses: anthropics/claude-code-action@v1
+        timeout-minutes: 20
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          show_full_output: "true"
+          # The bound on reading, the same hook the review workflow registers
+          # (solorepo's DR-110): a `Read`, `Grep` or `Glob` resolves inside the
+          # worktree and outside `.git/`, a `git` command carries no option
+          # that runs a program or writes a file, and Bash runs only the
+          # programs `.meta/lib/worktree_only/grammar.py` lists — the channel,
+          # git's readers, and three `gh pr` readers. No `gh issue` is among
+          # them, which is why the step above writes what the session needs
+          # under `.review/`; the allow-list below names nothing the hook
+          # would refuse.
+          settings: |
+            {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
+              "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}
+          prompt: |
+            Your Personality is work:personality/reviewer: Analytical and thorough. Holds the Challenge to the Disciplines and the Charter strictly. Clear and precise; concise yet unambiguous.
+
+            You are the reviewer Role (solorepo's DR-107), reading Challenge
+            #${{ github.event.issue.number }} of ${{ github.repository }} before any
+            coder takes it (solorepo's DR-230). Read /pr-first-reviewer first: its
+            third step says what your verdict is, what it asks, and that `move triage`
+            is the verb that lands it.
+
+            Then read `.review/challenge.md` with the Read tool. It is the Issue as
+            GitHub holds it: title, labels, who filed it and when, and the body in
+            the Challenge form. The body proposes a level under **Difficulty.**; the
+            proposal is the raiser's guess and not your verdict.
+
+            Ask four questions, and answer each in a paragraph under its heading.
+            Your login is `${{ github.repository_owner }}-${{ github.event.repository.name }}-reviewer`.
+
+            **Worth doing.** Does the body state a trigger, or a cost that will
+            land? If neither can be stated, this is an observation and not a
+            Challenge, and the level is `human` with that said.
+
+            **Waits on.** Is the first line right? Every blocker it names must be an
+            open Issue, and it must name every open Issue or pull request this cannot
+            start before. `.review/open.md` lists both, written before this session
+            started; read it with the Read tool. The shell here cannot list them.
+
+            **Already answered.** Does the tree already hold a mechanism that answers
+            this? Search it with Grep and Glob and read what you find with Read; a
+            Challenge the tree answers is `human` with the path named, since closing
+            it is the solo's call.
+
+            **Decision owed.** Is the next step a decision rather than an
+            implementation? Then the level is `human` whatever the effort, and the
+            verdict names the question the solo must settle (solorepo's DR-226).
+
+            Then the level. `easy` and `medium` are a loop's the moment the label
+            lands: `easy` is the smaller model and an hour, `medium` the larger and
+            a whole budget, and both are for work whose approach the body already
+            settles. `hard` is coder work too large for a loop, which waits for the
+            solo with a session beside him. `human` is where what the Issue needs is
+            the solo rather than a Job at all. The raiser's proposal is corrected in
+            either direction; say why where you move it.
+
+            Post the verdict through the channel, which holds it to the four
+            headings, posts it on the Issue, and lands the level in one act:
+
+                .meta/say/move --role reviewer triage ${{ github.event.issue.number }} <level> <<'BODY'
+                **Worth doing.** ...
+
+                **Waits on.** ...
+
+                **Already answered.** ...
+
+                **Decision owed.** ...
+                BODY
+
+            Where the first line is wrong and you can write the right one, correct
+            the body first with `.meta/say/move --role reviewer revise ${{ github.event.issue.number }}`
+            and the whole body on stdin — the reviewer holds `revise` for this —
+            then post the verdict. Where a question only the solo can answer
+            stands in the way, land `human` and say in the verdict what he must
+            settle.
+
+            Every command that writes begins with `.meta/say/move` and takes its
+            body as a quoted heredoc on stdin. Never `gh issue edit`, `gh issue
+            comment` or `gh api`: the hook refuses them. Do not claim the Issue and
+            do not open a pull request.
+
+            Your turn ends when the verdict is posted, and not before. The step
+            after this session reads the Issue's labels, and a session that landed
+            no level is a red run.
+          claude_args: |
+            --model claude-sonnet-5
+            --max-turns 60
+            --allowedTools "Skill,Read(./**),Grep,Glob,Bash(.meta/say/move:*),Bash(.meta/say/post:*),Bash(.meta/say/whoami:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --disallowedTools "Read(./.git/**)"
+
+      # A session that ended without a level has not read, and the check says
+      # so. The action reports success when the model's turn ends, and a turn
+      # ends without a verdict as readily as with one (solorepo's DR-122). The
+      # level is read rather than the transcript believed, because GitHub holds
+      # the one and the transcript only claims the other.
+      - name: was it read
+        if: ${{ !cancelled() && steps.unread.outputs.read == 'true' }}
+        run: |
+          level=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""')
+          if [ -z "$level" ]; then
+            echo "::error::the session ended and #$ISSUE carries no level: nothing was read, and the Challenge still waits"
+            exit 1
+          fi
+          echo "#$ISSUE was read and landed at $level"
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -3,14 +3,16 @@
 import importlib.util
 import pathlib
 import sys
+import types
 from importlib.machinery import SourceFileLoader
+from typing import Any
 
 import yaml
 
 from checks.collect import META, ROOT
 
 
-def load_module(path, name=None, register=True):
+def load_module(path: str | pathlib.Path, name: str | None = None, register: bool = True) -> types.ModuleType:
     """The Python source at `path` as a fresh module object, its `main()` unrun.
 
     `name` is the module's `__name__`, the file's stem by default. `register`
@@ -32,6 +34,8 @@ def load_module(path, name=None, register=True):
     name = name or path.name.removesuffix(".py")
     loader = SourceFileLoader(name, str(path))
     spec = importlib.util.spec_from_loader(name, loader)
+    if spec is None:
+        raise ImportError(f"no module spec for {path}")
     module = importlib.util.module_from_spec(spec)
     if register:
         sys.modules[name] = module
@@ -39,12 +43,12 @@ def load_module(path, name=None, register=True):
     return module
 
 
-def load_hook(name):
+def load_hook(name: str) -> types.ModuleType:
     """`.meta/hooks/<name>.py` as a module, by the stem alone."""
     return load_module(META / "hooks" / f"{name}.py", name)
 
 
-def load_channel():
+def load_channel() -> tuple[Any, dict[str, Any], dict[str, Any]]:
     """`.meta/say/` as modules: the signing primitive, the verb table, and every program the table names.
 
     Returns `(channel, table, programs)`: the `channel.py` module, the parsed

@@ -2,6 +2,8 @@
 """
 
 
+from typing import Any
+
 from checks.collect import check
 from checks.probes.harness import (
     FakeFiling,
@@ -16,7 +18,7 @@ BODY = "**Waits on.** Nothing.\n\nWhat was noticed.\n"
 
 
 @check("filing probes", pre=True)
-def filing_probes():
+def filing_probes() -> list[str]:
     """`file_issue` and `promote` refusing a second Issue for one Challenge (solorepo's DR-221).
 
     The three acts of a promotion — file, reply, resolve — are not one
@@ -55,7 +57,7 @@ def filing_probes():
     """
     channel, _, programs = load_channel()
     move, post = programs["move"], programs["post"]
-    problems = []
+    problems: list[str] = []
 
     fake = FakeFiling()
     said = run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level="hard"))
@@ -72,6 +74,13 @@ def filing_probes():
         problems.append(f"filing: a filing under an unused title said {said!r} and left "
                         f"{len(fake.created)} created")
 
+    unread = FakeFiling()
+    said = run_verb(channel, unread, lambda: move.file_issue(TITLE, BODY))
+    labels = next(iter(unread.created.values()), ("", "", []))[2]
+    if said or labels != ["challenge"]:
+        problems.append(f"filing: a filing with no level said {said!r} and landed {labels!r}; "
+                        "`challenge` alone is the reviewer's queue (solorepo's DR-230)")
+
     blind = FakeFiling(list_fails=True)
     said = run_verb(channel, blind, lambda: move.file_issue(TITLE, BODY, level="hard"))
     if said or blind.listings != 1 or len(blind.created) != 1:
@@ -82,12 +91,12 @@ def filing_probes():
     return problems
 
 
-def promotion_probes(channel, post):
+def promotion_probes(channel: Any, post: Any) -> list[str]:
     """`promote` against a thread that already carries a promotion link, and one that does not."""
-    problems = []
-    filed = []
+    problems: list[str] = []
+    filed: list[tuple[str, str | None]] = []
 
-    def promoting(bodies):
+    def promoting(bodies: list[str]) -> tuple[str | None, int]:
         """One `promote` of thread `t1` over a thread holding `bodies`, as `(what it exited with, thread reads)`.
 
         `channel.signed` is not stood in and is reached whichever way the verb
@@ -97,9 +106,14 @@ def promotion_probes(channel, post):
         reviewer job does, so the environment is supplied rather than assumed.
         """
         filed.clear()
-        reads = []
+        reads: list[int] = []
+
+        def read(_: str) -> list[str]:
+            reads.append(1)
+            return list(bodies)
+
         with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
-              stood_in(post, thread_comments=lambda _: (reads.append(1), list(bodies))[1],
+              stood_in(post, thread_comments=read,
                        reply=lambda *a: None, resolve=lambda *a: None),
               stood_in(channel, sibling=lambda _: Filer(filed))):
             return run_verb(channel, FakeFiling(),
@@ -121,16 +135,27 @@ def promotion_probes(channel, post):
     if said or len(filed) != 1:
         problems.append(f"filing: promoting a thread that merely cites an Issue said {said!r} "
                         f"and filed {filed!r}")
+
+    filed.clear()
+    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+          stood_in(post, thread_comments=lambda _: ["a point nobody promoted yet"],
+                   reply=lambda *a: None, resolve=lambda *a: None),
+          stood_in(channel, sibling=lambda _: Filer(filed))):
+        said = run_verb(channel, FakeFiling(), lambda: post.promote("t1", TITLE, BODY, None))
+    if said or filed != [(TITLE, None)]:
+        problems.append(f"filing: promoting with no level said {said!r} and filed {filed!r}; "
+                        "the Issue lands `challenge` alone (solorepo's DR-230)")
     return problems
 
 
 class Filer:
     """`move` as `promote` reaches it: `file_issue` recording its call rather than filing."""
 
-    def __init__(self, filed):
+    def __init__(self, filed: list[tuple[str, str | None]]) -> None:
         self.filed = filed
 
-    def file_issue(self, title, body, level=None, roadmap=False):
+    def file_issue(self, title: str, body: str, level: str | None = None,
+                   roadmap: bool = False) -> tuple[str, str]:
         """The call recorded, answered with a number and URL as the real one answers."""
         self.filed.append((title, level))
         return "900", "https://github.com/o/r/issues/900"

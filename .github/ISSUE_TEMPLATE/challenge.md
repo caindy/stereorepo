@@ -19,7 +19,10 @@ If neither can be stated, this is an observation and not a Challenge.
 **Where it was found.** The pull request or the work that turned it up, so the
 context it was noticed in survives.
 
-**Difficulty.** `easy`, `medium`, `hard` or `human`, as a label beside this
-one: your guess at what it takes. `easy` and `medium` are taken up by a loop
-the moment the label lands, and a loop that cannot finish relabels it `human`
-and says why. `hard` waits for the solo with an agent beside him.
+**Difficulty.** `easy`, `medium`, `hard` or `human`: your guess at what it
+takes, proposed here and not landed as a label. The reviewer reads every
+Challenge before a coder takes it, and its verdict lands the label; a level
+landed with the filing is the solo's verdict given in advance and skips the
+reviewer. `easy` and `medium` are taken up by a loop the moment the label
+lands, and a loop that cannot finish relabels it `human` and says why. `hard`
+waits for the solo with an agent beside him.
