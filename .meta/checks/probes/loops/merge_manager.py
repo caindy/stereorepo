@@ -142,7 +142,13 @@ CLEARED = {"number": 1, "isDraft": False, "mergeable": "MERGEABLE", "baseRefName
 """A pull request every semaphore but the decision one clears."""
 
 ENTRY = f".meta/assertions/decisions/DR-{299}.yaml"
-"""The path of the Decision entry the decision semaphore's cases write."""
+"""The path of the Decision entry the decision semaphore's cases write.
+
+`299` is a fixture number, not a Decision, so it is held out of the literal
+here and at its two other uses below: written plainly it would read as a
+citation and fail `cited_decisions` either way — unresolved as bare
+`DR-299`, or, written `solorepo's DR-299`, resolved and still absent from
+the index."""
 
 
 def _diff_of(*changed: dict[str, Any]) -> Any:
