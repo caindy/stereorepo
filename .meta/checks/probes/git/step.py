@@ -2,7 +2,11 @@
 """
 import io
 import json
+import pathlib
+import shutil
+import subprocess
 import sys
+import tempfile
 
 from checks.collect import check
 from checks.probes.git import events, offers, verdicts
@@ -60,9 +64,62 @@ def _instead(worktree):
             if name not in (worktree.command_allowed(command) or "")]
 
 
+def _matchers() -> list[str]:
+    """Assert what wildcard components do with `..` across harness matchers (solorepo's #457)."""
+    problems = []
+    with tempfile.TemporaryDirectory() as d:
+        tmp = pathlib.Path(d)
+        root = tmp / "root"
+        root.mkdir()
+        (root / "inside.txt").write_text("in")
+        (tmp / "outside.txt").write_text("out")
+
+        if [p.resolve() for p in root.glob("../outside.txt")] != [(tmp / "outside.txt").resolve()]:
+            problems.append("python glob did not resolve ../outside.txt to parent directory")
+        wildcard_patterns = (
+            "??/outside.txt",
+            "[!a][!a]/outside.txt",
+            "..*/outside.txt",
+            ".?/outside.txt",
+            "[.][.]/outside.txt",
+        )
+        for pat in wildcard_patterns:
+            if list(root.glob(pat)):
+                problems.append(f"python glob unexpectedly matched .. with {pat}")
+
+        if shutil.which("node"):
+            script = (
+                "const fs = require('fs');"
+                "const res = {};"
+                "if (fs.globSync) {"
+                "  res.literal = fs.globSync('../outside.txt', { cwd: process.cwd() });"
+                "  res.qmark = fs.globSync('??/outside.txt', { cwd: process.cwd() });"
+                "  res.bracket = fs.globSync('[!a][!a]/outside.txt', { cwd: process.cwd() });"
+                "  res.dotstar = fs.globSync('..*/outside.txt', { cwd: process.cwd() });"
+                "}"
+                "console.log(JSON.stringify(res));"
+            )
+            proc = subprocess.run(["node", "-e", script], cwd=root, capture_output=True, text=True)
+            if proc.returncode == 0 and proc.stdout.strip():
+                data = json.loads(proc.stdout)
+                if data.get("literal") != ["../outside.txt"]:
+                    problems.append("node glob did not find ../outside.txt")
+                for key in ("qmark", "bracket", "dotstar"):
+                    if data.get(key):
+                        problems.append(f"node glob unexpectedly matched .. for {key}")
+
+        if shutil.which("rg"):
+            for pat in ("??/outside.txt", "[!a][!a]/outside.txt", "..*/outside.txt", "../outside.txt"):
+                proc = subprocess.run(["rg", "--files", "--glob", pat], cwd=root, capture_output=True, text=True)
+                if proc.stdout.strip():
+                    problems.append(f"rg unexpectedly matched with glob {pat}")
+
+    return problems
+
+
 @check("hook probes", pre=True)
 def hook_probes():
-    """Both hooks' predicates against the calls they exist to refuse and the calls they must let through, and what a `worktree_only` refusal offers instead.
+    """Both hooks' predicates against the calls they exist to refuse and the calls they must let through, what a `worktree_only` refusal offers instead, and matcher invariants across harnesses.
 
     Loads `signed_channel` and `worktree_only` afresh and runs four tables in
     order: `VERDICTS`, each call with the verdict its hook owes it; `OFFERS`,
@@ -70,12 +127,13 @@ def hook_probes():
     where none is derivable; `EVENTS`, each before-tool payload with the code
     the entry point owes it, Claude Code's envelope beside Gemini CLI's;
     `INSTEAD`, each program off the list with the tool
-    its refusal names in its place. A line names the group and the call that
-    gave way, so the report says which case a predicate no longer holds. Each
-    refused call sits beside the innocent neighbour the predicate must not
-    catch (solorepo's #86, solorepo's #98), so an edit to either predicate
-    meets both before a run does (solorepo's DR-110).
+    its refusal names in its place. Asserts that wildcard components do not match
+    parent directories across the harnesses' own matchers (solorepo's #457).
+    A line names the group and the call that gave way, so the report says which
+    case a predicate no longer holds. Each refused call sits beside the innocent
+    neighbour the predicate must not catch (solorepo's #86, solorepo's #98), so an
+    edit to either predicate meets both before a run does (solorepo's DR-110).
     """
     hooks = {name: load_hook(name) for name in ("signed_channel", "worktree_only")}
     worktree = hooks["worktree_only"]
-    return _verdicts(hooks) + _offers(worktree) + _events(worktree) + _instead(worktree)
+    return _verdicts(hooks) + _offers(worktree) + _events(worktree) + _instead(worktree) + _matchers()

@@ -315,7 +315,7 @@ VERDICTS = (
     )),
     ("worktree_only: a glob pattern is bounded by the literal path its matches lie under, refused "
      "where it can leave that bound by ascent or alternation, and a reader naming no key of "
-     "`READERS` is refused rather than read as the worktree (solorepo's #452)",
+     "`READERS` is refused rather than read as the worktree (solorepo's #452, solorepo's #457)",
      "worktree_only", (
         ("refuse", "glob", {"pattern": "/etc/**"}),
         ("refuse", "glob", {"pattern": "../../**/*.pem"}),
@@ -327,6 +327,9 @@ VERDICTS = (
         ("refuse", "Glob", {"globPattern": "*.md"}),
         ("refuse", "read_file", {"absolute_path": "/etc/passwd"}),
         ("allow", "glob", {"pattern": ".meta/**/*.py"}),
+        ("allow", "glob", {"pattern": "??/*.py"}),
+        ("allow", "read_many_files", {"include": ["[!a][!a]/**/*.py"]}),
+        ("allow", "glob", {"pattern": "[!a][!a]/[!a][!a]/etc/passwd"}),
         ("allow", "Grep", {"pattern": "def blocked"}),
     )),
     ("worktree_only: a working directory is not a read, so the exemptions a read carries are not "
@@ -378,10 +381,12 @@ ascending, or under a harness configuration directory — is refused on the
 literal path its matches lie under, and `**/.git/config` is refused on the
 component rather than on a resolution in which the literal `**` stands between
 the root and `.git`. Beside them sit the shapes a reviewer types, `.meta/**/*.py`
-and a search naming no path, which mean the worktree and stay allowed. The two
-refusals of a key spelled otherwise are the structural row: `run-gemini-cli@v0`
-floats, so a renamed or added argument is a spelling this hook does not know,
-and it refuses rather than resolving to the worktree.
+and a search naming no path, which mean the worktree and stay allowed. Wildcard
+components that expand to dots (`??`, `[!a][!a]`) do not match `.` or `..` across
+the matchers and remain allowed (solorepo's #457). The two refusals of a key
+spelled otherwise are the structural row: `run-gemini-cli@v0` floats, so a
+renamed or added argument is a spelling this hook does not know, and it refuses
+rather than resolving to the worktree.
 
 `signed_channel.blocked()` judges each segment of a command line on its own, so
 a row there is a line rather than a call, and the two directions one regex over

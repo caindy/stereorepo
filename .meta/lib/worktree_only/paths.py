@@ -108,21 +108,20 @@ def outside(path: str | pathlib.Path) -> str | None:
 
 
 def ascends(part: str) -> bool:
-    """Judge whether one pattern component can match `..`.
+    """Judge whether one pattern component is an ascent that can leave its bound.
 
-    A metacharacter matches at least the empty string, so a component is an
-    ascent wherever the characters it does spell are all dots: `..` itself, and
-    the wildcard spellings of it — `..*`, `.?`, `[.][.]` — which a matcher's own
-    grammar decides and this hook therefore does not wait to hear about. A
-    component holding a literal that is not a dot is not one of them, so `*.py`
-    and `.git` pass here (`.git` having its own clause).
+    Catches literal `..` and pattern components whose literal characters are
+    dots alone (`..*`, `.?`, `[.][.]`). Pattern components expanding wildcards
+    without literal dots (`??`, `[!a][!a]`) do not match `.` or `..` across the
+    supported matchers (Python glob, ripgrep, and node glob) during filesystem
+    traversal.
 
     Parameters:
         part: One component of a glob pattern.
 
     Returns:
         bool: True where every character the component spells literally is a
-        dot, so `..` is among what it matches.
+        dot, identifying an ascending component; False otherwise.
     """
     literal = set(part) - GLOBBY
     return literal == {"."}

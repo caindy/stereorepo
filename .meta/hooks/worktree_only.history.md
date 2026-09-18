@@ -154,3 +154,16 @@ which reads the wildcard spellings `..*` and `.?` as the ascent they can match),
 and brace alternation, whose grammar this hook does not hold.
 
 Evidence: `.meta/checks/probes/git/step.py::hook_probes`
+
+### ascends() assumed wildcards only match .. by shrinking to dots
+
+`ascends()` computed `literal = set(part) - GLOBBY` and checked whether `literal == {"."}`,
+on the premise that a metacharacter matches at least the empty string (solorepo's #457). That premise
+held for `*` and `**` but failed for `?` and bracket classes, missing wildcard components that
+expand to dots such as `??` and `[!a][!a]`. Established: `hook_probes` asserts the actual
+matcher implementations across harnesses (Python `glob`, Claude Code `ripgrep`, Gemini CLI
+`glob`) to prove that wildcard components never match `.` or `..` during filesystem traversal,
+leaving literal `..` and dot-literal spellings as the only ascending components, and
+`paths.ascends()` states the probed invariant rather than the false empty-string premise.
+
+Evidence: `.meta/checks/probes/git/step.py::hook_probes`
