@@ -217,16 +217,21 @@ def wiki_probes():
 def wikisplain_probes():
     """`.meta/wikisplain.py` slugifies a title, formats a MOS:LEAD lead, finds a duplicate, and scaffolds a page that passes its own verification (solorepo's DR-187).
 
-    Five of the tool's acts, each called directly:
+    Six of the tool's acts, each called directly:
     `slugify` on a two-word title; `format_lead_sentence` on a title and a
     definition, which must read as one bold copular sentence; `find_duplicates`
     on a discipline the wiki already holds a page for, which must be found
     among the wiki pages; `generate_page` followed by `verify_page` on a
-    synthetic concept, which must raise no warning; and `generate_page` on that
+    synthetic concept, which must raise no warning; `generate_page` on that
     concept filed under a slug its title does not produce, which must declare
-    the slug it is filed under rather than the one its title implies. The last
-    three read the tree at `ROOT`, so they hold only while `wiki/solorepo/`
-    holds the pages the tool links a new page to by default.
+    the slug it is filed under rather than the one its title implies; and
+    `verify_page` on a page filed under that same custom slug with a
+    self-referencing wikilink to it, which must raise no warning either —
+    `verify_page` reads its own identity off `rel_path`'s stem rather than
+    re-slugifying the title, so the two can diverge without false-positiving
+    (solorepo's #617). The last four read the tree at `ROOT`, so they hold
+    only while `wiki/solorepo/` holds the pages the tool links a new page to
+    by default.
     """
     wikisplain = load_module(META / "wikisplain.py", "wikisplain")
     problems = []
@@ -254,4 +259,15 @@ def wikisplain_probes():
     )
     if "\nslug: test-filed-elsewhere\n" not in filed:
         problems.append(f"generate_page: a Page filed under its own slug declared another: {filed[:120]!r}")
+    self_ref = wikisplain.generate_page(
+        wikisplain.Page(title="Test Wiki Concept", slug="test-filed-elsewhere", context="solorepo",
+                        definition="a synthetic concept for gate validation",
+                        body="See [[test-filed-elsewhere]] for detail."),
+        root=ROOT,
+    )
+    self_ref_verif = wikisplain.verify_page(self_ref, "wiki/solorepo/test-filed-elsewhere.md", root=ROOT)
+    if self_ref_verif:
+        problems.append(
+            f"verify_page: self-reference under a custom --slug false-positived: {self_ref_verif!r}"
+        )
     return problems

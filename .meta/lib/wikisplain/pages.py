@@ -150,4 +150,5 @@ def verify_page(
     problems, title_clean = lead_problems(content.splitlines(), rel_path)
     if title_clean is None or (problems and "after title" in problems[0]):
         return problems
-    return problems + wikilink_problems(content, rel_path, lead.slugify(title_clean), root)
+    self_slug = pathlib.PurePosixPath(rel_path).stem.lower()
+    return problems + wikilink_problems(content, rel_path, self_slug, root)
