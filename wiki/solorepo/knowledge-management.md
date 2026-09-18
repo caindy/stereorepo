@@ -47,7 +47,7 @@ routing tree:
 3. **Settled Architectural Choice Between Alternatives?** Mint and write a
    Decision Record in `.meta/assertions/decisions/DR-nnn.yaml` (**Explanation**).
 4. **Incident Narrative or Defect History?** Append to `<module>.history.md`
-   with verifiable receipts (**Explanation**).
+   with verifiable Evidence (**Explanation**).
 5. **Enduring Domain Concept or Subsystem Overview?** Scaffold via `just wikisplain`
    and author under `wiki/<context>/<concept>.md` (**Explanation**).
 6. **Unrouted Residue?** Only transient reviewer handoff notes and links to

@@ -67,12 +67,12 @@ decisions:
         description asks for the sorting beside the single copy.
       - >-
         Nothing Unconsumed gains a step: a history entry says what failed and
-        what the change established, and names its receipt, the test that
+        what the change established, and names its Evidence, the test that
         would fail if the change were undone; the test suite is what the entry
         is checked against, and an entry whose test is gone goes with it.
       - >-
         The Rust and Python pages for Literate Programming say only how — where
-        each kind of prose sits in that language, and what a receipt names
+        each kind of prose sits in that language, and what the Evidence names
         there — and the two "candidates for pulling up" sections leave both
         READMEs.
       - >-
@@ -80,7 +80,7 @@ decisions:
     falsifier: >-
       A language whose documentation tooling cannot keep the three kinds of
       prose apart without a second copy, or one whose tests cannot be listed
-      by name so that a receipt cannot be checked mechanically. Either would
+      by name so that the Evidence cannot be checked mechanically. Either would
       show the rule was a language's business after all, and it would go back
       down to the Bootstraps that can hold it.
     rationale: |-

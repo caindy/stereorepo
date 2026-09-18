@@ -202,6 +202,25 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Externalized Memory.** Not the absence of memory. The harness's own memory surfaces are tracked and generated from the assertions, so memory here is compiled rather than forbidden. What is given up is the private copy: state an unprivileged Job cannot observe is state the system does not have; solorepo's DR-214 records the substrate choice this rests on and explicitly leaves open whether the wider commitment is a Decision of its own or the premise that one rests on; naming the practice does not settle that.
 
+### Toulmin's ontology of argument
+
+_Authority: Stephen Toulmin, *The Uses of Argument* (1958), as caindy/fitch-mvp's `schema/epistemology.yaml` models it on LinkML._
+
+| Term | Means | Do not say |
+|---|---|---|
+| **Claim** | Toulmin's Claim: the central hypothesis or predicate assertion being evaluated. | assertion, statement, hypothesis |
+| **Evidence** | Hard ground truths, telemetry, or verified physical/digital data streams. | receipt, proof |
+
+**Claim.** That sentence is the opening of the `Claim` class in `schema/epistemology.yaml` in caindy/fitch-mvp, quoted whole and unaltered. The schema models Toulmin's ontology of argument on LinkML — the same technology this vocabulary uses — and names Stephen Toulmin as the source; his published one is *The Uses of Argument* (1958). Quoted rather than paraphrased, because four systems are intended to merge and a shared word that acquires a second meaning here is the drift caindy/solorepo#488 exists to prevent.
+The same class continues: "A claim is its text and its warrants", and its Qualifier "is not stored", a claim carrying no probability of its own. `Warrant` and `Qualifier` are that schema's terms and are not minted here.
+The label collides with the channel verb `claim`, which takes an Issue by assigning it to a Role's account, and with "the claim released" in what `move stop` does. That is an ownership lock and not an assertion under evaluation. `confusable_with` cannot hold it, the verb being no Concept, so it is said here: a Claim is argued about, a claim is taken and released.
+What a history entry asserts, what an Article holds against an artifact, and what a Citation names in its target are each a Claim. Whether the rest of Toulmin's ontology is taken with it is caindy/solorepo#576's judgement, not settled here (solorepo's DR-228).
+
+**Evidence.** That sentence is the opening of the `Evidence` class in `schema/epistemology.yaml` in caindy/fitch-mvp, quoted whole and unaltered, for the reason Claim's is.
+The same class continues: "Toulmin's Grounds (Data) by default, reached from a warrant through `grounds`; also Backing when it lends a credence, which is how a data stream earns a track record. The two are positions in an argument, not kinds of evidence." `Grounds`, `Backing` and `Warrant` are that schema's terms, and the slot the quotation names is its slot, not one here; none of them is minted here.
+A Citation can be Evidence and is not the same thing: a citation names an upstream authority, and one that cannot go stale is what solorepo's DR-171 refused, which is why the collision is recorded rather than the word avoided.
+What is distinctive here is not that a history entry names Evidence but that it names Evidence which can fail: solorepo's DR-171 turned down commit hashes and pull request citations as not mechanically falsifiable, because a hash is unchanged when the change it records is undone, so nothing detects that the entry has gone stale. The `Evidence:` line is held to a symbol a parser resolves, which is what lets an entry go stale when the test it names is gone; the word itself carries no such requirement (solorepo's DR-228).
+
 ### APM primitives
 
 _Authority: Microsoft APM._
@@ -235,6 +254,7 @@ more often a collision than a gap.
 | **Pull Request** | Challenge, Issue |
 | **Review Thread** | Pull Request |
 | **Journaling** | Pull Request |
+| **Evidence** | Citation |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Dev Loop** | PR First |
 | **Choreography** | Dev Loop |

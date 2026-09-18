@@ -156,7 +156,7 @@ disciplines:
   # Distilled in `python_bootstrap` and pulled up here. Its own README is clear
   # that they were not invented there either: each came from a failure in a
   # working codebase — booktutor, a 560-commit Rust workspace, published
-  # agent-workflow skills — and its ADRs carry the receipts. Nine invariants
+  # agent-workflow skills — and its ADRs cite the failure each came from. Nine invariants
   # collapse to six Disciplines, because three pairs say one thing twice once
   # stated as ways of working rather than as rules.
   # ---------------------------------------------------------------------------
@@ -234,10 +234,11 @@ disciplines:
       - For each artifact, name what consumes it, and what that consumer checks it against.
       - Delete what nothing consumes. An unread artifact is not documentation, it is debris.
       - >-
-        Hold a history log to its receipts. An entry says what failed and what
+        Hold a history log to its Evidence. An entry says what failed and what
         the change established — not what changed, which the diff already says —
-        and names its **receipt**: the test that would fail if the change were
-        undone. The entry is consumed by a reader; what it is checked against is
+        and names its **Evidence**: the test that would fail if the change were
+        undone, which is Evidence that can fail rather than a citation that
+        cannot (solorepo's DR-171, solorepo's DR-228). The entry is consumed by a reader; what it is checked against is
         the test suite, so an entry whose test is gone is stale and goes with
         it, and the log prunes itself. Observed Failure's argument, applied to
         prose: an entry naming no test is debris for the same reason a guardrail

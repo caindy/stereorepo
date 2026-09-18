@@ -209,6 +209,9 @@ artifacts:
   - id: work:artifact/meta-assertions-imported-authority
     name: .meta/assertions/imported/authority.yaml
     path: .meta/assertions/imported/authority.yaml
+  - id: work:artifact/meta-assertions-imported-charter
+    name: .meta/assertions/imported/charter.yaml
+    path: .meta/assertions/imported/charter.yaml
   - id: work:artifact/meta-assertions-imported-disciplines
     name: .meta/assertions/imported/disciplines.yaml
     path: .meta/assertions/imported/disciplines.yaml

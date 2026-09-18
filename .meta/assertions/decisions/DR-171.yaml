@@ -64,10 +64,10 @@ decisions:
           its companion's module docstring.
     consequences:
       - >-
-        `.meta/checks/files.py` adds `meta history orphans` and `meta history receipts`
+        `.meta/checks/files.py` adds `meta history orphans` and `meta history evidence`
         checks. Every `.history.md` under `.meta/` must have a companion `.py` or
         executable script that names it in its module docstring, and every
-        `Receipt:` entry in a history log must resolve to a valid symbol in the
+        `Evidence:` entry in a history log must resolve to a valid symbol in the
         referenced file.
       - >-
         Executable scripts without file extensions in `.meta/say/` (`move`,
@@ -79,7 +79,7 @@ decisions:
         beside the corresponding module, leaving only load-bearing *why* and
         interface documentation in source docstrings.
     falsifier: >-
-      A history entry under `.meta/` whose receipt requires pytest to express, or
+      A history entry under `.meta/` whose Evidence requires pytest to express, or
       a companion script under `.meta/` whose docstring cannot be parsed by
       Python's `ast`.
     rationale: |-

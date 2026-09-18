@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use std::process::ExitCode;
 
-use xtask::{Outcome, Step, fmt, lints, orphans, receipts, receipts_against, run};
+use xtask::{Outcome, Step, evidence, evidence_against, fmt, lints, orphans, run};
 
 /// A throwaway package under the target directory, so probes leave nothing
 /// behind that the orphan check would then find. Its manifest carries an empty
@@ -113,7 +113,7 @@ fn build_output_and_hidden_directories_are_not_looked_at() {
 
 #[test]
 fn a_history_entry_names_a_test_that_exists() {
-    let tree = Tree::new("receipt");
+    let tree = Tree::new("evidence");
     let tests = vec!["example::tests::holds".to_owned()];
     tree.write(
         "src/lib.rs",
@@ -124,18 +124,18 @@ fn a_history_entry_names_a_test_that_exists() {
         "src/lib.history.md",
         "# History\n\n### Something failed\n\nEstablished: a thing.\n",
     );
-    let problems = found(receipts_against(&tree.0, &tests));
+    let problems = found(evidence_against(&tree.0, &tests));
     assert_eq!(problems.len(), 1);
     assert!(
-        problems[0].contains("'Something failed' names no receipt"),
+        problems[0].contains("'Something failed' names no evidence"),
         "{problems:?}"
     );
 
     tree.write(
         "src/lib.history.md",
-        "# History\n\n### Something failed\n\nEstablished: a thing.\n\nReceipt: `example::tests::gone`\n",
+        "# History\n\n### Something failed\n\nEstablished: a thing.\n\nEvidence: `example::tests::gone`\n",
     );
-    let problems = found(receipts_against(&tree.0, &tests));
+    let problems = found(evidence_against(&tree.0, &tests));
     assert!(
         problems[0].contains("`example::tests::gone`, which no test reports"),
         "{problems:?}"
@@ -143,10 +143,10 @@ fn a_history_entry_names_a_test_that_exists() {
 
     tree.write(
         "src/lib.history.md",
-        "# History\n\n### Something failed\n\nEstablished: a thing.\n\nReceipt: `example::tests::holds`\n\n### And again\n\nReceipt: `example::tests::holds`\n",
+        "# History\n\n### Something failed\n\nEstablished: a thing.\n\nEvidence: `example::tests::holds`\n\n### And again\n\nEvidence: `example::tests::holds`\n",
     );
     assert_eq!(
-        passed(receipts_against(&tree.0, &tests)),
+        passed(evidence_against(&tree.0, &tests)),
         "2 entries across 1 history logs, each naming a test that exists"
     );
 }
@@ -156,19 +156,19 @@ fn the_form_of_an_entry_in_a_comment_is_not_an_entry() {
     let tree = Tree::new("comment");
     tree.write(
         "src/lib.history.md",
-        "# History\n\n<!--\n### <what failed>\n\nReceipt: `example::tests::<name>`\n-->\n\n### Real\n\nReceipt: `t::real`\n",
+        "# History\n\n<!--\n### <what failed>\n\nEvidence: `example::tests::<name>`\n-->\n\n### Real\n\nEvidence: `t::real`\n",
     );
     assert_eq!(
-        passed(receipts_against(&tree.0, &["t::real".to_owned()])),
+        passed(evidence_against(&tree.0, &["t::real".to_owned()])),
         "1 entries across 1 history logs, each naming a test that exists"
     );
-    let problems = found(receipts_against(&tree.0, &[]));
+    let problems = found(evidence_against(&tree.0, &[]));
     assert_eq!(problems.len(), 1, "{problems:?}");
     assert!(problems[0].contains("'Real'"), "{problems:?}");
 }
 
 #[test]
-fn receipts_are_checked_against_the_tests_cargo_would_run() {
+fn evidence_is_checked_against_the_tests_cargo_would_run() {
     let tree = Tree::new("listed");
     tree.write(
         "src/lib.rs",
@@ -176,25 +176,25 @@ fn receipts_are_checked_against_the_tests_cargo_would_run() {
     );
     tree.write(
         "src/lib.history.md",
-        "# History\n\n### Real\n\nReceipt: `tests::holds`\n",
+        "# History\n\n### Real\n\nEvidence: `tests::holds`\n",
     );
     assert_eq!(
-        passed(receipts(&tree.0)),
+        passed(evidence(&tree.0)),
         "1 entries across 1 history logs, each naming a test that exists"
     );
 
     tree.write(
         "src/lib.history.md",
-        "# History\n\n### Stale\n\nReceipt: `tests::gone`\n",
+        "# History\n\n### Stale\n\nEvidence: `tests::gone`\n",
     );
-    let problems = found(receipts(&tree.0));
+    let problems = found(evidence(&tree.0));
     assert!(
         problems[0].contains("`tests::gone`, which no test reports"),
         "{problems:?}"
     );
 
     tree.write("src/lib.rs", "this does not compile\n");
-    assert!(matches!(receipts(&tree.0), Outcome::CouldNotRun(ref why) if why.contains("--list")));
+    assert!(matches!(evidence(&tree.0), Outcome::CouldNotRun(ref why) if why.contains("--list")));
 }
 
 #[test]

@@ -6,7 +6,7 @@
 <What was observed, and what the change established. Not what changed; the
 diff has that.>
 
-Receipt: `<path>::<symbol>`
+Evidence: `<path>::<symbol>`
 -->
 
 ### Hand-maintained step tables drifted from check definitions
@@ -17,7 +17,7 @@ allowing steps to be registered without running or step counts to drift from
 reality. Established: checks register themselves at definition via `@check`
 (solorepo's DR-150) and reports reflect the live registry.
 
-Receipt: `.meta/checks/files/history.py::meta_history_receipts`
+Evidence: `.meta/checks/files/history.py::meta_history_evidence`
 
 ### Template seed instructions drifted from root agent conventions
 
@@ -27,4 +27,4 @@ the ban on harness memory files), `template/AGENTS.md` and `template/.meta/READM
 lagged behind. Established: `template conventions agree` verifies that root and
 template files both declare the core operational conventions (solorepo's DR-183).
 
-Receipt: `.meta/checks/files/templates.py::template_conventions_agree`
+Evidence: `.meta/checks/files/templates.py::template_conventions_agree`

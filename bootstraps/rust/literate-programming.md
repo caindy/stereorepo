@@ -39,8 +39,9 @@ The crate itself is documented the same way: `src/lib.rs` includes the crate's
 ## The log
 
 Nothing Unconsumed says what an entry is: what failed and what the change
-established, and its receipt — the test that would fail if the change were
-undone. In Rust a receipt is a test path as `cargo test -- --list` prints it.
+established, and its Evidence — the test that would fail if the change were
+undone. In Rust the Evidence is a test path as `cargo test -- --list` prints
+it.
 
 ```markdown
 ### Tidal windows were computed in local time
@@ -49,7 +50,7 @@ Crossing a DST boundary produced a window an hour wide on two days a year, and
 the error was invisible because both endpoints were plausible. Established:
 every tidal computation is in UTC, and local time exists only at the edge.
 
-Receipt: `passage::tests::window_survives_dst_boundary`
+Evidence: `passage::tests::window_survives_dst_boundary`
 ```
 
 ## Gates
@@ -67,7 +68,7 @@ checked:
 - **`orphans`** — every markdown file under a package is included by a source
   file in it. A missing include already fails the build; this holds the other
   direction. *Nothing Unconsumed.*
-- **`receipts`** — every history entry names a test, and the test is one
+- **`evidence`** — every history entry names a test, and the test is one
   `cargo test -- --list` reports. The form of an entry can sit in the log as an
   HTML comment without counting as one, which is how the seed's log says what
   an entry looks like before it has any.
@@ -89,7 +90,7 @@ The test for any docstring is the **reader's test**:
 If an item's docstring must explain *why* an invariant exists or why an
 alternative was rejected, that rationale belongs in the module overview/rationale
 or a Decision Record, cited by number. If it narrates what failed in a past run
-or incident, that narrative belongs in `<module>.history.md` with a receipt.
+or incident, that narrative belongs in `<module>.history.md` with Evidence.
 
 The Technical Writer review pass (DR-176) holds prose, docstrings, and durable
 artifacts to this register during review, allowing implementation passes to

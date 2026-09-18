@@ -19,7 +19,7 @@ sent to, however carefully it was written. This is weaker than the Rust
 check, where the consumer is rustdoc and a file it does not include is not
 rendered; the page says so rather than claiming otherwise.
 
-**`uv run gate receipts`** — every history entry names a test, and the test is
+**`uv run gate evidence`** — every history entry names a test, and the test is
 one `pytest --collect-only` reports. The entry is consumed by a reader; what
 it is checked against is the test suite. An entry whose test is gone is the
 Discipline's "delete what nothing consumes", made mechanical.

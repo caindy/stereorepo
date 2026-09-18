@@ -129,7 +129,7 @@ Four facts about GitHub settle that table.
   as the same concurrency group" (Workflow syntax reference).
 - **A reply on a [[review-thread]] is a submitted review too**, carrying the
   state `commented` and no verdict, which is why the state is in the key at all.
-  Receipt: the ten answers posted to the pull request at solorepo's #467 on 2026-09-17 produced
+  Evidence: the ten answers posted to the pull request at solorepo's #467 on 2026-09-17 produced
   ten `pull_request_review` deliveries between 14:28:02Z and 14:28:33Z (runs
   `35233746673` through `35233808445`), each creating a coder run whose job
   declined and none cancelling a verdict. Keyed by number alone, each of those

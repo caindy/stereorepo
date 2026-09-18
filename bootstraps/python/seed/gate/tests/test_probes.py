@@ -14,9 +14,9 @@ from gate import (
     Passed,
     Step,
     doc,
+    evidence_against,
     lints,
     orphans,
-    receipts_against,
     rendered,
     run,
     select,
@@ -93,10 +93,10 @@ def test_a_history_entry_names_a_test_that_exists(tree: Tree) -> None:
     listed = ["tests/test_probe.py::test_it"]
     tree.write(
         "packages/probe/src/probe/probe.history.md",
-        "# History\n\n<!--\n### The form\n\nReceipt: `nothing`\n-->\n",
+        "# History\n\n<!--\n### The form\n\nEvidence: `nothing`\n-->\n",
     )
     assert (
-        passed(receipts_against(tree.root, listed))
+        passed(evidence_against(tree.root, listed))
         == "0 entries across 1 history logs, each naming a test that exists"
     )
 
@@ -104,23 +104,23 @@ def test_a_history_entry_names_a_test_that_exists(tree: Tree) -> None:
         "packages/probe/src/probe/probe.history.md",
         "### It broke\n\nEstablished: nothing.\n",
     )
-    problems = found(receipts_against(tree.root, listed))
+    problems = found(evidence_against(tree.root, listed))
     assert problems == (
-        "packages/probe/src/probe/probe.history.md: 'It broke' names no receipt",
+        "packages/probe/src/probe/probe.history.md: 'It broke' names no evidence",
     )
 
     tree.write(
         "packages/probe/src/probe/probe.history.md",
-        "### It broke\n\nReceipt: `tests/test_probe.py::test_gone`\n",
+        "### It broke\n\nEvidence: `tests/test_probe.py::test_gone`\n",
     )
-    problems = found(receipts_against(tree.root, listed))
+    problems = found(evidence_against(tree.root, listed))
     assert "test_gone" in problems[0]
 
     tree.write(
         "packages/probe/src/probe/probe.history.md",
-        "### It broke\n\nReceipt: `tests/test_probe.py::test_it`\n",
+        "### It broke\n\nEvidence: `tests/test_probe.py::test_it`\n",
     )
-    assert passed(receipts_against(tree.root, listed)).startswith("1 entries")
+    assert passed(evidence_against(tree.root, listed)).startswith("1 entries")
 
 
 def test_a_rule_switched_off_in_configuration_is_refused(tree: Tree) -> None:
@@ -224,6 +224,6 @@ def test_only_a_finding_fails(tree: Tree, capsys: pytest.CaptureFixture[str]) ->
 
 def test_a_word_selects_one_step_at_most() -> None:
     assert len(select("gate")) > 1
-    assert [label for label, _ in select("receipts")] == ["receipts"]
+    assert [label for label, _ in select("evidence")] == ["evidence"]
     assert select("everything") == []
     assert rendered(Passed("s"), "l") == "ok l — s\n"

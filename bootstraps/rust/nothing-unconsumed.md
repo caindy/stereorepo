@@ -16,7 +16,7 @@ resolves it. The consumer is rustdoc; what it is checked against is the source
 tree, because a file the source does not include is one rustdoc will not
 render, however carefully it was written.
 
-**`cargo xtask receipts`** — every history entry names a test, and the test is
+**`cargo xtask evidence`** — every history entry names a test, and the test is
 one `cargo test -- --list` reports. The entry is consumed by a reader; what it
 is checked against is the test suite. An entry whose test is gone is the
 Discipline's "delete what nothing consumes", made mechanical.

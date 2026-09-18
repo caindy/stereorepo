@@ -11,7 +11,7 @@ satisfied in Python and which step of the gate holds it there.
 | Literate Programming | [`literate-programming.md`](literate-programming.md) | `doc`, `test`, `orphans` |
 | Ratchet | [`ratchet.md`](ratchet.md) | `lints`, `ruff`, `types` |
 | Observed Failure | [`observed-failure.md`](observed-failure.md) | `mutants`, and the gate's own probes |
-| Nothing Unconsumed | [`nothing-unconsumed.md`](nothing-unconsumed.md) | `orphans`, `receipts` |
+| Nothing Unconsumed | [`nothing-unconsumed.md`](nothing-unconsumed.md) | `orphans`, `evidence` |
 | Seeded Artifacts | [`seeded-artifacts.md`](seeded-artifacts.md) | [`render`](render), and the `python seed` job in the workflow |
 | Written Decisions | [`written-decisions.md`](written-decisions.md) | nothing here — the portfolio's gate, and it says why |
 

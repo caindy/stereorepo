@@ -39,8 +39,9 @@ index renders first, and its example runs under `pytest`.
 ## The log
 
 Nothing Unconsumed says what an entry is: what failed and what the change
-established, and its receipt — the test that would fail if the change were
-undone. In Python a receipt is a test id as pytest names it from the package.
+established, and its Evidence — the test that would fail if the change were
+undone. In Python the Evidence is a test id as pytest names it from the
+package.
 
 ```markdown
 ### Tidal windows were computed in local time
@@ -49,7 +50,7 @@ Crossing a DST boundary produced a window an hour wide on two days a year, and
 the error was invisible because both endpoints were plausible. Established:
 every tidal computation is in UTC, and local time exists only at the edge.
 
-Receipt: `tests/test_passage.py::test_window_survives_dst_boundary`
+Evidence: `tests/test_passage.py::test_window_survives_dst_boundary`
 ```
 
 ## Gates
@@ -66,7 +67,7 @@ Each is a step of `uv run gate`, and each can fail and says what it checked:
   README is the package's documentation.
 - **`orphans`** — every markdown file under a package is named by a source
   file or the manifest in it. *Nothing Unconsumed.*
-- **`receipts`** — every history entry names a test, and the test is one
+- **`evidence`** — every history entry names a test, and the test is one
   `pytest --collect-only` reports. The form of an entry can sit in the log as
   an HTML comment without counting as one, which is how the seed's log says
   what an entry looks like before it has any.
@@ -88,7 +89,7 @@ The test for any docstring is the **reader's test**:
 If a docstring must explain *why* an invariant exists or why an alternative was
 rejected, that rationale belongs in the module docstring or a Decision Record,
 cited by number. If it narrates what failed in a past run or incident, that
-narrative belongs in `<module>.history.md` with a receipt.
+narrative belongs in `<module>.history.md` with Evidence.
 
 The Technical Writer review pass (DR-176) holds prose, docstrings, and durable
 artifacts to this register during review, allowing implementation passes to

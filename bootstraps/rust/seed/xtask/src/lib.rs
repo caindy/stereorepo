@@ -66,7 +66,7 @@ pub const STEPS: &[Step] = &[
     ("doc", doc),
     ("test", test),
     ("orphans", orphans),
-    ("receipts", receipts),
+    ("evidence", evidence),
     ("mutants", mutants),
 ];
 
@@ -256,21 +256,21 @@ pub fn orphans(root: &Path) -> Outcome {
 
 /// Every entry in a history log names a test that exists.
 ///
-/// An entry's receipt is the test that would fail if the change were undone.
+/// An entry's evidence is the test that would fail if the change were undone.
 /// That makes relevance mechanical: if the test is gone, the entry is stale.
 /// The tests are read from `cargo test -- --list`, so what is checked is what
 /// would actually run.
 #[must_use]
-pub fn receipts(root: &Path) -> Outcome {
+pub fn evidence(root: &Path) -> Outcome {
     match listed_tests(root) {
-        Ok(tests) => receipts_against(root, &tests),
+        Ok(tests) => evidence_against(root, &tests),
         Err(why) => Outcome::CouldNotRun(why),
     }
 }
 
-/// [`receipts`], given the tests. Separated so a probe can hand it a list.
+/// [`evidence`], given the tests. Separated so a probe can hand it a list.
 #[must_use]
-pub fn receipts_against(root: &Path, tests: &[String]) -> Outcome {
+pub fn evidence_against(root: &Path, tests: &[String]) -> Outcome {
     let mut problems = Vec::new();
     let mut logs = 0;
     let mut entries = 0;
@@ -284,11 +284,11 @@ pub fn receipts_against(root: &Path, tests: &[String]) -> Outcome {
             for entry in entries_of(&text) {
                 entries += 1;
                 let name = relative(root, &log);
-                match entry.receipt {
-                    None => problems.push(format!("{name}: '{}' names no receipt", entry.title)),
-                    Some(receipt) if !tests.iter().any(|test| test == &receipt) => {
+                match entry.evidence {
+                    None => problems.push(format!("{name}: '{}' names no evidence", entry.title)),
+                    Some(evidence) if !tests.iter().any(|test| test == &evidence) => {
                         problems.push(format!(
-                            "{name}: '{}' names `{receipt}`, which no test reports",
+                            "{name}: '{}' names `{evidence}`, which no test reports",
                             entry.title
                         ));
                     }
@@ -384,14 +384,14 @@ fn allowed_in_manifest(text: &str) -> Vec<(usize, String)> {
     found
 }
 
-/// One entry of a history log: its heading, and the receipt it names.
+/// One entry of a history log: its heading, and the evidence it names.
 struct Entry {
     title: String,
-    receipt: Option<String>,
+    evidence: Option<String>,
 }
 
 /// The entries of a history log. An entry starts at a `###` heading; its
-/// receipt is a line starting `Receipt:` naming a test in backticks. HTML
+/// evidence is a line starting `Evidence:` naming a test in backticks. HTML
 /// comments are not entries, which is how a log can carry the form of one.
 fn entries_of(text: &str) -> Vec<Entry> {
     let mut entries: Vec<Entry> = Vec::new();
@@ -399,12 +399,12 @@ fn entries_of(text: &str) -> Vec<Entry> {
         if let Some(title) = line.strip_prefix("### ") {
             entries.push(Entry {
                 title: title.trim().to_owned(),
-                receipt: None,
+                evidence: None,
             });
-        } else if let Some(rest) = line.trim().strip_prefix("Receipt:")
+        } else if let Some(rest) = line.trim().strip_prefix("Evidence:")
             && let Some(entry) = entries.last_mut()
         {
-            entry.receipt = rest.split('`').nth(1).map(str::to_owned);
+            entry.evidence = rest.split('`').nth(1).map(str::to_owned);
         }
     }
     entries

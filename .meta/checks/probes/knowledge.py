@@ -2,7 +2,7 @@
 
 The knowledge Knowledge Management governs is one subject in three containers,
 and each of these probes is over one of them: a history log parsed for its
-entries and their receipts (solorepo's DR-171), a withdrawn Decision of the
+entries and the Evidence they name (solorepo's DR-171), a withdrawn Decision of the
 record asked for the reason its `WITHDRAWN` status owes under
 `.meta/work/decisions.yaml`, and a wiki page held to closed-world wikilinks, a
 MOS:LEAD lead and vocabulary parity (solorepo's DR-185, solorepo's DR-190) —
@@ -32,22 +32,22 @@ WikiCase = collections.namedtuple("WikiCase", "name reads pages says")
 
 @check("history probes", pre=True)
 def history_probes():
-    """`files.history_entries_of` reads a history log's entries and receipts as `meta history receipts` needs them (solorepo's DR-171).
+    """`files.history_entries_of` reads a history log's entries and the Evidence they name as `meta history evidence` needs them (solorepo's DR-171).
 
     Two logs, each a string. The first holds a live entry and, inside an HTML
-    comment, a second whose receipt names nothing: the comment is stripped
+    comment, a second whose Evidence names nothing: the comment is stripped
     before parsing, so one entry comes back, it is the live one, and its
-    receipt is what stood between the backticks. The second holds an entry
-    with no `Receipt:` line, which parses to a `None` receipt, as an entry
-    whose receipt line has no backticks does.
+    Evidence is what stood between the backticks. The second holds an entry
+    with no `Evidence:` line, which parses to `None`, as an entry
+    whose `Evidence:` line has no backticks does.
     """
     problems = []
     commented = (
         "### Live Entry\n\n"
-        "Receipt: `.meta/check.py::main`\n\n"
+        "Evidence: `.meta/check.py::main`\n\n"
         "<!--\n"
         "### Commented Entry\n\n"
-        "Receipt: `.meta/checks/probes/knowledge.py::no_such_probe`\n"
+        "Evidence: `.meta/checks/probes/knowledge.py::no_such_probe`\n"
         "-->"
     )
     entries = files.history_entries_of(commented)
@@ -55,9 +55,9 @@ def history_probes():
         problems.append(f"history probes: an entry inside an HTML comment: expected 1 entry, got {len(entries)}")
     elif entries[0] != ("Live Entry", ".meta/check.py::main"):
         problems.append(f"history probes: an entry inside an HTML comment: unexpected entry {entries[0]}")
-    no_receipt = files.history_entries_of("### Broken Entry\n\nNo receipt line here\n")
-    if len(no_receipt) != 1 or no_receipt[0][1] is not None:
-        problems.append(f"history probes: an entry with no receipt line: expected None receipt, got {no_receipt}")
+    no_evidence = files.history_entries_of("### Broken Entry\n\nNo Evidence line here\n")
+    if len(no_evidence) != 1 or no_evidence[0][1] is not None:
+        problems.append(f"history probes: an entry with no Evidence line: expected None, got {no_evidence}")
     return problems
 
 

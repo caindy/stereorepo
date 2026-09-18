@@ -17,4 +17,4 @@ Established: `refuse_if_head_moved()` compares the
 head in `SOLOREPO_REVIEW_HEAD` against the head GitHub reports, and `review()`
 posts nothing where they differ.
 
-Receipt: `.meta/checks/probes/channel/verdict.py::verdict_probes`
+Evidence: `.meta/checks/probes/channel/verdict.py::verdict_probes`

@@ -8,7 +8,7 @@ events on challenges (solorepo's DR-116, solorepo's #113). Established: `triage(
 and `file_issue()` enforce that `challenge` and difficulty labels are applied
 in a single transactional operation, disallowing bare difficulty assignment.
 
-Receipt: `.meta/say/move::triage`
+Evidence: `.meta/say/move::triage`
 
 ### Human session and autonomous loop colliding on claimed challenges
 
@@ -18,7 +18,7 @@ resulted in duplicate runs and concurrent conflicting review answers
 refuses claims by interactive sessions on `easy` or `medium` issues, preserving
 loop boundaries.
 
-Receipt: `.meta/checks/probes/channel/claim.py::claim_probes`
+Evidence: `.meta/checks/probes/channel/claim.py::claim_probes`
 
 ### Unclaimed challenges remaining assigned to inactive sessions
 
@@ -27,7 +27,7 @@ issues, blocking other actors or loops from claiming them (solorepo's #117).
 Established: `unclaim()` and `stop()` synchronize GitHub issue assignees and
 state transitions atomically before posting hand-back commentary.
 
-Receipt: `.meta/checks/probes/loops/stop.py::stop_probes`
+Evidence: `.meta/checks/probes/loops/stop.py::stop_probes`
 
 ### Auto-merge arming on out-of-date branch heads
 
@@ -37,7 +37,7 @@ solorepo's #93, solorepo's #98, solorepo's #201). Established: `advance()` and
 `merge()` verify that pull requests are synchronized with trunk, disarm stale
 auto-merge states during updates, and re-arm only once clean.
 
-Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Pull request squashing using arbitrary commit messages
 
@@ -46,7 +46,7 @@ than PR titles, leading to discrepancies between the git log and repository
 issue index (solorepo's #26, solorepo's #27). Established: `merge()` explicitly
 derives the squash commit title and subject from the validated PR title.
 
-Receipt: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
 
 ### Review requests submitted for conflicting branches
 
@@ -56,7 +56,7 @@ failures (solorepo's #102, solorepo's #192). Established: `request_review()`
 checks that the branch is clean, conflict-free, and up to date before requesting
 reviewer assignment.
 
-Receipt: `.meta/say/move::request_review`
+Evidence: `.meta/say/move::request_review`
 
 ### Review request events suppressed for already-requested reviewer
 
@@ -65,7 +65,7 @@ on a pull request, leaving subsequent review requests silently ignored when a pr
 turn answered nothing (solorepo's #87). Established: `request_review()` withdraws any
 existing review request before requesting it again to trigger notification events.
 
-Receipt: `.meta/say/move::request_review`
+Evidence: `.meta/say/move::request_review`
 
 ### Asynchronous rebase settlement and arming verification
 
@@ -75,7 +75,7 @@ and fail (solorepo's DR-158, solorepo's #253). Established: `advance()` polls un
 the head commit moves and verifies whether auto-merge survived the update, re-arming
 it if dropped.
 
-Receipt: `.meta/say/move::advance`
+Evidence: `.meta/say/move::advance`
 
 ### Detached HEAD branch detection in decision minting
 
@@ -83,7 +83,7 @@ Using `git rev-parse --abbrev-ref HEAD` printed `HEAD` on detached checkouts, wr
 unresolvable tag messages during decision reservation (solorepo's #152). Established:
 `branch_here()` uses `git symbolic-ref -q` and falls back cleanly to 'an unnamed branch'.
 
-Receipt: `.meta/say/move::branch_here`
+Evidence: `.meta/say/move::branch_here`
 
 ### Decision record number collision across concurrent branches
 
@@ -92,7 +92,7 @@ multiple concurrent pull requests to claim the same identifier, requiring manual
 renumbering (solorepo's DR-125, solorepo's DR-128). Established: `mint()` allocates
 numbers via atomic tag creation on GitHub with conflict retry loops.
 
-Receipt: `.meta/say/move::mint`
+Evidence: `.meta/say/move::mint`
 
 ### Workflow dispatch to nonexistent branch references
 
@@ -101,7 +101,7 @@ or were already deleted led to untracked workflow failures (solorepo's #95).
 Established: `dispatch()` verifies remote branch existence prior to triggering
 workflow runs.
 
-Receipt: `.meta/say/move::dispatch`
+Evidence: `.meta/say/move::dispatch`
 
 
 ### Re-arming read back as a lost arming when GitHub merged inside the window
@@ -116,7 +116,7 @@ an arming shown or a `MERGED` state, and a merge in the window is reported as a
 merge; the waiting itself is what solorepo's DR-158 requires of a read GitHub
 may answer stale.
 
-Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Rebase read back off the commit the sweep listed rather than the one it asked GitHub to rebase
 
@@ -134,7 +134,7 @@ its distance behind together, `advance` asks it again after the `mergeability`
 wait and immediately before the call (solorepo's #252), and the settle wait and
 the compare are anchored to that commit (solorepo's DR-158).
 
-Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Stall reported over a merge that had landed or a branch already current
 
@@ -147,7 +147,7 @@ the last thing the Job says. Established: `merge --auto` reads the pull request
 back after arming, reports a merge as a merge, and reports a stall only over a
 branch that is still behind its base.
 
-Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Review request stranded by a merge on trunk went undispatched
 
@@ -163,7 +163,7 @@ for a loop's branch that conflicts while a review is requested of it
 approved (solorepo's DR-167); it leaves the lower layer of a stack alone, and
 one refused dispatch is one pull request's problem.
 
-Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Sweep went red on every push for a Challenge the loop no longer held
 
@@ -175,7 +175,7 @@ Challenge before dispatching (solorepo's DR-142), leaves a closed one, one at a
 level no loop takes, and one it cannot read alone by name in a printed line, and
 exits 0 over them.
 
-Receipt: `.meta/checks/probes/loops/advance.py::advance_probes`
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
 
 ### Superseded check runs read as failing
 
@@ -188,7 +188,7 @@ latest run per name, ordered by `startedAt`, then `completedAt` unless it is
 GitHub's year-one placeholder, then `createdAt`, and `check_green` and
 `check_pr.green` read the deduplicated list.
 
-Receipt: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
 
 ### Approved pull request left stranded behind trunk with nothing to move it
 
@@ -221,7 +221,7 @@ refusal that paints `advance.yml` red on an ordinary push. `merge.yml` passes
 `--no-advance` there, and the stranded sweep keeps the events `advance.yml`
 does not see: the schedule, and the gate and review completions.
 
-Receipt: `.meta/checks/probes/loops/merge_manager_advance.py::merge_manager_advance_probes`
+Evidence: `.meta/checks/probes/loops/merge_manager_advance.py::merge_manager_advance_probes`
 
 ### Review answer pass on solorepo's #361 stayed dormant after solorepo's #311 was relabelled easy
 
@@ -238,7 +238,7 @@ conflicting or `review` for a verdict standing unanswered on an open pull
 request, refuses clean pull requests with no changes requested, or assigns
 the coder and triggers the loop on an unstarted Challenge.
 
-Receipt: `.meta/checks/probes/loops/delegate.py::delegate_probes`
+Evidence: `.meta/checks/probes/loops/delegate.py::delegate_probes`
 
 ### Third layer of a stack left open and unlinked
 
@@ -253,7 +253,7 @@ the stack still counts a merged layer. Established: `link` names the stack's
 number, read off the pull request below, when that pull request is a layer,
 and the pull request itself when it is not.
 
-Receipt: `.meta/checks/probes/channel/layer.py::layer_probes`
+Evidence: `.meta/checks/probes/channel/layer.py::layer_probes`
 
 ### A decision merged to the trunk while it was still proposed
 
@@ -269,4 +269,4 @@ Established: `evaluate_pr` reads the candidate's diff through
 entry's `status` line as `PROPOSED`, which is a diff carrying a decision
 rather than one correcting an adopted entry's prose.
 
-Receipt: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`

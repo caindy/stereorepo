@@ -9,7 +9,7 @@ Each account names the symbol by the module of `.meta/lib/signed_channel/` that 
 <What was observed, and what the change established. Not what changed; the
 diff has that.>
 
-Receipt: `<path>::<symbol>`
+Evidence: `<path>::<symbol>`
 -->
 
 ### One regex over one flat command line was wrong in both directions
@@ -26,7 +26,7 @@ shell's own separators, each segment is lexed with `shlex` and judged on its own
 by the program it runs, and a segment being sanctioned says nothing about its
 neighbours.
 
-Receipt: `.meta/checks/probes/git/step.py::hook_probes`
+Evidence: `.meta/checks/probes/git/step.py::hook_probes`
 
 ### A heredoc body was read as the commands its lines spell
 
@@ -38,4 +38,4 @@ the line is split and hands it to the segment that opened it as text that
 segment carries, so a body the channel is given is data and a body piped into
 `curl` is still that call's.
 
-Receipt: `.meta/checks/probes/git/step.py::hook_probes`
+Evidence: `.meta/checks/probes/git/step.py::hook_probes`

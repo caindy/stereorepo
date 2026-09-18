@@ -8,7 +8,7 @@ where reviewers have found holes (solorepo's #86, solorepo's #98). They are a
 package of their own because the gate over assertions should not take its
 imports from a test suite (solorepo's DR-150), and a package rather than one
 module because one module had become the grab-bag that decision's falsifier
-names: twenty-three suites over five subjects, and every receipt in every
+names: twenty-three suites over five subjects, and all the Evidence in every
 history log routed to the same file.
 
 Importing a module registers its steps, so the order of the imports below is

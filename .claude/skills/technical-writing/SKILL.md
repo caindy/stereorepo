@@ -50,7 +50,7 @@ Before typing prose for a change, execute this routing tree to select the contai
 1. **Task, recipe, or repeatable procedure:** `justfile` recipe or solorepo's `SPECIALIZE.md` (**How-To**).
 2. **Public function, class, schema, or API fact:** item docstring or LinkML schema (**Reference**, solorepo's DR-171, solorepo's DR-175).
 3. **Settled architectural choice between alternatives:** Decision Record in `.meta/assertions/decisions/DR-nnn.yaml` (**Explanation**).
-4. **Bug, incident, or regression history:** `<module>.history.md` with receipts (**Explanation**).
+4. **Bug, incident, or regression history:** `<module>.history.md` with Evidence (**Explanation**).
 5. **Enduring domain concept or subsystem overview:** `wiki/<context>/<concept>.md` via `just wikisplain` (**Explanation**, solorepo's DR-184, solorepo's DR-190).
 6. **Unrouted residue:** Pull request descriptions hold only transient reviewer handoff notes and links to surviving review threads or promoted Issues (solorepo's Article 15). Never summarize diffs.
 
@@ -81,7 +81,7 @@ A comment annotating a module-level constant is not a fifth exception. Say what 
 
 A comment worth deleting is rarely a comment worth losing. Before removing non-trivial commentary, send what it knows down the routing tree in **Pre-Writing Routing: Where to Write** above:
 
-- **Defect narrative, incident, or regression history:** `<module>.history.md`, each account carrying an executable receipt — the check or probe symbol under `.meta/checks/probes/` that fails if the defect returns (solorepo's DR-171, solorepo's DR-209).
+- **Defect narrative, incident, or regression history:** `<module>.history.md`, each account naming Evidence that can fail — the check or probe symbol under `.meta/checks/probes/` that fails if the defect returns (solorepo's DR-171, solorepo's DR-209).
 - **Architectural rationale, or an alternative weighed and rejected:** a Decision Record in `.meta/assertions/decisions/DR-nnn.yaml`, or an enduring concept page under `wiki/<context>/` (solorepo's DR-184, solorepo's DR-196).
 - **An operational instruction — how to run, rebuild, or verify something:** a `justfile` recipe, self-documented by its own comment (solorepo's DR-106).
 - **Nothing a reader needs:** delete it. Narration of self-evident steps and commented-out dead code have no destination, and git holds the corpse.

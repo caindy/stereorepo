@@ -30,10 +30,10 @@ The steps, in the order they run:
 | `doc` | every module and every public function, class and method has a docstring | Literate Programming |
 | `test` | `pytest`, doctests included | Literate Programming |
 | `orphans` | every markdown file under a package is named by a source file or manifest in it | Nothing Unconsumed |
-| `receipts` | every history entry names a test that pytest collects | Nothing Unconsumed |
+| `evidence` | every history entry names a test that pytest collects | Nothing Unconsumed |
 | `mutants` | `mutmut`, the signal behind the tests | Observed Failure |
 
-The pure steps — `lints`, `doc`, `orphans`, `receipts` — are functions over a
+The pure steps — `lints`, `doc`, `orphans`, `evidence` — are functions over a
 path, so `tests/test_probes.py` can watch each of them fail against a tree
 built to fail it. A guardrail never observed to fail is not evidence of
 anything.

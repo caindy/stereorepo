@@ -117,8 +117,8 @@ decisions:
         `.meta/checks/probes/` holds `__init__.py`, `harness.py`, `git.py`,
         `channel.py`, `loops.py`, `knowledge.py` and `tools.py`. Every
         `@check(..., pre=True)` label and function name is unchanged, so prose
-        that names a probe and every receipt that names one still resolve, once
-        the receipt's path is the module's.
+        that names a probe and all the Evidence that names one still resolve, once
+        the Evidence's path is the module's.
       - >-
         `harness.py` holds `load_module`, `load_hook`, `load_channel`,
         `stood_in`, `environment`, `outcome`, `run_verb`, and the
@@ -132,16 +132,16 @@ decisions:
         down about itself, the tools — and within a module in definition order. Prechecks still print
         before every other step, whatever module they came from.
       - >-
-        Every receipt under `.meta/` that named `.meta/checks/probes.py` now
+        Every `Evidence:` line under `.meta/` that named `.meta/checks/probes.py` now
         names the module that holds the probe: a module of `probes/git/` for
         the hooks, of `probes/channel/` for the channel's verbs and
         reservations, of `probes/loops/` for `advance`, `stop` and
-        `merge-manager`. The `meta history receipts` check resolves each.
+        `merge-manager`. The `meta history evidence` check resolves each.
       - >-
         `.meta/checks/probes.py` leaves `comments.baseline.yaml`. The new
         modules carry no body commentary: what the 186 comment blocks knew is
         in the docstring of the item that embodies it, in the case name the
-        failure message carries, or in a history-log entry with a receipt
+        failure message carries, or in a history-log entry naming Evidence
         (solorepo's DR-207).
       - >-
         `render.py` reads prechecks off `.meta/checks/**/*.py` rather than
@@ -153,7 +153,7 @@ decisions:
         `.meta/checks/probes/` rather than the file this change deletes. A path
         inside an adopted Decision is a pointer, not a finding, so it is
         repointed where the file it names moves, as this change repoints every
-        receipt; what DR-207 settled is untouched.
+        `Evidence:` line; what DR-207 settled is untouched.
       - >-
         `structure.yaml` declares the package's `__init__.py` under the
         Artifact id the old file had, and each module as an Artifact of its

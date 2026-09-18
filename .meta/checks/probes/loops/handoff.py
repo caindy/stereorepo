@@ -1,6 +1,6 @@
 """`request-review`, `--watch` and the `unheld` sweep over the shapes a webhook should have carried (solorepo's DR-178).
 
-One module for one probe, so a history log's receipt names the file holding it (solorepo's DR-209).
+One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 import datetime
 from typing import Any

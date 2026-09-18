@@ -569,8 +569,8 @@ jobs:
             solorepo's DR-207): ensure item docstrings are Diátaxis Reference
             contracts without reviewer litigation (solorepo's DR-175), hold source
             comments to the four permissible exceptions (pruning inline narration,
-            routing defect narratives to companion <module>.history.md logs with probe
-            receipts under solorepo's DR-171, and mechanizing informal constraints
+            routing defect narratives to companion <module>.history.md logs naming probe
+            Evidence under solorepo's DR-171, and mechanizing informal constraints
             before pruning), audit lint and type suppressions as defects, and
             dereference all citations.
 
@@ -735,8 +735,8 @@ jobs:
             solorepo's DR-207): ensure item docstrings are Diátaxis Reference
             contracts without reviewer litigation (solorepo's DR-175), hold source
             comments to the four permissible exceptions (pruning inline narration,
-            routing defect narratives to companion <module>.history.md logs with probe
-            receipts under solorepo's DR-171, and mechanizing informal constraints
+            routing defect narratives to companion <module>.history.md logs naming probe
+            Evidence under solorepo's DR-171, and mechanizing informal constraints
             before pruning), audit lint and type suppressions as defects, and
             dereference all citations.
 

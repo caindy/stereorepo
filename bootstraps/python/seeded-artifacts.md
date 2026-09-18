@@ -20,7 +20,7 @@ is what proves it still matches.
 
 ## Where the seed cannot yet satisfy a rule, it says why, in the seed
 
-- `example.history.md` has no entry, and says so: the receipt rule binds
+- `example.history.md` has no entry, and says so: the Evidence rule binds
   entries, and the form of one sits in the log as a comment the check ignores.
 - The module docstring cites no Decision, and says what a citation there
   looks like.

@@ -103,8 +103,8 @@ decisions:
         `@check` step each, and its `__init__` imports them in the order the
         module listed them.
       - >-
-        The receipts in `.meta/check_pr.history.md` and
-        `.meta/say/move.history.md` name the module holding each probe.
+        The Evidence named in `.meta/check_pr.history.md` and
+        `.meta/say/move.history.md` names the module holding each probe.
       - >-
         The type ratchet holds one number per probe module in place of the
         module's (solorepo's DR-210).
@@ -113,7 +113,7 @@ decisions:
         splits the same way; a script splits as DR-217 says.
     falsifier: >-
       A probe under `.meta/checks/probes/loops/` that `python .meta/check.py`
-      does not run; or a receipt in a history log naming
+      does not run; or Evidence in a history log naming
       `.meta/checks/probes/loops.py`, which no longer exists.
     rationale: |-
       Two conventions rather than one, because the constraint that shaped

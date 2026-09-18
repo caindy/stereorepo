@@ -35,7 +35,7 @@ decisions:
     consequences:
       - >-
         `Article.origin` is removed and `Article.example` is required. A1 through
-        A11 lose eleven receipts adopted from `python_bootstrap`; DR-043 records
+        A11 lose eleven provenance records adopted from `python_bootstrap`; DR-043 records
         that adoption and those failures are that project's evidence, restated
         here.
       - >-

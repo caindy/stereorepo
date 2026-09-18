@@ -6,7 +6,7 @@
 <What was observed, and what the change established. Not what changed; the
 diff has that.>
 
-Receipt: `<path>::<symbol>`
+Evidence: `<path>::<symbol>`
 -->
 
 ### Asking the remote first hid deletion advice on clones without origin
@@ -18,7 +18,7 @@ actionable guidance explaining how to handle missing entries was withheld
 where it was most needed. Established: commit history is checked first for
 local deletions before falling back to remote tag reservations.
 
-Receipt: `.meta/checks/probes/channel/reservation.py::reservation_probes`
+Evidence: `.meta/checks/probes/channel/reservation.py::reservation_probes`
 
 ### Unreadable remote tags advised taking reserved decision numbers
 
@@ -28,7 +28,7 @@ sessions to inadvertently claim numbers already reserved by active branches.
 Established: an unreadable remote is explicitly reported as an unknown
 state rather than an unreserved hole.
 
-Receipt: `.meta/checks/probes/channel/reservation.py::reservation_probes`
+Evidence: `.meta/checks/probes/channel/reservation.py::reservation_probes`
 
 ### Reservation pattern anchored at line start matched no advertised tag
 
@@ -44,4 +44,4 @@ dereference, because a branch is worth probing where its input comes from
 somewhere else. The pattern, the fixture and the assertion landed together on
 solorepo's #152, and the start-anchored version never reached `main`.
 
-Receipt: `.meta/checks/probes/channel/reservation.py::reservation_probes`
+Evidence: `.meta/checks/probes/channel/reservation.py::reservation_probes`

@@ -420,10 +420,10 @@ def orphans(root: Path) -> Outcome:
     )
 
 
-def receipts(root: Path) -> Outcome:
+def evidence(root: Path) -> Outcome:
     """Every entry in a history log names a test that exists.
 
-    An entry's receipt is the test that would fail if the change were undone,
+    An entry's evidence is the test that would fail if the change were undone,
     as pytest names it from the package: `tests/test_x.py::test_y`. That makes
     relevance mechanical: if the test is gone, the entry is stale. The tests
     are read from `pytest --collect-only`, so what is checked is what would
@@ -443,7 +443,7 @@ def receipts(root: Path) -> Outcome:
                 f"pytest --collect-only in {package.name} exited with {out.returncode}"
             )
         tests += [line.strip() for line in out.stdout.splitlines() if "::" in line]
-    return receipts_against(root, tests)
+    return evidence_against(root, tests)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -451,11 +451,11 @@ class Entry:
     """One history entry: its heading, and the test it names, if any."""
 
     title: str
-    receipt: str | None
+    evidence: str | None
 
 
-def receipts_against(root: Path, tests: list[str]) -> Outcome:
-    """:func:`receipts`, given the tests. Separated so a probe can hand it a list."""
+def evidence_against(root: Path, tests: list[str]) -> Outcome:
+    """:func:`evidence`, given the tests. Separated so a probe can hand it a list."""
     problems: list[str] = []
     logs = 0
     entries = 0
@@ -465,11 +465,11 @@ def receipts_against(root: Path, tests: list[str]) -> Outcome:
             name = relative(root, log)
             for entry in entries_of(log.read_text(encoding="utf-8")):
                 entries += 1
-                if entry.receipt is None:
-                    problems.append(f"{name}: '{entry.title}' names no receipt")
-                elif entry.receipt not in tests:
+                if entry.evidence is None:
+                    problems.append(f"{name}: '{entry.title}' names no evidence")
+                elif entry.evidence not in tests:
                     problems.append(
-                        f"{name}: '{entry.title}' names `{entry.receipt}`, "
+                        f"{name}: '{entry.title}' names `{entry.evidence}`, "
                         "which no test reports"
                     )
     if problems:
@@ -481,17 +481,18 @@ def receipts_against(root: Path, tests: list[str]) -> Outcome:
 
 def entries_of(text: str) -> list[Entry]:
     """The entries of a history log. An entry starts at a `###` heading; its
-    receipt is a line starting `Receipt:` naming a test in backticks. HTML
+    evidence is a line starting `Evidence:` naming a test in backticks. HTML
     comments are not entries, which is how a log can carry the form of one.
 
-    >>> entries_of("### Broke\\n\\nReceipt: `tests/test_x.py::test_y`\\n<!-- ### F -->")
-    [Entry(title='Broke', receipt='tests/test_x.py::test_y')]
+    >>> log = "### Broke\\n\\nEvidence: `tests/test_x.py::test_y`\\n<!-- ### F -->"
+    >>> entries_of(log)
+    [Entry(title='Broke', evidence='tests/test_x.py::test_y')]
     """
     entries: list[Entry] = []
     for line in without_comments(text).splitlines():
         if line.startswith("### "):
             entries.append(Entry(line[4:].strip(), None))
-        elif line.strip().startswith("Receipt:") and entries:
+        elif line.strip().startswith("Evidence:") and entries:
             parts = line.split("`")
             entries[-1] = Entry(entries[-1].title, parts[1] if len(parts) > 1 else None)
     return entries
@@ -519,7 +520,7 @@ STEPS: tuple[Step, ...] = (
     ("doc", doc),
     ("test", test),
     ("orphans", orphans),
-    ("receipts", receipts),
+    ("evidence", evidence),
     ("mutants", mutants),
 )
 

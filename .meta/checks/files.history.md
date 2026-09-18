@@ -8,7 +8,7 @@ blocks in composite actions and workflow jobs (solorepo's DR-053, solorepo's DR-
 Established: `duplicate_keys` checks all YAML and YML files under `.meta/` and
 solorepo's `template/` using `Strict`, reporting any repeated mapping keys.
 
-Receipt: `.meta/checks/files/templates.py::duplicate_keys`
+Evidence: `.meta/checks/files/templates.py::duplicate_keys`
 
 ### Broken relative Markdown links in documentation
 
@@ -18,7 +18,7 @@ manual inspection (solorepo's DR-036, solorepo's #45). Established: `markdown_li
 verifies that every relative link in non-template Markdown files resolves to a
 tracked path or directory in the tree.
 
-Receipt: `.meta/checks/files/markdown.py::markdown_links`
+Evidence: `.meta/checks/files/markdown.py::markdown_links`
 
 ### Scaffold-only directory names in inherited portfolio files
 
@@ -29,7 +29,7 @@ in portfolio documentation and workflows (solorepo's DR-036, solorepo's #45, sol
 Established: `scaffold_only_paths` scans inherited documentation and workflows to ensure
 no unqualified references to scaffold-only paths survive Specialization.
 
-Receipt: `.meta/checks/files/workflows.py::scaffold_only_paths`
+Evidence: `.meta/checks/files/workflows.py::scaffold_only_paths`
 
 ### Shared job drift between root and template gate workflows
 
@@ -40,7 +40,7 @@ job steps, leaving newly cloned portfolios running outdated workflow logic
 Established: `gate_workflows_agree` enforces structural and semantic equality
 across shared triggers, permissions, and jobs (`pull-request`, `sweep`).
 
-Receipt: `.meta/checks/files/workflows.py::gate_workflows_agree`
+Evidence: `.meta/checks/files/workflows.py::gate_workflows_agree`
 
 ### Operational convention divergence between root and template instructions
 
@@ -50,7 +50,7 @@ and solorepo's `template/.meta/README.md`, causing clones to start with divergen
 (solorepo's DR-183, solorepo's #11). Established: `template_conventions_agree` verifies
 that key operational conventions are mirrored in template seed files.
 
-Receipt: `.meta/checks/files/templates.py::template_conventions_agree`
+Evidence: `.meta/checks/files/templates.py::template_conventions_agree`
 
 ### Type checking blind to the extension-less programs under `.meta/`
 
@@ -66,4 +66,4 @@ names the suffix-less programs on the command line under
 `--scripts-are-modules`, which keeps mypy from calling every script `__main__`
 and aborting on the duplicate, and the baseline gained an entry for each.
 
-Receipt: `.meta/checks/files/sources.py::is_py`
+Evidence: `.meta/checks/files/sources.py::is_py`

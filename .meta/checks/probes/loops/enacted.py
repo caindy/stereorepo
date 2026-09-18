@@ -1,6 +1,6 @@
 """`--handoff`'s reading of an adopted decision against the Artifacts it names (solorepo's DR-204).
 
-One module for one probe, so a history log's receipt names the file holding it (solorepo's DR-209).
+One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 import sys
 from typing import Any

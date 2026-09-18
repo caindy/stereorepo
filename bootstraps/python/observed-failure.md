@@ -5,12 +5,12 @@ one for the tests and one for the gate.
 
 ## The gate's own steps are watched failing
 
-The pure steps of the gate — `lints`, `doc`, `orphans`, `receipts` — are
+The pure steps of the gate — `lints`, `doc`, `orphans`, `evidence` — are
 functions over a path, and
 [`seed/gate/tests/test_probes.py`](seed/gate/tests/test_probes.py) builds a
 throwaway workspace under pytest's temporary directory for each, breaks it the
 way the step exists to catch, sees the finding, and puts it right. The steps
-that wrap a tool are watched through what they wrap: `receipts` hands its
+that wrap a tool are watched through what they wrap: `evidence` hands its
 pure half the tests pytest collected, and the runner is exercised against
 steps that could not run, passed and found.
 

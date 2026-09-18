@@ -6,7 +6,11 @@
 # one.
 #
 # Distilled in python_bootstrap, where each came from a failure in a working
-# codebase. `origin` is the receipt.
+# codebase. No Article carries that failure: solorepo's DR-087 removed the slot
+# that held it and made `example` required, and solorepo's DR-043 is where the
+# adoption and the failures behind it are recorded. What an Article's provenance
+# is, then, is a citation — and a citation is not the Evidence a history entry
+# names, the two having shared one word until solorepo's DR-228 retired it.
 
 # Numbers that were issued and are not Articles. Never reused: a citation that
 # silently comes to mean something else is worse than a dangling one. The account

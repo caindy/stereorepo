@@ -39,7 +39,7 @@ decisions:
       - >-
         Where the seed cannot yet satisfy a rule it seeds, it says why in the
         seed: the history log has no entry and carries the form of one as a
-        comment the receipt check ignores.
+        comment the Evidence check ignores.
     falsifier: >-
       A rendered crate whose gate passes while a spelling of `seed` survived
       that `render` did not know about. That would mean the pattern is not the

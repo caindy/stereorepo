@@ -11,7 +11,7 @@ are gone by the time anyone could look; so GitHub is answered from a dict or
 from a list of polls, and each state is a case rather than an argument about a
 code path nothing ran.
 
-One module for one subject, so that a history log's receipt names the file
+One module for one subject, so that a history log's Evidence names the file
 holding the probe it cites (solorepo's DR-209). The fakes and the loaders are
 the harness's, and the gate over assertions takes no import from a test suite
 (solorepo's DR-150).

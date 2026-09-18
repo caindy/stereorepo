@@ -6,7 +6,7 @@
 <What was observed, and what the change established. Not what changed; the
 diff has that.>
 
-Receipt: `<path>::<symbol>`
+Evidence: `<path>::<symbol>`
 -->
 
 ### Required contexts drifted from workflow job names
@@ -17,7 +17,7 @@ produced, blocking merges without explanation. Established: required status
 checks are read directly from branch rulesets and verified against workflow
 job definitions.
 
-Receipt: `.meta/lib/check_pr/verdict.py::required_contexts`
+Evidence: `.meta/lib/check_pr/verdict.py::required_contexts`
 
 ### Unpushed commit detection failing silently on missing upstream
 
@@ -26,7 +26,7 @@ configuration failed non-zero with empty stdout, causing unpushed checks to pass
 silently. Established: `unpushed()` verifies exit codes and explicit status so
 unpushed branches fail as actionable findings.
 
-Receipt: `.meta/lib/check_pr/branch.py::unpushed`
+Evidence: `.meta/lib/check_pr/branch.py::unpushed`
 
 ### Merge base diff swallows exit codes on unresolvable base references
 
@@ -35,7 +35,7 @@ returned empty outputs, causing handoff checks to treat unparsed branches as cle
 Established: `touched()` returns `None` on non-zero exit codes to distinguish
 unresolvable bases from empty diffs.
 
-Receipt: `.meta/lib/check_pr/branch.py::touched`
+Evidence: `.meta/lib/check_pr/branch.py::touched`
 
 ### Render check distinguishes stale generated targets from unrendered files
 
@@ -43,7 +43,7 @@ Reporting unrendered files as plain sentences caused them to bypass index target
 checks, allowing stale generated documentation to pass undetected. Established:
 `unrendered()` categorizes stale targets and orphaned files into distinct collections.
 
-Receipt: `.meta/lib/check_pr/branch.py::unrendered`
+Evidence: `.meta/lib/check_pr/branch.py::unrendered`
 
 ### Thread inspection truncation in interactive review resumes
 
@@ -51,7 +51,7 @@ Clipping discussion threads mid-paragraph in review summaries led autonomous age
 to reply to incomplete feedback (solorepo's #126). Established: `shown()` accepts
 an optional character limit and preserves complete thread text during review resumes.
 
-Receipt: `.meta/lib/check_pr/review.py::shown`
+Evidence: `.meta/lib/check_pr/review.py::shown`
 
 ### Resolved review threads excluded from reviewer inspection
 
@@ -60,7 +60,7 @@ from verifying whether claimed fixes matched discussion feedback (solorepo's #11
 solorepo's #122). Established: `settled()` surfaces resolved discussions with their
 resolving login alongside open review items.
 
-Receipt: `.meta/lib/check_pr/review.py::settled`
+Evidence: `.meta/lib/check_pr/review.py::settled`
 
 ### Review verdict query ordering and preview truncation
 
@@ -69,7 +69,7 @@ submitted against the active head commit (solorepo's DR-118, solorepo's #123).
 Established: `verdicts()` inspects the newest review records and formats them
 newest-first.
 
-Receipt: `.meta/lib/check_pr/review.py::verdicts`
+Evidence: `.meta/lib/check_pr/review.py::verdicts`
 
 ### Status check query permission failure on Actions resources
 
@@ -78,7 +78,7 @@ workflow run resources requiring `actions:read` permissions not held by gate
 tokens (solorepo's DR-153, solorepo's DR-155, solorepo's #233). Established:
 `rollup_of()` and `rollups()` query specific check context nodes directly.
 
-Receipt: `.meta/lib/check_pr/github.py::rollup_of`
+Evidence: `.meta/lib/check_pr/github.py::rollup_of`
 
 ### Branch conflicts under standing review requests silently stalling
 
@@ -88,7 +88,7 @@ suppressed notification events and prevented review workflows from running
 Established: `watch()` and `unheld()` monitor mergeability transitions and prescribe
 explicit rebase remedies.
 
-Receipt: `.meta/lib/check_pr/polling.py::watch`
+Evidence: `.meta/lib/check_pr/polling.py::watch`
 
 ### Armed auto-merge blocked by unresolved review conversations
 
@@ -98,7 +98,7 @@ merges (solorepo's DR-159, solorepo's #232). Established: `unheld()` identifies
 idle armed pull requests blocked by unresolved threads and prescribes the required
 promotion or reply action.
 
-Receipt: `.meta/lib/check_pr/sweep.py::unheld`
+Evidence: `.meta/lib/check_pr/sweep.py::unheld`
 
 ### Sweep fetch failure silently masked as clean triage
 
@@ -107,7 +107,7 @@ that parent jobs masked as an empty clean queue, leaving stale check statuses
 unreported (solorepo's #229). Established: `sweep_all` handles CLI failures explicitly,
 surfacing unreachable GitHub states as check failures.
 
-Receipt: `.meta/lib/check_pr/sweep.py::sweep_all`
+Evidence: `.meta/lib/check_pr/sweep.py::sweep_all`
 
 
 ### Dropped webhooks left loop pull requests unheld with nobody standing on them
@@ -121,7 +121,7 @@ Established: `unheld()` reports each shape once it has been idle longer than a
 run may last, reads the Challenge's level to say whether the loop or the solo
 holds the remedy, and prescribes the verb that re-delivers it.
 
-Receipt: `.meta/checks/probes/loops/handoff.py::handoff_probes`
+Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
 
 
 ### One unreadable pull request node ended the whole residue listing
@@ -135,5 +135,5 @@ had found, so the listing an operator runs the command for never appeared
 removal commands and reports what GitHub said in refusing, so an expired
 credential, which fails every branch alike, is legible on the screen.
 
-Receipt: `.meta/lib/check_pr/branch.py::residue`
+Evidence: `.meta/lib/check_pr/branch.py::residue`
 

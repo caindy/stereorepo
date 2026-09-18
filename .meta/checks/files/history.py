@@ -1,4 +1,4 @@
-"""The history logs under `.meta/`: every entry names a receipt that exists, and no log is orphaned from its module (solorepo's DR-171).
+"""The history logs under `.meta/`: every entry names Evidence that exists, and no log is orphaned from its module (solorepo's DR-171).
 """
 import ast
 
@@ -19,12 +19,12 @@ def without_comments(text: str) -> str:
 
 
 def history_entries_of(text: str) -> list[tuple[str, str | None]]:
-    """The (title, receipt) pairs of a history log (solorepo's DR-171)."""
+    """The (title, evidence) pairs of a history log (solorepo's DR-171, solorepo's DR-228)."""
     entries: list[tuple[str, str | None]] = []
     for line in without_comments(text).splitlines():
         if line.startswith("### "):
             entries.append((line[4:].strip(), None))
-        elif line.strip().startswith("Receipt:") and entries:
+        elif line.strip().startswith("Evidence:") and entries:
             parts = line.split("`")
             entries[-1] = (entries[-1][0], parts[1].strip() if len(parts) > 1 else None)
     return entries
@@ -70,8 +70,8 @@ def meta_history_orphans() -> StepOutcome:
     return Passed(f"{counted} history files under .meta/, each named by companion module docstring")
 
 
-def receipt_symbols(tree: ast.Module) -> set[str]:
-    """The names a receipt may cite in a parsed module: every top-level function and class, a class's methods as `Class.method`, and the label a decorator such as `@check` gives."""
+def evidence_symbols(tree: ast.Module) -> set[str]:
+    """The names an `Evidence:` line may cite in a parsed module: every top-level function and class, a class's methods as `Class.method`, and the label a decorator such as `@check` gives."""
     symbols: set[str] = set()
     for node in tree.body:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -86,38 +86,38 @@ def receipt_symbols(tree: ast.Module) -> set[str]:
     return symbols
 
 
-def receipt_problem(receipt: str | None) -> str | None:
-    """Why `receipt` names nothing: no receipt, not `<path>::<symbol>`, a file that is not there or does not parse, or a symbol the file does not define; None where it resolves."""
-    if not receipt:
-        return "names no receipt"
-    if "::" not in receipt:
-        return f"receipt `{receipt}` does not have <path>::<symbol> format"
-    path_str, symbol = receipt.split("::", 1)
+def evidence_problem(evidence: str | None) -> str | None:
+    """Why `evidence` names nothing: no Evidence, not `<path>::<symbol>`, a file that is not there or does not parse, or a symbol the file does not define; None where it resolves."""
+    if not evidence:
+        return "names no Evidence"
+    if "::" not in evidence:
+        return f"Evidence `{evidence}` does not have <path>::<symbol> format"
+    path_str, symbol = evidence.split("::", 1)
     target = (ROOT / path_str).resolve() if (ROOT / path_str).is_file() else (META / path_str).resolve()
     if not target.is_file():
-        return f"receipt `{receipt}` file '{path_str}' does not exist"
+        return f"Evidence `{evidence}` file '{path_str}' does not exist"
     try:
         tree = ast.parse(target.read_text(encoding="utf-8"))
     except SyntaxError as e:
-        return f"receipt `{receipt}` failed to parse '{path_str}': {e}"
-    if symbol not in receipt_symbols(tree):
-        return f"names `{receipt}`, which does not exist in {path_str}"
+        return f"Evidence `{evidence}` failed to parse '{path_str}': {e}"
+    if symbol not in evidence_symbols(tree):
+        return f"names `{evidence}`, which does not exist in {path_str}"
     return None
 
 
-@check("meta history receipts")
-def meta_history_receipts() -> StepOutcome:
+@check("meta history evidence")
+def meta_history_evidence() -> StepOutcome:
     """Every entry in a .meta/ history log names a check or probe that exists (solorepo's DR-171)."""
     problems: list[str] = []
     logs = 0
     entries = 0
     for history in sorted(META.rglob("*.history.md")):
         logs += 1
-        for title, receipt in history_entries_of(history.read_text(encoding="utf-8")):
+        for title, evidence in history_entries_of(history.read_text(encoding="utf-8")):
             entries += 1
-            problem = receipt_problem(receipt)
+            problem = evidence_problem(evidence)
             if problem:
                 problems.append(f"{history.relative_to(META)}: '{title}' {problem}")
     if problems:
         return Found(problems)
-    return Passed(f"{entries} entries across {logs} history logs, each naming a receipt that exists")
+    return Passed(f"{entries} entries across {logs} history logs, each naming Evidence that exists")

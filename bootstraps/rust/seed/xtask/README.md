@@ -29,9 +29,9 @@ The steps, in the order they run:
 | `doc` | `cargo doc` with every rustdoc warning an error; no public item undocumented | Literate Programming |
 | `test` | `cargo test`, doctests included | Literate Programming |
 | `orphans` | every markdown file under a package is included by a source file | Nothing Unconsumed |
-| `receipts` | every history entry names a test that exists | Nothing Unconsumed |
+| `evidence` | every history entry names a test that exists | Nothing Unconsumed |
 | `mutants` | `cargo mutants`, the signal behind the tests | Observed Failure |
 
-The pure steps — `orphans`, `receipts`, `lints` — are functions over a path, so
+The pure steps — `orphans`, `evidence`, `lints` — are functions over a path, so
 `tests/probes.rs` can watch each of them fail against a tree built to fail it.
 A guardrail never observed to fail is not evidence of anything.

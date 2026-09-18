@@ -1,6 +1,6 @@
 """The merge manager advancing an approved pull request that fell behind trunk.
 
-One module for one probe, so a history log's receipt names the file holding it (solorepo's DR-209).
+One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 from typing import Any
 

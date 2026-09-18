@@ -5,11 +5,11 @@ one for the tests and one for the gate.
 
 ## The gate's own steps are watched failing
 
-The pure steps of the xtask — `orphans`, `receipts`, `lints` — are functions
+The pure steps of the xtask — `orphans`, `evidence`, `lints` — are functions
 over a path, and [`seed/xtask/tests/probes.rs`](seed/xtask/tests/probes.rs)
 builds a throwaway package under the target directory for each, breaks it the
 way the step exists to catch, sees the finding, and puts it right. The
-cargo-driven steps are watched through what they wrap: `receipts` compiles a
+cargo-driven steps are watched through what they wrap: `evidence` compiles a
 probe crate and reads the tests cargo lists, and the binary is run with a word
 it does not know.
 

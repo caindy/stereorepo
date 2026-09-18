@@ -50,7 +50,7 @@ def role_agent(role_id: str, r: dict, personalities: dict) -> str:
             "Apply the /technical-writing skill before handoff (solorepo's DR-194, solorepo's DR-198, solorepo's DR-207):",
             "keep item docstrings dry Reference contracts without reviewer litigation (solorepo's DR-175),",
             "hold source comments to the four permissible exceptions, mechanize constraints before pruning,",
-            "route defect narratives to <module>.history.md with probe receipts (solorepo's DR-171), and audit",
+            "route defect narratives to <module>.history.md naming probe Evidence (solorepo's DR-171), and audit",
             "suppressions as defects.",
         ])
     lines.append("")

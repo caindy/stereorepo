@@ -26,7 +26,7 @@ from checks.files.markdown import FENCED, LINK, markdown_links
 from checks.files.wiki import LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wikilinks
 from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, RESTORE_PROSE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
-from checks.files.history import history_entries_of, meta_history_orphans, meta_history_receipts, without_comments
+from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
 from checks.files.python import MYPY, MYPY_ERROR, RUFF, TYPES_BASELINE, meta_doc, meta_lints, meta_ruff, meta_types, mypy_errors, tool_command
 from checks.files.rendered import apm_package, rendered_prose
 
@@ -65,8 +65,8 @@ __all__ = [
     "markdown",
     "markdown_links",
     "meta_doc",
+    "meta_history_evidence",
     "meta_history_orphans",
-    "meta_history_receipts",
     "meta_lints",
     "meta_ruff",
     "meta_sources",
