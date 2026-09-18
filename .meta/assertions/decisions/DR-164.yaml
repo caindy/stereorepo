@@ -12,6 +12,8 @@ decisions:
       - work:artifact/skill-pr-first
       - work:artifact/skill-pr-first-reviewer
       - work:artifact/meta-checks-graph-record
+      - work:artifact/meta-checks-probes-channel-parser
+      - work:artifact/meta-checks-probes-channel-status
     context: >-
       PR First's tenth step is *merged, never abandoned*, and the channel
       enforces it by construction: `.meta/say/verbs.yaml` holds no `close` verb

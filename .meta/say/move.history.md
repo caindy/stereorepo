@@ -18,7 +18,7 @@ resulted in duplicate runs and concurrent conflicting review answers
 refuses claims by interactive sessions on `easy` or `medium` issues, preserving
 loop boundaries.
 
-Receipt: `.meta/checks/probes/channel.py::claim_probes`
+Receipt: `.meta/checks/probes/channel/claim.py::claim_probes`
 
 ### Unclaimed challenges remaining assigned to inactive sessions
 
@@ -253,4 +253,4 @@ the stack still counts a merged layer. Established: `link` names the stack's
 number, read off the pull request below, when that pull request is a layer,
 and the pull request itself when it is not.
 
-Receipt: `.meta/checks/probes/channel.py::layer_probes`
+Receipt: `.meta/checks/probes/channel/layer.py::layer_probes`

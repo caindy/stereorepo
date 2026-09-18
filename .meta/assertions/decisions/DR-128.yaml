@@ -18,6 +18,8 @@ decisions:
       - work:artifact/meta-readme
       - work:artifact/meta-lib-render-targets
       - work:artifact/meta-checks-graph-record
+      - work:artifact/meta-checks-probes-channel-parser
+      - work:artifact/meta-checks-probes-channel-reservation
     alternatives:
       - name: Read the record on main and take the next number
         chosen: false

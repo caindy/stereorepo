@@ -9,6 +9,7 @@ decisions:
       - work:artifact/meta-check
       - work:artifact/meta-checks-graph-record
       - work:artifact/meta-checks-citations-record
+      - work:artifact/meta-checks-probes-channel-reservation
     alternatives:
       - name: Leave the Python as it was
         chosen: false

@@ -330,8 +330,32 @@ artifacts:
     name: .meta/checks/probes/git/step.py
     path: .meta/checks/probes/git/step.py
   - id: work:artifact/meta-checks-probes-channel
-    name: .meta/checks/probes/channel.py
-    path: .meta/checks/probes/channel.py
+    name: .meta/checks/probes/channel/__init__.py
+    path: .meta/checks/probes/channel/__init__.py
+  - id: work:artifact/meta-checks-probes-channel-parser
+    name: .meta/checks/probes/channel/parser.py
+    path: .meta/checks/probes/channel/parser.py
+  - id: work:artifact/meta-checks-probes-channel-status
+    name: .meta/checks/probes/channel/status.py
+    path: .meta/checks/probes/channel/status.py
+  - id: work:artifact/meta-checks-probes-channel-table
+    name: .meta/checks/probes/channel/table.py
+    path: .meta/checks/probes/channel/table.py
+  - id: work:artifact/meta-checks-probes-channel-layer
+    name: .meta/checks/probes/channel/layer.py
+    path: .meta/checks/probes/channel/layer.py
+  - id: work:artifact/meta-checks-probes-channel-claim
+    name: .meta/checks/probes/channel/claim.py
+    path: .meta/checks/probes/channel/claim.py
+  - id: work:artifact/meta-checks-probes-channel-actor
+    name: .meta/checks/probes/channel/actor.py
+    path: .meta/checks/probes/channel/actor.py
+  - id: work:artifact/meta-checks-probes-channel-signing-key
+    name: .meta/checks/probes/channel/signing_key.py
+    path: .meta/checks/probes/channel/signing_key.py
+  - id: work:artifact/meta-checks-probes-channel-reservation
+    name: .meta/checks/probes/channel/reservation.py
+    path: .meta/checks/probes/channel/reservation.py
   - id: work:artifact/meta-checks-probes-loops
     name: .meta/checks/probes/loops/__init__.py
     path: .meta/checks/probes/loops/__init__.py

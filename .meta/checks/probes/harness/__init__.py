@@ -15,6 +15,7 @@ every name is re-exported here, so `from probes.harness import ...` finds what i
 """
 from probes.harness.acts import (
     Outcome,
+    answered,
     environment,
     exit_of,
     outcome,
@@ -33,6 +34,7 @@ __all__ = [
     "Outcome",
     "WatchGitHub",
     "acts",
+    "answered",
     "environment",
     "exit_of",
     "fakes",

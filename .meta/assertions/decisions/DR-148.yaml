@@ -12,6 +12,7 @@ decisions:
       - work:artifact/meta-say-verbs
       - work:artifact/meta-check
       - work:artifact/meta-lib-check-pr-review
+      - work:artifact/meta-checks-probes-channel-claim
     context: >-
       DR-112 made `easy` and `medium` the loop's, taken on the event of the
       label landing, and `hard` the solo's, taken with an agent beside him. The

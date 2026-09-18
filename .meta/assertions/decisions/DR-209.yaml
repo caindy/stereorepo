@@ -132,10 +132,10 @@ decisions:
         before every other step, whatever module they came from.
       - >-
         Every receipt under `.meta/` that named `.meta/checks/probes.py` now
-        names the module that holds the probe: `probes/git/step.py` for the hooks,
-        `probes/channel.py` for the channel's verbs and reservations,
-        `probes/loops.py` for `advance`, `stop` and `merge-manager`. The `meta
-        history receipts` check resolves each.
+        names the module that holds the probe: a module of `probes/git/` for
+        the hooks, of `probes/channel/` for the channel's verbs and
+        reservations, of `probes/loops/` for `advance`, `stop` and
+        `merge-manager`. The `meta history receipts` check resolves each.
       - >-
         `.meta/checks/probes.py` leaves `comments.baseline.yaml`. The new
         modules carry no body commentary: what the 186 comment blocks knew is

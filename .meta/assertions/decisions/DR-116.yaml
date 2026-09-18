@@ -20,6 +20,7 @@ decisions:
       - work:artifact/meta-assertions-imported-authority
       - work:artifact/meta-templates-roadmap
       - work:artifact/meta-lib-render-pages
+      - work:artifact/meta-checks-probes-channel-parser
     alternatives:
       - name: A rule about the order, in a prompt, a step or a memory
         chosen: false

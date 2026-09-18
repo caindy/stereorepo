@@ -11,6 +11,7 @@ decisions:
       - work:artifact/meta-assertions-authority
       - work:artifact/template-meta-assertions-authority
       - work:artifact/meta-check
+      - work:artifact/meta-checks-probes-channel-table
     alternatives:
       - name: Move the whole file under `imported/`
         chosen: false

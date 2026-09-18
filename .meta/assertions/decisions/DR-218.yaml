@@ -41,6 +41,15 @@ decisions:
       - work:artifact/meta-checks-probes-git-offers
       - work:artifact/meta-checks-probes-git-events
       - work:artifact/meta-checks-probes-git-step
+      - work:artifact/meta-checks-probes-channel
+      - work:artifact/meta-checks-probes-channel-parser
+      - work:artifact/meta-checks-probes-channel-status
+      - work:artifact/meta-checks-probes-channel-table
+      - work:artifact/meta-checks-probes-channel-layer
+      - work:artifact/meta-checks-probes-channel-claim
+      - work:artifact/meta-checks-probes-channel-actor
+      - work:artifact/meta-checks-probes-channel-signing-key
+      - work:artifact/meta-checks-probes-channel-reservation
       - work:artifact/meta-assertions-structure
       - work:artifact/meta-checks-files
       - work:artifact/meta-lib-dereference-reading

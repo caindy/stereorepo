@@ -10,6 +10,7 @@ decisions:
       - work:artifact/meta-say-commit
       - work:artifact/meta-say-whoami
       - work:artifact/github-workflows-coder
+      - work:artifact/meta-checks-probes-channel-signing-key
     context: >-
       Commits produced by .meta/say/commit injected the coder Role's identity via
       role_identity() and appended Actor: and Agent: trailers (solorepo's DR-062,

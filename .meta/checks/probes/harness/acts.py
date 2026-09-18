@@ -105,3 +105,34 @@ def written(suffix, text):
         yield path
     finally:
         path.unlink(missing_ok=True)
+
+
+def answered(call):
+    """`call`'s return value beside how it ended, as `(value, code, exited)`; see `outcome`.
+
+    `outcome` reads a call's exit as text and drops what it returned, and once
+    an exit and a crash are both text nothing in the text tells them apart.
+    Three probes need both halves: `probes/channel/parser.py`, where a parser
+    answers a namespace or exits with its usage; `probes/channel/actor.py`,
+    where `channel.actor()` answers a session or refuses; and
+    `probes/channel/signing_key.py`, where `role_signing_key()` answers a path
+    or refuses. `value` is what the call returned, `None` where it did not
+    return; `code` is `outcome(call).code`;
+    `exited` is whether the call ended in `sys.exit`, read off the exception's
+    class before `outcome` renders it, so that a case expecting a refusal is
+    not satisfied by a crash. The `say:` prefix the channel puts on its
+    refusals is not tested, since an exit carrying a number or nothing is as
+    much a refusal as one carrying a sentence.
+    """
+    held, exits = [], []
+
+    def attempt():
+        """`call`, its value kept in `held` and an exit noted in `exits` on its way out to `outcome`."""
+        try:
+            held.append(call())
+        except SystemExit:
+            exits.append(True)
+            raise
+
+    code = outcome(attempt).code
+    return (held[0] if held else None), code, bool(exits)

@@ -20,6 +20,7 @@ decisions:
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-lib-dereference-reading
       - work:artifact/meta-checks-probes-git
+      - work:artifact/meta-checks-probes-channel
     context: >-
       `check.py` reached 2,592 lines holding four subjects and one thing that is
       not a subject at all. solorepo's #221 made each step register itself at

@@ -18,7 +18,7 @@ two-party review requirement of A16. Established: the channel composes
 and appends the Trailer directly from the environment and refuses to speak
 when the environment does not specify who is speaking.
 
-Receipt: `.meta/checks/probes/channel.py::channel_parser_probes`
+Receipt: `.meta/checks/probes/channel/parser.py::channel_parser_probes`
 
 ### Machine role commits were cryptographically unsigned
 
@@ -29,7 +29,7 @@ protection rules. Established: `channel.role_signing_key()` reads the Role's
 SSH private key from outside the tree and `say/commit` dynamically configures
 git commit signing when speaking under a Role credential.
 
-Receipt: `.meta/checks/probes/channel.py::signing_key_probes`
+Receipt: `.meta/checks/probes/channel/signing_key.py::signing_key_probes`
 
 ### Verdict flags bound to the wrong verb by a reused parser variable
 
@@ -44,7 +44,7 @@ nothing noticed until a review was posted. Established: every program exposes
 withdrawn nouns allowed (solorepo's DR-116), and holds each verb to the one
 program the table says (solorepo's DR-117).
 
-Receipt: `.meta/checks/probes/channel.py::channel_parser_probes`
+Receipt: `.meta/checks/probes/channel/parser.py::channel_parser_probes`
 
 ### Harness session id shadowed the run's workload identity in the Trailer
 
@@ -59,4 +59,4 @@ carries `RUN_MARK` and `CLAUDE_CODE_SESSION_ID` wins otherwise, the mark winning
 rather than mere presence (solorepo's DR-148); with neither set, `actor()`
 refuses and `mine()` answers `False` for any Trailer (solorepo's #301).
 
-Receipt: `.meta/checks/probes/channel.py::actor_probes`
+Receipt: `.meta/checks/probes/channel/actor.py::actor_probes`
