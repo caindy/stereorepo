@@ -1527,6 +1527,82 @@ def check_mergeable_clean(pull: Pull) -> tuple[bool, str]:
     return True, "mergeable clean"
 
 
+DECISION_ENTRY = re.compile(r"^\.meta/assertions/decisions/(DR-\d+)\.yaml$")
+"""One entry of the record, matched over the path GitHub names a changed file by."""
+
+STATUS_WRITTEN = re.compile(r"^\+\s+status:\s*(\S+)\s*$", re.M)
+"""A `status` a diff writes, matched in the patch hunk that adds the line."""
+
+PER_PAGE = 100
+"""How many of a pull request's files are asked for at once: GitHub's own maximum."""
+
+PAGES = 10
+"""How many pages of files are read before the diff is answered for as unreadable."""
+
+
+def changed_files(pull: Pull, owner: str, name: str) -> list[dict[str, Any]] | None:
+    """The files a pull request changes, as GitHub answers for them.
+
+    Parameters:
+        pull (dict): The pull request, which must carry `number`.
+        owner (str): The repository's owner.
+        name (str): The repository's name.
+
+    Returns:
+        list[dict] or None: One entry per file changed, or None where the file
+            list ran past the pages read.
+    """
+    files: list[dict[str, Any]] = []
+    for page in range(1, PAGES + 1):
+        got = channel.gh("api", f"repos/{owner}/{name}/pulls/{int(pull['number'])}/files"
+                                f"?per_page={PER_PAGE}&page={page}")
+        files += got
+        if len(got) < PER_PAGE:
+            return files
+    return None
+
+
+def check_decisions_in_force(pull: Pull, owner: str, name: str) -> tuple[bool, str]:
+    """Whether every Decision this diff carries is in force (solorepo's DR-222).
+
+    A diff carries a Decision when it writes an entry's `status` line: adding
+    the entry, or moving the status of one already on the trunk. `PROPOSED`
+    defers the pull request and names the entry in the reason; any other status,
+    and a diff that leaves the line alone, clears it. A diff that cannot be read
+    defers too — a decision entry GitHub sends no patch for, a file list running
+    past the pages read, or a call that failed.
+
+    Parameters:
+        pull (dict): The pull request, which must carry `number`.
+        owner (str): The repository's owner.
+        name (str): The repository's name.
+
+    Returns:
+        tuple[bool, str]: Whether it may merge, and the reason either way.
+    """
+    try:
+        files = changed_files(pull, owner, name)
+    except (Exception, SystemExit) as exc:
+        return False, f"could not read the diff ({type(exc).__name__})"
+    if files is None:
+        return False, f"could not read the diff (over {PER_PAGE * PAGES} files)"
+    proposed, unreadable = [], []
+    for changed in files:
+        found = DECISION_ENTRY.match(changed.get("filename") or "")
+        if not found:
+            continue
+        patch = changed.get("patch")
+        if not patch and (changed.get("additions") or changed.get("deletions")):
+            unreadable.append(found.group(1))
+        elif any(status.upper() == "PROPOSED" for status in STATUS_WRITTEN.findall(patch or "")):
+            proposed.append(found.group(1))
+    if unreadable:
+        return False, f"could not read the diff of {', '.join(sorted(unreadable))}"
+    if proposed:
+        return False, f"carries {', '.join(sorted(proposed))}, still proposed"
+    return True, "carries no proposed decision"
+
+
 def evaluate_pr(pull: Pull, reviewer_login: str, owner: str,
                 name: str) -> tuple[bool, list[str]]:
     """Evaluate a pull request against all semaphores (solorepo's DR-161)."""
@@ -1548,6 +1624,10 @@ def evaluate_pr(pull: Pull, reviewer_login: str, owner: str,
         threads_ok, threads_msg = check_threads(pull, owner, name)
         if not threads_ok:
             reasons.append(threads_msg)
+    if not reasons:
+        decisions_ok, decisions_msg = check_decisions_in_force(pull, owner, name)
+        if not decisions_ok:
+            reasons.append(decisions_msg)
     if reasons:
         return False, reasons
     return True, ["eligible"]

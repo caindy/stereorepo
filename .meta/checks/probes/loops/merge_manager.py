@@ -29,6 +29,14 @@ def merge_manager_probes():
     when GraphQL raises. With every semaphore satisfied the pull request is
     eligible.
 
+    The decision semaphore reads the diff (solorepo's DR-222): a diff adding
+    an entry as `PROPOSED` defers and is named in the reason, one adopting an
+    entry or correcting an adopted entry's prose does not, an entry GitHub
+    sends without a patch defers as unreadable, a file list that runs past the
+    pages read defers with it, and the read fails closed when the API raises.
+    Through `evaluate_pr`, a pull request every other semaphore clears is
+    refused for the decision it carries.
+
     The end-to-end run answers GitHub from four pull requests and two Issues:
     a stack base, a dependent that waits on it, an unreviewed one and a layer
     based on the first. The base is chosen and the dependent deferred; a dry
@@ -41,7 +49,8 @@ def merge_manager_probes():
     channel, _, programs = load_channel()
     move = programs["move"]
     return (_semaphores(move) + _rerun_reads_green(move) + _threads_fail_closed(channel, move)
-            + _eligible(move) + _end_to_end(channel, move) + _blockers(move))
+            + _eligible(channel, move) + _decisions_in_force(channel, move)
+            + _end_to_end(channel, move) + _blockers(move))
 
 
 REVIEWER = "owner-repo-reviewer"
@@ -127,14 +136,86 @@ def _threads_fail_closed(channel: Any, move: Any) -> list[str]:
     return problems
 
 
-def _eligible(move: Any) -> list[str]:
-    """With every semaphore satisfied the pull request is eligible."""
+CLEARED = {"number": 1, "isDraft": False, "mergeable": "MERGEABLE", "baseRefName": "main",
+           "statusCheckRollup": GREEN, "latestReviews": APPROVED,
+           "reviewThreads": [{"isResolved": True}]}
+"""A pull request every semaphore but the decision one clears."""
+
+ENTRY = f".meta/assertions/decisions/DR-{299}.yaml"
+"""The path of the Decision entry the decision semaphore's cases write."""
+
+
+def _diff_of(*changed: dict[str, Any]) -> Any:
+    """A `gh` answering the pull request's files endpoint with `changed` on its first page and nothing after, and an empty dict to anything else."""
+    def gh(*args: Any, **kwargs: Any) -> Any:
+        """One `gh` call, answered as the enclosing function says."""
+        if args[0] == "api" and "/files?per_page=" in str(args[-1]):
+            return list(changed) if str(args[-1]).endswith("page=1") else []
+        return {}
+    return gh
+
+
+def _eligible(channel: Any, move: Any) -> list[str]:
+    """With every semaphore satisfied, the decision one reading a diff that carries nothing, the pull request is eligible."""
     problems = []
-    ok, reasons = _evaluated(move, {"number": 1, "isDraft": False, "mergeable": "MERGEABLE",
-                             "baseRefName": "main", "statusCheckRollup": GREEN,
-                             "latestReviews": APPROVED, "reviewThreads": [{"isResolved": True}]})
+    with stood_in(channel, gh=_diff_of()):
+        ok, reasons = _evaluated(move, dict(CLEARED))
     if not ok or reasons != ["eligible"]:
         problems.append(f"merge manager: eligible PR failed evaluation: {reasons}")
+    return problems
+
+
+def _decisions_in_force(channel: Any, move: Any) -> list[str]:
+    """The decision semaphore over the diffs it tells apart, failing closed when the API raises, and refusing through `evaluate_pr` a pull request every other semaphore clears (solorepo's DR-222)."""
+    problems = []
+    cases = (
+        ("an entry proposed on the branch", False, f"DR-{299}",
+         [{"filename": ENTRY, "additions": 40, "deletions": 0,
+           "patch": "@@\n+  - id: work:decision/299\n+    status: PROPOSED\n"}]),
+        ("an entry the solo adopted on the branch", True, "no proposed decision",
+         [{"filename": ENTRY, "additions": 1, "deletions": 1,
+           "patch": "@@\n-    status: PROPOSED\n+    status: ADOPTED\n"}]),
+        ("a correction to an entry's prose", True, "no proposed decision",
+         [{"filename": ENTRY, "additions": 1, "deletions": 1,
+           "patch": "@@\n-    context: as it was\n+    context: as it is\n"}]),
+        ("a proposed status outside the record", True, "no proposed decision",
+         [{"filename": ".meta/work/decisions.yaml", "additions": 1, "deletions": 0,
+           "patch": "@@\n+    status: PROPOSED\n"}]),
+        ("an entry GitHub sent no patch for", False, "could not read the diff",
+         [{"filename": ENTRY, "additions": 40, "deletions": 0}]),
+    )
+    for case, expected, phrase, files in cases:
+        with stood_in(channel, gh=_diff_of(*files)):
+            ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
+        if ok != expected or phrase not in msg:
+            problems.append(f"merge manager: {case} was read as {msg!r}")
+
+    def broken_gh(*args: Any, **kwargs: Any) -> Any:
+        """A `gh` that raises, whatever it is asked."""
+        raise RuntimeError("API outage")
+
+    with stood_in(channel, gh=broken_gh):
+        ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
+    if ok or "could not read the diff" not in msg:
+        problems.append(f"merge manager: the decision semaphore did not fail closed: {msg}")
+
+    def crowded_gh(*args: Any, **kwargs: Any) -> Any:
+        """A `gh` whose every page of files is full, so the list never ends."""
+        if args[0] == "api" and "/files?per_page=" in str(args[-1]):
+            return [{"filename": "README.md", "additions": 1, "patch": "@@\n+a\n"}]
+        return {}
+
+    with stood_in(channel, gh=crowded_gh), stood_in(move, PER_PAGE=1, PAGES=2):
+        ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
+    if ok or "over 2 files" not in msg:
+        problems.append(f"merge manager: a file list past the pages read was not deferred: {msg}")
+
+    carried = [{"filename": ENTRY, "additions": 40, "deletions": 0,
+                "patch": "@@\n+    status: PROPOSED\n"}]
+    with stood_in(channel, gh=_diff_of(*carried)):
+        ok, reasons = _evaluated(move, dict(CLEARED))
+    if ok or not any(f"DR-{299}" in reason for reason in reasons):
+        problems.append(f"merge manager: PR carrying a proposed decision was reported as eligible: {reasons}")
     return problems
 
 
@@ -170,7 +251,8 @@ class ManagerFake:
 
     `pr view` answers `MERGED` once anything has been merged, `api
     .../pulls/10` answers a `stack` object so the winner is merged as a
-    stack, and any other call answers an empty dict.
+    stack, the files endpoint answers an empty page, so no candidate carries a
+    decision, and any other call answers an empty dict.
     """
 
     def __init__(self, pulls, issues):
@@ -192,6 +274,8 @@ class ManagerFake:
             state = "MERGED" if self.merged else "OPEN"
             return {"number": int(args[2]), "title": "merged pr", "state": state,
                     "mergeCommit": {"oid": "sha1234"}, "headRefName": "branch"}
+        if args[0] == "api" and "/files?per_page=" in str(args[-1]):
+            return []
         if len(args) >= 2 and args[0] == "api" and str(args[1]).endswith("/pulls/10"):
             return {"stack": {"id": "stack-1"}}
         return {}

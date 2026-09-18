@@ -254,3 +254,19 @@ number, read off the pull request below, when that pull request is a layer,
 and the pull request itself when it is not.
 
 Receipt: `.meta/checks/probes/channel/layer.py::layer_probes`
+
+### A decision merged to the trunk while it was still proposed
+
+The merge manager merged solorepo's #573 while solorepo's DR-227, the entry
+that pull request carried, stood `PROPOSED`, which is the falsifier
+solorepo's DR-222 states in its own words. Nothing misbehaved: the pull
+request was approved, green and mergeable, which was the whole of what
+`evaluate_pr` asked, and a decision waiting on the solo was a gate on the
+merge path that no semaphore knew about — named as a consequence by
+solorepo's DR-222 three hours before it happened (solorepo's #575).
+Established: `evaluate_pr` reads the candidate's diff through
+`check_decisions_in_force` and defers a pull request that writes a Decision
+entry's `status` line as `PROPOSED`, which is a diff carrying a decision
+rather than one correcting an adopted entry's prose.
+
+Receipt: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
