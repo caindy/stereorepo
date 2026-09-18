@@ -273,8 +273,20 @@ artifacts:
     name: .meta/checks/files/rendered.py
     path: .meta/checks/files/rendered.py
   - id: work:artifact/meta-checks-citations
-    name: .meta/checks/citations.py
-    path: .meta/checks/citations.py
+    name: .meta/checks/citations/__init__.py
+    path: .meta/checks/citations/__init__.py
+  - id: work:artifact/meta-checks-citations-loaders
+    name: .meta/checks/citations/loaders.py
+    path: .meta/checks/citations/loaders.py
+  - id: work:artifact/meta-checks-citations-prose
+    name: .meta/checks/citations/prose.py
+    path: .meta/checks/citations/prose.py
+  - id: work:artifact/meta-checks-citations-record
+    name: .meta/checks/citations/record.py
+    path: .meta/checks/citations/record.py
+  - id: work:artifact/meta-checks-citations-claims
+    name: .meta/checks/citations/claims.py
+    path: .meta/checks/citations/claims.py
   - id: work:artifact/meta-checks-comments
     name: .meta/checks/comments.py
     path: .meta/checks/comments.py

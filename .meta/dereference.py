@@ -48,7 +48,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from importlib.machinery import SourceFileLoader
 
 import yaml
 
@@ -74,7 +73,7 @@ CHECKS = META / "checks"
 
 
 def citations():
-    """`.meta/checks/citations.py`, imported for its extraction and nothing else.
+    """`.meta/checks/citations/`, imported for its extraction and nothing else.
 
     Importing runs nothing — everything it does is under `main()` — and the
     functions used here read files. It is imported the way `check.py` imports
@@ -84,17 +83,14 @@ def citations():
 
     The gate's steps moved out of `check.py` into `.meta/checks/`
     (solorepo's DR-150), so what this reaches for now has a name: the citation
-    grammar and the copy set are `citations.py`'s, and nothing else in the gate
-    is wanted here. Its own siblings are imported by plain name, so the
-    directory goes on `sys.path` first.
+    grammar and the copy set are the `citations` package's, and nothing else in
+    the gate is wanted here. Its own siblings are imported by plain name, so the
+    directory goes on `sys.path` first, and the package is imported by name
+    since a package has no one file to load (solorepo's DR-218).
     """
     if str(CHECKS) not in sys.path:
         sys.path.insert(0, str(CHECKS))
-    loader = SourceFileLoader("citations", str(CHECKS / "citations.py"))
-    spec = importlib.util.spec_from_loader("citations", loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
+    return importlib.import_module("citations")
 
 
 def git(*args, default=None):

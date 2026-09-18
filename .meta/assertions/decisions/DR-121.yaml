@@ -14,6 +14,7 @@ decisions:
       - work:artifact/meta-render
       - work:artifact/specialize
       - work:artifact/meta-checks-graph-artifacts
+      - work:artifact/meta-checks-citations-record
     alternatives:
       - name: The inherited material stops citing numbers and says the rule instead
         chosen: false

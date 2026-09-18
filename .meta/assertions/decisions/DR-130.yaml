@@ -8,6 +8,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-check
       - work:artifact/meta-check-pr
+      - work:artifact/meta-checks-citations-prose
     alternatives:
       - name: Leave the claim to review, and check the number only
         chosen: false

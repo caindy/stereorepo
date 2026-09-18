@@ -20,7 +20,10 @@
 .meta/arc/teardown: 12
 .meta/check.py: 5
 .meta/check_pr.py: 1
-.meta/checks/citations.py: 56
+.meta/checks/citations/claims.py: 5
+.meta/checks/citations/loaders.py: 8
+.meta/checks/citations/prose.py: 15
+.meta/checks/citations/record.py: 7
 .meta/checks/collect.py: 14
 .meta/checks/comments.py: 3
 .meta/checks/files/history.py: 2
@@ -56,7 +59,7 @@
 .meta/checks/probes/tools/dereference.py: 4
 .meta/checks/probes/tools/search.py: 1
 .meta/checks/probes/tools/timing.py: 3
-.meta/dereference.py: 41
+.meta/dereference.py: 40
 .meta/gate: 16
 .meta/lib/apm_compile/skills.py: 1
 .meta/lib/check_pr/branch.py: 41

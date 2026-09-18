@@ -1,0 +1,60 @@
+"""What prose claims about the record, read against the record.
+
+A12 asks three things of a citation, and the steps here resolve them in turn:
+the number it names, and then the claim it goes on to make — an Article that
+resolves, a quotation that appears where it is attributed, a relation that is
+the slot it claims to be, and a line that reads what it is cited for (solorepo's DR-150).
+One module per subject (solorepo's DR-218); every name is re-exported here, so
+`from citations import FOREIGN` and `citations.load_check_pr` resolve as they did.
+
+History in citations.history.md (solorepo's DR-171).
+"""
+import citations.loaders  # noqa: I001  # reason: registration order is deliberate
+import citations.prose
+import citations.record
+import citations.claims  # noqa: F401  # reason: registers check steps
+from citations.loaders import DR, FOREIGN, SCAFFOLD, copied_files, durable, issue_citation, load_check_pr, load_timing
+from citations.prose import ARTICLE, BLOCK, CITE, GAP, HEDGED, NEAREST, SAYS, SPAN, entry_text, flat, normalise, prose, scalars
+from citations.record import cited_decisions, enacting_citations, inherited_citations
+from citations.claims import ELISION, PATH_LINE, QUOTED, RELATIONS, STATED, SUBJECT, cited_articles, path_and_line_claims, quoted_claims, stated_relations
+
+__all__ = [
+    "ARTICLE",
+    "BLOCK",
+    "CITE",
+    "DR",
+    "ELISION",
+    "FOREIGN",
+    "GAP",
+    "HEDGED",
+    "NEAREST",
+    "PATH_LINE",
+    "QUOTED",
+    "RELATIONS",
+    "SAYS",
+    "SCAFFOLD",
+    "SPAN",
+    "STATED",
+    "SUBJECT",
+    "cited_articles",
+    "cited_decisions",
+    "claims",
+    "copied_files",
+    "durable",
+    "enacting_citations",
+    "entry_text",
+    "flat",
+    "inherited_citations",
+    "issue_citation",
+    "load_check_pr",
+    "load_timing",
+    "loaders",
+    "normalise",
+    "path_and_line_claims",
+    "prose",
+    "quoted_claims",
+    "record",
+    "scalars",
+    "stated_relations",
+]
+"""The module's whole surface, so every importer finds what it did."""

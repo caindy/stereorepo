@@ -8,6 +8,7 @@ decisions:
       - work:article/20
     enacted_in:
       - work:artifact/meta-check
+      - work:artifact/meta-checks-citations-record
     alternatives:
       - name: Every entry that names a file is cited in it
         chosen: false

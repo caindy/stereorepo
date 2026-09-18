@@ -31,6 +31,11 @@ decisions:
       - work:artifact/meta-checks-probes-tools-search
       - work:artifact/meta-checks-probes-tools-apm-compile
       - work:artifact/meta-checks-probes-tools-comments
+      - work:artifact/meta-checks-citations
+      - work:artifact/meta-checks-citations-loaders
+      - work:artifact/meta-checks-citations-prose
+      - work:artifact/meta-checks-citations-record
+      - work:artifact/meta-checks-citations-claims
       - work:artifact/meta-assertions-structure
       - work:artifact/meta-checks-files
     context: >-

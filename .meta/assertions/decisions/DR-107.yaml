@@ -15,6 +15,7 @@ decisions:
       - work:artifact/meta-checks-probes-loops-advance
       - work:artifact/meta-checks-probes-harness-fakes
       - work:artifact/meta-checks-probes-harness-github
+      - work:artifact/meta-checks-citations-loaders
     alternatives:
       - name: The reviewer stays Copilot
         chosen: false

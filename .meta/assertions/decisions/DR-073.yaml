@@ -43,6 +43,7 @@ decisions:
       permissions were supposed to.
     enacted_in:
       - work:artifact/meta-say
+      - work:artifact/meta-checks-citations-loaders
     rationale: |-
       The credential is what makes a Role real, and where it sits decides how
       much of that is true.

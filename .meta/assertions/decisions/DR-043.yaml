@@ -4,6 +4,7 @@ decisions:
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-citations-claims
     rationale: |-
       Literate Programming was too narrow to have a Rust implementation.
       It said a *schema* is an exposition; it now says an **artifact** is,

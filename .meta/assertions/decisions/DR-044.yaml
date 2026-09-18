@@ -4,6 +4,7 @@ decisions:
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-citations-claims
     rationale: |-
       DR-043's step read "keep the exposition in one copy, **included**
       rather than restated". That was over-prescriptive in a way that
