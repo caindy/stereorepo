@@ -116,11 +116,48 @@ def triage(issue, level):
     print(f"#{issue} is a Challenge, labelled {', '.join(now)}")
 
 
+def open_with_title(title):
+    """The open Issue carrying exactly this title, as `(number, url)`, or `None`.
+
+    Listed rather than searched. `gh issue list` reads the API, which answers
+    with what was written a moment ago; `--search` reads the code search index,
+    which lags by seconds to minutes, and the window this is asked about is a
+    retry seconds after a filing (solorepo's DR-221).
+
+    The comparison is the whole title, so a second Challenge about the same area
+    under a title of its own is filed and not refused. The listing is bounded at
+    200, above the open count this repository has carried, and a title beyond
+    that bound is not found.
+
+    Parameters:
+        title (str): Title to match exactly.
+
+    Returns:
+        tuple[str, str] | None: Issue number and URL, or None when no open Issue
+            matches and equally when GitHub would not answer the listing. The
+            two are not distinguished on purpose: both mean this call has no
+            standing Issue to name, and a filing proceeds either way.
+    """
+    try:
+        listed = channel.gh("issue", "list", "--state", "open", "--limit", "200",
+                            "--json", "number,title,url", tolerate_fail=True)
+    except subprocess.CalledProcessError:
+        return None
+    for issue in listed or []:
+        if issue.get("title") == title:
+            return str(issue["number"]), issue.get("url", "")
+    return None
+
+
 def file_issue(title, body, level=None, roadmap=False):
     """File a new Challenge or Roadmap Issue with required structural metadata.
 
     Enforces that the issue body opens with `**Waits on.**`, sets appropriate initial
     labels, establishes native blocked-by relationships, and verifies remote state (solorepo's DR-114, solorepo's DR-170).
+
+    Refuses when an open Issue already carries this title, so that a caller
+    retried after a failure part-way through a larger act files nothing the
+    first attempt already filed (solorepo's DR-221).
 
     Parameters:
         title (str): Issue title string.
@@ -129,12 +166,27 @@ def file_issue(title, body, level=None, roadmap=False):
         roadmap (bool): When True, creates a deferred roadmap issue instead of a Challenge.
 
     Returns:
-        tuple[str, str]: Issue number and GitHub issue URL.
+        tuple[str, str]: Issue number and URL.
+
+    Raises:
+        SystemExit: If the body does not open with `**Waits on.**`, if an open Issue
+            already carries this title, or if GitHub does not show the labels and
+            blocked-by relationships the call asked for.
     """
     first = body.lstrip().split("\n", 1)[0]
     if not first.startswith("**Waits on.**"):
         sys.exit("say: the body does not open with `**Waits on.**`, which is the line "
                  f"`just next` reads; it opens with {first[:60]!r}. Both forms begin there.")
+    standing = open_with_title(title)
+    if standing:
+        number, url = standing
+        sys.exit(f"say: #{number} is open under this exact title, so this would be the "
+                 f"second Issue for one Challenge: {url}\n"
+                 "     Nothing was filed. If the act that reached here is a `post promote` "
+                 "whose reply or resolve failed, the Issue exists and the thread is what is "
+                 "unfinished: `post answer <thread-id>` with a body linking it, or "
+                 "`post resolve <thread-id>` where the link is already posted. If this "
+                 "Challenge is genuinely a second one, give it a title of its own.")
     labels = ["roadmap"] if roadmap else ["challenge", level]
     cmd = ["issue", "create", "--title", title, "--body", body]
     for name in labels:

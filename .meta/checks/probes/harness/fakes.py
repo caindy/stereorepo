@@ -1,5 +1,6 @@
-"""An Issue answered from its labels, and a wiki page answered from a string.
+"""An Issue answered from its labels, a filing answered from an open listing, and a wiki page answered from a string.
 """
+import re
 import subprocess
 
 from collect import ROOT
@@ -125,3 +126,71 @@ class FakeWikiPath:
 
     def __str__(self):
         return str(self._path)
+
+
+class FakeFiling:
+    """As much of GitHub as `file_issue` asks about: the open Issues it lists, and the ones it creates.
+
+    `open_issues` maps an Issue's number to its title and is the listing
+    `gh issue list` answers with. `created` maps the number of each Issue a call
+    created to its `(title, body, labels)`, so a probe reads what was filed and
+    not only what was said, and a created Issue joins `open_issues` — which is
+    what makes the second of two identical filings in one probe the case the
+    guard is about. `listings` counts the reads of the open listing, the only
+    way from here to tell a guard that consulted GitHub from one that never
+    asked.
+
+    The `issue view` that `file_issue` performs after creating is answered from
+    `created`, so a filing that went through passes its own verification rather
+    than failing on the fake.
+    """
+
+    def __init__(self, open_issues=None, list_fails=False):
+        self.open_issues = {str(n): t for n, t in (open_issues or [])}
+        self.created = {}
+        self.listings = 0
+        self.list_fails = list_fails
+        self.next_number = 900
+
+    def __call__(self, *args, parse=True, **kwargs):
+        """One `gh` call: the open listing, an `issue create`, or the `issue view` that verifies one."""
+        if args[:2] == ("repo", "view"):
+            return {"nameWithOwner": "o/r"}
+        if args[:2] == ("issue", "list"):
+            self.listings += 1
+            if self.list_fails:
+                if not kwargs.get("tolerate_fail"):
+                    raise SystemExit("gh: mock API error")
+                raise subprocess.CalledProcessError(1, ["gh", *list(args)], output="",
+                                                    stderr="mock API error")
+            return [{"number": int(n), "title": t,
+                     "url": f"https://github.com/o/r/issues/{n}"}
+                    for n, t in self.open_issues.items()]
+        if args[:2] == ("issue", "create"):
+            return self.create(args)
+        if args[:2] == ("issue", "view"):
+            return self.view(args)
+        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+
+    def create(self, args):
+        """`issue create`: the Issue recorded and added to the open listing, its URL answered."""
+        title = args[args.index("--title") + 1]
+        body = args[args.index("--body") + 1]
+        labels = [args[i + 1] for i, arg in enumerate(args) if arg == "--label"]
+        number = str(self.next_number)
+        self.next_number += 1
+        self.created[number] = (title, body, labels)
+        self.open_issues[number] = title
+        return f"https://github.com/o/r/issues/{number}"
+
+    def view(self, args):
+        """`issue view` of a created Issue's labels, or of the blocked-by its body asked for."""
+        number = str(args[2])
+        _title, body, labels = self.created.get(number, ("", "", []))
+        if "labels" in args:
+            return {"labels": [{"name": name} for name in labels]}
+        if "blockedBy" in args:
+            first = body.lstrip().split("\n", 1)[0]
+            refs = sorted({int(n) for n in re.findall(r"#(\d+)", first)})
+            return {"blockedBy": {"nodes": [{"number": n} for n in refs]}}
+        raise AssertionError(f"the fake was asked something it has no answer for: {args}")

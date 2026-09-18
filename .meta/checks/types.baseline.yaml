@@ -40,6 +40,7 @@
 .meta/checks/graph/structure.py: 13
 .meta/checks/probes/channel/actor.py: 1
 .meta/checks/probes/channel/claim.py: 7
+.meta/checks/probes/channel/filing.py: 12
 .meta/checks/probes/channel/layer.py: 1
 .meta/checks/probes/channel/parser.py: 5
 .meta/checks/probes/channel/reservation.py: 4
@@ -48,7 +49,7 @@
 .meta/checks/probes/channel/table.py: 1
 .meta/checks/probes/git/step.py: 9
 .meta/checks/probes/harness/acts.py: 13
-.meta/checks/probes/harness/fakes.py: 17
+.meta/checks/probes/harness/fakes.py: 23
 .meta/checks/probes/harness/github.py: 25
 .meta/checks/probes/harness/loaders.py: 6
 .meta/checks/probes/knowledge.py: 4
@@ -99,7 +100,7 @@
 .meta/render.py: 1
 .meta/say/channel.py: 34
 .meta/say/commit: 13
-.meta/say/move: 272
+.meta/say/move: 275
 .meta/say/post: 75
 .meta/say/whoami: 12
 .meta/timing.py: 1

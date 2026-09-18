@@ -132,6 +132,17 @@ def sole_author(bodies):
     return bool(bodies) and all(b.rstrip().endswith(block) for b in bodies)
 
 
+PROMOTION = re.compile(r"Promoted to (https://github\.com/[\w.-]+/[\w.-]+/issues/\d+)")
+"""A promotion this channel performed, as `promote` writes it, capturing the Issue's URL.
+
+Narrower than `check_pr.PROMOTED`, which matches any Issue URL in any
+repository written by anyone. The gate wants the broad reading: a thread
+carrying a link to an Issue has its item recorded somewhere, whoever wrote the
+link. A refusal to file wants the narrow one, because its false positive costs
+the Challenge rather than a repeated URL (solorepo's DR-221).
+"""
+
+
 def promotes(body):
     """True when a reply links an Issue, which is what a promotion looks like.
 
@@ -162,19 +173,24 @@ def refuse_if_sole_author(thread_id, promotion=False):
     solorepo's DR-072 put the control on the thread for.
 
     The thread is fetched whether or not the rule can bite, so a bad id stops
-    the verb before anything is filed or posted rather than after.
+    the verb before anything is filed or posted rather than after. The bodies
+    are returned so that a caller needing them again does not fetch twice.
+
+    Returns:
+        list[str]: The thread's comment bodies, in the order GitHub reports them.
     """
     bodies = thread_comments(thread_id)
     if bodies is None:
         sys.exit(f"say: GitHub has no review thread {thread_id}")
     if promotion:
-        return
+        return bodies
     if sole_author(bodies):
         sys.exit("say: refusing — you are the sole author of this thread, and a reply from you "
                  "would not change that. A16 counts the resolver as a party, which means "
                  "nothing when it is you. Promote it, if it survived the argument, and answer "
                  "with the Issue's link — that stands aside from this rule. Otherwise ask the "
                  "solo to resolve it, or leave it for the next Job, whose Trailer differs.")
+    return bodies
 
 
 def reply(thread_id, body):
@@ -251,8 +267,26 @@ def promote(thread_id, title, body, level, resolve_thread=True):
     rather than dropped: this verb's reply carries the Issue's link by
     construction, which is the case solorepo's DR-127 has it stand aside for, and the call
     is still what proves the thread exists before an Issue is filed for it.
+
+    A thread already carrying this channel's own promotion is refused: the three
+    acts are not one transaction, so a `promote` whose `resolve` failed leaves
+    the Issue filed and the link posted, and repeating the verb would file a
+    second Issue for one thread (solorepo's DR-221). The evidence is `PROMOTION`
+    and not `promotes()`: the gate's pattern matches any Issue URL any party
+    wrote, and a thread citing an Issue is a thread this verb must still be able
+    to promote.
+
+    Raises:
+        SystemExit: If GitHub has no such thread, or the thread already carries a
+            promotion link.
     """
-    refuse_if_sole_author(thread_id, promotion=True)
+    bodies = refuse_if_sole_author(thread_id, promotion=True)
+    already = next((found for found in map(PROMOTION.search, bodies) if found), None)
+    if already:
+        sys.exit(f"say: this thread was already promoted to {already.group(1)}, so repeating "
+                 "`promote` would file a second Issue for one thread.\n"
+                 "     Nothing was filed. The thread is what is unfinished: "
+                 f"`post resolve {thread_id}` closes it on the link already posted.")
     # The link, not the number: `check_pr.py` reads a promotion in the one
     # form it can check, the Issue's URL, and a bare `#n` is what someone types
     # when referring to an Issue rather than when filing one.

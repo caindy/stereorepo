@@ -23,11 +23,12 @@ from probes.harness.acts import (
     stood_in,
     written,
 )
-from probes.harness.fakes import FakeIssue, FakeWikiPath
+from probes.harness.fakes import FakeFiling, FakeIssue, FakeWikiPath
 from probes.harness.github import FakeGitHub, WatchGitHub
 from probes.harness.loaders import load_channel, load_hook, load_module
 
 __all__ = [
+    "FakeFiling",
     "FakeGitHub",
     "FakeIssue",
     "FakeWikiPath",
