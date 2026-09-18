@@ -283,7 +283,10 @@ def promote(thread_id: str, title: str, body: str, level: str | None, resolve_th
 
     The Issue lands `challenge` alone unless a level is given: the level is the
     reviewer's verdict, and a raiser at approval proposes one in the body. A
-    level given here is the solo's mandate (solorepo's DR-230).
+    level given here is the solo's mandate (solorepo's DR-230), which a run
+    cannot hold and `file_issue` refuses it (solorepo's DR-235) — the promotion
+    pass after a review is where the mandate was invented and every Challenge
+    it filed went to the solo unread.
 
     A thread already carrying this channel's own promotion is refused, so
     that repeating the verb on a thread already promoted does not file a second
@@ -463,7 +466,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("promote"); p.add_argument("thread"); p.add_argument("--title", required=True)
     p.add_argument("--difficulty", choices=channel.sibling("move").DIFFICULTIES, dest="level",
                    help="the solo's verdict given in advance, which skips the reviewer; without it, "
-                        "`challenge` alone, for the reviewer to read (solorepo's DR-230)")
+                        "`challenge` alone, for the reviewer to read (solorepo's DR-230). A run "
+                        "lands `human` and no other (solorepo's DR-235)")
     p.add_argument("--no-resolve", action="store_true", help="file and reply, but do not resolve the thread")
     p = sub.add_parser("landed"); p.add_argument("pr")
     p = sub.add_parser("review"); p.add_argument("pr")

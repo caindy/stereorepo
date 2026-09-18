@@ -1,0 +1,227 @@
+decisions:
+  - id: work:decision/235
+    name: "DR-235 · A run lands no level on a Challenge but `human`, and `move reread` takes a level off one"
+    challenge: work:challenge/608
+    status: ADOPTED
+    supersedes:
+      - work:decision/159
+    applies:
+      - work:article/20
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-say-post
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-assertions-structure
+      - work:artifact/meta-checks-probes-channel
+      - work:artifact/meta-checks-probes-channel-level
+      - work:artifact/meta-checks-probes-channel-parser
+      - work:artifact/meta-checks-probes-harness-fakes
+      - work:artifact/meta-checks-probes-loops-delegate
+    context: >-
+      DR-230 put the reviewer in front of every Challenge and made its verdict
+      the label. The prose followed it everywhere: the Issue form says a level
+      is proposed in the body and not landed, `post promote`'s docstring says a
+      level given there is the solo's mandate, `coder.yml`'s promotion prompt
+      stopped passing `--difficulty`, and PR First's third step says a Job with
+      no mandate leaves the level to the reviewer. Nothing refuses one.
+      `file_issue` takes a level from any caller and `difficulty` reads nothing
+      about who typed it.
+
+      The runs kept landing `hard`, and they were reading the record when they
+      did it. DR-159's fifth consequence says surviving notices "are promoted
+      with difficulty hard so that threads resolve and merges proceed without
+      autonomous follow-up runs initiating unsupervised", and the alternative
+      it rejected — promoting at `easy` or `medium` — was rejected because the
+      label would start a coder run at once, so a loop would be delivering its
+      own follow-up work. That reason was sound before a reader existed
+      between the label and the door. DR-230 built the reader, and the
+      consequence stayed.
+
+      What it costs is on the queue. `just next` on 2026-09-18 listed thirty
+      ripe Challenges and every one was `hard`, which is the solo's with a
+      session beside him, so the coder loop had nothing it could take. #585,
+      #586, #587, #588, #598, #599 and #600 were filed by runs at `hard` with
+      no verdict on any of them; #594, #597 and #605 propose `medium` in the
+      body and carry `hard` as a label, landed afterwards by a session with no
+      verdict either. DR-230's own falsifier names this count — "Challenges
+      filed with a level at all so that the reviewed path goes unused" — and
+      the reading it asks for is not that the gate costs too much, but that
+      the record still instructed the path around it.
+
+      A second gap is in the door rather than the verbs. `triage.yml` runs the
+      reader where `challenge` lands on an Issue with no level **or where a
+      level is taken off one**, and no verb of the channel can take one off:
+      `difficulty` replaces a level, `triage` refuses where one stands, `stop`
+      lands `human`. So a Challenge labelled without a reading had no way back
+      to the reader, and the thirty are unreachable by the mechanism built for
+      them.
+    alternatives:
+      - name: Correct DR-159 and the refusal texts, and leave the flags open
+        chosen: false
+        reason: >-
+          This is the state that produced the queue. DR-230 already said the
+          rule in four artifacts a coder reads, and the runs landed `hard`
+          anyway; A20 says a rule that lives only in the decision record is not
+          in force, and the record here was worse than silent, since DR-159
+          said the opposite in the imperative. The solo's own reason for
+          DR-230, in its rationale, is that coder agents keep ignoring clear
+          directives in prose and that the mitigation which works is a reader
+          — so leaving this to prose asks the failure to fix itself.
+      - name: Refuse a level from every caller but the reviewer's `triage`
+        chosen: false
+        reason: >-
+          The solo's mandate is real and is typed through a session: DR-230
+          keeps it on purpose, since the solo directing a session to file at
+          `hard` has read the Challenge already. `move difficulty <n> hard` is
+          also the takeover DR-142 rests on — the one act by which a session
+          takes a branch the loop holds — and it is typed in a session by
+          construction. Refusing it there would either cost the takeover its
+          act or push the solo to type under ambient auth, which changes a
+          credential per act rather than stating a rule.
+      - name: Let the reviewer re-read a Challenge a run labelled
+        chosen: false
+        reason: >-
+          The reading door fires on `challenge` landing with no level. A level
+          landed is exactly the state in which it does not fire, so a reader
+          that catches these has to poll the queue instead of being delivered
+          to, which is the shape DR-230 chose a label over.
+      - name: A run lands `human` or no level, and a level comes off by `move reread`
+        chosen: true
+        reason: >-
+          `channel.in_a_run()` is the fact the refusal needs and it is already
+          load-bearing: `move claim` draws the same line between a run and a
+          session beside it (DR-148), and the mark is written by the workflow
+          and by nothing else. A run is where the solo's mandate cannot be,
+          because the solo is not there, so the refusal states what is already
+          true rather than adding a rule. Every path that lands a level asks one
+          function, so the rule is written once: `difficulty`, `file_issue` —
+          which `post promote` reaches and which lands its level on the
+          `issue create` rather than through `relabel` — and
+          `ensure_autonomous_level`, which is the level `move delegate` lands.
+          `stop` is excepted by writing `RUN_LEVEL` and nothing else. `triage`
+          is excepted from this function and guarded on identity instead,
+          argued below. This sentence has been wrong twice, both times by
+          enumerating from the wrong set — first the callers of `difficulty`
+          and `file_issue`, then the callers of `relabel` — and both times the
+          reviewer read it against the code and found it. The set that matters
+          is what lands a level, by whatever call.
+
+          `human` is excepted, and the exception is not a hole. The other three
+          levels say which kind of Job takes the work, which is the reviewer's
+          verdict to give; `human` says the next step is not a Job's at all,
+          which is the one fact a run holds first and nobody else can see — a
+          decision owed, or work it could not finish. PR First's fourth step
+          already gives every Role that reading and sets the bar deliberately
+          low (DR-226), and `move stop` already lands `human` on a Challenge
+          the Job holds. Refusing `human` would make a run choose between an
+          honest hand-back and no act at all.
+
+          `move reread` is the other half, and it is the event `triage.yml`
+          was already listening for. It refuses a claimed Challenge: the claim
+          is what says a Job stands on the work, and a level leaving would ask
+          the reader to route a Challenge under someone's feet. What it costs:
+          a run that was right about `hard` waits for a reading that says so,
+          which is the cost DR-230 accepted for every Challenge and is paid
+          here by the ones a run would have skipped it for.
+    consequences:
+      - >-
+        `refuse_a_level_from_a_run` in `.meta/say/move` refuses any level but
+        `RUN_LEVEL` where `channel.in_a_run()` holds, and is asked by
+        `file_issue` before anything reaches GitHub and by `difficulty` before
+        the labels are read. `post promote --difficulty` inherits it through
+        `file_issue`, which is the path the promotion pass after a review
+        takes. The refusal names what the caller does instead, so a run told
+        only that it may not land a level is not left without an act.
+      - >-
+        `ensure_autonomous_level` asks it on the level it settles on rather
+        than on the one a caller named, so the `medium` it defaults an
+        unestimated Issue to is refused with the rest. `move delegate` is the
+        solo's verb and no workflow types it, but `held_by` is who uses a verb
+        and not who may (solorepo's DR-116), and this is the one path by which
+        a run could have routed its own unread work to the loop in a single
+        act.
+      - >-
+        `move triage` is the one verb that lands a level in a run, and it is
+        guarded on identity rather than on location: in a run it refuses every
+        account but the reviewer's, which `channel.role_login` names without
+        touching its token (solorepo's DR-107). Asking `in_a_run()` there would
+        refuse the reading door itself, since `triage.yml` writes the run mark
+        like every other workflow. The hole this closes was real and the
+        reviewer found it on this change: a coder run could promote a thread
+        with no level, then type `move triage <n> medium` with four paragraphs
+        under the four headings, and the loop would take a Challenge whose only
+        reading was written by the run that raised it — solorepo's #608's
+        symptom with `medium` in place of `hard`, and a comment standing on the
+        Issue that looks like a reading. `move stop` is untouched and needs no
+        guard: it lands `human`, which is the level a run may land, and says
+        where the Job stopped as it does.
+      - >-
+        `move reread <issue>` takes every level off a Challenge, which is the
+        `unlabeled` delivery `triage.yml` runs the reader on. It refuses a run
+        outright, an Issue that is not a Challenge, one carrying no level, one
+        that is closed, and one a Job has claimed, naming `move stop` for the
+        run and for the claim. The refusal to a run is the one that makes the
+        rest of this Decision hold rather than a courtesy: a run that could
+        strip a level would reach in two acts what it may not do in one — take
+        off what the solo mandated, and let the door land a level a loop takes.
+        The closed case is the door's own condition read back, since
+        `triage.yml` asks for an open Issue before anything else and stripping
+        a level there would take the verdict off and queue no reader. Being
+        the solo's verb is not what stops a run typing it, and `held_by` never
+        was.
+      - >-
+        PR First's third step says a run cannot hold the solo's mandate and
+        that the verbs refuse it one, with `human` named as the hand-back
+        rather than the way round.
+      - >-
+        DR-159's fifth consequence is amended in place: surviving notices are
+        promoted with no level, for the reviewer to read. Its reasoning is
+        unchanged and is now DR-230's mechanism — a promotion that lands no
+        level starts no autonomous follow-up run, because the loop takes
+        nothing until a verdict lands a level.
+      - >-
+        The Challenges runs labelled before this are handed back with `move
+        reread`, which is the first thing the verb is for. The claim refusal is
+        the filter: the ones with a session standing on their branch are
+        claimed, and stay where they are.
+      - >-
+        `.meta/checks/probes/channel/level.py` observes the refusal firing and
+        standing aside, from a run and from a session, on both verbs, and
+        observes `reread` on a claimed Challenge and an unclaimed one — a
+        guardrail never observed to fail being evidence of nothing (A4).
+    falsifier: >-
+      A run landing any level but `human` on a Challenge, the reviewer's own
+      reading excepted, would falsify the mechanism — and a reading is the
+      reviewer's account speaking, not a workflow's name. The choice is falsified by `human` becoming what `hard` was:
+      a queue of Challenges a run handed to the solo at the rate the `hard`
+      queue grew, which would say the exception is being typed as an exit from
+      the reader rather than as the fact it names — and the answer then is a
+      reason posted beside the level, as `triage` already requires of a
+      verdict, rather than a level a run cannot land at all. It is also
+      falsified by a reading the queue does not need: if the Challenges handed
+      back by `reread` come back at `hard` in the same proportion, the runs
+      were right and the reader is spending a pass to agree with them.
+    rationale: |-
+      Christopher, on what he watched happen: the coder agent keeps marking
+      things hard after getting its reviews back, and he would like it to
+      stop — with an escape hatch to `human` for when it is stuck or has
+      discovered a decision that is owed.
+
+      The diagnosis is that it was not disobedience. DR-230 moved the rule and
+      left DR-159 standing behind it saying the opposite, and a coder reading
+      the record found `hard` written as the thing to do. So the correction is
+      two-sided: the stale instruction goes, and the rule that replaced it
+      stops being an instruction at all. That is A20 applied to a decision
+      record that had already been superseded in every artifact but its own.
+
+      The escape hatch is the part worth being careful about, because it is
+      the same shape as the failure. `hard` became a parking brake for
+      everything a run did not want to decide; `human` could too. The reason
+      to keep it anyway is that a run finding a decision owed is the case PR
+      First's fourth step exists for, and the bar there is deliberately low —
+      a Job that cannot say "this is the solo's" will say something worse, or
+      nothing. What separates the two is that `human` asks for the solo by
+      name and starts no Job, where `hard` was a routing claim about work the
+      run had not read. The falsifier watches for the difference collapsing.

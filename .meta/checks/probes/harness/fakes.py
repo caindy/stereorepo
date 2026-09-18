@@ -17,10 +17,15 @@ class FakeIssue:
     the assignees. `fail` makes every call raise
     `subprocess.CalledProcessError`, which is what a deleted Issue or a token
     without the scope looks like to the channel. `repo view` answers `o/r` and
-    `api user` answers `o-r-coder`, the coder Role's login for that repository
+    `api user` answers `login`, by default `o-r-coder`, the coder Role's login for that repository
     as `channel.role_login` composes it (solorepo's DR-107), which is what a
     claim that went through leaves in `assignees` and a comment posted leaves
-    as its author.
+    as its author. `state` and `login` are attributes rather than arguments,
+    because almost every case wants an open Issue and the coder's login: a case
+    assigns `state = "CLOSED"` where the verb asks whether the reading door
+    would accept the delivery, and `login = "o-r-reviewer"` where it asks which
+    Role is speaking rather than merely signing as one — `move triage`, whose
+    verdict is the reviewer's wherever it runs (solorepo's DR-235).
     """
 
     def __init__(self, labels: list[str], fail: bool = False, assignees: list[str] | None = None,
@@ -28,6 +33,8 @@ class FakeIssue:
         self.labels, self.assignees, self.views = list(labels), list(assignees or []), 0
         self.comments: list[dict[str, Any]] = list(comments or [])
         self.fail = fail
+        self.state = "OPEN"
+        self.login = "o-r-coder"
 
     def __call__(self, *args: str, parse: bool = True, **kwargs: Any) -> Any:
         """One `gh` call: `issue view` of the labels or the assignees, `issue edit` of either, the login, or the comments listed or one posted."""
@@ -40,7 +47,7 @@ class FakeIssue:
         if args[:2] == ("issue", "edit"):
             return self.edit(args)
         if args[:2] == ("api", "user"):
-            return "o-r-coder"
+            return self.login
         if args[:1] == ("api",) and len(args) > 1 and "comments" in args[1]:
             if "-f" not in args:
                 return list(self.comments)
@@ -50,16 +57,38 @@ class FakeIssue:
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
     def view(self, args: tuple[str, ...]) -> dict[str, Any]:
-        """`issue view` of the labels, counted in `views`, or of the assignees."""
-        if "labels" in args:
-            self.views += 1
-            return {"labels": [{"name": name} for name in self.labels]}
-        if "assignees" in args:
-            return {"assignees": [{"login": who} for who in self.assignees]}
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        """`issue view` of any fields this fake holds: the labels, counted in `views`, the assignees, or the state.
+
+        The fields are read off the value of `--json` rather than matched
+        against the call's words, so a verb that asks for two at once is
+        answered in one call — `move reread` asks for the state beside the
+        assignees, since the reading door it delivers to declines a closed
+        Issue (solorepo's DR-235).
+        """
+        asked = args[args.index("--json") + 1].split(",") if "--json" in args else []
+        answer: dict[str, Any] = {}
+        for field in asked:
+            if field == "labels":
+                self.views += 1
+                answer["labels"] = [{"name": name} for name in self.labels]
+            elif field == "assignees":
+                answer["assignees"] = [{"login": who} for who in self.assignees]
+            elif field == "state":
+                answer["state"] = self.state
+            else:
+                raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        if not answer:
+            raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        return answer
 
     def edit(self, args: tuple[str, ...]) -> str:
-        """`issue edit`: an assignee added or removed, or every `--add-label` and `--remove-label` applied."""
+        """`issue edit`: an assignee added or removed, or every `--add-label` and `--remove-label` applied, either without the other.
+
+        A call that only removes is `move reread` taking a level off a
+        Challenge (solorepo's DR-235); until it existed, every labelling verb
+        added one label as it dropped another, and reading the removals under
+        an addition was enough.
+        """
         if "--add-assignee" in args:
             self.assignees.append(args[args.index("--add-assignee") + 1])
             return ""
@@ -68,7 +97,7 @@ class FakeIssue:
             if login in self.assignees:
                 self.assignees.remove(login)
             return ""
-        if "--add-label" in args:
+        if "--add-label" in args or "--remove-label" in args:
             for i, arg in enumerate(args):
                 if arg == "--add-label" and args[i + 1] not in self.labels:
                     self.labels.append(args[i + 1])

@@ -60,7 +60,14 @@ decisions:
           circumvents the solo's judgement on what work is taken. Promoting at
           hard creates the Issue, links it to resolve the review thread, and lets
           the merge proceed, keeping the choice of when to take up the work with
-          the solo.
+          the solo. Amended on #608, with the consequence below and for the same
+          reason (solorepo's DR-235): what this alternative rejects is still
+          rejected, but the remedy the last sentence names is not. A promotion
+          that lands no level fires the reviewer's reading door, so the choice
+          of when to take up the work is kept by a reading rather than by a
+          label nobody gave — and this sentence, left standing, is the other
+          place a coder reading DR-159 would still find `hard` written as the
+          thing to do.
       - name: Move promotion to approval and before arming, and open the coder door on approved
         chosen: true
         reason: >-
@@ -87,7 +94,13 @@ decisions:
         On easy challenges and during the approval promotion pass, surviving
         notices are promoted with difficulty hard so that threads resolve and
         merges proceed without autonomous follow-up runs initiating
-        unsupervised.
+        unsupervised. Amended on #608: they are promoted with no level at all,
+        and a run is refused one (solorepo's DR-235). The reason this
+        consequence gives is now DR-230's mechanism rather than a label — a
+        promotion that lands no level fires the reviewer's reading door and
+        the loop takes nothing until a verdict lands a level, so `hard` buys
+        no supervision and costs the reading, which is what every Challenge
+        promoted after a review went without.
       - >-
         `.meta/check_pr.py`'s `unheld()` checks armed pull requests for
         unresolved conversations when idle for longer than longest_run(),

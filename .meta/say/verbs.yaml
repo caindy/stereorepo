@@ -53,7 +53,7 @@ programs:
         held_by: [coder, solo]
       - name: promote
         usage: "<thread-id> --title T [--difficulty D] [--no-resolve] < issue-body.md"
-        does: "at approval: file the Issue with the Issue form's body, `challenge` alone for the reviewer to read unless the solo mandates a level, reply with the link, resolve (or defer resolution)"
+        does: "at approval: file the Issue with the Issue form's body, `challenge` alone for the reviewer to read unless the solo mandates a level, which a run may not hold, reply with the link, resolve (or defer resolution)"
         held_by: [coder, solo]
       - name: landed
         usage: "<pr>"
@@ -74,15 +74,19 @@ programs:
     verbs:
       - name: file
         usage: "--title T [--difficulty D|--roadmap] < body.md"
-        does: "file a Challenge the form's way: `challenge` alone, for the reviewer to read and land a level on; with `--difficulty`, the solo's verdict given in advance, which skips the reviewer; or a roadmap Issue"
+        does: "file a Challenge the form's way: `challenge` alone, for the reviewer to read and land a level on; with `--difficulty`, the solo's verdict given in advance, which skips the reviewer, and which a run may not hold; or a roadmap Issue"
         held_by: [solo]
       - name: triage
         usage: "<issue> <level> < verdict.md"
-        does: "the verdict on a Challenge read against the form and the tree, the body naming what was checked: posted on the Issue, then the level landed; refused where the body names no check or a level already stands, which `difficulty` moves; also makes a Challenge of an Issue that arrived without the form, or of a roadmap Issue whose blocker has closed"
+        does: "the verdict on a Challenge read against the form and the tree, the body naming what was checked: posted on the Issue, then the level landed; refused in a run to every account but the reviewer's, since a run landing a level on the Challenge it raised is the raiser reading its own work, and refused where the body names no check or a level already stands, which `difficulty` moves; also makes a Challenge of an Issue that arrived without the form, or of a roadmap Issue whose blocker has closed"
         held_by: [reviewer, solo]
       - name: difficulty
         usage: "<issue> <level>"
-        does: "move a Challenge's level: easy, medium, hard, human"
+        does: "move a Challenge's level: easy, medium, hard, human; a run lands `human` and no other, the rest being a verdict the reviewer gives"
+        held_by: [solo]
+      - name: reread
+        usage: "<issue>"
+        does: "hand a Challenge back to the reviewer: its level taken off, which is the delivery the reading door fires on; refused to a run, which would undo in two acts a verdict it may not move in one, and on an Issue that is not a Challenge, one with no level to take off, one that is closed, which the door declines, or one a Job's claim stands on"
         held_by: [solo]
       - name: claim
         usage: "<issue>"
@@ -146,7 +150,8 @@ programs:
         usage: "<issue|pr> [--level easy|medium]"
         does: >-
           hand a Challenge or pull request to the coder loop: sets an autonomous
-          difficulty (`easy` or `medium`), refusing a `hard` or `human` Challenge
+          difficulty (`easy` or `medium`), refusing a run the level it lands —
+          the default `medium` included — and refusing a `hard` or `human` Challenge
           unless `--level` is passed; dispatches `rebase` if conflicting, dispatches
           `review` for a verdict standing unanswered, refuses a clean pull
           request with no changes requested, or assigns the coder and triggers

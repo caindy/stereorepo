@@ -7,6 +7,7 @@ from typing import Any
 
 from checks.collect import check
 from checks.probes.harness import (
+    environment,
     load_channel,
     outcome,
     stood_in,
@@ -231,17 +232,26 @@ def _pull_request_off_the_loops_branch_refused(channel, move) -> list[str]:
 
 @check("delegate probes", pre=True)
 def delegate_probes():
-    """`move delegate` on either a Challenge or pull request, verifying difficulty level enforcement and pass dispatches."""
+    """`move delegate` on either a Challenge or pull request, verifying difficulty level enforcement and pass dispatches.
+
+    `delegate` is the solo's, and a run is refused the level it lands
+    (solorepo's DR-235), so `ACTOR_SESSION` is unset around every case rather
+    than left as the environment has it: the gate runs inside the coder loop's
+    container as well as on a laptop, and the same case would otherwise be a
+    delegation in one place and a refused level in the other. The run's own case
+    is stated where the refusal is, in `probes/channel/level.py`.
+    """
     channel, _, programs = load_channel()
     move = programs["move"]
-    return [problem for problems in (
-        _unestimated_issue_is_labelled_medium_and_assigned(channel, move),
-        _medium_issue_has_its_label_re_added(channel, move),
-        _hard_issue_refused_without_level(channel, move),
-        _hard_issue_delegated_with_an_explicit_level(channel, move),
-        _conflicting_pull_request_dispatches_rebase_first(channel, move),
-        _changes_requested_pull_request_dispatches_review(channel, move),
-        _clean_pull_request_refused(channel, move),
-        _pull_request_off_the_loops_branch_refused(channel, move)
-    ) for problem in problems]
+    with environment(ACTOR_SESSION=None):
+        return [problem for problems in (
+            _unestimated_issue_is_labelled_medium_and_assigned(channel, move),
+            _medium_issue_has_its_label_re_added(channel, move),
+            _hard_issue_refused_without_level(channel, move),
+            _hard_issue_delegated_with_an_explicit_level(channel, move),
+            _conflicting_pull_request_dispatches_rebase_first(channel, move),
+            _changes_requested_pull_request_dispatches_review(channel, move),
+            _clean_pull_request_refused(channel, move),
+            _pull_request_off_the_loops_branch_refused(channel, move)
+        ) for problem in problems]
 

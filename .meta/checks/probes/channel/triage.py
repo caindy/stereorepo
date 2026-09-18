@@ -41,7 +41,14 @@ def triage_probes() -> list[str]:
 
 
 def triaged(channel: Any, move: Any, fake: FakeIssue, level: str, body: str) -> tuple[str | None, "Recorder"]:
-    """One `triage` of Issue 7 against `fake` with `body` signed as this Actor, as `(what it exited with, the recording fake)`."""
+    """One `triage` of Issue 7 against `fake` with `body` signed as this Actor, as `(what it exited with, the recording fake)`.
+
+    The fake speaks as the reviewer, because every case here is the reading
+    itself and the verb refuses a run on any other account (solorepo's DR-235).
+    Who may type it is asked in `probes/channel/level.py`, where the rule is;
+    what the verdict does is asked here.
+    """
+    fake.login = "o-r-reviewer"
     recorder = Recorder(fake)
     with environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"):
         signed = channel.signed(body)

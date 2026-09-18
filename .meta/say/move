@@ -31,6 +31,12 @@ DIFFICULTIES = ("easy", "medium", "hard", "human")
 # makes a Challenge at either one a run's rather than a session's.
 LOOP_LEVELS = ("easy", "medium")
 
+# The one level a run lands itself (solorepo's DR-235). The other three say which kind of
+# Job takes the Challenge, which is the reviewer's verdict to give; this one says
+# the next step is not a Job's at all, which is the fact a run is the first to
+# hold and nobody else can see.
+RUN_LEVEL = "human"
+
 
 # --- An Issue's life: filed, triaged, its level moved, claimed, handed back,
 # --- closed against what answered it.
@@ -89,17 +95,127 @@ def challenge_labels(issue: str | int) -> list[str]:
     return now
 
 
+def refuse_a_level_from_a_run(level: str | None, instead: str) -> None:
+    """Refuse a level a run would land on a Challenge, `RUN_LEVEL` excepted (solorepo's DR-235).
+
+    The reviewer reads every Challenge and its verdict is the label
+    (solorepo's DR-230), so a level landed anywhere else is a reading that did
+    not happen: it routes the work — to a loop at `easy` or `medium`, to the
+    solo at `hard` — without the one reader who has no stake in the answer. A
+    level landed at filing is the solo's verdict given in advance, and a run is
+    where that mandate cannot be: the solo is not beside it. A session may be,
+    and is not read here, which is the same line `move claim` draws
+    (solorepo's DR-148).
+
+    `RUN_LEVEL` is not a way round the refusal. `human` starts no Job and asks
+    for the solo, which is what a run has to be able to say the moment it finds
+    a decision owed or work it cannot finish — PR First's fourth step, whose
+    bar is deliberately low (solorepo's DR-226).
+
+    Parameters:
+        level (str | None): The level the call would land, or None where it lands none.
+        instead (str): What this caller does instead, named in the refusal so a
+            run told only that it may not land a level is not left without an
+            act (solorepo's DR-221).
+
+    Raises:
+        SystemExit: If a run asks for any level but `RUN_LEVEL`.
+    """
+    if not level or level == RUN_LEVEL or not channel.in_a_run():
+        return
+    sys.exit(f"say: `{level}` is a verdict and this is a run: the reviewer reads every "
+             "Challenge and its verdict is the label, so a level landed here is a reading "
+             "nobody did (solorepo's DR-230, solorepo's DR-235).\n"
+             f"     Nothing was written. {instead}\n"
+             f"     `{RUN_LEVEL}` is the one level a run lands, where the next step is the "
+             "solo's rather than a Job's — a decision owed, or work this Job could not "
+             "finish, which on a Challenge this Job holds is `move stop`.")
+
+
 def difficulty(issue: str | int, level: str) -> None:
-    """Set the difficulty estimate label on an existing Challenge issue.
+    """Move a level already standing on a Challenge, which is a verdict standing.
+
+    The solo's move of the reviewer's verdict (solorepo's DR-230), and the act
+    that takes a Challenge from the loop at `hard` so a session can hold its
+    branch (solorepo's DR-142). A run moves one to `RUN_LEVEL` and no further:
+    see `refuse_a_level_from_a_run`.
 
     Parameters:
         issue (int | str): Challenge issue number.
         level (str): Difficulty level to apply (`easy`, `medium`, `hard`, `human`).
+
+    Raises:
+        SystemExit: If a run asks for a level that is a verdict, or the Issue is
+            not a Challenge.
     """
+    refuse_a_level_from_a_run(level, "The level standing on the Issue is unmoved, and the "
+                                     "verdict that moves it is the reviewer's or the solo's.")
     now = challenge_labels(issue)
     stale = [l for l in now if l in DIFFICULTIES and l != level]
     now = relabel(issue, add=[level], remove=stale)
     print(f"#{issue} is labelled {', '.join(now)}")
+
+
+def reread(issue: str | int) -> None:
+    """Hand a Challenge back to the reviewer by taking its level off (solorepo's DR-235).
+
+    `triage.yml` runs the reader where a level leaves a Challenge as well as
+    where `challenge` lands on one without a level (solorepo's DR-230), and
+    until now nothing in the channel could deliver that event: `difficulty`
+    replaces a level, `triage` refuses where one stands, and `stop` lands
+    `human`. So a Challenge labelled without a reading — the levels a run
+    landed before this Decision, and any the solo mandated and thought better
+    of — had no way back to the reader that GitHub would notice.
+
+    A run is refused it. Taking a level off is undoing a verdict, and a run that
+    could do it would reach in two acts what `refuse_a_level_from_a_run` denies
+    it in one: strip the level the solo mandated, and let the reading door land
+    whatever it lands, which at `easy` or `medium` starts the loop on work that
+    was being held back. A run hands work back by `move stop`, which says where
+    it stopped and asks for the solo by name.
+
+    A claimed Challenge is refused. The claim is what says a Job is standing on
+    the work, and a level leaving hands the Challenge to a reader whose verdict
+    would route it under that Job; `move stop` is how a Job gives up what it
+    holds, and it says where it stopped as it goes.
+
+    A closed Challenge is refused, because the door declines one:
+    `triage.yml`'s job asks `github.event.issue.state == 'open'` before anything
+    else. Stripping the level there would take the verdict off and queue no
+    reader, and the verb would have reported the reading it did not cause.
+
+    Parameters:
+        issue (int | str): Challenge number to hand back to the reviewer.
+
+    Raises:
+        SystemExit: If a run types it, or the Issue is not a Challenge, carries
+            no level, is closed, or is claimed.
+    """
+    if channel.in_a_run():
+        sys.exit(f"say: taking the level off #{issue} undoes a verdict, and this is a run: it "
+                 "would reach in two acts what a run may not do in one, since the door lands a "
+                 "level of its own on what is stripped (solorepo's DR-235).\n"
+                 "     Nothing was written. A run hands work back with `move stop <issue>`, "
+                 "which says where it stopped and asks for the solo.")
+    now = challenge_labels(issue)
+    standing = [l for l in now if l in DIFFICULTIES]
+    if not standing:
+        sys.exit(f"say: #{issue} carries no level, so it is the reviewer's already; nothing "
+                 "would be delivered by taking one off. `just next` lists an unread Challenge "
+                 "under `unread`, and `python3 .meta/next.py --check` fails on one nothing has "
+                 "touched for an hour, which is a door that did not fire.")
+    seen = channel.gh("issue", "view", str(issue), "--json", "state,assignees")
+    if str(seen.get("state", "")).upper() != "OPEN":
+        sys.exit(f"say: #{issue} is {str(seen.get('state', 'not open')).lower()}, and the reading "
+                 "door asks for an open Issue before anything else, so this would take the level "
+                 "off and queue no reader. Reopen it first, if the Challenge is live.")
+    who = [a["login"] for a in seen["assignees"]]
+    if who:
+        sys.exit(f"say: #{issue} is claimed by {', '.join(who)}, and a level leaving asks the "
+                 "reviewer to route a Challenge a Job is standing on. `move stop <issue>` is "
+                 "how a Job gives up what it holds, and this is typeable once nobody does.")
+    now = relabel(issue, remove=standing)
+    print(f"#{issue} is labelled {', '.join(now) or 'nothing'}; the reviewer reads it")
 
 
 VERDICT = ("**Worth doing.**", "**Waits on.**", "**Already answered.**", "**Decision owed.**")
@@ -158,15 +274,39 @@ def triage(issue: str | int, level: str, body: str) -> None:
     refused, because a level standing is a verdict standing and `difficulty` is
     the verb that moves one.
 
+    This is the one verb that lands a level in a run, and it is guarded on
+    identity rather than on location (solorepo's DR-235). `refuse_a_level_from_a_run`
+    would refuse the reading door itself, since `triage.yml` writes the run
+    mark like every other workflow; what a run may not do is land a level on a
+    Challenge **it** raised, which is the raiser reading their own work. So the
+    question asked here is whose credential is speaking: in a run, the
+    reviewer's account and no other. `role_login` names it without touching its
+    token (solorepo's DR-107), so the coder's promotion pass cannot type a
+    verdict on the Issue it has just filed and then take it, which is
+    solorepo's #608's symptom reached by a longer road. A session is not asked,
+    as it is not asked anywhere else in this rule: the solo directs one.
+
     Parameters:
         issue (int | str): Issue number to triage.
         level (str): Difficulty level (`easy`, `medium`, `hard`, `human`).
         body (str): The verdict, signed, carrying every heading in `VERDICT`.
 
     Raises:
-        SystemExit: If the Challenge already carries a level, or the body lacks a
-            heading of the verdict form.
+        SystemExit: If a run speaks as any account but the reviewer's, if the
+            Challenge already carries a level, or the body lacks a heading of
+            the verdict form.
     """
+    if channel.in_a_run():
+        reviewer = channel.role_login("reviewer")
+        who = channel.login()
+        if who != reviewer:
+            sys.exit(f"say: a verdict is the reviewer's, and this run speaks as `{who}` rather "
+                     f"than `{reviewer}`: a run landing a level on a Challenge it raised is the "
+                     "raiser reading their own work, which is what the reading door exists to "
+                     "prevent (solorepo's DR-230, solorepo's DR-235).\n"
+                     "     Nothing was posted and no level landed. File or promote with no "
+                     "level and the door queues the reviewer, which is the reading; `move stop` "
+                     "hands the Challenge to the solo where the next step is his.")
     now = labels_of(issue)
     standing = [l for l in now if l in DIFFICULTIES]
     if "challenge" in now and standing:
@@ -234,7 +374,9 @@ def file_issue(title: str, body: str, level: str | None = None,
     A Challenge filed with no level lands `challenge` alone, which is the
     reviewer's queue: the raiser proposes a level in the body and the reviewer's
     verdict lands the label. A level given here is the solo's verdict given in
-    advance, and skips the reviewer on purpose (solorepo's DR-230).
+    advance, and skips the reviewer on purpose (solorepo's DR-230). A run holds
+    no such mandate, and is refused every level but `RUN_LEVEL`
+    (solorepo's DR-235).
 
     Refuses when an open Issue already carries this title, so that a caller
     retried after a failure part-way through a larger act files nothing the
@@ -250,10 +392,15 @@ def file_issue(title: str, body: str, level: str | None = None,
         tuple[str, str]: Issue number and URL.
 
     Raises:
-        SystemExit: If the body does not open with `**Waits on.**`, if an open Issue
-            already carries this title, or if GitHub does not show the labels and
-            blocked-by relationships the call asked for.
+        SystemExit: If a run asks for a level that is a verdict, if the body does
+            not open with `**Waits on.**`, if an open Issue already carries this
+            title, or if GitHub does not show the labels and blocked-by
+            relationships the call asked for.
     """
+    refuse_a_level_from_a_run(level, "Filed with no level it lands `challenge` alone, which "
+                                     "is the reviewer's queue, and the level this run would "
+                                     "have landed belongs under `**Difficulty.**` in the body, "
+                                     "where it is a proposal the reader answers.")
     first = body.lstrip().split("\n", 1)[0]
     if not first.startswith("**Waits on.**"):
         sys.exit("say: the body does not open with `**Waits on.**`, which is the line "
@@ -1990,6 +2137,12 @@ def ensure_autonomous_level(issue_number: str | int,
     `human` without explicit confirmation. If the `challenge` label is missing, applies
     it alongside the difficulty.
 
+    A run is refused the level this lands, as it is wherever a level is landed
+    (solorepo's DR-235): delegating is the solo handing a Challenge to the loop,
+    and a run that could type it would route its own work past the reviewer in
+    one act — including by the `medium` default, which is why the refusal is
+    asked on the level this settles on rather than on the one a caller named.
+
     Parameters:
         issue_number (int | str): Issue number to inspect and update.
         requested_level (str | None): Explicit difficulty level requested by caller.
@@ -1998,7 +2151,8 @@ def ensure_autonomous_level(issue_number: str | int,
         tuple[str, bool]: Target difficulty level and whether labels were changed.
 
     Raises:
-        SystemExit: If the Issue is labelled `hard` or `human` and no explicit level was given.
+        SystemExit: If the Issue is labelled `hard` or `human` and no explicit
+            level was given, or if a run asks for a level at all.
     """
     now_labels = labels_of(issue_number)
     current_level = next((l for l in now_labels if l in DIFFICULTIES), None)
@@ -2012,6 +2166,11 @@ def ensure_autonomous_level(issue_number: str | int,
     else:
         target_level = "medium"
 
+    refuse_a_level_from_a_run(target_level, "Delegating is the solo handing a Challenge to the "
+                                            "loop, and the reviewer's verdict is what opens that "
+                                            "door on its own: a Challenge read at `easy` or "
+                                            "`medium` is the loop's from the moment the label "
+                                            "lands.")
     stale = [l for l in now_labels if l == "roadmap" or (l in DIFFICULTIES and l != target_level)]
     changed = False
     if "challenge" not in now_labels or current_level != target_level:
@@ -2119,10 +2278,12 @@ def build_parser() -> argparse.ArgumentParser:
     what = p.add_mutually_exclusive_group()
     what.add_argument("--difficulty", choices=DIFFICULTIES, dest="level",
                       help="a Challenge at this level: the solo's verdict given in advance, which "
-                           "skips the reviewer; without it, `challenge` alone, for the reviewer to read")
+                           "skips the reviewer; without it, `challenge` alone, for the reviewer to "
+                           f"read. A run lands `{RUN_LEVEL}` and no other")
     what.add_argument("--roadmap", action="store_true", help="a roadmap Issue: intended and deferred")
     p = sub.add_parser("triage"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
     p = sub.add_parser("difficulty"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
+    p = sub.add_parser("reread"); p.add_argument("issue")
     p = sub.add_parser("claim"); p.add_argument("issue")
     p = sub.add_parser("stop"); p.add_argument("issue")
     p = sub.add_parser("obviate"); p.add_argument("issue")
@@ -2175,6 +2336,8 @@ def main() -> None:
         triage(args.issue, args.level, channel.signed(channel.stdin_body()))
     elif args.verb == "difficulty":
         difficulty(args.issue, args.level)
+    elif args.verb == "reread":
+        reread(args.issue)
     elif args.verb == "claim":
         claim(args.issue)
     elif args.verb == "delegate":

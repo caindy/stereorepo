@@ -54,38 +54,45 @@ def filing_probes() -> list[str]:
     A refusal's text is read, not just its presence: `run_verb` reports an
     exception as text rather than raising it, so a truthy answer alone cannot
     tell the refusal from the fake being asked something it has no answer for.
+
+    Every case here files at a level, which only a session may do
+    (solorepo's DR-235), so `ACTOR_SESSION` is unset around them rather than
+    left as the environment has it: the gate runs inside the coder loop's
+    container as well as on a laptop, and the same case would otherwise be a
+    filing in one place and a refused level in the other.
     """
     channel, _, programs = load_channel()
     move, post = programs["move"], programs["post"]
     problems: list[str] = []
 
-    fake = FakeFiling()
-    said = run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level="hard"))
-    if said or len(fake.created) != 1:
-        problems.append(f"filing: a first filing said {said!r} and created {len(fake.created)}")
+    with environment(ACTOR_SESSION=None):
+        fake = FakeFiling()
+        said = run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level="hard"))
+        if said or len(fake.created) != 1:
+            problems.append(f"filing: a first filing said {said!r} and created {len(fake.created)}")
 
-    said = run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level="hard"))
-    if not said or "900" not in said or "post answer" not in said or len(fake.created) != 1:
-        problems.append(f"filing: a second filing under one title said {said!r} and left "
-                        f"{len(fake.created)} created")
+        said = run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level="hard"))
+        if not said or "900" not in said or "post answer" not in said or len(fake.created) != 1:
+            problems.append(f"filing: a second filing under one title said {said!r} and left "
+                            f"{len(fake.created)} created")
 
-    said = run_verb(channel, fake, lambda: move.file_issue(TITLE + " again", BODY, level="hard"))
-    if said or len(fake.created) != 2:
-        problems.append(f"filing: a filing under an unused title said {said!r} and left "
-                        f"{len(fake.created)} created")
+        said = run_verb(channel, fake, lambda: move.file_issue(TITLE + " again", BODY, level="hard"))
+        if said or len(fake.created) != 2:
+            problems.append(f"filing: a filing under an unused title said {said!r} and left "
+                            f"{len(fake.created)} created")
 
-    unread = FakeFiling()
-    said = run_verb(channel, unread, lambda: move.file_issue(TITLE, BODY))
-    labels = next(iter(unread.created.values()), ("", "", []))[2]
-    if said or labels != ["challenge"]:
-        problems.append(f"filing: a filing with no level said {said!r} and landed {labels!r}; "
-                        "`challenge` alone is the reviewer's queue (solorepo's DR-230)")
+        unread = FakeFiling()
+        said = run_verb(channel, unread, lambda: move.file_issue(TITLE, BODY))
+        labels = next(iter(unread.created.values()), ("", "", []))[2]
+        if said or labels != ["challenge"]:
+            problems.append(f"filing: a filing with no level said {said!r} and landed {labels!r}; "
+                            "`challenge` alone is the reviewer's queue (solorepo's DR-230)")
 
-    blind = FakeFiling(list_fails=True)
-    said = run_verb(channel, blind, lambda: move.file_issue(TITLE, BODY, level="hard"))
-    if said or blind.listings != 1 or len(blind.created) != 1:
-        problems.append(f"filing: a filing whose listing GitHub would not answer said {said!r} "
-                        f"after {blind.listings} listing(s), and created {len(blind.created)}")
+        blind = FakeFiling(list_fails=True)
+        said = run_verb(channel, blind, lambda: move.file_issue(TITLE, BODY, level="hard"))
+        if said or blind.listings != 1 or len(blind.created) != 1:
+            problems.append(f"filing: a filing whose listing GitHub would not answer said {said!r} "
+                            f"after {blind.listings} listing(s), and created {len(blind.created)}")
 
     problems += promotion_probes(channel, post)
     return problems

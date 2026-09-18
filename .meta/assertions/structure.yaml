@@ -356,6 +356,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-obviate
     name: .meta/checks/probes/channel/obviate.py
     path: .meta/checks/probes/channel/obviate.py
+  - id: work:artifact/meta-checks-probes-channel-level
+    name: .meta/checks/probes/channel/level.py
+    path: .meta/checks/probes/channel/level.py
   - id: work:artifact/meta-checks-probes-channel-actor
     name: .meta/checks/probes/channel/actor.py
     path: .meta/checks/probes/channel/actor.py

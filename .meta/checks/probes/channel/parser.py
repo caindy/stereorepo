@@ -54,6 +54,7 @@ def channel_parser_probes():
         "move": [
             ("claim 93", {"verb": "claim", "issue": "93"}),
             ("difficulty 93 human", {"verb": "difficulty", "issue": "93", "level": "human"}),
+            ("reread 93", {"verb": "reread", "issue": "93"}),
             ("triage 93 medium", {"verb": "triage", "issue": "93", "level": "medium"}),
             ("stop 93", {"verb": "stop", "issue": "93"}),
             ("file --title t --difficulty medium",
@@ -101,6 +102,7 @@ def channel_parser_probes():
                          "file", "file --title t --difficulty huge",
                          "file --title t --difficulty easy --roadmap",
                          "difficulty 93 huge", "triage 93", "triage 93 huge",
+                         "reread", "reread 93 hard",
                          "open --title t --base b --on 12",
                          "issue --title t", "pr --title t", "pr-base 1 --base b",
                          "label 93 --add human", "stack 1 2"]),
