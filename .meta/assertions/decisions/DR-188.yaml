@@ -8,6 +8,8 @@ decisions:
       - work:artifact/meta-depth
       - work:artifact/meta-work-structure
       - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-checks-probes-tools-depth
     context: >-
       In `review.yml`, `choose the depth` hardcoded thirty lines of inline bash
       evaluating changed files against scaffold boundary paths (`.meta/say`,

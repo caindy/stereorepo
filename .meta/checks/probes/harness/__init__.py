@@ -20,6 +20,7 @@ from probes.harness.acts import (
     outcome,
     run_verb,
     stood_in,
+    written,
 )
 from probes.harness.fakes import FakeIssue, FakeWikiPath
 from probes.harness.github import FakeGitHub, WatchGitHub
@@ -43,5 +44,6 @@ __all__ = [
     "outcome",
     "run_verb",
     "stood_in",
+    "written",
 ]
 """The module's whole surface, so every probe's `from probes.harness import ...` still resolves."""

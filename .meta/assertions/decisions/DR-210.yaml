@@ -15,6 +15,7 @@ decisions:
       - work:artifact/meta-assertions-structure
       - work:artifact/meta-mypy-ini
       - work:artifact/meta-checks-files-python
+      - work:artifact/meta-checks-probes-tools-comments
     context: >-
       Product code instantiated from `bootstraps/python/seed/` is held to
       `mypy --strict` (solorepo's DR-193) with an `ignore` list that stays

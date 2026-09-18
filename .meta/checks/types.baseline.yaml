@@ -37,7 +37,7 @@
 .meta/checks/graph/structure.py: 13
 .meta/checks/probes/channel.py: 30
 .meta/checks/probes/git.py: 9
-.meta/checks/probes/harness/acts.py: 9
+.meta/checks/probes/harness/acts.py: 10
 .meta/checks/probes/harness/fakes.py: 13
 .meta/checks/probes/harness/github.py: 7
 .meta/checks/probes/harness/loaders.py: 6
@@ -49,7 +49,13 @@
 .meta/checks/probes/loops/merge_manager.py: 11
 .meta/checks/probes/loops/merge_manager_advance.py: 1
 .meta/checks/probes/loops/stop.py: 5
-.meta/checks/probes/tools.py: 43
+.meta/checks/probes/tools/agents.py: 1
+.meta/checks/probes/tools/apm_compile.py: 1
+.meta/checks/probes/tools/comments.py: 19
+.meta/checks/probes/tools/depth.py: 13
+.meta/checks/probes/tools/dereference.py: 4
+.meta/checks/probes/tools/search.py: 1
+.meta/checks/probes/tools/timing.py: 3
 .meta/dereference.py: 41
 .meta/gate: 16
 .meta/lib/apm_compile/skills.py: 1

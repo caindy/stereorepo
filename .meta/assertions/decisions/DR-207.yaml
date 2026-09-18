@@ -13,6 +13,8 @@ decisions:
       - work:artifact/agents
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-apm-compile-agents
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-checks-probes-tools-comments
     context: >-
       solorepo's DR-175 established the reader's rubric for item docstrings and
       solorepo's DR-198 separated the conversational register from durable

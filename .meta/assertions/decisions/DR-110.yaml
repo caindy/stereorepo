@@ -11,6 +11,7 @@ decisions:
       - work:artifact/meta-lib-worktree-only-grammar
       - work:artifact/meta-lib-worktree-only-paths
       - work:artifact/meta-lib-worktree-only-verdict
+      - work:artifact/meta-checks-probes-tools-comments
     alternatives:
       - name: A prefix list of shell commands, with the search tools denied
         chosen: false

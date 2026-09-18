@@ -4,6 +4,8 @@ import collections
 import contextlib
 import io
 import os
+import pathlib
+import tempfile
 from collections.abc import Iterator
 
 Outcome = collections.namedtuple("Outcome", "code out err")
@@ -91,3 +93,15 @@ def run_verb(channel, fake, call):
     """`call` with the channel's `gh` stood in by `fake`, and what it exited with."""
     with stood_in(channel, gh=fake):
         return exit_of(call)
+
+
+@contextlib.contextmanager
+def written(suffix, text):
+    """A file holding `text` under a temporary name ending in `suffix`, closed before the block and deleted after it, whatever the block did."""
+    with tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False) as handle:
+        handle.write(text)
+        path = pathlib.Path(handle.name)
+    try:
+        yield path
+    finally:
+        path.unlink(missing_ok=True)

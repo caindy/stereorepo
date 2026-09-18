@@ -6,6 +6,7 @@ decisions:
     enacted_in:
       - work:artifact/github-workflows-review
       - work:artifact/meta-timing
+      - work:artifact/meta-checks-probes-tools-agents
     context: >-
       DR-166 bounds how many agents a review spawns because the pass costs the sum
       of them, putting an initial review on the deep path at 11 to 15 minutes. DR-122

@@ -42,6 +42,7 @@ decisions:
       mean trunk was production after all, and the merge needed the guard.
     enacted_in:
       - work:artifact/meta-say
+      - work:artifact/meta-checks-probes-tools-search
     rationale: |-
       The reason is the release strategy rather than the merge: **branch
       for release**. Trunk is where work lands; what ships is a branch cut

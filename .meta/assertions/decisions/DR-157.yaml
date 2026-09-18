@@ -9,6 +9,8 @@ decisions:
       - work:artifact/justfile
       - work:artifact/meta-render
       - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-checks-probes-tools-timing
     context: >-
       Nothing reported what a workflow costs in time. `next.py`'s `loops()`
       reads the last run of each of the four workflows and prints its verdict
