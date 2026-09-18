@@ -32,7 +32,9 @@
 .meta/checks/files/templates.py: 7
 .meta/checks/files/wiki.py: 12
 .meta/checks/files/workflows.py: 12
-.meta/checks/graph.py: 33
+.meta/checks/graph/artifacts.py: 3
+.meta/checks/graph/record.py: 17
+.meta/checks/graph/structure.py: 13
 .meta/checks/probes/channel.py: 30
 .meta/checks/probes/git.py: 9
 .meta/checks/probes/harness/acts.py: 9

@@ -54,6 +54,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-render
       - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-checks-graph-record
     rationale: |-
       DR-055 built the mechanics of PR First and left the trigger to
       whoever remembered. That held while one conversation opened a pull

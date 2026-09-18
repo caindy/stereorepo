@@ -9,6 +9,7 @@ decisions:
       - work:artifact/meta-work-core
       - work:artifact/meta-charter
       - work:artifact/meta-check
+      - work:artifact/meta-checks-graph-record
     alternatives:
       - name: Semantic CURIEs for Decisions and Articles, minted once and never edited
         chosen: false

@@ -15,6 +15,7 @@ decisions:
       - work:artifact/meta-disciplines
       - work:artifact/meta-vocabulary
       - work:artifact/meta-lib-render-decisions
+      - work:artifact/meta-checks-graph-record
     alternatives:
       - name: Keep ADR for the Project level, and add a Product level beside it
         chosen: false

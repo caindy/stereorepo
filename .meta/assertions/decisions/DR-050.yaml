@@ -6,6 +6,7 @@ decisions:
       - work:article/11
     enacted_in:
       - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-graph-record
     rationale: |-
       A journal is the intake every other record draws from: a finding
       lands there and in the same change goes to the Charter if it

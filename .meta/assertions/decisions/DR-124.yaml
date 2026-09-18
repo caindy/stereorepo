@@ -7,6 +7,7 @@ decisions:
       - work:article/12
     enacted_in:
       - work:artifact/meta-check
+      - work:artifact/meta-checks-graph-record
     alternatives:
       - name: Leave the Python as it was
         chosen: false

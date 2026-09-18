@@ -13,6 +13,7 @@ decisions:
       - work:artifact/meta-assertions-imported-readme
       - work:artifact/meta-render
       - work:artifact/specialize
+      - work:artifact/meta-checks-graph-artifacts
     alternatives:
       - name: The inherited material stops citing numbers and says the rule instead
         chosen: false

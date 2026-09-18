@@ -19,6 +19,10 @@ decisions:
       - work:artifact/meta-checks-probes-harness-loaders
       - work:artifact/meta-checks-probes-harness-github
       - work:artifact/meta-checks-probes-harness-fakes
+      - work:artifact/meta-checks-graph
+      - work:artifact/meta-checks-graph-structure
+      - work:artifact/meta-checks-graph-record
+      - work:artifact/meta-checks-graph-artifacts
       - work:artifact/meta-assertions-structure
       - work:artifact/meta-checks-files
     context: >-

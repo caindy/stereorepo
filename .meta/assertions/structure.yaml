@@ -231,8 +231,17 @@ artifacts:
     name: .meta/checks/collect.py
     path: .meta/checks/collect.py
   - id: work:artifact/meta-checks-graph
-    name: .meta/checks/graph.py
-    path: .meta/checks/graph.py
+    name: .meta/checks/graph/__init__.py
+    path: .meta/checks/graph/__init__.py
+  - id: work:artifact/meta-checks-graph-structure
+    name: .meta/checks/graph/structure.py
+    path: .meta/checks/graph/structure.py
+  - id: work:artifact/meta-checks-graph-record
+    name: .meta/checks/graph/record.py
+    path: .meta/checks/graph/record.py
+  - id: work:artifact/meta-checks-graph-artifacts
+    name: .meta/checks/graph/artifacts.py
+    path: .meta/checks/graph/artifacts.py
   - id: work:artifact/meta-checks-files
     name: .meta/checks/files/__init__.py
     path: .meta/checks/files/__init__.py

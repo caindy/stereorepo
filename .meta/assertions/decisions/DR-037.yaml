@@ -11,6 +11,7 @@ decisions:
         reason: "The constraint is enforced where it is true rather than where it is convenient: one context declared in domain_vocabulary.yaml, and the Portfolio names it."
     enacted_in:
       - work:artifact/meta-check
+      - work:artifact/meta-checks-graph-structure
     rationale: |-
       A portfolio is exactly one Bounded Context (DR-014), and the plural
       `bounded_contexts` key invited listing several. The slot stays multivalued

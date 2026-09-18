@@ -9,6 +9,7 @@ decisions:
       - work:artifact/meta-charter
       - work:artifact/meta-readme
       - work:artifact/meta-check
+      - work:artifact/meta-checks-graph-artifacts
     alternatives:
       - name: Leave the mandate in the record and route to it
         chosen: false

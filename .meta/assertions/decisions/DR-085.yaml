@@ -8,6 +8,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-charter
       - work:artifact/meta-work-disciplines
+      - work:artifact/meta-checks-graph-artifacts
     alternatives:
       - name: Keep A13
         chosen: false

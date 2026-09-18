@@ -7,6 +7,7 @@ decisions:
       - "DR-013's framing of specializing into a new *product* repo is corrected: Specialization produces a Portfolio."
     enacted_in:
       - work:artifact/meta-check
+      - work:artifact/meta-checks-graph-structure
     rationale: |-
       One product **portfolio** holds one **bounded context** and therefore one
       **Ubiquitous Language**, and contains multiple **products**, which may be
