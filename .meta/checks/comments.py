@@ -33,6 +33,13 @@ baselines are
 The comparison itself is `collect.against_baseline`, shared with the
 `meta types` step of `files.py` (solorepo's DR-210).
 
+`repeated suppressions` ratchets too, against
+`.meta/checks/suppressions.baseline.yaml`, and its comparison is
+`against_repeats` rather than the shared one: a group is keyed by its rule and
+reason rather than by a path, so a baseline entry the tree has dropped is one
+to delete rather than one naming a file that no longer exists
+(solorepo's DR-223).
+
 Scope: every Python file under `.meta/`, which is the Project this gate is for,
 and every Rust file git lists, because `.meta/` holds none and the seed crates
 are where an `#[allow]` would appear.
@@ -59,6 +66,19 @@ from checks.files import tree
 
 BASELINE = META / "checks" / "comments.baseline.yaml"
 SUPPRESSIONS_BASELINE = META / "checks" / "suppressions.baseline.yaml"
+SUPPRESSIONS = SUPPRESSIONS_BASELINE
+
+# How many sites sharing one rule and one reason make a root cause rather than a
+# coincidence. Two is the literal reading of the Suppression Audit Protocol and
+# refuses the honest pair — two query builders in one module meeting one
+# constraint — so the limit is three, where a reason has been copied rather than
+# arrived at twice (solorepo's DR-223).
+REPEAT_LIMIT = 3
+# The Protocol's escape hatch, narrowed to what is outside this repository: a
+# specification or an upstream tracker a reader can open. `DR-nnn`, `Article n`
+# and `#n` name something inside the repository, and a cause inside it is one to
+# fix rather than to repeat (solorepo's DR-223).
+EXTERNAL = re.compile(r"(https?://|RFC\s*\d+)", re.IGNORECASE)
 
 # A tool directive: the third keep-exception, and the one a linter or formatter
 # reads rather than a person. `reason:` is here because `meta lints` requires it
@@ -116,6 +136,7 @@ RUST_CODE = re.compile(
 
 Comment = collections.namedtuple("Comment", "line text inline doc own")
 Block = collections.namedtuple("Block", "line text inline")
+Suppression = collections.namedtuple("Suppression", "line rule reason")
 
 
 def sources() -> list[pathlib.Path]:
@@ -388,7 +409,7 @@ def internal_cause(reason: str, names: set[str]) -> str | None:
             return f"names `{match.group()}` of this repository"
     for match in DOTTED.finditer(text):
         if match.group(1) in names:
-            return f"names `{match.group()}` of this repository"
+            return f"names `{match.group(1)}` of this repository"
     issue = ISSUE.search(text)
     if issue:
         return f"defers to {issue.group()}, an Issue of this repository"
@@ -401,6 +422,125 @@ def internal_cause(reason: str, names: set[str]) -> str | None:
 def cause_site(relative: str, line: int, cause: str, reason: str) -> str:
     """Formats an internal suppression cause as a site line for against_baseline."""
     return f"{relative}:{line}: {cause} — `{reason[:60]}`"
+
+
+def suppression_reasons(source: str) -> list[Suppression]:
+    """Every Python suppression of a source as `(line, rule, reason)`, the reason normalised.
+
+    `rule` is the directive with the codes it names and no spacing — `noqa:F401`,
+    `type: ignore[untyped-decorator]` — so that one rule spelled two ways is one
+    rule. `reason` is what follows `# reason:`, casefolded with backticks
+    dropped, runs of whitespace collapsed and surrounding punctuation trimmed,
+    so that a copy differing only in spacing, capitals or a full stop groups with
+    its original. `meta lints` is what requires the reason to be written at all
+    (solorepo's DR-177), and a suppression carrying none reads here as the empty
+    reason.
+
+    Normalisation reaches the copy and not the paraphrase: two reasons differing
+    by a word are two reasons to this function, and a repetition disguised that
+    way is the reviewer's to see.
+
+    Args:
+        source: The Python source text.
+
+    Returns:
+        list[Suppression]: One entry per `noqa` or `type: ignore` comment, in
+        line order.
+
+    Raises:
+        SyntaxError: The source does not parse; the caller names the file.
+        tokenize.TokenError: The source does not tokenize; the caller names the file.
+    """
+    found = []
+    for comment in python_comments(source):
+        for pattern, what in ((NOQA, "noqa"), (TYPE_IGNORE, "type: ignore")):
+            match = pattern.search(f"#{comment.text}")
+            if match is None:
+                continue
+            given = REASON.search(match.group("rest"))
+            reason = given.group("why") if given else ""
+            codes = re.sub(r"\s+", "", match.group("codes") or "")
+            normalised = re.sub(r"\s+", " ", reason.replace("`", "").casefold())
+            found.append(Suppression(comment.line, what + codes, normalised.strip(" .,;:")))
+    return found
+
+
+def repeated(reading: dict[str, str]) -> tuple[dict[str, list[str]], list[str]]:
+    """The suppression groups over a set of sources, and the sources that would not parse.
+
+    A group is one rule written with one reason, keyed `<rule> — <reason>`, and
+    its value is every site that wrote it as `<path>:<line>`. A suppression whose
+    reason cites something outside this repository is left out of the grouping
+    entirely: that is the Suppression Audit Protocol's one surviving kind, and a
+    boundary a foreign platform forces on the code may recur as often as the
+    code meets it (solorepo's DR-207, solorepo's DR-223).
+
+    Args:
+        reading: Repository-relative path to the Python source text at it.
+
+    Returns:
+        tuple[dict[str, list[str]], list[str]]: The groups, and one line per
+        source that would not parse.
+    """
+    groups: dict[str, list[str]] = collections.defaultdict(list)
+    problems = []
+    for relative, source in sorted(reading.items()):
+        try:
+            found = suppression_reasons(source)
+        except (SyntaxError, tokenize.TokenError) as error:
+            problems.append(f"{relative}: does not parse — {error}")
+            continue
+        for one in found:
+            if EXTERNAL.search(one.reason):
+                continue
+            groups[f"{one.rule} — {one.reason}"].append(f"{relative}:{one.line}")
+    return dict(groups), problems
+
+
+def against_repeats(groups: dict[str, list[str]], recorded: dict[str, int]) -> list[str]:
+    """What the repeat ratchet has to say about the groups it found, against the groups it recorded.
+
+    A group counts once it reaches `REPEAT_LIMIT` sites, and once the baseline
+    records it, so that a recorded group which has shrunk is still spoken about.
+    The comparison is two-sided as every ratchet here is, and worded for a key
+    that is a rule and a reason rather than a path: a group over its number is a
+    root cause written once more, so the line says to fix the cause rather than
+    to write the new number; a group under it, or down below `REPEAT_LIMIT`, is
+    progress the baseline has to bank.
+
+    `collect.against_baseline` is not reused: it reads a key that is not a file
+    on disk as a stale entry, which is right for a per-file ratchet and wrong
+    for every failing group here (solorepo's DR-223).
+
+    Args:
+        groups: Group key to every site in it, as `<path>:<line>`.
+        recorded: Group key to the number of sites the baseline allows.
+
+    Returns:
+        list[str]: One line per group whose count is not its recorded number,
+        and then one line per site in that group for groups at or above
+        `REPEAT_LIMIT`. A group shrunk below the limit reports only the
+        instruction to remove its entry.
+    """
+    counts = {key: len(sites) for key, sites in groups.items()
+              if len(sites) >= REPEAT_LIMIT or key in recorded}
+    where = SUPPRESSIONS.relative_to(ROOT).as_posix()
+    problems = []
+    for key in sorted(set(counts) | set(recorded)):
+        count, allowed = counts.get(key, 0), recorded.get(key, 0)
+        if count == allowed:
+            continue
+        if count < REPEAT_LIMIT:
+            problems.append(f"{key}: down to {count} sites — remove the entry from {where}")
+            continue
+        if count > allowed:
+            problems.append(f"{key}: {count} sites, over its baseline of {allowed} — one root "
+                            f"cause written {count} times; fix the cause, do not raise {where}")
+        else:
+            problems.append(f"{key}: {count} sites, under its baseline of {allowed} — "
+                            f"write {count} in {where}")
+        problems.extend(f"     {line}" for line in groups.get(key, []))
+    return problems
 
 
 @check("commented-out code")
@@ -474,7 +614,6 @@ def broad_suppressions():
     return Passed(f"no bare suppression across {len(python)} Python and "
                   f"{len(rust)} Rust files")
 
-
 @check("suppression causes")
 def suppression_causes() -> StepOutcome:
     """A suppression's reason names a cause outside this repository, ratcheted (A2, solorepo's DR-225).
@@ -497,7 +636,7 @@ def suppression_causes() -> StepOutcome:
     """
     if not SUPPRESSIONS_BASELINE.is_file():
         return CouldNotRun(f"{SUPPRESSIONS_BASELINE.relative_to(ROOT).as_posix()} is missing")
-    recorded = recorded_baseline(SUPPRESSIONS_BASELINE)
+    recorded = {k: v for k, v in recorded_baseline(SUPPRESSIONS_BASELINE).items() if " — " not in k}
     names, counts, sites, read = modules(), {}, {}, 0
     for source in sources():
         relative = source.relative_to(ROOT).as_posix()
@@ -518,6 +657,44 @@ def suppression_causes() -> StepOutcome:
         return Found(tuple(problems))
     return Passed(f"{read} suppression reasons read, {sum(counts.values())} naming a cause "
                   f"inside this repository, each file at its baseline")
+
+@check("repeated suppressions")
+def repeated_suppressions() -> StepOutcome:
+    """No rule and reason are suppressed together at three sites or more, ratcheted (solorepo's DR-207, solorepo's DR-223).
+
+    An identical reason at many sites is one root cause written many times, and
+    the Suppression Audit Protocol says to fix the cause: "the suppression is
+    not the fix; it is the record that nobody looked." `meta lints` and
+    `broad suppressions` pass such a run every time, because each site carries a
+    reason and each names a rule — which is how the prescribed fix for a
+    file-scope suppression, narrowing it to the line, defeats the rule behind
+    it.
+
+    The tree is not clean, so the step ratchets against
+    `suppressions.baseline.yaml`, and a group at its recorded number passes. A
+    group over it fails because the cause was written once more; a group under
+    it fails because a baseline nobody lowers has stopped being one; a group
+    down below `REPEAT_LIMIT` fails until its entry is deleted.
+
+    Scope is the Python under `.meta/`. Rust is left out because `#[allow(...)]`
+    is refused outright by `broad suppressions`, so it has no repetition to
+    count.
+    """
+    if not SUPPRESSIONS.is_file():
+        return CouldNotRun(f"{SUPPRESSIONS.relative_to(ROOT).as_posix()} is missing")
+    python = sources()
+    groups, unparsed = repeated({
+        source.relative_to(ROOT).as_posix(): source.read_text(encoding="utf-8")
+        for source in python
+    })
+    if unparsed:
+        return Found(tuple(unparsed))
+    problems = against_repeats(groups, {k: v for k, v in recorded_baseline(SUPPRESSIONS).items() if " — " in k})
+    if problems:
+        return Found(tuple(problems))
+    counted = [sites for sites in groups.values() if len(sites) >= REPEAT_LIMIT]
+    return Passed(f"{sum(len(sites) for sites in counted)} suppressions in {len(counted)} "
+                  f"repeated groups across {len(python)} files, each group at its baseline")
 
 
 def comment_site(relative: str, block: Block) -> str:

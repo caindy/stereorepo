@@ -308,6 +308,9 @@ artifacts:
   - id: work:artifact/meta-checks-types-baseline
     name: .meta/checks/types.baseline.yaml
     path: .meta/checks/types.baseline.yaml
+  - id: work:artifact/meta-checks-suppressions-baseline
+    name: .meta/checks/suppressions.baseline.yaml
+    path: .meta/checks/suppressions.baseline.yaml
   - id: work:artifact/meta-checks-probes
     name: .meta/checks/probes/__init__.py
     path: .meta/checks/probes/__init__.py

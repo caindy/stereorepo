@@ -26,13 +26,20 @@ def comment_probes():
     `internal_cause` is a fourth detector and carries the same cost both ways:
     a false negative reopens the escape solorepo's DR-225 closes, and a false
     positive refuses a reason whose cause is a foreign tracker.
+
+    The `repeated suppressions` step reads through a second ratchet and a fifth
+    detector, and both are asked here: what counts as one rule written with one
+    reason, what the threshold lets through, what the external-citation escape
+    hatch lifts, and the three ways `comments.against_repeats` fails a group
+    (solorepo's DR-223).
     """
     from checks import comments
     here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
     blocks_found, sites = _blocks_and_sites(comments, here)
     return (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
             + _causes(comments) + blocks_found + _ratchet(comments, here, sites)
-            + _type_errors(here) + _rust_comments(comments))
+            + _type_errors(here) + _rust_comments(comments) + _repeats(comments)
+            + _repeat_ratchet(comments))
 
 
 def _expecting(kind: Any) -> tuple[Any, list[str]]:
@@ -233,4 +240,77 @@ def _rust_comments(comments: Any) -> list[str]:
     if [c.doc for c in seen] != [False, False, False, True]:
         problems.append(f"comment probes: rust_comments marked {[c.doc for c in seen]!r} as doc, "
                         "expected only the `///` line")
+    return problems
+
+
+def _repeated(comments: Any, reasons: list[str]) -> dict[str, list[str]]:
+    """The groups `comments.repeated` finds over one `sample/<n>.py` per reason, each suppressing `untyped-decorator` on line 1."""
+    groups: dict[str, list[str]] = comments.repeated({
+        f"sample/{number}.py":
+            f"value = call()  # type: ignore[untyped-decorator]  # reason: {reason}\n"
+        for number, reason in enumerate(reasons)
+    })[0]
+    return groups
+
+
+def _repeats(comments: Any) -> list[str]:
+    """`suppression_reasons` and `repeated`: what one rule and one reason is, what the threshold lets through, and what the escape hatch lifts."""
+    problems = []
+    read = comments.suppression_reasons(
+        "value = call()  # type: ignore[untyped-decorator]  # reason:  The  `collect`  Import. \n")
+    want = [(1, "type: ignore[untyped-decorator]", "the collect import")]
+    if [tuple(one) for one in read] != want:
+        problems.append(f"comment probes: suppression_reasons gave {[tuple(o) for o in read]!r}, "
+                        f"expected {want!r}")
+    noqa = comments.suppression_reasons("value = call()  # noqa: F401  # reason: x\n")[0]
+    if noqa.rule != "noqa:F401":
+        problems.append(f"comment probes: `noqa: F401` read as the rule {noqa.rule!r}, "
+                        "expected 'noqa:F401'")
+
+    same = _repeated(comments, ["one root cause"] * 3)
+    if sorted(same.values()) != [["sample/0.py:1", "sample/1.py:1", "sample/2.py:1"]]:
+        problems.append(f"comment probes: three identical reasons should be one group of three, got {same!r}")
+    distinct = _repeated(comments, ["first cause", "second cause", "third cause"])
+    if sorted(len(sites) for sites in distinct.values()) != [1, 1, 1]:
+        problems.append(f"comment probes: three distinct reasons should be three groups of one, got {distinct!r}")
+    pair = _repeated(comments, ["one root cause"] * 2)
+    if comments.against_repeats(pair, {}):
+        problems.append(f"comment probes: two identical reasons are under the limit and should pass, got {pair!r}")
+    if comments.against_repeats(_repeated(comments, ["first", "second", "third"]), {}):
+        problems.append("comment probes: three distinct reasons should pass")
+
+    for cited in ("the language forces literal braces, see https://spec.graphql.org/",
+                  "the header folds, see RFC 5322"):
+        outside = _repeated(comments, [cited] * 3)
+        if outside:
+            problems.append(f"comment probes: {cited!r} cites outside this repository and is not "
+                            f"counted, got {outside!r}")
+    inside = _repeated(comments, ["the flat import, see caindy/solorepo#557"] * 3)
+    if not comments.against_repeats(inside, {}):
+        problems.append("comment probes: an Issue is inside this repository and does not lift the count")
+    return problems
+
+
+def _repeat_ratchet(comments: Any) -> list[str]:
+    """`against_repeats` at its baseline, over it, under it, and for a group the tree has dropped below the limit."""
+    problems = []
+    three = _repeated(comments, ["one root cause"] * 3)
+    key = next(iter(three))
+    if comments.against_repeats(three, {key: 3}):
+        problems.append("comment probes: a group at its baseline should pass")
+    grew = comments.against_repeats(three, {key: 2})
+    if not any("3 sites, over its baseline of 2" in line for line in grew):
+        problems.append(f"comment probes: a group over its baseline should fail, got {grew!r}")
+    if not any("fix the cause" in line for line in grew):
+        problems.append(f"comment probes: a growing group should be told to fix the cause, got {grew!r}")
+    if not any(line.strip() == "sample/0.py:1" for line in grew):
+        problems.append(f"comment probes: a failing group should list its sites, got {grew!r}")
+    fell = comments.against_repeats(three, {key: 4})
+    if not any("3 sites, under its baseline of 4" in line for line in fell):
+        problems.append(f"comment probes: a group under its baseline should fail, got {fell!r}")
+    gone = comments.against_repeats(_repeated(comments, ["one root cause"] * 2), {key: 3})
+    if not any("down to 2 sites — remove the entry" in line for line in gone):
+        problems.append(f"comment probes: a group down below the limit should fail, got {gone!r}")
+    if comments.against_repeats({}, {}):
+        problems.append("comment probes: an empty baseline over a clean tree should pass")
     return problems

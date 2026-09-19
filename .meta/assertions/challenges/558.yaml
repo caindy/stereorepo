@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/558
+    name: an identical suppression reason passes the gate once per site, so one root cause passes as many times as it is written
+    challenge_type: DEFECT
+    description: >-
+      Nothing in the gate counted suppressions, so a single root cause left
+      unfixed passed as many times as it was written. Pull request #541 wrote 22
+      identical `# type: ignore[untyped-decorator]` suppressions across eight
+      files under `.meta/checks/files/`, every one of them naming the same
+      cause — the flat `collect` import mypy cannot follow, whose root cause is
+      caindy/solorepo#557 — and all 22 merged. `meta lints` passed them because
+      each carries a reason, `broad suppressions` passed them because each names
+      a rule, and the Suppression Audit Protocol's own prescription for a
+      file-scope suppression, narrowing it to the line, is what the 22 obey.

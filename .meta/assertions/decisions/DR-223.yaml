@@ -1,0 +1,148 @@
+decisions:
+  - id: work:decision/223
+    name: "DR-223 · An identical suppression reason at three sites is one defect, ratcheted per rule and reason"
+    challenge: work:challenge/558
+    status: ADOPTED
+    applies:
+      - work:article/2
+    enacted_in:
+      - work:artifact/meta-checks-comments
+      - work:artifact/meta-checks-suppressions-baseline
+      - work:artifact/meta-checks-probes-tools-comments
+      - work:artifact/meta-assertions-structure
+    context: >-
+      solorepo's DR-207 holds that a lint or type suppression bypassing safety,
+      correctness or type soundness is an actionable defect rather than a
+      permanent comment, and the Suppression Audit Protocol of
+      `/technical-writing` says it in full: the suppression is not the fix, it
+      is the record that nobody looked. Nothing in the gate counted
+      suppressions, so one root cause left unfixed passed as many times as it
+      was written.
+
+      Pull request #541 wrote 22 identical `# type: ignore[untyped-decorator]`
+      suppressions across eight files under `.meta/checks/files/`, every one of
+      them naming the same cause: the flat `collect` import that
+      `.meta/check.py` sets up on `sys.path` and mypy cannot follow. The root
+      cause is caindy/solorepo#557. All 22 merged, and three mechanisms watched
+      them do it.
+
+      `meta lints` refuses a suppression carrying no `# reason:` on its line
+      (solorepo's DR-177); each of the 22 carries one, so it passed 22 times.
+      `broad suppressions` refuses a suppression naming no rule; each of the 22
+      names `untyped-decorator`, so it passed 22 times. The Protocol forbids a
+      blanket suppression at file or module scope and prescribes narrowing it to
+      the line; the 22 obey that prescription exactly, which is how the
+      prescribed fix defeats the rule behind it — one file-scope suppression is
+      refused, and the same silence spelled 22 times at line scope is not.
+
+      The signal was already in the text and nothing read it. An identical
+      reason is evidence of a single root cause, which is precisely what the
+      Protocol says to fix instead of suppressing.
+
+      caindy/solorepo#561 drained all 22 while this step was being written, by
+      giving `.meta/checks` one import spelling so that the decorator resolves
+      for mypy. That is the case for the step rather than against it: the fix
+      was a change of import spelling, available on the day the first
+      suppression was written, and nothing asked for it until the twenty-second
+      had merged.
+    alternatives:
+      - name: Leave repetition to the reviewer
+        chosen: false
+        reason: >-
+          The reviewer is what let the 22 through. A repeated suppression is
+          invisible in a diff read file by file, because each site is narrow,
+          each carries a reason, and no two are on the same screen.
+      - name: Count identical reasons only across what the branch changed
+        chosen: false
+        reason: >-
+          It is the literal reading of the Challenge and it goes green on a
+          clean branch without recording anything, which is its defect: the
+          debt already in the tree stays unnamed, and a cause split across two
+          pull requests is never counted. Every other step of this gate reads
+          the tree, and a diff-scoped step would also have nothing to say on
+          the trunk.
+      - name: Refuse at two identical sites, flatly
+        chosen: false
+        reason: >-
+          Two is the smallest possible repetition and the tree holds honest
+          pairs — two GraphQL query builders in one module meeting one
+          constraint of the query language. A flat refusal at any count is also
+          unreachable: the tree still holds 19 suppressions in two repeated
+          groups, so the step could not have been green on the day it landed.
+      - name: Refuse at three identical sites, ratcheted, with the Protocol's own escape hatch
+        chosen: true
+        reason: >-
+          Three is where a reason has been copied rather than arrived at twice,
+          so the honest pair survives and the pattern does not. The Ratchet
+          Discipline is what a checker that cannot be clean at once does, so the
+          groups the tree holds are recorded and the next one is refused.
+          And the escape hatch is not a new rule: the Protocol already says a
+          surviving suppression earns its keep only as an immutable external
+          boundary constraint carrying a dereferenced upstream issue or
+          specification, so a reason citing one is left out of the count
+          entirely, at any number of sites.
+    consequences:
+      - >-
+        `.meta/checks/comments.py` adds the gate step `repeated suppressions`,
+        which groups every `noqa` and `type: ignore` under `.meta/` by the rule
+        it names and the reason it gives, and compares each group of three sites
+        or more against `.meta/checks/suppressions.baseline.yaml`.
+      - >-
+        A reason is normalised before grouping — casefolded, backticks dropped,
+        whitespace collapsed, surrounding punctuation trimmed — so that a copy
+        differing only in spacing or capitals groups with its original. The
+        paraphrase is out of reach and stays the reviewer's: two reasons
+        differing by a word are two reasons to this step.
+      - >-
+        A suppression whose reason cites a URL or an RFC is left out of the
+        grouping. `DR-nnn`, `Article n` and `#n` do not lift it: they name
+        something inside this repository, and a cause inside the repository is
+        one to fix. This is why caindy/solorepo#557's 22 sites are counted
+        despite naming their cause precisely.
+      - >-
+        The comparison is `comments.against_repeats` rather than the shared
+        `collect.against_baseline` of solorepo's DR-210. The shared one reads a
+        key that is not a file on disk as a stale baseline entry, which is right
+        for a per-file ratchet and wrong for every failing group here, where the
+        key is a rule and a reason. A group over its number is told to fix the
+        cause rather than to write the new number, and a group down below three
+        sites is told to delete its entry.
+      - >-
+        Rust is out of scope. `#[allow(...)]` is refused outright by
+        `broad suppressions`, so it has no permitted repetition to count.
+      - >-
+        `.meta/checks/suppressions.baseline.yaml` records the two groups the
+        tree holds: 12 `noqa: F401` registering check steps and 7 `noqa: I001`
+        over a deliberate registration order, which are one cause — `.meta/check.py`
+        imports the step modules for their registration side effect, so every
+        package under `.meta/checks/` repeats the pair. The third group the step
+        was written for, the 22 `type: ignore[untyped-decorator]` of
+        caindy/solorepo#541, was drained by caindy/solorepo#561 before this
+        landed.
+    falsifier: >-
+      Three or more suppressions under `.meta/` sharing one rule and one reason,
+      none of them citing a specification or an upstream tracker, whose group is
+      absent from `.meta/checks/suppressions.baseline.yaml` or differs from its
+      entry there, that passes `.meta/check.py`.
+    rationale: |-
+      A reason is a claim about why the checker is wrong here. Written once it
+      can be true; written twenty-two times it is a claim about one thing, and
+      the one thing is a defect somebody could fix. The repetition is therefore
+      not a style problem to be counted for tidiness — it is the evidence, and
+      the only evidence a machine can read, that the Suppression Audit Protocol
+      was answered with a record rather than a fix.
+
+      Three rather than two is the concession that a pair can be honest. It is
+      also the smaller claim: at two the step would be asserting that no
+      constraint is ever met twice, which the tree falsifies, and a rule the
+      tree falsifies on the day it lands is a rule people learn to route around.
+      The escape hatch carries the rest of the load, and it is deliberately the
+      Protocol's own clause rather than a new one, so there is one test for
+      whether a suppression survives and not two that can disagree.
+
+      Ratcheting rather than refusing outright is the same argument
+      solorepo's DR-210 made for types. The tree is not clean, the standard is
+      right, and a standard waiting on a sweep is a standard that is not in the
+      gate. The number in the file is what the tree holds; lowering it is the
+      only way to change it, and the failure line says so in the words of the
+      fix rather than the words of the baseline.
