@@ -7,7 +7,6 @@ decisions:
     enacted_in:
       - work:artifact/github-workflows-review
       - work:artifact/github-workflows-coder
-      - work:artifact/meta-detect-fallback
       - work:artifact/meta-say-move
       - work:artifact/wiki-solorepo-dev-loop
     context: >-

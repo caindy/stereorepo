@@ -146,6 +146,10 @@ def _matchers() -> list[str]:
 def _registration() -> list[str]:
     """`REGISTRATIONS`, per harness: the registered matcher against the tool name its own event carries, the registered command resolved and run as a real subprocess over a refused call, a permitted one and a payload that is not JSON at all, and one line of Evidence left per call it decided.
 
+    Harnesses declared in `registration.OPTIONAL_HARNESS_ACTIONS` (such as Gemini CLI when
+    `run-gemini-cli` is excised under solorepo's DR-242) are skipped when their action is
+    absent from `review.yml`.
+
     The why is `registration`'s own module docstring (solorepo's #456,
     solorepo's #645); this is the invariant alone.
     """
@@ -156,6 +160,9 @@ def _registration() -> list[str]:
     for harness, variable, pattern, refuse_event, allow_event in registration.REGISTRATIONS:
         match = pattern.search(text)
         if not match:
+            action = registration.OPTIONAL_HARNESS_ACTIONS.get(harness)
+            if action and action not in text:
+                continue
             problems.append(f"{harness}: no hook registration found in review.yml to resolve")
             continue
         matcher, command = match.groups()

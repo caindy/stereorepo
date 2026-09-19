@@ -73,3 +73,8 @@ the one call every registration guards in common — a shell command — so the
 matcher is checked against the tool name the harness itself would send, and
 the command against a call the hook must refuse and one it must allow.
 """
+
+OPTIONAL_HARNESS_ACTIONS: dict[str, str] = {
+    "Gemini CLI": "run-gemini-cli",
+}
+"""Harnesses whose workflow step is optional, mapped to the action identifier required in `review.yml` (solorepo's DR-242)."""

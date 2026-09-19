@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/668
+    name: Disable harness routing by PR branch name in reviewer and coder workflows
+    challenge_type: DEFECT
+    description: >-
+      The reviewer and coder workflows (.github/workflows/review.yml and .github/workflows/coder.yml)
+      inspected pull request head branch names and automatically selected AI harnesses based on branch
+      prefixes (^gemini/ and ^codex/). This implicit routing caused pull requests to invoke Gemini CLI
+      unexpectedly without explicit harness labels, failing authentication when API keys were removed
+      and creating unintended execution paths.

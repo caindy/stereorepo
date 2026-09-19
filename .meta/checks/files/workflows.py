@@ -398,7 +398,9 @@ def gemini_allowlist_matches_claude() -> StepOutcome:
     toolset, so the same bound has to be named rather than left absent. This
     step fails when either path's list is missing, or when either path names
     either half of a `DANGEROUS_TOOLS` pair — whether the other path names its
-    half too or not, since the invariant is that neither may.
+    half too or not, since the invariant is that neither may. When Gemini CLI
+    is absent from `review.yml` (`run-gemini-cli` not configured per
+    solorepo's DR-242), the Claude path is verified in isolation.
 
     History in files.history.md (solorepo's DR-171).
     """
@@ -409,9 +411,18 @@ def gemini_allowlist_matches_claude() -> StepOutcome:
     core_match = CORE_TOOLS_LINE.search(text)
     if not allowed_match:
         return Found(("review.yml: no `--allowedTools` value on the Claude path to compare against",))
+    if "run-gemini-cli" not in text:
+        claude_tools = {token.split("(", 1)[0] for token in allowed_match.group(1).split(",")}
+        claude_problems = [
+            f"review.yml: the Claude path names `{claude_name}`; drop it from `--allowedTools`"
+            for claude_name, _ in DANGEROUS_TOOLS
+            if claude_name in claude_tools
+        ]
+        if claude_problems:
+            return Found(tuple(claude_problems))
+        return Passed(f"{len(DANGEROUS_TOOLS)} dangerous tools held out of Claude path (Gemini unconfigured per solorepo's DR-242)")
     if not core_match:
-        return Found(("review.yml: no `tools.core` value on the Gemini path; unset, it holds "
-                      "the whole core toolset, which is the bound solorepo's #454 found missing",))
+        return Found(("review.yml: no `tools.core` value on the Gemini path to compare against",))
     problems: list[str] = []
     claude_tools = {token.split("(", 1)[0] for token in allowed_match.group(1).split(",")}
     gemini_tools = {token.strip().strip('"') for token in core_match.group(1).split(",")}
@@ -442,13 +453,16 @@ def gemini_core_matches_hook_matcher() -> StepOutcome:
     own first head is the demonstration of what happens when they do not:
     `activate_skill` sat in `tools.core` and outside the matcher, admitted and
     unguarded, with every gate but a review thread green. This step fails when
-    the two sets differ, in either direction.
+    the two sets differ, in either direction. When Gemini CLI is unconfigured in
+    `review.yml` (solorepo's DR-242), the step passes without evaluation.
 
     History in files.history.md (solorepo's DR-171).
     """
     if not REVIEW_WORKFLOW.is_file():
         return CouldNotRun(f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
     text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
+    if "run-gemini-cli" not in text:
+        return Passed("Gemini reviewer not configured in review.yml (solorepo's DR-242)")
     core_match = CORE_TOOLS_LINE.search(text)
     matcher_match = BEFORE_TOOL_MATCHER.search(text)
     if not core_match:
