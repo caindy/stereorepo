@@ -1562,14 +1562,21 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     other open pull requests in a stack (solorepo's DR-133). When invoked as a general
     sweep (pr=None), delegates conflicting branches to autonomous coder dispatch passes.
 
+    A sweep succeeds when it reads every open pull request, whatever those pull
+    requests report: one branch's failed rebase or refused dispatch is printed
+    under `advance: ... reported a problem of their own` and leaves the exit
+    code at zero (solorepo's DR-238). A named pull request keeps its refusal in
+    the exit code, because the caller asked about that one.
+
     Parameters:
         pr (int or str, optional): Specific pull request number to advance. When None,
             sweeps all open pull requests.
         held (bool): If True, bypasses the armed/approved check for the caller's held branch.
 
     Raises:
-        SystemExit: If an explicit pull request cannot be advanced, or if any rebase,
-            settlement wait, or dispatch operation reports failure.
+        SystemExit: If an explicit pull request cannot be advanced, or if a read the
+            sweep itself depends on — the list of open pull requests, the reviewer's
+            login — is refused.
     """
     if pr is not None:
         open_now = [channel.gh("pr", "view", str(pr), "--json", ADVANCE)]
@@ -1646,7 +1653,14 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     # Sweep-level pass: dispatch review or rebase tasks for open pull requests.
     if pr is None:
         failed += dispatch(open_now)
-    if failed:
+        # A sweep's exit code answers for the sweep and not for the weather of
+        # the pull requests it read (solorepo's DR-238).
+        if failed:
+            print(f"advance: {len(failed)} pull request(s) reported a problem of their own, "
+                  "which the next push to trunk asks about again:")
+            for problem in failed:
+                print(f"  {problem}")
+    elif failed:
         sys.exit("say: " + "; ".join(failed))
 
 

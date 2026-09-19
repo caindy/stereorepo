@@ -298,3 +298,19 @@ refused pull request and its semaphore reasons across both idle and active
 passes.
 
 Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+
+### An advance sweep red for the weather of the pull requests it read
+
+Every failure the sweep collected — a `gh` call that hit `net/http: TLS
+handshake timeout`, a branch GitHub refuses to rebase because it conflicts
+with its base — was spent on one `sys.exit` at the end, so `advance.yml` was
+red on eleven consecutive pushes to trunk on 2026-09-18 and on nine of the
+fourteen before them, naming the same two pull requests each time. Nothing
+stalled from it, because the dispatch had already run; what was lost was the
+colour, and the stall on solorepo's #568 had nothing but that colour to
+signal it (solorepo's DR-238, solorepo's #635). Established: `advance()`
+exits on a failure only when it was given a pull request, and a sweep prints
+what the pull requests it read reported and returns, so its exit code answers
+for whether the sweep ran.
+
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`

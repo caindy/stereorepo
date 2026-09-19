@@ -1,0 +1,154 @@
+decisions:
+  - id: work:decision/238
+    name: "DR-238 · An advance sweep's exit code answers for the sweep, and one pull request's failure is a line it prints"
+    challenge: work:challenge/635
+    status: ADOPTED
+    applies:
+      - work:article/7
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-checks-probes-loops-advance
+      - work:artifact/meta-checks-probes-loops-dispatch
+    context: >-
+      `advance` runs on every push to `main` (DR-113). It lists the open pull
+      requests, rebases and re-arms the armed or approved ones that are behind
+      their base, and hands the whole list to the dispatch reading. Each of
+      those steps reaches GitHub. Every failure any of them reports is caught
+      per pull request, appended to one list, and spent at the end on a single
+      `sys.exit`, so the run is red if anything in the sweep went wrong for any
+      reason.
+
+      What goes into that list is mostly weather. A `gh` call that hit
+      `net/http: TLS handshake timeout`. A branch GitHub will not rebase
+      because it conflicts with its base. A dispatch refused because the
+      Challenge behind the branch is at a level no loop takes. None of these is
+      a fault of the sweep, none is fixed by re-running it, and the next push
+      to `main` asks about each of them again — which is the design, since the
+      sweep is idempotent and event-driven by construction.
+
+      On 2026-09-18 the workflow was red on eleven consecutive pushes from
+      16:52Z to 18:58Z, naming solorepo's #580 (a TLS timeout) and solorepo's
+      #565 (a rebase conflict) each time, and on nine of the fourteen pushes
+      before that. Nothing stalled from it: the failures accumulate and the
+      exit is at the end, so the dispatch had already run. What was lost was
+      the colour. When solorepo's #568 stalled, the only signal that anything
+      was wrong was a red `advance` — which was red anyway, and had been all
+      afternoon.
+
+      A7 is the Article this sits under. A mark is a claim about scope, and
+      `advance`'s exit code was making a claim about a scope it does not own:
+      the health of every open pull request, rather than whether the sweep ran.
+    alternatives:
+      - name: Leave it red and read the log
+        chosen: false
+        reason: >-
+          This is the state the Challenge is about. The log is already
+          complete — every failure is named in it — and nobody reads it,
+          because reading it is exactly the cost the colour exists to save. A
+          signal that is red on most pushes is not a signal, and the only
+          reader who could act on the difference is the solo, scanning a list
+          of runs.
+      - name: Classify the failures, and be red only for the ones worth reading
+        chosen: false
+        reason: >-
+          The obvious answer, and the one the Challenge proposed by rating
+          itself `human`: sort a TLS timeout from a real defect and let the
+          second kind turn the run red. It cannot be done from where the
+          failures are collected. `#7: <exit code>` is a string that came out
+          of `gh` or out of a refusal in this file, and the classification
+          would be a table of substrings kept in step with GitHub's error
+          messages and with every refusal any verb here can raise. It would be
+          wrong in both directions, silently, and its failure mode is a run
+          that is green for a defect — which is worse than the one being fixed.
+      - name: Retry the transient failures, so fewer reach the list
+        chosen: false
+        reason: >-
+          Worth doing on its own merits for a TLS timeout, and it does not
+          answer this. A rebase conflict is not transient and will be in the
+          list on every push until somebody resolves it, which was half of
+          what named each of the eleven red runs. Retrying narrows the
+          symptom and leaves the claim the exit code makes exactly as wrong.
+      - name: Post each finding where it accumulates, against its own pull request
+        chosen: false
+        reason: >-
+          The right long-term shape, and the condition under which this comes
+          out again: a finding that lands on the pull request it is about is
+          read by whoever next looks at that pull request, and the sweep's own
+          colour stops being the only report. It is also a much larger change
+          — the sweep holds no credential for writing to a pull request today,
+          and a comment written on every push is its own noise problem. Noted
+          as the removal condition rather than built here.
+      - name: The exit code answers for the sweep, and a pull request's failure is a line
+        chosen: true
+        reason: >-
+          The solo's own test, given on the Challenge: if `advance` does not
+          crash and reads every open pull request, it succeeded — even having
+          had nothing to do. It is checkable from inside the code, which the
+          classification is not. Every per-pull-request failure is already
+          caught where it happens, so reading all of them is exactly what the
+          sweep does when it does not crash; what is left red is a read the
+          sweep itself depends on — the list of open pull requests, the
+          reviewer's login — and any exception no `except SystemExit` was
+          written for, which is the sweep failing to be a sweep. The failures
+          keep their whole text and are printed together, so the log says no
+          less than it did.
+    consequences:
+      - >-
+        `advance()` splits its exit on whether it was given a pull request. The
+        sweep (`pr=None`) prints its collected failures under `advance: <n>
+        pull request(s) reported a problem of their own, which the next push to
+        trunk asks about again:` and returns; the named form keeps
+        `sys.exit("say: " + "; ".join(failed))`.
+      - >-
+        The named form has to keep it, and this is the reason the split is by
+        argument rather than by a flag. `merge --auto` calls `advance(pr,
+        held=True)` and reads the exit to decide whether to say the branch
+        stalled, and `advance_stranded` calls `advance(number)` inside an
+        `except SystemExit` to report `merge-manager: could not advance #<n>`.
+        Both callers are asking about one pull request, and for one pull
+        request the exit code's scope is right.
+      - >-
+        `advance.yml`'s colour now says whether the sweep ran. It is red for a
+        crash, for a refused read the sweep depends on, and for nothing else —
+        so a red run is worth opening, which is the whole of what this buys.
+      - >-
+        Every probe case that runs a sweep, in `probes/loops/advance.py` and
+        `probes/loops/dispatch.py`, reads what the sweep printed rather than
+        what it exited with. They go through one helper, `swept`, which holds
+        the exit code green in each of them, so the rule is asserted
+        twenty-three times rather than stated once. A case is added beside them
+        for the state the Challenge is about: two pull requests failing in one
+        sweep, which holds that both are named in one report. Without the
+        helper the change would be invisible to the gate, since a verb that had
+        simply stopped reporting would pass every case that asserts an absence.
+    falsifier: >-
+      A stall nobody notices because `advance` was green for it. If a failure
+      that belongs to the sweep rather than to a pull request is reached
+      through one of the per-pull-request `except SystemExit` arms, it is now
+      swallowed into a printed line, and the answer is that the arm was catching
+      too much rather than that the exit code was too broad. Falsified in the
+      other direction by `advance` still being red on most pushes — that would
+      say the red runs were never the pull requests' weather and something in
+      the sweep itself is failing, which is the reading the noise made
+      impossible to take.
+    rationale: |-
+      The Challenge rated itself `human` because the line between the sweep's
+      own failure and one pull request's weather looked like a judgement.
+      Christopher took it in one sentence on the Issue: if `advance` does not
+      crash and is able to sweep through all the open pull requests, then it
+      succeeded, even if it had nothing to do.
+
+      That answer is better than the classification it replaced, and not
+      merely cheaper. Sorting failures by whether they are worth reading needs
+      a table of GitHub's error strings, and a table like that is wrong
+      quietly — the run that goes green for a defect is the failure mode, and
+      it is the one this Decision exists to avoid. The solo's test needs no
+      table: the sweep already catches each pull request's failure where it
+      happens, so reading every open pull request is what it does whenever it
+      does not crash, and the exit code can be left to say precisely that.
+
+      What is given up is that a real defect inside one pull request's
+      handling no longer turns the run red on its own. It is named in the log
+      with its whole text, and it was already indistinguishable from the ten
+      weather reports beside it, so nothing readable is lost — the colour was
+      already spent.

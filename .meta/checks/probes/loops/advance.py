@@ -3,18 +3,52 @@
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 
+from typing import Any
+
 from checks.collect import check
 from checks.probes.harness import (
     FakeGitHub,
     load_channel,
+    outcome,
     run_verb,
+    stood_in,
 )
 
+REPORTED = "reported a problem of their own"
+"""The header `advance` prints the failures it collected under, and so where a sweep's report starts in its output."""
 
-def _rebase_under_a_base_that_moved_again(channel, move) -> list[str]:
+
+def swept(channel: Any, move: Any, fake: FakeGitHub, problems: list[str]) -> str:
+    """One `advance` sweep against `fake`: what it reported about the pull requests it read.
+
+    The answer is the text after `REPORTED`, which is every failure the sweep
+    collected and nothing it printed about the work it did. A sweep that read
+    every open pull request is green whatever those pull requests reported
+    (solorepo's DR-238), so the exit code is asserted here rather than in each
+    case, and an exit is added to `problems` under the case that took it.
+
+    Args:
+        channel: The channel module whose `gh` is stood in by `fake`.
+        move: The `move` program holding `advance`.
+        fake: The `FakeGitHub` standing in for GitHub.
+        problems: The case's findings, which an exit code is appended to.
+
+    Returns:
+        str: The sweep's report of the pull requests that failed, empty when none did.
+    """
+    with stood_in(channel, gh=fake):
+        ran = outcome(lambda: move.advance())
+    if ran.code is not None:
+        problems.append("advance: a sweep that read every open pull request exited with "
+                        f"{ran.code!r}, so its colour answers for their weather rather than "
+                        "for the sweep")
+    return str(ran.out.partition(REPORTED)[2])
+
+
+def _rebase_under_a_base_that_moved_again(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 2, "armed": True, "drops": True, "again": 1}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if not fake.pulls["7"]["armed"]:
         problems.append("advance: a rebase that dropped the arming left it dropped")
     if not said or "still behind" not in said:
@@ -22,11 +56,11 @@ def _rebase_under_a_base_that_moved_again(channel, move) -> list[str]:
     return problems
 
 
-def _refusal_to_rebase_one_pull_request(channel, move) -> list[str]:
+def _refusal_to_rebase_one_pull_request(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True}, 8: {"behind": 1, "armed": True}},
                       no_rebase=[7])
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.pulls["8"]["behind"]:
         problems.append("advance: a refusal on one pull request ended the sweep for the rest")
     if not said or "#7" not in said:
@@ -34,11 +68,11 @@ def _refusal_to_rebase_one_pull_request(channel, move) -> list[str]:
     return problems
 
 
-def _refusal_to_arm_one_pull_request(channel, move) -> list[str]:
+def _refusal_to_arm_one_pull_request(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True},
                        8: {"behind": 1, "armed": True}}, no_arm=[7])
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.pulls["8"]["behind"]:
         problems.append("advance: a refusal to arm one pull request ended the sweep")
     if not said or "clean status" not in said:
@@ -46,20 +80,20 @@ def _refusal_to_arm_one_pull_request(channel, move) -> list[str]:
     return problems
 
 
-def _arming_github_did_not_hold(channel, move) -> list[str]:
+def _arming_github_did_not_hold(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True}}, no_stick=[7])
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if not said or "#7" not in said:
         problems.append(f"advance: an arming that did not take was reported as {said!r}")
     return problems
 
 
-def _re_arming_that_merged_in_the_window(channel, move) -> list[str]:
+def _re_arming_that_merged_in_the_window(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True, "slow": 1}},
                       lands=[7])
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if said:
         problems.append(f"advance: a re-arming that merged reported {said!r}")
     if fake.pulls["7"]["state"] != "MERGED":
@@ -70,10 +104,10 @@ def _re_arming_that_merged_in_the_window(channel, move) -> list[str]:
     return problems
 
 
-def _rebase_github_had_not_shown_yet(channel, move) -> list[str]:
+def _rebase_github_had_not_shown_yet(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True, "slow": 2}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if said:
         problems.append(f"advance: a rebase GitHub had not shown yet reported {said!r}")
     if not fake.pulls["7"]["armed"]:
@@ -82,10 +116,10 @@ def _rebase_github_had_not_shown_yet(channel, move) -> list[str]:
     return problems
 
 
-def _push_landing_before_the_rebase(channel, move) -> list[str]:
+def _push_landing_before_the_rebase(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True, "slow": 2, "pushed": 1}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if said:
         problems.append(f"advance: a push landing before the rebase reported {said!r}")
     if not fake.pulls["7"]["armed"]:
@@ -95,10 +129,10 @@ def _push_landing_before_the_rebase(channel, move) -> list[str]:
     return problems
 
 
-def _push_that_brought_the_branch_current(channel, move) -> list[str]:
+def _push_that_brought_the_branch_current(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "pushed": 1, "leaves": 0}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.pulls["7"].get("rebased"):
         problems.append("advance: a push brought the branch current inside the window and it "
                         "asked GitHub to rebase a branch with nothing to rebase, on a compare "
@@ -108,10 +142,10 @@ def _push_that_brought_the_branch_current(channel, move) -> list[str]:
     return problems
 
 
-def _push_landing_inside_the_mergeability_poll(channel, move) -> list[str]:
+def _push_landing_inside_the_mergeability_poll(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "unknown": 1, "pushed": 2, "leaves": 0}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.pulls["7"].get("rebased"):
         problems.append("advance: a push landed while it waited on `mergeability` and it "
                         "rebased the branch that push brought current, so the read the call "
@@ -121,10 +155,10 @@ def _push_landing_inside_the_mergeability_poll(channel, move) -> list[str]:
     return problems
 
 
-def _head_github_never_moved(channel, move) -> list[str]:
+def _head_github_never_moved(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "slow": 9}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if not said or "has not moved it" not in said:
         problems.append(f"advance: a head GitHub never moved was reported as {said!r}")
     if said and "still behind" in said:
@@ -133,7 +167,19 @@ def _head_github_never_moved(channel, move) -> list[str]:
     return problems
 
 
-def _named_pull_request_not_armed(channel, move) -> list[str]:
+def _two_pull_requests_failing_in_one_sweep(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 1, "armed": True}, 8: {"behind": 1, "armed": True}},
+                      no_rebase=[7, 8])
+    said = swept(channel, move, fake, problems)
+    for number in ("#7", "#8"):
+        if number not in said:
+            problems.append("advance: a sweep both pull requests failed in did not name "
+                            f"{number} in its report, which said {said!r}")
+    return problems
+
+
+def _named_pull_request_not_armed(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False}})
     said = run_verb(channel, fake, lambda: move.advance("7"))
@@ -148,7 +194,7 @@ def _named_pull_request_not_armed(channel, move) -> list[str]:
     return problems
 
 
-def _merge_auto_after_a_failed_advance(channel, move) -> list[str]:
+def _merge_auto_after_a_failed_advance(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7])
     said = run_verb(channel, fake, lambda: move.merge("7", auto=True))
@@ -159,7 +205,7 @@ def _merge_auto_after_a_failed_advance(channel, move) -> list[str]:
     return problems
 
 
-def _merge_auto_over_a_merge_that_landed(channel, move) -> list[str]:
+def _merge_auto_over_a_merge_that_landed(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7], lands=[7])
     said = run_verb(channel, fake, lambda: move.merge("7", auto=True))
@@ -168,7 +214,7 @@ def _merge_auto_over_a_merge_that_landed(channel, move) -> list[str]:
     return problems
 
 
-def _merge_auto_over_a_blip_on_the_read_back(channel, move) -> list[str]:
+def _merge_auto_over_a_blip_on_the_read_back(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True}}, blip=[7])
     said = run_verb(channel, fake, lambda: move.merge("7", auto=True))
@@ -181,7 +227,7 @@ def _merge_auto_over_a_blip_on_the_read_back(channel, move) -> list[str]:
 
 
 @check("advance probes", pre=True)
-def advance_probes():
+def advance_probes() -> list[str]:
     """`advance` and `merge --auto` against a fake GitHub, in the states solorepo's #98 found them in.
 
     Each case is one of the reviewer's reproductions on solorepo's #94, read
@@ -222,7 +268,10 @@ def advance_probes():
       as itself and not as a branch still behind, because the rebase may yet
       land and drop the arming, and a pull request rebased and unarmed is out
       of reach of every later sweep, which reads only the armed ones
-      (solorepo's DR-133). Then a named pull request that is not armed,
+      (solorepo's DR-133). Then two pull requests failing in one sweep, which
+      is the state solorepo's #635 found `advance` red in on most pushes to
+      trunk: the sweep read both, so it is green, and both are named in what
+      it printed. Then a named pull request that is not armed,
       refused in the exit code so that `advance <n> && <next step>` does not
       carry on, and taken with `held=True` by the caller that holds the
       branch, which is `merge --auto`'s path.
@@ -239,7 +288,11 @@ def advance_probes():
 
     `said` is read in every case whose whole assertion is an absence: a verb
     that died before dispatching leaves `dispatched` empty too, and without it
-    a crash reads exactly like the filter doing its job. The fake's repository
+    a crash reads exactly like the filter doing its job. In a sweep it is what
+    the verb printed rather than what it exited with, through `swept`, because
+    a sweep that read every open pull request is green whatever they reported
+    (solorepo's DR-238); `run_verb` still reads the exit in the cases that name
+    one pull request, where the exit code is the answer. The fake's repository
     is `o/r`, so the reviewer's login is `o-r-reviewer`, as `channel.role_login`
     composes it (solorepo's DR-107).
     """
@@ -258,6 +311,7 @@ def advance_probes():
         _push_that_brought_the_branch_current(channel, move),
         _push_landing_inside_the_mergeability_poll(channel, move),
         _head_github_never_moved(channel, move),
+        _two_pull_requests_failing_in_one_sweep(channel, move),
         _named_pull_request_not_armed(channel, move),
         _merge_auto_after_a_failed_advance(channel, move),
         _merge_auto_over_a_merge_that_landed(channel, move),

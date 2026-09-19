@@ -10,6 +10,7 @@ from checks.probes.harness import (
     load_channel,
     run_verb,
 )
+from checks.probes.loops.advance import swept
 
 
 def _conflicting_with_a_review_request_dispatches_rebase(channel, move) -> list[str]:
@@ -17,7 +18,7 @@ def _conflicting_with_a_review_request_dispatches_rebase(channel, move) -> list[
     fake = FakeGitHub({7: {"behind": 1, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"},
                        8: {"behind": 1, "armed": False, "requested": ["reviewer"]}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched != [("7", "rebase")]:
         problems.append(f"advance: the conflicting one dispatched {fake.dispatched!r}")
     if fake.pulls["7"].get("rebased") or fake.pulls["8"].get("rebased"):
@@ -31,7 +32,7 @@ def _unknown_is_waited_out(channel, move) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING", "unknown": 2}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched != [("7", "rebase")]:
         problems.append("advance: it took the first `UNKNOWN` for an answer and dispatched "
                         f"{fake.dispatched!r}")
@@ -44,7 +45,7 @@ def _armed_conflicting_dispatched_not_rebased(channel, move) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "mergeable": "CONFLICTING"},
                        8: {"behind": 1, "armed": True}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched != [("7", "rebase")]:
         problems.append(f"advance: the armed conflicting one dispatched {fake.dispatched!r}")
     if fake.pulls["7"].get("rebased"):
@@ -60,7 +61,7 @@ def _approved_conflicting_dispatches_rebase(channel, move) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False, "mergeable": "CONFLICTING",
                            "verdicts": [("o-r-reviewer", "APPROVED")]}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched != [("7", "rebase")]:
         problems.append(f"advance: the approved conflicting one dispatched {fake.dispatched!r}")
     if said:
@@ -100,7 +101,7 @@ def _unanswered_changes_requested_dispatches_review(channel, move) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched != [("7", "review")]:
         problems.append(f"advance: unanswered changes requested one dispatched {fake.dispatched!r}")
     if said:
@@ -113,7 +114,7 @@ def _recent_changes_requested_left_to_the_run(channel, move) -> list[str]:
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "updatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
                            "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched:
         problems.append("advance: recent changes requested PR dispatched "
                         f"{fake.dispatched!r} during active run window")
@@ -127,7 +128,7 @@ def _approved_with_failing_checks_dispatches_review(channel, move) -> list[str]:
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "checks": [{"name": "gate", "conclusion": "FAILURE"}],
                            "verdicts": [("o-r-reviewer", "APPROVED")]}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched != [("7", "review")]:
         problems.append(f"advance: approved PR with failing checks dispatched {fake.dispatched!r}")
     if said:
@@ -140,7 +141,7 @@ def _stranded_review_request_re_requested(channel, move) -> list[str]:
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "requested": ["o-r-reviewer"],
                            "checks": [{"name": "reviewer", "conclusion": "FAILURE"}]}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if "o-r-reviewer" not in fake.pulls["7"]["requested"] or "7" not in fake.edited:
         problems.append(f"advance: stranded review request was not re-requested: {fake.pulls['7']!r}")
     if said:
@@ -153,7 +154,7 @@ def _nothing_asked_dispatches_nothing(channel, move) -> list[str]:
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING"},
                        8: {"behind": 0, "armed": True,
                            "mergeable": "CONFLICTING", "branch": "solo/whatever"}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched:
         problems.append(f"advance: it dispatched {fake.dispatched!r}, which nobody had asked "
                         "to review or to land, or which was not a loop's branch")
@@ -168,7 +169,7 @@ def _lower_layer_of_a_stack_left_alone(channel, move) -> list[str]:
                            "mergeable": "CONFLICTING"},
                        8: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "base": "claude/issue-7", "mergeable": "MERGEABLE"}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched:
         problems.append("advance: it dispatched the lower layer of a stack, "
                         f"{fake.dispatched!r}")
@@ -190,7 +191,7 @@ def _challenges_the_loop_does_not_hold(channel, move) -> list[str]:
                            "mergeable": "CONFLICTING", "issue": {"level": "human"}},
                        10: {"behind": 0, "armed": False, "requested": ["reviewer"],
                             "mergeable": "CONFLICTING", "issue": {"unreadable": True}}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched:
         problems.append("advance: it dispatched a Challenge the loop does not hold, "
                         f"{fake.dispatched!r}")
@@ -205,7 +206,7 @@ def _refused_dispatch_is_one_pull_requests_problem(channel, move) -> list[str]:
                            "mergeable": "CONFLICTING"},
                        8: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"}}, no_dispatch=[7])
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = swept(channel, move, fake, problems)
     if fake.dispatched != [("8", "rebase")]:
         problems.append(f"advance: a refused dispatch left the rest at {fake.dispatched!r}")
     if not said or "#7" not in said:
@@ -360,8 +361,9 @@ def dispatch_probes():
       event on it, or for a Challenge the loop does not hold — `hard`,
       closed, `human`, which is what `stop` leaves, or unreadable, which is
       an Issue deleted or transferred under its branch (solorepo's DR-142).
-      One refused dispatch is one pull request's problem, and the refusal
-      names the coder token without the Actions write. Neither `merge
+      One refused dispatch is one pull request's problem, so the sweep is
+      green and names it in what it printed (solorepo's DR-238), and the
+      refusal names the coder token without the Actions write. Neither `merge
       --auto`, which holds the branch it is arming, nor a typed `advance
       <n>`, which names one somebody is asking about, dispatches, since
       neither is the merge on `main` that stranded a request; and both keep
@@ -393,9 +395,13 @@ def dispatch_probes():
 
     `said` is read in every case whose whole assertion is an absence: a verb
     that died before dispatching leaves `dispatched` empty too, and without it
-    a crash reads exactly like the filter doing its job. The fake's repository
-    is `o/r`, so the reviewer's login is `o-r-reviewer`, as `channel.role_login`
-    composes it (solorepo's DR-107).
+    a crash reads exactly like the filter doing its job. In a sweep it is what
+    the verb printed rather than what it exited with, through `swept` from
+    `probes/loops/advance.py`, which also holds the sweep's exit code green
+    (solorepo's DR-238); `run_verb` still reads the exit in the cases that
+    name one pull request, where the exit code is the answer. The fake's
+    repository is `o/r`, so the reviewer's login is `o-r-reviewer`, as
+    `channel.role_login` composes it (solorepo's DR-107).
     """
     channel, _, programs = load_channel()
     move = programs["move"]
