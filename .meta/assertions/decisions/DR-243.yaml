@@ -1,0 +1,77 @@
+decisions:
+  - id: work:decision/243
+    name: "DR-243 · Advancing a linked pull request stack through GitHub's stack operation"
+    status: ADOPTED
+    supersedes:
+      - work:decision/133
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-checks-probes-loops-advance
+      - work:artifact/meta-checks-probes-harness-github
+      - work:artifact/github-workflows-advance
+      - work:artifact/wiki-solorepo-dev-loop
+    context: >-
+      DR-133 deliberately excluded a lower stack layer from `advance`: its
+      single-pull-request rebase rewrote that layer without moving the layers
+      above it. That exclusion was correct for `gh pr update-branch --rebase`,
+      but it leaves a linked stack unlandable when any layer falls behind.
+
+      A lower layer that falls behind its target cannot be safely advanced with
+      `gh pr update-branch --rebase`: the rebase rewrites its commits while
+      upper layers still name the former commits as their base. When the lower
+      layer later squash-merges, independently rebasing an upper layer can
+      replay absorbed commits and create conflicts that do not belong to its
+      change.
+    alternatives:
+      - name: Continue refusing every stacked pull request
+        chosen: false
+        reason: >-
+          Leaves a stack unlandable whenever its lower layer falls behind,
+          requiring the solo to reconstruct the complete branch relationship.
+      - name: Rebase each pull request separately
+        chosen: false
+        reason: >-
+          Rewrites lower layers without moving dependent heads, which leaves
+          the stack internally inconsistent and can replay squash-merged work.
+      - name: Advance the full linked stack through GitHub
+        chosen: true
+        reason: >-
+          `gh stack rebase` moves every layer from the bottom up as one
+          operation. The advance transition then pushes the resulting heads
+          and verifies each pull request independently.
+    consequences:
+      - >-
+        DR-133's fifth consequence excluding linked stack layers from the
+        mechanical `advance` transition is superseded. Its conflicting-stack
+        dispatch reading, its `dispatch_pass` refusal, and its exclusion for an
+        unlinked branch that is another open pull request's base (which remains
+        refused when named and passed over in a sweep) survive: a stack with
+        any conflicting layer remains the solo's to resolve from its bottom.
+      - >-
+        The sweep reaches a stack through any armed or approved layer,
+        advancing every layer in the stack from the bottom up. A named bottom
+        layer reaches its linked stack explicitly. In either case, `move
+        advance` checks out the root branch, invokes `gh stack rebase
+        --upstack` and `gh stack push` once, waits for each rewritten layer
+        (every layer behind its base and all layers above it) to move its head,
+        and verifies that every layer is current with its base.
+      - >-
+        GitHub does not arm stack layers (solorepo's DR-100), so stack
+        advancement preserves or renews a pending reviewer request but does
+        not re-arm auto-merge. A refused stack operation is reported against
+        every unchanged layer, and no individual fallback rebase is attempted.
+        The unattended `advance` workflow installs the `gh-stack` extension per
+        machine (solorepo's DR-100) and configures git authentication for
+        stack push operations, while `gh stack submit` remains unused.
+    falsifier: >-
+      An advance transition that reports a linked stack as advanced while
+      leaving a layer behind its base, an advance transition that drops a
+      requested review without renewal, or an advance transition that partially
+      moves a stack after reporting failure.
+    rationale: |-
+      A linked stack is one transition boundary. GitHub owns the relationship
+      between its layers, so it must also own the rebase that changes their
+      bases. Reading every resulting layer is still necessary: the stack
+      operation is asynchronous from this transition's perspective, and a
+      lost review request would otherwise leave a moved layer with no next
+      Role to read it.

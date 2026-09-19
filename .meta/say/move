@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, cast
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -1115,6 +1115,108 @@ def head_now(number: str | int) -> tuple[Pull, int]:
     return before, behind_by(before)
 
 
+def stack_layers(root: Pull, pulls: Sequence[Pull]) -> list[Pull]:
+    """Return the open linear stack beginning with `root`.
+
+    Parameters:
+        root: The bottom pull request of the stack.
+        pulls: The complete list of all open pull requests across the repository.
+
+    Returns:
+        list[Pull]: Bottom-first open pull requests forming the linear stack.
+
+    Raises:
+        SystemExit: If the open pull requests form a fork or cycle above `root`.
+    """
+    layers = [root]
+    seen = {root["headRefName"]}
+    while True:
+        above = [pull for pull in pulls if pull["baseRefName"] == layers[-1]["headRefName"]]
+        if not above:
+            return layers
+        if len(above) != 1 or above[0]["headRefName"] in seen:
+            sys.exit(f"say: #{root['number']} does not head a linear open stack; "
+                     "GitHub cannot advance its layers as one transition")
+        layers.append(above[0])
+        seen.add(above[0]["headRefName"])
+
+
+def stack_root(pull: Pull, pulls: Sequence[Pull]) -> Pull:
+    """Return `pull`'s bottom layer among open pull requests.
+
+    An unstacked pull request is its own bottom layer.
+
+    Parameters:
+        pull: The pull request whose stack root is sought.
+        pulls: The complete list of all open pull requests across the repository.
+
+    Returns:
+        Pull: The bottom layer pull request in pull's stack, or pull itself if unstacked.
+
+    Raises:
+        SystemExit: If the pull request bases form a cycle.
+    """
+    by_head = {candidate["headRefName"]: candidate for candidate in pulls}
+    root = pull
+    seen = {root["headRefName"]}
+    while root["baseRefName"] in by_head:
+        root = by_head[root["baseRefName"]]
+        if root["headRefName"] in seen:
+            sys.exit(f"say: #{pull['number']} belongs to a cyclic open pull-request stack")
+        seen.add(root["headRefName"])
+    return root
+
+
+def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
+                  must_move: Mapping[str, bool]) -> list[str]:
+    """Advance bottom-first stack `layers` through GitHub and report per-layer failures.
+
+    Parameters:
+        layers: Open pull requests in bottom-first stack order.
+        before: Current GitHub payload by pull request number.
+        must_move: Whether each layer was behind its base or sits above a layer that was.
+
+    Returns:
+        Per-layer failures found after GitHub's stack transition.
+
+    Raises:
+        SystemExit: If an external GitHub query or command fails outside the rebase sequence.
+    """
+    root = str(layers[0]["number"])
+    try:
+        channel.gh("stack", "checkout", layers[0]["headRefName"], parse=False)
+        channel.gh("stack", "rebase", "--upstack", parse=False)
+        channel.gh("stack", "push", parse=False)
+    except SystemExit as exc:
+        return [f"#{layer['number']} could not advance with #{root}'s stack: {exc.code}"
+                for layer in layers]
+
+    failed: list[str] = []
+    reviewer = channel.role_login("reviewer")
+    for layer in layers:
+        number = str(layer["number"])
+        if must_move.get(number, False):
+            after = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
+                            lambda now: now["headRefOid"] != before[number]["headRefOid"])
+            if after["headRefOid"] == before[number]["headRefOid"]:
+                failed.append(f"#{number} is on the head it had before #{root}'s stack advanced")
+                continue
+        else:
+            after = channel.gh("pr", "view", number, "--json", ADVANCE)
+        if behind_by(after):
+            failed.append(f"#{number} is still behind {after['baseRefName']} after #{root}'s stack advanced")
+            continue
+        asked_before = {r.get("login") for r in before[number].get("reviewRequests") or []}
+        asked_after = {r.get("login") for r in after.get("reviewRequests") or []}
+        if reviewer in asked_before and reviewer not in asked_after:
+            try:
+                request_review(number, "reviewer")
+            except SystemExit as exc:
+                failed.append(f"#{number} lost its review request during #{root}'s stack advance: {exc.code}")
+        print(f"advanced #{number} in #{root}'s stack: {layer['title']}")
+    return failed
+
+
 is_approved_pull = check_pr.is_approved_pull
 is_changes_requested_pull = check_pr.is_changes_requested_pull
 
@@ -1554,13 +1656,18 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
 
 
 def advance(pr: int | str | None = None, held: bool = False) -> None:
-    """Rebase armed or approved pull requests onto their base branch and dispatch coder tasks.
+    """Rebase armed or approved pull requests or linked stacks onto their base branch.
 
     Rebases armed or approved pull requests that are behind their base branch,
     verifying that the update settles and that auto-merge status is preserved
-    (solorepo's DR-113, solorepo's DR-158). Excludes pull requests acting as bases for
-    other open pull requests in a stack (solorepo's DR-133). When invoked as a general
-    sweep (pr=None), delegates conflicting branches to autonomous coder dispatch passes.
+    (solorepo's DR-113, solorepo's DR-158). Advances a linked stack as one
+    operation, bottom layer first, when GitHub reports the layers as a stack,
+    no layer conflicts with its base and at least one layer is behind; a
+    conflicting stack is left for the solo, and a branch that is another pull
+    request's base without being a linked layer is refused when named and passed
+    over in a sweep (solorepo's DR-133, solorepo's DR-243). When invoked as a
+    general sweep (pr=None), delegates conflicting branches to autonomous coder
+    dispatch passes.
 
     A sweep succeeds when it reads every open pull request, whatever those pull
     requests report: one branch's failed rebase or refused dispatch is printed
@@ -1576,32 +1683,69 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     Raises:
         SystemExit: If an explicit pull request cannot be advanced, or if a read the
             sweep itself depends on — the list of open pull requests, the reviewer's
-            login — is refused.
+            login — is refused, or the requested stack is not linear or linked.
     """
     if pr is not None:
         open_now = [channel.gh("pr", "view", str(pr), "--json", ADVANCE)]
-        bases = {p.get("baseRefName") for p in channel.gh("pr", "list", "--state", "open", "--json", "baseRefName") if p.get("baseRefName")}
+        all_open = channel.gh("pr", "list", "--state", "open", "--json", ADVANCE)
     else:
         open_now = channel.gh("pr", "list", "--state", "open", "--json", ADVANCE)
-        bases = {p.get("baseRefName") for p in open_now if p.get("baseRefName")}
+        all_open = open_now
+    bases = {p.get("baseRefName") for p in all_open if p.get("baseRefName")}
+    heads = {p.get("headRefName") for p in all_open if p.get("headRefName")}
     reviewer_login = channel.role_login("reviewer")
     found = open_now if held else [
         p for p in open_now
-        if (p.get("autoMergeRequest") or is_approved_pull(p, reviewer_login=reviewer_login)) and p.get("headRefName") not in bases
+        if (p.get("autoMergeRequest") or is_approved_pull(p, reviewer_login=reviewer_login)
+            or (pr is not None and p.get("headRefName") in bases and p.get("baseRefName") not in heads))
     ]
     moved, left = 0, 0
     failed: list[str] = []
+    advanced_stacks: set[str] = set()
     if not found:
         if pr is not None:
-            pull = open_now[0]
-            if pull.get("headRefName") in bases:
-                sys.exit(f"say: #{pr} is the base of another open pull request; rebasing it would conflict the stack (solorepo's DR-133)")
             sys.exit(f"say: #{pr} is not armed or approved; nothing has asked it to land")
         print("advance: nothing armed or approved is open")
     else:
         for pull in found:
             number = str(pull["number"])
             try:
+                if pull.get("headRefName") in bases or pull.get("baseRefName") in heads:
+                    root = stack_root(pull, all_open)
+                    root_number = str(root["number"])
+                    if root_number in advanced_stacks:
+                        continue
+                    stack = stacked(root_number)
+                    if stack:
+                        advanced_stacks.add(root_number)
+                        layers = stack_layers(root, all_open)
+                        before_and_behind = [head_now(str(layer["number"])) for layer in layers]
+                        before = {str(layer["number"]): current
+                                  for layer, (current, _) in zip(layers, before_and_behind)}
+                        was_behind = {str(layer["number"]): behind
+                                      for layer, (_, behind) in zip(layers, before_and_behind)}
+                        if any(mergeability(current) == "CONFLICTING" for current in before.values()):
+                            print(f"left #{root_number}'s stack alone: GitHub reports a layer conflicting "
+                                  "with its base, so the solo must resolve the stack from the bottom")
+                            left += 1
+                            continue
+                        if not any(was_behind.values()):
+                            continue
+                        must_move: dict[str, bool] = {}
+                        seen_behind = False
+                        for layer, (_, behind) in zip(layers, before_and_behind):
+                            seen_behind = seen_behind or bool(behind)
+                            must_move[str(layer["number"])] = seen_behind
+                        errors = advance_stack(layers, before, must_move)
+                        failed += errors
+                        if not errors:
+                            moved += 1
+                        continue
+                if pull["headRefName"] in bases:
+                    if pr is not None:
+                        sys.exit(f"say: #{pr} is the base of another open pull request; "
+                                 "it is not linked as a GitHub stack and cannot advance atomically (solorepo's DR-243)")
+                    continue
                 # Query head commit state directly to account for preceding wait times.
                 before, behind = head_now(number)
                 if not behind:
@@ -2327,9 +2471,9 @@ def advance_stranded(pulls: list[dict[str, Any]],
     merge until it is resolved anyway.
 
     The branch-safety refusals are `advance`'s, because this calls that verb by
-    number rather than repeating its filter: a branch that is the base of
-    another open pull request is refused (solorepo's DR-133), and one that is
-    neither armed nor approved is refused. A branch that conflicts never
+    number rather than repeating its filter: an unlinked branch that is the
+    base of another open pull request is refused, and one that is neither
+    armed nor approved is refused. A branch that conflicts never
     reaches here, since `check_mergeable_clean` gives a conflict its own reason
     and this reads for the one. A refusal is printed rather than exited on:
     `merge.yml` runs on a fifteen-minute schedule, and a stack base that stays

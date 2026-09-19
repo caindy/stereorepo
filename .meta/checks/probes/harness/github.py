@@ -2,6 +2,7 @@
 """
 import datetime
 import sys
+from typing import Any
 
 
 class FakeGitHub:
@@ -67,6 +68,8 @@ class FakeGitHub:
       with a `stack` object on every layer of a stack, the bottom included, and
       on nothing else, which is what `merge --auto` reads it for (solorepo's #117).
       Default `False`.
+    - `drops_review`: whether a stack rebase drops reviewer requests from `requested`.
+      Default `False`.
     - `state`: `OPEN`, or `MERGED` once a landing sets it.
 
     The head commit is held as a value, `head<number>`, and moved to
@@ -88,22 +91,45 @@ class FakeGitHub:
       happened, and nothing about the head is wrong.
     - `no_dispatch`: `workflow run` exits as GitHub answers a coder token
       without the Actions write it needs.
+    - `no_stack`: the stack whose bottom layer has this number refuses its
+      cascading rebase before moving any layer.
+    - `no_edit`: `pr edit` exits with GitHub's refusal over reviewer assignment.
 
     What a run leaves behind: `pulls`, as the calls left them; `reads`, how many
     `pr view` reads each number took; `dispatched`, every dispatch as
     `(number, task)` in order — the task because `coder.yml` defaults it to
     `review`, so a dispatch that lost it would run the review-answering pass on
     a pull request with no verdict to answer and rebase nothing, the one
-    mutation a probe reading the number alone cannot see; and `edited`, the
-    numbers `pr edit` touched. A dispatch of any workflow but `coder.yml`, and
-    any call this fake has no answer for, raise `AssertionError` naming the
-    call, which `outcome` reports as text.
+    mutation a probe reading the number alone cannot see; `edited`, the numbers
+    `pr edit` touched; `checked_out`, the branch arguments passed to `stack
+    checkout`; `stack_rebases`, the root pull request numbers of stacks that
+    rebased; `stack_rebase_args`, the flags passed to `stack rebase`; and
+    `pushed_stacks`, the count of `stack push` invocations. A dispatch of any
+    workflow but `coder.yml`, and any call this fake has no answer for, raise
+    `AssertionError` naming the call, which `outcome` reports as text.
     """
 
-    REFUSALS = ("no_rebase", "no_arm", "no_stick", "lands", "blip", "no_dispatch")
+    pulls: dict[str, dict[str, Any]]
+    reads: dict[str, int]
+    dispatched: list[tuple[str, str | None]]
+    linked: list[tuple[Any, ...]]
+    edited: list[str]
+    stack_rebases: list[str]
+    stack_rebase_args: list[tuple[Any, ...]]
+    checked_out: list[tuple[Any, ...]]
+    pushed_stacks: int
+    no_rebase: set[str]
+    no_arm: set[str]
+    no_stick: set[str]
+    lands: set[str]
+    blip: set[str]
+    no_dispatch: set[str]
+    no_stack: set[str]
+    no_edit: set[str]
+    REFUSALS = ("no_rebase", "no_arm", "no_stick", "lands", "blip", "no_dispatch", "no_stack", "no_edit")
     """The keywords `__init__` takes beside `pulls`, each the numbers one call answers as the class docstring says."""
 
-    def __init__(self, pulls, **refused):
+    def __init__(self, pulls: dict[int, dict[str, Any]], **refused: list[int]) -> None:
         unknown = set(refused) - set(self.REFUSALS)
         if unknown:
             raise TypeError(f"FakeGitHub takes {', '.join(self.REFUSALS)}, not {', '.join(sorted(unknown))}")
@@ -116,6 +142,10 @@ class FakeGitHub:
         self.dispatched = []
         self.linked = []
         self.edited = []
+        self.stack_rebases = []
+        self.stack_rebase_args = []
+        self.checked_out = []
+        self.pushed_stacks = 0
 
     def view(self, number):
         """One `pr view` of `number`, counted in `reads`, as GitHub would answer it at this moment.
@@ -172,9 +202,10 @@ class FakeGitHub:
         and otherwise keeps the pull request as it was for `slow` reads and for
         the `compare` of the head it has not moved yet, then sets `behind` to
         `again`, drops the arming where `drops` says, and moves the head.
-        `pr edit` applies `--remove-reviewer` and `--add-reviewer` to
-        `requested`, so what a probe reads back is what GitHub would be holding
-        rather than the call the verb made. `pr merge` refuses a number in
+        `pr edit` refuses a number in `no_edit`, and otherwise applies
+        `--remove-reviewer` and `--add-reviewer` to `requested`, so what a
+        probe reads back is what GitHub would be holding rather than the call
+        the verb made. `pr merge` refuses a number in
         `no_arm`, and otherwise lags the arming it shows behind the arming it
         holds by `slow` reads, sets the arming unless the number is in
         `no_stick`, and merges it if in `lands`. `workflow run coder.yml`
@@ -197,6 +228,14 @@ class FakeGitHub:
             return self.view(args[2])
         if head == ("stack", "link"):
             self.linked.append(tuple(args[2:]))
+            return ""
+        if head == ("stack", "checkout"):
+            self.checked_out.append(args[2:])
+            return ""
+        if head == ("stack", "rebase"):
+            return self.stack_rebase(args)
+        if head == ("stack", "push"):
+            self.pushed_stacks += 1
             return ""
         if head == ("workflow", "run") and args[2] == "coder.yml":
             return self.dispatch(args)
@@ -221,9 +260,46 @@ class FakeGitHub:
         pull["rebased"] = True
         return ""
 
+    def stack_rebase(self, args: tuple[Any, ...]) -> str:
+        """Rebase every layer in the checked-out stack, or refuse before moving one."""
+        if not self.checked_out:
+            raise AssertionError("gh stack rebase called without preceding gh stack checkout")
+        branch = self.checked_out[-1][0]
+        root = next((number for number, pull in self.pulls.items()
+                     if pull.get("branch", f"claude/issue-{number}") == branch), None)
+        if root is None:
+            raise AssertionError(f"gh stack rebase: branch {branch!r} not found in fake pulls")
+        if root in self.no_stack:
+            sys.exit("gh: the stack has conflicts that must be resolved")
+        self.stack_rebases.append(root)
+        self.stack_rebase_args.append(args[2:])
+        chain = [root]
+        while True:
+            head_branch = self.pulls[chain[-1]].get("branch", f"claude/issue-{chain[-1]}")
+            above = [number for number, pull in self.pulls.items()
+                     if pull.get("layer") and pull.get("base") == head_branch]
+            if not above:
+                break
+            chain.append(above[0])
+        moved_below = False
+        for number in chain:
+            pull = self.pulls[number]
+            if pull.get("behind", 0) > 0 or moved_below:
+                moved_below = True
+                pull["stale"] = (dict(pull), pull.get("slow", 0))
+                pull["behind"] = pull.get("again", 0)
+                pull["head"] = f"moved{number}"
+                pull["rebased"] = True
+                pull["armed"] = pull["armed"] and not pull.get("drops")
+                if pull.get("drops_review"):
+                    pull["requested"] = []
+        return ""
+
     def edit(self, args):
-        """`pr edit`: `--remove-reviewer` and `--add-reviewer` applied to `requested`, the number recorded in `edited`."""
+        """`pr edit`: refused for a number in `no_edit`; otherwise `--remove-reviewer` and `--add-reviewer` applied to `requested`, the number recorded in `edited`."""
         number = str(args[2])
+        if number in self.no_edit:
+            sys.exit("gh: Could not add requested reviewers")
         self.edited.append(number)
         pull = self.pulls[number]
         asked = list(pull.get("requested") or [])

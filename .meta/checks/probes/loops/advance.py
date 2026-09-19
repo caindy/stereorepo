@@ -194,6 +194,243 @@ def _named_pull_request_not_armed(channel: Any, move: Any) -> list[str]:
     return problems
 
 
+def _stack_advances_as_one_transition(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 0, "armed": True, "layer": True, "requested": ["o-r-reviewer"]},
+        8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7",
+            "requested": ["o-r-reviewer"], "drops_review": True},
+    })
+    said = swept(channel, move, fake, problems)
+    if (fake.checked_out != [("claude/issue-7",)] or fake.stack_rebases != ["7"]
+            or fake.stack_rebase_args != [("--upstack",)]
+            or fake.pushed_stacks != 1 or fake.pulls["7"].get("rebased")
+            or not fake.pulls["8"].get("rebased")):
+        problems.append("advance: a stack transition did not check out its root branch, rebase "
+                        f"upstack, and push once, or misreported layer movements: {fake.checked_out!r}, {fake.stack_rebases!r}, "
+                        f"{fake.stack_rebase_args!r}, {fake.pushed_stacks!r}, {fake.pulls!r}")
+    if "7" in fake.edited or "8" not in fake.edited or "o-r-reviewer" not in fake.pulls["8"]["requested"]:
+        problems.append(f"advance: review renewal touched unchanged layer or missed dropping layer: {fake.edited!r}")
+    if said:
+        problems.append(f"advance: a stack transition reported {said!r}")
+    return problems
+
+
+def _named_stack_base_advances_without_arming(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": False, "layer": True},
+        8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
+    })
+    said = run_verb(channel, fake, lambda: move.advance("7"))
+    if (fake.checked_out != [("claude/issue-7",)] or fake.stack_rebases != ["7"]
+            or not all(fake.pulls[n].get("rebased") for n in ("7", "8")) or said):
+        problems.append(f"advance: named stack base was not advanced: {fake.checked_out!r}, {fake.stack_rebases!r}, {said!r}")
+    return problems
+
+
+def _named_unarmed_upper_layer_is_refused(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": False, "layer": True},
+        8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
+    })
+    said = run_verb(channel, fake, lambda: move.advance("8"))
+    if not said or "not armed or approved" not in said or fake.stack_rebases:
+        problems.append(f"advance: unarmed upper layer was not refused: {said!r}, {fake.stack_rebases!r}")
+    return problems
+
+
+def _named_unlinked_stack_base_is_refused(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": True, "layer": False},
+        8: {"behind": 1, "armed": False, "layer": False, "base": "claude/issue-7"},
+    })
+    said = run_verb(channel, fake, lambda: move.advance("7"))
+    if not said or "not linked as a GitHub stack" not in said or "solorepo's DR-243" not in said:
+        problems.append(f"advance: unlinked stack base did not cite solorepo's DR-243: {said!r}")
+    return problems
+
+
+def _refused_stack_leaves_every_layer_unmoved(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": False, "layer": True},
+        8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
+    }, no_stack=[7])
+    said = run_verb(channel, fake, lambda: move.advance("7"))
+    if not said or "#7" not in said or "#8" not in said or any(pull.get("rebased") for pull in fake.pulls.values()):
+        problems.append(f"advance: a refused stack partially advanced or misreported: {said!r}, {fake.pulls!r}")
+    return problems
+
+
+def _stack_layer_still_behind_after_advance_is_reported(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    root, layer = 7, 8
+    fake = FakeGitHub({
+        root: {"behind": 1, "armed": True, "layer": True},
+        layer: {"behind": 1, "armed": False, "layer": True, "base": f"claude/issue-{root}", "again": 1},
+    })
+    said = swept(channel, move, fake, problems)
+    if not said or f"#{layer} is still behind claude/issue-{root} after #{root}'s stack advanced" not in said:
+        problems.append(f"advance: a stack layer still behind was reported as {said!r}")
+    return problems
+
+
+def _stack_reaches_advance_via_approved_layer(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": False, "layer": True, "verdicts": [("o-r-reviewer", "APPROVED")]},
+        8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
+    })
+    said = swept(channel, move, fake, problems)
+    if fake.checked_out != [("claude/issue-7",)] or fake.stack_rebases != ["7"] or said:
+        problems.append(f"advance: approved stack base was not advanced: {fake.checked_out!r}, {fake.stack_rebases!r}, {said!r}")
+    return problems
+
+
+def _stack_reaches_advance_via_armed_upper_layer(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": False, "layer": True},
+        8: {"behind": 1, "armed": True, "layer": True, "base": "claude/issue-7"},
+    })
+    said = swept(channel, move, fake, problems)
+    if fake.checked_out != [("claude/issue-7",)] or fake.stack_rebases != ["7"] or said:
+        problems.append(f"advance: armed upper layer did not advance stack from root: {fake.checked_out!r}, {fake.stack_rebases!r}, {said!r}")
+    return problems
+
+
+def _stack_with_multiple_armed_layers_rebases_once(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": True, "layer": True},
+        8: {"behind": 1, "armed": True, "layer": True, "base": "claude/issue-7"},
+    })
+    said = swept(channel, move, fake, problems)
+    if fake.stack_rebases != ["7"] or fake.pushed_stacks != 1 or said:
+        problems.append(f"advance: stack with multiple armed layers rebased more than once: {fake.stack_rebases!r}, {fake.pushed_stacks!r}, {said!r}")
+    return problems
+
+
+def _three_layer_stack_advances_in_order(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": True, "layer": True},
+        8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
+        9: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-8"},
+    })
+    said = swept(channel, move, fake, problems)
+    if (fake.checked_out != [("claude/issue-7",)] or fake.stack_rebases != ["7"]
+            or not all(fake.pulls[n].get("rebased") for n in ("7", "8", "9")) or said):
+        problems.append(f"advance: three-layer stack did not advance in order: {fake.checked_out!r}, {fake.stack_rebases!r}, {fake.pulls!r}")
+    return problems
+
+
+def _branched_stack_is_refused(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 1, "armed": True, "layer": True},
+        8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
+        9: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
+    })
+    said = swept(channel, move, fake, problems)
+    if not said or "does not head a linear open stack" not in said or fake.stack_rebases:
+        problems.append(f"advance: branched stack was not refused: {said!r}, {fake.stack_rebases!r}")
+    return problems
+
+
+def _stack_with_nothing_behind_is_skipped(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {"behind": 0, "armed": True, "layer": True},
+        8: {"behind": 0, "armed": False, "layer": True, "base": "claude/issue-7"},
+    })
+    with stood_in(channel, gh=fake):
+        ran = outcome(lambda: move.advance())
+    if ran.code is not None:
+        problems.append(f"advance: stack with nothing behind exited with {ran.code!r}")
+    if fake.checked_out or fake.stack_rebases or fake.pushed_stacks:
+        problems.append("advance: stack with nothing behind called stack verbs: "
+                        f"{fake.checked_out!r}, {fake.stack_rebases!r}, {fake.pushed_stacks!r}")
+    if "1 pull request(s) current with their base" not in ran.out:
+        problems.append(f"advance: stack with nothing behind did not report current: {ran.out!r}")
+    return problems
+
+
+def _stack_with_current_upper_layer_advances_both(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    root, upper = 7, 8
+    fake = FakeGitHub({
+        root: {"behind": 1, "armed": True, "layer": True},
+        upper: {"behind": 0, "armed": False, "layer": True, "base": f"claude/issue-{root}", "slow": 1},
+    })
+    said = swept(channel, move, fake, problems)
+    if (fake.checked_out != [(f"claude/issue-{root}",)] or fake.stack_rebases != [str(root)]
+            or not fake.pulls[str(root)].get("rebased") or not fake.pulls[str(upper)].get("rebased")
+            or said):
+        problems.append("advance: stack with current upper layer did not advance both layers: "
+                        f"{fake.checked_out!r}, {fake.stack_rebases!r}, {fake.pulls!r}, {said!r}")
+    return problems
+
+
+def _unlinked_chain_swept_rebases_top_layer_and_skips_base(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    base, top = 7, 8
+    fake = FakeGitHub({
+        base: {"behind": 1, "armed": True, "layer": False},
+        top: {"behind": 1, "armed": True, "layer": False, "base": f"claude/issue-{base}"},
+    })
+    said = swept(channel, move, fake, problems)
+    if fake.pulls[str(base)].get("rebased"):
+        problems.append("advance: unlinked chain base was rebased")
+    if not fake.pulls[str(top)].get("rebased"):
+        problems.append("advance: unlinked chain top layer was not rebased")
+    if fake.stack_rebases:
+        problems.append(f"advance: unlinked chain called stack verbs: {fake.stack_rebases!r}")
+    if said:
+        problems.append(f"advance: unlinked chain sweep reported {said!r}")
+    return problems
+
+
+def _stack_review_renewal_failure_is_reported(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    root, layer = 7, 8
+    fake = FakeGitHub({
+        root: {"behind": 0, "armed": True, "layer": True},
+        layer: {"behind": 1, "armed": False, "layer": True, "base": f"claude/issue-{root}",
+                "requested": ["o-r-reviewer"], "drops_review": True},
+    }, no_edit=[layer])
+    said = swept(channel, move, fake, problems)
+    if not said or f"#{layer} lost its review request during #{root}'s stack advance" not in said:
+        problems.append(f"advance: review renewal failure was reported as {said!r}")
+    return problems
+
+
+def _conflicting_stack_is_left_for_the_solo(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    root = 7
+    fake = FakeGitHub({
+        root: {"behind": 1, "armed": True, "layer": True, "mergeable": "CONFLICTING"},
+        8: {"behind": 0, "armed": False, "layer": True, "base": f"claude/issue-{root}"},
+    })
+    with stood_in(channel, gh=fake):
+        ran = outcome(lambda: move.advance())
+    if ran.code is not None:
+        problems.append(f"advance: a conflicting stack exited with {ran.code!r}")
+    if f"left #{root}'s stack alone" not in ran.out:
+        problems.append(f"advance: a conflicting stack was skipped in silence rather than explained: {ran.out!r}")
+    if fake.stack_rebases or any(pull.get("rebased") for pull in fake.pulls.values()):
+        problems.append(f"advance: a conflicting stack was rebased: {fake.stack_rebases!r}, {fake.pulls!r}")
+    if fake.dispatched:
+        problems.append(f"advance: a conflicting stack was dispatched to coders: {fake.dispatched!r}")
+    said = str(ran.out.partition(REPORTED)[2])
+    if said:
+        problems.append(f"advance: a conflicting stack was reported as failed: {said!r}")
+    return problems
+
+
 def _merge_auto_after_a_failed_advance(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7])
@@ -282,6 +519,21 @@ def advance_probes() -> list[str]:
       request armed and behind (solorepo's #46); nor over a branch a blip on
       the read-back left armed and current, since the exit code is the last
       thing the Job says.
+    - Stack advance (solorepo's DR-243). A stack advancing as one transition,
+      bottom layer first, renewing dropped review requests while leaving unchanged
+      layers untouched. An unarmed named stack base advancing explicitly, and an
+      unarmed upper layer refused. An unlinked stack base refused citing
+      solorepo's DR-243. A refused stack leaving every layer unmoved. A layer still
+      behind after advance reported as failed. Stack advance reached through an
+      approved layer or through an armed upper layer walking down to the root.
+      Deduplication of multiple armed layers in a single stack ensuring a single
+      rebase and push. A linear three-layer stack advancing in sequence, and a
+      branched stack refused. A stack with nothing behind skipped without stack
+      operations and accounted for as current. A stack with a current upper
+      layer advancing both layers. An unlinked chain swept rebasing its top
+      layer while passing over its base. A review renewal failure reported as a
+      failed transition. And a conflicting stack left for the solo with an
+      explanation printed rather than dispatched to coders.
 
     The dispatch reading and the dispatch a person makes are `dispatch_probes`
     in `probes/loops/dispatch.py`.
@@ -313,6 +565,22 @@ def advance_probes() -> list[str]:
         _head_github_never_moved(channel, move),
         _two_pull_requests_failing_in_one_sweep(channel, move),
         _named_pull_request_not_armed(channel, move),
+        _stack_advances_as_one_transition(channel, move),
+        _named_stack_base_advances_without_arming(channel, move),
+        _named_unarmed_upper_layer_is_refused(channel, move),
+        _named_unlinked_stack_base_is_refused(channel, move),
+        _refused_stack_leaves_every_layer_unmoved(channel, move),
+        _stack_layer_still_behind_after_advance_is_reported(channel, move),
+        _stack_reaches_advance_via_approved_layer(channel, move),
+        _stack_reaches_advance_via_armed_upper_layer(channel, move),
+        _stack_with_multiple_armed_layers_rebases_once(channel, move),
+        _three_layer_stack_advances_in_order(channel, move),
+        _branched_stack_is_refused(channel, move),
+        _stack_with_nothing_behind_is_skipped(channel, move),
+        _stack_with_current_upper_layer_advances_both(channel, move),
+        _unlinked_chain_swept_rebases_top_layer_and_skips_base(channel, move),
+        _stack_review_renewal_failure_is_reported(channel, move),
+        _conflicting_stack_is_left_for_the_solo(channel, move),
         _merge_auto_after_a_failed_advance(channel, move),
         _merge_auto_over_a_merge_that_landed(channel, move),
         _merge_auto_over_a_blip_on_the_read_back(channel, move)

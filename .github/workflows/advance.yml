@@ -7,8 +7,8 @@
 # ended when it armed — with nobody left to notice (solorepo's #93).
 # A push to `main` is the only thing that puts a pull request in that state,
 # so it is the event this runs on: no clock, and no interval to be stuck inside.
-# It advances approved or armed branches (excluding branches that are bases of other
-# open pull requests, solorepo's DR-133, DR-161) so the merge manager finds them clean and current.
+# It advances approved or armed branches, including linked stacks through GitHub's
+# bottom-up stack rebase operation (solorepo's DR-161, solorepo's DR-243).
 #
 # A file of its own rather than a job in `gate.yml`. This holds a credential
 # and the gate holds none; and on a `pull_request` event GitHub runs a workflow
@@ -44,11 +44,12 @@ jobs:
     # solorepo's DR-140 stopped depending on.
     runs-on: arc-runner-set
     steps:
-      # No token in `.git/config`: nothing here pushes from the checkout. The
-      # channel is all this needs from the tree, and it is trunk's by being on
-      # trunk.
+      # The stack transition fetches and force-with-lease pushes every affected
+      # branch. `persist-credentials` stays false so the explicit Role setup
+      # below, rather than the checkout action, provides that credential.
       - uses: actions/checkout@v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       # `.meta/say/channel.py` shells out to `gh` for every read and write, and
@@ -57,13 +58,16 @@ jobs:
       - uses: ./.meta/actions/gh
 
       # The Role's credential, where `.meta/say/` expects it by default
-      # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
-      # container.
+      # (solorepo's DR-073, solorepo's DR-107): outside the tree, mode 600, one token in the
+      # container. Installs the gh-stack extension per machine (solorepo's DR-100) and
+      # configures git authentication for stack push operations (solorepo's DR-243).
       - name: hold the coder's credential
         run: |
           install -d -m 700 ~/.config/solorepo
           install -m 600 /dev/null ~/.config/solorepo/coder.env
           printf 'GH_TOKEN=%s\n' "$CODER_GH_TOKEN" > ~/.config/solorepo/coder.env
+          gh stack --help >/dev/null || gh extension install github/gh-stack
+          GH_TOKEN="$CODER_GH_TOKEN" gh auth setup-git
           .meta/say/whoami
         env:
           CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
