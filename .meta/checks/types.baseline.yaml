@@ -43,7 +43,7 @@
 .meta/checks/probes/knowledge.py: 6
 .meta/checks/probes/loops/advance.py: 29
 .meta/checks/probes/loops/delegate.py: 10
-.meta/checks/probes/loops/dispatch.py: 41
+.meta/checks/probes/loops/dispatch.py: 45
 .meta/checks/probes/loops/enacted.py: 10
 .meta/checks/probes/loops/handoff.py: 12
 .meta/checks/probes/loops/merge_manager.py: 8

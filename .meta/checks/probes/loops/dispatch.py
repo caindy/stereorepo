@@ -68,6 +68,34 @@ def _approved_conflicting_dispatches_rebase(channel, move) -> list[str]:
     return problems
 
 
+def _conflicting_changes_requested_dispatches_rebase(channel, move) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING",
+                           "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
+    said = run_verb(channel, fake, lambda: move.advance())
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append("advance: a conflicting one with a verdict standing dispatched "
+                        f"{fake.dispatched!r}")
+    if said:
+        problems.append(f"advance: the conflicting one with a verdict standing exited with {said!r}")
+    return problems
+
+
+def _recent_conflicting_changes_requested_left_to_the_run(channel, move) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING",
+                           "updatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
+                           "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
+    said = run_verb(channel, fake, lambda: move.advance())
+    if fake.dispatched:
+        problems.append("advance: a conflicting one whose verdict is recent enough for a run to "
+                        f"be standing on it dispatched {fake.dispatched!r}")
+    if said:
+        problems.append("advance: the conflicting one left to the run it may already have "
+                        f"exited with {said!r}")
+    return problems
+
+
 def _unanswered_changes_requested_dispatches_review(channel, move) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
@@ -315,7 +343,13 @@ def dispatch_probes():
       taken for an answer. An armed conflicting one is dispatched and not
       rebased, and the sweep exits 0 having left it to the dispatch
       (solorepo's DR-149, solorepo's #201). An approved conflicting one is
-      dispatched to rebase; an unanswered request for changes to review,
+      dispatched to rebase, and so is one carrying a request for changes the
+      coder has not answered, which asks nobody for anything and so stands in
+      no request GitHub reports — unless GitHub has shown it moving more
+      recently than a run may last, where the verdict's own pass may be
+      standing on the branch and a rebase dispatched beside it would
+      force-push under it (solorepo's DR-237); an unanswered request for
+      changes on a branch that still merges goes to review,
       unless it is recent enough that a run may still be standing on it; an
       approved one with failing checks to review; and a review request whose
       reviewer check failed without a verdict is re-requested
@@ -373,6 +407,8 @@ def dispatch_probes():
         _unknown_is_waited_out(channel, move),
         _armed_conflicting_dispatched_not_rebased(channel, move),
         _approved_conflicting_dispatches_rebase(channel, move),
+        _conflicting_changes_requested_dispatches_rebase(channel, move),
+        _recent_conflicting_changes_requested_left_to_the_run(channel, move),
         _unanswered_changes_requested_dispatches_review(channel, move),
         _recent_changes_requested_left_to_the_run(channel, move),
         _approved_with_failing_checks_dispatches_review(channel, move),

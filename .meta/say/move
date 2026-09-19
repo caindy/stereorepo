@@ -945,9 +945,11 @@ def run_coder(pr: str | int, task: str) -> None:
 def dispatch(pulls: Sequence[Pull]) -> list[str]:
     """Dispatch coder rebase passes for pull requests left conflicting by recent merges.
 
-    Identifies loop-owned pull requests with outstanding review requests or auto-merge
-    intents that are in CONFLICTING merge state, excluding stacked base layers, and triggers
-    workflow dispatch for rebase passes (solorepo's DR-129, solorepo's DR-133, solorepo's DR-149).
+    Identifies loop-owned pull requests in CONFLICTING merge state that are waiting on
+    something a conflict holds up — a review requested, an arming, an approval, or a request
+    for changes the coder has not answered (solorepo's DR-237) — excluding stacked base layers,
+    and triggers workflow dispatch for rebase passes (solorepo's DR-129, solorepo's DR-133,
+    solorepo's DR-149).
 
     Parameters:
         pulls (list[dict]): Open pull request objects returned from GitHub API view.
@@ -968,6 +970,15 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
         challenge = re.sub(r"^(?:claude|gemini|codex)/issue-", "", pull["headRefName"])
         asked = [r.get("login") or r.get("name") or "someone"
                  for r in pull.get("reviewRequests") or []]
+        # How long GitHub has shown this pull request unmoved, in minutes,
+        # against how long a coder run may last. Read here rather than beside
+        # the one arm that used to need it, because two of them do
+        # (solorepo's DR-237): a branch that has moved more recently than a run
+        # may last is a branch a run may still be standing on, whichever pass
+        # that run is.
+        moved = (datetime.datetime.fromisoformat(pull["updatedAt"].replace("Z", "+00:00"))
+                 if pull.get("updatedAt") else None)
+        idle = (now - moved).total_seconds() / 60 if moved else float("inf")
         # What the pull request is waiting on, and so what the conflict is
         # holding up. Both, where the reviewer armed one whose request GitHub
         # still shows outstanding; the line below says which, because that is
@@ -977,6 +988,30 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
             waiting.append("armed")
         if is_approved_pull(pull, reviewer_login=reviewer_login):
             waiting.append("approved")
+        # A verdict the coder has not answered is the fourth thing a conflict
+        # holds up, and the one nobody else reaches (solorepo's DR-237). The
+        # three above are the pull request waiting on somebody who is not the
+        # coder; this is the pull request waiting on the Role that holds it,
+        # which asks for nothing and so shows in no request GitHub reports.
+        # The re-delivery below will not take it, because the pass that
+        # answers a verdict is delivered on the pull request's own merge ref
+        # and GitHub builds none for a branch that conflicts; so without this
+        # entry no pass is dispatched for it on any later push to trunk.
+        #
+        # The idle guard is the difference between this entry and the three
+        # above it, and it is the same one the re-delivery takes. A verdict is
+        # itself the event that starts a coder pass, so unlike a request, an
+        # arming or an approval this state can have a run of its own in
+        # flight — the verdict landing while the branch still merged, the
+        # conflict arriving under the run. The two passes take different
+        # concurrency groups in `coder.yml`, `changes_requested` and `rebase`,
+        # so neither waits for the other, and the rebase pass ends in `git
+        # push --force-with-lease`: the harm that file names in its own words
+        # as force-pushing under a session. A branch GitHub has shown unmoved
+        # for longer than a run may last has no run standing on it, and the
+        # next push to trunk asks again about one that has.
+        if is_changes_requested_pull(pull, reviewer_login=reviewer_login) and idle >= minutes:
+            waiting.append("awaiting the coder's answer to a request for changes")
         # A stranded review request where reviewer check failed without a verdict (solorepo's DR-178):
         if reviewer_login in asked and not pull.get("isDraft") and mergeability(pull) != "CONFLICTING":
             checks = pull.get("statusCheckRollup")
@@ -1066,14 +1101,22 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
 
         elif is_changes_requested_pull(pull, reviewer_login=reviewer_login):
             # An unanswered review changes request where the webhook was spent or the run crashed.
-            # Only re-deliver when the branch does not conflict and has been idle for longer than
-            # a run may last, ensuring no active coder run is standing on the branch.
-            moved = (datetime.datetime.fromisoformat(pull["updatedAt"].replace("Z", "+00:00"))
-                     if pull.get("updatedAt") else None)
-            idle = (now - moved).total_seconds() / 60 if moved else float("inf")
+            # Only re-deliver when the branch has been idle for longer than a run may last,
+            # ensuring no active coder run is standing on the branch.
             if idle < minutes:
                 continue
             try:
+                # The conflict, asked a second time. Reaching here with the
+                # same idle figure the entry above reads means that entry did
+                # not take this pull request, and the one way that happens on
+                # a branch that does conflict is a mergeability GitHub had not
+                # decided when the arm above asked: `mergeability` gives up
+                # after `MERGEABILITY` and writes `UNKNOWN` back, which is the
+                # expected answer on the push that invalidated every cached
+                # one. This call polls that value again. What it must not do
+                # is dispatch the review pass onto a branch whose problem is a
+                # conflict: that pass is dispatched, so it would start, and
+                # settling a conflict is not what it does (solorepo's DR-237).
                 if mergeability(pull) == "CONFLICTING":
                     continue
                 try:

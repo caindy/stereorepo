@@ -1,0 +1,129 @@
+decisions:
+  - id: work:decision/237
+    name: "DR-237 · A verdict the coder has not answered is something a conflict holds up, and the sweep dispatches the rebase pass for it"
+    challenge: work:challenge/633
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-checks-probes-loops-dispatch
+    context: >-
+      DR-133 gave a conflicting loop branch a pass of its own, because GitHub
+      builds no merge ref for one and so no review of its head can run and `gh
+      pr update-branch` is refused. `move:dispatch` reaches that pass through a
+      list of what the pull request is waiting on: a review requested of the
+      reviewer, an arming, or an approval. DR-178 added the two re-deliveries
+      that heal a spent webhook — an approved pull request with failing checks,
+      and a request for changes the coder never answered — and the second of
+      them skips a conflicting branch outright, correctly on its own terms,
+      because the pass it would dispatch is the review pass and that pass is
+      delivered on the pull request's own merge ref.
+
+      Between the two sits a state neither reaches. A pull request carrying a
+      standing request for changes is waiting on the Role that holds it. It
+      asks nobody for anything, so GitHub reports no review request, no arming
+      and no approval, and the list of what it waits on is empty; then a merge
+      to trunk conflicts it, and the one branch that reads an unanswered
+      verdict steps over it. Every subsequent push to `main` runs `advance.yml`,
+      reads the pull request, and dispatches nothing. solorepo's #568 is the
+      case that was found this way, and the ordering that produces it is the
+      commonest there is: the reviewer's verdict and the merge manager run
+      against the same trunk, so a verdict landing just before a merge strands
+      the answer behind a conflict before it can be pushed.
+    alternatives:
+      - name: Leave it to the solo to spot the stall and dispatch by hand
+        chosen: false
+        reason: >-
+          `move dispatch <n> --task rebase` already answers the case in one
+          command, and that is what makes leaving it here wrong rather than
+          merely slow: the repair is mechanical and known, and the only missing
+          part is somebody awake to notice. A loop whose recovery depends on the
+          solo reading a pull request list is the human polling DR-178 set out
+          to remove, and it fails silently — a stalled pull request looks
+          exactly like one whose coder pass is still running.
+      - name: Dispatch the review pass and let the run find the conflict
+        chosen: false
+        reason: >-
+          The review pass cannot start. `coder.yml` runs a `pull_request_review`
+          and its by-hand equivalent against the pull request's merge ref, which
+          is the ref GitHub does not build for a conflicting branch, and the
+          pass is written to answer threads rather than to settle a conflict.
+          The rebase pass exists for exactly this state and takes the larger
+          model for it, because a conflict here is prose as often as it is code.
+      - name: Read an unanswered verdict as waiting, with no guard against a run already standing
+        chosen: false
+        reason: >-
+          The three entries this joins are each the pull request waiting on
+          somebody who is not the coder, so no coder run is in flight for any of
+          them and none of them needs a guard. A verdict is different in kind: it
+          is itself the event that starts a coder pass. The ordering this
+          Decision calls ordinary produces the collision — the verdict lands
+          while the branch still merges, the review pass starts under a
+          seventy-five minute timeout, and the conflict arrives under it — and
+          the two passes take different concurrency groups in `coder.yml`,
+          `changes_requested` and `rebase`, so neither waits for the other. The
+          rebase pass ends in `git push --force-with-lease`, which is the harm
+          that file names in its own words as force-pushing under a session:
+          either the force-push lands and the review pass's answers are lost, or
+          the lease is refused and the branch is left conflicting for the next
+          push to dispatch again.
+      - name: Read an unanswered verdict as one of the things a conflict holds up, guarded by the idle window
+        chosen: true
+        reason: >-
+          It is the same fact the three existing entries state, said for the
+          fourth party that can be waiting: the coder itself. The dispatch
+          already refuses a stack's lower layer, a Challenge no loop holds and a
+          branch that is not a loop's, and those refusals apply unchanged, so
+          the change is one line of reading rather than a new path. The pass it
+          starts is the one DR-133 built, and once the branch is current the
+          review pass is reachable again by the door that was always meant to
+          deliver it.
+    consequences:
+      - >-
+        `move:dispatch` counts a request for changes the coder has not answered
+        among what a pull request is waiting on, so a conflicting loop branch
+        carrying one is dispatched for the rebase pass on the next push to
+        trunk, and the line it prints says the verdict is what the conflict was
+        holding up.
+      - >-
+        That entry is guarded by the same idle window DR-178's re-delivery
+        takes, and for the same reason said of a different pass: a branch GitHub
+        has shown moving more recently than a coder run may last is one a run
+        may still be standing on, and here the run in question is the verdict's
+        own review pass, which a rebase dispatched beside it would force-push
+        under. The figure is computed once for the pull request rather than
+        inside the arm that used to be its only reader.
+      - >-
+        DR-178's review re-delivery keeps its conflicting-branch guard, which
+        reaches a branch that does conflict by one route: `mergeability` gives
+        up after `MERGEABILITY` and writes `UNKNOWN` back, which is the expected
+        answer on the push that invalidated every cached one, and an `UNKNOWN`
+        read fails the entry above. The guard polls that value again, so a
+        branch GitHub has since decided is not dispatched for the pass that
+        answers threads rather than the one that settles a conflict.
+      - >-
+        The by-hand `move dispatch` is unchanged. It already defaults a task-less
+        dispatch to `rebase` on a `CONFLICTING` branch and already permits the
+        rebase pass there whatever verdict stands, so the solo's act and the
+        sweep's now agree on this state rather than only on the three others.
+      - >-
+        `.meta/checks/probes/loops/dispatch.py` holds both halves: a conflicting
+        pull request whose newest verdict requests changes dispatches `rebase`,
+        and one whose verdict is recent enough for a run to be standing on the
+        branch dispatches nothing. The case that dispatches nothing at all is
+        unchanged and still carries no verdict, so none of the three can be
+        satisfied by dispatching everything.
+    falsifier: >-
+      A conflicting loop pull request carrying an unanswered request for changes
+      that sits through a push to trunk, idle for longer than a run may last,
+      with no coder run dispatched for it. Equally, a rebase pass dispatched
+      beside a review pass that is still running on the same branch, or one
+      dispatched for a pull request whose verdict was already answered and
+      handed back, either of which would say the reading of what a pull request
+      waits on has stopped discriminating.
+    rationale: |-
+      The loop's recovery reads states rather than events, because the events
+      are spent by the time anything is stuck. What this adds is not a new
+      recovery but the missing fourth row of an existing one: three of the
+      parties that can be waiting on a conflicted branch were read, and the
+      coder — the only one of them that asks for nothing, and so shows in
+      nothing GitHub reports — was not.
