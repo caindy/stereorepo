@@ -50,14 +50,15 @@ def triaged(channel: Any, move: Any, fake: FakeIssue, level: str, body: str) -> 
     """
     fake.login = "o-r-reviewer"
     recorder = Recorder(fake)
-    with environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"):
+    with environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe"):
         signed = channel.signed(body)
         return run_verb(channel, recorder, lambda: move.triage("7", level, signed)), recorder
 
 
 def by(channel: Any, actor: str) -> dict[str, Any]:
     """A verdict comment as `actor` signed it, for seeding an Issue."""
-    with environment(ACTOR_SESSION=actor, AI_AGENT="probe"):
+    run_id = actor.removeprefix("gha-") if actor.startswith("gha-") else None
+    with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=actor, ACTOR_AGENT="probe"):
         return {"body": channel.signed(VERDICT)}
 
 

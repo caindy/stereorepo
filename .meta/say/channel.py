@@ -53,6 +53,17 @@ ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
 # verb can tell a run from a session beside it (`in_a_run`, solorepo's DR-148).
 RUN_MARK = "gha-"
 
+# The names a run's identity is read from, none of which the harness the run
+# starts owns (solorepo's DR-233). GitHub writes `GITHUB_RUN_ID` into every
+# step, and the workflows compose `ACTOR_SESSION` from it; a workflow writes
+# `ACTOR_AGENT` before the harness starts, where `AI_AGENT` is a name the
+# harness overwrites with its own build string; and the workflow and step
+# GitHub names are what is left to say what spoke where a workflow wrote
+# nothing.
+ENV_RUN_ID = "GITHUB_RUN_ID"
+ENV_RUN_AGENT = "ACTOR_AGENT"
+ENV_RUN_STEP = ("GITHUB_WORKFLOW", "GITHUB_ACTION")
+
 READING = ("`.meta/say/verbs.yaml` says what each verb does and which "
            "Role holds it; /pr-first is the coder's reading of PR First and "
            "/pr-first-reviewer the reviewer's. Every body arrives on stdin.")
@@ -104,6 +115,44 @@ def sibling(name: str) -> types.ModuleType:
 _siblings: dict[str, types.ModuleType] = {}
 
 
+def attested_run() -> str | None:
+    """The identity GitHub attests for this run, or `None` outside one.
+
+    `GITHUB_RUN_ID` is GitHub's own name for the run, written into every step's
+    environment and into no session's, and `coder.yml` and `review.yml` compose
+    `ACTOR_SESSION` from the same number. So a run's Trailer has one legitimate
+    value, this one, and every other identity in that environment — the
+    harness's session id, or anything a shell in the run typed — is something
+    else's (solorepo's DR-233).
+    """
+    run = os.environ.get(ENV_RUN_ID)
+    return f"{RUN_MARK}{run}" if run else None
+
+
+def speaker() -> str | None:
+    """Which session is speaking, or `None` where the environment does not say.
+
+    `actor()` without the refusals, so that a reader of the record —
+    `check_pr.mine()`, asking whether a Trailer is this session's — resolves the
+    session exactly as the writer of the record does, and the two cannot
+    disagree about which id signed (solorepo's #285).
+
+    The run's attested identity comes first. Failing that, an `ACTOR_SESSION`
+    carrying `RUN_MARK` is a workflow's own mark and wins over `ENV_SESSION`'s
+    declared order, since inside a container run the harness also sets
+    `CLAUDE_CODE_SESSION_ID`, a uuid that says nothing about the workflow.
+    Failing both, the environment is a session's and `ENV_SESSION` is read in
+    order.
+    """
+    run = attested_run()
+    if run:
+        return run
+    declared = os.environ.get("ACTOR_SESSION") or ""
+    if declared.startswith(RUN_MARK):
+        return declared
+    return next((os.environ[k] for k in ENV_SESSION if os.environ.get(k)), None)
+
+
 def actor() -> str:
     """**Who** is speaking: the session, and nothing else.
 
@@ -117,17 +166,18 @@ def actor() -> str:
     changes at every upgrade, so one Actor across an update read as two, while
     the part that actually distinguishes never moved.
 
-    `ACTOR_SESSION` wins over `ENV_SESSION`'s declared order when it carries
-    `RUN_MARK`: inside a container run the harness also sets
-    `CLAUDE_CODE_SESSION_ID`, a uuid that says nothing about the workflow, and
-    would otherwise shadow the workload identity `coder.yml` wrote — the run's
-    Trailer reading a session indistinguishable from a laptop's.
+    In a run the answer is the run's, whatever else that environment carries: an
+    `ACTOR_SESSION` naming anything but `attested_run()` is refused rather than
+    signed with, and a session id beside it is not read at all
+    (solorepo's DR-233).
 
     Fail closed. An unsigned comment should be unrepresentable, not discouraged.
     """
-    if in_a_run():
-        return os.environ["ACTOR_SESSION"]
-    session = next((os.environ[k] for k in ENV_SESSION if os.environ.get(k)), None)
+    run, declared = attested_run(), os.environ.get("ACTOR_SESSION")
+    if run and declared and declared != run:
+        sys.exit(f"say: this is run {run} and `ACTOR_SESSION` says {declared}; "
+                 "refusing to sign as a Job that is not this one")
+    session = speaker()
     if not session:
         sys.exit("say: the environment does not say who is speaking "
                  f"(need one of {ENV_SESSION}); refusing to post")
@@ -154,28 +204,48 @@ def in_a_run() -> bool:
     was not there, which is solorepo's DR-134's finding and is the
     credential's alone.
 
+    GitHub's own `GITHUB_RUN_ID` answers first and the mark answers after it
+    (solorepo's DR-233), so that a shell which dropped `ACTOR_SESSION` is still
+    in the run GitHub says it is in, and a mark alone still reads as a run where
+    GitHub's name for it does not reach.
+
     A session is the answer wherever nothing says otherwise — unset, or a shape
     no workflow writes. That is the side that asks rather than the side that
     acts, which is where an unknown belongs when the refusal it feeds costs one
     act to escape and the collision it prevents costs a Job.
     """
-    return (os.environ.get("ACTOR_SESSION") or "").startswith(RUN_MARK)
+    return bool(attested_run()) or (os.environ.get("ACTOR_SESSION") or "").startswith(RUN_MARK)
 
 
 def agent() -> str:
-    """**What** is speaking: the harness build, verbatim.
+    """**What** is speaking: the harness, named where its own shell cannot name it.
 
     A different question from `actor`, and a different class — this is a
     Component of a Bill of Materials, which is *supposed* to change when the
-    build changes. It is recorded exactly as the environment gives it, because
-    `AI_AGENT`'s format is undocumented and prettifying it would be inventing
-    structure that nothing attests.
+    build changes. Outside a run it is `AI_AGENT` exactly as the environment
+    gives it, because that format is undocumented and prettifying it would be
+    inventing structure that nothing attests.
+
+    In a run `AI_AGENT` is not read at all (solorepo's DR-233). The harness the
+    run starts overwrites that name with its own build string, so a value the
+    agent's own shell put there is indistinguishable from the ordinary one.
+    What the run chose is `ENV_RUN_AGENT`, written by the workflow before the
+    harness starts; where a run carries none, `ENV_RUN_STEP` — the workflow and
+    step GitHub names — says what spoke at the granularity GitHub attests, and
+    the build string is dropped rather than trusted.
 
     The model is not here, and not because it was forgotten. Nothing in this
     environment attests it, and configuring it would put a confident falsehood
     in the record the first time a session switches models. A missing identity
     is recoverable; a wrong one is not.
     """
+    if in_a_run():
+        step = [os.environ.get(name) for name in ENV_RUN_STEP]
+        run_agent = os.environ.get(ENV_RUN_AGENT) or "/".join(part for part in step if part)
+        if not run_agent:
+            sys.exit(f"say: this run does not say what is speaking "
+                     f"(need {ENV_RUN_AGENT}, which the workflow writes); refusing to post")
+        return run_agent
     who = next((os.environ[k] for k in ENV_AGENT if os.environ.get(k)), None)
     if not who:
         sys.exit(f"say: the environment does not say what is speaking "

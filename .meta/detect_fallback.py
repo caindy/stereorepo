@@ -118,6 +118,7 @@ def main() -> int:
     if env_file:
         with pathlib.Path(env_file).open("a", encoding="utf-8") as f:
             f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
+            f.write("ACTOR_AGENT=google-github-actions/run-gemini-cli\n")
 
     return 0
 

@@ -4,8 +4,8 @@ A thread is answered when a second party spoke, when it was promoted to an
 Issue, or when the solo resolved it (A16). Who spoke is read off the `Actor:`
 Trailer, because every comment an agent posts is authored by the solo's account.
 """
-import os
 import re
+import types
 from collections.abc import Sequence
 from typing import Any
 
@@ -24,11 +24,13 @@ from lib.check_pr import META, github
 ACTOR = re.compile(r"^Actor:\s*(\S+)", re.M)
 
 
-# What a workflow writes into `ACTOR_SESSION` and nothing else does
-# (`channel.py`'s `RUN_MARK`, solorepo's DR-148); `mine()` below resolves the
-# session the same way `channel.actor()` does, so the two never disagree
-# about which id the Trailer signed with.
-def _load_run_mark() -> str:
+# The channel itself, because `mine()` below asks it which session is speaking
+# rather than resolving one of its own: the reader of a Trailer and the writer
+# of it disagreeing inside a run is the defect solorepo's #285 fixed and
+# solorepo's DR-233 keeps fixed. `RUN_MARK` — what a workflow writes into
+# `ACTOR_SESSION` and nothing else does (solorepo's DR-148) — is re-exported
+# from here for the same reason: one constant, in the channel.
+def _load_channel() -> types.ModuleType:
     import importlib.util
     from importlib.machinery import SourceFileLoader
     loader = SourceFileLoader("channel", str(META / "say" / "channel.py"))
@@ -37,10 +39,12 @@ def _load_run_mark() -> str:
         raise ImportError(f"no module spec for {loader.path}")
     channel = importlib.util.module_from_spec(spec)
     loader.exec_module(channel)
-    return str(channel.RUN_MARK)
+    return channel
 
 
-RUN_MARK = _load_run_mark()
+CHANNEL = _load_channel()
+
+RUN_MARK = str(CHANNEL.RUN_MARK)
 
 NOTICED = re.compile(r"^\W*\*\*Noticed and not done\.?\*\*", re.M)
 
@@ -159,16 +163,17 @@ def said(body: str | None, limit: int = 300) -> str:
 def mine(body: str | None) -> bool:
     """Determines whether a comment was authored by the current session.
 
+    Who this session is comes from `channel.speaker()`, the resolution the
+    channel signs with, so a Trailer is read as this session's exactly when
+    this session would have written it (solorepo's DR-233).
+
     Args:
         body: Text content of the comment or review.
 
     Returns:
         bool: True if the comment trailer matches the active session identifier.
     """
-    run_session = os.environ.get("ACTOR_SESSION", "")
-    me = (run_session if run_session.startswith(RUN_MARK) else
-          next((os.environ[k] for k in ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
-                if os.environ.get(k)), None))
+    me = CHANNEL.speaker()
     found = ACTOR.search(body or "")
     return bool(me and found and found.group(1) == me)
 

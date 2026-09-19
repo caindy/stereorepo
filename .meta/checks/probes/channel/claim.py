@@ -19,7 +19,9 @@ def claim_probes() -> list[str]:
     one input a reader cannot see by reading the verb: "this is a session" holds
     on every machine except the one where it matters, or on none, and nothing
     says which. So `ACTOR_SESSION` is set and unset around each case rather than
-    stood in for — the variable is the fact — and GitHub is stood in for by
+    stood in for — the variable is the fact — with `GITHUB_RUN_ID` unset beside it,
+    since GitHub's own name for a run is the first thing `in_a_run()` reads and
+    the gate itself runs in one (solorepo's DR-233); and GitHub is stood in for by
     `FakeIssue`, so that all seven cases are cheap to state. `None` for the
     session is the variable unset, which is a session as much as an
     unrecognised value is.
@@ -49,7 +51,7 @@ def claim_probes() -> list[str]:
     def claimed(labels: list[str], session: str | None) -> tuple[str | None, FakeIssue]:
         """One claim of Issue 7 under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
         fake = FakeIssue(labels)
-        with environment(ACTOR_SESSION=session):
+        with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=session):
             return run_verb(channel, fake, lambda: move.claim("7")), fake
 
     for level in ("easy", "medium"):

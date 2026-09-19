@@ -243,7 +243,7 @@ def delegate_probes():
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    with environment(ACTOR_SESSION=None):
+    with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=None):
         return [problem for problems in (
             _unestimated_issue_is_labelled_medium_and_assigned(channel, move),
             _medium_issue_has_its_label_re_added(channel, move),

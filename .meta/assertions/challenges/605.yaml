@@ -1,0 +1,16 @@
+challenges:
+  - id: work:challenge/605
+    name: The channel signs a workflow run with a session id an agent typed, so a fallback harness forged another Job's Actor Trailer
+    challenge_type: DEFECT
+    description: >-
+      `channel.actor()` took whichever of `CLAUDE_CODE_SESSION_ID` and
+      `ACTOR_SESSION` was set and `channel.agent()` took `AI_AGENT` verbatim,
+      and nothing checked that a value found in a run was the run's own. Coder
+      run 35363666960, working caindy/solorepo#597, hit a Claude quota error and
+      fell back to Gemini CLI; the two acts the fallback step put through the
+      channel — `move obviate 571 --by 589` and `post landed 601` — were signed
+      with the desktop session id it had read off the Issue body and with an
+      `Agent` string no workflow wrote. The record says a laptop session closed
+      caindy/solorepo#571 and posted what landed on caindy/solorepo#601, and it
+      did neither. A19 calls a commit that does not name its Actor
+      unattributable; these acts name one, and the one they name was not there.

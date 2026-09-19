@@ -59,7 +59,8 @@ def moving_probes(channel: Any, move: Any) -> list[str]:
     def moved(level: str, session: str | None) -> tuple[str | None, FakeIssue]:
         """One `difficulty` of a `medium` Challenge under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
         fake = FakeIssue(["challenge", "medium"])
-        with environment(ACTOR_SESSION=session):
+        run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
+        with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
             return run_verb(channel, fake, lambda: move.difficulty("7", level)), fake
 
     for level in ("easy", "medium", "hard"):
@@ -92,7 +93,8 @@ def filing_probes(channel: Any, move: Any) -> list[str]:
     def filed(level: str | None, session: str | None) -> tuple[str | None, FakeFiling]:
         """One `file_issue` under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
         fake = FakeFiling()
-        with environment(ACTOR_SESSION=session):
+        run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
+        with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
             return run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level=level)), fake
 
     def landed(fake: FakeFiling) -> list[str]:
@@ -139,7 +141,8 @@ def delegating_probes(channel: Any, move: Any) -> list[str]:
                    session: str | None) -> tuple[str | None, FakeIssue]:
         """One `ensure_autonomous_level` under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
         fake = FakeIssue(labels)
-        with environment(ACTOR_SESSION=session):
+        run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
+        with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
             return run_verb(channel, fake,
                             lambda: move.ensure_autonomous_level("7", level)), fake
 
@@ -193,7 +196,9 @@ def triaging_probes(channel: Any, move: Any) -> list[str]:
         """One `triage` of an unread Challenge as `login` under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
         fake = FakeIssue(["challenge"])
         fake.login = login
-        with environment(ACTOR_SESSION=session, AI_AGENT="probe"):
+        run_id = session.removeprefix("gha-") if session.startswith("gha-") else None
+        with environment(GITHUB_RUN_ID=run_id,
+                         ACTOR_SESSION=session, AI_AGENT="probe", ACTOR_AGENT="probe"):
             return run_verb(channel, fake,
                             lambda: move.triage("7", "medium", VERDICT_BODY)), fake
 
@@ -238,7 +243,8 @@ def reread_probes(channel: Any, move: Any) -> list[str]:
         """One `reread` of an Issue holding `labels`, `assignees` and `state`, under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
         fake = FakeIssue(labels, assignees=assignees)
         fake.state = state
-        with environment(ACTOR_SESSION=session):
+        run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
+        with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
             return run_verb(channel, fake, lambda: move.reread("7")), fake
 
     said, fake = rereading(["challenge", "hard"])

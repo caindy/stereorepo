@@ -1,0 +1,124 @@
+decisions:
+  - id: work:decision/233
+    name: "DR-233 · In a run, only what GitHub attests and what the workflow wrote may sign"
+    challenge: work:challenge/605
+    status: ADOPTED
+    applies:
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-say
+      - work:artifact/meta-lib-check-pr-review
+      - work:artifact/meta-checks-probes-channel-actor
+      - work:artifact/meta-checks-files-workflows
+    context: >-
+      DR-071 split the Trailer in two: `Actor:` is the session, `Agent:` the
+      harness build recorded verbatim from `AI_AGENT`. DR-086 made the session
+      a workload identity GitHub attests for one run, and #285 made an
+      `ACTOR_SESSION` carrying the run mark win over the harness's own session
+      id inside a container. What none of them checked is that a value found in
+      a run is the run's own. Both names are ordinary environment variables in
+      a shell the agent controls, so an agent that sets either one signs as
+      whoever it names, with the channel's full authority. Run 35363666960 did
+      it: a Claude step hit a quota error, a Gemini step finished the pass, and
+      the two acts it put through the channel were signed with the desktop
+      session id it had read off the Issue body and with an `Agent` string no
+      workflow wrote. The record says a laptop closed caindy/solorepo#571 and
+      posted what landed on caindy/solorepo#601, and it did neither.
+    alternatives:
+      - name: Leave it; the Trailer says what the environment says
+        chosen: false
+        reason: >-
+          A19 makes an unattributable commit the failure to avoid, and this is
+          worse than unattributable: it is attributable, confidently, to a Job
+          that was not there. Nothing downstream can tell a forged Trailer from
+          an ordinary one, so the only reader who could catch it is the Job
+          being impersonated, on a record it has no reason to read.
+      - name: Refuse where the harness's names and the run's disagree
+        chosen: false
+        reason: >-
+          It reads as the strict answer and it refuses every real run. The
+          harness overwrites `AI_AGENT` with its own build string as a matter of
+          course — `anthropics/claude-code-action@v1` arrives in the agent's
+          shell as `claude-code_2-1-276_agent` — so "differs from what the
+          workflow wrote" is the ordinary state of a run and not the exceptional
+          one. A refusal that fires on every pass is a refusal that gets removed.
+      - name: In a run, read only the names the agent's shell does not own
+        chosen: true
+        reason: >-
+          `GITHUB_RUN_ID` is GitHub's own name for the run, written into every
+          step, and the workflows compose `ACTOR_SESSION` from that same number,
+          so a run has exactly one legitimate `Actor:` and every other identity
+          in the environment is something else's. `ACTOR_AGENT` is the same
+          trick for the second half: a name the workflow writes before the
+          harness starts and the harness has no reason to touch, which
+          `AI_AGENT` is not. What it costs is the harness's build string in a
+          run, which was the better Bill of Materials Component and was also the
+          forgeable one; the record gets the action as the workflow pinned it,
+          and the build is still in the run log where GitHub attests it.
+    consequences:
+      - >-
+        `channel.actor()` answers `gha-<GITHUB_RUN_ID>` wherever GitHub sets it,
+        refuses outright when `ACTOR_SESSION` names anything else, and does not
+        read a session id beside it. Outside a run nothing changes: a marked
+        `ACTOR_SESSION` wins over `CLAUDE_CODE_SESSION_ID` (#285) and an
+        unmarked one loses to it.
+      - >-
+        `channel.agent()` reads `ACTOR_AGENT` in a run and `AI_AGENT` never.
+        Where a run carries no `ACTOR_AGENT`, the workflow and step GitHub names
+        answer — `coder/take_claude` — and where it carries neither, the verb
+        refuses. So a workflow that signs writes `ACTOR_AGENT` beside the
+        `AI_AGENT` it already writes, and one that forgets records the step
+        rather than the harness's word for itself. `signed runs name their
+        harness` holds every workflow to writing the two together, so the
+        fallback is what a new workflow gets before the gate, and not after it.
+      - >-
+        `channel.speaker()` is the resolution without the refusals, and
+        `check_pr.mine()` asks it rather than resolving a session of its own.
+        The reader of a Trailer and the writer of one were two implementations
+        of one rule, which is how #285's defect stayed invisible while both were
+        wrong together.
+      - >-
+        `channel.in_a_run()` answers from `GITHUB_RUN_ID` first and the mark
+        after it, so a shell that dropped `ACTOR_SESSION` is still in the run
+        GitHub says it is in. DR-148's reading — the mark on the variable only a
+        workflow writes — stands where GitHub's own name does not reach, which
+        is the one place a typed identity still passes: a laptop can still
+        write a mark and sign as a run, and nothing here refuses that, because
+        refusing it would mean refusing every run whose shell does not carry
+        `GITHUB_RUN_ID`.
+      - >-
+        Two probes hold both refusals, since the whole of this is a branch taken
+        on the environment: `actor.py` over a run carrying a foreign session id
+        and a run whose `ACTOR_SESSION` names another Job, `agent.py` over a run
+        carrying an `Agent` string the workflow did not set. Every case sets
+        `GITHUB_RUN_ID` rather than inheriting it, because the gate runs in a
+        run and a case meaning a laptop has to say so.
+      - >-
+        DR-071's "records `AI_AGENT` verbatim" is now the session's half of the
+        rule. In a run the `Agent:` line is the action as the workflow pinned
+        it, which is the same class of fact — a Component of a Bill of
+        Materials — pinned one level coarser.
+    falsifier: >-
+      A run whose shell carries `ACTOR_SESSION` and not `GITHUB_RUN_ID`, which
+      would refuse a legitimate run at its first act; or wanting to ask which
+      harness build wrote a comment and finding only the action reference, often
+      enough that the run log is not near enough. The first would say GitHub's
+      name is not reliably in the shell the agent gets; the second, that the
+      build string needed attesting rather than dropping, and the place to fix
+      it is the workflow, which can write what it started into `ACTOR_AGENT`.
+    rationale: |-
+      Every identity in a container is a string in an environment, and the
+      agent's shell can write any of them. What separates them is who wrote
+      them last: GitHub writes `GITHUB_RUN_ID` and the workflow writes
+      `ACTOR_AGENT` before the agent exists, while `AI_AGENT` is a name the
+      harness itself rewrites on every start — so a forged value there is
+      indistinguishable from the ordinary one, and a forged `GITHUB_RUN_ID` is
+      an agent contradicting the run it is standing in.
+
+      That is the whole of the rule, and it is why this is not a validation of
+      what is found but a choice of what to read. DR-069 settled the same shape
+      once: a Trailer the writer types is a Trailer the writer can forget, so
+      signing became a property of the channel. This is the next term of it — a
+      Trailer whose inputs the writer can type is a Trailer the writer can
+      forge — and the answer is the same, to take the inputs out of the
+      writer's hands.

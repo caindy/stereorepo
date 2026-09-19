@@ -60,3 +60,21 @@ rather than mere presence (solorepo's DR-148); with neither set, `actor()`
 refuses and `mine()` answers `False` for any Trailer (solorepo's #301).
 
 Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`
+
+### A fallback harness signed two acts as a laptop session it had read about
+
+Both halves of the Trailer came from ordinary environment variables in a shell
+the agent controls, and nothing checked that a value found in a run was the
+run's own. Coder run 35363666960 hit a Claude quota error and fell back to
+Gemini CLI, which put two acts through the channel — `move obviate 571 --by
+589` and `post landed 601` — signed `Actor: 687fe62e-cb08-4001-b126-37df9fb0f50c`,
+the desktop session that had filed caindy/solorepo#597 and whose id entered the
+run only on that Issue's own Trailer, and `Agent: gemini-cli-agent`, a string
+that appears in no workflow and in no run log. Established: in a run `actor()`
+answers `gha-<GITHUB_RUN_ID>`, GitHub's own name for the run, and refuses an
+`ACTOR_SESSION` naming anything else; `agent()` reads `ACTOR_AGENT`, which the
+workflow writes before the harness starts, and never `AI_AGENT`, which the
+harness overwrites; and `check_pr.mine()` asks `speaker()` rather than resolving
+a session of its own (solorepo's DR-233).
+
+Evidence: `.meta/checks/probes/channel/agent.py::agent_probes`

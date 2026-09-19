@@ -77,7 +77,8 @@ def verdict_probes() -> list[str]:
     def reviewed(head: str, pinned: str | None) -> tuple[str | None, "FakeVerdict"]:
         """One `--approve` of pull request 7 with GitHub at `head` and the run pinned to `pinned`, as `(what it exited with, the fake)`."""
         fake = FakeVerdict(head)
-        with (environment(SOLOREPO_REVIEW_HEAD=pinned, ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+        with (environment(SOLOREPO_REVIEW_HEAD=pinned, GITHUB_RUN_ID="1",
+                          ACTOR_SESSION="gha-1", ACTOR_AGENT="probe"),
               stood_in(channel, piped=lambda timeout=0.5: "what was checked, and what was found")):
             return run_verb(channel, fake, lambda: post.review("7", "approve")), fake
 

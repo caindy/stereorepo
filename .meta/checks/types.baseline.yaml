@@ -29,6 +29,7 @@
 .meta/checks/graph/record.py: 17
 .meta/checks/graph/structure.py: 13
 .meta/checks/probes/channel/actor.py: 1
+.meta/checks/probes/channel/agent.py: 1
 .meta/checks/probes/channel/claim.py: 0
 .meta/checks/probes/channel/filing.py: 0
 .meta/checks/probes/channel/layer.py: 3

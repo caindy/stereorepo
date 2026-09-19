@@ -250,6 +250,11 @@ jobs:
           echo "branch_prefix=$harness" >> "$GITHUB_OUTPUT"
           echo "agent=$agent" >> "$GITHUB_OUTPUT"
           echo "AI_AGENT=$agent" >> "$GITHUB_ENV"
+          # The Trailer's second half, under a name the harness does not own
+          # (solorepo's DR-233): the harness overwrites `AI_AGENT` with its own
+          # build string, so a value the agent's shell typed there cannot be
+          # told from the ordinary one, and the channel reads this one in a run.
+          echo "ACTOR_AGENT=$agent" >> "$GITHUB_ENV"
           echo "Harness chosen: $harness (agent: $agent, branch_prefix: $harness)"
         env:
           GH_TOKEN: ${{ github.token }}

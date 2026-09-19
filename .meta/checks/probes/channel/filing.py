@@ -72,7 +72,7 @@ def filing_probes() -> list[str]:
     move, post = programs["move"], programs["post"]
     problems: list[str] = []
 
-    with environment(ACTOR_SESSION=None):
+    with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=None):
         fake = FakeFiling()
         said = run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level="hard"))
         if said or len(fake.created) != 1:
@@ -144,7 +144,7 @@ def sole_author_probes(channel: ModuleType, post: ModuleType) -> list[str]:
     own_voice_body = "my notice\n\nActor: gha-1\nAgent: probe"
     promoted_body = f"Promoted to {ISSUE_LINK}.\n\nActor: gha-1\nAgent: probe"
 
-    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+    with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe"),
           stood_in(post, thread_comments=lambda _: [own_voice_body],
                    reply=lambda t, b: replied_to.append((t, b)),
                    resolve=lambda t: resolved.append(t)),
@@ -164,7 +164,7 @@ def sole_author_probes(channel: ModuleType, post: ModuleType) -> list[str]:
         problems.append(f"filing: promoting sole-authored thread resolved the thread: {resolved!r}")
 
     resolved.clear()
-    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+    with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe"),
           stood_in(post, thread_nodes=lambda _: [
                        {"body": own_voice_body, "author": {"login": "caindy-solorepo-coder"}},
                        {"body": promoted_body, "author": {"login": "caindy-solorepo-coder"}},
@@ -181,7 +181,7 @@ def sole_author_probes(channel: ModuleType, post: ModuleType) -> list[str]:
 
     replied_to.clear()
     resolved.clear()
-    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+    with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe"),
           stood_in(post, thread_comments=lambda _: [own_voice_body, promoted_body],
                    reply=lambda t, b: replied_to.append((t, b)),
                    resolve=lambda t: resolved.append(t))):
@@ -218,7 +218,7 @@ def multi_voice_probes(channel: ModuleType, post: ModuleType) -> list[str]:
     own_voice_body = "my notice\n\nActor: gha-1\nAgent: probe"
     other_voice_body = "my reply\n\nActor: gha-2\nAgent: probe"
 
-    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+    with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe"),
           stood_in(post, thread_comments=lambda _: [own_voice_body, other_voice_body],
                    reply=lambda t, b: replied_to.append((t, b)),
                    resolve=lambda t: resolved.append(t)),
@@ -236,7 +236,7 @@ def multi_voice_probes(channel: ModuleType, post: ModuleType) -> list[str]:
         problems.append(f"filing: promoting multi-voice thread did not resolve: {resolved!r}")
 
     resolved.clear()
-    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+    with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe"),
           stood_in(post, thread_nodes=lambda _: [
                        {"body": own_voice_body, "author": {"login": "caindy-solorepo-coder"}},
                        {"body": other_voice_body, "author": {"login": "caindy-solorepo-coder"}}
@@ -249,7 +249,7 @@ def multi_voice_probes(channel: ModuleType, post: ModuleType) -> list[str]:
 
     replied_to.clear()
     resolved.clear()
-    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+    with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe"),
           stood_in(post, thread_comments=lambda _: [own_voice_body, other_voice_body],
                    reply=lambda t, b: replied_to.append((t, b)),
                    resolve=lambda t: resolved.append(t))):
@@ -283,7 +283,7 @@ def promotion_probes(channel: ModuleType, post: ModuleType) -> list[str]:
         """
         filed.clear()
         reads: list[int] = []
-        with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+        with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe"),
               stood_in(post, thread_comments=lambda _: read_bodies(bodies, reads),
                        reply=lambda *a: None, resolve=lambda *a: None),
               stood_in(channel, sibling=lambda _: Filer(filed))):
@@ -308,7 +308,7 @@ def promotion_probes(channel: ModuleType, post: ModuleType) -> list[str]:
                         f"and filed {filed!r}")
 
     filed.clear()
-    with (environment(ACTOR_SESSION="gha-1", AI_AGENT="probe"),
+    with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe"),
           stood_in(post, thread_comments=lambda _: ["a point nobody promoted yet"],
                    reply=lambda *a: None, resolve=lambda *a: None),
           stood_in(channel, sibling=lambda _: Filer(filed))):

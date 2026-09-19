@@ -1,4 +1,4 @@
-"""What the workflows and the scaffold owe each other: no scaffold-only path in inherited files, the two gate workflows held equal, the reviewer's trunk-restore set held to the control plane, and the control plane held to the tree.
+"""What the workflows and the scaffold owe each other: no scaffold-only path in inherited files, the two gate workflows held equal, the reviewer's trunk-restore set held to the control plane, the control plane held to the tree, and a workflow that names its harness naming it where the channel reads it.
 """
 import pathlib
 import re
@@ -228,6 +228,52 @@ def control_plane_restore() -> StepOutcome:
     if problems:
         return Found(tuple(problems))
     return Passed(f"{len(restored)} paths restored from trunk, stated four ways, all the control plane")
+
+
+WORKFLOWS = ROOT / ".github" / "workflows"
+"""Where this repository's workflows live, the loops among them."""
+
+
+WRITES_AGENT = re.compile(r"\bAI_AGENT=")
+"""A workflow naming the harness in the variable the harness itself overwrites."""
+
+
+WRITES_RUN_AGENT = re.compile(r"\bACTOR_AGENT=")
+"""A workflow naming the harness in the variable it writes before the harness starts,
+which is the one the channel signs with in a run (solorepo's DR-233)."""
+
+
+@check("signed runs name their harness")
+def signed_runs_name_their_harness() -> StepOutcome:
+    """A workflow writes `ACTOR_AGENT` wherever it writes `AI_AGENT` (solorepo's DR-233).
+
+    `channel.agent()` does not read `AI_AGENT` in a run, because the harness
+    overwrites that name with its own build string and a value the agent's shell
+    typed there cannot be told from the ordinary one. `ACTOR_AGENT` is what the
+    workflow writes before the harness starts, and a run that carries none signs
+    with the step GitHub attests instead — which says which step spoke and not
+    which harness. So the two names are written together, in the fallback steps
+    as much as in the step that chooses, and this fails where a file writes one
+    without the other.
+
+    Returns:
+        Passed | Found | CouldNotRun: The counts per workflow, or each file
+        whose two names are written a different number of times.
+    """
+    if not WORKFLOWS.is_dir():
+        return CouldNotRun(f"{WORKFLOWS.relative_to(ROOT).as_posix()} is missing")
+    problems, counted = [], 0
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        chosen, signed_with = len(WRITES_AGENT.findall(text)), len(WRITES_RUN_AGENT.findall(text))
+        counted += chosen
+        if chosen != signed_with:
+            problems.append(f"{path.relative_to(ROOT)}: writes `AI_AGENT` {chosen} time(s) and "
+                            f"`ACTOR_AGENT` {signed_with}; the channel signs a run with the "
+                            "second, so every write of the first has one beside it")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{counted} harness names written, each under both variables")
 
 
 LIB = META / "lib"
