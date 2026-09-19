@@ -24,4 +24,5 @@ import checks.probes.channel.triage
 import checks.probes.channel.actor
 import checks.probes.channel.signing_key
 import checks.probes.channel.reservation
+import checks.probes.channel.waits
 import checks.probes.channel.verdict  # noqa: F401  # reason: registers check steps

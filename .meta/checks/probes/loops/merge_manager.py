@@ -323,20 +323,20 @@ def _end_to_end(channel: Any, move: Any) -> list[str]:
 
 
 def _blockers(move: Any) -> list[str]:
-    """`issue_blockers` and `next.waits_on` prefer GitHub's native `blockedBy` over the body's prose, fall back to it, and return a blocker that is not an Issue as text (solorepo's DR-170)."""
+    """`issue_blockers` reads GitHub's native `blockedBy` alone (solorepo's DR-213); `next.waits_on` reads native `blockedBy` for Issue blockers and returns a blocker that is not an Issue as text (solorepo's DR-170)."""
     problems = []
     native = {"number": 1, "body": f"**Waits on.** #{'99'}", "blockedBy": {"nodes": [{"number": 42}]}}
     if move.issue_blockers(native) != [42]:
-        problems.append(f"issue_blockers did not prefer native blockedBy: {move.issue_blockers(native)}")
+        problems.append(f"issue_blockers did not read native blockedBy: {move.issue_blockers(native)}")
     prose = {"number": 2, "body": f"**Waits on.** #{'99'}", "blockedBy": {"nodes": []}}
-    if move.issue_blockers(prose) != [99]:
-        problems.append(f"issue_blockers did not fall back to prose: {move.issue_blockers(prose)}")
+    if move.issue_blockers(prose) != []:
+        problems.append(f"issue_blockers read body prose as a blocker: {move.issue_blockers(prose)}")
 
     screen = load_module(META / "next.py", "next_screen", register=False)
     if screen.waits_on(native) != [42]:
         problems.append(f"next.waits_on did not prefer native blockedBy: {screen.waits_on(native)}")
-    if screen.waits_on(prose) != [99]:
-        problems.append(f"next.waits_on did not fall back to prose: {screen.waits_on(prose)}")
+    if screen.waits_on(prose) != []:
+        problems.append(f"next.waits_on read unlinked numeric reference as a blocker: {screen.waits_on(prose)}")
     text_blocker = {"number": 3, "body": f"**Waits on.** Decision DR-{'041'}", "blockedBy": {"nodes": []}}
     if screen.waits_on(text_blocker) != f"Decision DR-{'041'}":
         problems.append(f"next.waits_on did not return non-issue blocker string: {screen.waits_on(text_blocker)}")

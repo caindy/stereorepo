@@ -1,0 +1,109 @@
+decisions:
+  - id: work:decision/213
+    name: "DR-213 · The `**Waits on.**` line describes an Issue's blocker and does not set it, and `move waits` is what changes one"
+    challenge: work:challenge/473
+    status: ADOPTED
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-templates-issue
+      - work:artifact/meta-templates-roadmap
+    context: >-
+      solorepo's DR-170 settled that a blocker which is an Issue is GitHub's own
+      blocked-by relationship, and had the `**Waits on.**` line seed that
+      relationship at filing while staying the home for a blocker GitHub cannot
+      hold. It left two records that could disagree, and only one of them
+      reachable through the channel.
+
+      `move file` derived blockers by scanning the first line of the body and
+      passed them to `gh issue create --blocked-by`; `issue_blockers()` read
+      native `blockedBy` first and fell back to the same prose when native was
+      empty. Together they produced a rule invisible from the screen. An Issue
+      filed as `**Waits on.** #470` had a native relationship, so a later body
+      edit was ignored and the two records disagreed in silence. An Issue filed
+      as `**Waits on.** Nothing.` had none, so the prose was all there was and a
+      later body edit did take effect. The same edit worked on one Issue and not
+      on another.
+
+      There was also no verb that changed a blocker after filing. Every other
+      state change on GitHub has a verb that refuses its own misuse and names
+      the verb to use instead (solorepo's DR-116); this one had none, so the
+      only routes were outside the channel. The cost is paid whenever a blocker needs
+      re-pointing: the session that filed #470, #471 and #472 wanted to move
+      #471's blocker, and the edit that looked like it would work would have
+      left the body saying one thing and `just next` reading another, with
+      nothing reporting the divergence. It was avoided by reading the source,
+      which is not a control.
+    alternatives:
+      - name: Keep the line as the input, and add a verb that edits the body
+        chosen: false
+        reason: >-
+          Leaves both records and both writers in place. A verb over the prose
+          would still have to decide whether the prose or the relationship won
+          when they disagreed, which is the question that produced the defect.
+      - name: Drop the line entirely, and render what `just next` already reads from GitHub
+        chosen: false
+        reason: >-
+          Loses the blocker GitHub cannot hold — a Decision, an account, the
+          solo — which is the reason solorepo's DR-170 kept the line, and loses
+          the statement a reader sees before opening anything.
+      - name: The flag and a verb are the input; the line describes, and the verb rewrites it
+        chosen: true
+        reason: >-
+          `move file --blocked-by <n>[,<n>]` takes the blockers explicitly and
+          stops scanning the body. `move waits <issue> --on <n>[,<n>]|--off <n>[,<n>]|--clear`
+          records or drops blockers on the relationship and rewrites the
+          `**Waits on.**` line to follow, verifying both sources on read-back,
+          so the description is a render target rather than a second input and
+          cannot go stale behind the record. `issue_blockers()` reads
+          `blockedBy` alone, so there is one record to read. The line survives
+          for the blocker no relationship can hold.
+    consequences:
+      - >-
+        `move file` gains `--blocked-by`, refuses a blocker that is not an open
+        Issue of this repository, and no longer reads `#<n>` off the
+        `**Waits on.**` line: it renders that line from the flag before filing
+        and reads both records back, so the line describes the relationship from
+        the moment it is first written. A line naming an `#<n>` the flag omits is
+        refused rather than rendered away, because such a caller is still
+        treating the line as the input.
+      - >-
+        `move waits <issue> --on <n>[,<n>]|--off <n>[,<n>]|--clear` sets or drops
+        blockers on the relationship and reads both sources back, verifying both
+        native `blockedBy` and the description line, refusing a blocker that is
+        closed, that is a pull request, that is not a number of this
+        repository, that is the Issue itself, or that the Issue already blocks
+        at any depth; and refusing a target that is not an open Issue.
+      - >-
+        `move waits` refuses before touching GitHub when taking a blocker off a
+        `**Waits on.**` line that says words beside its citations, because what
+        it says beyond them is a clause or non-Issue blocker no automated deletion
+        can safely rewrite. `move revise` rewrites the line, and the verb runs
+        after.
+      - >-
+        `issue_blockers()` in `.meta/say/move` reads GitHub's `blockedBy` and
+        nothing else. `next.py`'s `waits_on` reads `blockedBy` for Issue
+        blockers and falls back to prose only for non-Issue blockers, so what
+        `just next` calls ripe cannot diverge via `move revise`.
+      - >-
+        Both Issue forms say the line describes the relationship and no longer
+        sets it, and PR First's verb list carries `waits` and notes that
+        `revise` does not change what blocks an Issue.
+    falsifier: >-
+      An Issue whose blocker was set or changed through the channel where GitHub's
+      `blockedBy` and the `**Waits on.**` line name different Issues afterwards,
+      or a blocker a caller could set through the channel that is not an open
+      Issue.
+    rationale: |-
+      solorepo's DR-170 is refined rather than overturned: a blocker that is an
+      Issue is still GitHub's own relationship, and the line is still the home
+      for one that is not. What changes is which of the two writes. A record
+      with two writers and no adjudicator is not one record, and the pair here
+      adjudicated by accident — by which of them happened to be non-empty — so
+      the rule could not be read off either artifact.
+
+      Making the line a render target rather than an input is what keeps it
+      without keeping the defect. The author still reads one line before opening
+      anything, and nothing they can type there changes what `just next` counts.

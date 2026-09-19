@@ -15,7 +15,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, cast
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
@@ -36,6 +36,15 @@ LOOP_LEVELS = ("easy", "medium")
 # the next step is not a Job's at all, which is the fact a run is the first to
 # hold and nobody else can see.
 RUN_LEVEL = "human"
+
+# The line both Issue forms open with, and an Issue reference in either of the
+# two spellings GitHub renders: bare, and qualified by `owner/repo`.
+WAITS_LINE = re.compile(r"^\*\*Waits on\.\*\*(?P<text>.*)$", re.M)
+ISSUE_REF = re.compile(r"(?:[\w.-]+/[\w.-]+)?#(\d+)")
+# What a `**Waits on.**` line may hold besides its references and still be one
+# this program can rewrite: the words that join references, and the words for
+# none of them.
+WAITS_FILLER = frozenset(("and", "nothing", "none", ""))
 
 
 # --- An Issue's life: filed, triaged, its level moved, claimed, handed back,
@@ -365,11 +374,19 @@ def open_with_title(title: str) -> tuple[str, str] | None:
 
 
 def file_issue(title: str, body: str, level: str | None = None,
-               roadmap: bool = False) -> tuple[str, str]:
+               roadmap: bool = False,
+               blocked_by: Sequence[int | str] = ()) -> tuple[str, str]:
     """File a new Challenge or Roadmap Issue with required structural metadata.
 
-    Enforces that the issue body opens with `**Waits on.**`, sets appropriate initial
-    labels, establishes native blocked-by relationships, and verifies remote state (solorepo's DR-114, solorepo's DR-170).
+    Enforces that the issue body opens with `**Waits on.**` (solorepo's DR-114) and
+    sets the initial labels. The native blocked-by relationship is established from
+    `blocked_by` alone, and the body's `**Waits on.**` line is rendered from it, so
+    the line describes the relationship at the moment it is first written rather
+    than standing beside it (solorepo's DR-213). A line naming an `#<n>` the flag
+    omits is refused instead of rendered away, because such a caller is still
+    treating the line as the input and is owed the refusal rather than a silent
+    downgrade. Both records are read back from GitHub before the Issue is reported
+    as filed.
 
     A Challenge filed with no level lands `challenge` alone, which is the
     reviewer's queue: the raiser proposes a level in the body and the reviewer's
@@ -387,6 +404,9 @@ def file_issue(title: str, body: str, level: str | None = None,
         body (str): Issue body Markdown text.
         level (str | None): Difficulty level for a Challenge, or None to leave it to the reviewer.
         roadmap (bool): When True, creates a deferred roadmap issue instead of a Challenge.
+        blocked_by (Sequence[int | str]): Issue numbers to record as blockers; the
+            body's `**Waits on.**` line describes them and does not set them, and
+            is rewritten to name them.
 
     Returns:
         tuple[str, str]: Issue number and URL.
@@ -394,8 +414,10 @@ def file_issue(title: str, body: str, level: str | None = None,
     Raises:
         SystemExit: If a run asks for a level that is a verdict, if the body does
             not open with `**Waits on.**`, if an open Issue already carries this
-            title, or if GitHub does not show the labels and blocked-by
-            relationships the call asked for.
+            title, if the body's `**Waits on.**` line names an `#<n>` that
+            `blocked_by` omits, if a blocker is not an open Issue, or if GitHub
+            does not show the labels, the blocked-by relationships and the line
+            the call asked for.
     """
     refuse_a_level_from_a_run(level, "Filed with no level it lands `challenge` alone, which "
                                      "is the reviewer's queue, and the level this run would "
@@ -415,11 +437,21 @@ def file_issue(title: str, body: str, level: str | None = None,
                  "unfinished: `post answer <thread-id>` with a body linking it, or "
                  "`post resolve <thread-id>` where the link is already posted. If this "
                  "Challenge is genuinely a second one, give it a title of its own.")
+    refs = sorted(set(int(str(n).strip().lstrip("#")) for n in blocked_by))
+    line_refs = sorted(set(int(n) for n in re.findall(r"#(\d+)", first)))
+    missing_from_flags = set(line_refs) - set(refs)
+    if missing_from_flags:
+        sys.exit(f"say: the body names #{sorted(missing_from_flags)[0]} in its `**Waits on.**` line, "
+                 "but `--blocked-by` was not given or omitted it. `--blocked-by` sets the "
+                 "relationship (solorepo's DR-213); pass `--blocked-by "
+                 f"{','.join(str(n) for n in line_refs)}`.")
+    for n in refs:
+        issue_of(n, as_blocker=True)
+    body = retarget_waits(body, refs, issue=title)
     labels = ["roadmap"] if roadmap else ["challenge"] + ([level] if level else [])
     cmd = ["issue", "create", "--title", title, "--body", body]
     for name in labels:
         cmd += ["--label", name]
-    refs = sorted(set(int(n) for n in re.findall(r"#(\d+)", first)))
     if refs:
         cmd += ["--blocked-by", ",".join(str(n) for n in refs)]
     url = channel.gh(*cmd, parse=False)
@@ -428,13 +460,244 @@ def file_issue(title: str, body: str, level: str | None = None,
     if any(l not in now for l in labels):
         sys.exit(f"say: GitHub shows #{number} labelled {now} after the call, not {labels}")
     if refs:
-        view = channel.gh("issue", "view", str(number), "--json", "blockedBy")
+        view = channel.gh("issue", "view", str(number), "--json", "body,blockedBy")
         recorded = {n["number"] for n in (view.get("blockedBy") or {}).get("nodes", []) if "number" in n}
         missing = set(refs) - recorded
         if missing:
             sys.exit(f"say: GitHub shows #{number} missing blocked-by relationship for {sorted(missing)}")
+        line = WAITS_LINE.search(view.get("body") or "")
+        for n in refs:
+            if not line or not re.search(rf"#{n}(?!\d)", line.group(0)):
+                sys.exit(f"say: GitHub shows #{number} with the relationship set but the "
+                         f"`**Waits on.**` line not citing #{n}")
     print(url)
     return number, url
+
+
+def issue_of(number: int | str, as_blocker: bool = False) -> dict[str, Any]:
+    """The Issue GitHub holds at `number`, refusing what is not an open Issue.
+
+    Parameters:
+        number (int | str): Issue number to resolve.
+        as_blocker (bool): When True, the refusals read as a blocker's rather
+            than as the Issue being blocked.
+
+    Returns:
+        dict[str, Any]: GitHub's REST representation of the Issue.
+
+    Raises:
+        SystemExit: If `number` is not a number of this repository, is a pull
+            request, or names an Issue GitHub reports as closed.
+    """
+    try:
+        found = channel.gh("api", f"repos/{channel.repo()}/issues/{number}", tolerate_fail=True)
+    except subprocess.CalledProcessError:
+        sys.exit(f"say: {channel.repo()} has no #{number}" + (
+            "; a blocker is an Issue's number, and what is not one belongs in the "
+            "`**Waits on.**` line as the prose it is." if as_blocker else "."))
+    if "pull_request" in found:
+        sys.exit(f"say: #{number} is a pull request, not an Issue; GitHub holds a blocked-by "
+                 "relationship between Issues, and a pull request's own waiting is its stack's.")
+    if found.get("state") != "open":
+        sys.exit(f"say: #{number} is closed, and " + (
+            "a closed Issue blocks nothing: `just next` would read the relationship as "
+            "satisfied the moment it was set." if as_blocker else
+            "what a closed Issue waits on decides nothing."))
+    return cast(dict[str, Any], found)
+
+
+def native_blockers(issue: int | str) -> list[int]:
+    """The Issue numbers GitHub records as blocking `issue`.
+
+    Parameters:
+        issue (int | str): Issue number to read.
+
+    Returns:
+        list[int]: Blocker Issue numbers, in GitHub's order.
+    """
+    view = channel.gh("issue", "view", str(issue), "--json", "blockedBy")
+    return [n["number"] for n in (view.get("blockedBy") or {}).get("nodes", []) if "number" in n]
+
+
+def refuse_on_cycle(issue: int, blocker: int) -> None:
+    """Refuse a blocker `issue` already blocks, at any depth.
+
+    Walks GitHub's blocked-by relationship out from `blocker`; reaching `issue`
+    means the pair would wait on each other and neither would ever be ripe.
+
+    Parameters:
+        issue (int): Issue about to be blocked.
+        blocker (int): Issue about to block it.
+
+    Raises:
+        SystemExit: If `issue` already blocks `blocker`, directly or through
+            other Issues.
+    """
+    seen, frontier = set(), [blocker]
+    while frontier:
+        here = frontier.pop()
+        if here in seen:
+            continue
+        seen.add(here)
+        for further in native_blockers(here):
+            if further == issue:
+                sys.exit(f"say: #{issue} already blocks #{here}, so waiting on #{blocker} would "
+                         "close a cycle and neither Issue would ever be ripe.")
+            frontier.append(further)
+
+
+def waits_line(blockers: Sequence[int], prose: Sequence[str] = ()) -> str:
+    """The `**Waits on.**` line describing `blockers` and any surviving `prose` items.
+
+    Parameters:
+        blockers (Sequence[int]): Blocker Issue numbers.
+        prose (Sequence[str]): Non-Issue prose items (Decisions, accounts).
+
+    Returns:
+        str: The line, naming each blocker/prose, or `Nothing.` for an empty sequence.
+    """
+    items = list(prose) + [f"#{n}" for n in blockers]
+    return "**Waits on.** " + (", ".join(items) if items else "Nothing.")
+
+
+def retarget_waits(body: str, want: Sequence[int],
+                   removing: Sequence[int] = (),
+                   issue: int | str = "") -> str:
+    """`body` with its `**Waits on.**` line rewritten to describe `want`.
+
+    The line is rewritten preserving non-Issue prose blockers (Decisions,
+    accounts, the solo per solorepo's DR-170). If `removing` names a blocker
+    embedded in an explanatory clause, the rewrite is refused rather than leaving
+    a severed clause.
+
+    Parameters:
+        body (str): The Issue's body Markdown text.
+        want (Sequence[int]): Blocker Issue numbers now recorded on GitHub.
+        removing (Sequence[int]): Blocker Issue numbers being removed.
+        issue (int | str): Issue number, for error messages.
+
+    Returns:
+        str: The rewritten body.
+
+    Raises:
+        LookupError: If `body` has no `**Waits on.**` line.
+        SystemExit: If removing a blocker would sever an explanatory clause.
+    """
+    found = WAITS_LINE.search(body or "")
+    if not found:
+        raise LookupError("no `**Waits on.**` line")
+    line_text = found.group("text").strip()
+    raw_items = [p.strip().rstrip(".") for p in line_text.split(",") if p.strip()]
+    prose_items = []
+    for item in raw_items:
+        cleaned = re.sub(r"[^\w\s]+", " ", ISSUE_REF.sub(" ", item)).lower().split()
+        if not set(cleaned) <= WAITS_FILLER:
+            prose_items.append(item)
+    if removing and prose_items:
+        sys.exit(f"say: the `**Waits on.**` line of #{issue} says {prose_items[0]!r} beside its "
+                 f"citations, so taking #{removing[0]} off it is a rewrite and not a deletion. "
+                 f"`move revise {issue}` writes the line, and this verb takes the relationship "
+                 "off once the line no longer contradicts it.")
+    new_line = waits_line(want, prose_items)
+    return body[:found.start()] + new_line + body[found.end():]
+
+
+def waits_verify(issue: int, want: list[int], described: str) -> None:
+    """Read both sources back from GitHub and refuse where either does not match.
+
+    Parameters:
+        issue (int): The Issue that waits.
+        want (list[int]): Desired blocker Issue numbers.
+        described (str): Expected body after the edit.
+
+    Raises:
+        SystemExit: If GitHub's relationship or the `**Waits on.**` line does
+            not reflect the desired state.
+    """
+    view = channel.gh("issue", "view", str(issue), "--json", "body,blockedBy")
+    now_native = sorted(n["number"] for n in (view.get("blockedBy") or {}).get("nodes", []) if "number" in n)
+    if now_native != want:
+        sys.exit(f"say: GitHub shows #{issue} with blockedBy {now_native} after the call, not {want}")
+    remote_body = view.get("body") or ""
+    match = WAITS_LINE.search(remote_body)
+    if not match:
+        sys.exit(f"say: GitHub shows #{issue} with no `**Waits on.**` line after the call")
+    line_text = match.group(0)
+    for n in want:
+        if not re.search(rf"#{n}(?!\d)", line_text):
+            sys.exit(f"say: GitHub shows #{issue} with the relationship set but the line not citing #{n}")
+    if not want and not any(w in line_text.lower() for w in ("nothing", "none")):
+        sys.exit(f"say: GitHub shows #{issue} with no blockers but the line not saying nothing")
+
+
+def waits(issue: int | str, on: Sequence[int | str] | None = None,
+          off: Sequence[int | str] | None = None, clear: bool = False) -> None:
+    """Set, add, or drop what an Issue waits on, after it was filed.
+
+    GitHub's blocked-by relationship is the record (solorepo's DR-213).
+    `--on` replaces the relationship with the Issues given, `--off` drops the
+    named blockers, and `--clear` removes every blocker. The `**Waits on.**` line
+    is rewritten to follow, preserving non-Issue prose blockers (solorepo's DR-170).
+    A line whose citations carry explanatory clauses is refused when dropping a
+    blocker, rather than leaving a severed clause. Both sources are read back
+    and verified before the call reports success.
+
+    Parameters:
+        issue (int | str): Issue whose blockers are being set.
+        on (Sequence[int | str] | None): Blocker Issue numbers to set.
+        off (Sequence[int | str] | None): Blocker Issue numbers to drop.
+        clear (bool): When True, removes every blocker.
+
+    Raises:
+        SystemExit: If `issue` is not an open Issue, if a blocker is not an open
+            Issue, if a blocker is `issue` itself or closes a cycle, if the
+            `**Waits on.**` line is missing, or if GitHub does not reflect both
+            sources after the call.
+    """
+    issue_num = int(str(issue).strip().lstrip("#"))
+    issue_data = issue_of(issue_num)
+    body = issue_data.get("body") or ""
+    have = sorted(native_blockers(issue_num))
+
+    if clear:
+        want: list[int] = []
+        removing = list(have)
+    elif off is not None:
+        drop = {int(str(n).strip().lstrip("#")) for n in off}
+        want = sorted(set(have) - drop)
+        removing = sorted(drop)
+    elif on is not None:
+        want = sorted({int(str(n).strip().lstrip("#")) for n in on})
+        removing = sorted(set(have) - set(want))
+    else:
+        sys.exit("say: nothing to do — specify `--on`, `--off`, or `--clear`.")
+
+    if issue_num in want:
+        sys.exit(f"say: #{issue_num} cannot wait on itself.")
+    for n in want:
+        issue_of(n, as_blocker=True)
+        refuse_on_cycle(issue_num, n)
+
+    try:
+        described = retarget_waits(body, want, removing=removing, issue=issue_num)
+    except LookupError:
+        sys.exit(f"say: #{issue_num} has no `**Waits on.**` line for this to rewrite, which both "
+                 f"Issue forms open with. `move revise {issue_num}` writes one, and this runs after.")
+
+    if have == want and described == body:
+        print(f"#{issue_num} already {'waits on ' + ', '.join(f'#{n}' for n in want) if want else 'waits on nothing'}, "
+              "in the relationship and on the line")
+        return
+
+    flags = [f for n in want if n not in have for f in ("--add-blocked-by", str(n))]
+    flags += [f for n in have if n not in want for f in ("--remove-blocked-by", str(n))]
+    if flags:
+        channel.gh("issue", "edit", str(issue_num), *flags, parse=False)
+    if described != body:
+        channel.gh("issue", "edit", str(issue_num), "--body", described, parse=False)
+
+    waits_verify(issue_num, want, described)
+    print(f"#{issue_num} waits on {', '.join(f'#{n}' for n in want) or 'nothing'}")
 
 
 def claim(issue: str | int) -> None:
@@ -1813,9 +2076,15 @@ def parse_waits_on(body: str | None) -> list[int]:
 
 
 def issue_blockers(issue: dict[str, Any]) -> list[int]:
-    """Numbers that block an Issue: native blockedBy first, then body prose (solorepo's DR-170)."""
-    native = [n["number"] for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n]
-    return native if native else parse_waits_on(issue.get("body"))
+    """Numbers that block an Issue: GitHub's `blockedBy`, which is the only record (solorepo's DR-213).
+
+    Parameters:
+        issue (dict[str, Any]): An Issue as `gh issue list --json blockedBy` returns it.
+
+    Returns:
+        list[int]: Blocker Issue numbers.
+    """
+    return [n["number"] for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n]
 
 
 deduplicate_checks = check_pr.deduplicate_checks
@@ -2320,6 +2589,27 @@ def delegate(number: str | int, level: str | None = None) -> None:
             print(f"delegated Issue #{issue_number}: assigned to {coder_login} and triggered coder loop via label change.")
 
 
+def numbers(text: str) -> list[int]:
+    """Issue numbers from a comma-separated argument, as `gh` spells its own.
+
+    Parameters:
+        text (str): Comma-separated Issue numbers, each optionally written `#<n>`.
+
+    Returns:
+        list[int]: The numbers, in the order given.
+
+    Raises:
+        argparse.ArgumentTypeError: If an item is not a number.
+    """
+    found = []
+    for item in text.split(","):
+        item = item.strip().lstrip("#")
+        if not item.isdigit():
+            raise argparse.ArgumentTypeError(f"{item!r} is not an Issue number")
+        found.append(int(item))
+    return found
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Construct and return the command-line argument parser for state transition verbs.
 
@@ -2338,6 +2628,14 @@ def build_parser() -> argparse.ArgumentParser:
                            "skips the reviewer; without it, `challenge` alone, for the reviewer to "
                            f"read. A run lands `{RUN_LEVEL}` and no other")
     what.add_argument("--roadmap", action="store_true", help="a roadmap Issue: intended and deferred")
+    p.add_argument("--blocked-by", dest="blocked_by", type=numbers, default=[],
+                   help="the Issues this one waits on, as `<n>[,<n>]`; the `**Waits on.**` "
+                        "line describes them and does not set them")
+    p = sub.add_parser("waits"); p.add_argument("issue")
+    upon = p.add_mutually_exclusive_group(required=True)
+    upon.add_argument("--on", type=numbers, help="the Issues this one waits on, as `<n>[,<n>]`")
+    upon.add_argument("--off", type=numbers, help="the Issues to drop, as `<n>[,<n>]`")
+    upon.add_argument("--clear", action="store_true", help="this Issue waits on nothing")
     p = sub.add_parser("triage"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
     p = sub.add_parser("difficulty"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
     p = sub.add_parser("reread"); p.add_argument("issue")
@@ -2419,7 +2717,10 @@ def main() -> None:
         text = channel.piped()
         revise(args.number, body=channel.signed(text) if text else None, title=args.title)
     elif args.verb == "file":
-        file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level, roadmap=args.roadmap)
+        file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level,
+                   roadmap=args.roadmap, blocked_by=args.blocked_by)
+    elif args.verb == "waits":
+        waits(args.issue, on=args.on, off=args.off, clear=args.clear)
     elif args.verb == "stop":
         stop(args.issue, channel.signed(channel.stdin_body()))
     elif args.verb == "supersede":

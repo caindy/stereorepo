@@ -296,13 +296,17 @@ class FakeFiling:
         return f"https://github.com/o/r/issues/{number}"
 
     def view(self, args: tuple[str, ...]) -> dict[str, Any]:
-        """`issue view` of a created Issue's labels, or of the blocked-by its body asked for."""
+        """`issue view` of a created Issue's labels, or of the blocked-by and body its `--json` asked for."""
         number = str(args[2])
         _title, body, labels = self.created.get(number, ("", "", []))
         if "labels" in args:
             return {"labels": [{"name": name} for name in labels]}
-        if "blockedBy" in args:
+        fields = next((a for a in args if "blockedBy" in a), "")
+        if fields:
             first = body.lstrip().split("\n", 1)[0]
             refs = sorted({int(n) for n in re.findall(r"#(\d+)", first)})
-            return {"blockedBy": {"nodes": [{"number": n} for n in refs]}}
+            answer: dict[str, Any] = {"blockedBy": {"nodes": [{"number": n} for n in refs]}}
+            if "body" in fields.split(","):
+                answer["body"] = body
+            return answer
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")

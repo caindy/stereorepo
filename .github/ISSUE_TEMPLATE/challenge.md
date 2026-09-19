@@ -6,9 +6,12 @@ labels: challenge
 ---
 
 **Waits on.** Nothing — or `#<n>` per Issue that has to close first. One line,
-first, because `move file` sets `#<n>` as GitHub's native blocked-by relationship
-and `just next` reads it to say what is ripe; a blocker that is not an Issue
-keeps this waiting until the line is rewritten.
+first, because it is what a reader sees before opening anything. It describes
+the blocker and does not set it: `move file --blocked-by` sets GitHub's native
+relationship, `move waits` re-points it afterwards where the line says nothing
+but its own `#<n>` references, and `just next` reads the relationship. A blocker
+naming a Decision, an account or the solo is written in a few words, keeps this
+waiting until the line is rewritten, and is `move revise`'s to rewrite.
 
 **What was noticed.** The thing itself, and where. A path and a line if it has
 one.

@@ -328,7 +328,8 @@ class Filer:
     def __init__(self, filed: list[tuple[str, str | None]]) -> None:
         self.filed = filed
 
-    def file_issue(self, title: str, body: str, level: str | None = None, roadmap: bool = False) -> tuple[str, str]:
+    def file_issue(self, title: str, body: str, level: str | None = None, roadmap: bool = False,
+                   blocked_by: list[int] | None = None) -> tuple[str, str]:
         """The call recorded, answered with a number and URL as the real one answers."""
         self.filed.append((title, level))
         return "900", ISSUE_LINK

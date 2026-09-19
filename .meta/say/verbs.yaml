@@ -82,14 +82,30 @@ programs:
     path: .meta/say/move
     concern: >-
       What changes state on GitHub: an Issue filed, triaged, moved between
-      levels, claimed, handed back or obviated; a pull request opened, layered,
-      revised, merged, superseded or advanced; a review requested; a coder pass
-      dispatched; a Milestone set; a Decision's number reserved.
+      levels, re-pointed at what it waits on, claimed, handed back or
+      obviated; a pull request opened, layered, revised, merged, superseded or
+      advanced; a review requested; a coder pass dispatched; a Milestone set; a
+      Decision's number reserved.
     verbs:
       - name: file
-        usage: "--title T [--difficulty D|--roadmap] < body.md"
-        does: "file a Challenge the form's way: `challenge` alone, for the reviewer to read and land a level on; with `--difficulty`, the solo's verdict given in advance, which skips the reviewer, and which a run may not hold; or a roadmap Issue"
+        usage: "--title T [--difficulty D|--roadmap] [--blocked-by <n>[,<n>]] < body.md"
+        does: >-
+          file a Challenge the form's way: `challenge` alone, for the reviewer to read
+          and land a level on; with `--difficulty`, the solo's verdict given in advance,
+          which skips the reviewer, and which a run may not hold; or a roadmap Issue;
+          `--blocked-by` sets the native blockers and the body's `**Waits on.**` line
+          is rewritten to describe them; refused where the line names an `#<n>` the
+          flag omits
         held_by: [solo]
+      - name: waits
+        usage: "<issue> --on <n>[,<n>]|--off <n>[,<n>]|--clear"
+        does: >-
+          record or drop blockers on an Issue already filed: GitHub's
+          blocked-by relationship and the `**Waits on.**` line together;
+          refused on a blocker that is not an open Issue, on an Issue naming
+          itself, on a cycle, and on a line whose prose cannot be safely
+          rewritten
+        held_by: [coder, solo]
       - name: triage
         usage: "<issue> <level> < verdict.md"
         does: "the verdict on a Challenge read against the form and the tree, the body naming what was checked: posted on the Issue, then the level landed; refused in a run to every account but the reviewer's, since a run landing a level on the Challenge it raised is the raiser reading its own work, and refused where the body names no check or a level already stands, which `difficulty` moves; also makes a Challenge of an Issue that arrived without the form, or of a roadmap Issue whose blocker has closed"
@@ -129,7 +145,11 @@ programs:
         held_by: [coder]
       - name: revise
         usage: "<n> [--title T] [< body.md]"
-        does: "replace a pull request's or an Issue's body, or its title; the reviewer's for a Challenge whose first line it found wrong at reading"
+        does: >-
+          replace a pull request's or an Issue's body, or its title; it does not
+          change what blocks an Issue, which is GitHub's relationship and
+          `waits`'s to set; the reviewer's for a Challenge whose first line it
+          found wrong at reading
         held_by: [coder, reviewer]
       - name: supersede
         usage: "<pr> --by <pr|DR> < body.md"

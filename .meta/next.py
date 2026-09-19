@@ -12,12 +12,13 @@ screen. It decides nothing: which ripe Issue to take is the solo's.
 
 What it reads, and from where:
 
-- **Waits on.** The first line of both Issue forms, and GitHub's native
-  `blockedBy` relationship (solorepo's DR-170). `#<n>` per blocker seeds the
-  native relationship on GitHub, or `Nothing`. A blocker that is closed no
-  longer blocks, and a blocker written as prose — a Decision, an account —
-  keeps the Issue waiting until somebody rewrites the line. An Issue with no
-  such line is shown as `?`, which is the form asking for it.
+- **Waits on.** GitHub's native `blockedBy` relationship (solorepo's DR-170),
+  which `move file --blocked-by` sets and `move waits` re-points; the first
+  line of both Issue forms describes it and does not set it
+  (solorepo's DR-213). A blocker that is closed no longer blocks, and a
+  blocker written as prose — a Decision, an account — keeps the Issue waiting
+  until somebody rewrites the line. An Issue with no such line is shown as
+  `?`, which is the form asking for it.
 - **Difficulty.** The label the reviewer's verdict lands after reading the
   Challenge (solorepo's DR-230), or the solo's mandate given with the filing. A
   Challenge without one is unread and waits for the reviewer; `--check` asks
@@ -83,15 +84,16 @@ def gh(*args: str, default: Any = None) -> Any:
 def waits_on(issue):
     """Extracts blocker issue numbers declared by an issue.
 
-    Inspects GitHub's native `blockedBy` relation (solorepo's DR-170) before
-    falling back to markdown regex parsing.
+    Inspects GitHub's native `blockedBy` relation (solorepo's DR-170, solorepo's DR-213)
+    before falling back to prose in the `**Waits on.**` line for non-Issue blockers.
 
     Args:
         issue: Issue dictionary or raw markdown body string.
 
     Returns:
-        list[int] | str | None: List of blocker issue numbers, prose explanation string,
-            or None if no blocker section is declared.
+        list[int] | str | None: List of blocker issue numbers from GitHub's
+            relationship, prose explanation string, or None if no blocker
+            section is declared.
     """
     native = [n["number"] for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n] if isinstance(issue, dict) else []
     if native:
@@ -101,10 +103,8 @@ def waits_on(issue):
     if not m:
         return None
     text = m.group(1).strip()
-    refs = [int(n) for n in REF.findall(text)]
-    if refs:
-        return refs
-    if text.lower().rstrip(".") in ("nothing", "none", ""):
+    prose = re.sub(r"[^\w\s]+", " ", REF.sub(" ", text)).lower().split()
+    if set(prose) <= frozenset(("and", "nothing", "none", "")):
         return []
     return text
 

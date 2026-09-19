@@ -377,10 +377,9 @@ def promote(thread_id: str, title: str, body: str, level: str | None, resolve_th
                  "     Nothing was filed. The thread is what is unfinished: "
                  f"`post resolve {thread_id}` closes it on the link already posted, from a "
                  "second Job where every comment on it is yours.")
-    # The link, not the number: `check_pr.py` reads a promotion in the one
-    # form it can check, the Issue's URL, and a bare `#n` is what someone types
-    # when referring to an Issue rather than when filing one.
-    _, url = channel.sibling("move").file_issue(title, body, level=level)
+    first_line = body.lstrip().split("\n", 1)[0]
+    blocked_by = [int(n) for n in re.findall(r"#(\d+)", first_line)]
+    _, url = channel.sibling("move").file_issue(title, body, level=level, blocked_by=blocked_by)
     if sole_author(bodies):
         reply(thread_id, channel.signed(f"Promoted to {url}. {left_open(thread_id)}"))
         return

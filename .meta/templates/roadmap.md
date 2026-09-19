@@ -20,8 +20,12 @@ labels: roadmap
 
 **Waits on.** `#<n>` per Issue that has to close first, or the Decision, the
 account or the Discipline that has to exist, in a few words. One line, first,
-because `move file` sets `#<n>` as GitHub's native blocked-by relationship and
-`just next` reads it.
+because it is what a reader sees before opening anything. It describes the
+blocker and does not set it: `move file --blocked-by` sets GitHub's native
+relationship, `move waits` re-points it afterwards where the line says nothing
+but its own `#<n>` references, and `just next` reads the relationship. A blocker
+naming a Decision, an account or the solo keeps this waiting until the line is
+rewritten, and is `move revise`'s to rewrite.
 
 **What is intended.** The thing itself, in enough words to pick it up cold. What
 it would change, and for whom.
