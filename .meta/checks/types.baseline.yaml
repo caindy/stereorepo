@@ -21,9 +21,9 @@
 .meta/apm_compile.py: 0
 .meta/check.py: 6
 .meta/checks/citations/claims.py: 20
-.meta/checks/citations/loaders.py: 8
+.meta/checks/citations/loaders.py: 7
 .meta/checks/citations/prose.py: 15
-.meta/checks/citations/record.py: 13
+.meta/checks/citations/record.py: 12
 .meta/checks/comments.py: 3
 .meta/checks/graph/artifacts.py: 3
 .meta/checks/graph/record.py: 17

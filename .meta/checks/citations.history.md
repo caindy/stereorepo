@@ -80,3 +80,14 @@ Established: `inherited_citations()` requires all Issue citations in inherited
 files to be prefixed with `solorepo's #nnn` (solorepo's DR-132).
 
 Evidence: `.meta/checks/citations/record.py::inherited_citations`
+
+### A citation opening a sentence read as bare
+
+`FOREIGN`, and its Issue counterpart in `check_pr.py`, matched only the
+lowercase possessive, so a sentence-initial `Solorepo's DR-nnn` fell through
+to the bare scan and was reported as a citation missing the possessive it
+already carried (solorepo's #484). Established: both patterns hold the
+leading letter of `solorepo's`/`Solorepo's` case-insensitive and every other
+character exact.
+
+Evidence: `.meta/checks/probes/knowledge.py::citation_form_probes`

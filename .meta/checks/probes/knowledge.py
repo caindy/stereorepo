@@ -8,6 +8,9 @@ record asked for the reason its `WITHDRAWN` status owes under
 MOS:LEAD lead and vocabulary parity (solorepo's DR-185, solorepo's DR-190) —
 together with the authoring tool that scaffolds such a page, which is a probe
 over the wiki's form and not over a tool beside the gate (solorepo's DR-187).
+One further probe is over the form the prose in all three containers carries:
+the possessive that marks a citation as solorepo's rather than a portfolio's
+own (solorepo's DR-121, solorepo's DR-132).
 Each check is run against strings and stand-in pages rather than the tree, so a
 case is one fixture and one expectation, and a failure names the case. The
 steps register here rather than beside the checks they exercise, because the
@@ -16,7 +19,7 @@ gate over assertions should not take its imports from a test suite
 """
 import collections
 
-from checks import files, graph
+from checks import citations, files, graph
 from checks.collect import META, ROOT, check
 from checks.probes.harness import FakeWikiPath, load_module
 
@@ -328,4 +331,57 @@ def wikisplain_argv_probes() -> list[str]:
             problems.append(f"wikisplain argv: expected a successful scaffold, got {rc}")
         if not target.is_file():
             problems.append(f"wikisplain argv: expected scaffold at {target}, but it was not written")
+    return problems
+
+
+@check("citation form probes", pre=True)
+def citation_form_probes() -> list[str]:
+    """`citations.FOREIGN` and `check_pr.FOREIGN` hold every citation character exact except its leading `S` or `s`.
+
+    `citations.issue_citation()` loads the `(ISSUE, FOREIGN)` pair from
+    `check_pr.py`. Two forms, each put through the same split `cited_decisions` and
+    `inherited_citations` make between a citation the possessive marks as
+    foreign and one left over for the bare scan: `foreign.sub("", text)`
+    followed by the bare pattern's own `findall`. A sentence-initial
+    possessive citation must leave nothing for the bare scan to find, and a
+    genuinely bare one — no possessive at all — must still read as bare, so
+    the widened pattern is pinned in both directions and not merely proved
+    by the absence of a complaint. An all-uppercase possessive must remain
+    bare, proving that only the leading letter is widened. The number is spelled from `count` rather
+    than typed, because `DR-` or `#` immediately followed by digits in a file
+    a portfolio copies is a citation as far as `cited decisions` and
+    `inherited citations` are concerned, and this one is a fixture
+    (solorepo's DR-124).
+    """
+    problems = []
+    count = 999
+    issue, issue_foreign = citations.issue_citation()
+    cases = (
+        ("Decision", citations.FOREIGN, citations.DR,
+         f"Solorepo's DR-{count:03d} makes PR First a render target.",
+         f"DR-{count:03d} makes PR First a render target."),
+        ("Issue", issue_foreign, issue,
+         f"Solorepo's #{count} tracks the same fix.",
+         f"#{count} tracks the same fix."),
+    )
+    for name, foreign, pattern, capitalised, bare_text in cases:
+        left_over = set(pattern.findall(foreign.sub("", capitalised)))
+        if left_over:
+            problems.append(f"citation form: a sentence-initial {name} citation "
+                            f"read bare as {left_over!r}")
+        still_bare = set(pattern.findall(foreign.sub("", bare_text)))
+        if still_bare != {str(count)}:
+            problems.append(f"citation form: a genuinely bare {name} citation "
+                            f"read as {still_bare!r}, and the widened pattern "
+                            "must still catch it")
+        other_case = (
+            f"SOLOREPO'S DR-{count:03d} makes PR First a render target."
+            if name == "Decision"
+            else f"SOLOREPO'S #{count} tracks the same fix."
+        )
+        still_bare = set(pattern.findall(foreign.sub("", other_case)))
+        if still_bare != {str(count)}:
+            problems.append(f"citation form: an all-uppercase {name} citation "
+                            f"read as {still_bare!r}, but only the leading letter "
+                            "may be case-insensitive")
     return problems

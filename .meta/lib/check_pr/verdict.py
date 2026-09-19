@@ -44,8 +44,9 @@ ISSUE = re.compile(r"(?<![\w#&\"'])#(\d{1,4})(?!\d)")
 
 # A citation of solorepo's Issues, in the form `cited decisions` has the
 # inherited material write one of solorepo's record: the possessive, then a run,
-# so `solorepo's #11, #21` names two.
-FOREIGN = re.compile(r"solorepo's #\d{1,4}\b(?:(?:,| and|, and) #\d{1,4}\b)*")
+# so `solorepo's #11, #21` names two, and `Solorepo's #11` names one at the
+# head of a sentence.
+FOREIGN = re.compile(r"[Ss]olorepo's #\d{1,4}\b(?:(?:,| and|, and) #\d{1,4}\b)*")
 
 # This Portfolio is solorepo, read off the identity its assertions declare.
 # `cited decisions` asks its index; a checker with no YAML parser asks for the

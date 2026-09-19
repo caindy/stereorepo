@@ -9,12 +9,13 @@ DR = re.compile(r"\bDR-(\d{3})\b")
 
 
 # A citation of solorepo's record, in the form the material a portfolio inherits
-# writes one: the possessive, then a run, so `solorepo's DR-073, DR-107` names two.
-FOREIGN = re.compile(r"solorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
+# writes one: the possessive, then a run, so `solorepo's DR-073, DR-107` names two,
+# and `Solorepo's DR-073` names one at the head of a sentence.
+FOREIGN = re.compile(r"[Ss]olorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
 SCAFFOLD = "work:portfolio/solorepo"
 
 
-def issue_citation():
+def issue_citation() -> tuple[re.Pattern[str], re.Pattern[str]]:
     """Load compiled regular expressions for Issue citations from `check_pr.py`.
 
     Returns:
