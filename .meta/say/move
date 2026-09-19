@@ -2212,6 +2212,9 @@ def changed_files(pull: Pull, owner: str, name: str) -> list[dict[str, Any]] | N
     Returns:
         list[dict] or None: One entry per file changed, or None where the file
             list ran past the pages read.
+
+    Raises:
+        SystemExit: If a page's call to GitHub fails.
     """
     files: list[dict[str, Any]] = []
     for page in range(1, PAGES + 1):
