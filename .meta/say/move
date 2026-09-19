@@ -1200,9 +1200,11 @@ def run_coder(pr: str | int, task: str) -> None:
     the same act — and for the reason the task is passed at all: `coder.yml`
     defaults the input to `review`, so a dispatch that dropped it would run the
     pass that answers threads on a branch whose problem is a conflict.
+    Passes `harness=claude` explicitly to ensure unattended dispatch routes to
+    the subscription harness rather than a metered one (solorepo's DR-240).
     """
     channel.gh("workflow", "run", "coder.yml", "-f", f"pull_request={pr}",
-               "-f", f"task={task}", parse=False)
+               "-f", f"task={task}", "-f", "harness=claude", parse=False)
 
 
 def dispatch(pulls: Sequence[Pull]) -> list[str]:

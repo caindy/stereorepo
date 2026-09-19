@@ -578,6 +578,12 @@ artifacts:
   - id: work:artifact/meta-timing
     name: .meta/timing.py
     path: .meta/timing.py
+  - id: work:artifact/meta-detect-fallback
+    name: .meta/detect_fallback.py
+    path: .meta/detect_fallback.py
+    description: >-
+      Inspects Claude Code execution outputs and activates Gemini fallback
+      when enabled by the GEMINI_FALLBACK toggle (solorepo's DR-240).
   - id: work:artifact/meta-lib-timing
     name: .meta/lib/timing/__init__.py
     path: .meta/lib/timing/__init__.py
@@ -767,6 +773,9 @@ artifacts:
   - id: work:artifact/wiki-solorepo-client-repo
     name: wiki/solorepo/client-repo.md
     path: wiki/solorepo/client-repo.md
+  - id: work:artifact/wiki-solorepo-dev-loop
+    name: wiki/solorepo/dev-loop.md
+    path: wiki/solorepo/dev-loop.md
   - id: work:artifact/meta-wikisplain
     name: .meta/wikisplain.py
     path: .meta/wikisplain.py

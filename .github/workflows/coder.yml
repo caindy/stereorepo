@@ -56,7 +56,7 @@ on:
         description: which harness runs
         type: choice
         options: [gemini, claude, codex]
-        default: gemini
+        default: claude
 
 # One run per Issue or per pull request at a time. A second label on the
 # same Issue, or a second verdict on the same pull request, waits rather than
@@ -132,6 +132,10 @@ jobs:
       # GitHub attests for this run and no other; the harness is the action,
       # recorded as the environment names it.
       ACTOR_SESSION: gha-${{ github.run_id }}
+      # Automatic Gemini fallback toggle. Disabled by default ('false') to avoid
+      # unexpected pay-as-you-go API consumption (solorepo's DR-240). Can be overridden
+      # via repo variable vars.GEMINI_FALLBACK or set here.
+      GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
       # Differentiated thinking depth across harnesses (solorepo's DR-186): Sonnet and Opus
       # always run high extended thinking to prevent regressions and hallucinations.
       MAX_THINKING_TOKENS: "32000"
@@ -607,42 +611,14 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
+      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
+      # fall back to Gemini CLI if enabled by the GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-240).
       - name: detect claude quota error (take)
         id: claude_quota_take
         if: github.event_name == 'issues' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude' && steps.take_claude.outcome == 'failure'
         env:
           EXECUTION_FILE: ${{ steps.take_claude.outputs.execution_file }}
-        run: |
-          python3 -c '
-          import json, os, sys
-          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
-          fallback = False
-          if os.path.exists(file):
-              try:
-                  with open(file) as f:
-                      data = json.load(f)
-                  entries = data if isinstance(data, list) else [data]
-                  for item in entries:
-                      if isinstance(item, dict):
-                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
-                              fallback = True
-                              break
-              except Exception as e:
-                  print(f"Error parsing {file}: {e}", file=sys.stderr)
-              if not fallback:
-                  try:
-                      with open(file) as f:
-                          raw = f.read().lower()
-                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
-                          fallback = True
-                  except Exception as e:
-                      print(f"Error reading {file}: {e}", file=sys.stderr)
-          print(f"Claude failure detected (quota={fallback}); activating Gemini fallback.")
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("fallback=true\n")
-          with open(os.environ["GITHUB_ENV"], "a") as f:
-              f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
-          '
+        run: python3 .meta/detect_fallback.py
 
       - name: take the Issue (gemini)
         id: take_gemini
@@ -1051,42 +1027,14 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
+      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
+      # fall back to Gemini CLI if enabled by the GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-240).
       - name: detect claude quota error (rebase)
         id: claude_quota_rebase
         if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude' && steps.rebase_claude.outcome == 'failure'
         env:
           EXECUTION_FILE: ${{ steps.rebase_claude.outputs.execution_file }}
-        run: |
-          python3 -c '
-          import json, os, sys
-          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
-          fallback = False
-          if os.path.exists(file):
-              try:
-                  with open(file) as f:
-                      data = json.load(f)
-                  entries = data if isinstance(data, list) else [data]
-                  for item in entries:
-                      if isinstance(item, dict):
-                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
-                              fallback = True
-                              break
-              except Exception as e:
-                  print(f"Error parsing {file}: {e}", file=sys.stderr)
-              if not fallback:
-                  try:
-                      with open(file) as f:
-                          raw = f.read().lower()
-                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
-                          fallback = True
-                  except Exception as e:
-                      print(f"Error reading {file}: {e}", file=sys.stderr)
-          print(f"Claude failure detected (quota={fallback}); activating Gemini fallback.")
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("fallback=true\n")
-          with open(os.environ["GITHUB_ENV"], "a") as f:
-              f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
-          '
+        run: python3 .meta/detect_fallback.py
 
       - name: rebase onto the base (gemini)
         id: rebase_gemini
@@ -1227,6 +1175,16 @@ jobs:
             `gh api`; the list is what this prompt happens to name and not the
             definition, so a command not on it is not thereby allowed.
 
+      - name: verify rebase pass completed
+        if: >-
+          always() && (github.event_name == 'workflow_dispatch' && inputs.task == 'rebase')
+          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          && steps.rebase_claude.outcome != 'success' && steps.rebase_gemini.outcome != 'success'
+          && (steps.rebase_claude.outcome == 'failure' || steps.rebase_gemini.outcome == 'failure')
+        run: |
+          echo "::error::Neither Claude nor Gemini rebase pass succeeded (claude=${{ steps.rebase_claude.outcome }}, gemini=${{ steps.rebase_gemini.outcome }})."
+          exit 1
+
       - name: answer the review (claude)
         id: answer_claude
         if: >-
@@ -1290,7 +1248,7 @@ jobs:
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
       # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
-      # fall back to Gemini CLI so the review response does not stall.
+      # fall back to Gemini CLI if enabled by the GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-240).
       - name: detect claude quota error (answer)
         id: claude_quota_answer
         if: >-
@@ -1302,37 +1260,7 @@ jobs:
           && steps.answer_claude.outcome == 'failure'
         env:
           EXECUTION_FILE: ${{ steps.answer_claude.outputs.execution_file }}
-        run: |
-          python3 -c '
-          import json, os, sys
-          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
-          fallback = False
-          if os.path.exists(file):
-              try:
-                  with open(file) as f:
-                      data = json.load(f)
-                  entries = data if isinstance(data, list) else [data]
-                  for item in entries:
-                      if isinstance(item, dict):
-                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
-                              fallback = True
-                              break
-              except Exception as e:
-                  print(f"Error parsing {file}: {e}", file=sys.stderr)
-              if not fallback:
-                  try:
-                      with open(file) as f:
-                          raw = f.read().lower()
-                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
-                          fallback = True
-                  except Exception as e:
-                      print(f"Error reading {file}: {e}", file=sys.stderr)
-          print(f"Claude failure detected (quota={fallback}); activating Gemini fallback.")
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("fallback=true\n")
-          with open(os.environ["GITHUB_ENV"], "a") as f:
-              f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
-          '
+        run: python3 .meta/detect_fallback.py
 
       - name: answer the review (gemini)
         id: answer_gemini
@@ -1436,6 +1364,17 @@ jobs:
             hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
             `gh issue edit`, `gh issue comment` and `gh api`.
 
+      - name: verify answer pass completed
+        if: >-
+          always() && (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
+           || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
+          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          && steps.answer_claude.outcome != 'success' && steps.answer_gemini.outcome != 'success'
+          && (steps.answer_claude.outcome == 'failure' || steps.answer_gemini.outcome == 'failure')
+        run: |
+          echo "::error::Neither Claude nor Gemini answer pass succeeded (claude=${{ steps.answer_claude.outcome }}, gemini=${{ steps.answer_gemini.outcome }})."
+          exit 1
+
       # The pass an approval starts (solorepo's DR-159). What survives the argument
       # earns an Issue when the argument is settled, not at merge. If no threads
       # are held for promotion, the pull request satisfies the merge manager
@@ -1526,7 +1465,7 @@ jobs:
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
       # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
-      # fall back to Gemini CLI so promotion does not stall.
+      # fall back to Gemini CLI if enabled by the GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-240).
       - name: detect claude quota error (promote)
         id: claude_quota_promote
         if: >-
@@ -1536,37 +1475,7 @@ jobs:
           && steps.promote_claude.outcome == 'failure'
         env:
           EXECUTION_FILE: ${{ steps.promote_claude.outputs.execution_file }}
-        run: |
-          python3 -c '
-          import json, os, sys
-          file = os.environ.get("EXECUTION_FILE") or os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "claude-execution-output.json")
-          fallback = False
-          if os.path.exists(file):
-              try:
-                  with open(file) as f:
-                      data = json.load(f)
-                  entries = data if isinstance(data, list) else [data]
-                  for item in entries:
-                      if isinstance(item, dict):
-                          if item.get("api_error_status") == 429 or item.get("error") == "rate_limit" or any(k in str(item.get("result", "")).lower() for k in ["limit", "quota", "rate"]):
-                              fallback = True
-                              break
-              except Exception as e:
-                  print(f"Error parsing {file}: {e}", file=sys.stderr)
-              if not fallback:
-                  try:
-                      with open(file) as f:
-                          raw = f.read().lower()
-                      if "429" in raw or "rate_limit" in raw or "weekly limit" in raw or "hit your" in raw:
-                          fallback = True
-                  except Exception as e:
-                      print(f"Error reading {file}: {e}", file=sys.stderr)
-          print(f"Claude failure detected (quota={fallback}); activating Gemini fallback.")
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("fallback=true\n")
-          with open(os.environ["GITHUB_ENV"], "a") as f:
-              f.write("AI_AGENT=google-github-actions/run-gemini-cli\n")
-          '
+        run: python3 .meta/detect_fallback.py
 
       - name: promote on approval (gemini)
         id: promote_gemini
@@ -1680,3 +1589,13 @@ jobs:
 
             Do not request review: the pull request is already approved.
             Do not merge by hand, and do not make any code changes.
+
+      - name: verify promote pass completed
+        if: >-
+          always() && github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
+          && steps.taken.outputs.by == '' && steps.pr.outputs.by == '' && steps.promote.outputs.count != '0'
+          && steps.promote_claude.outcome != 'success' && steps.promote_gemini.outcome != 'success'
+          && (steps.promote_claude.outcome == 'failure' || steps.promote_gemini.outcome == 'failure')
+        run: |
+          echo "::error::Neither Claude nor Gemini promote pass succeeded (claude=${{ steps.promote_claude.outcome }}, gemini=${{ steps.promote_gemini.outcome }})."
+          exit 1

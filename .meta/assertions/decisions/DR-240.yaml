@@ -1,0 +1,94 @@
+decisions:
+  - id: work:decision/240
+    name: "DR-240 · Gating autonomous loop Gemini fallback behind an opt-in toggle to eliminate unexpected metered API billing"
+    status: ADOPTED
+    supersedes:
+      - work:decision/178
+    enacted_in:
+      - work:artifact/github-workflows-review
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-detect-fallback
+      - work:artifact/meta-say-move
+      - work:artifact/wiki-solorepo-dev-loop
+    context: >-
+      DR-178 expanded multi-harness fallback in review.yml and coder.yml to activate on
+      any Claude harness failure rather than aborting with exit 1 on non-quota errors.
+      While this prevented stranded review requests when Claude encountered transient
+      crashes or HTTP 429 quota exhaustion, it introduced a severe economic failure mode:
+      unlike Claude Code which authenticates via flat-rate user subscriptions
+      (`CLAUDE_CODE_OAUTH_TOKEN`), the Gemini CLI GitHub Action authenticates via
+      `GEMINI_API_KEY`, routing usage directly to Google Cloud pay-as-you-go billing.
+
+      Because coder and reviewer workflows execute deep multi-turn sessions (up to 120 turns
+      with multi-subagent exploration), context caching on Gemini Flash accumulates
+      tens of millions of cached token reads per execution. Unattended automated fallback
+      in CI rapidly accumulated hundreds of dollars in unexpected utility billing.
+    alternatives:
+      - name: Retain unconditional Gemini fallback as default
+        chosen: false
+        reason: >-
+          Leaves pay-as-you-go API consumption active by default across all clones and automated
+          passes, imposing surprise utility bills whenever Claude encounters rate limits.
+      - name: Limit fallback activation strictly to HTTP 429 quota exhaustion
+        chosen: false
+        reason: >-
+          Restricting fallback strictly to HTTP 429 quota exhaustion was rejected in DR-178 because
+          harness failures stem from varied non-quota aborts and drop reviews. Furthermore, gating
+          fallback on 429 fails to eliminate economic surprise because quota-triggered fallback still
+          incurs unbudgeted pay-as-you-go charges.
+      - name: Remove Gemini CLI harness integration entirely from CI workflows
+        chosen: false
+        reason: >-
+          Destroys multi-harness redundancy and prevents operators who maintain
+          dedicated API budgets or require multi-vendor failover from leveraging automated fallback.
+      - name: Opt-in fallback toggle defaulting to disabled with centralized evaluation and explicit dispatch defaults
+        chosen: true
+        reason: >-
+          Introduces `GEMINI_FALLBACK` (defaulting to `'false'`) in workflow environments and repository
+          variables. A dedicated, type-checked script (`.meta/detect_fallback.py`) evaluates the toggle
+          across multiple truthy representations (`true`, `1`, `yes`, `on`, `enable`, `enabled`),
+          skipping fallback cleanly when disabled. Coder workflow dispatch defaults to Claude, `move:run_coder`
+          passes `-f harness=claude` explicitly, and do-nothing failed passes fail loudly rather than
+          ending green with `continue-on-error: true`.
+    consequences:
+      - >-
+        DR-178 is superseded in part. Its third consequence ("activate Gemini fallback on any Claude
+        harness failure rather than aborting with exit 1 on non-quota errors") and the third limb of its
+        falsifier ("a Claude harness failure in review.yml exiting 1 without activating the Gemini
+        fallback") are superseded by the opt-in toggle requirement. The other two recovery mechanisms of
+        DR-178 stand: `move:dispatch` and `check_pr:unheld` continue to detect stranded reviews and
+        auto-retry review requests when a reviewer check finishes without a verdict, and coder review passes
+        continue to dispatch for post-rebase breakages.
+      - >-
+        `.github/workflows/review.yml` and `.github/workflows/coder.yml` set `GEMINI_FALLBACK` defaulting to
+        `'false'`. Fallback to Gemini CLI executes only when an operator explicitly opts in via repository
+        variable `vars.GEMINI_FALLBACK` or workflow environment.
+      - >-
+        `.meta/detect_fallback.py` replaces duplicate inline Python detection blocks, serving as the single
+        source of truth for toggle evaluation and fallback emission. By DR-178 and DR-240, any Claude failure
+        activates fallback when enabled; `has_quota_error` provides diagnostic log labeling.
+      - >-
+        `.github/workflows/coder.yml` defaults its `harness` dispatch input to `claude` rather than `gemini`,
+        and `.meta/say/move`'s `run_coder` passes `-f harness=claude` explicitly.
+      - >-
+        Coder passes (`rebase`, `answer`, `promote`) fail loudly via dedicated verification steps when Claude
+        fails and fallback does not succeed, preventing silent green runs under `continue-on-error: true`.
+        The `take` pass is covered instead by its existing hand-back step, which cleanly transitions the
+        Challenge to `human` and hands back uncompleted work.
+      - >-
+        Specialization inherits `.meta/detect_fallback.py` alongside `coder.yml` and `review.yml`, documenting
+        `vars.GEMINI_FALLBACK` so fresh clones are aware of the opt-in requirement.
+    falsifier: >-
+      A Claude failure in review.yml or coder.yml activating Gemini CLI execution when `GEMINI_FALLBACK` is
+      unset or false; a truthy toggle representation being ignored by the workflow; or an unset toggle leaving
+      an uncompleted pass green with no diagnostic reported.
+    rationale: |-
+      Autonomous loops must be economically safe by default. A scaffold intended for single-person
+      repositories cannot assume an unmetered or pre-funded cloud budget. Where one model provider offers
+      subscription-backed access and another operates strictly on utility-metered API keys, routing failure
+      recovery from the former to the latter must be an explicit, conscious choice made by the operator.
+
+      By gating the fallback behind `GEMINI_FALLBACK` defaulting to disabled, solorepo ensures that a fresh
+      clone or unconfigured repository never incurs unexpected credit card charges. Operators who provide a
+      funded `GEMINI_API_KEY` and enable the toggle retain the full self-healing resilience of DR-178, while
+      operators relying solely on Claude subscriptions are protected from silent billing accumulation.

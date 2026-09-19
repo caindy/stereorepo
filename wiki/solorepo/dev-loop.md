@@ -229,11 +229,11 @@ this account.
 
 Solorepo decouples engineering disciplines from any specific model vendor (solorepo's DR-111). A Role is a repository account and credential boundary (solorepo's DR-107), while a harness (Claude Code, Gemini CLI, OpenAI Codex) is the interchangeable execution container running inside the workflow.
 
-Because external model APIs suffer transient rate limits, weekly quota exhaustion, and unhandled container terminations, the development loop enforces multi-harness self-healing (solorepo's DR-178):
+Because external model APIs suffer transient rate limits, weekly quota exhaustion, and unhandled container terminations, the development loop enforces multi-harness self-healing (solorepo's DR-178, solorepo's DR-240):
 
 - **Decoupled Execution:** Workflows dispatch to the harness declared by issue labels (`harness:gemini`), branch prefixes, or manual workflow inputs.
-- **Automated Fallback:** When a primary harness encounters unrecoverable execution failures or quota limits (such as HTTP 429), the workflow catches the termination, records the fallback transition in the workload identity [[trailer]] (`AI_AGENT`), and transparently re-engages the secondary harness (such as Gemini CLI) to finish the pass.
-- **Single Source of Truth:** Implementation mechanics are maintained directly in workflow definitions ([`.github/workflows/coder.yml`](../../.github/workflows/coder.yml), [`.github/workflows/review.yml`](../../.github/workflows/review.yml)) rather than duplicated across documentation.
+- **Opt-In Fallback:** When a primary harness encounters unrecoverable execution failures or quota limits (such as HTTP 429), the workflow catches the termination and, if enabled by repository configuration (`vars.GEMINI_FALLBACK=true`, solorepo's DR-240), records the fallback transition in the workload identity [[trailer]] (`AI_AGENT`) and re-engages the secondary harness (such as Gemini CLI) to finish the pass. The fallback defaults to disabled to avoid unexpected pay-as-you-go API consumption.
+- **Single Source of Truth:** Implementation mechanics are maintained directly in workflow definitions ([`.github/workflows/coder.yml`](../../.github/workflows/coder.yml), [`.github/workflows/review.yml`](../../.github/workflows/review.yml)) and [`.meta/detect_fallback.py`](../../.meta/detect_fallback.py) rather than duplicated across documentation.
 
 ## The Graceful Hand-Back Invariant
 
@@ -243,4 +243,4 @@ When a coder pass encounters conditions beyond its capability—such as an archi
 
 ---
 
-**See also:** [[pr-first]], [[knowledge-management]], [[ubiquitous-language]], [[challenge]], solorepo's DR-107, solorepo's DR-111, solorepo's DR-112, solorepo's DR-133, solorepo's DR-161, solorepo's DR-178, solorepo's DR-188, solorepo's DR-214.
+**See also:** [[pr-first]], [[knowledge-management]], [[ubiquitous-language]], [[challenge]], solorepo's DR-107, solorepo's DR-111, solorepo's DR-112, solorepo's DR-133, solorepo's DR-161, solorepo's DR-178, solorepo's DR-188, solorepo's DR-214, solorepo's DR-240.
