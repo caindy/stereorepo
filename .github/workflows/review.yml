@@ -76,6 +76,17 @@ jobs:
       # reading of one commit against another. Job-level, so it reaches the
       # session's shell the way `ACTOR_SESSION` does.
       SOLOREPO_REVIEW_HEAD: ${{ github.event.pull_request.head.sha }}
+      # The hook writes Evidence here for `the hook fired` below (solorepo's #645).
+      # `_registration` in `.meta/checks/probes/git/step.py` verifies the
+      # registration, command, matcher, and Evidence format before the session
+      # starts, but cannot verify that an action release honors the settings.
+      # A release that changes its input schema or stops writing the settings
+      # can leave the session with no hook while every precheck passes.
+      # Job-level environment reaches hook subprocesses; `github.workspace` is
+      # available here while the runner context is not. `.review/` is scratch
+      # that the diff step removes before it writes, preventing reused runners
+      # from carrying Evidence of an earlier run.
+      SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook.evidence
     steps:
       # No token left in `.git/config`: the transcript is in the run log, and
       # a read of that file would put the token there past the masking. Full
@@ -609,6 +620,21 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           BEFORE: ${{ steps.before.outputs.count }}
           AFTER: ${{ steps.after.outputs.count }}
+
+      # Count `SOLOREPO_HOOK_EVIDENCE`: an empty file means the reviewer session
+      # did not start or no call reached the hook. `!cancelled()` follows the
+      # preceding verdict check, and the count asserts that the hook ran.
+      - name: the hook fired
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -s "$SOLOREPO_HOOK_EVIDENCE" ]; then
+            echo "the hook decided $(wc -l < "$SOLOREPO_HOOK_EVIDENCE") calls on #$PR"
+          else
+            echo "::error::the hook decided no call on #$PR: either the reviewer session did not start, or the harness never invoked the hook its settings register. Inspect the Claude action's settings: block against its resolved release. The request stands either way; the next review reads this unchanged head."
+            exit 1
+          fi
+        env:
+          PR: ${{ github.event.pull_request.number }}
 
       # A review that exceeded its fan-out ceiling has breached the depth contract
       # (solorepo's DR-166, solorepo's DR-191). The tool counts spawned subagent invocations
