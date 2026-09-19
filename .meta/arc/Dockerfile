@@ -33,10 +33,28 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | \
 COPY --from=ghcr.io/astral-sh/uv:0.6.14 /uv /uvx /usr/local/bin/
 
 # Install pinned Node.js (22.14.0 LTS) and pinned Gemini CLI (0.59.0)
-RUN curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz | \
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64) NODE_ARCH="x64" ;; \
+        arm64) NODE_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;; \
+    esac && \
+    curl -fsSL "https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-${NODE_ARCH}.tar.xz" | \
     tar -xJ -C /usr/local --strip-components=1 && \
     npm install -g @google/gemini-cli@0.59.0 && \
     chown -R runner:runner /usr/local/lib/node_modules /usr/local/bin
+
+# Install pinned Antigravity CLI (1.2.7)
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64) AGY_ARCH="x64"; TAR_ARCH="x64" ;; \
+        arm64) AGY_ARCH="arm"; TAR_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;; \
+    esac && \
+    curl -fsSL "https://storage.googleapis.com/antigravity-public/antigravity-cli/1.2.7-6731160148115456/linux-${AGY_ARCH}/cli_linux_${TAR_ARCH}.tar.gz" | \
+    tar -xz -C /usr/local/bin antigravity && \
+    ln -s /usr/local/bin/antigravity /usr/local/bin/agy && \
+    chown runner:runner /usr/local/bin/antigravity /usr/local/bin/agy
 
 # Install pinned APM CLI (0.30.0)
 RUN ARCH=$(dpkg --print-architecture) && \

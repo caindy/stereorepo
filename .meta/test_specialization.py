@@ -119,7 +119,7 @@ def retarget_workflows(workflows_dir: pathlib.Path) -> int:
     count = 0
     if not workflows_dir.is_dir():
         return count
-    replacement = "runs-on: ubuntu-latest\n    container: ghcr.io/caindy/solorepo-runner:2.337.0-2"
+    replacement = "runs-on: ubuntu-latest\n    container: ghcr.io/caindy/solorepo-runner:2.337.0-3"
     for wf in workflows_dir.glob("*.yml"):
         content = wf.read_text(encoding="utf-8")
         if "runs-on: arc-runner-set" in content:

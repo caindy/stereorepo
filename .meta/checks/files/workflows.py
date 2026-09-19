@@ -411,7 +411,7 @@ def gemini_allowlist_matches_claude() -> StepOutcome:
     core_match = CORE_TOOLS_LINE.search(text)
     if not allowed_match:
         return Found(("review.yml: no `--allowedTools` value on the Claude path to compare against",))
-    if "run-gemini-cli" not in text:
+    if "run-gemini-cli" not in text and "actions/agy" not in text:
         claude_tools = {token.split("(", 1)[0] for token in allowed_match.group(1).split(",")}
         claude_problems = [
             f"review.yml: the Claude path names `{claude_name}`; drop it from `--allowedTools`"
@@ -461,7 +461,7 @@ def gemini_core_matches_hook_matcher() -> StepOutcome:
     if not REVIEW_WORKFLOW.is_file():
         return CouldNotRun(f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
     text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
-    if "run-gemini-cli" not in text:
+    if "run-gemini-cli" not in text and "actions/agy" not in text:
         return Passed("Gemini reviewer not configured in review.yml (solorepo's DR-242)")
     core_match = CORE_TOOLS_LINE.search(text)
     matcher_match = BEFORE_TOOL_MATCHER.search(text)

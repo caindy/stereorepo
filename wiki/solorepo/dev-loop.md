@@ -28,8 +28,8 @@ Work progresses through five specialized, asynchronous passes triggered by repos
 
 The development loop operates without a centralized orchestrator database. State is tracked deterministically in git and GitHub metadata:
 
-- **Branch Names Reflect Chosen Harnesses:** Working branches created by the loop follow the canonical naming pattern `<harness>/issue-<n>` (for example, `claude/issue-414` or `codex/issue-414`). Rather than reading the branch name to select a harness (solorepo's DR-242), the coder workflow determines the harness exclusively from explicit pull request labels (`harness:<harness>`) or manual dispatch inputs, defaulting to Claude Code, and then records the selected harness as the branch prefix.
-- **Loop vs. Human Demarcation:** The branch prefix distinguishes autonomous loop work from human maintenance branches. When a reviewer requests changes on a `(claude|codex)/issue-*` branch, the verdict acts as an operational semaphore that automatically awakes the coder pass to remediate the diff. On human branches, the verdict remains an advisory review informing the author.
+- **Branch Names Reflect Chosen Harnesses:** Working branches created by the loop follow the canonical naming pattern `<harness>/issue-<n>` (for example, `claude/issue-414`, `gemini/issue-414`, or `codex/issue-414`). Rather than reading the branch name to select a harness (solorepo's DR-245), the coder workflow determines the harness exclusively from explicit pull request labels (`harness:<harness>`) or manual dispatch inputs, defaulting to Claude Code, and then records the selected harness as the branch prefix.
+- **Loop vs. Human Demarcation:** The branch prefix distinguishes autonomous loop work from human maintenance branches. When a reviewer requests changes on a `(claude|gemini|codex)/issue-*` branch, the verdict acts as an operational semaphore that automatically awakes the coder pass to remediate the diff. On human branches, the verdict remains an advisory review informing the author.
 - **Challenge Recovery for Hand-Back:** Embedding `issue-<n>` into the branch ref guarantees that if an autonomous pass cannot complete its remit, it can reliably extract the originating [[challenge]] number from the git ref and execute the hand-back protocol.
 
 ## Concurrency Keys and What They Hold
@@ -229,9 +229,9 @@ this account.
 
 Solorepo decouples engineering disciplines from any specific model vendor (solorepo's DR-111). A Role is a dedicated machine account with its login and credential file derived from the Role name (solorepo's DR-107), while a harness (Claude Code, OpenAI Codex) is the interchangeable execution container running inside the workflow.
 
-While multi-harness fallback to Gemini CLI was adopted to heal transient Claude Code crashes (solorepo's DR-178), differing authentication models introduced severe economic hazards: Claude Code authenticates via personal flat-rate user subscriptions (`CLAUDE_CODE_OAUTH_TOKEN`), whereas headless Gemini CLI required a utility-metered `GEMINI_API_KEY`, routing deep multi-turn loop sessions to unexpected Google Cloud pay-as-you-go bills. After initially gating fallback behind an opt-in toggle (solorepo's DR-240), Gemini CLI and secondary fallback steps were excised from autonomous workflows (solorepo's DR-242).
+While multi-harness fallback to Gemini was adopted to heal transient Claude Code crashes (solorepo's DR-178), differing authentication models originally introduced economic hazards when headless Gemini CLI required a utility-metered `GEMINI_API_KEY`, routing deep multi-turn loop sessions to unexpected Google Cloud pay-as-you-go bills. After initially gating fallback behind an opt-in toggle (solorepo's DR-240) and temporarily excising Gemini CLI (solorepo's DR-242), Google Antigravity CLI (`agy`) was adopted on self-hosted Actions Runner Controller (ARC) runner pods (solorepo's DR-245). Personal subscription developer credentials are mounted into ephemeral runner pods to execute containerized `agy` without metered API keys, restoring Gemini as an autonomous fallback harness gated by the `vars.GEMINI_FALLBACK` toggle (solorepo's DR-245).
 
-Autonomous loops execute on subscription-backed Claude Code, with OpenAI Codex available by explicit label. Re-introducing Gemini is deferred until personal subscription credentials can be mounted directly into self-hosted Actions Runner Controller (ARC) runner pods to drive the containerized Google Antigravity command-line interface without pay-as-you-go API keys (solorepo's DR-242).
+Autonomous loops execute on subscription-backed Claude Code, with OpenAI Codex available by explicit label and Antigravity CLI serving as the subscription-backed fallback when enabled (solorepo's DR-245).
 
 ## The Graceful Hand-Back Invariant
 
@@ -241,4 +241,4 @@ When a coder pass encounters conditions beyond its capability—such as an archi
 
 ---
 
-**See also:** [[pr-first]], [[knowledge-management]], [[ubiquitous-language]], [[challenge]], solorepo's DR-107, solorepo's DR-111, solorepo's DR-112, solorepo's DR-133, solorepo's DR-161, solorepo's DR-178, solorepo's DR-188, solorepo's DR-214, solorepo's DR-240, solorepo's DR-242.
+**See also:** [[pr-first]], [[knowledge-management]], [[ubiquitous-language]], [[challenge]], solorepo's DR-107, solorepo's DR-111, solorepo's DR-112, solorepo's DR-133, solorepo's DR-161, solorepo's DR-178, solorepo's DR-188, solorepo's DR-214, solorepo's DR-240, solorepo's DR-242, solorepo's DR-245.

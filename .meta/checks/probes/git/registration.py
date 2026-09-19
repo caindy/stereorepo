@@ -75,6 +75,6 @@ the command against a call the hook must refuse and one it must allow.
 """
 
 OPTIONAL_HARNESS_ACTIONS: dict[str, str] = {
-    "Gemini CLI": "run-gemini-cli",
+    "Gemini CLI": "actions/agy",
 }
-"""Harnesses whose workflow step is optional, mapped to the action identifier required in `review.yml` (solorepo's DR-242)."""
+"""Harnesses whose workflow step is optional, mapped to the action identifier required in `review.yml` (solorepo's DR-245)."""

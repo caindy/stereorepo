@@ -12,7 +12,7 @@ solorepo's DR-137 deliberately left hosted: **a merge cannot go green while
 this cluster is down**, so the machine being reachable is now the
 repository's business and not only the loops'. `template/`'s seeded gate
 runs on `ubuntu-latest` inside the published runner image (`container:
-ghcr.io/caindy/solorepo-runner:2.337.0-2`), a portfolio having no cluster
+ghcr.io/caindy/solorepo-runner:2.337.0-3`), a portfolio having no cluster
 of its own (solorepo's DR-160).
 
 Two layers, separately invokable:
@@ -69,30 +69,47 @@ Windows 11 Home has no Hyper-V, so `kind` needs Docker under WSL2:
 ## The runner image
 
 `values-runnerset.yaml` pins the runner container image to
-`ghcr.io/caindy/solorepo-runner:2.337.0-2` (solorepo's DR-156, solorepo's DR-160).
+`ghcr.io/caindy/solorepo-runner:2.337.0-3` (solorepo's DR-156, solorepo's DR-160).
 Defined in `.meta/arc/Dockerfile` on top of `ghcr.io/actions/actions-runner:2.337.0`
 (which carries `python3` `3.12.3`), it pre-bakes `build-essential`, `gh`,
-`jq`, `just`, `uv`, `apm`, `rustup`, `node` / `npm`, and `gemini`.
+`jq`, `just`, `uv`, `apm`, `rustup`, `node` / `npm`, `gemini`, and `agy` (pinned
+Antigravity CLI 1.2.7).
 
 To build, load into a local `kind` cluster, and publish to GHCR:
 ```bash
-docker build -t solorepo-runner:2.337.0-2 -t ghcr.io/caindy/solorepo-runner:2.337.0-2 -f .meta/arc/Dockerfile .meta/arc
-kind load docker-image ghcr.io/caindy/solorepo-runner:2.337.0-2 --name solorepo-arc
+docker build -t solorepo-runner:2.337.0-3 -t ghcr.io/caindy/solorepo-runner:2.337.0-3 -f .meta/arc/Dockerfile .meta/arc
+kind load docker-image ghcr.io/caindy/solorepo-runner:2.337.0-3 --name solorepo-arc
 
 # Publish to GHCR for hosted workflows and specialized portfolios:
 echo "$ARC_GITHUB_TOKEN" | docker login ghcr.io -u <username> --password-stdin
-docker push ghcr.io/caindy/solorepo-runner:2.337.0-2
+docker push ghcr.io/caindy/solorepo-runner:2.337.0-3
 ```
 
 The package on GHCR (`ghcr.io/caindy/solorepo-runner`) must remain configured as
 **Public** so that workflows in external portfolio repositories can pull the
 container image anonymously without authentication.
 
+## Subscription credentials (Gemini / Antigravity)
+
+Running autonomous loops under personal subscription quotas rather than
+metered API billing (solorepo's DR-245, solorepo's #669) provisions
+developer credentials into ephemeral runner pods:
+
+1. Authenticate `agy` locally so credentials exist in `~/.gemini` (or
+   `/mnt/c/Users/*/.gemini` under WSL2).
+2. Run `just arc`. `.meta/arc/deploy` packages the OAuth tokens and settings
+   into the `arc-gemini-credentials` Secret in namespace `arc-runners`.
+3. Ephemeral runner pods copy the Secret into an isolated, writable
+   `emptyDir` at `/home/runner/.gemini` with permissions restricted to
+   `chmod 600`.
+
 ## Verifying it worked
 
 - `kubectl get pods -n arc-systems` — the controller, `Running`, and its
   image tag matching `CHART_VERSION` in `.meta/arc/deploy` (both charts are
   pinned to the same number).
+- `kubectl get secret arc-gemini-credentials -n arc-runners` — the Gemini
+  subscription Secret provisioned from host credentials.
 - GitHub → `caindy/solorepo` → **Settings → Actions → Runners** —
   `arc-runner-set` listed, Idle or Listening.
 - A workflow with `runs-on: arc-runner-set` should show a pod appear and

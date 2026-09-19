@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     # Public runner image on GHCR; the base image provides python3 (Python 3.12.3)
     # and pre-bakes the single-source CLI toolchain (solorepo's DR-160).
-    container: ghcr.io/caindy/solorepo-runner:2.337.0-2
+    container: ghcr.io/caindy/solorepo-runner:2.337.0-3
     steps:
       # The whole history, because `decision numbering` asks this portfolio's own
       # commits whether a hole in its record is an entry somebody deleted

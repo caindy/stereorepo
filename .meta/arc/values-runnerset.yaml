@@ -38,15 +38,51 @@ maxRunners: 12
 
 template:
   spec:
+    initContainers:
+      - name: setup-gemini-creds
+        image: ghcr.io/caindy/solorepo-runner:2.337.0-3
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            mkdir -p /gemini-dest/antigravity-cli
+            for f in oauth_creds.json jetski-standalone-oauth-token google_accounts.json; do
+              if [ -f "/gemini-src/$f" ]; then
+                cp "/gemini-src/$f" /gemini-dest/
+                chmod 600 "/gemini-dest/$f"
+              fi
+            done
+            for f in antigravity-oauth-token settings.json; do
+              if [ -f "/gemini-src/$f" ]; then
+                cp "/gemini-src/$f" /gemini-dest/antigravity-cli/
+                chmod 600 "/gemini-dest/antigravity-cli/$f"
+              fi
+            done
+        volumeMounts:
+          - name: gemini-creds-secret
+            mountPath: /gemini-src
+            readOnly: true
+          - name: gemini-home
+            mountPath: /gemini-dest
     containers:
       - name: runner
         # Single-source runner image on GHCR (solorepo's DR-156, solorepo's DR-160)
-        image: ghcr.io/caindy/solorepo-runner:2.337.0-2
+        image: ghcr.io/caindy/solorepo-runner:2.337.0-3
         imagePullPolicy: IfNotPresent
         command: ["/home/runner/run.sh"]
+        volumeMounts:
+          - name: gemini-home
+            mountPath: /home/runner/.gemini
         resources:
           requests:
             cpu: "1"
             memory: 2Gi
           limits:
             memory: 4Gi
+    volumes:
+      - name: gemini-creds-secret
+        secret:
+          secretName: arc-gemini-credentials
+          optional: true
+      - name: gemini-home
+        emptyDir: {}

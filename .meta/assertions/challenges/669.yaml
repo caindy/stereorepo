@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/669
+    name: Explore using subscription-backed agy CLI with local ARC credential mounting as an autonomous loop harness
+    challenge_type: SPIKE
+    description: >-
+      Investigates mounting developer Gemini and Antigravity subscription credentials into self-hosted
+      Actions Runner Controller (ARC) runner pods in Kubernetes, pre-baking the Antigravity CLI (agy)
+      into the custom runner image, and restoring subscription-backed autonomous coder and reviewer loop
+      fallback without pay-as-you-go Google Cloud API billing.

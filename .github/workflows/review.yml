@@ -111,11 +111,17 @@ jobs:
 
           if echo "$labels" | grep -qw "harness:codex"; then
             harness="codex"
+          elif echo "$labels" | grep -qw "harness:gemini"; then
+            harness="gemini"
           elif echo "$labels" | grep -qw "harness:claude"; then
             harness="claude"
           fi
 
-          agent="anthropics/claude-code-action@v1"
+          if [ "$harness" = "gemini" ]; then
+            agent="antigravity-cli"
+          else
+            agent="anthropics/claude-code-action@v1"
+          fi
 
           echo "harness=$harness" >> "$GITHUB_OUTPUT"
           echo "agent=$agent" >> "$GITHUB_OUTPUT"
@@ -267,7 +273,7 @@ jobs:
             echo "::error::.review/ is tracked in this tree, and this step writes the reviewer's scratch there"
             exit 1
           fi
-          rm -rf .review .gemini
+          rm -rf .review
           install -d .review/head
           gh pr diff "$PR" > .review/diff.patch
           mapfile -d '' -t paths < <(git ls-tree -r -z --name-only "$HEAD" -- $TRUNK)
@@ -581,6 +587,235 @@ jobs:
             --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
+      # When Claude Code fails, evaluate Antigravity CLI fallback if enabled by the
+      # GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-245).
+      - name: detect claude quota error
+        id: claude_quota
+        if: steps.harness.outputs.harness == 'claude' && steps.review_claude.outcome == 'failure'
+        env:
+          EXECUTION_FILE: ${{ steps.review_claude.outputs.execution_file }}
+        run: python3 .meta/detect_fallback.py
+
+      - name: configure gemini reviewer settings
+        if: steps.harness.outputs.harness == 'gemini' || steps.claude_quota.outputs.fallback == 'true'
+        env:
+          GEMINI_PROJECT_DIR: ${{ github.workspace }}
+        run: |
+          # Reviewer tool confinement for the Gemini path (solorepo's DR-110,
+          # solorepo's DR-245).
+          #
+          # Under Antigravity CLI (`agy`), `tools.core` in `settings.json` is the
+          # whole confinement holding the line: naming what the model may call
+          # is what leaves `write_file`, `replace`, `web_fetch`, and
+          # `google_web_search` out rather than constrained, mirroring the tools
+          # held out on the Claude path above (line 554). `write_file` and
+          # `replace` are excluded because writes onto paths under `.meta/say/`
+          # or `.meta/hooks/` could be read back by `run_shell_command`;
+          # `web_fetch` and `google_web_search` are excluded to prevent
+          # exfiltration of credentials or repository state to external endpoints.
+          # `DANGEROUS_TOOLS` in `.meta/checks/files/workflows.py` carries why
+          # this pairs with the Claude path's list the way it does.
+          #
+          # `tools.core` admits `run_shell_command` so the reviewer session can
+          # execute necessary commands (`python3 .meta/check_pr.py`, `git diff`,
+          # and `.meta/say/post`). Because `agy` does not dispatch `BeforeTool`
+          # hooks from `settings.json`, `worktree_only.py` does not intercept
+          # `run_shell_command` at runtime on this path (deferred to
+          # solorepo's #682). The `hooks.BeforeTool` registration below is
+          # retained in `~/.gemini/settings.json` so the gate check
+          # `gemini_core_matches_hook_matcher` and the harness registration
+          # probes pass cleanly against the configuration.
+          #
+          # Settings written to `~/.gemini/settings.json` are merged into
+          # `~/.gemini/antigravity-cli/settings.json` via `.meta/detect_fallback.py
+          # --merge-settings` so mounted developer credentials and subscription
+          # configurations in the ARC runner are preserved rather than replaced.
+          mkdir -p ~/.gemini ~/.gemini/antigravity-cli
+          cat <<'SETTINGS_EOF' > ~/.gemini/settings.json
+          {
+            "tools": {
+              "core": ["read_file", "read_many_files", "grep_search", "search_file_content", "glob", "list_directory", "run_shell_command"]
+            },
+            "hooks": {
+              "BeforeTool": [
+                {
+                  "matcher": "^(run_shell_command|read_file|read_many_files|grep_search|search_file_content|glob|list_directory)$",
+                  "hooks": [
+                    {
+                      "type": "command",
+                      "name": "worktree-only",
+                      "command": "$GEMINI_PROJECT_DIR/.meta/hooks/worktree_only.py"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+          SETTINGS_EOF
+          python3 .meta/detect_fallback.py --merge-settings
+
+      - name: review the pull request (gemini)
+        id: review_gemini
+        if: steps.harness.outputs.harness == 'gemini' || steps.claude_quota.outputs.fallback == 'true'
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          GEMINI_PROJECT_DIR: ${{ github.workspace }}
+        uses: ./.meta/actions/agy
+        with:
+          model: ${{ steps.depth.outputs.gemini_model }}
+          effort: ${{ steps.depth.outputs.effort }}
+          timeout-minutes: ${{ steps.depth.outputs.minutes }}
+          prompt: |
+            Your Personality is work:personality/reviewer: Analytical and thorough. Holds the diff to the Disciplines and the Charter strictly. Clear and precise in identification of issues; concise yet unambiguous in argument.
+
+            You are the reviewer Role (solorepo's DR-107), answering a review request on
+            pull request #${{ github.event.pull_request.number }} of
+            ${{ github.repository }}. Read /pr-first-reviewer first: it is
+            the reviewer's reading of PR First, and says what a pull request
+            here must hold, what a reviewer's point owes, and which verbs
+            are yours; `AGENTS.md` (and `GEMINI.md`) has the conventions.
+
+            Then read `.review/constraints.md` with the Read tool. It was
+            written before this session and says where the diff is, which
+            paths in the worktree are trunk's and not this pull request's,
+            where the pull request's own version of those is, and what the
+            shell here takes. It binds you and every agent you spawn.
+
+            Then read what this Role has already said on it, before saying
+            anything: `python3 .meta/check_pr.py ${{ github.event.pull_request.number }} --threads`.
+            It lists every verdict with the head GitHub recorded it against
+            and the login that gave it, then the threads owed an answer, the
+            ones held for promotion, and the ones answered and resolved. Your
+            login is `${{ github.repository_owner }}-${{ github.event.repository.name }}-reviewer`;
+            a verdict by any other login, the solo's approval among them, is
+            not this Role's and decides nothing here, and a `DISMISSED` one
+            was withdrawn and decides nothing, whatever head it names. A run before this one may have raised
+            points and been cancelled by a push before its verdict. A point
+            already on the pull request is not raised again; where the new
+            head changes it, answer in its thread.
+
+            A long argument makes a long listing, and a shell result past
+            about 30 KB arrives as its first 2 KB and the path of a file
+            holding the whole; the verdicts print before everything else so
+            the preview holds the newest, and the file is read with the Read
+            tool before anything is decided from the preview.
+
+            If the listing shows a verdict of this Role and threads it raised
+            answered and resolved, this is a re-review, not a review: read
+            each answer against the diff between the head the verdict names
+            and this one, `git diff <that-head> ${{ github.event.pull_request.head.sha }}`.
+            The head GitHub records on a verdict is the head current when it
+            was posted, which is newer than the one the run read if a push
+            landed during the run; and a rebase of an open branch orphans
+            the old head, so where `git diff` cannot resolve that head, read
+            the pull request's whole diff at `.review/diff.patch` and each
+            answer in its thread instead. Say in the thread where an answer does not hold,
+            and post the verdict. Do not run the code-review skill again on
+            a head a verdict of this Role already names, nor on a head that
+            differs from one only by the answers; its agents cost the turns the verdict
+            needs (solorepo's #102), and on solorepo's #117 every pass ran it again because the
+            listing hid what had been resolved (solorepo's #122). Do not wait for
+            pending checks to finish: `gh pr checks` exits non-zero while a check
+            is pending, and the standing merge manager evaluates completed checks
+            before landing. However, inspect completed checks on this head with
+            `gh pr checks ${{ github.event.pull_request.number }}` and test form
+            compliance with `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`.
+
+            Then review with /code-review:code-review ${{ steps.depth.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+            without --comment. Every agent the review spawns is bound by
+            `.review/constraints.md` too, and hand it that line rather than
+            the paragraphs: writing them out once per agent is what made the
+            fourth agent start nearly a minute after the first (solorepo's #196).
+
+            Scope that pass before you spawn it (solorepo's DR-166). Every
+            agent runs in the foreground and the pass has been costing the sum
+            of its agents: that is where an initial review's 11 to 15 minutes
+            go (solorepo's #303). Name
+            the dimensions this diff actually has, from `.review/diff.patch`
+            which you have already read, and spawn no more than
+            ${{ steps.depth.outputs.agents }} of them, one to a dimension. When
+            launching multiple agents for independent work, send them in a
+            single message with multiple tool uses so they execute concurrently
+            in the foreground, returning together in the same turn rather than
+            costing the sum of their sequential executions (solorepo's DR-189).
+            If the diff
+            modifies docstrings, comments, Decision Records, or markdown files, include
+            the Technical Writer pass (evaluating against `work:personality/technical-writer`
+            and the Literate Programming rubric of solorepo's DR-175, solorepo's DR-176). A
+            dimension this diff does not touch is not reviewed by an agent
+            that finds nothing in it; one you can settle from the diff
+            yourself does not need an agent either; and no two agents get the
+            same dimension in different words. That number is a ceiling and
+            not a quota, so a diff with one dimension gets one agent whatever
+            the path, and a diff you have read whole gets none.
+
+            Post only through the channel, so every word carries the Trailer.
+            Every posting command begins with `.meta/say/post` and takes its
+            body as a quoted heredoc on stdin; a command that begins with
+            anything else, `cat` or `printf` or `echo`, is not permitted to
+            run. Each finding goes on a line of the diff:
+
+                .meta/say/post --role reviewer raise ${{ github.event.pull_request.number }} <path> <line> <<'BODY'
+                ...
+                BODY
+
+            and the verdict carries a body saying what was checked and what
+            was found:
+
+                .meta/say/post --role reviewer review ${{ github.event.pull_request.number }} --approve|--request-changes|--comment <<'BODY'
+                ...
+                BODY
+
+            Never `gh pr review`, `gh pr comment` or `gh api`: the hook
+            refuses them. Resolve no thread but one a promotion left open.
+            Where every comment on a thread carries one Trailer, the reply
+            that promotes it says `Left open: ...` and the thread stays open —
+            `promote` writing `Promoted to <url>. Left open: ...`, and `post
+            answer` putting the same sentence behind the coder's own words:
+            A16 accepts a second party's reply or a link, and
+            solorepo's DR-224 narrows the link limb, so a thread carrying one
+            Trailer waits for a second Job even with the link on it. This run
+            is that Job, its `ACTOR_SESSION` being this run's. So before the verdict,
+            for each unresolved thread whose last comment is one of those:
+
+                .meta/say/post --role reviewer resolve <thread-id>
+
+            and name in the verdict what you closed. Telling that thread
+            from the rest is yours: read the last comment, and resolve only
+            where it carries the Issue's URL and the words `Left open:`.
+            The verb is a backstop and not the test — it
+            refuses a thread every comment of which carries your own Trailer,
+            and one with neither a second party nor a promotion link, and
+            permits everything else, so a live point you misread as promoted
+            would resolve without a murmur. Every other thread is owed an
+            answer by whoever the point is for: reply to it, or raise a new
+            one, and leave it open.
+
+            Your approval clears the review semaphore for the merge manager. If
+            any completed check on this head has failed (in `gh pr checks`), or
+            if `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`
+            exits non-zero, do NOT approve. An approval on a red head leaves the
+            pull request stalled indefinitely: the merge manager will not land
+            non-green work and the promotion pass performs no checks. On a
+            `(claude|gemini|codex)/issue-*` branch, requesting changes is the semaphore that
+            wakes the coder Role to fix breakage; on other branches, it informs
+            the author. Post `--request-changes` instead, naming the failing
+            checks in "What was found". If all completed checks are green (or
+            pending) and the diff is clean, post your approval with
+            `.meta/say/post --role reviewer review ${{ github.event.pull_request.number }} --approve`. A standing
+            merge manager lands what is green in order of leverage
+            (solorepo's DR-161). Do not arm the merge and do not merge by hand.
+
+            Your turn ends when the verdict is posted, and not before. The
+            run ends when your turn ends: nothing here waits for a background
+            agent, whatever the harness's own reference says, and a turn that
+            ended "waiting for the agents" is a run that posted nothing —
+            solorepo's #130, #138 and #140. So an Agent you spawn runs in the foreground,
+            never with `run_in_background`, and its result arrives in the
+            same turn; one you did start in the background is read with
+            TaskOutput before anything else. The step after this session
+            counts your verdicts, and a session that added none is a red run.
+
       # A session that ended without a verdict has not reviewed, and the check
       # says so. The action reports success when the model's turn ends, and a
       # turn ends holding for a background subagent as readily as on a
@@ -624,8 +859,12 @@ jobs:
       # Count `SOLOREPO_HOOK_EVIDENCE`: an empty file means the reviewer session
       # did not start or no call reached the hook. `!cancelled()` follows the
       # preceding verdict check, and the count asserts that the hook ran.
+      # The Gemini path is currently exempt because Antigravity CLI (`agy`) does
+      # not dispatch `BeforeTool` hooks, and an `agy`-compatible `PreToolUse`
+      # hook adapter for `worktree_only.py` is tracked under solorepo's #682;
+      # on that path `tools.core` serves as the whole confinement boundary.
       - name: the hook fired
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.review_claude.outcome == 'success' }}
         run: |
           if [ -s "$SOLOREPO_HOOK_EVIDENCE" ]; then
             echo "the hook decided $(wc -l < "$SOLOREPO_HOOK_EVIDENCE") calls on #$PR"
@@ -639,7 +878,10 @@ jobs:
       # A review that exceeded its fan-out ceiling has breached the depth contract
       # (solorepo's DR-166, solorepo's DR-191). The tool counts spawned subagent invocations
       # from the execution output and fails closed (exit code 1) on any breach.
+      # The Gemini path is currently exempt from this post-execution transcript check
+      # because Antigravity CLI does not produce Claude execution transcript JSON;
+      # on that path the ceiling is communicated via prompt constraints alone.
       - name: the fan-out ceiling was kept
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.review_claude.outcome == 'success' }}
         run: |
           python3 .meta/agents.py --ceiling "${{ steps.depth.outputs.agents }}" --file "${{ steps.review_claude.outputs.execution_file }}"
