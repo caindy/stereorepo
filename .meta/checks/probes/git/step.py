@@ -12,9 +12,24 @@ import tempfile
 
 from checks.collect import ROOT, check
 from checks.probes.git import events, offers, registration, verdicts
-from checks.probes.harness import exit_of, load_hook, stood_in
+from checks.probes.harness import environment, exit_of, load_hook, stood_in
 
 REVIEW_WORKFLOW = ROOT / ".github" / "workflows" / "review.yml"
+EVIDENCE_LINE = re.compile(
+    r"^(?P<when>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00) (?P<tool>\S+) (?P<decided>permit|refuse)$")
+"""One line of the hook's Evidence, as `verdict.record_evidence` writes it and as a run that names the file reads it back: an ISO-8601 UTC instant to the second, the tool, and the decision.
+
+Each of the three fields is matched rather than skipped, so the pattern holds
+the whole of the format the hook publishes in its own Input/Output Contract: an
+instant at another precision or in another zone, or a decision recorded against
+a tool the payload did not name, is not a line (solorepo's #645).
+"""
+
+
+def _decision(line: str) -> tuple[str, str] | None:
+    """The tool one line of the hook's Evidence names and the decision it records, or `None` where the line is not one."""
+    match = EVIDENCE_LINE.match(line)
+    return (match.group("tool"), match.group("decided")) if match else None
 
 
 def _verdicts(hooks):
@@ -48,16 +63,23 @@ def _events(worktree):
 
     `main()` returns the code rather than exiting with it, so the call is wrapped
     in the `sys.exit` the program's last line performs, which is what `exit_of`
-    reads.
+    reads. It is run with no file named for the hook's Evidence: these rows run
+    in this process, so a row left to inherit `SOLOREPO_HOOK_EVIDENCE` would
+    append to whatever file that names — in a job that sets it for the whole
+    run, the very file read back to tell that a session was confined
+    (solorepo's #645). A payload that is not an object has no fields to name, so
+    the line says what was sent instead.
     """
     problems = []
     for group, rows in events.EVENTS:
         for want, event in rows:
-            with stood_in(sys, stdin=io.StringIO(json.dumps(event))):
+            with environment(SOLOREPO_HOOK_EVIDENCE=None), \
+                    stood_in(sys, stdin=io.StringIO(json.dumps(event))):
                 code = exit_of(lambda: sys.exit(worktree.main()))
             if code != ("2" if want == "refuse" else "0"):
-                problems.append(f"{group}: a {event['hook_event_name']} for {event['tool_name']} "
-                                f"should {want} and exited {code}")
+                sent = (f"a {event['hook_event_name']} for {event['tool_name']}"
+                        if isinstance(event, dict) else f"the payload {event!r}")
+                problems.append(f"{group}: {sent} should {want} and exited {code}")
     return problems
 
 
@@ -122,10 +144,10 @@ def _matchers() -> list[str]:
 
 
 def _registration() -> list[str]:
-    """`REGISTRATIONS`, per harness: the registered matcher against the tool name its own event carries, and the registered command resolved and run as a real subprocess.
+    """`REGISTRATIONS`, per harness: the registered matcher against the tool name its own event carries, the registered command resolved and run as a real subprocess over a refused call, a permitted one and a payload that is not JSON at all, and one line of Evidence left per call it decided.
 
-    The why is `registration`'s own module docstring (solorepo's #456); this is
-    the invariant alone.
+    The why is `registration`'s own module docstring (solorepo's #456,
+    solorepo's #645); this is the invariant alone.
     """
     if not REVIEW_WORKFLOW.is_file():
         return [f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing"]
@@ -150,14 +172,37 @@ def _registration() -> list[str]:
         if not os.access(resolved, os.X_OK):
             problems.append(f"{harness}: the registered command {resolved} is not executable")
             continue
-        env = {**os.environ, variable: str(ROOT)}
-        for want, event in (("refuse", refuse_event), ("allow", allow_event)):
-            proc = subprocess.run([str(resolved)], input=json.dumps(event),
-                                  capture_output=True, text=True, env=env)
-            code = str(proc.returncode)
-            if code != ("2" if want == "refuse" else "0"):
-                problems.append(f"{harness}: the registered command should {want} "
-                                f"{event['tool_input']!r} and exited {code}")
+        with tempfile.TemporaryDirectory() as d:
+            evidence = pathlib.Path(d) / "hook.evidence"
+            env = {**os.environ, variable: str(ROOT), "SOLOREPO_HOOK_EVIDENCE": str(evidence)}
+            calls = (
+                ("refuse", json.dumps(refuse_event).encode("utf-8"), repr(refuse_event["tool_input"]),
+                 (tool_name, "refuse")),
+                ("allow", json.dumps(allow_event).encode("utf-8"), repr(allow_event["tool_input"]),
+                 (tool_name, "permit")),
+                ("refuse", registration.UNREADABLE, "a payload that is not JSON at all",
+                 ("?", "refuse")),
+            )
+            exited = []
+            for want, payload, shown, _ in calls:
+                proc = subprocess.run([str(resolved)], input=payload, capture_output=True, env=env)
+                code = str(proc.returncode)
+                exited.append(code == ("2" if want == "refuse" else "0"))
+                if not exited[-1]:
+                    problems.append(f"{harness}: the registered command should {want} "
+                                    f"{shown} and exited {code}")
+            if not all(exited):
+                continue
+            written = evidence.read_text(encoding="utf-8").splitlines() if evidence.is_file() else []
+            wanted = [decision for *_, decision in calls]
+            if [_decision(line) for line in written] != wanted:
+                problems.append(f"{harness}: the registered command {resolved} decided "
+                                f"{len(calls)} calls and left {written!r} in the file "
+                                f"SOLOREPO_HOOK_EVIDENCE named ({evidence}) rather than a "
+                                "`<UTC timestamp, seconds> <tool> permit|refuse` line for each, "
+                                f"naming {wanted!r} in that order — which is the record a run that "
+                                "names the file reads back to tell a confined session from an "
+                                "unconfined one")
     return problems
 
 
@@ -173,7 +218,9 @@ def hook_probes():
     `INSTEAD`, each program off the list with the tool
     its refusal names in its place; `REGISTRATIONS`, each harness's own matcher
     and command line as `review.yml` registers them, resolved against this
-    checkout and run as a subprocess rather than assumed (solorepo's #456).
+    checkout and run as a subprocess rather than assumed (solorepo's #456),
+    leaving the Evidence a live run reads back to tell that the hook ran at all
+    (solorepo's #645).
     Asserts that wildcard components do not match parent directories across
     the harnesses' own matchers (solorepo's #457).
     A line names the group and the call that gave way, so the report says which

@@ -18,7 +18,14 @@ Input/Output Contract:
     Exits with code 0 to permit execution.
     Exits with code 2 and writes an explanatory refusal message to stderr to block
     execution; Claude Code and Gemini CLI both read code 2 as a block and stderr
-    as the reason given to the agent.
+    as the reason given to the agent. A payload that is not a readable event —
+    bytes that are not JSON, JSON that is not an object, or a stdin that cannot
+    be read — is blocked in the same way, because both harnesses read any other
+    exit code as a non-blocking error and run the tool anyway.
+    Appends one line of Evidence, `<UTC timestamp, seconds> <tool>
+    permit|refuse`, to the file `SOLOREPO_HOOK_EVIDENCE` names, where the run
+    set it, so that a session this hook never confined is a run that can be told
+    apart from a confined one (solorepo's #645).
 
 History in worktree_only.history.md (solorepo's DR-171).
 """
@@ -72,6 +79,7 @@ from lib.worktree_only.shell import (
 from lib.worktree_only.verdict import (
     blocked,
     main,
+    record_evidence,
 )
 
 __all__ = [
@@ -110,6 +118,7 @@ __all__ = [
     "partition_unquoted",
     "paths",
     "plain_form",
+    "record_evidence",
     "refused_option",
     "requote",
     "shell",

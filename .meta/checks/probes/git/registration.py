@@ -13,8 +13,37 @@ table is read against a real subprocess: the registered path is resolved with
 the harness's own project-directory variable, and the registered matcher is
 checked against the tool name each harness's own before-tool envelope would
 carry, before either amounts to nothing.
+
+What no check here can reach is the live session, where what honours the
+settings is the action's own release rather than anything in this tree: a
+release that renames an input or stops writing the settings file leaves the
+hook uninvoked with every assertion above still green. What a run can read back
+is the Evidence the hook leaves, one line per call it decided (solorepo's #645),
+so each subprocess run below is asserted to leave one too — the record such a
+run would depend on is then itself under a check, rather than being the one part
+of the boundary nothing reads.
+
+The subprocess is also the only place a payload that is not JSON can be sent:
+`EVENTS` reaches the entry point through `json.dumps`, so every row it can hold
+is a JSON value by construction, and `UNREADABLE` is the case that sits outside
+that table.
 """
 import re
+
+UNREADABLE = b"\xff\xfe{\x00"
+"""Bytes a harness could put on a hook's stdin that are not a JSON document, and are not UTF-8 either.
+
+Sent to the registered command as bytes rather than text, so the entry point
+meets a payload it cannot read as an event at all. Which half it fails in turns
+on the error handler the run's `sys.stdin` was opened with rather than on the
+bytes: `strict` raises out of the read, and `surrogateescape` — which PEP 540's
+UTF-8 Mode enables and a `C` or `POSIX` locale turns on — carries them to the
+parser instead. Either way it owes a refusal: an exception reaching the
+interpreter exits 1, and a harness
+reads any code other than 0 or 2 as a non-blocking error and runs the tool
+anyway, so the boundary would fail open on a payload it never had to understand
+(solorepo's #645).
+"""
 
 REGISTRATIONS = (
     ("Claude Code", "CLAUDE_PROJECT_DIR",
