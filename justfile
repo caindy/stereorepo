@@ -81,6 +81,6 @@ arc-cluster:
 arc:
     .meta/arc/deploy
 
-# run automated Specialization dogfooding end-to-end (solorepo's DR-239)
-dogfood *args:
-    python3 .meta/dogfood.py {{args}}
+# run automated Specialization end-to-end verification (solorepo's DR-239, solorepo's DR-244)
+test-specialization *args:
+    python3 .meta/test_specialization.py {{args}}

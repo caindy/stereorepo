@@ -1,9 +1,9 @@
-# Automated Specialization dogfooding audit (solorepo's DR-239).
+# Automated Specialization end-to-end verification audit (solorepo's DR-239, solorepo's DR-244).
 #
 # Runs weekly on schedule and on manual workflow dispatch, verifying that
 # the 8-step Specialization discipline executes hermetically end-to-end
 # against pre-judged portfolio fixtures.
-name: dogfood
+name: test-specialization
 
 on:
   schedule:
@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  dogfood:
-    name: specialization-dogfood
+  test-specialization:
+    name: test-specialization
     runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
@@ -25,6 +25,6 @@ jobs:
 
       - uses: ./.meta/actions/gh
 
-      - name: Run Specialization Dogfooding
+      - name: Verify Specialization End-to-End
         run: |
-          python3 .meta/dogfood.py
+          python3 .meta/test_specialization.py

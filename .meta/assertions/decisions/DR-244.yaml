@@ -1,0 +1,76 @@
+decisions:
+  - id: work:decision/244
+    name: "DR-244 · Distinguishing synthetic Specialization test verification from the Dogfooding discipline"
+    challenge: work:challenge/679
+    status: ADOPTED
+    applies:
+      - work:article/9
+      - work:article/17
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-test-specialization
+      - work:artifact/justfile
+      - work:artifact/meta-fixtures-specialization-readme
+      - work:artifact/meta-fixtures-specialization-tokens
+      - work:artifact/meta-checks-probes-tools-test-specialization
+      - work:artifact/github-workflows-test-specialization
+    context: >-
+      Challenge #657 delivered an automated runner and CI workflow to verify the 8-step
+      Specialization procedure into an isolated temporary directory (solorepo's DR-239),
+      automating the clean test repository verification that closed First Specialization
+      (solorepo's DR-204). That work carried over the colloquial identifier "dogfood" across
+      runner scripts, operator recipes, and scheduled workflows.
+    alternatives:
+      - name: Retain colloquial "dogfood" naming across scripts, operator recipes, and workflows
+        chosen: false
+        reason: >-
+          Retaining the colloquial identifier violates Article 17 and solorepo's Ubiquitous
+          Language parity. The Dogfooding discipline (work:discipline/dogfooding in
+          .meta/assertions/imported/disciplines.yaml) requires running a procedure for real rather
+          than reviewing it ("No test distinguishes them — only use does"). Leaving synthetic
+          fixture execution labeled as dogfooding on the operator surface conflates automated
+          test execution with the Dogfooding discipline.
+      - name: Distinguish synthetic test execution from dogfooding under the test-specialization identifier
+        chosen: true
+        reason: >-
+          Renames the runner to .meta/test_specialization.py, the operator recipe to just
+          test-specialization, the CI workflow to .github/workflows/test-specialization.yml,
+          and the probe module to .meta/checks/probes/tools/test_specialization.py.
+          Displaces the colloquial "dogfood" identifier from synthetic test execution so that
+          the Dogfooding discipline (work:discipline/dogfooding) remains reserved for authentic
+          application of what is being built to this repository.
+    consequences:
+      - >-
+        .meta/test_specialization.py executes all 8 Specialization discipline steps
+        end-to-end into an isolated temporary repository under the test-specialization
+        identifier.
+      - >-
+        just test-specialization exposes automated Specialization end-to-end verification
+        on the root operator surface (solorepo's DR-106).
+      - >-
+        .github/workflows/test-specialization.yml executes automated Specialization
+        end-to-end verification on schedule and manual dispatch.
+      - >-
+        .meta/checks/probes/tools/test_specialization.py probes the Specialization test
+        runner under the test-specialization identifier.
+      - >-
+        Synthetic fixture tokens (.meta/fixtures/specialization/tokens.json) and documentation
+        (.meta/fixtures/specialization/README.md) supply deterministic specialization inputs
+        for the test runner, reserving the Dogfooding discipline for authentic application.
+      - >-
+        Resolves Challenge 679.
+    falsifier: >-
+      Any script, recipe, workflow, or assertion under .meta/ or .github/ retaining the
+      "dogfood" identifier for synthetic Specialization test execution.
+    rationale: >-
+      Per Article 17 and solorepo's DR-190, vocabulary across code, commands, and documentation
+      must strictly adhere to the Ubiquitous Language. In solorepo, Dogfooding is a minted concept
+      (work:concept/dogfooding in .meta/assertions/imported/vocabulary.yaml) defined as "Using what
+      is being built, on itself, before anyone else has to", and a formal discipline
+      (work:discipline/dogfooding in .meta/assertions/imported/disciplines.yaml) whose judgement
+      holds that "No test distinguishes them — only use does" and whose third step is to "Run a
+      procedure for real rather than reviewing it". Executing synthetic specialization steps
+      against static fixture tokens in an ephemeral directory is an automated end-to-end
+      integration test rather than authentic dogfooding. Unifying runner scripts, operator
+      recipes, CI workflows, and regression probes under the test-specialization identifier
+      aligns the tooling with the Ubiquitous Language.

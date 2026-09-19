@@ -1,0 +1,15 @@
+challenges:
+  - id: work:challenge/679
+    name: Refactor and rename Specialization dogfooding harness to end-to-end verification
+    challenge_type: FEATURE
+    description: >-
+      The automated Specialization test harness (.meta/dogfood.py), its operator
+      recipe (just dogfood), CI workflow (.github/workflows/dogfood.yml), and test probes
+      were colloquially named "dogfooding". In solorepo's Ubiquitous Language, Dogfooding
+      is a formal discipline (work:discipline/dogfooding): "Use what is being built,
+      on itself, before anyone else has to", whose third step is to "Run a procedure for real
+      rather than reviewing it" and whose judgement notes "No test distinguishes them — only use does".
+      Refactor and rename the synthetic fixture harness, operator entrypoint, and workflows to
+      end-to-end verification (.meta/test_specialization.py, just test-specialization,
+      .github/workflows/test-specialization.yml) to distinguish synthetic test execution from
+      the Dogfooding discipline.

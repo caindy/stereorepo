@@ -7,12 +7,12 @@ decisions:
       - work:article/9
       - work:article/21
     enacted_in:
-      - work:artifact/meta-dogfood
+      - work:artifact/meta-test-specialization
       - work:artifact/justfile
       - work:artifact/meta-fixtures-specialization-readme
       - work:artifact/meta-fixtures-specialization-tokens
-      - work:artifact/meta-checks-probes-tools-dogfood
-      - work:artifact/github-workflows-dogfood
+      - work:artifact/meta-checks-probes-tools-test-specialization
+      - work:artifact/github-workflows-test-specialization
     context: >-
       Specialization is the core value proposition of solorepo: turning a clone
       into an independent portfolio via an 8-step discipline (solorepo's DR-204).
@@ -52,21 +52,21 @@ decisions:
       - >-
         .meta/fixtures/specialization/README.md documents the synthetic fixture contract under Diátaxis Reference mode.
       - >-
-        .meta/dogfood.py executes all 8 Specialization discipline steps end-to-end into a hermetic temporary repository.
+        .meta/test_specialization.py executes all 8 Specialization discipline steps end-to-end into a hermetic temporary repository.
       - >-
-        just dogfood exposes the automated specialization audit on the root operator surface.
+        just test-specialization exposes the automated specialization audit on the root operator surface.
       - >-
-        .github/workflows/dogfood.yml audits Specialization weekly and on manual dispatch.
+        .github/workflows/test-specialization.yml audits Specialization weekly and on manual dispatch.
       - >-
-        .github/workflows/release.yml runs Specialization dogfooding prior to publishing releases.
+        .github/workflows/release.yml runs Specialization verification prior to publishing releases.
       - >-
-        .meta/checks/probes/tools/dogfood.py provides regression probes for fixture loading, retargeting, and substitution.
+        .meta/checks/probes/tools/test_specialization.py provides regression probes for fixture loading, retargeting, and substitution.
       - >-
         Resolves Challenge 657, Challenge 658, Challenge 659, and Challenge 660.
     falsifier: >-
       A change to the scaffold, template files, bootstrap templates, or inherited tooling
       that breaks any step of the 8-step Specialization discipline or causes the specialized
-      portfolio gate to fail while .meta/dogfood.py or just dogfood exits cleanly.
+      portfolio gate to fail while .meta/test_specialization.py or just test-specialization exits cleanly.
     rationale: |-
       Per Article 9, a seed is data and is gated by rendering it and running the real
       gates on the result. Specialization is solorepo's primary external seed transformation.

@@ -46,9 +46,9 @@ jobs:
           export PATH="$HOME/.apm/bin:$PATH"
           python3 .meta/apm_compile.py validate
 
-      - name: Dogfood Specialization End-to-End
+      - name: Verify Specialization End-to-End
         run: |
-          python3 .meta/dogfood.py
+          python3 .meta/test_specialization.py
 
       - name: Publish GitHub Release
         env:
