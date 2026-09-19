@@ -1,0 +1,80 @@
+decisions:
+  - id: work:decision/241
+    name: "DR-241 · Prohibiting embedded inline Python invocations in workflows and shell scripts"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/github-workflows-coder
+      - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-lib-check-pr-cli
+      - work:artifact/meta-check-pr
+    context: >-
+      GitHub Actions workflows and shell scripts previously contained embedded inline Python
+      invocations (`python3 -c '...'`) within Bash run steps across `.github/workflows/`
+      and repository tooling. Because these inline scripts existed only as raw strings
+      inside workflow YAML blocks and shell commands, they bypassed static analysis
+      tools (`ruff`, `mypy`), syntax validators, and repository gate prechecks. Where
+      multi-line logic blocks were duplicated across workflows (such as the fallback
+      detection logic consolidated under DR-240 into `.meta/detect_fallback.py`),
+      maintaining them inline escaped static typing and linting.
+    alternatives:
+      - name: Permit inline Python one-liners when concise or single-use
+        chosen: false
+        reason: >-
+          Admitting exceptions for "simple" or "short" one-liners reintroduces unlinted,
+          untyped execution strings into CI and shell tooling, leaving the boundary
+          subjective and susceptible to incremental drift into multi-line logic blocks.
+      - name: Linters or regex extractors embedded in CI to lint YAML block strings
+        chosen: false
+        reason: >-
+          Extracting and running linters against synthetic Python snippets dynamically
+          scraped from YAML block scalars is fragile, error-prone, lacks editor tooling
+          integration, and does not provide standalone execution or testing capabilities.
+      - name: Prohibit inline Python across workflows and scripts, externalizing to first-class scripts and enforcing via gate check
+        chosen: true
+        reason: >-
+          Establishes a repository rule prohibiting direct inline Python invocations
+          (`python3 -c`, stdin heredocs, or piped interpreters) inside workflow steps,
+          composite actions, shell scripts, and recipes. Where Python logic is needed, it
+          must reside in a dedicated, first-class, linted, and type-checked script under
+          `.meta/`, or the step must be structured around a dedicated CLI flag on existing
+          tools (such as `check_pr.py --unresolved-count`). A dedicated gate check
+          `no_inline_python` mechanizes this rule by scanning workflow files, composite
+          actions, shell scripts, and the `justfile` for direct inline Python invocations.
+    consequences:
+      - >-
+        Workflow files across `.github/workflows/`, template workflows, composite actions under
+        `.meta/actions/`, repository shell scripts, and the repository `justfile` are prohibited
+        from using direct inline Python invocations (`python3 -c`, `python -c`, `uv run python -c`,
+        stdin heredocs, or piped interpreters).
+      - >-
+        `.github/workflows/coder.yml` replaces its inline Python thread-counting one-liner in the
+        `check for threads to promote` step with `python3 .meta/check_pr.py "$PR" --unresolved-count`.
+      - >-
+        `.meta/check_pr.py` and `.meta/lib/check_pr/cli.py` expose the `--unresolved-count` CLI option,
+        providing a first-class, type-checked command for retrieving unresolved review thread counts.
+      - >-
+        `.meta/checks/files/workflows.py` registers the `inline python` gate check (`no_inline_python`),
+        which validates that all workflow files, composite actions, shell scripts, and the `justfile`
+        remain free of direct inline Python invocations.
+    falsifier: >-
+      A scanned workflow file in `.github/workflows/`, a composite action in `.meta/actions/`,
+      a shell script, or the `justfile` containing an inline Python invocation (such as
+      `python3 -c`, `python3 <<`, `cat <<'PY' | python3`, or valued flag variants like
+      `python3 -W ignore -c`) passing the gate without being rejected by `no_inline_python`;
+      or a run step in `.github/workflows/coder.yml` reverting to an inline thread-counting string.
+    rationale: |-
+      In an autonomous repository developed by a team of one and a fleet of agents, static
+      analysis and mechanization are the primary defenses against silent defects. Inline
+      code strings inside YAML or Bash escape all toolchain checks — linters cannot see them,
+      type checkers cannot verify them, and syntax checkers do not parse them.
+
+      Requiring all Python logic to exist as first-class scripts under `.meta/` or as arguments to
+      existing CLI tools ensures that every piece of logic undergoes formatting, linting with ruff,
+      type checking with mypy, and docstring auditing before landing in trunk.
+
+      The gate check detects the spellings agents reach for by habit (`python`, `python3`,
+      `python3.12`, or `uv run python` followed by `-c`, a heredoc, or bare `-`, or piped
+      interpreters ending a pipeline) across workflow files, composite actions, shell scripts, and
+      the `justfile`. While indirect execution via shell variables or dynamic shell evaluation
+      falls outside regex inspection, mechanizing the habituated forms ensures that routine CI
+      and recipe development does not reintroduce uninspected inline logic.

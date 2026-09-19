@@ -26,6 +26,8 @@ def parser(description: str) -> argparse.ArgumentParser:
     ap.add_argument("--threads", action="store_true",
                     help="print the threads owed, held, and answered, and each verdict "
                          "with the head it was given on; check nothing")
+    ap.add_argument("--unresolved-count", action="store_true",
+                    help="print the count of unresolved review threads on this pull request; check nothing")
     ap.add_argument("--resume", action="store_true",
                     help="what an arriving Job needs, read from GitHub")
     ap.add_argument("--handoff", action="store_true",
@@ -109,6 +111,8 @@ def main(description: str) -> None:
         (args.watch, "--watch", lambda: polling.watch(args.pr, args.every)),
         (args.resume, "--resume", lambda: print(polling.resume(args.pr))),
         (args.threads, "--threads", lambda: print_threads(args.pr)),
+        (args.unresolved_count, "--unresolved-count",
+         lambda: print(len([t for t in github.threads(args.pr) if not t.get("isResolved")]))),
     )
     for chosen, needs_pr, run in modes:
         if not chosen:

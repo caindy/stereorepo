@@ -93,3 +93,14 @@ by a review thread, with every other gate green (solorepo's #454). Established:
 fails on any difference between them, in either direction.
 
 Evidence: `.meta/checks/files/workflows.py::gemini_core_matches_hook_matcher`
+
+### Embedded inline Python invocation in coder workflow promotion
+
+The promotion step in `.github/workflows/coder.yml` embedded an inline Python
+invocation (`python3 -c '...'`), bypassing static analysis tools (`ruff`,
+`mypy`), syntax checkers, and gate checks (solorepo's DR-241,
+solorepo's #666). Established: `no_inline_python` scans workflow YAML files,
+composite actions, shell scripts, and recipes, rejecting embedded Python
+invocations and requiring dedicated `.meta/` scripts or CLI flags.
+
+Evidence: `.meta/checks/files/workflows.py::no_inline_python`

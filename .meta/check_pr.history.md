@@ -137,3 +137,14 @@ credential, which fails every branch alike, is legible on the screen.
 
 Evidence: `.meta/lib/check_pr/branch.py::residue`
 
+### Embedded inline Python thread counting in coder workflow promotion
+
+The unattended coder workflow relied on an unlinted inline Python one-liner
+(`python3 -c '...'`) inside a Bash run step to count unresolved review
+threads on approved pull requests, bypassing static analysis and prechecks
+(solorepo's DR-241, solorepo's #666). Established: `check_pr.py` grew the
+`--unresolved-count` flag, and `no_inline_python` fails the gate if a run
+step goes back to counting threads inline.
+
+Evidence: `.meta/checks/files/workflows.py::no_inline_python`
+

@@ -46,6 +46,10 @@ step's shell (solorepo's DR-155).
 it holds is about the branch: A18, and what a branch that changes the record owes
 along with it — a render that is current, and a decision that names the artifacts
 the branch edits while settling it (solorepo's DR-175).
+
+`--unresolved-count` outputs the count of unresolved review threads for the
+pull request, giving unattended workflows a first-class CLI query without
+embedding inline Python in shell run steps (solorepo's DR-241).
 """
 from lib.check_pr import (
     META,

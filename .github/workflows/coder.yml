@@ -1390,7 +1390,7 @@ jobs:
         id: promote
         if: github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
         run: |
-          count=$(python3 -c "import sys; sys.path.insert(0, '.meta'); from check_pr import threads; print(len([t for t in threads('$PR') if not t['isResolved']]))")
+          count=$(python3 .meta/check_pr.py "$PR" --unresolved-count)
           printf 'count=%s\n' "$count" >> "$GITHUB_OUTPUT"
           echo "Found $count unresolved thread(s) on approved #$PR"
         env:
