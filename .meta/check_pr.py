@@ -60,6 +60,7 @@ from lib.check_pr import (
     github,
     polling,
     review,
+    state,
     sweep,
     verdict,
 )
@@ -117,9 +118,6 @@ from lib.check_pr.github import (
     threads,
 )
 from lib.check_pr.polling import (
-    GREEN,
-    UNCONCLUDED,
-    deduplicate_checks,
     resume,
     snapshot,
     watch,
@@ -139,6 +137,17 @@ from lib.check_pr.review import (
     unanswered,
     verdicts,
     where_of,
+)
+from lib.check_pr.state import (
+    CODER_ACTIONABLE_STATES,
+    GREEN,
+    UNCONCLUDED,
+    PullRequestState,
+    checks_summary,
+    classify_pr,
+    deduplicate_checks,
+    is_review_requested,
+    latest_verdict,
 )
 from lib.check_pr.sweep import (
     CODER,
@@ -179,6 +188,7 @@ __all__ = [
     "BULLET",
     "CLOSES",
     "CODER",
+    "CODER_ACTIONABLE_STATES",
     "CONTEXT",
     "DEFERRED",
     "DR",
@@ -214,6 +224,7 @@ __all__ = [
     "THREADS",
     "UNCONCLUDED",
     "WORKFLOW",
+    "PullRequestState",
     "accounted",
     "artifact_map",
     "artifacts",
@@ -221,7 +232,9 @@ __all__ = [
     "branch",
     "check",
     "checks_of",
+    "checks_summary",
     "cited_issues",
+    "classify_pr",
     "cli",
     "deduplicate_checks",
     "fence",
@@ -237,6 +250,8 @@ __all__ = [
     "handoff",
     "is_approved_pull",
     "is_changes_requested_pull",
+    "is_review_requested",
+    "latest_verdict",
     "longest_run",
     "main",
     "mine",
@@ -260,6 +275,7 @@ __all__ = [
     "settled",
     "shown",
     "snapshot",
+    "state",
     "sweep",
     "sweep_all",
     "threads",

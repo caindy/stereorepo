@@ -6,7 +6,7 @@ Trailer, because every comment an agent posts is authored by the solo's account.
 """
 import re
 import types
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from lib.check_pr import META, github
@@ -80,6 +80,34 @@ def shown(thread: dict[str, Any], where: str, limit: int | None = 600) -> str:
     return f"  {thread['id']}\n  {where}\n" + "\n".join(spoke)
 
 
+def unaddressed_threads(
+    nodes: Sequence[Mapping[str, Any]],
+    parked: bool = False,
+) -> list[Mapping[str, Any]]:
+    """Filters thread nodes for unaddressed comments, partitioned by parked status.
+
+    Args:
+        nodes: Sequence of review thread node mappings.
+        parked: If True, filters for threads whose last comment is parked work.
+            If False, filters for threads owed an active answer.
+
+    Returns:
+        List of unaddressed thread node mappings.
+    """
+    out: list[Mapping[str, Any]] = []
+    for t in nodes:
+        if t.get("isResolved"):
+            continue
+        comments_obj = t.get("comments")
+        comments = comments_obj.get("nodes", []) if isinstance(comments_obj, Mapping) else []
+        last_body = str(comments[-1].get("body") or "") if comments else ""
+        held = bool(comments) and bool(NOTICED.search(last_body))
+        if held != parked:
+            continue
+        out.append(t)
+    return out
+
+
 def unaddressed(nodes: Sequence[dict[str, Any]], parked: bool = False,
                 limit: int | None = 600) -> list[str]:
     """What is still owed an answer, in the order a reader should take them.
@@ -103,16 +131,10 @@ def unaddressed(nodes: Sequence[dict[str, Any]], parked: bool = False,
     An outdated thread is still unaddressed (solorepo's DR-057) and is marked rather than
     filtered: the anchor moving is the reader's context, not a reason to skip it.
     """
-    out: list[str] = []
-    for t in nodes:
-        if t["isResolved"]:
-            continue
-        comments = t["comments"]["nodes"]
-        held = bool(comments) and bool(NOTICED.search(comments[-1]["body"] or ""))
-        if held != parked:
-            continue
-        out.append(shown(t, where_of(t), limit=limit))
-    return out
+    return [
+        shown(dict(t), where_of(dict(t)), limit=limit)
+        for t in unaddressed_threads(nodes, parked=parked)
+    ]
 
 
 def settled(nodes: Sequence[dict[str, Any]], limit: int | None = 600) -> list[str]:

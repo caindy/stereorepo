@@ -2325,7 +2325,7 @@ def check_green(pull: Pull) -> tuple[bool, str]:
     contexts = deduplicate_checks(pull.get("statusCheckRollup") or [])
     if not contexts:
         return False, "checks pending (no checks concluded)"
-    green_states = {"SUCCESS", "NEUTRAL", "SKIPPED"}
+    green_states = set(check_pr.GREEN)
     failed: list[str] = []
     pending: list[str] = []
     for c in contexts:
@@ -2488,7 +2488,7 @@ def check_decisions_in_force(pull: Pull, owner: str, name: str) -> tuple[bool, s
 
 def evaluate_pr(pull: Pull, reviewer_login: str, owner: str,
                 name: str) -> tuple[bool, list[str]]:
-    """Evaluate a pull request against all semaphores (solorepo's DR-161)."""
+    """Evaluate a pull request against all semaphores (solorepo's DR-161, solorepo's DR-248)."""
     if pull.get("isDraft"):
         return False, ["draft"]
     reasons: list[str] = []
@@ -2503,14 +2503,26 @@ def evaluate_pr(pull: Pull, reviewer_login: str, owner: str,
     rev_ok, rev_msg = check_reviewer_approval(pull, reviewer_login)
     if not rev_ok:
         reasons.append(rev_msg)
+    threads: list[dict[str, Any]] | None = None
     if pull.get("reviewThreads") is not None or not reasons:
         threads_ok, threads_msg = check_threads(pull, owner, name)
         if not threads_ok:
             reasons.append(threads_msg)
+        else:
+            threads = pull.get("reviewThreads", [])
     if not reasons:
-        decisions_ok, decisions_msg = check_decisions_in_force(pull, owner, name)
-        if not decisions_ok:
-            reasons.append(decisions_msg)
+        pr_state = check_pr.classify_pr(
+            pull,
+            deduplicate_checks(pull.get("statusCheckRollup") or []),
+            threads,
+            reviewer_login,
+        )
+        if pr_state != check_pr.PullRequestState.READY_TO_MERGE:
+            reasons.append(f"state is {pr_state.value}, not READY_TO_MERGE")
+        else:
+            decisions_ok, decisions_msg = check_decisions_in_force(pull, owner, name)
+            if not decisions_ok:
+                reasons.append(decisions_msg)
     if reasons:
         return False, reasons
     return True, ["eligible"]

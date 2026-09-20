@@ -46,10 +46,14 @@ accumulating sequential turn delays (solorepo's DR-189).
 ## Persistent Monitoring
 
 A pull request opened in an interactive session is watched until it closes. The
-operator surface `just watch <n>` maintains an active subscription: waking the
-session when actionable feedback lands so that reviews are answered
-immediately rather than after an arbitrary delay (solorepo's DR-102, solorepo's DR-138).
+operator surface `just watch <n>` maintains an active subscription: evaluating
+`PullRequestState` on every poll and acting as an active handoff semaphore
+(solorepo's DR-248) whenever coder action is required (`GATE_FAILED`,
+`CHANGES_REQUESTED`, `NEEDS_REBASE`, `AWAITING_PROMOTION`, `READY_TO_MERGE`,
+`MERGED`, `CLOSED`), waking the session immediately rather than looping
+indefinitely or sitting on unaddressed events (solorepo's DR-102,
+solorepo's DR-138).
 
 ---
 
-**See also:** [[dev-loop]], [[knowledge-management]], [[ubiquitous-language]], solorepo's DR-062, solorepo's DR-117, solorepo's DR-184, solorepo's DR-185, solorepo's DR-188, solorepo's DR-189.
+**See also:** [[dev-loop]], [[knowledge-management]], [[ubiquitous-language]], solorepo's DR-062, solorepo's DR-117, solorepo's DR-184, solorepo's DR-185, solorepo's DR-188, solorepo's DR-189, solorepo's DR-248.

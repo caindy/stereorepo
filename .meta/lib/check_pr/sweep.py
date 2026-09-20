@@ -10,7 +10,7 @@ import time
 from collections.abc import Collection, Mapping, Sequence
 from typing import Any, NamedTuple
 
-from lib.check_pr import META, github, polling, verdict
+from lib.check_pr import META, github, polling, state, verdict
 
 CODER = META.parent / ".github" / "workflows" / "coder.yml"
 
@@ -52,10 +52,10 @@ def asked_of(pr: dict[str, Any]) -> list[str]:
 
 def green(pr: dict[str, Any]) -> bool:
     """Whether every check on the head has concluded and none of them failed."""
-    contexts = polling.deduplicate_checks(pr.get("statusCheckRollup") or [])
-    states = [c.get("conclusion") or c.get("state") or c.get("status")
-              for c in contexts]
-    return bool(states) and all(s in polling.GREEN for s in states)
+    raw_contexts = pr.get("statusCheckRollup") or []
+    contexts = polling.deduplicate_checks(raw_contexts)
+    _, all_green, _ = state.checks_summary(contexts)
+    return bool(contexts) and all_green
 
 
 # What the hand-back asks `gh pr list` for, which is everything except the
@@ -73,7 +73,7 @@ def wait_for_checks(pr_number: int, timeout: int = 120,
         raw = github.rollup_of(pr_number)
         if not raw:
             return []
-        pending = [c for c in raw if (c.get("conclusion") or c.get("state") or c.get("status") or "").upper() in polling.UNCONCLUDED]
+        pending = [c for c in raw if (c.get("conclusion") or c.get("state") or c.get("status") or "").upper() in state.UNCONCLUDED]
         if not pending:
             return raw
         time.sleep(interval)
@@ -100,7 +100,7 @@ def hand_back(issue: str | int) -> dict[str, Any]:
                 "conflicting": False, "base": None}
     pr = found[0]
     raw_contexts = github.rollup_of(pr["number"])
-    pending = [c for c in raw_contexts if (c.get("conclusion") or c.get("state") or c.get("status") or "").upper() in polling.UNCONCLUDED]
+    pending = [c for c in raw_contexts if (c.get("conclusion") or c.get("state") or c.get("status") or "").upper() in state.UNCONCLUDED]
     if pending:
         raw_contexts = wait_for_checks(pr["number"], timeout=120, interval=5)
     pr["statusCheckRollup"] = polling.deduplicate_checks(raw_contexts)
@@ -114,25 +114,25 @@ def hand_back(issue: str | int) -> dict[str, Any]:
 
 def is_approved_pull(pr: dict[str, Any], reviewer_login: str | None = None) -> bool:
     """Whether the reviewer's most recent review on this pull request is an approval."""
-    if not (pr.get("latestReviews") or pr.get("reviews")):
+    reviews = pr.get("latestReviews") or pr.get("reviews")
+    if not reviews:
         return False
     if reviewer_login is None:
         reviewer_login = github.role_login("reviewer")
-    revs = [r for r in pr.get("latestReviews") or pr.get("reviews") or []
-            if (r.get("author") or {}).get("login") == reviewer_login]
-    return bool(revs and revs[-1].get("state") == "APPROVED")
+    verdict = state.latest_verdict(pr, reviewer_login)
+    return verdict == "APPROVED"
 
 
 def is_changes_requested_pull(pr: dict[str, Any],
                               reviewer_login: str | None = None) -> bool:
     """Whether the reviewer's most recent review on this pull request requests changes."""
-    if not (pr.get("latestReviews") or pr.get("reviews")):
+    reviews = pr.get("latestReviews") or pr.get("reviews")
+    if not reviews:
         return False
     if reviewer_login is None:
         reviewer_login = github.role_login("reviewer")
-    revs = [r for r in pr.get("latestReviews") or pr.get("reviews") or []
-            if (r.get("author") or {}).get("login") == reviewer_login]
-    return bool(revs and revs[-1].get("state") == "CHANGES_REQUESTED")
+    verdict = state.latest_verdict(pr, reviewer_login)
+    return verdict == "CHANGES_REQUESTED"
 
 
 class Standing(NamedTuple):

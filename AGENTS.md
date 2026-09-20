@@ -48,10 +48,12 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 - A pull request this session opened is handed off and watched until it closes:
   the handoff is an active semaphore, so request review with
   `.meta/say/move request-review <n>` the moment the pull request is open and
-  clean; then start `just watch <n>` under a persistent Monitor, so a review is
-  answered when it lands and not when someone looks. When one closes, `just
-  sweep` names the branches whose remote is gone and the command that removes
-  each; run them. Both are the harness's business, not a Discipline's step.
+  clean; then start `just watch <n>` under a persistent Monitor, monitoring the
+  handoff (solorepo's DR-248) to wake the session whenever coder action is
+  required or status changes, so a review is answered when it lands and not when
+  someone looks. When one closes, `just sweep` names the branches whose remote
+  is gone and the command that removes each; run them. Both are the harness's
+  business, not a Discipline's step.
 - Asked open-endedly what to work on next, run `just next` and read the
   screen. The answer is an Issue: the next Milestone, then the ripe list. An
   open pull request on that screen is the loops' work in progress, not the

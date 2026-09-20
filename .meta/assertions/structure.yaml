@@ -476,6 +476,9 @@ artifacts:
   - id: work:artifact/meta-lib-check-pr-polling
     name: .meta/lib/check_pr/polling.py
     path: .meta/lib/check_pr/polling.py
+  - id: work:artifact/meta-lib-check-pr-state
+    name: .meta/lib/check_pr/state.py
+    path: .meta/lib/check_pr/state.py
   - id: work:artifact/meta-dereference
     name: .meta/dereference.py
     path: .meta/dereference.py

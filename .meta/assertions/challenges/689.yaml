@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/689
+    name: Formalize pull request state machine and align check_pr --watch as state transition semaphore
+    challenge_type: REFACTOR
+    description: >-
+      Formalizes the lifecycle states of a pull request into an authoritative
+      PullRequestState state machine and transition engine, unifying predicates
+      scattered across sweep.py, move:evaluate_pr, and polling.py into a single
+      source of truth. Refactors check_pr.py --watch from an ad-hoc snapshot differ
+      into an active state transition semaphore that exits on coder-actionable states.

@@ -7,39 +7,25 @@ latest run of each, so a re-run concluding as its predecessor did is still a
 change. A third mode answering the same question belongs here.
 """
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Any
 
 from lib.check_pr import github, review
+from lib.check_pr.state import (
+    CODER_ACTIONABLE_STATES,
+    GREEN,
+    UNCONCLUDED,
+    PullRequestState,
+    classify_pr,
+)
+from lib.check_pr.state import (
+    deduplicate_checks as deduplicate_checks,
+)
 
 Snapshot = tuple[int, str, dict[str, Any], dict[str, Any], dict[str, Any],
-                 dict[str, tuple[str, str | None]], str]
+                 dict[str, tuple[str, str | None]], str, dict[str, Any]]
 """One reading of a pull request: number, state, comments, reviews and threads each by id,
-checks by name paired with the run that answered, and mergeability."""
-
-# A check that has concluded and did not fail. GitHub reports a check that has
-# not finished with no conclusion at all, and pending is not green: PR First
-# stops a handoff at green, and a pull request whose gate has not answered yet
-# is not one whose gate passed.
-GREEN = {"SUCCESS", "NEUTRAL", "SKIPPED"}
-
-# Check status/state values that mean the check is still running and has not yet concluded.
-UNCONCLUDED = {"PENDING", "IN_PROGRESS", "QUEUED", "WAITING", "REQUESTED", "EXPECTED"}
-
-
-def deduplicate_checks(contexts: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
-    """When multiple check runs share a name (e.g. repeated runs or body revisions),
-    keep only the latest entry by startedAt / completedAt / createdAt."""
-    def timestamp(c: dict[str, Any]) -> str:
-        completed = c.get("completedAt") or ""
-        if completed.startswith("0001"):
-            completed = ""
-        return str(c.get("startedAt") or completed or c.get("createdAt") or "")
-    deduped: dict[str, dict[str, Any]] = {}
-    for c in sorted(contexts, key=timestamp):
-        name = c.get("name") or c.get("context") or "check"
-        deduped[name] = c
-    return list(deduped.values())
+checks by name paired with the run that answered, mergeability, and the raw pull mapping."""
 
 
 def snapshot(ref: str | int) -> Snapshot:
@@ -58,17 +44,34 @@ def snapshot(ref: str | int) -> Snapshot:
     its predecessor did is otherwise indistinguishable from no rerun at all,
     and the watcher would sit on it.
     """
-    pr = github.gh("pr", "view", str(ref), "--json", "number,state,comments,reviews,mergeable")
-    comments = {c["id"]: c for c in pr["comments"]}
-    reviews = {r["id"]: r for r in pr["reviews"]}
+    pr = github.gh(
+        "pr",
+        "view",
+        str(ref),
+        "--json",
+        "number,state,comments,reviews,latestReviews,mergeable,isDraft,reviewRequests",
+    )
+    comments = {c["id"]: c for c in pr.get("comments") or []}
+    reviews = {r["id"]: r for r in pr.get("reviews") or []}
     threads_ = {t["id"]: t for t in github.threads(ref)}
     sorted_checks = deduplicate_checks(github.rollup_of(pr["number"]))
-    checks = {str(c.get("name") or c.get("context") or "check"):
-              (str(c.get("conclusion") or c.get("state") or c.get("status") or "PENDING"),
-               c.get("detailsUrl") or c.get("targetUrl"))
-              for c in sorted_checks}
-    return (int(pr["number"]), str(pr["state"]), comments, reviews, threads_, checks,
-            str(pr.get("mergeable") or "UNKNOWN"))
+    checks = {
+        str(c.get("name") or c.get("context") or "check"): (
+            str(c.get("conclusion") or c.get("state") or c.get("status") or "PENDING"),
+            c.get("detailsUrl") or c.get("targetUrl"),
+        )
+        for c in sorted_checks
+    }
+    return (
+        int(pr["number"]),
+        str(pr["state"]),
+        comments,
+        reviews,
+        threads_,
+        checks,
+        str(pr.get("mergeable") or "UNKNOWN"),
+        pr,
+    )
 
 
 def where_of(thread: dict[str, Any]) -> str:
@@ -151,8 +154,8 @@ def check_changes(checks: Mapping[str, tuple[str, str | None]],
 
 def changes_since(current: Snapshot, previous: Snapshot, merges: str | None) -> list[str]:
     """Print every change from `previous` to `current` and answer the actionable lines among them; `merges` is the last mergeability GitHub answered."""
-    _, _, comments, reviews, threads_, checks, mergeable = current
-    _, _, p_comments, p_reviews, p_threads, p_checks, _ = previous
+    _, _, comments, reviews, threads_, checks, mergeable = current[:7]
+    _, _, p_comments, p_reviews, p_threads, p_checks, _ = previous[:7]
     actionable = (new_comments(comments, p_comments) + new_reviews(reviews, p_reviews)
                   + new_threads(threads_, p_threads) + thread_activity(threads_, p_threads)
                   + check_changes(checks, p_checks))
@@ -197,6 +200,71 @@ def is_fatal_poll_error(exc: SystemExit) -> bool:
     return any(pattern in msg for pattern in FATAL_POLL_PATTERNS)
 
 
+def _report_exit(
+    number: int,
+    state: str,
+    pr_state: PullRequestState,
+    detail: str = "",
+) -> None:
+    """Formats and prints the termination message when watch exits."""
+    if pr_state in (PullRequestState.MERGED, PullRequestState.CLOSED):
+        print(f"pr {state}", flush=True)
+    else:
+        suffix = f" ({detail})" if detail else ""
+        print(f"watch exiting on #{number}: {pr_state.value}{suffix}", flush=True)
+
+
+def _evaluate_poll(
+    current: Snapshot,
+    previous: Snapshot | None,
+    merges: str | None,
+) -> tuple[bool, Snapshot, str | None]:
+    """Evaluates pull request state and deltas for a single watch polling turn.
+
+    Returns:
+        tuple[bool, Snapshot, str | None]: (should_exit, current_snapshot, merges).
+    """
+    number, state, _, _, threads_, checks, mergeable = current[:7]
+    pr_data = current[7] if len(current) > 7 else {
+        "number": number,
+        "state": state,
+        "comments": list(current[2].values()),
+        "reviews": list(current[3].values()),
+        "mergeable": mergeable,
+    }
+    try:
+        reviewer_login = github.role_login("reviewer")
+    except Exception:
+        reviewer_login = None
+
+    pr_state = classify_pr(pr_data, checks, list(threads_.values()), reviewer_login)
+
+    if previous is None:
+        owed = len(review.unaddressed(list(threads_.values())))
+        print(f"watching #{number}: {owed} thread(s) owed an answer, mergeable={mergeable}, "
+              + ", ".join(f"{k}={v}" for k, (v, _) in checks.items()), flush=True)
+        if pr_state in CODER_ACTIONABLE_STATES:
+            _report_exit(number, state, pr_state)
+            return True, current, merges
+        return False, current, mergeable if mergeable != "UNKNOWN" else merges
+
+    actionable = changes_since(current, previous, merges)
+    if pr_state in CODER_ACTIONABLE_STATES:
+        _report_exit(number, state, pr_state, ", ".join(actionable))
+        return True, current, merges
+
+    if actionable:
+        print(f"watch exiting on #{number}: " + ", ".join(actionable), flush=True)
+        return True, current, merges
+
+    if state in ("MERGED", "CLOSED"):
+        print(f"pr {state}", flush=True)
+        return True, current, merges
+
+    new_merges = mergeable if mergeable != "UNKNOWN" else merges
+    return False, current, new_merges
+
+
 def watch(ref: str | int, every: int = 60, max_retries: int = 5,
           max_backoff: int = 300) -> None:
     """Monitors a pull request for changes, printing events and exiting on actionable signals or fatal errors.
@@ -218,9 +286,12 @@ def watch(ref: str | int, every: int = 60, max_retries: int = 5,
     two lines for no change. Nothing said yet — including by the heading — is
     a change from nothing, and is printed.
 
-    A conflicting branch is reported and not exited on. It is what the coder's
-    rebase pass is dispatched for, and a watcher that exited would stop
-    watching the branch about to move under it.
+    On every poll (including startup poll 0), the pull request is classified
+    into PullRequestState (solorepo's DR-248). Whenever a state requiring
+    coder action is reached — including conflict (NEEDS_REBASE), test failures
+    (GATE_FAILED), changes requested, parked notices (AWAITING_PROMOTION),
+    or readiness to merge (READY_TO_MERGE) — watch prints the transition and
+    exits 0 as an active handoff semaphore.
     """
     import time
     previous: Snapshot | None = None
@@ -248,22 +319,9 @@ def watch(ref: str | int, every: int = 60, max_retries: int = 5,
             time.sleep(delay)
             continue
         retries = 0
-        number, state, _, _, threads_, checks, mergeable = current
-        if previous is None:
-            owed = len(review.unaddressed(list(threads_.values())))
-            print(f"watching #{number}: {owed} thread(s) owed an answer, mergeable={mergeable}, "
-                  + ", ".join(f"{k}={v}" for k, (v, _) in checks.items()), flush=True)
-        else:
-            actionable = changes_since(current, previous, merges)
-            if actionable:
-                print(f"watch exiting on #{number}: " + ", ".join(actionable), flush=True)
-                return
-        if state in ("MERGED", "CLOSED"):
-            print(f"pr {state}", flush=True)
+        should_exit, previous, merges = _evaluate_poll(current, previous, merges)
+        if should_exit:
             return
-        if mergeable != "UNKNOWN":
-            merges = mergeable
-        previous = current
         time.sleep(every)
 
 
