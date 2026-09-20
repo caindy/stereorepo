@@ -24,10 +24,80 @@ inputs:
     description: Print timeout minutes for the CLI session.
     required: false
     default: ""
+  role:
+    description: Role executing the session (coder or reviewer).
+    required: false
+    default: "coder"
+  harness:
+    description: Active run harness (claude, gemini, etc.).
+    required: false
+    default: "gemini"
+  claude-outcome:
+    description: Outcome of preceding Claude step when executing as fallback.
+    required: false
+    default: ""
+  execution-file:
+    description: Claude execution output file path when executing as fallback.
+    required: false
+    default: ""
+outputs:
+  fallback:
+    description: Whether fallback was evaluated and activated.
+    value: ${{ steps.check_fallback.outputs.fallback || 'false' }}
+  executed:
+    description: Whether agy was executed.
+    value: ${{ steps.run_agy.outputs.executed || 'false' }}
 runs:
   using: composite
   steps:
+    - name: evaluate fallback
+      id: check_fallback
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness }}
+        CLAUDE_OUTCOME: ${{ inputs.claude-outcome }}
+        EXECUTION_FILE: ${{ inputs.execution-file }}
+      run: |
+        # If harness is explicit gemini, run directly without fallback evaluation
+        if [ "$HARNESS" = "gemini" ]; then
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "fallback=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # If claude outcome is provided, evaluate fallback condition
+        if [ -n "$CLAUDE_OUTCOME" ]; then
+          if [ "$CLAUDE_OUTCOME" != "failure" ]; then
+            echo "Claude outcome was '$CLAUDE_OUTCOME'; skipping Antigravity fallback."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "fallback=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          python3 .meta/detect_fallback.py
+          if grep -q "fallback=true" "$GITHUB_OUTPUT" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+          exit 0
+        fi
+
+        # Default: direct execution when no claude-outcome is provided
+        echo "run=true" >> "$GITHUB_OUTPUT"
+        echo "fallback=false" >> "$GITHUB_OUTPUT"
+
+    - name: configure reviewer confinement
+      if: steps.check_fallback.outputs.run == 'true' && inputs.role == 'reviewer'
+      shell: bash
+      env:
+        GEMINI_PROJECT_DIR: ${{ env.GEMINI_PROJECT_DIR || github.workspace }}
+      run: |
+        python3 .meta/detect_fallback.py --configure-reviewer
+
     - name: run agy
+      id: run_agy
+      if: steps.check_fallback.outputs.run == 'true'
       shell: bash
       env:
         PROMPT: ${{ inputs.prompt }}
@@ -52,3 +122,4 @@ runs:
         fi
         export GEMINI_PROJECT_DIR="${GEMINI_PROJECT_DIR:-$GITHUB_WORKSPACE}"
         agy "${args[@]}"
+        echo "executed=true" >> "$GITHUB_OUTPUT"

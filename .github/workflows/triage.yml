@@ -72,6 +72,9 @@ jobs:
       # identity GitHub attests for this run and no other.
       ACTOR_SESSION: gha-${{ github.run_id }}
       ISSUE: ${{ github.event.issue.number }}
+      # Fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle
+      # (solorepo's DR-178, solorepo's DR-245); set vars.GEMINI_FALLBACK to 'true' to enable.
+      GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -116,6 +119,37 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      # Which harness speaks: Claude Code by default, or Gemini by label (solorepo's DR-242)
+      - name: choose the harness
+        id: harness
+        if: steps.unread.outputs.read == 'true'
+        run: |
+          harness="claude"
+          labels=$(gh issue view "$ISSUE" --json labels -q '.labels[].name' 2>/dev/null || true)
+
+          if echo "$labels" | grep -qw "harness:gemini"; then
+            harness="gemini"
+          elif echo "$labels" | grep -qw "harness:claude"; then
+            harness="claude"
+          fi
+
+          if [ "$harness" = "gemini" ]; then
+            agent="antigravity-cli"
+          else
+            agent="anthropics/claude-code-action@v1"
+          fi
+
+          echo "harness=$harness" >> "$GITHUB_OUTPUT"
+          echo "agent=$agent" >> "$GITHUB_OUTPUT"
+          echo "AI_AGENT=$agent" >> "$GITHUB_ENV"
+          # The Trailer's second half, under a name the harness does not own
+          # (solorepo's DR-233): the harness overwrites `AI_AGENT` with its own
+          # build string, so a value the agent's shell typed there cannot be
+          # told from the ordinary one, and the channel reads this one in a run.
+          echo "ACTOR_AGENT=$agent" >> "$GITHUB_ENV"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       # What the session reads, written to files before it starts. The hook
       # below confines the session's shell to a closed list of programs, and
       # `gh issue` is not on it, so everything the reading needs from GitHub
@@ -149,7 +183,8 @@ jobs:
 
       - name: read the Challenge (claude)
         id: read_claude
-        if: steps.unread.outputs.read == 'true'
+        if: steps.unread.outputs.read == 'true' && steps.harness.outputs.harness == 'claude'
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: 20
         with:
@@ -244,6 +279,94 @@ jobs:
             --max-turns 60
             --allowedTools "Skill,Read(./**),Grep,Glob,Bash(.meta/say/move:*),Bash(.meta/say/post:*),Bash(.meta/say/whoami:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
+
+      - name: read the Challenge (gemini)
+        id: read_gemini
+        if: steps.unread.outputs.read == 'true' && (steps.harness.outputs.harness == 'gemini' || steps.read_claude.outcome == 'failure')
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          GEMINI_PROJECT_DIR: ${{ github.workspace }}
+        uses: ./.meta/actions/agy
+        with:
+          role: reviewer
+          model: gemini-3.8-flash
+          effort: medium
+          timeout-minutes: 20
+          harness: ${{ steps.harness.outputs.harness }}
+          claude-outcome: ${{ steps.read_claude.outcome }}
+          execution-file: ${{ steps.read_claude.outputs.execution_file }}
+          prompt: |
+            Your Personality is work:personality/reviewer: Analytical and thorough. Holds the Challenge to the Disciplines and the Charter strictly. Clear and precise; concise yet unambiguous.
+
+            You are the reviewer Role (solorepo's DR-107), reading Challenge
+            #${{ github.event.issue.number }} of ${{ github.repository }} before any
+            coder takes it (solorepo's DR-230). Read /pr-first-reviewer first: its
+            third step says what your verdict is, what it asks, and that `move triage`
+            is the verb that lands it.
+
+            Then read `.review/challenge.md` with the Read tool. It is the Issue as
+            GitHub holds it: title, labels, who filed it and when, and the body in
+            the Challenge form. The body proposes a level under **Difficulty.**; the
+            proposal is the raiser's guess and not your verdict.
+
+            Ask four questions, and answer each in a paragraph under its heading.
+            Your login is `${{ github.repository_owner }}-${{ github.event.repository.name }}-reviewer`.
+
+            **Worth doing.** Does the body state a trigger, or a cost that will
+            land? If neither can be stated, this is an observation and not a
+            Challenge, and the level is `human` with that said.
+
+            **Waits on.** Is the first line right? Every blocker it names must be an
+            open Issue, and it must name every open Issue or pull request this cannot
+            start before. `.review/open.md` lists both, written before this session
+            started; read it with the Read tool. The shell here cannot list them.
+
+            **Already answered.** Does the tree already hold a mechanism that answers
+            this? Search it with Grep and Glob and read what you find with Read; a
+            Challenge the tree answers is `human` with the path named, since closing
+            it is the solo's call.
+
+            **Decision owed.** Is the next step a decision rather than an
+            implementation? Then the level is `human` whatever the effort, and the
+            verdict names the question the solo must settle (solorepo's DR-226).
+
+            Then the level. `easy` and `medium` are a loop's the moment the label
+            lands: `easy` is the smaller model and an hour, `medium` the larger and
+            a whole budget, and both are for work whose approach the body already
+            settles. `hard` is coder work too large for a loop, which waits for the
+            solo with a session beside him. `human` is where what the Issue needs is
+            the solo rather than a Job at all. The raiser's proposal is corrected in
+            either direction; say why where you move it.
+
+            Post the verdict through the channel, which holds it to the four
+            headings, posts it on the Issue, and lands the level in one act:
+
+                .meta/say/move --role reviewer triage ${{ github.event.issue.number }} <level> <<'BODY'
+                **Worth doing.** ...
+
+                **Waits on.** ...
+
+                **Already answered.** ...
+
+                **Decision owed.** ...
+                BODY
+
+            Where the first line is wrong and you can write the right one, correct
+            the body first with `.meta/say/move --role reviewer revise ${{ github.event.issue.number }}`
+            and the whole body on stdin — the reviewer holds `revise` for this —
+            then post the verdict. Where a question only the solo can answer
+            stands in the way, land `human` and say in the verdict what he must
+            settle.
+
+            Every command that writes begins with `.meta/say/move` and takes its
+            body as a quoted heredoc on stdin. Never `gh issue edit`, `gh issue
+            comment` or `gh api`: the hook refuses them. Do not claim the Issue and
+            do not open a pull request.
+
+            Your turn ends when the verdict is posted, and not before. The step
+            after this session reads the Issue's labels, and a session that landed
+            no level is a red run.
 
       # A session that ended without a level has not read, and the check says
       # so. The action reports success when the model's turn ends, and a turn

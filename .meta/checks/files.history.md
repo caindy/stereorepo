@@ -94,6 +94,20 @@ fails on any difference between them, in either direction.
 
 Evidence: `.meta/checks/files/workflows.py::gemini_core_matches_hook_matcher`
 
+### Reviewer tool confinement duplication across review and triage workflows
+
+Reviewer tool confinement under Antigravity CLI (`agy`) was configured solely
+via an embedded heredoc in `.github/workflows/review.yml` and absent from
+`.github/workflows/triage.yml`, risking tool divergence and unconfined execution
+during triage fallback (solorepo's #699). Established: reviewer tool confinement
+is unified in `.meta/detect_fallback.py` under `REVIEWER_CORE_TOOLS` and
+`REVIEWER_BEFORE_TOOL_MATCHER` and applied by `.meta/actions/agy`, with
+`gemini_allowlist_matches_claude` and `gemini_core_matches_hook_matcher`
+verifying tool parity against dangerous tools and hook matcher alignment
+across `review.yml` and `triage.yml`.
+
+Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
+
 ### Embedded inline Python invocation in coder workflow promotion
 
 The promotion step in `.github/workflows/coder.yml` embedded an inline Python

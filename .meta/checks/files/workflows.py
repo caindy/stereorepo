@@ -1,5 +1,10 @@
-"""What the workflows and the scaffold owe each other: no scaffold-only path in inherited files, the two gate workflows held equal, the reviewer's trunk-restore set held to the control plane, the control plane held to the tree, and a workflow that names its harness naming it where the channel reads it.
 """
+What the workflows and the scaffold owe each other: no scaffold-only path in
+inherited files, the two gate workflows held equal, the reviewer's trunk-restore
+set held to the control plane, the control plane held to the tree, and a
+workflow that names its harness naming it where the channel reads it.
+"""
+
 import os
 import pathlib
 import re
@@ -283,7 +288,7 @@ FALLBACK_ENV_EXPORT = re.compile(r"^\s*GEMINI_FALLBACK:\s*\${{\s*vars\.GEMINI_FA
 
 @check("fallback workflows export GEMINI_FALLBACK")
 def fallback_workflows_export_gemini_fallback() -> StepOutcome:
-    """Workflows that run detect_fallback.py map vars.GEMINI_FALLBACK into job env (solorepo's DR-245).
+    """Workflows that run detect_fallback.py or actions/agy map vars.GEMINI_FALLBACK into job env (solorepo's DR-245, solorepo's #699).
 
     GitHub Actions does not populate repository variables into runner environments
     automatically. Without an explicit mapping under job-level `env:`,
@@ -293,7 +298,7 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
 
     Returns:
         Passed | Found | CouldNotRun: Validation result checking that workflows
-        invoking `detect_fallback.py` export `GEMINI_FALLBACK`.
+        invoking `detect_fallback.py` or `actions/agy` export `GEMINI_FALLBACK`.
     """
     if not WORKFLOWS.is_dir():
         return CouldNotRun(f"{WORKFLOWS.relative_to(ROOT).as_posix()} is missing")
@@ -301,12 +306,12 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
     checked = 0
     for path in sorted(WORKFLOWS.glob("*.yml")):
         text = path.read_text(encoding="utf-8")
-        if "detect_fallback.py" not in text:
+        if "detect_fallback.py" not in text and "actions/agy" not in text:
             continue
         checked += 1
         if not FALLBACK_ENV_EXPORT.search(text):
             problems.append(
-                f"{path.relative_to(ROOT)}: runs `detect_fallback.py` but does not export "
+                f"{path.relative_to(ROOT)}: runs `detect_fallback.py` or `actions/agy` but does not export "
                 "`GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK ... }}` in job `env:`"
             )
     if problems:
@@ -411,8 +416,11 @@ ALLOWED_TOOLS_LINE = re.compile(r'--allowedTools\s+"([^"]*)"')
 """The Claude path's `--allowedTools` value, inside the `claude_args` block scalar."""
 
 
-CORE_TOOLS_LINE = re.compile(r'"core"\s*:\s*\[([^\]]*)\]')
-"""The Gemini path's `tools.core` array, inside the `settings` block scalar."""
+REVIEWER_WORKFLOWS = (
+    ROOT / ".github" / "workflows" / "review.yml",
+    ROOT / ".github" / "workflows" / "triage.yml",
+)
+"""The reviewer workflows, bounding the reviewer Role during PR review and Challenge triage."""
 
 
 DANGEROUS_TOOLS = (
@@ -427,95 +435,98 @@ path's allowlist may name either half, on its own or alongside the other (solore
 
 @check("gemini reviewer allowlist matches claude's")
 def gemini_allowlist_matches_claude() -> StepOutcome:
-    """The reviewer workflow bounds Gemini CLI's tool registry the way it bounds Claude Code's (solorepo's #454).
+    """The reviewer workflows bound Gemini CLI's tool registry the way they bound Claude Code's (solorepo's #454, solorepo's #699).
 
     The Claude path names what the model may call with `--allowedTools`, so a
     tool it never names is simply not there for the model to reach. Gemini
     CLI's default is the opposite: an unset `tools.core` holds the whole core
     toolset, so the same bound has to be named rather than left absent. This
-    step fails when either path's list is missing, or when either path names
-    either half of a `DANGEROUS_TOOLS` pair — whether the other path names its
-    half too or not, since the invariant is that neither may. When Gemini CLI
-    is absent from `review.yml` (`run-gemini-cli` not configured per
-    solorepo's DR-242), the Claude path is verified in isolation.
+    bound is unified in `.meta/detect_fallback.py` under `REVIEWER_CORE_TOOLS`
+    (solorepo's #699). This step fails when any reviewer workflow's Claude list
+    is missing, when `detect_fallback.py` names any dangerous tools, or when
+    either harness names either half of a `DANGEROUS_TOOLS` pair.
 
     History in files.history.md (solorepo's DR-171).
     """
-    if not REVIEW_WORKFLOW.is_file():
-        return CouldNotRun(f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
-    text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
-    allowed_match = ALLOWED_TOOLS_LINE.search(text)
-    core_match = CORE_TOOLS_LINE.search(text)
-    if not allowed_match:
-        return Found(("review.yml: no `--allowedTools` value on the Claude path to compare against",))
-    if "run-gemini-cli" not in text and "actions/agy" not in text:
-        claude_tools = {token.split("(", 1)[0] for token in allowed_match.group(1).split(",")}
-        claude_problems = [
-            f"review.yml: the Claude path names `{claude_name}`; drop it from `--allowedTools`"
-            for claude_name, _ in DANGEROUS_TOOLS
-            if claude_name in claude_tools
-        ]
-        if claude_problems:
-            return Found(tuple(claude_problems))
-        return Passed(f"{len(DANGEROUS_TOOLS)} dangerous tools held out of Claude path (Gemini unconfigured per solorepo's DR-242)")
-    if not core_match:
-        return Found(("review.yml: no `tools.core` value on the Gemini path to compare against",))
+    sys.path.insert(0, str(META))
+    import detect_fallback
+
+    gemini_tools = set(detect_fallback.REVIEWER_CORE_TOOLS)
     problems: list[str] = []
-    claude_tools = {token.split("(", 1)[0] for token in allowed_match.group(1).split(",")}
-    gemini_tools = {token.strip().strip('"') for token in core_match.group(1).split(",")}
-    for claude_name, gemini_name in DANGEROUS_TOOLS:
-        if claude_name in claude_tools:
-            problems.append(f"review.yml: the Claude path names `{claude_name}`; no reviewer "
-                            f"path may name this pair, so drop it from `--allowedTools`")
+
+    for _claude_name, gemini_name in DANGEROUS_TOOLS:
         if gemini_name in gemini_tools:
-            problems.append(f"review.yml: the Gemini path names `{gemini_name}`; no reviewer "
-                            f"path may name this pair, so drop it from `tools.core`")
+            problems.append(
+                f"detect_fallback.py: `REVIEWER_CORE_TOOLS` names `{gemini_name}`; no reviewer "
+                "path may name this pair, so drop it from `REVIEWER_CORE_TOOLS`"
+            )
+
+    scanned = 0
+    for workflow_path in REVIEWER_WORKFLOWS:
+        if not workflow_path.is_file():
+            return CouldNotRun(f"{workflow_path.relative_to(ROOT).as_posix()} is missing")
+        text = workflow_path.read_text(encoding="utf-8")
+        allowed_match = ALLOWED_TOOLS_LINE.search(text)
+        if not allowed_match:
+            problems.append(f"{workflow_path.relative_to(ROOT)}: no `--allowedTools` value on the Claude path to compare against")
+            continue
+        scanned += 1
+        claude_tools = {token.split("(", 1)[0] for token in allowed_match.group(1).split(",")}
+        for claude_name, _ in DANGEROUS_TOOLS:
+            if claude_name in claude_tools:
+                problems.append(
+                    f"{workflow_path.relative_to(ROOT)}: the Claude path names `{claude_name}`; "
+                    "no reviewer path may name this pair, so drop it from `--allowedTools`"
+                )
+        if "role: reviewer" not in text:
+            problems.append(
+                f"{workflow_path.relative_to(ROOT)}: does not pass `role: reviewer` to `.meta/actions/agy`"
+            )
+
     if problems:
         return Found(tuple(problems))
-    return Passed(f"{len(DANGEROUS_TOOLS)} tool pairs held out of both reviewer paths alike")
-
-
-BEFORE_TOOL_MATCHER = re.compile(r'"matcher"\s*:\s*"\^\(([^)]*)\)\$"')
-"""The Gemini path's `BeforeTool` matcher: the alternation of tool names `worktree_only.py`
-is registered against, inside the `settings` block scalar."""
+    return Passed(f"{len(DANGEROUS_TOOLS)} tool pairs held out of all {scanned} reviewer workflows ({', '.join(p.name for p in REVIEWER_WORKFLOWS)})")
 
 
 @check("gemini tools.core matches the BeforeTool matcher")
 def gemini_core_matches_hook_matcher() -> StepOutcome:
-    """`tools.core` and the `BeforeTool` matcher name the same tools, or a call reaches `worktree_only.py` never sees (solorepo's #454).
+    """`tools.core` and the `BeforeTool` matcher name the same tools, or a call reaches `worktree_only.py` never sees (solorepo's #454, solorepo's #699).
 
     `tools.core` decides which tools the model may call at all; the `BeforeTool`
     matcher decides which of those calls the worktree-confinement hook
-    inspects. The two are meant to name the same set, and this pull request's
-    own first head is the demonstration of what happens when they do not:
-    `activate_skill` sat in `tools.core` and outside the matcher, admitted and
-    unguarded, with every gate but a review thread green. This step fails when
-    the two sets differ, in either direction. When Gemini CLI is unconfigured in
-    `review.yml` (solorepo's DR-242), the step passes without evaluation.
+    inspects. The two are unified in `.meta/detect_fallback.py` under
+    `REVIEWER_CORE_TOOLS` and `REVIEWER_BEFORE_TOOL_MATCHER` (solorepo's #699)
+    and applied by `.meta/actions/agy` when `role == 'reviewer'`. This step fails
+    when the two sets differ in either direction, or when `.meta/actions/agy`
+    fails to invoke reviewer confinement.
 
     History in files.history.md (solorepo's DR-171).
     """
-    if not REVIEW_WORKFLOW.is_file():
-        return CouldNotRun(f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
-    text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
-    if "run-gemini-cli" not in text and "actions/agy" not in text:
-        return Passed("Gemini reviewer not configured in review.yml (solorepo's DR-242)")
-    core_match = CORE_TOOLS_LINE.search(text)
-    matcher_match = BEFORE_TOOL_MATCHER.search(text)
-    if not core_match:
-        return Found(("review.yml: no `tools.core` value on the Gemini path to compare against",))
+    sys.path.insert(0, str(META))
+    import detect_fallback
+
+    action_path = META / "actions" / "agy" / "action.yml"
+    if not action_path.is_file():
+        return CouldNotRun(f"{action_path.relative_to(ROOT).as_posix()} is missing")
+    action_text = action_path.read_text(encoding="utf-8")
+    if "--configure-reviewer" not in action_text:
+        return Found((f"{action_path.relative_to(ROOT)}: does not invoke `detect_fallback.py --configure-reviewer`",))
+
+    core_tools = set(detect_fallback.REVIEWER_CORE_TOOLS)
+    raw_matcher = detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER
+    matcher_match = re.match(r"^\^\(([^)]+)\)\$$", raw_matcher)
     if not matcher_match:
-        return Found(("review.yml: no `BeforeTool` matcher on the Gemini path to compare against",))
-    core_tools = {token.strip().strip('"') for token in core_match.group(1).split(",")}
+        return Found((f"detect_fallback.py: REVIEWER_BEFORE_TOOL_MATCHER '{raw_matcher}' does not match expected pattern ^(...) $",))
     matcher_tools = set(matcher_match.group(1).split("|"))
+
     problems: list[str] = []
     for extra in sorted(core_tools - matcher_tools):
-        problems.append(f"review.yml: `tools.core` names `{extra}`, which the `BeforeTool` "
-                        "matcher does not guard; add it there or drop it from `tools.core`")
+        problems.append(f"detect_fallback.py: `REVIEWER_CORE_TOOLS` names `{extra}`, which the `BeforeTool` "
+                        "matcher does not guard; add it there or drop it from `REVIEWER_CORE_TOOLS`")
     for extra in sorted(matcher_tools - core_tools):
-        problems.append(f"review.yml: the `BeforeTool` matcher guards `{extra}`, which "
-                        "`tools.core` does not name; the matcher is guarding a tool the model "
-                        "cannot call, and the trunk comment's count is off by it")
+        problems.append(f"detect_fallback.py: the `BeforeTool` matcher guards `{extra}`, which "
+                        "`REVIEWER_CORE_TOOLS` does not name; the matcher is guarding a tool the model "
+                        "cannot call")
     if problems:
         return Found(tuple(problems))
     return Passed(f"{len(core_tools)} tools admitted, all and only the ones the BeforeTool matcher guards")

@@ -594,85 +594,22 @@ jobs:
             --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
-      # When Claude Code fails, evaluate Antigravity CLI fallback if enabled by the
-      # GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-245).
-      - name: detect claude quota error
-        id: claude_quota
-        if: steps.harness.outputs.harness == 'claude' && steps.review_claude.outcome == 'failure'
-        env:
-          EXECUTION_FILE: ${{ steps.review_claude.outputs.execution_file }}
-        run: python3 .meta/detect_fallback.py
-
-      - name: configure gemini reviewer settings
-        if: steps.harness.outputs.harness == 'gemini' || steps.claude_quota.outputs.fallback == 'true'
-        env:
-          GEMINI_PROJECT_DIR: ${{ github.workspace }}
-        run: |
-          # Reviewer tool confinement for the Gemini path (solorepo's DR-110,
-          # solorepo's DR-245).
-          #
-          # Under Antigravity CLI (`agy`), `tools.core` in `settings.json` is the
-          # whole confinement holding the line: naming what the model may call
-          # is what leaves `write_file`, `replace`, `web_fetch`, and
-          # `google_web_search` out rather than constrained, mirroring the tools
-          # held out on the Claude path above (line 554). `write_file` and
-          # `replace` are excluded because writes onto paths under `.meta/say/`
-          # or `.meta/hooks/` could be read back by `run_shell_command`;
-          # `web_fetch` and `google_web_search` are excluded to prevent
-          # exfiltration of credentials or repository state to external endpoints.
-          # `DANGEROUS_TOOLS` in `.meta/checks/files/workflows.py` carries why
-          # this pairs with the Claude path's list the way it does.
-          #
-          # `tools.core` admits `run_shell_command` so the reviewer session can
-          # execute necessary commands (`python3 .meta/check_pr.py`, `git diff`,
-          # and `.meta/say/post`). Because `agy` does not dispatch `BeforeTool`
-          # hooks from `settings.json`, `worktree_only.py` does not intercept
-          # `run_shell_command` at runtime on this path (deferred to
-          # solorepo's #682). The `hooks.BeforeTool` registration below is
-          # retained in `~/.gemini/settings.json` so the gate check
-          # `gemini_core_matches_hook_matcher` and the harness registration
-          # probes pass cleanly against the configuration.
-          #
-          # Settings written to `~/.gemini/settings.json` are merged into
-          # `~/.gemini/antigravity-cli/settings.json` via `.meta/detect_fallback.py
-          # --merge-settings` so mounted developer credentials and subscription
-          # configurations in the ARC runner are preserved rather than replaced.
-          mkdir -p ~/.gemini ~/.gemini/antigravity-cli
-          cat <<'SETTINGS_EOF' > ~/.gemini/settings.json
-          {
-            "tools": {
-              "core": ["read_file", "read_many_files", "grep_search", "search_file_content", "glob", "list_directory", "run_shell_command"]
-            },
-            "hooks": {
-              "BeforeTool": [
-                {
-                  "matcher": "^(run_shell_command|read_file|read_many_files|grep_search|search_file_content|glob|list_directory)$",
-                  "hooks": [
-                    {
-                      "type": "command",
-                      "name": "worktree-only",
-                      "command": "$GEMINI_PROJECT_DIR/.meta/hooks/worktree_only.py"
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-          SETTINGS_EOF
-          python3 .meta/detect_fallback.py --merge-settings
-
       - name: review the pull request (gemini)
         id: review_gemini
-        if: steps.harness.outputs.harness == 'gemini' || steps.claude_quota.outputs.fallback == 'true'
+        if: steps.harness.outputs.harness == 'gemini' || steps.review_claude.outcome == 'failure'
         continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         env:
           GEMINI_PROJECT_DIR: ${{ github.workspace }}
         uses: ./.meta/actions/agy
         with:
+          role: reviewer
           model: ${{ steps.depth.outputs.gemini_model }}
           effort: ${{ steps.depth.outputs.effort }}
           timeout-minutes: ${{ steps.depth.outputs.minutes }}
+          harness: ${{ steps.harness.outputs.harness }}
+          claude-outcome: ${{ steps.review_claude.outcome }}
+          execution-file: ${{ steps.review_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/reviewer: Analytical and thorough. Holds the diff to the Disciplines and the Charter strictly. Clear and precise in identification of issues; concise yet unambiguous in argument.
 
@@ -832,7 +769,7 @@ jobs:
         if: >-
           steps.harness.outputs.harness != 'jules' && (
             steps.review_gemini.outcome == 'failure' ||
-            (steps.review_claude.outcome == 'failure' && steps.claude_quota.outputs.fallback != 'true')
+            (steps.review_claude.outcome == 'failure' && steps.review_gemini.outputs.fallback != 'true')
           )
         env:
           JULES_FALLBACK: ${{ vars.JULES_FALLBACK }}

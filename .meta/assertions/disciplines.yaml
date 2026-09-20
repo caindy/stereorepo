@@ -37,7 +37,7 @@ disciplines:
         The schemas and the channel stay in this copy set rather than riding inside APM
         skills (DR-173). A portfolio without them has a coder that cannot commit, a gate that
         cannot run its own first steps, and a channel nothing enforces. The Gemini fallback
-        (`.meta/detect_fallback.py`) travels with `coder.yml` and `review.yml`: it defaults
+        (`.meta/detect_fallback.py`) travels with `coder.yml`, `review.yml`, and `triage.yml`: it defaults
         to disabled (`'false'`) to prevent unauthenticated execution failures in portfolios
         lacking local ARC credential infrastructure (solorepo's DR-245), and setting
         repository variable `vars.GEMINI_FALLBACK` to `'true'` activates fallback to

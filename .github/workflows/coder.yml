@@ -603,18 +603,9 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
-      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
-      # fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-245).
-      - name: detect claude quota error (take)
-        id: claude_quota_take
-        if: github.event_name == 'issues' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude' && steps.take_claude.outcome == 'failure'
-        env:
-          EXECUTION_FILE: ${{ steps.take_claude.outputs.execution_file }}
-        run: python3 .meta/detect_fallback.py
-
       - name: take the Issue (gemini)
         id: take_gemini
-        if: github.event_name == 'issues' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_take.outputs.fallback == 'true')
+        if: github.event_name == 'issues' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
         continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
@@ -622,10 +613,14 @@ jobs:
         # to read-only tools.
         uses: ./.meta/actions/agy
         with:
+          role: coder
           model: ${{ steps.depth.outputs.gemini_model }}
           effort: ${{ steps.depth.outputs.effort }}
           mode: accept-edits
           timeout-minutes: ${{ steps.depth.outputs.minutes }}
+          harness: ${{ steps.harness.outputs.harness }}
+          claude-outcome: ${{ steps.take_claude.outcome }}
+          execution-file: ${{ steps.take_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
@@ -973,18 +968,9 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
-      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
-      # fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-245).
-      - name: detect claude quota error (rebase)
-        id: claude_quota_rebase
-        if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude' && steps.rebase_claude.outcome == 'failure'
-        env:
-          EXECUTION_FILE: ${{ steps.rebase_claude.outputs.execution_file }}
-        run: python3 .meta/detect_fallback.py
-
       - name: rebase onto the base (gemini)
         id: rebase_gemini
-        if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_rebase.outputs.fallback == 'true')
+        if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.rebase_claude.outcome == 'failure')
         continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
@@ -992,10 +978,14 @@ jobs:
         # to read-only tools.
         uses: ./.meta/actions/agy
         with:
+          role: coder
           model: ${{ steps.depth.outputs.gemini_model }}
           effort: ${{ steps.depth.outputs.effort }}
           mode: accept-edits
           timeout-minutes: ${{ steps.depth.outputs.minutes }}
+          harness: ${{ steps.harness.outputs.harness }}
+          claude-outcome: ${{ steps.rebase_claude.outcome }}
+          execution-file: ${{ steps.rebase_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
@@ -1150,21 +1140,6 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
-      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
-      # fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-245).
-      - name: detect claude quota error (answer)
-        id: claude_quota_answer
-        if: >-
-          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
-           || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
-          && steps.taken.outputs.by == ''
-          && steps.pr.outputs.by == ''
-          && steps.harness.outputs.harness == 'claude'
-          && steps.answer_claude.outcome == 'failure'
-        env:
-          EXECUTION_FILE: ${{ steps.answer_claude.outputs.execution_file }}
-        run: python3 .meta/detect_fallback.py
-
       - name: answer the review (gemini)
         id: answer_gemini
         if: >-
@@ -1172,7 +1147,7 @@ jobs:
            || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
           && steps.taken.outputs.by == ''
           && steps.pr.outputs.by == ''
-          && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_answer.outputs.fallback == 'true')
+          && (steps.harness.outputs.harness == 'gemini' || steps.answer_claude.outcome == 'failure')
         continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
@@ -1180,10 +1155,14 @@ jobs:
         # to read-only tools.
         uses: ./.meta/actions/agy
         with:
+          role: coder
           model: ${{ steps.depth.outputs.gemini_model }}
           effort: ${{ steps.depth.outputs.effort }}
           mode: accept-edits
           timeout-minutes: ${{ steps.depth.outputs.minutes }}
+          harness: ${{ steps.harness.outputs.harness }}
+          claude-outcome: ${{ steps.answer_claude.outcome }}
+          execution-file: ${{ steps.answer_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
@@ -1324,26 +1303,13 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
-      # When Claude Code fails on rate limit or weekly token exhaustion (HTTP 429),
-      # fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle (solorepo's DR-178, solorepo's DR-245).
-      - name: detect claude quota error (promote)
-        id: claude_quota_promote
-        if: >-
-          github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
-          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
-          && steps.promote.outputs.count != '0' && steps.harness.outputs.harness == 'claude'
-          && steps.promote_claude.outcome == 'failure'
-        env:
-          EXECUTION_FILE: ${{ steps.promote_claude.outputs.execution_file }}
-        run: python3 .meta/detect_fallback.py
-
       - name: promote on approval (gemini)
         id: promote_gemini
         if: >-
           github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
           && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
           && steps.promote.outputs.count != '0'
-          && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_promote.outputs.fallback == 'true')
+          && (steps.harness.outputs.harness == 'gemini' || steps.promote_claude.outcome == 'failure')
         continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
@@ -1351,10 +1317,14 @@ jobs:
         # to read-only tools.
         uses: ./.meta/actions/agy
         with:
+          role: coder
           model: ${{ steps.depth.outputs.gemini_model }}
           effort: ${{ steps.depth.outputs.effort }}
           mode: accept-edits
           timeout-minutes: ${{ steps.depth.outputs.minutes }}
+          harness: ${{ steps.harness.outputs.harness }}
+          claude-outcome: ${{ steps.promote_claude.outcome }}
+          execution-file: ${{ steps.promote_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 

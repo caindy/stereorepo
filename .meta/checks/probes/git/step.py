@@ -144,6 +144,28 @@ def _matchers() -> list[str]:
     return problems
 
 
+def _find_hook_registration(harness: str, text: str, pattern: re.Pattern[str]) -> tuple[str, str] | None:
+    """Find the registered (matcher, command) pair for a harness from review workflow or fallback logic.
+
+    Args:
+        harness: Target harness name (e.g. 'Claude Code' or 'Gemini CLI').
+        text: Raw content of .github/workflows/review.yml.
+        pattern: Compiled regex to extract (matcher, command) groups from text.
+
+    Returns:
+        tuple[str, str] | None: Matched or fallback (matcher, command) pair, or None if unconfigured.
+    """
+    match = pattern.search(text)
+    if match:
+        matcher, command = match.groups()
+        return matcher, command
+    if harness == "Gemini CLI":
+        sys.path.insert(0, str(ROOT / ".meta"))
+        import detect_fallback
+        return detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER, detect_fallback.REVIEWER_HOOK_COMMAND
+    return None
+
+
 def _registration() -> list[str]:
     """`REGISTRATIONS`, per harness: the registered matcher against the tool name its own event carries, the registered command resolved and run as a real subprocess over a refused call, a permitted one and a payload that is not JSON at all, and one line of Evidence left per call it decided.
 
@@ -159,14 +181,14 @@ def _registration() -> list[str]:
     text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
     problems = []
     for harness, variable, pattern, refuse_event, allow_event in registration.REGISTRATIONS:
-        match = pattern.search(text)
-        if not match:
+        pair = _find_hook_registration(harness, text, pattern)
+        if not pair:
             action = registration.OPTIONAL_HARNESS_ACTIONS.get(harness)
             if action and action not in text:
                 continue
             problems.append(f"{harness}: no hook registration found in review.yml to resolve")
             continue
-        matcher, command = match.groups()
+        matcher, command = pair
         tool_name = str(refuse_event["tool_name"])
         if not re.fullmatch(matcher, tool_name):
             problems.append(f"{harness}: the registered matcher {matcher!r} does not match "

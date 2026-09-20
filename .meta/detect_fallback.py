@@ -138,6 +138,73 @@ def merge_settings(source_path: pathlib.Path | None = None, dest_path: pathlib.P
     dest.write_text(json.dumps(dest_data, indent=2) + "\n", encoding="utf-8")
 
 
+REVIEWER_CORE_TOOLS: list[str] = [
+    "read_file",
+    "read_many_files",
+    "grep_search",
+    "search_file_content",
+    "glob",
+    "list_directory",
+    "run_shell_command",
+]
+"""Core toolset admitted for the reviewer Role under Antigravity CLI (solorepo's DR-110, solorepo's DR-245)."""
+
+REVIEWER_BEFORE_TOOL_MATCHER: str = (
+    "^(run_shell_command|read_file|read_many_files|grep_search|search_file_content|glob|list_directory)$"
+)
+"""Pre-tool hook matcher guarding admitted reviewer tools via worktree_only.py (solorepo's #454)."""
+
+REVIEWER_HOOK_COMMAND: str = "$GEMINI_PROJECT_DIR/.meta/hooks/worktree_only.py"
+"""Command path invoking the worktree-confinement hook under Antigravity CLI (solorepo's #454, solorepo's #456)."""
+
+
+def configure_reviewer_settings(
+    workspace_dir: pathlib.Path | None = None,
+    settings_dir: pathlib.Path | None = None,
+) -> None:
+    """Configure tool confinement and hook registration for the reviewer Role (solorepo's DR-110, solorepo's DR-245).
+
+    Writes `tools.core` and `BeforeTool` hook settings to `~/.gemini/settings.json`, then merges
+    them into `~/.gemini/antigravity-cli/settings.json` while preserving mounted credentials.
+
+    Args:
+        workspace_dir: Optional root directory of the workspace. Defaults to GEMINI_PROJECT_DIR,
+            GITHUB_WORKSPACE, or current working directory.
+        settings_dir: Optional base directory for user Gemini settings. Defaults to ~/.gemini.
+    """
+    home = pathlib.Path.home()
+    base = settings_dir or (home / ".gemini")
+    base.mkdir(parents=True, exist_ok=True)
+    src = base / "settings.json"
+    hook_command = (
+        f"{workspace_dir}/.meta/hooks/worktree_only.py"
+        if workspace_dir
+        else REVIEWER_HOOK_COMMAND
+    )
+
+    settings_content = {
+        "tools": {
+            "core": REVIEWER_CORE_TOOLS,
+        },
+        "hooks": {
+            "BeforeTool": [
+                {
+                    "matcher": REVIEWER_BEFORE_TOOL_MATCHER,
+                    "hooks": [
+                        {
+                            "type": "command",
+                            "name": "worktree-only",
+                            "command": hook_command,
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    src.write_text(json.dumps(settings_content, indent=2) + "\n", encoding="utf-8")
+    merge_settings(src, home / ".gemini" / "antigravity-cli" / "settings.json")
+
+
 def write_env_file(path_env: str, content: str) -> None:
     """Write text content to a file specified by an environment variable name if defined."""
     target = os.environ.get(path_env)
@@ -148,6 +215,9 @@ def write_env_file(path_env: str, content: str) -> None:
 
 def main() -> int:
     """Evaluate harness execution output and trigger fallback if toggle is enabled (solorepo's DR-245, solorepo's DR-246).
+
+    When called with --configure-reviewer, configures reviewer tool confinement in
+    ~/.gemini/settings.json and merges into Antigravity CLI configuration (solorepo's #699).
 
     When called with --merge-settings, merges ~/.gemini/settings.json into
     ~/.gemini/antigravity-cli/settings.json to configure tools and hooks without
@@ -166,6 +236,10 @@ def main() -> int:
     Returns:
         int: Exit status code (always 0 to allow downstream workflow steps to read outputs).
     """
+    if "--configure-reviewer" in sys.argv:
+        configure_reviewer_settings()
+        return 0
+
     if "--merge-settings" in sys.argv:
         merge_settings()
         return 0
