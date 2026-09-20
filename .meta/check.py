@@ -29,6 +29,8 @@ under two module names and no registry is built twice. History in
 check.history.md (solorepo's DR-171).
 """
 import sys  # noqa: I001  # reason: the step imports below stand in registration order, not sorted order
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from checks import collect
 from checks import files
@@ -39,7 +41,7 @@ from checks import probes  # noqa: F401  # reason: registers check steps
 from checks.collect import STEPS, views
 
 
-def report(label, outcome):
+def report(label: str, outcome: collect.StepOutcome | Sequence[str]) -> bool:
     """One step, one line, in the shape A21 names (solorepo's DR-092), and its problems or status."""
     if isinstance(outcome, collect.CouldNotRun):
         print(f"?  {label}: {outcome.why}")
@@ -62,7 +64,7 @@ def report(label, outcome):
         return False
 
 
-def main():
+def main() -> int:
     """The prechecks, then the schemas, then every other step the registry holds.
 
     Nothing here dies where it can report instead: a step that cannot run says
@@ -97,9 +99,13 @@ def main():
     for name in skipped:
         print(f"?  {name}: no container accepts its top-level keys")
     failed |= bool(skipped)
-    sources = {"index": lambda: index, "refs": lambda: refs, "views": lambda: schemas,
-               "asked": lambda: files.rendering()[0].ASKED,
-               "pages": lambda: files.rendering()[1]}
+    sources: dict[str, Callable[[], Any]] = {
+        "index": lambda: index,
+        "refs": lambda: refs,
+        "views": lambda: schemas,
+        "asked": lambda: files.rendering()[0].ASKED,
+        "pages": lambda: files.rendering()[1],
+    }
     for step in rest:
         try:
             given = [sources[name]() for name in step.sources]

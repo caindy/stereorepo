@@ -2,13 +2,15 @@
 """
 
 
+from typing import Any
+
 from checks.citations import loaders
 from checks.collect import ROOT, TEMPLATE, check
 from checks.files import FENCED
 
 
 @check("cited decisions")
-def cited_decisions(index):
+def cited_decisions(index: dict[str, Any]) -> list[str]:
     """Validate that every Decision Record cited in durable prose resolves in the index.
 
     Ensures that Decision citations (`DR-nnn`) in durable files resolve to known Decision
@@ -51,7 +53,7 @@ def cited_decisions(index):
 
 
 @check("enacting citations")
-def enacting_citations(index):
+def enacting_citations(index: dict[str, Any]) -> list[str]:
     """Validate that files named in Decision `enacted_in` slots cite at least one enacting entry.
 
     Enforces bidirectional consistency between Decision enactment metadata and the citations
@@ -72,7 +74,7 @@ def enacting_citations(index):
     if not known:
         return []
     home = loaders.SCAFFOLD in index
-    named = {}
+    named: dict[str, set[str]] = {}
     for ident, (cls, obj, _) in index.items():
         if cls != "Decision":
             continue
@@ -81,7 +83,7 @@ def enacting_citations(index):
             if target and target[0] == "Artifact":
                 named.setdefault(target[1]["path"], set()).add(ident.rsplit("/", 1)[-1])
 
-    def listed(numbers):
+    def listed(numbers: set[str]) -> str:
         shown = sorted(numbers)
         return ", ".join(f"DR-{n}" for n in shown[:6]) + (
             f" and {len(shown) - 6} more" if len(shown) > 6 else "")
@@ -106,7 +108,7 @@ def enacting_citations(index):
 
 
 @check("inherited citations")
-def inherited_citations():
+def inherited_citations() -> list[str]:
     """Validate that Issue references in files inherited by portfolios use qualified citations.
 
     Enforces that Issue citations in files copied during specialization use `solorepo's #n`

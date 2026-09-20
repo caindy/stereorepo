@@ -81,7 +81,7 @@ def gh(*args: str, default: Any = None) -> Any:
     return json.loads(out.stdout) if out.stdout.strip() else default
 
 
-def waits_on(issue):
+def waits_on(issue: dict[str, Any] | str | None) -> list[int] | str | None:
     """Extracts blocker issue numbers declared by an issue.
 
     Inspects GitHub's native `blockedBy` relation (solorepo's DR-170, solorepo's DR-213)
@@ -95,7 +95,7 @@ def waits_on(issue):
             relationship, prose explanation string, or None if no blocker
             section is declared.
     """
-    native = [n["number"] for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n] if isinstance(issue, dict) else []
+    native = [int(n["number"]) for n in (issue.get("blockedBy") or {}).get("nodes", []) if "number" in n] if isinstance(issue, dict) else []
     if native:
         return native
     body = issue.get("body") if isinstance(issue, dict) else issue
@@ -109,7 +109,7 @@ def waits_on(issue):
     return text
 
 
-def classify(issue, open_numbers, closing):
+def classify(issue: dict[str, Any], open_numbers: set[int], closing: dict[int, int]) -> dict[str, Any]:
     """Classifies an issue by blocker status, in-progress state, and difficulty level.
 
     Args:
@@ -153,13 +153,13 @@ def row(i: dict[str, Any]) -> str:
     return f"  #{i['number']:<4} {level:<10} {i['note']:<24} {i['title'][:70]}"
 
 
-def issues(closing=None):
+def issues(closing: dict[int, int] | None = None) -> list[dict[str, Any]]:
     """Lists open issues and classifies each by blocker state and in-progress assignment."""
-    found = gh("issue", "list", "--state", "open", "--limit", "200",
-               "--json", "number,title,labels,body,milestone,blockedBy,createdAt", default=[])
-    numbers = {i["number"] for i in found}
+    found: list[dict[str, Any]] = gh("issue", "list", "--state", "open", "--limit", "200",
+                                     "--json", "number,title,labels,body,milestone,blockedBy,createdAt", default=[])
+    numbers = {int(i["number"]) for i in found}
     return sorted((classify(i, numbers, closing or {}) for i in found),
-                  key=lambda i: i["number"])
+                  key=lambda i: int(i["number"]))
 
 
 def unread(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -174,16 +174,16 @@ def unread(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [i for i in rows if i["kind"] == "challenge" and not i["level"]]
 
 
-def pull_requests():
+def pull_requests() -> dict[int, int]:
     """Prints open pull requests and returns mapping of closed issue numbers to PR numbers.
 
     Returns:
         dict[int, int]: Mapping of closed issue numbers to closing pull request numbers.
     """
-    prs = gh("pr", "list", "--state", "open", "--json",
-             "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,latestReviews,reviewRequests,isDraft,headRefName,"
-             "closingIssuesReferences",
-             default=[])
+    prs: list[dict[str, Any]] = gh("pr", "list", "--state", "open", "--json",
+                                   "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,latestReviews,reviewRequests,isDraft,headRefName,"
+                                   "closingIssuesReferences",
+                                   default=[])
     print("pull requests — the loops' work in progress, not what is next")
     if not prs:
         print("  none open")
@@ -200,16 +200,16 @@ def pull_requests():
                 review = "requested"
         print(f"  #{pr['number']:<4} {armed:<7} {state:<9} {review:<17} {pr['title'][:60]}")
     print()
-    return {ref["number"]: pr["number"]
+    return {int(ref["number"]): int(pr["number"])
             for pr in prs for ref in pr.get("closingIssuesReferences") or []}
 
 
-def loops():
+def loops() -> None:
     """Prints the status and timestamp of the most recent run for each loop workflow."""
     print("loops — last run of each")
     for wf in LOOPS:
-        runs = gh("run", "list", "--workflow", wf, "--limit", "1",
-                  "--json", "status,conclusion,createdAt,displayTitle,event", default=[])
+        runs: list[dict[str, Any]] = gh("run", "list", "--workflow", wf, "--limit", "1",
+                                        "--json", "status,conclusion,createdAt,displayTitle,event", default=[])
         if not runs:
             print(f"  {wf[:-4]:<9} no run listed (or no permission to list runs)")
             continue
@@ -221,10 +221,10 @@ def loops():
     print()
 
 
-def sweep_row():
+def sweep_row() -> None:
     """Prints status and timestamps for the last scheduled and last successful gate sweep runs."""
-    runs = gh("run", "list", "--workflow", "gate.yml", "--event", "schedule",
-              "--limit", "50", "--json", "status,conclusion,createdAt", default=[])
+    runs: list[dict[str, Any]] = gh("run", "list", "--workflow", "gate.yml", "--event", "schedule",
+                                    "--limit", "50", "--json", "status,conclusion,createdAt", default=[])
     if not runs:
         print(f"  {'sweep':<9} no scheduled run listed (or no permission to list runs)")
         return
@@ -236,17 +236,17 @@ def sweep_row():
     print(f"  {'sweep':<9} {verdict:<10} {when}  last ok  {ok_when}")
 
 
-def milestones(rows):
+def milestones(rows: list[dict[str, Any]]) -> None:
     """Prints open milestones in ascending numerical order along with their associated issues.
 
     Args:
         rows: Sequence of classified issue dictionaries.
     """
-    found = gh("api", "repos/{owner}/{repo}/milestones?state=open&per_page=20", default=[])
+    found: list[dict[str, Any]] = gh("api", "repos/{owner}/{repo}/milestones?state=open&per_page=20", default=[])
     print("milestones — the lowest number is next")
     if not found:
         print("  none open")
-    for m in sorted(found, key=lambda m: m["number"]):
+    for m in sorted(found, key=lambda m: int(m["number"])):
         print(f"  {m['title']}  ({m['open_issues']} open, {m['closed_issues']} closed)")
         for i in rows:
             if i["milestone"] == m["title"]:
@@ -254,7 +254,7 @@ def milestones(rows):
     print()
 
 
-def screen():
+def screen() -> int:
     """Renders the comprehensive next-actions overview screen."""
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     print(f"next — {now}\n")
@@ -271,7 +271,7 @@ def screen():
     missing = unread(rows)
     roadmap = [i for i in rows if i["kind"] == "roadmap"]
 
-    def section(name, items, empty="  none"):
+    def section(name: str, items: list[dict[str, Any]], empty: str = "  none") -> None:
         print(name)
         for i in items:
             print(row(i))
@@ -286,6 +286,7 @@ def screen():
     section("unread — a Challenge with no difficulty, waiting for the reviewer's verdict; "
             "the sweep fails on one untouched for an hour", missing)
     section("roadmap — deferred by definition, never queued", roadmap)
+    return 0
 
 
 def triage_runs() -> dict[int, dict[str, Any]] | None:

@@ -1,6 +1,8 @@
 """What the citation steps read from: the patterns a Decision and an Issue citation take, the scripts loaded for their patterns, and the files a portfolio inherits.
 """
+import pathlib
 import re
+from collections.abc import Iterator
 from typing import Any
 
 from checks.collect import META, ROOT, TEMPLATE
@@ -27,7 +29,7 @@ def issue_citation() -> tuple[re.Pattern[str], re.Pattern[str]]:
     return module.ISSUE, module.FOREIGN
 
 
-def load_timing():
+def load_timing() -> Any:
     """Load `timing.py` as an isolated module object without executing top-level scripts.
 
     Returns:
@@ -38,6 +40,7 @@ def load_timing():
 
     loader = SourceFileLoader("timing", str(META / "timing.py"))
     spec = importlib.util.spec_from_loader("timing", loader)
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)
     return module
@@ -55,12 +58,13 @@ def load_check_pr() -> Any:
 
     loader = SourceFileLoader("check_pr", str(META / "check_pr.py"))
     spec = importlib.util.spec_from_loader("check_pr", loader)
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)
     return module
 
 
-def copied_files():
+def copied_files() -> set[pathlib.Path]:
     """Determine the absolute paths of all files copied into a specialized portfolio.
 
     Returns:
@@ -73,7 +77,7 @@ def copied_files():
     return copied
 
 
-def durable(copied):
+def durable(copied: set[pathlib.Path]) -> Iterator[pathlib.Path]:
     """Yield all durable repository files subject to citation validation.
 
     Covers documentation pages, inherited portfolio files, template files,

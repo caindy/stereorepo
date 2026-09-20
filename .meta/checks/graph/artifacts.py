@@ -1,6 +1,8 @@
 """What an Artifact owes the record: a path that exists, an Article number that is reserved, and a Decision that names what enacts it.
 """
 
+from typing import Any
+
 import yaml
 
 from checks.citations import FOREIGN
@@ -13,7 +15,7 @@ RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
 
 
 @check("artifact paths")
-def artifact_paths(index):
+def artifact_paths(index: dict[str, Any]) -> list[str]:
     """Every Artifact is a file that exists.
 
     The reference to an Artifact is resolved by the references check, like any
@@ -27,7 +29,7 @@ def artifact_paths(index):
 
 
 @check("reserved article numbers")
-def reserved_article_numbers(index):
+def reserved_article_numbers(index: dict[str, Any]) -> list[str]:
     """A retired Article's number is never issued again.
 
     The reservation is the only thing a retirement leaves behind, and it exists
@@ -53,7 +55,7 @@ def reserved_article_numbers(index):
 
 
 @check("enacted decisions")
-def enacted_decisions(index):
+def enacted_decisions(index: dict[str, Any]) -> list[str]:
     """A20. An adopted decision names an Artifact that carries its rule (solorepo's DR-078).
 
     Whether the Artifact exists is a reference, resolved with every other. What

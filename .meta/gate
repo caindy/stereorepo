@@ -25,10 +25,12 @@ The gate string runs through the shell from the repository root, because that
 is what it is: the words a person types there. Two of the three carry a `cd`,
 and a slot for the working directory would be a second way of saying it.
 """
+import io
 import pathlib
 import re
 import subprocess
 import sys
+from typing import Any
 
 import yaml
 
@@ -48,7 +50,7 @@ COULD_NOT = re.compile(r"^\?  (?P<step>\S[^:]*): (?P<why>.*)$")
 PROBLEM = re.compile(r"^     (?P<problem>.+)$")
 
 
-def structure():
+def structure() -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
     """Loads declared projects and products from structure.yaml."""
     data = yaml.safe_load(STRUCTURE.read_text()) or {}
     projects = {p["id"]: p for p in data.get("projects") or []}
@@ -56,12 +58,16 @@ def structure():
     return projects, products
 
 
-def short(ident):
+def short(ident: str) -> str:
     """The tail of a CURIE: `work:project/meta` is typed as `meta`."""
     return ident.rsplit("/", 1)[-1]
 
 
-def select(word, projects, products):
+def select(
+    word: str | None,
+    projects: dict[str, dict[str, Any]],
+    products: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
     """The Projects a word names: all of them for no word, one by id, tail or
     path, or every Project a Product is built from. A word that names nothing
     is an error, not an empty run — a gate that ran nothing would print `ok`.
@@ -87,7 +93,7 @@ def select(word, projects, products):
     sys.exit(f"gate: nothing is called '{word}'. Projects and Products: {', '.join(known)}")
 
 
-def run(project):
+def run(project: dict[str, Any]) -> tuple[list[tuple[str, str, str]], int | None]:
     """Run one Project's gate and read its report.
 
     Returns the steps as (mark, step, detail) triples, and the exit code. The
@@ -101,9 +107,10 @@ def run(project):
         return [], None
     proc = subprocess.Popen(command, shell=True, cwd=ROOT, text=True,
                             stdout=subprocess.PIPE, stderr=sys.stderr)
-    steps = []
+    steps: list[tuple[str, str, str]] = []
     # `readline`, not iteration: iterating a pipe reads ahead in blocks, and a
     # slow build's first `ok` would sit in the buffer until the last.
+    assert proc.stdout is not None
     for line in iter(proc.stdout.readline, ""):
         line = line.rstrip("\n")
         if (m := X.match(line)):
@@ -122,9 +129,10 @@ def run(project):
     return steps, proc.wait()
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     """Executes the gate for the selected project, product, or the whole portfolio."""
-    sys.stdout.reconfigure(line_buffering=True)  # a report is read as it is printed
+    if isinstance(sys.stdout, io.TextIOWrapper):
+        sys.stdout.reconfigure(line_buffering=True)
     word = argv[1] if len(argv) > 1 else None
     projects, products = structure()
     chosen = select(word, projects, products)

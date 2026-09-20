@@ -1,6 +1,9 @@
 """Prose as the citation steps read it: the scalars of an assertion, the text of a page with its code stripped, and the Charter entry a citation points at.
 """
+import pathlib
 import re
+from collections.abc import Iterator
+from typing import Any
 
 import yaml
 
@@ -44,7 +47,7 @@ HEDGED = re.compile(r"\b(not|never|no longer|would|could|should|might|may|cannot
                     r"rather than|instead of|if)\b", re.I)
 
 
-def scalars(node):
+def scalars(node: object) -> Iterator[str]:
     """Recursively traverse a YAML document node and yield all leaf scalar string values.
 
     Parameters:
@@ -63,7 +66,7 @@ def scalars(node):
             yield from scalars(value)
 
 
-def prose(path):
+def prose(path: pathlib.Path) -> list[str]:
     """Extract prose spans from a file, excluding code blocks and structural comments.
 
     For Markdown, strips fenced code blocks; for YAML, extracts flattened scalar strings.
@@ -86,12 +89,12 @@ def prose(path):
     return [flat(BLOCK.sub(" ", text))]
 
 
-def flat(text):
+def flat(text: str) -> str:
     """Normalizes arbitrary sequences of whitespace in text into a single space."""
     return re.sub(r"\s+", " ", text)
 
 
-def normalise(text):
+def normalise(text: str) -> str:
     """Normalize text for quotation matching by folding case, quotes, and typography.
 
     Parameters:
@@ -105,7 +108,7 @@ def normalise(text):
     return re.sub(r"[`*_]", "", text).lower()
 
 
-def entry_text(cite, charter):
+def entry_text(cite: str, charter: dict[int, dict[str, Any]]) -> str | None:
     """Retrieve the complete normalized text of a Decision Record or Article entry.
 
     Parameters:

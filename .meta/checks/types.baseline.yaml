@@ -18,29 +18,20 @@
 # a defect, so a module is annotated and its number lowered in the same change,
 # one module at a time (solorepo's DR-210).
 # The sweep that empties it is caindy/solorepo#438.
-.meta/check.py: 6
-.meta/checks/citations/claims.py: 20
-.meta/checks/citations/loaders.py: 5
-.meta/checks/citations/prose.py: 15
-.meta/checks/citations/record.py: 12
-.meta/checks/comments.py: 3
-.meta/checks/graph/artifacts.py: 3
-.meta/checks/graph/record.py: 17
-.meta/checks/graph/structure.py: 13
 .meta/checks/probes/channel/actor.py: 1
 .meta/checks/probes/channel/agent.py: 1
 .meta/checks/probes/channel/claim.py: 0
 .meta/checks/probes/channel/filing.py: 0
 .meta/checks/probes/channel/layer.py: 2
 .meta/checks/probes/channel/parser.py: 5
-.meta/checks/probes/channel/reservation.py: 11
+.meta/checks/probes/channel/reservation.py: 4
 .meta/checks/probes/channel/signing_key.py: 1
 .meta/checks/probes/channel/status.py: 1
 .meta/checks/probes/channel/table.py: 1
 .meta/checks/probes/git/step.py: 9
 .meta/checks/probes/harness/fakes.py: 11
 .meta/checks/probes/harness/github.py: 17
-.meta/checks/probes/knowledge.py: 6
+.meta/checks/probes/knowledge.py: 5
 .meta/checks/probes/loops/advance.py: 0
 .meta/checks/probes/loops/delegate.py: 10
 .meta/checks/probes/loops/dispatch.py: 26
@@ -56,7 +47,5 @@
 .meta/checks/probes/tools/depth.py: 13
 .meta/checks/probes/tools/dereference.py: 4
 .meta/checks/probes/tools/search.py: 1
-.meta/checks/probes/tools/timing.py: 4
-.meta/gate: 16
-.meta/next.py: 23
+.meta/checks/probes/tools/timing.py: 3
 

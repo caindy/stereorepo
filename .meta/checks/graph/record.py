@@ -2,6 +2,8 @@
 """
 import re
 import subprocess
+from collections.abc import Callable
+from typing import Any
 
 import yaml
 
@@ -23,7 +25,7 @@ justified at the moment it is made and paid for afterwards.
 
 
 @check("decision alternatives")
-def decision_alternatives(index):
+def decision_alternatives(index: dict[str, Any]) -> list[str]:
     """One option is chosen, and it is stated at all from `DR-060` onward.
 
     A recommendation is held to the same rule as something in force. It is the
@@ -54,7 +56,7 @@ def decision_alternatives(index):
 
 
 @check("decision supersession")
-def decision_supersession(index):
+def decision_supersession(index: dict[str, Any]) -> list[str]:
     """Supersession resolves, does not loop, and the two directions agree.
 
     Resolution is already covered by the reference check. What is not is the
@@ -62,7 +64,8 @@ def decision_supersession(index):
     successor it names has to exist and has to be later. A record that says an
     entry was replaced by one written before it is a record nobody can order.
     """
-    problems, graph = [], {}
+    problems: list[str] = []
+    graph: dict[str, list[str]] = {}
     for did, (cls, obj, _) in index.items():
         if cls != "Decision":
             continue
@@ -75,9 +78,9 @@ def decision_supersession(index):
         for earlier in graph[did]:
             if earlier in index and earlier >= did:
                 problems.append(f"{did}: supersedes '{earlier}', which is not earlier")
-    state = {}
+    state: dict[str, str] = {}
 
-    def visit(node, trail):
+    def visit(node: str, trail: list[str]) -> None:
         if state.get(node) == "done":
             return
         if state.get(node) == "open":
@@ -94,7 +97,7 @@ def decision_supersession(index):
 
 
 @check("decision level")
-def decision_level(index):
+def decision_level(index: dict[str, Any]) -> list[str]:
     """A Decision is the Portfolio's, a Product's or a Project's, and not two of
     these (solorepo's DR-093).
 
@@ -111,7 +114,7 @@ def decision_level(index):
 
 
 @check("withdrawn decisions")
-def withdrawn_decisions(index):
+def withdrawn_decisions(index: dict[str, Any]) -> list[str]:
     """A withdrawn Decision says why it is a hole.
 
     The `Decision` rule in `.meta/work/decisions.yaml` requires
@@ -134,7 +137,7 @@ def withdrawn_decisions(index):
 RESERVATION = re.compile(r"\trefs/tags/DR-(\d+)$", re.M)
 
 
-def reserved_decision_numbers():
+def reserved_decision_numbers() -> set[int] | None:
     """The numbers GitHub holds a tag for, or None when it will not say
     (solorepo's DR-128).
 
@@ -175,7 +178,7 @@ def reserved_decision_numbers():
 DELETION = re.compile(r"^\.meta/assertions/decisions/DR-(\d+)\.yaml$", re.M)
 
 
-def deleted_decision_numbers(numbers):
+def deleted_decision_numbers(numbers: list[int] | set[int]) -> set[int] | None:
     """Which of these numbers the record here once held and a commit removed, or
     None when there is no history to read (solorepo's DR-128).
 
@@ -217,8 +220,11 @@ def deleted_decision_numbers(numbers):
 
 
 @check("decision numbering")
-def decision_numbering(index, reserved=reserved_decision_numbers,
-                       deleted=deleted_decision_numbers):
+def decision_numbering(
+    index: dict[str, Any],
+    reserved: Callable[[], set[int] | None] = reserved_decision_numbers,
+    deleted: Callable[[list[int]], set[int] | None] = deleted_decision_numbers,
+) -> list[str]:
     """Numbers are stable identifiers, so the sequence is contiguous and unused,
     and a hole GitHub reserves is a number in flight rather than a deletion.
 
@@ -298,7 +304,7 @@ def decision_numbering(index, reserved=reserved_decision_numbers,
     numbers = sorted(int(n) for n in seen)
     missing = sorted(set(range(1, numbers[-1] + 1)) - set(numbers))
     if missing:
-        def listed(numbers):
+        def listed(numbers: list[int]) -> str:
             """The numbers as `DR-nnn`, at most ten of them and then a count of the rest.
 
             Truncated because one mistyped number makes every number after it

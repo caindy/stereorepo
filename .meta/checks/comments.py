@@ -544,7 +544,7 @@ def against_repeats(groups: dict[str, list[str]], recorded: dict[str, int]) -> l
 
 
 @check("commented-out code")
-def commented_out_code():
+def commented_out_code() -> StepOutcome:
     """No comment under `.meta/` or in a Rust source is a line of code left behind (solorepo's DR-171).
 
     Code kept as a comment is a claim about the program that nothing runs and
@@ -588,7 +588,7 @@ def commented_out_code():
 
 
 @check("broad suppressions")
-def broad_suppressions():
+def broad_suppressions() -> StepOutcome:
     """Every suppression names the rule it suppresses (A2, solorepo's DR-177).
 
     The complement to `meta lints`, which holds that a suppression carries a
@@ -703,7 +703,7 @@ def comment_site(relative: str, block: Block) -> str:
 
 
 @check("inline commentary")
-def inline_commentary():
+def inline_commentary() -> StepOutcome:
     """Function bodies under `.meta/` hold no commentary outside the keep-exceptions, ratcheted (solorepo's DR-194, solorepo's DR-196).
 
     Narration inside a body is knowledge in the one container that has no reader

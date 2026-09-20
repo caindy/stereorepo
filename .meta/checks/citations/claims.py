@@ -1,6 +1,7 @@
 """What a citation goes on to claim: an Article that resolves, a quotation that appears where it is attributed, a relation that is the slot it claims to be, and a line that reads what it is cited for (A12).
 """
 import re
+from typing import Any
 
 import yaml
 
@@ -9,7 +10,7 @@ from checks.collect import META, ROOT, check
 
 
 @check("cited articles")
-def cited_articles():
+def cited_articles() -> list[str]:
     """Validate that every Article number cited in prose resolves in the Charter.
 
     Ensures `An` references outside code spans match live or reserved articles in `charter.yaml`.
@@ -58,7 +59,7 @@ ELISION = re.compile(r"…|\.\.\.|\[[^\]]*\]")
 
 
 @check("quoted claims")
-def quoted_claims():
+def quoted_claims() -> list[str]:
     """Validate that quotations attributed to an Article or Decision appear in that entry.
 
     Matches attributed quotations in prose against the normalized text of cited entries,
@@ -117,7 +118,7 @@ STATED = re.compile(rf"(?P<subject>{prose.CITE})(?P<before>{prose.NEAREST})"
 
 
 @check("stated relations")
-def stated_relations(index):
+def stated_relations(index: dict[str, Any]) -> list[str]:
     """Validate that semantic relationships between entries stated in prose match assertion slots.
 
     Checks indicative statements using relational verbs (`supersedes`, `applies`, `departs_from`)
@@ -139,18 +140,19 @@ def stated_relations(index):
             for m in STATED.finditer(span.replace("`", "")):
                 slot, wants, either = RELATIONS[m["word"].lower()]
                 entry = decisions.get(m["subject"].removeprefix("DR-"))
-                target = ("work:decision/" + m["object"].removeprefix("DR-") if wants == "Decision"
-                          else "work:article/" + m["object"].removeprefix("A"))
+                target_ref = ("work:decision/" + m["object"].removeprefix("DR-") if wants == "Decision"
+                              else "work:article/" + m["object"].removeprefix("A"))
                 if entry is None or not m["object"].startswith("DR-" if wants == "Decision" else "A"):
                     continue
                 if prose.HEDGED.search(m["before"]) or prose.HEDGED.search(m["after"]):
                     continue
                 held = [entry.get(slot)] if slot == "superseded_by" else list(entry.get(slot) or [])
+                targets = [target_ref]
                 if either:
                     other = decisions.get(m["object"].removeprefix("DR-")) or {}
                     held += list(other.get("supersedes") or [])
-                    target = [target, "work:decision/" + m["subject"].removeprefix("DR-")]
-                if not set(held) & set(target if either else [target]):
+                    targets.append("work:decision/" + m["subject"].removeprefix("DR-"))
+                if not set(held) & set(targets):
                     problems.append(
                         f"{path.relative_to(ROOT)}: \"{prose.flat(m.group(0))}\" is a relation stated in "
                         f"prose, and {m['subject']}'s `{slot}` does not name it; a relation here "
@@ -165,7 +167,7 @@ PATH_LINE = re.compile(r"`(?P<path>[^`\s:]*[./][^`\s:]*):(?P<line>\d+)`")
 
 
 @check("path and line claims")
-def path_and_line_claims():
+def path_and_line_claims() -> list[str]:
     """Validate that `path:line` citations point to existing lines containing adjacent code spans.
 
     Ensures that file line references cited beside code snippets in prose exist and contain

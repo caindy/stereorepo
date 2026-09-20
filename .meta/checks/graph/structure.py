@@ -2,23 +2,26 @@
 """
 
 
+from typing import Any
+
 from checks.collect import check
 
 
 @check("unresolved references")
-def unresolved_references(index, refs):
+def unresolved_references(index: dict[str, Any], refs: list[tuple[str, str, str]]) -> list[str]:
     """Every URI referenced in an assertion slot exists as an identified object in the index."""
     return [f"{site} -> {target} '{ref}' does not exist"
             for ref, target, site in refs if ref not in index]
 
 
 @check("composed_of cycles")
-def composed_of_cycles(index):
+def composed_of_cycles(index: dict[str, Any]) -> list[str]:
     """A skill composes tools and may compose skills. It may not compose itself."""
     graph = {i: o.get("composed_of", []) for i, (c, o, _) in index.items() if c == "Capability"}
-    problems, state = [], {}
+    problems: list[str] = []
+    state: dict[str, str] = {}
 
-    def visit(node, trail):
+    def visit(node: str, trail: list[str]) -> None:
         if state.get(node) == "done":
             return
         if state.get(node) == "open":
@@ -34,7 +37,7 @@ def composed_of_cycles(index):
     return problems
 
 
-def hop(index, start, *slots):
+def hop(index: dict[str, Any], start: str, *slots: str) -> str | None:
     """Follow a chain of single-valued references, or give up quietly."""
     cur = start
     for slot in slots:
@@ -47,7 +50,7 @@ def hop(index, start, *slots):
 
 
 @check("collaboration membership")
-def collaboration_membership(index):
+def collaboration_membership(index: dict[str, Any]) -> list[str]:
     """Every Job in a Collaboration answers the Collaboration's Challenge."""
     problems = []
     for cid, (cls, obj, _) in index.items():
@@ -62,7 +65,7 @@ def collaboration_membership(index):
 
 
 @check("audit invariants")
-def audit_invariants(index):
+def audit_invariants(index: dict[str, Any]) -> list[str]:
     """An authorising Permission comes from the Remit; a target is in the Securable."""
     problems = []
     for aid, (cls, obj, _) in index.items():
@@ -83,7 +86,7 @@ def audit_invariants(index):
 
 
 @check("served goals")
-def served_goals(index):
+def served_goals(index: dict[str, Any]) -> list[str]:
     """A Job to be Done serves END goals, and only ones its own Persona holds.
 
     Neither is expressible in the schema: the tier lives on the target object,
@@ -115,7 +118,7 @@ def served_goals(index):
 
 
 @check("one context per portfolio")
-def one_context_per_portfolio(index):
+def one_context_per_portfolio(index: dict[str, Any]) -> list[str]:
     """A portfolio is exactly one Bounded Context, by construction (solorepo's DR-014).
 
     The slot stays multivalued because `DddModel` is generic DDD and a Context
