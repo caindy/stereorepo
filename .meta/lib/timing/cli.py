@@ -5,7 +5,7 @@ import argparse
 from lib.timing import github, screen
 
 
-def main(description):
+def main(description: str) -> None:
     """Parses arguments and outputs workflow timing statistics.
 
     Args:

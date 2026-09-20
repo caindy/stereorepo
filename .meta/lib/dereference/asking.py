@@ -4,6 +4,7 @@ import os
 import pathlib
 import subprocess
 import sys
+from typing import Any
 
 CREDENTIAL = pathlib.Path(
     os.environ.get("SOLOREPO_MODEL_ENV", "~/.config/solorepo/claude.env")).expanduser()
@@ -43,7 +44,7 @@ WHAT {cite} SAYS
 """
 
 
-def credential():
+def credential() -> dict[str, str]:
     """The model token, on the terms the channel holds a Role's: outside the
     working tree, refused where others can read it, and handed to one child
     process rather than exported.
@@ -92,7 +93,12 @@ def credential():
     return {}
 
 
-def ask(pair, token, model, seconds=120):
+def ask(
+    pair: dict[str, Any],
+    token: dict[str, str],
+    model: str,
+    seconds: int = 120,
+) -> tuple[str, str]:
     """One question, answered by a model with no tools and the target in hand.
 
     No tools on purpose: everything the question turns on is in the prompt, so

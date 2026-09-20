@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import pathlib
+from typing import Any
 
 from lib.apm_compile import BANNER, META, instructions
 
 
-def role_agent(role_id: str, r: dict, personalities: dict) -> str:
+def role_agent(role_id: str, r: dict[str, Any], personalities: dict[str, Any]) -> str:
     """One operational Role's agent file: its remit, the communication style of the Personality sharing its slug, and write access only where the Role writes."""
     role_slug = role_id.rsplit("/", 1)[-1]
     personality_id = f"work:personality/{role_slug}"
@@ -57,7 +58,7 @@ def role_agent(role_id: str, r: dict, personalities: dict) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
-def persona_agent(p: dict) -> str:
+def persona_agent(p: dict[str, Any]) -> str:
     """One stakeholder Persona's agent file: an interrogation surrogate that reads and never writes (solorepo's DR-200)."""
     persona_slug = p.get("id", "").rsplit("/", 1)[-1]
     name = p.get("name", persona_slug)

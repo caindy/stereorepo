@@ -7,7 +7,7 @@ import shutil
 from lib.dereference import asking, reading, report
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     """Parses arguments and checks cited sentences against the entries they cite.
 
     Answers `could not run` in both of the ways that happens here — too much to

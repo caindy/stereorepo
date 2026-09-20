@@ -1,12 +1,16 @@
 """The screen: one row per workflow, its sub-rows by stratum, and the slowest steps under `--steps`.
 """
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from lib.timing import arithmetic, github, routing
 
+OpenedRun = tuple[dict[str, Any], list[dict[str, Any]], float | None, float | None]
 
-def summarise(workflow, limit, deep, stratify=None):
+
+def summarise(workflow: str, limit: int, deep: int,
+              stratify: str | None = None) -> tuple[dict[str, Any] | None, list[OpenedRun]]:
     """Aggregates runtime and wait percentiles across workflow runs.
 
     Args:
@@ -26,7 +30,7 @@ def summarise(workflow, limit, deep, stratify=None):
     found = github.runs_of(workflow, limit)
     if found is None:
         return None, []
-    opened = []
+    opened: list[OpenedRun] = []
     for run in found[:deep]:
         jobs = github.jobs_of(run["databaseId"])
         if not jobs:
@@ -50,18 +54,18 @@ def summarise(workflow, limit, deep, stratify=None):
         waits = []
         works = []
         n = len(found)
-    total = [s for s in total if s is not None]
+    non_null_total: list[float] = [s for s in total if s is not None]
 
-    result = {
+    result: dict[str, Any] = {
         "n": n,
         "available": len(found),
-        "total": total,
+        "total": non_null_total,
         "waiting": waits,
         "running": works,
     }
 
     if stratify and opened:
-        groups = {}
+        groups: dict[str, dict[str, Any]] = {}
         for run, _, w, x in opened:
             tag = routing.stratify_run(workflow, run, stratify)
             if tag:
@@ -77,7 +81,7 @@ def summarise(workflow, limit, deep, stratify=None):
     return result, opened
 
 
-def row(name, seen):
+def row(name: str, seen: dict[str, Any]) -> str:
     """Formats one workflow summary row displaying runtime and wait percentiles."""
     return (f"  {name[:-4]:<9} {seen['n']:>3}  "
             f"{arithmetic.clock(arithmetic.pick(seen['total'], 0.5))} {arithmetic.clock(arithmetic.pick(seen['total'], 0.95))} "
@@ -86,7 +90,7 @@ def row(name, seen):
             f"{arithmetic.clock(arithmetic.pick(seen['running'], 0.5))} {arithmetic.clock(arithmetic.pick(seen['running'], 0.95))}")
 
 
-def subrow(tag, seen):
+def subrow(tag: str, seen: dict[str, Any]) -> str:
     """Formats a stratified breakdown subrow under a workflow row."""
     label = f"  {tag}"
     return (f"  {label:<9} {seen['n']:>3}  "
@@ -96,14 +100,14 @@ def subrow(tag, seen):
             f"{arithmetic.clock(arithmetic.pick(seen['running'], 0.5))} {arithmetic.clock(arithmetic.pick(seen['running'], 0.95))}")
 
 
-def steps(opened, show):
+def steps(opened: Sequence[OpenedRun], show: int) -> None:
     """Identifies and displays the slowest workflow steps across opened runs.
 
     Args:
         opened: Sequence of opened run tuples containing job step timings.
         show: Maximum number of slowest steps to display.
     """
-    seen = {}
+    seen: dict[tuple[str, str], list[float]] = {}
     for _, jobs, *_ in opened:
         for job in jobs:
             for step in job.get("steps") or []:
@@ -114,9 +118,9 @@ def steps(opened, show):
         print("  no step timing (no run was opened, or none had jobs to read)")
         return
     ranked = sorted(seen.items(), key=lambda kv: arithmetic.pick(kv[1], 0.5) or 0, reverse=True)
-    for (job, step), costs in ranked[:show]:
+    for (job_name, step_name), costs in ranked[:show]:
         print(f"  {arithmetic.clock(arithmetic.pick(costs, 0.5))} {arithmetic.clock(arithmetic.pick(costs, 0.95))} n={len(costs):<3} "
-              f"{job} / {step[:58]}")
+              f"{job_name} / {step_name[:58]}")
 
 
 class Window(NamedTuple):
@@ -127,7 +131,7 @@ class Window(NamedTuple):
     stratify: str | None = None
 
 
-def screen(names, window, show, want_steps):
+def screen(names: Sequence[str], window: Window, show: int, want_steps: bool) -> None:
     """Renders the workflow timing summary screen over `window` for each of `names`."""
     limit, deep, stratify = window
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
@@ -135,7 +139,8 @@ def screen(names, window, show, want_steps):
     print(f"  {'workflow':<9} {'n':>3}  {'total':>7} {'p95':>7} {'max':>7}  "
           f"{'wait':>7} {'p95':>7}  {'run':>7} {'p95':>7}")
     print(f"  {'':<9} {'':>3}  {'p50':>7} {'':>7} {'':>7}  {'p50':>7} {'':>7}  {'p50':>7} {'':>7}")
-    unreadable, everything = [], []
+    unreadable: list[str] = []
+    everything: list[OpenedRun] = []
     for name in names:
         seen, opened = summarise(name, limit, deep, stratify=stratify)
         everything += opened

@@ -1,13 +1,15 @@
 """The record of decisions: its index, the form a new entry is written on, and what landed for a Challenge.
 """
 import posixpath
+from collections.abc import Sequence
+from typing import Any
 
 import yaml
 
 from lib.render import META, record
 
 
-def _decision_slots():
+def _decision_slots() -> dict[str, Any]:
     """The slot descriptions from the model, which is where the guidance lives.
 
     Read as plain YAML rather than through a SchemaView so the renderer keeps its
@@ -16,13 +18,13 @@ def _decision_slots():
     a form whose headings were typed by hand would be the third copy of a shape
     the schema already states.
     """
-    slots = {}
+    slots: dict[str, Any] = {}
     for module in ("work/core.yaml", "work/decisions.yaml"):
         slots.update((record.load(module) or {}).get("slots") or {})
     return slots
 
 
-def landed(number):
+def landed(number: int | str) -> str:
     """What a Challenge got, rendered from the entries taken under it.
 
     The account of a finished piece of work is not new prose: every line of it is
@@ -63,7 +65,7 @@ def landed(number):
     return "\n".join(out)
 
 
-def decisions():
+def decisions() -> str | None:
     """The index to the record, and the only thing rendered from it (solorepo's DR-082).
 
     An entry is its assertion file, so rendering one as markdown made a second
@@ -101,7 +103,7 @@ def decisions():
             out.append(f"- [DR-{num}]({record.ENTRY.format(num)}) — withdrawn. "
                        + why.split(". ")[0].rstrip(".") + ".")
         out.append("")
-    by_artifact = {}
+    by_artifact: dict[str, list[str]] = {}
     for d in rows:
         for ref in (d.get("enacted_in") or []):
             by_artifact.setdefault(paths.get(ref, ref), []).append(
@@ -120,7 +122,7 @@ def decisions():
     return "\n".join(out)
 
 
-def _row(rows, d, levels):
+def _row(rows: Sequence[dict[str, Any]], d: dict[str, Any], levels: dict[str, str]) -> str:
     """One entry's line of the index: its number, the question it settled with its level where it is not the Portfolio's (solorepo's DR-093), and its status."""
     num = d["id"].rsplit("/", 1)[-1]
     status = (d.get("status") or "").capitalize()
@@ -133,7 +135,7 @@ def _row(rows, d, levels):
     return f"| [DR-{num}]({record.ENTRY.format(num)}) | {title} | {status} |"
 
 
-def _link(rows, ident):
+def _link(rows: Sequence[dict[str, Any]], ident: str) -> str:
     """A supersession, rendered as a link to the entry it names."""
     for d in rows:
         if d["id"] == ident:
@@ -141,7 +143,7 @@ def _link(rows, ident):
     return ident
 
 
-def decision_form():
+def decision_form() -> str | None:
     """The form for an entry, rendered from the same class the record uses.
 
     One class at three levels — the Portfolio's, a Product's, a Project's —

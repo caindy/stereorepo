@@ -1,10 +1,15 @@
 """Every target a render writes, by the path it lands on, and the table's three readers, all here: what is rendered, what is on disk that nothing renders, and which pages take a `merge=union` driver in `.gitattributes`.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 from lib.render import META, decisions, pages, record, skills, writers
 
+TargetFn = Callable[[], str | dict[str, Any] | None]
 
-def gitattributes():
+
+def gitattributes() -> str:
     """`merge=union` for every path this file writes, from the list that writes them.
 
     A generated page carries no information its sources do not, and the gate
@@ -42,7 +47,10 @@ def gitattributes():
         result = fn()
         if result is None:
             continue
-        names.update(result if isinstance(result, dict) else {name: None})
+        if isinstance(result, dict):
+            names.update(result.keys())
+        else:
+            names.add(name)
     paths = sorted(f"/{name.removeprefix('../')}" if name.startswith("../")
                    else f"/.meta/{name}" for name in names)
     return "\n".join([
@@ -56,25 +64,27 @@ def gitattributes():
         "",
     ] + [f"{path} merge=union" for path in paths]) + "\n"
 
-TARGETS = {"disciplines.md": pages.disciplines,
-           "decisions.md": decisions.decisions,
-           "templates/decision.md": decisions.decision_form,
-           "charter.md": pages.charter,
-           "vocabulary.md": pages.vocabulary,
-           "../SPECIALIZE.md": pages.specialize,
-           "../justfile": writers.justfile,
-           "../.github/PULL_REQUEST_TEMPLATE.md": pages.pull_request_template,
-           "../.github/ISSUE_TEMPLATE/challenge.md": pages.issue_template,
-           "../.github/ISSUE_TEMPLATE/roadmap.md": pages.roadmap_template,
-           "../.claude/skills/pr-first/SKILL.md": skills.pr_first_skill,
-           "../.claude/skills/pr-first-reviewer/SKILL.md": skills.pr_first_reviewer_skill,
-           "../.claude/skills/wikisplain/SKILL.md": skills.wikisplain_skill,
-           "../.claude/skills/technical-writing/SKILL.md": skills.technical_writing_skill,
-           "apm_primitives": writers.apm_primitives,
-           "../.gitattributes": gitattributes}
+TARGETS: dict[str, TargetFn] = {
+    "disciplines.md": pages.disciplines,
+    "decisions.md": decisions.decisions,
+    "templates/decision.md": decisions.decision_form,
+    "charter.md": pages.charter,
+    "vocabulary.md": pages.vocabulary,
+    "../SPECIALIZE.md": pages.specialize,
+    "../justfile": writers.justfile,
+    "../.github/PULL_REQUEST_TEMPLATE.md": pages.pull_request_template,
+    "../.github/ISSUE_TEMPLATE/challenge.md": pages.issue_template,
+    "../.github/ISSUE_TEMPLATE/roadmap.md": pages.roadmap_template,
+    "../.claude/skills/pr-first/SKILL.md": skills.pr_first_skill,
+    "../.claude/skills/pr-first-reviewer/SKILL.md": skills.pr_first_reviewer_skill,
+    "../.claude/skills/wikisplain/SKILL.md": skills.wikisplain_skill,
+    "../.claude/skills/technical-writing/SKILL.md": skills.technical_writing_skill,
+    "apm_primitives": writers.apm_primitives,
+    "../.gitattributes": gitattributes,
+}
 
 
-def rendered():
+def rendered() -> dict[str, str]:
     """Every generated path, relative to `.meta/`, mapped to its content.
 
     A target renders one file or a set of them. Both callers — `cli.main`, which writes,
@@ -85,16 +95,20 @@ def rendered():
     prose in the assertions, and which generator carries it to a page is not
     that sentence's business.
     """
-    out = {}
+    out: dict[str, str] = {}
     for name, fn in TARGETS.items():
         result = fn()
         if result is None:
             continue
-        out.update(result if isinstance(result, dict) else {name: result})
+        if isinstance(result, dict):
+            out.update({k: v.decode("utf-8") if isinstance(v, bytes) else str(v)
+                        for k, v in result.items()})
+        else:
+            out[name] = result
     return {name: record.counted(text) for name, text in out.items()}
 
 
-def unrendered():
+def unrendered() -> list[str]:
     """Targets that produce nothing and yet have a file on disk, by name.
 
     By name and not as a sentence about the name, because both callers key on

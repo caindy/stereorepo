@@ -18,7 +18,6 @@
 # a defect, so a module is annotated and its number lowered in the same change,
 # one module at a time (solorepo's DR-210).
 # The sweep that empties it is caindy/solorepo#438.
-.meta/apm_compile.py: 0
 .meta/check.py: 6
 .meta/checks/citations/claims.py: 20
 .meta/checks/citations/loaders.py: 5
@@ -58,26 +57,6 @@
 .meta/checks/probes/tools/dereference.py: 4
 .meta/checks/probes/tools/search.py: 1
 .meta/checks/probes/tools/timing.py: 4
-.meta/dereference.py: 1
 .meta/gate: 16
-.meta/lib/apm_compile/agents.py: 2
-.meta/lib/apm_compile/skills.py: 1
-.meta/lib/dereference/asking.py: 2
-.meta/lib/dereference/cli.py: 7
-.meta/lib/dereference/reading.py: 40
-.meta/lib/dereference/report.py: 5
-.meta/lib/render/cli.py: 4
-.meta/lib/render/decisions.py: 21
-.meta/lib/render/pages.py: 40
-.meta/lib/render/record.py: 21
-.meta/lib/render/skills.py: 24
-.meta/lib/render/targets.py: 8
-.meta/lib/render/writers.py: 6
-.meta/lib/timing/arithmetic.py: 11
-.meta/lib/timing/cli.py: 2
-.meta/lib/timing/github.py: 5
-.meta/lib/timing/routing.py: 9
-.meta/lib/timing/screen.py: 37
 .meta/next.py: 23
-.meta/render.py: 1
-.meta/timing.py: 1
+

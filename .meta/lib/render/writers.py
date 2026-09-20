@@ -1,10 +1,12 @@
 """The files a render writes that are not prose: the justfile (solorepo's DR-106) and the APM primitives (solorepo's DR-172, solorepo's DR-173, solorepo's DR-174).
 """
 
+from typing import Any
+
 from lib.render import META, record
 
 
-def justfile():
+def justfile() -> str:
     """The root's verb surface, rendered so that the one line in it that names
     anything comes from the assertions rather than a list kept beside them
     (solorepo's DR-106).
@@ -17,8 +19,8 @@ def justfile():
     """
     structure = record.load("assertions/structure.yaml") or {}
 
-    def tail(p):
-        return p["id"].rsplit("/", 1)[-1]
+    def tail(p: dict[str, Any]) -> str:
+        return str(p["id"]).rsplit("/", 1)[-1]
 
     projects = ", ".join(tail(p) for p in structure.get("projects") or [])
     products = ", ".join(tail(p) for p in structure.get("products") or [])
@@ -131,7 +133,7 @@ def justfile():
     return "\n".join(lines) + "\n"
 
 
-def apm_primitives():
+def apm_primitives() -> dict[str, str | bytes]:
     """Compiles .meta/assertions/ into .meta/.apm/ primitives and .meta/apm.yml (solorepo's DR-172, solorepo's DR-173, solorepo's DR-174)."""
     import apm_compile
     return apm_compile.rendered_primitives(META)

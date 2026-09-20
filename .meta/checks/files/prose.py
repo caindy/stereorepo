@@ -25,7 +25,7 @@ def rendering() -> tuple[Any, Any]:
     """
     sys.path.insert(0, str(META))
     import render
-    return render, render.rendered()  # type: ignore[no-untyped-call]  # reason: `render.rendered()` carries no annotations — .meta/render.py re-exports it from .meta/lib/render/targets.py:77, where it is defined bare; removable when that module is annotated and its baseline entry falls
+    return render, render.rendered()
 
 
 def declared(rel: str) -> dict[str, dict[str, Any]]:

@@ -5,7 +5,7 @@ import sys
 from lib.render import META, decisions, targets
 
 
-def main():
+def main() -> None:
     """Runs the mode the arguments name and exits with the render's verdict.
 
     `--landed <n>` prints what a Challenge got and exits. Otherwise every

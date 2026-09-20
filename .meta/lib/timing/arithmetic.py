@@ -1,10 +1,12 @@
 """The arithmetic over a run: timestamps, spans, the clock a span prints as, the nearest-rank percentile, and the critical path through the job that finished last.
 """
 import math
-from datetime import datetime
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from typing import Any
 
 
-def at(stamp):
+def at(stamp: str | None) -> datetime | None:
     """Parses an ISO 8601 UTC timestamp string into a timezone-aware datetime object.
 
     Args:
@@ -18,7 +20,7 @@ def at(stamp):
     return datetime.fromisoformat(stamp.replace("Z", "+00:00"))
 
 
-def span(start, end):
+def span(start: str | None, end: str | None) -> float | None:
     """Computes the elapsed time in seconds between two ISO 8601 timestamps.
 
     Args:
@@ -34,7 +36,7 @@ def span(start, end):
     return max(0.0, (b - a).total_seconds())
 
 
-def clock(seconds):
+def clock(seconds: float | None) -> str:
     """Formats a duration in seconds into human-readable fixed-width units.
 
     Args:
@@ -45,15 +47,15 @@ def clock(seconds):
     """
     if seconds is None:
         return "     —"
-    seconds = round(seconds)
-    if seconds < 60:
-        return f"{seconds:>6}s"
-    if seconds < 3600:
-        return f"{seconds // 60:>3}m{seconds % 60:02d}s"
-    return f"{seconds // 3600:>3}h{(seconds % 3600) // 60:02d}m"
+    sec = round(seconds)
+    if sec < 60:
+        return f"{sec:>6}s"
+    if sec < 3600:
+        return f"{sec // 60:>3}m{sec % 60:02d}s"
+    return f"{sec // 3600:>3}h{(sec % 3600) // 60:02d}m"
 
 
-def pick(values, fraction):
+def pick(values: Sequence[float], fraction: float) -> float | None:
     """Calculates the nearest-rank percentile value from a sequence of numbers.
 
     Args:
@@ -70,7 +72,7 @@ def pick(values, fraction):
     return ordered[min(rank, len(ordered)) - 1]
 
 
-def critical(run, jobs):
+def critical(run: dict[str, Any], jobs: Sequence[dict[str, Any]]) -> tuple[float | None, float | None]:
     """Determines the critical-path job for a run and calculates queue wait and active work duration.
 
     Args:
@@ -80,15 +82,22 @@ def critical(run, jobs):
     Returns:
         tuple[float | None, float | None]: Queue wait duration and active execution duration in seconds.
     """
-    created = at(run["createdAt"])
+    created = at(run.get("createdAt"))
     if created is None:
         return None, None
-    ran_at_all = [j for j in jobs
-                  if j.get("startedAt") and j.get("completedAt")
-                  and (j.get("steps") or [])
-                  and at(j["completedAt"]) >= at(j["startedAt"])]
+    ran_at_all: list[dict[str, Any]] = []
+    for j in jobs:
+        if not (j.get("startedAt") and j.get("completedAt") and (j.get("steps") or [])):
+            continue
+        c_at, s_at = at(j.get("completedAt")), at(j.get("startedAt"))
+        if c_at is not None and s_at is not None and c_at >= s_at:
+            ran_at_all.append(j)
     if not ran_at_all:
         return None, None
-    last = max(ran_at_all, key=lambda j: at(j["completedAt"]))
-    wait = max(0.0, (at(last["startedAt"]) - created).total_seconds())
-    return wait, span(last["startedAt"], last["completedAt"])
+    min_time = datetime.min.replace(tzinfo=UTC)
+    last = max(ran_at_all, key=lambda j: at(j.get("completedAt")) or min_time)
+    s_last = at(last.get("startedAt"))
+    if s_last is None:
+        return None, None
+    wait = max(0.0, (s_last - created).total_seconds())
+    return wait, span(last.get("startedAt"), last.get("completedAt"))

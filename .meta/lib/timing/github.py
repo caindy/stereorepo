@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+from typing import Any
 
 # The same four `next.py` reads, and for the same reason: they are the
 # workflows a portfolio inherits or writes its own of. `gate.yml` is not in
@@ -26,7 +27,7 @@ RUN_FIELDS = "databaseId,createdAt,startedAt,updatedAt,conclusion,event,status,h
 UNSET = object()
 
 
-def gh(*args, default=UNSET):
+def gh(*args: str, default: Any = UNSET) -> Any:
     """Executes a GitHub CLI command and parses its JSON output.
 
     Args:
@@ -44,7 +45,7 @@ def gh(*args, default=UNSET):
     return json.loads(out.stdout or "null")
 
 
-def runs_of(workflow, limit):
+def runs_of(workflow: str, limit: int) -> list[dict[str, Any]] | None:
     """Fetches completed workflow runs, filtering out skipped or cancelled deliveries.
 
     Args:
@@ -62,7 +63,7 @@ def runs_of(workflow, limit):
             if r["status"] == "completed" and (r["conclusion"] or "").lower() not in NOT_RUN]
 
 
-def jobs_of(run_id):
+def jobs_of(run_id: int | str) -> list[dict[str, Any]]:
     """Fetches job definitions and step timings for a specific workflow run.
 
     Args:
@@ -72,4 +73,4 @@ def jobs_of(run_id):
         list[dict]: List of job dictionaries including step timing metadata.
     """
     found = gh("run", "view", str(run_id), "--json", "jobs", default={})
-    return found.get("jobs") or []
+    return list(found.get("jobs") or [])

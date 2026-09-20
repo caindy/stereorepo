@@ -3,7 +3,16 @@
 
 
 
-def report(answers, pairs, where, everything, sample=False):
+from typing import Any
+
+
+def report(
+    answers: list[tuple[str, str]],
+    pairs: list[dict[str, Any]],
+    where: str,
+    everything: bool,
+    sample: bool = False,
+) -> int:
     """A21's three lines, from a step that is not a gate.
 
     One step, one mark. `x` where any pair failed, and the undecided are listed
@@ -25,7 +34,7 @@ def report(answers, pairs, where, everything, sample=False):
     bad = [(p, why) for (mark, why), p in zip(answers, pairs, strict=True) if mark == "x"]
     held = [(p, why) for (mark, why), p in zip(answers, pairs, strict=True) if mark == "?"]
 
-    def lines(items, mark):
+    def lines(items: list[tuple[dict[str, Any], str]], mark: str) -> None:
         for pair, why in items:
             print(f"     {mark} {pair['path']}: {pair['cite']} — {why}")
             print(f"       “{pair['sentence'][:160]}”")

@@ -17,6 +17,6 @@
 # every package under `.meta/checks/` repeats the pair. The sweep that drained
 # the 22 untyped-decorator suppressions of caindy/solorepo#541 is
 # caindy/solorepo#561.
-.meta/checks/files/prose.py: 1
 "noqa:F401 — registers check steps": 12
 "noqa:I001 — registration order is deliberate": 7
+

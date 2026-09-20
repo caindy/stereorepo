@@ -6,6 +6,8 @@ import re
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterable
+from typing import Any
 
 import yaml
 
@@ -30,7 +32,7 @@ CONTEXT = 600
 CHECKS = META / "checks"
 
 
-def citations():
+def citations() -> Any:
     """`.meta/checks/citations/`, imported for its extraction and nothing else.
 
     Importing runs nothing — everything it does is under `main()` — and the
@@ -51,7 +53,7 @@ def citations():
     return importlib.import_module("citations")
 
 
-def git(*args, default=None):
+def git(*args: str, default: str | None = None) -> str:
     """Executes a git command in the repository root and returns its stdout."""
     out = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
     if out.returncode:
@@ -61,14 +63,14 @@ def git(*args, default=None):
     return out.stdout
 
 
-def articles():
+def articles() -> dict[int, dict[str, Any]]:
     """Every Article, by number, as the entry a citation of it names."""
     charter = yaml.safe_load(
         (META / "assertions" / "imported" / "charter.yaml").read_text()) or {}
     return {int(a["id"].rsplit("/", 1)[-1]): a for a in charter.get("articles") or []}
 
 
-def target(cite, index):
+def target(cite: str, index: dict[int, dict[str, Any]]) -> str | None:
     """What a citation names, as text a reader could be handed, or None where it
     names nothing here.
 
@@ -91,7 +93,7 @@ def target(cite, index):
 MANY = 4
 
 
-def spans(chk, path):
+def spans(chk: Any, path: pathlib.Path) -> list[str]:
     """The units a claim is made in: an assertion's scalars, or a page's
     paragraphs and table rows.
 
@@ -114,25 +116,26 @@ def spans(chk, path):
     construction.
     """
     if path.suffix in (".yaml", ".yml"):
-        return chk.prose(path)
+        result: list[str] = chk.prose(path)
+        return result
     try:
         text = chk.BLOCK.sub(" ", path.read_text())
     except (UnicodeDecodeError, OSError):
         return []
     found = []
     for block in re.split(r"\n\s*\n", text):
-        item = []
+        item: list[str] = []
         for line in block.splitlines():
             if ITEM.match(line) and item:
-                found.append(chk.flat(" ".join(item)))
+                found.append(str(chk.flat(" ".join(item))))
                 item = []
             item.append(line)
         if item:
-            found.append(chk.flat(" ".join(item)))
+            found.append(str(chk.flat(" ".join(item))))
     return [span for span in found if span.strip()]
 
 
-def sentences(chk, path):
+def sentences(chk: Any, path: pathlib.Path) -> list[tuple[str, str, list[str]]]:
     """Every sentence of a file that cites an entry, with the span around it.
 
     A citation inside a code span is the shape of one and not one, and is
@@ -141,7 +144,7 @@ def sentences(chk, path):
     bare `CITE` would read the `A1` inside a token that merely contains one.
     """
     cites = re.compile(rf"\b{chk.CITE}\b")
-    found = []
+    found: list[tuple[str, str, list[str]]] = []
     for span in spans(chk, path):
         at = 0
         for part in SENTENCE.split(span):
@@ -154,7 +157,7 @@ def sentences(chk, path):
     return found
 
 
-def as_it_was(chk, path, text):
+def as_it_was(chk: Any, path: pathlib.Path, text: str) -> set[str]:
     """The citing sentences a file held at the base.
 
     Written to a file with the same suffix and read back through the same
@@ -171,24 +174,30 @@ def as_it_was(chk, path, text):
         was.unlink()
 
 
-def durable_prose(chk):
+def durable_prose(chk: Any) -> set[pathlib.Path]:
     """The durable files the questions are asked of: what `chk.durable` names, less Python and less every rendered page but the justfile."""
     import render
-    durable = set(chk.durable(chk.copied_files()))
+    durable: set[pathlib.Path] = set(chk.durable(chk.copied_files()))
     meta_dir = pathlib.Path(render.__file__).resolve().parent
     skip = {(meta_dir / name).resolve() for name in render.rendered()} - {(meta_dir / ".." / "justfile").resolve()}
     return {p for p in durable if p.suffix != ".py" and p.resolve() not in skip}
 
 
-def pair(path, cite, sentence, around, body, **more):
+def pair(path: pathlib.Path, cite: str, sentence: str, around: str, body: str, **more: Any) -> dict[str, Any]:
     """One question: the sentence at `path`, the citation, the span it sits in and what the citation names."""
     return {"path": str(path.relative_to(ROOT)), "cite": cite, "sentence": sentence,
             "context": around, "body": body, **more}
 
 
-def sampled(chk, index, durable, sample):
+def sampled(
+    chk: Any,
+    index: dict[int, dict[str, Any]],
+    durable: set[pathlib.Path],
+    sample: int,
+) -> list[dict[str, Any]]:
     """A rotating sample of `sample` pairs over every durable file, the offset turning with the commit count (solorepo's DR-192)."""
-    all_pairs, seen = [], set()
+    all_pairs: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
     for path in sorted(durable):
         for sentence, around, named in sentences(chk, path):
             for cite in named:
@@ -205,7 +214,7 @@ def sampled(chk, index, durable, sample):
     return (all_pairs + all_pairs)[offset:offset + sample]
 
 
-def moved_articles(base, path):
+def moved_articles(base: str, path: pathlib.Path) -> set[str]:
     """The Articles whose text differs between `base` and the charter at `path`, as `A<n>`."""
     was_text = git("show", f"{base}:{path.relative_to(ROOT)}", default="")
     was_charter = yaml.safe_load(was_text) or {} if was_text else {}
@@ -215,9 +224,9 @@ def moved_articles(base, path):
     return {f"A{num}" for num, art in now_art.items() if num not in was_art or was_art[num] != art}
 
 
-def modified_entries(base, changed):
+def modified_entries(base: str, changed: list[pathlib.Path]) -> set[str]:
     """The Decisions and Articles this branch moved: every `DR-` assertion among `changed`, and each Article the charter's text changed (solorepo's DR-192)."""
-    entries = set()
+    entries: set[str] = set()
     for p in changed:
         try:
             rel = p.relative_to(ROOT)
@@ -231,9 +240,14 @@ def modified_entries(base, changed):
     return entries
 
 
-def asked(chk, index, seen, readings):
+def asked(
+    chk: Any,
+    index: dict[int, dict[str, Any]],
+    seen: set[tuple[str, str]],
+    readings: Iterable[tuple[pathlib.Path, set[str], set[str] | None]],
+) -> list[dict[str, Any]]:
     """The pairs over `readings`, each `(path, held, only)`: sentences in `held` are skipped, and where `only` is given so is every citation outside it, which marks the pair as ground that moved; `seen` keeps a pair from being asked twice."""
-    pairs = []
+    pairs: list[dict[str, Any]] = []
     for path, held, only in readings:
         for sentence, around, named in sentences(chk, path):
             if sentence in held:
@@ -250,7 +264,10 @@ def asked(chk, index, seen, readings):
     return pairs
 
 
-def branch_paths(base, durable):
+def branch_paths(
+    base: str,
+    durable: set[pathlib.Path],
+) -> tuple[list[pathlib.Path], dict[pathlib.Path, str], set[str]]:
     """The durable files this branch changed, tracked or not, each with its text at `base`, and the entries the branch moved."""
     named = git("diff", "--name-only", base).split()
     named += git("ls-files", "--others", "--exclude-standard", default="").split()
@@ -260,7 +277,12 @@ def branch_paths(base, durable):
     return paths, before, modified_entries(base, changed)
 
 
-def scope(chk, base, everything, sample=None):
+def scope(
+    chk: Any,
+    base: str,
+    everything: bool,
+    sample: int | None = None,
+) -> list[dict[str, Any]]:
     """The pairs to ask about: a sentence, the span it sits in, the citation and
     what the citation names.
 
@@ -286,12 +308,15 @@ def scope(chk, base, everything, sample=None):
     durable = durable_prose(chk)
     if sample:
         return sampled(chk, index, durable, sample)
+    paths: list[pathlib.Path]
+    before: dict[pathlib.Path, str]
+    moved: set[str]
     if everything:
         paths, before, moved = sorted(durable), {}, set()
     else:
         paths, before, moved = branch_paths(base, durable)
 
-    seen = set()
+    seen: set[tuple[str, str]] = set()
     pairs = asked(chk, index, seen, ((path, set() if everything else as_it_was(chk, path, before[path]), None)
                                      for path in paths))
     pairs += asked(chk, index, seen, ((path, set(), moved) for path in sorted(durable) if moved))

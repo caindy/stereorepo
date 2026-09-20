@@ -7,24 +7,26 @@ from the assertions. `READING` and `BODY` reach the two PR First skills;
 `DEREFERENCE` is the coder's alone.
 """
 import textwrap
+from collections.abc import Sequence
+from typing import Any, cast
 
 from lib.render import pages, record
 
 
-def _discipline(name):
+def _discipline(name: str) -> dict[str, Any] | None:
     for rel in ("assertions/disciplines.yaml", "assertions/imported/disciplines.yaml"):
         for d in (record.load(rel) or {}).get("disciplines") or []:
             if d["name"] == name:
-                return d
+                return cast(dict[str, Any], d)
     return None
 
 
-def channel():
+def channel() -> dict[str, Any] | None:
     """The channel's verbs, once: `.meta/say/verbs.yaml`."""
-    return record.load("say/verbs.yaml")
+    return cast(dict[str, Any] | None, record.load("say/verbs.yaml"))
 
 
-def verb_line(program, verb, role=None):
+def verb_line(program: dict[str, Any], verb: dict[str, Any], role: str | None = None) -> str:
     """How a verb is typed, from the table: the program, `--role` for any Role
     but the channel's default, the verb unless the program is the verb, and
     the shape of its arguments."""
@@ -38,7 +40,8 @@ def verb_line(program, verb, role=None):
     return " ".join(words)
 
 
-def skill(name, discipline, commands, forms=(), role=None):
+def skill(name: str, discipline: str, commands: Sequence[str],
+          forms: Sequence[tuple[str, str, str]] = (), role: str | None = None) -> str | None:
     """A Discipline, compiled for this harness, and for one Role (solorepo's DR-117).
 
     A skill is a Discipline plus the commands that carry it out, in the shape one
@@ -121,7 +124,7 @@ DEREFERENCE = [
 BODY = [("The body", "pull-request.md", "the body")]
 
 
-def pr_first_skill():
+def pr_first_skill() -> str | None:
     """The coder's reading. `/pr-first` and not `/pr-first-coder`, because the
     coder is the channel's default Role too: a session that names no Role is
     the coder's, in what it types and in what it reads (solorepo's DR-117)."""
@@ -129,14 +132,14 @@ def pr_first_skill():
         "pr-first", "PR First", READING + DEREFERENCE, BODY, role="coder")
 
 
-def pr_first_reviewer_skill():
+def pr_first_reviewer_skill() -> str | None:
     """The reviewer's reading: its verbs, the form a pull request is held to,
     and the judgement a reviewer's point is owed (solorepo's DR-117)."""
     return skill(
         "pr-first-reviewer", "PR First", READING, BODY, role="reviewer")
 
 
-def wikisplain_skill():
+def wikisplain_skill() -> str:
     """Operational authoring skill for Knowledge Management wiki concepts (solorepo's DR-187)."""
     desc = record.authored("../.claude/skills/wikisplain/SKILL.md", "description").strip()
     return "\n".join([
@@ -183,7 +186,7 @@ def wikisplain_skill():
     ])
 
 
-def technical_writing_skill():
+def technical_writing_skill() -> str:
     """Technical writing skill fusing Diátaxis, Google style, and Literate Programming (solorepo's DR-171, solorepo's DR-175, solorepo's DR-176, solorepo's DR-187, solorepo's DR-194, solorepo's DR-196), and the rubric governing source bodies (solorepo's DR-207)."""
     desc = record.authored("../.claude/skills/technical-writing/SKILL.md", "description").strip()
     return "\n".join([

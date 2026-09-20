@@ -1,18 +1,22 @@
 """The Portfolio's pages: the Disciplines, the vocabulary, the Charter, the Specialization steps, and the three GitHub forms.
 """
 
+from collections.abc import Sequence
+from typing import Any
+
 from lib.render import META, record, skills
 
 
-def disciplines():
+def disciplines() -> str:
     """Renders the disciplines catalog markdown from declared and imported disciplines."""
-    tbox = record.load("work/disciplines.yaml")
-    abox = {"disciplines": []}
+    tbox = record.load("work/disciplines.yaml") or {}
+    abox: dict[str, list[dict[str, Any]]] = {"disciplines": []}
     for rel in ("assertions/disciplines.yaml", "assertions/imported/disciplines.yaml"):
         abox["disciplines"].extend((record.load(rel) or {}).get("disciplines") or [])
     out = [record.BANNER.format(src="assertions/disciplines.yaml + assertions/imported/disciplines.yaml"),
            record.authored("disciplines.md"),
-           tbox["description"].strip() + "\n"]
+           str(tbox.get("description", "")).strip() + "\n"]
+    chan = skills.channel()
     for d in abox["disciplines"]:
         out.append(f"### {d['name']}\n")
         if d.get("description"):
@@ -21,13 +25,13 @@ def disciplines():
             out.append(f"**Where the judgement is.** {d['judgement'].strip()}\n")
         if d.get("steps"):
             out.append("\n".join(f"{i}. {s}" for i, s in enumerate(d["steps"], 1)) + "\n")
-        if d["name"] == (skills.channel() or {}).get("discipline"):
+        if chan and d["name"] == chan.get("discipline"):
             out.append("The verbs are the steps, and each refuses its own misuse (solorepo's DR-116). Every act\n"
                        "on GitHub goes through the channel, `.meta/say/`, which names the Actor in\n"
                        "every commit and every comment; which Role holds each verb is\n"
                        "`.meta/say/verbs.yaml`'s to say, and a Role's reading lists\n"
                        "only its own (solorepo's DR-117).\n")
-            for program in skills.channel()["programs"]:
+            for program in chan.get("programs", []):
                 out.append(f"**`.meta/say/{program['name']}`** — {program['concern'].strip()}\n")
                 out.append("\n".join(f"- `{skills.verb_line(program, v)}` — {v['does']} *({', '.join(v['held_by'])})*"
                                       for v in program["verbs"]) + "\n")
@@ -36,7 +40,7 @@ def disciplines():
     return "\n".join(out) + record.accounted_by("disciplines.md")
 
 
-def _term_table(rows):
+def _term_table(rows: Sequence[dict[str, Any]]) -> list[str]:
     """The `Term | Means | Do not say` table over `rows`, and a blank line after it."""
     out = ["| Term | Means | Do not say |\n|---|---|---|"]
     for c in rows:
@@ -46,12 +50,13 @@ def _term_table(rows):
     return out
 
 
-def _scheme(scheme, members, concepts):
+def _scheme(scheme: dict[str, Any], members: Sequence[dict[str, Any]],
+            concepts: Sequence[dict[str, Any]]) -> list[str]:
     """One scheme's section: its authority, the loose terms, a table under each hub, and every scope note."""
     out = [f"### {scheme['name']}\n", f"_Authority: {scheme.get('authority', 'unstated')}._\n"]
     hubs = [c for c in members if any(m.get("broader") == c["id"] for m in concepts)]
-    grouped = {h["id"]: [] for h in hubs}
-    loose = []
+    grouped: dict[str, list[dict[str, Any]]] = {h["id"]: [] for h in hubs}
+    loose: list[dict[str, Any]] = []
     for c in members:
         if c in hubs:
             continue
@@ -65,7 +70,7 @@ def _scheme(scheme, members, concepts):
     return out
 
 
-def _confusables(concepts):
+def _confusables(concepts: Sequence[dict[str, Any]]) -> list[str]:
     """The `Confusables` section, one row per concept with `confusable_with`, or nothing."""
     collisions = [c for c in concepts if c.get("confusable_with")]
     if not collisions:
@@ -82,11 +87,11 @@ def _confusables(concepts):
     return out
 
 
-def vocabulary():
+def vocabulary() -> str:
     """Imported and domain terms render as one language, which is what a reader
     needs. They are separate files because sync treats them differently, not
     because they are separate vocabularies."""
-    abox = {"concept_schemes": [], "concept_set": []}
+    abox: dict[str, list[dict[str, Any]]] = {"concept_schemes": [], "concept_set": []}
     for rel in ("assertions/imported/vocabulary.yaml", "assertions/vocabulary.yaml",
                 "assertions/domain_vocabulary.yaml"):
         part = record.load(rel) or {}
@@ -103,7 +108,7 @@ def vocabulary():
     return "\n".join(out) + record.accounted_by("vocabulary.md")
 
 
-def charter():
+def charter() -> str | None:
     """The Charter, numbered, which is the form that makes an Article citable.
 
     Rendered flat and in order rather than grouped by Discipline: the number is
@@ -147,7 +152,7 @@ def charter():
     return "\n".join(out) + record.accounted_by("charter.md")
 
 
-def specialize():
+def specialize() -> str | None:
     """The root-level instruction an agent arriving at the repo is pointed to.
 
     Generated from the Specialization Discipline, so the steps exist once. A
@@ -173,7 +178,7 @@ def specialize():
     return "\n".join(out) + record.accounted_by("../SPECIALIZE.md")
 
 
-def form(name):
+def form(name: str) -> str:
     """The fenced block of a form in `.meta/templates/`, which is the form itself.
 
     The prose around it explains the form to whoever fills it in; the fence is
@@ -185,16 +190,16 @@ def form(name):
     return fence.rstrip("\n") + "\n"
 
 
-def pull_request_template():
+def pull_request_template() -> str:
     """Renders the GitHub pull request markdown template form."""
     return form("pull-request.md")
 
 
-def issue_template():
+def issue_template() -> str:
     """Renders the GitHub issue markdown template form."""
     return form("issue.md")
 
 
-def roadmap_template():
+def roadmap_template() -> str:
     """Renders the GitHub roadmap item markdown template form."""
     return form("roadmap.md")

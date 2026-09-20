@@ -3,6 +3,7 @@
 import json
 import re
 import subprocess
+from typing import Any
 
 from depth import CONTROL_PLANE
 
@@ -12,7 +13,7 @@ under `.meta/lib/`, the initialiser and the packages of control-plane scripts (s
 DIFFICULTY_CACHE: dict[str, str] = {}
 
 
-def model_of(run):
+def model_of(run: dict[str, Any]) -> str:
     """Infers the model family ('opus' vs 'sonnet') used for a review workflow run.
 
     Args:
@@ -41,7 +42,7 @@ ISSUE_DIFF_BY_TITLE: dict[str, str] = {}
 ISSUES_FETCHED = False
 
 
-def _ensure_issues_loaded():
+def _ensure_issues_loaded() -> None:
     global ISSUES_FETCHED
     if ISSUES_FETCHED:
         return
@@ -62,7 +63,7 @@ def _ensure_issues_loaded():
     ISSUES_FETCHED = True
 
 
-def difficulty_of(run):
+def difficulty_of(run: dict[str, Any]) -> str:
     """Determines challenge difficulty label associated with a workflow run.
 
     Args:
@@ -77,7 +78,7 @@ def difficulty_of(run):
     its display title instead, and failing that the title is matched against
     the Issue titles the run listing carries.
     """
-    branch = run.get("headBranch") or ""
+    branch = str(run.get("headBranch") or "")
     m = re.search(r"issue-(\d+)", branch)
     if m:
         issue_num = m.group(1)
@@ -102,7 +103,7 @@ def difficulty_of(run):
         DIFFICULTY_CACHE[issue_num] = diff
         return diff
 
-    title = (run.get("displayTitle") or "").strip()
+    title = str(run.get("displayTitle") or "").strip()
     if title:
         m = re.search(r"#(\d+)", title)
         if m:
@@ -114,7 +115,7 @@ def difficulty_of(run):
     return "unknown"
 
 
-def stratify_run(workflow, run, stratify):
+def stratify_run(workflow: str, run: dict[str, Any], stratify: str | None) -> str | None:
     """Categorizes a workflow run by model or difficulty when requested.
 
     Args:
