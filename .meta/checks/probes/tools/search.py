@@ -23,7 +23,7 @@ synonyms:
 
 
 @check("search probes", pre=True)
-def search_probes():
+def search_probes() -> list[str]:
     """`search.py` indexes the assertions and the wiki, ranks by Okapi BM25F over three fields, and meets the retrieval benchmark (solorepo's DR-103, solorepo's DR-194, solorepo's DR-195).
 
     The index built over `.meta/assertions/` and `wiki/` holds at least a

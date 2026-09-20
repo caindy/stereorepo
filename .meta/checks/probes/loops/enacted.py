@@ -14,7 +14,7 @@ from checks.probes.harness import (
 
 
 @check("enacted probes", pre=True)
-def enacted_probes():
+def enacted_probes() -> CouldNotRun | list[str]:
     """`--handoff`'s reading of a decision against the artifacts the branch edits.
 
     Three parts, and they fail differently. The judgement, which edited
@@ -55,10 +55,11 @@ def _unenacted_cases(check_pr: Any, sample: Any) -> list[str]:
     """`unenacted` over a branch that settles nothing, one that settles `sample` and names an artifact, and one whose decision names none."""
     problems = []
 
-    def read(changed):
+    def read(changed: list[str]) -> tuple[Any, Any]:
         """`unenacted("origin/main")` with the branch's diff stood in for by `changed`."""
         with stood_in(check_pr.branch, touched=lambda base: changed):
-            return check_pr.unenacted("origin/main")
+            res: tuple[Any, Any] = check_pr.unenacted("origin/main")
+            return res
 
     found, note = read([".meta/arc/deploy", ".meta/say/move"])
     if found or "settles no decision" not in note:
@@ -83,11 +84,16 @@ def _handoff_cases(check_pr: Any) -> list[str]:
     """`handoff` with the render unrunnable, and with it answering each of the four pages it can name stale or unrendered."""
     problems = []
 
-    def handed_off(render):
+    def handed_off(render: list[str]) -> tuple[list[str], list[str]]:
         """What `handoff("origin/main")` printed with `RENDER` stood in for by the command `render`, and the bases the enacted step was asked about, the step itself answering nothing."""
-        asked = []
+        asked: list[str] = []
+
+        def mock_unenacted(base: str) -> tuple[list[str], str]:
+            asked.append(base)
+            return ([], "")
+
         with stood_in(check_pr.branch, RENDER=render,
-                      unenacted=lambda base: (asked.append(base), ([], ""))[1]):
+                      unenacted=mock_unenacted):
             said = outcome(lambda: check_pr.handoff("origin/main")).out
         return asked, said.splitlines()
 

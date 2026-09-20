@@ -3,6 +3,8 @@
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 
+from typing import Any
+
 from checks.collect import check
 from checks.probes.harness import (
     FakeIssue,
@@ -13,7 +15,7 @@ from checks.probes.harness import (
 
 
 @check("stop probes", pre=True)
-def stop_probes():
+def stop_probes() -> list[str]:
     """`stop` against one Issue's labels and assignees: the hand-back, the refusal, and a GitHub that fails every call.
 
     A stop on a Challenge labels it `human`, removes the level it was at, and
@@ -27,7 +29,7 @@ def stop_probes():
     move = programs["move"]
     problems = []
 
-    def stopped(fake, issue, body):
+    def stopped(fake: Any, issue: str, body: str) -> Any:
         """`stop(issue, body)` against `fake`: what it exited with, and what it printed on both streams."""
         with stood_in(channel, gh=fake):
             return outcome(lambda: move.stop(issue, body))

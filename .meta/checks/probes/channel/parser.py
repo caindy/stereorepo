@@ -1,5 +1,7 @@
 """The channel's parsers: every verb of every program parses the flags its own branch in `main()` reads, refuses what is not typeable, and belongs to the program the table says (solorepo's DR-117).
 """
+from typing import Any
+
 from checks.collect import check
 from checks.probes.harness import (
     answered,
@@ -8,7 +10,7 @@ from checks.probes.harness import (
 
 
 @check("channel parser probes", pre=True)
-def channel_parser_probes():
+def channel_parser_probes() -> list[str]:
     """Every verb of every program parses the flags its own branch in `main()`
     reads, refuses what is not typeable, and belongs to the program the table
     says (solorepo's DR-117).
@@ -32,7 +34,7 @@ def channel_parser_probes():
     captured rather than shown.
     """
     _, _, programs = load_channel()
-    accepted = {
+    accepted: dict[str, list[tuple[str, dict[str, Any]]]] = {
         "post": [
             ("review 1 --approve", {"verb": "review", "pr": "1", "verdict": "approve"}),
             ("review 1 --request-changes", {"verdict": "request-changes"}),
@@ -127,7 +129,7 @@ def channel_parser_probes():
         "whoami": (("the program has no verbs, and `--role` takes a value", ["whoami", "--role"]),),
     }
 
-    def parsed(name, line):
+    def parsed(name: str, line: str) -> tuple[Any, Any, bool]:
         """`.meta/say/<name> <line>` through the program's parser, as `(namespace, code, exited)`; see `answered`.
 
         `namespace` is what the line parsed to, or `None`; `code` is `None`
@@ -149,10 +151,10 @@ def channel_parser_probes():
                 if got != value:
                     problems.append(f"`.meta/say/{name} {line}`: {key} was {got!r}, not {value!r}")
     for name, groups in refused.items():
-        for reason, lines in groups:
-            for line in lines:
-                _, code, exited = parsed(name, line)
+        for reason, rejected_lines in groups:
+            for rejected_line in rejected_lines:
+                _, code, exited = parsed(name, rejected_line)
                 if not exited:
-                    problems.append(f"`.meta/say/{name} {line}` parsed or crashed ({code!r}), "
+                    problems.append(f"`.meta/say/{name} {rejected_line}` parsed or crashed ({code!r}), "
                                     f"and should have been rejected: {reason}")
     return problems

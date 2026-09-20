@@ -3,6 +3,7 @@
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 import subprocess
+from collections.abc import Callable
 from typing import Any
 
 from checks.collect import check
@@ -43,7 +44,7 @@ class FakeDelegate:
 
     def __call__(self, *args: Any, parse: bool = True, **kwargs: Any) -> Any:
         """One `gh` call, answered by the handler for its first two words."""
-        handlers = {
+        handlers: dict[tuple[str, str], Callable[..., Any]] = {
             ("pr", "view"): self.view_pull,
             ("pr", "list"): lambda cmd: self.open_prs,
             ("issue", "view"): self.view_issue,
@@ -91,7 +92,7 @@ class FakeDelegate:
         return ""
 
 
-def _unestimated_issue_is_labelled_medium_and_assigned(channel, move) -> list[str]:
+def _unestimated_issue_is_labelled_medium_and_assigned(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge"])
     with stood_in(channel, gh=fake):
@@ -110,7 +111,7 @@ def _unestimated_issue_is_labelled_medium_and_assigned(channel, move) -> list[st
     return problems
 
 
-def _medium_issue_has_its_label_re_added(channel, move) -> list[str]:
+def _medium_issue_has_its_label_re_added(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "medium"])
     with stood_in(channel, gh=fake):
@@ -126,7 +127,7 @@ def _medium_issue_has_its_label_re_added(channel, move) -> list[str]:
     return problems
 
 
-def _hard_issue_refused_without_level(channel, move) -> list[str]:
+def _hard_issue_refused_without_level(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "hard"])
     with stood_in(channel, gh=fake):
@@ -138,7 +139,7 @@ def _hard_issue_refused_without_level(channel, move) -> list[str]:
     return problems
 
 
-def _hard_issue_delegated_with_an_explicit_level(channel, move) -> list[str]:
+def _hard_issue_delegated_with_an_explicit_level(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "hard"])
     with stood_in(channel, gh=fake):
@@ -152,7 +153,7 @@ def _hard_issue_delegated_with_an_explicit_level(channel, move) -> list[str]:
     return problems
 
 
-def _conflicting_pull_request_dispatches_rebase_first(channel, move) -> list[str]:
+def _conflicting_pull_request_dispatches_rebase_first(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "medium"], open_prs=[
         {
@@ -174,7 +175,7 @@ def _conflicting_pull_request_dispatches_rebase_first(channel, move) -> list[str
     return problems
 
 
-def _changes_requested_pull_request_dispatches_review(channel, move) -> list[str]:
+def _changes_requested_pull_request_dispatches_review(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "medium"], is_pr=True, pr_data={
         "number": 101,
@@ -194,7 +195,7 @@ def _changes_requested_pull_request_dispatches_review(channel, move) -> list[str
     return problems
 
 
-def _clean_pull_request_refused(channel, move) -> list[str]:
+def _clean_pull_request_refused(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "medium"], is_pr=True, pr_data={
         "number": 101,
@@ -212,7 +213,7 @@ def _clean_pull_request_refused(channel, move) -> list[str]:
     return problems
 
 
-def _pull_request_off_the_loops_branch_refused(channel, move) -> list[str]:
+def _pull_request_off_the_loops_branch_refused(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "medium"], is_pr=True, pr_data={
         "number": 102,
@@ -231,7 +232,7 @@ def _pull_request_off_the_loops_branch_refused(channel, move) -> list[str]:
 
 
 @check("delegate probes", pre=True)
-def delegate_probes():
+def delegate_probes() -> list[str]:
     """`move delegate` on either a Challenge or pull request, verifying difficulty level enforcement and pass dispatches.
 
     `delegate` is the solo's, and a run is refused the level it lands

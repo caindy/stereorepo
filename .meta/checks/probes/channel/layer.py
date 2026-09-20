@@ -2,6 +2,8 @@
 """
 
 
+import functools
+
 from checks.collect import Found, Passed, check
 from checks.probes.harness import (
     FakeGitHub,
@@ -11,7 +13,7 @@ from checks.probes.harness import (
 
 
 @check("layer probes", pre=True)
-def layer_probes():
+def layer_probes() -> Found | Passed:
     """`link` names the stack when the pull request below is a layer, and the pull request when it is not (solorepo's #496).
 
     `gh stack link` takes two pull requests, which starts a stack, or a stack's
@@ -27,7 +29,7 @@ def layer_probes():
                        8: {"behind": 0, "armed": False, "layer": True, "stack": 493}})
     problems = []
     for below in ("7", "8"):
-        said = run_verb(channel, fake, lambda below=below: move.link(below, "9"))
+        said = run_verb(channel, fake, functools.partial(move.link, below, "9"))
         if said:
             problems.append(f"link({below!r}, '9') exited with {said!r}")
     if fake.linked != [("7", "9"), ("493", "9")]:

@@ -38,7 +38,7 @@ WikiCase = collections.namedtuple("WikiCase", "name reads pages says")
 
 
 @check("history probes", pre=True)
-def history_probes():
+def history_probes() -> list[str]:
     """`files.history_entries_of` reads a history log's entries and the Evidence they name as `meta history evidence` needs them (solorepo's DR-171).
 
     Two logs, each a string. The first holds a live entry and, inside an HTML
@@ -69,7 +69,7 @@ def history_probes():
 
 
 @check("withdrawn decisions probes", pre=True)
-def withdrawn_decisions_probes():
+def withdrawn_decisions_probes() -> list[str]:
     """`graph.withdrawn_decisions` names a WITHDRAWN Decision that gives no `withdrawn_because`, and nothing else, as the `Decision` rule in `.meta/work/decisions.yaml` requires when `status` is `WITHDRAWN`.
 
     Three Decisions, each indexed alone under `work:decision/<number>`:
@@ -95,7 +95,7 @@ def withdrawn_decisions_probes():
 
 
 @check("wiki probes", pre=True)
-def wiki_probes():
+def wiki_probes() -> list[str]:
     """Observed failure and concordance for wikilinks, MOS:LEAD lead paragraphs, vocabulary parity and forbidden synonyms (A2, solorepo's DR-185, solorepo's DR-190, solorepo's DR-231).
 
     One index stands for the record: a concept carrying an `avoid` list, a
@@ -243,7 +243,7 @@ def wiki_probes():
 
 
 @check("wikisplain probes", pre=True)
-def wikisplain_probes():
+def wikisplain_probes() -> list[str]:
     """`.meta/wikisplain.py` slugifies a title, formats a MOS:LEAD lead, finds a duplicate, refuses a forbidden synonym, and scaffolds a page that passes its own verification (solorepo's DR-187, solorepo's DR-231).
 
     Eight of the tool's acts, each called directly or through `cli.main`:

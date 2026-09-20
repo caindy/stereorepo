@@ -1,4 +1,4 @@
-"""The Python under `.meta/`, held to its linters: no configuration ignore, ruff clean, `mypy --strict` ratcheted per file, and a docstring on every public item (solorepo's DR-177, solorepo's DR-210).
+"""The Python under `.meta/`, held to its linters: no configuration ignore, ruff clean, `mypy --strict` clean, and a docstring on every public item (solorepo's DR-177, solorepo's DR-210, solorepo's #540).
 """
 import ast
 import re
@@ -16,9 +16,7 @@ from checks.collect import (
     Found,
     Passed,
     StepOutcome,
-    against_baseline,
     check,
-    recorded_baseline,
 )
 from checks.files import sources
 
@@ -180,29 +178,16 @@ def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
 
 @check("meta types")
 def meta_types() -> StepOutcome:
-    """`mypy --strict` over .meta/, ratcheted against types.baseline.yaml (solorepo's DR-210).
+    """`mypy --strict` over .meta/ (solorepo's DR-210, solorepo's #540).
 
     Product code instantiated from the Python bootstrap's seed is held to
     `mypy --strict` outright, and the tooling under `.meta/` that every
-    portfolio inherits was held to nothing. It cannot be held to strict typing
-    outright either: the tree carried 873 strict errors across 21 files when
-    this step was written, over nine tenths of them missing annotations rather
-    than defects. So it ratchets, as `inline commentary` does — the baseline may
-    fall and may not rise, and a file under its recorded number fails until the
-    number is lowered, because progress nobody banks is progress the next
-    regression spends.
-
-    What non-strict mypy finds is not ratcheted and is simply absent: those
-    eleven errors were fixed in the change that added this step, so a semantic
-    type error entering `.meta/` raises a file over its baseline on the day it
-    lands.
+    portfolio inherits is held to the same standard: clean under `mypy --strict`
+    with no baseline read.
 
     The pin is exact on the `uvx` route, matching the gate environment's own
     top-level requirements in `.meta/assertions/structure.yaml` and
-    `.github/workflows/gate.yml`. A ratchet reads a tool's count as a fact about
-    the tree, and an unpinned checker that gains a diagnostic in a patch release
-    would fail the gate on every file it newly speaks about, while one that loses
-    a diagnostic would fail every file it has gone quiet on.
+    `.github/workflows/gate.yml`.
 
     The extension-less programs are named on the command line beside the
     directory, because mypy collects `*.py` from a directory and would
@@ -213,8 +198,6 @@ def meta_types() -> StepOutcome:
     script is the module `__main__`, and two `__main__` modules in one run is a
     duplicate-module error that stops the run before it checks anything.
     """
-    if not TYPES_BASELINE.is_file():
-        return CouldNotRun(f"{TYPES_BASELINE.relative_to(ROOT).as_posix()} is missing")
     config = META / "mypy.ini"
     if not config.is_file():
         return CouldNotRun(".meta/mypy.ini is missing")
@@ -227,16 +210,10 @@ def meta_types() -> StepOutcome:
     if not cmd:
         return CouldNotRun("neither mypy nor uvx is installed")
     out = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=str(ROOT))
-    counts, sites = mypy_errors(out.stdout + "\n" + out.stderr)
-    if out.returncode not in (0, 1) or (out.returncode != 0 and not counts):
-        lines = [line.strip() for line in (out.stdout + "\n" + out.stderr).splitlines() if line.strip()]
-        return Found(tuple(lines) or ("mypy failed and reported nothing",))
-    problems = against_baseline(counts, sites, recorded_baseline(TYPES_BASELINE),
-                                "type errors", TYPES_BASELINE)
-    if problems:
-        return Found(tuple(problems))
-    return Passed(f"{sum(counts.values())} strict type errors across {len(counts)} files, "
-                  f"each file at its baseline")
+    if out.returncode == 0:
+        return Passed("mypy --strict passed over .meta/")
+    lines = [line.strip() for line in (out.stdout + "\n" + out.stderr).splitlines() if line.strip()]
+    return Found(tuple(lines) or ("mypy failed and reported nothing",))
 
 
 @check("meta doc")

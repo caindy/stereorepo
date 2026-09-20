@@ -7,7 +7,7 @@ from checks.probes.harness import load_module, written
 
 
 @check("agents probes", pre=True)
-def agents_probes():
+def agents_probes() -> list[str]:
     """`agents.py` counts the `Agent` calls a review transcript records, in each shape a transcript takes, and holds the count to the ceiling (solorepo's DR-191).
 
     Nothing — an empty string, whitespace, an empty dict, an empty list —

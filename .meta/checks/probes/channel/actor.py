@@ -12,7 +12,7 @@ from checks.probes.harness import (
 
 
 @check("actor probes", pre=True)
-def actor_probes():
+def actor_probes() -> list[str]:
     """`channel.actor()` and `check_pr.mine()` agree on which session is
     speaking, over the precedence of the two variables and the fallback when
     neither is set (solorepo's #301).

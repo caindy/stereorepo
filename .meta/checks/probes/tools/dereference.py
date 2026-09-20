@@ -1,12 +1,14 @@
 """`dereference.py`'s scopes and its report (solorepo's DR-134, solorepo's DR-192).
 """
 
+from typing import Any
+
 from checks.collect import META, check
 from checks.probes.harness import load_module, outcome
 
 
 @check("dereference probes", pre=True)
-def dereference_probes():
+def dereference_probes() -> list[str]:
     """`dereference.py` extracts citation pairs across the diff, sample and ground-moved scopes, and heads its report by the scope it read (solorepo's DR-134, solorepo's DR-192).
 
     The sample scope, asked for four pairs of the durable set, answers four,
@@ -22,7 +24,7 @@ def dereference_probes():
     citations_mod = deref.citations()
     problems = []
 
-    def heading(case, call, header):
+    def heading(case: str, call: Any, header: str) -> None:
         """One problem naming `case` unless the report `call` prints carries `header`."""
         shown = outcome(call)
         if header not in shown.out:

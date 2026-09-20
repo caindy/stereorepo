@@ -13,7 +13,7 @@ from checks.probes.harness import (
 
 
 @check("channel table probes", pre=True)
-def channel_table_probes():
+def channel_table_probes() -> list[str]:
     """The verb table is the parsers, and a Role's reading is the table (solorepo's DR-117).
 
     Every verb the table names parses in the program it names, every verb a

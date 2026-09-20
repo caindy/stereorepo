@@ -13,7 +13,7 @@ from checks.probes.harness import (
 
 
 @check("signing key probes", pre=True)
-def signing_key_probes():
+def signing_key_probes() -> list[str]:
     """`channel.role_signing_key()` finds the Role's key, refuses one readable
     by others, and answers `None` for the solo (solorepo's DR-197).
 

@@ -10,7 +10,7 @@ from checks.probes.harness import load_module
 
 
 @check("apm compile probes", pre=True)
-def apm_compile_probes():
+def apm_compile_probes() -> list[str]:
     """`apm_compile.python_bootstrap_primitives` over a skill file that is not UTF-8 text (solorepo's DR-208).
 
     One byte that does not decode — the shape a `__pycache__/*.pyc` beside a

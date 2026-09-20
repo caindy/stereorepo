@@ -3,6 +3,7 @@
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 import datetime
+from typing import Any
 
 from checks.collect import check
 from checks.probes.harness import (
@@ -13,7 +14,7 @@ from checks.probes.harness import (
 from checks.probes.loops.advance import swept
 
 
-def _conflicting_with_a_review_request_dispatches_rebase(channel, move) -> list[str]:
+def _conflicting_with_a_review_request_dispatches_rebase(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"},
@@ -28,7 +29,7 @@ def _conflicting_with_a_review_request_dispatches_rebase(channel, move) -> list[
     return problems
 
 
-def _unknown_is_waited_out(channel, move) -> list[str]:
+def _unknown_is_waited_out(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING", "unknown": 2}})
@@ -41,7 +42,7 @@ def _unknown_is_waited_out(channel, move) -> list[str]:
     return problems
 
 
-def _armed_conflicting_dispatched_not_rebased(channel, move) -> list[str]:
+def _armed_conflicting_dispatched_not_rebased(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "mergeable": "CONFLICTING"},
                        8: {"behind": 1, "armed": True}})
@@ -57,7 +58,7 @@ def _armed_conflicting_dispatched_not_rebased(channel, move) -> list[str]:
     return problems
 
 
-def _approved_conflicting_dispatches_rebase(channel, move) -> list[str]:
+def _approved_conflicting_dispatches_rebase(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False, "mergeable": "CONFLICTING",
                            "verdicts": [("o-r-reviewer", "APPROVED")]}})
@@ -69,7 +70,7 @@ def _approved_conflicting_dispatches_rebase(channel, move) -> list[str]:
     return problems
 
 
-def _conflicting_changes_requested_dispatches_rebase(channel, move) -> list[str]:
+def _conflicting_changes_requested_dispatches_rebase(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING",
                            "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
@@ -82,7 +83,7 @@ def _conflicting_changes_requested_dispatches_rebase(channel, move) -> list[str]
     return problems
 
 
-def _recent_conflicting_changes_requested_left_to_the_run(channel, move) -> list[str]:
+def _recent_conflicting_changes_requested_left_to_the_run(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING",
                            "updatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
@@ -97,7 +98,7 @@ def _recent_conflicting_changes_requested_left_to_the_run(channel, move) -> list
     return problems
 
 
-def _unanswered_changes_requested_dispatches_review(channel, move) -> list[str]:
+def _unanswered_changes_requested_dispatches_review(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
@@ -109,7 +110,7 @@ def _unanswered_changes_requested_dispatches_review(channel, move) -> list[str]:
     return problems
 
 
-def _recent_changes_requested_left_to_the_run(channel, move) -> list[str]:
+def _recent_changes_requested_left_to_the_run(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "updatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
@@ -123,7 +124,7 @@ def _recent_changes_requested_left_to_the_run(channel, move) -> list[str]:
     return problems
 
 
-def _approved_with_failing_checks_dispatches_review(channel, move) -> list[str]:
+def _approved_with_failing_checks_dispatches_review(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "checks": [{"name": "gate", "conclusion": "FAILURE"}],
@@ -136,7 +137,7 @@ def _approved_with_failing_checks_dispatches_review(channel, move) -> list[str]:
     return problems
 
 
-def _stranded_review_request_re_requested(channel, move) -> list[str]:
+def _stranded_review_request_re_requested(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                            "requested": ["o-r-reviewer"],
@@ -149,7 +150,7 @@ def _stranded_review_request_re_requested(channel, move) -> list[str]:
     return problems
 
 
-def _nothing_asked_dispatches_nothing(channel, move) -> list[str]:
+def _nothing_asked_dispatches_nothing(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING"},
                        8: {"behind": 0, "armed": True,
@@ -163,7 +164,7 @@ def _nothing_asked_dispatches_nothing(channel, move) -> list[str]:
     return problems
 
 
-def _lower_layer_of_a_stack_left_alone(channel, move) -> list[str]:
+def _lower_layer_of_a_stack_left_alone(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"},
@@ -181,7 +182,7 @@ def _lower_layer_of_a_stack_left_alone(channel, move) -> list[str]:
     return problems
 
 
-def _challenges_the_loop_does_not_hold(channel, move) -> list[str]:
+def _challenges_the_loop_does_not_hold(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING", "issue": {"level": "hard"}},
@@ -200,7 +201,7 @@ def _challenges_the_loop_does_not_hold(channel, move) -> list[str]:
     return problems
 
 
-def _refused_dispatch_is_the_sweeps_own_problem(channel, move) -> list[str]:
+def _refused_dispatch_is_the_sweeps_own_problem(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"},
@@ -215,7 +216,7 @@ def _refused_dispatch_is_the_sweeps_own_problem(channel, move) -> list[str]:
     return problems
 
 
-def _refused_re_request_is_the_sweeps_own_problem(channel, move) -> list[str]:
+def _refused_re_request_is_the_sweeps_own_problem(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     stranded = {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                 "requested": ["o-r-reviewer"],
@@ -231,7 +232,7 @@ def _refused_re_request_is_the_sweeps_own_problem(channel, move) -> list[str]:
     return problems
 
 
-def _re_request_not_sticking_is_one_pull_requests_line(channel, move) -> list[str]:
+def _re_request_not_sticking_is_one_pull_requests_line(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     stranded = {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
                 "requested": ["o-r-reviewer"],
@@ -246,7 +247,7 @@ def _re_request_not_sticking_is_one_pull_requests_line(channel, move) -> list[st
     return problems
 
 
-def _merged_pull_request_stranded_review_is_one_pull_requests_line(channel, move) -> list[str]:
+def _merged_pull_request_stranded_review_is_one_pull_requests_line(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({
         7: {
@@ -270,7 +271,7 @@ def _merged_pull_request_stranded_review_is_one_pull_requests_line(channel, move
     return problems
 
 
-def _refused_mergeability_read_is_one_pull_requests_line(channel, move) -> list[str]:
+def _refused_mergeability_read_is_one_pull_requests_line(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING", "unknown": 1},
@@ -287,7 +288,7 @@ def _refused_mergeability_read_is_one_pull_requests_line(channel, move) -> list[
     return problems
 
 
-def _named_and_merge_auto_dispatch_nothing(channel, move) -> list[str]:
+def _named_and_merge_auto_dispatch_nothing(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": True, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"}})
@@ -301,7 +302,7 @@ def _named_and_merge_auto_dispatch_nothing(channel, move) -> list[str]:
     return problems
 
 
-def _named_conflicting_pull_request_refused(channel, move) -> list[str]:
+def _named_conflicting_pull_request_refused(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "mergeable": "CONFLICTING"}},
                       no_rebase=[7])
@@ -311,7 +312,7 @@ def _named_conflicting_pull_request_refused(channel, move) -> list[str]:
     return problems
 
 
-def _dispatch_review_on_a_standing_verdict(channel, move, reviewer) -> list[str]:
+def _dispatch_review_on_a_standing_verdict(channel: Any, move: Any, reviewer: str) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False,
                            "verdicts": [(reviewer, "CHANGES_REQUESTED"),
@@ -324,7 +325,7 @@ def _dispatch_review_on_a_standing_verdict(channel, move, reviewer) -> list[str]
     return problems
 
 
-def _dispatch_review_on_approval_with_failing_checks(channel, move, reviewer) -> list[str]:
+def _dispatch_review_on_approval_with_failing_checks(channel: Any, move: Any, reviewer: str) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False,
                            "checks": [{"name": "gate", "conclusion": "FAILURE"}],
@@ -337,7 +338,7 @@ def _dispatch_review_on_approval_with_failing_checks(channel, move, reviewer) ->
     return problems
 
 
-def _dispatch_review_refused_without_a_request_for_changes(channel, move, reviewer) -> list[str]:
+def _dispatch_review_refused_without_a_request_for_changes(channel: Any, move: Any, reviewer: str) -> list[str]:
     problems: list[str] = []
     for case, pull in (("an approval", {"verdicts": [(reviewer, "APPROVED")]}),
                        ("somebody else's", {"verdicts": [(reviewer, "APPROVED"),
@@ -352,7 +353,7 @@ def _dispatch_review_refused_without_a_request_for_changes(channel, move, review
     return problems
 
 
-def _dispatch_review_refused_while_answered(channel, move, reviewer) -> list[str]:
+def _dispatch_review_refused_while_answered(channel: Any, move: Any, reviewer: str) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": [reviewer],
                            "verdicts": [(reviewer, "CHANGES_REQUESTED")]}})
@@ -364,7 +365,7 @@ def _dispatch_review_refused_while_answered(channel, move, reviewer) -> list[str
     return problems
 
 
-def _dispatch_rebase_on_conflicting_not_on_behind(channel, move) -> list[str]:
+def _dispatch_rebase_on_conflicting_not_on_behind(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING"},
                        8: {"behind": 3, "armed": False}})
@@ -384,7 +385,7 @@ def _dispatch_rebase_on_conflicting_not_on_behind(channel, move) -> list[str]:
     return problems
 
 
-def _dispatch_rebase_refused_by_hand(channel, move) -> list[str]:
+def _dispatch_rebase_refused_by_hand(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     for case, pull in (("a branch that is not the loop's",
                         {"branch": "claude/issue-169-followup"}),

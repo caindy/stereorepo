@@ -2,12 +2,14 @@
 """
 
 
+from typing import Any
+
 from checks import graph
 from checks.collect import check
 
 
 @check("reservation probes", pre=True)
-def reservation_probes():
+def reservation_probes() -> list[str]:
     """`decision numbering` over a hole GitHub reserves, a hole it does not, a
     hole a tag holds and a commit made, a remote that will not say, a history
     that is not there, a deletion with neither a remote nor a tag behind it,
@@ -47,7 +49,7 @@ def reservation_probes():
     (solorepo's #152).
     """
     hole = 3
-    index = {f"work:decision/{n}": ("Decision", {}, "a probe") for n in (1, 2, 4)}
+    index: dict[str, Any] = {f"work:decision/{n}": ("Decision", {}, "a probe") for n in (1, 2, 4)}
     problems = []
     advertised = ("707ad55ec421eb46374520f6c4e7641d65f6afd9\trefs/tags/DR-{0:03d}\n"
                   "5f05eca90639651a8aadaf12fe98a30abaa39093\trefs/tags/DR-{0:03d}^{{}}\n")
@@ -75,7 +77,7 @@ def reservation_probes():
         problems.append("decision numbering: a hole under a history that cannot be read was "
                         f"reported as {said!r}, and an unexplained hole is a failure")
 
-    def unreachable():
+    def unreachable() -> set[int] | None:
         """The remote over a hole the commits explain: never asked, and a call is itself a finding."""
         problems.append("decision numbering: the remote was asked about a hole a commit "
                         "here explains, and the tags decide only what the history leaves")
@@ -89,7 +91,7 @@ def reservation_probes():
 
     asked = []
 
-    def unreadable():
+    def unreadable() -> set[int] | None:
         """The remote that will not say, over a hole no history explains.
 
         Records in `asked` that it was called, and answers `None`.

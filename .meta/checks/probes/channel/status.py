@@ -10,7 +10,7 @@ from checks.probes.harness import (
 
 
 @check("channel status probes", pre=True)
-def channel_status_probes():
+def channel_status_probes() -> list[str]:
     """`move`'s reading of the status a Decision's entry gives itself, against
     `yaml`'s, over every entry in the record (solorepo's DR-164).
 

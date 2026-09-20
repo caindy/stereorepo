@@ -2,6 +2,7 @@
 """
 import datetime
 import sys
+from collections.abc import Iterable
 from typing import Any
 
 
@@ -157,7 +158,7 @@ class FakeGitHub:
         self.checked_out = []
         self.pushed_stacks = 0
 
-    def view(self, number):
+    def view(self, number: int | str) -> dict[str, Any]:
         """One `pr view` of `number`, counted in `reads`, as GitHub would answer it at this moment.
 
         `mergeable` is `UNKNOWN` while the pull request's `unknown` reads
@@ -200,7 +201,7 @@ class FakeGitHub:
                 pull["behind"] = pull.get("leaves", pull["behind"])
         return answer
 
-    def __call__(self, *args, parse=True, **kwargs):
+    def __call__(self, *args: Any, parse: bool = True, **kwargs: Any) -> Any:
         """One `gh` call, answered from the dict.
 
         `repo view` is `o/r` with branches deleted on merge, so a Role's login
@@ -262,7 +263,7 @@ class FakeGitHub:
             return answered[head](args)
         raise AssertionError(f"the fake was asked something it has no answer for: {args}")
 
-    def update_branch(self, args):
+    def update_branch(self, args: Any) -> str:
         """`pr update-branch`: refused for a number in `no_rebase`; otherwise the rebase, shown after `slow` reads."""
         number = str(args[2])
         if number in self.no_rebase:
@@ -310,7 +311,7 @@ class FakeGitHub:
                     pull["requested"] = []
         return ""
 
-    def edit(self, args):
+    def edit(self, args: Any) -> str:
         """`pr edit`: refused for a number in `no_edit`; otherwise `--remove-reviewer` and `--add-reviewer` applied to `requested` (unless in `no_edit_sticks`), the number recorded in `edited`."""
         number = str(args[2])
         if number in self.no_edit:
@@ -329,7 +330,7 @@ class FakeGitHub:
         pull["requested"] = asked
         return ""
 
-    def merge(self, args):
+    def merge(self, args: Any) -> str:
         """`pr merge --auto`: refused for a number in `no_arm`; otherwise armed unless in `no_stick`, and merged if in `lands`."""
         number = str(args[2])
         if number in self.no_arm:
@@ -341,7 +342,7 @@ class FakeGitHub:
             pull.update(state="MERGED", armed=False)
         return ""
 
-    def dispatch(self, args):
+    def dispatch(self, args: Any) -> str:
         """`workflow run coder.yml`: refused for a number in `no_dispatch`; otherwise `(number, task)` recorded in `dispatched`."""
         number = next(a.split("=", 1)[1] for a in args if a.startswith("pull_request="))
         task = next((a.split("=", 1)[1] for a in args if a.startswith("task=")), None)
@@ -350,7 +351,7 @@ class FakeGitHub:
         self.dispatched.append((number, task))
         return ""
 
-    def compare(self, endpoint):
+    def compare(self, endpoint: str) -> dict[str, Any]:
         """`api .../compare/...`: how far behind the commit asked about is, with one rate-limit exit first for a number in `blip`."""
         oid = endpoint.rsplit("...", 1)[1]
         number = oid.removeprefix("head").removeprefix("moved").removeprefix("pushed")
@@ -361,7 +362,7 @@ class FakeGitHub:
         was, _ = pull.get("stale") or (pull, 0)
         return {"behind_by": pull["behind"] if oid == pull["head"] else was["behind"]}
 
-    def issue(self, args):
+    def issue(self, args: Any) -> dict[str, Any]:
         """`issue view`: the branch's Challenge, or the CLI's exit where the case marks it unreadable."""
         issue = self.pulls[str(args[2])].get("issue") or {}
         if issue.get("unreadable"):
@@ -369,7 +370,7 @@ class FakeGitHub:
         return {"state": issue.get("state", "OPEN"),
                 "labels": [{"name": "challenge"}, {"name": issue.get("level", "medium")}]}
 
-    def api(self, endpoint):
+    def api(self, endpoint: str) -> dict[str, Any]:
         """Any other `api` call: the compare, the `stack` object of a layer, or the repository's own settings."""
         if "/compare/" in endpoint:
             return self.compare(endpoint)
@@ -395,10 +396,10 @@ class WatchGitHub:
     anyway.
     """
 
-    def __init__(self, polls):
+    def __init__(self, polls: Iterable[tuple[str, str]]) -> None:
         self.polls = list(polls)
 
-    def __call__(self, *args):
+    def __call__(self, *args: Any) -> Any:
         """One `gh` call: the repository, a pull request read, or a GraphQL query, as the class docstring says."""
         if args[:2] == ("repo", "view"):
             return {"nameWithOwner": "o/r"}

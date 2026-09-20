@@ -6,7 +6,7 @@ from checks.collect import check
 
 
 @check("timing probes", pre=True)
-def timing_probes():
+def timing_probes() -> list[str]:
     """`timing.pick` over the lengths where nearest-rank ties, and `timing.gh` over the one default a caller can ask for (solorepo's DR-157).
 
     Nearest-rank: the median of `n` values is the `ceil(n/2)`-th smallest,
@@ -44,14 +44,14 @@ def timing_probes():
                         "and `pick` answered otherwise")
     if timing.pick([], 0.5) is not None:
         problems.append("timing: no runs is no figure, and `pick` answered one")
-    for default, want in ((None, None), ({}, {})):
+    for default, expected in ((None, None), ({}, {})):
         try:
             got = timing.gh("timing-probe-no-such-subcommand", default=default)
         except SystemExit:
             problems.append(f"timing: a read that fails and was given a default of "
                             f"{default!r} exited instead of degrading to it")
             continue
-        if got != want:
+        if got != expected:
             problems.append(f"timing: a read that fails and was given a default of "
                             f"{default!r} answered {got!r}")
     return problems

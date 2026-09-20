@@ -16,7 +16,7 @@ from checks.probes.harness import (
 
 
 @check("merge manager probes", pre=True)
-def merge_manager_probes():
+def merge_manager_probes() -> list[str]:
     """`merge-manager` against its semaphores and its leverage ranking (solorepo's DR-161).
 
     Each semaphore refuses in turn: a draft; checks pending on an empty
@@ -126,7 +126,7 @@ def _rerun_reads_green(move: Any) -> list[str]:
 def _threads_fail_closed(channel: Any, move: Any) -> list[str]:
     """`check_threads` fails closed when GraphQL raises."""
     problems = []
-    def broken_graphql(*args, **kwargs):
+    def broken_graphql(*args: Any, **kwargs: Any) -> Any:
         """A GraphQL that raises, whatever it is asked."""
         raise RuntimeError("GraphQL outage")
 
@@ -265,10 +265,11 @@ class ManagerFake:
     decision, and any other call answers an empty dict.
     """
 
-    def __init__(self, pulls, issues):
-        self.pulls, self.issues, self.merged = pulls, issues, []
+    def __init__(self, pulls: Any, issues: Any) -> None:
+        self.pulls, self.issues = pulls, issues
+        self.merged: list[Any] = []
 
-    def gh(self, *args, parse=True):
+    def gh(self, *args: Any, parse: bool = True) -> Any:
         """One `gh` call, answered as the class docstring says."""
         head = args[:2]
         if head == ("repo", "view") or args[0] == "repo":
@@ -290,11 +291,11 @@ class ManagerFake:
             return {"stack": {"id": "stack-1"}}
         return {}
 
-    def repo(self):
+    def repo(self) -> str:
         """`owner/repo`."""
         return "owner/repo"
 
-    def graphql(self, query, **variables):
+    def graphql(self, query: str, **variables: Any) -> dict[str, Any]:
         """One resolved review thread, whatever is asked."""
         return {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": [{"isResolved": True}]}}}}}
 

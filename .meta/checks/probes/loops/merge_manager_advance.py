@@ -14,7 +14,7 @@ from checks.probes.harness import (
 
 
 @check("merge manager advance probes", pre=True)
-def merge_manager_advance_probes():
+def merge_manager_advance_probes() -> list[str]:
     """The merge manager rebasing what only a stale branch holds back (solorepo's #459).
 
     An approved pull request that goes behind trunk while it is in review is

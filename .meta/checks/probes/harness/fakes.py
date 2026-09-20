@@ -1,5 +1,6 @@
 """An Issue answered from its labels, an obviation answered from what each number is, a filing answered from an open listing, and a wiki page answered from a string.
 """
+import pathlib
 import re
 import subprocess
 from typing import Any, ClassVar
@@ -190,52 +191,52 @@ class FakeWikiPath:
     nothing else, so a case is one string and one path rather than a file.
     """
 
-    def __init__(self, rel_str, text):
+    def __init__(self, rel_str: str | pathlib.Path, text: str) -> None:
         self._path = ROOT / rel_str
         self._text = text
 
     @property
-    def suffix(self):
+    def suffix(self) -> str:
         """The path's suffix, `.md` for a page."""
         return self._path.suffix
 
     @property
-    def name(self):
+    def name(self) -> str:
         """The file name."""
         return self._path.name
 
     @property
-    def stem(self):
+    def stem(self) -> str:
         """The file name without its suffix, which is the page's slug."""
         return self._path.stem
 
     @property
-    def parts(self):
+    def parts(self) -> tuple[str, ...]:
         """The path's components."""
         return self._path.parts
 
     @property
-    def parent(self):
+    def parent(self) -> pathlib.Path:
         """The directory the page is in, which names its context."""
         return self._path.parent
 
-    def is_symlink(self):
+    def is_symlink(self) -> bool:
         """Never a symlink."""
         return False
 
-    def is_file(self):
+    def is_file(self) -> bool:
         """Always a file."""
         return True
 
-    def read_text(self, encoding="utf-8"):
+    def read_text(self, encoding: str = "utf-8") -> str:
         """The page's text, as given."""
         return self._text
 
-    def relative_to(self, other):
+    def relative_to(self, other: pathlib.Path | str) -> pathlib.Path:
         """The path relative to `other`, as `pathlib.Path.relative_to` answers it."""
         return self._path.relative_to(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._path)
 
 

@@ -11,7 +11,7 @@ from checks.probes.harness import (
 
 
 @check("agent probes", pre=True)
-def agent_probes():
+def agent_probes() -> list[str]:
     """`channel.agent()` records what the run says is speaking, and in a run
     reads nothing the agent's own shell owns (solorepo's DR-233).
 

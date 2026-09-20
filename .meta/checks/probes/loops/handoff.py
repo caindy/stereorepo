@@ -19,7 +19,7 @@ from checks.probes.harness import (
 
 
 @check("handoff probes", pre=True)
-def handoff_probes():
+def handoff_probes() -> list[str]:
     """`request-review` on a branch GitHub reports as `CONFLICTING`, `--watch` on one that becomes it, and the `unheld` sweep over the shapes a webhook should have carried.
 
     The two readings of solorepo's #195: a request made on a conflicting
@@ -76,7 +76,7 @@ def handoff_probes():
             + _unheld_armed_cases(check_pr) + _unheld_idle_cases(check_pr))
 
 
-def _pull_of(number: Any, title: Any, **fields) -> dict[str, Any]:
+def _pull_of(number: Any, title: Any, **fields: Any) -> dict[str, Any]:
     """A pull request on the loop's branch for `number`, based on trunk, not a draft, with no review requested, and `fields` over that."""
     return {"number": number, "title": title, "headRefName": f"claude/issue-{number}",
             "baseRefName": "main", "isDraft": False, "reviewRequests": [], **fields}
@@ -116,10 +116,11 @@ def _request_review_cases(channel: Any, move: Any) -> list[str]:
 def _watch_cases(check_pr: Any) -> list[str]:
     """`--watch` reporting the one change that produces no event: a branch going conflicting, headed by what it started on."""
     problems = []
-    def watched(polls):
+    def watched(polls: list[tuple[str, str]]) -> list[str]:
         """What `--watch` printed on pull request 7, GitHub answering one poll at a time from `polls`."""
         with stood_in(check_pr.github, gh=WatchGitHub(polls)):
-            return outcome(lambda: check_pr.watch("7", every=0)).out.splitlines()
+            lines: list[str] = outcome(lambda: check_pr.watch("7", every=0)).out.splitlines()
+            return lines
 
     lines = watched([("OPEN", "MERGEABLE"), ("OPEN", "UNKNOWN"), ("OPEN", "MERGEABLE"),
                      ("OPEN", "CONFLICTING"), ("MERGED", "CONFLICTING")])
@@ -251,7 +252,7 @@ def _unheld_idle_cases(check_pr: Any) -> list[str]:
         old_time = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=60)).isoformat()
         gate_failed = [{"name": "gate", "conclusion": "FAILURE", "startedAt": "2026-09-11T12:00:00Z"}]
         gate_passed = [{"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-11T12:00:00Z"}]
-        idle = (
+        idle: tuple[Any, ...] = (
             ("changes requested PR", "medium", set(),
              ("changes requested by reviewer, and unanswered",),
              _pull_of(12, "Changes requested PR", mergeable="MERGEABLE", statusCheckRollup=gate_failed,

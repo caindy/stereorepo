@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from typing import Any
 
 from checks.collect import ROOT, check
 from checks.probes.git import events, offers, registration, verdicts
@@ -32,7 +33,7 @@ def _decision(line: str) -> tuple[str, str] | None:
     return (match.group("tool"), match.group("decided")) if match else None
 
 
-def _verdicts(hooks):
+def _verdicts(hooks: dict[str, Any]) -> list[str]:
     """The rows of `VERDICTS` a hook did not answer as owed, each line naming the group, the hook and the call."""
     problems = []
     for group, name, rows in verdicts.VERDICTS:
@@ -45,7 +46,7 @@ def _verdicts(hooks):
     return problems
 
 
-def _offers(worktree):
+def _offers(worktree: Any) -> list[str]:
     """The rows of `OFFERS` whose refusal offered other than the row says, or offered a command the hook itself refuses."""
     problems = []
     for group, rows in offers.OFFERS:
@@ -58,7 +59,7 @@ def _offers(worktree):
     return problems
 
 
-def _events(worktree):
+def _events(worktree: Any) -> list[str]:
     """The rows of `EVENTS` whose payload the hook's entry point did not exit as the row says.
 
     `main()` returns the code rather than exiting with it, so the call is wrapped
@@ -83,7 +84,7 @@ def _events(worktree):
     return problems
 
 
-def _instead(worktree):
+def _instead(worktree: Any) -> list[str]:
     """The rows of `INSTEAD` whose refusal does not name the tool the row says."""
     return [f"the refusal for {command!r} should name {name} as what to use instead"
             for command, name in offers.INSTEAD
@@ -214,7 +215,7 @@ def _registration() -> list[str]:
 
 
 @check("hook probes", pre=True)
-def hook_probes():
+def hook_probes() -> list[str]:
     """Both hooks' predicates against the calls they exist to refuse and the calls they must let through, what a `worktree_only` refusal offers instead, matcher invariants across harnesses, and each harness's own registration run as a real subprocess.
 
     Loads `signed_channel` and `worktree_only` afresh and runs five tables in

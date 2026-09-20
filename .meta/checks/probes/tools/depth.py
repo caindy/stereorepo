@@ -1,12 +1,14 @@
 """`depth.py`'s four layers, each answered by the paths a change touches (solorepo's DR-188).
 """
 
+from typing import Any
+
 from checks.collect import META, ROOT, check
 from checks.probes.harness import load_module, written
 
 
 @check("depth probes", pre=True)
-def depth_probes():
+def depth_probes() -> list[str]:
     """`depth.evaluate` answers from the first of its four layers that speaks, one case per layer and one per precedence between them (solorepo's DR-188).
 
     Layer 1 is the scaffold boundary: each of the four boundary files alone
@@ -27,7 +29,7 @@ def depth_probes():
     problems = []
     opus, sonnet = "claude-opus-5", "claude-sonnet-5"
 
-    def expect(case, cfg, **want):
+    def expect(case: str, cfg: Any, **want: Any) -> None:
         """One problem naming `case` when any field of `cfg` differs from `want`; `reason_has` asks that the reason contain a phrase rather than equal one."""
         phrase = want.pop("reason_has", None)
         if any(getattr(cfg, field) != value for field, value in want.items()) or (

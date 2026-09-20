@@ -7,7 +7,7 @@ from checks.collect import ROOT, against_baseline, check
 
 
 @check("comment probes", pre=True)
-def comment_probes():
+def comment_probes() -> list[str]:
     """`comments.py`'s three detectors, against the comments they exist to catch and the comments they must let through.
 
     A heuristic over comment text is a boundary like any other, and the cost of
@@ -46,7 +46,7 @@ def _expecting(kind: Any) -> tuple[Any, list[str]]:
     """A recorder for detector `kind`: `expect(want, got, case)` keeps one problem where `got` is not `want`, and `problems` is what it kept."""
     problems = []
 
-    def expect(want, got, case):
+    def expect(want: Any, got: Any, case: Any) -> None:
         if want != got:
             problems.append(f"comment probes: {kind} answered {got!r} for {case!r}, expected {want!r}")
     return expect, problems
@@ -181,7 +181,7 @@ def _blocks_and_sites(comments: Any, here: Any) -> tuple[list[str], list[str]]:
 def _ratchet(comments: Any, here: Any, one: Any) -> list[str]:
     """The shared ratchet at, over and under its baseline, and over an entry naming a file the tree no longer has (solorepo's DR-210)."""
     problems = []
-    def ratcheted(counts, sites, recorded):
+    def ratcheted(counts: dict[str, int], sites: dict[str, Any], recorded: dict[str, int]) -> list[str]:
         """The shared ratchet, asked about counts under the `inline commentary` step's baseline."""
         return against_baseline(counts, sites, recorded, "body comments", comments.BASELINE)
 
