@@ -50,6 +50,7 @@
 .meta/checks/probes/loops/merge_manager.py: 7
 .meta/checks/probes/loops/merge_manager_advance.py: 1
 .meta/checks/probes/loops/stop.py: 5
+.meta/checks/probes/loops/sweep.py: 0
 .meta/checks/probes/tools/agents.py: 1
 .meta/checks/probes/tools/apm_compile.py: 1
 .meta/checks/probes/tools/comments.py: 8
