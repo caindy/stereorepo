@@ -385,3 +385,12 @@ request's own weather (including merged/closed states and non-sticking re-reques
 the printed report.
 
 Evidence: `.meta/checks/probes/loops/dispatch.py::dispatch_probes`, `.meta/checks/probes/loops/advance.py::advance_probes`
+
+### An unlabelled Issue had no channel verb to move onto the roadmap
+
+An Issue opened outside the issue form or channel arrived unlabelled, and the
+channel had no verb to apply `roadmap` to an existing Issue (solorepo's #421).
+Established: `roadmap()` moves an open Issue onto the roadmap, applying `roadmap`
+and stripping `challenge` and difficulty labels symmetrically with `triage()`.
+
+Evidence: `.meta/say/move::roadmap`

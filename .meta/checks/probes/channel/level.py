@@ -1,15 +1,16 @@
-"""The level a run may land, and the level `move reread` takes off (solorepo's DR-235).
+"""The level a run may land, the level `move reread` takes off (solorepo's DR-235), and roadmap transitions (solorepo's #421).
 """
 
 
 from typing import Any
 
-from checks.collect import check
+from checks.collect import META, check
 from checks.probes.harness import (
     FakeFiling,
     FakeIssue,
     environment,
     load_channel,
+    load_module,
     run_verb,
 )
 
@@ -41,7 +42,8 @@ def level_probes() -> list[str]:
     move = programs["move"]
     return (moving_probes(channel, move) + filing_probes(channel, move)
             + delegating_probes(channel, move) + triaging_probes(channel, move)
-            + reread_probes(channel, move))
+            + reread_probes(channel, move) + roadmap_probes(channel, move)
+            + next_unlabelled_probes())
 
 
 def moving_probes(channel: Any, move: Any) -> list[str]:
@@ -267,3 +269,79 @@ def reread_probes(channel: Any, move: Any) -> list[str]:
     if not said or "carries no level" not in said or fake.labels != ["challenge"]:
         problems.append(f"level: rereading a Challenge with no level was told {said!r}")
     return problems
+
+
+def roadmap_probes(channel: Any, move: Any) -> list[str]:
+    """`move roadmap`, which moves an unlabelled or challenge Issue onto the roadmap.
+
+    Args:
+        channel: The channel module.
+        move: The move program module.
+
+    Returns:
+        list[str]: Discrepancies found during probe execution.
+    """
+    problems: list[str] = []
+
+    def roadmapping(labels: list[str], assignees: list[str] | None = None,
+                    state: str = "OPEN",
+                    session: str | None = None) -> tuple[str | None, FakeIssue]:
+        """One `roadmap` of an Issue holding `labels`, `assignees` and `state`, under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
+        fake = FakeIssue(labels, assignees=assignees)
+        fake.state = state
+        run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
+        with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
+            return run_verb(channel, fake, lambda: move.roadmap("7")), fake
+
+    said, fake = roadmapping([])
+    if said or fake.labels != ["roadmap"]:
+        problems.append(f"roadmap: roadmapping an unlabelled Issue said {said!r} and left it "
+                        f"labelled {fake.labels!r}")
+
+    said, fake = roadmapping(["challenge", "hard"])
+    if said or fake.labels != ["roadmap"]:
+        problems.append(f"roadmap: roadmapping a Challenge said {said!r} and left it "
+                        f"labelled {fake.labels!r}")
+
+    said, fake = roadmapping(["roadmap"])
+    if not said or "already" not in said or fake.labels != ["roadmap"]:
+        problems.append(f"roadmap: roadmapping an Issue already on the roadmap said {said!r} and left it "
+                        f"labelled {fake.labels!r}")
+
+    said, fake = roadmapping(["challenge"], session=RUN)
+    if not said or "solo's" not in said or fake.labels != ["challenge"]:
+        problems.append(f"roadmap: a run roadmapping an Issue was told {said!r} and left it "
+                        f"labelled {fake.labels!r}")
+
+    said, fake = roadmapping(["challenge"], assignees=["o-r-coder"])
+    if not said or "claimed" not in said or fake.labels != ["challenge"]:
+        problems.append(f"roadmap: roadmapping a claimed Issue was told {said!r} and left it "
+                        f"labelled {fake.labels!r}")
+
+    said, fake = roadmapping(["challenge"], state="CLOSED")
+    if not said or "closed" not in said or fake.labels != ["challenge"]:
+        problems.append(f"roadmap: roadmapping a closed Issue was told {said!r} and left it "
+                        f"labelled {fake.labels!r}")
+
+    return problems
+
+
+def next_unlabelled_probes() -> list[str]:
+    """Verification of next.py unlabelled issue classification and row formatting.
+
+    Returns:
+        list[str]: Discrepancies found during next unlabelled issue checks.
+    """
+    problems: list[str] = []
+    screen = load_module(META / "next.py", "next_screen", register=False)
+    issue = {"number": 22, "title": "An unlabelled issue", "labels": [], "createdAt": "2026-09-04T00:00:00Z"}
+    classified = screen.classify(issue, {22}, {})
+    if classified["kind"] != "-":
+        problems.append(f"next: expected kind '-' for unlabelled issue, got {classified['kind']!r}")
+    if screen.unlabelled([classified]) != [classified]:
+        problems.append("next: unlabelled() did not return the unlabelled issue")
+    row_text = screen.row(classified)
+    if "unlabelled" not in row_text:
+        problems.append(f"next: row() did not format level as 'unlabelled', got: {row_text!r}")
+    return problems
+

@@ -118,6 +118,10 @@ programs:
         usage: "<issue>"
         does: "hand a Challenge back to the reviewer: its level taken off, which is the delivery the reading door fires on; refused to a run, which would undo in two acts a verdict it may not move in one, and on an Issue that is not a Challenge, one with no level to take off, one that is closed, which the door declines, or one a Job's claim stands on"
         held_by: [solo]
+      - name: roadmap
+        usage: "<issue>"
+        does: "move an Issue onto the roadmap: `roadmap` lands, and any `challenge` and difficulty labels are stripped"
+        held_by: [solo]
       - name: claim
         usage: "<issue>"
         does: "take an Issue: assign it to this Role's account; refused to a session on a Challenge no reviewer has read, and at `easy` or `medium`, which are the loop's until the Issue is moved to `hard`"

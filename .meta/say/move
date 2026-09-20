@@ -340,6 +340,39 @@ def triage(issue: str | int, level: str, body: str) -> None:
     print(f"#{issue} is a Challenge, labelled {', '.join(now)}")
 
 
+def roadmap(issue: str | int) -> None:
+    """Move an open Issue onto the roadmap.
+
+    Applies the `roadmap` label and strips any `challenge` or difficulty labels,
+    symmetric with the strip performed by `triage`.
+
+    Parameters:
+        issue (int | str): Issue number to move onto the roadmap.
+
+    Raises:
+        SystemExit: If invoked within a run, if the Issue is not open, if it is
+            claimed by an Actor, or if it is on the roadmap already with no stale
+            labels to strip.
+    """
+    if channel.in_a_run():
+        sys.exit(f"say: moving #{issue} to the roadmap is the solo's: roadmap Issues are deferred "
+                 "intent, and a run hands work back with `move stop <issue>`.")
+    seen = channel.gh("issue", "view", str(issue), "--json", "state,assignees")
+    if str(seen.get("state", "")).upper() != "OPEN":
+        sys.exit(f"say: #{issue} is {str(seen.get('state', 'not open')).lower()}, and the roadmap "
+                 "is for open intent; reopen it first, if it is live.")
+    who = [a["login"] for a in seen.get("assignees", [])]
+    if who:
+        sys.exit(f"say: #{issue} is claimed by {', '.join(who)}; a Job cannot be working on a "
+                 "roadmap Issue. `move stop <issue>` releases the claim first.")
+    now = labels_of(issue)
+    stale = [l for l in now if l == "challenge" or l in DIFFICULTIES]
+    if "roadmap" in now and not stale:
+        sys.exit(f"say: #{issue} is on the roadmap already")
+    now = relabel(issue, add=["roadmap"], remove=stale)
+    print(f"#{issue} is on the roadmap, labelled {', '.join(now)}")
+
+
 def open_with_title(title: str) -> tuple[str, str] | None:
     """The open Issue carrying exactly this title, as `(number, url)`, or `None`.
 
@@ -2889,6 +2922,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("triage"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
     p = sub.add_parser("difficulty"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
     p = sub.add_parser("reread"); p.add_argument("issue")
+    p = sub.add_parser("roadmap"); p.add_argument("issue")
     p = sub.add_parser("claim"); p.add_argument("issue")
     p = sub.add_parser("stop"); p.add_argument("issue")
     p = sub.add_parser("obviate"); p.add_argument("issue")
@@ -2943,6 +2977,8 @@ def main() -> None:
         difficulty(args.issue, args.level)
     elif args.verb == "reread":
         reread(args.issue)
+    elif args.verb == "roadmap":
+        roadmap(args.issue)
     elif args.verb == "claim":
         claim(args.issue)
     elif args.verb == "delegate":

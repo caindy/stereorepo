@@ -8,7 +8,7 @@ of those is a field a listing can read, so this reads them and prints one
 screen. It decides nothing: which ripe Issue to take is the solo's.
 
     python3 .meta/next.py            # the screen
-    python3 .meta/next.py --check    # the sweep: fail on a Challenge the reviewer's door did not read
+    python3 .meta/next.py --check    # the sweep: fail on a Challenge the reviewer's door did not read, or an unlabelled Issue
 
 What it reads, and from where:
 
@@ -27,6 +27,8 @@ What it reads, and from where:
   queue cannot stall without anyone noticing. Where the runs cannot be listed,
   the hour is measured from the filing alone, since `updatedAt` moves on any
   touch and would let a comment silence the check.
+- **Kind.** `challenge` or `roadmap`. An open Issue carrying neither label is
+  unlabelled, displayed in its own section on the screen, and refused by `--check`.
 - **Milestone.** GitHub's, with the lowest number next. The priority is
   written once there rather than inferred per session from which Issues
   happen to cite it.
@@ -149,7 +151,7 @@ def classify(issue: dict[str, Any], open_numbers: set[int], closing: dict[int, i
 
 def row(i: dict[str, Any]) -> str:
     """Formats one issue summary line for the next screen."""
-    level = i["level"] or ("roadmap" if i["kind"] == "roadmap" else "unread")
+    level = i["level"] or ("roadmap" if i["kind"] == "roadmap" else "unread" if i["kind"] == "challenge" else "unlabelled")
     return f"  #{i['number']:<4} {level:<10} {i['note']:<24} {i['title'][:70]}"
 
 
@@ -172,6 +174,18 @@ def unread(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         list[dict[str, Any]]: Unread Challenges.
     """
     return [i for i in rows if i["kind"] == "challenge" and not i["level"]]
+
+
+def unlabelled(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Filters open issues carrying neither `challenge` nor `roadmap`.
+
+    Args:
+        rows: Sequence of classified issue dictionaries.
+
+    Returns:
+        list[dict[str, Any]]: Unlabelled issues.
+    """
+    return [i for i in rows if i["kind"] == "-"]
 
 
 def pull_requests() -> dict[int, int]:
@@ -269,6 +283,7 @@ def screen() -> int:
     waiting = [i for i in challenges if i["level"] and i["blocked"] and not i["taken"]]
     unknown = [i for i in challenges if i["level"] and i["blocked"] is None]
     missing = unread(rows)
+    orphans = unlabelled(rows)
     roadmap = [i for i in rows if i["kind"] == "roadmap"]
 
     def section(name: str, items: list[dict[str, Any]], empty: str = "  none") -> None:
@@ -285,6 +300,8 @@ def screen() -> int:
     section("waiting", waiting + unknown)
     section("unread — a Challenge with no difficulty, waiting for the reviewer's verdict; "
             "the sweep fails on one untouched for an hour", missing)
+    section("unlabelled — carrying neither challenge nor roadmap; "
+            "the sweep fails on these", orphans)
     section("roadmap — deferred by definition, never queued", roadmap)
     return 0
 
@@ -340,13 +357,24 @@ def stalled(rows: list[dict[str, Any]], runs: dict[int, dict[str, Any]] | None,
 
 
 def check() -> int:
-    """Verifies that the reviewer's door read every open Challenge carrying no level."""
-    found = stalled(issues(), triage_runs(), datetime.now(UTC))
+    """Verifies that the reviewer's door read every open Challenge carrying no level,
+    and that no open Issue sits unlabelled."""
+    all_issues = issues()
+    found = stalled(all_issues, triage_runs(), datetime.now(UTC))
+    orphans = unlabelled(all_issues)
+    failed = False
     if found:
         print(f"x  triage — {len(found)} Challenge(s) carry no difficulty and the reviewer's "
               "door did not read them (solorepo's DR-230)")
         for i, why in found:
             print(row(i) + f"  ({why})")
+        failed = True
+    if orphans:
+        print(f"x  unlabelled — {len(orphans)} Issue(s) carry neither `challenge` nor `roadmap`")
+        for i in orphans:
+            print(row(i))
+        failed = True
+    if failed:
         return 1
     print("ok triage — every Challenge carries a difficulty, or its triage run is under way")
     return 0
@@ -356,6 +384,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true",
-                    help="fail on a Challenge the reviewer's door did not read, one line each")
+                    help="fail on a Challenge the reviewer's door did not read or an unlabelled Issue, one line each")
     args = ap.parse_args()
     sys.exit(check() if args.check else screen())
