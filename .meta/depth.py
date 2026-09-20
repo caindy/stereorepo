@@ -1,26 +1,13 @@
 #!/usr/bin/env python3
-"""Review depth evaluation for pull requests and specialized portfolios (solorepo's DR-188).
+"""Review depth evaluation pipeline for pull requests and specialized portfolios.
 
-Decides the model, effort, turns, minutes, and agent fan-out ceiling for a
-pull request review, replacing inline workflow conditionals with a 4-layer
-template method pipeline:
+Determines model tier, reasoning effort, agent turn budget, execution timeout,
+and concurrent subagent fan-out ceiling across four evaluation layers (solorepo's DR-188,
+solorepo's DR-219):
+scaffold control plane invariants, declared project critical paths, programmatic hooks,
+and standard defaults.
 
-1. **Scaffold Invariant (Hard Baseline):** Changes to the agent harness control
-   plane (`.meta/say`, `.meta/hooks`, `.claude`, `.github/workflows`, `check_pr.py`)
-   unconditionally trigger the deep path (Opus, high effort, 45m, 3 agents).
-2. **Declarative Assertions (Portfolio Extensions):** Matches modified files
-   against `critical_paths` asserted on Projects in `structure.yaml`. Matching
-   files trigger the deep path (or project-configured tier).
-3. **Programmatic Hook (Custom Heuristics):** If `.meta/hooks/depth.py` exists,
-   it is invoked with `(pr_meta, files, diff_patch)` to allow dynamic AST or
-   metadata-driven depth decisions.
-4. **Standard Default:** All other changes receive the standard review tier
-   (Sonnet, medium effort, 15m, 1 agent).
-
-Usage:
-    python3 .meta/depth.py <pr-number>               # evaluated from GitHub PR diff
-    python3 .meta/depth.py --files file1,file2       # evaluated from explicit file list
-    python3 .meta/depth.py --files - < files.txt     # evaluated from stdin
+History in depth.history.md (solorepo's DR-171).
 """
 from __future__ import annotations
 
@@ -47,23 +34,23 @@ CONTROL_PLANE: tuple[str, ...] = (
     ".meta/lib/worktree_only/", ".meta/lib/signed_channel/",
     ".claude/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/",
 )
-"""The path prefixes of the control plane: the channel, the hooks, the pull request gate, and the
-bodies of the gate and the hooks under `.meta/lib/`, the settings that register them, the instructions every session loads
-before it reads anything, and the workflows. A change under one is routed to the deepest review
-(Layer 1 of the template method) and `.meta/timing.py` reports it as the critical path.
-`.github/workflows/review.yml` restores every prefix but the workflows' from trunk before a
-reviewer reads anything, and the gate step `control plane restore` holds each statement of that
-set in the workflow to this one. Under `.meta/lib/`, the initialiser is always named, and a
-package is named when the script it is the body of is: trunk's `check_pr.py` imports its package
-through `lib/__init__.py`, so the initialiser is module-level code trunk's gate executes, and the
-restore is no-overlay, so a package restored wholesale deletes the body a pull request adds for a
-script outside the envelope (solorepo's DR-219)."""
+"""Path prefixes defining the agent harness control plane and security boundary (solorepo's DR-219)."""
 SCAFFOLD_BOUNDARY = re.compile("^(" + "|".join(re.escape(prefix) for prefix in CONTROL_PLANE) + ")")
 """Matches a repository-relative path inside the control plane."""
 
 
 class DepthConfig(NamedTuple):
-    """The reviewer parameters chosen by the depth pipeline."""
+    """Reviewer runtime parameters determined by depth evaluation.
+
+    Attributes:
+        model: Claude model name to dispatch.
+        gemini_model: Gemini model name for fallback passes.
+        effort: Reasoning effort level ('high' or 'medium').
+        turns: Maximum turn limit for the reviewer agent.
+        minutes: Execution timeout in minutes.
+        agents: Maximum concurrent subagent fan-out ceiling.
+        reason: Explanation justifying the selected review tier.
+    """
 
     model: str
     gemini_model: str
@@ -74,7 +61,11 @@ class DepthConfig(NamedTuple):
     reason: str
 
     def to_github_output(self) -> str:
-        """Formats the configuration as key=value lines for $GITHUB_OUTPUT."""
+        """Formats the configuration as key=value lines for $GITHUB_OUTPUT.
+
+        Returns:
+            str: Multi-line string formatted for GitHub Actions step output.
+        """
         return (
             f"model={self.model}\n"
             f"gemini_model={self.gemini_model}\n"
@@ -108,12 +99,13 @@ STANDARD_CONFIG = DepthConfig(
 
 
 def load_structure_projects(structure_file: pathlib.Path = STRUCTURE_PATH) -> list[dict[str, Any]]:
-    """Loads declared projects from structure.yaml, handling pyyaml or minimal fallback.
+    """Loads declared projects from structure.yaml with minimal fallback parser.
 
-    The fallback reads `critical_paths` and nothing else, by indentation, and
-    exists because this tool runs in the review workflow's container before any
-    dependency is installed. A project's other slots are not read there, so the
-    parser that would read them is not written.
+    Args:
+        structure_file: Path to structure.yaml definition.
+
+    Returns:
+        list[dict[str, Any]]: Project dictionaries with 'id' and 'critical_paths'.
     """
     if not structure_file.is_file():
         return []
@@ -147,7 +139,14 @@ def load_structure_projects(structure_file: pathlib.Path = STRUCTURE_PATH) -> li
 
 
 def normalize_path(path: str) -> str:
-    """Normalizes relative path by stripping leading './' while preserving leading dot in directory names."""
+    """Normalizes a file path by stripping leading './' prefixes.
+
+    Args:
+        path: Path string to normalize.
+
+    Returns:
+        str: Normalized repository-relative path string.
+    """
     p = path.strip()
     if p.startswith("./"):
         p = p[2:]
@@ -155,7 +154,14 @@ def normalize_path(path: str) -> str:
 
 
 def check_scaffold_boundary(files: list[str]) -> DepthConfig | None:
-    """Layer 1: Verifies whether any file touches the scaffold harness security boundary."""
+    """Evaluates Layer 1: checks if modified files touch harness control plane paths.
+
+    Args:
+        files: List of repository-relative file paths.
+
+    Returns:
+        DepthConfig | None: Deep review configuration if a control plane path matched, else None.
+    """
     for path in files:
         norm = normalize_path(path)
         if SCAFFOLD_BOUNDARY.search(norm):
@@ -172,7 +178,15 @@ def check_scaffold_boundary(files: list[str]) -> DepthConfig | None:
 
 
 def check_declarative_assertions(files: list[str], projects: list[dict[str, Any]]) -> DepthConfig | None:
-    """Layer 2: Verifies whether any file matches critical_paths declared on projects."""
+    """Evaluates Layer 2: matches files against declared project critical_paths.
+
+    Args:
+        files: List of repository-relative file paths.
+        projects: List of declared project configurations from structure.yaml.
+
+    Returns:
+        DepthConfig | None: Deep review configuration if a declared critical path matched, else None.
+    """
     for proj in projects:
         proj_id = proj.get("id", "project")
         critical_globs = proj.get("critical_paths") or []
@@ -198,7 +212,17 @@ def check_programmatic_hook(
     diff_patch: str,
     hook_file: pathlib.Path = HOOK_PATH,
 ) -> DepthConfig | None:
-    """Layer 3: Executes custom heuristic callback in .meta/hooks/depth.py if present."""
+    """Evaluates Layer 3: executes custom heuristic hook in .meta/hooks/depth.py.
+
+    Args:
+        pr_meta: Pull request metadata mapping (labels, title, author).
+        files: List of modified file paths.
+        diff_patch: Unified diff string of the pull request changes.
+        hook_file: Path to the depth hook script.
+
+    Returns:
+        DepthConfig | None: Custom DepthConfig if returned by hook, else None.
+    """
     if not hook_file.is_file():
         return None
     try:
@@ -239,12 +263,17 @@ def evaluate(
     structure_file: pathlib.Path = STRUCTURE_PATH,
     hook_file: pathlib.Path = HOOK_PATH,
 ) -> DepthConfig:
-    """Executes the 4-layer template method pipeline over a list of changed files.
+    """Evaluates the 4-layer template method pipeline over modified files.
 
-    The layers answer in order and the first that answers wins, so the scaffold
-    boundary cannot be talked out of deep review by an assertion or a hook
-    beneath it: the invariant boundary, then the `critical_paths` a project
-    declares, then the portfolio's own hook, then the standard default.
+    Args:
+        files: List of modified file paths in the change.
+        pr_meta: Optional pull request metadata dictionary.
+        diff_patch: Optional unified diff patch text.
+        structure_file: Path to structure.yaml definition.
+        hook_file: Path to custom depth hook script.
+
+    Returns:
+        DepthConfig: Selected reviewer execution configuration.
     """
     meta = pr_meta or {}
 
@@ -265,7 +294,14 @@ def evaluate(
 
 
 def repo_target(repo: str | None = None) -> str | None:
-    """The repository to read, as `owner/name`: `repo`, else `GITHUB_REPOSITORY`, else what `gh repo view` answers, else None."""
+    """Resolves target GitHub repository slug as owner/repo.
+
+    Args:
+        repo: Optional repository slug override.
+
+    Returns:
+        str | None: Repository slug, or None if unresolved.
+    """
     target = repo or os.environ.get("GITHUB_REPOSITORY")
     if target:
         return target
@@ -280,7 +316,15 @@ def repo_target(repo: str | None = None) -> str | None:
 
 
 def last_verdict_head(pr: str, target: str | None) -> str | None:
-    """The commit the reviewer Role's last verdict on `pr` was recorded against, or None where there is none or the reviews could not be read."""
+    """Retrieves the commit SHA evaluated by the reviewer Role's latest verdict.
+
+    Args:
+        pr: Pull request number.
+        target: Repository slug as owner/repo.
+
+    Returns:
+        str | None: Commit SHA if found, or None if no prior review verdict exists.
+    """
     owner, _, repo_name = (target or "").partition("/")
     if not (owner and repo_name):
         return None
@@ -298,7 +342,14 @@ def last_verdict_head(pr: str, target: str | None) -> str | None:
 
 
 def incremental_files(head: str | None) -> list[str] | None:
-    """The files changed since `head`, or None where there is no such commit here or the diff failed, in which case the cumulative reading is the one to take."""
+    """Computes file paths changed since the specified commit SHA.
+
+    Args:
+        head: Base commit SHA of previous review verdict.
+
+    Returns:
+        list[str] | None: List of changed file paths, or None if head commit is inaccessible.
+    """
     if not head or subprocess.run(["git", "cat-file", "-e", head], capture_output=True).returncode != 0:
         return None
     print(f"depth: checking incremental delta diff since last verdict head: {head}", file=sys.stderr)
@@ -311,7 +362,17 @@ def incremental_files(head: str | None) -> list[str] | None:
 
 
 def pull_view(pr: str, target: str | None, fields: str, query: str) -> str:
-    """`gh pr view` of `pr` in `target`, asking for `fields` and reading them with the jq `query`."""
+    """Queries GitHub CLI for pull request metadata fields.
+
+    Args:
+        pr: Pull request number.
+        target: Optional repository slug.
+        fields: Comma-separated list of JSON field names.
+        query: JQ extraction query.
+
+    Returns:
+        str: Raw output string from gh pr view.
+    """
     cmd = ["gh", "pr", "view", pr]
     if target:
         cmd.extend(["--repo", target])
@@ -320,12 +381,14 @@ def pull_view(pr: str, target: str | None, fields: str, query: str) -> str:
 
 
 def resolve_files_for_pr(pr: str, repo: str | None = None) -> tuple[list[str], dict[str, Any], str]:
-    """Resolves changed files and metadata for a pull request, accounting for re-reviews.
+    """Resolves changed files and review metadata for a pull request.
 
-    The metadata — labels, title and author — is what a portfolio's programmatic
-    hook is given to judge on, and a read of it that fails leaves the number and
-    the repository alone rather than stopping the evaluation: a hook that sees
-    less falls through to the layer beneath it.
+    Args:
+        pr: Pull request number.
+        repo: Optional repository slug.
+
+    Returns:
+        tuple: (changed_files, pr_metadata, diff_patch).
     """
     target = repo_target(repo)
     files = incremental_files(last_verdict_head(pr, target))
@@ -342,7 +405,14 @@ def resolve_files_for_pr(pr: str, repo: str | None = None) -> tuple[list[str], d
 
 
 def main(argv: list[str]) -> int:
-    """CLI entrypoint for depth evaluation."""
+    """CLI entrypoint for evaluating review depth.
+
+    Args:
+        argv: Command-line arguments starting with the script name.
+
+    Returns:
+        int: Exit status code (0 on success, 2 on missing arguments).
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("pr", nargs="?", help="Pull request number to evaluate")
     parser.add_argument("--files", help="Comma-separated list of files, or '-' to read from stdin")

@@ -1,35 +1,11 @@
 #!/usr/bin/env -S uvx --with pyyaml python
-"""The self-hosted runner: layer two of two, and the one that matters.
+"""Actions Runner Controller and runner scale set Helm deployer.
 
-    .meta/arc/deploy
+Idempotently deploys or upgrades the GitHub Actions Runner Controller operator
+and associated autoscaling runner scale sets targeting the active Kubernetes context.
+Applies GitHub registration secrets and local developer Gemini credentials.
 
-Installs GitHub's Actions Runner Controller — the operator, then the runner
-scale set `runs-on: arc-runner-set` targets — against whatever cluster
-`kubectl config current-context` already names. Never `kind`-specific, which
-is the whole point: the same command is what a `kind` cluster from
-`.meta/arc/cluster` runs against today and what a machine with its own
-cluster runs against tomorrow, `kubectl config use-context` being the only
-thing that changes between them.
-
-`helm upgrade --install` both times, so running this again after a values
-file changes, or after nothing changed at all, is the same command and does
-the same thing either way.
-
-`helm upgrade` preserves custom resource annotations across runs. If a runner
-scale set was deregistered on GitHub (for example, by `teardown` running on
-another machine), an existing `AutoscalingRunnerSet` here would otherwise
-continue holding the stale `runner-scale-set-id` annotation — a 404 from
-GitHub on JIT config generation that the controller never recovers from on its
-own. `deploy` clears that cached ID and any stuck ephemeral runners on upgrade
-so the controller re-verifies registration with GitHub and adopts the live ID.
-
-The GitHub token ARC registers runners with is never a command-line argument
-and never a file this repository holds. It comes from `$ARC_GITHUB_TOKEN` in
-the environment, or from `~/.config/solorepo/arc-runner.env` — outside the
-tree, per machine, mode 600 — the same shape `.meta/say/channel.py` holds a
-Role's credential in (solorepo's DR-073), though this is not a Role's: nothing
-here posts to GitHub as anyone, it only tells ARC how to ask GitHub for
-runner registrations.
+History in deploy.history.md (solorepo's DR-171).
 """
 import argparse
 import json
@@ -46,14 +22,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 TOKEN_ENV = pathlib.Path("~/.config/solorepo/arc-runner.env").expanduser()
 TOKEN_VAR = "ARC_GITHUB_TOKEN"
 
-# Pinned, like every other tool this repository provisions (`actions/checkout@v7.0.1`):
-# `helm upgrade --install` is idempotent for a given chart version, not across
-# "whatever `latest` resolves to today" — two machines running this a month
-# apart, or the same machine before and after an unrelated `helm repo update`,
-# would otherwise land different controller and runner-set versions from a
-# command that changed nothing. An upgrade is an edit to this file, not a side
-# effect of the calendar.
 CHART_VERSION = "0.14.2"
+"""Pinned Actions Runner Controller Helm chart version ensuring deterministic deployment across environments."""
 
 CONTROLLER_CHART = "oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller"
 CONTROLLER_RELEASE = "arc"
@@ -97,8 +67,15 @@ def require(*tools: str) -> None:
 
 
 def token() -> str:
-    """The PAT ARC uses to register runners, read the way a Role's is: fail
-    loud rather than fall back to something that looks like success."""
+    """Reads the GitHub personal access token used for runner registration.
+
+    Returns:
+        str: Personal access token with repo scope.
+
+    Raises:
+        SystemExit: If ARC_GITHUB_TOKEN is unset, the credential file is missing,
+            has insecure file permissions, or lacks the token key.
+    """
     found = os.environ.get(TOKEN_VAR)
     if found:
         print(f"arc: speaking with {TOKEN_VAR} from the environment", file=sys.stderr)
@@ -137,8 +114,11 @@ def current_context() -> str:
 
 
 def apply_secret(pat: str) -> None:
-    """The registration Secret, applied as a manifest over stdin so the token
-    is never a process argument (`ps` would show it) or a shell history line."""
+    """Applies the GitHub runner registration Secret into the runner namespace.
+
+    Args:
+        pat: GitHub personal access token passed via process stdin.
+    """
     manifest = subprocess.run(["kubectl", "create", "namespace", RUNNER_NAMESPACE,
                                "--dry-run=client", "-o", "yaml"],
                               capture_output=True, text=True, check=True).stdout
@@ -155,9 +135,7 @@ def apply_secret(pat: str) -> None:
 
 
 def apply_gemini_secret() -> None:
-    """The developer's Gemini subscription credentials, applied as a Secret in
-    the runner namespace so containerized agy sessions execute under personal
-    subscription quota rather than metered API billing (solorepo's DR-245, solorepo's #669)."""
+    """Applies local Gemini subscription credentials as a Secret in the runner namespace."""
     gemini_dir = find_gemini_dir()
     if not gemini_dir:
         print(f"arc: notice: no .gemini directory with credentials found; skipping {GEMINI_SECRET_NAME}", file=sys.stderr)
@@ -208,7 +186,14 @@ STALE_EXCEPTIONS = (
 
 
 def is_registration_stale(since_seconds: float | int = 120) -> bool:
-    """Whether ARC has encountered a 404 or 409 from GitHub for a dead runner scale set ID."""
+    """Checks whether recent controller or listener logs contain stale scale set registration errors.
+
+    Args:
+        since_seconds: Window in seconds to inspect container logs. Defaults to 120.
+
+    Returns:
+        bool: True if 404 or 409 scale set exceptions are present in logs, False otherwise.
+    """
     scale_set = subprocess.run([
         "kubectl", "-n", RUNNER_NAMESPACE, "get", "autoscalingrunnerset",
         RUNNERSET_RELEASE, "-o", "jsonpath={.metadata.annotations.runner-scale-set-id}",
@@ -229,7 +214,11 @@ def is_registration_stale(since_seconds: float | int = 120) -> bool:
 
 
 def is_listener_ready() -> bool:
-    """Whether a runner-scale-set-listener pod is running and ready in the controller namespace."""
+    """Checks whether a runner scale set listener pod is running and ready.
+
+    Returns:
+        bool: True if a ready listener pod exists in the controller namespace, False otherwise.
+    """
     out = subprocess.run([
         "kubectl", "-n", CONTROLLER_NAMESPACE, "get", "pods",
         "-l", "app.kubernetes.io/component=runner-scale-set-listener",
@@ -254,11 +243,11 @@ def is_listener_ready() -> bool:
 
 
 def active_runners() -> tuple[list[str], bool]:
-    """Names of EphemeralRunners that are actively executing or starting a job.
+    """Inspects ephemeral runner custom resources for active execution.
 
-    Returns (runners, True) on a clean inspection, or ([], False) if kubectl
-    failed or the response was unparseable. Fails closed: callers must not
-    treat an error as 'no runners active'.
+    Returns:
+        tuple[list[str], bool]: Tuple containing list of active runner names and a boolean
+            indicating whether the cluster inspection succeeded.
     """
     out = subprocess.run([
         "kubectl", "-n", RUNNER_NAMESPACE, "get", "ephemeralrunners", "-o", "json",
@@ -291,23 +280,11 @@ def active_runners() -> tuple[list[str], bool]:
 
 
 def reset_stale_registration(start_time: float | None = None) -> None:
-    """Clear cached scale set metadata from an existing AutoscalingRunnerSet.
+    """Clears cached scale set metadata from an AutoscalingRunnerSet custom resource.
 
-    `helm upgrade` preserves existing annotations on custom resources. If a
-    runner scale set was deregistered on GitHub (e.g. by `teardown` running on
-    another machine) or had its session held open across an ungraceful restart,
-    the AutoscalingRunnerSet in this cluster continues to hold the stale
-    `runner-scale-set-id` annotation. The controller never clears that annotation
-    on error and fails every JIT config generation.
-
-    We only reset if the registration is actually stale (evidenced by a 404
-    `RunnerScaleSetNotFoundException` or 409 `RunnerScaleSetSessionConflictException`
-    from GitHub in recent listener or controller logs). If not immediately stale,
-    we poll up to 25s for the listener to start or surface a session error. When
-    stale registration is detected, we wait for any active jobs to finish, clean up
-    stuck child resources with bounded timeouts, patch the custom resource so the
-    controller re-verifies registration with GitHub and adopts a live ID, and
-    poll up to 30s for the replacement listener to reach ready status.
+    Args:
+        start_time: Optional deployment start epoch timestamp used to calibrate
+            log inquiry windows. Defaults to None.
     """
     since_seconds = (time.time() - start_time + 60) if start_time else 120
     if not is_registration_stale(since_seconds):

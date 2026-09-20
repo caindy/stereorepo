@@ -28,3 +28,14 @@ lagged behind. Established: `template conventions agree` verifies that root and
 template files both declare the core operational conventions (solorepo's DR-183).
 
 Evidence: `.meta/checks/files/templates.py::template_conventions_agree`
+
+### Step or schema load exceptions halted gate without diagnostic reporting
+
+When unexpected errors occurred during schema loading or individual check step
+execution, the gate runner crashed with raw Python tracebacks, preventing
+downstream checks from running or obscuring remaining step status. Established:
+`main()` isolates precheck and step executions, catches unhandled exceptions, and
+reports structured failure summaries without exiting early (Article 6).
+
+Evidence: `.meta/checks/files/history.py::meta_history_evidence`
+

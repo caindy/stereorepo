@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
-"""Monitors Actions Runner Controller (ARC) workers in the cluster.
+"""Actions Runner Controller worker monitor.
 
-    .meta/arc/watch [--once] [--title] [--namespace NAMESPACE]
-
-Watches `EphemeralRunner` custom resources in the runner namespace (default:
-`arc-runners`). When a worker is scheduled by ARC, GitHub sends the workflow run
-context to the listener, which populates the runner's status with its workflow
-ref, run ID, and job name.
-
-For pull request jobs, this script extracts and highlights the PR number
-(`refs/pull/<PR>/merge`).
+Streams or snapshots ephemeral runner custom resource events from Kubernetes,
+correlating workflow runs, pull request numbers, execution harnesses, and models.
 """
 import argparse
 import datetime
@@ -34,20 +27,34 @@ NON_AI_WORKFLOWS = {
 
 
 def require(tool: str) -> None:
-    """Verifies that the specified tool is available on PATH or exits."""
+    """Verifies that a specified executable tool exists on PATH.
+
+    Args:
+        tool: Executable name to verify.
+
+    Raises:
+        SystemExit: If the tool is not found on PATH.
+    """
     if not shutil.which(tool):
         sys.exit(f"arc-watch: '{tool}' not found on PATH.")
 
 
 def current_context() -> str:
-    """Returns the active kubectl context name or a fallback indicator."""
+    """Returns the active kubectl context name or a fallback string if unset."""
     out = subprocess.run(["kubectl", "config", "current-context"],
                          capture_output=True, text=True)
     return out.stdout.strip() if out.returncode == 0 else "(unknown)"
 
 
 def fetch_run_title(run_id: int | str) -> str:
-    """Optionally queries gh for the display title of a workflow run."""
+    """Queries GitHub CLI for the display title of a workflow run.
+
+    Args:
+        run_id: Identifier of the workflow run.
+
+    Returns:
+        str: Workflow run display title or empty string on failure.
+    """
     if not run_id or not shutil.which("gh"):
         return ""
     if run_id in TITLE_CACHE:
@@ -69,12 +76,13 @@ def fetch_run_title(run_id: int | str) -> str:
 
 
 def _inspect_steps(steps: list[dict[str, Any]]) -> tuple[str, str]:
-    """Determines active (in-progress) or chosen (completed) harness and model from workflow steps.
+    """Extracts execution harness and language model metadata from workflow steps.
+
+    Args:
+        steps: List of GitHub Actions step status dictionaries.
 
     Returns:
-        tuple[str, str]: A pair of (harness, model) naming the active or selected execution harness
-        ('claude', 'agy', 'agy (fallback)', 'jules', 'jules (fallback)', or 'prep (...)') and the
-        corresponding language model.
+        tuple[str, str]: Tuple of harness identifier and language model name.
     """
     harness, model = "-", "-"
     active_step = None
@@ -115,7 +123,15 @@ def _inspect_steps(steps: list[dict[str, Any]]) -> tuple[str, str]:
 
 
 def fetch_run_details(run_id: int | str, workflow: str = "") -> tuple[str, str, str]:
-    """Queries gh for active or chosen harness, model, and workflow run title."""
+    """Queries GitHub CLI for active or chosen harness, model, and workflow run title.
+
+    Args:
+        run_id: Workflow run identifier.
+        workflow: Workflow file name used to skip non-AI workflow queries. Defaults to "".
+
+    Returns:
+        tuple[str, str, str]: Tuple of harness identifier, model name, and run title.
+    """
     if not run_id or str(run_id) == "-" or not shutil.which("gh"):
         return "-", "-", ""
     if run_id in DETAILS_CACHE:
@@ -154,7 +170,15 @@ def fetch_run_details(run_id: int | str, workflow: str = "") -> tuple[str, str, 
 
 
 def parse_runner(obj: dict[str, Any], fetch_titles: bool = False) -> dict[str, str]:
-    """Parses an EphemeralRunner custom resource JSON object into a summary record."""
+    """Parses an EphemeralRunner custom resource dictionary into a summary record.
+
+    Args:
+        obj: EphemeralRunner Kubernetes resource dictionary.
+        fetch_titles: Whether to query GitHub CLI for run display titles. Defaults to False.
+
+    Returns:
+        dict[str, str]: Mapped summary record of runner status and execution metadata.
+    """
     metadata = obj.get("metadata", {})
     status = obj.get("status", {})
     name = metadata.get("name", "-")
@@ -206,7 +230,12 @@ def parse_runner(obj: dict[str, Any], fetch_titles: bool = False) -> dict[str, s
 
 
 def print_row(r: dict[str, str], show_title: bool = False) -> None:
-    """Prints a single runner summary row formatted for tabular terminal output."""
+    """Prints a single runner summary row formatted for tabular terminal output.
+
+    Args:
+        r: Runner summary record dictionary.
+        show_title: Whether to print workflow run titles. Defaults to False.
+    """
     base = (f"{r['time']:<10} {r['name']:<34} {r['phase']:<12} {r['pr']:<8} "
             f"{r['run_id']:<14} {r['workflow']:<14} {r['job']:<16} "
             f"{r['harness']:<18} {r['model']:<18}")
@@ -218,7 +247,11 @@ def print_row(r: dict[str, str], show_title: bool = False) -> None:
 
 
 def print_header(show_title: bool = False) -> None:
-    """Prints the column headers and separator line for runner tracking."""
+    """Prints tabular column headers and separator lines for runner tracking.
+
+    Args:
+        show_title: Whether to include the title column header. Defaults to False.
+    """
     header = (f"{'TIME':<10} {'RUNNER':<34} {'STATUS':<12} {'PR':<8} "
               f"{'RUN_ID':<14} {'WORKFLOW':<14} {'JOB':<16} "
               f"{'HARNESS':<18} {'MODEL':<18}")
@@ -230,7 +263,12 @@ def print_header(show_title: bool = False) -> None:
 
 
 def run_once(namespace: str, show_title: bool = False) -> None:
-    """Lists the current ephemeral runners in the namespace and exits."""
+    """Snapshots and prints current ephemeral runners in a Kubernetes namespace.
+
+    Args:
+        namespace: Kubernetes namespace containing ephemeral runners.
+        show_title: Whether to query and print run titles. Defaults to False.
+    """
     cmd = ["kubectl", "get", "ephemeralrunners", "-n", namespace, "-o", "json"]
     out = subprocess.run(cmd, capture_output=True, text=True)
     if out.returncode != 0:
@@ -253,7 +291,12 @@ def run_once(namespace: str, show_title: bool = False) -> None:
 
 
 def run_watch(namespace: str, show_title: bool = False) -> None:
-    """Continuously streams runner status events from kubectl watch output."""
+    """Continuously streams runner status events from kubectl watch output.
+
+    Args:
+        namespace: Kubernetes namespace containing ephemeral runners.
+        show_title: Whether to query and print run titles. Defaults to False.
+    """
     context = current_context()
     print(f"arc-watch: watching '{namespace}' on context '{context}' (Ctrl+C to stop)...", file=sys.stderr)
     print_header(show_title)
@@ -296,7 +339,7 @@ def run_watch(namespace: str, show_title: bool = False) -> None:
 
 
 def main() -> None:
-    """CLI entry point for watching ARC runner pods and jobs."""
+    """CLI entry point for monitoring ARC runner pods and jobs."""
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter

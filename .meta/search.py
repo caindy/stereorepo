@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""Retrieval over the repository assertions, decisions, and wiki by meaning (solorepo's DR-103, solorepo's DR-192, solorepo's DR-194, solorepo's DR-195).
+"""Information retrieval facade indexing repository assertions, decisions, and wiki concepts.
 
-Provides an in-memory Okapi BM25 search index over all identified objects
-declared in .meta/assertions/*.yaml and concepts defined in wiki/**/*.md.
-Enables agents and the solo to find relevant decisions, articles, disciplines,
-and roles using natural language queries without relying on exact substring grep.
-
-Usage:
-    python3 .meta/search.py "<query>" [--limit N] [--detail] [--json]
-    python3 .meta/search.py --benchmark
+Constructs and queries an in-memory Okapi BM25 ranking index over YAML assertions
+under `.meta/assertions/` and markdown concept pages under `wiki/` (solorepo's DR-103,
+solorepo's DR-192, solorepo's DR-194, solorepo's DR-195). Re-exports search index
+classes, tokenizers, and CLI dispatchers from `lib.search`.
 """
 
 from lib.search import META, ROOT, cli

@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""The optional local cluster: layer one of two, and skippable.
+"""Local Kubernetes cluster provisioner for Actions Runner Controller.
 
-    .meta/arc/cluster
-
-Creates a `kind` cluster named `solorepo-arc` if one by that name does not
-already exist, and does nothing — loudly, not silently — if it does. A
-machine that already has a cluster some other way (an existing GKE context,
-a k3s box) never runs this at all: `deploy` is layer two, and it only ever
-acts on whatever `kubectl config current-context` already points at. This
-script exists for the machine that has nothing yet.
+Idempotently provisions a local kind cluster named `solorepo-arc` for hosting
+Actions Runner Controller runners when no existing cluster context is configured.
 """
 import shutil
 import subprocess
@@ -18,7 +12,14 @@ CLUSTER = "solorepo-arc"
 
 
 def existing_clusters() -> list[str]:
-    """Returns the list of existing kind cluster names found on the local host."""
+    """Retrieves names of active kind clusters on the local system.
+
+    Returns:
+        list[str]: Names of currently discovered kind clusters.
+
+    Raises:
+        SystemExit: If the `kind` executable is missing from PATH or execution fails.
+    """
     if not shutil.which("kind"):
         sys.exit("arc-cluster: kind is not on PATH — install it, or point kubectl "
                  "at a cluster you already have and run `just arc` directly")
@@ -29,7 +30,7 @@ def existing_clusters() -> list[str]:
 
 
 def main() -> None:
-    """CLI entry point for creating the local kind cluster for Actions Runner Controller."""
+    """CLI entrypoint for creating the local kind cluster if absent."""
     if CLUSTER in existing_clusters():
         print(f"arc-cluster: {CLUSTER} already exists; nothing to do", file=sys.stderr)
         return

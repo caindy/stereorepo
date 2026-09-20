@@ -1,19 +1,10 @@
 #!/usr/bin/env python3
-"""Render the prose satellites from the assertions they describe.
+"""Compiler facade generating prose satellites, skills, and templates from assertions.
 
-`disciplines.md` and `vocabulary.md` list things that `.meta/assertions/` already
-holds. Maintaining both by hand is the drift these Disciplines exist to prevent,
-so the prose derives and the assertions are the source (solorepo's DR-026). The decision
-record joined them once it too was assertions (solorepo's DR-059), and PR First compiles the
-same way into a skill (solorepo's DR-060).
-
-    uvx --with pyyaml python .meta/render.py           # write
-    uvx --with pyyaml python .meta/render.py --check   # fail if stale
-    uvx --with pyyaml python .meta/render.py --landed 11   # what a Challenge got
-
-Definitions in the vocabulary are one-line glosses. The full reasoning stays on
-the class, per Literate Programming; these are for recognising a term, not for
-applying it.
+Derives documentation, templates, skills, and configuration artifacts directly
+from declarative YAML models under `.meta/assertions/` (solorepo's DR-026,
+solorepo's DR-059, solorepo's DR-060). Re-exports compilation targets, markdown
+formatters, and file writers from `lib.render`.
 """
 from lib.render import META, cli, pages, skills, targets, writers
 from lib.render.decisions import decision_form, decisions, landed

@@ -1,32 +1,12 @@
 #!/usr/bin/env python3
-"""The gate for the .meta Project (solorepo's DR-029).
+"""Gate orchestrator and semantic constraint checker for the .meta Project.
 
-Invariants stated in the schemas and enforceable by none of them. Some cross a
-path LinkML cannot traverse; one crosses a file boundary, because two tree roots
-are two documents and references between them resolve to nothing a validator will
-look at; and three are arithmetic over a list, which a rule cannot count.
+Validates semantic invariants across LinkML schema instances, graph relations,
+prose citations, and code standards (solorepo's DR-029, solorepo's DR-150,
+solorepo's DR-209). Sequentially executes registered prechecks, schema model
+loaders, and step suites from `.meta/checks/`.
 
-    uvx --with linkml --with pyyaml python .meta/check.py
-
-Run `linkml-validate` first — this checks what that cannot, and assumes the
-documents are otherwise well formed. It also runs render.py's staleness check, so
-one command is the whole gate.
-
-This file is the run. The steps live in `.meta/checks/`, one module per subject
-(solorepo's DR-150), and each registers itself at its definition with `@check`,
-so there is no table here naming them. Importing a module is what puts its steps
-in the registry, so the order of these imports is the order the steps register.
-`main()` then prints every precheck first, whatever module it came from, and the
-rest in that same registration order. What that comes to: `duplicate keys` and
-the probes under `.meta/checks/probes/` (solorepo's DR-209), then the tree, then
-what prose claims about it, then what its comments hold, then the graph.
-The imports are written in dependency order so that the registration order is
-the one stated here and not one a transitive import decided. They spell the step
-modules `checks.*`, which is the one spelling the tree has: this script's own
-directory is `.meta/` and so `sys.path[0]`, and every module under
-`.meta/checks/` reaches its neighbours the same way, so no file is importable
-under two module names and no registry is built twice. History in
-check.history.md (solorepo's DR-171).
+History in check.history.md (solorepo's DR-171).
 """
 import sys  # noqa: I001  # reason: the step imports below stand in registration order, not sorted order
 from collections.abc import Callable, Sequence
@@ -42,7 +22,15 @@ from checks.collect import STEPS, views
 
 
 def report(label: str, outcome: collect.StepOutcome | Sequence[str]) -> bool:
-    """One step, one line, in the shape A21 names (solorepo's DR-092), and its problems or status."""
+    """Formats and prints a single check step outcome adhering to Article 21 (solorepo's DR-092).
+
+    Args:
+        label: Descriptive identifier of the check step.
+        outcome: Step result object (Passed, Found, CouldNotRun) or list of issues.
+
+    Returns:
+        bool: True if defects were detected, False otherwise.
+    """
     if isinstance(outcome, collect.CouldNotRun):
         print(f"?  {label}: {outcome.why}")
         return False
@@ -65,21 +53,14 @@ def report(label: str, outcome: collect.StepOutcome | Sequence[str]) -> bool:
 
 
 def main() -> int:
-    """The prechecks, then the schemas, then every other step the registry holds.
+    """Executes prechecks, schema collections, and registered verification steps.
 
-    Nothing here dies where it can report instead: a step that cannot run says
-    so, and says why, rather than printing a stack trace (Article 6). That
-    holds three times over, once at each point where the gate is asked for
-    something it may not be able to produce.
+    Catches execution exceptions per step to ensure failures report structured
+    diagnostics rather than aborting prematurely (Article 6). Evaluates step
+    sources on demand and tallies object indices.
 
-    A precheck exists so that one broken thing does not take the gate down
-    before the step that names it runs, so a precheck that dies uncaught is
-    that same failure with the roles swapped. A schema load that fails names
-    how many steps did not run, counted off the registry, because a gate that
-    stops early otherwise looks like one that passed. And a step's sources are
-    built on first demand rather than up front: the render is the costly one
-    and only the last steps read it, so a gate going red on the record does not
-    pay for pages nothing asked about.
+    Returns:
+        int: 0 if all registered steps pass cleanly, 1 if any step fails.
     """
     failed = False
     for step in [s for s in STEPS if s.pre]:

@@ -1,21 +1,12 @@
 #!/usr/bin/env python3
-"""Count the agents a review spawns against the fan-out ceiling (solorepo's DR-191).
+"""Transcript parser and subagent fan-out ceiling validator.
 
-A ceiling that is not checked is a wish, not a bound. solorepo's DR-166 established
-an agent fan-out ceiling chosen with review depth (evaluated via solorepo's DR-188):
-three subagents on the boundary path, and one on standard paths. solorepo's DR-189
-instructs foreground review subagents to be dispatched concurrently in a single message.
-However, allowed tools granted `Agent` without limit, leaving passes that exceeded the
-depth ceiling detectable only through manual transcript inspection.
+Counts subagent invocations recorded in review session execution transcripts
+across single-document JSON, JSON Lines (NDJSON), and formatted log representations,
+verifying compliance with the fan-out ceiling (solorepo's DR-166, solorepo's DR-188,
+solorepo's DR-189, solorepo's DR-191).
 
-Following solorepo's DR-122's principle of verifying execution facts rather than accepting
-prompt claims, this tool counts the subagents spawned in a review session from the
-execution transcript and fails closed (exit code 1, red run) if the fan-out ceiling is breached.
-
-Usage:
-    python3 .meta/agents.py --file path/to/claude-execution-output.json --ceiling 3
-    python3 .meta/agents.py < path/to/transcript.json
-    just agents --ceiling 1 path/to/execution.json
+History in agents.history.md (solorepo's DR-171).
 """
 
 import argparse
@@ -38,11 +29,13 @@ class SpawnedAgent:
 
 
 def _claude_tool_use(node: dict[str, Any]) -> SpawnedAgent | None:
-    """The `Agent` call a Claude Code `tool_use` block records, or `None` for any other block.
+    """Extracts an Agent invocation from a Claude Code tool_use block.
 
-    The tool's name is read from `name`, falling back to `tool`, and matched
-    case-insensitively. The description is the call's `description`, falling
-    back to its `prompt`, truncated to 120 characters.
+    Args:
+        node: Dictionary representing a message block or event node.
+
+    Returns:
+        SpawnedAgent | None: SpawnedAgent instance if the block invokes the Agent tool, else None.
     """
     if node.get("type") != "tool_use":
         return None
@@ -59,11 +52,13 @@ def _claude_tool_use(node: dict[str, Any]) -> SpawnedAgent | None:
 
 
 def _openai_function_call(node: dict[str, Any]) -> SpawnedAgent | None:
-    """The `Agent` call an OpenAI-style function block records, or `None` for any other block.
+    """Extracts an Agent invocation from an OpenAI function call block.
 
-    Carries neither description nor subagent type: the representation holds a
-    call's arguments as a JSON string rather than a mapping, and the ceiling
-    counts calls rather than reading them.
+    Args:
+        node: Dictionary representing a message block or function call node.
+
+    Returns:
+        SpawnedAgent | None: SpawnedAgent instance if the call targets the Agent function, else None.
     """
     if node.get("type") != "function" or not isinstance(node.get("function"), dict):
         return None
@@ -73,11 +68,12 @@ def _openai_function_call(node: dict[str, Any]) -> SpawnedAgent | None:
 
 
 def _extract_from_dict(d: dict[str, Any], seen_ids: set[str], agents: list[SpawnedAgent]) -> None:
-    """Appends the `Agent` call a JSON dictionary records, if any, then walks its values.
+    """Extracts agent calls from a dictionary node and recursively inspects values.
 
-    A call carrying an `id` is appended once and its id added to `seen_ids`, so
-    a block a stream emits twice counts once. A call with no id is appended
-    every time, having nothing to be recognised by.
+    Args:
+        d: JSON dictionary node.
+        seen_ids: Set of deduplicated tool call identifiers.
+        agents: Destination list accumulating discovered SpawnedAgent instances.
     """
     spawned = _claude_tool_use(d) or _openai_function_call(d)
     if spawned and not (spawned.id and spawned.id in seen_ids):
@@ -90,7 +86,13 @@ def _extract_from_dict(d: dict[str, Any], seen_ids: set[str], agents: list[Spawn
 
 
 def _walk(node: Any, seen_ids: set[str], agents: list[SpawnedAgent]) -> None:
-    """Traverses nested JSON structures collecting Agent invocations."""
+    """Recursively traverses nested JSON structures collecting Agent invocations.
+
+    Args:
+        node: Arbitrary JSON data structure (dict, list, or scalar).
+        seen_ids: Set of deduplicated tool call identifiers.
+        agents: Destination list accumulating discovered SpawnedAgent instances.
+    """
     if isinstance(node, dict):
         _extract_from_dict(node, seen_ids, agents)
     elif isinstance(node, (list, tuple)):
@@ -99,7 +101,14 @@ def _walk(node: Any, seen_ids: set[str], agents: list[SpawnedAgent]) -> None:
 
 
 def _from_document(text: str) -> list[SpawnedAgent] | None:
-    """The agents of a transcript that is one JSON document, or `None` when it is not one."""
+    """Parses a transcript represented as a single JSON document.
+
+    Args:
+        text: JSON document string.
+
+    Returns:
+        list[SpawnedAgent] | None: List of discovered agents, or None if JSON decoding fails.
+    """
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
@@ -111,10 +120,13 @@ def _from_document(text: str) -> list[SpawnedAgent] | None:
 
 
 def _from_ndjson(text: str) -> list[SpawnedAgent] | None:
-    """The agents of a transcript that is a JSON Lines event stream, or `None` when no line parses.
+    """Parses a transcript represented as a newline-delimited JSON stream.
 
-    A line that is not a self-contained object is skipped rather than fatal: a
-    harness writes its events interleaved with plain log output.
+    Args:
+        text: Multi-line JSON Lines string.
+
+    Returns:
+        list[SpawnedAgent] | None: List of discovered agents, or None if no valid line parsed.
     """
     seen_ids: set[str] = set()
     agents: list[SpawnedAgent] = []
@@ -133,12 +145,13 @@ def _from_ndjson(text: str) -> list[SpawnedAgent] | None:
 
 
 def _from_log(text: str) -> list[SpawnedAgent]:
-    """The agents named by the `tool_use` blocks a raw log transcript quotes.
+    """Extracts agent invocations from raw text logs using regex patterns.
 
-    The last reader, for a transcript that parses neither as a document nor as
-    a stream. It matches only blocks holding no nested object, so a call whose
-    `input` survived into the log is not found; what is left of the transcript
-    at this point is text a runner wrapped, and the count is a floor.
+    Args:
+        text: Raw log text string.
+
+    Returns:
+        list[SpawnedAgent]: List of extracted SpawnedAgent instances.
     """
     seen_ids: set[str] = set()
     agents: list[SpawnedAgent] = []
@@ -157,17 +170,13 @@ def _from_log(text: str) -> list[SpawnedAgent]:
 
 
 def parse_agents(content: str | bytes | dict[str, Any] | list[Any]) -> list[SpawnedAgent]:
-    """Parses raw text, JSON data, or message event streams to extract spawned agents.
+    """Parses raw text, JSON data, or event streams to extract spawned agents.
 
-    Supports:
-    - Structured Python dicts or lists.
-    - Full JSON documents (single object or array).
-    - JSON Lines (NDJSON) event streams.
-    - Fallback regex extraction from raw log transcripts.
+    Args:
+        content: Input transcript as text, bytes, parsed JSON dict, or list.
 
-    The three text readers are tried in that order and the first that recognises
-    the transcript answers it, so a stream of events is never re-read as the log
-    text it also is.
+    Returns:
+        list[SpawnedAgent]: List of discovered SpawnedAgent instances.
     """
     if isinstance(content, (dict, list)):
         seen_ids: set[str] = set()
@@ -193,7 +202,12 @@ def parse_agents(content: str | bytes | dict[str, Any] | list[Any]) -> list[Spaw
 def evaluate_ceiling(count: int, ceiling: int | None) -> tuple[bool, str]:
     """Evaluates whether the agent count satisfies the fan-out ceiling.
 
-    Returns a tuple of (passed, message).
+    Args:
+        count: Number of spawned subagents discovered.
+        ceiling: Maximum permitted subagent ceiling, or None for unconstrained.
+
+    Returns:
+        tuple[bool, str]: A pair containing pass/fail boolean and a status message.
     """
     if ceiling is None:
         return True, f"Spawned {count} subagent(s) (no ceiling enforced)."
@@ -208,7 +222,15 @@ def evaluate_ceiling(count: int, ceiling: int | None) -> tuple[bool, str]:
 
 
 def read_content(target: str | None, quiet: bool = False) -> str:
-    """Reads execution transcript content from a file path or stdin."""
+    """Reads execution transcript content from a file path or standard input.
+
+    Args:
+        target: File path string, '-' for stdin, or None.
+        quiet: If True, suppresses missing file warnings on stderr.
+
+    Returns:
+        str: Transcript text content, or empty string on missing input.
+    """
     if not target or target == "-":
         if not sys.stdin.isatty():
             return sys.stdin.read()
@@ -224,7 +246,7 @@ def read_content(target: str | None, quiet: bool = False) -> str:
 
 
 def main() -> None:
-    """Entry point for parsing agent invocations and checking the fan-out ceiling."""
+    """CLI entrypoint for counting subagent invocations against the fan-out ceiling."""
     parser = argparse.ArgumentParser(
         description="Count review subagent invocations against the depth fan-out ceiling (solorepo's DR-191)."
     )

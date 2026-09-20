@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-"""Assertion-to-APM compiler generator and harness root reconciliation (solorepo's DR-007, solorepo's DR-172, solorepo's DR-173, solorepo's DR-174, solorepo's DR-199, solorepo's DR-200, solorepo's DR-208).
+"""Compiler and packager translating assertions into APM package primitives.
 
-Compiles .meta/assertions/ and bootstraps/ into APM primitives as late-bound derived
-artifacts (solorepo's #28, solorepo's #59, solorepo's #342):
-- Disciplines map to instructions/ with applyTo globs
-- Ubiquitous Language maps to instructions/ubiquitous-language.instructions.md
-- Roles, Personalities, and Personas map to agents/
-- Capabilities of kind SKILL map to skills/
-- Python bootstrap capabilities and standards compile to bootstraps/python/.apm/ (solorepo's DR-208)
-- Gate and signed channel map to hooks/
-- Manifest maps to .meta/apm.yml and bootstraps/python/apm.yml
-- Reconciles harness root files (AGENTS.md, CLAUDE.md symlink)
+Compiles declarative assertions and bootstrap capabilities into Agent Package
+Manager (APM) primitives and reconciles root agent harness configurations
+(solorepo's DR-007, solorepo's DR-172, solorepo's DR-173, solorepo's DR-174,
+solorepo's DR-199, solorepo's DR-200, solorepo's DR-208).
 """
 import pathlib
 import sys

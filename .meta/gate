@@ -1,29 +1,12 @@
 #!/usr/bin/env -S uvx --with pyyaml python
-"""One verb for every Project's gate, and a gate for a Product (solorepo's DR-104).
+"""Portfolio and project gate runner streaming Article 21 structured reports.
 
-    .meta/gate                       every Project the assertions declare
-    .meta/gate meta                  one Project, by the tail of its id or its path
-    .meta/gate rust-standard         one Product: every Project it is built from
+Reads declared projects, products, and gate commands from
+`.meta/assertions/structure.yaml` (solorepo's DR-104). Executes gate commands
+from repository root, streams and re-prefixes structured step reports adhering to
+Article 21 (solorepo's DR-092), and enforces clean exit and non-empty step assertions.
 
-Each Project asserts a `gate` — the command that must pass, typed at the root
-of the repository — and each Product asserts what it is `built_from`. Until
-this runner nothing read either slot: the developer typed the gate that matched
-the language, and a Product built from two Projects had no gate at all. The
-runner reads both, so the verb is the same in every Project and a Product is
-red when any Project under it is.
-
-It reads what a gate **prints**, not what it exits with. Every gate here
-reports each step in one shape (A21, solorepo's DR-092): `ok`, `x` or `?`, then the step,
-then what it covered, found, or could not do. The runner parses those lines as
-they stream, re-prints them under the Project's name, and passes everything
-else — cargo's build noise, uv's resolution — through to stderr where it was
-going anyway. A gate that prints no line in the shape has not reported, and
-that is a failure of the gate whatever its exit code said, which is what makes
-this the check A21 names.
-
-The gate string runs through the shell from the repository root, because that
-is what it is: the words a person types there. Two of the three carry a `cd`,
-and a slot for the working directory would be a second way of saying it.
+History in gate.history.md (solorepo's DR-171).
 """
 import io
 import pathlib
@@ -38,20 +21,25 @@ META = pathlib.Path(__file__).parent
 ROOT = META.parent
 STRUCTURE = META / "assertions" / "structure.yaml"
 
-# The three lines of A21. `ok` may carry its scope after an em dash, or not:
-# `check.py` prints a bare `ok artifact paths`, and the Charter's own example
-# reads it beside the Rust gate's `ok orphans — 5 markdown files ...`. The
-# step begins at once after the mark: cargo-mutants writes `ok       Unmutated
-# baseline` to the same stdout, and one space is where the shape ends and a
-# tool's own summary begins.
 OK = re.compile(r"^ok (?P<step>\S.*?)(?: — (?P<scope>.*))?$")
+"""Matches passing step reports under Article 21 with optional scope details."""
+
 X = re.compile(r"^x  (?P<step>\S.*) \((?P<count>\d+)\)$")
+"""Matches failing step reports under Article 21 with failure count."""
+
 COULD_NOT = re.compile(r"^\?  (?P<step>\S[^:]*): (?P<why>.*)$")
+"""Matches unexecutable step reports under Article 21 with explanatory reason."""
+
 PROBLEM = re.compile(r"^     (?P<problem>.+)$")
+"""Matches indented problem diagnostics beneath a failing step report."""
 
 
 def structure() -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
-    """Loads declared projects and products from structure.yaml."""
+    """Loads declared projects and products from structure.yaml.
+
+    Returns:
+        tuple: A pair of (projects_dict, products_dict) keyed by object identifier.
+    """
     data = yaml.safe_load(STRUCTURE.read_text()) or {}
     projects = {p["id"]: p for p in data.get("projects") or []}
     products = {p["id"]: p for p in data.get("products") or []}
@@ -59,7 +47,14 @@ def structure() -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
 
 
 def short(ident: str) -> str:
-    """The tail of a CURIE: `work:project/meta` is typed as `meta`."""
+    """Extracts the terminal identifier segment from a CURIE string.
+
+    Args:
+        ident: CURIE identifier string (for example, 'work:project/meta').
+
+    Returns:
+        str: Terminal component of the identifier ('meta').
+    """
     return ident.rsplit("/", 1)[-1]
 
 
@@ -68,13 +63,20 @@ def select(
     projects: dict[str, dict[str, Any]],
     products: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """The Projects a word names: all of them for no word, one by id, tail or
-    path, or every Project a Product is built from. A word that names nothing
-    is an error, not an empty run — a gate that ran nothing would print `ok`.
-    An empty selection is refused in `main`, where every path arrives: no word
-    over no Projects, which is a portfolio between the step that copies
-    `structure.yaml` and the step that fills it in, and a Product asserted
-    before anything it is `built_from`, which the schema allows."""
+    """Resolves target projects from a command-line selector or defaults to all projects.
+
+    Args:
+        word: Target project name, product name, or CURIE, or None for all projects.
+        projects: Mapping of project identifiers to declared project configurations.
+        products: Mapping of product identifiers to declared product configurations.
+
+    Returns:
+        list[dict[str, Any]]: List of matching project configuration dictionaries.
+
+    Raises:
+        SystemExit: If the specified word matches no declared project or product,
+            or if a product references an undeclared project.
+    """
     if word is None:
         return list(projects.values())
     for ident, project in projects.items():
@@ -94,11 +96,14 @@ def select(
 
 
 def run(project: dict[str, Any]) -> tuple[list[tuple[str, str, str]], int | None]:
-    """Run one Project's gate and read its report.
+    """Executes a project gate command and streams parsed step reports.
 
-    Returns the steps as (mark, step, detail) triples, and the exit code. The
-    report lines go to stdout under the Project's name; every other line goes
-    to stderr as it arrives, so a slow build is seen building.
+    Args:
+        project: Project configuration dictionary containing 'id' and 'gate'.
+
+    Returns:
+        tuple: A pair containing a list of (mark, step, detail) report triples
+        and the process exit code (or None if no gate is asserted).
     """
     name = short(project["id"])
     command = project.get("gate")
@@ -108,8 +113,6 @@ def run(project: dict[str, Any]) -> tuple[list[tuple[str, str, str]], int | None
     proc = subprocess.Popen(command, shell=True, cwd=ROOT, text=True,
                             stdout=subprocess.PIPE, stderr=sys.stderr)
     steps: list[tuple[str, str, str]] = []
-    # `readline`, not iteration: iterating a pipe reads ahead in blocks, and a
-    # slow build's first `ok` would sit in the buffer until the last.
     assert proc.stdout is not None
     for line in iter(proc.stdout.readline, ""):
         line = line.rstrip("\n")
@@ -130,16 +133,20 @@ def run(project: dict[str, Any]) -> tuple[list[tuple[str, str, str]], int | None
 
 
 def main(argv: list[str]) -> int:
-    """Executes the gate for the selected project, product, or the whole portfolio."""
+    """CLI entrypoint for running gates across selected projects or products.
+
+    Args:
+        argv: Command-line arguments starting with the script name.
+
+    Returns:
+        int: 0 if all selected gates report green and exit cleanly, 1 on failure.
+    """
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(line_buffering=True)
     word = argv[1] if len(argv) > 1 else None
     projects, products = structure()
     chosen = select(word, projects, products)
     if not chosen:
-        # `select` has already refused a word that names nothing, so an empty
-        # selection here is an empty run, and the check required of every merge
-        # must say so rather than pass on nothing.
         what = (f"no Project is asserted in {STRUCTURE.relative_to(ROOT)}" if word is None
                 else f"{word} is built from no Project")
         sys.exit(f"gate: {what}, so there is no gate to run. A gate over nothing is not green.")
