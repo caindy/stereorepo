@@ -2,6 +2,10 @@
 
 **What this changes.** The shape of the change. Not the file list; the diff has that.
 
+**The plan.** For a `hard` or `human` Challenge, the approach validated with the
+solo before code: the architecture chosen and what was rejected. "Not applicable
+— `easy`/`medium`." is a complete answer.
+
 **What the ground looked like.** The context that will not be visible from the
 code afterwards — what was already true, what was tried and abandoned, what
 constraint made the obvious approach wrong.

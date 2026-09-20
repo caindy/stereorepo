@@ -55,7 +55,7 @@ Repoless mode resolves friction with repository rules by keeping mutation and ch
 - **Repoless Resolution**: `review_pr` queries `gh pr checks --json name,state,bucket` and `.meta/check_pr.py <pr>`. If any check has failed, or if open review threads remain unresolved (PR First step 8), approval is strictly refused.
 
 ### C. Pull Request Form Compliance
-- **Verification Rule**: Pull requests must follow the mandatory 6-heading description template defined in `.github/PULL_REQUEST_TEMPLATE.md` (PR First, verified by `check_pr.py`).
+- **Verification Rule**: Pull requests must follow the mandatory 7-heading description template defined in `.github/PULL_REQUEST_TEMPLATE.md` (PR First, verified by `check_pr.py`).
 - **Repoless Resolution**: `review_pr` passes the output of `python3 .meta/check_pr.py <pr>` directly to Jules, ensuring pull request form violations result in a changes-requested verdict.
 
 ---

@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/593
+    name: A reviewer verdict on a pull request's opening body, before any code
+    challenge_type: FEATURE
+    description: >-
+      PR First has the pull request body written when the work starts, and the
+      first reader it gets is the reviewer at green, after the code is done.
+      A verdict on the opening body reads the approach rather than the Challenge,
+      which is what crystallizes once a coder has looked at the code, so it catches
+      a class of error the Challenge reading cannot. Settling whether this seam
+      is worth having, its difficulty differentiation, and how the approach is validated
+      before code on hard or human work.

@@ -318,7 +318,7 @@ Review Invariants:
 2. Diátaxis Compass: Docstrings are dry Reference contracts without reviewer litigation (solorepo's DR-175). Past defect narratives belong in <module>.history.md (solorepo's DR-171).
 3. No inline Python in workflows or actions (solorepo's DR-241).
 4. Commits must name their Actor and Agent in trailers (Article 19, solorepo's DR-233).
-5. Mandatory 6-heading PR description template (PR First, verified by check_pr.py).
+5. Mandatory 7-heading PR description template (PR First, verified by check_pr.py).
 6. Every review thread must be answered; do not approve if open threads remain unresolved (PR First step 8, solorepo's DR-161).
 7. Do not approve if GitHub CI checks have failed (solorepo's DR-161).
 {caller_block}

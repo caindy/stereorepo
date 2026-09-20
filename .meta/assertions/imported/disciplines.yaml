@@ -476,10 +476,22 @@ disciplines:
       solo into the Ubiquitous Language with a corresponding Knowledge
       Management wiki entry. A word that arrived by use without minting is an
       objection to raise.
+
+      Whether the approach is the right one (solorepo's DR-249). A reviewer's
+      first interrogation of a pull request is its root architecture, not merely
+      whether the diff compiles, lints, and passes tests. An unsound plan
+      rejected at the root costs a conversation; accepted into the diff, it
+      costs a multi-hour cycle of incremental patches propping up an unviable
+      foundation.
     steps:
       - >-
         Open it when the work starts, not when it is finished. Written at the
-        end it becomes a summary of the diff, which git already holds.
+        end it becomes a summary of the diff, which git already holds. For `easy`
+        and `medium` Challenges, state the intended shape in the opening body,
+        and review on the diff is the check; for `hard` and `human` Challenges,
+        formulate the plan under **The plan.** and validate it with the solo
+        before writing code, which is the bound that prevents unsound
+        architectures from being enacted into diffs (solorepo's DR-249).
       - >-
         Take Challenges in as pull requests, whatever raised them — the solo, a
         scheduled job, another agent — and name the Challenge in the body with a

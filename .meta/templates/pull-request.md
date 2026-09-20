@@ -17,6 +17,10 @@ required by that act alone.
 
 **What this changes.** The shape of the change. Not the file list; the diff has that.
 
+**The plan.** For a `hard` or `human` Challenge, the approach validated with the
+solo before code: the architecture chosen and what was rejected. "Not applicable
+— `easy`/`medium`." is a complete answer.
+
 **What the ground looked like.** The context that will not be visible from the
 code afterwards — what was already true, what was tried and abandoned, what
 constraint made the obvious approach wrong.
@@ -47,7 +51,16 @@ thread, not tracked.
 - #<n> — <one line, so the list is readable without opening anything>
 ```
 
-**The fourth heading is asked because it was forgotten.** A decision taken in a
+The second heading records the plan validated before writing code for `hard` or
+`human` Challenges (solorepo's DR-249). On routine, bounded work (`easy` or
+`medium`), "Not applicable — `easy`/`medium`." is the complete answer and
+review on the diff is the check.
+
+The fourth heading is the point of the form. It is Chesterton's Fence answered in
+advance: a later reader deciding whether to remove something needs to know what
+it was put there to hold, and that is exactly what nobody records at the time.
+
+**The fifth heading is asked because it was forgotten.** A decision taken in a
 change and recorded later is one that lived, for a while, only where it was
 argued — which is A11's failure with a delay rather than an exemption. Nothing
 can check whether a decision was taken; a form can put the question in front of
@@ -58,10 +71,6 @@ Optional, where they apply:
 - **Evidence.** A measurement, with how it was taken and what the control was.
 - **Supersedes.** Name the earlier pull request. Never rewrite it.
 
-The third heading is the point of the form. It is Chesterton's Fence answered in
-advance: a later reader deciding whether to remove something needs to know what
-it was put there to hold, and that is exactly what nobody records at the time.
-
 **Route every finding in the change that records it** (A13 — a finding that
 exists only in a pull request has not been made). A rule established here goes to
 the Charter in the same change; something foreclosed goes to a decision record.
@@ -70,14 +79,14 @@ The pull request is durable and searchable and still not authoritative.
 **Commit messages stay short** (A14). If a message has begun explaining, the
 explanation belongs in an artifact or here.
 
-**The fifth heading closes the Issue.** GitHub reads `Closes #n` in a body and
+**The sixth heading closes the Issue.** GitHub reads `Closes #n` in a body and
 closes the Issue when the pull request merges to the default branch, which is
 the one act here that needs no verb: the merge is the act, and the body the form
 already requires carries the link (solorepo's DR-089). Write it only on the pull request
 that finishes the Challenge; one that takes part of it up names the Issue
 without the keyword. `check_pr.py` holds the shape, not the judgement.
 
-**The sixth heading takes links, not text** (A15). Work noticed and not done is
+**The seventh heading takes links, not text** (A15). Work noticed and not done is
 a Challenge nobody has taken up, and it needs what an Issue has and prose does
 not: an open and a closed, and a life longer than this body's.
 
