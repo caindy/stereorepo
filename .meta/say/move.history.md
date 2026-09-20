@@ -328,3 +328,39 @@ one (solorepo's #586). Established: `check_decisions_in_force` defers on
 either `PROPOSED` or `RECOMMENDED`, both named in `NOT_IN_FORCE`.
 
 Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+
+### A coder dispatch that would not start counted as one pull request's weather
+
+`dispatch()` caught `run_coder`'s refusal in the same `except SystemExit` arm
+as the reads that belong to one pull request, and the collection that arm
+appends to is the one a sweep prints and returns from rather than exiting on
+(solorepo's DR-238). `gh workflow run coder.yml` is refused the same way
+whichever pull request asked for it — the credential without the Actions
+write, `coder.yml` disabled on the repository — so a rotation would have
+appended a line for every conflicting pull request in the sweep, started no
+coder pass for any of them, and left `advance.yml` green, which is the
+falsifier solorepo's DR-238 wrote for itself (solorepo's #651). Established:
+each `run_coder` call is caught on its own and
+its refusals are returned apart from what the pull requests reported, so the
+sweep dispatches for the rest and then exits naming the ones whose pass never
+started.
+
+Evidence: `.meta/checks/probes/loops/dispatch.py::dispatch_probes`
+
+### A refused mergeability re-read ended an advance sweep mid-list
+
+`dispatch()` called `mergeability(pull)` in three arms outside any `try`, and
+that function reaches GitHub whenever the answer in hand is `UNKNOWN` — which
+is what GitHub answers while it computes a merge ref, and so is routine on the
+push to trunk the sweep runs on. The re-read is an ordinary `gh pr view` and
+failed the ordinary way, on `net/http: TLS handshake timeout` among others, so
+one pull request's weather propagated out of `dispatch()` and out of `advance()`
+with it: the pull requests behind that one in the list got no dispatch on that
+push, nothing rebased a conflicting branch and nothing re-delivered a verdict
+until the next push found them, and the sweep was red while claiming to have
+read every open pull request (solorepo's DR-238, solorepo's #655). Established:
+the read happens once for each pull request an arm could act on, inside a `try`,
+and a refusal is appended to what the pull requests reported so the sweep goes
+on to the ones behind it.
+
+Evidence: `.meta/checks/probes/loops/dispatch.py::dispatch_probes`

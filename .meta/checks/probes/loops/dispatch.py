@@ -200,17 +200,35 @@ def _challenges_the_loop_does_not_hold(channel, move) -> list[str]:
     return problems
 
 
-def _refused_dispatch_is_one_pull_requests_problem(channel, move) -> list[str]:
+def _refused_dispatch_is_the_sweeps_own_problem(channel, move) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"},
                        8: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"}}, no_dispatch=[7])
-    said = swept(channel, move, fake, problems)
+    said = run_verb(channel, fake, lambda: move.advance())
     if fake.dispatched != [("8", "rebase")]:
         problems.append(f"advance: a refused dispatch left the rest at {fake.dispatched!r}")
     if not said or "#7" not in said:
-        problems.append(f"advance: the refused dispatch was reported as {said!r}")
+        problems.append(f"advance: a refused dispatch exited with {said!r}, so a sweep that "
+                        "dispatched no coder pass reports the colour of one that did")
+    return problems
+
+
+def _refused_mergeability_read_is_one_pull_requests_line(channel, move) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING", "unknown": 1},
+                       8: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                           "mergeable": "CONFLICTING"}}, no_view=[7])
+    said = swept(channel, move, fake, problems)
+    if fake.dispatched != [("8", "rebase")]:
+        problems.append(f"advance: a refused mergeability read left the rest at "
+                        f"{fake.dispatched!r}, so the sweep ended at the pull request whose "
+                        "read was refused rather than going on to the ones behind it")
+    if "#7" not in said:
+        problems.append(f"advance: a refused mergeability read reported {said!r}, so the pull "
+                        "request it was left where it stands is named nowhere")
     return problems
 
 
@@ -327,7 +345,7 @@ def _dispatch_rebase_refused_by_hand(channel, move) -> list[str]:
 
 
 @check("dispatch probes", pre=True)
-def dispatch_probes():
+def dispatch_probes() -> list[str]:
     """The dispatch reading of `advance` and the by-hand `dispatch` against a fake GitHub (solorepo's DR-133).
 
     Both waits are shortened to nothing before the first case, `SETTLES`
@@ -361,15 +379,27 @@ def dispatch_probes():
       event on it, or for a Challenge the loop does not hold — `hard`,
       closed, `human`, which is what `stop` leaves, or unreadable, which is
       an Issue deleted or transferred under its branch (solorepo's DR-142).
-      One refused dispatch is one pull request's problem, so the sweep is
-      green and names it in what it printed (solorepo's DR-238), and the
-      refusal names the coder token without the Actions write. Neither `merge
-      --auto`, which holds the branch it is arming, nor a typed `advance
-      <n>`, which names one somebody is asking about, dispatches, since
-      neither is the merge on `main` that stranded a request; and both keep
-      GitHub's refusal over a branch that conflicts where the sweep skips it,
-      because nobody stands behind a named pull request but whoever typed the
-      verb.
+      A refused dispatch is the sweep's own problem rather than one pull
+      request's, and it is told apart by which call it is — a write the sweep
+      makes on a pull request's behalf, whose refusal no state of that pull
+      request caused — rather than by what GitHub said, the coder token
+      without the Actions write being one cause among them. The case refuses
+      the dispatch for one of two conflicting pull requests: the sweep
+      dispatches for the other and then exits naming the one whose pass never
+      started (solorepo's DR-238).
+      A refused read of whether a branch still merges is the other way round,
+      and one pull request's line: `mergeability` re-reads GitHub for an
+      `UNKNOWN` answer, which is what GitHub says while it computes a merge
+      ref and so is routine on the push this runs on, and that re-read fails
+      the ordinary way — so the pull request it was refused for is named in
+      the report and the one behind it in the list is still dispatched for
+      (solorepo's #655).
+      Neither `merge --auto`, which holds the branch it is arming, nor a
+      typed `advance <n>`, which names one somebody is asking about,
+      dispatches, since neither is the merge on `main` that stranded a
+      request; and both keep GitHub's refusal over a branch that conflicts
+      where the sweep skips it, because nobody stands behind a named pull
+      request but whoever typed the verb.
     - The dispatch a person makes. It reads the pull request and nothing
       else, because the review dispatch is the delivery solorepo's DR-142
       exempts from `coder.yml`'s guard. The review pass starts on a request
@@ -398,10 +428,11 @@ def dispatch_probes():
     a crash reads exactly like the filter doing its job. In a sweep it is what
     the verb printed rather than what it exited with, through `swept` from
     `probes/loops/advance.py`, which also holds the sweep's exit code green
-    (solorepo's DR-238); `run_verb` still reads the exit in the cases that
-    name one pull request, where the exit code is the answer. The fake's
-    repository is `o/r`, so the reviewer's login is `o-r-reviewer`, as
-    `channel.role_login` composes it (solorepo's DR-107).
+    (solorepo's DR-238); `run_verb` reads the exit in the cases that name one
+    pull request, where the exit code is the answer, and in the refused
+    dispatch, where the failure is the sweep's own and the exit code is the
+    assertion. The fake's repository is `o/r`, so the reviewer's login is
+    `o-r-reviewer`, as `channel.role_login` composes it (solorepo's DR-107).
     """
     channel, _, programs = load_channel()
     move = programs["move"]
@@ -422,7 +453,8 @@ def dispatch_probes():
         _nothing_asked_dispatches_nothing(channel, move),
         _lower_layer_of_a_stack_left_alone(channel, move),
         _challenges_the_loop_does_not_hold(channel, move),
-        _refused_dispatch_is_one_pull_requests_problem(channel, move),
+        _refused_dispatch_is_the_sweeps_own_problem(channel, move),
+        _refused_mergeability_read_is_one_pull_requests_line(channel, move),
         _named_and_merge_auto_dispatch_nothing(channel, move),
         _named_conflicting_pull_request_refused(channel, move),
         _dispatch_review_on_a_standing_verdict(channel, move, reviewer),

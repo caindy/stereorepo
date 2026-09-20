@@ -109,13 +109,18 @@ decisions:
         request the exit code's scope is right.
       - >-
         `advance.yml`'s colour now says whether the sweep ran. It is red for a
-        crash, for a refused read the sweep depends on, and for nothing else —
-        so a red run is worth opening, which is the whole of what this buys.
+        crash, for a refused read the sweep depends on, for a refused `gh
+        workflow run coder.yml` — a write the sweep makes on a pull request's
+        behalf, whose refusal starts no coder pass for it — and for nothing
+        else, so a red run is worth opening, which is the whole of what this
+        buys.
       - >-
         Every probe case that runs a sweep, in `probes/loops/advance.py` and
         `probes/loops/dispatch.py`, reads what the sweep printed rather than
-        what it exited with. They go through one helper, `swept`, which holds
-        the exit code green in each of them, so the rule is asserted
+        what it exited with — the one exception being the case whose failure
+        is the sweep's own, a dispatch `coder.yml` refused, where the exit
+        code is the assertion. The rest go through one helper, `swept`, which
+        holds the exit code green in each of them, so the rule is asserted
         twenty-three times rather than stated once. A case is added beside them
         for the state the Challenge is about: two pull requests failing in one
         sweep, which holds that both are named in one report. Without the

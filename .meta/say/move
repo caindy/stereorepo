@@ -1309,7 +1309,7 @@ def run_coder(pr: str | int, task: str) -> None:
                "-f", f"task={task}", "-f", "harness=claude", parse=False)
 
 
-def dispatch(pulls: Sequence[Pull]) -> list[str]:
+def dispatch(pulls: Sequence[Pull]) -> tuple[list[str], list[str]]:
     """Dispatch coder rebase passes for pull requests left conflicting by recent merges.
 
     Identifies loop-owned pull requests in CONFLICTING merge state that are waiting on
@@ -1318,10 +1318,30 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
     and triggers workflow dispatch for rebase passes (solorepo's DR-129, solorepo's DR-133,
     solorepo's DR-149).
 
+    Refusals of `gh workflow run coder.yml` are returned apart from the rest
+    (solorepo's DR-238), and every remaining pull request is read before either
+    list is returned.
+
+    A refused read of whether the branch still merges is the opposite case, and
+    is one pull request's line: `mergeability` re-reads GitHub whenever the
+    answer in hand is `UNKNOWN`, which is what GitHub answers while it computes
+    a merge ref and so is routine on the push to trunk this runs on. The read
+    happens once for each pull request any arm below could act on, so a refusal
+    leaves that one where it stands and the pull requests behind it in the list
+    are still dispatched for.
+
     Parameters:
         pulls (list[dict]): Open pull request objects returned from GitHub API view.
+
+    Returns:
+        tuple[list[str], list[str]]: The problems the caller prints and leaves
+            the sweep green for — a review request that could not be
+            re-requested, a mergeability GitHub would not answer — and the
+            refusals of `gh workflow run coder.yml`, which the caller exits
+            with.
     """
     failed: list[str] = []
+    refused: list[str] = []
     # Every branch an open pull request is based on, which is the lower layer
     # of every open stack. Read off the list already in hand: `open_now`
     # carries both refs of every open pull request, so no layer has to be
@@ -1377,10 +1397,20 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
         # as force-pushing under a session. A branch GitHub has shown unmoved
         # for longer than a run may last has no run standing on it, and the
         # next push to trunk asks again about one that has.
-        if is_changes_requested_pull(pull, reviewer_login=reviewer_login) and idle >= minutes:
+        redeliver = (is_changes_requested_pull(pull, reviewer_login=reviewer_login)
+                     and idle >= minutes)
+        if redeliver:
             waiting.append("awaiting the coder's answer to a request for changes")
+        if not waiting and not redeliver:
+            continue
+        try:
+            merges = mergeability(pull)
+        except SystemExit as exc:
+            failed.append(f"#{number} was left where it stands: GitHub would not say whether "
+                          f"it still merges — {exc.code}")
+            continue
         # A stranded review request where reviewer check failed without a verdict (solorepo's DR-178):
-        if reviewer_login in asked and not pull.get("isDraft") and mergeability(pull) != "CONFLICTING":
+        if reviewer_login in asked and not pull.get("isDraft") and merges != "CONFLICTING":
             checks = pull.get("statusCheckRollup")
             if checks is None:
                 try:
@@ -1397,7 +1427,7 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
                     failed.append(f"#{number} review request stranded and could not be re-requested — {exc.code}")
                 continue
 
-        if waiting and mergeability(pull) == "CONFLICTING":
+        if waiting and merges == "CONFLICTING":
             waits = " and ".join(waiting)
             if pull["headRefName"] in below:
                 print(f"left #{number} alone: another open pull request is based on "
@@ -1405,29 +1435,29 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
                       f"layer above is on — a conflicting stack is resolved from the bottom, "
                       f"by the solo — {pull['title']}")
                 continue
+            # Its own refusal, and not the dispatch's below: an Issue deleted
+            # or transferred under its branch fails this read the same way on
+            # every push to trunk, and a red sweep each time is the repetition
+            # this read exists to stop. `coder.yml` gives the same fact a word
+            # on its doors, `unnamed`; here it is a line, and the sweep's.
             try:
-                # Its own refusal, and not the dispatch's below: an Issue deleted
-                # or transferred under its branch fails this read the same way on
-                # every push to trunk, and a red sweep each time is the repetition
-                # this read exists to stop. `coder.yml` gives the same fact a word
-                # on its doors, `unnamed`; here it is a line, and the sweep's.
-                try:
-                    issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
-                except SystemExit:
-                    print(f"left #{number} alone: #{challenge} cannot be read, so the conflict "
-                          f"is the solo's, and the sweep names it — {pull['title']}")
-                    continue
-                levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
-                if issue["state"] != "OPEN" or not levels:
-                    print(f"left #{number} alone: #{challenge} is "
-                          f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
-                          f"so the conflict is the solo's, and the sweep names it — "
-                          f"{pull['title']}")
-                    continue
+                issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
+            except SystemExit:
+                print(f"left #{number} alone: #{challenge} cannot be read, so the conflict "
+                      f"is the solo's, and the sweep names it — {pull['title']}")
+                continue
+            levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
+            if issue["state"] != "OPEN" or not levels:
+                print(f"left #{number} alone: #{challenge} is "
+                      f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
+                      f"so the conflict is the solo's, and the sweep names it — "
+                      f"{pull['title']}")
+                continue
+            try:
                 run_coder(number, "rebase")
             except SystemExit as exc:
-                failed.append(f"#{number} is {waits} and the coder could not be "
-                              f"dispatched for it — {exc.code}")
+                refused.append(f"#{number} is {waits} and the coder could not be "
+                               f"dispatched for it — {exc.code}")
                 continue
             print(f"dispatched the coder for #{number}: {waits}, and conflicting with "
                   f"{pull['baseRefName']}, so GitHub builds no merge ref and will not update "
@@ -1435,7 +1465,7 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
             continue
 
         # An approved PR with failing checks is dispatched for review (solorepo's DR-178):
-        if is_approved_pull(pull, reviewer_login=reviewer_login) and not pull.get("isDraft") and mergeability(pull) != "CONFLICTING":
+        if is_approved_pull(pull, reviewer_login=reviewer_login) and not pull.get("isDraft") and merges != "CONFLICTING":
             checks = pull.get("statusCheckRollup")
             if checks is None:
                 try:
@@ -1445,47 +1475,6 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
                     checks = []
             ok, msg = check_green({"statusCheckRollup": checks})
             if not ok and "failing" in msg:
-                try:
-                    try:
-                        issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
-                    except SystemExit:
-                        print(f"left #{number} alone: #{challenge} cannot be read, so the review "
-                              f"is the solo's, and the sweep names it — {pull['title']}")
-                        continue
-                    levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
-                    if issue["state"] != "OPEN" or not levels:
-                        print(f"left #{number} alone: #{challenge} is "
-                              f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
-                              f"so the review is the solo's, and the sweep names it — "
-                              f"{pull['title']}")
-                        continue
-                    run_coder(number, "review")
-                    print(f"dispatched the coder for #{number}: approved, with failing checks ({msg}) — {pull['title']}")
-                except SystemExit as exc:
-                    failed.append(f"#{number} is approved with failing checks and the coder could not be "
-                                  f"dispatched for it — {exc.code}")
-                continue
-
-        elif is_changes_requested_pull(pull, reviewer_login=reviewer_login):
-            # An unanswered review changes request where the webhook was spent or the run crashed.
-            # Only re-deliver when the branch has been idle for longer than a run may last,
-            # ensuring no active coder run is standing on the branch.
-            if idle < minutes:
-                continue
-            try:
-                # The conflict, asked a second time. Reaching here with the
-                # same idle figure the entry above reads means that entry did
-                # not take this pull request, and the one way that happens on
-                # a branch that does conflict is a mergeability GitHub had not
-                # decided when the arm above asked: `mergeability` gives up
-                # after `MERGEABILITY` and writes `UNKNOWN` back, which is the
-                # expected answer on the push that invalidated every cached
-                # one. This call polls that value again. What it must not do
-                # is dispatch the review pass onto a branch whose problem is a
-                # conflict: that pass is dispatched, so it would start, and
-                # settling a conflict is not what it does (solorepo's DR-237).
-                if mergeability(pull) == "CONFLICTING":
-                    continue
                 try:
                     issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
                 except SystemExit:
@@ -1499,13 +1488,43 @@ def dispatch(pulls: Sequence[Pull]) -> list[str]:
                           f"so the review is the solo's, and the sweep names it — "
                           f"{pull['title']}")
                     continue
+                try:
+                    run_coder(number, "review")
+                except SystemExit as exc:
+                    refused.append(f"#{number} is approved with failing checks and the coder could not be "
+                                   f"dispatched for it — {exc.code}")
+                    continue
+                print(f"dispatched the coder for #{number}: approved, with failing checks ({msg}) — {pull['title']}")
+                continue
+
+        elif redeliver:
+            # An unanswered review changes request where the webhook was spent or the run crashed.
+            # Only re-deliver when the branch does not conflict, the idle window above having
+            # already held it back while a coder run may still be standing on the branch.
+            if merges == "CONFLICTING":
+                continue
+            try:
+                issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
+            except SystemExit:
+                print(f"left #{number} alone: #{challenge} cannot be read, so the review "
+                      f"is the solo's, and the sweep names it — {pull['title']}")
+                continue
+            levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
+            if issue["state"] != "OPEN" or not levels:
+                print(f"left #{number} alone: #{challenge} is "
+                      f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
+                      f"so the review is the solo's, and the sweep names it — "
+                      f"{pull['title']}")
+                continue
+            try:
                 run_coder(number, "review")
-                print(f"dispatched the coder for #{number}: changes requested by reviewer, "
-                      f"re-delivering pass — {pull['title']}")
             except SystemExit as exc:
-                failed.append(f"#{number} has changes requested and the coder could not be "
-                              f"dispatched for it — {exc.code}")
-    return failed
+                refused.append(f"#{number} has changes requested and the coder could not be "
+                               f"dispatched for it — {exc.code}")
+                continue
+            print(f"dispatched the coder for #{number}: changes requested by reviewer, "
+                  f"re-delivering pass — {pull['title']}")
+    return failed, refused
 
 
 # The two states of a review that decide anything. A `COMMENTED` review is what
@@ -1670,10 +1689,10 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     dispatch passes.
 
     A sweep succeeds when it reads every open pull request, whatever those pull
-    requests report: one branch's failed rebase or refused dispatch is printed
-    under `advance: ... reported a problem of their own` and leaves the exit
-    code at zero (solorepo's DR-238). A named pull request keeps its refusal in
-    the exit code, because the caller asked about that one.
+    requests report: one branch's failed rebase or stranded review request is
+    printed under `advance: ... reported a problem of their own` and leaves the
+    exit code at zero (solorepo's DR-238). A named pull request keeps its
+    refusal in the exit code, because the caller asked about that one.
 
     Parameters:
         pr (int or str, optional): Specific pull request number to advance. When None,
@@ -1681,9 +1700,10 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
         held (bool): If True, bypasses the armed/approved check for the caller's held branch.
 
     Raises:
-        SystemExit: If an explicit pull request cannot be advanced, or if a read the
+        SystemExit: If an explicit pull request cannot be advanced, if a read the
             sweep itself depends on — the list of open pull requests, the reviewer's
-            login — is refused, or the requested stack is not linear or linked.
+            login — is refused, the requested stack is not linear or linked, or if
+            any `gh workflow run coder.yml` was refused, whatever the refusal said.
     """
     if pr is not None:
         open_now = [channel.gh("pr", "view", str(pr), "--json", ADVANCE)]
@@ -1796,7 +1816,8 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
             print(f"advance: {len(found) - left} pull request(s) current with their base")
     # Sweep-level pass: dispatch review or rebase tasks for open pull requests.
     if pr is None:
-        failed += dispatch(open_now)
+        reported, refused = dispatch(open_now)
+        failed += reported
         # A sweep's exit code answers for the sweep and not for the weather of
         # the pull requests it read (solorepo's DR-238).
         if failed:
@@ -1804,6 +1825,11 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
                   "which the next push to trunk asks about again:")
             for problem in failed:
                 print(f"  {problem}")
+        # A dispatch that would not start is the sweep's own, and red: no coder
+        # pass runs for any pull request the refusal reached, and nothing else
+        # asks again.
+        if refused:
+            sys.exit("say: " + "; ".join(refused))
     elif failed:
         sys.exit("say: " + "; ".join(failed))
 

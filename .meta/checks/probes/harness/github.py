@@ -94,6 +94,10 @@ class FakeGitHub:
     - `no_stack`: the stack whose bottom layer has this number refuses its
       cascading rebase before moving any layer.
     - `no_edit`: `pr edit` exits with GitHub's refusal over reviewer assignment.
+    - `no_view`: `pr view` of that number exits with a transport failure, which
+      is how the re-read `mergeability` makes for an `UNKNOWN` answer fails.
+      `pr list` still answers for it, since the list is one call for every pull
+      request and a sweep reads its pull requests off that.
 
     What a run leaves behind: `pulls`, as the calls left them; `reads`, how many
     `pr view` reads each number took; `dispatched`, every dispatch as
@@ -126,7 +130,8 @@ class FakeGitHub:
     no_dispatch: set[str]
     no_stack: set[str]
     no_edit: set[str]
-    REFUSALS = ("no_rebase", "no_arm", "no_stick", "lands", "blip", "no_dispatch", "no_stack", "no_edit")
+    no_view: set[str]
+    REFUSALS = ("no_rebase", "no_arm", "no_stick", "lands", "blip", "no_dispatch", "no_stack", "no_edit", "no_view")
     """The keywords `__init__` takes beside `pulls`, each the numbers one call answers as the class docstring says."""
 
     def __init__(self, pulls: dict[int, dict[str, Any]], **refused: list[int]) -> None:
@@ -198,7 +203,10 @@ class FakeGitHub:
         (solorepo's DR-107), which is what a case's `requested` and `verdicts`
         spell for the verb to recognise the reviewer. `pr list` is every
         pull request as `view` answers it, less `statusCheckRollup`
-        (solorepo's DR-153). `pr update-branch` refuses a number in `no_rebase`,
+        (solorepo's DR-153). `pr view` refuses a number in `no_view`, where
+        `pr list` does not, so a case can refuse the re-read `mergeability`
+        makes without refusing the list the sweep reads its pull requests off.
+        `pr update-branch` refuses a number in `no_rebase`,
         and otherwise keeps the pull request as it was for `slow` reads and for
         the `compare` of the head it has not moved yet, then sets `behind` to
         `again`, drops the arming where `drops` says, and moves the head.
@@ -225,6 +233,8 @@ class FakeGitHub:
         if head == ("pr", "list"):
             return [{k: v for k, v in self.view(n).items() if k != "statusCheckRollup"} for n in self.pulls]
         if head == ("pr", "view"):
+            if str(args[2]) in self.no_view:
+                sys.exit("gh: Post https://api.github.com/graphql: net/http: TLS handshake timeout")
             return self.view(args[2])
         if head == ("stack", "link"):
             self.linked.append(tuple(args[2:]))
