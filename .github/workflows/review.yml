@@ -113,12 +113,16 @@ jobs:
             harness="codex"
           elif echo "$labels" | grep -qw "harness:gemini"; then
             harness="gemini"
+          elif echo "$labels" | grep -qw "harness:jules"; then
+            harness="jules"
           elif echo "$labels" | grep -qw "harness:claude"; then
             harness="claude"
           fi
 
           if [ "$harness" = "gemini" ]; then
             agent="antigravity-cli"
+          elif [ "$harness" = "jules" ]; then
+            agent="google-labs-jules"
           else
             agent="anthropics/claude-code-action@v1"
           fi
@@ -657,6 +661,7 @@ jobs:
       - name: review the pull request (gemini)
         id: review_gemini
         if: steps.harness.outputs.harness == 'gemini' || steps.claude_quota.outputs.fallback == 'true'
+        continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         env:
           GEMINI_PROJECT_DIR: ${{ github.workspace }}
@@ -815,6 +820,34 @@ jobs:
             same turn; one you did start in the background is read with
             TaskOutput before anything else. The step after this session
             counts your verdicts, and a session that added none is a red run.
+
+      # When Claude Code and Antigravity both fail (or when Antigravity fallback is unconfigured
+      # in a clone without ARC), evaluate Google Labs Jules API fallback if enabled by the
+      # JULES_FALLBACK toggle under Google AI Ultra subscription quota (solorepo's DR-246).
+      - name: detect jules fallback
+        id: jules_fallback
+        if: >-
+          steps.harness.outputs.harness != 'jules' && (
+            steps.review_gemini.outcome == 'failure' ||
+            (steps.review_claude.outcome == 'failure' && steps.claude_quota.outputs.fallback != 'true')
+          )
+        env:
+          JULES_FALLBACK: ${{ vars.JULES_FALLBACK }}
+        run: python3 .meta/detect_fallback.py --harness jules
+
+      - name: review the pull request (jules)
+        id: review_jules
+        if: steps.harness.outputs.harness == 'jules' || steps.jules_fallback.outputs.fallback == 'true'
+        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+        uses: ./.meta/actions/jules
+        with:
+          role: reviewer
+          pr: ${{ github.event.pull_request.number }}
+          timeout-minutes: ${{ steps.depth.outputs.minutes }}
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }}
 
       # A session that ended without a verdict has not reviewed, and the check
       # says so. The action reports success when the model's turn ends, and a

@@ -1,26 +1,56 @@
 #!/usr/bin/env python3
-"""Evaluate Claude execution output to activate fallback, or merge reviewer settings (solorepo's DR-178, solorepo's DR-245).
+"""Evaluate harness execution output to activate multi-vendor fallback, or merge reviewer settings (solorepo's DR-178, solorepo's DR-245, solorepo's DR-246).
 
-Evaluates whether the automatic Gemini fallback is enabled via `GEMINI_FALLBACK`.
-When enabled via repository variable `vars.GEMINI_FALLBACK` (solorepo's DR-245, solorepo's #669),
-any Claude harness failure activates Gemini / Antigravity fallback per solorepo's DR-178's
+Evaluates whether automatic fallback is enabled for a target harness via repository
+toggles (`GEMINI_FALLBACK` or `JULES_FALLBACK`). When enabled via repository variables
+(solorepo's DR-245, solorepo's DR-246, solorepo's #669, solorepo's #681), harness failures
+activate the requested fallback harness per solorepo's DR-178's multi-vendor resilience
 choice to prevent stalled loops on unhandled crashes, emitting `fallback=true` to
 `$GITHUB_OUTPUT` and exporting `AI_AGENT` and `ACTOR_AGENT` to `$GITHUB_ENV`.
-An advisory scan (`has_quota_error`) inspects the execution log to label whether quota
-or rate limit errors were detected. When disabled or unset (the default per
-solorepo's DR-245), the script cleanly emits `fallback=false` to `$GITHUB_OUTPUT`
-and skips fallback activation to avoid unauthenticated failures in portfolios
-lacking local ARC credential infrastructure.
+
+For `--harness gemini`, an advisory scan (`has_quota_error`) inspects the execution log
+to label whether quota or rate limit errors were detected. For `--harness jules`,
+activation occurs on the repository toggle alone without scanning execution logs.
+When disabled or unset (the default per solorepo's DR-240, solorepo's DR-245, solorepo's DR-246),
+the script cleanly emits `fallback=false` to `$GITHUB_OUTPUT` and skips fallback activation
+to avoid unauthenticated failures in portfolios lacking local ARC or Jules credential infrastructure.
 
 When invoked with `--merge-settings`, merges tool allowances and hook registrations
 from `~/.gemini/settings.json` into `~/.gemini/antigravity-cli/settings.json` while
 preserving mounted subscription credentials.
 """
 
+import argparse
 import json
 import os
 import pathlib
 import sys
+from typing import TypedDict
+
+
+class HarnessConfig(TypedDict):
+    """Configuration mapping for a supported fallback harness."""
+
+    toggle: str
+    agent: str
+    label: str
+    scan_quota: bool
+
+
+HARNESS_CONFIGS: dict[str, HarnessConfig] = {
+    "gemini": {
+        "toggle": "GEMINI_FALLBACK",
+        "agent": "antigravity-cli",
+        "label": "Gemini",
+        "scan_quota": True,
+    },
+    "jules": {
+        "toggle": "JULES_FALLBACK",
+        "agent": "google-labs-jules",
+        "label": "Jules",
+        "scan_quota": False,
+    },
+}
 
 
 def is_toggle_enabled(name: str, default: bool = False) -> bool:
@@ -108,18 +138,30 @@ def merge_settings(source_path: pathlib.Path | None = None, dest_path: pathlib.P
     dest.write_text(json.dumps(dest_data, indent=2) + "\n", encoding="utf-8")
 
 
+def write_env_file(path_env: str, content: str) -> None:
+    """Write text content to a file specified by an environment variable name if defined."""
+    target = os.environ.get(path_env)
+    if target:
+        with pathlib.Path(target).open("a", encoding="utf-8") as f:
+            f.write(content)
+
+
 def main() -> int:
-    """Evaluate Claude execution output and trigger Gemini fallback if toggle is enabled.
+    """Evaluate harness execution output and trigger fallback if toggle is enabled (solorepo's DR-245, solorepo's DR-246).
 
     When called with --merge-settings, merges ~/.gemini/settings.json into
     ~/.gemini/antigravity-cli/settings.json to configure tools and hooks without
     overwriting mounted subscription credentials.
 
-    When GEMINI_FALLBACK is disabled (the default), prints a diagnostic log, writes
+    When called with --harness jules, checks JULES_FALLBACK (defaulting to False) and
+    skips execution log scans, activating Jules cloud fallback directly when enabled.
+    When called with --harness gemini (default), checks GEMINI_FALLBACK (defaulting to False)
+    and performs an advisory quota scan of Claude Code's execution log.
+
+    When the respective fallback toggle is disabled, prints a diagnostic log, writes
     'fallback=false' to $GITHUB_OUTPUT, and exits 0. When enabled via repository
-    variable, runs the advisory quota scan, logs the activation, writes
-    'fallback=true' to $GITHUB_OUTPUT, and exports AI_AGENT and ACTOR_AGENT to
-    $GITHUB_ENV.
+    variable, logs the activation, writes 'fallback=true' to $GITHUB_OUTPUT, and exports
+    AI_AGENT and ACTOR_AGENT to $GITHUB_ENV.
 
     Returns:
         int: Exit status code (always 0 to allow downstream workflow steps to read outputs).
@@ -128,34 +170,38 @@ def main() -> int:
         merge_settings()
         return 0
 
-    if not is_toggle_enabled("GEMINI_FALLBACK", default=False):
-        print("Gemini fallback is disabled (GEMINI_FALLBACK != true); skipping.")
-        output_file = os.environ.get("GITHUB_OUTPUT")
-        if output_file:
-            with pathlib.Path(output_file).open("a", encoding="utf-8") as f:
-                f.write("fallback=false\n")
+    parser = argparse.ArgumentParser(
+        description="Evaluate execution output and toggle fallback harness (solorepo's DR-245, solorepo's DR-246)."
+    )
+    parser.add_argument(
+        "--harness",
+        choices=list(HARNESS_CONFIGS.keys()),
+        default="gemini",
+        help="Target fallback harness to evaluate (default: gemini)",
+    )
+    args = parser.parse_args()
+    cfg = HARNESS_CONFIGS[args.harness]
+
+    if not is_toggle_enabled(cfg["toggle"], default=False):
+        print(f"{cfg['label']} fallback is disabled ({cfg['toggle']} != true); skipping.")
+        write_env_file("GITHUB_OUTPUT", "fallback=false\n")
         return 0
 
-    custom_path = os.environ.get("EXECUTION_FILE")
-    if custom_path:
-        file_path: pathlib.Path | str = custom_path
+    if cfg["scan_quota"]:
+        custom_path = os.environ.get("EXECUTION_FILE")
+        file_path: pathlib.Path | str = (
+            custom_path
+            if custom_path
+            else pathlib.Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "claude-execution-output.json"
+        )
+        quota_detected = has_quota_error(file_path)
+        print(f"Claude failure detected (quota={quota_detected}); activating {cfg['label']} fallback.")
     else:
-        temp_dir = os.environ.get("RUNNER_TEMP", "/tmp")
-        file_path = pathlib.Path(temp_dir) / "claude-execution-output.json"
+        print(f"Activating {cfg['label']} fallback ({cfg['toggle']}=true).")
 
-    quota_detected = has_quota_error(file_path)
-    print(f"Claude failure detected (quota={quota_detected}); activating Gemini fallback.")
-
-    output_file = os.environ.get("GITHUB_OUTPUT")
-    if output_file:
-        with pathlib.Path(output_file).open("a", encoding="utf-8") as f:
-            f.write("fallback=true\n")
-    env_file = os.environ.get("GITHUB_ENV")
-    if env_file:
-        with pathlib.Path(env_file).open("a", encoding="utf-8") as f:
-            f.write("AI_AGENT=antigravity-cli\n")
-            f.write("ACTOR_AGENT=antigravity-cli\n")
-
+    write_env_file("GITHUB_OUTPUT", "fallback=true\n")
+    agent = cfg["agent"]
+    write_env_file("GITHUB_ENV", f"AI_AGENT={agent}\nACTOR_AGENT={agent}\n")
     return 0
 
 

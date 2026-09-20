@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/681
+    name: Incorporate Google Labs Jules API as an autonomous reviewer fallback harness
+    challenge_type: FEATURE
+    description: >-
+      Integrates the Google Labs Jules REST API allotment under Google AI Ultra subscription
+      quota as a third-tier cloud fallback harness for the autonomous reviewer loop in review.yml.
+      Enforces repoless operation with runner-executed attestation (.meta/say/), gates activation
+      behind opt-in toggle JULES_FALLBACK, and encapsulates execution within .meta/actions/jules.

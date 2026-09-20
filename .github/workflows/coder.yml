@@ -982,6 +982,7 @@ jobs:
       - name: rebase onto the base (gemini)
         id: rebase_gemini
         if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_rebase.outputs.fallback == 'true')
+        continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
         # (shell, read, edit, write) unlike the reviewer which is bounded
@@ -1169,6 +1170,7 @@ jobs:
           && steps.taken.outputs.by == ''
           && steps.pr.outputs.by == ''
           && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_answer.outputs.fallback == 'true')
+        continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
         # (shell, read, edit, write) unlike the reviewer which is bounded
@@ -1339,6 +1341,7 @@ jobs:
           && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
           && steps.promote.outputs.count != '0'
           && (steps.harness.outputs.harness == 'gemini' || steps.claude_quota_promote.outputs.fallback == 'true')
+        continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
         # (shell, read, edit, write) unlike the reviewer which is bounded

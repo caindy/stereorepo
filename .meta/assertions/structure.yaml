@@ -512,6 +512,15 @@ artifacts:
   - id: work:artifact/meta-actions-agy
     name: .meta/actions/agy/action.yml
     path: .meta/actions/agy/action.yml
+  - id: work:artifact/meta-actions-jules
+    name: .meta/actions/jules/action.yml
+    path: .meta/actions/jules/action.yml
+  - id: work:artifact/meta-jules-client
+    name: .meta/jules/client.py
+    path: .meta/jules/client.py
+  - id: work:artifact/meta-jules-readme
+    name: .meta/jules/README.md
+    path: .meta/jules/README.md
   - id: work:artifact/meta-arc-readme
     name: .meta/arc/README.md
     path: .meta/arc/README.md
