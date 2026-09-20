@@ -2338,6 +2338,9 @@ DECISION_ENTRY = re.compile(r"^\.meta/assertions/decisions/(DR-\d+)\.yaml$")
 STATUS_WRITTEN = re.compile(r"^\+\s+status:\s*(\S+)\s*$", re.M)
 """A `status` a diff writes, matched in the patch hunk that adds the line."""
 
+NOT_IN_FORCE = frozenset({"PROPOSED", "RECOMMENDED"})
+"""The `DecisionStatus` values `.meta/work/decisions.yaml` describes as not yet in force."""
+
 PER_PAGE = 100
 """How many of a pull request's files are asked for at once: GitHub's own maximum."""
 
@@ -2374,11 +2377,13 @@ def check_decisions_in_force(pull: Pull, owner: str, name: str) -> tuple[bool, s
     """Whether every Decision this diff carries is in force (solorepo's DR-222).
 
     A diff carries a Decision when it writes an entry's `status` line: adding
-    the entry, or moving the status of one already on the trunk. `PROPOSED`
-    defers the pull request and names the entry in the reason; any other status,
-    and a diff that leaves the line alone, clears it. A diff that cannot be read
-    defers too — a decision entry GitHub sends no patch for, a file list running
-    past the pages read, or a call that failed.
+    the entry, or moving the status of one already on the trunk. `PROPOSED` or
+    `RECOMMENDED` defers the pull request and names the entry in the reason —
+    neither is yet in force, by `DecisionStatus`'s description in
+    `.meta/work/decisions.yaml`; any other status, and a diff that leaves the
+    line alone, clears it. A diff that cannot be read defers too — a decision
+    entry GitHub sends no patch for, a file list running past the pages read,
+    or a call that failed.
 
     Parameters:
         pull (dict): The pull request, which must carry `number`.
@@ -2394,7 +2399,7 @@ def check_decisions_in_force(pull: Pull, owner: str, name: str) -> tuple[bool, s
         return False, f"could not read the diff ({type(exc).__name__})"
     if files is None:
         return False, f"could not read the diff (over {PER_PAGE * PAGES} files)"
-    proposed, unreadable = [], []
+    pending, unreadable = [], []
     for changed in files:
         found = DECISION_ENTRY.match(changed.get("filename") or "")
         if not found:
@@ -2402,13 +2407,13 @@ def check_decisions_in_force(pull: Pull, owner: str, name: str) -> tuple[bool, s
         patch = changed.get("patch")
         if not patch and (changed.get("additions") or changed.get("deletions")):
             unreadable.append(found.group(1))
-        elif any(status.upper() == "PROPOSED" for status in STATUS_WRITTEN.findall(patch or "")):
-            proposed.append(found.group(1))
+        elif any(status.upper() in NOT_IN_FORCE for status in STATUS_WRITTEN.findall(patch or "")):
+            pending.append(found.group(1))
     if unreadable:
         return False, f"could not read the diff of {', '.join(sorted(unreadable))}"
-    if proposed:
-        return False, f"carries {', '.join(sorted(proposed))}, still proposed"
-    return True, "carries no proposed decision"
+    if pending:
+        return False, f"carries {', '.join(sorted(pending))}, not in force"
+    return True, "carries only decisions in force"
 
 
 def evaluate_pr(pull: Pull, reviewer_login: str, owner: str,

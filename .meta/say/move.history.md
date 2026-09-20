@@ -314,3 +314,17 @@ what the pull requests it read reported and returns, so its exit code answers
 for whether the sweep ran.
 
 Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
+
+### The decision semaphore would have cleared a decision recommended but not built
+
+`check_decisions_in_force` deferred only a diff writing `PROPOSED`, while both
+`PROPOSED` and `RECOMMENDED` fall short of `ADOPTED` — the only status
+`.meta/work/decisions.yaml` describes as in force. The function's name and
+docstring claimed to catch every Decision short of in force, but the semaphore
+would have cleared a diff writing `RECOMMENDED` and printed `carries no proposed
+decision`, read as clearance, though the solo had not adopted it. The latent
+gap was caught by inspection on solorepo's #582 before any candidate carried
+one (solorepo's #586). Established: `check_decisions_in_force` defers on
+either `PROPOSED` or `RECOMMENDED`, both named in `NOT_IN_FORCE`.
+
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`

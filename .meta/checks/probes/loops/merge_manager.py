@@ -30,12 +30,13 @@ def merge_manager_probes():
     eligible.
 
     The decision semaphore reads the diff (solorepo's DR-222): a diff adding
-    an entry as `PROPOSED` defers and is named in the reason, one adopting an
-    entry or correcting an adopted entry's prose does not, an entry GitHub
-    sends without a patch defers as unreadable, a file list that runs past the
-    pages read defers with it, and the read fails closed when the API raises.
-    Through `evaluate_pr`, a pull request every other semaphore clears is
-    refused for the decision it carries.
+    an entry as `PROPOSED` or `RECOMMENDED` defers and is named in the reason
+    (neither is yet in force), one adopting an entry or correcting an adopted
+    entry's prose does not, an entry GitHub sends without a patch defers as
+    unreadable, a file list that runs past the pages read defers with it, and
+    the read fails closed when the API raises. Through `evaluate_pr`, a pull
+    request every other semaphore clears is refused for the decision it
+    carries.
 
     The end-to-end run answers GitHub from four pull requests and two Issues:
     a stack base, a dependent that waits on it, an unreviewed one and a layer
@@ -178,13 +179,16 @@ def _decisions_in_force(channel: Any, move: Any) -> list[str]:
         ("an entry proposed on the branch", False, f"DR-{299}",
          [{"filename": ENTRY, "additions": 40, "deletions": 0,
            "patch": "@@\n+  - id: work:decision/299\n+    status: PROPOSED\n"}]),
-        ("an entry the solo adopted on the branch", True, "no proposed decision",
+        ("an entry recommended on the branch", False, f"DR-{299}",
+         [{"filename": ENTRY, "additions": 40, "deletions": 0,
+           "patch": "@@\n+  - id: work:decision/299\n+    status: RECOMMENDED\n"}]),
+        ("an entry the solo adopted on the branch", True, "only decisions in force",
          [{"filename": ENTRY, "additions": 1, "deletions": 1,
            "patch": "@@\n-    status: PROPOSED\n+    status: ADOPTED\n"}]),
-        ("a correction to an entry's prose", True, "no proposed decision",
+        ("a correction to an entry's prose", True, "only decisions in force",
          [{"filename": ENTRY, "additions": 1, "deletions": 1,
            "patch": "@@\n-    context: as it was\n+    context: as it is\n"}]),
-        ("a proposed status outside the record", True, "no proposed decision",
+        ("a proposed status outside the record", True, "only decisions in force",
          [{"filename": ".meta/work/decisions.yaml", "additions": 1, "deletions": 0,
            "patch": "@@\n+    status: PROPOSED\n"}]),
         ("an entry GitHub sent no patch for", False, "could not read the diff",
