@@ -22,7 +22,9 @@ intent. Conversely, ignoring them or writing ad-hoc reminders in commit messages
 guarantees they will be lost.
 
 The [[ubiquitous-language]] establishes *noticed and not done* as the sole
-legitimate mechanism for capturing this work.
+legitimate mechanism for capturing this work — except where the branch can
+already reach the fix under the four-part bound, which makes it an
+[[incidental-commit|Incidental Commit]] instead (solorepo's DR-236).
 
 ## Contrast with Industry Synonyms
 
@@ -66,4 +68,4 @@ Work noticed during a change follows a deterministic three-stage lifecycle:
 
 ---
 
-**See also:** [[pr-first]], [[ubiquitous-language]], [[knowledge-management]], solorepo's Article 15, solorepo's DR-054, solorepo's DR-064, solorepo's DR-195.
+**See also:** [[incidental-commit]], [[pr-first]], [[ubiquitous-language]], [[knowledge-management]], solorepo's Article 15, solorepo's DR-054, solorepo's DR-064, solorepo's DR-195.

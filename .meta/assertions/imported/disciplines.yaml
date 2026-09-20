@@ -431,8 +431,8 @@ disciplines:
       four failures above were weighed against and is paid here too. Where the
       fix is mechanical and the branch can already reach it, the cheaper act is
       the fix — in a commit of its own, saying what it is, so the diff still
-      reads as one change with a drive-by beside it rather than as two changes
-      wearing one title.
+      reads as one change with an Incidental Commit beside it rather than as
+      two changes wearing one title.
     judgement: >-
       What constitutes one pull request. Too coarse and an argument has no
       subject; too fine and the record narrates change by change without ever
@@ -561,11 +561,12 @@ disciplines:
         What you notice and *can* do, do. A fix the branch can already reach
         that is mechanical, owes no Decision, implies no Challenge of its own
         and is proved by the gate this change is already running is not
-        noticed-and-not-done at all — it is a **drive-by**, and it goes in a
-        commit of its own whose subject begins `Drive-by:`, rather than into
-        a conversation that will cost a pickup to answer (solorepo's DR-236).
+        noticed-and-not-done at all — it is an **Incidental Commit**, and it is
+        made in a commit of its own whose subject begins `Incidental:`, rather
+        than into a conversation that will cost a pickup to answer
+        (solorepo's DR-236).
         The prefix is the whole form and it is there to be counted: `git log
-        --grep '^Drive-by:'` is how a later reader tells whether this licence
+        --grep '^Incidental:'` is how a later reader tells whether this licence
         is being taken.
         All four parts hold or it is a notice: the bound is what keeps a
         licence to fix from becoming a licence to wander, and the coder is
@@ -585,8 +586,8 @@ disciplines:
         resolves what the promotion left open.
 
         A point **another party raised** that survives and meets the
-        drive-by bound can be paid for here rather than later, and at approval
-        that is the first thing to try: answer it with a **commit on this
+        Incidental Commit bound can be paid for here rather than later, and at
+        approval that is the first thing to try: answer it with a **commit on this
         branch** before the merge, the reply naming the commit, and file no
         Issue (solorepo's DR-236). This adds no fourth answer to the three a
         point can get — it changes what *right, and a change to make* may be

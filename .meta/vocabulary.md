@@ -110,6 +110,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Pull Request** | Where a Challenge is taken in, argued and recorded — the Collaboration point, and the searchable account of why each change was made. | changelog, ticket |
 | **Review Thread** | One conversation on a Pull Request, opened against a line or against the change as a whole, and closed by being answered and resolved. | comment, conversation |
 | **Noticed and Not Done** | Work or observations encountered during the execution of a change that fall outside its remit, parked on the diff as a review thread, and promoted to an Issue at merge (solorepo's Article 15, solorepo's DR-064, solorepo's DR-195). | backlog, technical debt, punch list, follow-up ticket |
+| **Incidental Commit** | A fix a branch can already reach that is mechanical, owes no Decision, implies no Challenge of its own and is proved by the gate already running, made in a commit of its own whose subject begins `Incidental:` (solorepo's DR-236). | drive-by, drive-by commit, opportunistic fix |
 | **Decision record** | The record of decisions at every level — the Portfolio's, a Product's or a Project's, told apart by which the entry names. One sequence, numbered DR-nnn, newest last. | ADR, architecture decision record |
 | **Trailer** | A `Key: value` line at the end of a commit message or a comment, naming the Actor that wrote it. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
@@ -165,6 +166,8 @@ _The named ways of working, each adhered to because it is not a program._
 **Review Thread.** **Outdated is not resolved.** GitHub collapses a thread whose anchor moved and leaves it open, and the two states are independent — an objection can outlive the line it was written against. A16 turns on that distinction.
 
 **Noticed and Not Done.** Recorded only in an Issue or parked review thread, never buried in a commit message or lost in PR summaries (solorepo's Article 15).
+
+**Incidental Commit.** The counterpart of Noticed and Not Done, and the two partition what a change encounters outside its remit: what the branch can reach under the four-part bound is committed here, and everything else is parked on the diff. The subject prefix is the whole form and exists to be counted: `git log --grep '^Incidental:'` is the query one direction of the falsifier in solorepo's DR-236 runs. "Drive-by" named this in that Decision as first adopted, and is avoided here under A17 as a word that arrived by use rather than by minting.
 
 **Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until solorepo's DR-093, and imported a qualifier the record never used.
 
@@ -253,6 +256,8 @@ more often a collision than a gap.
 | **Issue** | Challenge, Pull Request |
 | **Pull Request** | Challenge, Issue |
 | **Review Thread** | Pull Request |
+| **Noticed and Not Done** | Incidental Commit |
+| **Incidental Commit** | Noticed and Not Done |
 | **Journaling** | Pull Request |
 | **Evidence** | Citation |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |

@@ -1,6 +1,6 @@
 decisions:
   - id: work:decision/236
-    name: "DR-236 · A mechanical fix within the branch's reach is a drive-by commit, not an Issue"
+    name: "DR-236 · A mechanical fix within the branch's reach is an Incidental Commit, not an Issue"
     challenge: work:challenge/631
     status: ADOPTED
     applies:
@@ -10,6 +10,7 @@ decisions:
       - work:artifact/meta-assertions-imported-disciplines
       - work:artifact/github-workflows-coder
       - work:artifact/meta-templates-pull-request
+      - work:artifact/meta-assertions-imported-vocabulary
     context: >-
       PR First routes what is noticed and not done to a conversation on the
       diff, holds it to approval, and promotes what survives to a linked Issue.
@@ -47,8 +48,8 @@ decisions:
       and the reason that follow-up run is expensive"; what it had not noticed
       is that a single well-formed Issue pays most of it too.
 
-      The route was imported from a setting where it is cheap. On a team the
-      drive-by fix is a separate pull request because a colleague reads three
+      The route was imported from a setting where it is cheap. On a team a fix
+      of this size is a separate pull request because a colleague reads three
       lines in thirty seconds and nobody reloads anything. Here the follow-up
       is an agent starting from nothing, and the asymmetry inverts the advice.
     alternatives:
@@ -67,11 +68,11 @@ decisions:
           real one. A diff that answers its Challenge and also quietly edits
           something else gives the reviewer no way to read either — the
           argument loses its subject, which is the first thing the judgement
-          block warns about. The separate commit is what makes the drive-by
-          cheap without making the change unreadable: it is visible, it is
-          named, and a reviewer who objects to it objects to one commit rather
-          than to the change.
-      - name: Batch drive-bys into a periodic tidy-up change
+          block warns about. The separate commit is what makes the Incidental
+          Commit cheap without making the change unreadable: it is visible, it
+          is named, and a reviewer who objects to it objects to one commit
+          rather than to the change.
+      - name: Batch Incidental Commits into a periodic tidy-up change
         chosen: false
         reason: >-
           That is the pile the Discipline already rejected, with a pull request
@@ -127,9 +128,9 @@ decisions:
           be paid with, which is why A16 is untouched and the thread still owes
           a reply either way.
 
-          Journaling needs no amendment. Its residue divides by tense and a
-          drive-by is finished work, which already goes to the body; what
-          changes is only how much reaches the unfinished half.
+          Journaling needs no amendment. Its residue divides by tense and an
+          Incidental Commit is finished work, which already goes to the body;
+          what changes is only how much reaches the unfinished half.
     consequences:
       - >-
         PR First's description says the prior question is whether to eject at
@@ -140,17 +141,31 @@ decisions:
       - >-
         The step that raises a notice carries the coder clause and the bound:
         a fix the branch can reach that is mechanical, owes no Decision,
-        implies no Challenge and is proved by the running gate is a drive-by in
-        a commit of its own, and all four parts hold or it stays a notice.
+        implies no Challenge and is proved by the running gate is an
+        Incidental Commit, made in a commit of its own, and all four parts hold
+        or it stays a notice.
       - >-
-        A drive-by commit's subject begins `Drive-by:`, in the step, in the
-        approval-pass prompt and on the pull request form. The prefix is not
-        decoration: the first direction of the falsifier below is a count of
+        An Incidental Commit's subject begins `Incidental:`, in the step, in
+        the approval-pass prompt and on the pull request form. The prefix is
+        not decoration: the first direction of the falsifier below is a count of
         these commits, and without a fixed form two Jobs write two subjects
-        and nobody can enumerate them. `git log --grep '^Drive-by:'` is the
+        and nobody can enumerate them. `git log --grep '^Incidental:'` is the
         query, which is the cheapest possible counter and the reason this
         Decision can decline to build one and still be falsifiable at both
         ends.
+      - >-
+        The thing the prefix marks is a minted Concept:
+        `work:concept/incidental-commit` in the imported vocabulary, with a
+        wiki entry for the parity A17 and solorepo's DR-190 require. This
+        Decision as first adopted called it a "drive-by" — bolded as a
+        definition, given the four-part identity criterion and fixed as a
+        commit-subject prefix, which is a Concept in everything but the
+        minting. solorepo's #642 renamed it in place rather than opening a
+        second Decision, because the rule is unchanged and only its word is
+        not: "drive-by" is recorded on the concept under `avoid`, so the
+        rejected coinage is kept rather than forgotten, and the falsifier's
+        query moved with the prefix, because a prefix that disagrees with its
+        own falsifier leaves the count that prefix exists for unrunnable.
       - >-
         The step that promotes at approval carries the reviewer clause, and it
         reaches only a point **another party raised**: such a point, surviving
@@ -178,8 +193,8 @@ decisions:
       - >-
         The rule is written where the promotion decision is actually taken, not
         only where the Discipline records it. `.github/workflows/coder.yml`'s
-        approval pass — both copies — says to try the drive-by first on a
-        reviewer's point and promotes what is left, and
+        approval pass — both copies — says to try the Incidental Commit first
+        on a reviewer's point and promotes what is left, and
         `.meta/templates/pull-request.md` says the same beside its marker. The
         reason is not A20, which a prose step already satisfies, but the
         failure DR-235 diagnosed: a record is worse than silent when an
@@ -202,8 +217,8 @@ decisions:
         admits a reply from the coder to a thread the reviewer authored, which
         is exactly the path the second clause takes and the whole of it.
     falsifier: >-
-      The rule is falsified by drive-by commits that are not mechanical: a
-      commit under `git log --grep '^Drive-by:'` that a reviewer has to argue
+      The rule is falsified by Incidental Commits that are not mechanical: a
+      commit under `git log --grep '^Incidental:'` that a reviewer has to argue
       about, or that carries a Decision nobody minted, says the bound is being
       read as a licence and
       the answer is to make the fourth part — proved by the running gate —
