@@ -22,6 +22,15 @@ from typing import Any
 
 DEFAULT_NAMESPACE = "arc-runners"
 TITLE_CACHE: dict[int | str, str] = {}
+DETAILS_CACHE: dict[int | str, tuple[str, str, str]] = {}
+NON_AI_WORKFLOWS = {
+    "gate.yml",
+    "merge.yml",
+    "advance.yml",
+    "release.yml",
+    "test-specialization.yml",
+}
+"""Workflows that do not run AI agent harnesses; watching them skips GitHub CLI job queries and reports 'n/a'."""
 
 
 def require(tool: str) -> None:
@@ -59,6 +68,91 @@ def fetch_run_title(run_id: int | str) -> str:
     return ""
 
 
+def _inspect_steps(steps: list[dict[str, Any]]) -> tuple[str, str]:
+    """Determines active (in-progress) or chosen (completed) harness and model from workflow steps.
+
+    Returns:
+        tuple[str, str]: A pair of (harness, model) naming the active or selected execution harness
+        ('claude', 'agy', 'agy (fallback)', 'jules', 'jules (fallback)', or 'prep (...)') and the
+        corresponding language model.
+    """
+    harness, model = "-", "-"
+    active_step = None
+    claude_ran = any(
+        "(claude)" in s.get("name", "")
+        and s.get("status") == "completed"
+        and s.get("conclusion") not in ("", "skipped")
+        for s in steps
+    )
+
+    for s in steps:
+        name = s.get("name", "")
+        status = s.get("status", "")
+        conclusion = s.get("conclusion", "")
+
+        if status == "in_progress":
+            active_step = name
+
+        if "(gemini)" in name and (status == "in_progress" or conclusion == "success"):
+            harness = "agy (fallback)" if claude_ran else "agy"
+            model = "gemini-3.8-flash"
+        elif "(claude)" in name and (status == "in_progress" or conclusion == "success"):
+            harness = "claude"
+            model = ("claude-opus-5" if "rebase" in name
+                     else "claude-sonnet-5" if "promote" in name
+                     else "opus/sonnet")
+        elif "(jules)" in name and (status == "in_progress" or conclusion == "success"):
+            harness = "jules (fallback)" if claude_ran else "jules"
+            model = "jules"
+
+    if harness == "-" and active_step:
+        if len(active_step) > 10:
+            harness = f"prep ({active_step[:9]}…)"
+        else:
+            harness = f"prep ({active_step})"
+
+    return harness, model
+
+
+def fetch_run_details(run_id: int | str, workflow: str = "") -> tuple[str, str, str]:
+    """Queries gh for active or chosen harness, model, and workflow run title."""
+    if not run_id or str(run_id) == "-" or not shutil.which("gh"):
+        return "-", "-", ""
+    if run_id in DETAILS_CACHE:
+        return DETAILS_CACHE[run_id]
+    if workflow in NON_AI_WORKFLOWS:
+        title = fetch_run_title(run_id)
+        if title:
+            DETAILS_CACHE[run_id] = ("n/a", "n/a", title)
+        return "n/a", "n/a", title
+    try:
+        out = subprocess.run(
+            ["gh", "run", "view", str(run_id), "--json", "jobs,displayTitle"],
+            capture_output=True, text=True, timeout=5
+        )
+        if out.returncode != 0:
+            return "-", "-", ""
+        data = json.loads(out.stdout)
+    except Exception:
+        return "-", "-", ""
+
+    title = str(data.get("displayTitle", "")).strip()
+    if title:
+        TITLE_CACHE[run_id] = title
+    jobs = data.get("jobs", [])
+    if not jobs:
+        return "-", "-", title
+
+    job = jobs[0]
+    steps = job.get("steps", [])
+    harness, model = _inspect_steps(steps)
+
+    if job.get("status") == "completed":
+        DETAILS_CACHE[run_id] = (harness, model, title)
+
+    return harness, model, title
+
+
 def parse_runner(obj: dict[str, Any], fetch_titles: bool = False) -> dict[str, str]:
     """Parses an EphemeralRunner custom resource JSON object into a summary record."""
     metadata = obj.get("metadata", {})
@@ -86,9 +180,13 @@ def parse_runner(obj: dict[str, Any], fetch_titles: bool = False) -> dict[str, s
         wf_match = re.search(r"\.github/workflows/([^@]+)", ref)
         workflow = wf_match.group(1) if wf_match else ref
 
-    title = ""
-    if fetch_titles and run_id:
-        title = fetch_run_title(run_id)
+    if phase == "Running" or run_id in DETAILS_CACHE:
+        harness, model, title = fetch_run_details(run_id, workflow)
+    else:
+        harness, model, title = "-", "-", ""
+
+    if not fetch_titles:
+        title = ""
 
     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
 
@@ -100,6 +198,8 @@ def parse_runner(obj: dict[str, Any], fetch_titles: bool = False) -> dict[str, s
         "run_id": str(run_id) if run_id else "-",
         "workflow": workflow,
         "job": job or "-",
+        "harness": harness,
+        "model": model,
         "title": title,
         "ref": ref,
     }
@@ -107,16 +207,21 @@ def parse_runner(obj: dict[str, Any], fetch_titles: bool = False) -> dict[str, s
 
 def print_row(r: dict[str, str], show_title: bool = False) -> None:
     """Prints a single runner summary row formatted for tabular terminal output."""
+    base = (f"{r['time']:<10} {r['name']:<34} {r['phase']:<12} {r['pr']:<8} "
+            f"{r['run_id']:<14} {r['workflow']:<14} {r['job']:<16} "
+            f"{r['harness']:<18} {r['model']:<18}")
     if show_title and r["title"]:
-        print(f"{r['time']:<10} {r['name']:<34} {r['phase']:<12} {r['pr']:<10} {r['run_id']:<14} {r['workflow']:<14} {r['job']:<24} {r['title']}")
+        print(f"{base} {r['title']}")
     else:
-        print(f"{r['time']:<10} {r['name']:<34} {r['phase']:<12} {r['pr']:<10} {r['run_id']:<14} {r['workflow']:<14} {r['job']}")
+        print(base.rstrip())
     sys.stdout.flush()
 
 
 def print_header(show_title: bool = False) -> None:
     """Prints the column headers and separator line for runner tracking."""
-    header = f"{'TIME':<10} {'RUNNER':<34} {'STATUS':<12} {'PR':<10} {'RUN_ID':<14} {'WORKFLOW':<14} {'JOB':<24}"
+    header = (f"{'TIME':<10} {'RUNNER':<34} {'STATUS':<12} {'PR':<8} "
+              f"{'RUN_ID':<14} {'WORKFLOW':<14} {'JOB':<16} "
+              f"{'HARNESS':<18} {'MODEL':<18}")
     if show_title:
         header += " TITLE"
     print(header)
@@ -159,7 +264,7 @@ def run_watch(namespace: str, show_title: bool = False) -> None:
 
     decoder = json.JSONDecoder()
     buf = ""
-    last_state: dict[str, tuple[str, str, str, str, str]] = {}
+    last_state: dict[str, tuple[str, ...]] = {}
 
     try:
         while True:
@@ -174,7 +279,7 @@ def run_watch(namespace: str, show_title: bool = False) -> None:
                     obj, idx = decoder.raw_decode(buf.lstrip())
                     buf = buf.lstrip()[idx:]
                     r = parse_runner(obj, fetch_titles=show_title)
-                    state_key = (r["name"], r["phase"], r["pr"], r["run_id"], r["job"])
+                    state_key = (r["name"], r["phase"], r["pr"], r["run_id"], r["job"], r["harness"], r["model"])
                     if last_state.get(r["name"]) != state_key:
                         last_state[r["name"]] = state_key
                         print_row(r, show_title)

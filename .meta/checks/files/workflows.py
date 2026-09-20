@@ -277,6 +277,43 @@ def signed_runs_name_their_harness() -> StepOutcome:
     return Passed(f"{counted} harness names written, each under both variables")
 
 
+FALLBACK_ENV_EXPORT = re.compile(r"^\s*GEMINI_FALLBACK:\s*\${{\s*vars\.GEMINI_FALLBACK\b", re.M)
+"""A workflow that invokes detect_fallback.py exports GEMINI_FALLBACK from vars.GEMINI_FALLBACK in job env (solorepo's DR-245)."""
+
+
+@check("fallback workflows export GEMINI_FALLBACK")
+def fallback_workflows_export_gemini_fallback() -> StepOutcome:
+    """Workflows that run detect_fallback.py map vars.GEMINI_FALLBACK into job env (solorepo's DR-245).
+
+    GitHub Actions does not populate repository variables into runner environments
+    automatically. Without an explicit mapping under job-level `env:`,
+    `.meta/detect_fallback.py` sees `GEMINI_FALLBACK` unset and defaults to false,
+    silently disabling fallback on quota exhaustion even when configured in the
+    repository.
+
+    Returns:
+        Passed | Found | CouldNotRun: Validation result checking that workflows
+        invoking `detect_fallback.py` export `GEMINI_FALLBACK`.
+    """
+    if not WORKFLOWS.is_dir():
+        return CouldNotRun(f"{WORKFLOWS.relative_to(ROOT).as_posix()} is missing")
+    problems = []
+    checked = 0
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        if "detect_fallback.py" not in text:
+            continue
+        checked += 1
+        if not FALLBACK_ENV_EXPORT.search(text):
+            problems.append(
+                f"{path.relative_to(ROOT)}: runs `detect_fallback.py` but does not export "
+                "`GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK ... }}` in job `env:`"
+            )
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{checked} fallback workflow{'s' if checked != 1 else ''} export GEMINI_FALLBACK")
+
+
 LIB = META / "lib"
 """Where a script under `.meta/` keeps its body, one package per script (solorepo's DR-217)."""
 

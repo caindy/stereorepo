@@ -132,6 +132,9 @@ jobs:
       # GitHub attests for this run and no other; the harness is the action,
       # recorded as the environment names it.
       ACTOR_SESSION: gha-${{ github.run_id }}
+      # Fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle
+      # (solorepo's DR-178, solorepo's DR-245); set vars.GEMINI_FALLBACK to 'true' to enable.
+      GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
       # Differentiated thinking depth across harnesses (solorepo's DR-186): Sonnet and Opus
       # always run high extended thinking to prevent regressions and hallucinations.
       MAX_THINKING_TOKENS: "32000"
