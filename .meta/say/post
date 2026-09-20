@@ -69,24 +69,32 @@ mutation($t: ID!) { resolveReviewThread(input: {threadId: $t}) { thread { isReso
 
 
 def solo() -> str:
-    """The account the repository belongs to: the party a parked conversation
-    is addressed to."""
+    """Retrieves the GitHub login of the repository owner."""
     return str(channel.gh("repo", "view", "--json", "owner")["owner"]["login"])
 
 
 def conversation_comment(number: int | str, body: str) -> None:
-    """A comment on a pull request's conversation or an Issue's — the same
-    endpoint on GitHub, which is why one verb serves both."""
+    """Posts a comment to an Issue or pull request conversation timeline.
+
+    Parameters:
+        number: The issue or pull request number.
+        body: The markdown body text to post.
+    """
     made = channel.gh("api", f"repos/{channel.repo()}/issues/{number}/comments", "-f", f"body={body}")
     print(made["html_url"])
 
 
 def raise_thread(pr: int | str, path: str, line: int | str, body: str) -> None:
-    """Open a thread on a line of the diff, at the pull request's head.
+    """Opens a review thread on a specific diff line at the pull request's current head.
 
-    The pull request's head, not this worktree's. They are usually the same
-    and the failure when they are not is opaque: GitHub rejects a comment
-    whose commit is not part of the pull request.
+    Resolves the remote head commit OID from GitHub rather than the local
+    worktree to ensure the comment attaches to a commit recognized by GitHub.
+
+    Parameters:
+        pr: The pull request number.
+        path: Relative path to the modified file.
+        line: Line number in the diff to comment on.
+        body: The markdown comment text.
     """
     head = channel.gh("pr", "view", str(pr), "--json", "headRefOid", "--jq", ".headRefOid", parse=False)
     made = channel.gh("api", f"repos/{channel.repo()}/pulls/{pr}/comments",
@@ -96,20 +104,29 @@ def raise_thread(pr: int | str, path: str, line: int | str, body: str) -> None:
 
 
 def notice(pr: int | str, path: str, line: int | str, text: str) -> None:
-    """Work noticed and not done, as a conversation on the diff (A15).
+    """Opens a diff conversation for work noticed and not done (solorepo's Article 15, solorepo's DR-116).
 
-    PR First's step: raise it where it was noticed, tagging the solo and
-    opening with the marker. The marker is what tells a thread held open on
-    purpose from one owed an answer, and `check_pr.py` reads it from the
-    *last* comment; the mention is who decides what it is. Both are supplied
-    here rather than typed, so a notice is never one a reader mistakes for a
-    question (solorepo's DR-116).
+    Formats the comment with the standard NOTICED marker, mentions the repository
+    owner, and signs with attribution trailers.
+
+    Parameters:
+        pr: Pull request number to attach the notice to.
+        path: File path where the unaddressed work was noticed.
+        line: Line number in the diff.
+        text: Description of the work noticed and left unaddressed.
     """
     raise_thread(pr, path, line, channel.signed(f"{NOTICED} @{solo()}\n\n{text}"))
 
 
 def thread_nodes(thread_id: str) -> list[dict[str, Any]] | None:
-    """Every comment node in one thread, asked for by id."""
+    """Fetches comment nodes belonging to a pull request review thread.
+
+    Parameters:
+        thread_id: GraphQL node ID of the review thread.
+
+    Returns:
+        List of comment node dictionaries, or None if the thread does not exist.
+    """
     node = channel.graphql(THREAD, id=thread_id)["data"]["node"]
     if not node:
         return None
@@ -117,12 +134,14 @@ def thread_nodes(thread_id: str) -> list[dict[str, Any]] | None:
 
 
 def thread_comments(thread_id: str) -> list[str] | None:
-    """Every comment body in one thread, asked for by id.
+    """Retrieves all comment bodies in a pull request review thread by node ID.
 
-    The first version scanned every open pull request looking for the id, on the
-    belief that GitHub had no by-id query. It has: a review thread is a `node`
-    like anything else. Scanning was several calls, and it silently depended on
-    the thread being in the first hundred of a pull request that was still open.
+    Parameters:
+        thread_id: The GraphQL node ID of the review thread.
+
+    Returns:
+        A list of comment body strings in chronological order, or None if the
+        thread node cannot be resolved.
     """
     nodes = thread_nodes(thread_id)
     if nodes is None:
@@ -131,74 +150,57 @@ def thread_comments(thread_id: str) -> list[str] | None:
 
 
 def sole_author(bodies: list[str]) -> bool:
-    """True when every comment *ends with* this Actor's Trailer and no other voice.
+    """Returns True if every comment in the thread was authored exclusively by this Actor.
 
-    Ends with, rather than contains: a comment quoting the Trailer — a reply
-    discussing attribution, say, which this repository produces constantly —
-    would otherwise be read as having been written by whoever it quoted.
+    Evaluates whether every comment ends with the current Actor's attribution
+    trailer. Unsigned comments or comments with differing trailers indicate
+    participation by other parties.
 
-    An unsigned comment counts as somebody else — that is the human, who signs
-    nothing. The false pass this rule exists to prevent went the other way: an
-    agent's *own* unsigned comment read as the human and made a second party out
-    of nothing. Here that failure is impossible, because everything this channel
-    posts is signed by construction.
+    Parameters:
+        bodies: List of comment body strings from the thread.
+
+    Returns:
+        bool: True if non-empty and all comments end with this Actor's trailer.
     """
     block = channel.trailers()
     return bool(bodies) and all(b.rstrip().endswith(block) for b in bodies)
 
 
 PROMOTION = re.compile(r"Promoted to (https://github\.com/[\w.-]+/[\w.-]+/issues/\d+)")
-"""A promotion this channel performed, as `promote` writes it, capturing the Issue's URL.
-
-Narrower than `check_pr.PROMOTED`, which matches any Issue URL in any
-repository written by anyone. The gate wants the broad reading: a thread
-carrying a link to an Issue has its item recorded somewhere, whoever wrote the
-link. A refusal to file wants the narrow one, because its false positive costs
-the Challenge rather than a repeated URL (solorepo's DR-221).
-"""
+"""A promotion this channel performed, as `promote` writes it, capturing the Issue's URL (solorepo's DR-221)."""
 
 
 def promotes(body: str) -> bool:
-    """True when a reply links an Issue, which is what a promotion looks like.
+    """Checks whether a reply body contains an Issue promotion link.
 
-    `check_pr.PROMOTED` rather than a pattern of this program's, so the verb
-    never stands aside where the gate would go on calling the thread resolved
-    without an answer — the one direction A16 depends on, and the same parity
-    `landed` keeps with the gate's sections (solorepo's #117).
+    Uses `check_pr.PROMOTED` to detect issue links matching the promotion
+    criteria required by pull request gate verification (solorepo's Article 16, solorepo's #117).
 
-    The other direction does not hold and is not wanted. The gate scans every
-    comment on the thread; this scans the one body about to be posted. So a
-    sole-authored thread that already carries a link from a promotion whose
-    resolve failed is refused here and passed there, and the way through is to
-    repeat the URL — the conservative side, and the refusal names it. Dropping
-    either scan to make the two equal is the reading that would break A16.
+    Parameters:
+        body: Comment body text to inspect.
+
+    Returns:
+        bool: True if an issue reference pattern is found in the body.
     """
     return bool(check_pr.PROMOTED.search(body))
 
 
 def refuse_if_sole_author(thread_id: str, promotion: bool = False) -> list[str]:
-    """The sole-author refusal, and the one case it stands aside for (solorepo's DR-127).
+    """Enforces two-party review by preventing sole authors from self-resolving threads (solorepo's Article 16, solorepo's DR-127).
 
-    A promotion is an answer: PR First's eighth step gives it to the coder, and
-    the thread it closes is one the coder wrote every word of, so a rule that
-    counts parties refuses the act the step assigns. A16 is not weakened by
-    standing aside, because what the reply carries is an Issue — the item
-    survives with a state of its own, which is the opposite of walking past it.
-    A reply with no link stays refused: that is the self-resolution solorepo's DR-068 and
-    solorepo's DR-072 put the control on the thread for.
+    Permits replies that promote the item to an Issue. Fetches the thread's
+    comments and aborts execution if the current Actor is the sole author and
+    the action is not an issue promotion.
 
-    What stands aside is the reply, not the resolve. Its two callers, `promote`
-    and `answer`, ask `sole_author` again on the bodies this returns, and a
-    sole-authored thread is left open for a second Job however the link got
-    there (solorepo's DR-224). `resolve_verb` asks the same question of its own
-    fetch, having no reply to stand aside for.
-
-    The thread is fetched whether or not the rule can bite, so a bad id stops
-    the verb before anything is filed or posted rather than after. The bodies
-    are returned so that a caller needing them again does not fetch twice.
+    Parameters:
+        thread_id: GraphQL node ID of the thread.
+        promotion: Whether the caller is posting an issue promotion.
 
     Returns:
-        list[str]: The thread's comment bodies, in the order GitHub reports them.
+        list[str]: The list of comment body strings in chronological order.
+
+    Raises:
+        SystemExit: If the thread does not exist or sole-author resolution is attempted.
     """
     bodies = thread_comments(thread_id)
     if bodies is None:
@@ -235,18 +237,19 @@ def comment_party(c: dict[str, Any]) -> str:
 
 
 def resolve_verb(thread_id: str) -> None:
-    """Resolve a review thread whose answer or promotion link is already posted (A16).
+    """Resolves an answered or promoted review thread (solorepo's Article 16, solorepo's DR-224).
 
-    Refuse first where every comment is this Actor's own — the promotion link
-    included, per `sole_author` (solorepo's DR-224). A16's falsifier is a thread only the
-    Actor who raised it can resolve, and a resolve only its sole author could
-    type is that thread. A second Job resolves it: `sole_author` reads
-    `channel.trailers()`, so a later run reads a different Trailer on the same
-    bodies and stands aside.
+    Validates that the thread has received a response from a second party or
+    contains an issue promotion link before executing resolution. Refuses
+    resolution if every comment on the thread belongs exclusively to the current
+    Actor.
 
-    Otherwise stand aside when the thread already carries a promotion link or
-    a comment from a party other than whoever opened it; refuse otherwise, so
-    resolving without either cannot clear the gate.
+    Parameters:
+        thread_id: GraphQL node ID of the thread to resolve.
+
+    Raises:
+        SystemExit: If the thread is missing, sole-authored by the caller, or
+            unanswered.
     """
     nodes = thread_nodes(thread_id)
     if nodes is None:
@@ -268,19 +271,13 @@ def resolve_verb(thread_id: str) -> None:
 
 
 def left_open(thread_id: str) -> str:
-    """The sentence a reply carries when the thread it answers is left open (solorepo's DR-224).
+    """Generates the notification text appended when a sole-authored thread is left open (solorepo's DR-224).
 
-    One wording for both doors, `promote` and `answer`, because what tells the
-    arriving reviewer which unresolved thread is its to close is a string it
-    reads: `review.yml`'s prompts say resolve only where the last comment
-    carries the Issue's URL and the words `Left open:`. A second wording is a
-    thread the arriving run is instructed to walk past, and the merge waits on
-    a thread with no one left to close it.
+    Parameters:
+        thread_id: GraphQL node ID of the unresolved thread.
 
-    It goes in front of the Trailer rather than after, since `sole_author`
-    reads a comment by what it ends with: appended after, the marker would make
-    this Actor's own reply read as somebody else's and hand the thread the
-    second party it is waiting for.
+    Returns:
+        str: Notification message indicating the thread awaits second-job resolution.
     """
     return ("Left open: this thread has had one voice, mine. A16 accepts a second party's "
             "reply or a link, and solorepo's DR-224 narrows the link limb, so a thread carrying "
@@ -290,32 +287,15 @@ def left_open(thread_id: str) -> str:
 
 
 def answer(thread_id: str, text: str) -> None:
-    """Reply, then resolve: PR First's step, whole — except on a thread this
-    Actor is the sole author of, which is replied to and left open (solorepo's DR-224).
+    """Replies to a review thread and resolves it if multi-party criteria are met (solorepo's DR-127, solorepo's DR-224).
 
-    A thread answered and left open reads as one still owed something, and
-    one resolved without an answer is A16's defect; the step is both, and so
-    is the verb wherever the thread has two voices. The sole-author refusal is
-    asked before anything is posted: a reply that goes out and a resolve that
-    then refuses is the step half done, which is the shape this verb exists to
-    make untypeable.
+    Posts the reply text. Resolves the thread immediately if another party has
+    participated. If the thread is sole-authored, leaves the thread open with an
+    explanatory notice for subsequent review handoff.
 
-    The body decides whether that refusal applies: one linking an Issue is the
-    promotion PR First's eighth step names (solorepo's DR-127). `promote` below does the
-    whole step in one act and is the coder's ordinary door to it; this verb is
-    what closes the thread when the two came apart — a promotion whose resolve
-    failed, or an Issue filed for the thread before it was answered. The link is
-    what says the Issue exists, so a thread is never closed on a promotion that
-    did not happen.
-
-    The reply goes out either way; the resolve waits where `sole_author` holds
-    on the bodies read before posting (solorepo's DR-224). The stand-aside above is why the
-    link reaches the thread at all, and it is about the reply: a thread every
-    word of which is this Actor's is left open for a second Job, the same as
-    `promote` leaves it — and carrying `left_open`'s sentence for the same
-    reason, so the arriving run reads one marker whichever door left the thread
-    open. The caller's words are signed here rather than in `main`, since that
-    sentence goes between them and the Trailer.
+    Parameters:
+        thread_id: GraphQL node ID of the review thread.
+        text: Markdown content for the reply.
     """
     bodies = refuse_if_sole_author(thread_id, promotion=promotes(text))
     if sole_author(bodies):
@@ -328,46 +308,21 @@ def answer(thread_id: str, text: str) -> None:
 
 
 def promote(thread_id: str, title: str, body: str, level: str | None, resolve_thread: bool = True) -> None:
-    """At approval: what survived the argument earns an Issue, and the thread is
-    resolved with a link to it (PR First, solorepo's DR-159).
+    """Promotes a review thread discussion into a tracked GitHub Issue (solorepo's DR-159, solorepo's DR-221).
 
-    Where `sole_author` holds on the thread's bodies, the Issue is filed and
-    the link posted and the thread is left open, whatever `resolve_thread`
-    asked for; the reply names what closes it (solorepo's DR-224). Where it does not, the
-    order is file, reply, resolve, so the Issue exists before the thread says
-    it does.
+    Files a new Issue using the provided title and body, posts a reply linking
+    to the created Issue, and resolves the thread if multi-party criteria and
+    `resolve_thread` permit. Refuses if the thread already contains a promotion.
 
-    The body is the Issue form's, not the thread's: it opens with
-    `**Waits on.**` like anything `file` takes, since what is promoted is an
-    Issue and the thread is where it was found. `--no-resolve` replies and
-    leaves the thread open so the pull request's body and what landed can be
-    finalized first; a sole-authored thread is left open whether or not it was
-    passed.
-
-    The sole-author refusal cannot bite here and is asked as `promotion=True`
-    rather than dropped: this verb's reply carries the Issue's link by
-    construction, which is the case solorepo's DR-127 has it stand aside for, and the call
-    is still what proves the thread exists before an Issue is filed for it. The
-    bodies it returns are then read twice, for the standing promotion and for
-    `sole_author`.
-
-    The Issue lands `challenge` alone unless a level is given: the level is the
-    reviewer's verdict, and a raiser at approval proposes one in the body. A
-    level given here is the solo's mandate (solorepo's DR-230), which a run
-    cannot hold and `file_issue` refuses it (solorepo's DR-235) — the promotion
-    pass after a review is where the mandate was invented and every Challenge
-    it filed went to the solo unread.
-
-    A thread already carrying this channel's own promotion is refused, so
-    that repeating the verb on a thread already promoted does not file a second
-    Issue for one Challenge (solorepo's DR-221). The evidence is `PROMOTION` and
-    not `promotes()`: the gate's pattern matches any Issue URL any party wrote,
-    and a thread citing an Issue is a thread this verb must still be able to
-    promote.
+    Parameters:
+        thread_id: GraphQL node ID of the thread.
+        title: Title for the newly created Issue.
+        body: Body text for the Issue following the Issue form.
+        level: Optional difficulty level (solo mandate only).
+        resolve_thread: Whether to attempt resolving the thread upon reply.
 
     Raises:
-        SystemExit: If GitHub has no such thread, or the thread already carries a
-            promotion link.
+        SystemExit: If the thread does not exist or was already promoted.
     """
     bodies = refuse_if_sole_author(thread_id, promotion=True)
     already = next((found for found in map(PROMOTION.search, bodies) if found), None)
@@ -389,21 +344,19 @@ def promote(thread_id: str, title: str, body: str, level: str | None, resolve_th
 
 
 def closed_by(pr: int | str) -> list[str] | None:
-    """The Challenges a pull request's body closes, by the gate's own rule.
+    """Extracts Challenge issue numbers closed by a pull request body (solorepo's #117).
 
-    `check_pr.py` blesses the heading: one bullet per item, each carrying a
-    closing keyword and one of the three references GitHub closes on, or an
-    explicit `None.`. The same objects read it here, so a body the required
-    check passed is never one this verb calls wrong. `None` is the answer for a
-    body that says it closes nothing, and an empty list is a body that named
-    nothing the gate would accept.
+    Parses the `**What it closes.**` section of the pull request description
+    according to pull request gate closing keyword requirements.
 
-    The near-miss is the heading present and its section empty, since
-    `check_pr.check()` guards its closing rule on `closing` being truthy and
-    that rule would pass it. It fails the gate one rule earlier, as a required
-    section left blank — the form submitted with nothing in it — so the parity
-    holds through that body too and the refusal in `landed` is not reached on
-    one the gate blessed (solorepo's #117).
+    Parameters:
+        pr: Pull request number to inspect.
+
+    Returns:
+        List of closed issue number strings, or None if the PR explicitly closes nothing.
+
+    Raises:
+        SystemExit: If the required section is missing or contains invalid entries.
     """
     body = channel.gh("pr", "view", str(pr), "--json", "body")["body"] or ""
     found = check_pr.sections(body)
@@ -423,22 +376,13 @@ def closed_by(pr: int | str) -> list[str] | None:
 
 
 def landed(pr: int | str) -> None:
-    """Post what landed for every Challenge the pull request closes, rendered
-    from the record and never typed (PR First, solorepo's DR-084).
+    """Renders and posts landed summaries for challenges closed by a pull request (solorepo's DR-084, solorepo's #281).
 
-    One comment per Challenge the record asserts. A body that says `None.`
-    closes nothing and has nothing to post, which is allowed and is a question
-    the form asks; a Challenge with no `assertions/challenges/<n>.yaml` has
-    nothing to post either, and is the common case rather than the rare one,
-    so it is said here and not posted — the renderer's line for it is about
-    the assertion directory, not the work, and on a pull request it reads as
-    a tool error. Neither is a refusal, since the coder loop runs this on
-    every pull request and every pass. `render.py --landed` is run rather
-    than imported: it needs `yaml`, which this interpreter may not have. The
-    interpreter already running this script is tried first, and `uvx` only
-    when `yaml` does not import under it — a laptop session with plain
-    `python3` and `pyyaml` installed has no `uvx` to fall back to
-    (solorepo's #281).
+    Reads closed Challenge numbers from the PR body, invokes `render.py --landed`
+    for asserted challenges, and posts the resulting markdown as a PR comment.
+
+    Parameters:
+        pr: Pull request number whose closed challenges are to be reported.
     """
     import importlib.util
     import subprocess
@@ -469,22 +413,17 @@ def landed(pr: int | str) -> None:
 
 
 def refuse_if_head_moved(pr: int | str) -> None:
-    """Refuse a verdict whose head moved under the run (solorepo's #566).
+    """Refuses to record a review verdict if the pull request head moved during execution (solorepo's #566).
 
-    GitHub records a review against whatever the pull request's head is when the
-    review lands, and not against the commit the run read, so a verdict posted
-    across a push is filed against a commit it never read.
+    Compares the head commit OID recorded in `SOLOREPO_REVIEW_HEAD` against the
+    current head reported by GitHub. Prevents submitting reviews against commits
+    different from those evaluated by the review run.
 
-    `REVIEW_HEAD` names the head the run was given, and where it is unset there
-    is nothing to compare and the verdict posts. Nothing is re-triggered: the
-    push that moved the head is a `synchronize` on a pull request whose review
-    request still stands, which is an event `review.yml` runs on.
-
-    Args:
-        pr: The pull request the verdict is for.
+    Parameters:
+        pr: The pull request number under review.
 
     Raises:
-        SystemExit: If the environment names a head and GitHub reports another.
+        SystemExit: If `SOLOREPO_REVIEW_HEAD` is set and does not match GitHub's current head.
     """
     read = (os.environ.get(REVIEW_HEAD) or "").strip()
     if not read:
@@ -500,16 +439,17 @@ def refuse_if_head_moved(pr: int | str) -> None:
 
 
 def review(pr: int | str, verdict: str) -> None:
-    """The reviewer's answer, as the Role: approve, request changes, or comment.
+    """Submits a pull request review verdict under the active role identity.
 
-    An approval may carry no body — the act is the answer — and the other two
-    cannot, which GitHub enforces and this does not repeat. Whatever body there
-    is arrives signed like every other utterance. The head is asked about first,
-    so a run whose head moved hears that rather than a complaint about its body.
+    Verifies head commit currency, reads review body text from standard input
+    if required, signs the body, and posts the review to GitHub.
+
+    Parameters:
+        pr: The pull request number being reviewed.
+        verdict: Review verdict type ('approve', 'request-changes', or 'comment').
 
     Raises:
-        SystemExit: If the head moved under the run, or a verdict that is not an
-            approval arrives with nothing on stdin.
+        SystemExit: If the head commit moved or a non-approval lacks body text.
     """
     refuse_if_head_moved(pr)
     body = channel.piped()
@@ -524,10 +464,11 @@ def review(pr: int | str, verdict: str) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """The parser alone, so a probe can check what each verb accepts without
-    running what it dispatches to (solorepo's #95: the mutually exclusive verdict group
-    landed on the wrong verb because both reused the loop variable `p`, and
-    nothing parsed a verb without also calling `gh`)."""
+    """Constructs the argument parser for `post` CLI commands (solorepo's #95).
+
+    Returns:
+        argparse.ArgumentParser: Configured parser supporting post subcommands.
+    """
     ap = channel.parser(__doc__)
     sub = ap.add_subparsers(dest="verb", required=True)
     p = sub.add_parser("comment"); p.add_argument("number")

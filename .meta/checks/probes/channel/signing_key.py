@@ -39,6 +39,16 @@ def signing_key_probes() -> list[str]:
         role_env = tmppath / "coder.env"
         role_env.write_text("GH_TOKEN=fake_token_for_test\n")
         role_env.chmod(0o600)
+        empty_token_env = tmppath / "empty_token.env"
+        empty_token_env.write_text("GH_TOKEN=\n")
+        empty_token_env.chmod(0o600)
+        with stood_in(channel, ROLE_ENV=empty_token_env):
+            _, code, exited = answered(channel.role_credential)
+            if not exited:
+                problems.append("signing_key: empty GH_TOKEN in credential file: expected a refusal, got exit code None")
+        got_pipe, code_pipe, exited_pipe = answered(lambda: channel.piped(timeout=0.01))
+        if exited_pipe or got_pipe != "":
+            problems.append(f"signing_key: channel.piped(): expected empty string, got {got_pipe!r} and {code_pipe!r}")
         key_file = tmppath / "coder_signing.key"
         key_file.write_text("dummy-key\n")
         key_file.chmod(0o600)

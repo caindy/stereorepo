@@ -40,29 +40,29 @@ from typing import Any
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-# Outside the tree, per role and per machine (solorepo's DR-073). `speak_as` points
-# ROLE_ENV at the Role named by --role; the environment variable names a file
-# and wins.
 ROLE_DIR = pathlib.Path("~/.config/solorepo").expanduser()
+"""Path to external role credential directory outside the working tree (solorepo's DR-073)."""
+
 ROLE_ENV = pathlib.Path(os.environ.get("SOLOREPO_ROLE_ENV", ROLE_DIR / "coder.env")).expanduser()
+"""Path to the active role credential file, overridable via SOLOREPO_ROLE_ENV."""
 
 ENV_AGENT = ("AI_AGENT",)
+"""Environment variable names evaluated to detect local agent harness identity."""
+
 ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
+"""Environment variable names evaluated to detect local session identifiers."""
 
-# What a workflow writes into `ACTOR_SESSION` and nothing else does, so that a
-# verb can tell a run from a session beside it (`in_a_run`, solorepo's DR-148).
 RUN_MARK = "gha-"
+"""Workflow run identifier prefix for ACTOR_SESSION to distinguish CI runs from local sessions (solorepo's DR-148)."""
 
-# The names a run's identity is read from, none of which the harness the run
-# starts owns (solorepo's DR-233). GitHub writes `GITHUB_RUN_ID` into every
-# step, and the workflows compose `ACTOR_SESSION` from it; a workflow writes
-# `ACTOR_AGENT` before the harness starts, where `AI_AGENT` is a name the
-# harness overwrites with its own build string; and the workflow and step
-# GitHub names are what is left to say what spoke where a workflow wrote
-# nothing.
 ENV_RUN_ID = "GITHUB_RUN_ID"
+"""Environment variable containing the attested GitHub Actions run identifier (solorepo's DR-233)."""
+
 ENV_RUN_AGENT = "ACTOR_AGENT"
+"""Environment variable containing the workflow-attested agent name (solorepo's DR-233)."""
+
 ENV_RUN_STEP = ("GITHUB_WORKFLOW", "GITHUB_ACTION")
+"""Fallback workflow step environment variables identifying caller provenance."""
 
 READING = ("`.meta/say/verbs.yaml` says what each verb does and which "
            "Role holds it; /pr-first is the coder's reading of PR First and "
@@ -70,8 +70,14 @@ READING = ("`.meta/say/verbs.yaml` says what each verb does and which "
 
 
 def parser(doc: str) -> argparse.ArgumentParser:
-    """A program's parser: its docstring, and `--role`, the one option every
-    program shares. The verbs are the caller's to add."""
+    """Creates a base argument parser configured with shared channel options.
+
+    Parameters:
+        doc: Command description string.
+
+    Returns:
+        argparse.ArgumentParser: Parser initialized with standard `--role` option.
+    """
     ap = argparse.ArgumentParser(description=doc, epilog=READING,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--role", default="coder",
@@ -80,20 +86,27 @@ def parser(doc: str) -> argparse.ArgumentParser:
 
 
 def speak_as(role: str) -> None:
-    """Point the credential at a Role, unless the environment named a file."""
+    """Configures the active role credential file path unless overridden by environment.
+
+    Parameters:
+        role: Role name identifying the credential file (~/.config/solorepo/<role>.env).
+    """
     global ROLE_ENV
     if not os.environ.get("SOLOREPO_ROLE_ENV"):
         ROLE_ENV = ROLE_DIR / f"{role}.env"
 
 
 def sibling(name: str) -> types.ModuleType:
-    """A program beside this one, as a module.
+    """Imports and caches a neighbouring executable script under .meta/say/ as a module.
 
-    The programs have no `.py` and are programs rather than libraries, so the
-    loader is named explicitly. Importing runs nothing: everything each does is
-    under `main()`, and `main()` is under `__name__`. Loaded once and kept
-    here, so two programs that import each other — `move stop` posts a
-    comment, `post promote` files an Issue — share one copy.
+    Parameters:
+        name: Filename of the sibling script to load.
+
+    Returns:
+        types.ModuleType: Loaded module instance.
+
+    Raises:
+        ImportError: If the module specification cannot be created.
     """
     import importlib.util
     from importlib.machinery import SourceFileLoader
@@ -110,39 +123,31 @@ def sibling(name: str) -> types.ModuleType:
     return module
 
 
-# Kept on this module and not in `sys.modules`, so a probe that loads the
-# channel afresh gets programs bound to that copy and not to an earlier one.
 _siblings: dict[str, types.ModuleType] = {}
+"""Cached sibling executable modules loaded by sibling()."""
 
 
 def attested_run() -> str | None:
-    """The identity GitHub attests for this run, or `None` outside one.
+    """Returns the attested workflow run identity, or None outside a GitHub Actions run.
 
-    `GITHUB_RUN_ID` is GitHub's own name for the run, written into every step's
-    environment and into no session's, and `coder.yml` and `review.yml` compose
-    `ACTOR_SESSION` from the same number. So a run's Trailer has one legitimate
-    value, this one, and every other identity in that environment — the
-    harness's session id, or anything a shell in the run typed — is something
-    else's (solorepo's DR-233).
+    Reads `GITHUB_RUN_ID` from the environment and prefixes it with `RUN_MARK`
+    (solorepo's DR-233).
+
+    Returns:
+        Attested run identifier string (`gha-<run_id>`), or None if unset.
     """
     run = os.environ.get(ENV_RUN_ID)
     return f"{RUN_MARK}{run}" if run else None
 
 
 def speaker() -> str | None:
-    """Which session is speaking, or `None` where the environment does not say.
+    """Resolves the active session or run identifier from the environment (solorepo's #285).
 
-    `actor()` without the refusals, so that a reader of the record —
-    `check_pr.mine()`, asking whether a Trailer is this session's — resolves the
-    session exactly as the writer of the record does, and the two cannot
-    disagree about which id signed (solorepo's #285).
+    Evaluates attested run identity first, followed by `ACTOR_SESSION` prefixed
+    with `RUN_MARK`, and finally session variables declared in `ENV_SESSION`.
 
-    The run's attested identity comes first. Failing that, an `ACTOR_SESSION`
-    carrying `RUN_MARK` is a workflow's own mark and wins over `ENV_SESSION`'s
-    declared order, since inside a container run the harness also sets
-    `CLAUDE_CODE_SESSION_ID`, a uuid that says nothing about the workflow.
-    Failing both, the environment is a session's and `ENV_SESSION` is read in
-    order.
+    Returns:
+        The resolved speaker identifier string, or None if no identifier is present.
     """
     run = attested_run()
     if run:
@@ -154,24 +159,17 @@ def speaker() -> str | None:
 
 
 def actor() -> str:
-    """**Who** is speaking: the session, and nothing else.
+    """Returns the verified session identifier for the current Actor (solorepo's DR-086, solorepo's DR-233).
 
-    A workload identity, attested for one run (solorepo's DR-086). A Role account will hold
-    the principal identity and say which Role acted; it cannot say which run did
-    the work, because one account serves many sessions. The key reads `Actor:`
-    because it names the entity, not the identity it carries.
+    In a workflow run, validates that `ACTOR_SESSION` matches `attested_run()`.
+    Refuses execution if no valid speaker identifier is established.
 
-    One Job is one thread, and the session is what identifies it. The harness
-    build used to be part of this and was doing a different job badly — it
-    changes at every upgrade, so one Actor across an update read as two, while
-    the part that actually distinguishes never moved.
+    Returns:
+        The verified Actor session identifier.
 
-    In a run the answer is the run's, whatever else that environment carries: an
-    `ACTOR_SESSION` naming anything but `attested_run()` is refused rather than
-    signed with, and a session id beside it is not read at all
-    (solorepo's DR-233).
-
-    Fail closed. An unsigned comment should be unrepresentable, not discouraged.
+    Raises:
+        SystemExit: If `ACTOR_SESSION` conflicts with the attested run ID or no
+            speaker is found in the environment.
     """
     run, declared = attested_run(), os.environ.get("ACTOR_SESSION")
     if run and declared and declared != run:
@@ -185,59 +183,29 @@ def actor() -> str:
 
 
 def in_a_run() -> bool:
-    """**Where** it is speaking from: a workflow run, or a session beside it.
+    """Returns True if execution occurs within a GitHub Actions workflow run.
 
-    A third question, and the one a verb asks when what it does depends on
-    whether a loop is standing on the work (solorepo's DR-148). `coder.yml` and `review.yml`
-    write `gha-<run id>` into `ACTOR_SESSION`, so that prefix is the run's mark
-    under solorepo's DR-086 — a workload identity, attested for one run.
+    Detects workflow execution by verifying either the presence of an attested
+    GITHUB_RUN_ID or an ACTOR_SESSION starting with the RUN_MARK prefix
+    (solorepo's DR-148, solorepo's DR-233).
 
-    Not `actor()`, which answers a different question: it says which session
-    is speaking, and a caller that only needs to know whether one is standing
-    on a run would have to compare its answer against `RUN_MARK` itself. The
-    mark is on `ACTOR_SESSION` itself, which nothing but a workflow here writes.
-
-    That the mark reaches the agent's shell at all is a fact about the action,
-    so it is a probe: run 34554434032 read `ACTOR_SESSION=gha-34554434032`
-    beside `GITHUB_RUN_ID=34554434032` inside it, with `actor()` answering the
-    harness's uuid in the same shell. The credential in that same `env:` block
-    was not there, which is solorepo's DR-134's finding and is the
-    credential's alone.
-
-    GitHub's own `GITHUB_RUN_ID` answers first and the mark answers after it
-    (solorepo's DR-233), so that a shell which dropped `ACTOR_SESSION` is still
-    in the run GitHub says it is in, and a mark alone still reads as a run where
-    GitHub's name for it does not reach.
-
-    A session is the answer wherever nothing says otherwise — unset, or a shape
-    no workflow writes. That is the side that asks rather than the side that
-    acts, which is where an unknown belongs when the refusal it feeds costs one
-    act to escape and the collision it prevents costs a Job.
+    Returns:
+        bool: True if executing within a GitHub Actions workflow, False otherwise.
     """
     return bool(attested_run()) or (os.environ.get("ACTOR_SESSION") or "").startswith(RUN_MARK)
 
 
 def agent() -> str:
-    """**What** is speaking: the harness, named where its own shell cannot name it.
+    """Returns the identifier of the executing agent harness component (solorepo's DR-233).
 
-    A different question from `actor`, and a different class — this is a
-    Component of a Bill of Materials, which is *supposed* to change when the
-    build changes. Outside a run it is `AI_AGENT` exactly as the environment
-    gives it, because that format is undocumented and prettifying it would be
-    inventing structure that nothing attests.
+    In a workflow run, reads `ENV_RUN_AGENT` (`ACTOR_AGENT`) or derives identity
+    from workflow step metadata (`ENV_RUN_STEP`). Outside a run, returns `AI_AGENT`.
 
-    In a run `AI_AGENT` is not read at all (solorepo's DR-233). The harness the
-    run starts overwrites that name with its own build string, so a value the
-    agent's own shell put there is indistinguishable from the ordinary one.
-    What the run chose is `ENV_RUN_AGENT`, written by the workflow before the
-    harness starts; where a run carries none, `ENV_RUN_STEP` — the workflow and
-    step GitHub names — says what spoke at the granularity GitHub attests, and
-    the build string is dropped rather than trusted.
+    Returns:
+        The resolved agent harness component name.
 
-    The model is not here, and not because it was forgotten. Nothing in this
-    environment attests it, and configuring it would put a confident falsehood
-    in the record the first time a session switches models. A missing identity
-    is recoverable; a wrong one is not.
+    Raises:
+        SystemExit: If the environment does not specify the executing agent.
     """
     if in_a_run():
         step = [os.environ.get(name) for name in ENV_RUN_STEP]
@@ -254,8 +222,11 @@ def agent() -> str:
 
 
 def trailers() -> str:
-    """The block this channel signs with, defined once because two readers need
-    it: the one that writes it, and the one that recognises it."""
+    """Constructs the standard Actor and Agent attribution trailer block.
+
+    Returns:
+        Formatted multi-line attribution string.
+    """
     return f"Actor: {actor()}\nAgent: {agent()}"
 
 
@@ -267,13 +238,18 @@ def signed(text: str) -> str:
 
 
 def piped(timeout: float = 0.5) -> str:
-    """Whatever was piped in, or nothing — but never a wait for input that will
-    not come.
+    """Reads non-blocking piped content from standard input if available.
 
-    A plain `sys.stdin.read()` hangs forever when this is run by a tool harness:
-    stdin is neither a terminal nor closed, so `isatty()` says pipe and the read
-    blocks on a pipe nobody is writing to. Five minutes of a session went that
-    way. Ask whether anything is actually readable first.
+    Returns an empty string immediately when stdin is connected to a tty.
+    Otherwise polls stdin via select up to the specified timeout to avoid
+    hanging on open but unwritten pipes.
+
+    Parameters:
+        timeout: Maximum duration in seconds to wait for stdin readability.
+
+    Returns:
+        The stripped string content from standard input, or an empty string if
+        no input is available within the timeout.
     """
     if sys.stdin.isatty():
         return ""
@@ -290,18 +266,17 @@ def stdin_body() -> str:
 
 
 def role_credential() -> dict[str, str]:
-    """The token for the Role this machine holds, from outside the working tree.
+    """Retrieves authentication tokens for the active role from the external configuration file.
 
-    Outside because a token in the tree is one `git add -A` from being published,
-    and per role and per machine because that is what the credential is: a Remit
-    bound where the work happens. It is read here and handed to one child
-    process, so nothing exports it into the environment of every other command.
+    Loads credentials from ~/.config/solorepo/<role>.env (solorepo's DR-073).
+    Enforces mode 0600 file permissions and validates that GH_TOKEN is present and
+    non-empty.
 
-    It is not a boundary on this machine. Anything with a shell can read this
-    file, so the wrapper is the only path by convention until an agent runs
-    somewhere it cannot reach the solo's credentials at all. What it does buy is
-    that GitHub can tell the Role from the solo, and that the fallback is
-    visible rather than silent.
+    Returns:
+        Dictionary mapping 'GH_TOKEN' to token value, or empty dict if speaking as solo.
+
+    Raises:
+        SystemExit: If the credential file permissions are invalid or GH_TOKEN is missing.
     """
     if not ROLE_ENV.exists():
         print(f"say: no {ROLE_ENV}; speaking with ambient auth, which is the solo",
@@ -319,10 +294,6 @@ def role_credential() -> dict[str, str]:
         key, value = line.split("=", 1)
         found[key.strip()] = value.strip().strip("\"'")
     if not found.get("GH_TOKEN"):
-        # Empty counts as missing. A secret that was never set arrives as an
-        # empty string, and the first run of review.yml (solorepo's #84) passed this
-        # check with one and failed further down, in gh's words rather than
-        # this file's.
         sys.exit(f"say: {ROLE_ENV} has no GH_TOKEN")
     print(f"say: speaking with the credential in {ROLE_ENV}", file=sys.stderr)
     return {"GH_TOKEN": found["GH_TOKEN"]}
@@ -371,26 +342,27 @@ def repo() -> str:
 
 
 def login() -> str:
-    """The account this credential is, asked of GitHub."""
+    """Queries GitHub API for the authenticated login name corresponding to the credential."""
     return str(gh("api", "user", "--jq", ".login", parse=False))
 
 
 def role_login(role: str) -> str:
-    """The account a Role holds, by name and not by reading anything.
+    """Derives the expected GitHub login name for a designated role (solorepo's DR-107).
 
-    `<owner>-<repo>-<role>` is the convention solorepo's DR-107 set, and it is what lets the
-    coder name the reviewer without touching the reviewer's token — which on
-    this machine it could read, and must not.
+    Parameters:
+        role: The role name.
+
+    Returns:
+        The formatted login string `<owner>-<repo>-<role>`.
     """
     return f"{repo().replace('/', '-')}-{role}"
 
 
 def role_identity() -> dict[str, str]:
-    """The Role's git identity, or nothing at all.
+    """Derives git author and committer environment variables for the active role.
 
-    Only when a Role credential is in use. Without one the channel is speaking
-    as the solo, and overriding his configured identity to say so would be the
-    channel asserting something it was not given.
+    Returns:
+        Dictionary of GIT_* environment variable bindings, or empty dict if speaking as solo.
     """
     if not role_credential():
         return {}
@@ -401,11 +373,15 @@ def role_identity() -> dict[str, str]:
 
 
 def role_signing_key() -> pathlib.Path | None:
-    """The path to the Role's SSH signing key, or None if speaking as solo.
+    """Resolves the SSH signing key path for the active role (solorepo's DR-073, solorepo's DR-197).
 
-    A key is read from ~/.config/solorepo/<role>_signing.key (or GIT_SIGNING_KEY in
-    <role>.env, or SOLOREPO_SIGNING_KEY in the environment). The file must not be
-    readable by others (mode 0600) (solorepo's DR-073, DR-197).
+    Validates that the key file exists and has permissions not readable by others (mode 0600).
+
+    Returns:
+        Path to the signing key file, or None if speaking as solo or key is not configured.
+
+    Raises:
+        SystemExit: If the key file exists but has permissions readable by others.
     """
     if not role_credential():
         return None

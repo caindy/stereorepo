@@ -18,3 +18,14 @@ head in `SOLOREPO_REVIEW_HEAD` against the head GitHub reports, and `review()`
 posts nothing where they differ.
 
 Evidence: `.meta/checks/probes/channel/verdict.py::verdict_probes`
+
+### PR scan for thread id failed when thread fell outside open list
+
+An initial implementation scanned open pull requests sequentially to locate a
+review thread by identifier on the assumption that GitHub lacked a direct query.
+This required multiple API round-trips and failed silently whenever a target
+thread was outside the first hundred results or belonged to a closed pull
+request. Established: `thread_nodes()` and `thread_comments()` retrieve review
+threads directly by GraphQL node identifier.
+
+Evidence: `.meta/checks/probes/channel/parser.py::channel_parser_probes`

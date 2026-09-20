@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Which login this channel speaks as, and what it can reach.
+"""Queries and displays authenticated GitHub account identity and repository access permissions.
 
+Usage:
     .meta/say/whoami [--role R]
 
-The channel says on stderr where the credential came from; this says who that
-credential *is*, which is the other half and the one that fails interestingly.
-A Role account that cannot see the repository looks exactly like a repository
-that does not exist.
+Verifies active credentials, displaying authenticated login, email,
+configured role, SSH signing key path, and repository access permission level.
 """
 import argparse
 import pathlib
@@ -17,7 +16,7 @@ import channel  # noqa: E402
 
 
 def whoami() -> None:
-    """Prints the authenticated user login, email, role, and repo permissions."""
+    """Displays authenticated user login, email, active role, signing key, and repo permissions."""
     who = channel.gh("api", "user", "--jq", ".login,.id", parse=False).split("\n")
     print("login:", who[0])
     print("email:", f"{who[1]}+{who[0]}@users.noreply.github.com")

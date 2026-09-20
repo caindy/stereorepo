@@ -78,3 +78,35 @@ harness overwrites; and `check_pr.mine()` asks `speaker()` rather than resolving
 a session of its own (solorepo's DR-233).
 
 Evidence: `.meta/checks/probes/channel/agent.py::agent_probes`
+
+### Workflow run mark reached container shell without credential block
+
+Run 34554434032 read `ACTOR_SESSION=gha-34554434032` beside
+`GITHUB_RUN_ID=34554434032` inside the runner, while `actor()` answered the
+harness's uuid in the same shell. The credential in that same `env:` block was
+omitted (solorepo's DR-134). Established: GitHub's attested `GITHUB_RUN_ID`
+takes precedence over session identifiers, and `in_a_run()` evaluates the
+attested run before inspecting `ACTOR_SESSION` (solorepo's DR-233).
+
+Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`
+
+### Unwritten stdin pipe hung interactive harness sessions
+
+A plain `sys.stdin.read()` hung indefinitely when executed by an interactive tool
+harness where standard input was neither a tty nor closed. Because `isatty()`
+returned false, the call blocked indefinitely on an open pipe with no incoming
+data. Established: `channel.piped()` polls stdin with `select.select()` against
+a timeout, returning an empty string if input is unavailable.
+
+Evidence: `.meta/checks/probes/channel/signing_key.py::signing_key_probes`
+
+### Empty GH_TOKEN string in role environment bypassed missing secret check
+
+When a repository secret was not configured, the GitHub Actions environment
+injected `GH_TOKEN` as an empty string. The credential loader treated an empty
+string as present, allowing execution to proceed until failing later in `gh` CLI
+calls during the first run of `review.yml` (solorepo's #84). Established:
+`role_credential()` requires a non-empty `GH_TOKEN` and exits with an explicit
+error message if the token value is blank or missing.
+
+Evidence: `.meta/checks/probes/channel/signing_key.py::signing_key_probes`
