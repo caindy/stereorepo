@@ -21,7 +21,7 @@
 .meta/apm_compile.py: 0
 .meta/check.py: 6
 .meta/checks/citations/claims.py: 20
-.meta/checks/citations/loaders.py: 7
+.meta/checks/citations/loaders.py: 5
 .meta/checks/citations/prose.py: 15
 .meta/checks/citations/record.py: 12
 .meta/checks/comments.py: 3
@@ -45,9 +45,9 @@
 .meta/checks/probes/loops/advance.py: 0
 .meta/checks/probes/loops/delegate.py: 10
 .meta/checks/probes/loops/dispatch.py: 23
-.meta/checks/probes/loops/enacted.py: 10
-.meta/checks/probes/loops/handoff.py: 9
-.meta/checks/probes/loops/merge_manager.py: 8
+.meta/checks/probes/loops/enacted.py: 9
+.meta/checks/probes/loops/handoff.py: 8
+.meta/checks/probes/loops/merge_manager.py: 7
 .meta/checks/probes/loops/merge_manager_advance.py: 1
 .meta/checks/probes/loops/stop.py: 5
 .meta/checks/probes/tools/agents.py: 1

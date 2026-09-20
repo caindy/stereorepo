@@ -1,6 +1,7 @@
 """What the citation steps read from: the patterns a Decision and an Issue citation take, the scripts loaded for their patterns, and the files a portfolio inherits.
 """
 import re
+from typing import Any
 
 from checks.collect import META, ROOT, TEMPLATE
 from checks.files import inherited, tree
@@ -42,11 +43,12 @@ def load_timing():
     return module
 
 
-def load_check_pr():
+def load_check_pr() -> Any:
     """Load `check_pr.py` as an isolated module object without executing network calls.
 
     Returns:
-        types.ModuleType: The imported check_pr module object.
+        Any: The imported check_pr module object, untyped so a caller's
+        `check_pr.<name>` reads are not checked against it.
     """
     import importlib.util
     from importlib.machinery import SourceFileLoader
