@@ -5,6 +5,8 @@ This tool provides a deterministic workflow for checking duplicates, scaffolding
 and verifying maintainer-facing wiki concept pages under `wiki/<context>/<slug>.md`
 following Wikipedia editorial conventions (MOS:LEAD bold lead definitions,
 closed-world wikilinks, and Bounded Context partitioning).
+
+History in wikisplain.history.md (solorepo's DR-171).
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ except ImportError:
 
 from lib.wikisplain import cli
 from lib.wikisplain.cli import main
-from lib.wikisplain.duplicates import find_duplicates
+from lib.wikisplain.duplicates import avoided_synonyms, find_duplicates
 from lib.wikisplain.lead import LEAD_COPULA, format_lead_sentence, slugify
 from lib.wikisplain.links import (
     FENCED_RE,
@@ -37,6 +39,7 @@ __all__ = [
     "LEAD_COPULA",
     "WIKILINK_RE",
     "Page",
+    "avoided_synonyms",
     "cli",
     "embed_wikilinks",
     "extract_known_concepts",
@@ -48,8 +51,8 @@ __all__ = [
     "verify_page",
 ]
 """The script's whole surface, so `wikisplain probes` in `.meta/checks/probes/knowledge.py`, which loads
-this file by path, finds `find_duplicates`, `format_lead_sentence`, `generate_page`, `slugify` and
-`verify_page` where it did."""
+this file by path, finds `avoided_synonyms`, `find_duplicates`, `format_lead_sentence`, `generate_page`,
+`slugify` and `verify_page` where it did."""
 
 if __name__ == "__main__":
     sys.exit(cli.main())

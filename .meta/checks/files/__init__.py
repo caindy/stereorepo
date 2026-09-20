@@ -23,7 +23,7 @@ import checks.files.rendered  # noqa: F401  # reason: registers check steps
 from checks.files.sources import inherited, is_py, meta_sources, template_files, tree
 from checks.files.templates import Strict, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
 from checks.files.markdown import FENCED, LINK, markdown_links
-from checks.files.wiki import LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wikilinks
+from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wiki_synonyms_are_not_avoided, wikilinks
 from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, RESTORE_PROSE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
@@ -32,6 +32,7 @@ from checks.files.rendered import apm_package, rendered_prose
 
 __all__ = [
     "FENCED",
+    "FRONTMATTER",
     "LEAD_COPULA",
     "LIB",
     "LINK",
@@ -91,6 +92,7 @@ __all__ = [
     "unread_prose",
     "wiki",
     "wiki_lead_paragraphs",
+    "wiki_synonyms_are_not_avoided",
     "wikilinks",
     "without_comments",
     "workflows",

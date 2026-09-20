@@ -1,4 +1,4 @@
-"""The wiki: wikilinks that resolve, a lead paragraph that defines its concept, and one page per term of the Ubiquitous Language (solorepo's DR-187, solorepo's DR-190).
+"""The wiki: wikilinks that resolve, a lead paragraph that defines its concept, one page per term of the Ubiquitous Language, and synonyms the vocabulary does not forbid (solorepo's DR-187, solorepo's DR-190, solorepo's DR-231).
 """
 import pathlib
 import re
@@ -16,6 +16,7 @@ from checks.files.markdown import FENCED
 
 WIKILINK = re.compile(r"\[\[(.*?)\]\]")
 
+FRONTMATTER = re.compile(r"\A---\n(?P<block>.*?)\n---(?:\n|\Z)", re.DOTALL)
 
 LEAD_COPULA = re.compile(
     r"^\*\*(?:`(?P<backticked>[^`]+)`|(?P<plain>[^*]+))\*\*\s+"
@@ -328,4 +329,65 @@ def ubiquitous_language_wiki_parity(
             missing = f"wiki page '{slug}' has no corresponding concept in vocabulary schema"
         if not any(ident in index for ident in minted):
             problems.append(f"{_rel(path)}: {missing} (solorepo's DR-190)")
+    return problems
+
+
+def _frontmatter(text: str) -> dict[str, object]:
+    """A page's YAML frontmatter as a mapping: empty where the page opens with none, where the block will not parse, or where it parses to something other than a mapping."""
+    match = FRONTMATTER.match(text)
+    if not match:
+        return {}
+    try:
+        block = yaml.safe_load(match.group("block"))
+    except yaml.YAMLError:
+        return {}
+    return block if isinstance(block, dict) else {}
+
+
+def _avoided(index: Index, slug: str) -> dict[str, tuple[str, str]]:
+    """Every word the entry minted at `slug` tells a writer to avoid, keyed by its slug and valued as `(the word as written, the identifier that forbids it)`."""
+    avoided: dict[str, tuple[str, str]] = {}
+    for ident in (f"work:concept/{slug}", f"work:discipline/{slug}", f"ddd:concept/{slug}"):
+        entry = index.get(ident)
+        if not entry:
+            continue
+        for word in entry[1].get("avoid") or []:
+            avoided[_slugged(str(word).lower())] = (str(word), ident)
+    return avoided
+
+
+@check("wiki synonyms")
+def wiki_synonyms_are_not_avoided(
+        index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
+    """No wiki page declares as a synonym a word its own entry's `avoid` list forbids (A17, solorepo's DR-190, solorepo's DR-231).
+
+    A page's frontmatter `synonyms` are folded into the title field of the BM25
+    index at `.meta/lib/search/build.py`, which is the highest weight that index
+    carries. A word on the entry's `avoid` list declared there therefore makes
+    `just search <word>` return the page for the very word the Ubiquitous
+    Language exists to stop denoting the concept. The two lists must be
+    disjoint; a synonym the vocabulary merely does not mint is allowed.
+    """
+    problems: list[str] = []
+    tree_files = md_files if md_files is not None else sources.tree()
+    for path in tree_files:
+        rel = _rel(path)
+        if not _is_wiki_page(path, rel):
+            continue
+        try:
+            raw_text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        synonyms = _frontmatter(raw_text).get("synonyms")
+        if not isinstance(synonyms, list):
+            continue
+        avoided = _avoided(index, path.stem.lower())
+        for synonym in synonyms:
+            found = avoided.get(_slugged(str(synonym).lower()))
+            if found:
+                word, ident = found
+                problems.append(
+                    f"{rel}: synonym '{synonym}' is on {ident}'s avoid list as '{word}', "
+                    f"and a synonym is indexed at title weight (solorepo's DR-231)"
+                )
     return problems

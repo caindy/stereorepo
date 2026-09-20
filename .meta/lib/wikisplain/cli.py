@@ -30,7 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--synonyms",
         default="",
-        help="Comma-separated synonyms or alternate labels.",
+        help="Comma-separated findable synonyms; a word the concept's `avoid` list forbids is refused.",
     )
     parser.add_argument(
         "--slug",
@@ -54,10 +54,9 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-    root = ROOT
     concept = " ".join(args.concept).strip()
 
-    dups = duplicates.find_duplicates(concept, context=args.context, root=root)
+    dups = duplicates.find_duplicates(concept, context=args.context, root=ROOT)
 
     if args.check_duplicate:
         if dups:
@@ -79,16 +78,25 @@ def main(argv: list[str] | None = None) -> int:
     slug = args.slug.strip() or lead.slugify(title)
     syn_list = [s.strip() for s in args.synonyms.split(",") if s.strip()] if args.synonyms else []
 
+    avoided = duplicates.avoided_synonyms(slug, syn_list, root=ROOT)
+    if avoided:
+        print(f"Error: synonyms of '{concept}' name words its own vocabulary entry forbids:")
+        for a in avoided:
+            print(f"  - '{a['synonym']}' is on {a['id']}'s avoid list as '{a['avoid']}' in {a['path']}")
+        print("A synonym is indexed at title weight, so the search would return this page "
+              "for a word the vocabulary exists to stop denoting the concept (solorepo's DR-231).")
+        return 1
+
     content = pages.generate_page(
         pages.Page(title=title, slug=slug, context=args.context,
                    definition=args.definition, synonyms=syn_list),
-        root=root,
+        root=ROOT,
     )
 
-    target_file = root / "wiki" / args.context / f"{slug}.md"
+    target_file = ROOT / "wiki" / args.context / f"{slug}.md"
     rel_path = f"wiki/{args.context}/{slug}.md"
 
-    problems = pages.verify_page(content, rel_path, root=root)
+    problems = pages.verify_page(content, rel_path, root=ROOT)
     if problems:
         print(f"Verification warnings for {rel_path}:")
         for p in problems:

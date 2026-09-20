@@ -1,0 +1,119 @@
+decisions:
+  - id: work:decision/231
+    name: "DR-231 · A wiki page's synonyms are disjoint from its concept's `avoid` list, and are not held to its `alt_labels`"
+    challenge: work:challenge/594
+    status: ADOPTED
+    applies:
+      - work:article/17
+    enacted_in:
+      - work:artifact/meta-checks-files-wiki
+      - work:artifact/meta-lib-wikisplain-duplicates
+      - work:artifact/meta-lib-wikisplain-cli
+      - work:artifact/meta-wikisplain
+      - work:artifact/meta-checks-probes-knowledge
+    context: >-
+      A wiki page's frontmatter `synonyms` and its concept's `avoid` list are
+      both machine-readable and nothing compared them.
+      `ubiquitous_language_wiki_parity` reads slugs against minted identifiers
+      in both directions and reads neither list, so a page could declare as
+      findable the very words the vocabulary exists to stop denoting the
+      concept, and the gate stayed green. Both pages minted in caindy/solorepo#581
+      did it: `wiki/solorepo/claim.md` carried `[assertion, statement,
+      hypothesis]`, which is `work:concept/claim`'s `avoid` list word for word
+      and in order, and `wiki/solorepo/evidence.md` carried `[grounds,
+      receipt]`, `receipt` being the word that change retired. The reviewer
+      caught both pages; nothing caught the gap. The cost is not shelf space,
+      because the list has a consumer: `.meta/lib/search/build.py` folds every
+      frontmatter list item into the **title** field of the BM25 index, which
+      is the highest weight that index carries, so `just search assertion`
+      answered with the page for `Claim`. A vocabulary whose own search returns
+      the forbidden word is not a vocabulary anybody is held to.
+    alternatives:
+      - name: Leave it to the reviewer
+        chosen: false
+        reason: >-
+          What the reviewer already did, and the reason the Issue exists: the
+          reading was correct and cost a review round on two pages at once. Both
+          vocabularies are machine-readable and the test is a set intersection,
+          so the judgement being asked for is one nobody has to make.
+      - name: Require `synonyms` to equal the concept's `alt_labels`
+        chosen: false
+        reason: >-
+          The strongest rule available, and the two hand-authored pages that
+          predate the defect — `wiki/solorepo/noticed-and-not-done.md` and
+          `wiki/solorepo/externalized-memory.md` — each already carry exactly
+          their `alt_labels`, so it would have cost nothing to adopt. It is
+          refused because `alt_labels` and `synonyms` answer different
+          questions. `alt_labels` says what else the concept may be *called*, a
+          claim about the vocabulary; `synonyms` says what a reader may
+          *search*, a claim about retrieval. Equality forbids a page a findable
+          word nobody wants minted — a misspelling, an outside term of art, the
+          name a neighbouring tool uses — and buys, over disjointness, only the
+          cases where a word is neither minted nor forbidden, which is where a
+          page has the most to gain.
+      - name: Fix the indexer instead, dropping forbidden words at build time
+        chosen: false
+        reason: >-
+          It closes the observed harm — the search would no longer answer for
+          the word — and closes nothing else. The page still asserts, to every
+          human reader of its frontmatter, that the forbidden word denotes the
+          concept, and the assertion is now invisible to the one tool that read
+          it. A silent index is a worse record than a loud gate.
+      - name: A gate step, and a refusal in `wikisplain`
+        chosen: true
+        reason: >-
+          The gate step catches every hand-authored page, which is where both
+          observed failures came from, and `wikisplain` refuses at the moment
+          the word is typed, which is where the next one would. Neither
+          subsumes the other: the tool scaffolds pages that are then edited by
+          hand, and the gate cannot speak at the keystroke.
+    consequences:
+      - >-
+        `check.py` gains a `wiki synonyms` step. Every page under `wiki/` whose
+        frontmatter declares `synonyms` has them read against the `avoid` list
+        of the concept, discipline or domain concept minted at its slug, matched
+        on the slugified word so spacing and case let nothing through. A page
+        whose slug is minted nowhere, and a concept with no `avoid` list, are
+        both silent rather than red.
+      - >-
+        `wikisplain --synonyms` refuses a word on the `avoid` list of the
+        concept the page is being scaffolded for, before the page is written,
+        naming the word, the concept and the vocabulary file that forbids it.
+        `--force` does not pass it: that flag overwrites a duplicate page, and
+        the refusal here is not about a collision.
+      - >-
+        The refusal cost a second fix to reach the caller at all. `cli.main`
+        resolved the tree it reads as `__file__.parent.parent`, which was the
+        repository root while the command line lived in `.meta/wikisplain.py`
+        and became `.meta/lib` when it moved to `.meta/lib/wikisplain/cli.py`,
+        so every read went to a directory with no `wiki/` and no
+        `.meta/assertions/`. The root is now `parents[3]`, named once at module
+        level, and two probes go through `cli.main` rather than round it.
+      - >-
+        A synonym the vocabulary neither mints nor forbids stays legal, which is
+        the whole of the difference between this and equality with
+        `alt_labels`. Nothing asks a page to justify one.
+      - >-
+        `.meta/lib/search/build.py` is untouched. It still scrapes every `- `
+        item out of the frontmatter block rather than reading the `synonyms`
+        key, so a second list-valued key added to the frontmatter would be
+        indexed at title weight too. That is a separate defect and the gate step
+        does not cover it.
+    falsifier: >-
+      A wiki page on the trunk whose `synonyms` name a word its own concept's
+      `avoid` list forbids, or a `just search` for such a word answering with
+      that page. Equally, a page refused a findable synonym that the vocabulary
+      does not forbid, which would mean the rule had become equality with
+      `alt_labels` after all.
+    rationale: |-
+      Two lists that contradict each other are one list too many, and this pair
+      contradicted in the direction that costs most: the forbidden word was not
+      merely written down but promoted to the top weight of the retrieval
+      surface, so the vocabulary's own tooling argued against the vocabulary.
+      Disjointness rather than equality is the narrower claim, and it is the one
+      the evidence supports. Every observed failure was a page carrying a word
+      the concept forbids; none was a page carrying a word the concept merely
+      does not mint. A rule wider than its evidence would have forbidden the
+      useful case to catch the harmful one, and the useful case — a reader
+      arriving with a word from outside — is the reason a `synonyms` field
+      exists at all.

@@ -5,7 +5,8 @@ and each of these probes is over one of them: a history log parsed for its
 entries and the Evidence they name (solorepo's DR-171), a withdrawn Decision of the
 record asked for the reason its `WITHDRAWN` status owes under
 `.meta/work/decisions.yaml`, and a wiki page held to closed-world wikilinks, a
-MOS:LEAD lead and vocabulary parity (solorepo's DR-185, solorepo's DR-190) —
+MOS:LEAD lead, vocabulary parity and synonyms its concept does not forbid
+(solorepo's DR-185, solorepo's DR-190, solorepo's DR-231) —
 together with the authoring tool that scaffolds such a page, which is a probe
 over the wiki's form and not over a tool beside the gate (solorepo's DR-187).
 One further probe is over the form the prose in all three containers carries:
@@ -18,6 +19,9 @@ gate over assertions should not take its imports from a test suite
 (solorepo's DR-150).
 """
 import collections
+import contextlib
+import io
+import types
 
 from checks import citations, files, graph
 from checks.collect import META, ROOT, check
@@ -92,25 +96,29 @@ def withdrawn_decisions_probes():
 
 @check("wiki probes", pre=True)
 def wiki_probes():
-    """Observed failure and concordance for wikilinks, MOS:LEAD lead paragraphs and vocabulary parity (A2, solorepo's DR-185, solorepo's DR-190).
+    """Observed failure and concordance for wikilinks, MOS:LEAD lead paragraphs, vocabulary parity and forbidden synonyms (A2, solorepo's DR-185, solorepo's DR-190, solorepo's DR-231).
 
-    One index stands for the record: a concept, a discipline and a Decision.
-    Each case gives one of `files.wikilinks`, `files.wiki_lead_paragraphs` or
-    `files.ubiquitous_language_wiki_parity` that index and a tree of
+    One index stands for the record: a concept carrying an `avoid` list, a
+    discipline and a Decision. Each case gives one of `files.wikilinks`,
+    `files.wiki_lead_paragraphs`, `files.ubiquitous_language_wiki_parity` or
+    `files.wiki_synonyms_are_not_avoided` that index and a tree of
     `FakeWikiPath` pages, and expects either a finding carrying a given text or
     no finding at all. A wikilink resolves against the index, the pages given,
     and the wiki on disk under `ROOT`; the case gives the scoped
     `[[solorepo/knowledge-management]]` its page so that it holds on a tree
     that lacks one; a code fence and inline backticks hide a wikilink from
     the check; `README.md` is exempt from the lead rule; frontmatter may stand
-    ahead of the heading (solorepo's DR-187); and a domain page with no minted
+    ahead of the heading (solorepo's DR-187); a domain page with no minted
     concept fails parity where solorepo pages of a minted discipline and
-    concept pass (solorepo's DR-190).
+    concept pass (solorepo's DR-190); and a page declaring an avoided word as a
+    synonym fails where one declaring an unminted word passes, since parity is
+    owed to the `avoid` list and not to `alt_labels` (solorepo's DR-231).
     """
     index = {
         "work:concept/ubiquitous-language": (
             "Concept",
-            {"id": "work:concept/ubiquitous-language", "pref_label": "Ubiquitous Language"},
+            {"id": "work:concept/ubiquitous-language", "pref_label": "Ubiquitous Language",
+             "avoid": ["Shared Glossary"]},
             "vocabulary.yaml",
         ),
         "work:discipline/knowledge-management": (
@@ -203,6 +211,24 @@ def wiki_probes():
               "# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n")),
             None,
         ),
+        WikiCase(
+            "a synonym on the concept's own avoid list (solorepo's DR-231)",
+            files.wiki_synonyms_are_not_avoided,
+            (("wiki/solorepo/ubiquitous-language.md",
+              "---\nslug: ubiquitous-language\ncontext: solorepo\nsynonyms:\n  - shared glossary\n"
+              "minted: 2026-09-18\n---\n\n# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n"),),
+            "is on work:concept/ubiquitous-language's avoid list",
+        ),
+        WikiCase(
+            "a synonym the vocabulary neither mints nor forbids (solorepo's DR-231)",
+            files.wiki_synonyms_are_not_avoided,
+            (("wiki/solorepo/ubiquitous-language.md",
+              "---\nslug: ubiquitous-language\ncontext: solorepo\nsynonyms:\n  - domain dialect\n"
+              "minted: 2026-09-18\n---\n\n# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n"),
+             ("wiki/solorepo/knowledge-management.md",
+              "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n")),
+            None,
+        ),
     )
     problems = []
     for case in cases:
@@ -218,9 +244,9 @@ def wiki_probes():
 
 @check("wikisplain probes", pre=True)
 def wikisplain_probes():
-    """`.meta/wikisplain.py` slugifies a title, formats a MOS:LEAD lead, finds a duplicate, and scaffolds a page that passes its own verification (solorepo's DR-187).
+    """`.meta/wikisplain.py` slugifies a title, formats a MOS:LEAD lead, finds a duplicate, refuses a forbidden synonym, and scaffolds a page that passes its own verification (solorepo's DR-187, solorepo's DR-231).
 
-    Six of the tool's acts, each called directly:
+    Eight of the tool's acts, each called directly or through `cli.main`:
     `slugify` on a two-word title; `format_lead_sentence` on a title and a
     definition, which must read as one bold copular sentence; `find_duplicates`
     on a discipline the wiki already holds a page for, which must be found
@@ -232,9 +258,15 @@ def wikisplain_probes():
     self-referencing wikilink to it, which must raise no warning either —
     `verify_page` reads its own identity off `rel_path`'s stem rather than
     re-slugifying the title, so the two can diverge without false-positiving
-    (solorepo's #617). The last four read the tree at `ROOT`, so they hold
-    only while `wiki/solorepo/` holds the pages the tool links a new page to
-    by default.
+    (solorepo's #617); and `cli.main`, which is where the tree the tool reads is
+    resolved rather than passed: `--check-duplicate` on a concept the wiki and
+    the vocabulary both hold, and a scaffold whose `--synonyms` name an avoided
+    word. Each must exit 1, and the second is given `--force` and `--dry-run`,
+    so it is refused for the avoid list rather than for the collision and
+    nothing is written. Their output is captured, because the gate reads this
+    process's stdout for A21's shapes. The tree-reading cases hold only while
+    `wiki/solorepo/` holds the pages the tool links a new page to by default
+    and the vocabulary holds `work:concept/challenge`.
     """
     wikisplain = load_module(META / "wikisplain.py", "wikisplain")
     problems = []
@@ -247,6 +279,9 @@ def wikisplain_probes():
     dups = wikisplain.find_duplicates("Knowledge Management", root=ROOT)
     if not any(d["source"] == "wiki" for d in dups):
         problems.append(f"find_duplicates: expected wiki duplicate for 'Knowledge Management', got {dups!r}")
+    avoided = wikisplain.avoided_synonyms("challenge", ["Ticket", "unit of work"], root=ROOT)
+    if [a["synonym"] for a in avoided] != ["Ticket"]:
+        problems.append(f"avoided_synonyms: expected 'Ticket' alone to be refused, got {avoided!r}")
     content = wikisplain.generate_page(
         wikisplain.Page(title="Test Wiki Concept", context="solorepo",
                         definition="a synthetic concept for gate validation"),
@@ -273,6 +308,24 @@ def wikisplain_probes():
         problems.append(
             f"verify_page: self-reference under a custom --slug false-positived: {self_ref_verif!r}"
         )
+    problems.extend(cli_probes(wikisplain))
+    return problems
+
+
+def cli_probes(wikisplain: types.ModuleType) -> list[str]:
+    """`cli.main` refusing a collision and an avoided synonym, each read from its exit code with its output captured (solorepo's DR-187, solorepo's DR-231)."""
+    problems = []
+    for name, argv in (
+        ("a concept the wiki and the vocabulary both hold",
+         ["Knowledge Management", "--check-duplicate"]),
+        ("a synonym on the concept's avoid list, past --force",
+         ["Challenge", "--slug", "challenge", "--synonyms", "ticket", "--force", "--dry-run"]),
+    ):
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            code = wikisplain.main(argv)
+        if code != 1:
+            problems.append(f"cli.main: {name}: expected exit 1, got {code} saying {said.getvalue()!r}")
     return problems
 
 

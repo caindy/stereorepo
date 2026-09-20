@@ -1,4 +1,4 @@
-"""The search for a concept already on a page, by title, alias and lead, before a second page is scaffolded.
+"""The search for a concept already on a page, by title, alias and lead, before a second page is scaffolded — and for the words that concept's `avoid` list forbids a page to carry.
 """
 from __future__ import annotations
 
@@ -91,6 +91,36 @@ def discipline_duplicates(root_path: pathlib.Path, target_slug: str, target_norm
                 found.append({"source": "discipline", "id": d_id, "label": d_name,
                               "path": str(d_path.relative_to(root_path)),
                               "details": f"Discipline in assertions: {d.get('description', '')[:80]}..."})
+    return found
+
+
+def avoided_synonyms(
+    slug: str, synonyms: list[str], root: pathlib.Path
+) -> list[dict[str, Any]]:
+    """The proposed `synonyms` of the concept minted at `slug` that its own `avoid` list forbids, read from the vocabularies under `root` (solorepo's DR-231).
+
+    One item per forbidden synonym, each giving the `synonym` as proposed, the
+    `avoid` entry it matches, the concept's `id`, and the vocabulary `path` that
+    forbids it. Matching is on the slugified word, so spacing and case do not
+    let a forbidden word through. A slug the vocabulary does not mint, and a
+    concept with no `avoid` list, both yield nothing. `root` is required rather
+    than defaulted: the tool's default root was wrong for as long as this file
+    has been where it is, which is what `.meta/wikisplain.history.md` records.
+    """
+    proposed = {lead.slugify(s): s for s in synonyms}
+    found: list[dict[str, Any]] = []
+    for v_path in (root / ".meta" / "assertions" / "imported" / "vocabulary.yaml",
+                   root / ".meta" / "assertions" / "vocabulary.yaml",
+                   root / ".meta" / "assertions" / "domain_vocabulary.yaml"):
+        for item in loaded(v_path).get("concept_set") or []:
+            item_id = str(item.get("id") or "")
+            if item_id.rsplit("/", 1)[-1].lower() != slug.lower():
+                continue
+            for word in item.get("avoid") or []:
+                synonym = proposed.get(lead.slugify(str(word)))
+                if synonym is not None:
+                    found.append({"synonym": synonym, "avoid": str(word), "id": item_id,
+                                  "path": str(v_path.relative_to(root))})
     return found
 
 

@@ -104,3 +104,22 @@ composite actions, shell scripts, and recipes, rejecting embedded Python
 invocations and requiring dedicated `.meta/` scripts or CLI flags.
 
 Evidence: `.meta/checks/files/workflows.py::no_inline_python`
+
+### A wiki page declaring the words its own concept forbids
+
+A page's frontmatter `synonyms` and its concept's `avoid` list were both
+machine-readable and nothing compared them:
+`ubiquitous_language_wiki_parity` reads slugs against minted identifiers in
+both directions and reads neither list. Both pages minted in
+caindy/solorepo#581 declared as synonyms words their concept forbids —
+`wiki/solorepo/claim.md` carried `work:concept/claim`'s whole `avoid` list,
+word for word and in order — and the gate stayed green while the reviewer
+caught them (solorepo's DR-231, solorepo's #594). The cost is retrieval:
+`.meta/lib/search/build.py` folds a frontmatter list item into the title field
+of the BM25 index, which is the highest weight it carries, so the search
+answered with the page for the forbidden word. Established:
+`wiki_synonyms_are_not_avoided` reads every page's `synonyms` against the
+`avoid` list of the concept, discipline or domain concept minted at its slug,
+matched on the slugified word.
+
+Evidence: `.meta/checks/files/wiki.py::wiki_synonyms_are_not_avoided`

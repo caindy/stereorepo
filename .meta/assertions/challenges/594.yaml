@@ -1,0 +1,19 @@
+challenges:
+  - id: work:challenge/594
+    name: A wiki page's synonyms can be its concept's avoid list, and the BM25 title index takes them
+    challenge_type: DEFECT
+    description: >-
+      A wiki page can declare, as frontmatter `synonyms`, the very words its
+      concept's `avoid` list forbids, and nothing catches it. Both pages minted
+      in caindy/solorepo#581 did: `wiki/solorepo/claim.md` carried `[assertion,
+      statement, hypothesis]`, which is `work:concept/claim`'s `avoid` list word
+      for word and in order, and `wiki/solorepo/evidence.md` carried `[grounds,
+      receipt]`, `receipt` being the word that change retired.
+      `ubiquitous_language_wiki_parity` compares slugs against minted
+      identifiers in both directions and reads neither list, so the two can
+      contradict each other completely and the step still passes. The list has a
+      consumer: `.meta/lib/search/build.py` folds every frontmatter list item
+      into the title field of the BM25 index, which is the highest weight it
+      carries, so `just search assertion` returns the page for a word Article 17
+      exists to stop denoting the concept. Both vocabularies are already
+      machine-readable, so the test is a set intersection.
