@@ -3,6 +3,7 @@
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 import datetime
+import sys
 from typing import Any
 
 from checks import citations
@@ -71,6 +72,7 @@ def handoff_probes():
     move.MERGEABILITY = (3, 0)
     check_pr = citations.load_check_pr()
     return (_request_review_cases(channel, move) + _watch_cases(check_pr)
+            + _watch_failure_cases(check_pr) + _watch_recovery_cases(check_pr)
             + _unheld_armed_cases(check_pr) + _unheld_idle_cases(check_pr))
 
 
@@ -137,6 +139,76 @@ def _watch_cases(check_pr: Any) -> list[str]:
     if len(changes) != 1 or "CONFLICTING" not in changes[0]:
         problems.append(f"watch: a watch headed `UNKNOWN` reported {changes!r}, and the answer "
                         "that followed is the only one it could have said")
+
+    return problems
+
+
+def _watch_failure_cases(check_pr: Any) -> list[str]:
+    """`--watch` failing fast on fatal environment errors and tripping the circuit breaker."""
+    problems: list[str] = []
+
+    def fatal_gh(*args: Any) -> Any:
+        sys.exit("gh: fatal: Unable to read current working directory: No such file or directory")
+
+    with stood_in(check_pr.github, gh=fatal_gh):
+        fatal_res = outcome(lambda: check_pr.watch("7", every=0))
+    if not fatal_res.code or "fatal poll error" not in str(fatal_res.code):
+        problems.append(f"watch: fatal poll error did not exit immediately: {fatal_res.code!r}")
+
+    def transient_gh(*args: Any) -> Any:
+        sys.exit("gh: GraphQL: connection timeout")
+
+    with stood_in(check_pr.github, gh=transient_gh):
+        breaker_res = outcome(lambda: check_pr.watch("7", every=0, max_retries=3))
+    if not breaker_res.code or "circuit broken after 3 retries" not in str(breaker_res.code):
+        problems.append(f"watch: circuit breaker did not trip after 3 retries: {breaker_res.code!r}")
+
+    return problems
+
+
+def _watch_recovery_cases(check_pr: Any) -> list[str]:
+    """`--watch` recovering from transient poll failures and resetting the retry counter."""
+    problems: list[str] = []
+
+    sequence: list[tuple[str, str] | None] = [
+        None,
+        ("OPEN", "MERGEABLE"),
+        None,
+        ("OPEN", "MERGEABLE"),
+        None,
+        ("OPEN", "MERGEABLE"),
+        None,
+        ("MERGED", "MERGEABLE"),
+    ]
+
+    def alternating_gh(*args: Any) -> Any:
+        if args[:2] == ("repo", "view"):
+            return {"nameWithOwner": "o/r"}
+        if args[:2] == ("pr", "view"):
+            if args[-1] == "number":
+                return {"number": 7}
+            if not sequence:
+                return {"number": 7, "state": "MERGED", "comments": [], "reviews": [], "mergeable": "MERGEABLE"}
+            item = sequence.pop(0)
+            if item is None:
+                sys.exit("gh: temporary network glitch")
+            state, mergeable = item
+            return {"number": 7, "state": state, "comments": [], "reviews": [], "mergeable": mergeable}
+        if args[0] == "api":
+            return {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": []}, "reviews": {"nodes": []}}}}}
+        raise AssertionError(f"unexpected call: {args}")
+
+    with stood_in(check_pr.github, gh=alternating_gh):
+        alternating_res = outcome(lambda: check_pr.watch("7", every=0, max_retries=3))
+    if alternating_res.code is not None or "pr MERGED" not in alternating_res.out:
+        problems.append(
+            f"watch: failures separated by successes tripped circuit breaker: code={alternating_res.code!r} out={alternating_res.out!r}"
+        )
+    if alternating_res.err.count("? poll skipped") != 4:
+        problems.append(
+            f"watch: alternating retry did not report expected 4 skipped polls: {alternating_res.err!r}"
+        )
+
     return problems
 
 

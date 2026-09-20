@@ -148,3 +148,17 @@ step goes back to counting threads inline.
 
 Evidence: `.meta/checks/files/workflows.py::no_inline_python`
 
+
+### Unbounded watcher retry loop on fatal errors and persistent polling failures
+
+Catching `SystemExit` unconditionally without backoff or error classification in
+`watch()` caused background watchers to spin indefinitely when encountering fatal
+environment failures (such as pruned worktrees or missing working directories) or
+unrecoverable GitHub errors, hanging background processes and preventing reactive
+agent harnesses from receiving task exit signals (solorepo's #683).
+Established: `watch()` classifies unrecoverable environment errors to fail fast,
+applies exponential backoff to transient failures, and terminates via a circuit
+breaker when retry attempts after a failed poll are exhausted.
+
+Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
+

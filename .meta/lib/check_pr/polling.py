@@ -163,12 +163,53 @@ def changes_since(current: Snapshot, previous: Snapshot, merges: str | None) -> 
     return actionable
 
 
-def watch(ref: str | int, every: int = 60) -> None:
-    """Monitors a pull request for changes, printing events and exiting on actionable signals.
+FATAL_POLL_PATTERNS: tuple[str, ...] = (
+    "unable to read current working directory",
+    "no such file or directory",
+    "could not resolve to a repository",
+    "could not resolve to a pullrequest",
+    "pull request not found",
+    "repository not found",
+    "authentication required",
+    "bad credentials",
+    "must authenticate",
+    "command not found",
+    "permission denied",
+)
+
+
+def is_fatal_poll_error(exc: SystemExit) -> bool:
+    """Matches a subprocess failure against known fatal stderr strings in FATAL_POLL_PATTERNS.
+
+    Performs a case-insensitive substring search of `str(exc)` against
+    `FATAL_POLL_PATTERNS`. Because `github.gh` raises `SystemExit` containing
+    the raw stderr of `gh`, this is a heuristic over CLI and remote API prose
+    outside local control; any fatal error reworded upstream will not match and
+    will fall back to the transient retry loop.
+
+    Args:
+        exc: Subprocess exit exception from `github.gh`.
+
+    Returns:
+        bool: True if the exception message contains any pattern in `FATAL_POLL_PATTERNS`.
+    """
+    msg = str(exc).lower()
+    return any(pattern in msg for pattern in FATAL_POLL_PATTERNS)
+
+
+def watch(ref: str | int, every: int = 60, max_retries: int = 5,
+          max_backoff: int = 300) -> None:
+    """Monitors a pull request for changes, printing events and exiting on actionable signals or fatal errors.
 
     Args:
         ref: Pull request number, URL, or head branch reference.
         every: Polling frequency in seconds (default: 60).
+        max_retries: Maximum number of retry attempts after a failed poll before the circuit breaker trips (default: 5).
+        max_backoff: Maximum exponential backoff delay in seconds between retries (default: 300).
+
+    Raises:
+        SystemExit: Non-zero exit when `snapshot` encounters an unrecoverable fatal error
+            matched by `is_fatal_poll_error`, or when consecutive poll failures exhaust `max_retries`.
 
     Mergeability is remembered as the last answer GitHub gave, apart from the
     snapshot, because `UNKNOWN` is not a state of the branch but GitHub
@@ -184,13 +225,29 @@ def watch(ref: str | int, every: int = 60) -> None:
     import time
     previous: Snapshot | None = None
     merges: str | None = None
+    retries: int = 0
+    ref_name = f"#{str(ref).lstrip('#')}" if str(ref).lstrip("#").isdigit() else str(ref)
     while True:
         try:
             current = snapshot(ref)
         except SystemExit as e:
-            print(f"? poll skipped: {e}", file=sys.stderr)
-            time.sleep(every)
+            if is_fatal_poll_error(e):
+                sys.exit(f"watch exiting on {ref_name}: fatal poll error: {e}")
+            if retries >= max_retries:
+                sys.exit(
+                    f"watch exiting on {ref_name}: circuit broken after "
+                    f"{retries} retries: {e}"
+                )
+            retries += 1
+            delay = min(every * (2 ** (retries - 1)), max_backoff)
+            print(
+                f"? poll skipped ({retries}/{max_retries}): "
+                f"{e} (retrying in {delay}s)",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
             continue
+        retries = 0
         number, state, _, _, threads_, checks, mergeable = current
         if previous is None:
             owed = len(review.unaddressed(list(threads_.values())))

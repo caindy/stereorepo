@@ -46,6 +46,8 @@ def parser(description: str) -> argparse.ArgumentParser:
     ap.add_argument("--watch", action="store_true",
                     help="one line per change on the pull request, exiting on actionable events or when it closes")
     ap.add_argument("--every", type=int, default=60, help="seconds between polls under --watch")
+    ap.add_argument("--retries", type=int, default=5,
+                    help="maximum retry attempts after a failed poll under --watch before circuit breaker trips")
     ap.add_argument("--all", action="store_true",
                     help="the check on every open pull request, one line each, and who "
                          "holds each one next")
@@ -108,7 +110,8 @@ def main(description: str) -> None:
         (args.hand_back, False, lambda: print(json.dumps(sweep.hand_back(args.hand_back)))),
         (args.sweep, False, print_sweep),
         (args.handoff, False, lambda: sys.exit(branch.handoff(args.base))),
-        (args.watch, "--watch", lambda: polling.watch(args.pr, args.every)),
+        (args.watch, "--watch",
+         lambda: polling.watch(args.pr, args.every, max_retries=args.retries)),
         (args.resume, "--resume", lambda: print(polling.resume(args.pr))),
         (args.threads, "--threads", lambda: print_threads(args.pr)),
         (args.unresolved_count, "--unresolved-count",
