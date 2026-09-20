@@ -98,7 +98,7 @@ def residue() -> list[str]:
                               "--state", "all", "--json", "number,state")
         except SystemExit as unreadable:
             state = "pull request unreadable"
-            refusal = " ".join(str(unreadable.code).split())
+            refusal = github.reason(unreadable)
         else:
             state = (f"#{found[0]['number']} {found[0]['state'].lower()}"
                      if found else "no pull request")

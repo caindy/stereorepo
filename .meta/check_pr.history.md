@@ -162,3 +162,18 @@ breaker when retry attempts after a failed poll are exhausted.
 
 Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
 
+
+### The sweep's other pull request lookup still ended the whole sweep
+
+`print_sweep()` asks `owned_and_open()` what this branch owns before it asks
+`residue()` what outlived its pull request, and that first question makes the
+same `gh pr list --head <branch>` call against the same process-exiting
+`github.gh`. Protecting the residue lookup alone left the symptom a second path
+to it: standing on the branch GitHub will not answer for, the sweep exited
+before the residue ran (solorepo's #578, solorepo's #579). Established: the
+sweep's GitHub half reports itself unreadable and names the refusal, rather
+than returning an empty list that reads as a branch owning nothing, and the
+residue prints under it either way.
+
+Evidence: `.meta/lib/check_pr/cli.py::print_sweep`
+

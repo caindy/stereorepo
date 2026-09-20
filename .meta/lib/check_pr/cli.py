@@ -57,18 +57,31 @@ def parser(description: str) -> argparse.ArgumentParser:
 
 
 def print_sweep() -> None:
-    """What this branch owns and what each open pull request still owes, then the branches that outlived their pull request."""
-    head, found = branch.owned_and_open()
-    if not found:
-        print(f"no open pull request for branch '{head}'" if head
-              else "no open pull requests")
-    for number, title, owed in found:
-        if owed is None:
-            print(f"#{number} {title} — open, and not this branch's")
-            continue
-        print(f"#{number} {title} — {len(owed)} unaddressed")
-        for item in owed:
-            print(item)
+    """What this branch owns and what each open pull request still owes, then the branches that outlived their pull request.
+
+    The two halves fail apart. What GitHub answers for is asked first and is
+    reported unreadable when it will not, naming what it refused with, because
+    a silent empty list here reads as a branch that owns nothing. The residue
+    below reads the tree, so the branches an operator came to remove print
+    either way.
+    """
+    try:
+        head, found = branch.owned_and_open()
+    except SystemExit as unreadable:
+        print("?  open pull requests are not readable from here; "
+              "what this branch owns is unchecked")
+        print(f"   {github.reason(unreadable)}")
+    else:
+        if not found:
+            print(f"no open pull request for branch '{head}'" if head
+                  else "no open pull requests")
+        for number, title, owed in found:
+            if owed is None:
+                print(f"#{number} {title} — open, and not this branch's")
+                continue
+            print(f"#{number} {title} — {len(owed)} unaddressed")
+            for item in owed:
+                print(item)
     left = branch.residue()
     if left:
         print(f"\n--- residue: {sum(1 for line in left if not line.startswith('    '))} "

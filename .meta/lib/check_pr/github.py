@@ -109,6 +109,16 @@ def gh(*args: str) -> Any:
     return json.loads(out.stdout)
 
 
+def reason(exc: SystemExit) -> str:
+    """Names what `gh` refused with, on one line.
+
+    Returns:
+        str: The stderr `gh` exited on, its newlines and runs of space collapsed,
+            so that a caller degrading rather than exiting spends one line on why.
+    """
+    return " ".join(str(exc.code).split())
+
+
 def repo() -> str:
     """Determines the current GitHub repository slug from environment, CLI, or git remote."""
     repo_name = os.environ.get("GITHUB_REPOSITORY")
