@@ -215,6 +215,61 @@ def _refused_dispatch_is_the_sweeps_own_problem(channel, move) -> list[str]:
     return problems
 
 
+def _refused_re_request_is_the_sweeps_own_problem(channel, move) -> list[str]:
+    problems: list[str] = []
+    stranded = {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
+                "requested": ["o-r-reviewer"],
+                "checks": [{"name": "reviewer", "conclusion": "FAILURE"}]}
+    fake = FakeGitHub({7: dict(stranded), 8: dict(stranded)}, no_edit=[7])
+    said = run_verb(channel, fake, lambda: move.advance())
+    if "8" not in fake.edited or "o-r-reviewer" not in (fake.pulls["8"].get("requested") or []):
+        problems.append(f"advance: a refused re-request left the rest at {fake.edited!r}")
+    if not said or "#7" not in said:
+        problems.append(f"advance: a refused re-request exited with {said!r}, so a sweep that "
+                        "left a review request stranded reports the colour of one that "
+                        "re-requested it")
+    return problems
+
+
+def _re_request_not_sticking_is_one_pull_requests_line(channel, move) -> list[str]:
+    problems: list[str] = []
+    stranded = {"behind": 0, "armed": False, "mergeable": "MERGEABLE",
+                "requested": ["o-r-reviewer"],
+                "checks": [{"name": "reviewer", "conclusion": "FAILURE"}]}
+    fake = FakeGitHub({7: dict(stranded), 8: dict(stranded)}, no_edit_sticks=[7])
+    said = swept(channel, move, fake, problems)
+    if "8" not in fake.edited or "o-r-reviewer" not in (fake.pulls["8"].get("requested") or []):
+        problems.append(f"advance: a non-sticking re-request left the rest at {fake.edited!r}")
+    if "#7" not in said:
+        problems.append(f"advance: a non-sticking re-request reported {said!r}, so the pull "
+                        "request left with a stranded review is named nowhere")
+    return problems
+
+
+def _merged_pull_request_stranded_review_is_one_pull_requests_line(channel, move) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({
+        7: {
+            "behind": 0, "armed": False, "mergeable": "MERGEABLE",
+            "state": "MERGED",
+            "requested": ["o-r-reviewer"],
+            "checks": [{"name": "reviewer", "conclusion": "FAILURE"}],
+        },
+        8: {
+            "behind": 0, "armed": False, "mergeable": "MERGEABLE",
+            "requested": ["o-r-reviewer"],
+            "checks": [{"name": "reviewer", "conclusion": "FAILURE"}],
+        },
+    })
+    said = swept(channel, move, fake, problems)
+    if "8" not in fake.edited or "o-r-reviewer" not in (fake.pulls["8"].get("requested") or []):
+        problems.append(f"advance: a merged pull request left the rest at {fake.edited!r}")
+    if not said or "#7" not in said or "merged, not open" not in said:
+        problems.append(f"advance: a merged pull request reported {said!r}, so the line "
+                        "preventing a false red write is named nowhere")
+    return problems
+
+
 def _refused_mergeability_read_is_one_pull_requests_line(channel, move) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
@@ -379,21 +434,25 @@ def dispatch_probes() -> list[str]:
       event on it, or for a Challenge the loop does not hold — `hard`,
       closed, `human`, which is what `stop` leaves, or unreadable, which is
       an Issue deleted or transferred under its branch (solorepo's DR-142).
-      A refused dispatch is the sweep's own problem rather than one pull
-      request's, and it is told apart by which call it is — a write the sweep
-      makes on a pull request's behalf, whose refusal no state of that pull
-      request caused — rather than by what GitHub said, the coder token
-      without the Actions write being one cause among them. The case refuses
-      the dispatch for one of two conflicting pull requests: the sweep
-      dispatches for the other and then exits naming the one whose pass never
-      started (solorepo's DR-238).
+      A refused write is the sweep's own problem rather than one pull
+      request's, the refusal here being the token without the write it
+      needs, which no pull request's state can cause and which stops the
+      write taking for any of them: the sweep goes on to the rest and then
+      exits naming the one it could not write for (solorepo's DR-238). Both
+      writes it makes are held that way — the `coder.yml` dispatch, whose
+      pass never starts, and the `pr edit` that re-requests a stranded
+      review, which leaves the request stranded (solorepo's #656).
       A refused read of whether a branch still merges is the other way round,
       and one pull request's line: `mergeability` re-reads GitHub for an
       `UNKNOWN` answer, which is what GitHub says while it computes a merge
       ref and so is routine on the push this runs on, and that re-read fails
       the ordinary way — so the pull request it was refused for is named in
       the report and the one behind it in the list is still dispatched for
-      (solorepo's #655).
+      (solorepo's #655). A re-request that does not stick is one pull request's
+      line too: `request_review` reads back the requested reviewers after
+      writing them, and if GitHub does not show the assignment the write was
+      refused for that pull request alone — so it is named in the printed report
+      and leaves the sweep green (solorepo's #656).
       Neither `merge --auto`, which holds the branch it is arming, nor a
       typed `advance <n>`, which names one somebody is asking about,
       dispatches, since neither is the merge on `main` that stranded a
@@ -429,8 +488,8 @@ def dispatch_probes() -> list[str]:
     the verb printed rather than what it exited with, through `swept` from
     `probes/loops/advance.py`, which also holds the sweep's exit code green
     (solorepo's DR-238); `run_verb` reads the exit in the cases that name one
-    pull request, where the exit code is the answer, and in the refused
-    dispatch, where the failure is the sweep's own and the exit code is the
+    pull request, where the exit code is the answer, and in the two refused
+    writes, where the failure is the sweep's own and the exit code is the
     assertion. The fake's repository is `o/r`, so the reviewer's login is
     `o-r-reviewer`, as `channel.role_login` composes it (solorepo's DR-107).
     """
@@ -454,7 +513,10 @@ def dispatch_probes() -> list[str]:
         _lower_layer_of_a_stack_left_alone(channel, move),
         _challenges_the_loop_does_not_hold(channel, move),
         _refused_dispatch_is_the_sweeps_own_problem(channel, move),
+        _refused_re_request_is_the_sweeps_own_problem(channel, move),
         _refused_mergeability_read_is_one_pull_requests_line(channel, move),
+        _re_request_not_sticking_is_one_pull_requests_line(channel, move),
+        _merged_pull_request_stranded_review_is_one_pull_requests_line(channel, move),
         _named_and_merge_auto_dispatch_nothing(channel, move),
         _named_conflicting_pull_request_refused(channel, move),
         _dispatch_review_on_a_standing_verdict(channel, move, reviewer),

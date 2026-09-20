@@ -91,7 +91,7 @@ def _request_review_cases(channel: Any, move: Any) -> list[str]:
     if fake.pulls["7"].get("requested"):
         problems.append(f"request-review: a conflicting branch was requested of "
                         f"{fake.pulls['7']['requested']!r}, and no review can run on it")
-    if not said or "claude/issue-6" not in said or "no merge ref" not in said:
+    if not said or "claude/issue-6" not in said or "claude/issue-7" not in said or "no merge ref" not in said:
         problems.append(f"request-review: the refusal on a conflicting branch was {said!r}, "
                         "which does not name the rebase that lifts it")
 

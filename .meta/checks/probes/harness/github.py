@@ -93,7 +93,11 @@ class FakeGitHub:
       without the Actions write it needs.
     - `no_stack`: the stack whose bottom layer has this number refuses its
       cascading rebase before moving any layer.
-    - `no_edit`: `pr edit` exits with GitHub's refusal over reviewer assignment.
+    - `no_edit`: `pr edit` exits as GitHub answers a token without the
+      repository write a review request needs.
+    - `no_edit_sticks`: `pr edit` exits 0 and the reviewer assignment does not
+      take — the one reviewer-request outcome an exit code cannot see, and so
+      the only one a read-back is for.
     - `no_view`: `pr view` of that number exits with a transport failure, which
       is how the re-read `mergeability` makes for an `UNKNOWN` answer fails.
       `pr list` still answers for it, since the list is one call for every pull
@@ -130,8 +134,9 @@ class FakeGitHub:
     no_dispatch: set[str]
     no_stack: set[str]
     no_edit: set[str]
+    no_edit_sticks: set[str]
     no_view: set[str]
-    REFUSALS = ("no_rebase", "no_arm", "no_stick", "lands", "blip", "no_dispatch", "no_stack", "no_edit", "no_view")
+    REFUSALS = ("no_rebase", "no_arm", "no_stick", "lands", "blip", "no_dispatch", "no_stack", "no_edit", "no_edit_sticks", "no_view")
     """The keywords `__init__` takes beside `pulls`, each the numbers one call answers as the class docstring says."""
 
     def __init__(self, pulls: dict[int, dict[str, Any]], **refused: list[int]) -> None:
@@ -306,7 +311,7 @@ class FakeGitHub:
         return ""
 
     def edit(self, args):
-        """`pr edit`: refused for a number in `no_edit`; otherwise `--remove-reviewer` and `--add-reviewer` applied to `requested`, the number recorded in `edited`."""
+        """`pr edit`: refused for a number in `no_edit`; otherwise `--remove-reviewer` and `--add-reviewer` applied to `requested` (unless in `no_edit_sticks`), the number recorded in `edited`."""
         number = str(args[2])
         if number in self.no_edit:
             sys.exit("gh: Could not add requested reviewers")
@@ -318,7 +323,8 @@ class FakeGitHub:
                 who = args[args.index(flag) + 1]
                 if flag == "--remove-reviewer" and who in asked:
                     asked.remove(who)
-                elif flag == "--add-reviewer" and who not in asked:
+                elif (flag == "--add-reviewer" and who not in asked
+                      and number not in self.no_edit_sticks):
                     asked.append(who)
         pull["requested"] = asked
         return ""

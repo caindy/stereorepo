@@ -401,10 +401,26 @@ def _stack_review_renewal_failure_is_reported(channel: Any, move: Any) -> list[s
         root: {"behind": 0, "armed": True, "layer": True},
         layer: {"behind": 1, "armed": False, "layer": True, "base": f"claude/issue-{root}",
                 "requested": ["o-r-reviewer"], "drops_review": True},
-    }, no_edit=[layer])
+    }, no_edit_sticks=[layer])
     said = swept(channel, move, fake, problems)
     if not said or f"#{layer} lost its review request during #{root}'s stack advance" not in said:
         problems.append(f"advance: review renewal failure was reported as {said!r}")
+    return problems
+
+
+def _refused_stack_review_renewal_is_the_sweeps_own_problem(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    root, layer = 7, 8
+    fake = FakeGitHub({
+        root: {"behind": 0, "armed": True, "layer": True},
+        layer: {"behind": 1, "armed": False, "layer": True, "base": f"claude/issue-{root}",
+                "requested": ["o-r-reviewer"], "drops_review": True},
+    }, no_edit=[layer])
+    said = run_verb(channel, fake, lambda: move.advance())
+    if not said or f"#{layer}" not in said:
+        problems.append(f"advance: a refused stack review renewal exited with {said!r}, "
+                        "so a sweep that lost a review request during stack advance reports "
+                        "the colour of one that re-requested it")
     return problems
 
 
@@ -580,6 +596,7 @@ def advance_probes() -> list[str]:
         _stack_with_current_upper_layer_advances_both(channel, move),
         _unlinked_chain_swept_rebases_top_layer_and_skips_base(channel, move),
         _stack_review_renewal_failure_is_reported(channel, move),
+        _refused_stack_review_renewal_is_the_sweeps_own_problem(channel, move),
         _conflicting_stack_is_left_for_the_solo(channel, move),
         _merge_auto_after_a_failed_advance(channel, move),
         _merge_auto_over_a_merge_that_landed(channel, move),

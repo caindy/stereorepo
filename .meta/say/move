@@ -1168,7 +1168,7 @@ def stack_root(pull: Pull, pulls: Sequence[Pull]) -> Pull:
 
 
 def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
-                  must_move: Mapping[str, bool]) -> list[str]:
+                  must_move: Mapping[str, bool]) -> tuple[list[str], list[str]]:
     """Advance bottom-first stack `layers` through GitHub and report per-layer failures.
 
     Parameters:
@@ -1177,7 +1177,9 @@ def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
         must_move: Whether each layer was behind its base or sits above a layer that was.
 
     Returns:
-        Per-layer failures found after GitHub's stack transition.
+        tuple[list[str], list[str]]: A pair `(failed, refused)`, where `failed`
+        collects per-layer problems that belong to individual pull requests, and
+        `refused` collects writes GitHub refused that belong to the sweep itself.
 
     Raises:
         SystemExit: If an external GitHub query or command fails outside the rebase sequence.
@@ -1189,9 +1191,10 @@ def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
         channel.gh("stack", "push", parse=False)
     except SystemExit as exc:
         return [f"#{layer['number']} could not advance with #{root}'s stack: {exc.code}"
-                for layer in layers]
+                for layer in layers], []
 
     failed: list[str] = []
+    refused: list[str] = []
     reviewer = channel.role_login("reviewer")
     for layer in layers:
         number = str(layer["number"])
@@ -1211,10 +1214,12 @@ def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
         if reviewer in asked_before and reviewer not in asked_after:
             try:
                 request_review(number, "reviewer")
+            except RequestRefused as exc:
+                refused.append(f"#{number} lost its review request during #{root}'s stack advance and could not be re-requested — {exc.code}")
             except SystemExit as exc:
                 failed.append(f"#{number} lost its review request during #{root}'s stack advance: {exc.code}")
         print(f"advanced #{number} in #{root}'s stack: {layer['title']}")
-    return failed
+    return failed, refused
 
 
 is_approved_pull = check_pr.is_approved_pull
@@ -1318,9 +1323,18 @@ def dispatch(pulls: Sequence[Pull]) -> tuple[list[str], list[str]]:
     and triggers workflow dispatch for rebase passes (solorepo's DR-129, solorepo's DR-133,
     solorepo's DR-149).
 
-    Refusals of `gh workflow run coder.yml` are returned apart from the rest
-    (solorepo's DR-238), and every remaining pull request is read before either
-    list is returned.
+    The two writes the sweep makes on a pull request's behalf are answered for
+    separately from the rest. `gh workflow run coder.yml` fails identically
+    whichever pull request asked for it — the credential without the Actions
+    write, `coder.yml` disabled on the repository. The `pr edit` behind
+    `request_review` fails identically too, for the credential without the
+    repository write or a reviewer who is not a collaborator, which is why
+    `RequestRefused` marks it apart from the reads around it. Neither is one
+    pull request's weather, and a failure of the sweep reached through a
+    per-pull-request arm is an arm catching too much, which is the falsifier
+    solorepo's DR-238 wrote for itself; so the sweep's exit code answers for
+    both. The sweep still reads every remaining pull request before the exit,
+    since reading them is what its colour claims.
 
     A refused read of whether the branch still merges is the opposite case, and
     is one pull request's line: `mergeability` re-reads GitHub whenever the
@@ -1334,11 +1348,8 @@ def dispatch(pulls: Sequence[Pull]) -> tuple[list[str], list[str]]:
         pulls (list[dict]): Open pull request objects returned from GitHub API view.
 
     Returns:
-        tuple[list[str], list[str]]: The problems the caller prints and leaves
-            the sweep green for — a review request that could not be
-            re-requested, a mergeability GitHub would not answer — and the
-            refusals of `gh workflow run coder.yml`, which the caller exits
-            with.
+        tuple[list[str], list[str]]: What each pull request reported about
+            itself, and the refused writes that belong to the sweep.
     """
     failed: list[str] = []
     refused: list[str] = []
@@ -1423,6 +1434,8 @@ def dispatch(pulls: Sequence[Pull]) -> tuple[list[str], list[str]]:
             if reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE":
                 try:
                     request_review(number, "reviewer")
+                except RequestRefused as exc:
+                    refused.append(f"#{number} has a review request stranded and the reviewer could not be re-requested for it — {exc.code}")
                 except SystemExit as exc:
                     failed.append(f"#{number} review request stranded and could not be re-requested — {exc.code}")
                 continue
@@ -1703,7 +1716,9 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
         SystemExit: If an explicit pull request cannot be advanced, if a read the
             sweep itself depends on — the list of open pull requests, the reviewer's
             login — is refused, the requested stack is not linear or linked, or if
-            any `gh workflow run coder.yml` was refused, whatever the refusal said.
+            GitHub refused a write the sweep makes on a pull request's behalf: a
+            `coder.yml` dispatch, or the re-request of a stranded or stack-dropped
+            review. No pull request's own state causes either.
     """
     if pr is not None:
         open_now = [channel.gh("pr", "view", str(pr), "--json", ADVANCE)]
@@ -1721,6 +1736,7 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     ]
     moved, left = 0, 0
     failed: list[str] = []
+    refused: list[str] = []
     advanced_stacks: set[str] = set()
     if not found:
         if pr is not None:
@@ -1756,15 +1772,16 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
                         for layer, (_, behind) in zip(layers, before_and_behind):
                             seen_behind = seen_behind or bool(behind)
                             must_move[str(layer["number"])] = seen_behind
-                        errors = advance_stack(layers, before, must_move)
+                        errors, stack_refused = advance_stack(layers, before, must_move)
                         failed += errors
-                        if not errors:
+                        refused += stack_refused
+                        if not errors and not stack_refused:
                             moved += 1
                         continue
                 if pull["headRefName"] in bases:
                     if pr is not None:
                         sys.exit(f"say: #{pr} is the base of another open pull request; "
-                                 "it is not linked as a GitHub stack and cannot advance atomically (solorepo's DR-243)")
+                                  "it is not linked as a GitHub stack and cannot advance atomically (solorepo's DR-243)")
                     continue
                 # Query head commit state directly to account for preceding wait times.
                 before, behind = head_now(number)
@@ -1816,8 +1833,9 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
             print(f"advance: {len(found) - left} pull request(s) current with their base")
     # Sweep-level pass: dispatch review or rebase tasks for open pull requests.
     if pr is None:
-        reported, refused = dispatch(open_now)
+        reported, dispatch_refused = dispatch(open_now)
         failed += reported
+        refused += dispatch_refused
         # A sweep's exit code answers for the sweep and not for the weather of
         # the pull requests it read (solorepo's DR-238).
         if failed:
@@ -1825,13 +1843,13 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
                   "which the next push to trunk asks about again:")
             for problem in failed:
                 print(f"  {problem}")
-        # A dispatch that would not start is the sweep's own, and red: no coder
-        # pass runs for any pull request the refusal reached, and nothing else
-        # asks again.
+        # A write the sweep makes and GitHub refuses is the sweep's own, and
+        # red: no coder pass runs and no stranded request is re-requested for
+        # any pull request the refusal reached, and nothing else asks again.
         if refused:
             sys.exit("say: " + "; ".join(refused))
-    elif failed:
-        sys.exit("say: " + "; ".join(failed))
+    elif failed or refused:
+        sys.exit("say: " + "; ".join(failed + refused))
 
 
 def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
@@ -2081,6 +2099,19 @@ def supersede(pr: str | int, by: str, reason: str) -> None:
         print(f"{hole} was minted here and never landed; write it back as WITHDRAWN")
 
 
+class RequestRefused(SystemExit):
+    """GitHub's refusal of the `pr edit` write that `request_review` makes.
+
+    Raised for a refused `pr edit` that wrote nothing — the remove, or an add
+    that followed no remove — so a caller re-requesting across a list of pull
+    requests tells the refusals that reach every one of them (the credential
+    without the repository write, the Role account that is not a collaborator)
+    from the ones a single pull request causes (the remove took and the add did
+    not, leaving the pull request with nobody requested). Subclasses `SystemExit`,
+    so a caller that does not catch it exits with GitHub's message unchanged.
+    """
+
+
 def request_review(pr: str | int, to: str) -> None:
     """Request pull request review from a designated Role account.
 
@@ -2095,11 +2126,16 @@ def request_review(pr: str | int, to: str) -> None:
         to (str): Target Role name (e.g., 'reviewer').
 
     Raises:
-        SystemExit: If the branch conflicts with its base, or if GitHub fails to
-            register the reviewer request.
+        RequestRefused: For a refused `pr edit` that wrote nothing — the remove,
+            or an add that followed no remove.
+        SystemExit: If the pull request is not open, if its branch conflicts
+            with its base, if the reviewer was removed but could not be added
+            back, or if GitHub does not show the reviewer requested after the write.
     """
     login = channel.role_login(to)
     pull = channel.gh("pr", "view", str(pr), "--json", ADVANCE)
+    if pull.get("state") != "OPEN":
+        sys.exit(f"say: #{pr} is {pull.get('state', '').lower()}, not open")
     if mergeability(pull) == "CONFLICTING":
         sys.exit(f"say: #{pr}'s branch {pull['headRefName']} conflicts with its base, "
                  f"{pull['baseRefName']}. GitHub builds no merge ref for one that does, "
@@ -2113,8 +2149,16 @@ def request_review(pr: str | int, to: str) -> None:
 
     again = login in asked()
     if again:
-        channel.gh("pr", "edit", str(pr), "--remove-reviewer", login, parse=False)
-    channel.gh("pr", "edit", str(pr), "--add-reviewer", login, parse=False)
+        try:
+            channel.gh("pr", "edit", str(pr), "--remove-reviewer", login, parse=False)
+        except SystemExit as exc:
+            raise RequestRefused(exc.code) from exc
+    try:
+        channel.gh("pr", "edit", str(pr), "--add-reviewer", login, parse=False)
+    except SystemExit as exc:
+        if again:
+            sys.exit(f"say: removed {login} from #{pr} but could not add them back — {exc.code}")
+        raise RequestRefused(exc.code) from exc
     if login not in asked():
         sys.exit(f"say: GitHub shows {asked() or 'nobody'} requested on #{pr} after the call, not {login}")
     print(f"{'requested again' if again else 'requested'} review of #{pr} from {login}")

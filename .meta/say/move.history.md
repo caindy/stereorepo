@@ -364,3 +364,24 @@ and a refusal is appended to what the pull requests reported so the sweep goes
 on to the ones behind it.
 
 Evidence: `.meta/checks/probes/loops/dispatch.py::dispatch_probes`
+
+### A stranded review request the sweep could not re-request, reported green
+
+Narrowing the dispatch arms left the other write the sweep makes on a pull
+request's behalf where it was. `dispatch()` and `advance_stack()` re-request a review
+whose `reviewer` check failed without a verdict or was dropped during a stack advance
+(solorepo's DR-178, solorepo's DR-243), and every refusal of `request_review` went
+to the printed list — including the one from `pr edit`, which needs the repository
+write and which a rotated credential loses for every pull request in the sweep at
+once. The repair solorepo's DR-178 put in the sweep because nothing else notices a
+stranded request would have stopped running while the sweep stayed green (solorepo's #656).
+Unlike the dispatch, this call has refusals a pull request does cause — a non-open state,
+its branch conflicting, GitHub not showing the request after the write — so the arm
+is narrowed to the write rather than to the verb: `request_review` raises
+`RequestRefused` from a refused `pr edit` that wrote nothing, and the reads and
+partial writes around it keep exiting as they did. Established: the sweep's exit names
+a stranded or stack-dropped request it could not re-request, and still names each pull
+request's own weather (including merged/closed states and non-sticking re-requests) in
+the printed report.
+
+Evidence: `.meta/checks/probes/loops/dispatch.py::dispatch_probes`, `.meta/checks/probes/loops/advance.py::advance_probes`
