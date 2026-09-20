@@ -31,7 +31,14 @@ from __future__ import annotations
 
 
 def lines(text: str) -> list[str]:
-    """The non-empty lines of `text`, each trimmed.
+    """Splits text into non-empty, whitespace-trimmed lines.
+
+    Args:
+        text: Multiline string to split and trim.
+
+    Returns:
+        list[str]: Sequence of non-empty line strings with surrounding
+            whitespace removed.
 
     >>> lines(" a \\n\\n b ")
     ['a', 'b']

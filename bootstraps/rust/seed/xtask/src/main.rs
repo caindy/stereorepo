@@ -1,5 +1,4 @@
-//! `cargo xtask gate` runs every step; `cargo xtask <step>` runs one. The
-//! steps, what they hold, and the selection are all the library's.
+//! Command-line entry point for workspace gate verification tasks.
 
 use std::path::Path;
 use std::process::ExitCode;

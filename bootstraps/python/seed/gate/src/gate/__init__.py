@@ -39,24 +39,21 @@ SKIPPED = frozenset(
 
 @dataclasses.dataclass(frozen=True)
 class CouldNotRun:
-    """The step did not run. Loud, unmarked, and not a failure: a missing tool
-    is an absence of evidence, and exiting non-zero for it would train the
-    reflex of installing nothing and skipping the step."""
+    """Represents a gate step that could not execute due to missing prerequisites."""
 
     why: str
 
 
 @dataclasses.dataclass(frozen=True)
 class Passed:
-    """The step ran and found nothing. Carries what it checked, so the mark is
-    a claim about scope and not a bare tick."""
+    """Represents a successfully executed gate step with its verified scope."""
 
     scope: str
 
 
 @dataclasses.dataclass(frozen=True)
 class Found:
-    """The step found something. One line per problem, each naming where."""
+    """Represents a gate step execution that detected one or more defects."""
 
     problems: tuple[str, ...]
 
@@ -69,13 +66,26 @@ type Step = tuple[str, Callable[[Path], Outcome]]
 
 
 def failed(outcome: Outcome) -> bool:
-    """Whether this outcome fails the gate."""
+    """Checks whether an outcome represents a failing gate result.
+
+    Args:
+        outcome: Outcome instance to evaluate.
+
+    Returns:
+        bool: True if outcome indicates findings that fail the gate, False otherwise.
+    """
     return isinstance(outcome, Found)
 
 
 def rendered(outcome: Outcome, label: str) -> str:
-    """The report in the one shape every gate prints (A21): `?` unmarked,
-    `ok` with its scope, `x` with a count and one indented line per problem.
+    """Formats an outcome into a standardized gate report line adhering to Article 21.
+
+    Args:
+        outcome: Outcome instance to format.
+        label: Name of the gate step.
+
+    Returns:
+        str: Formatted report line string with trailing newline.
 
     >>> rendered(Passed("3 files"), "step")
     'ok step — 3 files\\n'
@@ -97,16 +107,29 @@ def rendered(outcome: Outcome, label: str) -> str:
 
 
 def packages(root: Path) -> list[Path]:
-    """Every workspace member: a directory under the root with a manifest,
-    not counting the root's own."""
+    """Finds all member packages declared under the workspace root.
+
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        list[Path]: Sorted list of package root paths excluding the workspace root.
+    """
     return sorted(
         path.parent for path in files(root, "pyproject.toml") if path.parent != root
     )
 
 
 def files(root: Path, suffix: str) -> list[Path]:
-    """Every file under `root` whose name ends in `suffix`, skipping tool
-    output. `suffix` is a whole name when it has no leading dot."""
+    """Finds all non-skipped files under a root matching a suffix or exact name.
+
+    Args:
+        root: Root directory path to search.
+        suffix: File name suffix starting with a dot, or exact file name.
+
+    Returns:
+        list[Path]: Sorted list of matching file paths outside skipped tool directories.
+    """
     return sorted(
         path
         for path in root.rglob("*")
@@ -121,7 +144,15 @@ def files(root: Path, suffix: str) -> list[Path]:
 
 
 def relative(root: Path, path: Path) -> str:
-    """`path` under `root`, with forward slashes, for a report line."""
+    """Formats a path relative to root using forward slashes.
+
+    Args:
+        root: Base directory path.
+        path: Path to make relative.
+
+    Returns:
+        str: POSIX-style relative path string.
+    """
     return path.relative_to(root).as_posix()
 
 
@@ -129,9 +160,18 @@ def relative(root: Path, path: Path) -> str:
 
 
 def tool(cwd: Path, module: str, args: list[str], scope: str) -> Outcome:
-    """Runs one tool as `python -m <module>` from the interpreter the gate runs
-    under, in `cwd`. Output streams through, so what the tool found is on the
-    screen above the line that says it found something."""
+    """Executes a Python module as a subprocess tool within the active interpreter.
+
+    Args:
+        cwd: Working directory for tool execution.
+        module: Python module name to run via `-m`.
+        args: Command-line arguments passed to the module.
+        scope: Description of the check scope reported on success.
+
+    Returns:
+        Outcome: Passed on zero exit, Found on non-zero exit, or CouldNotRun on
+            invocation failure.
+    """
     argv = [sys.executable, "-m", module, *args]
     try:
         status = subprocess.run(argv, cwd=cwd, check=False)  # noqa: S603  # reason: fixed argv from STEPS, no shell, no input
@@ -143,9 +183,17 @@ def tool(cwd: Path, module: str, args: list[str], scope: str) -> Outcome:
 
 
 def each_package(root: Path, step: Callable[[Path], Outcome], scope: str) -> Outcome:
-    """Runs a step in every package, stopping at the first that does not pass.
-    A workspace member is where its tests, its doctests and its mutants live,
-    and the tools that run them read the member's own manifest."""
+    """Executes a step callable across all workspace member packages.
+
+    Args:
+        root: Workspace root directory path.
+        step: Step function taking a package directory path and returning an Outcome.
+        scope: Prefix description for the reported scope on success.
+
+    Returns:
+        Outcome: Passed if all packages succeed, or the first non-Passed outcome
+            encountered.
+    """
     members = packages(root)
     for package in members:
         outcome = step(package)
@@ -155,15 +203,26 @@ def each_package(root: Path, step: Callable[[Path], Outcome], scope: str) -> Out
 
 
 def ruff(root: Path) -> Outcome:
-    """`ruff check`, with the rule set the workspace manifest selects."""
+    """Runs ruff check across the workspace directory.
+
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome representing ruff linter execution results.
+    """
     return tool(root, "ruff", ["check", "."], "ruff check over the workspace")
 
 
 def types(root: Path) -> Outcome:
-    """`mypy --strict` over each package's source and tests, one package at a
-    time so two packages' test modules cannot collide by name. Run from the
-    root, because mypy reads its configuration from the directory it runs in
-    and the workspace manifest holds it."""
+    """Runs mypy type checking across member packages in strict mode.
+
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome representing type verification results across packages.
+    """
 
     def one(package: Path) -> Outcome:
         targets = [
@@ -177,10 +236,14 @@ def types(root: Path) -> Outcome:
 
 
 def test(root: Path) -> Outcome:
-    """`pytest`, doctests included: the examples in the prose are executed
-    rather than asserted, the package readme's among them. Run in each
-    package, whose manifest holds its pytest configuration, so the run is the
-    same one mutmut repeats."""
+    """Runs pytest across member packages including documentation tests.
+
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome representing test suite execution results.
+    """
     return each_package(
         root,
         lambda package: tool(
@@ -200,20 +263,14 @@ def test(root: Path) -> Outcome:
 
 
 def mutants(root: Path) -> Outcome:
-    """`mutmut run` in each package under `packages/`, the signal behind the
-    tests (A3). A mutant that survives is a line the tests execute without
-    checking, and one no test reaches is a line they do not execute; both are
-    findings. Could not run when mutmut is not installed, so a missing tool is
-    reported and not passed.
+    """Runs mutation testing via mutmut across packages under packages/.
 
-    mutmut mutates a package's `src/` into `mutants/` beside it and puts that
-    copy first on the path, which is why it runs in the package rather than the
-    workspace: it knows `src/`, and nothing else. The gate is not mutated: its
-    steps are watched failing by the probes, which is the claim mutation would
-    make, and its surface is mostly the text of its reports.
+    Args:
+        root: Workspace root directory path.
 
-    The run's exit code says nothing about survivors, so `mutmut results` is
-    read afterwards: it prints one line per mutant that was not killed."""
+    Returns:
+        Outcome: Outcome representing mutation execution and survivor results.
+    """
     mutmut = shutil.which("mutmut")
     if mutmut is None:
         return CouldNotRun("mutmut is not installed; `uv sync` installs it")
@@ -253,15 +310,13 @@ REASON = re.compile(r"#\s*reason:\s*\S")
 
 
 def lints(root: Path) -> Outcome:
-    """No rule is switched off in configuration, and every suppression at a
-    site carries a reason (A2).
+    """Verifies that manifests disable no lint rules and all suppressions state reasons.
 
-    An `ignore` in a ruff table is a rule deleted where nobody reads. A
-    `per-file-ignores` entry is configuration too, and is allowed only with a
-    reason on its line, because the alternative — a `noqa` on every assert in
-    every test — is a rule nobody would keep. At a site, a `noqa` and a
-    `type: ignore` each carry a `reason:`, or they are a configuration
-    ignore with extra steps.
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome reporting unreasoned suppressions or disabled linter rules.
     """
     problems: list[str] = []
     manifests = files(root, "pyproject.toml")
@@ -291,7 +346,15 @@ def lints(root: Path) -> Outcome:
 
 
 def manifest_ignores(root: Path, manifest: Path) -> list[str]:
-    """The lines of one manifest that switch a rule off in configuration."""
+    """Inspects a pyproject.toml manifest for disabled lint rules or unreasoned ignores.
+
+    Args:
+        root: Workspace root directory path.
+        manifest: Path to the pyproject.toml file.
+
+    Returns:
+        list[str]: Formatted error messages for each configuration suppression found.
+    """
     text = manifest.read_text(encoding="utf-8")
     try:
         data = tomllib.loads(text)
@@ -327,7 +390,16 @@ def manifest_ignores(root: Path, manifest: Path) -> list[str]:
 
 
 def in_table(text: str, number: int, table: str) -> bool:
-    """Whether line `number` of a TOML text sits under a `[…table]` header."""
+    """Checks whether a line number falls within a specified TOML table header block.
+
+    Args:
+        text: Full TOML document string.
+        number: Target 1-indexed line number.
+        table: Table substring to match in bracketed headers.
+
+    Returns:
+        bool: True if the line falls under a matching table header, False otherwise.
+    """
     header = None
     for current, line in enumerate(text.splitlines(), 1):
         if line.strip().startswith("["):
@@ -338,9 +410,14 @@ def in_table(text: str, number: int, table: str) -> bool:
 
 
 def doc(root: Path) -> Outcome:
-    """Every module, and every public function, class and method, has a
-    docstring — the Python `missing_docs`. Tests are not documentation and are
-    not held to it; a package's `src/` is."""
+    """Verifies that all modules and public items have docstrings.
+
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome reporting undocumented public code symbols.
+    """
     problems: list[str] = []
     counted = 0
     modules = 0
@@ -375,8 +452,15 @@ def public_items(
 ) -> Iterator[
     tuple[str, ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef]
 ]:
-    """The module, then every public def and class at the top level and every
-    public method of a public class."""
+    """Yields public top-level functions, classes, and public methods from an AST.
+
+    Args:
+        tree: Parsed AST module node.
+
+    Yields:
+        tuple[str, ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef]:
+            Pairs of symbol names and their corresponding AST definition nodes.
+    """
     yield "module", tree
     for node in tree.body:
         if isinstance(
@@ -392,13 +476,13 @@ def public_items(
 
 
 def orphans(root: Path) -> Outcome:
-    """Every markdown file under a package is named by a source file or the
-    manifest in it.
+    """Verifies that every markdown document is referenced by code or manifests.
 
-    Python has no `include_str!`, so naming is the consumer: a docstring that
-    says which log sits beside the module, or a manifest that names its readme.
-    Prose beside code that nothing names is a copy waiting to drift, or a first
-    copy nobody reads, which is debris. Either way it is an orphan.
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome reporting unreferenced markdown documentation files.
     """
     problems: list[str] = []
     counted = 0
@@ -421,13 +505,13 @@ def orphans(root: Path) -> Outcome:
 
 
 def evidence(root: Path) -> Outcome:
-    """Every entry in a history log names a test that exists.
+    """Verifies that every history log entry names a test collected by pytest.
 
-    An entry's evidence is the test that would fail if the change were undone,
-    as pytest names it from the package: `tests/test_x.py::test_y`. That makes
-    relevance mechanical: if the test is gone, the entry is stale. The tests
-    are read from `pytest --collect-only`, so what is checked is what would
-    actually run.
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome reporting history entries with missing or non-existent tests.
     """
     tests: list[str] = []
     argv = [sys.executable, "-m", "pytest", "--collect-only", "-q", "--no-header"]
@@ -448,14 +532,27 @@ def evidence(root: Path) -> Outcome:
 
 @dataclasses.dataclass(frozen=True)
 class Entry:
-    """One history entry: its heading, and the test it names, if any."""
+    """Represents an individual entry in a companion history log.
+
+    Attributes:
+        title: Problem or defect summary heading.
+        evidence: Test symbol in backticks that verifies the resolution.
+    """
 
     title: str
     evidence: str | None
 
 
 def evidence_against(root: Path, tests: list[str]) -> Outcome:
-    """:func:`evidence`, given the tests. Separated so a probe can hand it a list."""
+    """Verifies history log evidence entries against valid test names.
+
+    Args:
+        root: Workspace root directory path.
+        tests: List of test names collected from pytest.
+
+    Returns:
+        Outcome: Outcome reporting invalid or uncollected test evidence references.
+    """
     problems: list[str] = []
     logs = 0
     entries = 0
@@ -480,9 +577,14 @@ def evidence_against(root: Path, tests: list[str]) -> Outcome:
 
 
 def entries_of(text: str) -> list[Entry]:
-    """The entries of a history log. An entry starts at a `###` heading; its
-    evidence is a line starting `Evidence:` naming a test in backticks. HTML
-    comments are not entries, which is how a log can carry the form of one.
+    """Parses history entries from markdown text outside HTML comments.
+
+    Args:
+        text: Markdown content from a history log file.
+
+    Returns:
+        list[Entry]: Parsed list of Entry records with titles and optional
+            evidence citations.
 
     >>> log = "### Broke\\n\\nEvidence: `tests/test_x.py::test_y`\\n<!-- ### F -->"
     >>> entries_of(log)
@@ -499,8 +601,13 @@ def entries_of(text: str) -> list[Entry]:
 
 
 def without_comments(text: str) -> str:
-    """The text with every `<!-- … -->` removed. A comment never closed runs to
-    the end, as it does in HTML.
+    """Strips HTML comment blocks from markdown text.
+
+    Args:
+        text: Input string potentially containing `<!-- ... -->` comment blocks.
+
+    Returns:
+        str: String with all HTML comments stripped.
 
     >>> without_comments("a <!-- b --> c <!-- d")
     'a  c '
@@ -526,10 +633,13 @@ STEPS: tuple[Step, ...] = (
 
 
 def select(wanted: str) -> list[Step]:
-    """The steps a word selects: every step for `gate`, the one step with that
-    label otherwise, and nothing for a word that is neither. One word selects
-    one step at most, so a test that runs the gate with a word can never be
-    made to run the whole gate — whose `test` step runs the tests.
+    """Selects gate steps matching a command-line request string.
+
+    Args:
+        wanted: Step label, or 'gate' to select all configured steps.
+
+    Returns:
+        list[Step]: Matching step list, containing at most one step when not 'gate'.
 
     >>> [label for label, _ in select("gate")] == [label for label, _ in STEPS]
     True
@@ -544,7 +654,15 @@ def select(wanted: str) -> list[Step]:
 
 
 def run(root: Path, steps: list[Step]) -> int:
-    """Runs the steps and reports each. No steps is a usage error, exit 2."""
+    """Executes a list of gate steps and prints formatted outcome reports.
+
+    Args:
+        root: Workspace root directory path.
+        steps: List of Step tuples to execute.
+
+    Returns:
+        int: Exit status code (0 for success, 1 for failures, 2 for empty step list).
+    """
     if not steps:
         known = " | ".join(label for label, _ in STEPS)
         print(f"usage: uv run gate [gate | {known}]", file=sys.stderr)
@@ -560,8 +678,14 @@ def run(root: Path, steps: list[Step]) -> int:
 
 
 def workspace_root() -> Path:
-    """The workspace: the nearest ancestor of this file with a manifest that
-    declares one."""
+    """Locates the nearest ancestor directory containing a UV workspace configuration.
+
+    Returns:
+        Path: Absolute directory path of the enclosing workspace.
+
+    Raises:
+        SystemExit: If no workspace manifest exists in directory ancestors.
+    """
     for candidate in Path(__file__).resolve().parents:
         manifest = candidate / "pyproject.toml"
         if manifest.is_file() and "[tool.uv.workspace]" in manifest.read_text(
@@ -573,6 +697,6 @@ def workspace_root() -> Path:
 
 
 def main() -> int:
-    """`uv run gate [step]`."""
+    """CLI entry point for running workspace gate verification steps."""
     wanted = sys.argv[1] if len(sys.argv) > 1 else "gate"
     return run(workspace_root(), select(wanted))

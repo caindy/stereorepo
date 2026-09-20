@@ -2,7 +2,9 @@
 #![doc = include_str!("example.rationale.md")]
 #![doc = include_str!("example.history.md")]
 
-/// The non-empty lines of `text`, each trimmed.
+/// Splits `text` into non-empty, whitespace-trimmed line slices.
+///
+/// Returns a vector of string slices with empty lines and surrounding whitespace omitted.
 ///
 /// ```
 /// use seed::example::lines;

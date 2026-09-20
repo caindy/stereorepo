@@ -5,37 +5,30 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
-/// What one gate step reports. Three outcomes, never two: a step that cannot
-/// run is not a step that passed, and it is not a step that failed either.
+/// Represents the result of a gate step execution adhering to Article 6.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Outcome {
-    /// The step did not run. Reported loudly, unmarked, and not a failure —
-    /// a missing tool is an absence of evidence, and exiting non-zero for it
-    /// would train the reflex of installing nothing and skipping the step.
+    /// The step did not run due to missing tools or environmental prerequisites.
     CouldNotRun(String),
-    /// The step ran and found nothing. Carries what it checked, so the mark is
-    /// a claim about scope and not a bare tick.
+    /// The step ran and found zero defects, recording verified scope.
     Passed(String),
-    /// The step found something. One line per problem, each naming where.
+    /// The step detected one or more defects, recording diagnostic descriptions.
     Found(Vec<String>),
 }
 
 impl Outcome {
-    /// Whether this outcome fails the gate.
+    /// Checks whether this outcome represents a failing gate result.
     #[must_use]
     pub fn failed(&self) -> bool {
         matches!(self, Outcome::Found(_))
     }
 
-    /// Prints the outcome in the one shape every gate prints — A21: `ok`, `x`
-    /// or `?`, the step, then what it covered, found, or could not do — so a
-    /// reader of any Project's gate reads every other's.
+    /// Prints the rendered outcome to standard output.
     pub fn report(&self, label: &str) {
         print!("{}", self.rendered(label));
     }
 
-    /// The report as text: `?` unmarked, `ok` with its scope, `x` with a count
-    /// and one indented line per problem.
+    /// Formats the outcome into a standardized gate report line adhering to Article 21.
     #[must_use]
     pub fn rendered(&self, label: &str) -> String {
         match self {
@@ -54,11 +47,10 @@ impl Outcome {
     }
 }
 
-/// A gate step: a label somebody types after `cargo xtask`, and what it runs.
+/// A named gate step associating a command-line label with an execution function.
 pub type Step = (&'static str, fn(&Path) -> Outcome);
 
-/// Every step, in the order the gate runs them. Cheap and pure first, so a
-/// formatting slip is reported before a build is paid for.
+/// Ordered sequence of gate steps executed by the gate runner.
 pub const STEPS: &[Step] = &[
     ("fmt", fmt),
     ("lints", lints),
@@ -70,12 +62,9 @@ pub const STEPS: &[Step] = &[
     ("mutants", mutants),
 ];
 
-/// The steps a word selects: every step for `gate`, the one step with that
-/// label otherwise, and nothing for a word that is neither. Built on `find`
-/// rather than `filter` on purpose: a word other than `gate` can select one
-/// step at most, however this is changed, so a test that runs the binary with
-/// one word can never be made to run the whole gate — and the gate's `test`
-/// step runs the tests, so that would be the gate inside itself.
+/// Selects gate steps corresponding to a command-line label.
+///
+/// Returns all steps when `wanted` is `"gate"`, or a single matching step if found.
 #[must_use]
 pub fn select(wanted: &str) -> Vec<&'static Step> {
     match wanted {
@@ -88,9 +77,10 @@ pub fn select(wanted: &str) -> Vec<&'static Step> {
     }
 }
 
-/// Runs the steps and reports each. No steps is a usage error, exit 2. The
-/// binary is `select` then this and nothing else, so that every branch here is
-/// reached by a test in-process.
+/// Executes each step in sequence and prints its formatted outcome.
+///
+/// Returns `ExitCode::SUCCESS` if all steps pass, `ExitCode::FAILURE` if any step
+/// finds issues, or exit code 2 if `steps` is empty.
 #[must_use]
 pub fn run(root: &Path, steps: &[&Step]) -> ExitCode {
     if steps.is_empty() {
@@ -111,8 +101,7 @@ pub fn run(root: &Path, steps: &[&Step]) -> ExitCode {
     }
 }
 
-/// Runs one cargo subcommand as a step. Output streams through, so what the
-/// tool found is on the screen above the line that says it found something.
+/// Executes a cargo subcommand as a gate step subprocess.
 fn cargo(root: &Path, args: &[&str], env: &[(&str, &str)], scope: &str) -> Outcome {
     let status = Command::new("cargo")
         .args(args)
@@ -129,8 +118,7 @@ fn cargo(root: &Path, args: &[&str], env: &[(&str, &str)], scope: &str) -> Outco
     }
 }
 
-/// `cargo fmt --check`. Never `cargo fmt`: a gate step that rewrites the tree
-/// leaves the author unsure what they committed.
+/// Runs `cargo fmt --all --check` across the workspace.
 #[must_use]
 pub fn fmt(root: &Path) -> Outcome {
     cargo(
@@ -141,8 +129,7 @@ pub fn fmt(root: &Path) -> Outcome {
     )
 }
 
-/// `cargo clippy` with every warning an error, over every target so tests and
-/// the xtask are held to the same standard as the library.
+/// Runs `cargo clippy --workspace --all-targets -- -D warnings` across the workspace.
 #[must_use]
 pub fn clippy(root: &Path) -> Outcome {
     cargo(
@@ -160,9 +147,7 @@ pub fn clippy(root: &Path) -> Outcome {
     )
 }
 
-/// `cargo doc` with every rustdoc warning an error. With `missing_docs` denied
-/// in the workspace lints, no public item goes undocumented and no broken
-/// intra-doc link survives.
+/// Runs `cargo doc --workspace --no-deps` with rustdoc warnings treated as errors.
 #[must_use]
 pub fn doc(root: &Path) -> Outcome {
     cargo(
@@ -173,8 +158,7 @@ pub fn doc(root: &Path) -> Outcome {
     )
 }
 
-/// `cargo test`, which runs the doctests too — the examples in the prose are
-/// executed, not asserted.
+/// Runs `cargo test --workspace` including documentation tests.
 #[must_use]
 pub fn test(root: &Path) -> Outcome {
     cargo(
@@ -185,9 +169,7 @@ pub fn test(root: &Path) -> Outcome {
     )
 }
 
-/// `cargo mutants`: the signal behind the tests. A test that passes against
-/// broken code passed for the wrong reason, and this is how that is found.
-/// Not installed is reported, not passed.
+/// Runs `cargo mutants --no-shuffle` across the workspace if installed.
 #[must_use]
 pub fn mutants(root: &Path) -> Outcome {
     if subcommand_present(root, "mutants") {
@@ -206,8 +188,7 @@ pub fn mutants(root: &Path) -> Outcome {
     }
 }
 
-/// Whether `cargo <name> --version` answers, which is how a cargo extension
-/// says it is installed.
+/// Checks whether a specified cargo subcommand is installed and available on PATH.
 #[must_use]
 pub fn subcommand_present(root: &Path, name: &str) -> bool {
     Command::new("cargo")
@@ -217,12 +198,7 @@ pub fn subcommand_present(root: &Path, name: &str) -> bool {
         .is_ok_and(|out| out.status.success())
 }
 
-/// Every markdown file under a package is included by a source file in it.
-///
-/// Prose beside code that nothing includes is a second copy waiting to drift
-/// — or a first copy nobody reads, which is debris. Either way it is an
-/// orphan. A missing include fails the build already; this holds the other
-/// direction.
+/// Verifies that every markdown document in a package is included by a Rust source file.
 #[must_use]
 pub fn orphans(root: &Path) -> Outcome {
     let packages = packages(root);
@@ -254,12 +230,7 @@ pub fn orphans(root: &Path) -> Outcome {
     }
 }
 
-/// Every entry in a history log names a test that exists.
-///
-/// An entry's evidence is the test that would fail if the change were undone.
-/// That makes relevance mechanical: if the test is gone, the entry is stale.
-/// The tests are read from `cargo test -- --list`, so what is checked is what
-/// would actually run.
+/// Verifies that every history log entry names an existing test in the test suite.
 #[must_use]
 pub fn evidence(root: &Path) -> Outcome {
     match listed_tests(root) {
@@ -268,7 +239,7 @@ pub fn evidence(root: &Path) -> Outcome {
     }
 }
 
-/// [`evidence`], given the tests. Separated so a probe can hand it a list.
+/// Verifies history log evidence entries against a list of collected test names.
 #[must_use]
 pub fn evidence_against(root: &Path, tests: &[String]) -> Outcome {
     let mut problems = Vec::new();
@@ -306,11 +277,7 @@ pub fn evidence_against(root: &Path, tests: &[String]) -> Outcome {
     }
 }
 
-/// No lint is switched off in configuration.
-///
-/// An `allow` in a `[lints]` table, or a `-A` in a cargo config's rustflags,
-/// is a rule deleted where nobody reads. The site is the only place a
-/// suppression is legible, and there it carries a reason.
+/// Verifies that manifests and cargo configs do not disable lints in configuration.
 #[must_use]
 pub fn lints(root: &Path) -> Outcome {
     let mut problems = Vec::new();
