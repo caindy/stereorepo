@@ -77,21 +77,21 @@ def reconcile_root(root_dir: pathlib.Path = ROOT) -> list[str]:
 def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROOT) -> list[str]:
     """Projects single-source APM cognitive assets to multi-harness target directories (solorepo's DR-172, solorepo's DR-201, solorepo's #430).
 
-    When Microsoft APM CLI is present, invokes `apm install ./.meta --target antigravity,codex,gemini`
-    to deploy skills, agents, and hooks into `.agents/`, `.gemini/`, and `.codex/`.
+    When Microsoft APM CLI is present, invokes `apm install ./.meta --target antigravity,codex`
+    to deploy skills, agents, and hooks into `.agents/` and `.codex/`.
     When APM CLI is absent, projects `.meta/.apm/skills/` into `.agents/skills/` directly.
     """
     actions = []
     apm_bin = shutil.which("apm")
     if apm_bin:
         res = subprocess.run(
-            [apm_bin, "install", "./.meta", "--target", "antigravity,codex,gemini"],
+            [apm_bin, "install", "./.meta", "--target", "antigravity,codex"],
             cwd=str(root_dir),
             capture_output=True,
             text=True,
         )
         if res.returncode == 0:
-            actions.append("Materialized multi-harness cognitive assets via APM CLI (.agents/, .gemini/, .codex/)")
+            actions.append("Materialized multi-harness cognitive assets via APM CLI (.agents/, .codex/)")
             return actions
 
     src_skills = meta_dir / ".apm" / "skills"
