@@ -115,10 +115,7 @@ def _inspect_steps(steps: list[dict[str, Any]]) -> tuple[str, str]:
             model = "jules"
 
     if harness == "-" and active_step:
-        if len(active_step) > 10:
-            harness = f"prep ({active_step[:9]}…)"
-        else:
-            harness = f"prep ({active_step})"
+        harness = f"prep ({active_step[:9]}…)" if len(active_step) > 10 else f"prep ({active_step})"
 
     return harness, model
 

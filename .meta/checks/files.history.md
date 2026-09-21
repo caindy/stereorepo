@@ -184,3 +184,15 @@ Established: `.github/workflows/review.yml` provides the concrete path
 Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
 
 
+
+### Unbounded line length under `.meta/`
+
+`.meta/ruff.toml` selected no line-length family, so nothing bounded a line and
+the tree grew one of 488 characters (solorepo's DR-177, solorepo's #751). The
+debt a 100-character bound found was diffuse — 1179 lines spread over the tree,
+the largest single file holding under a tenth of them — so no flat step could
+admit it in a diff anyone would read. Established: `meta_lines` ratchets `E501`
+alone against `.meta/checks/lines.baseline.yaml`, and `meta_ruff` passes the
+rule over on the command line so the declared ruleset still runs whole.
+
+Evidence: `.meta/checks/files/python.py::meta_lines`

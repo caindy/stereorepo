@@ -184,10 +184,7 @@ def parse_agents(content: str | bytes | dict[str, Any] | list[Any]) -> list[Spaw
         _walk(content, seen_ids, agents)
         return agents
 
-    if isinstance(content, bytes):
-        text = content.decode("utf-8", errors="replace")
-    else:
-        text = str(content)
+    text = content.decode("utf-8", errors="replace") if isinstance(content, bytes) else str(content)
 
     if not text.strip():
         return []

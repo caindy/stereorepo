@@ -308,6 +308,9 @@ artifacts:
   - id: work:artifact/meta-checks-comments-baseline
     name: .meta/checks/comments.baseline.yaml
     path: .meta/checks/comments.baseline.yaml
+  - id: work:artifact/meta-checks-lines-baseline
+    name: .meta/checks/lines.baseline.yaml
+    path: .meta/checks/lines.baseline.yaml
   - id: work:artifact/meta-checks-suppressions-baseline
     name: .meta/checks/suppressions.baseline.yaml
     path: .meta/checks/suppressions.baseline.yaml

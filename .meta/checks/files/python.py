@@ -1,4 +1,13 @@
-"""The Python under `.meta/`, held to its linters — no configuration ignore, ruff clean, `mypy --strict` clean, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (solorepo's DR-177, solorepo's DR-210, solorepo's #540, solorepo's #760).
+"""The Python under `.meta/`, held to its linters — no configuration ignore, ruff clean, `mypy --strict` clean, a line limit that ratchets, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (solorepo's DR-177, solorepo's DR-210, solorepo's #540, solorepo's #760).
+
+The line limit runs across two steps rather than one because it arrived over a
+tree that had never been held to one, and the debt it found is diffuse: `meta
+ruff` runs the declared ruleset flat, and `meta lines` ratchets `E501` alone
+against `.meta/checks/lines.baseline.yaml`. That is the Ratchet Discipline's
+answer for a checker that cannot be clean at once; a flat step would have had to
+land the whole backlog in a single diff, which is how a limit gets adopted and
+then quietly exempted. What the tree measured before the limit is in
+`.meta/checks/files.history.md`.
 """
 import ast
 import pathlib
@@ -18,7 +27,9 @@ from checks.collect import (
     Found,
     Passed,
     StepOutcome,
+    against_baseline,
     check,
+    recorded_baseline,
 )
 from checks.files import sources
 
@@ -369,10 +380,24 @@ MYPY = "mypy==2.3.1"
 TYPES_BASELINE = META / "checks" / "types.baseline.yaml"
 
 
+LINES_BASELINE = META / "checks" / "lines.baseline.yaml"
+
+
+# The line-length rule, named once because two steps divide it between them:
+# `meta ruff` passes over it and `meta lines` ratchets it, so the ruleset
+# `.meta/ruff.toml` declares is run whole and no rule is switched off.
+LINE_LENGTH_RULE = "E501"
+
+
 # A mypy diagnostic, which is `<path>:<line>: error: <message>  [<rule>]`. Only
 # `error` is counted: `note` lines elaborate the error above them and would
 # count one diagnostic twice (solorepo's DR-210).
 MYPY_ERROR = re.compile(r"^(?P<path>[^\s:][^:]*):(?P<line>\d+):(?:\d+:)? error: (?P<message>.*)$")
+
+
+# A ruff finding in `concise` output, which is `<path>:<line>:<column>: <rule> <message>`.
+RUFF_FINDING = re.compile(
+    r"^(?P<path>[^\s:][^:]*):(?P<line>\d+):\d+: (?P<rule>[A-Z]+\d+) (?P<message>.*)$")
 
 
 def tool_command(name: str, pin: str, args: Sequence[str],
@@ -415,16 +440,23 @@ def tool_command(name: str, pin: str, args: Sequence[str],
 
 @check("meta ruff")
 def meta_ruff() -> StepOutcome:
-    """Ruff check over .meta/ against the ruleset declared in .meta/ruff.toml (solorepo's DR-177).
+    """Ruff check over .meta/, less the line limit `meta lines` ratchets (solorepo's DR-177).
 
-    Runs `ruff check` on the repository staging directory using the configured
-    ruleset. A violation fails the gate with the offending rule and location.
+    Runs `ruff check` on the repository staging directory using the ruleset
+    `.meta/ruff.toml` declares. A violation fails the gate with the offending
+    rule and location.
+
+    `E501` is passed over here and ratcheted by `meta lines` instead. The
+    command-line `--ignore` is what carries that split rather than an `ignore`
+    in the configuration, which `meta lints` refuses and which would switch the
+    rule off for every reader of the file.
     """
     config = META / "ruff.toml"
     if not config.is_file():
         return CouldNotRun(".meta/ruff.toml is missing")
     scripts = [str(p) for p in sources.meta_sources() if p.suffix != ".py"]
-    cmd = tool_command("ruff", RUFF, ["check", "--config", str(config), str(META), *scripts])
+    cmd = tool_command("ruff", RUFF, ["check", "--config", str(config),
+                                      "--ignore", LINE_LENGTH_RULE, str(META), *scripts])
     if not cmd:
         return CouldNotRun("neither ruff nor uvx is installed")
     out = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -432,6 +464,68 @@ def meta_ruff() -> StepOutcome:
         return Passed("ruff check passed over .meta/")
     lines = [line.strip() for line in (out.stdout + "\n" + out.stderr).splitlines() if line.strip()]
     return Found(tuple(lines))
+
+
+def ruff_findings(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
+    """The findings a concise ruff run reported, by repository-relative path.
+
+    Args:
+        output: The tool's standard output, in ruff's `concise` format. Paths
+            are relative to the directory the run was made from, which is the
+            repository root.
+
+    Returns:
+        tuple[dict[str, int], dict[str, list[str]]]: How many findings each file
+        holds, and the diagnostic lines behind each count, in the order ruff
+        reported them.
+    """
+    counts: dict[str, int] = {}
+    sites: dict[str, list[str]] = {}
+    for line in output.splitlines():
+        match = RUFF_FINDING.match(line.strip())
+        if match is None:
+            continue
+        relative = match.group("path")
+        counts[relative] = counts.get(relative, 0) + 1
+        sites.setdefault(relative, []).append(
+            f"{relative}:{match.group('line')}: {match.group('rule')} {match.group('message')}")
+    return counts, sites
+
+
+@check("meta lines")
+def meta_lines() -> StepOutcome:
+    """Every file under .meta/ sits at its baseline of lines over the limit (solorepo's DR-177).
+
+    The limit is 100, declared in `.meta/ruff.toml`. `lines.baseline.yaml`
+    records how many lines over it each file may still hold, and a file fails on
+    either side of its number — over, because the debt grew; under, because a
+    baseline nobody lowers has stopped being one. New code is held to the limit
+    from the moment it lands, and the backlog drains as files are touched.
+
+    The scope and the configuration are `meta ruff`'s, so the limit is declared
+    once; `--select` narrows the run to the one rule that step passes over.
+    """
+    if not LINES_BASELINE.is_file():
+        return CouldNotRun(f"{LINES_BASELINE.relative_to(ROOT).as_posix()} is missing")
+    config = META / "ruff.toml"
+    if not config.is_file():
+        return CouldNotRun(".meta/ruff.toml is missing")
+    scripts = [str(p) for p in sources.meta_sources() if p.suffix != ".py"]
+    cmd = tool_command("ruff", RUFF, ["check", "--config", str(config),
+                                      "--select", LINE_LENGTH_RULE, "--output-format", "concise",
+                                      str(META), *scripts])
+    if not cmd:
+        return CouldNotRun("neither ruff nor uvx is installed")
+    out = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=str(ROOT))
+    if out.returncode not in (0, 1):
+        return CouldNotRun(f"ruff could not run — {(out.stderr or out.stdout).strip()}")
+    counts, sites = ruff_findings(out.stdout)
+    problems = against_baseline(counts, sites, recorded_baseline(LINES_BASELINE),
+                                "lines over the limit", LINES_BASELINE)
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{sum(counts.values())} lines over the limit across {len(counts)} files, "
+                  "each file at its baseline")
 
 
 def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:

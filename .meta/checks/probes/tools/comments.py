@@ -33,6 +33,10 @@ def comment_probes() -> list[str]:
     hatch lifts, and the three ways `comments.against_repeats` fails a group
     (solorepo's DR-223).
 
+    The `meta lines` step reads through a third ratchet and a second output
+    parser, and both are asked here: what `files.ruff_findings` counts and how
+    it sites a finding, and the ratchet over it (solorepo's DR-177).
+
     The seed gate synchronization probe asserts that keep-exceptions, suppression
     patterns, and statement detectors in `bootstraps/python/seed/gate/` remain
     in lockstep with `comments.py` (solorepo's DR-250).
@@ -42,8 +46,8 @@ def comment_probes() -> list[str]:
     blocks_found, sites = _blocks_and_sites(comments, here)
     return (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
             + _causes(comments) + blocks_found + _ratchet(comments, here, sites)
-            + _type_errors(here) + _rust_comments(comments) + _repeats(comments)
-            + _repeat_ratchet(comments) + _seed_gate_sync(comments))
+            + _type_errors(here) + _ruff_findings(here) + _rust_comments(comments)
+            + _repeats(comments) + _repeat_ratchet(comments) + _seed_gate_sync(comments))
 
 
 def _expecting(kind: Any) -> tuple[Any, list[str]]:
@@ -230,6 +234,27 @@ def _type_errors(here: Any) -> list[str]:
         problems.append(f"comment probes: type errors over baseline should fail, got {type_grew!r}")
     if not any(f"     {expected_site}" in line for line in type_grew):
         problems.append(f"comment probes: type error site not formatted, got {type_grew!r}")
+    return problems
+
+
+def _ruff_findings(here: Any) -> list[str]:
+    """`files.ruff_findings` counting and siting a finding, and the ratchet over it."""
+    problems = []
+    from checks import files
+    sample = (f"{here}:7:101: E501 Line too long (118 > 100)\n"
+              "Found 1 error.\n")
+    counts, sites = files.ruff_findings(sample)
+    if counts != {here: 1}:
+        problems.append(f"comment probes: ruff_findings counts gave {counts!r}")
+    expected = f"{here}:7: E501 Line too long (118 > 100)"
+    if sites != {here: [expected]}:
+        problems.append(f"comment probes: ruff_findings sites gave {sites!r}")
+    grew = against_baseline({here: 1}, sites, {here: 0},
+                            "lines over the limit", files.LINES_BASELINE)
+    if not any("1 lines over the limit, over its baseline of 0" in line for line in grew):
+        problems.append(f"comment probes: lines over baseline should fail, got {grew!r}")
+    if not any(f"     {expected}" in line for line in grew):
+        problems.append(f"comment probes: line finding site not formatted, got {grew!r}")
     return problems
 
 
