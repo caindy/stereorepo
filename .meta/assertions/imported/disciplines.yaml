@@ -483,6 +483,18 @@ disciplines:
       rejected at the root costs a conversation; accepted into the diff, it
       costs a multi-hour cycle of incremental patches propping up an unviable
       foundation.
+
+      Whether a change to the loops adds a reader, a read-back, or a door where
+      there is meant to be one place (solorepo's DR-264). The loops move toward
+      one state model, one settling channel layer, and a scheduled reconciler,
+      in that order, and a change that reads pull request or Issue state
+      without asking the one classifier, reads back a write the channel should
+      have settled, or puts logic longer than a call in a workflow's `run:`
+      block is an objection to raise, whichever seam has landed. Where the seam
+      that would answer it has not, the point is right about something else,
+      and its reply links the Challenge that owns that seam, which is the one
+      Issue every seam's coder reads before opening its pull request; the
+      thread resolves on the link, as a promotion does.
     steps:
       - >-
         Open it when the work starts, not when it is finished. Written at the

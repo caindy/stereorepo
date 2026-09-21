@@ -1,0 +1,159 @@
+decisions:
+  - id: work:decision/264
+    name: "DR-264 · Restructure the autonomous loops around one state model, one settling channel layer, and a scheduled reconciler"
+    challenge: work:challenge/783
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-disciplines
+    context: >-
+      The loops are a pair of state machines, one over Issues and one over pull
+      requests, whose state GitHub holds (A22). Nothing in the tree holds either
+      machine whole. `.meta/say/move` is 3,508 lines carrying forty verbs, the
+      merge manager, `advance`, stall eviction, delegation, and Decision minting.
+      The question "has GitHub shown what I asked for" is answered by
+      `gh_with_retry` in `.meta/say/channel.py`, by `mergeability()` and
+      `settled()` in `.meta/say/move`, and by nine bare read-backs after label,
+      assignee, base, and reviewer edits. The facts about one pull request are
+      read by `classify_pr` in `.meta/lib/check_pr/state.py`, again by
+      `evaluate_pr` in `.meta/say/move`, which runs its own checks first and calls
+      the classifier last, and a third time by the take and hand-back steps of
+      `.github/workflows/coder.yml`, in shell inside `run:` blocks that no probe
+      covers. Recovery from a missed event exists piecemeal: `merge.yml`'s cron and
+      `advance_stranded` for pull requests, DR-133's rebase dispatch, and #779's
+      redelivery of a review pass, with nothing scheduled for a Challenge whose
+      coder run never started.
+
+      The merge queue freeze of 2026-09-21, where one candidate crashed sixteen
+      scheduled runs, produced four Challenges (#773, #776, #780, #781), each a
+      patch to one of those places, and #781 asked for six distributed-systems
+      primitives to be added across all of them. Doing nothing means every
+      incident keeps landing as one more function in `move`, one more condition
+      in YAML, and one more Decision: DR-133, DR-149, DR-155, DR-161, DR-221,
+      DR-248, DR-255, and DR-258 each answer one patch to the same two lifecycles.
+      DR-249 names the failure this becomes: line-level fixes propping up a
+      foundation nobody re-examined.
+    alternatives:
+      - name: Keep answering each incident where it lands
+        chosen: false
+        reason: >-
+          This is the path the record shows for the last twenty entries, and its
+          cost is the context above: a fix for read-after-write needs nine edits
+          because there is no one site, a fix for a stranded claim is a condition
+          in YAML nobody can probe, and a fix for a dropped event is a fourth loop
+          beside three. Each patch is correct and the shape they accumulate into
+          is the defect.
+      - name: Rewrite the loops on one branch and land it whole
+        chosen: false
+        reason: >-
+          The loops run from `main`, and `move` changes on trunk several times a
+          day while the loops answer Challenges. A branch that rewrites it takes
+          weeks, conflicts with every patch that lands meanwhile, and asks the
+          reviewer to read one diff the size of the tree, which DR-249 says is
+          where architecture stops being reviewed. It also has no gate until the
+          end: nothing between the first commit and the last is a state the
+          repository can run from.
+      - name: Adopt an external workflow engine or GitHub's merge queue
+        chosen: false
+        reason: >-
+          GitHub's merge queue holds neither the Issue lifecycle nor the review
+          semaphores, which are what freeze; and a workflow engine is a runtime
+          the solo must operate beside GitHub, holding state an unprivileged Job
+          cannot observe there, which A22 says the system then does not have. The
+          substrate is GitHub by design, and the structure has to live in the
+          tree that reads it.
+      - name: Move one seam at a time, in a fixed order, each landing green
+        chosen: true
+        reason: >-
+          Four seams, each a layered pull request or a short stack of them, each
+          leaving the loops running from trunk. First, one state model: one
+          classifier for the pull request lifecycle and one for the Issue
+          lifecycle, in `.meta/lib`, that every reader asks. Second, one channel
+          layer with one consistency contract: every write returns when a bounded
+          settle predicate shows the act, or reports that it did not, folding the
+          three existing helpers into that shape. Third, a scheduled reconciler
+          that reads every open Issue and pull request through the classifier and
+          dispatches what is owed, subsuming the merge cron and `advance_stranded`,
+          so a dropped event costs one period rather than a freeze. Fourth, thin
+          workflows and a split `move`: each door in YAML calls one probed Python
+          entry point, and `move` becomes a dispatcher over modules named by
+          lifecycle. The order is the dependency order, and it is A8's: the state
+          model first because every later seam consumes it, and a seam that
+          consumes nothing yet is a speculative abstraction. The cost is weeks of
+          stacked pull requests during which the old readers and the new
+          classifier coexist, every probe over `move` moves with the code it
+          probes, and the incident fixes already open (#773, #776, #780, #784,
+          #785) land on the old shape and are carried across.
+    consequences:
+      - >-
+        `#783` is the Challenge, and it closes with the fourth seam. Each seam is
+        its own pull request or stack, opened with a plan under **The plan.** that
+        cites this record, so the reviewer's first question on each is whether it
+        is the seam this order names.
+      - >-
+        Every reader of pull request or Issue state asks the one classifier, and
+        a second reader of the same facts is an objection at review.
+      - >-
+        Every write to GitHub through the channel returns settled or says it did
+        not; a bare read-back after a write is an objection at review.
+      - >-
+        The reconciler is the primary loop and the webhook doors are its
+        accelerator. Roadmap #349's supervisor lands as the reconciler rather
+        than as a fifth workflow.
+      - >-
+        Workflow YAML holds triggers, concurrency, permissions, and one call per
+        door. Logic in a `run:` block longer than a call is an objection at review.
+      - >-
+        The record grows by this entry and by whatever question a seam turns up,
+        not by one entry per incident. An incident after the fourth seam that
+        needs an edit in more than one of the four places is this record's
+        falsifier.
+      - >-
+        What is in force from this entry is the reviewer's question, carried by
+        PR First's judgement section: whether a change to the loops adds a
+        reader, a read-back, or a door where this record says there is one
+        place. The structure itself is in force seam by seam, and each seam's
+        pull request adds the Artifacts that carry it to `enacted_in`.
+    falsifier: >-
+      After the fourth seam lands, an incident of the 2026-09-21 kind, a stranded
+      claim, a refused candidate, or a dropped event, whose fix needs edits in more
+      than one of the state model, the channel layer, the reconciler, or a door's
+      entry point; or a seam that cannot land green without the one after it.
+    rationale: |-
+      The loops are a distributed system with GitHub as its only shared state, and
+      the repository already knows the primitives such a system needs: a bounded
+      settle (`settled()`), a computed-value wait (`mergeability()`), a retry
+      (`gh_with_retry`), an idempotent filing (DR-221), an in-place notice
+      (DR-255), an eviction (DR-258), and a periodic sweep (`merge.yml`). What it
+      lacks is a place for each primitive to live once. #781 read the absence of a
+      single place as the absence of the primitives, and asked for six of them to
+      be added across nine sites, two workflows, and a script; that is the same
+      shape as every fix before it, and it would leave a tenth site for the next
+      incident to miss.
+
+      A state model is the seam that pays first because it is the one every other
+      reader duplicates today. The merge manager, the coder's take door, the
+      hand-back, the sweep, and `just next` each answer "what is this pull
+      request waiting on" in their own words, and they disagree at the edges: the
+      merge manager refuses `UNKNOWN` where `advance` waits for it (#784), and the
+      hand-back fires on `failure` where the take can end `cancelled` (#785). One
+      classifier ends that class of defect rather than one instance of it.
+
+      The reconciler is the seam that ends freezes. An edge-triggered system loses
+      the transition when it loses the event, and the repository has answered
+      each lost edge with a new door: a dispatch for the rebase (DR-133), a
+      redelivery for the review (#779), a cron for the merge. A reconciler that
+      reads the classifier and dispatches what is owed makes every door an
+      accelerator and none of them load-bearing. That is the property #781 named
+      as anti-entropy, and it costs one scheduled workflow rather than six
+      primitives.
+
+      The order is fixed because A8 is: an artifact prevents drift only if
+      something consumes it. The channel layer before the state model would settle
+      writes nobody reads through one classifier; the reconciler before the
+      channel layer would dispatch on reads that race their writes. Each seam
+      consumes the one before it, and each lands green, which is what makes this a
+      refactor of a running system rather than a rewrite beside one.
