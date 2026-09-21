@@ -654,10 +654,13 @@ disciplines:
         nothing. Closed in the browser instead it is an act the record cannot
         see, which is what the signing hook refuses.
       - >-
-        Push before stopping, and stop at green. Work that exists only in a
-        worktree the next Job will never see has not been handed off, and a red
-        gate is not a handoff — it is a mess whose author is gone. The gate is
-        the completeness test for the Agency you hold; nothing else is.
+        Push before stopping, and stop at green. The gate is an exit check for
+        the Agency you hold, not an entrance check: `main` is evergreen, so do
+        not run `just gate` at session start or against an unmodified checkout.
+        Work that exists only in a worktree the next Job will never see has not
+        been handed off, and a red gate is not a handoff — it is a mess whose
+        author is gone. The gate is the completeness test for the Agency you
+        hold; nothing else is.
       - >-
         Bring a branch current by rebase, never by GitHub's plain **Update
         branch** button on the pull request page: it authors a merge commit

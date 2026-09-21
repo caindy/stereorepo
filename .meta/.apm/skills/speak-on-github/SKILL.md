@@ -1,7 +1,8 @@
 ---
 name: speak-on-github
 description: >-
-  Write a comment, open a thread, reply, resolve, file an Issue or open a pull
+  Write a comment, open a thread, reply, resolve, file, claim, stop, or
+  obviate an Issue, manage blockers (`waits`), or open and merge a pull
   request — with the Actor Trailer appended by the channel rather than by the
   writer.
 ---
@@ -11,7 +12,7 @@ description: >-
 
 # /speak-on-github
 
-Write a comment, open a thread, reply, resolve, file an Issue or open a pull request — with the Actor Trailer appended by the channel rather than by the writer.
+Write a comment, open a thread, reply, resolve, file, claim, stop, or obviate an Issue, manage blockers (`waits`), or open and merge a pull request — with the Actor Trailer appended by the channel rather than by the writer.
 A SKILL rather than a TOOL because it composes one, and because the thing being permitted is not the binary. "Use `gh`" names an implement and permits everything it can reach; this names what may be done, which is what a Capability is for.
 Its guarantee is where the identity comes from: the environment, never an argument. A caller that can pass an identity can pass the wrong one, and the failure this exists to prevent was not a wrong identity but a missing one.
-Its operations are the steps of the Disciplines, one verb each, and not `gh`'s nouns (solorepo's DR-116): file a Challenge, hand an Issue back, open a layer, answer a thread, promote one at approval, post what landed. They are verbs of programs split by concern over one signing primitive (solorepo's DR-117), and which Role holds which is `.meta/say/verbs.yaml`'s to say, not a Permission's. They are not Capabilities of their own. A Capability earns an instance when one Role holds it and another does not, and every Role that may speak may perform all of these; splitting them would divide the axis without a Permission that could name a piece. The one operation a single Role holds, review, is the instance below.
+Its operations are the steps of the Disciplines, one verb each, and not `gh`'s nouns (solorepo's DR-116): file a Challenge, claim or hand an Issue back (`stop`), manage blockers (`waits`), close or obviate an Issue (`obviate`), open a layer, answer a thread, promote one at approval, post what landed. They are verbs of programs split by concern over one signing primitive (solorepo's DR-117), and which Role holds which is `.meta/say/verbs.yaml`'s to say, not a Permission's. They are not Capabilities of their own. A Capability earns an instance when one Role holds it and another does not, and every Role that may speak may perform all of these; splitting them would divide the axis without a Permission that could name a piece. The one operation a single Role holds, review, is the instance below.

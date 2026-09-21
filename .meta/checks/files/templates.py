@@ -234,6 +234,7 @@ def template_conventions_agree() -> StepOutcome:
         ("next issue", ("`just next`",)),
         ("harness memory prohibition", ("harness's memory",)),
         ("empty directory README", ("empty directory carries a README",)),
+        ("gate is an exit check", ("exit condition, not an entrance condition",)),
     )
 
     readme_conventions = (
