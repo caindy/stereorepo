@@ -440,3 +440,19 @@ consumes both; a merge GitHub never lands still reads `OPEN` once the wait runs
 out, which the refusal below the read-back reports as it always has.
 
 Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
+
+### One candidate that could not merge stranded the whole queue
+
+`merge_manager` called `merge` on the winning candidate with nothing between
+them, so a `SystemExit` from that call ended the run before `advance_stranded`
+swept the other open pull requests. A candidate that never settles refuses
+identically on every pass, so the queue stalled on it: solorepo's #757 held the
+merge queue across sixteen consecutive scheduled runs of `merge.yml` (runs
+35574165608 through 35609888922) on 2026-09-21, each one red and none of them
+advancing anything else (solorepo's #776). Established: the winner's `merge` is
+called inside a `try`, the refusal is printed, `advance_stranded` runs when
+`stranded`, and the merge's own code is then re-raised through `sys.exit` so the
+scheduled run stays red — the isolation is of the queue from the candidate, not
+of the operator from the failure.
+
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`

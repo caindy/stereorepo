@@ -42,16 +42,20 @@ def merge_manager_probes() -> list[str]:
     a stack base, a dependent that waits on it, an unreviewed one and a layer
     based on the first. The base is chosen, the dependent deferred, and the
     unreviewed and layered candidates refused with their reasons; a dry run says
-    so and merges nothing; the real run merges the base and nothing else. Last, `issue_blockers` and `next.waits_on` prefer GitHub's native
-    `blockedBy` over the body's prose and fall back to the prose, and
-    `waits_on` returns a blocker that is not an Issue as the text it was
-    (solorepo's DR-170).
+    so and merges nothing; the real run merges the base and nothing else. A
+    winning candidate whose `merge` raises `SystemExit` sweeps the rest of the
+    queue through `advance_stranded` and then exits on the merge's own code, so
+    one failing candidate starves nothing and the run still goes red. Last,
+    `issue_blockers` and `next.waits_on` prefer GitHub's native `blockedBy` over
+    the body's prose and fall back to the prose, and `waits_on` returns a
+    blocker that is not an Issue as the text it was (solorepo's DR-170).
     """
     channel, _, programs = load_channel()
     move = programs["move"]
     return (_semaphores(move) + _rerun_reads_green(move) + _threads_fail_closed(channel, move)
             + _eligible(channel, move) + _decisions_in_force(channel, move)
-            + _end_to_end(channel, move) + _blockers(move)
+            + _end_to_end(channel, move) + _check_merge_failure_isolation(channel, move)
+            + _blockers(move)
             + _check_contention_hold(channel, move)
             + _check_disjoint_bypass(channel, move)
             + _check_reservation_semantics(move)
@@ -328,6 +332,42 @@ def _end_to_end(channel: Any, move: Any) -> list[str]:
             problems.append(f"merge manager: did not attempt merging #{'10'}, got:\n{text}")
         if fake.merged != ["10"]:
             problems.append(f"merge manager: expected merge of #{'10'}, got: {fake.merged}")
+    return problems
+
+
+def _check_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
+    """A winning candidate's `merge` raising `SystemExit` sweeps the queue
+    through `advance_stranded` and then exits on the merge's own code, so the
+    scheduled run goes red (solorepo's #776).
+
+    `winner` is the stack base among `_fixtures`, which the leverage ranking
+    chooses; `failing_merge` refuses it in the words `merge` itself uses.
+    """
+    problems = []
+    fake = ManagerFake(*_fixtures())
+    winner = 10
+    refusal = f"say: #{winner} is open after the merge call; not deleting the branch"
+    calls: list[Any] = []
+
+    def failing_merge(pr: Any, stack: bool = False, auto: bool = False) -> None:
+        """A `merge` that always refuses, as GitHub's own would on a candidate that never settles."""
+        raise SystemExit(refusal)
+
+    def recording_advance_stranded(*args: Any, **kwargs: Any) -> None:
+        """An `advance_stranded` that records its call rather than sweeping anything."""
+        calls.append(args)
+
+    with stood_in(channel, gh=fake.gh, repo=fake.repo, graphql=fake.graphql), \
+            stood_in(move, merge=failing_merge, advance_stranded=recording_advance_stranded):
+        result = outcome(lambda: move.merge_manager(dry_run=False))
+
+    if result.code != refusal:
+        problems.append(
+            f"merge manager: a failing merge did not exit on the merge's own code: {result.code}")
+    if f"could not merge #{winner}" not in result.out:
+        problems.append(f"merge manager: failing merge was not logged, got:\n{result.out}")
+    if not calls:
+        problems.append("merge manager: advance_stranded did not run after a failing merge")
     return problems
 
 

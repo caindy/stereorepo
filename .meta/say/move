@@ -3140,6 +3140,14 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
     `advance_stranded`, so an approved one that has merely fallen behind trunk
     is rebased here rather than waiting for a push to `main` that may never come.
 
+    A `SystemExit` from the winning candidate's `merge` is caught so that the
+    failure isolates to its own candidate: `advance_stranded` runs when
+    `stranded`, as on the idle branches above, and the queue's other work moves
+    rather than waiting behind a candidate that cannot land. The code is then
+    re-raised. A failed merge is an anomaly rather than a state only the solo
+    can clear, so unlike `advance_stranded`'s own refusals it paints the
+    scheduled run red, which is what surfaces a stall.
+
     Parameters:
         dry_run (bool): If True, name the winner and merge nothing.
         stranded (bool): If False, leave a stranded pull request alone. The
@@ -3183,7 +3191,13 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
         return
 
     print(f"merge-manager: merging #{winner['number']}...")
-    merge(str(winner["number"]), stack=bool(stacked(winner["number"])), auto=False)
+    try:
+        merge(str(winner["number"]), stack=bool(stacked(winner["number"])), auto=False)
+    except SystemExit as exc:
+        print(f"merge-manager: could not merge #{winner['number']} — {exc.code}")
+        if stranded:
+            advance_stranded(pulls, evaluations, owner, name, dry_run)
+        sys.exit(exc.code)
 
 
 def ensure_autonomous_level(issue_number: str | int,
