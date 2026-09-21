@@ -69,7 +69,8 @@ decisions:
         claim it does not have: the reviewer holds `comment`, `raise`,
         `reply`, `review` and `merge`. It says what it found where it is
         standing, and the Issue reaches `human` through whoever holds the
-        Challenge. Whether that indirection is right is #564.
+        Challenge. Solorepo's DR-256 confirmed that this indirection is right,
+        settling solorepo's #564.
       - >-
         The meaning DR-148 located in PR First's third step and in DR-112 is
         now here as well, and DR-112's own text is left as the record of what

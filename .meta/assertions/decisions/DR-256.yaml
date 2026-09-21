@@ -1,0 +1,94 @@
+decisions:
+  - id: work:decision/256
+    name: "DR-256 · Maintain the Role boundary by reserving move stop strictly for claim-holding Roles"
+    challenge: work:challenge/564
+    status: ADOPTED
+    applies:
+      - work:article/16
+      - work:article/18
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-disciplines
+    context: >-
+      Solorepo's DR-226 established that any Role noticing an owed decision
+      should hand work back to the solo, and that `move stop` releases an active
+      claim, labels the Issue `human`, and leaves the pull request open. Because
+      `stop` was assigned in `.meta/say/verbs.yaml` strictly to claim-holding roles
+      (`coder` and `workflow`), a reviewer encountering an unsettled architectural
+      question during pull request review cannot invoke `stop` directly; instead,
+      the reviewer records the finding in review threads or its verdict, and the
+      Issue reaches `human` when the coder stops.
+
+      Challenge #564 asked whether that indirection is right or whether the
+      reviewer Role should hold `stop` too. Since DR-226 was proposed, two
+      upstream architectural seams altered the review funnel: solorepo's DR-230
+      instituted reviewer triage at Issue intake, catching decision-dependent
+      challenges before coder branching; and solorepo's DR-249 established pre-code
+      approach validation for `hard` and `human` Challenges under **The plan.**,
+      preventing unviable architectures from being enacted into code.
+    alternatives:
+      - name: Grant move stop to the reviewer Role
+        chosen: false
+        reason: >-
+          Granting `move stop` to the reviewer Role introduces a severe moral hazard
+          in an autonomous agent fleet: an autonomous reviewer reading a complex
+          or unfamiliar diff cold faces an incentive gradient to abdicate thorough
+          diff critique by hitting the terminal `stop` escape hatch and dumping the
+          work back onto the human maintainer as `human`. This risks degrading the
+          solo into a high-latency triage desk for risk-averse reviewer ejections.
+          Furthermore, in solorepo's authority and operational model, a claim
+          (`move claim`) represents an active execution lease held exclusively by
+          the coder implementing the change. Allowing a reviewer—an external auditor
+          evaluating diff artifacts—to unilaterally strip a worker's claim and alter
+          Issue state violates role separation and creates concurrency races with
+          active coder worktrees.
+      - name: Maintain the Role boundary by reserving move stop strictly for claim-holding Roles
+        chosen: true
+        reason: >-
+          Confirms that the indirection is intentional and structurally sound.
+          The reviewer's authoritative mechanism for addressing flawed or
+          decision-blocked code is the pull request review verdict
+          (`--request-changes`) and anchored review threads. Under solorepo's DR-230
+          (intake triage) and solorepo's DR-249 (pre-code approach validation),
+          decision-dependent work is overwhelmingly identified and routed to `human`
+          before code is written. In the rare degenerate case where an `easy` or
+          `medium` implementation encounters an unresolvable architectural impasse,
+          the reviewer requests changes, stating clearly in the review thread that an
+          unsettled decision is owed. Under PR First step 4, the coder Role holding
+          the Challenge receives this finding and executes `move stop`, cleanly
+          releasing its own claim, transitioning the Issue to `human`, and leaving
+          the pull request open for the solo.
+    consequences:
+      - >-
+        `.meta/say/verbs.yaml` maintains `held_by: [coder, workflow]` for `stop`,
+        preserving the invariant that only Roles capable of holding an execution
+        claim may release one.
+      - >-
+        PR First step 4 and the reviewer Role's instructions affirm that when a
+        reviewer identifies an unmade architectural decision or an insurmountable
+        blocker during diff review, its duty is to request changes and explicitly
+        direct the coder to hand the Challenge back via `move stop`.
+      - >-
+        The solo is protected from autonomous reviewer abdication, preserving
+        human attention as the scarcest resource in the single-human, multi-agent
+        collaboration model.
+      - >-
+        Challenge #564 is closed as settled.
+    falsifier: >-
+      A reviewer Role invoking `move stop`, or an autonomous coder loop repeatedly
+      patching around an explicit reviewer directive that an architectural decision
+      is owed rather than executing `move stop`.
+    rationale: |-
+      Christopher, on settling Issue #564: with our reviewer / triage we give it a
+      crack at the issue itself, then the plan for the PR, then the code that gets
+      written. The only degenerate case would be an issue that was judged
+      easy/medium that ran into a complete code disaster, but I don't want to have
+      the reviewer throwing anything else back at me. Maintain the role boundary.
+
+      The Decision recognizes that the three-stage evaluation funnel (intake triage
+      under DR-230, pre-code plan validation under DR-249, and diff review) already
+      filters architectural ambiguity prior to implementation. Permitting the
+      reviewer to bypass diff review and eject Challenges directly to the solo
+      would introduce an escape hatch that subverts reviewer diligence. The coder
+      holds the claim, and the coder executes the hand-back.
