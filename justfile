@@ -17,8 +17,8 @@ render:
     uvx --with pyyaml python .meta/render.py
 
 # the pull request gate: A15, A16, A18, A19
-pr n:
-    python3 .meta/check_pr.py {{n}}
+pr n *args:
+    python3 .meta/check_pr.py {{n}} {{args}}
 
 # the subscription: one line per change, exiting on actionable events or when it closes
 watch n:

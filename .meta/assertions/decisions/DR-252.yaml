@@ -1,0 +1,108 @@
+decisions:
+  - id: work:decision/252
+    name: "DR-252 · Steer agent harnesses across the tripartite operator boundary and mandate PR First reading"
+    challenge: work:challenge/692
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/15
+      - work:article/19
+      - work:article/22
+    enacted_in:
+      - work:artifact/agents
+      - work:artifact/template-agents
+      - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-render-skills
+    context: >-
+      AGENTS.md instructs agents that "The full repository operator surface is
+      `just --list`" (solorepo's DR-106). However, in practice, agent harnesses frequently bypass
+      `just` to invoke internal scripts under `.meta/` directly (for example, invoking
+      `python3 .meta/check_pr.py <n> --watch` instead of `just watch <n>`, or bypassing
+      `just next`, `just gate`, and `just sweep`) (solorepo's #692).
+
+      Investigation revealed two root drivers of this behavioral drift:
+      First, repository operations are architecturally partitioned across three distinct planes
+      with disparate execution and payload semantics:
+      1. Local Operator Plane (`just`): Verification gates (`just gate`), rendering derived
+      assertions (`just render`), citation auditing (`just dereference`), compiling APM packages
+      (`just apm`), and polling loops (`just watch`, `just sweep`, `just next`). Recipes invoke
+      internal tools and contain no business logic (solorepo's DR-106). They run unauthenticated
+      in local and CI environments and execute atomic command lines without interactive stdin payloads.
+      2. Attested Mutation Plane (`.meta/say/` — `move`, `post`, `commit`): State transitions altering
+      shared state on GitHub or in git history: claiming an Issue (`move claim`), setting blockers
+      (`move waits`), closing superseded work (`move obviate`), posting signed review verdicts
+      (`post comment`, `post answer`), or authoring commits (`commit`). Every mutation is role-held,
+      cryptographically attributed via `Actor:` and `Agent:` trailers (solorepo's Article 19, solorepo's DR-233),
+      enforces atomic Discipline preconditions (solorepo's DR-232), and consumes multiline Markdown rationale on stdin.
+      3. GitHub Inspection Plane (`gh`): Unstructured, read-only queries against GitHub: reading raw
+      JSON metadata (`gh pr view --json`, `gh issue list`, `gh api`), reading diffs, and checking runner statuses.
+      Read operations produce no unattributed mutations and bypass no Disciplines.
+
+      Attempting to funnel all repository actions into `just` breaks down at the boundary of attested
+      mutations: `just` cannot cleanly receive multiline Markdown payloads on stdin without brittle
+      escaping, and lacks role and session identity. When agents encounter an operation lacking a
+      `just` recipe, they default to raw `gh` mutations (e.g., `gh issue close`), bypassing signing
+      trailers and Discipline checks.
+
+      Second, an operability gap existed in `just`: the `pr n:` recipe in `writers.py` did not forward
+      additional CLI arguments (`*args`), preventing agents from executing `just pr <n> --threads`
+      or other flags supported by `check_pr.py`. Furthermore, the compiled `pr-first` and `pr-first-reviewer`
+      skills actively taught agents to run `python3 .meta/check_pr.py` directly rather than invoking `just`.
+      Finally, coder and reviewer agents frequently began work without loading or internalizing the
+      PR First discipline, resulting in uncoordinated branching, missing headings, and missed handoff semaphores.
+    alternatives:
+      - name: Funnel all state mutations and channel operations into just recipes
+        chosen: false
+        reason: >-
+          Passing multiline Markdown rationale bodies on stdin through just recipes requires brittle
+          escaping, temporary files, or complex shell wrappers. Furthermore, just recipes are designed
+          as unauthenticated local task runners; coupling them to role credential resolution and session
+          signing trailers conflates the local operator plane with the attested mutation plane.
+      - name: Pure prompt instruction steering without addressing operability and skill templates
+        chosen: false
+        reason: >-
+          Instructing agents in AGENTS.md to use `just` while `just pr` refuses flags like `--threads`
+          forces agents to violate instructions when checking review threads. Additionally, leaving
+          `python3 .meta/check_pr.py` in the generated `pr-first` skill command templates continues to
+          provide conflicting demonstrations that counteract system prompt rules.
+      - name: Partition operations across the tripartite boundary, close just operability gaps, and mandate PR First skill reading
+        chosen: true
+        reason: >-
+          Codifying the tripartite boundary in AGENTS.md establishes clear, non-conflicting domains:
+          `just` for local execution and gates, `.meta/say/` for attested state mutations, and `gh`
+          for read-only queries. Forwarding `*args` in `just pr` (`pr n *args: python3 .meta/check_pr.py {{n}} {{args}}`)
+          and updating skill command templates to use `just sweep` and `just pr <n>` aligns the operator
+          surface with actual tool capabilities. Explicitly mandating in AGENTS.md that agents must read
+          `/pr-first` (and `/pr-first-reviewer`) before taking action guarantees adherence to repository
+          collaboration and handoff semaphores (solorepo's DR-248, solorepo's DR-249).
+    consequences:
+      - >-
+        AGENTS.md defines the tripartite operational boundary across `just` (local gates, renders, polling),
+        `.meta/say/` (attested GitHub/git mutations), and `gh` (read-only inspection), prohibiting
+        direct script execution under `.meta/` when a `just` recipe exists, and prohibiting out-of-band
+        mutations via `gh`.
+      - >-
+        AGENTS.md mandates that coder agents must read the `/pr-first` skill (.agents/skills/pr-first/SKILL.md)
+        before writing code or taking git/GitHub actions when taking up a Challenge or handling a PR,
+        and reviewer agents must read `/pr-first-reviewer`.
+      - >-
+        .meta/lib/render/writers.py updates `justfile` generation so `pr n *args:` forwards all
+        arguments to `python3 .meta/check_pr.py {{n}} {{args}}`.
+      - >-
+        .meta/lib/render/skills.py updates the `READING` command templates to present `just sweep`,
+        `just pr <n> --threads`, and `just pr <n>` instead of raw `python3 .meta/check_pr.py` invocations.
+      - >-
+        Challenge #692 is closed as answered.
+    falsifier: >-
+      An agent harness invoking an internal script under .meta/ directly when a corresponding
+      recipe exists in just, or performing a state mutation on GitHub via raw gh rather than .meta/say/.
+    rationale: |-
+      Clarity of operational agency requires clean architectural separation. `just` is the tool
+      for repeatable, credential-free execution, gates, and status polling. GitHub and git state
+      mutations demand role-held cryptographic attribution and Discipline enforcement, which lives
+      exclusively in `.meta/say/`. `gh` is an escape hatch for read-only telemetry.
+
+      By aligning `just pr` to accept arbitrary subcommands, updating skill examples to reflect
+      `just` idioms, defining the operational planes in `AGENTS.md`, and mandating the reading of
+      the PR First discipline, agent fleets are given both the rules and the ergonomic capability
+      to stay on the supported surface.
