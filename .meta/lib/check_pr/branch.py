@@ -35,7 +35,8 @@ DR = re.compile(r"DR-(\d+)")
 
 # The render, invoked as `just render` invokes it. Naming what it is run with is
 # this file's only choice: it needs PyYAML and this one does not have it.
-RENDER = ["uvx", "--with", "pyyaml", "python", str(META.resolve() / "render.py"), "--check"]
+RENDER = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
+          str(META.resolve() / "render.py"), "--check"]
 
 RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
 

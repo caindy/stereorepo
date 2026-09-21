@@ -29,16 +29,19 @@ from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT,
 from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
-from checks.files.python import MYPY, MYPY_ERROR, RUFF, TYPES_BASELINE, meta_doc, meta_lints, meta_ruff, meta_types, mypy_errors, tool_command
+from checks.files.python import CONTINUATION, EDGES, INTERPRETERS, MYPY, MYPY_ERROR, RUFF, TARGET_VERSION, TYPES_BASELINE, UVX_FLAGS, UVX_VALUED, Invocation, declared_interpreter, meta_doc, meta_interpreter, meta_lints, meta_ruff, meta_types, mypy_errors, tool_command, uvx_interpreter_calls
 from checks.files.rendered import apm_package, rendered_prose
 
 __all__ = [
+    "CONTINUATION",
     "CONTRACT",
+    "EDGES",
     "FENCED",
     "FLAGS",
     "FRONTMATTER",
     "IDENTIFIER",
     "INTERPOLATION",
+    "INTERPRETERS",
     "JUSTFILE",
     "LEAD_COPULA",
     "LIB",
@@ -57,14 +60,19 @@ __all__ = [
     "SEED_OWN_JOBS",
     "SHARED_JOBS",
     "SUBCOMMAND",
+    "TARGET_VERSION",
     "TYPES_BASELINE",
+    "UVX_FLAGS",
+    "UVX_VALUED",
     "WIKILINK",
+    "Invocation",
     "Strict",
     "apm_package",
     "asserts",
     "control_plane_packages",
     "control_plane_restore",
     "declared",
+    "declared_interpreter",
     "duplicate_concept_ids",
     "duplicate_keys",
     "gate_workflows_agree",
@@ -80,6 +88,7 @@ __all__ = [
     "meta_doc",
     "meta_history_evidence",
     "meta_history_orphans",
+    "meta_interpreter",
     "meta_lints",
     "meta_ruff",
     "meta_sources",
@@ -102,6 +111,7 @@ __all__ = [
     "tree",
     "ubiquitous_language_wiki_parity",
     "unread_prose",
+    "uvx_interpreter_calls",
     "wiki",
     "wiki_lead_paragraphs",
     "wiki_synonyms_are_not_avoided",

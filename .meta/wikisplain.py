@@ -18,7 +18,8 @@ try:
     import yaml  # noqa: F401  # reason: the import is the test of whether PyYAML is installed
 except ImportError:
     import subprocess
-    cmd = ["uvx", "--with", "pyyaml", "python", str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
+    cmd = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
+           str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
     res = subprocess.run(cmd)
     sys.exit(res.returncode)
 

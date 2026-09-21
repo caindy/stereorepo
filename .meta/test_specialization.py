@@ -31,7 +31,8 @@ from collections.abc import Sequence
 try:
     import yaml
 except ImportError:
-    cmd = ["uvx", "--with", "pyyaml", "python", str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
+    cmd = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
+           str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
     res = subprocess.run(cmd)
     sys.exit(res.returncode)
 
@@ -267,7 +268,8 @@ def step_5_bootstrap_project(target_path: pathlib.Path, lang: str, verbose: bool
 def step_6_render_portfolio(target_path: pathlib.Path) -> int:
     """Executes .meta/render.py inside the specialized repository to render recipes and docs."""
     print("test-specialization: step 6 — render portfolio assertions and recipes")
-    r_code, r_out, r_err = run_command(["uvx", "--with", "pyyaml", "python", ".meta/render.py"], target_path)
+    r_code, r_out, r_err = run_command(
+        ["uvx", "--python", "3.13", "--with", "pyyaml", "python", ".meta/render.py"], target_path)
     if r_code != 0:
         print(f"test-specialization: error — render failed (exit {r_code}):\n{r_out}\n{r_err}", file=sys.stderr)
         return r_code

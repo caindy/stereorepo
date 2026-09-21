@@ -30,6 +30,18 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | \
     bash -s -- --tag 1.58.0 --to /usr/local/bin
 
 # Install pinned uv / uvx (0.6.14)
+#
+# The interpreter `uv` runs is not pre-baked, and is the one tool this image
+# resolves over the network at run time. Every `uvx` invocation in the tree names
+# `--python 3.13` (solorepo's #760), the base image carries 3.12.3, and nothing
+# caches `~/.local/share/uv/python` across the ephemeral pods, so `uv` fetches a
+# CPython before the gate's first step reports. `RUN uv python install 3.13`
+# would close it for this image, and is deliberately not here: it lands with a
+# tag bump and a build and push that no branch can perform, and it narrows only
+# this image, while `.meta/gate` also runs on workstations and, for a portfolio
+# whose gate names no container, on `ubuntu-latest`. So the gap is written down
+# rather than left to be inferred from what this file does not say
+# (solorepo's DR-160).
 COPY --from=ghcr.io/astral-sh/uv:0.6.14 /uv /uvx /usr/local/bin/
 
 # Install pinned Node.js (22.14.0 LTS) and pinned Gemini CLI (0.59.0)

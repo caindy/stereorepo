@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uvx --with pyyaml python
+#!/usr/bin/env -S uvx --python 3.13 --with pyyaml python
 """Actions Runner Controller and runner scale set Helm deployer.
 
 Idempotently deploys or upgrades the GitHub Actions Runner Controller operator

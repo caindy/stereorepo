@@ -66,7 +66,7 @@ class itself. The script is what a shell runs; its body is the package
 `lib/render/`, seven modules (solorepo's DR-217). Edit the source and re-render:
 
 ```bash
-uvx --with pyyaml python .meta/render.py
+uvx --python 3.13 --with pyyaml python .meta/render.py
 ```
 
 **The verbs are `just` recipes, at the root.** `just --list` names them; each
@@ -79,7 +79,7 @@ done. It enforces the invariants the schemas state and cannot check, and
 subsumes the staleness check above:
 
 ```bash
-uvx --with linkml --with pyyaml python .meta/check.py
+uvx --python 3.13 --with linkml --with pyyaml python .meta/check.py
 ```
 
 **One verb runs any Project's gate, or a Product's: `.meta/gate`.** It reads

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uvx --with pyyaml python
+#!/usr/bin/env -S uvx --python 3.13 --with pyyaml python
 """Portfolio and project gate runner streaming Article 21 structured reports.
 
 Reads declared projects, products, and gate commands from

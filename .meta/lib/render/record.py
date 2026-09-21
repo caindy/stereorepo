@@ -130,11 +130,12 @@ def prechecks() -> list[str]:
     """The gate's prechecks, by function name, read out of the modules that
     register them.
 
-    Read and not imported. The renderer has one dependency — `uvx --with pyyaml
-    python .meta/render.py` is how it is run, and how `check.py` runs it — and
-    the modules a count of the gate's steps reaches into have LinkML. Each step
-    registers itself at its definition, so `@check(..., pre=True)` is the
-    declaration, and `ast` reads it without running anything.
+    Read and not imported. The renderer has one dependency — `uvx --python 3.13
+    --with pyyaml python .meta/render.py` is how it is run, and how `check.py`
+    runs it — and the modules a count of the gate's steps reaches into have
+    LinkML. Each step registers itself at its definition, so
+    `@check(..., pre=True)` is the declaration, and `ast` reads it without
+    running anything.
 
     The steps live in `.meta/checks/`, one module per subject
     (solorepo's DR-150), and the probes one level further down in

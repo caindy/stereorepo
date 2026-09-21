@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uvx --with linkml --with pyyaml python
+#!/usr/bin/env -S uvx --python 3.13 --with linkml --with pyyaml python
 """The reading of a citation, run before the hand-off (solorepo's DR-134, DR-192).
 
     just dereference                 what this branch wrote or affected, against origin/main

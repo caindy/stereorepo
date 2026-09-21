@@ -75,10 +75,10 @@ decisions:
         One count is derived: `prechecks`, the number of `check.py`'s steps
         registered with `@check(..., pre=True)`. It is read out of the source by
         `ast` and not by importing the module. The renderer has one dependency,
-        which is what `uvx --with pyyaml python .meta/render.py` says and what
-        `check.py` itself runs it with, and `check.py` has LinkML; importing it
-        to count it would cost the renderer the property that makes it runnable
-        on its own.
+        which is what `uvx --python 3.13 --with pyyaml python .meta/render.py`
+        says and what `check.py` itself runs it with, and `check.py` has LinkML;
+        importing it to count it would cost the renderer the property that makes
+        it runnable on its own.
       - >-
         A name nothing derives raises, naming the counts there are, for the
         reason `authored()` raises: an unfilled slot reaching a page is the

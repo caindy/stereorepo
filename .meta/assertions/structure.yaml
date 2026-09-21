@@ -23,7 +23,7 @@ projects:
     # `meta types` reads a count against a baseline (DR-177, DR-210), and a
     # release that gains or loses a diagnostic would move a count the tree did
     # not move.
-    gate: uvx --with linkml --with pyyaml --with ruff==0.14.0 --with mypy==2.3.1 --with types-pyyaml python .meta/check.py
+    gate: uvx --python 3.13 --with linkml --with pyyaml --with ruff==0.14.0 --with mypy==2.3.1 --with types-pyyaml python .meta/check.py
 
   # A second Project, in a second language: the monorepo claim as a build unit
   # rather than a word. Its gate is written in Rust (DR-090), and the Project

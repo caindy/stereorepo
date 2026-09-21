@@ -398,7 +398,8 @@ def landed(pr: int | str) -> None:
     if importlib.util.find_spec("yaml") is not None:
         command = [sys.executable, ".meta/render.py", "--landed"]
     else:
-        command = ["uvx", "--with", "pyyaml", "python", ".meta/render.py", "--landed"]
+        command = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
+                   ".meta/render.py", "--landed"]
     for number in numbers:
         if not (root / ".meta" / "assertions" / "challenges" / f"{number}.yaml").exists():
             print(f"#{number} is not asserted as a Challenge; nothing to post for it")

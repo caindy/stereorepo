@@ -1,6 +1,7 @@
-"""The Python under `.meta/`, held to its linters: no configuration ignore, ruff clean, `mypy --strict` clean, and a docstring on every public item (solorepo's DR-177, solorepo's DR-210, solorepo's #540).
+"""The Python under `.meta/`, held to its linters — no configuration ignore, ruff clean, `mypy --strict` clean, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (solorepo's DR-177, solorepo's DR-210, solorepo's #540, solorepo's #760).
 """
 import ast
+import pathlib
 import re
 import shutil
 import subprocess
@@ -8,6 +9,7 @@ import sys
 import tokenize
 import tomllib
 from collections.abc import Sequence
+from typing import NamedTuple
 
 from checks.collect import (
     META,
@@ -19,6 +21,289 @@ from checks.collect import (
     check,
 )
 from checks.files import sources
+
+# `target-version` in `.meta/ruff.toml`, which is the syntax the tree is
+# entitled to write: `py313` names Python 3.13.
+TARGET_VERSION = re.compile(r"^py(?P<major>\d)(?P<minor>\d+)$")
+
+
+# What wraps a command word where one is quoted, listed, fenced or tabulated,
+# stripped from both ends so that `` `uvx` ``, `(uvx`, `uvx,` and `uvx:` are all
+# read as the word `uvx`.
+EDGES = "\"'`,[]()<>;:"
+
+
+# The backslash a shell writes at the end of a wrapped command line. Dropped
+# with every word that strips to nothing, a `>` blockquote marker being one, so
+# that what the walk reads is the command's own words and no others.
+CONTINUATION = "\\"
+
+
+# The `uv tool run` options that take the following word as their value, read
+# off `uv tool run --help` at 0.6.14, the version `.meta/arc/Dockerfile` bakes.
+# A word after one of these is that value, not the command `uvx` was asked to
+# run.
+UVX_VALUED = frozenset({
+    "--allow-insecure-host", "--cache-dir", "--color", "--config-file",
+    "--config-setting", "-C", "--constraints", "-c", "--default-index",
+    "--directory", "--env-file", "--exclude-newer", "--extra-index-url",
+    "--find-links", "-f", "--fork-strategy", "--from", "--index",
+    "--index-strategy", "--index-url", "-i", "--keyring-provider",
+    "--link-mode", "--no-binary-package", "--no-build-isolation-package",
+    "--no-build-package", "--overrides", "--prerelease", "--project",
+    "--python", "-p", "--refresh-package", "--reinstall-package",
+    "--resolution", "--upgrade-package", "-P", "--with", "--with-editable",
+    "--with-requirements",
+})
+
+
+# The `uv tool run` options that stand alone, from the same reading. An option
+# in neither set is one this walk has not heard of, and is reported rather than
+# guessed at: guessing it valueless reads its value as the command, and the
+# invocation passes unexamined.
+UVX_FLAGS = frozenset({
+    "--compile-bytecode", "--help", "-h", "--isolated", "--managed-python",
+    "--native-tls", "--no-binary", "--no-build", "--no-build-isolation",
+    "--no-cache", "-n", "--no-config", "--no-env-file", "--no-index",
+    "--no-managed-python", "--no-progress", "--no-python-downloads",
+    "--no-sources", "--offline", "--quiet", "-q", "--refresh", "--reinstall",
+    "--upgrade", "-U", "--verbose", "-v", "--version", "-V",
+})
+
+
+# The commands that are a bare interpreter, whose version is therefore whatever
+# `uvx` resolved rather than anything the invocation asked for.
+INTERPRETERS = frozenset({"python", "python3"})
+
+
+class Invocation(NamedTuple):
+    """One `uvx` invocation this step has something to say about: an interpreter call, or a call whose command could not be read.
+
+    Attributes:
+        line: The one-based line the invocation starts on.
+        pinned: The version `--python` names, or `None` where it names none.
+        unread: `None` where the command word was read and is an interpreter;
+            the option that stopped the walk, or the empty string where the
+            file ended before any command word, otherwise.
+    """
+
+    line: int
+    pinned: str | None
+    unread: str | None
+
+
+def declared_interpreter(config: str) -> str | None:
+    """The Python version a `.meta/ruff.toml` declares, as `uvx --python` spells it.
+
+    Args:
+        config: The contents of `.meta/ruff.toml`.
+
+    Returns:
+        str | None: The dotted version, such as `3.13`, or `None` where the file
+        declares no `target-version`.
+
+    Raises:
+        tomllib.TOMLDecodeError: Where `config` is not TOML. Left to the caller,
+            which reports an unparseable configuration file as a defect in the
+            tree rather than as a step that could not run.
+    """
+    data = tomllib.loads(config)
+    declared = TARGET_VERSION.match(str(data.get("target-version", "")))
+    if declared is None:
+        return None
+    return f"{declared['major']}.{declared['minor']}"
+
+
+def _invocation_options(words: Sequence[str], start: int) -> int | None:
+    """Where the options begin for a word that starts a `uvx` invocation, and `None` for a word that starts none.
+
+    `uvx`, its long form `uv tool run`, and either qualified by a path are one
+    invocation: `.meta/arc/Dockerfile` installs the binary at
+    `/usr/local/bin/uvx`, and `tool_command()` builds its command from
+    `shutil.which("uvx")`, so a path-qualified spelling is the ordinary runtime
+    shape rather than an exotic one.
+    """
+    command = words[start].rsplit("/", 1)[-1]
+    if command == "uvx":
+        return start + 1
+    if command == "uv" and list(words[start + 1:start + 3]) == ["tool", "run"]:
+        return start + 3
+    return None
+
+
+def uvx_interpreter_calls(text: str) -> list[Invocation]:
+    """Every `uvx` invocation in `text` that runs a bare interpreter, and every one whose command could not be read.
+
+    Read as one stream of words rather than line by line, so a shebang, a
+    workflow `run:`, a `just` recipe, a Markdown fence, a Python argument list
+    and a YAML folded scalar are all read by one rule, and a call wrapped across
+    two lines is read to its command instead of being dropped at the break. A
+    rewrap is otherwise how a call site leaves this scan with nothing saying so,
+    and one wrap away is one edit away: `.github/workflows/gate.yml` and
+    `.meta/assertions/structure.yaml` each carry the command on a line of about
+    140 columns.
+
+    What cannot be read that way is reported rather than passed over. An option
+    named in neither `UVX_VALUED` nor `UVX_FLAGS` stops the walk, because
+    guessing it valueless would read its value as the command and pass the
+    invocation unexamined.
+
+    Args:
+        text: The contents of one file.
+
+    Returns:
+        list[Invocation]: One entry per interpreter call or unreadable
+        invocation, each against the line its `uvx` stands on.
+    """
+    stream = [(number, stripped)
+              for number, line in enumerate(text.splitlines(), start=1)
+              for stripped in (word.strip(EDGES) for word in line.split())
+              if stripped and stripped != CONTINUATION]
+    words = [word for _, word in stream]
+    calls: list[Invocation] = []
+    for start in range(len(words)):
+        options = _invocation_options(words, start)
+        if options is None:
+            continue
+        at = options
+        pinned: str | None = None
+        unread: str | None = None
+        while at < len(words) and words[at].startswith("-"):
+            option = words[at]
+            if option.startswith("--python="):
+                pinned = option.split("=", 1)[1]
+                at += 1
+            elif option in ("--python", "-p") and at + 1 < len(words):
+                pinned = words[at + 1]
+                at += 2
+            elif option in UVX_VALUED:
+                at += 2
+            elif option in UVX_FLAGS or "=" in option:
+                at += 1
+            else:
+                unread = option
+                break
+        number = stream[start][0]
+        if unread is not None:
+            calls.append(Invocation(number, pinned, unread))
+        elif at >= len(words):
+            if at > options:
+                calls.append(Invocation(number, pinned, ""))
+        elif words[at].rsplit("/", 1)[-1] in INTERPRETERS:
+            calls.append(Invocation(number, pinned, None))
+    return calls
+
+
+def _declared_version() -> str | StepOutcome:
+    """The version `.meta/ruff.toml` declares, or the outcome the step reports in place of one.
+
+    The ways there is no version are separated, because under solorepo's DR-261
+    an unrunnable step fails under CI, which makes this string the whole
+    diagnostic of a red required check rather than a note beside a green one. A
+    missing file is an environment the step cannot run in; a file that is
+    present and either unparseable or silent on `target-version` is a defect in
+    the tree, which is how `meta_lints` reads the same file below.
+    """
+    config = META / "ruff.toml"
+    if not config.is_file():
+        return CouldNotRun(".meta/ruff.toml is missing")
+    try:
+        declared = config.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        return CouldNotRun(f".meta/ruff.toml cannot be read — {error}")
+    try:
+        version = declared_interpreter(declared)
+    except tomllib.TOMLDecodeError as error:
+        return Found((f".meta/ruff.toml: does not parse — {error}",))
+    if version is None:
+        return Found((".meta/ruff.toml: declares no `target-version`, so there is no version "
+                      "to hold an invocation to",))
+    return version
+
+
+def _scannable(source: pathlib.Path) -> tuple[str | None, str | None]:
+    """The text of `source` for the walk to read, and why it could not be read.
+
+    A file holding a NUL byte is binary, as git decides it, and is neither text
+    nor a problem. Anything else that will not decode is a problem and not a
+    silence: one such file removes every call site it holds from the scan.
+    """
+    try:
+        raw = source.read_bytes()
+    except OSError as error:
+        return None, f"cannot be read, so it was not scanned — {error}"
+    if b"\0" in raw:
+        return None, None
+    try:
+        return raw.decode("utf-8"), None
+    except UnicodeDecodeError as error:
+        return None, f"is not UTF-8, so it was not scanned — {error}"
+
+
+def _call_problem(call: Invocation, where: str, version: str) -> str | None:
+    """What is wrong with one invocation, or `None` where nothing is."""
+    if call.unread == "":
+        return f"{where}: a `uvx` invocation runs past the end of the file, so the command " \
+               f"it names cannot be read"
+    if call.unread is not None:
+        return f"{where}: a `uvx` invocation carries `{call.unread}`, which this step does " \
+               f"not know, so the command it names cannot be read"
+    if call.pinned is None:
+        return f"{where}: `uvx` runs an interpreter it does not pin — add `--python {version}`"
+    if call.pinned != version:
+        return f"{where}: `uvx` pins Python {call.pinned}, and .meta/ruff.toml declares {version}"
+    return None
+
+
+@check("meta interpreter")
+def meta_interpreter() -> StepOutcome:
+    """Every invocation that asks `uvx` to run an interpreter names the version `.meta/ruff.toml` declares (solorepo's #760).
+
+    Reads the whole worktree — every file git tracks or does not ignore, so
+    `justfile`, `.github/workflows/`, `template/`, `bootstraps/`, Markdown and
+    YAML as much as `.py` — because that is where the invocations are. It is the
+    one step in this module that is not scoped to `.meta/`.
+
+    `uvx` given no `--python` resolves whatever default the machine has, so the
+    tooling runs on an interpreter that need not parse the syntax the tree is
+    entitled to write. `threading.Lock | None` is a `TypeError` at import before
+    Python 3.13, which kills `.meta/gate` before its first step reports: no step
+    name, no verdict, only a traceback from inside the runner.
+
+    The version is stated in each invocation and reconciled here rather than
+    derived, because a shebang has no way to read a file.
+
+    The count this step passes with is a report and not an assertion. What keeps
+    it a ratchet is that no call site leaves the scan quietly: a wrapped call is
+    read across the break, a file that cannot be read or decoded is reported,
+    and an option neither `UVX_VALUED` nor `UVX_FLAGS` names stops the walk with
+    a line rather than a shrug. A stated count would be the other shape, and it
+    cannot be this one: a portfolio inherits this step and its own tree holds a
+    different number.
+    """
+    version = _declared_version()
+    if not isinstance(version, str):
+        return version
+    problems = []
+    calls = 0
+    for source in sources.tree():
+        if not source.is_file():
+            continue
+        relative = source.relative_to(ROOT)
+        text, unscanned = _scannable(source)
+        if unscanned is not None:
+            problems.append(f"{relative}: {unscanned}")
+        if text is None:
+            continue
+        for call in uvx_interpreter_calls(text):
+            if call.unread is None:
+                calls += 1
+            problem = _call_problem(call, f"{relative}:{call.line}", version)
+            if problem is not None:
+                problems.append(problem)
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{calls} uvx invocations across the worktree, each pinned to Python {version}")
 
 
 @check("meta lints")

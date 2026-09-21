@@ -41,3 +41,17 @@ annotation, deferring it to the type checker, which reads `threading.Lock`
 as the class typeshed declares.
 
 Evidence: `.meta/checks/probes/tools/gate.py::gate_runner_probes`
+
+### Unpinned uvx interpreter aborted the gate at import before any step reported
+
+The shebang ran an interpreter through `uvx` and named no `--python`, so `uv`
+resolved whatever default the machine had. On a 3.12 default the `threading.Lock
+| None` annotation of `_emit()` raised `TypeError: unsupported operand type(s)
+for |` at import — `threading.Lock` being a factory function before Python 3.13
+and a class from 3.13 on — and the runner died with a traceback and no step
+name, no verdict, and no sentence saying the machine was the problem.
+Established: every invocation that asks `uvx` to run an interpreter names
+`--python 3.13`, the version `.meta/ruff.toml` declares as `target-version`, and
+a gate step reconciles the two.
+
+Evidence: `.meta/checks/files/python.py::meta interpreter`

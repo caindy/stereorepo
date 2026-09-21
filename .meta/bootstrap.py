@@ -23,7 +23,8 @@ import sys
 try:
     import yaml
 except ImportError:
-    cmd = ["uvx", "--with", "pyyaml", "python", str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
+    cmd = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
+           str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
     res = subprocess.run(cmd)
     sys.exit(res.returncode)
 

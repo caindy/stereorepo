@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uvx --with wordfreq python
+#!/usr/bin/env -S uvx --python 3.13 --with wordfreq python
 """An operator audit instrument that surfaces unminted terms by keyness and dispersion (solorepo's DR-234).
 
 Evaluates candidate terms doing technical work across the repository's durable

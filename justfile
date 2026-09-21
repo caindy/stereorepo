@@ -14,7 +14,7 @@ gate target="":
 
 # every generated page, from the assertions
 render:
-    uvx --with pyyaml python .meta/render.py
+    uvx --python 3.13 --with pyyaml python .meta/render.py
 
 # the pull request gate: A15, A16, A18, A19
 pr n *args:
@@ -34,7 +34,7 @@ merge-manager *args:
 
 # what landed for a Challenge, from the record; `.meta/say/post landed <pr>` posts it
 landed n:
-    uvx --with pyyaml python .meta/render.py --landed {{n}}
+    uvx --python 3.13 --with pyyaml python .meta/render.py --landed {{n}}
 
 # what to work on next: pull requests, loops, the milestone, and what is ripe
 next:
@@ -50,15 +50,15 @@ agents *args:
 
 # the citations this branch wrote, read against what they name; not a gate
 dereference *args:
-    uvx --with linkml --with pyyaml python .meta/dereference.py {{args}}
+    uvx --python 3.13 --with linkml --with pyyaml python .meta/dereference.py {{args}}
 
 # search assertions, decisions, and wiki by meaning (solorepo's DR-103)
 search *args:
-    uvx --with linkml --with pyyaml python .meta/search.py {{args}}
+    uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py {{args}}
 
 # surface unminted candidate terms by keyness and dispersion (solorepo's DR-234)
 terms *args:
-    uvx --with wordfreq python .meta/terms.py {{args}}
+    uvx --python 3.13 --with wordfreq python .meta/terms.py {{args}}
 
 # validate, pack, or compile the APM package via .meta/apm_compile.py (solorepo's DR-201)
 apm *args:
@@ -66,7 +66,7 @@ apm *args:
 
 # instantiate a Project from a language Bootstrap on demand (solorepo's DR-206)
 bootstrap *args:
-    uvx --with pyyaml python .meta/bootstrap.py {{args}}
+    uvx --python 3.13 --with pyyaml python .meta/bootstrap.py {{args}}
 
 # the optional local cluster this repo's self-hosted runner can use
 arc-cluster:

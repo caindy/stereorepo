@@ -37,7 +37,7 @@ def landed(number: int | str) -> str:
     goes through the channel that signs: `.meta/say/post landed 15` runs this for
     every Challenge the body closes and posts each. By hand:
 
-        uvx --with pyyaml python .meta/render.py --landed 11
+        uvx --python 3.13 --with pyyaml python .meta/render.py --landed 11
     """
     challenges = {c["id"]: c for path in
                   sorted((META / "assertions" / "challenges").glob("*.yaml"))

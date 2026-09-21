@@ -21,7 +21,7 @@ projects:
       The staging ground: the assertions and the tooling that renders and
       checks them.
     language: LinkML YAML, with Python for rendering and the gate
-    gate: uvx --with linkml --with pyyaml python .meta/check.py
+    gate: uvx --python 3.13 --with linkml --with pyyaml python .meta/check.py
 
 # The artifacts a Decision names under `enacted_in`. A file earns an entry by
 # being answerable for something.

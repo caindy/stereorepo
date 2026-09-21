@@ -88,7 +88,7 @@ jobs:
             curl -fsSL https://aka.ms/apm-unix | sh
             echo "$HOME/.apm/bin" >> $GITHUB_PATH
           fi
-      - run: uvx --with linkml --with pyyaml --with ruff==0.14.0 --with mypy==2.3.1 --with types-pyyaml python .meta/check.py
+      - run: uvx --python 3.13 --with linkml --with pyyaml --with ruff==0.14.0 --with mypy==2.3.1 --with types-pyyaml python .meta/check.py
 
   # The Rust seed is data, and it is gated by rendering it and running its own
   # gate on the result (A9, DR-091). Required by main's ruleset like the two

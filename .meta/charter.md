@@ -19,7 +19,7 @@ Discipline; some stand alone, and need nothing behind them.
 
 **Enforces** Ratchet. **Checked by** The gate, run before committing.
 
-_In practice:_ `uvx --with linkml --with pyyaml python .meta/check.py` passes, then the commit. Not a commit with `--no-verify` and a note to fix it after.
+_In practice:_ `uvx --python 3.13 --with linkml --with pyyaml python .meta/check.py` passes, then the commit. Not a commit with `--no-verify` and a note to fix it after.
 
 _Retired when:_ A commit that is the gate's own act, so a tree that did not pass is not one the history can hold and there is no order left for a Job to keep.
 

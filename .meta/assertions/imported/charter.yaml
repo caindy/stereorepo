@@ -27,9 +27,9 @@ articles:
     checked_by: >-
       The gate, run before committing.
     example: >-
-      `uvx --with linkml --with pyyaml python .meta/check.py` passes, then
-      the commit. Not a commit with `--no-verify` and a note to fix it
-      after.
+      `uvx --python 3.13 --with linkml --with pyyaml python .meta/check.py`
+      passes, then the commit. Not a commit with `--no-verify` and a note to
+      fix it after.
     falsifier: >-
       A commit that is the gate's own act, so a tree that did not pass is not
       one the history can hold and there is no order left for a Job to keep.
