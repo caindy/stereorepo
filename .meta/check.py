@@ -98,7 +98,11 @@ def main() -> int:
                   f"{type(exc).__name__}: {exc}")
             failed = True
             continue
-        failed |= report(step.label, step.run(*given))
+        try:
+            problems = step.run(*given)
+        except Exception as exc:
+            problems = [f"the check itself could not run — {type(exc).__name__}: {exc}"]
+        failed |= report(step.label, problems)
     print(f"\n{len(index)} identified objects, {len(refs)} references")
     return 1 if failed else 0
 
