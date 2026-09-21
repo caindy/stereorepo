@@ -59,7 +59,7 @@ UNREAD = timedelta(hours=1)
 """How long after its filing a Challenge may carry no level with no triage run before `--check` reports it as stalled (solorepo's DR-230)."""
 RUN_ISSUE = re.compile(r"#(\d+)")
 """The Issue number in a triage run's name, which `triage.yml` writes as `triage-issue-#<n>`."""
-LOOPS = ("coder.yml", "review.yml", "merge.yml", "advance.yml", "gate.yml")
+LOOPS = ("coder.yml", "review.yml", "merge.yml", "advance.yml", "reconcile.yml", "gate.yml")
 
 WAITS = re.compile(r"^\*\*Waits on\.\*\*\s*(.*?)\s*$", re.M)
 OLD_WAITS = re.compile(r"\*\*What it waits on\.\*\*\s*(.*?)(?:\n\s*\n|\Z)", re.S)

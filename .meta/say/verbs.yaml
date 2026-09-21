@@ -171,6 +171,16 @@ programs:
         usage: "[--dry-run]"
         does: "evaluate open pull requests against semaphores, rank eligible candidates by leverage, assert choices and deferrals out loud, and squash-merge the top candidate"
         held_by: [coder, workflow]
+      - name: reconcile
+        usage: "[--live] [--dry-run]"
+        does: >-
+          run the merge manager, then read every open Issue and pull request
+          through the classifiers and perform what each is owed where no run is
+          answering it — a rebase or review pass dispatched, a review requested
+          again, a take dispatched, an unread Challenge re-delivered to the
+          reviewer, a dead run's claim released; reported and not performed
+          without --live
+        held_by: [coder, workflow]
       - name: advance
         usage: "[<pr>]"
         does: >-

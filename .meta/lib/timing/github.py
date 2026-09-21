@@ -13,7 +13,7 @@ from typing import Any
 # Specialization's copied set — a portfolio writes one whose jobs are its own
 # Projects' — so it is named here rather than discovered, and a portfolio's
 # own gate keeps the name.
-WORKFLOWS = ("gate.yml", "coder.yml", "review.yml", "merge.yml", "advance.yml")
+WORKFLOWS = ("gate.yml", "coder.yml", "review.yml", "merge.yml", "advance.yml", "reconcile.yml")
 # A run GitHub never started costs nothing and would drag every percentile
 # toward zero. `skipped` is the common one: `coder.yml` and `review.yml` skip
 # far more deliveries than they take.

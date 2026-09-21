@@ -15,12 +15,13 @@ import re
 import subprocess
 import sys
 from collections.abc import Mapping, Sequence
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import channel
 import check_pr
+from lib.timing.github import NOT_RUN
 
 Pull = dict[str, Any]
 """One pull request as GitHub answers for it, whichever fields were asked for."""
@@ -3348,6 +3349,546 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
         sys.exit(exc.code)
 
 
+# --- The reconciler: what every open Issue and pull request is owed, read on the
+# --- clock and performed where no run is answering it (solorepo's DR-264).
+
+RECONCILE_FIELDS = MERGE_MANAGER_FIELDS + ",updatedAt"
+"""The reconciler's read of each open pull request: the merge manager's fields, plus `updatedAt`."""
+
+RECONCILE_MINUTES = 30.0
+"""How long a pull request or Issue must have sat idle before an act is owed on it.
+
+The sweep's bound, for the sweep's reason: a pass merely still running is not
+mistaken for one that stopped."""
+
+UNREAD_MINUTES = 60.0
+"""How long an unread Challenge must have sat since it last moved before its door is re-delivered.
+
+The hour is the one `just next --check` reports an unread Challenge after
+(solorepo's DR-230). Counting it from `updatedAt` rather than from the filing
+is this verb's own choice: a re-delivery moves it, so a Challenge re-delivered
+once is not re-delivered every period."""
+
+IN_FLIGHT = ("queued", "in_progress")
+"""The statuses a run has before it concludes, each listed by name so volume does not bound it."""
+
+RUN_FIELDS = "displayTitle,status,conclusion,headBranch"
+"""What `runs_of` reads off each run: its name, its status, its conclusion, and its branch.
+
+The loop workflows write the name with the number they run for, which is how a
+run for one Issue or pull request is told from the rest."""
+
+ISSUE_FIELDS = "number,title,labels,assignees,blockedBy,updatedAt,createdAt"
+"""What the reconciler reads off each open Issue, the blockers among it (solorepo's DR-213)."""
+
+
+class Owed(NamedTuple):
+    """One act the reconciler owes: its kind, the number it is owed on, and why.
+
+    Attributes:
+        kind: `rebase` or `review`, a coder pass dispatched on a pull request;
+            `request`, a review requested again; `take`, the coder's take pass
+            dispatched for a Challenge; `reread`, the reviewer's door
+            re-delivered; `release`, a dead run's claim released; or `hold`,
+            which is reported and never performed, since what it names is the
+            solo's.
+        number: The pull request or Issue the act is owed on.
+        why: The reading that owes it, in the words the log gets.
+    """
+
+    kind: str
+    number: int
+    why: str
+
+
+class Runs(NamedTuple):
+    """What GitHub lists of a workflow's runs, or that it would not.
+
+    Attributes:
+        flying: The runs queued or running, listed by status so that the
+            hundred newest do not bound them.
+        recent: The hundred newest runs, for a completed run's conclusion; None
+            where GitHub would not list them.
+    """
+
+    flying: list[dict[str, Any]]
+    recent: list[dict[str, Any]] | None
+
+    @property
+    def listed(self) -> bool:
+        """Whether GitHub answered every listing; unlistable runs hold every guarded act."""
+        return self.recent is not None
+
+
+def runs_of(workflow: str) -> Runs:
+    """The runs of a workflow, or that GitHub would not list them, said out loud.
+
+    A listing refused is not nothing in flight: the guard that keeps two coder
+    runs off one branch is what the listing is for, and a token without
+    `actions: read` would otherwise disable it in silence. So a refusal is
+    printed and answered as `Runs` with `recent` None, which holds every act
+    the guard qualifies. A call that hangs exits the channel without asking
+    for a fallback, and is caught here for the same reason.
+
+    Parameters:
+        workflow (str): The workflow file's name, as `gh run list` takes it.
+
+    Returns:
+        Runs: What was listed.
+    """
+    def listing(*args: str) -> list[dict[str, Any]] | None:
+        try:
+            found = channel.gh("run", "list", "--workflow", workflow, *args,
+                               "--json", RUN_FIELDS, default=None)
+        except SystemExit as exc:
+            found, why = None, str(exc.code)
+        else:
+            why = "GitHub refused the listing"
+        if found is None:
+            print(f"reconcile: could not list {workflow} runs — {why}")
+            return None
+        return list(found)
+
+    flying: list[dict[str, Any]] = []
+    for status in IN_FLIGHT:
+        got = listing("--status", status, "--limit", "100")
+        if got is None:
+            return Runs([], None)
+        flying += got
+    return Runs(flying, listing("--limit", "100"))
+
+
+def in_flight(runs: Runs, title: str = "", branch: str = "") -> bool:
+    """Whether a run named `title`, or running on `branch`, is queued or running.
+
+    Unlistable runs answer True: where nothing says whether a run is
+    answering, nothing is dispatched beside it.
+
+    Parameters:
+        runs (Runs): A workflow's runs, as `runs_of` lists them.
+        title (str): A run's whole display title, as the loop workflows write
+            it: `coder-issue-#<n>`, `triage-issue-#<n>`.
+        branch (str): A head branch, which is how a review run is found.
+
+    Returns:
+        bool: True where a run matching either has not concluded, or where
+            the runs could not be listed.
+    """
+    if not runs.listed:
+        return True
+    for run in runs.flying:
+        if title and str(run.get("displayTitle") or "") == title:
+            return True
+        if branch and run.get("headBranch") == branch:
+            return True
+    return False
+
+
+def read_by(runs: Runs, title: str) -> bool:
+    """Whether the newest run named `title` whose job ran concluded `success`, as `next` reads it.
+
+    A run the job declined or one displaced before it started concludes in
+    `NOT_RUN` and is passed over, so the run read is one that owed a reading.
+    Unlistable runs answer True, since a re-delivery nothing can check against
+    is one too many.
+
+    Parameters:
+        runs (Runs): The triage runs, as `runs_of` lists them.
+        title (str): The run name `triage.yml` writes for the Issue.
+
+    Returns:
+        bool: True where a reader read it and finished, or where nothing can say.
+    """
+    if not runs.listed:
+        return True
+    for run in runs.recent or []:
+        if str(run.get("displayTitle") or "") != title:
+            continue
+        if run.get("status") == "completed" and str(run.get("conclusion") or "") in NOT_RUN:
+            continue
+        return run.get("status") == "completed" and run.get("conclusion") == "success"
+    return False
+
+
+def idle_minutes(obj: Mapping[str, Any], now: datetime.datetime) -> float:
+    """Minutes since an Issue or pull request last moved, by `updatedAt`; forever without one."""
+    moved = obj.get("updatedAt")
+    if not moved:
+        return float("inf")
+    since = datetime.datetime.fromisoformat(str(moved).replace("Z", "+00:00"))
+    return (now - since).total_seconds() / 60
+
+
+def owed_by_pull(pull: Pull, found: Any, state: Any, reviewer_login: str,
+                 free: bool) -> Owed | None:
+    """What a loop branch's pull request is owed, read off the two classifiers' states, or None.
+
+    `state` is `classify_pr`'s and `found` is `classify_issue`'s, and the act
+    is decided on those (solorepo's DR-264); what the states do not carry, who
+    is asked and whether the merge is armed, is read off the pull request.
+    The shapes are the ones the sweep's `unheld` names, each qualified by
+    `free`, which the caller reads as the bound's silence with no run
+    answering. A branch conflicting under a request, an arming, or a verdict
+    owes a rebase pass, which is the sweep's own dispatch, the verdict the
+    coder has not answered being the case solorepo's DR-237 added to it. A
+    request for changes nobody is answering owes a review pass, since the review event
+    was dropped or a run ended without answering. A gate that failed owes a
+    review pass where the reviewer had approved and nobody is asked, and
+    owes the request again where the check that failed is the reviewer's own
+    and a request stands (solorepo's DR-178). A green pull request with no
+    verdict, no request, and no arming owes its first request, since a run
+    ended without handing it over. A Challenge in any state but `RESUMABLE`,
+    the one a loop-level Challenge with an open pull request reads when the
+    claim is read as nobody's, is held and reported, free or not, since what
+    stands on it is the solo's: a claim read as the coder's would read `TAKEN`
+    before `hard`, and a branch the solo took over at `hard` would be acted
+    on, which is what the take door's second reading exists to prevent
+    (solorepo's DR-142).
+
+    Parameters:
+        pull (dict): The pull request, carrying `RECONCILE_FIELDS`, its
+            `mergeable` settled by `mergeability` where `free`: the bulk
+            listing answers `UNKNOWN` for a branch GitHub has not recomputed,
+            and a conflict read as anything else dispatches the wrong pass.
+        found (IssueState | None): What `classify_issue` read of the Challenge
+            the branch names, with the pull request counted open and the claim
+            read as nobody's, as the doors a run arrives at with its own pull
+            request read it; None where the branch names no open Challenge.
+        state (PullRequestState): What `classify_pr` read of the pull request.
+        reviewer_login (str): The reviewer Role's login.
+        free (bool): Whether it has sat idle past the bound with no coder or
+            review run answering it.
+
+    Returns:
+        Owed | None: The one act owed, or None.
+    """
+    number = int(pull["number"])
+    issues, pulls_ = check_pr.state.IssueState, check_pr.PullRequestState
+    if found is None:
+        return None
+    if found is not issues.RESUMABLE:
+        return Owed("hold", number, f"its Challenge reads {found.value}, which is the solo's")
+    if not free:
+        return None
+    asked = check_pr.is_review_requested(pull, reviewer_login)
+    verdict = check_pr.latest_verdict(pull, reviewer_login)
+    armed = bool(pull.get("autoMergeRequest"))
+    if state is pulls_.NEEDS_REBASE:
+        if asked or armed or verdict in VERDICTS:
+            return Owed("rebase", number, "conflicting under a request, an arming, or a verdict")
+        return None
+    if state is pulls_.CHANGES_REQUESTED:
+        if not asked:
+            return Owed("review", number, "changes requested, and no run answering them")
+        return None
+    if state is pulls_.GATE_FAILED:
+        checks = deduplicate_checks(pull.get("statusCheckRollup") or [])
+        reviewer_check = next((c for c in checks if c.get("name") == "reviewer"), None)
+        reviewer_failed = str((reviewer_check or {}).get("conclusion") or "").upper() == "FAILURE"
+        if asked and reviewer_failed:
+            return Owed("request", number, "review requested, and the reviewer check failed "
+                                           "without a verdict")
+        if verdict == "APPROVED" and not asked:
+            return Owed("review", number, "approved, with failing checks")
+        return None
+    if state is pulls_.AWAITING_REVIEW and not asked and not verdict and not armed:
+        return Owed("request", number, "green, and nobody holds it")
+    return None
+
+
+class Quiet(NamedTuple):
+    """How long an Issue has sat, read against each bound, and what stands beside it.
+
+    Attributes:
+        free: Idle past the reconciler's bound with no coder run for it.
+        unread: Idle past `UNREAD_MINUTES` with no triage run for it in flight
+            and none that read it and finished.
+        expired: Idle past the coder workflow's job timeout with no coder run
+            for it, which is a claim its run died holding.
+        blocked: Waiting on an open Issue (solorepo's DR-213), which `just
+            next` keeps out of the ripe list and a take pass must not start.
+        idle: The minutes it has sat, for the log.
+    """
+
+    free: bool
+    unread: bool
+    expired: bool
+    blocked: bool
+    idle: float
+
+
+def owed_by_issue(issue: Mapping[str, Any], found: Any, quiet: Quiet) -> Owed | None:
+    """What an Issue is owed off its `IssueState`, or None.
+
+    An unread Challenge past the hour with no reader running and none that
+    read it owes the reviewer's door again; an offered one free of any run
+    and waiting on nothing owes the take pass; a claimed one with no pull
+    request whose claim has expired owes its release, which is the lease
+    solorepo's #781 asked for.
+
+    Parameters:
+        issue (dict): The Issue, carrying `ISSUE_FIELDS`.
+        found (IssueState): What `classify_issue` read.
+        quiet (Quiet): How long it has sat against each bound, and what
+            stands beside it.
+
+    Returns:
+        Owed | None: The one act owed, or None.
+    """
+    number = int(issue["number"])
+    states = check_pr.state.IssueState
+    if found is states.UNREAD and quiet.unread:
+        return Owed("reread", number, "unread for an hour, and no reader read it")
+    if found is states.OFFERED and quiet.free and not quiet.blocked:
+        return Owed("take", number, "offered, and no run took it")
+    if found is states.CLAIMED and quiet.expired:
+        return Owed("release", number, f"claimed with no pull request and no run for "
+                                       f"{int(quiet.idle)} minutes, past the longest coder run")
+    return None
+
+
+PERFORMED = {"rebase": ("dispatch a rebase pass for", "dispatched a rebase pass for"),
+             "review": ("dispatch a review pass for", "dispatched a review pass for"),
+             "request": ("request review of", "requested review of"),
+             "take": ("dispatch the take pass for", "dispatched the take pass for"),
+             "reread": ("re-deliver to the reviewer", "re-delivered to the reviewer"),
+             "release": ("release the claim on", "released the claim on")}
+"""Each act's verb, to say and to have done, for the log."""
+
+
+def redeliver(number: int) -> None:
+    """Re-deliver a Challenge to the reviewer's door: `challenge` taken off and put back, retried.
+
+    The door fires on `challenge` landing (solorepo's DR-230), so the label is
+    taken off and put back. The put-back is the half that must not fail, since
+    a Challenge left without `challenge` reads `UNLABELLED` and nothing here
+    owes it anything again; so where the settled write refuses, the label is
+    put back through `gh_with_retry` before the refusal is reported.
+
+    Parameters:
+        number (int): The Challenge.
+
+    Raises:
+        SystemExit: Where either half refused; the label was put back before
+            the second half's refusal is raised, or the exit says it was not.
+    """
+    relabel(number, remove=["challenge"])
+    try:
+        relabel(number, add=["challenge"])
+    except SystemExit as refused:
+        try:
+            channel.gh_with_retry("issue", "edit", str(number), "--add-label", "challenge",
+                                  parse=False, tolerate_fail=True)
+        except UNREACHED as again:
+            sys.exit(f"{refused.code}; and putting `challenge` back on #{number} was refused "
+                     f"too — {again} — so it is unlabelled, and `just next` is what reports it")
+        raise
+
+
+def perform(owed: Sequence[Owed], live: bool) -> None:
+    """Perform each act owed, or say what would be performed, each isolated from the rest.
+
+    A refusal on one act is printed and the next is performed, as the merge
+    manager isolates a candidate's failure (solorepo's #776). A rebase on a
+    layer of a stack is left to the solo, for `dispatch_pass`'s reason. The
+    take pass is dispatched without a harness, so the door reads the
+    Challenge's own `harness:` label as the label's delivery would.
+
+    Parameters:
+        owed (list[Owed]): The acts, as `reconcile` read them.
+        live (bool): Whether to perform them; otherwise each is reported.
+    """
+    for act in owed:
+        if act.kind == "hold":
+            print(f"reconcile: holding #{act.number} — {act.why}")
+            continue
+        saying, done = PERFORMED[act.kind]
+        if not live:
+            print(f"reconcile: would {saying} #{act.number} — {act.why}")
+            continue
+        try:
+            if act.kind == "rebase":
+                if stacked(act.number):
+                    print(f"reconcile: leaving #{act.number} to the solo — a layer of a stack, "
+                          "which is resolved from the bottom")
+                    continue
+                run_coder(act.number, "rebase")
+            elif act.kind == "review":
+                run_coder(act.number, "review")
+            elif act.kind == "request":
+                request_review(act.number, "reviewer")
+            elif act.kind == "take":
+                channel.gh("workflow", "run", "coder.yml", "-f", f"issue={act.number}",
+                           parse=False)
+            elif act.kind == "reread":
+                redeliver(act.number)
+            elif act.kind == "release":
+                release(act.number)
+        except SystemExit as exc:
+            print(f"reconcile: could not {saying} #{act.number} — {exc.code}")
+            continue
+        print(f"reconcile: {done} #{act.number} — {act.why}")
+
+
+def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None = None) -> None:
+    """Run the merge manager, then perform what every open Issue and pull request is owed.
+
+    The primary loop, of which the webhook doors are the accelerator
+    (solorepo's DR-264): a dropped edge costs one period of the clock rather
+    than a freeze. The merge manager runs first, as it did on the clock before
+    this, and its exit is held until the reading is done so that a failed
+    candidate paints the run red without starving the acts beside it. Every
+    act is qualified twice: by `minutes` of silence, and by no run for it
+    queued or running, read off the run names the loop workflows write; runs
+    GitHub will not list hold every act that needs the guard, and the log says
+    so. A pull request that is free has its mergeability settled before it is
+    read, as every other dispatch here settles it, so an `UNKNOWN` pays in a
+    wait and not in the wrong pass. Whether a Challenge has a pull request
+    open counts a draft, as the take door counts one, since the merge manager
+    this has just run is what parks a stalled loop branch in draft
+    (solorepo's DR-258). Without `live`, each act is reported and none
+    performed, which is how the workflow lands.
+
+    Parameters:
+        live (bool): Whether to perform the acts, or only report them.
+        dry_run (bool): The merge manager's own dry run: name its winner and
+            merge nothing; with it, nothing here is performed either.
+        minutes (float | None): The silence an act waits for, `RECONCILE_MINUTES`
+            by default.
+
+    Raises:
+        SystemExit: With the merge manager's code, after the reading, where a
+            candidate failed to land.
+    """
+    bound = RECONCILE_MINUTES if minutes is None else minutes
+    ended: str | int | None = None
+    try:
+        merge_manager(dry_run=dry_run)
+    except SystemExit as exc:
+        ended = exc.code
+        print(f"reconcile: the merge manager ended with {ended}; reading on")
+    _, _, reviewer_login = repo_context()
+    coder = channel.role_login("coder")
+    pulls = channel.gh("pr", "list", "--state", "open", "--limit", "100",
+                       "--json", RECONCILE_FIELDS)
+    issues = channel.gh("issue", "list", "--state", "open", "--limit", "200",
+                        "--json", ISSUE_FIELDS)
+    coder_runs, review_runs, triage_runs = (runs_of("coder.yml"), runs_of("review.yml"),
+                                            runs_of("triage.yml"))
+    if not (coder_runs.listed and review_runs.listed and triage_runs.listed):
+        print("reconcile: holding every act a run could be answering, since the runs could "
+              "not be listed and nothing says whether one is")
+    reading = Reading(now=datetime.datetime.now(datetime.UTC), bound=bound,
+                      longest=float(check_pr.longest_run() or 75), coder=coder,
+                      reviewer_login=reviewer_login,
+                      by_number={int(i["number"]): i for i in issues},
+                      named={int(m.group(1)) for pull in pulls
+                             if (m := LOOPS_BRANCH.match(pull.get("headRefName") or ""))},
+                      coder_runs=coder_runs, review_runs=review_runs, triage_runs=triage_runs)
+    owed = owed_by_pulls(pulls, reading) + owed_by_issues(issues, reading)
+    if not owed:
+        print("reconcile: nothing owed")
+    perform(owed, live and not dry_run)
+    if ended is not None:
+        sys.exit(ended)
+
+
+class Reading(NamedTuple):
+    """What one pass of the reconciler reads once and every decision shares.
+
+    Attributes:
+        now: The moment the pass is made.
+        bound: The silence an act waits for, in minutes.
+        longest: The coder workflow's job timeout, in minutes.
+        coder: The coder Role's login, whose assignment is a claim.
+        reviewer_login: The reviewer Role's login.
+        by_number: Every open Issue by number.
+        named: The Issues an open loop-branch pull request names, drafts
+            included, which is what `classify_issue` counts as a pull request.
+        coder_runs: `coder.yml`'s runs.
+        review_runs: `review.yml`'s runs.
+        triage_runs: `triage.yml`'s runs.
+    """
+
+    now: datetime.datetime
+    bound: float
+    longest: float
+    coder: str
+    reviewer_login: str
+    by_number: dict[int, Mapping[str, Any]]
+    named: set[int]
+    coder_runs: Runs
+    review_runs: Runs
+    triage_runs: Runs
+
+
+def owed_by_pulls(pulls: Sequence[Pull], reading: Reading) -> list[Owed]:
+    """What every open loop-branch pull request not in draft is owed, read through both classifiers.
+
+    Parameters:
+        pulls (list): The open pull requests, carrying `RECONCILE_FIELDS`.
+        reading (Reading): What the pass reads once.
+
+    Returns:
+        list[Owed]: The acts owed, at most one per pull request.
+    """
+    owed: list[Owed] = []
+    for pull in pulls:
+        match = LOOPS_BRANCH.match(pull.get("headRefName") or "")
+        if not match or pull.get("isDraft"):
+            continue
+        challenge_number = int(match.group(1))
+        challenge: Mapping[str, Any] | None = reading.by_number.get(challenge_number)
+        if challenge is None:
+            challenge = channel.gh("issue", "view", str(challenge_number),
+                                   "--json", "state,labels,assignees", default=None)
+        found = (check_pr.state.classify_issue({"state": "OPEN", **challenge}, None, True)
+                 if challenge is not None else None)
+        head = str(pull.get("headRefName") or "")
+        busy = (in_flight(reading.coder_runs, title=f"coder-issue-#{pull['number']}")
+                or in_flight(reading.coder_runs, title=f"coder-issue-#{challenge_number}")
+                or in_flight(reading.review_runs, branch=head))
+        free = not busy and idle_minutes(pull, reading.now) >= reading.bound
+        if free:
+            mergeability(pull)
+        state = check_pr.classify_pr(pull, deduplicate_checks(pull.get("statusCheckRollup") or []),
+                                     None, reading.reviewer_login)
+        act = owed_by_pull(pull, found, state, reading.reviewer_login, free)
+        if act:
+            owed.append(act)
+    return owed
+
+
+def owed_by_issues(issues: Sequence[Mapping[str, Any]], reading: Reading) -> list[Owed]:
+    """What every open Issue is owed, each read through the Issue classifier against the bounds.
+
+    Parameters:
+        issues (list): The open Issues, carrying `ISSUE_FIELDS`.
+        reading (Reading): What the pass reads once.
+
+    Returns:
+        list[Owed]: The acts owed, at most one per Issue.
+    """
+    owed: list[Owed] = []
+    for issue in issues:
+        number = int(issue["number"])
+        found = check_pr.state.classify_issue({**issue, "state": "OPEN"}, reading.coder,
+                                              number in reading.named)
+        idle = idle_minutes(issue, reading.now)
+        busy_coder = in_flight(reading.coder_runs, title=f"coder-issue-#{number}")
+        busy_triage = in_flight(reading.triage_runs, title=f"triage-issue-#{number}")
+        quiet = Quiet(free=not busy_coder and idle >= reading.bound,
+                      unread=(not busy_triage and idle >= UNREAD_MINUTES
+                              and not read_by(reading.triage_runs, f"triage-issue-#{number}")),
+                      expired=not busy_coder and idle >= reading.longest,
+                      blocked=any(n in reading.by_number for n in issue_blockers(dict(issue))),
+                      idle=idle)
+        act = owed_by_issue(issue, found, quiet)
+        if act:
+            owed.append(act)
+    return owed
+
+
 def ensure_autonomous_level(issue_number: str | int,
                             requested_level: str | None = None) -> tuple[str, bool]:
     """Ensure an Issue carries the `challenge` label and an autonomous difficulty.
@@ -3584,6 +4125,14 @@ def _add_pr_parsers(sub: Any) -> None:
     p.add_argument("--no-advance", action="store_true",
                    help="leave a pull request stranded behind trunk to `advance.yml`, which a "
                         "push to `main` runs alongside this")
+    p = sub.add_parser("reconcile")
+    p.add_argument("--live", action="store_true",
+                   help="perform what is owed; without it, report what would be performed")
+    p.add_argument("--dry-run", action="store_true",
+                   help="the merge manager's dry run too: name its winner and merge nothing")
+    p.add_argument("--minutes", type=float, default=None,
+                   help="how long a pull request or Issue must have sat idle before an act "
+                        "is owed on it (default RECONCILE_MINUTES)")
     p = sub.add_parser("advance")
     p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
     p = sub.add_parser("dispatch")
@@ -3653,6 +4202,8 @@ def _dispatch_pr_verb(args: argparse.Namespace) -> None:
         merge(args.pr, stack=args.stack, auto=args.auto)
     elif args.verb == "merge-manager":
         merge_manager(dry_run=args.dry_run, stranded=not args.no_advance)
+    elif args.verb == "reconcile":
+        reconcile(live=args.live, dry_run=args.dry_run, minutes=args.minutes)
     elif args.verb == "advance":
         advance(args.pr)
     elif args.verb == "dispatch":

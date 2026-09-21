@@ -22,7 +22,7 @@
 # coder's, and the bound on it is the ruleset, the gate and review rather than
 # the reviewer's reading hook.
 name: coder
-run-name: coder-issue-#${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}
+run-name: coder-issue-#${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request || inputs.issue }}
 
 on:
   issues:
@@ -46,7 +46,18 @@ on:
     inputs:
       pull_request:
         description: the pull request the coder is dispatched for
-        required: true
+        required: false
+      # The take pass, dispatched for a Challenge rather than a pull request:
+      # what the reconciler sends for a delivery the label's own event never
+      # made (solorepo's DR-264). A run may not re-land a level to fire the
+      # door (solorepo's DR-235), so the door is opened by name instead. The
+      # facts the label's door reads off its event are read here off the
+      # Issue by number: the take door reads its state, and the harness step
+      # reads its `harness:` label, since the `harness` input is never empty
+      # and would otherwise decide for a label it never saw.
+      issue:
+        description: the Challenge the coder is dispatched to take
+        required: false
       task:
         description: what the coder is dispatched to do
         type: choice
@@ -55,7 +66,7 @@ on:
       harness:
         description: which harness runs
         type: choice
-        options: [claude, codex]
+        options: [claude, codex, gemini]
         default: claude
 
 # One run per Issue or per pull request at a time. A second label on the
@@ -85,7 +96,7 @@ on:
 # separation, a non-taking label arriving while a difficulty run is pending
 # cancels the difficulty run and leaves a delivery that skips (solorepo's #472).
 concurrency:
-  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || ((github.event.label.name == 'easy' || github.event.label.name == 'medium') && 'take') || github.event.label.name || 'take' }}
+  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request || inputs.issue }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || ((github.event.label.name == 'easy' || github.event.label.name == 'medium') && 'take') || github.event.label.name || 'take' }}
   cancel-in-progress: false
 
 # The workflow's own token reads. Every write goes through the coder's
@@ -175,7 +186,7 @@ jobs:
       # Challenge back and has nothing else to name.
       - name: find the pull request
         id: pr
-        if: github.event_name != 'issues'
+        if: github.event_name != 'issues' && inputs.issue == ''
         run: |
           n="${EVENT_PR:-$INPUT_PR}"
           pull=$(gh pr view "$n" --json state,headRefName,baseRefName)
@@ -220,7 +231,25 @@ jobs:
           # Default per repository decision: claude
           harness="claude"
 
-          if [ -n "$INPUT_HARNESS" ]; then
+          # A Challenge dispatched by number carries its own `harness:` label,
+          # which the label's door would have read; it wins over the input,
+          # whose default is never empty, and the input wins where the label
+          # names no harness, so an explicit ask still decides over silence.
+          issue_harness=""
+          if [ -n "$INPUT_ISSUE" ]; then
+            issue_labels=$(gh issue view "$INPUT_ISSUE" --json labels -q '.labels[].name' 2>/dev/null || true)
+            if echo "$issue_labels" | grep -qw "harness:codex"; then
+              issue_harness="codex"
+            elif echo "$issue_labels" | grep -qw "harness:gemini"; then
+              issue_harness="gemini"
+            elif echo "$issue_labels" | grep -qw "harness:claude"; then
+              issue_harness="claude"
+            fi
+          fi
+
+          if [ -n "$issue_harness" ]; then
+            harness="$issue_harness"
+          elif [ -n "$INPUT_HARNESS" ]; then
             harness="$INPUT_HARNESS"
           elif [ "$EVENT" = "issues" ]; then
             if echo "$ISSUE_LABELS" | grep -qw "harness:codex"; then
@@ -261,6 +290,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           INPUT_HARNESS: ${{ inputs.harness }}
+          INPUT_ISSUE: ${{ inputs.issue }}
           ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ' ') }}
           PR_BRANCH: ${{ steps.pr.outputs.branch }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
@@ -374,7 +404,7 @@ jobs:
       # Challenge the loop holds — and not a failure.
       - name: is it taken already
         id: taken
-        if: github.event_name != 'workflow_dispatch' || inputs.task == 'rebase' || steps.pr.outputs.by == 'merged'
+        if: github.event_name != 'workflow_dispatch' || inputs.task == 'rebase' || inputs.issue != '' || steps.pr.outputs.by == 'merged'
         run: |
           if [ "$BY" = merged ]; then
             printf 'by=merged\nwhy=merged\n' >> "$GITHUB_OUTPUT"
@@ -386,8 +416,8 @@ jobs:
           jq -r '.said' <<<"$taken"
         env:
           GH_TOKEN: ${{ github.token }}
-          DOOR: ${{ github.event_name }}
-          ISSUE: ${{ github.event.issue.number || steps.pr.outputs.issue }}
+          DOOR: ${{ inputs.issue != '' && 'issues' || github.event_name }}
+          ISSUE: ${{ github.event.issue.number || inputs.issue || steps.pr.outputs.issue }}
           BY: ${{ steps.pr.outputs.by }}
 
       # Where the loop stood down and nobody is standing there, say so on the
@@ -463,11 +493,11 @@ jobs:
           # label was: the threads it answers were written by the deeper reviewer.
           # A promotion pass (approved) takes the smaller model and a quarter of
           # the budget above regardless of LEVEL.
-          LEVEL: ${{ (github.event_name == 'issues' && steps.taken.outputs.level) || 'medium' }}
+          LEVEL: ${{ ((github.event_name == 'issues' || inputs.issue != '') && steps.taken.outputs.level) || 'medium' }}
 
       - name: take the Issue (claude)
         id: take_claude
-        if: github.event_name == 'issues' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude'
+        if: (github.event_name == 'issues' || inputs.issue != '') && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
@@ -507,7 +537,7 @@ jobs:
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
-            You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}
+            You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number || inputs.issue }}
             of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
             Read /pr-first: it is the coder's reading of PR First, and lists
             your verbs, what each does and where the judgement is; `AGENTS.md`
@@ -518,9 +548,9 @@ jobs:
             instead. Commit through `.meta/say/commit -m "<subject>"` and
             never `git commit`; only the channel signs.
 
-            Claim it: `.meta/say/move claim ${{ github.event.issue.number }}`.
-            Read it: `gh issue view ${{ github.event.issue.number }}`.
-            Branch as `${{ steps.harness.outputs.branch_prefix }}/issue-${{ github.event.issue.number }}` from
+            Claim it: `.meta/say/move claim ${{ github.event.issue.number || inputs.issue }}`.
+            Read it: `gh issue view ${{ github.event.issue.number || inputs.issue }}`.
+            Branch as `${{ steps.harness.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
             `origin/main`, push at the first commit, and open the pull request
             at once with `.meta/say/move open`, the form filled and the Issue named
             under "What it closes". ${{ steps.taken.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.taken.outputs.resume) || 'No run has taken this Issue before.' }}
@@ -565,7 +595,7 @@ jobs:
 
             If you cannot finish — a decision only the solo can take, a gate
             that will not go green, work larger than it looked —
-            `.meta/say/move stop ${{ github.event.issue.number }}` with why on
+            `.meta/say/move stop ${{ github.event.issue.number || inputs.issue }}` with why on
             stdin. It hands the Issue to the solo and leaves the pull request
             open for the run that takes it up again.
 
@@ -580,7 +610,7 @@ jobs:
 
       - name: take the Issue (gemini)
         id: take_gemini
-        if: github.event_name == 'issues' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
+        if: (github.event_name == 'issues' || inputs.issue != '') && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
         continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
@@ -599,7 +629,7 @@ jobs:
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
-            You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number }}
+            You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number || inputs.issue }}
             of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
             Read /pr-first: it is the coder's reading of PR First, and lists
             your verbs, what each does and where the judgement is; `AGENTS.md` (and `GEMINI.md`)
@@ -610,9 +640,9 @@ jobs:
             instead. Commit through `.meta/say/commit -m "<subject>"` and
             never `git commit`; only the channel signs.
 
-            Claim it: `.meta/say/move claim ${{ github.event.issue.number }}`.
-            Read it: `gh issue view ${{ github.event.issue.number }}`.
-            Branch as `${{ steps.harness.outputs.branch_prefix }}/issue-${{ github.event.issue.number }}` from
+            Claim it: `.meta/say/move claim ${{ github.event.issue.number || inputs.issue }}`.
+            Read it: `gh issue view ${{ github.event.issue.number || inputs.issue }}`.
+            Branch as `${{ steps.harness.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
             `origin/main`, push at the first commit, and open the pull request
             at once with `.meta/say/move open`, the form filled and the Issue named
             under "What it closes". ${{ steps.taken.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.taken.outputs.resume) || 'No run has taken this Issue before.' }}
@@ -662,7 +692,7 @@ jobs:
 
             If you cannot finish — a decision only the solo can take, a gate
             that will not go green, work larger than it looked —
-            `.meta/say/move stop ${{ github.event.issue.number }}` with why on
+            `.meta/say/move stop ${{ github.event.issue.number || inputs.issue }}` with why on
             stdin. It hands the Issue to the solo and leaves the pull request
             open for the run that takes it up again.
 
@@ -725,7 +755,7 @@ jobs:
       # arriving Job reads.
       - name: hand back what the run did not finish
         if: >-
-          always() && github.event_name == 'issues' && steps.taken.outputs.by == ''
+          always() && (github.event_name == 'issues' || inputs.issue != '') && steps.taken.outputs.by == ''
           && (steps.take_claude.outcome == 'failure' || steps.take_claude.outcome == 'cancelled'
               || steps.take_gemini.outcome == 'failure' || steps.take_gemini.outcome == 'cancelled')
         run: |
@@ -838,7 +868,7 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number }}
+          ISSUE: ${{ github.event.issue.number || inputs.issue }}
           OUTCOME: ${{ (steps.take_gemini.outcome == 'failure' || steps.take_gemini.outcome == 'cancelled') && steps.take_gemini.outcome || steps.take_claude.outcome }}
           BRANCH_PREFIX: ${{ steps.harness.outputs.branch_prefix }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -1094,7 +1124,7 @@ jobs:
       - name: answer the review (claude)
         id: answer_claude
         if: >-
-          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
+          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase' && inputs.issue == ''
            || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
           && steps.taken.outputs.by == ''
           && steps.pr.outputs.by == ''
@@ -1156,7 +1186,7 @@ jobs:
       - name: answer the review (gemini)
         id: answer_gemini
         if: >-
-          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
+          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase' && inputs.issue == ''
            || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
           && steps.taken.outputs.by == ''
           && steps.pr.outputs.by == ''
@@ -1218,7 +1248,7 @@ jobs:
 
       - name: verify answer pass completed
         if: >-
-          always() && (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase'
+          always() && (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase' && inputs.issue == ''
            || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
           && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
           && steps.answer_claude.outcome != 'success' && steps.answer_gemini.outcome != 'success'

@@ -1,0 +1,74 @@
+# The reconciler: the primary loop, of which the webhook doors are the
+# accelerator (solorepo's DR-264). On the clock it runs the merge manager,
+# which is the backstop `merge.yml`'s schedule was, and then reads every open
+# Issue and pull request through the classifiers and performs what each is
+# owed where no run is answering it: a rebase or review pass dispatched, a
+# review requested again, a take dispatched, an unread Challenge re-delivered
+# to the reviewer, a dead run's claim released. A dropped webhook edge then
+# costs one period rather than a freeze.
+#
+# It lands observing: on the schedule the acts are reported and not performed,
+# and the merge manager runs as it always did on the clock. `live` on a
+# dispatch performs them, and the line below moves to `--live` once the log
+# has said for a day what it would have done.
+name: reconcile
+
+# The merge manager's group, because this runs it: two merges in quick
+# succession must serialize, whichever workflow asked for them.
+concurrency:
+  group: merge
+  cancel-in-progress: false
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      live:
+        description: perform what is owed rather than reporting it
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  reconcile:
+    name: reconcile
+    # The self-hosted scale set (solorepo's DR-140).
+    runs-on: arc-runner-set
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.meta/actions/gh
+
+      # The coder's credential, as `advance.yml` holds it: the acts are the
+      # coder Role's, and a dispatch or a request made by the workflow's own
+      # token would start no run (solorepo's DR-133).
+      - name: hold the coder's credential
+        run: |
+          install -d -m 700 ~/.config/solorepo
+          install -m 600 /dev/null ~/.config/solorepo/coder.env
+          printf 'GH_TOKEN=%s\n' "$CODER_GH_TOKEN" > ~/.config/solorepo/coder.env
+          gh stack --help >/dev/null || gh extension install github/gh-stack
+          GH_TOKEN="$CODER_GH_TOKEN" gh auth setup-git
+          .meta/say/whoami
+        env:
+          CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
+
+      - name: reconcile
+        run: |
+          if [ "${{ inputs.live }}" = "true" ]; then
+            .meta/say/move reconcile --live
+          else
+            .meta/say/move reconcile
+          fi
+        env:
+          ACTOR_SESSION: gha-${{ github.run_id }}
+          ACTOR_AGENT: gha/reconcile
+          AI_AGENT: gha/reconcile

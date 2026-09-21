@@ -18,6 +18,9 @@ decisions:
       - work:artifact/meta-say
       - work:artifact/meta-checks-probes-channel-settle
       - work:artifact/meta-checks-probes-harness-fakes
+      - work:artifact/github-workflows-reconcile
+      - work:artifact/github-workflows-merge
+      - work:artifact/meta-checks-probes-loops-reconcile
     context: >-
       The loops are a pair of state machines, one over Issues and one over pull
       requests, whose state GitHub holds (A22). Nothing in the tree holds either

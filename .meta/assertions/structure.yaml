@@ -155,6 +155,9 @@ artifacts:
   - id: work:artifact/github-workflows-merge
     name: .github/workflows/merge.yml
     path: .github/workflows/merge.yml
+  - id: work:artifact/github-workflows-reconcile
+    name: .github/workflows/reconcile.yml
+    path: .github/workflows/reconcile.yml
   - id: work:artifact/github-workflows-test-specialization
     name: .github/workflows/test-specialization.yml
     path: .github/workflows/test-specialization.yml
@@ -425,6 +428,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-take
     name: .meta/checks/probes/loops/take.py
     path: .meta/checks/probes/loops/take.py
+  - id: work:artifact/meta-checks-probes-loops-reconcile
+    name: .meta/checks/probes/loops/reconcile.py
+    path: .meta/checks/probes/loops/reconcile.py
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py

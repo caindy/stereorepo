@@ -27,9 +27,9 @@ disciplines:
         `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`,
         `.meta/templates/`, `.meta/arc/Dockerfile`, `.github/workflows/coder.yml`,
         `.github/workflows/review.yml`, `.meta/detect_fallback.py` (solorepo's DR-245), `.meta/run_agy.py` (solorepo's DR-257), `.github/workflows/triage.yml` (solorepo's DR-230), `.github/workflows/merge.yml`, `.github/workflows/advance.yml`,
-        `wiki/solorepo/` (solorepo's DR-184), `stakeholders/` and `.gitignore`. The channel, its hooks and the
+        `.github/workflows/reconcile.yml` (solorepo's DR-264), `wiki/solorepo/` (solorepo's DR-184), `stakeholders/` and `.gitignore`. The channel, its hooks and the
         settings that register them travel with the loop workflows rather than
-        after them: every instruction those five give is typed as a program of `.meta/say/`,
+        after them: every instruction those six give is typed as a program of `.meta/say/`,
         most of `check.py`'s {#prechecks} prechecks load the channel or a hook, and
         `.claude/settings.json` is the one place the hook is invoked and the
         unsigned `gh` verbs denied (DR-069) — a hook file that nothing invokes

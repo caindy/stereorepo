@@ -9,9 +9,10 @@
 #
 # Runs on push to main (when trunk moves, to land newly current work), on a
 # gate or review run that *succeeded* (the instant a candidate's checks or
-# review finish, rather than waiting on the clock), on a 15-minute schedule
-# (for quiet check completions, and as a backstop if a workflow_run delivery
-# is ever missed), and on workflow_dispatch.
+# review finish, rather than waiting on the clock), and on workflow_dispatch.
+# The clock is `reconcile.yml`'s (solorepo's DR-264): it runs the merge
+# manager on a schedule as the backstop for a quiet check completion or a
+# workflow_run delivery that was missed, and reads what else is owed beside it.
 # Does not run on pull_request or pull_request_review events: those run unmerged
 # code from the PR's merge ref holding the coder's token (solorepo's DR-161).
 # workflow_run is not among them — GitHub's reference gives its GITHUB_REF as
@@ -32,8 +33,6 @@ on:
   workflow_run:
     workflows: [gate, review]
     types: [completed]
-  schedule:
-    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -87,8 +86,8 @@ jobs:
       # when GitHub has taken the rebase and not when it has done it — the
       # reason `settled` polls at all — so inside that window both callers read
       # a branch still behind and both issue one. The stranded sweep is wanted
-      # where `advance.yml`'s trigger is absent: the schedule, and the gate and
-      # review completions.
+      # where `advance.yml`'s trigger is absent: the gate and review
+      # completions here, and the schedule in `reconcile.yml`.
       - name: run merge manager
         run: |
           stranded=""
