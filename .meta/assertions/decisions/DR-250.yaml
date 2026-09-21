@@ -1,0 +1,96 @@
+decisions:
+  - id: work:decision/250
+    name: "DR-250 · Dual-layer comment hygiene: portfolio governance via .meta/ scope broadening and bootstrap self-contained gate checking"
+    challenge: work:challenge/416
+    status: ADOPTED
+    applies:
+      - work:article/2
+      - work:article/5
+      - work:article/6
+      - work:article/7
+      - work:article/8
+      - work:article/15
+      - work:article/21
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-checks-comments
+      - work:artifact/bootstraps-python-gate
+      - work:artifact/bootstraps-python-lint-gate
+    context: >-
+      Challenge #416 identified that while static comment and suppression guardrails
+      (solorepo's DR-207) were implemented in `.meta/checks/comments.py` to gate
+      the `.meta` Project, the Python Bootstrap seed at `bootstraps/python/seed/`
+      and project packages lacked comment checks. The Challenge's original proposal
+      suggested that `bootstraps/python/seed/gate/` inherit detector functions and
+      keep-exceptions directly from `.meta/checks/comments.py`.
+
+      However, `.meta/` is deliberately outside the `uv` Project system and holds no
+      `pyproject.toml` distribution manifest, while every seed manifest maintains
+      `dependencies = []` to prevent workspace tooling from coupling to repository
+      infrastructure. Conversely, relying solely on repository-level checks leaves
+      local developers and agents running `uv run gate` inside a project workspace
+      without immediate feedback on inline commentary and suppression debt.
+    alternatives:
+      - name: Make .meta/checks an installable Python package dependency for the seed gate
+        chosen: false
+        reason: >-
+          Violates project isolation. A root uv workspace or installable distribution
+          forces repository tooling to couple to a specific project system, reversing
+          the clean separation documented in py-modernize.
+      - name: Rely solely on repository-level .meta/ governance like Rust without local seed checks
+        chosen: false
+        reason: >-
+          While matching the Rust xtask pattern where `cargo xtask gate` stays silent
+          on comments and `.meta/check.py` audits `rust_sources()` from above, it deprives
+          Python developers and autonomous agents of fast local feedback when running
+          `uv run gate` within a project directory, deferring failures to the repository
+          gate or CI.
+      - name: "Dual-layer comment hygiene: portfolio governance via .meta/ scope broadening and bootstrap self-contained gate checking"
+        chosen: true
+        reason: >-
+          Establishes complementary, decoupled enforcement at both repository and
+          project tiers. At the portfolio governance tier, `.meta/checks/comments.py`
+          broadens Python discovery via `tree()` across all git-tracked sources,
+          auditing Python and Rust across the monorepo and throughout specialized
+          portfolios via `.meta/gate`. At the project tier, `bootstraps/python/seed/gate/`
+          implements a self-contained, pure `comments` step using only Python standard
+          library (`ast`, `tokenize`, `re`), maintaining `dependencies = []` and
+          providing immediate local feedback on `uv run gate`. A probe under
+          `.meta/checks/probes/` asserts that keep-exceptions and suppression patterns
+          remain synchronized between both layers, eliminating drift.
+    consequences:
+      - >-
+        `.meta/checks/comments.py` updates `sources()` to discover every git-tracked
+        Python source file via `tree()`, unifying repository-wide coverage for Python
+        and Rust.
+      - >-
+        `bootstraps/python/seed/gate/src/gate/__init__.py` adds a pure `comments` step
+        to `STEPS` enforcing zero commented-out code, specific suppression codes, and
+        the Four Permissible Comment Exceptions within function bodies.
+      - >-
+        `bootstraps/python/seed/gate/tests/test_probes.py` adds probe coverage verifying
+        that the seed's `comments` gate step fails on defective trees and passes on
+        compliant code.
+      - >-
+        `bootstraps/python/skills/py-git-hooks/lint-gate.py` prunes its single redundant
+        inline narration comment, and repeated subprocess suppressions in the seed gate
+        are given distinct descriptive reasons, ensuring zero comment baseline regressions.
+      - >-
+        A regression probe under `.meta/checks/probes/tools/comments.py` verifies
+        rule synchronization across `.meta/` and the bootstrap seed gate.
+      - >-
+        Challenge #416 is closed as answered.
+    falsifier: >-
+      A Python source file in the Python Bootstrap seed or an instantiated portfolio
+      project containing commented-out code, a bare suppression lacking an error code,
+      or inline body commentary outside the four keep-exceptions that passes either
+      `uv run gate` locally or `.meta/gate` at the repository root.
+    rationale: |-
+      Christopher, on settling Issue #416: We need to figure out a way for the
+      bootstrap to inherit `comments.py` or at least the bits it needs, having
+      `.meta/` govern from above while ensuring comment checking works from within
+      a specialized Python repo.
+
+      The dual-layer architecture gives developers and agents fast local verification
+      in `uv run gate` while guaranteeing portfolio-wide governance in `.meta/gate`
+      without coupling package manifests to repository internals.

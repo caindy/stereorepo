@@ -32,6 +32,10 @@ def comment_probes() -> list[str]:
     reason, what the threshold lets through, what the external-citation escape
     hatch lifts, and the three ways `comments.against_repeats` fails a group
     (solorepo's DR-223).
+
+    The seed gate synchronization probe asserts that keep-exceptions, suppression
+    patterns, and statement detectors in `bootstraps/python/seed/gate/` remain
+    in lockstep with `comments.py` (solorepo's DR-250).
     """
     from checks import comments
     here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
@@ -39,7 +43,7 @@ def comment_probes() -> list[str]:
     return (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
             + _causes(comments) + blocks_found + _ratchet(comments, here, sites)
             + _type_errors(here) + _rust_comments(comments) + _repeats(comments)
-            + _repeat_ratchet(comments))
+            + _repeat_ratchet(comments) + _seed_gate_sync(comments))
 
 
 def _expecting(kind: Any) -> tuple[Any, list[str]]:
@@ -313,4 +317,58 @@ def _repeat_ratchet(comments: Any) -> list[str]:
         problems.append(f"comment probes: a group down below the limit should fail, got {gone!r}")
     if comments.against_repeats({}, {}):
         problems.append("comment probes: an empty baseline over a clean tree should pass")
+    return problems
+
+
+def _seed_gate_sync(comments: Any) -> list[str]:
+    """Asserts that keep-exceptions, statements and suppression patterns in the Python seed gate match comments.py."""
+    problems = []
+    import sys
+    seed_gate_src = ROOT / "bootstraps" / "python" / "seed" / "gate" / "src"
+    if str(seed_gate_src) not in sys.path:
+        sys.path.insert(0, str(seed_gate_src))
+    try:
+        import gate as _gate
+        gate: Any = _gate
+    except ImportError as error:
+        return [f"comment probes: could not import Python seed gate — {error}"]
+
+    for name in ("DIRECTIVE", "NOTICE", "CITATION", "NOQA", "TYPE_IGNORE"):
+        meta_re = getattr(comments, name)
+        gate_re = getattr(gate, name, None)
+        if gate_re is None:
+            problems.append(f"comment probes: gate is missing pattern {name}")
+        elif meta_re.pattern != gate_re.pattern:
+            problems.append(
+                f"comment probes: gate {name}.pattern differs from comments.py: "
+                f"{gate_re.pattern!r} != {meta_re.pattern!r}"
+            )
+
+    if gate.STATEMENTS != comments.STATEMENTS:
+        problems.append("comment probes: gate.STATEMENTS differs from comments.STATEMENTS")
+
+    for sample in (
+        "x = compute(1)",
+        "return None",
+        "noqa: F401",
+        "Copyright 2026 the solo",
+        "see solorepo's DR-171",
+        "narration inside body",
+        "value = 1  # noqa",
+    ):
+        meta_keep = comments.keep_exception(sample)
+        gate_keep = gate.keep_exception(sample)
+        if meta_keep != gate_keep:
+            problems.append(
+                f"comment probes: keep_exception({sample!r}) disagreed: "
+                f"gate={gate_keep!r}, meta={meta_keep!r}"
+            )
+        meta_code = comments.python_code(sample)
+        gate_code = gate.python_code(sample)
+        if meta_code != gate_code:
+            problems.append(
+                f"comment probes: python_code({sample!r}) disagreed: "
+                f"gate={gate_code!r}, meta={meta_code!r}"
+            )
+
     return problems

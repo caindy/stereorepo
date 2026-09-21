@@ -258,7 +258,6 @@ def main() -> None:
     """Reads the Stop event, checks what the turn changed, blocks on what it found."""
     event = json.load(sys.stdin)
 
-    # Already retrying after a block: allow the stop rather than loop.
     if event.get("stop_hook_active"):
         json.dump({"decision": "approve"}, sys.stdout)
         return

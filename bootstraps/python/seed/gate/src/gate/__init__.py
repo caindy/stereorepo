@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import ast
 import dataclasses
+import io
 import re
 import shutil
 import subprocess
 import sys
+import tokenize
 import tomllib
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -277,7 +279,7 @@ def mutants(root: Path) -> Outcome:
     problems: list[str] = []
     members = [pkg for pkg in packages(root) if pkg.parent.name == "packages"]
     for package in members:
-        run_ = subprocess.run(  # noqa: S603  # reason: fixed argv, no shell, no input
+        run_ = subprocess.run(  # noqa: S603  # reason: mutmut run fixed argv, no shell, no input
             [mutmut, "run"], cwd=package, check=False
         )
         if run_.returncode != 0:
@@ -285,7 +287,7 @@ def mutants(root: Path) -> Outcome:
                 f"`mutmut run` in {package.name} exited with {run_.returncode}"
             )
             continue
-        results = subprocess.run(  # noqa: S603  # reason: fixed argv, no shell, no input
+        results = subprocess.run(  # noqa: S603  # reason: mutmut results fixed argv, no shell, no input
             [mutmut, "results"],
             cwd=package,
             capture_output=True,
@@ -304,8 +306,10 @@ def mutants(root: Path) -> Outcome:
 
 # --- pure steps: functions over a path, watched failing by the probes --------
 
-NOQA = re.compile(r"#\s*noqa(?::\s*[A-Z]+[0-9]+(?:\s*,\s*[A-Z]+[0-9]+)*)?(?P<rest>.*)$")
-TYPE_IGNORE = re.compile(r"#\s*type:\s*ignore(?:\[[^\]]*\])?(?P<rest>.*)$")
+NOQA = re.compile(
+    r"#\s*noqa(?P<codes>:\s*[A-Z]+[0-9]*(?:\s*,\s*[A-Z]+[0-9]*)*)?(?P<rest>.*)$"
+)
+TYPE_IGNORE = re.compile(r"#\s*type:\s*ignore(?P<codes>\[[^\]]*\])?(?P<rest>.*)$")
 REASON = re.compile(r"#\s*reason:\s*\S")
 
 
@@ -323,7 +327,7 @@ def lints(root: Path) -> Outcome:
     for manifest in manifests:
         problems += manifest_ignores(root, manifest)
     sources = files(root, ".py")
-    suppressions = 0
+    suppression_count = 0
     for source in sources:
         for number, line in enumerate(
             source.read_text(encoding="utf-8").splitlines(), 1
@@ -332,7 +336,7 @@ def lints(root: Path) -> Outcome:
                 match = pattern.search(line)
                 if match is None:
                     continue
-                suppressions += 1
+                suppression_count += 1
                 if not REASON.search(match.group("rest")):
                     problems.append(
                         f"{relative(root, source)}:{number}: `{what}` gives no reason"
@@ -340,7 +344,7 @@ def lints(root: Path) -> Outcome:
     if problems:
         return Found(tuple(problems))
     return Passed(
-        f"{suppressions} suppressions across {len(sources)} source files, each "
+        f"{suppression_count} suppressions across {len(sources)} source files, each "
         f"with a reason; {len(manifests)} manifests, none switching a rule off"
     )
 
@@ -407,6 +411,236 @@ def in_table(text: str, number: int, table: str) -> bool:
         if current == number:
             return header is not None and table in header
     return False
+
+
+@dataclasses.dataclass(frozen=True)
+class Comment:
+    """A comment token in a Python source file.
+
+    Attributes:
+        line: 1-based line number where the comment appears.
+        text: Comment text with leading `#` and whitespace stripped.
+        inline: Whether the comment appears within a function body.
+        own: Whether the comment occupies its own line.
+    """
+
+    line: int
+    text: str
+    inline: bool
+    own: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class Block:
+    """A contiguous group of own-line comments, or a single trailing comment.
+
+    Attributes:
+        line: 1-based line number of the first comment in the block.
+        text: Combined comment text joined with single spaces.
+        inline: Whether the block appears within a function body.
+    """
+
+    line: int
+    text: str
+    inline: bool
+
+
+DIRECTIVE = re.compile(
+    r"^(noqa\b|type:\s*ignore\b|fmt:\s*\w+|pragma:|ruff:|mypy:|isort:|pylint:|pyright:"
+    r"|nosec\b|coding[:=]|reason:|prettier-ignore|rustfmt::)"
+)
+NOTICE = re.compile(r"(copyright|SPDX-License-Identifier|licen[cs]e)", re.IGNORECASE)
+CITATION = re.compile(r"(DR-\d{3}|Article\s+\d+|#\d+|RFC\s*\d+|https?://|\[\[[^\]]+\]\])")
+
+STATEMENTS = (
+    ast.Assign,
+    ast.AugAssign,
+    ast.Import,
+    ast.ImportFrom,
+    ast.FunctionDef,
+    ast.AsyncFunctionDef,
+    ast.ClassDef,
+    ast.Return,
+    ast.If,
+    ast.For,
+    ast.While,
+    ast.With,
+    ast.Try,
+    ast.Raise,
+    ast.Assert,
+    ast.Delete,
+    ast.Global,
+    ast.Nonlocal,
+)
+
+
+def python_comments(source: str) -> list[Comment]:
+    """The `#` comments of a Python source, marked for function body placement.
+
+    Args:
+        source: Python source code string.
+
+    Returns:
+        list[Comment]: Parsed Comment records with lines, text, and placement.
+    """
+    spans = [
+        (node.body[0].lineno, node.end_lineno)
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.body
+        and node.end_lineno is not None
+    ]
+    found = []
+    for token in tokenize.generate_tokens(io.StringIO(source).readline):
+        if token.type != tokenize.COMMENT:
+            continue
+        line = token.start[0]
+        found.append(
+            Comment(
+                line=line,
+                text=token.string.lstrip("#").strip(),
+                inline=any(start <= line <= end for start, end in spans),
+                own=not token.line[: token.start[1]].strip(),
+            )
+        )
+    return found
+
+
+def blocks(comments: list[Comment]) -> list[Block]:
+    """Groups consecutive own-line comments into unified blocks.
+
+    Args:
+        comments: List of Comment records in source order.
+
+    Returns:
+        list[Block]: List of consolidated Block records.
+    """
+    grouped: list[list[Comment]] = []
+    for comment in comments:
+        joins = (
+            grouped
+            and comment.own
+            and grouped[-1][-1].own
+            and comment.line == grouped[-1][-1].line + 1
+        )
+        if joins:
+            grouped[-1].append(comment)
+        else:
+            grouped.append([comment])
+    return [
+        Block(
+            line=run[0].line,
+            text=" ".join(c.text for c in run),
+            inline=run[0].inline,
+        )
+        for run in grouped
+    ]
+
+
+def keep_exception(text: str) -> str | None:
+    """Identifies which keep-exception a comment satisfies, or None.
+
+    Args:
+        text: Comment text to inspect.
+
+    Returns:
+        str | None: Exception kind ('directive', 'notice', 'citation') or None.
+    """
+    if DIRECTIVE.match(text):
+        return "directive"
+    if NOTICE.search(text):
+        return "notice"
+    if CITATION.search(text):
+        return "citation"
+    return None
+
+
+def python_code(text: str) -> bool:
+    """Whether a comment's text is a Python statement rather than prose.
+
+    Args:
+        text: Comment text to evaluate.
+
+    Returns:
+        bool: True if text parses as executable Python statements, False otherwise.
+    """
+    body = text.strip()
+    if not body or keep_exception(body) == "directive":
+        return False
+    if body.endswith(":"):
+        body += "\n    pass"
+    try:
+        parsed = ast.parse(body)
+    except (SyntaxError, ValueError):
+        return False
+    if len(parsed.body) != 1:
+        return bool(parsed.body)
+    node = parsed.body[0]
+    if isinstance(node, STATEMENTS):
+        return True
+    return isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
+
+
+def suppressions(source: str) -> list[tuple[int, str]]:
+    """The suppressions in a Python source that name no rule, as (line, what) pairs.
+
+    Args:
+        source: Python source code string.
+
+    Returns:
+        list[tuple[int, str]]: List of (line_number, error_description) tuples.
+    """
+    found: list[tuple[int, str]] = []
+    for comment in python_comments(source):
+        for pattern, what in ((NOQA, "noqa"), (TYPE_IGNORE, "type: ignore")):
+            match = pattern.search(f"#{comment.text}")
+            if match and not match.group("codes"):
+                found.append((comment.line, f"bare `{what}` names no rule"))
+    return found
+
+
+def comments(root: Path) -> Outcome:
+    """Verifies that source comments follow permissible exceptions.
+
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome reporting comment violations across workspace Python sources.
+    """
+    problems: list[str] = []
+    sources = files(root, ".py")
+    counted = 0
+    for source in sources:
+        relative_path = relative(root, source)
+        text = source.read_text(encoding="utf-8")
+        try:
+            source_comments = python_comments(text)
+        except (SyntaxError, tokenize.TokenError) as error:
+            problems.append(f"{relative_path}: does not parse — {error}")
+            continue
+        counted += len(source_comments)
+        for comment in source_comments:
+            if python_code(comment.text):
+                text_prefix = comment.text[:60]
+                problems.append(
+                    f"{relative_path}:{comment.line}: "
+                    f"commented-out code — `{text_prefix}`"
+                )
+        for number, what in suppressions(text):
+            problems.append(f"{relative_path}:{number}: {what}")
+        for block in blocks(source_comments):
+            if block.inline and keep_exception(block.text) is None:
+                text_prefix = block.text[:60]
+                problems.append(
+                    f"{relative_path}:{block.line}: inline commentary — `{text_prefix}`"
+                )
+    if problems:
+        return Found(tuple(problems))
+    return Passed(
+        f"{counted} comments across {len(sources)} source files, clean of commented "
+        "code, bare suppressions, and inline commentary"
+    )
 
 
 def doc(root: Path) -> Outcome:
@@ -517,7 +751,7 @@ def evidence(root: Path) -> Outcome:
     argv = [sys.executable, "-m", "pytest", "--collect-only", "-q", "--no-header"]
     for package in packages(root):
         try:
-            out = subprocess.run(  # noqa: S603  # reason: fixed argv, no shell, no input
+            out = subprocess.run(  # noqa: S603  # reason: pytest collect fixed argv, no shell, no input
                 argv, cwd=package, capture_output=True, text=True, check=False
             )
         except OSError as error:
@@ -622,6 +856,7 @@ def without_comments(text: str) -> str:
 #: manifest or syntax slip is reported before a type check is paid for.
 STEPS: tuple[Step, ...] = (
     ("lints", lints),
+    ("comments", comments),
     ("ruff", ruff),
     ("types", types),
     ("doc", doc),

@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/416
+    name: "Check comments and suppressions in the Python Bootstrap's own gate"
+    challenge_type: FEATURE
+    description: >-
+      Extend comment, suppression, and inline commentary guardrails to the Python
+      Bootstrap seed and project packages. Combine portfolio-level governance in
+      .meta/check.py across all git-tracked Python sources with a self-contained,
+      zero-dependency comment check in the Python Bootstrap gate runner, eliminating
+      the risk of product comment debt across specialized portfolios without
+      coupling project workspaces to repository tooling.

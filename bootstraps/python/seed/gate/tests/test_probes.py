@@ -13,6 +13,7 @@ from gate import (
     Found,
     Passed,
     Step,
+    comments,
     doc,
     evidence_against,
     lints,
@@ -26,6 +27,8 @@ from gate import (
 # suppression in this file.
 NOQA = "# " + "noqa: F401"
 TYPE_IGNORE = "# " + "type: ignore[assignment]"
+BARE_NOQA = "# " + "noqa"
+BARE_TYPE_IGNORE = "# " + "type: ignore"
 REASON = "  # " + "reason: "
 
 ROOT_MANIFEST = (
@@ -227,3 +230,78 @@ def test_a_word_selects_one_step_at_most() -> None:
     assert [label for label, _ in select("evidence")] == ["evidence"]
     assert select("everything") == []
     assert rendered(Passed("s"), "l") == "ok l — s\n"
+
+
+def test_commented_out_code_is_found(tree: Tree) -> None:
+    tree.write("packages/probe/src/probe/a.py", '"""A."""\n\n# x = 1\n')
+    problems = found(comments(tree.root))
+    assert len(problems) == 1
+    assert "commented-out code" in problems[0]
+    assert "x = 1" in problems[0]
+
+    tree.write(
+        "packages/probe/src/probe/a.py",
+        '"""A."""\n\n# The variable holds state.\n',
+    )
+    assert isinstance(comments(tree.root), Passed)
+
+
+def test_a_bare_suppression_is_found(tree: Tree) -> None:
+    tree.write(
+        "packages/probe/src/probe/a.py",
+        '"""A."""\n\nimport os  ' + BARE_NOQA + REASON + "needed\n",
+    )
+    problems = found(comments(tree.root))
+    assert problems == (
+        "packages/probe/src/probe/a.py:3: bare `noqa` names no rule",
+    )
+
+    tree.write(
+        "packages/probe/src/probe/a.py",
+        '"""A."""\n\nx = 1  ' + BARE_TYPE_IGNORE + REASON + "untyped\n",
+    )
+    problems = found(comments(tree.root))
+    assert problems == (
+        "packages/probe/src/probe/a.py:3: bare `type: ignore` names no rule",
+    )
+
+    tree.write(
+        "packages/probe/src/probe/a.py",
+        '"""A."""\n\nimport os  ' + NOQA + REASON + "needed\n",
+    )
+    assert isinstance(comments(tree.root), Passed)
+
+
+def test_inline_body_commentary_is_found_unless_exempted(tree: Tree) -> None:
+    tree.write(
+        "packages/probe/src/probe/a.py",
+        '"""A."""\n\n\ndef f():\n    """F."""\n    # explain what f does\n    pass\n',
+    )
+    problems = found(comments(tree.root))
+    assert len(problems) == 1
+    assert "inline commentary" in problems[0]
+
+    tree.write(
+        "packages/probe/src/probe/a.py",
+        '"""A."""\n\n\ndef f():\n    """F."""\n    # pragma: no cover\n    pass\n',
+    )
+    assert isinstance(comments(tree.root), Passed)
+
+    tree.write(
+        "packages/probe/src/probe/a.py",
+        '"""A."""\n\n\ndef f():\n    """F."""\n    # bounded by DR-207\n    pass\n',
+    )
+    assert isinstance(comments(tree.root), Passed)
+
+    tree.write(
+        "packages/probe/src/probe/a.py",
+        '"""A."""\n\n\ndef f():\n    """F."""\n'
+        "    # SPDX-License-Identifier: MIT\n    pass\n",
+    )
+    assert isinstance(comments(tree.root), Passed)
+
+
+def test_clean_comments_pass(tree: Tree) -> None:
+    assert passed(comments(tree.root)).endswith(
+        "clean of commented code, bare suppressions, and inline commentary"
+    )

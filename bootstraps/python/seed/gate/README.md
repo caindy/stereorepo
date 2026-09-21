@@ -25,6 +25,7 @@ The steps, in the order they run:
 | Step | What it holds | Discipline |
 |---|---|---|
 | `lints` | no rule switched off in a manifest; every `noqa` and `type: ignore` carries a reason | Ratchet |
+| `comments` | zero commented-out code, specific suppression codes, and the four permissible comment exceptions within function bodies | Literate Programming |
 | `ruff` | `ruff check`, with the rule set the workspace manifest selects | Ratchet |
 | `types` | `mypy --strict` over each package's source and tests | Ratchet |
 | `doc` | every module and every public function, class and method has a docstring | Literate Programming |
@@ -33,7 +34,7 @@ The steps, in the order they run:
 | `evidence` | every history entry names a test that pytest collects | Nothing Unconsumed |
 | `mutants` | `mutmut`, the signal behind the tests | Observed Failure |
 
-The pure steps — `lints`, `doc`, `orphans`, `evidence` — are functions over a
+The pure steps — `lints`, `comments`, `doc`, `orphans`, `evidence` — are functions over a
 path, so `tests/test_probes.py` can watch each of them fail against a tree
 built to fail it. A guardrail never observed to fail is not evidence of
 anything.

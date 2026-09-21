@@ -258,6 +258,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-246](assertions/decisions/DR-246.yaml) | Incorporating Google Labs Jules API as autonomous reviewer cloud fallback harness | Adopted |
 | [DR-248](assertions/decisions/DR-248.yaml) | Formalize pull request state machine and watch handoff semaphore | Adopted |
 | [DR-249](assertions/decisions/DR-249.yaml) | Settle the approach before code on hard and human Challenges, with diff review for easy and medium | Adopted |
+| [DR-250](assertions/decisions/DR-250.yaml) | Dual-layer comment hygiene: portfolio governance via .meta/ scope broadening and bootstrap self-contained gate checking | Adopted |
 
 ## Holes
 
@@ -327,7 +328,7 @@ and the query a reader in a file actually has.
 | [`.meta/checks/citations/prose.py`](checks/citations/prose.py) | [DR-130](assertions/decisions/DR-130.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/citations/record.py`](checks/citations/record.py) | [DR-121](assertions/decisions/DR-121.yaml), [DR-124](assertions/decisions/DR-124.yaml), [DR-131](assertions/decisions/DR-131.yaml), [DR-132](assertions/decisions/DR-132.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/collect.py`](checks/collect.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-169](assertions/decisions/DR-169.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-210](assertions/decisions/DR-210.yaml) |
-| [`.meta/checks/comments.py`](checks/comments.py) | [DR-210](assertions/decisions/DR-210.yaml), [DR-223](assertions/decisions/DR-223.yaml), [DR-225](assertions/decisions/DR-225.yaml) |
+| [`.meta/checks/comments.py`](checks/comments.py) | [DR-210](assertions/decisions/DR-210.yaml), [DR-223](assertions/decisions/DR-223.yaml), [DR-225](assertions/decisions/DR-225.yaml), [DR-250](assertions/decisions/DR-250.yaml) |
 | [`.meta/checks/files/__init__.py`](checks/files/__init__.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-169](assertions/decisions/DR-169.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-183](assertions/decisions/DR-183.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-210](assertions/decisions/DR-210.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/files/history.py`](checks/files/history.py) | [DR-171](assertions/decisions/DR-171.yaml), [DR-228](assertions/decisions/DR-228.yaml) |
 | [`.meta/checks/files/prose.py`](checks/files/prose.py) | [DR-144](assertions/decisions/DR-144.yaml), [DR-152](assertions/decisions/DR-152.yaml) |
@@ -496,9 +497,9 @@ and the query a reader in a file actually has.
 | [`bootstraps/python/assertions/capabilities.yaml`](../bootstraps/python/assertions/capabilities.yaml) | [DR-208](assertions/decisions/DR-208.yaml) |
 | [`bootstraps/python/literate-programming.md`](../bootstraps/python/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-176](assertions/decisions/DR-176.yaml) |
 | [`bootstraps/python/render`](../bootstraps/python/render) | [DR-094](assertions/decisions/DR-094.yaml) |
-| [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml), [DR-193](assertions/decisions/DR-193.yaml), [DR-228](assertions/decisions/DR-228.yaml) |
+| [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml), [DR-193](assertions/decisions/DR-193.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-250](assertions/decisions/DR-250.yaml) |
 | [`bootstraps/python/seed/pyproject.toml`](../bootstraps/python/seed/pyproject.toml) | [DR-095](assertions/decisions/DR-095.yaml), [DR-096](assertions/decisions/DR-096.yaml), [DR-097](assertions/decisions/DR-097.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
-| [`bootstraps/python/skills/py-git-hooks/lint-gate.py`](../bootstraps/python/skills/py-git-hooks/lint-gate.py) | [DR-212](assertions/decisions/DR-212.yaml) |
+| [`bootstraps/python/skills/py-git-hooks/lint-gate.py`](../bootstraps/python/skills/py-git-hooks/lint-gate.py) | [DR-212](assertions/decisions/DR-212.yaml), [DR-250](assertions/decisions/DR-250.yaml) |
 | [`bootstraps/python/skills/py-quality-setup/SKILL.md`](../bootstraps/python/skills/py-quality-setup/SKILL.md) | [DR-212](assertions/decisions/DR-212.yaml) |
 | [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/rust/literate-programming.md`](../bootstraps/rust/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-176](assertions/decisions/DR-176.yaml) |

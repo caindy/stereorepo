@@ -40,9 +40,7 @@ reason rather than by a path, so a baseline entry the tree has dropped is one
 to delete rather than one naming a file that no longer exists
 (solorepo's DR-223).
 
-Scope: every Python file under `.meta/`, which is the Project this gate is for,
-and every Rust file git lists, because `.meta/` holds none and the seed crates
-are where an `#[allow]` would appear.
+Scope: every Python and Rust file git lists.
 """
 import ast
 import collections
@@ -140,8 +138,9 @@ Suppression = collections.namedtuple("Suppression", "line rule reason")
 
 
 def sources() -> list[pathlib.Path]:
-    """Every Python file under `.meta/`, excluding dotted directories and caches."""
-    return meta_sources()
+    """Every Python file git lists, including extension-less scripts under .meta/."""
+    tracked_py = [p for p in tree() if p.suffix == ".py" and p.is_file()]
+    return sorted(set(tracked_py + meta_sources()))
 
 
 def rust_sources() -> list[pathlib.Path]:
