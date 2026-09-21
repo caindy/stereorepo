@@ -16,6 +16,7 @@ import checks.files.templates
 import checks.files.markdown
 import checks.files.wiki
 import checks.files.workflows
+import checks.files.justfile
 import checks.files.prose
 import checks.files.history
 import checks.files.python
@@ -25,14 +26,20 @@ from checks.files.templates import Strict, duplicate_concept_ids, duplicate_keys
 from checks.files.markdown import FENCED, LINK, markdown_links
 from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wiki_synonyms_are_not_avoided, wikilinks
 from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, RESTORE_PROSE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
+from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
 from checks.files.python import MYPY, MYPY_ERROR, RUFF, TYPES_BASELINE, meta_doc, meta_lints, meta_ruff, meta_types, mypy_errors, tool_command
 from checks.files.rendered import apm_package, rendered_prose
 
 __all__ = [
+    "CONTRACT",
     "FENCED",
+    "FLAGS",
     "FRONTMATTER",
+    "IDENTIFIER",
+    "INTERPOLATION",
+    "JUSTFILE",
     "LEAD_COPULA",
     "LIB",
     "LINK",
@@ -40,6 +47,7 @@ __all__ = [
     "MYPY_ERROR",
     "NOT_SHARED",
     "NUMBER_WORDS",
+    "RECIPE",
     "RESTORE_COUNT",
     "RESTORE_LINE",
     "RESTORE_PROSE",
@@ -48,6 +56,7 @@ __all__ = [
     "SCAFFOLD_ONLY",
     "SEED_OWN_JOBS",
     "SHARED_JOBS",
+    "SUBCOMMAND",
     "TYPES_BASELINE",
     "WIKILINK",
     "Strict",
@@ -64,6 +73,8 @@ __all__ = [
     "inherited",
     "inherited_prose",
     "is_py",
+    "justfile",
+    "justfile_recipe_shape",
     "markdown",
     "markdown_links",
     "meta_doc",

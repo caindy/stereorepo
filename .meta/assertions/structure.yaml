@@ -269,6 +269,9 @@ artifacts:
   - id: work:artifact/meta-checks-files-workflows
     name: .meta/checks/files/workflows.py
     path: .meta/checks/files/workflows.py
+  - id: work:artifact/meta-checks-files-justfile
+    name: .meta/checks/files/justfile.py
+    path: .meta/checks/files/justfile.py
   - id: work:artifact/meta-checks-files-prose
     name: .meta/checks/files/prose.py
     path: .meta/checks/files/prose.py
@@ -413,6 +416,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py
+  - id: work:artifact/meta-checks-probes-surface
+    name: .meta/checks/probes/surface.py
+    path: .meta/checks/probes/surface.py
   - id: work:artifact/meta-checks-probes-tools
     name: .meta/checks/probes/tools/__init__.py
     path: .meta/checks/probes/tools/__init__.py
@@ -434,6 +440,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-apm-compile
     name: .meta/checks/probes/tools/apm_compile.py
     path: .meta/checks/probes/tools/apm_compile.py
+  - id: work:artifact/meta-checks-probes-tools-gate
+    name: .meta/checks/probes/tools/gate.py
+    path: .meta/checks/probes/tools/gate.py
   - id: work:artifact/meta-checks-probes-tools-comments
     name: .meta/checks/probes/tools/comments.py
     path: .meta/checks/probes/tools/comments.py

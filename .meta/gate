@@ -97,7 +97,7 @@ def select(
     sys.exit(f"gate: nothing is called '{word}'. Projects and Products: {', '.join(known)}")
 
 
-def _emit(text: str, *, file: Any = sys.stdout, lock: threading.Lock | None = None) -> None:
+def _emit(text: str, *, file: Any = sys.stdout, lock: "threading.Lock | None" = None) -> None:
     """Emits output line-buffered and thread-safe when a lock is provided."""
     if lock is not None:
         with lock:
@@ -108,7 +108,7 @@ def _emit(text: str, *, file: Any = sys.stdout, lock: threading.Lock | None = No
 
 def run(
     project: dict[str, Any],
-    print_lock: threading.Lock | None = None,
+    print_lock: "threading.Lock | None" = None,
 ) -> tuple[list[tuple[str, str, str]], int | None]:
     """Executes a project gate command and streams parsed step reports.
 

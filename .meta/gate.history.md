@@ -28,3 +28,16 @@ thread pool executor with thread-safe output streaming while preserving
 deterministic per-project step aggregation.
 
 Evidence: `.meta/checks/files/history.py::meta_history_evidence`
+
+### Runtime-evaluated threading.Lock annotation aborting the gate runner at load
+
+When the concurrent runner annotated its print lock as `threading.Lock | None`,
+the interpreter evaluated that union at `def` time. `threading.Lock` is a
+factory function before Python 3.13 and a class from 3.13 on, so the runner
+loaded on 3.13 and raised `TypeError: unsupported operand type(s) for |:
+'builtin_function_or_method' and 'NoneType'` on 3.12, taking every step of
+every Project's gate with it. Established: `_emit()` and `run()` quote the
+annotation, deferring it to the type checker, which reads `threading.Lock`
+as the class typeshed declares.
+
+Evidence: `.meta/checks/probes/tools/gate.py::gate_runner_probes`

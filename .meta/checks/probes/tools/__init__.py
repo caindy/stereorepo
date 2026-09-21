@@ -6,9 +6,11 @@ ceiling (solorepo's DR-191), `dereference.py`'s scopes and report
 (solorepo's DR-134, solorepo's DR-192), `search.py`'s index and benchmark
 (solorepo's DR-103), `apm_compile.py`'s byte fallback for a skill file that
 is not UTF-8 text (solorepo's DR-208), and the detectors of `comments.py`
-that the comment steps read through (solorepo's DR-207). Six are scripts
+that the comment steps read through (solorepo's DR-207), and `.meta/gate`'s
+own runner, which every step of every Project reports through
+(solorepo's DR-092). Seven are scripts
 under `.meta/` that no step of the gate runs, so a wrong answer from one
-shows nowhere else; the seventh is read by those steps, so a wrong answer
+shows nowhere else; the eighth is read by those steps, so a wrong answer
 from it shows as a wrong verdict rather than as a failure. Each is loaded
 and asked one case at a time, and a failure names the case. The steps
 register here rather than beside the tools they exercise, because the gate
@@ -25,4 +27,5 @@ import checks.probes.tools.apm_compile
 import checks.probes.tools.terms
 import checks.probes.tools.test_specialization
 import checks.probes.tools.fallback
+import checks.probes.tools.gate
 import checks.probes.tools.comments  # noqa: F401  # reason: registers check steps

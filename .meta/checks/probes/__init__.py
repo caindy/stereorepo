@@ -13,7 +13,7 @@ history log routed to the same file.
 
 Importing a module registers its steps, so the order of the imports below is
 the order the probes report in: the hooks, then the channel, then the loops'
-verbs, then what the repository writes down about itself, then the tools. `harness.py` registers
+verbs, then what the repository writes down about itself, then its verb surface, then the tools. `harness.py` registers
 nothing and is what every subject module imports; it imports no sibling, so
 the package's import graph is a tree with the harness at its root.
 """
@@ -21,4 +21,5 @@ import checks.probes.git  # noqa: I001  # reason: registration order is delibera
 import checks.probes.channel
 import checks.probes.loops
 import checks.probes.knowledge
+import checks.probes.surface
 import checks.probes.tools  # noqa: F401  # reason: registers check steps
