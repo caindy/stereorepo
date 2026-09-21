@@ -209,7 +209,7 @@ def _mergeable_unknown_is_waited_out(channel: Any, move: Any) -> list[str]:
     `mergeStateStatus` from the read that answered rather than from the one
     the wait was entered on (solorepo's #784)."""
     problems = []
-    with stood_in(move, MERGEABILITY=(2, 0)):
+    with stood_in(channel, MERGEABILITY=(2, 0)):
         with stood_in(channel, gh=_settling_to(mergeable="MERGEABLE")):
             ok, reasons = _evaluated(move, {**CLEARED, "mergeable": "UNKNOWN"})
         if not ok or reasons != ["eligible"]:

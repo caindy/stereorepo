@@ -14,8 +14,7 @@ import pathlib
 import re
 import subprocess
 import sys
-import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -78,9 +77,22 @@ def labels_of(issue: str | int) -> list[str]:
     return [str(lbl["name"]) for lbl in channel.gh("issue", "view", str(issue), "--json", "labels")["labels"]]
 
 
+def assignees_of(issue: str | int) -> list[str]:
+    """The logins an Issue is assigned to, as GitHub lists them now.
+
+    Parameters:
+        issue (int | str): Issue number to inspect.
+
+    Returns:
+        list[str]: The assignees' logins.
+    """
+    view = channel.gh("issue", "view", str(issue), "--json", "assignees")
+    return [str(a["login"]) for a in view["assignees"]]
+
+
 def relabel(issue: str | int, add: Sequence[str] = (),
             remove: Sequence[str] = ()) -> list[str]:
-    """Update an Issue's labels and verify the resulting state remotely on GitHub.
+    """Update an Issue's labels, settled: the labels GitHub lists once it shows the edit.
 
     Parameters:
         issue (int | str): Issue number to update.
@@ -88,18 +100,25 @@ def relabel(issue: str | int, add: Sequence[str] = (),
         remove (tuple[str, ...]): Labels to detach from the issue.
 
     Returns:
-        list[str]: Verified current list of label names on the issue.
+        list[str]: The label names on the Issue once GitHub shows the edit.
+
+    Raises:
+        SystemExit: If GitHub does not show the edit within the channel's wait.
     """
     cmd = ["issue", "edit", str(issue)]
     for name in add:
         cmd += ["--add-label", name]
     for name in remove:
         cmd += ["--remove-label", name]
-    channel.gh(*cmd, parse=False)
-    now = labels_of(issue)
-    missing = [n for n in add if n not in now] + [n for n in remove if n in now]
-    if missing:
-        sys.exit(f"say: GitHub shows #{issue} labelled {now} after the call; {missing} did not take")
+
+    def missing(now: list[str]) -> list[str]:
+        return [n for n in add if n not in now] + [n for n in remove if n in now]
+
+    _, now = channel.act(
+        lambda: channel.gh(*cmd, parse=False), lambda: labels_of(issue),
+        lambda now: not missing(now),
+        lambda now: f"say: GitHub shows #{issue} labelled {now} after the call; "
+                    f"{missing(now)} did not take")
     return now
 
 
@@ -513,22 +532,48 @@ def file_issue(title: str, body: str, level: str | None = None,
         cmd += ["--blocked-by", ",".join(str(n) for n in refs)]
     url = channel.gh(*cmd, parse=False)
     number = url.rstrip("/").rsplit("/", 1)[-1]
-    now = labels_of(number)
-    if any(lbl not in now for lbl in labels):
-        sys.exit(f"say: GitHub shows #{number} labelled {now} after the call, not {labels}")
+    channel.shown(lambda: labels_of(number), lambda now: all(lbl in now for lbl in labels),
+                  lambda now: f"say: GitHub shows #{number} labelled {now} after the call, "
+                              f"not {labels}")
     if refs:
-        view = channel.gh("issue", "view", str(number), "--json", "body,blockedBy")
-        recorded = {n["number"] for n in (view.get("blockedBy") or {}).get("nodes", []) if "number" in n}
-        missing = set(refs) - recorded
-        if missing:
-            sys.exit(f"say: GitHub shows #{number} missing blocked-by relationship for {sorted(missing)}")
-        line = WAITS_LINE.search(view.get("body") or "")
-        for n in refs:
-            if not line or not re.search(rf"#{n}(?!\d)", line.group(0)):
-                sys.exit(f"say: GitHub shows #{number} with the relationship set but the "
-                         f"`**Waits on.**` line not citing #{n}")
+        channel.shown(lambda: channel.gh("issue", "view", str(number), "--json", "body,blockedBy"),
+                      lambda view: blockers_mismatch(view, number, refs) is None,
+                      lambda view: blockers_mismatch(view, number, refs) or "")
     print(url)
     return number, url
+
+
+def blockers_mismatch(view: dict[str, Any], issue: int | str, want: Sequence[int]) -> str | None:
+    """Why an Issue as GitHub shows it does not carry the blockers wanted, or None where it does.
+
+    Both sources are read: the relationship (solorepo's DR-213) and the
+    `**Waits on.**` line, which must cite every blocker the relationship holds
+    and say nothing where it holds none.
+
+    Parameters:
+        view (dict): The Issue as `gh issue view --json body,blockedBy` answers it.
+        issue (int | str): The Issue's number, for the refusal's words.
+        want (Sequence[int]): The blocker numbers wanted, in full.
+
+    Returns:
+        str | None: The refusal, or None where both sources show the blockers.
+    """
+    recorded = sorted(n["number"] for n in (view.get("blockedBy") or {}).get("nodes", [])
+                      if "number" in n)
+    wanted = sorted(want)
+    if recorded != wanted:
+        return f"say: GitHub shows #{issue} with blockedBy {recorded} after the call, not {wanted}"
+    match = WAITS_LINE.search(view.get("body") or "")
+    if not match:
+        return f"say: GitHub shows #{issue} with no `**Waits on.**` line after the call"
+    line_text = match.group(0)
+    for n in wanted:
+        if not re.search(rf"#{n}(?!\d)", line_text):
+            return (f"say: GitHub shows #{issue} with the relationship set but the line "
+                    f"not citing #{n}")
+    if not wanted and not any(w in line_text.lower() for w in ("nothing", "none")):
+        return f"say: GitHub shows #{issue} with no blockers but the line not saying nothing"
+    return None
 
 
 def issue_of(number: int | str, as_blocker: bool = False) -> dict[str, Any]:
@@ -663,34 +708,6 @@ def retarget_waits(body: str, want: Sequence[int],
     return body[:found.start()] + new_line + body[found.end():]
 
 
-def waits_verify(issue: int, want: list[int], described: str) -> None:
-    """Read both sources back from GitHub and refuse where either does not match.
-
-    Parameters:
-        issue (int): The Issue that waits.
-        want (list[int]): Desired blocker Issue numbers.
-        described (str): Expected body after the edit.
-
-    Raises:
-        SystemExit: If GitHub's relationship or the `**Waits on.**` line does
-            not reflect the desired state.
-    """
-    view = channel.gh("issue", "view", str(issue), "--json", "body,blockedBy")
-    now_native = sorted(n["number"] for n in (view.get("blockedBy") or {}).get("nodes", []) if "number" in n)
-    if now_native != want:
-        sys.exit(f"say: GitHub shows #{issue} with blockedBy {now_native} after the call, not {want}")
-    remote_body = view.get("body") or ""
-    match = WAITS_LINE.search(remote_body)
-    if not match:
-        sys.exit(f"say: GitHub shows #{issue} with no `**Waits on.**` line after the call")
-    line_text = match.group(0)
-    for n in want:
-        if not re.search(rf"#{n}(?!\d)", line_text):
-            sys.exit(f"say: GitHub shows #{issue} with the relationship set but the line not citing #{n}")
-    if not want and not any(w in line_text.lower() for w in ("nothing", "none")):
-        sys.exit(f"say: GitHub shows #{issue} with no blockers but the line not saying nothing")
-
-
 def waits(issue: int | str, on: Sequence[int | str] | None = None,
           off: Sequence[int | str] | None = None, clear: bool = False) -> None:
     """Set, add, or drop what an Issue waits on, after it was filed.
@@ -752,12 +769,18 @@ def waits(issue: int | str, on: Sequence[int | str] | None = None,
 
     flags = [f for n in want if n not in have for f in ("--add-blocked-by", str(n))]
     flags += [f for n in have if n not in want for f in ("--remove-blocked-by", str(n))]
-    if flags:
-        channel.gh("issue", "edit", str(issue_num), *flags, parse=False)
-    if described != body:
-        channel.gh("issue", "edit", str(issue_num), "--body", described, parse=False)
 
-    waits_verify(issue_num, want, described)
+    def rewrite() -> None:
+        """Both sources, each written only where it differs."""
+        if flags:
+            channel.gh("issue", "edit", str(issue_num), *flags, parse=False)
+        if described != body:
+            channel.gh("issue", "edit", str(issue_num), "--body", described, parse=False)
+
+    channel.act(rewrite,
+                lambda: channel.gh("issue", "view", str(issue_num), "--json", "body,blockedBy"),
+                lambda view: blockers_mismatch(view, issue_num, want) is None,
+                lambda view: blockers_mismatch(view, issue_num, want) or "")
     print(f"#{issue_num} waits on {', '.join(f'#{n}' for n in want) or 'nothing'}")
 
 
@@ -788,24 +811,29 @@ def claim(issue: str | int) -> None:
                      "Challenge from the loop — the level is what says whose a branch is — and "
                      "it can be claimed then.")
     login = channel.login()
-    channel.gh("issue", "edit", str(issue), "--add-assignee", login, parse=False)
-    who = [a["login"] for a in channel.gh("issue", "view", str(issue), "--json", "assignees")["assignees"]]
-    if login not in who:
-        sys.exit(f"say: GitHub shows #{issue} assigned to {who or 'nobody'} after the call, not {login}")
+    channel.act(
+        lambda: channel.gh("issue", "edit", str(issue), "--add-assignee", login, parse=False),
+        lambda: assignees_of(issue), lambda who: login in who,
+        lambda who: f"say: GitHub shows #{issue} assigned to {who or 'nobody'} after the call, "
+                    f"not {login}")
     print(f"claimed #{issue} as {login}")
 
 
 def release(issue: str | int) -> None:
-    """Remove the authenticated Role's assignment from an Issue and verify removal.
+    """Remove the authenticated Role's assignment from an Issue, settled.
 
     Parameters:
         issue (int | str): Issue number to release.
+
+    Raises:
+        SystemExit: If GitHub still shows the Role assigned once the channel's
+            wait is spent.
     """
     login = channel.login()
-    channel.gh("issue", "edit", str(issue), "--remove-assignee", login, parse=False)
-    who = [a["login"] for a in channel.gh("issue", "view", str(issue), "--json", "assignees")["assignees"]]
-    if login in who:
-        sys.exit(f"say: GitHub shows #{issue} still assigned to {login} after the call")
+    _, who = channel.act(
+        lambda: channel.gh("issue", "edit", str(issue), "--remove-assignee", login, parse=False),
+        lambda: assignees_of(issue), lambda who: login not in who,
+        lambda who: f"say: GitHub shows #{issue} still assigned to {login} after the call")
     print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
 
 
@@ -840,13 +868,18 @@ def _stop_release_assignee(issue: str | int) -> None:
     try:
         login = channel.login()
         channel.gh_with_retry("issue", "edit", str(issue), "--remove-assignee", login, parse=False, tolerate_fail=True)
-        who_res = channel.gh_with_retry("issue", "view", str(issue), "--json", "assignees", tolerate_fail=True)
-        if who_res is not None:
-            who = [a["login"] for a in who_res["assignees"]]
-            if login in who:
-                print(f"warning: GitHub shows #{issue} still assigned to {login} after release", file=sys.stderr)
-            else:
-                print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
+
+        def who_now() -> list[str]:
+            """The assignees, read as tolerantly as the write was, so a refusal warns here."""
+            seen = channel.gh_with_retry("issue", "view", str(issue), "--json", "assignees",
+                                         tolerate_fail=True)
+            return [str(a["login"]) for a in seen["assignees"]]
+
+        who = channel.settled(who_now, lambda who: login not in who)
+        if login in who:
+            print(f"warning: GitHub shows #{issue} still assigned to {login} after release", file=sys.stderr)
+        else:
+            print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
     except UNREACHED as exc:
         print(f"warning: could not release assignee on #{issue}: {exc}", file=sys.stderr)
 
@@ -862,10 +895,16 @@ def _stop_move_human(issue: str | int) -> None:
             for name in stale:
                 cmd += ["--remove-label", name]
             channel.gh_with_retry(*cmd, parse=False, tolerate_fail=True)
-            res_back = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
-            if res_back is not None:
-                now_back = [lbl["name"] for lbl in res_back["labels"]]
-                print(f"#{issue} is labelled {', '.join(now_back)}")
+
+            def labels_now() -> list[str]:
+                """The labels, read as tolerantly as the write was, so a refusal warns here."""
+                seen = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels",
+                                             tolerate_fail=True)
+                return [str(lbl["name"]) for lbl in seen["labels"]]
+
+            now_back = channel.settled(
+                labels_now, lambda back: "human" in back and not any(lbl in back for lbl in stale))
+            print(f"#{issue} is labelled {', '.join(now_back)}")
     except UNREACHED as exc:
         print(f"warning: could not set difficulty of #{issue} to human: {exc}", file=sys.stderr)
 
@@ -975,14 +1014,16 @@ def obviate(issue: str | int, by: str, reason: str) -> None:
             f"#{number} now, so no change of its own is owed and the queue should not "
             "offer it as ripe."]
     channel.sibling("post").conversation_comment(issue, channel.signed("\n".join(said)))
-    channel.gh("issue", "close", str(issue), "--reason", "not planned", parse=False)
-    after = channel.gh("issue", "view", str(issue), "--json", "state,stateReason")
-    if after["state"] != "CLOSED" or after["stateReason"] != "NOT_PLANNED":
-        sys.exit(f"say: GitHub shows #{issue} {after['state'].lower()} as "
-                 f"{(after['stateReason'] or 'nothing').lower()} after the call, not closed as "
-                 f"not planned. The comment saying it was obviated by #{number} is already "
-                 f"posted on #{issue} and now contradicts its state; delete it before trying "
-                 "again, since a second run posts a second one. No backlink was posted.")
+    channel.act(
+        lambda: channel.gh("issue", "close", str(issue), "--reason", "not planned", parse=False),
+        lambda: channel.gh("issue", "view", str(issue), "--json", "state,stateReason"),
+        lambda after: after["state"] == "CLOSED" and after["stateReason"] == "NOT_PLANNED",
+        lambda after: f"say: GitHub shows #{issue} {after['state'].lower()} as "
+                      f"{(after['stateReason'] or 'nothing').lower()} after the call, not closed "
+                      f"as not planned. The comment saying it was obviated by #{number} is "
+                      f"already posted on #{issue} and now contradicts its state; delete it "
+                      "before trying again, since a second run posts a second one. No backlink "
+                      "was posted.")
     channel.sibling("post").conversation_comment(
         number, channel.signed(f"**#{issue} was obviated by this** — {before['title']}. It is "
                                "closed as not planned, and where each part of it went is said "
@@ -999,21 +1040,29 @@ def milestone(issue: str | int, title: str | None, clear: bool = False) -> None:
     act GitHub records against an account, and `gh` has no verb for it, so it
     goes through here like every other write.
     """
+    def milestone_of() -> dict[str, Any] | None:
+        """The Milestone GitHub shows the Issue in now, or None."""
+        found: dict[str, Any] | None = channel.gh("issue", "view", str(issue),
+                                                  "--json", "milestone")["milestone"]
+        return found
+
     if clear:
-        channel.gh("issue", "edit", str(issue), "--milestone", "", parse=False)
-        now = channel.gh("issue", "view", str(issue), "--json", "milestone")["milestone"]
-        if now:
-            sys.exit(f"say: GitHub shows #{issue} still in {now['title']!r} after the call")
+        channel.act(
+            lambda: channel.gh("issue", "edit", str(issue), "--milestone", "", parse=False),
+            milestone_of, lambda now: not now,
+            lambda now: f"say: GitHub shows #{issue} still in {(now or {}).get('title')!r} "
+                        "after the call")
         print(f"#{issue} is in no Milestone")
         return
     existing = [m["title"] for m in channel.gh("api", "repos/{owner}/{repo}/milestones?state=all&per_page=100")]
     if title not in existing:
         channel.gh("api", "repos/{owner}/{repo}/milestones", "-f", f"title={title}", parse=False)
         print(f"created Milestone {title!r}")
-    channel.gh("issue", "edit", str(issue), "--milestone", title or "", parse=False)
-    now = channel.gh("issue", "view", str(issue), "--json", "milestone")["milestone"]
-    if not now or now["title"] != title:
-        sys.exit(f"say: GitHub shows #{issue} in {now and now['title']!r} after the call, not {title!r}")
+    channel.act(
+        lambda: channel.gh("issue", "edit", str(issue), "--milestone", title or "", parse=False),
+        milestone_of, lambda now: now is not None and now["title"] == title,
+        lambda now: f"say: GitHub shows #{issue} in {now and now['title']!r} after the call, "
+                    f"not {title!r}")
     print(f"#{issue} is in Milestone {title!r}")
 
 
@@ -1117,10 +1166,11 @@ def layer(pr: str | int, below: str | int) -> None:
     rebase it over when that branch merged; both halves are one verb now.
     """
     base = head_branch(below)
-    channel.gh("pr", "edit", str(pr), "--base", base, parse=False)
-    now = channel.gh("pr", "view", str(pr), "--json", "baseRefName")["baseRefName"]
-    if now != base:
-        sys.exit(f"say: GitHub shows #{pr} based on {now} after the call, not {base}")
+    channel.act(
+        lambda: channel.gh("pr", "edit", str(pr), "--base", base, parse=False),
+        lambda: str(channel.gh("pr", "view", str(pr), "--json", "baseRefName")["baseRefName"]),
+        lambda now: now == base,
+        lambda now: f"say: GitHub shows #{pr} based on {now} after the call, not {base}")
     link(below, pr)
     print(f"#{pr} is a layer on #{below} ({base})")
 
@@ -1242,7 +1292,7 @@ def stack_root(pull: Pull, pulls: Sequence[Pull]) -> Pull:
 
 def _settle_layer(layer_number: str, expected_oid: str) -> Pull:
     """Poll GitHub until layer PR headRefOid differs from expected_oid."""
-    return settled(
+    return channel.settled(
         lambda: channel.gh("pr", "view", layer_number, "--json", ADVANCE),
         lambda now: now["headRefOid"] != expected_oid,
     )
@@ -1316,36 +1366,27 @@ is_changes_requested_pull = check_pr.is_changes_requested_pull
 # cuts, so it is the shape a dispatched coder can be sent back to; the solo's
 # own pull request is the solo's to rebase, whatever it looks like from here.
 LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-(\d+)$")
-# How long to wait for GitHub to say whether a branch still merges. `mergeable`
-# is computed in the background when it is asked for, and GitHub's reference
-# for it says to poll until the value is no longer null — which `gh` spells
-# `UNKNOWN`. This runs on the push that invalidated every cached answer, which
-# is exactly the read the reference warns about: asked once, every waiting pull
-# request would report `UNKNOWN` and nothing would ever be dispatched.
-MERGEABILITY = (6, 5)
 
 
 def mergeability(pull: Pull) -> str | None:
     """Whether GitHub can still merge this branch into its base.
 
-    Waited for rather than read once, for the reason above. The first read is
-    the one already in hand, so a pull request GitHub has an answer for costs
-    nothing; only an `UNKNOWN` pays, and it pays in a sleep rather than in a
-    wrong answer. Bounded, because a value that is still unknown after half a
-    minute is one the next push to trunk will ask about again — and a sweep
-    that waited forever on one branch would hold up the rest.
+    Waited for rather than read once, under `channel.MERGEABILITY`, which says
+    why. The first read is the one already in hand, so a pull request GitHub
+    has an answer for costs nothing; only an `UNKNOWN` pays, and it pays in a
+    sleep rather than in a wrong answer. Bounded, because a value that is
+    still unknown after half a minute is one the next push to trunk will ask
+    about again — and a sweep that waited forever on one branch would hold
+    up the rest.
 
     `mergeable` and `mergeStateStatus` are both settled onto `pull` from the
     read that answered, so a caller reading one against the other reads two
     values GitHub computed at the same moment.
     """
-    tries, wait = MERGEABILITY
-    fresh = pull
-    for _ in range(tries):
-        if fresh.get("mergeable") != "UNKNOWN":
-            break
-        time.sleep(wait)
-        fresh = channel.gh("pr", "view", str(pull["number"]), "--json", ADVANCE)
+    fresh = channel.settled(
+        lambda: channel.gh("pr", "view", str(pull["number"]), "--json", ADVANCE),
+        lambda now: now.get("mergeable") != "UNKNOWN",
+        channel.MERGEABILITY, held=pull)
     # Settled onto the pull request the caller holds, so the sweep's two
     # readings of one branch cost one question (solorepo's DR-149). `advance`
     # asks before it rebases and `dispatch` asks again about the same object —
@@ -1361,38 +1402,6 @@ def mergeability(pull: Pull) -> str | None:
     if fresh is not pull:
         pull["mergeStateStatus"] = fresh.get("mergeStateStatus")
     pull["mergeable"] = answer
-    return answer
-
-
-# How long to wait for GitHub to *show* an act it has accepted. The sibling of
-# `MERGEABILITY` above and a different question: that one waits on a value
-# GitHub computes when asked, this one on work GitHub queues and performs.
-# `gh pr update-branch --rebase` returns when GitHub has taken the rebase, not
-# when it has done it — measured on runs 34593386083 and 34594139086, where the
-# branch heads were rewritten one to two seconds after the call and a `pr view`
-# half a second later still answered with the head they had before. Same bound
-# as the other, because a branch GitHub has not moved after half a minute is
-# one the next push to trunk will ask about again.
-SETTLES = (6, 5)
-
-
-def settled(read: Callable[[], Pull], shows: Callable[[Pull], object]) -> Pull:
-    """What GitHub holds once it shows the act asked of it — or what it still
-    holds when the wait runs out, which is the caller's to report.
-
-    The first read is the one that usually answers, so an act GitHub has
-    already shown costs one question and no sleep; only the read that is too
-    early pays, and it pays in a wait rather than in a wrong answer. The
-    predicate is the caller's because what counts as shown differs: a head that
-    has moved off the commit it was on, an arming GitHub lists.
-    """
-    tries, wait = SETTLES
-    answer = read()
-    for _ in range(tries):
-        if shows(answer):
-            break
-        time.sleep(wait)
-        answer = read()
     return answer
 
 
@@ -1836,8 +1845,8 @@ def _advance_single_pull(pull: Pull, pr: int | str | None,
     print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} — {pull['title']}")
     failed: list[str] = []
     before_oid = before["headRefOid"]
-    after = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
-                    lambda now: now["headRefOid"] != before_oid)
+    after = channel.settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
+                            lambda now: now["headRefOid"] != before_oid)
     if after["headRefOid"] == before_oid:
         failed.append(f"#{number} is on the head it was before the update and "
                       "GitHub has not moved it within the wait, so whether the "
@@ -1847,8 +1856,8 @@ def _advance_single_pull(pull: Pull, pr: int | str | None,
         failed.append(f"#{number} is still behind {pull['baseRefName']} after the update")
     if pull.get("autoMergeRequest") and not after.get("autoMergeRequest") and after.get("state") != "MERGED":
         arm(number, f"{pull['title']} (#{number})")
-        now = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
-                      lambda seen: seen.get("autoMergeRequest") or seen["state"] == "MERGED")
+        now = channel.settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
+                              lambda seen: seen.get("autoMergeRequest") or seen["state"] == "MERGED")
         if now["state"] == "MERGED":
             print(f"merged #{number}: re-armed after the update, and green")
         elif not now.get("autoMergeRequest"):
@@ -2115,14 +2124,14 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
     catch a merge that did not land, leaving some layers merged and nothing
     reconciling them.
 
-    The read-back itself is `settled()` under `SETTLES`, not a single read:
-    GitHub processes a squash merge asynchronously, and a `pr view` issued
-    immediately after the merge call can still report `state: OPEN`. The
-    predicate waits on the merge commit beside the state, because the line
-    that prints reads both and a state that arrived without its commit would
-    raise where the merge had in fact landed. A merge GitHub never lands still
-    reads `OPEN` once `settled()`'s wait runs out, which the check below
-    reports as it always has.
+    The read-back itself is `channel.shown` under `channel.SETTLES`, not a
+    single read: GitHub processes a squash merge asynchronously, and a `pr
+    view` issued immediately after the merge call can still report `state:
+    OPEN`. The predicate waits on the merge commit beside the state, because
+    the line that prints reads both and a state that arrived without its
+    commit would raise where the merge had in fact landed. A merge GitHub
+    never lands still reads `OPEN` once the wait runs out, and the exit says
+    so, as it always has.
     """
     before = channel.gh("pr", "view", str(pr), "--json", "title,state,headRefName")
     if before["state"] != "OPEN":
@@ -2138,12 +2147,14 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
                  "Pass --stack to merge everything up to it.")
     else:
         channel.gh("pr", "merge", str(pr), "--squash", "--subject", subject, parse=False)
-    after = settled(
+    after = channel.shown(
         lambda: channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit"),
         lambda now: now["state"] == "MERGED" and now["mergeCommit"],
+        lambda now: (f"say: #{pr} is {now['state'].lower()} after the merge call; not deleting "
+                     "the branch" if now["state"] != "MERGED" else
+                     f"say: #{pr} is merged but GitHub shows no merge commit for it yet; not "
+                     "deleting the branch"),
     )
-    if after["state"] != "MERGED":
-        sys.exit(f"say: #{pr} is {after['state'].lower()} after the merge call; not deleting the branch")
     print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
     branch = before["headRefName"]
     if channel.gh("repo", "view", "--json", "deleteBranchOnMerge")["deleteBranchOnMerge"]:
@@ -2304,11 +2315,11 @@ def supersede(pr: str | int, by: str, reason: str) -> None:
                  "stays, so nothing issues the number twice; each is closed by writing it "
                  "back into the record as WITHDRAWN, not by releasing it (solorepo's DR-128)."]
     channel.sibling("post").conversation_comment(pr, channel.signed("\n".join(said)))
-    channel.gh("pr", "close", str(pr), parse=False)
-    # Verify the pull request reflects CLOSED state on GitHub.
-    after = channel.gh("pr", "view", str(pr), "--json", "state")["state"]
-    if after != "CLOSED":
-        sys.exit(f"say: GitHub shows #{pr} {after.lower()} after the call, not closed")
+    channel.act(
+        lambda: channel.gh("pr", "close", str(pr), parse=False),
+        lambda: str(channel.gh("pr", "view", str(pr), "--json", "state")["state"]),
+        lambda after: after == "CLOSED",
+        lambda after: f"say: GitHub shows #{pr} {after.lower()} after the call, not closed")
     print(f"superseded #{pr} by {name} — {before['title']}")
     for hole in unredeemed:
         print(f"{hole} was minted here and never landed; write it back as WITHDRAWN")
@@ -2371,19 +2382,24 @@ def request_review(pr: str | int, to: str) -> None:
                 in channel.gh("pr", "view", str(pr), "--json", "reviewRequests")["reviewRequests"]]
 
     again = login in asked()
-    if again:
-        try:
-            channel.gh("pr", "edit", str(pr), "--remove-reviewer", login, parse=False)
-        except SystemExit as exc:
-            raise RequestRefused(exc.code) from exc
-    try:
-        channel.gh("pr", "edit", str(pr), "--add-reviewer", login, parse=False)
-    except SystemExit as exc:
+
+    def request() -> None:
+        """The request, withdrawn first where one already stands so that GitHub delivers it again."""
         if again:
-            sys.exit(f"say: removed {login} from #{pr} but could not add them back — {exc.code}")
-        raise RequestRefused(exc.code) from exc
-    if login not in asked():
-        sys.exit(f"say: GitHub shows {asked() or 'nobody'} requested on #{pr} after the call, not {login}")
+            try:
+                channel.gh("pr", "edit", str(pr), "--remove-reviewer", login, parse=False)
+            except SystemExit as exc:
+                raise RequestRefused(exc.code) from exc
+        try:
+            channel.gh("pr", "edit", str(pr), "--add-reviewer", login, parse=False)
+        except SystemExit as exc:
+            if again:
+                sys.exit(f"say: removed {login} from #{pr} but could not add them back — {exc.code}")
+            raise RequestRefused(exc.code) from exc
+
+    channel.act(request, asked, lambda who: login in who,
+                lambda who: f"say: GitHub shows {who or 'nobody'} requested on #{pr} after the "
+                            f"call, not {login}")
     print(f"{'requested again' if again else 'requested'} review of #{pr} from {login}")
 
 

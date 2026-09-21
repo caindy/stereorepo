@@ -6,8 +6,9 @@ refusals that keep an Issue's close an answer rather than a tidy-up, the
 refusals that keep one Challenge to one Issue, the level a run may land and
 the one `reread` takes off, who the Actor is, what the Agent
 is, where a Role's signing key is, the numbers `decision numbering` reads as
-reserved, a verdict held to the head its run read, and the bound on a `gh` call
-that never answers. Not invariants over the record: each probe loads the
+reserved, a verdict held to the head its run read, a write settled against a
+GitHub that shows it late or never, and the bound on a `gh` call that never
+answers. Not invariants over the record: each probe loads the
 channel and runs it, which is why the probes are a package of
 their own rather than steps beside the checks over assertions
 (solorepo's DR-150). One module per probe, imported in the order the steps
@@ -28,4 +29,5 @@ import checks.probes.channel.signing_key
 import checks.probes.channel.reservation
 import checks.probes.channel.waits
 import checks.probes.channel.verdict
+import checks.probes.channel.settle
 import checks.probes.channel.bound  # noqa: F401  # reason: registers check steps

@@ -21,7 +21,15 @@ class FakeIssue:
     claim that refuses nobody and a claim that never asked look identical in
     the assignees. `fail` makes every call raise
     `subprocess.CalledProcessError`, which is what a deleted Issue or a token
-    without the scope looks like to the channel. `repo view` answers `o/r` and
+    without the scope looks like to the channel. `stale` is how many views of
+    `labels` or `assignees` after an edit answer with the two as they were
+    before it, which is GitHub showing a write late and what `channel.settled`,
+    `shown` and `act` wait out; `state` and the comments are never held back.
+    `fail_views`, an attribute like `state` and `login`, refuses every `issue
+    view` in the caller's own shape while the edits still land, which is a
+    write GitHub took and a read-back it refused: a fallback is answered, a
+    tolerated failure raises, and a bare read exits as `channel.gh` does.
+    `repo view` answers `o/r` and
     `api user` answers `login`, by default `o-r-coder`, the coder Role's login for that repository
     as `channel.role_login` composes it (solorepo's DR-107), which is what a
     claim that went through leaves in `assignees` and a comment posted leaves
@@ -34,12 +42,16 @@ class FakeIssue:
     """
 
     def __init__(self, labels: list[str], fail: bool = False, assignees: list[str] | None = None,
-                 comments: list[dict[str, Any]] | None = None) -> None:
+                 comments: list[dict[str, Any]] | None = None, stale: int = 0) -> None:
         self.labels, self.assignees, self.views = list(labels), list(assignees or []), 0
         self.comments: list[dict[str, Any]] = list(comments or [])
         self.fail = fail
+        self.fail_views = False
         self.state = "OPEN"
         self.login = "o-r-coder"
+        self.stale = stale
+        self.before: tuple[list[str], list[str]] | None = None
+        self.left = 0
 
     def __call__(self, *args: str, parse: bool = True, **kwargs: Any) -> Any:
         """One `gh` call: `issue view` of the labels or the assignees, `issue edit` of either, the login, or the comments listed or one posted."""
@@ -50,6 +62,8 @@ class FakeIssue:
         if args[:2] == ("pr", "list"):
             return []
         if args[:2] == ("issue", "view"):
+            if self.fail_views:
+                return self.refuse_view(args, kwargs)
             return self.view(args)
         if args[:2] == ("issue", "edit"):
             return self.edit(args)
@@ -63,6 +77,22 @@ class FakeIssue:
             return {"html_url": f"https://github.com/o/r/issues/1/comments/{len(self.comments)}"}
         raise unanswered(args)
 
+    def refuse_view(self, args: tuple[str, ...], kwargs: dict[str, Any]) -> Any:
+        """A refused `issue view`, in the caller's own shape, as `channel.gh` refuses one.
+
+        A read that gave a fallback is answered with it; one that tolerated
+        the failure gets `subprocess.CalledProcessError`; and one that did
+        neither exits, in the words `channel.gh` exits with. So a case built
+        on `fail_views` fails against a read-back that exits and passes
+        against one that tolerates, which is the difference the case is for.
+        """
+        if "default" in kwargs:
+            return kwargs["default"]
+        if kwargs.get("tolerate_fail"):
+            raise subprocess.CalledProcessError(1, ["gh", *list(args)], output="",
+                                                stderr="mock API error")
+        raise SystemExit(LIST_REFUSAL)
+
     def view(self, args: tuple[str, ...]) -> dict[str, Any]:
         """`issue view` of any fields this fake holds: the labels, counted in `views`, the assignees, or the state.
 
@@ -73,13 +103,17 @@ class FakeIssue:
         Issue (solorepo's DR-235).
         """
         asked = args[args.index("--json") + 1].split(",") if "--json" in args else []
+        labels, assignees = self.labels, self.assignees
+        if self.left > 0 and self.before is not None and set(asked) & {"labels", "assignees"}:
+            self.left -= 1
+            labels, assignees = self.before
         answer: dict[str, Any] = {}
         for field in asked:
             if field == "labels":
                 self.views += 1
-                answer["labels"] = [{"name": name} for name in self.labels]
+                answer["labels"] = [{"name": name} for name in labels]
             elif field == "assignees":
-                answer["assignees"] = [{"login": who} for who in self.assignees]
+                answer["assignees"] = [{"login": who} for who in assignees]
             elif field == "state":
                 answer["state"] = self.state
             else:
@@ -95,7 +129,17 @@ class FakeIssue:
         Challenge (solorepo's DR-235); until it existed, every labelling verb
         added one label as it dropped another, and reading the removals under
         an addition was enough.
+
+        With `stale` set, the labels and assignees before an edit this fake
+        models are kept and answer the next `stale` views that ask for either:
+        GitHub showing a write late, which `channel.settled` waits out
+        (solorepo's DR-264). An edit this fake declines arms nothing.
         """
+        modelled = any(flag in args for flag in ("--add-assignee", "--remove-assignee",
+                                                 "--add-label", "--remove-label"))
+        if modelled and self.stale and self.left == 0:
+            self.before = (list(self.labels), list(self.assignees))
+            self.left = self.stale
         if "--add-assignee" in args:
             self.assignees.append(args[args.index("--add-assignee") + 1])
             return ""

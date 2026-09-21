@@ -610,8 +610,8 @@ def advance_probes() -> list[str]:
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    move.SETTLES = (3, 0)
-    move.MERGEABILITY = (3, 0)
+    channel.SETTLES = (3, 0)
+    channel.MERGEABILITY = (3, 0)
     return [problem for problems in (
         _notice_lifecycle_on_advance_failures(channel, move),
         _advance_notice_local_operator_visibility(channel, move),

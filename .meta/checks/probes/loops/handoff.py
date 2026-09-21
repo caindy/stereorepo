@@ -75,7 +75,7 @@ def handoff_probes() -> list[str]:
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    move.MERGEABILITY = (3, 0)
+    channel.MERGEABILITY = (3, 0)
     check_pr = citations.load_check_pr()
     return (_request_review_cases(channel, move) + _watch_cases(check_pr)
             + _watch_failure_cases(check_pr) + _watch_recovery_cases(check_pr)

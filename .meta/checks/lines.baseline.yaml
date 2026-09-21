@@ -153,7 +153,7 @@
 .meta/next.py: 18
 .meta/say/channel.py: 7
 .meta/say/commit: 2
-.meta/say/move: 93
+.meta/say/move: 82
 .meta/say/post: 16
 .meta/say/whoami: 2
 .meta/terms.py: 3

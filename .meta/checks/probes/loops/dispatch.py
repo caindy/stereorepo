@@ -496,8 +496,8 @@ def dispatch_probes() -> list[str]:
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    move.SETTLES = (3, 0)
-    move.MERGEABILITY = (3, 0)
+    channel.SETTLES = (3, 0)
+    channel.MERGEABILITY = (3, 0)
     reviewer = "o-r-reviewer"
     return [problem for problems in (
         _conflicting_with_a_review_request_dispatches_rebase(channel, move),

@@ -392,6 +392,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-verdict
     name: .meta/checks/probes/channel/verdict.py
     path: .meta/checks/probes/channel/verdict.py
+  - id: work:artifact/meta-checks-probes-channel-settle
+    name: .meta/checks/probes/channel/settle.py
+    path: .meta/checks/probes/channel/settle.py
   - id: work:artifact/meta-checks-probes-loops
     name: .meta/checks/probes/loops/__init__.py
     path: .meta/checks/probes/loops/__init__.py

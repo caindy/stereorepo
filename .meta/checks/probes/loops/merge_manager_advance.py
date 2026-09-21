@@ -51,8 +51,8 @@ def merge_manager_advance_probes() -> list[str]:
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    move.SETTLES = (3, 0)
-    move.MERGEABILITY = (3, 0)
+    channel.SETTLES = (3, 0)
+    channel.MERGEABILITY = (3, 0)
     return _dry_run(channel, move) + _held_run(channel, move) + _real_run(channel, move)
 
 

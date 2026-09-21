@@ -36,8 +36,10 @@ import re
 import select
 import subprocess
 import sys
+import time
 import types
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 NO_SPEC = "no module spec for {path}"
 """What loading a sibling raises where `importlib` declines to describe the file as a module."""
@@ -456,6 +458,116 @@ def gh_with_retry(*args: str, parse: bool = True, tries: int = 3, delay: float =
             time.sleep(current_delay)
             current_delay *= backoff
     sys.exit(f"gh: {' '.join(args)} was never attempted — `tries` is {tries}")
+
+
+Read = TypeVar("Read")
+"""What a read answers with, which is what `settled` and `shown` hand back."""
+
+Written = TypeVar("Written")
+"""What a write answers with, which is what `act` hands back beside the read."""
+
+# How long to wait for GitHub to *show* an act it has accepted. A different
+# question from `MERGEABILITY` below: this waits on work GitHub queues and
+# performs, that one on a value GitHub computes when asked. `gh pr
+# update-branch --rebase` returns when GitHub has taken the rebase, not when it
+# has done it — measured on runs 34593386083 and 34594139086, where the branch
+# heads were rewritten one to two seconds after the call and a `pr view` half
+# a second later still answered with the head they had before. Half a minute,
+# because an act GitHub has not shown by then is one the next run will ask
+# about again.
+SETTLES = (6, 5)
+"""How many reads after the first a write is waited on for, and the seconds between them.
+
+The first read costs no wait, so `(6, 5)` is seven reads over thirty seconds
+where nothing is held, and six where the caller holds the first answer."""
+
+# How long to wait for GitHub to say whether a branch still merges. `mergeable`
+# is computed in the background when it is asked for, and GitHub's reference
+# for it says to poll until the value is no longer null — which `gh` spells
+# `UNKNOWN`. `advance` runs on the push that invalidated every cached answer,
+# which is exactly the read the reference warns about: asked once, every
+# waiting pull request would report `UNKNOWN` and nothing would ever be
+# dispatched.
+MERGEABILITY = (6, 5)
+"""How many reads after the one in hand a computed value is waited on, and the seconds between."""
+
+
+def settled(read: Callable[[], Read], shows: Callable[[Read], object],
+            bound: tuple[int, float] | None = None, held: Read | None = None) -> Read:
+    """What GitHub holds once it shows the act asked of it, or still holds when the wait runs out.
+
+    The first answer is `held` where the caller has one in hand, and the one
+    `read` gives otherwise; an act GitHub has already shown costs one question
+    and no sleep, and only a read that is too early pays, in a wait rather
+    than in a wrong answer. The predicate is the caller's because what counts
+    as shown differs: a head that has moved, a label that is listed, a value
+    that is no longer `UNKNOWN`. What the wait runs out on is the caller's to
+    judge; `shown` is the caller that ends the process on it.
+
+    Args:
+        read: One read of GitHub, made until `shows` is satisfied or the bound
+            is spent.
+        shows: Whether an answer shows the act.
+        bound: Reads after the first, and seconds between them; `SETTLES` by
+            default. The first read, or `held`, costs no wait.
+        held: An answer already in hand, read before any is asked for.
+
+    Returns:
+        Read: The first answer `shows` accepts, or the last one read.
+    """
+    tries, wait = bound or SETTLES
+    answer = held if held is not None else read()
+    for _ in range(tries):
+        if shows(answer):
+            break
+        time.sleep(wait)
+        answer = read()
+    return answer
+
+
+def shown(read: Callable[[], Read], shows: Callable[[Read], object],
+          refused: Callable[[Read], str], bound: tuple[int, float] | None = None) -> Read:
+    """`settled`, and the process ended with what `refused` says of the answer if the wait ran out.
+
+    Args:
+        read: One read of GitHub, as `settled` takes it.
+        shows: Whether an answer shows the act, as `settled` takes it.
+        refused: The exit's words, given the answer GitHub still holds.
+        bound: Reads after the first, and seconds between them; `SETTLES` by default.
+
+    Returns:
+        Read: The answer that showed the act.
+
+    Raises:
+        SystemExit: When the wait ran out, with `refused`'s words.
+    """
+    answer = settled(read, shows, bound)
+    if not shows(answer):
+        sys.exit(refused(answer))
+    return answer
+
+
+def act(write: Callable[[], Written], read: Callable[[], Read], shows: Callable[[Read], object],
+        refused: Callable[[Read], str],
+        bound: tuple[int, float] | None = None) -> tuple[Written, Read]:
+    """A write, then the read that shows it, settled or refused (solorepo's DR-264).
+
+    Args:
+        write: The act, as one call or several; what it answers is handed back.
+        read: One read of GitHub, as `settled` takes it.
+        shows: Whether an answer shows the act.
+        refused: The exit's words, given the answer GitHub still holds.
+        bound: Reads after the first, and seconds between them; `SETTLES` by default.
+
+    Returns:
+        tuple[Written, Read]: What the write answered, and the read that showed it.
+
+    Raises:
+        SystemExit: When the wait ran out, with `refused`'s words; the write
+            has been made, and the exit says what GitHub shows in its place.
+    """
+    written = write()
+    return written, shown(read, shows, refused, bound)
 
 
 def graphql(query: str, **variables: object) -> Any:

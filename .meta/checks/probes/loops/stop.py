@@ -24,7 +24,9 @@ def stop_probes() -> list[str]:
     a Challenge is refused, naming the label it lacks; and a GitHub that fails
     every call, which is what a deleted Issue or a token without the scope
     looks like to the channel, is tolerated without an exit, each step warning
-    on stderr rather than ending the hand-back.
+    on stderr rather than ending the hand-back; and so is a GitHub that takes
+    every write and refuses every read-back, since the read that settles a
+    write here is as tolerant as the write (solorepo's DR-264).
     """
     channel, _, programs = load_channel()
     move = programs["move"]
@@ -59,4 +61,16 @@ def stop_probes() -> list[str]:
                         f"but got: {ended.code}")
     if "warning" not in ended.err:
         problems.append("stop: persistent API failure should print warnings to stderr")
+
+    fake = FakeIssue(["challenge", "medium"], assignees=["o-r-coder"])
+    fake.fail_views = True
+    ended = stopped(fake, "7", "stopped working")
+    if ended.code is not None:
+        problems.append("stop: a read-back GitHub refuses after a write it took ended the "
+                        f"hand-back with {ended.code!r}, where each step warns and carries on")
+    if "o-r-coder" in fake.assignees:
+        problems.append("stop: the release did not land under a refused read-back, so the "
+                        "write is not as tolerant as the read")
+    if "warning" not in ended.err:
+        problems.append("stop: a refused read-back should warn on stderr")
     return problems
