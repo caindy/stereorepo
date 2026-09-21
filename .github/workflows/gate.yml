@@ -76,6 +76,18 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
+      # `apm package` reports that it could not run when `apm` is absent, which
+      # under CI is a failure rather than a note (A6, DR-261). The CLI is not a
+      # Python package, so it is installed here rather than named on the `uvx`
+      # line below, by the installer `release.yml` uses.
+      - name: Ensure APM CLI is available
+        run: |
+          set -euo pipefail
+          if ! command -v apm >/dev/null 2>&1; then
+            echo "Installing APM CLI..."
+            curl -fsSL https://aka.ms/apm-unix | sh
+            echo "$HOME/.apm/bin" >> $GITHUB_PATH
+          fi
       - run: uvx --with linkml --with pyyaml --with ruff==0.14.0 --with mypy==2.3.1 --with types-pyyaml python .meta/check.py
 
   # The Rust seed is data, and it is gated by rendering it and running its own

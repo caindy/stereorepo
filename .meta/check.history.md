@@ -49,3 +49,19 @@ when backed by a text stream wrapper.
 
 Evidence: `.meta/check.py::main`
 
+### A required status check reported green on a step that never ran
+
+`report()` printed `?` for a `CouldNotRun` outcome and left `failed` alone, so
+the gate exited zero however many steps had not executed. Under CI that read a
+provisioning hole as a note: `apm package` returned `CouldNotRun` on every run
+because `.github/workflows/gate.yml` installed `linkml`, `pyyaml`, `ruff`,
+`mypy` and `types-pyyaml` and no `apm`, and the `files` job was a required
+status check on `main` the whole time. The same file also held two answers to
+one question, failing the run for a schema container that accepted nothing
+while passing it for a step that said the same thing through `CouldNotRun`.
+Established: every unrunnable step and every skipped container is collected
+into one closing block, and `closing_block()` fails the run where `CI` holds a
+non-empty value (Article 6, solorepo's DR-261).
+
+Evidence: `.meta/check.py::closing_block`
+

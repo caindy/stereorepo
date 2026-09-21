@@ -80,7 +80,7 @@ The APM package is integrated into the repository operator surface (`just`) via 
 - **Validation:** `just apm validate` verifies assertion-to-primitive alignment and runs downstream `apm compile --validate`.
 - **Packaging:** `just apm pack` runs `apm pack` to bundle the package into distributable plugin artifacts (`plugin.json`, `.github/plugin/plugin.json`).
 - **Compilation:** `just apm compile` compiles primitives across target harnesses (`claude`, `gemini`, `copilot`), redirecting output to the repository root via `--root ..`.
-- **Gate Check:** The repository gate (`just gate meta` / `.meta/gate meta`) runs `@check("apm package")`, executing `apm compile --validate` whenever the `apm` binary is installed. When `apm` is absent, the gate cleanly skips the check per solorepo's Article 6.
+- **Gate Check:** The repository gate (`just gate meta` / `.meta/gate meta`) runs `@check("apm package")`, executing `apm compile --validate` whenever the `apm` binary is installed. When `apm` is absent the gate reports the check as unrunnable and names it in the closing block — exit code zero where a person runs the gate, non-zero under CI, which installs the CLI in the `files` job (Article 6 as narrowed by solorepo's DR-261).
 
 ## APM Distribution & Upstream Synchronization (solorepo's DR-206)
 

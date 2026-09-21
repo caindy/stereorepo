@@ -51,7 +51,10 @@ Refs = list[tuple[str, str, str]]
 
 
 class CouldNotRun:
-    """The step did not run. Loud, unmarked, and exits zero."""
+    """The step did not run, and carries why.
+
+    Loud and unmarked: the gate reports it and exits zero where a person runs
+    the gate, non-zero under CI (Article 6, solorepo's DR-261)."""
     def __init__(self, why: str) -> None:
         self.why = why
 
