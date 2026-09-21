@@ -19,8 +19,8 @@ from typing import Any, cast
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-import channel  # noqa: E402
-import check_pr  # noqa: E402
+import channel
+import check_pr
 
 Pull = dict[str, Any]
 """One pull request as GitHub answers for it, whichever fields were asked for."""
@@ -59,7 +59,7 @@ def labels_of(issue: str | int) -> list[str]:
     Returns:
         list[str]: List of label names attached to the issue.
     """
-    return [str(l["name"]) for l in channel.gh("issue", "view", str(issue), "--json", "labels")["labels"]]
+    return [str(lbl["name"]) for lbl in channel.gh("issue", "view", str(issue), "--json", "labels")["labels"]]
 
 
 def relabel(issue: str | int, add: Sequence[str] = (),
@@ -160,7 +160,7 @@ def difficulty(issue: str | int, level: str) -> None:
     refuse_a_level_from_a_run(level, "The level standing on the Issue is unmoved, and the "
                                      "verdict that moves it is the reviewer's or the solo's.")
     now = challenge_labels(issue)
-    stale = [l for l in now if l in DIFFICULTIES and l != level]
+    stale = [lbl for lbl in now if lbl in DIFFICULTIES and lbl != level]
     now = relabel(issue, add=[level], remove=stale)
     print(f"#{issue} is labelled {', '.join(now)}")
 
@@ -207,7 +207,7 @@ def reread(issue: str | int) -> None:
                  "     Nothing was written. A run hands work back with `move stop <issue>`, "
                  "which says where it stopped and asks for the solo.")
     now = challenge_labels(issue)
-    standing = [l for l in now if l in DIFFICULTIES]
+    standing = [lbl for lbl in now if lbl in DIFFICULTIES]
     if not standing:
         sys.exit(f"say: #{issue} carries no level, so it is the reviewer's already; nothing "
                  "would be delivered by taking one off. `just next` lists an unread Challenge "
@@ -317,7 +317,7 @@ def triage(issue: str | int, level: str, body: str) -> None:
                      "level and the door queues the reviewer, which is the reading; `move stop` "
                      "hands the Challenge to the solo where the next step is his.")
     now = labels_of(issue)
-    standing = [l for l in now if l in DIFFICULTIES]
+    standing = [lbl for lbl in now if lbl in DIFFICULTIES]
     if "challenge" in now and standing:
         if verdict_posted(issue):
             sys.exit(f"say: #{issue} is read already: this Actor's verdict stands on it and "
@@ -335,7 +335,7 @@ def triage(issue: str | int, level: str, body: str) -> None:
         channel.gh("api", f"repos/{channel.repo()}/issues/{issue}/comments", "-f", f"body={body}")
     if level in now:
         relabel(issue, remove=[level])
-    stale = [l for l in now if l == "roadmap" or (l in DIFFICULTIES and l != level)]
+    stale = [lbl for lbl in now if lbl == "roadmap" or (lbl in DIFFICULTIES and lbl != level)]
     now = relabel(issue, add=["challenge", level], remove=stale)
     print(f"#{issue} is a Challenge, labelled {', '.join(now)}")
 
@@ -366,7 +366,7 @@ def roadmap(issue: str | int) -> None:
         sys.exit(f"say: #{issue} is claimed by {', '.join(who)}; a Job cannot be working on a "
                  "roadmap Issue. `move stop <issue>` releases the claim first.")
     now = labels_of(issue)
-    stale = [l for l in now if l == "challenge" or l in DIFFICULTIES]
+    stale = [lbl for lbl in now if lbl == "challenge" or lbl in DIFFICULTIES]
     if "roadmap" in now and not stale:
         sys.exit(f"say: #{issue} is on the roadmap already")
     now = relabel(issue, add=["roadmap"], remove=stale)
@@ -470,8 +470,8 @@ def file_issue(title: str, body: str, level: str | None = None,
                  "unfinished: `post answer <thread-id>` with a body linking it, or "
                  "`post resolve <thread-id>` where the link is already posted. If this "
                  "Challenge is genuinely a second one, give it a title of its own.")
-    refs = sorted(set(int(str(n).strip().lstrip("#")) for n in blocked_by))
-    line_refs = sorted(set(int(n) for n in re.findall(r"#(\d+)", first)))
+    refs = sorted({int(str(n).strip().lstrip("#")) for n in blocked_by})
+    line_refs = sorted({int(n) for n in re.findall(r"#(\d+)", first)})
     missing_from_flags = set(line_refs) - set(refs)
     if missing_from_flags:
         sys.exit(f"say: the body names #{sorted(missing_from_flags)[0]} in its `**Waits on.**` line, "
@@ -490,7 +490,7 @@ def file_issue(title: str, body: str, level: str | None = None,
     url = channel.gh(*cmd, parse=False)
     number = url.rstrip("/").rsplit("/", 1)[-1]
     now = labels_of(number)
-    if any(l not in now for l in labels):
+    if any(lbl not in now for lbl in labels):
         sys.exit(f"say: GitHub shows #{number} labelled {now} after the call, not {labels}")
     if refs:
         view = channel.gh("issue", "view", str(number), "--json", "body,blockedBy")
@@ -747,12 +747,12 @@ def claim(issue: str | int) -> None:
     """
     if not channel.in_a_run():
         now = labels_of(issue)
-        if "challenge" in now and not any(l in DIFFICULTIES for l in now):
+        if "challenge" in now and not any(lbl in DIFFICULTIES for lbl in now):
             sys.exit(f"say: #{issue} is a Challenge no reviewer has read: it carries no level, "
                      "and the reviewer's verdict is what lands one (solorepo's DR-230). "
                      f"`move --role reviewer triage {issue} <level>` with the verdict on stdin "
                      f"reads it; a level the solo mandates is `move difficulty {issue} <level>`.")
-        taken = next((l for l in now if l in LOOP_LEVELS), None)
+        taken = next((lbl for lbl in now if lbl in LOOP_LEVELS), None)
         if taken and "challenge" in now:
             sys.exit(f"say: #{issue} is labelled `{taken}`, which is a loop's from the moment "
                      "the label landed, and this is a session: a claim here stands beside the "
@@ -781,32 +781,24 @@ def release(issue: str | int) -> None:
     print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
 
 
-def stop(issue: str | int, body: str) -> None:
-    """Execute graceful loop hand-back to the human maintainer (solorepo's DR-112).
-
-    Posts the explanatory hand-back comment, releases issue assignment, and adjusts
-    difficulty to `human` while handling potential GitHub API transient errors gracefully.
-
-    Parameters:
-        issue (int | str): Issue number to hand back.
-        body (str): Explanatory markdown body detailing why the run stopped.
-    """
-    # 1. Best-effort label check (retrying and tolerating failures).
+def _stop_check_challenge(issue: str | int) -> None:
+    """Best-effort check that the issue is a challenge before stopping."""
     try:
         res = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
         if res is not None:
-            now = [l["name"] for l in res["labels"]]
+            now = [lbl["name"] for lbl in res["labels"]]
             if "challenge" not in now:
                 sys.exit(f"say: #{issue} is not a Challenge (labelled {now or 'nothing'}); a difficulty "
                          "is a Challenge's, and a loop reads it only beside `challenge`. "
                          "`move triage` makes it one, at a level, in one act.")
     except SystemExit:
-        # Re-raise the sys.exit from inside the label check block
         raise
     except Exception as exc:
         print(f"warning: could not read labels of #{issue} to verify Challenge: {exc}", file=sys.stderr)
 
-    # 2. Best-effort comment.
+
+def _stop_post_comment(issue: str | int, body: str) -> None:
+    """Best-effort posting of explanation comment when stopping."""
     try:
         made = channel.gh_with_retry("api", f"repos/{channel.repo()}/issues/{issue}/comments", "-f", f"body={body}", tolerate_fail=True)
         if made and "html_url" in made:
@@ -814,7 +806,9 @@ def stop(issue: str | int, body: str) -> None:
     except Exception as exc:
         print(f"warning: could not post comment on #{issue}: {exc}", file=sys.stderr)
 
-    # 3. Best-effort release assignee.
+
+def _stop_release_assignee(issue: str | int) -> None:
+    """Best-effort removal of the current assignee when stopping."""
     try:
         login = channel.login()
         channel.gh_with_retry("issue", "edit", str(issue), "--remove-assignee", login, parse=False, tolerate_fail=True)
@@ -828,23 +822,40 @@ def stop(issue: str | int, body: str) -> None:
     except Exception as exc:
         print(f"warning: could not release assignee on #{issue}: {exc}", file=sys.stderr)
 
-    # 4. Best-effort difficulty move to human.
+
+def _stop_move_human(issue: str | int) -> None:
+    """Best-effort move of difficulty level to human when stopping."""
     try:
         res_diff = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
         if res_diff is not None:
-            now = [l["name"] for l in res_diff["labels"]]
-            stale = [l for l in now if l in DIFFICULTIES and l != "human"]
-            cmd = ["issue", "edit", str(issue)]
-            cmd += ["--add-label", "human"]
+            now = [lbl["name"] for lbl in res_diff["labels"]]
+            stale = [lbl for lbl in now if lbl in DIFFICULTIES and lbl != "human"]
+            cmd = ["issue", "edit", str(issue), "--add-label", "human"]
             for name in stale:
                 cmd += ["--remove-label", name]
             channel.gh_with_retry(*cmd, parse=False, tolerate_fail=True)
             res_back = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
             if res_back is not None:
-                now_back = [l["name"] for l in res_back["labels"]]
+                now_back = [lbl["name"] for lbl in res_back["labels"]]
                 print(f"#{issue} is labelled {', '.join(now_back)}")
     except Exception as exc:
         print(f"warning: could not set difficulty of #{issue} to human: {exc}", file=sys.stderr)
+
+
+def stop(issue: str | int, body: str) -> None:
+    """Execute graceful loop hand-back to the human maintainer (solorepo's DR-112).
+
+    Posts the explanatory hand-back comment, releases issue assignment, and adjusts
+    difficulty to `human` while handling potential GitHub API transient errors gracefully.
+
+    Parameters:
+        issue (int | str): Issue number to hand back.
+        body (str): Explanatory markdown body detailing why the run stopped.
+    """
+    _stop_check_challenge(issue)
+    _stop_post_comment(issue, body)
+    _stop_release_assignee(issue)
+    _stop_move_human(issue)
 
 
 OBVIATOR = re.compile(r"^#?(\d+)$")
@@ -890,7 +901,7 @@ def obviator(what: str, issue: str | int) -> tuple[str, str]:
         sys.exit(f"say: #{number} is closed, so it owns nothing now and cannot be where "
                  f"#{issue}'s work went. Name the Challenge that holds the work today, or the "
                  "pull request that answered it.")
-    labels = [str(l["name"]) for l in answer["labels"]]
+    labels = [str(lbl["name"]) for lbl in answer["labels"]]
     if "challenge" not in labels:
         sys.exit(f"say: #{number} is labelled {labels or 'nothing'} and not `challenge`, so "
                  "nothing is queued to answer it and no run will take it. Closing "
@@ -1200,6 +1211,14 @@ def stack_root(pull: Pull, pulls: Sequence[Pull]) -> Pull:
     return root
 
 
+def _settle_layer(layer_number: str, expected_oid: str) -> Pull:
+    """Poll GitHub until layer PR headRefOid differs from expected_oid."""
+    return settled(
+        lambda: channel.gh("pr", "view", layer_number, "--json", ADVANCE),
+        lambda now: now["headRefOid"] != expected_oid,
+    )
+
+
 def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
                   must_move: Mapping[str, bool]) -> tuple[list[str], list[str]]:
     """Advance bottom-first stack `layers` through GitHub and report per-layer failures.
@@ -1212,7 +1231,7 @@ def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
     Returns:
         tuple[list[str], list[str]]: A pair `(failed, refused)`, where `failed`
         collects per-layer problems that belong to individual pull requests, and
-        `refused` collects writes GitHub refused that belong to the sweep itself.
+        `refused` collects failures of writes made on their behalf.
 
     Raises:
         SystemExit: If an external GitHub query or command fails outside the rebase sequence.
@@ -1232,8 +1251,7 @@ def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
     for layer in layers:
         number = str(layer["number"])
         if must_move.get(number, False):
-            after = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
-                            lambda now: now["headRefOid"] != before[number]["headRefOid"])
+            after = _settle_layer(number, before[number]["headRefOid"])
             if after["headRefOid"] == before[number]["headRefOid"]:
                 failed.append(f"#{number} is on the head it had before #{root}'s stack advanced")
                 continue
@@ -1347,6 +1365,155 @@ def run_coder(pr: str | int, task: str) -> None:
                "-f", f"task={task}", "-f", "harness=claude", parse=False)
 
 
+def _is_autonomous_challenge(challenge: str, action: str, pull: Pull) -> bool:
+    """Verify associated Challenge is open and easy/medium for loop action.
+
+    An Issue deleted or transferred under its branch fails this read the same
+    way on every push to trunk. This check avoids repeated red sweeps.
+    """
+    try:
+        issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
+    except SystemExit:
+        print(f"left #{pull['number']} alone: #{challenge} cannot be read, so the {action} "
+              f"is the solo's, and the sweep names it — {pull['title']}")
+        return False
+    levels = {lbl["name"] for lbl in issue["labels"]} & {"easy", "medium"}
+    if issue["state"] != "OPEN" or not levels:
+        state_str = "closed" if issue["state"] != "OPEN" else "at a level no loop takes"
+        print(f"left #{pull['number']} alone: #{challenge} is {state_str}, "
+              f"so the {action} is the solo's, and the sweep names it — {pull['title']}")
+        return False
+    return True
+
+
+def _retry_stranded_reviewer(number: str, pull: Pull, asked: list[str],
+                             merges: str, reviewer_login: str) -> tuple[bool, str | None, str | None]:
+    """Retry review request if reviewer check failed without a verdict (solorepo's DR-178).
+
+    Returns:
+        tuple[bool, str | None, str | None]: (handled, failed_msg, refused_msg)
+    """
+    if reviewer_login not in asked or pull.get("isDraft") or merges == "CONFLICTING":
+        return False, None, None
+    checks = pull.get("statusCheckRollup")
+    if checks is None:
+        try:
+            view_res = channel.gh("pr", "view", number, "--json", "statusCheckRollup")
+            checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
+        except SystemExit:
+            checks = []
+    contexts = deduplicate_checks(checks or [])
+    reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
+    if reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE":
+        try:
+            request_review(number, "reviewer")
+        except RequestRefused as exc:
+            return True, None, f"#{number} has a review request stranded and the reviewer could not be re-requested for it — {exc.code}"
+        except SystemExit as exc:
+            return True, f"#{number} review request stranded and could not be re-requested — {exc.code}", None
+        return True, None, None
+    return False, None, None
+
+
+def _dispatch_conflicting(number: str, pull: Pull, waiting: list[str],
+                          below: set[str], challenge: str) -> tuple[bool, str | None]:
+    """Dispatch coder rebase pass for conflicting pull request if eligible.
+
+    Returns:
+        tuple[bool, str | None]: (handled, refused_msg)
+    """
+    waits = " and ".join(waiting)
+    if pull["headRefName"] in below:
+        print(f"left #{number} alone: another open pull request is based on "
+              f"{pull['headRefName']}, so rebasing it would rewrite the commits the "
+              f"layer above is on — a conflicting stack is resolved from the bottom, "
+              f"by the solo — {pull['title']}")
+        return True, None
+    if not _is_autonomous_challenge(challenge, "conflict", pull):
+        return True, None
+    try:
+        run_coder(number, "rebase")
+    except SystemExit as exc:
+        return True, f"#{number} is {waits} and the coder could not be dispatched for it — {exc.code}"
+    print(f"dispatched the coder for #{number}: {waits}, and conflicting with "
+          f"{pull['baseRefName']}, so GitHub builds no merge ref and will not update "
+          f"the branch — {pull['title']}")
+    return True, None
+
+
+def _dispatch_approved_or_redeliver(pull: Pull, merges: str,
+                                    challenge: str, reviewer_login: str,
+                                    redeliver: bool) -> tuple[bool, str | None]:
+    """Dispatch review pass for approved PR with failing checks or redeliver changes requested."""
+    number = str(pull["number"])
+    if is_approved_pull(pull, reviewer_login=reviewer_login) and not pull.get("isDraft") and merges != "CONFLICTING":
+        checks = pull.get("statusCheckRollup")
+        if checks is None:
+            try:
+                view_res = channel.gh("pr", "view", number, "--json", "statusCheckRollup")
+                checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
+            except SystemExit:
+                checks = []
+        ok, msg = check_green({"statusCheckRollup": checks})
+        if not ok and "failing" in msg:
+            if not _is_autonomous_challenge(challenge, "review", pull):
+                return True, None
+            try:
+                run_coder(number, "review")
+            except SystemExit as exc:
+                return True, f"#{number} is approved with failing checks and the coder could not be dispatched for it — {exc.code}"
+            print(f"dispatched the coder for #{number}: approved, with failing checks ({msg}) — {pull['title']}")
+            return True, None
+    elif redeliver and merges != "CONFLICTING":
+        if not _is_autonomous_challenge(challenge, "review", pull):
+            return True, None
+        try:
+            run_coder(number, "review")
+        except SystemExit as exc:
+            return True, f"#{number} has changes requested and the coder could not be dispatched for it — {exc.code}"
+        print(f"dispatched the coder for #{number}: changes requested by reviewer, re-delivering pass — {pull['title']}")
+        return True, None
+    return False, None
+
+
+def _dispatch_single_pull(pull: Pull, below: set[str], reviewer_login: str,
+                          minutes: int, now: datetime.datetime) -> tuple[str | None, str | None]:
+    """Evaluate and dispatch coder passes for a single pull request."""
+    number = str(pull["number"])
+    challenge = re.sub(r"^(?:claude|gemini|codex)/issue-", "", pull["headRefName"])
+    asked = [r.get("login") or r.get("name") or "someone"
+             for r in pull.get("reviewRequests") or []]
+    moved = (datetime.datetime.fromisoformat(pull["updatedAt"].replace("Z", "+00:00"))
+             if pull.get("updatedAt") else None)
+    idle = (now - moved).total_seconds() / 60 if moved else float("inf")
+    waiting = [f"requested of {', '.join(asked)}"] if asked else []
+    if pull.get("autoMergeRequest"):
+        waiting.append("armed")
+    if is_approved_pull(pull, reviewer_login=reviewer_login):
+        waiting.append("approved")
+    redeliver = (is_changes_requested_pull(pull, reviewer_login=reviewer_login)
+                 and idle >= minutes)
+    if redeliver:
+        waiting.append("awaiting the coder's answer to a request for changes")
+    if not waiting and not redeliver:
+        return None, None
+    try:
+        merges = mergeability(pull) or "UNKNOWN"
+    except SystemExit as exc:
+        return f"#{number} was left where it stands: GitHub would not say whether it still merges — {exc.code}", None
+
+    handled, f_msg, r_msg = _retry_stranded_reviewer(number, pull, asked, merges, reviewer_login)
+    if handled:
+        return f_msg, r_msg
+
+    if waiting and merges == "CONFLICTING":
+        _, r_msg = _dispatch_conflicting(number, pull, waiting, below, challenge)
+        return None, r_msg
+
+    _, r_msg = _dispatch_approved_or_redeliver(pull, merges, challenge, reviewer_login, redeliver)
+    return None, r_msg
+
+
 def dispatch(pulls: Sequence[Pull]) -> tuple[list[str], list[str]]:
     """Dispatch coder rebase passes for pull requests left conflicting by recent merges.
 
@@ -1393,183 +1560,16 @@ def dispatch(pulls: Sequence[Pull]) -> tuple[list[str], list[str]]:
     below = {pull["baseRefName"] for pull in pulls}
     reviewer_login = channel.role_login("reviewer")
     minutes = check_pr.longest_run() or 30
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     for pull in pulls:
         if not LOOPS_BRANCH.match(pull["headRefName"]):
             continue
-        number = str(pull["number"])
-        challenge = re.sub(r"^(?:claude|gemini|codex)/issue-", "", pull["headRefName"])
-        asked = [r.get("login") or r.get("name") or "someone"
-                 for r in pull.get("reviewRequests") or []]
-        # How long GitHub has shown this pull request unmoved, in minutes,
-        # against how long a coder run may last. Read here rather than beside
-        # the one arm that used to need it, because two of them do
-        # (solorepo's DR-237): a branch that has moved more recently than a run
-        # may last is a branch a run may still be standing on, whichever pass
-        # that run is.
-        moved = (datetime.datetime.fromisoformat(pull["updatedAt"].replace("Z", "+00:00"))
-                 if pull.get("updatedAt") else None)
-        idle = (now - moved).total_seconds() / 60 if moved else float("inf")
-        # What the pull request is waiting on, and so what the conflict is
-        # holding up. Both, where the reviewer armed one whose request GitHub
-        # still shows outstanding; the line below says which, because that is
-        # what the dispatch is repairing.
-        waiting = [f"requested of {', '.join(asked)}"] if asked else []
-        if pull.get("autoMergeRequest"):
-            waiting.append("armed")
-        if is_approved_pull(pull, reviewer_login=reviewer_login):
-            waiting.append("approved")
-        # A verdict the coder has not answered is the fourth thing a conflict
-        # holds up, and the one nobody else reaches (solorepo's DR-237). The
-        # three above are the pull request waiting on somebody who is not the
-        # coder; this is the pull request waiting on the Role that holds it,
-        # which asks for nothing and so shows in no request GitHub reports.
-        # The re-delivery below will not take it, because the pass that
-        # answers a verdict is delivered on the pull request's own merge ref
-        # and GitHub builds none for a branch that conflicts; so without this
-        # entry no pass is dispatched for it on any later push to trunk.
-        #
-        # The idle guard is the difference between this entry and the three
-        # above it, and it is the same one the re-delivery takes. A verdict is
-        # itself the event that starts a coder pass, so unlike a request, an
-        # arming or an approval this state can have a run of its own in
-        # flight — the verdict landing while the branch still merged, the
-        # conflict arriving under the run. The two passes take different
-        # concurrency groups in `coder.yml`, `changes_requested` and `rebase`,
-        # so neither waits for the other, and the rebase pass ends in `git
-        # push --force-with-lease`: the harm that file names in its own words
-        # as force-pushing under a session. A branch GitHub has shown unmoved
-        # for longer than a run may last has no run standing on it, and the
-        # next push to trunk asks again about one that has.
-        redeliver = (is_changes_requested_pull(pull, reviewer_login=reviewer_login)
-                     and idle >= minutes)
-        if redeliver:
-            waiting.append("awaiting the coder's answer to a request for changes")
-        if not waiting and not redeliver:
-            continue
-        try:
-            merges = mergeability(pull)
-        except SystemExit as exc:
-            failed.append(f"#{number} was left where it stands: GitHub would not say whether "
-                          f"it still merges — {exc.code}")
-            continue
-        # A stranded review request where reviewer check failed without a verdict (solorepo's DR-178):
-        if reviewer_login in asked and not pull.get("isDraft") and merges != "CONFLICTING":
-            checks = pull.get("statusCheckRollup")
-            if checks is None:
-                try:
-                    view_res = channel.gh("pr", "view", number, "--json", "statusCheckRollup")
-                    checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
-                except SystemExit:
-                    checks = []
-            contexts = deduplicate_checks(checks or [])
-            reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
-            if reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE":
-                try:
-                    request_review(number, "reviewer")
-                except RequestRefused as exc:
-                    refused.append(f"#{number} has a review request stranded and the reviewer could not be re-requested for it — {exc.code}")
-                except SystemExit as exc:
-                    failed.append(f"#{number} review request stranded and could not be re-requested — {exc.code}")
-                continue
+        f_msg, r_msg = _dispatch_single_pull(pull, below, reviewer_login, minutes, now)
+        if f_msg:
+            failed.append(f_msg)
+        if r_msg:
+            refused.append(r_msg)
 
-        if waiting and merges == "CONFLICTING":
-            waits = " and ".join(waiting)
-            if pull["headRefName"] in below:
-                print(f"left #{number} alone: another open pull request is based on "
-                      f"{pull['headRefName']}, so rebasing it would rewrite the commits the "
-                      f"layer above is on — a conflicting stack is resolved from the bottom, "
-                      f"by the solo — {pull['title']}")
-                continue
-            # Its own refusal, and not the dispatch's below: an Issue deleted
-            # or transferred under its branch fails this read the same way on
-            # every push to trunk, and a red sweep each time is the repetition
-            # this read exists to stop. `coder.yml` gives the same fact a word
-            # on its doors, `unnamed`; here it is a line, and the sweep's.
-            try:
-                issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
-            except SystemExit:
-                print(f"left #{number} alone: #{challenge} cannot be read, so the conflict "
-                      f"is the solo's, and the sweep names it — {pull['title']}")
-                continue
-            levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
-            if issue["state"] != "OPEN" or not levels:
-                print(f"left #{number} alone: #{challenge} is "
-                      f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
-                      f"so the conflict is the solo's, and the sweep names it — "
-                      f"{pull['title']}")
-                continue
-            try:
-                run_coder(number, "rebase")
-            except SystemExit as exc:
-                refused.append(f"#{number} is {waits} and the coder could not be "
-                               f"dispatched for it — {exc.code}")
-                continue
-            print(f"dispatched the coder for #{number}: {waits}, and conflicting with "
-                  f"{pull['baseRefName']}, so GitHub builds no merge ref and will not update "
-                  f"the branch — {pull['title']}")
-            continue
-
-        # An approved PR with failing checks is dispatched for review (solorepo's DR-178):
-        if is_approved_pull(pull, reviewer_login=reviewer_login) and not pull.get("isDraft") and merges != "CONFLICTING":
-            checks = pull.get("statusCheckRollup")
-            if checks is None:
-                try:
-                    view_res = channel.gh("pr", "view", number, "--json", "statusCheckRollup")
-                    checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
-                except SystemExit:
-                    checks = []
-            ok, msg = check_green({"statusCheckRollup": checks})
-            if not ok and "failing" in msg:
-                try:
-                    issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
-                except SystemExit:
-                    print(f"left #{number} alone: #{challenge} cannot be read, so the review "
-                          f"is the solo's, and the sweep names it — {pull['title']}")
-                    continue
-                levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
-                if issue["state"] != "OPEN" or not levels:
-                    print(f"left #{number} alone: #{challenge} is "
-                          f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
-                          f"so the review is the solo's, and the sweep names it — "
-                          f"{pull['title']}")
-                    continue
-                try:
-                    run_coder(number, "review")
-                except SystemExit as exc:
-                    refused.append(f"#{number} is approved with failing checks and the coder could not be "
-                                   f"dispatched for it — {exc.code}")
-                    continue
-                print(f"dispatched the coder for #{number}: approved, with failing checks ({msg}) — {pull['title']}")
-                continue
-
-        elif redeliver:
-            # An unanswered review changes request where the webhook was spent or the run crashed.
-            # Only re-deliver when the branch does not conflict, the idle window above having
-            # already held it back while a coder run may still be standing on the branch.
-            if merges == "CONFLICTING":
-                continue
-            try:
-                issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
-            except SystemExit:
-                print(f"left #{number} alone: #{challenge} cannot be read, so the review "
-                      f"is the solo's, and the sweep names it — {pull['title']}")
-                continue
-            levels = {l["name"] for l in issue["labels"]} & {"easy", "medium"}
-            if issue["state"] != "OPEN" or not levels:
-                print(f"left #{number} alone: #{challenge} is "
-                      f"{'closed' if issue['state'] != 'OPEN' else 'at a level no loop takes'}, "
-                      f"so the review is the solo's, and the sweep names it — "
-                      f"{pull['title']}")
-                continue
-            try:
-                run_coder(number, "review")
-            except SystemExit as exc:
-                refused.append(f"#{number} has changes requested and the coder could not be "
-                               f"dispatched for it — {exc.code}")
-                continue
-            print(f"dispatched the coder for #{number}: changes requested by reviewer, "
-                  f"re-delivering pass — {pull['title']}")
     return failed, refused
 
 
@@ -1577,6 +1577,70 @@ def dispatch(pulls: Sequence[Pull]) -> tuple[list[str], list[str]]:
 # every reply on a thread is submitted under and says nothing about the pull
 # request; a `DISMISSED` one is a verdict GitHub has already taken back.
 VERDICTS = ("APPROVED", "CHANGES_REQUESTED")
+
+
+def _check_dispatch_rebase(pr: str | int, pull: Pull) -> None:
+    """Validate preconditions before dispatching a coder rebase pass.
+
+    Checks branch shape first because it is free, then whether the branch is
+    a layer of a stack, and finally checks mergeability against base.
+    """
+    if not LOOPS_BRANCH.match(pull["headRefName"]):
+        sys.exit(f"say: #{pr} is on {pull['headRefName']}, which is not a loop branch `(claude|gemini|codex)/issue-<n>`. "
+                 "The rebase pass reads the Challenge it would hand back to off the branch "
+                 "name, so on any other shape a pass that could not settle the conflict "
+                 "has nowhere to stop. `coder.yml` holds that refusal already and holds it "
+                 "after the dispatch, where it is a red run attached to no check; a name "
+                 "that only nearly fits, `claude/issue-<n>-followup`, does not reach even "
+                 "that — the guard reads it as naming no Challenge, the rebase is skipped, "
+                 "and the run ends green having done nothing. Rebase it by hand.")
+    if stacked(pr):
+        sys.exit(f"say: #{pr} is a layer of a stack, and rebasing one moves commits the "
+                 "layer above may be based on with no event on it to say so, so the next "
+                 "reader of that layer sees this one's work shown as its own "
+                 "(solorepo's DR-133). A conflicting stack is resolved from the bottom, "
+                 "which is a judgement about the stack and not about any one of its pull "
+                 "requests: `advance` declines the same case, and this one is the solo's "
+                 "to settle by hand.")
+    merges = mergeability(pull) or "UNKNOWN"
+    if merges != "CONFLICTING":
+        sys.exit(f"say: GitHub reports #{pr} as {merges} against "
+                 f"{pull['baseRefName']}, not CONFLICTING, and the rebase pass is for a "
+                 "branch GitHub builds no merge ref for — which is the state where no "
+                 "review of the head can run and nothing but authoring can fix it. One "
+                 "that has merely fallen behind is waiting on nothing and needs no Job: "
+                 "its merge ref exists, so a review runs on the head as it stands, and "
+                 "the branch comes onto its base when it is armed — `merge --auto` "
+                 "advances before it arms, and `advance` sweeps up an armed one on the "
+                 "next push to trunk.")
+
+
+def _check_dispatch_review(pr: str | int, pull: Pull) -> None:
+    """Validate preconditions before dispatching a coder review pass."""
+    reviewer = channel.role_login("reviewer")
+    if reviewer in [r.get("login") for r in pull.get("reviewRequests") or []]:
+        sys.exit(f"say: GitHub shows a review of #{pr} requested of {reviewer} and not yet "
+                 "given, so what stands on it is the reviewer's. The review pass answers a "
+                 "verdict; a verdict answered and handed back is not one to answer again.")
+    given = [r["state"] for r in pull.get("reviews") or []
+             if (r.get("author") or {}).get("login") == reviewer and r["state"] in VERDICTS]
+    if given and given[-1] == "APPROVED":
+        checks = pull.get("statusCheckRollup")
+        if checks is None:
+            try:
+                view_res = channel.gh("pr", "view", str(pr), "--json", "statusCheckRollup")
+                checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
+            except SystemExit:
+                checks = []
+        ok, msg = check_green({"statusCheckRollup": checks})
+        if not (not ok and "failing" in msg):
+            sys.exit(f"say: the last verdict {reviewer} left on #{pr} is APPROVED, "
+                     f"and the review pass is for a request for changes or an approved PR with failing checks ({msg})")
+    elif not given or given[-1] != "CHANGES_REQUESTED":
+        sys.exit(f"say: the last verdict {reviewer} left on #{pr} is "
+                 f"{given[-1] if given else 'nothing'}, and the review pass is for a request "
+                 f"for changes or an approved pull request with failing checks: `move request-review "
+                 f"{pr}` asks for a verdict; this dispatches the pass that answers one.")
 
 
 def dispatch_pass(pr: str | int, task: str | None) -> None:
@@ -1652,72 +1716,125 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
     if task is None:
         task = "rebase" if pull.get("mergeable") == "CONFLICTING" else "review"
     if task == "rebase":
-        # The branch's shape first, because it is free and it is the commonest
-        # thing this verb is typed against: `advance` never dispatches for the
-        # solo's own branch, so the branch this one meets is the one the
-        # machine's filter passes over.
-        if not LOOPS_BRANCH.match(pull["headRefName"]):
-            sys.exit(f"say: #{pr} is on {pull['headRefName']}, which is not a loop branch `(claude|gemini|codex)/issue-<n>`. "
-                     "The rebase pass reads the Challenge it would hand back to off the branch "
-                     "name, so on any other shape a pass that could not settle the conflict "
-                     "has nowhere to stop. `coder.yml` holds that refusal already and holds it "
-                     "after the dispatch, where it is a red run attached to no check; a name "
-                     "that only nearly fits, `claude/issue-<n>-followup`, does not reach even "
-                     "that — the guard reads it as naming no Challenge, the rebase is skipped, "
-                     "and the run ends green having done nothing. Rebase it by hand.")
-        # Then the stack, which is one read, and then the conflict, which may
-        # cost half a minute of polling: a refusal that is certain is not worth
-        # waiting for GitHub to compute an answer this verb will not use.
-        if stacked(pr):
-            sys.exit(f"say: #{pr} is a layer of a stack, and rebasing one moves commits the "
-                     "layer above may be based on with no event on it to say so, so the next "
-                     "reader of that layer sees this one's work shown as its own "
-                     "(solorepo's DR-133). A conflicting stack is resolved from the bottom, "
-                     "which is a judgement about the stack and not about any one of its pull "
-                     "requests: `advance` declines the same case, and this one is the solo's "
-                     "to settle by hand.")
-        merges = mergeability(pull) or "UNKNOWN"
-        if merges != "CONFLICTING":
-            sys.exit(f"say: GitHub reports #{pr} as {merges} against "
-                     f"{pull['baseRefName']}, not CONFLICTING, and the rebase pass is for a "
-                     "branch GitHub builds no merge ref for — which is the state where no "
-                     "review of the head can run and nothing but authoring can fix it. One "
-                     "that has merely fallen behind is waiting on nothing and needs no Job: "
-                     "its merge ref exists, so a review runs on the head as it stands, and "
-                     "the branch comes onto its base when it is armed — `merge --auto` "
-                     "advances before it arms, and `advance` sweeps up an armed one on the "
-                     "next push to trunk.")
+        _check_dispatch_rebase(pr, pull)
     else:
-        reviewer = channel.role_login("reviewer")
-        if reviewer in [r.get("login") for r in pull.get("reviewRequests") or []]:
-            sys.exit(f"say: GitHub shows a review of #{pr} requested of {reviewer} and not yet "
-                     "given, so what stands on it is the reviewer's. The review pass answers a "
-                     "verdict; a verdict answered and handed back is not one to answer again.")
-        given = [r["state"] for r in pull.get("reviews") or []
-                 if (r.get("author") or {}).get("login") == reviewer and r["state"] in VERDICTS]
-        if given and given[-1] == "APPROVED":
-            checks = pull.get("statusCheckRollup")
-            if checks is None:
-                try:
-                    view_res = channel.gh("pr", "view", str(pr), "--json", "statusCheckRollup")
-                    checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
-                except SystemExit:
-                    checks = []
-            ok, msg = check_green({"statusCheckRollup": checks})
-            if not ok and "failing" in msg:
-                pass
-            else:
-                sys.exit(f"say: the last verdict {reviewer} left on #{pr} is APPROVED, "
-                         f"and the review pass is for a request for changes or an approved PR with failing checks ({msg})")
-        elif not given or given[-1] != "CHANGES_REQUESTED":
-            sys.exit(f"say: the last verdict {reviewer} left on #{pr} is "
-                     f"{given[-1] if given else 'nothing'}, and the review pass is for a request "
-                     f"for changes or an approved pull request with failing checks: `move request-review "
-                     f"{pr}` asks for a verdict; this dispatches the pass that answers one.")
+        _check_dispatch_review(pr, pull)
     run_coder(pr, task)
     print(f"dispatched the coder's {task} pass for #{pr} — {pull['title']}. GitHub creates the "
           "run after it answers the dispatch, so there is nothing to read back yet: "
           "`gh run list --workflow coder.yml` names it once it exists.")
+
+
+def _advance_stack_layers(pull: Pull, all_open: Sequence[Pull],
+                          advanced_stacks: set[str]) -> tuple[bool, int, list[str], list[str]]:
+    """Advance linked stack layers if pull is part of a stack.
+
+    Returns:
+        tuple: (handled, moved_count, failed_list, refused_list)
+    """
+    root = stack_root(pull, all_open)
+    root_number = str(root["number"])
+    if root_number in advanced_stacks:
+        return True, 0, [], []
+    stack = stacked(root_number)
+    if not stack:
+        return False, 0, [], []
+    advanced_stacks.add(root_number)
+    layers = stack_layers(root, all_open)
+    before_and_behind = [head_now(str(layer["number"])) for layer in layers]
+    before = {str(layer["number"]): current
+              for layer, (current, _) in zip(layers, before_and_behind, strict=True)}
+    was_behind = {str(layer["number"]): behind
+                  for layer, (_, behind) in zip(layers, before_and_behind, strict=True)}
+    if any(mergeability(current) == "CONFLICTING" for current in before.values()):
+        print(f"left #{root_number}'s stack alone: GitHub reports a layer conflicting "
+              "with its base, so the solo must resolve the stack from the bottom")
+        return True, 0, [], []
+    if not any(was_behind.values()):
+        return True, 0, [], []
+    must_move: dict[str, bool] = {}
+    seen_behind = False
+    for layer, (_, behind) in zip(layers, before_and_behind, strict=True):
+        seen_behind = seen_behind or bool(behind)
+        must_move[str(layer["number"])] = seen_behind
+    errors, stack_refused = advance_stack(layers, before, must_move)
+    moved = 1 if not errors and not stack_refused else 0
+    return True, moved, errors, stack_refused
+
+
+def _advance_single_pull(pull: Pull, pr: int | str | None,
+                         bases: set[str]) -> tuple[int, int, list[str]]:
+    """Advance a single non-stacked pull request onto its base branch.
+
+    Returns:
+        tuple: (moved_count, left_count, failed_list)
+    """
+    number = str(pull["number"])
+    if pull["headRefName"] in bases:
+        if pr is not None:
+            sys.exit(f"say: #{pr} is the base of another open pull request; "
+                     "it is not linked as a GitHub stack and cannot advance atomically (solorepo's DR-243)")
+        return 0, 0, []
+    before, behind = head_now(number)
+    if not behind:
+        return 0, 0, []
+    if pr is None and mergeability(pull) == "CONFLICTING":
+        print(f"left #{number} to the dispatch below: {behind} commit(s) behind "
+              f"{pull['baseRefName']} and conflicting with it, which GitHub "
+              f"will not rebase — {pull['title']}")
+        return 0, 1, []
+    before, behind = head_now(number)
+    if not behind:
+        return 0, 0, []
+    channel.gh("pr", "update-branch", number, "--rebase", parse=False)
+    print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} — {pull['title']}")
+    failed: list[str] = []
+    before_oid = before["headRefOid"]
+    after = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
+                    lambda now: now["headRefOid"] != before_oid)
+    if after["headRefOid"] == before_oid:
+        failed.append(f"#{number} is on the head it was before the update and "
+                      "GitHub has not moved it within the wait, so whether the "
+                      "rebase drops the arming is unread — and dropped, it is "
+                      "out of reach of every later sweep")
+    elif behind_by(after):
+        failed.append(f"#{number} is still behind {pull['baseRefName']} after the update")
+    if pull.get("autoMergeRequest") and not after.get("autoMergeRequest") and after.get("state") != "MERGED":
+        arm(number, f"{pull['title']} (#{number})")
+        now = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
+                      lambda seen: seen.get("autoMergeRequest") or seen["state"] == "MERGED")
+        if now["state"] == "MERGED":
+            print(f"merged #{number}: re-armed after the update, and green")
+        elif not now.get("autoMergeRequest"):
+            failed.append(f"#{number} lost its arming to the update and GitHub "
+                          "does not show it armed after the call that re-armed it")
+        else:
+            print(f"armed #{number} again: moving the head had dropped it")
+    return 1, 0, failed
+
+
+def _is_advance_candidate(pull: Pull, pr: int | str | None, bases: set[str],
+                          heads: set[str], reviewer_login: str) -> bool:
+    """Check if an open pull request is candidate for advance."""
+    if pull.get("autoMergeRequest"):
+        return True
+    if is_approved_pull(pull, reviewer_login=reviewer_login):
+        return True
+    return bool(pr is not None and pull.get("headRefName") in bases and pull.get("baseRefName") not in heads)
+
+
+def _report_advance_sweep(open_now: Sequence[Pull], failed: list[str], refused: list[str]) -> None:
+    """Run sweep dispatch and report pull request problems."""
+    reported, dispatch_refused = dispatch(open_now)
+    failed += reported
+    refused += dispatch_refused
+    if failed:
+        print(f"advance: {len(failed)} pull request(s) reported a problem of their own, "
+              "which the next push to trunk asks about again:")
+        for problem in failed:
+            print(f"  {problem}")
+    if refused:
+        sys.exit("say: " + "; ".join(refused))
 
 
 def advance(pr: int | str | None = None, held: bool = False) -> None:
@@ -1763,9 +1880,7 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     heads = {p.get("headRefName") for p in all_open if p.get("headRefName")}
     reviewer_login = channel.role_login("reviewer")
     found = open_now if held else [
-        p for p in open_now
-        if (p.get("autoMergeRequest") or is_approved_pull(p, reviewer_login=reviewer_login)
-            or (pr is not None and p.get("headRefName") in bases and p.get("baseRefName") not in heads))
+        p for p in open_now if _is_advance_candidate(p, pr, bases, heads, reviewer_login)
     ]
     moved, left = 0, 0
     failed: list[str] = []
@@ -1780,109 +1895,73 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
             number = str(pull["number"])
             try:
                 if pull.get("headRefName") in bases or pull.get("baseRefName") in heads:
-                    root = stack_root(pull, all_open)
-                    root_number = str(root["number"])
-                    if root_number in advanced_stacks:
-                        continue
-                    stack = stacked(root_number)
-                    if stack:
-                        advanced_stacks.add(root_number)
-                        layers = stack_layers(root, all_open)
-                        before_and_behind = [head_now(str(layer["number"])) for layer in layers]
-                        before = {str(layer["number"]): current
-                                  for layer, (current, _) in zip(layers, before_and_behind)}
-                        was_behind = {str(layer["number"]): behind
-                                      for layer, (_, behind) in zip(layers, before_and_behind)}
-                        if any(mergeability(current) == "CONFLICTING" for current in before.values()):
-                            print(f"left #{root_number}'s stack alone: GitHub reports a layer conflicting "
-                                  "with its base, so the solo must resolve the stack from the bottom")
-                            left += 1
-                            continue
-                        if not any(was_behind.values()):
-                            continue
-                        must_move: dict[str, bool] = {}
-                        seen_behind = False
-                        for layer, (_, behind) in zip(layers, before_and_behind):
-                            seen_behind = seen_behind or bool(behind)
-                            must_move[str(layer["number"])] = seen_behind
-                        errors, stack_refused = advance_stack(layers, before, must_move)
+                    handled, stack_moved, errors, stack_refused = _advance_stack_layers(
+                        pull, all_open, advanced_stacks
+                    )
+                    if handled:
+                        moved += stack_moved
                         failed += errors
                         refused += stack_refused
-                        if not errors and not stack_refused:
-                            moved += 1
                         continue
-                if pull["headRefName"] in bases:
-                    if pr is not None:
-                        sys.exit(f"say: #{pr} is the base of another open pull request; "
-                                  "it is not linked as a GitHub stack and cannot advance atomically (solorepo's DR-243)")
-                    continue
-                # Query head commit state directly to account for preceding wait times.
-                before, behind = head_now(number)
-                if not behind:
-                    continue
-                if pr is None and mergeability(pull) == "CONFLICTING":
-                    # Conflicting branches cannot be rebased cleanly via API; delegate to dispatch.
-                    print(f"left #{number} to the dispatch below: {behind} commit(s) behind "
-                          f"{pull['baseRefName']} and conflicting with it, which GitHub "
-                          f"will not rebase — {pull['title']}")
-                    left += 1
-                    continue
-                # Re-query head state following mergeability polling to avoid stale references.
-                before, behind = head_now(number)
-                if not behind:
-                    continue
-                channel.gh("pr", "update-branch", number, "--rebase", parse=False)
-                moved += 1
-                print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} "
-                      f"— {pull['title']}")
-                # Wait for remote rebase operation to settle asynchronously (solorepo's DR-158).
-                after = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
-                                lambda now: now["headRefOid"] != before["headRefOid"])
-                if after["headRefOid"] == before["headRefOid"]:
-                    failed.append(f"#{number} is on the head it was before the update and "
-                                  "GitHub has not moved it within the wait, so whether the "
-                                  "rebase drops the arming is unread — and dropped, it is "
-                                  "out of reach of every later sweep")
-                elif behind_by(after):
-                    failed.append(f"#{number} is still behind {pull['baseRefName']} "
-                                  "after the update")
-                # Re-arm auto-merge if head movement cleared the existing request.
-                if pull.get("autoMergeRequest") and not after.get("autoMergeRequest") and after.get("state") != "MERGED":
-                    arm(number, f"{pull['title']} (#{number})")
-                    # Poll until auto-merge is restored or PR completes merge.
-                    now = settled(lambda: channel.gh("pr", "view", number, "--json", ADVANCE),
-                                  lambda seen: seen.get("autoMergeRequest")
-                                  or seen["state"] == "MERGED")
-                    if now["state"] == "MERGED":
-                        print(f"merged #{number}: re-armed after the update, and green")
-                    elif not now.get("autoMergeRequest"):
-                        failed.append(f"#{number} lost its arming to the update and GitHub "
-                                      "does not show it armed after the call that re-armed it")
-                    else:
-                        print(f"armed #{number} again: moving the head had dropped it")
+                single_moved, single_left, single_failed = _advance_single_pull(pull, pr, bases)
+                moved += single_moved
+                left += single_left
+                failed += single_failed
             except SystemExit as exc:
                 failed.append(f"#{number}: {exc.code}")
         if not moved and not failed and len(found) > left:
             print(f"advance: {len(found) - left} pull request(s) current with their base")
-    # Sweep-level pass: dispatch review or rebase tasks for open pull requests.
     if pr is None:
-        reported, dispatch_refused = dispatch(open_now)
-        failed += reported
-        refused += dispatch_refused
-        # A sweep's exit code answers for the sweep and not for the weather of
-        # the pull requests it read (solorepo's DR-238).
-        if failed:
-            print(f"advance: {len(failed)} pull request(s) reported a problem of their own, "
-                  "which the next push to trunk asks about again:")
-            for problem in failed:
-                print(f"  {problem}")
-        # A write the sweep makes and GitHub refuses is the sweep's own, and
-        # red: no coder pass runs and no stranded request is re-requested for
-        # any pull request the refusal reached, and nothing else asks again.
-        if refused:
-            sys.exit("say: " + "; ".join(refused))
+        _report_advance_sweep(open_now, failed, refused)
     elif failed or refused:
         sys.exit("say: " + "; ".join(failed + refused))
+
+
+def _merge_auto(pr: str | int, before: Pull, subject: str, stack: bool) -> None:
+    """Enable GitHub auto-merge on pull request once required checks pass.
+
+    Advances the branch to base head before arming. Falls back to immediate
+    merge if the branch status is already clean. Verifies that auto-merge
+    request is preserved on GitHub after branch movements.
+    """
+    if stack or stacked(pr):
+        sys.exit(f"say: #{pr} is in a stack, and GitHub does not arm a stacked pull request, "
+                 "bottom included. Merge it with --stack when it is green, and GitHub "
+                 "retargets the layers above as it lands.")
+    if not channel.gh("api", f"repos/{channel.repo()}").get("allow_auto_merge"):
+        sys.exit("say: this repository does not allow auto-merge; that is a setting on "
+                 "GitHub, not a line here")
+    stalled = None
+    try:
+        advance(pr, held=True)
+    except SystemExit as exc:
+        stalled = str(exc.code)
+    try:
+        arm(pr, subject)
+    except SystemExit as exc:
+        if "clean status" not in str(exc.code):
+            raise
+    else:
+        after = channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit,autoMergeRequest")
+        if after["state"] == "MERGED":
+            print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
+        elif after.get("autoMergeRequest"):
+            print(f"armed: #{pr} merges as a squash when green — {before['title']}")
+            if stalled:
+                try:
+                    current = channel.gh("pr", "view", str(pr), "--json", ADVANCE)
+                    behind = behind_by(current)
+                except SystemExit as exc:
+                    sys.exit(f"say: #{pr} is armed, and advancing it did not finish — "
+                             f"{stalled}. GitHub would not say whether it is current "
+                             f"either — {exc.code}")
+                if behind:
+                    sys.exit(f"say: #{pr} is armed and {behind} commit(s) behind "
+                             f"{current['baseRefName']} — {stalled}")
+                print(f"#{pr} is armed and current with {current['baseRefName']}; "
+                      f"advancing it did not finish — {stalled}")
+        else:
+            sys.exit(f"say: GitHub shows #{pr} neither merged nor armed after the call")
 
 
 def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
@@ -1908,51 +1987,9 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
         sys.exit(f"say: #{pr} is {before['state'].lower()}, not open")
     subject = f"{before['title']} (#{pr})"
     if auto:
-        if stack or stacked(pr):
-            # GitHub does not support auto-merge on stacked pull requests.
-            sys.exit(f"say: #{pr} is in a stack, and GitHub does not arm a stacked pull request, "
-                     "bottom included. Merge it with --stack when it is green, and GitHub "
-                     "retargets the layers above as it lands.")
-        if not channel.gh("api", f"repos/{channel.repo()}").get("allow_auto_merge"):
-            sys.exit("say: this repository does not allow auto-merge; that is a setting on "
-                     "GitHub, not a line here")
-        # Attempt to advance branch to base head before arming; catch failures to avoid disarming.
-        stalled = None
-        try:
-            advance(pr, held=True)
-        except SystemExit as exc:
-            stalled = str(exc.code)
-        try:
-            arm(pr, subject)
-        except SystemExit as exc:
-            # If the branch is already mergeable, proceed to immediate merge.
-            if "clean status" not in str(exc.code):
-                raise
-        else:
-            after = channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit,autoMergeRequest")
-            if after["state"] == "MERGED":
-                print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
-            elif after.get("autoMergeRequest"):
-                print(f"armed: #{pr} merges as a squash when green — {before['title']}")
-                # If advancing stalled, check whether the branch is currently behind trunk.
-                if stalled:
-                    try:
-                        current = channel.gh("pr", "view", str(pr), "--json", ADVANCE)
-                        behind = behind_by(current)
-                    except SystemExit as exc:
-                        sys.exit(f"say: #{pr} is armed, and advancing it did not finish — "
-                                 f"{stalled}. GitHub would not say whether it is current "
-                                 f"either — {exc.code}")
-                    if behind:
-                        sys.exit(f"say: #{pr} is armed and {behind} commit(s) behind "
-                                 f"{current['baseRefName']} — {stalled}")
-                    print(f"#{pr} is armed and current with {current['baseRefName']}; "
-                          f"advancing it did not finish — {stalled}")
-            else:
-                sys.exit(f"say: GitHub shows #{pr} neither merged nor armed after the call")
-            return
+        _merge_auto(pr, before, subject, stack)
+        return
     if stack:
-        # Recursively merge stacked PR layers up to and including this branch.
         channel.gh("stack", "merge", str(pr), "--squash", "--yes", parse=False)
     elif stacked(pr):
         sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
@@ -2527,15 +2564,14 @@ def evaluate_pr(pull: Pull, reviewer_login: str, owner: str,
     reasons: list[str] = []
     if pull.get("baseRefName") and pull.get("baseRefName") != "main":
         reasons.append(f"base is {pull.get('baseRefName')}, not main")
-    clean_ok, clean_msg = check_mergeable_clean(pull)
-    if not clean_ok:
-        reasons.append(clean_msg)
-    green_ok, green_msg = check_green(pull)
-    if not green_ok:
-        reasons.append(green_msg)
-    rev_ok, rev_msg = check_reviewer_approval(pull, reviewer_login)
-    if not rev_ok:
-        reasons.append(rev_msg)
+    clean_checks = (
+        check_mergeable_clean(pull),
+        check_green(pull),
+        check_reviewer_approval(pull, reviewer_login),
+    )
+    for ok, msg in clean_checks:
+        if not ok:
+            reasons.append(msg)
     threads: list[dict[str, Any]] | None = None
     if pull.get("reviewThreads") is not None or not reasons:
         threads_ok, threads_msg = check_threads(pull, owner, name)
@@ -2764,7 +2800,7 @@ def ensure_autonomous_level(issue_number: str | int,
             level was given, or if a run asks for a level at all.
     """
     now_labels = labels_of(issue_number)
-    current_level = next((l for l in now_labels if l in DIFFICULTIES), None)
+    current_level = next((lbl for lbl in now_labels if lbl in DIFFICULTIES), None)
 
     if requested_level:
         target_level = requested_level
@@ -2780,7 +2816,7 @@ def ensure_autonomous_level(issue_number: str | int,
                                             "door on its own: a Challenge read at `easy` or "
                                             "`medium` is the loop's from the moment the label "
                                             "lands.")
-    stale = [l for l in now_labels if l == "roadmap" or (l in DIFFICULTIES and l != target_level)]
+    stale = [lbl for lbl in now_labels if lbl == "roadmap" or (lbl in DIFFICULTIES and lbl != target_level)]
     changed = False
     if "challenge" not in now_labels or current_level != target_level:
         relabel(issue_number, add=["challenge", target_level], remove=stale)
@@ -2790,6 +2826,39 @@ def ensure_autonomous_level(issue_number: str | int,
         print(f"#{issue_number} already at autonomous-capable difficulty {target_level}")
 
     return target_level, changed
+
+
+def _delegate_pull(pull: Pull, issue_number: str) -> None:
+    """Delegate an open pull request by dispatching rebase or review."""
+    pr_number = pull["number"]
+    merges = mergeability(pull)
+    reviewer_login = channel.role_login("reviewer")
+    is_changes_requested = is_changes_requested_pull(pull, reviewer_login=reviewer_login)
+
+    if merges == "CONFLICTING":
+        run_coder(pr_number, "rebase")
+        print(f"delegated #{pr_number} (Issue #{issue_number}): open with merge conflicts; dispatched rebase pass.")
+    elif is_changes_requested:
+        run_coder(pr_number, "review")
+        print(f"delegated #{pr_number} (Issue #{issue_number}): open with changes requested; dispatched review pass.")
+    else:
+        sys.exit(f"say: #{pr_number} is clean and has no standing changes requested; nothing to delegate to coder loop")
+
+
+def _delegate_issue(issue_number: str, target_level: str, changed: bool) -> None:
+    """Delegate an Issue without an open pull request to the autonomous coder loop."""
+    coder_login = channel.role_login("coder")
+    channel.gh("issue", "edit", str(issue_number), "--add-assignee", coder_login, parse=False)
+    assigned = [a["login"] for a in channel.gh("issue", "view", str(issue_number), "--json", "assignees")["assignees"]]
+    if coder_login not in assigned:
+        sys.exit(f"say: #{issue_number} could not be assigned to {coder_login}")
+
+    if not changed:
+        relabel(issue_number, remove=[target_level])
+        relabel(issue_number, add=[target_level])
+        print(f"delegated Issue #{issue_number}: assigned to {coder_login} and triggered coder loop via label re-addition.")
+    else:
+        print(f"delegated Issue #{issue_number}: assigned to {coder_login} and triggered coder loop via label change.")
 
 
 def delegate(number: str | int, level: str | None = None) -> None:
@@ -2844,32 +2913,9 @@ def delegate(number: str | int, level: str | None = None) -> None:
     target_level, changed = ensure_autonomous_level(issue_number, requested_level=level)
 
     if pull:
-        pr_number = pull["number"]
-        merges = mergeability(pull)
-        reviewer_login = channel.role_login("reviewer")
-        is_changes_requested = is_changes_requested_pull(pull, reviewer_login=reviewer_login)
-
-        if merges == "CONFLICTING":
-            run_coder(pr_number, "rebase")
-            print(f"delegated #{pr_number} (Issue #{issue_number}): open with merge conflicts; dispatched rebase pass.")
-        elif is_changes_requested:
-            run_coder(pr_number, "review")
-            print(f"delegated #{pr_number} (Issue #{issue_number}): open with changes requested; dispatched review pass.")
-        else:
-            sys.exit(f"say: #{pr_number} is clean and has no standing changes requested; nothing to delegate to coder loop")
+        _delegate_pull(pull, issue_number)
     else:
-        coder_login = channel.role_login("coder")
-        channel.gh("issue", "edit", str(issue_number), "--add-assignee", coder_login, parse=False)
-        assigned = [a["login"] for a in channel.gh("issue", "view", str(issue_number), "--json", "assignees")["assignees"]]
-        if coder_login not in assigned:
-            sys.exit(f"say: #{issue_number} could not be assigned to {coder_login}")
-
-        if not changed:
-            relabel(issue_number, remove=[target_level])
-            relabel(issue_number, add=[target_level])
-            print(f"delegated Issue #{issue_number}: assigned to {coder_login} and triggered coder loop via label re-addition.")
-        else:
-            print(f"delegated Issue #{issue_number}: assigned to {coder_login} and triggered coder loop via label change.")
+        _delegate_issue(issue_number, target_level, changed)
 
 
 def numbers(text: str) -> list[int]:
@@ -2893,18 +2939,10 @@ def numbers(text: str) -> list[int]:
     return found
 
 
-def build_parser() -> argparse.ArgumentParser:
-    """Construct and return the command-line argument parser for state transition verbs.
-
-    Returns:
-        argparse.ArgumentParser: Configured parser for issues, pull requests, and decisions.
-    """
-    ap = channel.parser(__doc__)
-    sub = ap.add_subparsers(dest="verb", required=True)
-
-    # An Issue's life: filed, its difficulty moved, claimed, handed back, or
-    # closed against what answered it.
-    p = sub.add_parser("file"); p.add_argument("--title", required=True)
+def _add_issue_parsers(sub: Any) -> None:
+    """Configure subparsers for Issue lifecycle verbs: filed, triage, waits, claim, obviate."""
+    p = sub.add_parser("file")
+    p.add_argument("--title", required=True)
     what = p.add_mutually_exclusive_group()
     what.add_argument("--difficulty", choices=DIFFICULTIES, dest="level",
                       help="a Challenge at this level: the solo's verdict given in advance, which "
@@ -2914,36 +2952,56 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--blocked-by", dest="blocked_by", type=numbers, default=[],
                    help="the Issues this one waits on, as `<n>[,<n>]`; the `**Waits on.**` "
                         "line describes them and does not set them")
-    p = sub.add_parser("waits"); p.add_argument("issue")
+    p = sub.add_parser("waits")
+    p.add_argument("issue")
     upon = p.add_mutually_exclusive_group(required=True)
     upon.add_argument("--on", type=numbers, help="the Issues this one waits on, as `<n>[,<n>]`")
     upon.add_argument("--off", type=numbers, help="the Issues to drop, as `<n>[,<n>]`")
     upon.add_argument("--clear", action="store_true", help="this Issue waits on nothing")
-    p = sub.add_parser("triage"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
-    p = sub.add_parser("difficulty"); p.add_argument("issue"); p.add_argument("level", choices=DIFFICULTIES)
-    p = sub.add_parser("reread"); p.add_argument("issue")
-    p = sub.add_parser("roadmap"); p.add_argument("issue")
-    p = sub.add_parser("claim"); p.add_argument("issue")
-    p = sub.add_parser("stop"); p.add_argument("issue")
-    p = sub.add_parser("obviate"); p.add_argument("issue")
+    p = sub.add_parser("triage")
+    p.add_argument("issue")
+    p.add_argument("level", choices=DIFFICULTIES)
+    p = sub.add_parser("difficulty")
+    p.add_argument("issue")
+    p.add_argument("level", choices=DIFFICULTIES)
+    p = sub.add_parser("reread")
+    p.add_argument("issue")
+    p = sub.add_parser("roadmap")
+    p.add_argument("issue")
+    p = sub.add_parser("claim")
+    p.add_argument("issue")
+    p = sub.add_parser("stop")
+    p.add_argument("issue")
+    p = sub.add_parser("obviate")
+    p.add_argument("issue")
     p.add_argument("--by", required=True,
                    help="what answered it already: an open Challenge, or a merged pull request")
-    p = sub.add_parser("milestone"); p.add_argument("issue")
+    p = sub.add_parser("milestone")
+    p.add_argument("issue")
     target = p.add_mutually_exclusive_group(required=True)
     target.add_argument("--set", dest="title", help="the Milestone's title; created if new")
     target.add_argument("--clear", action="store_true", help="take the Issue out of its Milestone")
-
-    p = sub.add_parser("delegate"); p.add_argument("number")
+    p = sub.add_parser("delegate")
+    p.add_argument("number")
     p.add_argument("--level", choices=LOOP_LEVELS, help="ensure Challenge difficulty level")
 
-    # A pull request's: opened, layered, revised, merged, advanced, handed off.
-    p = sub.add_parser("open"); p.add_argument("--title", required=True)
+
+def _add_pr_parsers(sub: Any) -> None:
+    """Configure subparsers for Pull Request lifecycle verbs: open, layer, merge, advance, dispatch."""
+    p = sub.add_parser("open")
+    p.add_argument("--title", required=True)
     where = p.add_mutually_exclusive_group()
     where.add_argument("--base", default="main")
     where.add_argument("--on", help="open as a layer on this pull request, and link the stack")
-    p = sub.add_parser("layer"); p.add_argument("pr"); p.add_argument("--on", required=True)
-    p = sub.add_parser("revise"); p.add_argument("number"); p.add_argument("--title")
-    p = sub.add_parser("merge"); p.add_argument("pr"); p.add_argument("--stack", action="store_true")
+    p = sub.add_parser("layer")
+    p.add_argument("pr")
+    p.add_argument("--on", required=True)
+    p = sub.add_parser("revise")
+    p.add_argument("number")
+    p.add_argument("--title")
+    p = sub.add_parser("merge")
+    p.add_argument("pr")
+    p.add_argument("--stack", action="store_true")
     p.add_argument("--auto", action="store_true", help="arm GitHub to merge when green")
     p = sub.add_parser("merge-manager")
     p.add_argument("--dry-run", action="store_true", help="evaluate eligibility and leverage order without merging")
@@ -2952,25 +3010,37 @@ def build_parser() -> argparse.ArgumentParser:
                         "push to `main` runs alongside this")
     p = sub.add_parser("advance")
     p.add_argument("pr", nargs="?", help="one pull request; every armed one by default")
-    p = sub.add_parser("dispatch"); p.add_argument("pr")
+    p = sub.add_parser("dispatch")
+    p.add_argument("pr")
     p.add_argument("--task", required=True, choices=("review", "rebase"),
                    help="which pass: `review` answers a verdict that stands, `rebase` puts a "
                         "conflicting branch back where a review can run")
-    p = sub.add_parser("supersede"); p.add_argument("pr")
+    p = sub.add_parser("supersede")
+    p.add_argument("pr")
     p.add_argument("--by", required=True,
                    help="what answered the Challenge already: a merged pull request, or a "
                         "landed Decision as DR-nnn")
-    p = sub.add_parser("request-review"); p.add_argument("pr"); p.add_argument("--to", default="reviewer")
-
+    p = sub.add_parser("request-review")
+    p.add_argument("pr")
+    p.add_argument("--to", default="reviewer")
     sub.add_parser("mint")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Construct and return the command-line argument parser for state transition verbs.
+
+    Returns:
+        argparse.ArgumentParser: Configured parser for issues, pull requests, and decisions.
+    """
+    ap = channel.parser(__doc__)
+    sub = ap.add_subparsers(dest="verb", required=True)
+    _add_issue_parsers(sub)
+    _add_pr_parsers(sub)
     return ap
 
 
-def main() -> None:
-    """Parses arguments and dispatches state transition verbs on GitHub."""
-    args = build_parser().parse_args()
-    channel.speak_as(args.role)
-
+def _dispatch_issue_verb(args: argparse.Namespace) -> bool:
+    """Dispatch an Issue-specific state transition verb."""
     if args.verb == "triage":
         triage(args.issue, args.level, channel.signed(channel.stdin_body()))
     elif args.verb == "difficulty":
@@ -2985,7 +3055,23 @@ def main() -> None:
         delegate(args.number, level=args.level)
     elif args.verb == "milestone":
         milestone(args.issue, args.title, clear=args.clear)
-    elif args.verb == "layer":
+    elif args.verb == "file":
+        file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level,
+                   roadmap=args.roadmap, blocked_by=args.blocked_by)
+    elif args.verb == "waits":
+        waits(args.issue, on=args.on, off=args.off, clear=args.clear)
+    elif args.verb == "stop":
+        stop(args.issue, channel.signed(channel.stdin_body()))
+    elif args.verb == "obviate":
+        obviate(args.issue, args.by, channel.stdin_body())
+    else:
+        return False
+    return True
+
+
+def _dispatch_pr_verb(args: argparse.Namespace) -> None:
+    """Dispatch a Pull Request or Decision state transition verb."""
+    if args.verb == "layer":
         layer(args.pr, args.on)
     elif args.verb == "merge":
         merge(args.pr, stack=args.stack, auto=args.auto)
@@ -3002,19 +3088,18 @@ def main() -> None:
     elif args.verb == "revise":
         text = channel.piped()
         revise(args.number, body=channel.signed(text) if text else None, title=args.title)
-    elif args.verb == "file":
-        file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level,
-                   roadmap=args.roadmap, blocked_by=args.blocked_by)
-    elif args.verb == "waits":
-        waits(args.issue, on=args.on, off=args.off, clear=args.clear)
-    elif args.verb == "stop":
-        stop(args.issue, channel.signed(channel.stdin_body()))
     elif args.verb == "supersede":
         supersede(args.pr, args.by, channel.stdin_body())
-    elif args.verb == "obviate":
-        obviate(args.issue, args.by, channel.stdin_body())
     elif args.verb == "open":
         open_pull_request(args.title, channel.signed(channel.stdin_body()), base=args.base, on=args.on)
+
+
+def main() -> None:
+    """Parses arguments and dispatches state transition verbs on GitHub."""
+    args = build_parser().parse_args()
+    channel.speak_as(args.role)
+    if not _dispatch_issue_verb(args):
+        _dispatch_pr_verb(args)
 
 
 if __name__ == "__main__":

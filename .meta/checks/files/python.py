@@ -50,11 +50,7 @@ def meta_lints() -> StepOutcome:
     for key in ("ignore", "extend-ignore"):
         if lint.get(key):
             problems.append(f".meta/ruff.toml: `{key}` switches {len(lint[key])} rules off in configuration")
-    py_files = [
-        p for p in META.rglob("*.py")
-        if not any(part.startswith(".") and part != "." for part in p.relative_to(META).parts)
-        and "__pycache__" not in p.parts
-    ]
+    py_files = sources.meta_sources()
     suppressions = 0
     for source in sorted(py_files):
         relative = source.relative_to(ROOT).as_posix()
@@ -142,7 +138,8 @@ def meta_ruff() -> StepOutcome:
     config = META / "ruff.toml"
     if not config.is_file():
         return CouldNotRun(".meta/ruff.toml is missing")
-    cmd = tool_command("ruff", RUFF, ["check", "--config", str(config), str(META)])
+    scripts = [str(p) for p in sources.meta_sources() if p.suffix != ".py"]
+    cmd = tool_command("ruff", RUFF, ["check", "--config", str(config), str(META), *scripts])
     if not cmd:
         return CouldNotRun("neither ruff nor uvx is installed")
     out = subprocess.run(cmd, capture_output=True, text=True, check=False)

@@ -62,7 +62,7 @@ from checks.collect import (
     check,
     recorded_baseline,
 )
-from checks.files import tree
+from checks.files import meta_sources, tree
 
 BASELINE = META / "checks" / "comments.baseline.yaml"
 SUPPRESSIONS_BASELINE = META / "checks" / "suppressions.baseline.yaml"
@@ -141,11 +141,7 @@ Suppression = collections.namedtuple("Suppression", "line rule reason")
 
 def sources() -> list[pathlib.Path]:
     """Every Python file under `.meta/`, excluding dotted directories and caches."""
-    return sorted(
-        p for p in META.rglob("*.py")
-        if not any(part.startswith(".") and part != "." for part in p.relative_to(META).parts)
-        and "__pycache__" not in p.parts
-    )
+    return meta_sources()
 
 
 def rust_sources() -> list[pathlib.Path]:

@@ -8,3 +8,6 @@
 #
 # Written by `comments.py`, which names the file and the number in the failure.
 # The sweep that empties it is caindy/solorepo#461.
+
+.meta/say/move: 4
+.meta/say/post: 2

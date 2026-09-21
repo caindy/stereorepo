@@ -23,13 +23,13 @@ import sys
 from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import channel  # noqa: E402
+import channel
 
 # The pull request gate's rules, held once. `landed` reads *What it closes* by
 # the same alternation `check_pr.py` blesses a body with, or a body the gate
 # passed is one the channel then calls wrong (solorepo's #117).
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-import check_pr  # noqa: E402
+import check_pr
 
 NOTICED = "**Noticed and not done.**"
 
@@ -404,7 +404,7 @@ def landed(pr: int | str) -> None:
             print(f"#{number} is not asserted as a Challenge; nothing to post for it")
             continue
         try:
-            out = subprocess.run(command + [number], cwd=root, capture_output=True, text=True)
+            out = subprocess.run([*command, number], cwd=root, capture_output=True, text=True)
         except FileNotFoundError:
             sys.exit(f"say: render.py --landed {number} failed: `{command[0]}` is not on PATH")
         if out.returncode:
@@ -471,20 +471,34 @@ def build_parser() -> argparse.ArgumentParser:
     """
     ap = channel.parser(__doc__)
     sub = ap.add_subparsers(dest="verb", required=True)
-    p = sub.add_parser("comment"); p.add_argument("number")
-    p = sub.add_parser("raise"); p.add_argument("pr"); p.add_argument("path"); p.add_argument("line", type=int)
-    p = sub.add_parser("notice"); p.add_argument("pr"); p.add_argument("path"); p.add_argument("line", type=int)
-    p = sub.add_parser("reply"); p.add_argument("thread")
-    p = sub.add_parser("answer"); p.add_argument("thread")
-    p = sub.add_parser("resolve"); p.add_argument("thread")
-    p = sub.add_parser("promote"); p.add_argument("thread"); p.add_argument("--title", required=True)
+    p = sub.add_parser("comment")
+    p.add_argument("number")
+    p = sub.add_parser("raise")
+    p.add_argument("pr")
+    p.add_argument("path")
+    p.add_argument("line", type=int)
+    p = sub.add_parser("notice")
+    p.add_argument("pr")
+    p.add_argument("path")
+    p.add_argument("line", type=int)
+    p = sub.add_parser("reply")
+    p.add_argument("thread")
+    p = sub.add_parser("answer")
+    p.add_argument("thread")
+    p = sub.add_parser("resolve")
+    p.add_argument("thread")
+    p = sub.add_parser("promote")
+    p.add_argument("thread")
+    p.add_argument("--title", required=True)
     p.add_argument("--difficulty", choices=channel.sibling("move").DIFFICULTIES, dest="level",
                    help="the solo's verdict given in advance, which skips the reviewer; without it, "
                         "`challenge` alone, for the reviewer to read (solorepo's DR-230). A run "
                         "lands `human` and no other (solorepo's DR-235)")
     p.add_argument("--no-resolve", action="store_true", help="file and reply, but do not resolve the thread")
-    p = sub.add_parser("landed"); p.add_argument("pr")
-    p = sub.add_parser("review"); p.add_argument("pr")
+    p = sub.add_parser("landed")
+    p.add_argument("pr")
+    p = sub.add_parser("review")
+    p.add_argument("pr")
     verdict = p.add_mutually_exclusive_group(required=True)
     verdict.add_argument("--approve", action="store_const", const="approve", dest="verdict")
     verdict.add_argument("--request-changes", action="store_const", const="request-changes", dest="verdict")

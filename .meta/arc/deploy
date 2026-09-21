@@ -8,6 +8,7 @@ Applies GitHub registration secrets and local developer Gemini credentials.
 History in deploy.history.md (solorepo's DR-171).
 """
 import argparse
+import contextlib
 import json
 import os
 import pathlib
@@ -150,10 +151,8 @@ def apply_gemini_secret() -> None:
     string_data = {}
     for key, path in files.items():
         if path.exists():
-            try:
+            with contextlib.suppress(OSError, ValueError):
                 string_data[key] = path.read_text(encoding="utf-8")
-            except (OSError, ValueError):
-                pass
     if not string_data:
         print(f"arc: notice: no readable credential files in {gemini_dir}; skipping {GEMINI_SECRET_NAME}", file=sys.stderr)
         return
@@ -279,6 +278,60 @@ def active_runners() -> tuple[list[str], bool]:
     return active, True
 
 
+def _wait_active_runners_drain() -> bool:
+    """Waits for active runner jobs to finish before modifying runner sets.
+
+    Returns:
+        bool: True if active runners drained successfully, False if timed out.
+    """
+    deadline = time.time() + 600
+    while time.time() < deadline:
+        active, ok = active_runners()
+        if ok and not active:
+            return True
+        busy = active or ["(unverified runner)"]
+        print(f"arc: waiting for active runner(s) {', '.join(busy)} to finish before reset...",
+              file=sys.stderr)
+        time.sleep(5)
+    active, ok = active_runners()
+    if not ok or active:
+        busy = active or ["(unverified runner)"]
+        print(f"arc: active runner(s) {', '.join(busy)} still running after 10m; "
+              "aborting stale registration reset to protect active jobs.",
+              file=sys.stderr)
+        return False
+    return True
+
+
+def _delete_stuck_child_crs() -> None:
+    """Deletes stuck child CRs that bind dead runnerScaleSetId in their spec."""
+    for kind, ns in [("ephemeralrunnerset", RUNNER_NAMESPACE),
+                     ("autoscalinglistener", CONTROLLER_NAMESPACE),
+                     ("ephemeralrunner", RUNNER_NAMESPACE)]:
+        del_cmd = subprocess.run([
+            "kubectl", "-n", ns, "delete", kind, "--all",
+            "--ignore-not-found", "--timeout", "30s",
+        ], capture_output=True, text=True)
+        if del_cmd.returncode != 0:
+            print(f"arc: {kind} did not finish deleting in 30s — "
+                  f"`kubectl get {kind} -n {ns} -o yaml` will show what it is waiting on",
+                  file=sys.stderr)
+
+
+def _wait_listener_ready() -> None:
+    """Waits for controller to re-register and replacement listener to become ready."""
+    print(f"arc: waiting up to 30s for replacement listener in {CONTROLLER_NAMESPACE} to become ready...",
+          file=sys.stderr)
+    post_deadline = time.time() + 30
+    while time.time() < post_deadline:
+        if is_listener_ready():
+            return
+        time.sleep(2)
+    print(f"arc: replacement listener did not become ready in 30s — "
+          f"`kubectl get pods -n {CONTROLLER_NAMESPACE}` will show its status",
+          file=sys.stderr)
+
+
 def reset_stale_registration(start_time: float | None = None) -> None:
     """Clears cached scale set metadata from an AutoscalingRunnerSet custom resource.
 
@@ -304,24 +357,8 @@ def reset_stale_registration(start_time: float | None = None) -> None:
     print("arc: detected stale runner scale set registration on GitHub; resetting...",
           file=sys.stderr)
 
-    # Wait for any active jobs to finish before touching runner sets.
-    deadline = time.time() + 600
-    while time.time() < deadline:
-        active, ok = active_runners()
-        if ok and not active:
-            break
-        busy = active or ["(unverified runner)"]
-        print(f"arc: waiting for active runner(s) {', '.join(busy)} to finish before reset...",
-              file=sys.stderr)
-        time.sleep(5)
-    else:
-        active, ok = active_runners()
-        if not ok or active:
-            busy = active or ["(unverified runner)"]
-            print(f"arc: active runner(s) {', '.join(busy)} still running after 10m; "
-                  "aborting stale registration reset to protect active jobs.",
-                  file=sys.stderr)
-            return
+    if not _wait_active_runners_drain():
+        return
 
     out = subprocess.run([
         "kubectl", "-n", RUNNER_NAMESPACE, "patch", "autoscalingrunnerset",
@@ -333,31 +370,8 @@ def reset_stale_registration(start_time: float | None = None) -> None:
               file=sys.stderr)
         return
 
-    # Delete stuck child CRs that bind the dead runnerScaleSetId in their spec.
-    for kind, ns in [("ephemeralrunnerset", RUNNER_NAMESPACE),
-                     ("autoscalinglistener", CONTROLLER_NAMESPACE),
-                     ("ephemeralrunner", RUNNER_NAMESPACE)]:
-        del_cmd = subprocess.run([
-            "kubectl", "-n", ns, "delete", kind, "--all",
-            "--ignore-not-found", "--timeout", "30s",
-        ], capture_output=True, text=True)
-        if del_cmd.returncode != 0:
-            print(f"arc: {kind} did not finish deleting in 30s — "
-                  f"`kubectl get {kind} -n {ns} -o yaml` will show what it is waiting on",
-                  file=sys.stderr)
-
-    # Wait for the controller to re-register and the new listener to become ready.
-    print(f"arc: waiting up to 30s for replacement listener in {CONTROLLER_NAMESPACE} to become ready...",
-          file=sys.stderr)
-    post_deadline = time.time() + 30
-    while time.time() < post_deadline:
-        if is_listener_ready():
-            break
-        time.sleep(2)
-    else:
-        print(f"arc: replacement listener did not become ready in 30s — "
-              f"`kubectl get pods -n {CONTROLLER_NAMESPACE}` will show its status",
-              file=sys.stderr)
+    _delete_stuck_child_crs()
+    _wait_listener_ready()
 
 
 def main() -> None:
