@@ -169,13 +169,18 @@ pub fn test(root: &Path) -> Outcome {
     )
 }
 
-/// Runs `cargo mutants --no-shuffle` across the workspace if installed.
+/// Runs `cargo mutants --no-shuffle --iterate -j <jobs>` across the workspace if installed.
 #[must_use]
 pub fn mutants(root: &Path) -> Outcome {
     if subcommand_present(root, "mutants") {
+        let jobs = std::env::var("CARGO_MUTANTS_JOBS").unwrap_or_else(|_| {
+            std::thread::available_parallelism()
+                .map_or(4, |n| n.get().clamp(1, 8))
+                .to_string()
+        });
         cargo(
             root,
-            &["mutants", "--no-shuffle"],
+            &["mutants", "--no-shuffle", "--iterate", "-j", &jobs],
             &[],
             "every viable mutant caught by a test",
         )
