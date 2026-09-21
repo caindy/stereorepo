@@ -438,3 +438,44 @@ def citation_form_probes() -> list[str]:
                             f"read as {still_bare!r}, but only the leading letter "
                             "may be case-insensitive")
     return problems
+
+
+@check("concept duplicate id probes", pre=True)
+def concept_duplicate_id_probes() -> list[str]:
+    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (solorepo's DR-190, solorepo's #549)."""
+    import pathlib
+    import tempfile
+
+    problems = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        test_yaml = pathlib.Path(tmpdir) / "vocab.yaml"
+        test_yaml.write_text(
+            "concept_set:\n"
+            "  - id: work:concept/first\n"
+            "    pref_label: First\n"
+            "  - id: work:concept/second\n"
+            "    pref_label: Second\n"
+            "  - id: work:concept/first\n"
+            "    pref_label: First Duplicate\n",
+            encoding="utf-8",
+        )
+        findings = files.duplicate_concept_ids([test_yaml])
+        if len(findings) != 1:
+            problems.append(f"concept duplicate id probes: expected 1 finding, got {len(findings)}: {findings}")
+        elif "concept 'work:concept/first' declared twice in concept_set (first at line 2)" not in findings[0]:
+            problems.append(f"concept duplicate id probes: unexpected finding text {findings[0]}")
+
+        clean_yaml = pathlib.Path(tmpdir) / "clean.yaml"
+        clean_yaml.write_text(
+            "concept_set:\n"
+            "  - id: work:concept/alpha\n"
+            "    pref_label: Alpha\n"
+            "  - id: work:concept/beta\n"
+            "    pref_label: Beta\n",
+            encoding="utf-8",
+        )
+        clean_findings = files.duplicate_concept_ids([clean_yaml])
+        if clean_findings:
+            problems.append(f"concept duplicate id probes: expected 0 findings on clean file, got {clean_findings}")
+    return problems
+

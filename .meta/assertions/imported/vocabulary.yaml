@@ -339,15 +339,6 @@ concept_set:
       - work:concept/challenge
       - work:concept/pull-request
     avoid: [tech debt, backlog item]
-  - id: work:concept/noticed-and-not-done
-    pref_label: Noticed and Not Done
-    definition: >-
-      Work observed but left unexecuted during a change, formally parked as an
-      unresolved review thread or a linked Issue to preserve its context
-      without blocking delivery.
-    in_scheme: work:scheme/solorepo
-    broader: work:concept/g-recorded
-    alt_labels: [leftover work, remainder, deferred work]
   - id: work:concept/pull-request
     pref_label: Pull Request
     definition: >-
@@ -383,9 +374,10 @@ concept_set:
   - id: work:concept/noticed-and-not-done
     pref_label: Noticed and Not Done
     definition: >-
-      Work or observations encountered during the execution of a change that
-      fall outside its remit, parked on the diff as a review thread, and
-      promoted to an Issue at merge (solorepo's Article 15, solorepo's DR-064, solorepo's DR-195).
+      Work observed but left unexecuted during a change that falls outside its
+      remit, formally parked on the diff as an unresolved review thread and
+      promoted to an Issue at approval to preserve its context without
+      blocking delivery (solorepo's Article 15, solorepo's DR-064, solorepo's DR-159, solorepo's DR-195).
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-recorded
     alt_labels:

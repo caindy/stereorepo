@@ -1,4 +1,4 @@
-"""The templates and the YAML they are written in: duplicate keys, surviving placeholders, a template that does not parse, and the conventions the seeded template must echo.
+"""The templates and the YAML they are written in: duplicate keys, duplicate concept IDs, surviving placeholders, a template that does not parse, and the conventions the seeded template must echo.
 """
 import pathlib
 import re
@@ -67,6 +67,75 @@ def duplicate_keys() -> list[str]:
             continue
         problems += [f"{path.relative_to(ROOT)}:{line} '{key}' written twice"
                      for key, line in _DUPLICATES]
+    return problems
+
+
+def _concept_ids_in_file(path: pathlib.Path) -> list[str]:
+    """Checks one YAML file for duplicate concept IDs in any concept_set."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return []
+    try:
+        loader = yaml.SafeLoader(text)
+        node = loader.get_single_node()
+    except yaml.YAMLError:
+        return []
+    if not isinstance(node, yaml.MappingNode):
+        return []
+    problems: list[str] = []
+    for k_node, v_node in node.value:
+        if k_node.value == "concept_set" and isinstance(v_node, yaml.SequenceNode):
+            seen: dict[str, int] = {}
+            for item_node in v_node.value:
+                if isinstance(item_node, yaml.MappingNode):
+                    for ik_node, iv_node in item_node.value:
+                        if ik_node.value == "id":
+                            cid = str(iv_node.value)
+                            line = iv_node.start_mark.line + 1
+                            if cid in seen:
+                                try:
+                                    rel = path.relative_to(ROOT)
+                                except ValueError:
+                                    rel = path
+                                problems.append(
+                                    f"{rel}:{line} concept '{cid}' declared twice in concept_set "
+                                    f"(first at line {seen[cid]}) (solorepo's DR-190)"
+                                )
+                            else:
+                                seen[cid] = line
+    return problems
+
+
+@check("duplicate concept ids", pre=True)
+def duplicate_concept_ids(
+        paths: Sequence[pathlib.Path] | None = None) -> list[str]:
+    """Validate that no YAML assertion or template file declaring a concept_set contains duplicate concept IDs.
+
+    Enforces that concept declarations within any concept_set carry unique identifiers,
+    preventing silent dictionary overwrites and divergent definitions in the Ubiquitous
+    Language (solorepo's DR-190, solorepo's #549).
+
+    Args:
+        paths: Specific paths to scan, or None to scan all assertion and template YAML files.
+
+    Returns:
+        list[str]: Validation problem messages identifying file, line number, and duplicate concept ID.
+    """
+    if paths is None:
+        scan_paths: list[pathlib.Path] = sorted([
+            *(META / "assertions").rglob("*.yaml"),
+            *TEMPLATE.rglob("*.yaml"),
+        ])
+        bootstraps_dir = ROOT / "bootstraps"
+        if bootstraps_dir.is_dir():
+            scan_paths.extend(sorted(bootstraps_dir.glob("*/assertions/*.yaml")))
+    else:
+        scan_paths = list(paths)
+
+    problems: list[str] = []
+    for path in scan_paths:
+        problems.extend(_concept_ids_in_file(path))
     return problems
 
 

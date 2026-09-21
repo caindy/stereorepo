@@ -163,3 +163,10 @@ audited by `gemini_allowlist_matches_claude` in `.meta/checks/files/workflows.py
 
 Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
 
+### Concept set silent overwrites on duplicate concept identifiers
+
+PyYAML parses sequence items independently, and LinkML index collection keyed by identifier silently overwrites earlier definitions with later occurrences when an `id` is declared twice in a `concept_set` list, masking duplicate concept definitions with divergent attributes and avoid lists (solorepo's DR-190, solorepo's #549). Established: `duplicate_concept_ids` scans all YAML assertion and template files declaring a `concept_set`, reporting duplicate concept IDs with their line numbers.
+
+Evidence: `.meta/checks/files/templates.py::duplicate_concept_ids`
+
+

@@ -21,7 +21,7 @@ import checks.files.history
 import checks.files.python
 import checks.files.rendered  # noqa: F401  # reason: registers check steps
 from checks.files.sources import inherited, is_py, meta_sources, template_files, tree
-from checks.files.templates import Strict, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
+from checks.files.templates import Strict, duplicate_concept_ids, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
 from checks.files.markdown import FENCED, LINK, markdown_links
 from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wiki_synonyms_are_not_avoided, wikilinks
 from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, RESTORE_PROSE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
@@ -56,6 +56,7 @@ __all__ = [
     "control_plane_packages",
     "control_plane_restore",
     "declared",
+    "duplicate_concept_ids",
     "duplicate_keys",
     "gate_workflows_agree",
     "history",
