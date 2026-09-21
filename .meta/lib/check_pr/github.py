@@ -82,6 +82,10 @@ query($owner: String!, $name: String!) {
 """ % ROLLUP  # noqa: UP031  # reason: GraphQL query templates have literal curly braces
 
 
+UNSET = object()
+"""No default was given, as a value no caller can pass, so that a caller wanting `None` back from a failed read is told apart from a caller that wants the process to exit."""
+
+
 def _role_token() -> str | None:
     for role in ("reviewer.env", "coder.env"):
         p = pathlib.Path("~/.config/solorepo").expanduser() / role
@@ -117,18 +121,40 @@ class GhTimeout(SystemExit):
     """
 
 
-def gh(*args: str, timeout: float = GH_TIMEOUT) -> Any:
+def _degrade(default: Any, why: str) -> Any:
+    """Answers a failed read with the caller's fallback, or exits saying what went wrong.
+
+    Args:
+        default: The fallback the caller gave, or `UNSET` if it gave none.
+        why: What failed, in `gh`'s words or `json`'s, which `gh`'s stderr may
+            spread over several lines.
+
+    Returns:
+        Any: The caller's fallback.
+
+    Raises:
+        SystemExit: When the caller gave no fallback.
+    """
+    if default is not UNSET:
+        return default
+    sys.exit(f"gh: {why}")
+
+
+def gh(*args: str, default: Any = UNSET, timeout: float = GH_TIMEOUT) -> Any:
     """Invokes the GitHub CLI with the role credential and parses JSON output.
 
     Args:
-        args: Arguments passed to the `gh` CLI.
+        *args: Command arguments passed to gh.
+        default: Fallback value returned if the command fails, prints nothing,
+            or prints output that is not JSON. If `default` is omitted, any of
+            the three exits the process.
         timeout: Seconds to wait for the invocation, `GH_TIMEOUT` by default.
 
     Returns:
-        The parsed JSON `gh` wrote to standard output.
+        Any: Parsed JSON data or the fallback.
 
     Raises:
-        SystemExit: `gh` exited non-zero.
+        SystemExit: If the read fails and no fallback was given.
         GhTimeout: `gh` answered nothing within `timeout`. It exits with prose no
             pattern in `polling.FATAL_POLL_PATTERNS` matches, so `watch` reads it
             as transient and retries it under backoff.
@@ -144,8 +170,14 @@ def gh(*args: str, timeout: float = GH_TIMEOUT) -> Any:
     except subprocess.TimeoutExpired:
         raise GhTimeout(f"gh: `gh {' '.join(args)}` answered nothing within {timeout}s") from None
     if out.returncode:
-        sys.exit(f"gh: {out.stderr.strip()}")
-    return json.loads(out.stdout)
+        return _degrade(default, out.stderr.strip())
+    text = out.stdout.strip()
+    if not text:
+        return _degrade(default, "answered nothing")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        return _degrade(default, f"answered what is not JSON: {exc}")
 
 
 def reason(exc: SystemExit) -> str:

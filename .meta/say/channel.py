@@ -319,28 +319,58 @@ timeout leaves through `sys.exit`, whose status is 1, so a shell tells a hang
 from a refusal by the prose on standard error and not by `$?`.
 """
 
+UNSET = object()
+"""No default was given, as a value no caller can pass, so that a caller wanting `None` back from a failed read is told apart from a caller that wants the process to exit."""
 
-def gh(*args: str, parse: bool = True, tolerate_fail: bool = False,
-       timeout: float | None = GH_TIMEOUT) -> Any:
+
+def _degrade(default: Any, why: str) -> Any:
+    """Answers a failed read with the caller's fallback, or exits saying what went wrong.
+
+    Args:
+        default: The fallback the caller gave, or `UNSET` if it gave none.
+        why: What failed, in `gh`'s words or `json`'s, which `gh`'s stderr may
+            spread over several lines.
+
+    Returns:
+        Any: The caller's fallback.
+
+    Raises:
+        SystemExit: When the caller gave no fallback.
+    """
+    if default is not UNSET:
+        return default
+    sys.exit(f"gh: {why}")
+
+
+def gh(*args: str, parse: bool = True, default: Any = UNSET,
+       tolerate_fail: bool = False, timeout: float | None = GH_TIMEOUT) -> Any:
     """Executes a gh CLI command using the role credential and parses JSON output.
 
     Args:
-        args: Arguments passed to the `gh` CLI.
-        parse: Whether to parse standard output as JSON.
-        tolerate_fail: Whether a failure raises rather than exits.
+        *args: Command arguments passed to gh.
+        parse: Whether to read the output as JSON. False returns it as stripped text,
+            which is what a write that prints nothing answers with.
+        default: Fallback value returned if the command fails, or prints output
+            that `parse` cannot read as JSON. If `default` is omitted, either
+            exits the process.
+        tolerate_fail: Whether to raise the failure rather than answer it, which
+            is how `gh_with_retry` sees the attempt it has to repeat. It is read
+            before `default` on both failures, so a caller that sets it handles
+            a failed command and an unreadable body itself.
         timeout: Seconds to wait for the invocation, `GH_TIMEOUT` by default;
             `None` waits indefinitely, which is what the `gh stack` calls pass.
 
     Returns:
-        The parsed JSON where `parse` is set and `gh` wrote anything to standard
-        output, and the stripped standard output otherwise — which is the empty
-        string for a `gh` that wrote nothing, parsed or not.
+        Any: Parsed JSON data, the stripped output where `parse` is false or the
+            command printed nothing, or the fallback.
 
     Raises:
-        subprocess.CalledProcessError: The invocation failed or timed out and
-            `tolerate_fail` is set; a timeout carries `TIMEOUT_RETURNCODE`, so
+        subprocess.CalledProcessError: If the command fails or times out under
+            `tolerate_fail`; a timeout carries `TIMEOUT_RETURNCODE`, so
             `gh_with_retry` retries it as it retries any other failure.
-        SystemExit: The invocation failed or timed out and `tolerate_fail` is not set.
+        json.JSONDecodeError: If the output cannot be read as JSON under
+            `tolerate_fail`.
+        SystemExit: If the read fails or times out and no fallback was given.
     """
     try:
         out = subprocess.run(["gh", *args], capture_output=True, text=True,
@@ -354,8 +384,16 @@ def gh(*args: str, parse: bool = True, tolerate_fail: bool = False,
     if out.returncode:
         if tolerate_fail:
             raise subprocess.CalledProcessError(out.returncode, ["gh", *list(args)], output=out.stdout, stderr=out.stderr)
-        sys.exit(f"gh: {out.stderr.strip()}")
-    return json.loads(out.stdout) if parse and out.stdout.strip() else out.stdout.strip()
+        return _degrade(default, out.stderr.strip())
+    text = out.stdout.strip()
+    if not parse or not text:
+        return text
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        if tolerate_fail:
+            raise
+        return _degrade(default, f"answered what is not JSON: {exc}")
 
 
 def gh_with_retry(*args: str, parse: bool = True, tries: int = 3, delay: float = 2,
@@ -365,6 +403,24 @@ def gh_with_retry(*args: str, parse: bool = True, tries: int = 3, delay: float =
     A call that answers nothing within `GH_TIMEOUT` seconds is a failure like
     any other here, so a hung invocation is abandoned and retried rather than
     waited on (solorepo's #738).
+
+    Args:
+        *args: Command arguments passed to gh.
+        parse: Whether to read the output as JSON, as `gh` takes it.
+        tries: How many attempts to make before the failure is final.
+        delay: Seconds to wait after the first failed attempt.
+        backoff: What each further wait is multiplied by.
+        tolerate_fail: Whether to raise the final failure rather than exit on it.
+
+    Returns:
+        Any: What `gh` answered on the first attempt that succeeded.
+
+    Raises:
+        subprocess.CalledProcessError: If every attempt fails under `tolerate_fail`.
+        json.JSONDecodeError: If an attempt answers a body that is not JSON. That
+            failure is not retried and reaches the caller whatever `tolerate_fail`
+            was set to, since a body `gh` printed once it will print again.
+        SystemExit: If every attempt fails and the failure is not tolerated.
     """
     import time
     current_delay = delay
