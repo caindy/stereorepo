@@ -78,8 +78,14 @@ on:
 # waiting rather than two rebasing the same branch; a third cancels the one
 # waiting. What the survivor finds is a branch already current with its base,
 # which the pass is told to leave alone.
+#
+# An Issue delivery is keyed by its difficulty label for taking passes (`easy`
+# or `medium` mapped to `take`), and by the label itself for non-taking passes
+# (`challenge`, `roadmap`, `harness:*`, `hard`, `human`). Without this
+# separation, a non-taking label arriving while a difficulty run is pending
+# cancels the difficulty run and leaves a delivery that skips (solorepo's #472).
 concurrency:
-  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || 'take' }}
+  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || ((github.event.label.name == 'easy' || github.event.label.name == 'medium') && 'take') || github.event.label.name || 'take' }}
   cancel-in-progress: false
 
 # The workflow's own token reads. Every write goes through the coder's

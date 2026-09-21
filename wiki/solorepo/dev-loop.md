@@ -60,7 +60,7 @@ is what solorepo's #102 was.
 subject and a shape, and cancels nothing that is already running:
 
 ```yaml
-group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || 'take' }}
+group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || ((github.event.label.name == 'easy' || github.event.label.name == 'medium') && 'take') || github.event.label.name || 'take' }}
 cancel-in-progress: false
 ```
 
@@ -99,7 +99,8 @@ segment names one subject and never two.
 
 | Delivery | What the payload carries | Branch of the shape chain | Group | The pass it runs |
 |---|---|---|---|---|
-| `issues`, `labeled` | `github.event.issue`, `github.event.label`; no `pull_request`; no `inputs` | fourth, the literal `take` | `coder-<issue>-take` | take the Issue |
+| `issues`, `labeled` (`easy` or `medium`) | `github.event.issue`, `github.event.label`; no `pull_request`; no `inputs` | fourth, `take` via difficulty match | `coder-<issue>-take` | take the Issue |
+| `issues`, `labeled` (other label) | as above | fifth, the label name itself | `coder-<issue>-<label>` | none: the job condition admits only `easy` and `medium` |
 | `pull_request_review`, `submitted`, state `approved` | `github.event.review`, `github.event.pull_request`; no `inputs` | first | `coder-<pr>-approved` | promote on approval (solorepo's DR-159) |
 | `pull_request_review`, `submitted`, state `changes_requested` | as above | first | `coder-<pr>-changes_requested` | answer the review (solorepo's DR-112) |
 | `pull_request_review`, `submitted`, state `commented` | as above | first | `coder-<pr>-commented` | none: the job admits only `changes_requested` and `approved` |
@@ -209,21 +210,20 @@ this account.
    hangs on the new head although the run read the old one. What is lost is not
    a verdict but the guarantee that a posted point was read against the head it
    anchors to, and the window is the seconds between a push and a cancellation.
-3. **The take shape does not separate a delivery that takes from one that
-   declines.** Unlike the two above, this one the comments do not record.
-   `take` is the chain's default, so *every* `issues` delivery lands on it,
+3. **The take shape originally did not separate a delivery that takes from one that
+   declines.** Unlike the two above, the original comments did not record this
+   hazard. `take` was the chain's default, so *every* `issues` delivery landed on it,
    including deliveries for labels the job declines — `challenge`, `roadmap`, a
-   `harness:` label. One pending slot per group then admits a loss the other
-   shapes cannot reach: where a declining delivery arrives while a sibling
-   delivery's run is still in progress and a difficulty delivery is pending
-   behind it, the difficulty delivery is cancelled and replaced by one that
-   skips, and nothing takes the [[challenge]] until a label moves again. Two
-   labels in one act cannot reach it, because the second delivery has nothing
-   behind it to displace; three can, and GitHub orders them only loosely —
-   "ordering is not guaranteed". How close such deliveries land is visible in
-   the Challenge at solorepo's #473, whose two `labeled` deliveries created runs `35242844586` and
-   `35242844314` in the same second. Whether to close this or accept it belongs
-   to solorepo's #472, which holds the change to these expressions.
+   `harness:` label. One pending slot per group then admitted a loss the other
+   shapes could not reach: where a declining delivery arrived while a sibling
+   delivery's run was still in progress and a difficulty delivery was pending
+   behind it, the difficulty delivery was cancelled and replaced by one that
+   skipped, and nothing took the [[challenge]] until a label moved again.
+   Solorepo's #472 closed this case by qualifying the shape chain: taking
+   difficulties (`easy` and `medium`) evaluate to `take`, while non-taking
+   labels evaluate to their own label name (`coder-<issue>-<label>`), ensuring
+   a declining label delivery can never share a concurrency group with, or
+   displace, a pending difficulty delivery.
 
 ## Harness Agnosticism and Subscription Economics
 
