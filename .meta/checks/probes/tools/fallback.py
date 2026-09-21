@@ -1,8 +1,11 @@
-"""`detect_fallback.py`'s reviewer tool confinement and settings merging probes (solorepo's DR-245, solorepo's #636).
+"""`detect_fallback.py`'s reviewer and coder tool confinement, settings merging, and `run_agy.py` probes (solorepo's DR-245, solorepo's DR-257, solorepo's #636, solorepo's #715).
 """
+import io
 import json
 import os
 import pathlib
+import subprocess
+import sys
 import tempfile
 from typing import Any
 
@@ -91,6 +94,45 @@ def _probe_reviewer_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> lis
     return problems
 
 
+def _probe_coder_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[str]:
+    """Verify detect_fallback.py --configure-coder creates expected permissions.deny via CLI (solorepo's DR-257)."""
+    problems: list[str] = []
+    coder_home = tmp_dir / "coder_home"
+    coder_home.mkdir()
+    env = {**os.environ, "HOME": str(coder_home)}
+
+    res = subprocess.run(
+        [sys.executable, str(META / "detect_fallback.py"), "--configure-coder"],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if res.returncode != 0:
+        return [f"fallback probes: detect_fallback.py --configure-coder exited {res.returncode}: {res.stderr}"]
+
+    settings_file = coder_home / ".gemini" / "antigravity-cli" / "settings.json"
+    if not settings_file.is_file():
+        return ["fallback probes: detect_fallback.py --configure-coder failed to produce settings.json"]
+
+    try:
+        data = json.loads(settings_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        return [f"fallback probes: failed to parse generated coder settings JSON: {e}"]
+
+    denied = set(data.get("permissions", {}).get("deny", []))
+    for req in detect_fallback.CODER_DENIED_PERMISSIONS:
+        if req not in denied:
+            problems.append(f"fallback probes: configure-coder omitted required denied permission `{req}`")
+
+    custom_settings = tmp_dir / "custom_coder_settings.json"
+    detect_fallback.configure_coder_settings(settings_file=custom_settings)
+    if not custom_settings.is_file():
+        problems.append("fallback probes: configure_coder_settings failed to produce custom settings file")
+
+    return problems
+
+
 def _probe_merge_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[str]:
     """Verify merge_settings preserves credentials while safely combining permissions and tools."""
     problems: list[str] = []
@@ -159,23 +201,151 @@ def _probe_toggle_truthiness(detect_fallback: Any) -> list[str]:
     return problems
 
 
+class _FakeStdin:
+    """Mock standard input stream for FakePopen."""
+
+    def __init__(self, broken: bool = False) -> None:
+        self.broken = broken
+        self.buffer = io.StringIO()
+
+    def write(self, s: str) -> int:
+        """Write string to buffer or raise BrokenPipeError when broken."""
+        if self.broken:
+            raise BrokenPipeError("Broken pipe")
+        return self.buffer.write(s)
+
+    def flush(self) -> None:
+        """Flush buffer."""
+
+    def close(self) -> None:
+        """Close buffer."""
+
+
+class FakePopen:
+    """Mock subprocess.Popen for testing run_agy streaming NDJSON processing (solorepo's DR-257)."""
+
+    def __init__(self, stdout_lines: list[str], returncode: int = 0, broken_pipe: bool = False) -> None:
+        self.stdin = _FakeStdin(broken=broken_pipe)
+        self.stdout = stdout_lines
+        self.stderr = io.StringIO()
+        self.returncode = returncode
+
+    def wait(self) -> int:
+        """Wait for subprocess termination and return the returncode."""
+        return self.returncode
+
+
+def _probe_run_agy(run_agy: Any) -> list[str]:
+    """Verify run_agy's command builder, tool formatter, and stream runner (solorepo's DR-257)."""
+    problems: list[str] = []
+
+    cmd = run_agy.build_command(
+        add_dir="/tmp/test",
+        options=run_agy.SessionOptions(
+            mode="accept-edits",
+            model="gemini-3.8-flash",
+            effort="medium",
+            timeout_minutes=15,
+        ),
+    )
+    expected_args = [
+        "agy",
+        "--output-format",
+        "stream-json",
+        "--input-format",
+        "stream-json",
+        "--dangerously-skip-permissions",
+        "--add-dir",
+        "/tmp/test",
+        "--mode",
+        "accept-edits",
+        "--model",
+        "gemini-3.8-flash",
+        "--effort",
+        "medium",
+        "--print-timeout",
+        "15m",
+    ]
+    if cmd != expected_args:
+        problems.append(f"fallback probes: run_agy.build_command produced {cmd!r}, expected {expected_args!r}")
+
+    tool_cases = [
+        ("run_command", {"parameters": {"CommandLine": "just gate"}}, "run_command: just gate"),
+        ("view_file", {"parameters": {"AbsolutePath": "/a/b.py"}}, "view_file: /a/b.py"),
+        ("replace_file_content", {"parameters": {"TargetFile": "/a/b.py"}}, "replace_file_content: /a/b.py"),
+        ("unknown_tool", {}, "unknown_tool"),
+    ]
+    for tool_name, info, expected_str in tool_cases:
+        formatted = run_agy.format_tool_call(tool_name, info)
+        if formatted != expected_str:
+            problems.append(f"fallback probes: format_tool_call({tool_name}) produced {formatted!r}, expected {expected_str!r}")
+
+    orig_popen = run_agy.subprocess.Popen
+    try:
+        run_agy.subprocess.Popen = lambda *args, **kwargs: FakePopen(
+            [
+                json.dumps({"event": "init", "conversation_id": "test-123"}) + "\n",
+                json.dumps({"event": "step_update", "step_update": {"step_type": "tool", "state": "ACTIVE", "tool_name": "run_command", "tool_info": {"parameters": {"CommandLine": "just gate"}}}}) + "\n",
+                json.dumps({"event": "step_update", "step_update": {"step_type": "tool", "state": "DONE", "tool_name": "run_command", "duration_seconds": 12}}) + "\n",
+                json.dumps({"event": "result", "result": {"status": "SUCCESS", "response": "Done"}}) + "\n",
+            ],
+            returncode=0,
+        )
+        code = run_agy.run_session(prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions())
+        if code != 0:
+            problems.append(f"fallback probes: run_session returned {code}, expected 0 on SUCCESS")
+
+        run_agy.subprocess.Popen = lambda *args, **kwargs: FakePopen(
+            [
+                json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n",
+            ],
+            returncode=0,
+        )
+        code = run_agy.run_session(prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions())
+        if code != 1:
+            problems.append(f"fallback probes: run_session returned {code}, expected 1 on ERROR")
+
+        run_agy.subprocess.Popen = lambda *args, **kwargs: FakePopen(
+            [
+                json.dumps({"event": "init", "conversation_id": "test-123"}) + "\n",
+            ],
+            returncode=0,
+        )
+        code = run_agy.run_session(prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions())
+        if code != 1:
+            problems.append(f"fallback probes: run_session returned {code}, expected 1 when result event is missing")
+
+        run_agy.subprocess.Popen = lambda *args, **kwargs: FakePopen([], returncode=1, broken_pipe=True)
+        code = run_agy.run_session(prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions())
+        if code != 1:
+            problems.append(f"fallback probes: run_session returned {code}, expected 1 on BrokenPipeError")
+    finally:
+        run_agy.subprocess.Popen = orig_popen
+
+    return problems
+
+
 @check("fallback probes", pre=True)
 def fallback_probes() -> list[str]:
-    """Reviewer confinement configuration, permission merging, and fallback toggle evaluation in `detect_fallback.py` (solorepo's DR-245, solorepo's #636).
+    """Reviewer and coder confinement, permission merging, toggle evaluation, and streaming runner (solorepo's DR-245, solorepo's DR-257).
 
     Proves that `configure_reviewer_settings()` configures `permissions.deny` with
-    fine-grained denial patterns (`write_file(*)`, `read_url(*)`, `execute_url(*)`)
-    directly in the settings JSON without clobbering credentials, that `merge_settings()`
-    safely merges permissions and tools, and that toggle evaluation adheres to accepted
-    truthy conventions.
+    fine-grained denial patterns (`write_file(*)`, `read_url(*)`, `execute_url(*)`, `invoke_subagent(*)`)
+    directly in the settings JSON without clobbering credentials, that `configure_coder_settings()`
+    denies `invoke_subagent(*)`, that `merge_settings()` safely merges permissions and tools,
+    that toggle evaluation adheres to accepted truthy conventions, and that `run_agy.py`
+    builds commands, formats tool updates, and handles streaming NDJSON events.
     """
     detect_fallback = load_module(META / "detect_fallback.py", "detect_fallback_module", register=False)
+    run_agy = load_module(META / "run_agy.py", "run_agy_module", register=False)
     problems: list[str] = []
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = pathlib.Path(tmp)
         problems.extend(_probe_reviewer_settings(detect_fallback, tmp_dir))
+        problems.extend(_probe_coder_settings(detect_fallback, tmp_dir))
         problems.extend(_probe_merge_settings(detect_fallback, tmp_dir))
 
     problems.extend(_probe_toggle_truthiness(detect_fallback))
+    problems.extend(_probe_run_agy(run_agy))
     return problems

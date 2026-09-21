@@ -650,8 +650,13 @@ jobs:
             Below, `<n>` is that pull request's number, never the Issue's;
             `revise` and `comment` take either.
 
-            Do what the Issue asks and no more. Gate green with
-            `.meta/gate meta`, commit and push as you go, `.meta/say/move revise <n>`
+            Do what the Issue asks and no more. Never run `just gate` or
+            `.meta/gate meta` as an entrance check on origin/main (`main` is
+            evergreen under PR First). Gate green with
+            `.meta/gate meta` only when your changes are complete before handoff.
+            Do NOT invoke subagents: evaluate and implement the Challenge
+            directly in this session (solorepo's DR-257).
+            Commit and push as you go, `.meta/say/move revise <n>`
             when the body no longer says what the head does, and
             `just dereference` and then `.meta/say/post landed <n>` before you
             hand it over. `dereference` reads the citations this branch wrote
@@ -857,7 +862,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
-          OUTCOME: ${{ steps.take_claude.outcome }}
+          OUTCOME: ${{ steps.take_gemini.outcome == 'failure' && steps.take_gemini.outcome || steps.take_claude.outcome }}
           BRANCH_PREFIX: ${{ steps.harness.outputs.branch_prefix }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 

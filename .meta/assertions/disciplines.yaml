@@ -26,7 +26,7 @@ disciplines:
         `.meta/hooks/`, `.meta/checks/`, `.claude/settings.json`, `.meta/assertions/imported/`,
         `.meta/.apm/`, `.meta/principles.md`, `.meta/schemas.md`,
         `.meta/templates/`, `.meta/arc/Dockerfile`, `.github/workflows/coder.yml`,
-        `.github/workflows/review.yml`, `.meta/detect_fallback.py` (solorepo's DR-245), `.github/workflows/triage.yml` (solorepo's DR-230), `.github/workflows/merge.yml`, `.github/workflows/advance.yml`,
+        `.github/workflows/review.yml`, `.meta/detect_fallback.py` (solorepo's DR-245), `.meta/run_agy.py` (solorepo's DR-257), `.github/workflows/triage.yml` (solorepo's DR-230), `.github/workflows/merge.yml`, `.github/workflows/advance.yml`,
         `wiki/solorepo/` (solorepo's DR-184), `stakeholders/` and `.gitignore`. The channel, its hooks and the
         settings that register them travel with the loop workflows rather than
         after them: every instruction those five give is typed as a program of `.meta/say/`,

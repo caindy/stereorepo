@@ -259,6 +259,45 @@ def configure_reviewer_settings(
     hooks_dest.write_text(json.dumps(hooks_data, indent=2) + "\n", encoding="utf-8")
 
 
+CODER_DENIED_PERMISSIONS: list[str] = [
+    "invoke_subagent(*)",
+]
+"""Fine-grained permissions denied for the coder Role under Antigravity CLI (solorepo's DR-257)."""
+
+
+def configure_coder_settings(
+    settings_file: pathlib.Path | None = None,
+) -> None:
+    """Configure permissions denial for the coder Role under Antigravity CLI (solorepo's DR-257).
+
+    Denies subagent invocation (`invoke_subagent(*)`) in `~/.gemini/antigravity-cli/settings.json`
+    to enforce single-session evaluation during autonomous coder fallback.
+
+    Args:
+        settings_file: Optional path to settings JSON file. Defaults to
+            ~/.gemini/antigravity-cli/settings.json.
+    """
+    home = pathlib.Path.home()
+    dest = settings_file or (home / ".gemini" / "antigravity-cli" / "settings.json")
+
+    dest_data: dict[str, Any] = {}
+    if dest.is_file():
+        try:
+            dest_data = json.loads(dest.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"Error reading destination settings {dest}: {e}", file=sys.stderr)
+            dest_data = {}
+
+    perms = dest_data.setdefault("permissions", {})
+    denied = perms.setdefault("deny", [])
+    for p in CODER_DENIED_PERMISSIONS:
+        if p not in denied:
+            denied.append(p)
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(dest_data, indent=2) + "\n", encoding="utf-8")
+
+
 def write_env_file(path_env: str, content: str) -> None:
     """Write text content to a file specified by an environment variable name if defined."""
     target = os.environ.get(path_env)
@@ -268,11 +307,14 @@ def write_env_file(path_env: str, content: str) -> None:
 
 
 def main() -> int:
-    """Evaluate harness execution output and trigger fallback if toggle is enabled (solorepo's DR-245, solorepo's DR-246).
+    """Evaluate harness execution output and trigger fallback if toggle is enabled (solorepo's DR-245, solorepo's DR-246, solorepo's DR-257).
 
     When called with --configure-reviewer, configures reviewer tool confinement in
     ~/.gemini/antigravity-cli/settings.json and registers PreToolUse lifecycle hooks in
     ~/.gemini/config/hooks.json (solorepo's #682, solorepo's #699).
+
+    When called with --configure-coder, configures coder permission denials in
+    ~/.gemini/antigravity-cli/settings.json to prohibit subagent spawning (solorepo's DR-257).
 
     When called with --merge-settings, merges ~/.gemini/settings.json into
     ~/.gemini/antigravity-cli/settings.json to configure tools and hooks without
@@ -293,6 +335,10 @@ def main() -> int:
     """
     if "--configure-reviewer" in sys.argv:
         configure_reviewer_settings()
+        return 0
+
+    if "--configure-coder" in sys.argv:
+        configure_coder_settings()
         return 0
 
     if "--merge-settings" in sys.argv:

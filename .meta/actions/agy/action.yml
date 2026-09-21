@@ -95,6 +95,14 @@ runs:
       run: |
         python3 .meta/detect_fallback.py --configure-reviewer
 
+    - name: configure coder confinement
+      if: steps.check_fallback.outputs.run == 'true' && inputs.role == 'coder'
+      shell: bash
+      env:
+        GEMINI_PROJECT_DIR: ${{ env.GEMINI_PROJECT_DIR || github.workspace }}
+      run: |
+        python3 .meta/detect_fallback.py --configure-coder
+
     - name: run agy
       id: run_agy
       if: steps.check_fallback.outputs.run == 'true'
@@ -105,21 +113,7 @@ runs:
         EFFORT: ${{ inputs.effort }}
         MODE: ${{ inputs.mode }}
         TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+        GEMINI_PROJECT_DIR: ${{ env.GEMINI_PROJECT_DIR || github.workspace }}
       run: |
-        args=(--add-dir "$GITHUB_WORKSPACE" -p "$PROMPT")
-        if [ -n "$MODE" ]; then
-          args+=(--mode "$MODE")
-        fi
-        args+=(--dangerously-skip-permissions)
-        if [ -n "$MODEL" ]; then
-          args+=(--model "$MODEL")
-        fi
-        if [ -n "$EFFORT" ]; then
-          args+=(--effort "$EFFORT")
-        fi
-        if [ -n "$TIMEOUT_MINUTES" ]; then
-          args+=(--print-timeout "${TIMEOUT_MINUTES}m")
-        fi
-        export GEMINI_PROJECT_DIR="${GEMINI_PROJECT_DIR:-$GITHUB_WORKSPACE}"
-        agy "${args[@]}"
+        python3 .meta/run_agy.py
         echo "executed=true" >> "$GITHUB_OUTPUT"

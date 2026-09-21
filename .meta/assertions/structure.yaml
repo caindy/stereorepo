@@ -599,6 +599,12 @@ artifacts:
     description: >-
       Inspects Claude Code execution outputs and activates Gemini fallback
       when enabled by the GEMINI_FALLBACK toggle (solorepo's DR-245).
+  - id: work:artifact/meta-run-agy
+    name: .meta/run_agy.py
+    path: .meta/run_agy.py
+    description: >-
+      Drives headless Antigravity CLI via streaming NDJSON execution to synchronize
+      long-running commands and stream real-time events in CI (solorepo's DR-257).
   - id: work:artifact/meta-lib-timing
     name: .meta/lib/timing/__init__.py
     path: .meta/lib/timing/__init__.py

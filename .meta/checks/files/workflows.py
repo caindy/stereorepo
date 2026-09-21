@@ -441,22 +441,42 @@ REQUIRED_DENIED_PERMISSIONS: tuple[str, ...] = (
 )
 """Fine-grained permissions required to be denied for Antigravity CLI reviewer confinement (solorepo's DR-110, solorepo's DR-245, solorepo's DR-254, solorepo's #636, solorepo's #637)."""
 
+REQUIRED_CODER_DENIED_PERMISSIONS: tuple[str, ...] = (
+    "invoke_subagent(*)",
+)
+"""Fine-grained permissions required to be denied for Antigravity CLI coder confinement (solorepo's DR-254, solorepo's DR-257, solorepo's #715)."""
+
 
 def _audit_denied_permissions(detect_fallback: Any) -> list[str]:
-    """Verify that detect_fallback.py defines and populates REVIEWER_DENIED_PERMISSIONS."""
-    denied_permissions = getattr(detect_fallback, "REVIEWER_DENIED_PERMISSIONS", None)
-    if not denied_permissions:
+    """Verify that detect_fallback.py defines and populates REVIEWER_DENIED_PERMISSIONS and CODER_DENIED_PERMISSIONS."""
+    reviewer_denied = getattr(detect_fallback, "REVIEWER_DENIED_PERMISSIONS", None)
+    if not reviewer_denied:
         return [
             "detect_fallback.py: `REVIEWER_DENIED_PERMISSIONS` is missing or empty; "
             "Antigravity CLI reviewer confinement requires explicit permissions.deny"
         ]
     problems: list[str] = []
     for required_perm in REQUIRED_DENIED_PERMISSIONS:
-        if required_perm not in denied_permissions:
+        if required_perm not in reviewer_denied:
             problems.append(
                 f"detect_fallback.py: `REVIEWER_DENIED_PERMISSIONS` is missing `{required_perm}`; "
                 "add it to prevent unconfined file writing or network access"
             )
+
+    coder_denied = getattr(detect_fallback, "CODER_DENIED_PERMISSIONS", None)
+    if not coder_denied:
+        problems.append(
+            "detect_fallback.py: `CODER_DENIED_PERMISSIONS` is missing or empty; "
+            "Antigravity CLI coder confinement requires explicit permissions.deny for invoke_subagent(*)"
+        )
+    else:
+        for required_perm in REQUIRED_CODER_DENIED_PERMISSIONS:
+            if required_perm not in coder_denied:
+                problems.append(
+                    f"detect_fallback.py: `CODER_DENIED_PERMISSIONS` is missing `{required_perm}`; "
+                    "add it to prevent headless subagent delegation under Antigravity CLI"
+                )
+
     return problems
 
 
@@ -539,6 +559,10 @@ def gemini_core_matches_hook_matcher() -> StepOutcome:
     action_text = action_path.read_text(encoding="utf-8")
     if "--configure-reviewer" not in action_text:
         return Found((f"{action_path.relative_to(ROOT)}: does not invoke `detect_fallback.py --configure-reviewer`",))
+    if "--configure-coder" not in action_text:
+        return Found((f"{action_path.relative_to(ROOT)}: does not invoke `detect_fallback.py --configure-coder`",))
+    if "run_agy.py" not in action_text:
+        return Found((f"{action_path.relative_to(ROOT)}: does not invoke `python3 .meta/run_agy.py`",))
 
     core_tools = set(detect_fallback.REVIEWER_CORE_TOOLS)
     raw_matcher = detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER
