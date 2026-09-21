@@ -433,17 +433,44 @@ DANGEROUS_TOOLS = (
 path's allowlist may name either half, on its own or alongside the other (solorepo's #454)."""
 
 
+REQUIRED_DENIED_PERMISSIONS: tuple[str, ...] = (
+    "write_file(*)",
+    "read_url(*)",
+    "execute_url(*)",
+)
+"""Fine-grained permissions required to be denied for Antigravity CLI reviewer confinement (solorepo's DR-110, solorepo's DR-245, solorepo's #636)."""
+
+
+def _audit_denied_permissions(detect_fallback: Any) -> list[str]:
+    """Verify that detect_fallback.py defines and populates REVIEWER_DENIED_PERMISSIONS."""
+    denied_permissions = getattr(detect_fallback, "REVIEWER_DENIED_PERMISSIONS", None)
+    if not denied_permissions:
+        return [
+            "detect_fallback.py: `REVIEWER_DENIED_PERMISSIONS` is missing or empty; "
+            "Antigravity CLI reviewer confinement requires explicit permissions.deny"
+        ]
+    problems: list[str] = []
+    for required_perm in REQUIRED_DENIED_PERMISSIONS:
+        if required_perm not in denied_permissions:
+            problems.append(
+                f"detect_fallback.py: `REVIEWER_DENIED_PERMISSIONS` is missing `{required_perm}`; "
+                "add it to prevent unconfined file writing or network access"
+            )
+    return problems
+
+
 @check("gemini reviewer allowlist matches claude's")
 def gemini_allowlist_matches_claude() -> StepOutcome:
-    """The reviewer workflows bound Gemini CLI's tool registry the way they bound Claude Code's (solorepo's #454, solorepo's #699).
+    """The reviewer workflows bound Gemini CLI's tool registry the way they bound Claude Code's (solorepo's #454, solorepo's #636, solorepo's #699).
 
     The Claude path names what the model may call with `--allowedTools`, so a
-    tool it never names is simply not there for the model to reach. Gemini
-    CLI's default is the opposite: an unset `tools.core` holds the whole core
-    toolset, so the same bound has to be named rather than left absent. This
-    bound is unified in `.meta/detect_fallback.py` under `REVIEWER_CORE_TOOLS`
-    (solorepo's #699). This step fails when any reviewer workflow's Claude list
-    is missing, when `detect_fallback.py` names any dangerous tools, or when
+    tool it never names is simply not there for the model to reach. Under
+    containerized Antigravity CLI (solorepo's DR-245), capability bounds are enforced via
+    fine-grained `permissions.deny` (`REVIEWER_DENIED_PERMISSIONS`) alongside the
+    hook-guarded `REVIEWER_CORE_TOOLS` allowlist (solorepo's #636, solorepo's #699).
+    This step fails when any reviewer workflow's Claude list is missing, when
+    `detect_fallback.py` names dangerous tools in `REVIEWER_CORE_TOOLS`, when
+    `REVIEWER_DENIED_PERMISSIONS` omits required write/network denials, or when
     either harness names either half of a `DANGEROUS_TOOLS` pair.
 
     History in files.history.md (solorepo's DR-171).
@@ -452,7 +479,7 @@ def gemini_allowlist_matches_claude() -> StepOutcome:
     import detect_fallback
 
     gemini_tools = set(detect_fallback.REVIEWER_CORE_TOOLS)
-    problems: list[str] = []
+    problems: list[str] = _audit_denied_permissions(detect_fallback)
 
     for _claude_name, gemini_name in DANGEROUS_TOOLS:
         if gemini_name in gemini_tools:

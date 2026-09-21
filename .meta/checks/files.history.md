@@ -149,3 +149,17 @@ outbound symlinks.
 
 Evidence: `.meta/checks/files/workflows.py::reviewer_symlinks_verified`
 
+### Reviewer tool confinement bypassed under Antigravity CLI without fine-grained permission denials
+
+The reviewer workflow configured `tools.core` to restrict Gemini capability bounds,
+but containerized Antigravity CLI (`agy`) enforces capability bounds strictly via
+`permissions.deny` rather than `tools.core`, leaving write and network capabilities
+unconfined if `permissions.deny` is omitted (solorepo's DR-110, solorepo's DR-245,
+solorepo's #636). Established: `configure_reviewer_settings` and `merge_settings` in
+`.meta/detect_fallback.py` configure explicit `permissions.deny: ["write_file(*)", "read_url(*)", "execute_url(*)"]`
+directly in `~/.gemini/antigravity-cli/settings.json` while preserving credentials,
+audited by `gemini_allowlist_matches_claude` in `.meta/checks/files/workflows.py` and probed by
+`fallback_probes`.
+
+Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
+

@@ -25,7 +25,7 @@ import json
 import os
 import pathlib
 import sys
-from typing import TypedDict
+from typing import Any, TypedDict
 
 
 class HarnessConfig(TypedDict):
@@ -114,7 +114,7 @@ def has_quota_error(execution_file: str | pathlib.Path) -> bool:
 
 
 def merge_settings(source_path: pathlib.Path | None = None, dest_path: pathlib.Path | None = None) -> None:
-    """Merge tools and hook settings from ~/.gemini/settings.json into Antigravity CLI configuration without overwriting credentials."""
+    """Merge permissions, tools, and hook settings from source JSON into Antigravity CLI configuration without overwriting credentials."""
     home = pathlib.Path.home()
     src = source_path or (home / ".gemini" / "settings.json")
     dest = dest_path or (home / ".gemini" / "antigravity-cli" / "settings.json")
@@ -130,6 +130,14 @@ def merge_settings(source_path: pathlib.Path | None = None, dest_path: pathlib.P
     except Exception as e:
         print(f"Error reading destination settings {dest}: {e}", file=sys.stderr)
         dest_data = {}
+    if "permissions" in src_data:
+        dest_perms = dest_data.setdefault("permissions", {})
+        for kind in ("deny", "ask", "allow"):
+            if kind in src_data["permissions"]:
+                existing = dest_perms.setdefault(kind, [])
+                for item in src_data["permissions"][kind]:
+                    if item not in existing:
+                        existing.append(item)
     if "tools" in src_data:
         dest_data["tools"] = src_data["tools"]
     if "hooks" in src_data:
@@ -137,6 +145,13 @@ def merge_settings(source_path: pathlib.Path | None = None, dest_path: pathlib.P
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(dest_data, indent=2) + "\n", encoding="utf-8")
 
+
+REVIEWER_DENIED_PERMISSIONS: list[str] = [
+    "write_file(*)",
+    "read_url(*)",
+    "execute_url(*)",
+]
+"""Fine-grained permissions denied for the reviewer Role under Antigravity CLI (solorepo's DR-110, solorepo's DR-245)."""
 
 REVIEWER_CORE_TOOLS: list[str] = [
     "read_file",
@@ -160,49 +175,57 @@ REVIEWER_HOOK_COMMAND: str = "$GEMINI_PROJECT_DIR/.meta/hooks/worktree_only.py"
 
 def configure_reviewer_settings(
     workspace_dir: pathlib.Path | None = None,
-    settings_dir: pathlib.Path | None = None,
+    settings_file: pathlib.Path | None = None,
 ) -> None:
     """Configure tool confinement and hook registration for the reviewer Role (solorepo's DR-110, solorepo's DR-245).
 
-    Writes `tools.core` and `BeforeTool` hook settings to `~/.gemini/settings.json`, then merges
-    them into `~/.gemini/antigravity-cli/settings.json` while preserving mounted credentials.
+    Writes `permissions.deny`, `tools.core`, and `BeforeTool` hook settings directly to
+    `~/.gemini/antigravity-cli/settings.json` while preserving mounted credentials.
 
     Args:
         workspace_dir: Optional root directory of the workspace. Defaults to GEMINI_PROJECT_DIR,
             GITHUB_WORKSPACE, or current working directory.
-        settings_dir: Optional base directory for user Gemini settings. Defaults to ~/.gemini.
+        settings_file: Optional path to settings JSON file. Defaults to
+            ~/.gemini/antigravity-cli/settings.json.
     """
     home = pathlib.Path.home()
-    base = settings_dir or (home / ".gemini")
-    base.mkdir(parents=True, exist_ok=True)
-    src = base / "settings.json"
+    dest = settings_file or (home / ".gemini" / "antigravity-cli" / "settings.json")
     hook_command = (
         f"{workspace_dir}/.meta/hooks/worktree_only.py"
         if workspace_dir
         else REVIEWER_HOOK_COMMAND
     )
 
-    settings_content = {
-        "tools": {
-            "core": REVIEWER_CORE_TOOLS,
-        },
-        "hooks": {
-            "BeforeTool": [
+    dest_data: dict[str, Any] = {}
+    if dest.is_file():
+        try:
+            dest_data = json.loads(dest.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"Error reading destination settings {dest}: {e}", file=sys.stderr)
+            dest_data = {}
+
+    perms = dest_data.setdefault("permissions", {})
+    denied = perms.setdefault("deny", [])
+    for p in REVIEWER_DENIED_PERMISSIONS:
+        if p not in denied:
+            denied.append(p)
+
+    dest_data.setdefault("tools", {})["core"] = REVIEWER_CORE_TOOLS
+
+    dest_data.setdefault("hooks", {})["BeforeTool"] = [
+        {
+            "matcher": REVIEWER_BEFORE_TOOL_MATCHER,
+            "hooks": [
                 {
-                    "matcher": REVIEWER_BEFORE_TOOL_MATCHER,
-                    "hooks": [
-                        {
-                            "type": "command",
-                            "name": "worktree-only",
-                            "command": hook_command,
-                        }
-                    ],
+                    "type": "command",
+                    "name": "worktree-only",
+                    "command": hook_command,
                 }
-            ]
-        },
-    }
-    src.write_text(json.dumps(settings_content, indent=2) + "\n", encoding="utf-8")
-    merge_settings(src, home / ".gemini" / "antigravity-cli" / "settings.json")
+            ],
+        }
+    ]
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(dest_data, indent=2) + "\n", encoding="utf-8")
 
 
 def write_env_file(path_env: str, content: str) -> None:
