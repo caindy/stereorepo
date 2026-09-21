@@ -702,10 +702,17 @@ jobs:
             comment`, `gh issue edit`, `gh issue comment` and `gh api`.
 
       # A run that ended without finishing — the step's timeout, the turn
-      # limit, a crash — and without saying so has left the Issue claimed and
-      # its pull request open, which is what a standing run looks like, so
-      # every later delivery would read as a duplicate and the Challenge
-      # would be unreachable except by hand. The exit status alone cannot say
+      # limit, a crash, a cancellation — and without saying so has left the
+      # Issue claimed and its pull request open, which is what a standing run
+      # looks like, so every later delivery would read as a duplicate and the
+      # Challenge would be unreachable except by hand. A cancellation is a
+      # member of that list distinct from a crash, because GitHub's steps
+      # context reports a cancelled step's `outcome` as `cancelled` and never
+      # as `failure`, so a condition naming only the failure misses both of
+      # the ways one arrives: a run cancelled by hand from the Actions page,
+      # and GitHub withdrawing the runner. `always()` on the condition below
+      # is what lets this step run at all under one — `success() || failure()`
+      # is the form that would exclude it. The exit status alone cannot say
       # that: a run that finished its work and then sat waiting on the checks
       # (solorepo's #102) ends the same way, and so does one that ran `say stop` itself
       # and then ran out. So this asks what a finished run leaves. A finished
@@ -750,7 +757,8 @@ jobs:
       - name: hand back what the run did not finish
         if: >-
           always() && github.event_name == 'issues' && steps.taken.outputs.by == ''
-          && (steps.take_claude.outcome == 'failure' || steps.take_gemini.outcome == 'failure')
+          && (steps.take_claude.outcome == 'failure' || steps.take_claude.outcome == 'cancelled'
+              || steps.take_gemini.outcome == 'failure' || steps.take_gemini.outcome == 'cancelled')
         run: |
           # `bash -e` ends the step on the first failed assignment, so every
           # bare read here is a way for the handler to die without handing
@@ -810,7 +818,7 @@ jobs:
           fi
           if ! issue=$(gh issue view "$ISSUE" --json state,labels); then
             .meta/say/move stop "$ISSUE" <<EOF
-          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
+          This run ended without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
 
           Not requested of the reviewer: #$ISSUE could not be read, so whether it is still open and at what level is unknown here; the run log above says why.
           EOF
@@ -830,7 +838,7 @@ jobs:
             echo "#$ISSUE is already at human; the run handed it back itself"
           elif ! merged=$(gh pr list --state merged --head "$branch" --json number --jq '.[0].number // empty'); then
             .meta/say/move stop "$ISSUE" <<EOF
-          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
+          This run ended without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
 
           Not requested of the reviewer: whether $branch's pull request has merged could not be read, so whether the work already landed is unknown here; the run log above says why.
           EOF
@@ -838,7 +846,7 @@ jobs:
             echo "#$ISSUE's pull request #$merged has merged; the run finished and then ran out"
           elif [ -n "$number" ] && [ "$green" = true ] && [ "$conflicting" != true ]; then
             .meta/say/post comment "$number" <<EOF
-          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN.
+          This run ended without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN.
 
           Every check on this head is green, so this is where a run stopped and not where one finished, and review is requested on that basis: what is here is worth reading, and whether it answers #$ISSUE is the review's question. #$ISSUE stays claimed at \`$level\`, and a request for changes comes back to the coder as a new run.
           EOF
@@ -854,7 +862,7 @@ jobs:
               why="the checks on #$number have not all passed, and a red gate is not a handoff"
             fi
             .meta/say/move stop "$ISSUE" <<EOF
-          This run ended at its budget without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
+          This run ended without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
 
           Not requested of the reviewer: $why.
           EOF
@@ -862,7 +870,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
-          OUTCOME: ${{ steps.take_gemini.outcome == 'failure' && steps.take_gemini.outcome || steps.take_claude.outcome }}
+          OUTCOME: ${{ (steps.take_gemini.outcome == 'failure' || steps.take_gemini.outcome == 'cancelled') && steps.take_gemini.outcome || steps.take_claude.outcome }}
           BRANCH_PREFIX: ${{ steps.harness.outputs.branch_prefix }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
