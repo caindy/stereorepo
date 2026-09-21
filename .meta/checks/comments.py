@@ -48,6 +48,7 @@ import io
 import pathlib
 import re
 import tokenize
+from collections.abc import Mapping
 
 from checks.collect import (
     META,
@@ -104,16 +105,18 @@ ALLOW = re.compile(r"#!?\[\s*allow\s*\(")
 
 # A dereference of something outside this repository, blanked from a reason
 # before its cause is read: a foreign tracker's host spells a module name of
-# this one, so `https://github.com/python/mypy/issues/1` is the boundary
-# citation the clause asks for and not a reference to
+# this one, so `https://github.com/python/mypy/issues/1` or `github.com/…` is
+# the boundary citation the clause asks for and not a reference to
 # `.meta/lib/check_pr/github.py` (solorepo's DR-225).
-UPSTREAM = re.compile(r"https?://\S+")
+UPSTREAM = re.compile(
+    r"https?://\S+|\b(?:[a-zA-Z0-9-]+\.)+(?:com|org|io|net|dev|edu|gov|app)\b[/\S]*"
+)
 # The four shapes a cause inside this repository takes, each resolved against
 # this tree rather than read: a path the repository holds, a dotted reference
-# whose head is a module under `.meta/`, an Issue number, and a Decision Record
-# number (solorepo's DR-225).
+# whose head is a module under `.meta/` and whose attribute is exported by it,
+# an Issue number, and a Decision Record number (solorepo's DR-225).
 REPO_PATH = re.compile(r"[\w.][\w./-]*\.(?:py|md|ya?ml|rs|toml|json|sh|txt)\b")
-DOTTED = re.compile(r"\b(\w+)\.\w+")
+DOTTED = re.compile(r"\b(\w+)\.(\w+)")
 ISSUE = re.compile(r"#\d+\b")
 DECISION = re.compile(r"\bDR-\d{3}\b")
 
@@ -347,9 +350,84 @@ def suppressions(source: str, rust: bool = False) -> list[tuple[int, str]]:
     return found
 
 
-def modules() -> set[str]:
-    """Every module name a Python file under `.meta/` defines, a package named by its directory."""
-    return {path.parent.name if path.stem == "__init__" else path.stem for path in sources()}
+def _target_names(target: ast.AST) -> list[str]:
+    """Helper extracting identifier names from an assignment target."""
+    if isinstance(target, ast.Name):
+        return [target.id]
+    if isinstance(target, (ast.Tuple, ast.List)):
+        names = []
+        for elt in target.elts:
+            names.extend(_target_names(elt))
+        return names
+    return []
+
+
+def _all_names(node: ast.Assign) -> list[str]:
+    """Extract string constants from an __all__ assignment value."""
+    if not isinstance(node.value, (ast.List, ast.Tuple, ast.Set)):
+        return []
+    return [
+        elt.value for elt in node.value.elts
+        if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+    ]
+
+
+def _node_symbols(node: ast.AST) -> set[str]:
+    """Extract symbol names defined or imported by a top-level AST node."""
+    names = set()
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        names.add(node.name)
+    elif isinstance(node, ast.Assign):
+        for target in node.targets:
+            names.update(_target_names(target))
+            if isinstance(target, ast.Name) and target.id == "__all__":
+                names.update(_all_names(node))
+    elif isinstance(node, ast.AnnAssign):
+        names.update(_target_names(node.target))
+    elif isinstance(node, ast.ImportFrom):
+        names.update(alias.asname or alias.name for alias in node.names)
+    elif isinstance(node, ast.Import):
+        names.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+    return names
+
+
+def _package_submodules(path: pathlib.Path) -> set[str]:
+    """Submodule and child package names within a package directory."""
+    if path.stem != "__init__":
+        return set()
+    names = set()
+    for child in path.parent.iterdir():
+        if child.suffix == ".py" and child.stem != "__init__":
+            names.add(child.stem)
+        elif child.is_dir() and (child / "__init__.py").is_file():
+            names.add(child.name)
+    return names
+
+
+def _file_symbols(path: pathlib.Path) -> set[str]:
+    """Every symbol name a Python source file defines, imports, or contains as a submodule."""
+    names = _package_submodules(path)
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
+    except (SyntaxError, ValueError):
+        return names
+    for node in tree.body:
+        names.update(_node_symbols(node))
+    return names
+
+
+def modules() -> dict[str, set[str]]:
+    """Every module name a Python file under `.meta/` defines, mapped to its defined or exported names.
+
+    Returns:
+        dict[str, set[str]]: Module and package names mapped to sets of
+        submodules, definitions, and re-exported symbols.
+    """
+    symbols: dict[str, set[str]] = {}
+    for path in sources():
+        mod_name = path.parent.name if path.stem == "__init__" else path.stem
+        symbols.setdefault(mod_name, set()).update(_file_symbols(path))
+    return symbols
 
 
 def reasons(source: str) -> list[tuple[int, str]]:
@@ -381,7 +459,7 @@ def reasons(source: str) -> list[tuple[int, str]]:
     return found
 
 
-def internal_cause(reason: str, names: set[str]) -> str | None:
+def internal_cause(reason: str, names: Mapping[str, set[str]] | set[str]) -> str | None:
     """What of this repository a suppression's reason names, or `None` where it names nothing here.
 
     The half of the surviving-suppression clause that is decidable: that a cause
@@ -391,7 +469,8 @@ def internal_cause(reason: str, names: set[str]) -> str | None:
 
     Args:
         reason: The text after `# reason:`, as `reasons` returns it.
-        names: The module names `modules` found under `.meta/`.
+        names: The module names `modules` found under `.meta/`, mapped to their
+            defined or exported symbols, or as a set of module names.
 
     Returns:
         str | None: What the reason names here, in the words the failure line
@@ -403,8 +482,11 @@ def internal_cause(reason: str, names: set[str]) -> str | None:
         if (ROOT / match.group()).is_file():
             return f"names `{match.group()}` of this repository"
     for match in DOTTED.finditer(text):
-        if match.group(1) in names:
-            return f"names `{match.group(1)}` of this repository"
+        mod, attr = match.group(1), match.group(2)
+        if mod in names:
+            attrs = names[mod] if isinstance(names, Mapping) else None
+            if attrs is None or attr in attrs:
+                return f"names `{mod}` of this repository"
     issue = ISSUE.search(text)
     if issue:
         return f"defers to {issue.group()}, an Issue of this repository"

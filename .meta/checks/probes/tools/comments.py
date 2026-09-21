@@ -144,13 +144,19 @@ def _causes(comments: Any) -> list[str]:
     for text in ("flat `collect` import makes this Any; see collect.check",
                  "the root cause is filed as solorepo's #557",
                  "`render.rendered()` carries no annotations — .meta/render.py re-exports it",
-                 "the ordering solorepo's DR-207 settles"):
+                 "the ordering solorepo's DR-207 settles",
+                 "see files.tree"):
         expect(True, comments.internal_cause(text, names) is not None, text)
     for text in ("mypy does not narrow this, see https://github.com/python/mypy/issues/12345",
                  "the import is the test of whether PyYAML is installed",
                  "GraphQL query templates have literal curly braces",
                  "normalising unicode smart quotes to ascii quotes",
-                 "registers check steps", "registration order is deliberate"):
+                 "registers check steps", "registration order is deliberate",
+                 "see github.com/python/mypy#1",
+                 "see github.com/python/mypy/issues/1234",
+                 "running python.exe on Windows requires binary mode",
+                 "git.status reports untracked files",
+                 "HTTP response status.code is checked"):
         expect(False, comments.internal_cause(text, names) is not None, text)
     return problems + cause_problems
 
