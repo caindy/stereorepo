@@ -137,3 +137,13 @@ answered with the page for the forbidden word. Established:
 matched on the slugified word.
 
 Evidence: `.meta/checks/files/wiki.py::wiki_synonyms_are_not_avoided`
+
+### Worktree symlink containment verification
+
+An unvetted pull request could check out outbound symlinks allowing pattern-based
+tools to traverse into host runner directories and access credentials (solorepo's DR-251,
+solorepo's #458). Established: `worktree_symlinks_verified` validates that all symlinks
+within the repository resolve strictly within repository boundaries and do not enter `.git/`.
+
+Evidence: `.meta/checks/files/workflows.py::worktree_symlinks_verified`
+

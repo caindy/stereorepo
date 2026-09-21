@@ -532,6 +532,26 @@ def gemini_core_matches_hook_matcher() -> StepOutcome:
     return Passed(f"{len(core_tools)} tools admitted, all and only the ones the BeforeTool matcher guards")
 
 
+@check("worktree symlink verification")
+def worktree_symlinks_verified() -> StepOutcome:
+    """The repository worktree holds no outbound symlinks escaping repository boundaries (solorepo's DR-251, solorepo's #458).
+
+    Validates that all symlinks within the repository resolve strictly within
+    repository boundaries, refusing any symlink pointing outside the root or
+    into `.git/`.
+
+    History in files.history.md (solorepo's DR-171).
+    """
+    sys.path.insert(0, str(META))
+    from lib.worktree_only.paths import audit_symlinks
+
+    violations = audit_symlinks(ROOT)
+    if violations:
+        return Found(tuple(f"outbound symlink: {v}" for v in violations))
+
+    return Passed("worktree contains no outbound symlinks")
+
+
 INLINE_PYTHON = re.compile(
     r"\b(?:python[0-9.]*|uv\s+run\s+python)\b(?:\s+-[a-zA-Z0-9_.-]+(?:\s+[^\s-]\S*)?)*\s+(-c\b|<<|-\s*<<|-\s*$)|"
     r"\|\s*(?:python[0-9.]*|uv\s+run\s+python)(?:\s+-[a-zA-Z0-9_.-]+(?:\s+[^\s-]\S*)?)*\s*$"

@@ -259,6 +259,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-248](assertions/decisions/DR-248.yaml) | Formalize pull request state machine and watch handoff semaphore | Adopted |
 | [DR-249](assertions/decisions/DR-249.yaml) | Settle the approach before code on hard and human Challenges, with diff review for easy and medium | Adopted |
 | [DR-250](assertions/decisions/DR-250.yaml) | Dual-layer comment hygiene: portfolio governance via .meta/ scope broadening and bootstrap self-contained gate checking | Adopted |
+| [DR-251](assertions/decisions/DR-251.yaml) | Refuse outbound symlinks at checkout to prevent pattern traversal escapes | Adopted |
 
 ## Holes
 
@@ -337,7 +338,7 @@ and the query a reader in a file actually has.
 | [`.meta/checks/files/sources.py`](checks/files/sources.py) | [DR-150](assertions/decisions/DR-150.yaml) |
 | [`.meta/checks/files/templates.py`](checks/files/templates.py) | [DR-034](assertions/decisions/DR-034.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-183](assertions/decisions/DR-183.yaml) |
 | [`.meta/checks/files/wiki.py`](checks/files/wiki.py) | [DR-184](assertions/decisions/DR-184.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-231](assertions/decisions/DR-231.yaml) |
-| [`.meta/checks/files/workflows.py`](checks/files/workflows.py) | [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-219](assertions/decisions/DR-219.yaml), [DR-233](assertions/decisions/DR-233.yaml), [DR-241](assertions/decisions/DR-241.yaml) |
+| [`.meta/checks/files/workflows.py`](checks/files/workflows.py) | [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-219](assertions/decisions/DR-219.yaml), [DR-233](assertions/decisions/DR-233.yaml), [DR-241](assertions/decisions/DR-241.yaml), [DR-251](assertions/decisions/DR-251.yaml) |
 | [`.meta/checks/graph/__init__.py`](checks/graph/__init__.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-164](assertions/decisions/DR-164.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/graph/artifacts.py`](checks/graph/artifacts.py) | [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/graph/record.py`](checks/graph/record.py) | [DR-050](assertions/decisions/DR-050.yaml), [DR-060](assertions/decisions/DR-060.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-124](assertions/decisions/DR-124.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-128](assertions/decisions/DR-128.yaml), [DR-164](assertions/decisions/DR-164.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
@@ -396,7 +397,7 @@ and the query a reader in a file actually has.
 | [`.meta/fixtures/specialization/tokens.json`](fixtures/specialization/tokens.json) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml) |
 | [`.meta/gate`](gate) | [DR-104](assertions/decisions/DR-104.yaml), [DR-115](assertions/decisions/DR-115.yaml), [DR-179](assertions/decisions/DR-179.yaml) |
 | [`.meta/hooks/signed_channel.py`](hooks/signed_channel.py) | [DR-069](assertions/decisions/DR-069.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-113](assertions/decisions/DR-113.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-151](assertions/decisions/DR-151.yaml), [DR-174](assertions/decisions/DR-174.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-179](assertions/decisions/DR-179.yaml) |
-| [`.meta/hooks/worktree_only.py`](hooks/worktree_only.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-177](assertions/decisions/DR-177.yaml) |
+| [`.meta/hooks/worktree_only.py`](hooks/worktree_only.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-251](assertions/decisions/DR-251.yaml) |
 | [`.meta/jules/README.md`](jules/README.md) | [DR-246](assertions/decisions/DR-246.yaml) |
 | [`.meta/jules/client.py`](jules/client.py) | [DR-246](assertions/decisions/DR-246.yaml) |
 | [`.meta/lib/__init__.py`](lib/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
@@ -456,7 +457,7 @@ and the query a reader in a file actually has.
 | [`.meta/lib/wikisplain/pages.py`](lib/wikisplain/pages.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/worktree_only/__init__.py`](lib/worktree_only/__init__.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/worktree_only/grammar.py`](lib/worktree_only/grammar.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
-| [`.meta/lib/worktree_only/paths.py`](lib/worktree_only/paths.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
+| [`.meta/lib/worktree_only/paths.py`](lib/worktree_only/paths.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-251](assertions/decisions/DR-251.yaml) |
 | [`.meta/lib/worktree_only/shell.py`](lib/worktree_only/shell.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/worktree_only/verdict.py`](lib/worktree_only/verdict.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/mypy.ini`](mypy.ini) | [DR-210](assertions/decisions/DR-210.yaml) |

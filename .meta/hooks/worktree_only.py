@@ -57,9 +57,11 @@ from lib.worktree_only.paths import (
     SEARCHES,
     TOOLS,
     ascends,
+    audit_symlinks,
     elsewhere,
     outside,
     outside_pattern,
+    outside_symlink,
     targets,
 )
 from lib.worktree_only.shell import (
@@ -105,6 +107,7 @@ __all__ = [
     "TAKES_VALUE",
     "TOOLS",
     "ascends",
+    "audit_symlinks",
     "before_operator",
     "blocked",
     "command_allowed",
@@ -115,6 +118,7 @@ __all__ = [
     "options_allowed",
     "outside",
     "outside_pattern",
+    "outside_symlink",
     "partition_unquoted",
     "paths",
     "plain_form",
@@ -136,4 +140,12 @@ exported so a probe can stand a collaborator in at the module that defines it,
 (solorepo's DR-217)."""
 
 if __name__ == "__main__":
+    if "--audit-symlinks" in sys.argv:
+        symlink_problems = paths.audit_symlinks()
+        if symlink_problems:
+            for item in symlink_problems:
+                print(f"::error::outbound symlink detected: {item}", file=sys.stderr)
+            sys.exit(2)
+        print("all worktree symlinks resolve within repository boundaries")
+        sys.exit(0)
     sys.exit(verdict.main())

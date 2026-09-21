@@ -16,7 +16,9 @@ run elsewhere, an allowed command reads what `git -C` is refused for pointing
 at. That is its own predicate, `elsewhere`, a directory commands run in carrying
 neither exemption a path read from carries.
 """
+import os
 import pathlib
+import subprocess
 from typing import Any
 
 from lib.worktree_only import ROOT
@@ -83,26 +85,28 @@ HARNESS = (
 )
 
 
-def outside(path: str | pathlib.Path) -> str | None:
+def outside(path: str | pathlib.Path, root: pathlib.Path | None = None) -> str | None:
     """Validate whether a target filesystem path remains within permitted boundaries.
 
     Parameters:
         path: Relative or absolute target path to evaluate.
+        root: Optional repository root to validate against (defaults to ROOT).
 
     Returns:
         str | None: Error message detailing the boundary violation if the resolved
         path escapes the repository root or enters `.git/` (and is not within a
         harness scratch directory); None if access is permitted.
     """
+    base = (root or ROOT).resolve()
     target = pathlib.Path(path).expanduser()
     if not target.is_absolute():
-        target = ROOT / target
+        target = base / target
     target = target.resolve()
     if any(scratch in target.parents for scratch in HARNESS):
         return None
-    if target != ROOT and ROOT not in target.parents:
-        return f"{path} is outside the worktree {ROOT}"
-    if target == (ROOT / ".git") or (ROOT / ".git") in target.parents:
+    if target != base and base not in target.parents:
+        return f"{path} is outside the worktree {base}"
+    if target == (base / ".git") or (base / ".git") in target.parents:
         return f"{path} is inside .git/, where the action keeps a token"
     return None
 
@@ -143,6 +147,12 @@ def outside_pattern(pattern: str) -> str | None:
     metacharacter being where it stops looking: the literal prefix of
     `**/../../etc/passwd` is the worktree, as the prefix of `{/etc,.}/passwd`
     is, and neither pattern stays there.
+
+    Precondition (solorepo's DR-251):
+        Assumes the repository worktree contains no outbound symlinks (enforced
+        via `audit_symlinks()` at checkout and gate). A wildcard component
+        cannot traverse beyond a permitted literal prefix when every symlink
+        beneath it resolves within repository boundaries.
 
     Parameters:
         pattern: Glob pattern a reader names the files it reads with.
@@ -219,3 +229,111 @@ def targets(tool_input: dict[str, Any], keys: dict[str, str]) -> list[tuple[str,
         elif value:
             found.append((value, kind))
     return found
+
+
+def outside_symlink(path: str | pathlib.Path, root: pathlib.Path | None = None) -> str | None:
+    """Validate whether a target symlink resolves strictly within repository boundaries (solorepo's DR-251).
+
+    Unlike runtime tool filesystem access (which permits harness scratch directories),
+    repository symlinks have no exemption: every symlink must resolve strictly
+    within the repository worktree root and never enter `.git/`.
+
+    Parameters:
+        path: Relative or absolute target path to evaluate.
+        root: Optional repository root to validate against (defaults to ROOT).
+
+    Returns:
+        str | None: Error message detailing the boundary violation if the resolved
+        path escapes the repository root or enters `.git/`; None if containment holds.
+    """
+    base = (root or ROOT).resolve()
+    target = pathlib.Path(path).expanduser()
+    if not target.is_absolute():
+        target = base / target
+    resolved = target.resolve()
+    if resolved != base and base not in resolved.parents:
+        return f"{path} is outside the worktree {base}"
+    if resolved == (base / ".git") or (base / ".git") in resolved.parents:
+        return f"{path} is inside .git/, where the action keeps a token"
+    return None
+
+
+def _readlink_safe(path: pathlib.Path) -> str:
+    """Read symlink target path safely, returning 'unreadable' on filesystem error."""
+    try:
+        return str(path.readlink())
+    except OSError:
+        return "unreadable"
+
+
+def _tracked_symlinks(base: pathlib.Path) -> tuple[list[str], set[pathlib.Path]]:
+    """Audit git-tracked symlinks within the base repository."""
+    problems: list[str] = []
+    scanned: set[pathlib.Path] = set()
+    try:
+        proc = subprocess.run(
+            ["git", "ls-files", "-s", "-z"],
+            cwd=base,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if proc.returncode == 0:
+            for entry in proc.stdout.split(b"\0"):
+                if not entry:
+                    continue
+                parts = entry.split(b"\t", 1)
+                if len(parts) == 2 and parts[0].startswith(b"120000"):
+                    rel = parts[1].decode("utf-8", errors="replace")
+                    target_path = base / rel
+                    scanned.add(target_path)
+                    problem = outside_symlink(target_path, root=base)
+                    if problem:
+                        problems.append(f"tracked symlink `{rel}` -> `{_readlink_safe(target_path)}`: {problem}")
+    except Exception:
+        pass
+    return problems, scanned
+
+
+def _worktree_symlinks(base: pathlib.Path, scanned: set[pathlib.Path]) -> list[str]:
+    """Audit filesystem symlinks across the worktree excluding ignored trees."""
+    problems: list[str] = []
+    ignored = (".git", ".venv", "node_modules", ".pytest_cache")
+    for dirpath, dirnames, filenames in os.walk(base):
+        dir_path = pathlib.Path(dirpath)
+        all_entries = list(filenames) + list(dirnames)
+        dirnames[:] = [
+            d for d in dirnames
+            if d not in ignored and not (dir_path / d).is_symlink()
+        ]
+        for name in all_entries:
+            p = dir_path / name
+            if p.is_symlink() and p not in scanned:
+                scanned.add(p)
+                problem = outside_symlink(p, root=base)
+                if problem:
+                    rel = str(p.relative_to(base)) if base in p.parents or p == base else str(p)
+                    problems.append(f"worktree symlink `{rel}` -> `{_readlink_safe(p)}`: {problem}")
+    return problems
+
+
+def audit_symlinks(root: pathlib.Path | None = None) -> list[str]:
+    """Audit all symlinks within a worktree to ensure none escape repository boundaries (solorepo's DR-251).
+
+    Validates both git-tracked symlinks and untracked filesystem symlinks within the
+    worktree. Refuses any symlink whose resolved destination escapes the repository
+    root or enters `.git/`, with no harness scratch exemption.
+
+    Parameters:
+        root: Base directory to audit (defaulting to ROOT).
+
+    Returns:
+        list[str]: Descriptions of all symlink boundary violations detected; empty
+        when all symlinks remain strictly within repository boundaries.
+    """
+    base = (root or ROOT).resolve()
+    tracked_problems, scanned = _tracked_symlinks(base)
+    worktree_problems = _worktree_symlinks(base, scanned)
+    return sorted(tracked_problems + worktree_problems)
+
+

@@ -11,7 +11,7 @@ import sys
 import tempfile
 from typing import Any
 
-from checks.collect import ROOT, check
+from checks.collect import META, ROOT, check
 from checks.probes.git import events, offers, registration, verdicts
 from checks.probes.harness import environment, exit_of, load_hook, stood_in
 
@@ -236,6 +236,41 @@ def _registration() -> list[str]:
     return problems
 
 
+def _audit_symlinks(worktree: Any) -> list[str]:
+    """Assert that audit_symlinks accepts valid symlinks and refuses escaping ones (solorepo's DR-251)."""
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as d:
+        root = pathlib.Path(d).resolve()
+        (root / "inner").write_text("ok", encoding="utf-8")
+        (root / "valid_link").symlink_to(root / "inner")
+        (root / "evil_link").symlink_to("/etc/passwd")
+        (root / "git_link").symlink_to(root / ".git")
+        (root / "harness_link").symlink_to(pathlib.Path.home() / ".gemini" / "tmp")
+
+        violations = worktree.paths.audit_symlinks(root)
+        if len(violations) != 3:
+            problems.append(
+                f"audit_symlinks: expected 3 violations (evil_link, git_link, harness_link), found {len(violations)}: {violations}"
+            )
+        if not any("evil_link" in v and "outside" in v for v in violations):
+            problems.append(f"audit_symlinks: did not report evil_link as outside: {violations}")
+        if not any("git_link" in v and ".git" in v for v in violations):
+            problems.append(f"audit_symlinks: did not report git_link entering .git: {violations}")
+        if not any("harness_link" in v and "outside" in v for v in violations):
+            problems.append(f"audit_symlinks: did not report harness_link without exemption as outside: {violations}")
+
+        hook_path = META / "hooks" / "worktree_only.py"
+        res = subprocess.run(
+            [sys.executable, str(hook_path), "--audit-symlinks"],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+        )
+        if res.returncode != 0:
+            problems.append(f"worktree_only.py --audit-symlinks on clean ROOT exited {res.returncode}: {res.stderr}")
+    return problems
+
+
 @check("hook probes", pre=True)
 def hook_probes() -> list[str]:
     """Both hooks' predicates against the calls they exist to refuse and the calls they must let through, what a `worktree_only` refusal offers instead, matcher invariants across harnesses, and each harness's own registration run as a real subprocess.
@@ -261,4 +296,5 @@ def hook_probes() -> list[str]:
     hooks = {name: load_hook(name) for name in ("signed_channel", "worktree_only")}
     worktree = hooks["worktree_only"]
     return (_verdicts(hooks) + _offers(worktree) + _events(worktree) + _instead(worktree)
-            + _matchers() + _registration())
+            + _matchers() + _registration() + _audit_symlinks(worktree))
+

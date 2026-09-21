@@ -167,3 +167,19 @@ leaving literal `..` and dot-literal spellings as the only ascending components,
 `paths.ascends()` states the probed invariant rather than the false empty-string premise.
 
 Evidence: `.meta/checks/probes/git/step.py::hook_probes`
+
+### Outbound symlinks beneath literal prefix bypassed outside_pattern()
+
+A pattern is bounded by its literal prefix, while which files lie beneath that prefix
+is decided by the matcher walking the filesystem after the hook has answered
+(solorepo's DR-251, solorepo's #458). An unvetted pull request committing a symlink
+beneath an allowed prefix (such as `.meta/evil -> /`) passed `paths.outside_pattern()`,
+allowing pattern readers like `read_many_files` to cross the symlink into the runner
+filesystem and read credentials outside the worktree. Established: `paths.audit_symlinks()`
+and `paths.outside_symlink()` validate both git-tracked and filesystem symlinks across the
+worktree without harness scratch exemptions, refusing any symlink whose resolved destination
+escapes the repository root or enters `.git/`, exposed via `worktree_only.py --audit-symlinks`
+and verified by `hook_probes` and repository gate checks.
+
+Evidence: `.meta/checks/probes/git/step.py::hook_probes`
+

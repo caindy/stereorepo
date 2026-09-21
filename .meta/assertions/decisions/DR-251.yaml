@@ -1,0 +1,72 @@
+decisions:
+  - id: work:decision/251
+    name: "DR-251 · Refuse outbound symlinks at checkout to prevent pattern traversal escapes"
+    challenge: work:challenge/458
+    status: ADOPTED
+    applies:
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-lib-worktree-only-paths
+      - work:artifact/meta-hooks-worktree-only
+      - work:artifact/meta-checks-files-workflows
+    context: >-
+      Under solorepo's DR-110, the before-tool hook at .meta/hooks/worktree_only.py confines
+      reviewer filesystem reads to the repository worktree and authorized harness scratch directories.
+      Path validation in .meta/lib/worktree_only/paths.py evaluates explicit paths via outside(),
+      which resolves target symlinks using pathlib.Path.resolve(). However, pattern-based tools
+      (read_many_files, glob, grep_search, search_file_content) are evaluated via outside_pattern(),
+      which validates only the literal prefix preceding the first wildcard component (*, ?, [], {}).
+      Because glob matchers walk the directory tree after the hook evaluates the prefix, an unvetted
+      pull request containing a symlink beneath a valid prefix (e.g. .meta/evil -> / or sub/leak -> ~/.config)
+      would pass outside_pattern() and allow the matching tool to traverse the symlink, exfiltrating
+      sensitive files outside the worktree (such as REVIEWER_GH_TOKEN at ~/.config/solorepo/reviewer.env)
+      (solorepo's #458).
+    alternatives:
+      - name: Expand glob patterns and resolve all matching paths inside outside_pattern()
+        chosen: false
+        reason: >-
+          Executing filesystem glob walks within the before-tool hook duplicates matcher execution,
+          incurs latency on every agent turn, and risks behavioral divergence between Python's glob
+          implementation and harness-specific matching engines (e.g. ripgrep or Antigravity CLI).
+      - name: Narrow the reviewer toolset by removing read_many_files and pattern-based search tools
+        chosen: false
+        reason: >-
+          Eliminating read_many_files degrades reviewer throughput and rolls back the core toolset
+          parity established in Pull Request #625 (solorepo's DR-245). Furthermore, it fails to close
+          traversal for other pattern-accepting tools (glob, grep_search, search_file_content).
+      - name: Refuse outbound symlinks during checkout in review.yml and enforce in gate checks
+        chosen: true
+        reason: >-
+          Auditing all tracked symlinks (git ls-files -s | awk '$1 == "120000"') and worktree symlinks
+          immediately following checkout in review.yml prevents any outbound symlink from existing
+          in the reviewer's filesystem before credentials or harness processes are initialized.
+          Complemented by an invariant check in .meta/checks/files/workflows.py and gate probes,
+          this eliminates the escape vector at the boundary without runtime overhead during agent turns,
+          guaranteeing that outside_pattern()'s prefix bound is sound.
+    consequences:
+      - >-
+        .meta/lib/worktree_only/paths.py implements audit_symlinks() and outside_symlink(),
+        verifying that all tracked and filesystem symlinks resolve strictly within the worktree
+        root and do not enter .git/, without harness scratch exemptions.
+      - >-
+        .meta/hooks/worktree_only.py exposes the --audit-symlinks CLI flag to enable worktree
+        symlink auditing at checkout in reviewer workflows.
+      - >-
+        .meta/lib/worktree_only/paths.py:outside_pattern() documents the external boundary
+        precondition that the worktree holds no outbound symlinks.
+      - >-
+        A gate check in .meta/checks/files/workflows.py and probes in .meta/checks/probes/git/step.py
+        verify symlink audit mechanics and assert that the worktree contains no outbound symlinks.
+    falsifier: >-
+      A symlink checked out from a pull request head pointing outside the repository root
+      that is traversed by a reviewer tool without causing the workflow to refuse execution.
+    rationale: |-
+      The reviewer workflow checks out untrusted diffs from unvetted pull requests while holding
+      a privileged credential (REVIEWER_GH_TOKEN). Attempting to resolve dynamic wildcard
+      traversals in a pre-tool hook is the wrong layer: the hook evaluates patterns before
+      traversal occurs, while the filesystem itself hosts the trap.
+
+      Checking out code into a container holding credentials requires sanitizing the workspace
+      at the boundary before handing control to the model or its tools. Verifying that all
+      symlinks resolve strictly within the worktree ensures that no valid prefix can ever lead
+      a glob walk outside the repository root.
