@@ -23,14 +23,14 @@ The `/wikisplain` skill creates, explains, and verifies encyclopedic wiki pages 
 
 ## Verbs
 
-- `just wikisplain <concept> [--context <context>] [--definition <def>] [--synonyms <s1,s2>]` — scaffold a wiki page and verify compliance
-- `python3 .meta/wikisplain.py <concept> --dry-run` — preview page content without writing to disk
-- `python3 .meta/wikisplain.py <concept> --check-duplicate` — check if a concept or slug already exists
+- `python3 .meta/wikisplain.py "<concept>" [--context <context>] [--definition <def>] [--synonyms <s1,s2>]` — scaffold a wiki page and verify compliance
+- `python3 .meta/wikisplain.py "<concept>" --dry-run` — preview page content without writing to disk
+- `python3 .meta/wikisplain.py "<concept>" --check-duplicate` — check if a concept or slug already exists
 
 ## Instructions
 
 1. **Check for Duplicates:** Run `python3 .meta/wikisplain.py "<Concept>" --check-duplicate` to verify no collision exists in vocabulary or existing wiki files.
-2. **Scaffold the Page:** Run `just wikisplain "<Concept>" --context <context> --definition "<copular definition>"` to generate the canonical structure.
+2. **Scaffold the Page:** Run `python3 .meta/wikisplain.py "<Concept>" --context <context> --definition "<copular definition>"` to generate the canonical structure.
 3. **Write Exposition:** Expand the page with narrative context, invariants, and relationships to other disciplines.
 4. **Wikilink Entities:** Use closed-world wikilinks (`[[concept]]` or scoped `[[context/concept]]`) to link related terms.
 5. **Verify Compliance:** Run `just gate meta` to ensure `wikilinks` and `wiki lead paragraphs` pass cleanly.

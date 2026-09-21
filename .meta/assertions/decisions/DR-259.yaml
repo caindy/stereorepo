@@ -1,0 +1,112 @@
+decisions:
+  - id: work:decision/259
+    name: "DR-259 · Reserve the just verb surface for operator flags and identifiers by scoping authoring to skills"
+    challenge: work:challenge/485
+    status: ADOPTED
+    supersedes:
+      - work:decision/187
+    applies:
+      - work:article/8
+      - work:article/15
+      - work:article/22
+    enacted_in:
+      - work:artifact/justfile
+      - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/skill-wikisplain
+      - work:artifact/skill-technical-writing
+      - work:artifact/agents
+      - work:artifact/template-agents
+      - work:artifact/wiki-solorepo-knowledge-management
+    context: >-
+      Solorepo's DR-106 established the root `justfile` as an invoking-only verb surface,
+      and solorepo's DR-252 formally partitioned repository operational agency into three
+      distinct planes: the Local Operator Plane (`just`), the Attested Mutation Plane
+      (`.meta/say/`), and the GitHub Inspection Plane (`gh`). Under this separation, the
+      Local Operator Plane is reserved for local verification gates (`gate`, `pr`,
+      `dereference`, `test-specialization`), assertion compilers (`render`, `apm`,
+      `bootstrap`), and harness status inspection (`next`, `watch`, `sweep`, `timing`,
+      `agents`, `terms`, `search`, `landed`, `merge-manager`).
+
+      In Issue #482, running `just wikisplain "Externalized Memory" --check-duplicate`
+      failed because `just` interpolates `*args` unquoted into the execution shell,
+      splitting multi-word strings across space boundaries into separate argv tokens before
+      reaching Python's `argparse`. PR #483 patched `wikisplain.py` by accepting `nargs="+"`
+      and rejoining tokens, mirroring an earlier ad-hoc pattern in `search.py`.
+
+      Challenge #485 recognized that this point fix left the root verb surface with an
+      undeclared, unenforced argument-passing contract. Across the root justfile on trunk,
+      eleven recipes took `*args` unquoted (`pr`, `merge-manager`, `timing`, `agents`,
+      `wikisplain`, `dereference`, `search`, `terms`, `apm`, `bootstrap`, and
+      `test-specialization`), yet only `wikisplain` took bare prose positionals. A caller
+      could not discern whether quoting worked without inspecting the internal `argparse`
+      configuration of the invoked script, violating solorepo's Article 22. Furthermore,
+      `wikisplain` was an architectural outlier on the Local Operator Plane: an authoring
+      workflow creating maintainer-facing prose in `wiki/<context>/`, whereas all other
+      content authoring (decisions, challenges, personas, code) is governed by Agent Skills.
+    alternatives:
+      - name: Faithful forwarding across the entire just verb surface
+        chosen: false
+        reason: >-
+          Configuring `set positional-arguments` in `justfile` and replacing unquoted
+          interpolations with `"$@"` allows `just` to preserve caller quotes faithfully.
+          However, solving this purely at the command runner level accommodates an
+          architectural category error: placing a content authoring workflow on an operator
+          surface reserved for verification gates, compilers, and status queries. Retaining
+          authoring recipes on `just` encourages further prose-authoring subcommands to
+          accumulate on the operator surface rather than within structured agent skills.
+      - name: Tolerant tools reassembling split arguments in Python
+        chosen: false
+        reason: >-
+          Requiring every downstream script behind a variadic `just` recipe to accept
+          `nargs="+"` or `nargs="*"` and manually rejoin tokens (as PR #483 did for
+          `wikisplain.py`) pushes shell-quoting workarounds into Python implementations.
+          While `wikisplain.py` retains `nargs="+"` as a guarded ergonomic convenience
+          for maintainers typing unquoted concepts directly at a terminal, adopting
+          tool-level tolerance as the repository-wide contract complicates CLI definitions,
+          creates divergence across tools, and requires AST or gate linters over argparse
+          to enforce compliance across the entire verb surface.
+      - name: Reserve the just verb surface for operator flags and identifiers by scoping authoring to skills
+        chosen: true
+        reason: >-
+          Removes `wikisplain` from the root `justfile`, restoring strict cohesion to the
+          Local Operator Plane under solorepo's DR-252. Content authoring is governed by
+          Agent Skills: the `/wikisplain` skill invokes `.meta/wikisplain.py` directly,
+          where standard process execution preserves quoted multi-word concept arguments
+          in `sys.argv` without intermediate shell interpolation. The `just` verb surface
+          explicitly adopts the contract that recipes take only flags, subcommands, and
+          atomic identifiers, never bare multi-word prose positionals.
+    consequences:
+      - >-
+        The `wikisplain *args:` recipe is removed from `.meta/lib/render/writers.py` and
+        the root `justfile`, leaving ten variadic recipes that accept flags, subcommands,
+        or atomic identifiers.
+      - >-
+        Partially supersedes DR-187's consequence providing the `just wikisplain` recipe,
+        while preserving `wikisplain.py`'s `nargs="+"` rejoining behavior (guarded by the
+        `wikisplain argv probes` precheck in `.meta/checks/probes/knowledge.py`) as a
+        deliberate ergonomic convenience for direct terminal callers.
+      - >-
+        The `/wikisplain` and `/technical-writing` skill renderers in
+        `.meta/lib/render/skills.py` are updated to document direct CLI invocation via
+        `python3 .meta/wikisplain.py "<Concept>" ...`.
+      - >-
+        The argument-passing contract of the root `just` surface is formally established:
+        recipes accept flags, subcommands, and atomic identifiers; bare prose positionals
+        belong in dedicated tools mediated by skills.
+      - >-
+        AGENTS.md, template/AGENTS.md, and Knowledge Management documentation are updated
+        to route authoring through the `/wikisplain` skill and `.meta/wikisplain.py`.
+      - >-
+        Challenge #485 is settled and closed.
+    falsifier: >-
+      A recipe added to the root `justfile` that accepts bare multi-word prose positionals,
+      or a content-authoring workflow generating repository documentation or code that is
+      exposed as a `just` subcommand rather than mediated through an agent skill.
+    rationale: |-
+      Christopher: wikisplain was originally designed as an authoring skill for Knowledge
+      Management, but was implemented as a `just` subcommand. Looking at the `just` recipes,
+      there is strong cohesion across verification gates, assertion compilers, and status
+      inspectors—except for wikisplain. Splitting wikisplain out of `just` into its own
+      skill restores plane cohesion and resolves the tension in Challenge #485 by adopting
+      the flags-and-identifiers contract for the verb surface.

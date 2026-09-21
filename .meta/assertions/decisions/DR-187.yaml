@@ -69,7 +69,8 @@ decisions:
       - >-
         .claude/skills/wikisplain/SKILL.md is rendered from structure assertions.
       - >-
-        justfile provides the `just wikisplain` recipe.
+        justfile originally provided the `just wikisplain` recipe, superseded
+        by solorepo's DR-259 which scoped authoring to the `/wikisplain` skill.
       - >-
         SPECIALIZE.md copies .meta/wikisplain.py forward into specialized portfolios.
       - >-

@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/485
+    name: The verb surface has an undeclared argument-passing contract, and nothing holds it
+    challenge_type: ARCHITECTURE
+    description: >-
+      Across the root justfile on trunk, eleven recipes took *args and interpolated it unquoted,
+      leaving the argument-passing contract undeclared. Settling the verb surface
+      contract as flags and identifiers only, moving authoring workflows like
+      wikisplain out of justfile into dedicated agent skills calling tools directly.

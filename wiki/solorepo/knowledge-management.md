@@ -48,8 +48,8 @@ routing tree:
    Decision Record in `.meta/assertions/decisions/DR-nnn.yaml` (**Explanation**).
 4. **Incident Narrative or Defect History?** Append to `<module>.history.md`
    with verifiable Evidence (**Explanation**).
-5. **Enduring Domain Concept or Subsystem Overview?** Scaffold via `just wikisplain`
-   and author under `wiki/<context>/<concept>.md` (**Explanation**).
+5. **Enduring Domain Concept or Subsystem Overview?** Scaffold via `/wikisplain`
+   (`.meta/wikisplain.py`) and author under `wiki/<context>/<concept>.md` (**Explanation**).
 6. **Unrouted Residue?** Only transient reviewer handoff notes and links to
    surviving review threads or promoted Issues belong in the pull request body
    (solorepo's Article 15). A pull request description is not a documentation

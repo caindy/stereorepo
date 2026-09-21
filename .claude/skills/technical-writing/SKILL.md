@@ -51,7 +51,7 @@ Before typing prose for a change, execute this routing tree to select the contai
 2. **Public function, class, schema, or API fact:** item docstring or LinkML schema (**Reference**, solorepo's DR-171, solorepo's DR-175).
 3. **Settled architectural choice between alternatives:** Decision Record in `.meta/assertions/decisions/DR-nnn.yaml` (**Explanation**).
 4. **Bug, incident, or regression history:** `<module>.history.md` with Evidence (**Explanation**).
-5. **Enduring domain concept or subsystem overview:** `wiki/<context>/<concept>.md` via `just wikisplain` (**Explanation**, solorepo's DR-184, solorepo's DR-190).
+5. **Enduring domain concept or subsystem overview:** `wiki/<context>/<concept>.md` via `/wikisplain` (`python3 .meta/wikisplain.py`) (**Explanation**, solorepo's DR-184, solorepo's DR-190).
 6. **Unrouted residue:** Pull request descriptions hold only transient reviewer handoff notes and links to surviving review threads or promoted Issues (solorepo's Article 15). Never summarize diffs.
 
 ## Container Subordination
