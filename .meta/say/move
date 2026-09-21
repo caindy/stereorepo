@@ -37,6 +37,9 @@ LOOP_LEVELS = ("easy", "medium")
 # hold and nobody else can see.
 RUN_LEVEL = "human"
 
+STALL_CHANGES_REQUESTED_THRESHOLD = 3
+"""Number of changes-requested review rounds before an autonomous loop PR is evicted to draft (solorepo's DR-258)."""
+
 # The line both Issue forms open with, and an Issue reference in either of the
 # two spellings GitHub renders: bare, and qualified by `owner/repo`.
 WAITS_LINE = re.compile(r"^\*\*Waits on\.\*\*(?P<text>.*)$", re.M)
@@ -1155,7 +1158,7 @@ def behind_by(pull: Pull) -> int:
 
 
 ADVANCE = ("number,title,state,baseRefName,headRefName,headRefOid,autoMergeRequest,"
-           "reviewRequests,mergeable,latestReviews,updatedAt")
+           "reviewRequests,mergeable,latestReviews,updatedAt,isDraft")
 
 
 def head_now(number: str | int) -> tuple[Pull, int]:
@@ -2294,8 +2297,10 @@ def request_review(pr: str | int, to: str) -> None:
     Signals a role handoff by requesting review on GitHub. If a review request
     is already pending for the designated login, it is withdrawn and re-requested
     to trigger notification events. Polls branch mergeability and refuses review
-    requests if the branch is conflicting (solorepo's DR-145). Reads back requested
-    reviewers to verify the assignment took effect.
+    requests if the branch is conflicting (solorepo's DR-145). Restores an autonomous
+    loop pull request from draft to ready once open status and clean mergeability
+    are confirmed (solorepo's DR-258). Reads back requested reviewers to verify
+    the assignment took effect.
 
     Parameters:
         pr (int or str): Pull request number.
@@ -2318,6 +2323,12 @@ def request_review(pr: str | int, to: str) -> None:
                  "review.yml runs on pull_request, and so a review requested on it would "
                  f"create no run and be answered by nobody. Rebase {pull['headRefName']} "
                  f"onto {pull['baseRefName']}, push, and the request can be made")
+    if pull.get("isDraft") and LOOPS_BRANCH.match(pull.get("headRefName") or ""):
+        try:
+            channel.gh("pr", "ready", str(pr), parse=False)
+            print(f"restored #{pr} from draft to ready for review")
+        except (Exception, SystemExit) as exc:
+            print(f"warning: could not mark #{pr} ready for review: {exc}", file=sys.stderr)
 
     def asked() -> list[str]:
         return [r.get("login") for r
@@ -2447,7 +2458,7 @@ def mint() -> int:
 
 MERGE_MANAGER_FIELDS = (
     "number,title,headRefName,baseRefName,headRefOid,isDraft,mergeable,"
-    "mergeStateStatus,latestReviews,reviewRequests,closingIssuesReferences,"
+    "mergeStateStatus,latestReviews,reviews,reviewRequests,closingIssuesReferences,"
     "additions,deletions,statusCheckRollup,body"
 )
 
@@ -2521,12 +2532,11 @@ def check_green(pull: Pull) -> tuple[bool, str]:
 
 def check_reviewer_approval(pull: Pull, reviewer_login: str) -> tuple[bool, str]:
     """Whether the reviewer account has approved."""
+    if check_pr.is_review_requested(pull, reviewer_login):
+        return False, f"waiting on review from {reviewer_login}"
     reviews = pull.get("latestReviews") or pull.get("reviews") or []
     matching = [r for r in reviews if (r.get("author") or {}).get("login") == reviewer_login]
     if not matching:
-        reqs = [r.get("login") if isinstance(r, dict) else r for r in pull.get("reviewRequests") or []]
-        if reviewer_login in reqs:
-            return False, f"waiting on review from {reviewer_login}"
         return False, f"no review from {reviewer_login}"
     latest = matching[-1]
     state = latest.get("state")
@@ -2783,35 +2793,189 @@ def report_refusals(pulls: list[Pull],
             print(f"  #{num} ({pull.get('title', '')[:50]}): {'; '.join(reasons)}")
 
 
-def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
-    """Evaluate open pull requests against semaphores, rank eligible candidates
-    by leverage, assert choices, deferrals, and semaphore refusals out loud, and
-    squash-merge the top candidate (solorepo's DR-161).
+def pr_changed_files(pull: Pull, owner: str, name: str,
+                     cache: dict[int, set[str] | None]) -> set[str] | None:
+    """The set of modified filenames for a pull request, cached by number (solorepo's DR-258).
 
-    Idle with nothing eligible, it hands the open pull requests to
-    `advance_stranded`, so an approved one that has merely fallen behind trunk
-    is rebased here rather than waiting for a push to `main` that may never come.
+    Cached by pull request number across a single merge manager pass; the cache
+    assumes branch head commits remain stable during that evaluation cycle.
 
     Parameters:
-        dry_run (bool): If True, name the winner and merge nothing.
-        stranded (bool): If False, leave a stranded pull request alone. The
-            caller passes False on the one event `advance.yml` also runs on, a
-            push to `main`: the two workflows are in different concurrency
-            groups, so nothing holds them apart, and `update-branch` returns
-            before GitHub has performed the rebase, so both would issue one for
-            the same branch.
+        pull (dict): The pull request dictionary.
+        owner (str): Repository owner.
+        name (str): Repository name.
+        cache (dict): Cache dictionary mapping pull request number to set of filenames or None.
+
+    Returns:
+        set[str] or None: Set of changed file paths, or None if files could not be read.
     """
+    num = pull["number"]
+    if num in cache:
+        return cache[num]
+    try:
+        files = changed_files(pull, owner, name)
+    except (Exception, SystemExit):
+        cache[num] = None
+        return None
+    if files is None:
+        cache[num] = None
+        return None
+    paths: set[str] = {str(f["filename"]) for f in files if f.get("filename")}
+    cache[num] = paths
+    return paths
+
+
+def has_active_reservation(pull: Pull, reviewer_login: str) -> bool:
+    """Whether pull holds an active review or check reservation window (solorepo's DR-258).
+
+    Parameters:
+        pull (dict): The pull request metadata dictionary.
+        reviewer_login (str): Expected login of the reviewer Role.
+
+    Returns:
+        bool: True if review is requested or status checks are actively in progress.
+    """
+    if pull.get("isDraft"):
+        return False
+    requests = pull.get("reviewRequests") or []
+    if any(r.get("login") == reviewer_login or r.get("name") == reviewer_login for r in requests):
+        return True
+    contexts = deduplicate_checks(pull.get("statusCheckRollup") or [])
+    if not contexts:
+        return False
+    green_states = set(check_pr.GREEN)
+    has_in_flight = False
+    for c in contexts:
+        state = (c.get("conclusion") or c.get("state") or c.get("status") or "").upper()
+        if state in ("PENDING", "IN_PROGRESS", "QUEUED"):
+            has_in_flight = True
+        elif state not in green_states:
+            return False
+    return has_in_flight
+
+
+def is_stalled_autonomous_pr(pull: Pull, reviewer_login: str) -> bool:
+    """Whether an autonomous loop pull request has stalled beyond recovery thresholds (solorepo's DR-258).
+
+    Parameters:
+        pull (dict): The pull request metadata dictionary.
+        reviewer_login (str): Expected login of the reviewer Role.
+
+    Returns:
+        bool: True if loop PR has exceeded changes-requested or rebase failure thresholds.
+    """
+    head = pull.get("headRefName") or ""
+    if not LOOPS_BRANCH.match(head):
+        return False
+    if pull.get("mergeable") == "CONFLICTING" and _find_advance_notice_comment(pull["number"]) is not None:
+        return True
+    approved, _ = check_reviewer_approval(pull, reviewer_login)
+    if approved:
+        return False
+    reviews = pull.get("reviews") or pull.get("latestReviews") or []
+    cr_reviews = [
+        r for r in reviews
+        if (r.get("author") or {}).get("login") == reviewer_login and r.get("state") == "CHANGES_REQUESTED"
+    ]
+    if len(cr_reviews) < STALL_CHANGES_REQUESTED_THRESHOLD:
+        return False
+    last_cr = cr_reviews[-1]
+    last_cr_oid = (last_cr.get("commit") or {}).get("oid")
+    head_oid = pull.get("headRefOid")
+    return not (head_oid and last_cr_oid and head_oid != last_cr_oid)
+
+
+def evict_stalled_autonomous_pr(pull: Pull, reviewer_login: str = "reviewer", dry_run: bool = False) -> bool:
+    """Demote stalled autonomous loop PR to draft to prevent head-of-line blocking (solorepo's DR-258).
+
+    Parameters:
+        pull (dict): The pull request metadata dictionary.
+        reviewer_login (str): Expected login of the reviewer Role.
+        dry_run (bool): If True, log action without mutating GitHub state.
+
+    Returns:
+        bool: True if the pull request was demoted (or would be in dry run).
+    """
+    if not is_stalled_autonomous_pr(pull, reviewer_login):
+        return False
+    if dry_run:
+        print(f"merge-manager: dry run — would evict stalled autonomous PR #{pull['number']} to draft")
+        return True
+    pull["isDraft"] = True
+    try:
+        channel.gh("pr", "ready", str(pull["number"]), "--undo", parse=False)
+        print(f"merge-manager: evicted stalled autonomous PR #{pull['number']} to draft")
+        return True
+    except (Exception, SystemExit) as exc:
+        print(f"warning: could not demote PR #{pull['number']} to draft: {exc}", file=sys.stderr)
+        return False
+
+
+def _restore_draft_if_ready(pull: Pull, reviewer_login: str, dry_run: bool) -> None:
+    """Restore approved and green loop pull request from draft to ready (solorepo's DR-258)."""
+    if not (pull.get("isDraft") and LOOPS_BRANCH.match(pull.get("headRefName") or "")):
+        return
+    approved, _ = check_reviewer_approval(pull, reviewer_login)
+    if not approved:
+        return
+    ok_green, _ = check_green(pull)
+    if ok_green and pull.get("mergeable") != "CONFLICTING":
+        if not dry_run:
+            try:
+                channel.gh("pr", "ready", str(pull["number"]), parse=False)
+                pull["isDraft"] = False
+                print(f"merge-manager: restored answered and green PR #{pull['number']} from draft")
+            except (Exception, SystemExit) as exc:
+                print(f"warning: could not mark PR #{pull['number']} ready: {exc}", file=sys.stderr)
+        else:
+            print(f"merge-manager: dry run — would restore PR #{pull['number']} from draft")
+
+
+def repo_context() -> tuple[str, str, str]:
+    """Resolve repository owner, name, and default reviewer login."""
     try:
         repo = channel.repo()
         owner, name = repo.split("/")
-        reviewer_login = f"{owner}-{name}-reviewer"
+        return owner, name, f"{owner}-{name}-reviewer"
     except Exception:
-        owner, name, reviewer_login = "owner", "repo", "reviewer"
+        return "owner", "repo", "reviewer"
 
-    pulls = channel.gh("pr", "list", "--state", "open", "--limit", "100", "--json", MERGE_MANAGER_FIELDS)
-    if not pulls:
-        print("merge-manager: idle — no open pull requests")
-        return
+
+def open_issues() -> list[dict[str, Any]]:
+    """Query open repository issues for blocker calculation, failing open on errors."""
+    try:
+        return cast(list[dict[str, Any]], channel.gh(
+            "issue", "list", "--state", "open", "--limit", "100",
+            "--json", "number,title,body,blockedBy",
+        ))
+    except Exception:
+        return []
+
+
+def evaluate_open_pulls(
+    pulls: Sequence[Pull],
+    reviewer_login: str,
+    owner: str,
+    name: str,
+    dry_run: bool = False,
+) -> tuple[list[Pull], dict[int, tuple[bool, list[str]]]]:
+    """Evaluate open PRs against semaphores after evicting stalled loop branches.
+
+    Parameters:
+        pulls (list): All open pull requests in the repository.
+        reviewer_login (str): Login of the reviewer Role.
+        owner (str): Repository owner.
+        name (str): Repository name.
+        dry_run (bool): If True, do not mutate pull request state on GitHub.
+
+    Returns:
+        tuple[list[Pull], dict[int, tuple[bool, list[str]]]]: Pair of eligible PRs and evaluations.
+    """
+    for pull in pulls:
+        if not pull.get("isDraft"):
+            evict_stalled_autonomous_pr(pull, reviewer_login, dry_run=dry_run)
+        else:
+            _restore_draft_if_ready(pull, reviewer_login, dry_run=dry_run)
 
     evaluations: dict[int, tuple[bool, list[str]]] = {}
     eligible: list[Pull] = []
@@ -2821,22 +2985,82 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
         evaluations[num] = (ok, reasons)
         if ok:
             eligible.append(pull)
+    return eligible, evaluations
 
-    if not eligible:
-        print(f"merge-manager: idle — 0 of {len(pulls)} open pull request(s) eligible")
-        report_refusals(pulls, evaluations)
-        if stranded:
-            advance_stranded(pulls, evaluations, owner, name, dry_run)
-        return
 
-    try:
-        issues = channel.gh("issue", "list", "--state", "open", "--limit", "100",
-                            "--json", "number,title,body,blockedBy")
-    except Exception:
-        issues = []
+def partition_contention(
+    eligible: list[Pull],
+    pulls: Sequence[Pull],
+    reviewer_login: str,
+    owner: str,
+    name: str,
+) -> tuple[list[Pull], list[tuple[Pull, list[str]]]]:
+    """Separate eligible candidates into uncontended and contention-deferred sets (solorepo's DR-258).
 
+    Parameters:
+        eligible (list): Candidate pull requests clearing all semaphores.
+        pulls (list): All open pull requests in the repository.
+        reviewer_login (str): Expected login of the reviewer Role.
+        owner (str): Repository owner.
+        name (str): Repository name.
+
+    Returns:
+        tuple[list[Pull], list[tuple[Pull, list[str]]]]: Uncontended PRs and contention deferred pairs.
+    """
+    file_cache: dict[int, set[str] | None] = {}
+    reserving_older_prs = [
+        p for p in pulls
+        if not p.get("isDraft") and has_active_reservation(p, reviewer_login)
+    ]
+
+    contention_deferred: list[tuple[Pull, list[str]]] = []
+    contention_nums: set[int] = set()
+    for cand in eligible:
+        cand_num = cand["number"]
+        older_reserving = [p for p in reserving_older_prs if p["number"] < cand_num]
+        if not older_reserving:
+            continue
+        cand_files = pr_changed_files(cand, owner, name, file_cache)
+        if cand_files is None:
+            contention_deferred.append((cand, ["cannot read candidate file list (over page limit or API unavailable)"]))
+            contention_nums.add(cand_num)
+            continue
+        conflicts = []
+        for older in older_reserving:
+            older_files = pr_changed_files(older, owner, name, file_cache)
+            if older_files is None:
+                conflicts.append(f"held on older #{older['number']} in review reservation: unreadable file list (maximal contention assumed)")
+            else:
+                overlap = cand_files & older_files
+                if overlap:
+                    conflicts.append(f"shares {len(overlap)} file(s) with older #{older['number']} in review reservation")
+        if conflicts:
+            contention_deferred.append((cand, conflicts))
+            contention_nums.add(cand_num)
+        else:
+            print(f"merge-manager: disjoint bypass — #{cand_num} has no file contention with older in-flight PRs")
+
+    uncontended = [cand for cand in eligible if cand["number"] not in contention_nums]
+    return uncontended, contention_deferred
+
+
+def rank_by_leverage(
+    uncontended: list[Pull],
+    pulls: Sequence[Pull],
+    issues: list[dict[str, Any]],
+) -> tuple[Pull, list[Pull], dict[int, dict[str, Any]]]:
+    """Rank uncontended candidates by leverage metrics (solorepo's DR-161, solorepo's DR-258).
+
+    Parameters:
+        uncontended (list): Uncontended candidate pull requests.
+        pulls (list): All open pull requests in the repository.
+        issues (list): Open issues for blocker calculations.
+
+    Returns:
+        tuple: Top candidate, remaining candidates, and computed metrics mapping.
+    """
     metrics: dict[int, dict[str, Any]] = {}
-    for pull in eligible:
+    for pull in uncontended:
         num = pull["number"]
         is_base = any(other.get("baseRefName") == pull.get("headRefName")
                       for other in pulls if other.get("number") != num)
@@ -2856,18 +3080,90 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
         m = metrics[pull["number"]]
         return (1 if m["is_base"] else 0, m["unblocks"], m["churn"], -pull["number"])
 
-    eligible.sort(key=leverage_key, reverse=True)
-    winner = eligible[0]
-    deferred = eligible[1:]
+    sorted_candidates = sorted(uncontended, key=leverage_key, reverse=True)
+    return sorted_candidates[0], sorted_candidates[1:], metrics
 
+
+def report_contention_deferred(contention_deferred: list[tuple[Pull, list[str]]]) -> None:
+    """Print deferred candidates held on review reservation.
+
+    Parameters:
+        contention_deferred (list): Pairs of candidate pull request and refusal reasons.
+    """
+    for cand_pull, reasons in contention_deferred:
+        print(f"deferred: #{cand_pull['number']} — {cand_pull.get('title', '')[:50]} (contention hold: {'; '.join(reasons)})")
+
+
+def report_evaluation_choices(
+    winner: Pull,
+    deferred: list[Pull],
+    metrics: dict[int, dict[str, Any]],
+    contention_deferred: list[tuple[Pull, list[str]]],
+) -> None:
+    """Print evaluation outcomes for winner, deferred candidates, and contention holds.
+
+    Parameters:
+        winner (dict): Selected top-ranked candidate.
+        deferred (list): Lower-leverage candidates.
+        metrics (dict): Computed leverage metrics per pull request.
+        contention_deferred (list): Candidate pairs held on contention.
+    """
     wm = metrics[winner["number"]]
-    print(f"merge-manager: evaluated {len(eligible)} eligible candidate(s)")
+    print(f"merge-manager: evaluated {1 + len(deferred)} uncontended candidate(s)")
     print(f"chosen: #{winner['number']} — {winner['title']} "
           f"(unblocks: {wm['unblocks']}, base: {wm['is_base']}, churn: +{winner.get('additions', 0)}/-{winner.get('deletions', 0)})")
     for d in deferred:
         dm = metrics[d["number"]]
         print(f"deferred: #{d['number']} — {d['title']} "
               f"(lower leverage: unblocks: {dm['unblocks']}, base: {dm['is_base']}, churn: +{d.get('additions', 0)}/-{d.get('deletions', 0)})")
+    report_contention_deferred(contention_deferred)
+
+
+def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
+    """Evaluate open pull requests against semaphores, rank eligible candidates
+    by leverage, assert choices, deferrals, and semaphore refusals out loud, and
+    squash-merge the top candidate (solorepo's DR-161, solorepo's DR-258).
+
+    Idle with nothing eligible, it hands the open pull requests to
+    `advance_stranded`, so an approved one that has merely fallen behind trunk
+    is rebased here rather than waiting for a push to `main` that may never come.
+
+    Parameters:
+        dry_run (bool): If True, name the winner and merge nothing.
+        stranded (bool): If False, leave a stranded pull request alone. The
+            caller passes False on the one event `advance.yml` also runs on, a
+            push to `main`: the two workflows are in different concurrency
+            groups, so nothing holds them apart, and `update-branch` returns
+            before GitHub has performed the rebase, so both would issue one for
+            the same branch.
+    """
+    owner, name, reviewer_login = repo_context()
+    pulls = channel.gh("pr", "list", "--state", "open", "--limit", "100", "--json", MERGE_MANAGER_FIELDS)
+    if not pulls:
+        print("merge-manager: idle — no open pull requests")
+        return
+
+    eligible, evaluations = evaluate_open_pulls(pulls, reviewer_login, owner, name, dry_run=dry_run)
+    if not eligible:
+        print(f"merge-manager: idle — 0 of {len(pulls)} open pull request(s) eligible")
+        report_refusals(pulls, evaluations)
+        if stranded:
+            advance_stranded(pulls, evaluations, owner, name, dry_run)
+        return
+
+    uncontended, contention_deferred = partition_contention(
+        eligible, pulls, reviewer_login, owner, name
+    )
+    if not uncontended:
+        print(f"merge-manager: idle — 0 of {len(eligible)} eligible candidate(s) uncontended (held on review reservation)")
+        report_contention_deferred(contention_deferred)
+        report_refusals(pulls, evaluations)
+        if stranded:
+            advance_stranded(pulls, evaluations, owner, name, dry_run)
+        return
+
+    winner, deferred, metrics = rank_by_leverage(uncontended, pulls, open_issues())
+    report_evaluation_choices(winner, deferred, metrics, contention_deferred)
     report_refusals(pulls, evaluations)
 
     if dry_run:

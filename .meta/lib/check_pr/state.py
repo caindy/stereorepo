@@ -255,7 +255,7 @@ def classify_pr(
     if verdict == "CHANGES_REQUESTED" and (unaddressed_owed or not review_requested):
         return PullRequestState.CHANGES_REQUESTED
 
-    if verdict == "APPROVED":
+    if verdict == "APPROVED" and not review_requested:
         st = _approved_state(bool(unaddressed_owed), bool(unaddressed_parked), all_green, mergeable)
         if st is not None:
             return st

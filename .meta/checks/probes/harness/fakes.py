@@ -43,6 +43,8 @@ class FakeIssue:
             raise subprocess.CalledProcessError(1, ["gh", *list(args)], output="", stderr="mock API error")
         if args[:2] == ("repo", "view"):
             return {"nameWithOwner": "o/r"}
+        if args[:2] == ("pr", "list"):
+            return []
         if args[:2] == ("issue", "view"):
             return self.view(args)
         if args[:2] == ("issue", "edit"):

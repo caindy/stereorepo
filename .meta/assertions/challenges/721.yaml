@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/721
+    name: "Serialize merge queue with disjoint file bypass and draft eviction for stalled branches"
+    challenge_type: FEATURE
+    description: >-
+      DR-161 established leverage ranking among ready PRs but evaluated readiness
+      at an instant in time. Under multi-PR concurrency on shared files, opportunistic
+      merges repeatedly conflicted in-flight branches, producing the rebase churn
+      and review starvation documented in solorepo's #652. DR-258 introduces
+      contention-aware merge queueing with disjoint file bypass, active review
+      reservations, and stall eviction.

@@ -1,0 +1,98 @@
+decisions:
+  - id: work:decision/258
+    name: "DR-258 · Contention-aware merge queueing with disjoint file bypass and active review protection"
+    challenge: work:challenge/721
+    status: ADOPTED
+    applies:
+      - work:article/15
+      - work:article/21
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-next
+      - work:artifact/meta-checks-probes-loops-merge-manager
+    context: >-
+      DR-161 established leverage-based ordering for candidate selection in
+      `merge_manager` (unblocks count, stack bases, and churn), explicitly
+      rejecting timestamp/completion ordering to protect high-drift architectural
+      work from starvation. However, candidate qualification remained opportunistic,
+      evaluating PRs against semaphores at the instant `merge_manager` ran.
+      Under multi-PR concurrency where branches touched shared core files
+      (`.meta/assertions/imported/disciplines.yaml`, `.meta/say/move`, or compiled
+      skills), newer PRs reaching green status faster repeatedly leapfrogged older
+      branches actively undergoing review passes or final status checks. Each squash
+      merge advanced `main`, invalidating the older PR's synthetic merge ref
+      mid-flight and triggering rebase cycles (~13 minutes), invalidated review
+      passes, and review starvation (solorepo's #652). Challenge #721 demands
+      serializing the merge queue with contention-aware ordering, disjoint file bypass,
+      review reservation windows, and stall eviction.
+    alternatives:
+      - name: Replace leverage ranking with global FIFO queueing
+        chosen: false
+        reason: >-
+          Re-creates the failure mode DR-161 explicitly rejected: pure FIFO queueing
+          permits low-churn cleanups and trivial edits to starve high-drift architectural
+          work and ignores the blocker dependency graph.
+      - name: Unilaterally demote all stalled pull requests to draft status
+        chosen: false
+        reason: >-
+          Unilaterally demoting interactive session or human pull requests to draft
+          status disrupts developer workflow and violates the pull request state
+          machine invariants established under DR-248.
+      - name: Hard admission control and candidate suppression in just next
+        chosen: false
+        reason: >-
+          Violates the foundational Local Operator Plane invariant that next.py
+          reports status without deciding what to work on, leaving Challenge
+          selection to the solo (DR-106, DR-114).
+      - name: Contention-aware queueing with disjoint file bypass and active review reservations
+        chosen: true
+        reason: >-
+          Synthesizes DR-161 leverage ranking with head-of-line protection: candidate
+          PR B is blocked from leapfrogging an older in-flight PR A if they share
+          modified files (`files(A) ∩ files(B) ≠ ∅`). Disjoint pull requests
+          (`files(A) ∩ files(B) == ∅`) bypass in-flight older branches cleanly because
+          non-overlapping changes auto-rebase without conflicts. Establishes an
+          active review reservation window protecting branches in review or testing
+          from mid-flight ref invalidation. Partitions stall eviction by branch origin
+          (draft demotion for autonomous loops, in-place notices for session branches).
+          Surfaces queue congestion warnings in just next while controlling concurrency
+          directly at the merge queue.
+    consequences:
+      - >-
+        `.meta/say/move` computes modified file intersections across open non-draft
+        pull requests during `merge_manager` evaluation.
+      - >-
+        A candidate pull request sharing files with an older pull request currently
+        under active review or running status checks is deferred, preserving the
+        older pull request's synthetic merge ref.
+      - >-
+        A candidate pull request whose changed file set is disjoint from all older
+        in-flight pull requests is permitted to bypass the queue and land immediately.
+      - >-
+        Autonomous loop branches exceeding rebase failure or changes-requested thresholds
+        are demoted to draft status to prevent head-of-line blocking; session branches
+        receive in-place notice escalation under DR-255 without state corruption.
+      - >-
+        `next.py` surfaces repository WIP congestion warnings in the Local Operator
+        Plane without filtering or concealing ripe Challenges.
+      - >-
+        Closes #721.
+    falsifier: >-
+      A merge manager cycle where a newer pull request merges onto trunk while an
+      older pull request sharing modified files is actively undergoing a reviewer
+      pass, invalidating the older pull request's merge ref mid-flight; or an
+      autonomous branch stalling on rebase conflicts indefinitely blocking disjoint
+      candidates.
+    rationale: |-
+      Under Little's Law, pipeline stability requires balancing arrival rate with
+      cycle time and bounding in-flight concurrency. When changes touch contested
+      files, opportunistic finish-line merges maximize rework by perpetually
+      invalidating concurrent branches.
+
+      Contention-aware queueing eliminates this thrash at the root. Requiring disjoint
+      diff sets (`files(A) ∩ files(B) == ∅`) for line-skipping guarantees that any candidate
+      landing ahead of an in-flight branch cannot produce merge conflicts or semantic
+      invalidation. Meanwhile, holding merges during active review reservation windows
+      ensures reviewer passes evaluate stable heads rather than ephemeral refs that vanish
+      before the verdict is recorded.

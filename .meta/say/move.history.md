@@ -409,3 +409,19 @@ Plane (`just sweep` and `just next`) detects and surfaces standing advance notic
 prominently during local review.
 
 Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
+
+### Opportunistic finish-line merge races invalidated in-flight pull requests on contested files
+
+Opportunistic finish-line merges repeatedly invalidated in-flight pull requests on
+contested files (solorepo's #652, solorepo's #721). When newer pull requests landed on
+trunk ahead of older active branches sharing modified paths, the synthetic merge ref
+of the in-flight pull requests was broken mid-cycle, forcing repeated rebases, CI
+churn, and review starvation (solorepo's DR-258). Established: `merge_manager`
+implements contention-aware queueing. An older pull request actively undergoing review
+or status checks holds an active reservation window. Candidate pull requests sharing
+modified files are deferred behind the active reservation, while disjoint pull
+requests (`files(A) ∩ files(B) == ∅`) bypass the queue cleanly without conflict risk.
+Stalled autonomous loop pull requests are demoted to draft to prevent head-of-line
+blocking, and queue congestion is surfaced in `just next`.
+
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`

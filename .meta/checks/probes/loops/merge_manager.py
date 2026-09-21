@@ -51,7 +51,11 @@ def merge_manager_probes() -> list[str]:
     move = programs["move"]
     return (_semaphores(move) + _rerun_reads_green(move) + _threads_fail_closed(channel, move)
             + _eligible(channel, move) + _decisions_in_force(channel, move)
-            + _end_to_end(channel, move) + _blockers(move))
+            + _end_to_end(channel, move) + _blockers(move)
+            + _check_contention_hold(channel, move)
+            + _check_disjoint_bypass(channel, move)
+            + _check_reservation_semantics(move)
+            + _stall_eviction(channel, move))
 
 
 REVIEWER = "owner-repo-reviewer"
@@ -346,3 +350,571 @@ def _blockers(move: Any) -> list[str]:
     if screen.waits_on(text_blocker) != f"Decision DR-{'041'}":
         problems.append(f"next.waits_on did not return non-issue blocker string: {screen.waits_on(text_blocker)}")
     return problems
+
+
+def _check_contention_overlap(channel: Any, move: Any) -> list[str]:
+    """Candidates sharing files with older reserving PRs are deferred under contention hold (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    pull_20 = {
+        "number": 20, "title": "older in-review PR", "headRefName": "feat-20", "baseRefName": "main",
+        "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+        "latestReviews": [], "reviewRequests": [{"login": REVIEWER}], "reviewThreads": [],
+        "body": "", "additions": 10, "deletions": 5,
+    }
+    pull_21 = {
+        "number": 21, "title": "contended newer PR", "headRefName": "feat-21", "baseRefName": "main",
+        "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+        "latestReviews": APPROVED, "reviewThreads": [{"isResolved": True}],
+        "body": "", "additions": 10, "deletions": 5,
+    }
+    merged_calls: list[str] = []
+
+    def gh_contention(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("repo", "view") or args[0] == "repo":
+            return {"nameWithOwner": "owner/repo", "deleteBranchOnMerge": True}
+        if args[:2] == ("pr", "list"):
+            return [pull_20, pull_21]
+        if args[:2] == ("issue", "list"):
+            return []
+        if args[:2] in (("pr", "merge"), ("stack", "merge")):
+            merged_calls.append(str(args[2]))
+            return {}
+        if args[0] == "api" and "/files?per_page=" in str(args[-1]):
+            return [{"filename": "shared.py"}]
+        return {}
+
+    with stood_in(channel, gh=gh_contention, repo=lambda: "owner/repo"):
+        out = outcome(lambda: move.merge_manager(dry_run=True)).out
+        if "contention hold" not in out or f"shares 1 file(s) with older #{'20'}" not in out:
+            problems.append(f"merge manager: expected PR 21 to be held on contention, got:\n{out}")
+        if merged_calls:
+            problems.append(f"merge manager: attempted merge during contention hold: {merged_calls}")
+    return problems
+
+
+def _check_contention_unreadable(channel: Any, move: Any) -> list[str]:
+    """Unreadable diffs assume maximal contention and defer candidates (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    pull_20 = {
+        "number": 20, "title": "older in-review PR", "headRefName": "feat-20", "baseRefName": "main",
+        "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+        "latestReviews": [], "reviewRequests": [{"login": REVIEWER}], "reviewThreads": [],
+        "body": "", "additions": 10, "deletions": 5,
+    }
+    pull_21 = {
+        "number": 21, "title": "contended newer PR", "headRefName": "feat-21", "baseRefName": "main",
+        "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+        "latestReviews": APPROVED, "reviewThreads": [{"isResolved": True}],
+        "body": "", "additions": 10, "deletions": 5,
+    }
+
+    def gh_unreadable(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("repo", "view") or args[0] == "repo":
+            return {"nameWithOwner": "owner/repo", "deleteBranchOnMerge": True}
+        if args[:2] == ("pr", "list"):
+            return [pull_20, pull_21]
+        if args[:2] == ("issue", "list"):
+            return []
+        if args[0] == "api" and "/files?per_page=" in str(args[-1]):
+            url = str(args[-1])
+            if f"/pulls/{'21'}/" in url:
+                return [{"filename": "cand.py"}]
+            return [{"filename": f"file_{i}.py"} for i in range(100)]
+        return {}
+
+    with stood_in(channel, gh=gh_unreadable, repo=lambda: "owner/repo"):
+        out_unreadable = outcome(lambda: move.merge_manager(dry_run=True)).out
+        if "contention hold" not in out_unreadable or "unreadable file list (maximal contention assumed)" not in out_unreadable:
+            problems.append(f"merge manager: expected PR 21 to be held on unreadable diff, got:\n{out_unreadable}")
+
+    cache: dict[int, set[str] | None] = {21: None}
+    cand_files = move.pr_changed_files(pull_21, "owner", "repo", cache)
+    if cand_files is not None:
+        problems.append("pr_changed_files: expected None when cached as unreadable")
+
+    return problems
+
+
+def _check_contention_hold(channel: Any, move: Any) -> list[str]:
+    """Contention-aware queueing defers candidates sharing files with older reserving PRs (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    return _check_contention_overlap(channel, move) + _check_contention_unreadable(channel, move)
+
+
+def _check_disjoint_bypass(channel: Any, move: Any) -> list[str]:
+    """Disjoint diffs bypass the contention hold and merge cleanly (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    pull_20 = {
+        "number": 20, "title": "older in-review PR", "headRefName": "feat-20", "baseRefName": "main",
+        "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+        "latestReviews": [], "reviewRequests": [{"login": REVIEWER}], "reviewThreads": [],
+        "body": "", "additions": 10, "deletions": 5,
+    }
+    pull_22 = {
+        "number": 22, "title": "disjoint newer PR", "headRefName": "feat-22", "baseRefName": "main",
+        "isDraft": False, "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+        "latestReviews": APPROVED, "reviewThreads": [{"isResolved": True}],
+        "body": "", "additions": 10, "deletions": 5,
+    }
+
+    merged_calls: list[str] = []
+
+    def gh_disjoint(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("repo", "view") or args[0] == "repo":
+            return {"nameWithOwner": "owner/repo", "deleteBranchOnMerge": True}
+        if args[:2] == ("pr", "list"):
+            return [pull_20, pull_22]
+        if args[:2] == ("issue", "list"):
+            return []
+        if args[:2] in (("pr", "merge"), ("stack", "merge")):
+            merged_calls.append(str(args[2]))
+            return {}
+        if args[:2] == ("pr", "view"):
+            state = "MERGED" if merged_calls else "OPEN"
+            return {"number": int(args[2]), "title": "disjoint newer PR", "state": state,
+                    "mergeCommit": {"oid": "sha2222"}, "headRefName": "feat-22"}
+        if args[0] == "api" and "/files?per_page=" in str(args[-1]):
+            url = str(args[-1])
+            if f"/pulls/{'20'}/" in url:
+                return [{"filename": "a.py"}]
+            if f"/pulls/{'22'}/" in url:
+                return [{"filename": "b.py"}]
+            return []
+        return {}
+
+    with stood_in(channel, gh=gh_disjoint, repo=lambda: "owner/repo"):
+        out = outcome(lambda: move.merge_manager(dry_run=False)).out
+        if "disjoint bypass" not in out or f"chosen: #{'22'}" not in out:
+            problems.append(f"merge manager: expected PR 22 to bypass disjointly, got:\n{out}")
+        if merged_calls != ["22"]:
+            problems.append(f"merge manager: expected PR 22 to merge via disjoint bypass, got: {merged_calls}")
+    return problems
+
+
+def _check_reservation_semantics(move: Any) -> list[str]:
+    """Active reservation window semantics for reviews and check rollups (solorepo's DR-258).
+
+    Parameters:
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+
+    draft_pr = {"number": 1, "isDraft": True, "reviewRequests": [{"login": REVIEWER}]}
+    if move.has_active_reservation(draft_pr, REVIEWER):
+        problems.append("has_active_reservation: draft PR should not hold reservation")
+
+    req_pr = {"number": 2, "isDraft": False, "reviewRequests": [{"login": REVIEWER}]}
+    if not move.has_active_reservation(req_pr, REVIEWER):
+        problems.append("has_active_reservation: PR with review request should hold reservation")
+
+    pending_context_pr = {
+        "number": 3, "isDraft": False,
+        "statusCheckRollup": [{"context": "ci/test", "state": "PENDING"}],
+    }
+    if not move.has_active_reservation(pending_context_pr, REVIEWER):
+        problems.append("has_active_reservation: PR with PENDING StatusContext should hold reservation")
+
+    in_progress_pr = {
+        "number": 4, "isDraft": False,
+        "statusCheckRollup": [{"name": "gate", "status": "IN_PROGRESS"}],
+    }
+    if not move.has_active_reservation(in_progress_pr, REVIEWER):
+        problems.append("has_active_reservation: PR with IN_PROGRESS check run should hold reservation")
+
+    success_pr = {
+        "number": 5, "isDraft": False,
+        "statusCheckRollup": [{"context": "ci/test", "state": "SUCCESS"}],
+    }
+    if move.has_active_reservation(success_pr, REVIEWER):
+        problems.append("has_active_reservation: PR with all green status contexts should not hold reservation")
+
+    failed_pr = {
+        "number": 6, "isDraft": False,
+        "statusCheckRollup": [
+            {"context": "ci/test", "state": "PENDING"},
+            {"context": "ci/lint", "state": "FAILURE"},
+        ],
+    }
+    if move.has_active_reservation(failed_pr, REVIEWER):
+        problems.append("has_active_reservation: PR with failed check should forfeit reservation")
+
+    dedup_pr = {
+        "number": 7, "isDraft": False,
+        "statusCheckRollup": [
+            {"name": "gate", "status": "IN_PROGRESS", "startedAt": "2026-09-20T10:00:00Z"},
+            {"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-20T10:05:00Z"},
+        ],
+    }
+    if move.has_active_reservation(dedup_pr, REVIEWER):
+        problems.append("has_active_reservation: deduplicated green rerun should not hold reservation")
+
+    return problems
+
+
+def _check_stall_thresholds(move: Any) -> list[str]:
+    """Loop branches stall only after exceeding thresholds while session branches do not (solorepo's DR-258).
+
+    Parameters:
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    loop_pr_1_cr = {
+        "number": 30, "headRefName": "gemini/issue-30", "isDraft": False,
+        "reviews": [{"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"}],
+        "latestReviews": [], "reviewRequests": [{"login": REVIEWER}],
+        "mergeable": "MERGEABLE",
+    }
+    if move.is_stalled_autonomous_pr(loop_pr_1_cr, REVIEWER):
+        problems.append("is_stalled_autonomous_pr: single CHANGES_REQUESTED should not stall loop PR")
+
+    session_pr_3_cr = {
+        "number": 30, "headRefName": "chris/issue-30", "isDraft": False,
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+        ],
+        "latestReviews": [], "reviewRequests": [{"login": REVIEWER}],
+        "mergeable": "MERGEABLE",
+    }
+    if move.is_stalled_autonomous_pr(session_pr_3_cr, REVIEWER):
+        problems.append("is_stalled_autonomous_pr: non-loops session branch should not be marked stalled")
+
+    stalled_loop_pr = {
+        "number": 30, "headRefName": "gemini/issue-30", "isDraft": False,
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+        ],
+        "latestReviews": [], "reviewRequests": [{"login": REVIEWER}],
+        "mergeable": "MERGEABLE",
+    }
+    if not move.is_stalled_autonomous_pr(stalled_loop_pr, REVIEWER):
+        problems.append("is_stalled_autonomous_pr: 3 CHANGES_REQUESTED reviews should stall loop PR")
+
+    approved_loop_pr = {
+        "number": 33, "headRefName": "claude/issue-33", "isDraft": False,
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "APPROVED"},
+        ],
+        "latestReviews": [{"author": {"login": REVIEWER}, "state": "APPROVED"}],
+        "reviewRequests": [],
+        "mergeable": "MERGEABLE",
+    }
+    if move.is_stalled_autonomous_pr(approved_loop_pr, REVIEWER):
+        problems.append("is_stalled_autonomous_pr: approved loop PR with prior CRs should not be marked stalled")
+
+    answered_loop_pr = {
+        "number": 34, "headRefName": "claude/issue-34", "isDraft": False,
+        "headRefOid": "new-head-oid",
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED", "commit": {"oid": "old-oid-1"}},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED", "commit": {"oid": "old-oid-2"}},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED", "commit": {"oid": "old-oid-3"}},
+        ],
+        "latestReviews": [],
+        "reviewRequests": [{"login": REVIEWER}],
+        "mergeable": "MERGEABLE",
+    }
+    if move.is_stalled_autonomous_pr(answered_loop_pr, REVIEWER):
+        problems.append("is_stalled_autonomous_pr: answered loop PR with new head commit should not be marked stalled")
+
+    re_requested_pr = {
+        "number": 37, "headRefName": "gemini/issue-37", "baseRefName": "main", "isDraft": False,
+        "latestReviews": APPROVED, "reviews": APPROVED, "reviewRequests": [{"login": REVIEWER}],
+        "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+    }
+    ok_app, reason = move.check_reviewer_approval(re_requested_pr, REVIEWER)
+    if ok_app or "waiting on review" not in reason:
+        problems.append(f"check_reviewer_approval: re-requested PR must not authorize approval: {reason}")
+
+    return problems
+
+
+def _check_stall_eviction_dry_run(channel: Any, move: Any) -> list[str]:
+    """Stall eviction demotes to draft in real runs while leaving state untouched in dry runs (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    stalled_loop_pr = {
+        "number": 30, "headRefName": "gemini/issue-30", "isDraft": False,
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+        ],
+        "latestReviews": [], "reviewRequests": [{"login": REVIEWER}],
+        "mergeable": "MERGEABLE",
+    }
+    demoted: list[str] = []
+
+    def gh_evict(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("pr", "ready") and "--undo" in args:
+            demoted.append(str(args[2]))
+            return {}
+        if args[0] == "api" and "/comments" in str(args[-1]):
+            return [{"body": f"{move.ADVANCE_NOTICE_MARKER}\nAdvance notice: branch has merge conflicts"}]
+        return {}
+
+    with stood_in(channel, gh=gh_evict, repo=lambda: "owner/repo"):
+        evicted_dry = move.evict_stalled_autonomous_pr(stalled_loop_pr, reviewer_login=REVIEWER, dry_run=True)
+        if not evicted_dry or demoted:
+            problems.append(f"evict_stalled_autonomous_pr: dry run should not demote PR: {demoted}")
+
+        evicted = move.evict_stalled_autonomous_pr(stalled_loop_pr, reviewer_login=REVIEWER, dry_run=False)
+        if not evicted or demoted != ["30"]:
+            problems.append(f"evict_stalled_autonomous_pr: expected PR 30 demoted, got: {demoted}")
+
+        conflicting_loop_pr = {
+            "number": 32, "headRefName": "gemini/issue-32", "isDraft": False,
+            "mergeable": "CONFLICTING",
+        }
+        if not move.is_stalled_autonomous_pr(conflicting_loop_pr, REVIEWER):
+            problems.append("is_stalled_autonomous_pr: conflicting loop PR with advance notice should stall")
+
+    return problems
+
+
+def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
+    """Draft loop pull requests are restored to ready when approved and green (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    restored: list[str] = []
+
+    def gh_restore(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("pr", "ready") and "--undo" not in args:
+            restored.append(str(args[2]))
+            return {}
+        return {}
+
+    draft_loop_pr = {
+        "number": 31, "headRefName": "gemini/issue-31", "isDraft": True,
+        "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
+    }
+    with stood_in(channel, gh=gh_restore):
+        move.evaluate_open_pulls([draft_loop_pr], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=True)
+        if restored:
+            problems.append(f"evaluate_open_pulls: dry run should not restore draft PR: {restored}")
+
+        move.evaluate_open_pulls([draft_loop_pr], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=False)
+        if restored != ["31"] or draft_loop_pr.get("isDraft") is not False:
+            problems.append(f"evaluate_open_pulls: expected PR 31 restored to ready, got: {restored}")
+
+    def gh_fail_restore(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("pr", "ready") and "--undo" not in args:
+            raise SystemExit("gh: simulated network failure marking ready")
+        return {}
+
+    failing_draft_pr = {
+        "number": 36, "headRefName": "gemini/issue-36", "isDraft": True,
+        "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
+    }
+    with stood_in(channel, gh=gh_fail_restore):
+        move.evaluate_open_pulls([failing_draft_pr], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=False)
+        if failing_draft_pr.get("isDraft") is not True:
+            problems.append("evaluate_open_pulls: failed pr ready call must not clear isDraft in local dictionary")
+
+    return problems
+
+
+def _check_request_review_draft_restoration(channel: Any, move: Any) -> list[str]:
+    """`request_review` restores loop drafts after conflict validation but leaves human drafts untouched (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    ready_calls: list[str] = []
+    pull_data: dict[str, Any] = {}
+
+    def gh_req(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("pr", "view"):
+            if "--json" in args and "reviewRequests" in args:
+                return {"reviewRequests": [{"login": REVIEWER}]}
+            return pull_data
+        if args[:2] == ("pr", "ready"):
+            ready_calls.append(str(args[2]))
+            return {}
+        if args[:2] == ("pr", "edit"):
+            return {}
+        return {}
+
+    pull_data = {
+        "number": 40, "headRefName": "gemini/issue-40", "baseRefName": "main",
+        "state": "OPEN", "isDraft": True, "mergeable": "CONFLICTING",
+    }
+    with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):
+        try:
+            move.request_review(40, "reviewer")
+            problems.append("request_review: expected conflicting branch to raise SystemExit")
+        except SystemExit as exc:
+            if "conflicts with its base" not in str(exc):
+                problems.append(f"request_review: unexpected exit message: {exc}")
+        if ready_calls:
+            problems.append(f"request_review: undrafted conflicting branch before validation: {ready_calls}")
+
+    ready_calls.clear()
+    pull_data = {
+        "number": 41, "headRefName": "session-feat", "baseRefName": "main",
+        "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE",
+    }
+    with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):
+        move.request_review(41, "reviewer")
+        if ready_calls:
+            problems.append(f"request_review: non-loop draft PR should not be undrafted: {ready_calls}")
+
+    ready_calls.clear()
+    pull_data = {
+        "number": 42, "headRefName": "gemini/issue-42", "baseRefName": "main",
+        "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE",
+    }
+    with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):
+        move.request_review(42, "reviewer")
+        if ready_calls != ["42"]:
+            problems.append(f"request_review: expected loop draft PR 42 to be undrafted, got: {ready_calls}")
+
+    return problems
+
+
+def _check_stalled_pr_merge_manager_refusal(channel: Any, move: Any) -> list[str]:
+    """A stalled loop PR is demoted to draft in-cycle and refused by merge_manager without merging (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    stalled_claude_pr = {
+        "number": 35,
+        "title": "stalled autonomous loop PR",
+        "headRefName": "claude/issue-35",
+        "baseRefName": "main",
+        "headRefOid": "sha-stalled-35",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "statusCheckRollup": GREEN,
+        "reviewThreads": [{"isResolved": True}],
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED", "commit": {"oid": "sha-stalled-35"}},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED", "commit": {"oid": "sha-stalled-35"}},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED", "commit": {"oid": "sha-stalled-35"}},
+        ],
+        "latestReviews": [],
+        "reviewRequests": [],
+        "body": "",
+        "additions": 10,
+        "deletions": 5,
+    }
+
+    demoted_calls: list[str] = []
+    merged_calls: list[str] = []
+
+    def gh_stalled(*args: Any, **kwargs: Any) -> Any:
+        cmd = args[:2]
+        if cmd == ("pr", "ready") and "--undo" in args:
+            demoted_calls.append(str(args[2]))
+        elif cmd in (("pr", "merge"), ("stack", "merge")):
+            merged_calls.append(str(args[2]))
+        elif cmd == ("pr", "list"):
+            return [stalled_claude_pr]
+        elif cmd in (("repo", "view"), ("repo",)):
+            return {"nameWithOwner": "owner/repo", "deleteBranchOnMerge": True}
+        elif cmd == ("pr", "view"):
+            return {"number": int(args[2]), "state": "OPEN", "headRefName": "claude/issue-35"}
+        elif args[0] == "api":
+            return [{"filename": "lib/foo.py"}]
+        return {}
+
+    with stood_in(channel, gh=gh_stalled, repo=lambda: "owner/repo"):
+        out = outcome(lambda: move.merge_manager(dry_run=False)).out
+        if demoted_calls != ["35"]:
+            problems.append(f"merge_manager: expected PR 35 demoted to draft on GitHub, got: {demoted_calls}")
+        if stalled_claude_pr.get("isDraft") is not True:
+            problems.append("merge_manager: stalled PR isDraft was not updated to True in local dictionary")
+        if merged_calls:
+            problems.append(f"merge_manager: stalled PR was merged despite draft demotion: {merged_calls}")
+        if f"merging #{'35'}" in out:
+            problems.append(f"merge_manager: log indicates attempt to merge stalled PR:\n{out}")
+
+    return problems
+
+
+def _stall_eviction(channel: Any, move: Any) -> list[str]:
+    """Stalled autonomous PRs are demoted to draft, and answered green PRs restored (solorepo's DR-258).
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    return (
+        _check_stall_thresholds(move)
+        + _check_stall_eviction_dry_run(channel, move)
+        + _check_draft_restoration(channel, move)
+        + _check_request_review_draft_restoration(channel, move)
+        + _check_stalled_pr_merge_manager_refusal(channel, move)
+    )
+

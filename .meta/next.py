@@ -224,6 +224,9 @@ def unlabelled(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 ADVANCE_NOTICE_MARKER = "<!-- solorepo:advance-finding -->"
 """HTML comment marker identifying an in-place advance finding notice (solorepo's DR-255)."""
 
+WIP_LIMIT = 2
+"""Maximum concurrent active non-draft pull requests allowed before intake congestion warning (solorepo's DR-258)."""
+
 
 def pull_requests() -> dict[int, int]:
     """Prints open pull requests and returns mapping of closed issue numbers to PR numbers.
@@ -238,6 +241,9 @@ def pull_requests() -> dict[int, int]:
     print("pull requests — the loops' work in progress, not what is next")
     if not prs:
         print("  none open")
+    active_prs = sum(1 for pr in prs if not pr.get("isDraft"))
+    if active_prs >= WIP_LIMIT:
+        print(f"  queue congestion: {active_prs} active non-draft PR(s) open (threshold {WIP_LIMIT}) (solorepo's DR-258)")
     for pr in prs:
         armed = "armed" if pr.get("autoMergeRequest") else "draft" if pr["isDraft"] else "open"
         state = (pr.get("mergeStateStatus") or "").lower()
