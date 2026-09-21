@@ -168,9 +168,11 @@ class FakeGitHub:
         remain, counted down here rather than in the caller, because what is
         modelled is GitHub answering the same question differently over time.
         The head, the arming and the state are the stale object while `slow`
-        reads remain. And when `pushed` reaches zero on this read, the outside
-        push lands at its end: the head moves, the old commit is kept for the
-        `compare` of its oid, and `behind` becomes `leaves`.
+        reads remain, and the merge commit follows the state shown, since a
+        pull request GitHub still reports as open has none. And when `pushed`
+        reaches zero on this read, the outside push lands at its end: the head
+        moves, the old commit is kept for the `compare` of its oid, and
+        `behind` becomes `leaves`.
         """
         self.reads[str(number)] = self.reads.get(str(number), 0) + 1
         pull = self.pulls[str(number)]
@@ -183,9 +185,10 @@ class FakeGitHub:
         if reads:
             pull["stale"] = (was, reads - 1)
         shown = was if reads else pull
+        merged = shown.get("state") == "MERGED"
         answer = {"number": int(number), "title": f"pull {number}",
                   "state": shown.get("state", "OPEN"),
-                  "mergeCommit": {"oid": f"merged{number}"},
+                  "mergeCommit": {"oid": f"merged{number}"} if merged else None,
                   "baseRefName": pull.get("base", "main"),
                   "headRefName": pull.get("branch", f"claude/issue-{number}"),
                   "headRefOid": shown["head"],

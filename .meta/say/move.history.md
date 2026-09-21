@@ -425,3 +425,18 @@ Stalled autonomous loop pull requests are demoted to draft to prevent head-of-li
 blocking, and queue congestion is surfaced in `just next`.
 
 Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+
+### A squash merge GitHub had accepted but not yet shown, judged as one that failed
+
+GitHub processes a squash merge asynchronously, so a `pr view` issued immediately
+after the merge call could still answer `state: OPEN` for a merge GitHub had
+already taken — observed on run 35609888922, over solorepo's #757's stack merge,
+where every layer landed and the Job exited non-zero on the read-back
+(solorepo's DR-158, solorepo's #773). The sibling of the `update-branch` entry above, on the
+same asynchrony one endpoint over. Established: `merge()` reads the post-merge
+state through `settled()` under `SETTLES` rather than through a single read, and
+waits on the merge commit beside the state, since the line that reports the merge
+consumes both; a merge GitHub never lands still reads `OPEN` once the wait runs
+out, which the refusal below the read-back reports as it always has.
+
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`

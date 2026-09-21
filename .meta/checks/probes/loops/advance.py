@@ -1,4 +1,4 @@
-"""`advance`, `merge --auto` and the by-hand `dispatch` against a GitHub stood in for, in the states solorepo's #98 found them in.
+"""`advance`, `merge` and the by-hand `dispatch` against a GitHub stood in for, in the states solorepo's #98 found them in.
 
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
@@ -481,6 +481,32 @@ def _merge_auto_over_a_blip_on_the_read_back(channel: Any, move: Any) -> list[st
     return problems
 
 
+def _merge_github_had_not_shown_yet(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    landed = 7
+    fake = FakeGitHub({landed: {"armed": False, "slow": 1}}, lands=[landed])
+    with stood_in(channel, gh=fake):
+        ran = outcome(lambda: move.merge(str(landed)))
+    if ran.code is not None:
+        problems.append(f"merge: a merge GitHub had not shown on the first read exited with {ran.code!r}, "
+                        "so a squash GitHub accepted is reported as one that did not land")
+    if f"merged #{landed} as merged{landed}" not in ran.out:
+        problems.append("merge: a merge GitHub had not shown on the first read "
+                        f"printed {ran.out!r}")
+    return problems
+
+
+def _merge_github_never_showed(channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    stuck = 7
+    fake = FakeGitHub({stuck: {"armed": False, "slow": 9}}, lands=[stuck])
+    said = run_verb(channel, fake, lambda: move.merge(str(stuck)))
+    if not said or "is open after the merge call" not in said:
+        problems.append(f"merge: a merge GitHub never showed exited with {said!r}, so the wait "
+                        "swallowed the refusal it is wrapped around")
+    return problems
+
+
 def _notice_lifecycle_on_advance_failures(channel: Any, move: Any) -> list[str]:
     """Verification of in-place advance finding notice lifecycle (solorepo's DR-255).
 
@@ -545,7 +571,7 @@ def _advance_notice_local_operator_visibility(channel: Any, move: Any) -> list[s
 
 @check("advance probes", pre=True)
 def advance_probes() -> list[str]:
-    """`advance` and `merge --auto` against a fake GitHub, in the states solorepo's #98 found them in.
+    """`advance` and `merge` against a fake GitHub, in the states solorepo's #98 found them in.
 
     Each case is one of the reviewer's reproductions on solorepo's #94, read
     off the code because `advance` reaches GitHub in every branch and, until
@@ -564,6 +590,10 @@ def advance_probes() -> list[str]:
       in place on subsequent errors, deleted when the branch cleanly advances,
       and visible to local operators through branch.advance_notice.
     - Advance sweep failure cases and stack layer transitions.
+    - The plain merge's read-back (solorepo's DR-158, solorepo's #773): a squash
+      GitHub has accepted but not yet shown, which the read-back waits out, and
+      one GitHub never shows, where the refusal the wait is wrapped around still
+      stands.
 
     The dispatch reading and the dispatch a person makes are `dispatch_probes`
     in `probes/loops/dispatch.py`.
@@ -616,5 +646,7 @@ def advance_probes() -> list[str]:
         _conflicting_stack_is_left_for_the_solo(channel, move),
         _merge_auto_after_a_failed_advance(channel, move),
         _merge_auto_over_a_merge_that_landed(channel, move),
-        _merge_auto_over_a_blip_on_the_read_back(channel, move)
+        _merge_auto_over_a_blip_on_the_read_back(channel, move),
+        _merge_github_had_not_shown_yet(channel, move),
+        _merge_github_never_showed(channel, move)
     ) for problem in problems]

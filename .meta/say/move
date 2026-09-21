@@ -2090,6 +2090,15 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
     short would pass out of here before the read-back below that exists to
     catch a merge that did not land, leaving some layers merged and nothing
     reconciling them.
+
+    The read-back itself is `settled()` under `SETTLES`, not a single read:
+    GitHub processes a squash merge asynchronously, and a `pr view` issued
+    immediately after the merge call can still report `state: OPEN`. The
+    predicate waits on the merge commit beside the state, because the line
+    that prints reads both and a state that arrived without its commit would
+    raise where the merge had in fact landed. A merge GitHub never lands still
+    reads `OPEN` once `settled()`'s wait runs out, which the check below
+    reports as it always has.
     """
     before = channel.gh("pr", "view", str(pr), "--json", "title,state,headRefName")
     if before["state"] != "OPEN":
@@ -2105,7 +2114,10 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
                  "Pass --stack to merge everything up to it.")
     else:
         channel.gh("pr", "merge", str(pr), "--squash", "--subject", subject, parse=False)
-    after = channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit")
+    after = settled(
+        lambda: channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit"),
+        lambda now: now["state"] == "MERGED" and now["mergeCommit"],
+    )
     if after["state"] != "MERGED":
         sys.exit(f"say: #{pr} is {after['state'].lower()} after the merge call; not deleting the branch")
     print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
