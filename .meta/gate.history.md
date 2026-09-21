@@ -18,3 +18,13 @@ steps and returned exit code 0. Established: `main()` verifies non-empty project
 selection and fails closed with an informative error when no gates exist to run.
 
 Evidence: `.meta/checks/files/history.py::meta_history_evidence`
+
+### Serial project gate execution compounded top-level verification duration
+
+Executing independent project gates sequentially serialized compile and test
+workloads, accumulating wall-clock latency across all declared projects.
+Established: `main()` executes multi-project gate suites concurrently using a
+thread pool executor with thread-safe output streaming while preserving
+deterministic per-project step aggregation.
+
+Evidence: `.meta/checks/files/history.py::meta_history_evidence`
