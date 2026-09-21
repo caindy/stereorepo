@@ -141,7 +141,7 @@ decisions:
           three places hand it out on exactly that contract, none of which can
           promise the last comment is a promotion reply: `sweep` prints "answer
           is already posted with `.meta/say/post resolve`"
-          (`.meta/lib/check_pr/sweep.py:223`), `move` prints "`post resolve
+          (`.meta/lib/check_pr/sweep.py:361`), `move` prints "`post resolve
           <thread-id>` where the link is already posted" (`.meta/say/move:195`),
           and DR-221's third consequence names the same act as what finishes a
           filing its own guard refused, "`post resolve` where the link is

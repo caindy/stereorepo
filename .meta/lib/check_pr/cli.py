@@ -41,6 +41,15 @@ def parser(description: str) -> argparse.ArgumentParser:
                     help="as JSON, what a dead run's hand-back needs about the pull "
                          "request on a Challenge's branch: whether anybody holds it, "
                          "whether it is green, and whether it conflicts")
+    ap.add_argument("--take", metavar="ISSUE",
+                    help="as JSON, what the coder's take door decides about a delivery of "
+                         "this Issue: `by`, a word for every delivery that must not run and "
+                         "empty for one that does; `why`; `resume`, the open pull request a "
+                         "hand-back left; `level`; `state`, the IssueState it was read off, "
+                         "empty where no Issue was read; and `said`, the line for the log")
+    ap.add_argument("--door", default=sweep.ISSUE_DOOR,
+                    help="with --take: the event the delivery arrived on, as "
+                         f"github.event_name names it (default {sweep.ISSUE_DOOR})")
     ap.add_argument("--sweep", action="store_true",
                     help="every open pull request you own, and what each still owes")
     ap.add_argument("--watch", action="store_true",
@@ -127,6 +136,8 @@ def main(description: str) -> None:
     modes: tuple[tuple[bool, str | bool, Callable[[], None]], ...] = (
         (args.all, False, lambda: sys.exit(sweep.sweep_all(args.publish))),
         (args.hand_back, False, lambda: print(json.dumps(sweep.hand_back(args.hand_back)))),
+        (args.take is not None, False,
+         lambda: print(json.dumps(sweep.take(args.take, args.door)))),
         (args.sweep, False, print_sweep),
         (args.handoff, False, lambda: sys.exit(branch.handoff(args.base))),
         (args.watch, "--watch",

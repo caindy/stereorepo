@@ -325,8 +325,9 @@ jobs:
       # run. What can still arrive twice is a level moved under a run, and the
       # event's payload is frozen at delivery, so the job's `if` cannot see
       # what happened while the run it waited on was standing. Four facts
-      # are read now, each into its own assignment so that a read which fails
-      # aborts the step rather than reading as empty, and `by` carries a word
+      # are read now, by `check_pr.py --take`, which reads them through the
+      # Issue classifier (solorepo's DR-264): a read of the Issue which fails
+      # ends the step rather than reading as empty, and `by` carries a word
       # for every delivery that must not run, so that it is never empty by
       # accident: whether the Issue is still open, since one closed by its
       # own merge since the delivery is finished work; its *current*
@@ -380,45 +381,13 @@ jobs:
             echo "Pull request is merged already; this delivery has nothing to do"
             exit 0
           fi
-          if [ "$DOOR" != issues ]; then
-            case "$ISSUE" in
-              ''|*[!0-9]*)
-                printf 'by=unnamed\nwhy=%s\n' "on a branch that names no Challenge the loop holds" >> "$GITHUB_OUTPUT"
-                echo "'$ISSUE' is not an Issue number; the branch is not the loop's shape, and this delivery is not its"
-                exit 0 ;;
-            esac
-          fi
-          open=$(gh pr list --state open --json number,headRefName --jq ".[] | select(.headRefName | test(\"^(claude|gemini|codex)/issue-$ISSUE$\")) | .number" | head -n 1)
-          if ! issue=$(gh issue view "$ISSUE" --json state,assignees,labels); then
-            [ "$DOOR" != issues ] || exit 1
-            printf 'by=unnamed\nwhy=%s\n' "not an Issue this repository can read" >> "$GITHUB_OUTPUT"
-            echo "#$ISSUE cannot be read; the branch names no Challenge the loop holds, and this delivery is not its"
-            exit 0
-          fi
-          state=$(jq -r .state <<<"$issue")
-          mine=$(jq -r --arg c "$CODER" '.assignees[].login | select(. == $c)' <<<"$issue")
-          level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium")][0] // ""' <<<"$issue")
-          if [ "$state" != OPEN ]; then
-            printf 'by=closed\nwhy=closed\n' >> "$GITHUB_OUTPUT"
-            echo "#$ISSUE is closed now; this delivery is stale"
-          elif [ "$DOOR" = issues ] && [ -n "$open" ] && [ -n "$mine" ]; then
-            printf 'by=%s\n' "$open" >> "$GITHUB_OUTPUT"
-            echo "#$ISSUE is claimed by $mine and has open pull request #$open; this delivery is a duplicate"
-          elif jq -e '.labels[].name | select(. == "hard")' <<<"$issue" >/dev/null; then
-            printf 'by=held\nwhy=%s\n' "labelled hard" >> "$GITHUB_OUTPUT"
-            echo "#$ISSUE is hard now: the solo's, with a session beside him; this loop stands down"
-          elif [ -z "$level" ]; then
-            printf 'by=stale\nwhy=%s\n' "labelled $(jq -r '[.labels[].name] | join(", ")' <<<"$issue") now, which no loop takes" >> "$GITHUB_OUTPUT"
-            echo "#$ISSUE is labelled '$(jq -r '[.labels[].name] | join(", ")' <<<"$issue")' now; a Challenge at neither easy nor medium is not this loop's, on any door but the solo's own dispatch"
-          else
-            printf 'by=\nresume=%s\nlevel=%s\n' "$open" "$level" >> "$GITHUB_OUTPUT"
-            [ -z "$open" ] || echo "#$ISSUE has open pull request #$open and no claim: a hand-back, taken up again"
-          fi
+          taken=$(python3 .meta/check_pr.py --take "$ISSUE" --door "$DOOR")
+          jq -r '"by=\(.by)\nwhy=\(.why)\nresume=\(.resume)\nlevel=\(.level)"' <<<"$taken" >> "$GITHUB_OUTPUT"
+          jq -r '.said' <<<"$taken"
         env:
           GH_TOKEN: ${{ github.token }}
           DOOR: ${{ github.event_name }}
           ISSUE: ${{ github.event.issue.number || steps.pr.outputs.issue }}
-          CODER: ${{ format('{0}-{1}-coder', github.repository_owner, github.event.repository.name) }}
           BY: ${{ steps.pr.outputs.by }}
 
       # Where the loop stood down and nobody is standing there, say so on the

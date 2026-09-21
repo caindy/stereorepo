@@ -26,4 +26,5 @@ import checks.probes.loops.stop
 import checks.probes.loops.merge_manager
 import checks.probes.loops.merge_manager_advance
 import checks.probes.loops.delegate
+import checks.probes.loops.take
 import checks.probes.loops.concurrency  # noqa: F401  # reason: registers check steps

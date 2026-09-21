@@ -419,6 +419,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-delegate
     name: .meta/checks/probes/loops/delegate.py
     path: .meta/checks/probes/loops/delegate.py
+  - id: work:artifact/meta-checks-probes-loops-take
+    name: .meta/checks/probes/loops/take.py
+    path: .meta/checks/probes/loops/take.py
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py

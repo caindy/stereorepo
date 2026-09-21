@@ -1,25 +1,24 @@
-"""The sweep the gate workflow runs on the clock, and the hand-back a dying run asks for.
+"""The sweep the gate runs on the clock, the hand-back a dying run asks for, and the take door.
 
 Beyond the body, the sweep asks who takes each open pull request next
 (solorepo's DR-129); the hand-back asks whether anybody holds a Challenge's pull
-request yet (solorepo's DR-155).
+request yet (solorepo's DR-155); and the take door asks whether a delivery of a
+Challenge is the loop's to run, read through the Issue classifier in `state`
+(solorepo's DR-264).
 """
 import datetime
 import re
+import sys
 import time
 from collections.abc import Collection, Mapping, Sequence
 from typing import Any, NamedTuple
 
 from lib.check_pr import META, github, polling, state, verdict
+from lib.check_pr.state import LOOP_LEVELS
 
 CODER = META.parent / ".github" / "workflows" / "coder.yml"
 
 LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-(\d+)$")
-
-# The difficulties a loop takes, which is what makes a Challenge a loop's and
-# not the solo's. `human` and `hard` are the solo's, and so is a pull request
-# on their Challenge.
-TAKEN = ("easy", "medium")
 
 # The fields the hand-off reader needs, added to the sweep's own list so that
 # one fetch answers both. The rollup is not among them: `gh` answers that one
@@ -80,6 +79,35 @@ def wait_for_checks(pr_number: int, timeout: int = 120,
     return github.rollup_of(pr_number)
 
 
+def loop_pull(issue: str | int, fields: str,
+              default: Any = github.UNSET) -> dict[str, Any] | None:
+    """The open pull request on a Challenge's loop branch under any harness's prefix, or None.
+
+    Asked by head, one prefix at a time, rather than listed whole and filtered:
+    `gh pr list --head` is one indexed read where the listing is every open
+    pull request. The prefixes are the shapes `coder.yml` cuts.
+
+    Args:
+        issue: Challenge Issue number.
+        fields: The `--json` fields the caller reads off the pull request.
+        default: What a listing GitHub refuses answers with, as `github.gh`
+            takes it. Omitted, the refusal ends the process, which is the
+            hand-back's reading; `take` passes an empty listing, so that a
+            refused read is no pull request rather than a red job on a door
+            where a red job is a verdict answered by nobody.
+
+    Returns:
+        dict[str, Any] | None: The pull request's fields, or None where no
+            prefix has an open pull request on that Issue's branch.
+    """
+    for prefix in ("gemini", "claude", "codex"):
+        found = github.gh("pr", "list", "--state", "open", "--head", f"{prefix}/issue-{issue}",
+                          "--json", fields, default=default)
+        if found:
+            return dict(found[0])
+    return None
+
+
 def hand_back(issue: str | int) -> dict[str, Any]:
     """Provides pull request status metrics for challenge hand-back automation.
 
@@ -89,16 +117,10 @@ def hand_back(issue: str | int) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Status summary containing handed, green, conflicting, number, base.
     """
-    found: list[dict[str, Any]] = []
-    for prefix in ("gemini", "claude", "codex"):
-        found = github.gh("pr", "list", "--state", "open", "--head", f"{prefix}/issue-{issue}",
-                   "--json", HANDBACK_FIELDS)
-        if found:
-            break
-    if not found:
+    pr = loop_pull(issue, HANDBACK_FIELDS)
+    if pr is None:
         return {"number": None, "branch": None, "handed": False, "green": False,
                 "conflicting": False, "base": None}
-    pr = found[0]
     raw_contexts = github.rollup_of(pr["number"])
     pending = [c for c in raw_contexts if (c.get("conclusion") or c.get("state") or c.get("status") or "").upper() in state.UNCONCLUDED]
     if pending:
@@ -110,6 +132,122 @@ def hand_back(issue: str | int) -> dict[str, Any]:
             "green": green(pr),
             "conflicting": pr.get("mergeable") == "CONFLICTING",
             "base": pr.get("baseRefName") or "main"}
+
+
+ISSUE_DOOR = "issues"
+"""The event a label delivers a Challenge on, where a claim with a pull request is a duplicate."""
+
+UNNAMED = "on a branch that names no Challenge the loop holds"
+"""Why a delivery on a branch of the loop's shape that names no Issue is not the loop's."""
+
+UNREADABLE = "not an Issue this repository can read"
+"""Why a delivery naming an Issue GitHub will not answer for is not the loop's."""
+
+
+class Decision(NamedTuple):
+    """The take door's outputs, as `--take` prints them.
+
+    Attributes:
+        by: A word for a delivery that must not run — `closed`, `held`, `stale`,
+            `unnamed`, or the number of the pull request a standing run holds —
+            and empty for one that does. The one field every branch writes, so
+            that it is never empty by accident.
+        why: Why the delivery must not run, beside a `by` that says so.
+        resume: The open pull request a hand-back left, for the run to take up.
+        level: The label the run takes the Challenge at.
+        state: The `IssueState` the decision was read off; empty where no Issue
+            was read, which is a name that is not a number or one GitHub would
+            not answer for.
+        said: The line the run log gets.
+    """
+
+    by: str
+    why: str = ""
+    resume: str = ""
+    level: str = ""
+    state: str = ""
+    said: str = ""
+
+
+def _decided(by: str, why: str = "", **rest: str) -> dict[str, Any]:
+    """A `Decision` as the mapping `--take` prints, `rest` being its remaining fields by name."""
+    return Decision(by, why, **rest)._asdict()
+
+
+def take(issue: str, door: str) -> dict[str, Any]:
+    """What the coder's take door decides about a delivery, read through the Issue classifier.
+
+    `by` carries a word for every delivery that must not run — `closed`,
+    `held`, `stale`, `unnamed`, or the number of the pull request a standing
+    run already holds — and is empty for one that does; `resume` is the open
+    pull request a hand-back left, `level` the label the run takes the
+    Challenge at, `state` the `IssueState` the decision was read off, empty
+    where no Issue was read, and `said` the line the run log gets. A pull
+    request listing GitHub refuses reads as no pull request on every door,
+    which is what the shell this replaced read off a failed pipeline, since
+    the door must not go red where a red job is a verdict answered by nobody.
+    The door decides one reading only: a
+    claim with a pull request open is a duplicate where the delivery is the
+    label's own event, and the ordinary standing of a run where the delivery
+    arrived on that pull request (solorepo's DR-142).
+
+    Args:
+        issue: What the delivery names, which on the label's door is an Issue
+            number and on the others is read off a branch by prefix.
+        door: The event the delivery arrived on, as `github.event_name` names it.
+
+    Returns:
+        dict[str, Any]: `by`, `why`, `resume`, `level`, `state` and `said`.
+
+    Raises:
+        SystemExit: On the label's door, an Issue that is not a number or that
+            GitHub will not answer for: the delivery is not taken, and the Issue
+            is there to be delivered again. On the other doors both are a word
+            rather than a failure, since a red job there is a verdict answered
+            by nobody.
+    """
+    if not (issue.isascii() and issue.isdigit()):
+        if door == ISSUE_DOOR:
+            sys.exit(f"take: {issue!r} is not an Issue number")
+        return _decided("unnamed", UNNAMED,
+                        said=f"'{issue}' is not an Issue number; the branch is not the loop's "
+                             "shape, and this delivery is not its")
+    read = github.gh("issue", "view", issue, "--json", "state,assignees,labels", default=None)
+    if read is None:
+        if door == ISSUE_DOOR:
+            sys.exit(f"take: #{issue} could not be read")
+        return _decided("unnamed", UNREADABLE,
+                        said=f"#{issue} cannot be read; the branch names no Challenge the "
+                             "loop holds, and this delivery is not its")
+    pull = loop_pull(issue, "number,headRefName", default=[])
+    number = str(pull["number"]) if pull else ""
+    coder = github.role_login("coder")
+    found = state.classify_issue(read, coder, pull is not None)
+    if found is state.IssueState.TAKEN and door != ISSUE_DOOR:
+        found = state.classify_issue(read, None, pull is not None)
+    labels = ", ".join(state.issue_labels(read))
+    if found is state.IssueState.CLOSED:
+        return _decided("closed", "closed", state=found,
+                        said=f"#{issue} is closed now; this delivery is stale")
+    if found is state.IssueState.TAKEN:
+        return _decided(number, state=found,
+                        said=f"#{issue} is claimed by {coder} and has open pull request "
+                             f"#{number}; this delivery is a duplicate")
+    if found is state.IssueState.HELD:
+        return _decided("held", "labelled hard", state=found,
+                        said=f"#{issue} is hard now: the solo's, with a session beside him; "
+                             "this loop stands down")
+    if found in state.NOT_TAKEN_STATES:
+        shown = f"'{labels}'" if labels else "nothing"
+        return _decided("stale", f"labelled {labels or 'nothing'} now, which no loop takes",
+                        state=found,
+                        said=f"#{issue} is labelled {shown} now; a Challenge at neither easy "
+                             "nor medium is not this loop's, on any door but the solo's own "
+                             "dispatch")
+    level = next((lvl for lvl in LOOP_LEVELS if lvl in state.issue_labels(read)), "")
+    said = (f"#{issue} has open pull request #{number} and no claim: a hand-back, taken up again"
+            if number else "")
+    return _decided("", resume=number, level=level, state=found, said=said)
 
 
 def is_approved_pull(pr: dict[str, Any], reviewer_login: str | None = None) -> bool:
@@ -249,7 +387,7 @@ def unanswered_changes(standing: Standing, minutes: float,
         return []
     if not (unresolved_of(pr, unresolved) or not green(pr)):
         return []
-    state, level = standing.challenge(TAKEN)
+    state, level = standing.challenge(LOOP_LEVELS)
     if state != "OPEN" or not level:
         return []
     return [f"{standing.line()} — changes requested by "
@@ -266,10 +404,10 @@ def approved_and_failing(standing: Standing, minutes: float) -> list[str]:
             and not pr["isDraft"] and not green(pr) and pr.get("mergeable") != "CONFLICTING"
             and standing.branch and standing.idle >= minutes):
         return []
-    state, level = standing.challenge((*TAKEN, "human", "hard"))
+    state, level = standing.challenge((*LOOP_LEVELS, "human", "hard"))
     if state != "OPEN" or not level:
         return []
-    if level in TAKEN:
+    if level in LOOP_LEVELS:
         remedy = f".meta/say/move dispatch {pr['number']} --task review"
     else:
         remedy = f"fix the failing checks (or move difficulty {standing.branch.group(1)} medium)"
@@ -287,7 +425,7 @@ def green_and_unheld(standing: Standing, minutes: float,
     if (standing.asked or pr.get("autoMergeRequest") or pr["isDraft"] or not green(pr)
             or pr["number"] not in clean or not standing.branch or standing.idle < minutes):
         return []
-    state, level = standing.challenge((*TAKEN, "human", "hard"))
+    state, level = standing.challenge((*LOOP_LEVELS, "human", "hard"))
     if state != "OPEN" or not level:
         return []
     number = standing.branch.group(1)

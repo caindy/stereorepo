@@ -1,8 +1,12 @@
-"""Pull request state classification and lifecycle predicates.
+"""Lifecycle states of a pull request and of an Issue, and the classification over each.
 
-Defines the formal states of a pull request across autonomous GitHub Actions
-loops and interactive local agent harnesses, and provides state classification
-over pull request metadata, reviews, check rollups, and threads.
+`classify_pr` reads a pull request off its metadata, reviews, check rollup and
+threads, for the autonomous loops and the local harnesses alike.
+`classify_issue` reads an Issue off its state, labels and assignees and the
+pull request on its loop branch. The Issue half is the first seam of
+solorepo's DR-264: the coder's take door reads through it, in `sweep.take`,
+while `just next` and `.meta/say/move` still read an Issue's labels for
+themselves until the seams that move them land.
 """
 
 from collections.abc import Mapping, Sequence
@@ -51,6 +55,109 @@ class PullRequestState(StrEnum):
     READY_TO_MERGE = "READY_TO_MERGE"
     MERGED = "MERGED"
     CLOSED = "CLOSED"
+
+
+class IssueState(StrEnum):
+    """Lifecycle states of an Issue.
+
+    The order the states are decided in is the take door's: a closed Issue is
+    finished whatever else is
+    true of it; a claim with a pull request open is a run standing, whatever
+    the level; `hard` is the solo's; a Challenge at no level a loop takes is
+    nobody's to take; and only then does the claim or the pull request say
+    whether a loop starts, resumes, or is already standing.
+
+    Attributes:
+        CLOSED: Closed, by a merge or by hand; finished work.
+        UNLABELLED: Neither `challenge` nor `roadmap`; nothing offers it.
+        ROADMAP: Intended and deferred; never taken.
+        UNREAD: A Challenge with no level; no reviewer has read it (solorepo's DR-230).
+        HANDED_BACK: `human`; the solo's, and no Job's.
+        HELD: `hard`; the solo's with a session beside them, and a loop stands down.
+        TAKEN: Claimed by the coder with its pull request open; a run is standing.
+        CLAIMED: Claimed by the coder with no pull request; a run that has not
+            opened yet, or one that ended holding the claim.
+        RESUMABLE: At a level a loop takes, its pull request open and no claim;
+            a hand-back the solo has answered, taken up again.
+        OFFERED: At a level a loop takes, unclaimed, no pull request; the
+            loop's the moment the label landed.
+    """
+
+    CLOSED = "CLOSED"
+    UNLABELLED = "UNLABELLED"
+    ROADMAP = "ROADMAP"
+    UNREAD = "UNREAD"
+    HANDED_BACK = "HANDED_BACK"
+    HELD = "HELD"
+    TAKEN = "TAKEN"
+    CLAIMED = "CLAIMED"
+    RESUMABLE = "RESUMABLE"
+    OFFERED = "OFFERED"
+
+
+LOOP_LEVELS: tuple[str, ...] = ("easy", "medium")
+"""The levels a loop takes the moment the label lands, which is what makes a Challenge a
+loop's and not the solo's (solorepo's DR-112); `human` and `hard` are the solo's, and so is
+a pull request on their Challenge."""
+
+NOT_TAKEN_STATES = frozenset({
+    IssueState.UNLABELLED,
+    IssueState.ROADMAP,
+    IssueState.UNREAD,
+    IssueState.HANDED_BACK,
+})
+"""Issue states at no level a loop takes, which the take door calls stale."""
+
+
+def issue_labels(issue: Mapping[str, Any]) -> list[str]:
+    """The label names on an Issue, as `gh issue view --json labels` lists them."""
+    return [str(lbl.get("name") or "") for lbl in issue.get("labels") or []
+            if isinstance(lbl, Mapping)]
+
+
+def classify_issue(
+    issue: Mapping[str, Any],
+    coder_login: str | None,
+    open_pull: bool,
+) -> IssueState:
+    """Classifies an Issue into its current IssueState.
+
+    Args:
+        issue: Issue metadata mapping from GitHub, carrying `state`, `labels`
+            and `assignees` as `gh issue view --json` lists them.
+        coder_login: The coder Role's login, whose assignment is the claim; None
+            reads the Issue as if nobody held it, which is how the doors a run
+            arrives at with its own pull request read it.
+        open_pull: Whether a pull request is open on the Issue's loop branch.
+
+    Returns:
+        IssueState: The classified lifecycle state.
+    """
+    if str(issue.get("state", "OPEN")).upper() != "OPEN":
+        return IssueState.CLOSED
+    labels = issue_labels(issue)
+    claimed = bool(coder_login) and any(
+        isinstance(a, Mapping) and a.get("login") == coder_login
+        for a in issue.get("assignees") or []
+    )
+    if claimed and open_pull:
+        return IssueState.TAKEN
+    if "hard" in labels:
+        return IssueState.HELD
+    level = next((lvl for lvl in LOOP_LEVELS if lvl in labels), None)
+    if level is None:
+        if "human" in labels:
+            return IssueState.HANDED_BACK
+        if "challenge" in labels:
+            return IssueState.UNREAD
+        if "roadmap" in labels:
+            return IssueState.ROADMAP
+        return IssueState.UNLABELLED
+    if claimed:
+        return IssueState.CLAIMED
+    if open_pull:
+        return IssueState.RESUMABLE
+    return IssueState.OFFERED
 
 
 CODER_ACTIONABLE_STATES = frozenset({

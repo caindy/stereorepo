@@ -9,6 +9,10 @@ decisions:
     enacted_in:
       - work:artifact/meta-assertions-imported-disciplines
       - work:artifact/meta-disciplines
+      - work:artifact/meta-lib-check-pr-state
+      - work:artifact/meta-lib-check-pr-sweep
+      - work:artifact/meta-checks-probes-loops-take
+      - work:artifact/github-workflows-coder
     context: >-
       The loops are a pair of state machines, one over Issues and one over pull
       requests, whose state GitHub holds (A22). Nothing in the tree holds either
