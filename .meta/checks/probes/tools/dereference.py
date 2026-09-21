@@ -22,6 +22,7 @@ def dereference_probes() -> list[str]:
     """
     deref = load_module(META / "dereference.py", "dereference", register=False)
     citations_mod = deref.citations()
+    sample_durable = {META / "assertions" / "decisions" / f"DR-00{i}.yaml" for i in range(1, 10)}
     problems = []
 
     def heading(case: str, call: Any, header: str) -> None:
@@ -32,14 +33,14 @@ def dereference_probes() -> list[str]:
             problems.append(f"dereference: the report of {case} expected {header!r}, "
                             f"got {shown.out!r}{exited}")
 
-    four = deref.scope(citations_mod, "origin/main", False, sample=4)
+    four = deref.scope(citations_mod, "origin/main", False, sample=4, durable=sample_durable)
     if len(four) != 4:
         problems.append(f"dereference: sample=4 expected 4 pairs, got {len(four)}")
     for pair in four:
         if not ("path" in pair and "cite" in pair and "sentence" in pair and "body" in pair):
             problems.append(f"dereference: sample pair missing required keys: {pair}")
-    first = deref.scope(citations_mod, "origin/main", False, sample=3)
-    again = deref.scope(citations_mod, "origin/main", False, sample=3)
+    first = deref.scope(citations_mod, "origin/main", False, sample=3, durable=sample_durable)
+    again = deref.scope(citations_mod, "origin/main", False, sample=3, durable=sample_durable)
     if [p["sentence"] for p in first] != [p["sentence"] for p in again]:
         problems.append("dereference: identical sample queries produced different results")
 

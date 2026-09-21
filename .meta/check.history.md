@@ -39,3 +39,13 @@ reports structured failure summaries without exiting early (Article 6).
 
 Evidence: `.meta/checks/files/history.py::meta_history_evidence`
 
+### Block-buffered standard output delayed gate streaming in subprocess pipelines
+
+When `check.py` executed within a subprocess pipeline or under `gate`, standard
+output defaulted to block buffering instead of flushing line by line, delaying
+real-time step reporting and violating the streaming contract asserted in
+solorepo's DR-104. Established: `main()` configures line buffering on `sys.stdout`
+when backed by a text stream wrapper.
+
+Evidence: `.meta/check.py::main`
+

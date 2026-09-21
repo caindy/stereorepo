@@ -282,6 +282,7 @@ def scope(
     base: str,
     everything: bool,
     sample: int | None = None,
+    durable: set[pathlib.Path] | None = None,
 ) -> list[dict[str, Any]]:
     """The pairs to ask about: a sentence, the span it sits in, the citation and
     what the citation names.
@@ -305,7 +306,8 @@ def scope(
     branch exists to add.
     """
     index = articles()
-    durable = durable_prose(chk)
+    if durable is None:
+        durable = durable_prose(chk)
     if sample:
         return sampled(chk, index, durable, sample)
     paths: list[pathlib.Path]

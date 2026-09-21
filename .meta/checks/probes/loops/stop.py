@@ -3,6 +3,7 @@
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 
+import time
 from typing import Any
 
 from checks.collect import check
@@ -31,7 +32,7 @@ def stop_probes() -> list[str]:
 
     def stopped(fake: Any, issue: str, body: str) -> Any:
         """`stop(issue, body)` against `fake`: what it exited with, and what it printed on both streams."""
-        with stood_in(channel, gh=fake):
+        with stood_in(channel, gh=fake), stood_in(time, sleep=lambda _: None):
             return outcome(lambda: move.stop(issue, body))
 
     fake = FakeIssue(["challenge", "medium"], assignees=["o-r-coder"])

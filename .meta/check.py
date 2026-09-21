@@ -8,7 +8,8 @@ loaders, and step suites from `.meta/checks/`.
 
 History in check.history.md (solorepo's DR-171).
 """
-import sys  # noqa: I001  # reason: the step imports below stand in registration order, not sorted order
+import io  # noqa: I001  # reason: the step imports below stand in registration order, not sorted order
+import sys
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -62,6 +63,8 @@ def main() -> int:
     Returns:
         int: 0 if all registered steps pass cleanly, 1 if any step fails.
     """
+    if isinstance(sys.stdout, io.TextIOWrapper):
+        sys.stdout.reconfigure(line_buffering=True)
     failed = False
     for step in [s for s in STEPS if s.pre]:
         try:
