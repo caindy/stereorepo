@@ -96,14 +96,53 @@ def _role_token() -> str | None:
     return None
 
 
-def gh(*args: str) -> Any:
-    """Invokes the GitHub CLI with the role credential and parses JSON output."""
+GH_TIMEOUT = 60
+"""Seconds one `gh` invocation is given before it is abandoned as hung (solorepo's #738).
+
+Every read this module makes is a single API call behind a CLI that refreshes
+its own auth, so a minute is far longer than any of them takes and far shorter
+than the indefinite wait a hung call would otherwise impose on `watch`.
+"""
+
+
+class GhTimeout(SystemExit):
+    """A `gh` invocation abandoned at its bound, rather than refused by GitHub.
+
+    A `SystemExit`, so a caller that does nothing about it leaves on the prose
+    as it always did; its own class so that a caller catching a refusal can
+    decline to catch a hang. `repo()` is the one such caller, and the
+    distinction is the difference between GitHub saying this is not a
+    repository — which the git remote answers — and GitHub saying nothing,
+    which no fallback answers.
+    """
+
+
+def gh(*args: str, timeout: float = GH_TIMEOUT) -> Any:
+    """Invokes the GitHub CLI with the role credential and parses JSON output.
+
+    Args:
+        args: Arguments passed to the `gh` CLI.
+        timeout: Seconds to wait for the invocation, `GH_TIMEOUT` by default.
+
+    Returns:
+        The parsed JSON `gh` wrote to standard output.
+
+    Raises:
+        SystemExit: `gh` exited non-zero.
+        GhTimeout: `gh` answered nothing within `timeout`. It exits with prose no
+            pattern in `polling.FATAL_POLL_PATTERNS` matches, so `watch` reads it
+            as transient and retries it under backoff.
+    """
     env = None
     if "GH_TOKEN" not in os.environ:
         token = _role_token()
         if token:
             env = dict(os.environ, GH_TOKEN=token)
-    out = subprocess.run(["gh", *args], capture_output=True, text=True, env=env)
+    try:
+        out = subprocess.run(["gh", *args], capture_output=True, text=True, env=env,
+                             timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise GhTimeout(f"gh: `gh {' '.join(args)}` answered nothing within {timeout}s") from None
     if out.returncode:
         sys.exit(f"gh: {out.stderr.strip()}")
     return json.loads(out.stdout)
@@ -120,12 +159,22 @@ def reason(exc: SystemExit) -> str:
 
 
 def repo() -> str:
-    """Determines the current GitHub repository slug from environment, CLI, or git remote."""
+    """Determines the current GitHub repository slug from environment, CLI, or git remote.
+
+    Raises:
+        GhTimeout: `gh` answered nothing within its bound. The git remote is the
+            fallback for a `gh` that will not answer this, and not for one that
+            answers nothing at all: taking it there would spend the bound on
+            every call and then degrade in silence, which is a watch that crawls
+            without ever failing a poll (solorepo's #738).
+    """
     repo_name = os.environ.get("GITHUB_REPOSITORY")
     if repo_name:
         return repo_name
     try:
         return str(gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"])
+    except GhTimeout:
+        raise
     except (Exception, SystemExit):
         out = subprocess.run(["git", "remote", "get-url", "origin"],
                              capture_output=True, text=True, cwd=ROOT)

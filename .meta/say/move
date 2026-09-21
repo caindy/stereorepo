@@ -391,14 +391,22 @@ def open_with_title(title: str) -> tuple[str, str] | None:
 
     Returns:
         tuple[str, str] | None: Issue number and URL, or None when no open Issue
-            matches and equally when GitHub would not answer the listing. The
-            two are not distinguished on purpose: both mean this call has no
-            standing Issue to name, and a filing proceeds either way.
+            matches and equally when GitHub refused the listing. The two are not
+            distinguished on purpose: both mean this call has no standing Issue
+            to name, and a filing proceeds either way.
+
+    Raises:
+        SystemExit: The listing answered nothing within `channel.GH_TIMEOUT`. A
+            refusal is an answer of a kind and a filing proceeds through it; a
+            hang says nothing about what is open, so proceeding would file a
+            second Issue under a title that already has one.
     """
     try:
         listed = channel.gh("issue", "list", "--state", "open", "--limit", "200",
                             "--json", "number,title,url", tolerate_fail=True)
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as exc:
+        if exc.returncode == channel.TIMEOUT_RETURNCODE:
+            sys.exit(f"say: {exc.stderr}")
         return None
     for issue in listed or []:
         if issue.get("title") == title:
@@ -520,11 +528,15 @@ def issue_of(number: int | str, as_blocker: bool = False) -> dict[str, Any]:
 
     Raises:
         SystemExit: If `number` is not a number of this repository, is a pull
-            request, or names an Issue GitHub reports as closed.
+            request, or names an Issue GitHub reports as closed; and separately
+            if the read answered nothing within `channel.GH_TIMEOUT`, which is
+            reported as the hang it is rather than as the absence it is not.
     """
     try:
         found = channel.gh("api", f"repos/{channel.repo()}/issues/{number}", tolerate_fail=True)
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as exc:
+        if exc.returncode == channel.TIMEOUT_RETURNCODE:
+            sys.exit(f"say: {exc.stderr}")
         sys.exit(f"say: {channel.repo()} has no #{number}" + (
             "; a blocker is an Issue's number, and what is not one belongs in the "
             "`**Waits on.**` line as the prose it is." if as_blocker else "."))
@@ -1069,7 +1081,8 @@ def link(below: str | int, above: str | int) -> None:
     the call names its stack's number in place of `below` (solorepo's #496).
     """
     stack = stacked(below)
-    print(channel.gh("stack", "link", stack if stack else str(below), str(above), parse=False))
+    print(channel.gh("stack", "link", stack if stack else str(below), str(above),
+                     parse=False, timeout=None))
 
 
 def head_branch(pr: str | int) -> str:
@@ -1235,12 +1248,18 @@ def advance_stack(layers: Sequence[Pull], before: dict[str, Pull],
 
     Raises:
         SystemExit: If an external GitHub query or command fails outside the rebase sequence.
+
+    The three `gh stack` calls wait indefinitely rather than under
+    `channel.GH_TIMEOUT`: they rebase every layer locally and then force-push
+    each of them, so a bound cutting the sequence short would leave the
+    branches rewritten and an unknown number of them pushed, reported to every
+    layer as a failure to advance.
     """
     root = str(layers[0]["number"])
     try:
-        channel.gh("stack", "checkout", layers[0]["headRefName"], parse=False)
-        channel.gh("stack", "rebase", "--upstack", parse=False)
-        channel.gh("stack", "push", parse=False)
+        channel.gh("stack", "checkout", layers[0]["headRefName"], parse=False, timeout=None)
+        channel.gh("stack", "rebase", "--upstack", parse=False, timeout=None)
+        channel.gh("stack", "push", parse=False, timeout=None)
     except SystemExit as exc:
         return [f"#{layer['number']} could not advance with #{root}'s stack: {exc.code}"
                 for layer in layers], []
@@ -2062,6 +2081,12 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
     Raises:
         SystemExit: If the pull request is not open, is an unsupported stacked auto-merge,
             or if the merge or arming operation fails on GitHub.
+
+    The stack merge waits indefinitely rather than under `channel.GH_TIMEOUT`:
+    it lands every layer up to `pr` and restacks what remains, and a bound cut
+    short would pass out of here before the read-back below that exists to
+    catch a merge that did not land, leaving some layers merged and nothing
+    reconciling them.
     """
     before = channel.gh("pr", "view", str(pr), "--json", "title,state,headRefName")
     if before["state"] != "OPEN":
@@ -2071,7 +2096,7 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
         _merge_auto(pr, before, subject, stack)
         return
     if stack:
-        channel.gh("stack", "merge", str(pr), "--squash", "--yes", parse=False)
+        channel.gh("stack", "merge", str(pr), "--squash", "--yes", parse=False, timeout=None)
     elif stacked(pr):
         sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
                  "Pass --stack to merge everything up to it.")

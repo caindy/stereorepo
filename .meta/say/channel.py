@@ -299,10 +299,58 @@ def role_credential() -> dict[str, str]:
     return {"GH_TOKEN": found["GH_TOKEN"]}
 
 
-def gh(*args: str, parse: bool = True, tolerate_fail: bool = False) -> Any:
-    """Executes a gh CLI command using the role credential and parses JSON output."""
-    out = subprocess.run(["gh", *args], capture_output=True, text=True,
-                         env={**os.environ, **role_credential()})
+GH_TIMEOUT = 60
+"""Seconds one `gh` invocation is given before it is abandoned as hung (solorepo's #738).
+
+The bound is the default and not the rule. A verb that waits on `gh` for a
+single API call is bounded by it, and a minute is far longer than one of those
+takes. The `gh stack` invocations in `.meta/say/move` are the exception and
+pass `timeout=None`: rebasing and force-pushing every layer of a stack, or
+merging every layer up to one, can take longer than a minute with nothing
+wrong, and abandoned at a bound they would report a half-rewritten stack or a
+merge whose landing nothing reconciled as a hang.
+"""
+
+TIMEOUT_RETURNCODE = 124
+"""The `returncode` a tolerated timeout's `CalledProcessError` carries, which is what `timeout(1)` reports one under.
+
+It is not an exit status of anything here: where failure is not tolerated a
+timeout leaves through `sys.exit`, whose status is 1, so a shell tells a hang
+from a refusal by the prose on standard error and not by `$?`.
+"""
+
+
+def gh(*args: str, parse: bool = True, tolerate_fail: bool = False,
+       timeout: float | None = GH_TIMEOUT) -> Any:
+    """Executes a gh CLI command using the role credential and parses JSON output.
+
+    Args:
+        args: Arguments passed to the `gh` CLI.
+        parse: Whether to parse standard output as JSON.
+        tolerate_fail: Whether a failure raises rather than exits.
+        timeout: Seconds to wait for the invocation, `GH_TIMEOUT` by default;
+            `None` waits indefinitely, which is what the `gh stack` calls pass.
+
+    Returns:
+        The parsed JSON where `parse` is set and `gh` wrote anything to standard
+        output, and the stripped standard output otherwise — which is the empty
+        string for a `gh` that wrote nothing, parsed or not.
+
+    Raises:
+        subprocess.CalledProcessError: The invocation failed or timed out and
+            `tolerate_fail` is set; a timeout carries `TIMEOUT_RETURNCODE`, so
+            `gh_with_retry` retries it as it retries any other failure.
+        SystemExit: The invocation failed or timed out and `tolerate_fail` is not set.
+    """
+    try:
+        out = subprocess.run(["gh", *args], capture_output=True, text=True,
+                             env={**os.environ, **role_credential()}, timeout=timeout)
+    except subprocess.TimeoutExpired as expired:
+        hung = f"`gh {' '.join(args)}` answered nothing within {timeout}s"
+        if tolerate_fail:
+            raise subprocess.CalledProcessError(
+                TIMEOUT_RETURNCODE, ["gh", *list(args)], output="", stderr=hung) from expired
+        sys.exit(f"gh: {hung}")
     if out.returncode:
         if tolerate_fail:
             raise subprocess.CalledProcessError(out.returncode, ["gh", *list(args)], output=out.stdout, stderr=out.stderr)
@@ -312,7 +360,12 @@ def gh(*args: str, parse: bool = True, tolerate_fail: bool = False) -> Any:
 
 def gh_with_retry(*args: str, parse: bool = True, tries: int = 3, delay: float = 2,
                   backoff: float = 2, tolerate_fail: bool = False) -> Any:
-    """Run gh, retrying on subprocess/API failure with exponential backoff."""
+    """Run gh, retrying on subprocess/API failure with exponential backoff.
+
+    A call that answers nothing within `GH_TIMEOUT` seconds is a failure like
+    any other here, so a hung invocation is abandoned and retried rather than
+    waited on (solorepo's #738).
+    """
     import time
     current_delay = delay
     for attempt in range(tries):

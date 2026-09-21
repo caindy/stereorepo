@@ -223,6 +223,13 @@ def _evaluate_poll(
 
     Returns:
         tuple[bool, Snapshot, str | None]: (should_exit, current_snapshot, merges).
+
+    Raises:
+        github.GhTimeout: The reviewer's login could not be read because `gh`
+            answered nothing. Every other failure of that read degrades to an
+            unknown reviewer, which costs the classification one distinction; a
+            hang costs the poll its whole interval, so it is raised for `watch`
+            to retry rather than absorbed here.
     """
     number, state, _, _, threads_, checks, mergeable = current[:7]
     pr_data = current[7] if len(current) > 7 else {
@@ -279,6 +286,15 @@ def watch(ref: str | int, every: int = 60, max_retries: int = 5,
         SystemExit: Non-zero exit when `snapshot` encounters an unrecoverable fatal error
             matched by `is_fatal_poll_error`, or when consecutive poll failures exhaust `max_retries`.
 
+    Every `gh` call a poll makes is bounded by `github.GH_TIMEOUT`, so a hung
+    invocation fails the poll it serves rather than stalling the watch: the
+    failure is transient, so it is retried under backoff, and a hang that
+    persists exhausts `max_retries` and exits, which is the signal a silent
+    watch never sent (solorepo's #738). A poll is the snapshot and the
+    evaluation of it together for exactly this reason: the reviewer's login is
+    read during the evaluation, and a hang there costs the same interval and is
+    owed the same retry as one in the snapshot.
+
     Mergeability is remembered as the last answer GitHub gave, apart from the
     snapshot, because `UNKNOWN` is not a state of the branch but GitHub
     computing one and every push sets it: compared snapshot to snapshot, a push
@@ -301,6 +317,7 @@ def watch(ref: str | int, every: int = 60, max_retries: int = 5,
     while True:
         try:
             current = snapshot(ref)
+            should_exit, nxt, nxt_merges = _evaluate_poll(current, previous, merges)
         except SystemExit as e:
             if is_fatal_poll_error(e):
                 sys.exit(f"watch exiting on {ref_name}: fatal poll error: {e}")
@@ -319,7 +336,7 @@ def watch(ref: str | int, every: int = 60, max_retries: int = 5,
             time.sleep(delay)
             continue
         retries = 0
-        should_exit, previous, merges = _evaluate_poll(current, previous, merges)
+        previous, merges = nxt, nxt_merges
         if should_exit:
             return
         time.sleep(every)

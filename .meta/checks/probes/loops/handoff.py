@@ -3,7 +3,9 @@
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
 import datetime
+import subprocess
 import sys
+import types
 from typing import Any
 
 from checks import citations
@@ -144,8 +146,27 @@ def _watch_cases(check_pr: Any) -> list[str]:
     return problems
 
 
+def _hung_subprocess(bounds: list[float | None]) -> Any:
+    """As much of `subprocess` as `github.gh` uses, its `run` answering a call only when the call carries no bound.
+
+    Each invocation records the `timeout=` it was given in `bounds`. A bounded
+    call raises `TimeoutExpired`; an unbounded one returns successfully, so a
+    `run` handed no bound never times out and the assertions below stop holding
+    — which is what makes them assertions about the bound rather than about the
+    handling of a timeout.
+    """
+    def run(*args: Any, **kwargs: Any) -> Any:
+        bound = kwargs.get("timeout")
+        bounds.append(bound)
+        if bound is None:
+            return subprocess.CompletedProcess(["gh"], 0, stdout="{}", stderr="")
+        raise subprocess.TimeoutExpired(cmd=["gh"], timeout=bound)
+    return types.SimpleNamespace(run=run, TimeoutExpired=subprocess.TimeoutExpired,
+                                 CompletedProcess=subprocess.CompletedProcess)
+
+
 def _watch_failure_cases(check_pr: Any) -> list[str]:
-    """`--watch` failing fast on fatal environment errors and tripping the circuit breaker."""
+    """`--watch` failing fast on fatal environment errors, bounding a hung `gh` in the snapshot and in the evaluation, and tripping the circuit breaker."""
     problems: list[str] = []
 
     def fatal_gh(*args: Any) -> Any:
@@ -163,6 +184,32 @@ def _watch_failure_cases(check_pr: Any) -> list[str]:
         breaker_res = outcome(lambda: check_pr.watch("7", every=0, max_retries=3))
     if not breaker_res.code or "circuit broken after 3 retries" not in str(breaker_res.code):
         problems.append(f"watch: circuit breaker did not trip after 3 retries: {breaker_res.code!r}")
+
+    bounds: list[float | None] = []
+    with stood_in(check_pr.github, subprocess=_hung_subprocess(bounds)):
+        hung_call = outcome(lambda: check_pr.github.gh("pr", "view", "7"))
+        given = bounds[0] if bounds else "no call at all"
+        hung_watch = outcome(lambda: check_pr.watch("7", every=0, max_retries=2))
+    if given != check_pr.github.GH_TIMEOUT:
+        problems.append(f"gh: a call reached `subprocess.run` with timeout={given!r} rather "
+                        f"than {check_pr.github.GH_TIMEOUT!r}, and an invocation carrying no "
+                        "bound is the stall this exists to refuse")
+    if not hung_call.code or "answered nothing within" not in str(hung_call.code):
+        problems.append(f"gh: a call that never answered came to {hung_call.code!r}, "
+                        "and a poll waiting on one stalls the watch it serves")
+    if not hung_watch.code or "circuit broken after 2 retries" not in str(hung_watch.code):
+        problems.append(f"watch: a hung `gh` came to {hung_watch.code!r}, and a hang that "
+                        "persists is owed the exit a transient failure gets")
+
+    def hung_login(_role: Any) -> Any:
+        raise check_pr.github.GhTimeout("gh: `gh repo view` answered nothing within 60s")
+
+    with stood_in(check_pr.github, gh=WatchGitHub([]), role_login=hung_login):
+        hung_eval = outcome(lambda: check_pr.watch("7", every=0, max_retries=2))
+    if not hung_eval.code or "circuit broken after 2 retries" not in str(hung_eval.code):
+        problems.append(f"watch: a hang reading the reviewer's login came to {hung_eval.code!r}, "
+                        "and a poll that spends the bound and then classifies without a "
+                        "reviewer is a watch that crawls without ever failing")
 
     return problems
 

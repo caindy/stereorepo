@@ -110,3 +110,23 @@ calls during the first run of `review.yml` (solorepo's #84). Established:
 error message if the token value is blank or missing.
 
 Evidence: `.meta/checks/probes/channel/signing_key.py::signing_key_probes`
+
+### Unbounded gh invocations could hang a verb indefinitely
+
+`channel.gh` ran `gh` with no `timeout=`, so a call that stopped answering — a
+rate-limited API behind a CLI that refreshes its own auth — left the verb
+waiting with no failure to report and no bound to reach (solorepo's #738).
+`gh_with_retry` could not help: it retries `CalledProcessError`, and a call that
+never returns raises nothing. Established: `channel.gh` bounds each invocation
+at `GH_TIMEOUT` and reports a timeout as the failure shape its callers already
+handle — `CalledProcessError` under `TIMEOUT_RETURNCODE` where failure is
+tolerated, and an exit naming the call and the bound where it is not — so
+`gh_with_retry` retries a hang as it retries any other failure. The bound is
+the default and not the rule: the `gh stack` calls in `.meta/say/move` pass
+`timeout=None`, because a stack rebase or a stack merge can outlast a minute
+with nothing wrong and would be abandoned half done. The stand-in the probe
+runs against answers an unbounded call successfully, so stripping `timeout=`
+from the invocation fails the probe rather than leaving it asserting only that
+a timeout, once raised, is handled.
+
+Evidence: `.meta/checks/probes/channel/bound.py::gh_bound_probes`

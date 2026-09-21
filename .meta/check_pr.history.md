@@ -177,3 +177,25 @@ residue prints under it either way.
 
 Evidence: `.meta/lib/check_pr/cli.py::print_sweep`
 
+
+### A hung gh call stalled the watch that a handoff depends on
+
+`github.gh` ran `gh` with no `timeout=`, and every poll `watch` makes goes
+through it. A call that never returned produced no output, no retry and no
+exit, so the watch stopped without stopping: the failure was indistinguishable
+from the normal state of a watch, which is that nothing has happened yet, and
+the process that would have woken the session was the one stuck
+(solorepo's #738). The circuit breaker established for solorepo's #683 could
+not fire, because a hang raises nothing for it to count. Established:
+`github.gh` bounds each invocation at `GH_TIMEOUT` and exits with prose no
+pattern in `FATAL_POLL_PATTERNS` matches, so a hung poll is retried under
+backoff and a hang that persists exhausts `max_retries` and exits. A bound
+alone did not reach every call a poll makes: `repo()` caught the exit and fell
+back to the git remote, so a hang there cost the interval and degraded in
+silence, and the evaluation that reads the reviewer's login sat outside the
+retry. `gh` now raises `GhTimeout`, which `repo()` declines to catch, and a
+poll is the snapshot and its evaluation together. The stand-in the probe runs
+against answers an unbounded call successfully, so stripping `timeout=` from
+the invocation fails the probe.
+
+Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
