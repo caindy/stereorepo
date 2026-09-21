@@ -92,7 +92,7 @@ def has_quota_error(execution_file: str | pathlib.Path) -> bool:
 
     try:
         raw = path.read_text(encoding="utf-8", errors="replace")
-    except Exception as e:
+    except OSError as e:
         print(f"Error reading {path}: {e}", file=sys.stderr)
         return False
 
@@ -106,7 +106,7 @@ def has_quota_error(execution_file: str | pathlib.Path) -> bool:
                 or any(k in str(item.get("result", "")).lower() for k in ("limit", "quota", "rate"))
             ):
                 return True
-    except Exception as e:
+    except json.JSONDecodeError as e:
         print(f"Error parsing {path}: {e}", file=sys.stderr)
 
     lowered = raw.lower()
@@ -122,12 +122,12 @@ def merge_settings(source_path: pathlib.Path | None = None, dest_path: pathlib.P
         return
     try:
         src_data = json.loads(src.read_text(encoding="utf-8"))
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         print(f"Error reading source settings {src}: {e}", file=sys.stderr)
         return
     try:
         dest_data = json.loads(dest.read_text(encoding="utf-8")) if dest.is_file() else {}
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         print(f"Error reading destination settings {dest}: {e}", file=sys.stderr)
         dest_data = {}
     if "permissions" in src_data:
@@ -216,7 +216,7 @@ def configure_reviewer_settings(
     if dest.is_file():
         try:
             dest_data = json.loads(dest.read_text(encoding="utf-8"))
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             print(f"Error reading destination settings {dest}: {e}", file=sys.stderr)
             dest_data = {}
 
@@ -257,7 +257,7 @@ def configure_reviewer_settings(
     if hooks_dest.is_file():
         try:
             hooks_data = json.loads(hooks_dest.read_text(encoding="utf-8"))
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             print(f"Error reading destination hooks {hooks_dest}: {e}", file=sys.stderr)
             hooks_data = {}
 
@@ -327,7 +327,7 @@ def configure_coder_settings(
     if dest.is_file():
         try:
             dest_data = json.loads(dest.read_text(encoding="utf-8"))
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             print(f"Error reading destination settings {dest}: {e}", file=sys.stderr)
             dest_data = {}
 
@@ -357,7 +357,7 @@ def configure_coder_settings(
     if hooks_dest.is_file():
         try:
             hooks_data = json.loads(hooks_dest.read_text(encoding="utf-8"))
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             print(f"Error reading destination hooks {hooks_dest}: {e}", file=sys.stderr)
             hooks_data = {}
 

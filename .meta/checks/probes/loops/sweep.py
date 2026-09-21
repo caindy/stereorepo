@@ -9,7 +9,7 @@ from typing import Any
 
 from checks import citations
 from checks.collect import check
-from checks.probes.harness import answered, outcome, stood_in
+from checks.probes.harness import answered, outcome, stood_in, unanswered
 
 REFUSAL = "gh: HTTP 502: Server Error (https://api.github.com/graphql)"
 """What a `gh` that exits non-zero leaves behind, in the words `github.gh` exits with."""
@@ -79,7 +79,7 @@ class _Tree:
         elif verb == "fetch":
             said = ""
         else:
-            raise AssertionError(f"unexpected git call: {list(args)}")
+            raise unanswered(list(args), "the git fake")
         return types.SimpleNamespace(stdout=said)
 
 

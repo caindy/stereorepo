@@ -34,7 +34,7 @@ def generate_page(page: Page, root: pathlib.Path | None = None) -> str:
     see_also = page.see_also
     slug = page.slug.strip() or lead.slugify(title)
     syn_list = page.synonyms or []
-    minted = page.date_str or datetime.date.today().isoformat()
+    minted = page.date_str or datetime.datetime.now(datetime.UTC).astimezone().date().isoformat()
     lead_sentence = lead.format_lead_sentence(title, page.definition)
 
     frontmatter_lines = [

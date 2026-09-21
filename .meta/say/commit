@@ -43,7 +43,8 @@ def commit(subject: str) -> None:
     elif channel.role_credential():
         print("say: speaking as role without signing key; commit is cryptographically unsigned",
               file=sys.stderr)
-    out = subprocess.run(["git", *signing_args, "commit", "-F", "-"], input=message, text=True,
+    out = subprocess.run(["git", *signing_args, "commit", "-F", "-"],
+                         check=False, input=message, text=True,
                          env={**os.environ, **channel.role_identity()})
     sys.exit(out.returncode)
 

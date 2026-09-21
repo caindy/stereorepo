@@ -294,7 +294,7 @@ def _domain_vocabulary_problems(wiki_map: dict[tuple[str, str], pathlib.Path]) -
             slug = item_id.rsplit("/", 1)[-1].lower()
             if not any(s == slug for (c, s) in wiki_map if c != "solorepo"):
                 problems.append(f"domain_vocabulary.yaml: concept '{item_id}' has no corresponding wiki page (solorepo's DR-190)")
-    except Exception as e:
+    except (OSError, UnicodeDecodeError, yaml.YAMLError, AttributeError, TypeError) as e:
         problems.append(f"domain_vocabulary.yaml: failed to parse for parity check: {e}")
     return problems
 

@@ -40,22 +40,18 @@ def report(label: str, outcome: collect.StepOutcome | Sequence[str],
         print(f"?  {label}: {outcome.why}")
         unrunnable.append(f"{label}: {outcome.why}")
         return False
-    elif isinstance(outcome, collect.Passed):
+    if isinstance(outcome, collect.Passed):
         print(f"ok {label}" + (f" — {outcome.scope}" if outcome.scope else ""))
         return False
-    elif isinstance(outcome, collect.Found):
-        problems = outcome.problems
-    else:
-        problems = outcome
+    problems = outcome.problems if isinstance(outcome, collect.Found) else outcome
 
     if problems:
         print(f"x  {label} ({len(problems)})")
         for p in problems:
             print(f"     {p}")
         return True
-    else:
-        print(f"ok {label}")
-        return False
+    print(f"ok {label}")
+    return False
 
 
 def closing_block(unrunnable: Sequence[str],
@@ -112,14 +108,14 @@ def main() -> int:
     for step in [s for s in STEPS if s.pre]:
         try:
             problems = step.run()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001  # reason: a step is arbitrary code, and the gate reports the one that died rather than aborting the run (A7)
             problems = [f"the check itself could not run — {type(exc).__name__}: {exc}"]
         failed |= report(step.label, problems, unrunnable)
     rest = [s for s in STEPS if not s.pre]
     try:
         schemas = views()
         index, refs, skipped = collect.collect(schemas)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001  # reason: schema loading is third-party LinkML, and the gate names what failed rather than dying with its traceback
         print(f"?  schemas: could not load — {type(exc).__name__}: {exc}")
         print(f"     {len(rest)} steps did not run")
         return 1
@@ -136,7 +132,7 @@ def main() -> int:
     for step in rest:
         try:
             given = [sources[name]() for name in step.sources]
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001  # reason: a source builder is arbitrary code, and the gate reports the step whose input could not be built (A7)
             report(step.label,
                    collect.CouldNotRun("its source could not be built — "
                                        f"{type(exc).__name__}: {exc}"),
@@ -144,7 +140,7 @@ def main() -> int:
             continue
         try:
             problems = step.run(*given)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001  # reason: a step is arbitrary code, and the gate reports the one that died rather than aborting the run (A7)
             problems = [f"the check itself could not run — {type(exc).__name__}: {exc}"]
         failed |= report(step.label, problems, unrunnable)
     print(f"\n{len(index)} identified objects, {len(refs)} references")

@@ -5,6 +5,17 @@ import sys
 from collections.abc import Iterable
 from typing import Any
 
+from checks.probes.harness.acts import unanswered
+
+UNKNOWN_REFUSALS = "FakeGitHub takes {known}, not {unknown}"
+"""What construction raises on a keyword outside `FakeGitHub.REFUSALS`."""
+
+STACK_UNCHECKED_OUT = "gh stack rebase called without preceding gh stack checkout"
+"""What a stack rebase raises where nothing checked the stack out first."""
+
+STACK_UNKNOWN_BRANCH = "gh stack rebase: branch {branch!r} not found in fake pulls"
+"""What a stack rebase raises where the checked-out branch names no pull request this fake holds."""
+
 
 class FakeGitHub:
     """As much of GitHub as `advance`, `merge --auto`, `request-review` and the by-hand `dispatch` ask about, answered from a dict.
@@ -143,7 +154,8 @@ class FakeGitHub:
     def __init__(self, pulls: dict[int, dict[str, Any]], **refused: list[int]) -> None:
         unknown = set(refused) - set(self.REFUSALS)
         if unknown:
-            raise TypeError(f"FakeGitHub takes {', '.join(self.REFUSALS)}, not {', '.join(sorted(unknown))}")
+            raise TypeError(UNKNOWN_REFUSALS.format(known=", ".join(self.REFUSALS),
+                                                    unknown=", ".join(sorted(unknown))))
         self.pulls = {str(n): dict(p) for n, p in pulls.items()}
         self.reads = {}
         for number, pull in self.pulls.items():
@@ -268,7 +280,7 @@ class FakeGitHub:
                     ("pr", "merge"): self.merge, ("issue", "view"): self.issue}
         if head in answered:
             return answered[head](args)
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        raise unanswered(args)
 
     def update_branch(self, args: Any) -> str:
         """`pr update-branch`: refused for a number in `no_rebase`; otherwise the rebase, shown after `slow` reads."""
@@ -286,12 +298,12 @@ class FakeGitHub:
     def stack_rebase(self, args: tuple[Any, ...]) -> str:
         """Rebase every layer in the checked-out stack, or refuse before moving one."""
         if not self.checked_out:
-            raise AssertionError("gh stack rebase called without preceding gh stack checkout")
+            raise AssertionError(STACK_UNCHECKED_OUT)
         branch = self.checked_out[-1][0]
         root = next((number for number, pull in self.pulls.items()
                      if pull.get("branch", f"claude/issue-{number}") == branch), None)
         if root is None:
-            raise AssertionError(f"gh stack rebase: branch {branch!r} not found in fake pulls")
+            raise AssertionError(STACK_UNKNOWN_BRANCH.format(branch=branch))
         if root in self.no_stack:
             sys.exit("gh: the stack has conflicts that must be resolved")
         self.stack_rebases.append(root)
@@ -445,4 +457,4 @@ class WatchGitHub:
         if args[0] == "api":
             return {"data": {"repository": {"pullRequest": {
                 "reviewThreads": {"nodes": []}, "reviews": {"nodes": []}}}}}
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        raise unanswered(args)

@@ -26,6 +26,9 @@ from typing import Any
 
 from lib.worktree_only import grammar, paths
 
+NOT_AN_OBJECT = "expected JSON object, got {got}"
+"""What reading the event raises where the harness sent valid JSON that is not an object."""
+
 
 def blocked(tool: str, tool_input: dict[str, Any]) -> str | None:
     """Determine whether a tool invocation violates filesystem or confinement boundaries.
@@ -78,7 +81,7 @@ def blocked(tool: str, tool_input: dict[str, Any]) -> str | None:
                         "goes in single quotes, which is most regexes — `'\\bdef\\b'`."
                         + (f" This one would be taken as: {plain}" if plain else ""))
         return None
-    except BaseException as exc:
+    except BaseException as exc:  # noqa: BLE001  # reason: a hook that dies admits the call, so anything raised here — a recursion limit or an interrupt included — becomes a refusal
         return f"Blocked: hook evaluation failed ({type(exc).__name__}: {exc}); refusing rather than guessing."
 
 
@@ -116,7 +119,7 @@ def record_evidence(tool: str, permitted: bool, evidence: str | pathlib.Path | N
         verdict = "permit" if permitted else "refuse"
         with path.open("a", encoding="utf-8") as handle:
             handle.write(f"{stamp} {tool} {verdict}\n")
-    except Exception:
+    except OSError:
         return
 
 
@@ -142,7 +145,7 @@ def main() -> int:
         raw = sys.stdin.read()
         event = json.loads(raw)
         if not isinstance(event, dict):
-            raise TypeError(f"expected JSON object, got {type(event).__name__}")
+            raise TypeError(NOT_AN_OBJECT.format(got=type(event).__name__))
         if "toolCall" in event:
             is_antigravity = True
             tool_call = event.get("toolCall") or {}
@@ -152,7 +155,7 @@ def main() -> int:
             tool = event.get("tool_name") or ""
             tool_input = event.get("tool_input") or {}
         problem = blocked(tool, tool_input)
-    except BaseException as exc:
+    except BaseException as exc:  # noqa: BLE001  # reason: a hook that dies admits the call, so anything raised while reading the event — a recursion limit or an interrupt included — becomes a refusal
         if "toolCall" in raw:
             is_antigravity = True
         problem = f"Blocked: the hook failed ({type(exc).__name__}); refusing rather than guessing."

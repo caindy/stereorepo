@@ -25,7 +25,7 @@ try:
 except ImportError:
     cmd = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
            str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
-    res = subprocess.run(cmd)
+    res = subprocess.run(cmd, check=False)
     sys.exit(res.returncode)
 
 META = pathlib.Path(__file__).resolve().parent
@@ -85,7 +85,7 @@ def fetch_upstream_bootstrap(lang: str, target_dir: pathlib.Path) -> bool:
                 import shutil
                 shutil.copytree(src, target_dir)
                 return True
-    except Exception as e:
+    except (OSError, subprocess.CalledProcessError) as e:
         print(f"[!] Warning: Unable to fetch upstream bootstrap automatically: {e}", file=sys.stderr)
     return False
 
@@ -231,7 +231,7 @@ def bootstrap(lang: str, destination: str, name: str | None = None) -> int:
         return 1
 
     print(f"[*] Instantiating {lang.capitalize()} project at '{dest_rel}' with name '{package_name}'...")
-    res = subprocess.run([sys.executable, str(render_script), str(dest), package_name], capture_output=True, text=True)
+    res = subprocess.run([sys.executable, str(render_script), str(dest), package_name], check=False, capture_output=True, text=True)
     if res.returncode != 0:
         print(f"error: render failed:\n{res.stderr}", file=sys.stderr)
         return res.returncode
@@ -246,7 +246,7 @@ def bootstrap(lang: str, destination: str, name: str | None = None) -> int:
         render_py = META / "render.py"
         if render_py.is_file():
             print("[*] Re-rendering repository operator surface (just render)...")
-            subprocess.run(["python3", str(render_py)], capture_output=True, text=True)
+            subprocess.run(["python3", str(render_py)], check=False, capture_output=True, text=True)
     else:
         print("[!] Warning: structure.yaml not found; skipping project registration.")
 

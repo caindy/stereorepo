@@ -15,7 +15,7 @@ except ImportError:
     import subprocess
     cmd = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
            str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
-    res = subprocess.run(cmd)
+    res = subprocess.run(cmd, check=False)
     sys.exit(res.returncode)
 
 from lib.apm_compile import (

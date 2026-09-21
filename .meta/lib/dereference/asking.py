@@ -128,7 +128,7 @@ def ask(
     env.update(token)
     try:
         out = subprocess.run(["claude", "-p", "--model", model],
-                             input=QUESTION.format(**pair), capture_output=True,
+                             check=False, input=QUESTION.format(**pair), capture_output=True,
                              text=True, env=env, timeout=seconds)
     except subprocess.TimeoutExpired:
         return "?", f"the model did not answer within {seconds}s"

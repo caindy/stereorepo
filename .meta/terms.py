@@ -137,7 +137,12 @@ def _read_vocab_content(root_path: pathlib.Path, rel_path: str, commit: str | No
 
 
 def _parse_vocab_yaml(text: str) -> list[str]:
-    """Extract raw label strings from structured YAML when parser is available."""
+    """Extract raw label strings from structured YAML when parser is available.
+
+    A document that will not parse, or whose concept set is not the shape this
+    reads, yields no labels, so the caller falls back to the regex parser
+    rather than failing.
+    """
     if yaml is None:
         return []
     labels: list[str] = []
@@ -152,8 +157,8 @@ def _parse_vocab_yaml(text: str) -> list[str]:
                     for alt in c.get("alt_labels") or []:
                         if isinstance(alt, str):
                             labels.append(alt)
-    except Exception:
-        pass
+    except (yaml.YAMLError, AttributeError, TypeError):
+        return []
     return labels
 
 

@@ -33,7 +33,7 @@ try:
 except ImportError:
     cmd = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
            str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
-    res = subprocess.run(cmd)
+    res = subprocess.run(cmd, check=False)
     sys.exit(res.returncode)
 
 META = pathlib.Path(__file__).resolve().parent
@@ -42,6 +42,18 @@ FIXTURES_DIR = META / "fixtures" / "specialization"
 DEFAULT_TOKENS_PATH = FIXTURES_DIR / "tokens.json"
 TOKEN_RE = re.compile(r"__[A-Z0-9_]+__")
 SCAFFOLD_ONLY_PATHS = ("SPECIALIZE.md", "template", "bootstraps")
+
+NO_FIXTURE = "Tokens fixture file not found: {path}"
+"""What `load_tokens` raises where nothing is at the path it was given."""
+
+UNPARSED_FIXTURE = "Failed to parse tokens fixture as JSON: {why}"
+"""What `load_tokens` raises where the fixture will not parse as JSON."""
+
+NOT_AN_OBJECT = "Tokens fixture must be a JSON object, got {got}"
+"""What `load_tokens` raises where the fixture parses to something other than an object."""
+
+NOT_A_STRING_PAIR = "Token key and value must be strings: {key!r}: {value!r}"
+"""What `load_tokens` raises where a token's key or value is not a string."""
 
 
 def load_tokens(path: pathlib.Path) -> dict[str, str]:
@@ -57,17 +69,17 @@ def load_tokens(path: pathlib.Path) -> dict[str, str]:
         ValueError: If the file is missing, invalid JSON, or contains non-string mappings.
     """
     if not path.is_file():
-        raise ValueError(f"Tokens fixture file not found: {path}")
+        raise ValueError(NO_FIXTURE.format(path=path))
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise ValueError(f"Failed to parse tokens fixture as JSON: {exc}") from exc
+        raise ValueError(UNPARSED_FIXTURE.format(why=exc)) from exc
     if not isinstance(data, dict):
-        raise ValueError(f"Tokens fixture must be a JSON object, got {type(data).__name__}")
+        raise ValueError(NOT_AN_OBJECT.format(got=type(data).__name__))
     tokens: dict[str, str] = {}
     for key, val in data.items():
         if not isinstance(key, str) or not isinstance(val, str):
-            raise ValueError(f"Token key and value must be strings: {key!r}: {val!r}")
+            raise ValueError(NOT_A_STRING_PAIR.format(key=key, value=val))
         tokens[key] = val
     return tokens
 
@@ -172,7 +184,8 @@ def run_command(cmd: Sequence[str], cwd: pathlib.Path, env: dict[str, str] | Non
         tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
     """
     proc_env = {**os.environ, **(env or {})}
-    res = subprocess.run(cmd, cwd=str(cwd), env=proc_env, capture_output=True, text=True)
+    res = subprocess.run(cmd, check=False, cwd=str(cwd), env=proc_env,
+                         capture_output=True, text=True)
     return res.returncode, res.stdout, res.stderr
 
 
@@ -294,7 +307,8 @@ def step_8_run_gate(target_path: pathlib.Path, verbose: bool) -> int:
     """Runs .meta/gate in the specialized repository and verifies zero failing steps."""
     print("test-specialization: step 8 — execute portfolio gate across all projects")
     gate_script = target_path / ".meta" / "gate"
-    gate_proc = subprocess.run([str(gate_script)], cwd=str(target_path), capture_output=True, text=True)
+    gate_proc = subprocess.run([str(gate_script)], check=False, cwd=str(target_path),
+                               capture_output=True, text=True)
     if verbose or gate_proc.returncode != 0:
         print(gate_proc.stdout)
         if gate_proc.stderr:

@@ -405,7 +405,8 @@ def landed(pr: int | str) -> None:
             print(f"#{number} is not asserted as a Challenge; nothing to post for it")
             continue
         try:
-            out = subprocess.run([*command, number], cwd=root, capture_output=True, text=True)
+            out = subprocess.run([*command, number], check=False, cwd=root,
+                                 capture_output=True, text=True)
         except FileNotFoundError:
             sys.exit(f"say: render.py --landed {number} failed: `{command[0]}` is not on PATH")
         if out.returncode:

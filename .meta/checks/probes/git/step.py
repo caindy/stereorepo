@@ -88,7 +88,7 @@ def _events(worktree: Any) -> list[str]:
                 try:
                     payload = json.loads(res.out)
                     got_decision = payload.get("decision")
-                except Exception as exc:
+                except (json.JSONDecodeError, AttributeError) as exc:
                     problems.append(f"{group}: toolCall for {tool_name} emitted invalid JSON ({exc})")
                     continue
                 want_decision = "deny" if want == "refuse" else "allow"
@@ -121,7 +121,7 @@ def _check_signed_channel_toolcall(signed_channel: Any, want: str, event: dict[s
     try:
         payload = json.loads(res.out)
         got_decision = payload.get("decision")
-    except Exception as exc:
+    except (json.JSONDecodeError, AttributeError) as exc:
         return [f"signed_channel toolCall {tool_name}: emitted invalid JSON ({exc})"]
     want_decision = "deny" if want == "refuse" else "allow"
     if got_decision != want_decision:
@@ -158,7 +158,7 @@ def _check_signed_channel_unparseable(signed_channel: Any) -> list[str]:
             agy_dec = json.loads(res_agy.out).get("decision")
             if agy_dec != "deny":
                 problems.append(f"signed_channel unparseable toolCall: expected deny, got {agy_dec}")
-        except Exception as exc:
+        except (json.JSONDecodeError, AttributeError) as exc:
             problems.append(f"signed_channel unparseable toolCall: invalid JSON ({exc})")
 
     with environment(SOLOREPO_HOOK_EVIDENCE=None), \
@@ -241,7 +241,8 @@ def _matchers() -> list[str]:
                 "}"
                 "console.log(JSON.stringify(res));"
             )
-            proc = subprocess.run(["node", "-e", script], cwd=root, capture_output=True, text=True)
+            proc = subprocess.run(["node", "-e", script], check=False, cwd=root,
+                                  capture_output=True, text=True)
             if proc.returncode == 0 and proc.stdout.strip():
                 data = json.loads(proc.stdout)
                 if data.get("literal") != ["../outside.txt"]:
@@ -252,7 +253,8 @@ def _matchers() -> list[str]:
 
         if shutil.which("rg"):
             for pat in ("??/outside.txt", "[!a][!a]/outside.txt", "..*/outside.txt", "../outside.txt"):
-                proc = subprocess.run(["rg", "--files", "--glob", pat], cwd=root, capture_output=True, text=True)
+                proc = subprocess.run(["rg", "--files", "--glob", pat], check=False, cwd=root,
+                                      capture_output=True, text=True)
                 if proc.stdout.strip():
                     problems.append(f"rg unexpectedly matched with glob {pat}")
 
@@ -301,7 +303,8 @@ def _probe_antigravity_registration(resolved: pathlib.Path, variable: str, harne
             "stepIdx": 1,
             "toolCall": {"name": "run_command", "args": {"CommandLine": "git status --porcelain"}},
         }).encode("utf-8")
-        agy_proc = subprocess.run([str(resolved)], input=agy_allow, capture_output=True, env=agy_env)
+        agy_proc = subprocess.run([str(resolved)], check=False, input=agy_allow,
+                                  capture_output=True, env=agy_env)
         if agy_proc.returncode != 0:
             problems.append(
                 f"{harness}: Antigravity toolCall should exit 0 and exited {agy_proc.returncode}"
@@ -309,7 +312,7 @@ def _probe_antigravity_registration(resolved: pathlib.Path, variable: str, harne
         else:
             try:
                 agy_out = json.loads(agy_proc.stdout)
-            except Exception as e:
+            except json.JSONDecodeError as e:
                 problems.append(
                     f"{harness}: Antigravity toolCall stdout is not JSON ({agy_proc.stdout!r}): {e}"
                 )
@@ -322,7 +325,8 @@ def _probe_antigravity_registration(resolved: pathlib.Path, variable: str, harne
             "stepIdx": 2,
             "toolCall": {"name": "run_command", "args": {"CommandLine": "cat /etc/passwd"}},
         }).encode("utf-8")
-        agy_deny_proc = subprocess.run([str(resolved)], input=agy_deny, capture_output=True, env=agy_env)
+        agy_deny_proc = subprocess.run([str(resolved)], check=False, input=agy_deny,
+                                       capture_output=True, env=agy_env)
         if agy_deny_proc.returncode != 0:
             problems.append(
                 f"{harness}: Antigravity deny toolCall should exit 0 and exited {agy_deny_proc.returncode}"
@@ -330,7 +334,7 @@ def _probe_antigravity_registration(resolved: pathlib.Path, variable: str, harne
         else:
             try:
                 agy_deny_out = json.loads(agy_deny_proc.stdout)
-            except Exception as e:
+            except json.JSONDecodeError as e:
                 problems.append(
                     f"{harness}: Antigravity deny toolCall stdout is not JSON ({agy_deny_proc.stdout!r}): {e}"
                 )
@@ -396,7 +400,8 @@ def _probe_harness_registration(
         )
         exited = []
         for want, payload, shown, _ in calls:
-            proc = subprocess.run([str(resolved)], input=payload, capture_output=True, env=env)
+            proc = subprocess.run([str(resolved)], check=False, input=payload,
+                                  capture_output=True, env=env)
             code = str(proc.returncode)
             exited.append(code == ("2" if want == "refuse" else "0"))
             if not exited[-1]:
@@ -469,7 +474,7 @@ def _audit_symlinks(worktree: Any) -> list[str]:
         hook_path = META / "hooks" / "worktree_only.py"
         res = subprocess.run(
             [sys.executable, str(hook_path), "--audit-symlinks"],
-            cwd=str(ROOT),
+            check=False, cwd=str(ROOT),
             capture_output=True,
             text=True,
         )

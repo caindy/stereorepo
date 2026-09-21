@@ -9,6 +9,7 @@ History in move.history.md (solorepo's DR-171).
 """
 import argparse
 import datetime
+import json
 import pathlib
 import re
 import subprocess
@@ -24,6 +25,12 @@ import check_pr
 
 Pull = dict[str, Any]
 """One pull request as GitHub answers for it, whichever fields were asked for."""
+
+UNREACHED = (OSError, subprocess.CalledProcessError, json.JSONDecodeError, KeyError, TypeError)
+"""What a call through `channel` raises short of exiting: `gh` would not start, it
+failed where the caller passed `tolerate_fail`, or GitHub answered with something
+other than the JSON the caller reads. A verb that degrades rather than exits names
+this tuple, so a defect in the code it guards is not reported as a GitHub failure."""
 
 DIFFICULTIES = ("easy", "medium", "hard", "human")
 
@@ -48,6 +55,12 @@ ISSUE_REF = re.compile(r"(?:[\w.-]+/[\w.-]+)?#(\d+)")
 # this program can rewrite: the words that join references, and the words for
 # none of them.
 WAITS_FILLER = frozenset(("and", "nothing", "none", ""))
+
+NO_WAITS_LINE = "no `**Waits on.**` line"
+"""What rewriting a blocker line raises where the Issue body holds none."""
+
+NOT_AN_ISSUE = "{item!r} is not an Issue number"
+"""What the `--on`/`--off` parser raises for an item that is not digits."""
 
 
 # --- An Issue's life: filed, triaged, its level moved, claimed, handed back,
@@ -633,7 +646,7 @@ def retarget_waits(body: str, want: Sequence[int],
     """
     found = WAITS_LINE.search(body or "")
     if not found:
-        raise LookupError("no `**Waits on.**` line")
+        raise LookupError(NO_WAITS_LINE)
     line_text = found.group("text").strip()
     raw_items = [p.strip().rstrip(".") for p in line_text.split(",") if p.strip()]
     prose_items = []
@@ -808,7 +821,7 @@ def _stop_check_challenge(issue: str | int) -> None:
                          "`move triage` makes it one, at a level, in one act.")
     except SystemExit:
         raise
-    except Exception as exc:
+    except UNREACHED as exc:
         print(f"warning: could not read labels of #{issue} to verify Challenge: {exc}", file=sys.stderr)
 
 
@@ -818,7 +831,7 @@ def _stop_post_comment(issue: str | int, body: str) -> None:
         made = channel.gh_with_retry("api", f"repos/{channel.repo()}/issues/{issue}/comments", "-f", f"body={body}", tolerate_fail=True)
         if made and "html_url" in made:
             print(made["html_url"])
-    except Exception as exc:
+    except UNREACHED as exc:
         print(f"warning: could not post comment on #{issue}: {exc}", file=sys.stderr)
 
 
@@ -834,7 +847,7 @@ def _stop_release_assignee(issue: str | int) -> None:
                 print(f"warning: GitHub shows #{issue} still assigned to {login} after release", file=sys.stderr)
             else:
                 print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
-    except Exception as exc:
+    except UNREACHED as exc:
         print(f"warning: could not release assignee on #{issue}: {exc}", file=sys.stderr)
 
 
@@ -853,7 +866,7 @@ def _stop_move_human(issue: str | int) -> None:
             if res_back is not None:
                 now_back = [lbl["name"] for lbl in res_back["labels"]]
                 print(f"#{issue} is labelled {', '.join(now_back)}")
-    except Exception as exc:
+    except UNREACHED as exc:
         print(f"warning: could not set difficulty of #{issue} to human: {exc}", file=sys.stderr)
 
 
@@ -1875,7 +1888,7 @@ def _find_advance_notice_comment(pr: str | int) -> dict[str, Any] | None:
     """Find existing advance notice comment on a pull request, or None."""
     try:
         comments = channel.gh("api", f"repos/{channel.repo()}/issues/{pr}/comments", tolerate_fail=True)
-    except Exception:
+    except UNREACHED:
         return None
     if not isinstance(comments, list):
         return None
@@ -1919,7 +1932,7 @@ def reconcile_advance_notice(pr: str | int, problem: str | None) -> None:
             channel.gh("api", f"repos/{channel.repo()}/issues/comments/{comment_id}",
                        "-X", "DELETE", parse=False, tolerate_fail=True)
             print(f"advance: cleared notice on #{pr}")
-    except (Exception, SystemExit) as exc:
+    except (SystemExit, *UNREACHED) as exc:
         print(f"warning: could not reconcile advance notice on #{pr}: {exc}", file=sys.stderr)
 
 
@@ -2350,7 +2363,7 @@ def request_review(pr: str | int, to: str) -> None:
         try:
             channel.gh("pr", "ready", str(pr), parse=False)
             print(f"restored #{pr} from draft to ready for review")
-        except (Exception, SystemExit) as exc:
+        except (SystemExit, *UNREACHED) as exc:
             print(f"warning: could not mark #{pr} ready for review: {exc}", file=sys.stderr)
 
     def asked() -> list[str]:
@@ -2421,7 +2434,7 @@ def branch_here() -> str:
         str: Current git branch name, or 'an unnamed branch' on detached HEAD.
     """
     found = subprocess.run(["git", "-C", str(ROOT), "symbolic-ref", "-q", "--short", "HEAD"],
-                           capture_output=True, text=True)
+                           check=False, capture_output=True, text=True)
     return found.stdout.strip() if not found.returncode else "an unnamed branch"
 
 
@@ -2583,7 +2596,7 @@ def check_threads(pull: Pull, owner: str, name: str) -> tuple[bool, str]:
             if not pr_data:
                 return False, "could not read conversations (no pull request data)"
             threads = pr_data.get("reviewThreads", {}).get("nodes", [])
-        except (Exception, SystemExit) as exc:
+        except (SystemExit, Exception) as exc:  # noqa: BLE001  # reason: a semaphore that cannot read fails closed, so anything raised in the read refuses the merge rather than passing it
             return False, f"could not read conversations ({type(exc).__name__})"
     unresolved = [t for t in threads if not t.get("isResolved")]
     if unresolved:
@@ -2682,7 +2695,7 @@ def check_decisions_in_force(pull: Pull, owner: str, name: str) -> tuple[bool, s
     """
     try:
         files = changed_files(pull, owner, name)
-    except (Exception, SystemExit) as exc:
+    except (SystemExit, Exception) as exc:  # noqa: BLE001  # reason: a semaphore that cannot read fails closed, so anything raised in the read refuses the merge rather than passing it
         return False, f"could not read the diff ({type(exc).__name__})"
     if files is None:
         return False, f"could not read the diff (over {PER_PAGE * PAGES} files)"
@@ -2845,7 +2858,7 @@ def pr_changed_files(pull: Pull, owner: str, name: str,
         return cache[num]
     try:
         files = changed_files(pull, owner, name)
-    except (Exception, SystemExit):
+    except (SystemExit, *UNREACHED):
         cache[num] = None
         return None
     if files is None:
@@ -2937,7 +2950,7 @@ def evict_stalled_autonomous_pr(pull: Pull, reviewer_login: str = "reviewer", dr
         channel.gh("pr", "ready", str(pull["number"]), "--undo", parse=False)
         print(f"merge-manager: evicted stalled autonomous PR #{pull['number']} to draft")
         return True
-    except (Exception, SystemExit) as exc:
+    except (SystemExit, *UNREACHED) as exc:
         print(f"warning: could not demote PR #{pull['number']} to draft: {exc}", file=sys.stderr)
         return False
 
@@ -2956,7 +2969,7 @@ def _restore_draft_if_ready(pull: Pull, reviewer_login: str, dry_run: bool) -> N
                 channel.gh("pr", "ready", str(pull["number"]), parse=False)
                 pull["isDraft"] = False
                 print(f"merge-manager: restored answered and green PR #{pull['number']} from draft")
-            except (Exception, SystemExit) as exc:
+            except (SystemExit, *UNREACHED) as exc:
                 print(f"warning: could not mark PR #{pull['number']} ready: {exc}", file=sys.stderr)
         else:
             print(f"merge-manager: dry run — would restore PR #{pull['number']} from draft")
@@ -2968,7 +2981,7 @@ def repo_context() -> tuple[str, str, str]:
         repo = channel.repo()
         owner, name = repo.split("/")
         return owner, name, f"{owner}-{name}-reviewer"
-    except Exception:
+    except (*UNREACHED, ValueError):
         return "owner", "repo", "reviewer"
 
 
@@ -2979,7 +2992,7 @@ def open_issues() -> list[dict[str, Any]]:
             "issue", "list", "--state", "open", "--limit", "100",
             "--json", "number,title,body,blockedBy",
         ))
-    except Exception:
+    except UNREACHED:
         return []
 
 
@@ -3335,7 +3348,7 @@ def delegate(number: str | int, level: str | None = None) -> None:
         pull = channel.gh("pr", "view", str(number), "--json", f"{ADVANCE},reviews", tolerate_fail=True)
         is_pr_num = True
         print(f"#{number} identified as a pull request.")
-    except Exception:
+    except UNREACHED:
         pass
 
     if is_pr_num:
@@ -3381,7 +3394,7 @@ def numbers(text: str) -> list[int]:
     for item in text.split(","):
         item = item.strip().lstrip("#")
         if not item.isdigit():
-            raise argparse.ArgumentTypeError(f"{item!r} is not an Issue number")
+            raise argparse.ArgumentTypeError(NOT_AN_ISSUE.format(item=item))
         found.append(int(item))
     return found
 

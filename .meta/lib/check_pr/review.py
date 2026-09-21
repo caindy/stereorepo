@@ -25,6 +25,9 @@ ACTOR = re.compile(r"^Actor:\s*(\S+)", re.M)
 AGENT = re.compile(r"^Agent:\s*(\S+)", re.M)
 GHA_ACTOR = re.compile(r"^gha-\d+$")
 
+NO_SPEC = "no module spec for {path}"
+"""What loading the channel raises where `importlib` declines to describe the file as a module."""
+
 
 # The channel itself, because `mine()` below asks it which session is speaking
 # rather than resolving one of its own: the reader of a Trailer and the writer
@@ -38,7 +41,7 @@ def _load_channel() -> types.ModuleType:
     loader = SourceFileLoader("channel", str(META / "say" / "channel.py"))
     spec = importlib.util.spec_from_loader("channel", loader)
     if spec is None:
-        raise ImportError(f"no module spec for {loader.path}")
+        raise ImportError(NO_SPEC.format(path=loader.path))
     channel = importlib.util.module_from_spec(spec)
     loader.exec_module(channel)
     return channel

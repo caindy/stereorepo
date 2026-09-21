@@ -1,4 +1,4 @@
-"""The Python under `.meta/`, held to its linters — no configuration ignore, ruff clean, `mypy --strict` clean, a line limit that ratchets, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (solorepo's DR-177, solorepo's DR-210, solorepo's #540, solorepo's #760).
+"""The Python under `.meta/`, held to its linters — a ruleset at its floor, no configuration ignore, ruff clean, `mypy --strict` clean, a line limit that ratchets, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (solorepo's DR-177, solorepo's DR-210, solorepo's #540, solorepo's #760).
 
 The line limit runs across two steps rather than one because it arrived over a
 tree that had never been held to one, and the debt it found is diffuse: `meta
@@ -317,36 +317,79 @@ def meta_interpreter() -> StepOutcome:
     return Passed(f"{calls} uvx invocations across the worktree, each pinned to Python {version}")
 
 
-@check("meta lints")
-def meta_lints() -> StepOutcome:
-    """No linter rule is switched off in configuration, and every site suppression carries a reason (A2, solorepo's DR-177).
+SELECT_FLOOR = {
+    "E4": "E", "E7": "E", "E9": "E", "W": "W", "F": "F", "I": "I", "N": "N",
+    "UP": "UP", "B": "B", "BLE": "BLE", "C4": "C", "C90": "C", "DTZ": "DTZ",
+    "PLR0912": "PL", "PLR0913": "PL", "PLR0915": "PL", "PLW1510": "PL",
+    "RET": "RET", "SIM": "SIM", "TRY003": "TRY", "RUF": "RUF", "PTH": "PTH",
+}
+"""What `.meta/ruff.toml` must select, each entry against the ruff linter that owns it.
 
-    An `ignore` in `.meta/ruff.toml` switches a rule off where nobody reads it.
-    At a site, a `noqa` or `type: ignore` comment without an explanatory
-    `reason:` is a configuration ignore with extra steps. This holds .meta/
-    tooling to the same discipline the Python bootstrap enforces on portfolio
-    code.
+Stated here rather than read from the file it audits, and each entry paired with
+its linter rather than left as bare text, for the reasons recorded in
+solorepo's DR-263.
+"""
 
-    Read from comment tokens, so a suppression quoted in a string or a docstring
-    is the text of one rather than one: `comments.py` states every pattern here
-    and passes each to a probe as a literal, and a line scan reports both. The
-    patterns are `comments.py`'s too, so that the rule a suppression names and
-    the reason it gives are read off one parse (solorepo's DR-150).
+
+WIDEST = "ALL"
+"""Ruff's selector for every rule it implements, which reaches every entry of the floor."""
+
+
+def _reaches(selector: str, rule: str, linter: str) -> bool:
+    """Whether one `select` entry selects the rules a floor entry names.
+
+    A ruff selector is a linter's prefix followed by as much of a code as the
+    author wrote, and a prefix widens only inside the linter that owns it:
+    `TRY` selects `TRY003` because both are tryceratops, while `T` is
+    flake8-debugger and selects none of it. Reaching the linter's own prefix is
+    what tells the two apart.
+
+    Args:
+        selector: One entry of `select` or `extend-select`.
+        rule: The floor entry it is read against.
+        linter: The prefix of the ruff linter that owns `rule`.
+
+    Returns:
+        bool: True where the selector is ruff's widest, or is a prefix of the
+        rule that reaches at least the linter's own prefix.
+    """
+    if selector == WIDEST:
+        return True
+    return rule.startswith(selector) and selector.startswith(linter)
+
+
+def unselected(lint: dict[str, object]) -> list[str]:
+    """The entries of `SELECT_FLOOR` a `[lint]` table does not reach.
+
+    Args:
+        lint: The `[lint]` table of `.meta/ruff.toml`, as `tomllib` read it.
+
+    Returns:
+        list[str]: The floor entries no selector under `select` or
+        `extend-select` reaches, in the floor's own order.
+    """
+    selectors: list[str] = []
+    for key in ("select", "extend-select"):
+        named = lint.get(key)
+        if isinstance(named, list):
+            selectors += [str(entry) for entry in named]
+    return [rule for rule, linter in SELECT_FLOOR.items()
+            if not any(_reaches(selector, rule, linter) for selector in selectors)]
+
+
+def unreasoned(py_files: Sequence[pathlib.Path]) -> tuple[list[str], int]:
+    """Every site suppression under `.meta/` that gives no reason, and how many were read.
+
+    Args:
+        py_files: The Python sources to read, as `sources.meta_sources` lists them.
+
+    Returns:
+        tuple[list[str], int]: One problem per suppression without a `reason:`
+        and one per file that will not parse, in path order; and the number of
+        suppressions read, reasoned or not.
     """
     from checks import comments
-    config = META / "ruff.toml"
-    if not config.is_file():
-        return CouldNotRun(".meta/ruff.toml is missing")
-    try:
-        data = tomllib.loads(config.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as error:
-        return Found((f".meta/ruff.toml: does not parse — {error}",))
-    problems = []
-    lint = data.get("lint", {})
-    for key in ("ignore", "extend-ignore"):
-        if lint.get(key):
-            problems.append(f".meta/ruff.toml: `{key}` switches {len(lint[key])} rules off in configuration")
-    py_files = sources.meta_sources()
+    problems: list[str] = []
     suppressions = 0
     for source in sorted(py_files):
         relative = source.relative_to(ROOT).as_posix()
@@ -363,11 +406,58 @@ def meta_lints() -> StepOutcome:
                 suppressions += 1
                 if not comments.REASON.search(match.group("rest")):
                     problems.append(f"{relative}:{comment.line}: `{what}` gives no reason")
+    return problems, suppressions
+
+
+@check("meta lints")
+def meta_lints() -> StepOutcome:
+    """The ruleset is at its floor, nothing is switched off, and a suppression gives a reason.
+
+    What is held here is A2 and solorepo's DR-177. An `ignore` in
+    `.meta/ruff.toml` switches a rule off where nobody reads it.
+    At a site, a `noqa` or `type: ignore` comment without an explanatory
+    `reason:` is a configuration ignore with extra steps. This holds .meta/
+    tooling to the same discipline the Python bootstrap enforces on portfolio
+    code.
+
+    `select` admits the same evasion: declining to select a rule costs no
+    suppression, no `reason:` and no argument, while switching the same rule off
+    after selecting it costs all three. `SELECT_FLOOR` is the ruleset this
+    repository must select at a minimum, and a `.meta/ruff.toml` whose `select`
+    and `extend-select` do not reach every entry of it is a problem this step
+    reports (solorepo's DR-263).
+
+    Read from comment tokens, so a suppression quoted in a string or a docstring
+    is the text of one rather than one: `comments.py` states every pattern here
+    and passes each to a probe as a literal, and a line scan reports both. The
+    patterns are `comments.py`'s too, so that the rule a suppression names and
+    the reason it gives are read off one parse (solorepo's DR-150).
+    """
+    config = META / "ruff.toml"
+    if not config.is_file():
+        return CouldNotRun(".meta/ruff.toml is missing")
+    try:
+        data = tomllib.loads(config.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as error:
+        return Found((f".meta/ruff.toml: does not parse — {error}",))
+    problems = []
+    lint = data.get("lint", {})
+    for key in ("ignore", "extend-ignore"):
+        if lint.get(key):
+            problems.append(f".meta/ruff.toml: `{key}` switches {len(lint[key])} rules off in configuration")
+    missing = unselected(lint)
+    if missing:
+        problems.append(f".meta/ruff.toml: `select` does not reach {', '.join(missing)}, "
+                        "which the floor in checks/files/python.py names")
+    py_files = sources.meta_sources()
+    unreasoned_problems, suppressions = unreasoned(py_files)
+    problems += unreasoned_problems
     if problems:
         return Found(tuple(problems))
     return Passed(
         f"{suppressions} suppressions across {len(py_files)} files, each with a reason; "
-        ".meta/ruff.toml switches no rule off"
+        f".meta/ruff.toml reaches all {len(SELECT_FLOOR)} entries of the floor "
+        "and switches none off"
     )
 
 

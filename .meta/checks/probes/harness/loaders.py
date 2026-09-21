@@ -11,6 +11,9 @@ import yaml
 
 from checks.collect import META, ROOT
 
+NO_SPEC = "no module spec for {path}"
+"""What loading raises where `importlib` declines to describe the file as a module."""
+
 
 def load_module(path: str | pathlib.Path, name: str | None = None, register: bool = True) -> types.ModuleType:
     """The Python source at `path` as a fresh module object, its `main()` unrun.
@@ -35,7 +38,7 @@ def load_module(path: str | pathlib.Path, name: str | None = None, register: boo
     loader = SourceFileLoader(name, str(path))
     spec = importlib.util.spec_from_loader(name, loader)
     if spec is None:
-        raise ImportError(f"no module spec for {path}")
+        raise ImportError(NO_SPEC.format(path=path))
     module = importlib.util.module_from_spec(spec)
     if register:
         sys.modules[name] = module

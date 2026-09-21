@@ -124,6 +124,6 @@ def blocked(command: str, depth: int = 0) -> str | None:
             if problem:
                 return problem
         return None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001  # reason: the hook refuses what it cannot read, so a command that breaks the reader is blocked rather than admitted by the failure
         return f"{tables.UNREADABLE} ({type(exc).__name__}: {exc})"
 

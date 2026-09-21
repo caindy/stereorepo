@@ -104,7 +104,7 @@ def gh(*args: str, default: Any = UNSET) -> Any:
     Raises:
         SystemExit: If the read fails and no fallback was given.
     """
-    out = subprocess.run(["gh", *args], capture_output=True, text=True)
+    out = subprocess.run(["gh", *args], check=False, capture_output=True, text=True)
     if out.returncode:
         return _degrade(args, default, out.stderr.strip())
     text = out.stdout.strip()

@@ -23,7 +23,7 @@ def existing_clusters() -> list[str]:
     if not shutil.which("kind"):
         sys.exit("arc-cluster: kind is not on PATH — install it, or point kubectl "
                  "at a cluster you already have and run `just arc` directly")
-    out = subprocess.run(["kind", "get", "clusters"], capture_output=True, text=True)
+    out = subprocess.run(["kind", "get", "clusters"], check=False, capture_output=True, text=True)
     if out.returncode:
         sys.exit(f"arc-cluster: kind could not list clusters — {out.stderr.strip()}")
     return [line.strip() for line in out.stdout.splitlines() if line.strip()]

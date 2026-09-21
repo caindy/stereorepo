@@ -251,7 +251,7 @@ def check_programmatic_hook(
                 agents=int(res.get("agents", DEEP_CONFIG.agents)),
                 reason=res.get("reason", "programmatic hook"),
             )
-    except Exception as err:
+    except Exception as err:  # noqa: BLE001  # reason: a portfolio's depth hook is arbitrary code loaded from its own tree, and a broken one falls back to the declared depth rather than stopping the review
         print(f"depth: error executing programmatic hook {hook_file}: {err}", file=sys.stderr)
     return None
 
@@ -310,7 +310,7 @@ def repo_target(repo: str | None = None) -> str | None:
             ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
             text=True,
         ).strip()
-    except Exception:
+    except (OSError, subprocess.CalledProcessError):
         return None
     return out or None
 
@@ -335,7 +335,7 @@ def last_verdict_head(pr: str, target: str | None) -> str | None:
             f'[.[] | select(.user.login == "{reviewer_login}") | '
             'select(.state != "COMMENTED" or (.body // "") != "")] | last | .commit_id',
         ], text=True).strip()
-    except Exception as err:
+    except (OSError, subprocess.CalledProcessError) as err:
         print(f"depth: notice: could not query prior reviews for {reviewer_login}: {err}", file=sys.stderr)
         return None
     return head if head and head != "null" else None
@@ -350,12 +350,12 @@ def incremental_files(head: str | None) -> list[str] | None:
     Returns:
         list[str] | None: List of changed file paths, or None if head commit is inaccessible.
     """
-    if not head or subprocess.run(["git", "cat-file", "-e", head], capture_output=True).returncode != 0:
+    if not head or subprocess.run(["git", "cat-file", "-e", head], check=False, capture_output=True).returncode != 0:
         return None
     print(f"depth: checking incremental delta diff since last verdict head: {head}", file=sys.stderr)
     try:
         diff_out = subprocess.check_output(["git", "diff", "--name-only", head, "HEAD"], text=True)
-    except Exception as err:
+    except (OSError, subprocess.CalledProcessError) as err:
         print(f"depth: git diff incremental failed ({err}); falling back to cumulative PR files", file=sys.stderr)
         return None
     return [line.strip() for line in diff_out.splitlines() if line.strip()]

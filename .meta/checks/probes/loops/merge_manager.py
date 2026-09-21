@@ -14,6 +14,15 @@ from checks.probes.harness import (
     stood_in,
 )
 
+GRAPHQL_OUTAGE = "GraphQL outage"
+"""What a GraphQL stood in for to fail raises, so the probe reads a degraded answer."""
+
+API_OUTAGE = "API outage"
+"""What a `gh` stood in for to fail raises, so the probe reads a degraded answer."""
+
+SIMULATED_NETWORK_FAILURE = "gh: simulated network failure marking ready"
+"""What a stood-in `gh` raises to simulate a network failure marking a pull request ready."""
+
 
 @check("merge manager probes", pre=True)
 def merge_manager_probes() -> list[str]:
@@ -142,7 +151,7 @@ def _threads_fail_closed(channel: Any, move: Any) -> list[str]:
     problems = []
     def broken_graphql(*args: Any, **kwargs: Any) -> Any:
         """A GraphQL that raises, whatever it is asked."""
-        raise RuntimeError("GraphQL outage")
+        raise RuntimeError(GRAPHQL_OUTAGE)
 
     with stood_in(channel, graphql=broken_graphql):
         ok_th, msg_th = move.check_threads({"number": 99}, "owner", "repo")
@@ -256,7 +265,7 @@ def _decisions_in_force(channel: Any, move: Any) -> list[str]:
 
     def broken_gh(*args: Any, **kwargs: Any) -> Any:
         """A `gh` that raises, whatever it is asked."""
-        raise RuntimeError("API outage")
+        raise RuntimeError(API_OUTAGE)
 
     with stood_in(channel, gh=broken_gh):
         ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
@@ -842,7 +851,7 @@ def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
 
     def gh_fail_restore(*args: Any, **kwargs: Any) -> Any:
         if args[:2] == ("pr", "ready") and "--undo" not in args:
-            raise SystemExit("gh: simulated network failure marking ready")
+            raise SystemExit(SIMULATED_NETWORK_FAILURE)
         return {}
 
     failing_draft_pr = {

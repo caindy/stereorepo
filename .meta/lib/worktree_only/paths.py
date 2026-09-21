@@ -359,7 +359,7 @@ def _tracked_symlinks(base: pathlib.Path) -> tuple[list[str], set[pathlib.Path]]
                     problem = outside_symlink(target_path, root=base)
                     if problem:
                         problems.append(f"tracked symlink `{rel}` -> `{_readlink_safe(target_path)}`: {problem}")
-    except Exception:
+    except OSError:
         pass
     return problems, scanned
 

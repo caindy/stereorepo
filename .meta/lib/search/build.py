@@ -128,7 +128,7 @@ def build_index(meta_dir: Path, root_dir: Path) -> bm25.SearchIndex:
                     source_file=rel_source,
                     field_tokens=field_tokens,
                 )
-        except Exception as err:
+        except Exception as err:  # noqa: BLE001  # reason: LinkML raises its own hierarchy across schema load and induction, and an index built without assertions is better than a search that will not build
             print(f"Warning: collect could not load LinkML schemas: {err}", file=sys.stderr)
 
     wiki_dir = root_dir / "wiki"

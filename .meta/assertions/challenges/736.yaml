@@ -1,0 +1,12 @@
+challenges:
+  - id: work:challenge/736
+    name: The select door the no-ignore rule left open, and the findings behind it
+    challenge_type: ARCHITECTURE
+    description: >-
+      The `meta lints` step refuses any `ignore` in `.meta/ruff.toml`, on the reasoning
+      that an ignore switches a rule off where nobody reads it, and never read `select`.
+      Declining to select a family reached the same end at no cost, and BLE, DTZ, PLW1510,
+      RET and TRY003 had been unselected for as long as the file had existed. Widens the
+      ruleset to those families, fixes the findings behind them, and asserts a floor on
+      select itself so that removing a family costs the argument switching one off after
+      selecting it already costs.

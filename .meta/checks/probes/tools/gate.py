@@ -24,7 +24,7 @@ def gate_runner_probes() -> list[str]:
     problems = []
     try:
         gate = load_module(META / "gate", "gate-runner", register=False)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001  # reason: loading the runner evaluates its module body and every signature in it, and the probe names what failed rather than taking the gate down with the traceback this step exists to catch
         return [f"gate runner: .meta/gate did not load — {type(exc).__name__}: {exc}"]
 
     for name, lock in (("without a lock", None), ("under a lock", threading.Lock())):

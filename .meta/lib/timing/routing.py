@@ -26,10 +26,10 @@ def model_of(run: dict[str, Any]) -> str:
     if not sha:
         return "unknown"
     res = subprocess.run(["git", "diff", "--name-only", f"origin/main...{sha}"],
-                         capture_output=True, text=True)
+                         check=False, capture_output=True, text=True)
     if res.returncode != 0 or not res.stdout.strip():
         res = subprocess.run(["git", "diff-tree", "--no-commit-id", "--name-only", "-r", sha],
-                             capture_output=True, text=True)
+                             check=False, capture_output=True, text=True)
     if res.returncode == 0 and res.stdout.strip():
         if any(BOUNDARY_PATTERN.search(f) for f in res.stdout.splitlines()):
             return "opus"
@@ -47,7 +47,7 @@ def _ensure_issues_loaded() -> None:
     if ISSUES_FETCHED:
         return
     res = subprocess.run(["gh", "issue", "list", "--state", "all", "--limit", "300", "--json", "number,title,labels"],
-                         capture_output=True, text=True)
+                         check=False, capture_output=True, text=True)
     if res.returncode == 0:
         try:
             for item in json.loads(res.stdout):
@@ -58,7 +58,7 @@ def _ensure_issues_loaded() -> None:
                         break
                 ISSUE_DIFF_BY_NUM[str(item["number"])] = diff
                 ISSUE_DIFF_BY_TITLE[item.get("title", "").strip().lower()] = diff
-        except Exception:
+        except (json.JSONDecodeError, AttributeError, KeyError, TypeError):
             pass
     ISSUES_FETCHED = True
 
@@ -88,7 +88,7 @@ def difficulty_of(run: dict[str, Any]) -> str:
         diff = ISSUE_DIFF_BY_NUM.get(issue_num)
         if not diff or diff == "unknown":
             res = subprocess.run(["gh", "issue", "view", issue_num, "--json", "labels"],
-                                 capture_output=True, text=True)
+                                 check=False, capture_output=True, text=True)
             if res.returncode == 0:
                 try:
                     data = json.loads(res.stdout)
@@ -97,7 +97,7 @@ def difficulty_of(run: dict[str, Any]) -> str:
                         if cand in labels:
                             diff = cand
                             break
-                except Exception:
+                except (json.JSONDecodeError, AttributeError, TypeError):
                     pass
         diff = diff or "unknown"
         DIFFICULTY_CACHE[issue_num] = diff

@@ -21,6 +21,9 @@ import urllib.request
 from collections.abc import Mapping
 from typing import Any
 
+EMPTY_REVIEW = "Jules session {session} returned an empty review response; aborting verdict."
+"""What a review raises where the session produced no agent text to read a verdict from."""
+
 API_BASE = "https://jules.googleapis.com/v1alpha"
 ENV_API_KEY = "JULES_API_KEY"
 CONFIG_ENV = pathlib.Path("~/.config/solorepo/jules.env").expanduser()
@@ -156,7 +159,12 @@ def poll_session_activities(
     timeout_seconds: int = 180,
     poll_interval: float = 3.0,
 ) -> list[dict[str, Any]]:
-    """Polls a session until agent activities are generated or timeout occurs."""
+    """Polls a session until agent activities are generated or timeout occurs.
+
+    A failed poll costs one interval rather than the run: a payload that will
+    not parse or will not decode, and a connection dropped mid-read, are
+    swallowed and the next tick asks again.
+    """
     clean_id = session_id.removeprefix("sessions/")
     start = time.time()
     while time.time() - start < timeout_seconds:
@@ -173,7 +181,7 @@ def poll_session_activities(
                 ]
                 if agent_activities:
                     return activities
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             pass
         time.sleep(poll_interval)
     sys.exit(f"jules: timed out waiting for session {clean_id} activities after {timeout_seconds}s")
@@ -213,7 +221,7 @@ def extract_findings(text: str) -> list[tuple[str, int, str]]:
 def check_pr_ci_status(pr_number: str) -> tuple[bool, str]:
     """Check whether any completed GitHub CI check on the pull request has failed."""
     cmd = ["gh", "pr", "checks", pr_number, "--json", "name,state,bucket"]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, check=False, capture_output=True, text=True)
     if res.returncode != 0:
         return False, "Checks pending or status query unavailable."
     try:
@@ -232,7 +240,7 @@ def check_pr_ci_status(pr_number: str) -> tuple[bool, str]:
         if failed_checks:
             return True, f"Failed CI checks: {', '.join(failed_checks)}"
         return False, "All completed CI checks passed."
-    except Exception as e:
+    except json.JSONDecodeError as e:
         return False, f"Could not parse checks JSON: {e}"
 
 
@@ -282,10 +290,10 @@ def review_pr(
     if diff_path.is_file():
         diff_text = diff_path.read_text(encoding="utf-8", errors="replace")
     else:
-        diff_cmd = subprocess.run(["git", "diff", "origin/main...HEAD"], capture_output=True, text=True)
+        diff_cmd = subprocess.run(["git", "diff", "origin/main...HEAD"], check=False, capture_output=True, text=True)
         diff_text = diff_cmd.stdout if diff_cmd.returncode == 0 else ""
 
-    check_pr_res = subprocess.run(["python3", ".meta/check_pr.py", clean_pr], capture_output=True, text=True)
+    check_pr_res = subprocess.run(["python3", ".meta/check_pr.py", clean_pr], check=False, capture_output=True, text=True)
     form_passed = check_pr_res.returncode == 0
     checks_summary = f"check_pr exit code: {check_pr_res.returncode}\n{check_pr_res.stdout}\n{check_pr_res.stderr}".strip()
 
@@ -293,7 +301,7 @@ def review_pr(
 
     unresolved_res = subprocess.run(
         ["python3", ".meta/check_pr.py", clean_pr, "--unresolved-count"],
-        capture_output=True,
+        check=False, capture_output=True,
         text=True,
     )
     unresolved_count = 0
@@ -302,7 +310,7 @@ def review_pr(
 
     threads_res = subprocess.run(
         ["python3", ".meta/check_pr.py", clean_pr, "--threads"],
-        capture_output=True,
+        check=False, capture_output=True,
         text=True,
     )
     threads_summary = threads_res.stdout.strip() if threads_res.returncode == 0 else "None."
@@ -364,7 +372,7 @@ RECOMMENDED_VERDICT: COMMENT
     activities = poll_session_activities(session_id, api_key=api_key, timeout_seconds=timeout_seconds)
     review_body = extract_agent_text(activities)
     if not review_body.strip():
-        raise RuntimeError(f"Jules session {session_id} returned an empty review response; aborting verdict.")
+        raise RuntimeError(EMPTY_REVIEW.format(session=session_id))
 
     findings = extract_findings(review_body)
     verdict = determine_verdict(

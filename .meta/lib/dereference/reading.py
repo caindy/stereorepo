@@ -55,7 +55,7 @@ def citations() -> Any:
 
 def git(*args: str, default: str | None = None) -> str:
     """Executes a git command in the repository root and returns its stdout."""
-    out = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
+    out = subprocess.run(["git", *args], check=False, capture_output=True, text=True, cwd=ROOT)
     if out.returncode:
         if default is None:
             sys.exit(f"dereference: git {' '.join(args[:2])}: {out.stderr.strip()}")

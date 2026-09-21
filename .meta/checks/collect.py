@@ -43,6 +43,10 @@ STEPS: list[Step] = []
 # require. A step takes the ones it names, in the order it names them.
 SOURCES = ("index", "refs", "views", "asked", "pages")
 
+UNKNOWN_SOURCES = ("{step} requires {unknown}, which the gate has nothing to pass; "
+                   "a step's sources are {known}")
+"""What registering a step raises on a parameter `SOURCES` does not name."""
+
 Index = dict[str, tuple[str, dict[str, Any], str]]
 """The identified objects one pass over the assertions found: identifier to `(class, object, file)`."""
 
@@ -114,8 +118,8 @@ def check(label: str, pre: bool = False) -> Callable[[StepFunction], StepFunctio
                         if p.default is inspect.Parameter.empty)
         unknown = [name for name in sources if name not in SOURCES]
         if unknown:
-            raise TypeError(f"{fn.__name__} requires {', '.join(unknown)}, which the gate has "
-                            f"nothing to pass; a step's sources are {', '.join(SOURCES)}")
+            raise TypeError(UNKNOWN_SOURCES.format(step=fn.__name__, unknown=", ".join(unknown),
+                                                  known=", ".join(SOURCES)))
         STEPS.append(Step(label, fn, pre, sources))
         return fn
 
@@ -212,7 +216,7 @@ def walk(obj: Any, cls: str, sv: Any, found: Collected, where: str) -> None:
     for key, val in obj.items():
         try:
             slot = sv.induced_slot(key, cls)
-        except Exception:
+        except Exception:  # noqa: BLE001  # reason: LinkML raises its own hierarchy for a key no class induces, and a key this schema does not model is skipped rather than fatal
             continue
         if slot is None or slot.range not in sv.all_classes():
             continue

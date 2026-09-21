@@ -163,7 +163,7 @@ def reserved_decision_numbers() -> set[int] | None:
     """
     try:
         found = subprocess.run(["git", "-C", str(ROOT), "ls-remote", "--tags", "origin", "DR-*"],
-                               capture_output=True, text=True, timeout=30)
+                               check=False, capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.SubprocessError):
         return None
     if found.returncode:
@@ -205,13 +205,13 @@ def deleted_decision_numbers(numbers: list[int] | set[int]) -> set[int] | None:
     argv = ["git", "-C", str(ROOT)]
     try:
         shallow = subprocess.run([*argv, "rev-parse", "--is-shallow-repository"],
-                                 capture_output=True, text=True, timeout=30)
+                                 check=False, capture_output=True, text=True, timeout=30)
         if shallow.returncode or shallow.stdout.strip() != "false":
             return None
         found = subprocess.run(argv + ["log", "--no-renames", "--diff-filter=D",
                                        "--name-only", "--format=", "--"]
                                + [f"{where}/DR-{n:03d}.yaml" for n in sorted(numbers)],
-                               capture_output=True, text=True, timeout=30)
+                               check=False, capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.SubprocessError):
         return None
     if found.returncode:

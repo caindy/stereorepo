@@ -31,7 +31,8 @@ def tree() -> list[pathlib.Path]:
     """Every file git would commit or is not ignoring, or every file at all
     where there is no git to ask."""
     listed = subprocess.run(["git", "-C", str(ROOT), "ls-files", "--cached", "--others",
-                             "--exclude-standard", "-z"], capture_output=True, text=True)
+                             "--exclude-standard", "-z"],
+                            check=False, capture_output=True, text=True)
     if listed.returncode:
         return sorted(ROOT.rglob("*"))
     return sorted(ROOT / name for name in listed.stdout.split("\0") if name)

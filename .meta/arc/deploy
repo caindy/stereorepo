@@ -107,7 +107,7 @@ def token() -> str:
 def current_context() -> str:
     """Returns the active kubectl context name or exits if none is configured."""
     out = subprocess.run(["kubectl", "config", "current-context"],
-                         capture_output=True, text=True)
+                         check=False, capture_output=True, text=True)
     if out.returncode:
         sys.exit("arc: no kubectl context is set — point kubectl at a cluster first "
                  "(`.meta/arc/cluster` for a local one, or `kubectl config use-context`)")
@@ -196,7 +196,7 @@ def is_registration_stale(since_seconds: float | int = 120) -> bool:
     scale_set = subprocess.run([
         "kubectl", "-n", RUNNER_NAMESPACE, "get", "autoscalingrunnerset",
         RUNNERSET_RELEASE, "-o", "jsonpath={.metadata.annotations.runner-scale-set-id}",
-    ], capture_output=True, text=True)
+    ], check=False, capture_output=True, text=True)
     if scale_set.returncode != 0 or not scale_set.stdout.strip():
         return False
 
@@ -205,7 +205,7 @@ def is_registration_stale(since_seconds: float | int = 120) -> bool:
                       ("app.kubernetes.io/component=controller-manager", CONTROLLER_NAMESPACE)]:
         logs = subprocess.run([
             "kubectl", "-n", ns, "logs", "-l", label, since_arg, "--tail=50",
-        ], capture_output=True, text=True)
+        ], check=False, capture_output=True, text=True)
         if logs.returncode == 0 and any(exc in logs.stdout for exc in STALE_EXCEPTIONS):
             return True
 
@@ -222,12 +222,12 @@ def is_listener_ready() -> bool:
         "kubectl", "-n", CONTROLLER_NAMESPACE, "get", "pods",
         "-l", "app.kubernetes.io/component=runner-scale-set-listener",
         "-o", "json",
-    ], capture_output=True, text=True)
+    ], check=False, capture_output=True, text=True)
     if out.returncode != 0:
         return False
     try:
         items = json.loads(out.stdout).get("items", [])
-    except Exception:
+    except (json.JSONDecodeError, AttributeError):
         return False
     for pod in items:
         if pod.get("metadata", {}).get("deletionTimestamp"):
@@ -250,12 +250,12 @@ def active_runners() -> tuple[list[str], bool]:
     """
     out = subprocess.run([
         "kubectl", "-n", RUNNER_NAMESPACE, "get", "ephemeralrunners", "-o", "json",
-    ], capture_output=True, text=True)
+    ], check=False, capture_output=True, text=True)
     if out.returncode != 0:
         return [], False
     try:
         items = json.loads(out.stdout).get("items", [])
-    except Exception:
+    except (json.JSONDecodeError, AttributeError):
         return [], False
     active = []
     for r in items:
@@ -267,7 +267,7 @@ def active_runners() -> tuple[list[str], bool]:
             pod = subprocess.run([
                 "kubectl", "-n", RUNNER_NAMESPACE, "get", "pod", name,
                 "-o", "jsonpath={.status.phase}",
-            ], capture_output=True, text=True)
+            ], check=False, capture_output=True, text=True)
             if pod.returncode == 0:
                 if pod.stdout.strip() in ("Pending", "Running"):
                     active.append(name)
@@ -311,7 +311,7 @@ def _delete_stuck_child_crs() -> None:
         del_cmd = subprocess.run([
             "kubectl", "-n", ns, "delete", kind, "--all",
             "--ignore-not-found", "--timeout", "30s",
-        ], capture_output=True, text=True)
+        ], check=False, capture_output=True, text=True)
         if del_cmd.returncode != 0:
             print(f"arc: {kind} did not finish deleting in 30s — "
                   f"`kubectl get {kind} -n {ns} -o yaml` will show what it is waiting on",
@@ -364,7 +364,7 @@ def reset_stale_registration(start_time: float | None = None) -> None:
         "kubectl", "-n", RUNNER_NAMESPACE, "patch", "autoscalingrunnerset",
         RUNNERSET_RELEASE, "--type=merge",
         "-p", '{"metadata": {"annotations": {"actions.github.com/values-hash": null, "runner-scale-set-id": null}}}',
-    ], capture_output=True, text=True)
+    ], check=False, capture_output=True, text=True)
     if out.returncode != 0:
         print(f"arc: failed to patch {RUNNERSET_RELEASE}: {out.stderr.strip()}",
               file=sys.stderr)

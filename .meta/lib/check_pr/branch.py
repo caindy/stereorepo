@@ -4,6 +4,7 @@ What is read here is the tree and this repository's own commits, never GitHub:
 uncommitted or unpushed work, a stale render, and an adopted decision naming
 no Artifact that carries it (solorepo's DR-175).
 """
+import json
 import pathlib
 import re
 import subprocess
@@ -71,7 +72,7 @@ def advance_notice(pr_number: int | str) -> str | None:
                         return s
                 return "advance finding stands"
         return None
-    except Exception:
+    except (OSError, json.JSONDecodeError, AttributeError):
         return None
 
 
@@ -83,7 +84,7 @@ def owned_and_open() -> tuple[str, list[tuple[int, str, list[str] | None]]]:
             list of tuples containing PR number, title, and unaddressed thread summaries.
     """
     branch = subprocess.run(["git", "branch", "--show-current"],
-                            capture_output=True, text=True).stdout.strip()
+                            check=False, capture_output=True, text=True).stdout.strip()
     if branch and branch != "main":
         found = github.gh("pr", "list", "--head", branch, "--state", "open",
                    "--json", "number,title")
@@ -109,7 +110,7 @@ def residue() -> list[str]:
     and that reads differently from one node GitHub declined to serve.
     """
     def git(*args: str) -> str:
-        return subprocess.run(["git", *args], capture_output=True, text=True).stdout
+        return subprocess.run(["git", *args], check=False, capture_output=True, text=True).stdout
     git("fetch", "--prune", "--quiet", "origin")
     gone = [line.split()[0] for line in
             git("for-each-ref", "--format=%(refname:short) %(upstream:track,nobracket)",
@@ -163,7 +164,7 @@ def unpushed() -> list[str]:
         Returns:
             tuple[int, str, str]: Return code, stripped stdout, and stripped stderr.
         """
-        out = subprocess.run(["git", *args], capture_output=True, text=True)
+        out = subprocess.run(["git", *args], check=False, capture_output=True, text=True)
         return out.returncode, out.stdout.strip(), out.stderr.strip()
 
     problems: list[str] = []
@@ -193,7 +194,7 @@ def git_read(*args: str) -> tuple[int, str]:
     Returns:
         tuple[int, str]: Git return code and raw standard output string.
     """
-    out = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
+    out = subprocess.run(["git", *args], check=False, capture_output=True, text=True, cwd=ROOT)
     return out.returncode, out.stdout
 
 
@@ -266,7 +267,7 @@ def unrendered() -> tuple[list[str] | None, list[str] | None, str]:
             - error: Descriptive error message if the render command could not run.
     """
     try:
-        out = subprocess.run(RENDER, capture_output=True, text=True, cwd=ROOT)
+        out = subprocess.run(RENDER, check=False, capture_output=True, text=True, cwd=ROOT)
     except OSError as missing:
         return None, None, f"{RENDER[0]} could not be run — {missing}"
     said = out.stdout.strip()

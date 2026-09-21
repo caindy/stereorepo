@@ -6,6 +6,10 @@ import subprocess
 from typing import Any, ClassVar
 
 from checks.collect import ROOT
+from checks.probes.harness.acts import unanswered
+
+LIST_REFUSAL = "gh: mock API error"
+"""What a listing stood in for to fail exits with, in the words `channel.gh` exits with."""
 
 
 class FakeIssue:
@@ -57,7 +61,7 @@ class FakeIssue:
             body = args[args.index("-f") + 1].removeprefix("body=")
             self.comments.append({"body": body, "user": {"login": "o-r-coder"}})
             return {"html_url": f"https://github.com/o/r/issues/1/comments/{len(self.comments)}"}
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        raise unanswered(args)
 
     def view(self, args: tuple[str, ...]) -> dict[str, Any]:
         """`issue view` of any fields this fake holds: the labels, counted in `views`, the assignees, or the state.
@@ -79,9 +83,9 @@ class FakeIssue:
             elif field == "state":
                 answer["state"] = self.state
             else:
-                raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+                raise unanswered(args)
         if not answer:
-            raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+            raise unanswered(args)
         return answer
 
     def edit(self, args: tuple[str, ...]) -> str:
@@ -108,7 +112,7 @@ class FakeIssue:
                 if arg == "--remove-label" and args[i + 1] in self.labels:
                     self.labels.remove(args[i + 1])
             return ""
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        raise unanswered(args)
 
 
 class FakeObviation:
@@ -156,7 +160,7 @@ class FakeObviation:
             what = self.of(args[1].rsplit("/", 1)[1])
             pull = {"url": f"https://api.github.com/repos/o/r/pulls/{args[1].rsplit('/', 1)[1]}"}
             return {"pull_request": pull} if what["kind"] == "pull request" else {}
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        raise unanswered(args)
 
     def view(self, args: tuple[str, ...]) -> dict[str, Any]:
         """`issue view` or `pr view` of the fields the `--json` beside it asked for."""
@@ -166,7 +170,7 @@ class FakeObviation:
                   "labels": [{"name": name} for name in what.get("labels") or []],
                   "stateReason": what.get("stateReason")}
         if any(field not in answer for field in fields):
-            raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+            raise unanswered(args)
         return {field: answer[field] for field in fields}
 
     REASONS: ClassVar[dict[str, str]] = {"completed": "COMPLETED", "not planned": "NOT_PLANNED",
@@ -178,7 +182,7 @@ class FakeObviation:
         what = self.of(args[2])
         reason = args[args.index("--reason") + 1] if "--reason" in args else "completed"
         if reason not in self.REASONS:
-            raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+            raise unanswered(args)
         self.closed.append((str(args[2]), reason))
         what["state"], what["stateReason"] = "CLOSED", self.REASONS[reason]
         return ""
@@ -275,7 +279,7 @@ class FakeFiling:
             self.listings += 1
             if self.list_fails:
                 if not kwargs.get("tolerate_fail"):
-                    raise SystemExit("gh: mock API error")
+                    raise SystemExit(LIST_REFUSAL)
                 raise subprocess.CalledProcessError(1, ["gh", *list(args)], output="",
                                                     stderr="mock API error")
             return [{"number": int(n), "title": t,
@@ -285,7 +289,7 @@ class FakeFiling:
             return self.create(args)
         if args[:2] == ("issue", "view"):
             return self.view(args)
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        raise unanswered(args)
 
     def create(self, args: tuple[str, ...]) -> str:
         """`issue create`: the Issue recorded and added to the open listing, its URL answered."""
@@ -312,4 +316,4 @@ class FakeFiling:
             if "body" in fields.split(","):
                 answer["body"] = body
             return answer
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        raise unanswered(args)

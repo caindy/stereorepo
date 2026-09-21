@@ -17,6 +17,9 @@ from lib.signed_channel import reach
 SHELL_TOOLS: set[str] = {"Bash", "run_shell_command", "run_command"}
 """Shell execution tool names intercepted by the signed channel hook."""
 
+NOT_AN_OBJECT = "expected JSON object, got {kind}"
+"""What an event that parses as JSON but is not an object is refused with."""
+
 
 def record_evidence(tool: str, permitted: bool, evidence: str | pathlib.Path | None = None) -> None:
     """Records one line of hook decision evidence to the designated evidence file.
@@ -37,7 +40,7 @@ def record_evidence(tool: str, permitted: bool, evidence: str | pathlib.Path | N
         verdict = "permit" if permitted else "refuse"
         with path.open("a", encoding="utf-8") as handle:
             handle.write(f"{stamp} {tool} {verdict}\n")
-    except Exception:
+    except OSError:
         return
 
 
@@ -78,7 +81,7 @@ def main() -> int:
         raw = sys.stdin.read()
         event = json.loads(raw)
         if not isinstance(event, dict):
-            raise TypeError(f"expected JSON object, got {type(event).__name__}")
+            raise TypeError(NOT_AN_OBJECT.format(kind=type(event).__name__))
         if "toolCall" in event:
             is_antigravity = True
             tool_call = event.get("toolCall") or {}
@@ -88,7 +91,7 @@ def main() -> int:
             tool = event.get("tool_name") or ""
             tool_input = event.get("tool_input") or {}
         problem = blocked(tool, tool_input)
-    except BaseException as exc:
+    except BaseException as exc:  # noqa: BLE001  # reason: a hook that dies admits the call, so anything raised while reading the event — a recursion limit or an interrupt included — becomes a refusal
         if "toolCall" in raw:
             is_antigravity = True
         problem = f"Blocked: the hook failed ({type(exc).__name__}); refusing rather than guessing."

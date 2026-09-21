@@ -21,7 +21,7 @@ def apm_package() -> StepOutcome:
     apm_bin = shutil.which("apm")
     if not apm_bin:
         return CouldNotRun("apm is not installed (install via 'brew install apm' or 'curl -sSL https://aka.ms/apm-unix | sh')")
-    res = subprocess.run([apm_bin, "compile", "--validate"], cwd=str(META), capture_output=True, text=True)
+    res = subprocess.run([apm_bin, "compile", "--validate"], check=False, cwd=str(META), capture_output=True, text=True)
     if res.returncode != 0:
         lines = [line.strip() for line in (res.stdout + "\n" + res.stderr).splitlines() if line.strip()]
         return Found(tuple(lines))

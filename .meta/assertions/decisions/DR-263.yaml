@@ -1,0 +1,100 @@
+decisions:
+  - id: work:decision/263
+    name: "DR-263 · Assert a floor on ruff's select in the gate's own code, each entry paired with the linter that owns it"
+    challenge: work:challenge/736
+    status: ADOPTED
+    applies:
+      - work:article/2
+    enacted_in:
+      - work:artifact/meta-checks-files-python
+      - work:artifact/meta-checks-probes-ruleset
+      - work:artifact/meta-ruff-toml
+    context: >-
+      Solorepo's Article 2 refuses a suppression made in configuration: the `meta lints`
+      step reads `lint.ignore` and `lint.extend-ignore` out of `.meta/ruff.toml` and fails
+      on any entry, so switching a rule off after selecting it costs a site suppression,
+      a `reason:` under solorepo's DR-177, and an argument on the pull request.
+
+      The step never read `select`. Declining to select a family reaches the same end at
+      none of that cost: the rule is off, no site carries a comment, and the diff that
+      turned it off is one deleted line in a TOML list. Challenge #736 named this the
+      `select` door the no-`ignore` rule left open, and it is not hypothetical — `BLE`,
+      `DTZ`, `PLW1510`, `RET` and `TRY003` were absent from the ruleset for as long as the
+      file had existed, and the findings behind them had never been seen.
+
+      Closing it means the gate holding an opinion about which rules must be selected, and
+      that opinion has to be stated somewhere the ruleset cannot reach. It also has to be
+      read the way ruff reads a selector, which is the step the first implementation
+      skipped: a floor entry accepted on any string prefix is satisfied by `B` for `BLE`,
+      `S` for `SIM`, `PT` for `PTH`, `D` for `DTZ` and `T` for `TRY003`, each a valid
+      selector belonging to a different linter and selecting none of the rules the floor
+      entry names.
+    alternatives:
+      - name: Read the floor out of the ruleset it audits
+        chosen: false
+        reason: >-
+          Deriving the required families from `.meta/ruff.toml`'s own `select` list costs
+          no second copy and never falls behind the file. It also asserts nothing: a floor
+          read from what it audits is satisfied by every state of that file, including the
+          one where a family has just been deleted. The duplication is the mechanism.
+      - name: Accept any selector that is a string prefix of a floor entry
+        chosen: false
+        reason: >-
+          Ruff's selectors are prefixes of the codes they name, so a prefix test looks like
+          the widening rule — `TRY` reaches `TRY003`, `E` reaches `E4`, `PL` reaches
+          `PLW1510`. A prefix widens only inside the linter that owns it, and ruff's linter
+          prefixes are not prefix-free: `B` is flake8-bugbear and `BLE` is
+          flake8-blind-except, `T` is flake8-debugger and `TRY` is tryceratops. Under a
+          bare string test, deleting `"BLE",` from the ruleset leaves the gate reporting
+          that it reaches the whole floor, which is the evasion the floor exists to close.
+      - name: State the floor in the gate's code, each entry paired with its linter's prefix
+        chosen: true
+        reason: >-
+          `SELECT_FLOOR` maps each required rule to the prefix of the ruff linter that owns
+          it, and a selector reaches an entry where it is a prefix of the entry and itself
+          reaches at least the linter's prefix. That accepts every widening inside a linter
+          and refuses every shorter selector belonging to another, without the gate holding
+          a copy of ruff's rule table. Pairing the linter with the entry is also the fact a
+          later editor needs in order to widen or narrow the floor correctly, held on the
+          line that needs it.
+    consequences:
+      - >-
+        `.meta/checks/files/python.py` states `SELECT_FLOOR` as a mapping from each rule
+        the ruleset must select to the ruff linter prefix that owns it, and `unselected`
+        reports the entries no selector under `select` or `extend-select` reaches.
+      - >-
+        Ruff's `ALL` selector reaches every entry, so the widest configuration ruff offers
+        is not the one the gate refuses.
+      - >-
+        A new probe module, `.meta/checks/probes/ruleset.py`, registers the
+        `ruleset floor probes` step: every widening the floor must accept and every
+        cross-linter prefix it must refuse, one case each, so the reading that satisfied
+        `BLE` with `B` cannot return unnoticed.
+      - >-
+        `.meta/ruff.toml` selects `BLE`, `DTZ`, `PLW1510`, `RET` and `TRY003` beside the
+        families it already held, and a family removed from it fails the gate until the
+        floor is edited too — which is the argument the `ignore` refusal already exacts.
+      - >-
+        The floor comes out when ruff itself gains a way to declare a ruleset as a minimum,
+        or when the portfolio's ruleset stops being a file a change can edit silently. The
+        selected families come out one at a time, each by an argument on its own rule.
+      - >-
+        Challenge #736 is settled and closed.
+    falsifier: >-
+      A floor entry reported as reached by a selector that does not select its rules — a
+      shorter selector belonging to a different ruff linter — or a floor derived from the
+      ruleset file it audits, either of which restores the cost-free removal Article 2
+      refuses everywhere else.
+    rationale: |-
+      Article 2 prices a rule's removal in a reason stated where a reader meets it. The
+      price was charged at only one of the two doors: `ignore` cost a suppression and an
+      argument, while never selecting the rule cost a deleted line. A gate that refuses
+      the expensive route and ignores the cheap one is not a ratchet.
+
+      The mechanism is worth its duplication precisely because the duplicate cannot be
+      derived. Its correctness, though, turns on a fact about ruff rather than about this
+      repository — that a selector widens within one linter and not across them — and a
+      fact about a foreign system belongs in a probe rather than in a reading. The
+      `ruleset floor probes` step is where that fact is held: `B` against `BLE` is the
+      case, and the repository is its own evidence, because `B` was selected throughout
+      the years the bare `except Exception:` clauses this Challenge fixed went unreported.

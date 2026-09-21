@@ -29,7 +29,7 @@ def require(*tools: str) -> None:
 def current_context() -> str:
     """Returns the active kubectl context name or a fallback string if unset."""
     out = subprocess.run(["kubectl", "config", "current-context"],
-                         capture_output=True, text=True)
+                         check=False, capture_output=True, text=True)
     return out.stdout.strip() if out.returncode == 0 else "(none set)"
 
 
@@ -45,7 +45,7 @@ def helm_uninstall(release: str, namespace: str, wait: bool = False) -> None:
     cmd = ["helm", "uninstall", release, "--namespace", namespace, "--timeout", "2m"]
     if wait:
         cmd += ["--wait", "--cascade", "foreground"]
-    out = subprocess.run(cmd, capture_output=True, text=True)
+    out = subprocess.run(cmd, check=False, capture_output=True, text=True)
     sys.stderr.write(out.stdout)
     sys.stderr.write(out.stderr)
     if not out.returncode or "release: not found" in out.stderr.lower():
@@ -59,7 +59,7 @@ def helm_uninstall(release: str, namespace: str, wait: bool = False) -> None:
 def delete_namespace(namespace: str) -> None:
     """Deletes a Kubernetes namespace with a 60-second timeout ignoring not found."""
     out = subprocess.run(["kubectl", "delete", "namespace", namespace,
-                          "--ignore-not-found", "--timeout", "60s"])
+                          "--ignore-not-found", "--timeout", "60s"], check=False)
     if out.returncode:
         print(f"arc-teardown: {namespace} did not finish deleting in 60s — "
              f"`kubectl get namespace {namespace} -o yaml` will show what it is "
@@ -81,7 +81,7 @@ def main() -> None:
     delete_namespace(RUNNER_NAMESPACE)
     delete_namespace(CONTROLLER_NAMESPACE)
     if args.cluster:
-        subprocess.run(["kind", "delete", "cluster", "--name", CLUSTER])
+        subprocess.run(["kind", "delete", "cluster", "--name", CLUSTER], check=False)
 
 
 if __name__ == "__main__":

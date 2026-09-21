@@ -428,6 +428,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-wrappers
     name: .meta/checks/probes/wrappers.py
     path: .meta/checks/probes/wrappers.py
+  - id: work:artifact/meta-checks-probes-ruleset
+    name: .meta/checks/probes/ruleset.py
+    path: .meta/checks/probes/ruleset.py
   - id: work:artifact/meta-checks-probes-tools
     name: .meta/checks/probes/tools/__init__.py
     path: .meta/checks/probes/tools/__init__.py

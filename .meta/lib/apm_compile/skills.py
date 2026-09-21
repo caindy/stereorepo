@@ -60,7 +60,7 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
                 content = gen_fn()
                 if content:
                     out[rel_path] = content
-    except (ImportError, Exception):
+    except Exception:  # noqa: BLE001  # reason: best effort — the four generators read Artifacts and templates a specialization can leave absent, and a clone missing one gets the other primitives rather than an aborted compile
         pass
 
     claude_skills = meta_dir.parent / ".claude" / "skills"

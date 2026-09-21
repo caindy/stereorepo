@@ -20,7 +20,7 @@ def run_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
             file=sys.stderr,
         )
         return 1
-    res = subprocess.run([apm_bin, *args], cwd=str(meta_dir))
+    res = subprocess.run([apm_bin, *args], check=False, cwd=str(meta_dir))
     return res.returncode
 
 

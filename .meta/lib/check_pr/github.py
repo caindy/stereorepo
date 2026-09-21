@@ -95,7 +95,7 @@ def _role_token() -> str | None:
                     line = line.strip().removeprefix("export ").strip()
                     if line.startswith("GH_TOKEN="):
                         return line.split("=", 1)[1].strip("\"'")
-            except Exception:
+            except OSError:
                 pass
     return None
 
@@ -119,6 +119,10 @@ class GhTimeout(SystemExit):
     repository — which the git remote answers — and GitHub saying nothing,
     which no fallback answers.
     """
+
+
+GH_HUNG = "gh: `gh {cmd}` answered nothing within {timeout}s"
+"""What an abandoned `gh` invocation exits with, which no fatal poll pattern matches."""
 
 
 def _degrade(default: Any, why: str) -> Any:
@@ -165,10 +169,10 @@ def gh(*args: str, default: Any = UNSET, timeout: float = GH_TIMEOUT) -> Any:
         if token:
             env = dict(os.environ, GH_TOKEN=token)
     try:
-        out = subprocess.run(["gh", *args], capture_output=True, text=True, env=env,
+        out = subprocess.run(["gh", *args], check=False, capture_output=True, text=True, env=env,
                              timeout=timeout)
     except subprocess.TimeoutExpired:
-        raise GhTimeout(f"gh: `gh {' '.join(args)}` answered nothing within {timeout}s") from None
+        raise GhTimeout(GH_HUNG.format(cmd=" ".join(args), timeout=timeout)) from None
     if out.returncode:
         return _degrade(default, out.stderr.strip())
     text = out.stdout.strip()
@@ -207,9 +211,9 @@ def repo() -> str:
         return str(gh("repo", "view", "--json", "nameWithOwner")["nameWithOwner"])
     except GhTimeout:
         raise
-    except (Exception, SystemExit):
+    except (OSError, SystemExit, json.JSONDecodeError, KeyError):
         out = subprocess.run(["git", "remote", "get-url", "origin"],
-                             capture_output=True, text=True, cwd=ROOT)
+                             check=False, capture_output=True, text=True, cwd=ROOT)
         if out.returncode == 0 and out.stdout.strip():
             url = out.stdout.strip()
             m = re.search(r"[:/]([^/:]+)/([^/:]+?)(?:\.git)?$", url)

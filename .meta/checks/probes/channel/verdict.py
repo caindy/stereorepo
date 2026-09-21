@@ -8,6 +8,7 @@ from checks.probes.harness import (
     load_channel,
     run_verb,
     stood_in,
+    unanswered,
 )
 
 READ = "7f7179344444444444444444444444444444444"
@@ -59,7 +60,7 @@ class FakeVerdict:
                     parsed[k] = v
             self.comments.append(parsed)
             return {"html_url": f"https://github.com/caindy/solorepo/pull/7#discussion_r{len(self.comments)}"}
-        raise AssertionError(f"the fake was asked something it has no answer for: {args}")
+        raise unanswered(args)
 
 
 @check("verdict probes", pre=True)

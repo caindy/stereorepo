@@ -23,6 +23,7 @@ from checks.probes.harness.acts import (
     outcome,
     run_verb,
     stood_in,
+    unanswered,
     written,
 )
 from checks.probes.harness.fakes import (
@@ -55,6 +56,7 @@ __all__ = [
     "outcome",
     "run_verb",
     "stood_in",
+    "unanswered",
     "written",
 ]
 """The module's whole surface, so every probe's `from checks.probes.harness import ...` still resolves."""

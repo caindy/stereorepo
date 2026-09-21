@@ -39,6 +39,9 @@ import sys
 import types
 from typing import Any
 
+NO_SPEC = "no module spec for {path}"
+"""What loading a sibling raises where `importlib` declines to describe the file as a module."""
+
 HERE = pathlib.Path(__file__).resolve().parent
 
 ROLE_DIR = pathlib.Path("~/.config/solorepo").expanduser()
@@ -117,7 +120,7 @@ def sibling(name: str) -> types.ModuleType:
     loader = SourceFileLoader(name, str(HERE / name))
     spec = importlib.util.spec_from_loader(name, loader)
     if spec is None:
-        raise ImportError(f"no module spec for {loader.path}")
+        raise ImportError(NO_SPEC.format(path=loader.path))
     module = importlib.util.module_from_spec(spec)
     _siblings[name] = module
     loader.exec_module(module)
@@ -390,7 +393,7 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
         SystemExit: If the read fails or times out and no fallback was given.
     """
     try:
-        out = subprocess.run(["gh", *args], capture_output=True, text=True,
+        out = subprocess.run(["gh", *args], check=False, capture_output=True, text=True,
                              env={**os.environ, **role_credential()}, timeout=timeout)
     except subprocess.TimeoutExpired as expired:
         hung = f"`gh {' '.join(args)}` answered nothing within {timeout}s"
@@ -452,6 +455,7 @@ def gh_with_retry(*args: str, parse: bool = True, tries: int = 3, delay: float =
             print(f"warning: gh {' '.join(args)} failed (attempt {attempt + 1}/{tries}): {exc.stderr.strip()}. Retrying in {current_delay}s...", file=sys.stderr)
             time.sleep(current_delay)
             current_delay *= backoff
+    sys.exit(f"gh: {' '.join(args)} was never attempted — `tries` is {tries}")
 
 
 def graphql(query: str, **variables: object) -> Any:

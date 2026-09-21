@@ -239,10 +239,7 @@ def _evaluate_poll(
         "reviews": list(current[3].values()),
         "mergeable": mergeable,
     }
-    try:
-        reviewer_login = github.role_login("reviewer")
-    except Exception:
-        reviewer_login = None
+    reviewer_login = github.role_login("reviewer")
 
     pr_state = classify_pr(pr_data, checks, list(threads_.values()), reviewer_login)
 

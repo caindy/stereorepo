@@ -26,6 +26,9 @@ NON_AI_WORKFLOWS = {
 }
 """Workflows that do not run AI agent harnesses; watching them skips GitHub CLI job queries and reports 'n/a'."""
 
+UNREADABLE = (OSError, subprocess.SubprocessError, json.JSONDecodeError, AttributeError)
+"""What a `gh run view` read raises when it cannot start, times out, or answers non-JSON."""
+
 
 def require(tool: str) -> None:
     """Verifies that a specified executable tool exists on PATH.
@@ -43,7 +46,7 @@ def require(tool: str) -> None:
 def current_context() -> str:
     """Returns the active kubectl context name or a fallback string if unset."""
     out = subprocess.run(["kubectl", "config", "current-context"],
-                         capture_output=True, text=True)
+                         check=False, capture_output=True, text=True)
     return out.stdout.strip() if out.returncode == 0 else "(unknown)"
 
 
@@ -63,7 +66,7 @@ def fetch_run_title(run_id: int | str) -> str:
     try:
         out = subprocess.run(
             ["gh", "run", "view", str(run_id), "--json", "displayTitle"],
-            capture_output=True, text=True, timeout=5
+            check=False, capture_output=True, text=True, timeout=5
         )
         if out.returncode == 0:
             data = json.loads(out.stdout)
@@ -71,7 +74,7 @@ def fetch_run_title(run_id: int | str) -> str:
             if title:
                 TITLE_CACHE[run_id] = title
             return title
-    except Exception:
+    except UNREADABLE:
         pass
     return ""
 
@@ -142,12 +145,12 @@ def fetch_run_details(run_id: int | str, workflow: str = "") -> tuple[str, str, 
     try:
         out = subprocess.run(
             ["gh", "run", "view", str(run_id), "--json", "jobs,displayTitle"],
-            capture_output=True, text=True, timeout=5
+            check=False, capture_output=True, text=True, timeout=5
         )
         if out.returncode != 0:
             return "-", "-", ""
         data = json.loads(out.stdout)
-    except Exception:
+    except UNREADABLE:
         return "-", "-", ""
 
     title = str(data.get("displayTitle", "")).strip()
@@ -210,7 +213,7 @@ def parse_runner(obj: dict[str, Any], fetch_titles: bool = False) -> dict[str, s
     if not fetch_titles:
         title = ""
 
-    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    timestamp = datetime.datetime.now(datetime.UTC).astimezone().strftime("%H:%M:%S")
 
     return {
         "time": timestamp,
@@ -268,7 +271,7 @@ def run_once(namespace: str, show_title: bool = False) -> None:
         show_title: Whether to query and print run titles. Defaults to False.
     """
     cmd = ["kubectl", "get", "ephemeralrunners", "-n", namespace, "-o", "json"]
-    out = subprocess.run(cmd, capture_output=True, text=True)
+    out = subprocess.run(cmd, check=False, capture_output=True, text=True)
     if out.returncode != 0:
         sys.exit(f"arc-watch: failed to list ephemeralrunners: {out.stderr.strip()}")
 

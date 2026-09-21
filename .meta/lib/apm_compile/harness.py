@@ -28,7 +28,7 @@ def check_root_symlinks(root_dir: pathlib.Path = ROOT) -> list[str]:
                 target = link_path.resolve()
                 if target != agents_md.resolve():
                     problems.append(f"{link_path.name} resolves to {target}, expected {agents_md}")
-            except Exception as e:
+            except OSError as e:
                 problems.append(f"{link_path.name} broken symlink: {e}")
 
     return problems
@@ -86,7 +86,7 @@ def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = 
     if apm_bin:
         res = subprocess.run(
             [apm_bin, "install", "./.meta", "--target", "antigravity,codex"],
-            cwd=str(root_dir),
+            check=False, cwd=str(root_dir),
             capture_output=True,
             text=True,
         )

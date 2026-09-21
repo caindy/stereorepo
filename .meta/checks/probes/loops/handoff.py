@@ -17,7 +17,11 @@ from checks.probes.harness import (
     outcome,
     run_verb,
     stood_in,
+    unanswered,
 )
+
+HUNG_LOGIN = "gh: `gh repo view` answered nothing within 60s"
+"""What a hung login read raises, so the probe verifies the circuit breaker on login hangs."""
 
 
 @check("handoff probes", pre=True)
@@ -202,7 +206,7 @@ def _watch_failure_cases(check_pr: Any) -> list[str]:
                         "persists is owed the exit a transient failure gets")
 
     def hung_login(_role: Any) -> Any:
-        raise check_pr.github.GhTimeout("gh: `gh repo view` answered nothing within 60s")
+        raise check_pr.github.GhTimeout(HUNG_LOGIN)
 
     with stood_in(check_pr.github, gh=WatchGitHub([]), role_login=hung_login):
         hung_eval = outcome(lambda: check_pr.watch("7", every=0, max_retries=2))
@@ -244,7 +248,7 @@ def _watch_recovery_cases(check_pr: Any) -> list[str]:
             return {"number": 7, "state": state, "comments": [], "reviews": [], "mergeable": mergeable}
         if args[0] == "api":
             return {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": []}, "reviews": {"nodes": []}}}}}
-        raise AssertionError(f"unexpected call: {args}")
+        raise unanswered(args, "the gh fake")
 
     with stood_in(check_pr.github, gh=alternating_gh):
         alternating_res = outcome(lambda: check_pr.watch("7", every=0, max_retries=3))

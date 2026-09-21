@@ -12,6 +12,9 @@ from typing import Any
 from checks.collect import META, check
 from checks.probes.harness import environment, load_module
 
+BROKEN_PIPE = "Broken pipe"
+"""What a standard input stood in for as broken raises on a write."""
+
 
 def _probe_hooks_section(hooks_file: pathlib.Path, section: str, expected_cmd: str, matcher: str) -> list[str]:
     """Verify generated hooks.json contains expected PreToolUse configuration for a named section."""
@@ -19,7 +22,7 @@ def _probe_hooks_section(hooks_file: pathlib.Path, section: str, expected_cmd: s
         return [f"fallback probes: configure settings failed to produce a hooks.json file for {section}"]
     try:
         hooks_data = json.loads(hooks_file.read_text(encoding="utf-8"))
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         return [f"fallback probes: failed to parse generated hooks JSON: {e}"]
 
     pre_hooks = hooks_data.get(section, {}).get("PreToolUse", [])
@@ -54,7 +57,7 @@ def _probe_reviewer_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> lis
 
     try:
         data = json.loads(settings_file.read_text(encoding="utf-8"))
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         return [f"fallback probes: failed to parse generated settings JSON: {e}"]
 
     denied = set(data.get("permissions", {}).get("deny", []))
@@ -110,7 +113,7 @@ def _probe_coder_settings_api(detect_fallback: Any, tmp_dir: pathlib.Path) -> li
 
     try:
         data = json.loads(settings_file.read_text(encoding="utf-8"))
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         return [f"fallback probes: failed to parse generated coder settings JSON: {e}"]
 
     denied = set(data.get("permissions", {}).get("deny", []))
@@ -182,7 +185,7 @@ def _probe_coder_settings_cli(detect_fallback: Any, tmp_dir: pathlib.Path) -> li
                 for req in detect_fallback.CODER_DENIED_PERMISSIONS:
                     if req not in cli_denied:
                         problems.append(f"fallback probes: configure-coder omitted required denied permission `{req}`")
-            except Exception as e:
+            except (OSError, json.JSONDecodeError) as e:
                 problems.append(f"fallback probes: failed to parse generated coder settings JSON: {e}")
 
     custom_settings = tmp_dir / "custom_coder_settings.json"
@@ -229,7 +232,7 @@ def _probe_merge_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[s
     detect_fallback.merge_settings(source_path=src_file, dest_path=dest_file)
     try:
         merged = json.loads(dest_file.read_text(encoding="utf-8"))
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         return [f"fallback probes: failed to parse merged settings JSON: {e}"]
 
     if merged.get("oauth") != "secret_token":
@@ -279,7 +282,7 @@ class _FakeStdin:
     def write(self, s: str) -> int:
         """Write string to buffer or raise BrokenPipeError when broken."""
         if self.broken:
-            raise BrokenPipeError("Broken pipe")
+            raise BrokenPipeError(BROKEN_PIPE)
         return self.buffer.write(s)
 
     def flush(self) -> None:

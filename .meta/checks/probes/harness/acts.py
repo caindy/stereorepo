@@ -16,6 +16,22 @@ Outcome = collections.namedtuple("Outcome", "code out err")
 _ABSENT = object()
 
 
+def unanswered(args: object, fake: str = "the fake") -> AssertionError:
+    """The refusal a fake raises for a call it does not model.
+
+    Args:
+        args: The arguments the fake was called with.
+        fake: What to call the fake in the message, which a module standing in
+            for more than one command needs so that an unmodelled `git` call
+            and an unmodelled `gh` call read apart.
+
+    Returns:
+        AssertionError: Naming the call, so the probe report says what the fake
+        was asked rather than only that it declined.
+    """
+    return AssertionError(f"{fake} was asked something it has no answer for: {args}")
+
+
 @contextlib.contextmanager
 def stood_in(target: object, **attributes: object) -> Iterator[None]:
     """The named attributes of `target` replaced for the block, and put back after it, whatever the block did.
@@ -80,7 +96,7 @@ def outcome(call: Callable[[], object]) -> Outcome:
         code = None
     except SystemExit as exc:
         code = str(exc.code)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001  # reason: the fake under test may raise anything, and the refusal is reported as text so later cases still run (A7)
         code = f"{type(exc).__name__}: {exc}"
     return Outcome(code, out.getvalue(), err.getvalue())
 

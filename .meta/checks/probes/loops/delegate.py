@@ -12,6 +12,7 @@ from checks.probes.harness import (
     load_channel,
     outcome,
     stood_in,
+    unanswered,
 )
 
 
@@ -55,7 +56,7 @@ class FakeDelegate:
         }
         handler = handlers.get(args[:2])
         if handler is None:
-            raise AssertionError(f"mock asked unknown: {args}")
+            raise unanswered(args)
         return handler(args)
 
     def view_pull(self, cmd: tuple[Any, ...]) -> Any:
