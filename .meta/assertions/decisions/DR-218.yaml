@@ -62,10 +62,10 @@ decisions:
       question then arose for `.meta/checks/probes/loops.py`, at 1320 lines the
       second largest Python file in the repository, and neither half of that
       answer fits it. Nothing invokes a probe module by path: `check.py`
-      imports `probes`, whose `__init__` imports `probes.loops`, and the steps
+      imports `probes`, whose `__init__` imports `checks.probes.loops`, and the steps
       register themselves on import. So the path is not spoken for: the module
       is removed and a package named `loops` takes its name, and
-      `import probes.loops` resolves to the package because it is the only
+      `import checks.probes.loops` resolves to the package because it is the only
       `loops` on `probes.__path__`. Nothing coexists and nothing is shadowed.
 
       Solorepo's DR-209 asks one module for one subject, so that a history
@@ -90,7 +90,7 @@ decisions:
       - name: Replace the module with a package of the same name in place, one module per probe, the __init__ importing each
         chosen: true
         reason: >-
-          `import probes.loops` still registers every step, in the order the
+          `import checks.probes.loops` still registers every step, in the order the
           `__init__` lists them, which is the parent package's own pattern. The
           receipts in the history logs name the module holding the probe, as
           DR-209 wants. What it costs is that the artifact's path moves to the

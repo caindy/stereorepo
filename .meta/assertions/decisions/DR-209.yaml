@@ -105,7 +105,7 @@ decisions:
           other one imports and that imports none of them, so the package's
           import graph is a tree with the harness at its root, as `collect.py`
           is for the gate — and a fake's contract now sits where it is read.
-          `check.py` still says `import probes`, and the package's `__init__.py`
+          `.meta/check.py` says `from checks import probes`, and the package's `__init__.py`
           imports the five modules in a stated order, so the prechecks still
           run first and nothing about what runs changes. What the split costs is
           the print order within the probes group, which now follows the
@@ -158,7 +158,7 @@ decisions:
         `structure.yaml` declares the package's `__init__.py` under the
         Artifact id the old file had, and each module as an Artifact of its
         own. An Artifact is a file, so `work:artifact/meta-checks-probes` is
-        the module object `import probes` gives and not the package: an
+        the module object `from checks import probes` gives and not the package: an
         `enacted_in` naming it names a docstring and five imports. Each adopted
         Decision that was enacted in the old file is therefore repointed at the
         module that now holds what it enacted — `probes/loops.py` for DR-161's
