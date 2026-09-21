@@ -437,8 +437,9 @@ REQUIRED_DENIED_PERMISSIONS: tuple[str, ...] = (
     "write_file(*)",
     "read_url(*)",
     "execute_url(*)",
+    "invoke_subagent(*)",
 )
-"""Fine-grained permissions required to be denied for Antigravity CLI reviewer confinement (solorepo's DR-110, solorepo's DR-245, solorepo's #636)."""
+"""Fine-grained permissions required to be denied for Antigravity CLI reviewer confinement (solorepo's DR-110, solorepo's DR-245, solorepo's DR-254, solorepo's #636, solorepo's #637)."""
 
 
 def _audit_denied_permissions(detect_fallback: Any) -> list[str]:

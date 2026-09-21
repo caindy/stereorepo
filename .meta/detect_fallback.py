@@ -150,8 +150,9 @@ REVIEWER_DENIED_PERMISSIONS: list[str] = [
     "write_file(*)",
     "read_url(*)",
     "execute_url(*)",
+    "invoke_subagent(*)",
 ]
-"""Fine-grained permissions denied for the reviewer Role under Antigravity CLI (solorepo's DR-110, solorepo's DR-245)."""
+"""Fine-grained permissions denied for the reviewer Role under Antigravity CLI (solorepo's DR-110, solorepo's DR-245, solorepo's DR-254)."""
 
 REVIEWER_CORE_TOOLS: list[str] = [
     "read_file",

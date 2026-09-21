@@ -169,4 +169,18 @@ PyYAML parses sequence items independently, and LinkML index collection keyed by
 
 Evidence: `.meta/checks/files/templates.py::duplicate_concept_ids`
 
+### Reviewer prompt lacked working path to pr-first-reviewer and permitted premature subagent exits
+
+The Gemini CLI reviewer prompt instructed the session to "Read /pr-first-reviewer first"
+and delegated review passes across Claude-specific plugin and foreground subagent commands,
+providing no working file path to `/pr-first-reviewer` under Antigravity CLI and causing
+headless batch runs (`agy -p`) to exit prematurely upon asynchronous subagent invocation
+before posting review verdicts (solorepo's DR-107, solorepo's DR-254, solorepo's #637).
+Established: `.github/workflows/review.yml` provides the concrete path
+`.agents/skills/pr-first-reviewer/SKILL.md` for direct single-session evaluation under
+"review the pull request (agy)", while `detect_fallback.py` adds `invoke_subagent(*)` to
+`REVIEWER_DENIED_PERMISSIONS`, audited by `gemini_allowlist_matches_claude`.
+
+Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
+
 

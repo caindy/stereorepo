@@ -599,7 +599,7 @@ jobs:
             --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
-      - name: review the pull request (gemini)
+      - name: review the pull request (agy)
         id: review_gemini
         if: steps.harness.outputs.harness == 'gemini' || steps.review_claude.outcome == 'failure'
         continue-on-error: true
@@ -618,10 +618,10 @@ jobs:
           prompt: |
             Your Personality is work:personality/reviewer: Analytical and thorough. Holds the diff to the Disciplines and the Charter strictly. Clear and precise in identification of issues; concise yet unambiguous in argument.
 
-            You are the reviewer Role (solorepo's DR-107), answering a review request on
+            You are the reviewer Role (solorepo's DR-107, solorepo's DR-254), answering a review request on
             pull request #${{ github.event.pull_request.number }} of
-            ${{ github.repository }}. Read /pr-first-reviewer first: it is
-            the reviewer's reading of PR First, and says what a pull request
+            ${{ github.repository }}. Read `.agents/skills/pr-first-reviewer/SKILL.md` first with
+            the Read tool: it is the reviewer's reading of PR First, and says what a pull request
             here must hold, what a reviewer's point owes, and which verbs
             are yours; `AGENTS.md` (and `GEMINI.md`) has the conventions.
 
@@ -671,33 +671,14 @@ jobs:
             `gh pr checks ${{ github.event.pull_request.number }}` and test form
             compliance with `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`.
 
-            Then review with /code-review:code-review ${{ steps.depth.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
-            without --comment. Every agent the review spawns is bound by
-            `.review/constraints.md` too, and hand it that line rather than
-            the paragraphs: writing them out once per agent is what made the
-            fourth agent start nearly a minute after the first (solorepo's #196).
-
-            Scope that pass before you spawn it (solorepo's DR-166). Every
-            agent runs in the foreground and the pass has been costing the sum
-            of its agents: that is where an initial review's 11 to 15 minutes
-            go (solorepo's #303). Name
-            the dimensions this diff actually has, from `.review/diff.patch`
-            which you have already read, and spawn no more than
-            ${{ steps.depth.outputs.agents }} of them, one to a dimension. When
-            launching multiple agents for independent work, send them in a
-            single message with multiple tool uses so they execute concurrently
-            in the foreground, returning together in the same turn rather than
-            costing the sum of their sequential executions (solorepo's DR-189).
-            If the diff
-            modifies docstrings, comments, Decision Records, or markdown files, include
-            the Technical Writer pass (evaluating against `work:personality/technical-writer`
-            and the Literate Programming rubric of solorepo's DR-175, solorepo's DR-176). A
-            dimension this diff does not touch is not reviewed by an agent
-            that finds nothing in it; one you can settle from the diff
-            yourself does not need an agent either; and no two agents get the
-            same dimension in different words. That number is a ceiling and
-            not a quota, so a diff with one dimension gets one agent whatever
-            the path, and a diff you have read whole gets none.
+            Review the pull request diff across the dimensions it touches directly in this
+            session (solorepo's DR-254). Read `.review/diff.patch` whole. Do NOT invoke subagents:
+            in headless batch execution, delegating to asynchronous subagents yields the turn and
+            terminates the run prematurely before any verdict lands (solorepo's #637). Evaluate
+            all dimensions yourself in this session. If the diff modifies docstrings, comments,
+            Decision Records, or markdown files, apply the Technical Writer pass directly
+            (evaluating against `work:personality/technical-writer` and the Literate Programming
+            rubric of solorepo's DR-175, solorepo's DR-176).
 
             Post only through the channel, so every word carries the Trailer.
             Every posting command begins with `.meta/say/post` and takes its
@@ -760,11 +741,10 @@ jobs:
             run ends when your turn ends: nothing here waits for a background
             agent, whatever the harness's own reference says, and a turn that
             ended "waiting for the agents" is a run that posted nothing —
-            solorepo's #130, #138 and #140. So an Agent you spawn runs in the foreground,
-            never with `run_in_background`, and its result arrives in the
-            same turn; one you did start in the background is read with
-            TaskOutput before anything else. The step after this session
-            counts your verdicts, and a session that added none is a red run.
+            solorepo's #130, #138, #140, and #637. Do not call `invoke_subagent` or
+            yield the turn; post your review verdict via `.meta/say/post --role reviewer review ...`
+            before ending your turn. The step after this session counts your verdicts,
+            and a session that added none is a red run.
 
       # When Claude Code and Antigravity both fail (or when Antigravity fallback is unconfigured
       # in a clone without ARC), evaluate Google Labs Jules API fallback if enabled by the
