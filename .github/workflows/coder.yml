@@ -1089,6 +1089,31 @@ jobs:
           echo "::error::Neither Claude nor Gemini rebase pass succeeded (claude=${{ steps.rebase_claude.outcome }}, gemini=${{ steps.rebase_gemini.outcome }})."
           exit 1
 
+      # A rebase that clears a conflict pushes with `git push
+      # --force-with-lease`, which GitHub reports as `synchronize` — an event
+      # `coder.yml` does not listen for. Where the review was still
+      # outstanding that costs nothing: `review.yml` runs on `synchronize`
+      # itself while a request of the reviewer is pending, so the push is
+      # answered there. Where the reviewer had already left
+      # `CHANGES_REQUESTED`, no request is pending — GitHub drops a reviewer
+      # from `requested_reviewers` the moment they submit a review — so
+      # neither event fires a Job, and the pull request sits at
+      # `CHANGES_REQUESTED` with a clean, green head and nobody dispatched to
+      # answer it (solorepo's #777). `move dispatch --task review` already
+      # reads the standing verdict and the pending request before deciding
+      # whether a review pass is owed — the same read `advance`'s own sweep
+      # makes on the next push to trunk, just made here instead of waiting for
+      # one. It refuses where there is nothing to redeliver, an approved
+      # branch that was merely conflicting being the common case, so its exit
+      # is printed and not treated as this step's failure.
+      - name: redeliver the review pass where a rebase cleared changes requested
+        if: >-
+          inputs.task == 'rebase' && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          && (steps.rebase_claude.outcome == 'success' || steps.rebase_gemini.outcome == 'success')
+        run: .meta/say/move dispatch "$PR" --task review || true
+        env:
+          PR: ${{ steps.pr.outputs.number }}
+
       - name: answer the review (claude)
         id: answer_claude
         if: >-
