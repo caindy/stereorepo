@@ -1158,7 +1158,7 @@ def behind_by(pull: Pull) -> int:
 
 
 ADVANCE = ("number,title,state,baseRefName,headRefName,headRefOid,autoMergeRequest,"
-           "reviewRequests,mergeable,latestReviews,updatedAt,isDraft")
+           "reviewRequests,mergeable,mergeStateStatus,latestReviews,updatedAt,isDraft")
 
 
 def head_now(number: str | int) -> tuple[Pull, int]:
@@ -1321,21 +1321,32 @@ def mergeability(pull: Pull) -> str | None:
     wrong answer. Bounded, because a value that is still unknown after half a
     minute is one the next push to trunk will ask about again — and a sweep
     that waited forever on one branch would hold up the rest.
+
+    `mergeable` and `mergeStateStatus` are both settled onto `pull` from the
+    read that answered, so a caller reading one against the other reads two
+    values GitHub computed at the same moment.
     """
     tries, wait = MERGEABILITY
-    answer = pull.get("mergeable")
+    fresh = pull
     for _ in range(tries):
-        if answer != "UNKNOWN":
+        if fresh.get("mergeable") != "UNKNOWN":
             break
         time.sleep(wait)
-        answer = channel.gh("pr", "view", str(pull["number"]),
-                            "--json", ADVANCE).get("mergeable")
+        fresh = channel.gh("pr", "view", str(pull["number"]), "--json", ADVANCE)
     # Settled onto the pull request the caller holds, so the sweep's two
     # readings of one branch cost one question (solorepo's DR-149). `advance`
     # asks before it rebases and `dispatch` asks again about the same object —
     # `found` is filtered out of `open_now`, not copied — and the only thing
     # that moves between the two is a rebase this run performed, which GitHub
     # would not have performed on a branch that conflicts.
+    #
+    # `mergeStateStatus` settles beside it because GitHub computes the pair
+    # together: renewing one and leaving the other hands the caller two
+    # readings taken at different moments, and `check_mergeable_clean` refuses
+    # on both.
+    answer: str | None = fresh.get("mergeable")
+    if fresh is not pull:
+        pull["mergeStateStatus"] = fresh.get("mergeStateStatus")
     pull["mergeable"] = answer
     return answer
 
@@ -2586,8 +2597,14 @@ BEHIND_BASE = "branch is behind base"
 
 
 def check_mergeable_clean(pull: Pull) -> tuple[bool, str]:
-    """Whether branch is mergeable and not behind or dirty."""
-    mergeable = pull.get("mergeable")
+    """Whether branch is mergeable and not behind or dirty.
+
+    `mergeable` and `mergeStateStatus` are read through `mergeability`, which
+    waits an `UNKNOWN` out and settles both. A value still `UNKNOWN` once that
+    wait is spent is refused with a reason that says so, distinct from the
+    reason a settled non-`MERGEABLE` value gets.
+    """
+    mergeable = mergeability(pull)
     status = pull.get("mergeStateStatus")
     if mergeable == "CONFLICTING":
         return False, "branch conflicts with base"
@@ -2595,6 +2612,8 @@ def check_mergeable_clean(pull: Pull) -> tuple[bool, str]:
         return False, BEHIND_BASE
     if status == "DIRTY":
         return False, "branch has dirty merge state"
+    if mergeable == "UNKNOWN":
+        return False, "mergeable is still UNKNOWN after waiting"
     if mergeable not in (None, "MERGEABLE"):
         return False, f"mergeable is {mergeable}"
     return True, "mergeable clean"

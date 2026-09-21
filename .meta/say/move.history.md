@@ -456,3 +456,28 @@ scheduled run stays red — the isolation is of the queue from the candidate, no
 of the operator from the failure.
 
 Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+
+### A mergeability read that cost a cycle, and a wait that settled half of it
+
+`check_mergeable_clean` read `pull.get("mergeable")` off the merge manager's one
+`pr list` and refused a candidate answering `UNKNOWN` as though a semaphore had
+failed. `UNKNOWN` is what GitHub answers while it computes the value in the
+background, and `merge.yml` runs on `workflow_run` completion — seconds after the
+push that invalidated every cached answer — so an approved, green candidate was
+refused for the cycle and waited on the next `workflow_run` or the fifteen-minute
+cron, the log naming it ineligible when it was only unread. Found reviewing
+solorepo's #781 on 2026-09-21, which names the read among nine read-after-write
+sites (solorepo's #784). Routing that one read through `mergeability` then broke a
+second way, caught in review before it landed: the wait renewed `mergeable` and
+left `mergeStateStatus` at the value of the read it was entered on, and GitHub
+computes the pair together, so a branch the same push to trunk had just put behind
+its base cleared the `BEHIND` refusal on a stale `UNKNOWN` and returned `mergeable
+clean` — which `advance_stranded` never rebases, since it decides on a reason list
+of exactly `[BEHIND_BASE]`, and which the merge manager could instead arm on an
+out-of-date head. Established: `ADVANCE` names `mergeStateStatus`, `mergeability`
+settles it onto the caller's pull request beside `mergeable` from the read that
+answered, and `check_mergeable_clean` reads both through it — so every refusal in
+that function reads two values GitHub computed at one moment, and a value still
+`UNKNOWN` once the wait is spent is refused in words that say it was waited for.
+
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`

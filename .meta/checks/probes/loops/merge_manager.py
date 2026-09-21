@@ -27,7 +27,12 @@ def merge_manager_probes() -> list[str]:
     alike, a `completedAt` of year one counting as no timestamp
     (solorepo's DR-167, solorepo's #316), and `check_threads` fails closed
     when GraphQL raises. With every semaphore satisfied the pull request is
-    eligible.
+    eligible. A mergeable read of `UNKNOWN` is waited out through
+    `mergeability` rather than refusing the cycle on it; a branch the wait
+    reveals as behind its base is refused as behind and nothing else, so
+    `advance_stranded` still reaches it; and only a value still `UNKNOWN` once
+    the wait is spent is refused, in words distinct from a settled
+    non-`MERGEABLE` value (solorepo's #784).
 
     The decision semaphore reads the diff (solorepo's DR-222): a diff adding
     an entry as `PROPOSED` or `RECOMMENDED` defers and is named in the reason
@@ -53,6 +58,7 @@ def merge_manager_probes() -> list[str]:
     channel, _, programs = load_channel()
     move = programs["move"]
     return (_semaphores(move) + _rerun_reads_green(move) + _threads_fail_closed(channel, move)
+            + _mergeable_unknown_is_waited_out(channel, move)
             + _eligible(channel, move) + _decisions_in_force(channel, move)
             + _end_to_end(channel, move) + _check_merge_failure_isolation(channel, move)
             + _blockers(move)
@@ -168,6 +174,46 @@ def _diff_of(*changed: dict[str, Any]) -> Any:
             return list(changed) if str(args[-1]).endswith("page=1") else []
         return {}
     return gh
+
+
+def _settling_to(**settled: str) -> Any:
+    """A `gh` answering every `pr view` with `settled`, and anything else the
+    empty dict `_diff_of` would."""
+    def gh(*args: Any, **kwargs: Any) -> Any:
+        """One `gh` call, answered as the enclosing function says."""
+        return dict(settled) if args[:2] == ("pr", "view") else {}
+    return gh
+
+
+def _mergeable_unknown_is_waited_out(channel: Any, move: Any) -> list[str]:
+    """`check_mergeable_clean` waits an `UNKNOWN` mergeable read out through
+    `mergeability` rather than refusing the cycle on it, refuses with a
+    distinct reason once the wait is spent and the value never settles, and
+    reads `mergeStateStatus` from the read that answered rather than from the
+    one the wait was entered on (solorepo's #784)."""
+    problems = []
+    with stood_in(move, MERGEABILITY=(2, 0)):
+        with stood_in(channel, gh=_settling_to(mergeable="MERGEABLE")):
+            ok, reasons = _evaluated(move, {**CLEARED, "mergeable": "UNKNOWN"})
+        if not ok or reasons != ["eligible"]:
+            problems.append(
+                f"merge manager: UNKNOWN settling to MERGEABLE was refused: {reasons}")
+
+        behind = _settling_to(mergeable="MERGEABLE", mergeStateStatus="BEHIND")
+        with stood_in(channel, gh=behind):
+            ok, reasons = _evaluated(
+                move, {**CLEARED, "mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN"})
+        if ok or reasons != [move.BEHIND_BASE]:
+            problems.append(
+                f"merge manager: a branch the wait revealed as behind was not "
+                f"refused as behind and nothing else: {reasons}")
+
+        with stood_in(channel, gh=_settling_to(mergeable="UNKNOWN")):
+            ok, msg = move.check_mergeable_clean({"number": 1, "mergeable": "UNKNOWN"})
+        if ok or "waiting" not in msg:
+            problems.append(
+                f"merge manager: UNKNOWN outliving the wait was not refused as waited for: {msg}")
+    return problems
 
 
 def _eligible(channel: Any, move: Any) -> list[str]:
