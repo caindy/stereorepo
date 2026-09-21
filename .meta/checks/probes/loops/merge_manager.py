@@ -40,8 +40,14 @@ def merge_manager_probes() -> list[str]:
     `mergeability` rather than refusing the cycle on it; a branch the wait
     reveals as behind its base is refused as behind and nothing else, so
     `advance_stranded` still reaches it; and only a value still `UNKNOWN` once
-    the wait is spent is refused, in words distinct from a settled
-    non-`MERGEABLE` value (solorepo's #784).
+    the wait is spent is refused, once and in words that say it was waited
+    for, a settled `CONFLICTING` being the classifier's `NEEDS_REBASE`
+    (solorepo's #784, solorepo's DR-264). The lifecycle refusals are the
+    classifier's: a notice held at approval, read through the threads query
+    the merge manager runs, is named as held for promotion; a thread owed an
+    answer is counted once; a state nothing words names itself only where no
+    other reason explains it; and a conflicting branch is refused once, in the
+    classifier's words.
 
     The decision semaphore reads the diff (solorepo's DR-222): a diff adding
     an entry as `PROPOSED` or `RECOMMENDED` defers and is named in the reason
@@ -68,6 +74,7 @@ def merge_manager_probes() -> list[str]:
     move = programs["move"]
     return (_semaphores(move) + _rerun_reads_green(move) + _threads_fail_closed(channel, move)
             + _mergeable_unknown_is_waited_out(channel, move)
+            + _lifecycle_is_the_classifiers(channel, move)
             + _eligible(channel, move) + _decisions_in_force(channel, move)
             + _end_to_end(channel, move) + _check_merge_failure_isolation(channel, move)
             + _blockers(move)
@@ -196,10 +203,11 @@ def _settling_to(**settled: str) -> Any:
 
 def _mergeable_unknown_is_waited_out(channel: Any, move: Any) -> list[str]:
     """`check_mergeable_clean` waits an `UNKNOWN` mergeable read out through
-    `mergeability` rather than refusing the cycle on it, refuses with a
-    distinct reason once the wait is spent and the value never settles, and
-    reads `mergeStateStatus` from the read that answered rather than from the
-    one the wait was entered on (solorepo's #784)."""
+    `mergeability` rather than refusing the cycle on it, refuses once and in
+    words that say it was waited for once the wait is spent and the value
+    never settles, with no second reason naming the review, and reads
+    `mergeStateStatus` from the read that answered rather than from the one
+    the wait was entered on (solorepo's #784)."""
     problems = []
     with stood_in(move, MERGEABILITY=(2, 0)):
         with stood_in(channel, gh=_settling_to(mergeable="MERGEABLE")):
@@ -222,6 +230,59 @@ def _mergeable_unknown_is_waited_out(channel: Any, move: Any) -> list[str]:
         if ok or "waiting" not in msg:
             problems.append(
                 f"merge manager: UNKNOWN outliving the wait was not refused as waited for: {msg}")
+        with stood_in(channel, gh=_settling_to(mergeable="UNKNOWN")):
+            ok, reasons = _evaluated(move, {**CLEARED, "mergeable": "UNKNOWN"})
+        if ok or reasons != ["mergeable is still UNKNOWN after waiting"]:
+            problems.append(
+                f"merge manager: an approved pull request whose mergeability never settled "
+                f"was refused as {reasons}, not once as waited for")
+    return problems
+
+
+def _lifecycle_is_the_classifiers(channel: Any, move: Any) -> list[str]:
+    """The lifecycle is refused off the state `classify_pr` found (solorepo's DR-264).
+
+    A notice held open at approval, read through `THREADS_QUERY` as the merge
+    manager reads threads it was not handed, is named as held for promotion
+    and not as a point owed; a thread left unresolved is refused once, as owed
+    an answer, since the classifier reads it and nothing counts it a second
+    time; a state nothing words names itself where no other reason explains
+    it; and a branch that conflicts is refused once, in the classifier's
+    words, rather than once by it and once by the mergeability check.
+    """
+    problems = []
+    parked = [{"isResolved": False, "isOutdated": False,
+               "comments": {"nodes": [{"author": {"login": REVIEWER},
+                                       "body": "**Noticed and not done.** a thing"}]}}]
+
+    def fetched(query: str, **_: Any) -> Any:
+        """`THREADS_QUERY` answered as GitHub would, the comments only where selected."""
+        nodes = parked if "comments" in query else [
+            {key: value for key, value in thread.items() if key != "comments"} for thread in parked]
+        return {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": nodes}}}}}
+
+    with stood_in(channel, gh=_diff_of(), graphql=fetched):
+        ok, reasons = _evaluated(move, {**CLEARED, "reviewThreads": None})
+    if ok or not any("held for promotion" in r for r in reasons):
+        problems.append(f"merge manager: a notice held at approval was refused as {reasons}, "
+                        "not as held for promotion")
+    answered = [{"isResolved": False, "comments": {"nodes": [{"body": "Fixed in abc123."}]}}]
+    with stood_in(channel, gh=_diff_of()):
+        ok, reasons = _evaluated(move, {**CLEARED, "reviewThreads": answered})
+    if ok or reasons != ["1 unresolved conversation(s) owed an answer"]:
+        problems.append(f"merge manager: a thread left unresolved was refused as {reasons}, "
+                        "not once as owed an answer")
+    with stood_in(channel, gh=_diff_of()):
+        ok, reasons = _evaluated(move, {**CLEARED, "mergeable": None})
+    if ok or reasons != ["state is AWAITING_REVIEW, not READY_TO_MERGE"]:
+        problems.append(f"merge manager: a state nothing words was refused as {reasons}, "
+                        "not by naming itself")
+    with stood_in(channel, gh=_diff_of()):
+        ok, reasons = _evaluated(move, {**CLEARED, "mergeable": "CONFLICTING",
+                                        "mergeStateStatus": "DIRTY"})
+    if ok or reasons != ["branch conflicts with base"]:
+        problems.append(f"merge manager: a conflicting branch was refused as {reasons}, "
+                        "not once in the classifier's words")
     return problems
 
 
