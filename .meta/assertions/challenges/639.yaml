@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/639
+    name: Prevent autonomous runs from fabricating trailers or bypassing the signing channel
+    challenge_type: DEFECT
+    description: >-
+      Autonomous rebase passes executed raw `gh pr comment` commands bearing
+      copied or fabricated `Actor:` and `Agent:` trailers due to missing pre-tool
+      confinement under Antigravity CLI and Gemini CLI harnesses, corrupting execution
+      provenance and audit records.

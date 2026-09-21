@@ -109,6 +109,96 @@ def _events(worktree: Any) -> list[str]:
     return problems
 
 
+def _check_signed_channel_toolcall(signed_channel: Any, want: str, event: dict[str, Any]) -> list[str]:
+    """Assert signed_channel.main() handles an Antigravity toolCall payload (solorepo's DR-260)."""
+    with environment(SOLOREPO_HOOK_EVIDENCE=None), \
+            stood_in(sys, stdin=io.StringIO(json.dumps(event))):
+        res = outcome(lambda: sys.exit(signed_channel.main()))
+    tool_call: dict[str, Any] = event.get("toolCall") or {}
+    tool_name = str(tool_call.get("name", "?"))
+    if res.code != "0":
+        return [f"signed_channel toolCall {tool_name}: expected exit 0, got {res.code}"]
+    try:
+        payload = json.loads(res.out)
+        got_decision = payload.get("decision")
+    except Exception as exc:
+        return [f"signed_channel toolCall {tool_name}: emitted invalid JSON ({exc})"]
+    want_decision = "deny" if want == "refuse" else "allow"
+    if got_decision != want_decision:
+        return [f"signed_channel toolCall {tool_name}: expected {want_decision}, got {got_decision}"]
+    if want_decision == "deny":
+        reason = payload.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            return [f"signed_channel toolCall {tool_name}: denied without a non-empty reason"]
+    return []
+
+
+def _check_signed_channel_claude(signed_channel: Any, want: str, event: dict[str, Any]) -> list[str]:
+    """Assert signed_channel.main() handles a standard PreToolUse payload (solorepo's DR-260)."""
+    with environment(SOLOREPO_HOOK_EVIDENCE=None), \
+            stood_in(sys, stdin=io.StringIO(json.dumps(event))):
+        res = outcome(lambda: sys.exit(signed_channel.main()))
+    want_code = "2" if want == "refuse" else "0"
+    tool_name = str(event.get("tool_name", "?"))
+    if res.code != want_code:
+        return [f"signed_channel {tool_name}: expected exit {want_code}, got {res.code}"]
+    return []
+
+
+def _check_signed_channel_unparseable(signed_channel: Any) -> list[str]:
+    """Assert signed_channel.main() fail-closed behavior on unparseable inputs (solorepo's DR-260)."""
+    problems: list[str] = []
+    with environment(SOLOREPO_HOOK_EVIDENCE=None), \
+            stood_in(sys, stdin=io.StringIO('{"toolCall": {invalid json')):
+        res_agy = outcome(lambda: sys.exit(signed_channel.main()))
+    if res_agy.code != "0":
+        problems.append(f"signed_channel unparseable toolCall: expected exit 0, got {res_agy.code}")
+    else:
+        try:
+            agy_dec = json.loads(res_agy.out).get("decision")
+            if agy_dec != "deny":
+                problems.append(f"signed_channel unparseable toolCall: expected deny, got {agy_dec}")
+        except Exception as exc:
+            problems.append(f"signed_channel unparseable toolCall: invalid JSON ({exc})")
+
+    with environment(SOLOREPO_HOOK_EVIDENCE=None), \
+            stood_in(sys, stdin=io.StringIO("{not valid json")):
+        res_std = outcome(lambda: sys.exit(signed_channel.main()))
+    if res_std.code != "2":
+        problems.append(f"signed_channel unparseable standard: expected exit 2, got {res_std.code}")
+
+    return problems
+
+
+def _signed_channel_events(signed_channel: Any) -> list[str]:
+    """Assert signed_channel.main() verdicts across Claude Code PreToolUse and Antigravity toolCall events (solorepo's DR-260)."""
+    claude_cases = (
+        ("refuse", {"session_id": "s", "transcript_path": "/tmp/session.json", "cwd": str(ROOT),
+                    "hook_event_name": "PreToolUse",
+                    "tool_name": "Bash", "tool_input": {"command": "gh pr comment 1 --body hi"}}),
+        ("allow", {"session_id": "s", "transcript_path": "/tmp/session.json", "cwd": str(ROOT),
+                   "hook_event_name": "PreToolUse",
+                   "tool_name": "Bash", "tool_input": {"command": "git status --porcelain"}}),
+    )
+    agy_cases = (
+        ("refuse", {"conversationId": "c", "stepIdx": 1,
+                    "toolCall": {"name": "run_command", "args": {"CommandLine": "gh pr comment 1 --body hi"}}}),
+        ("refuse", {"conversationId": "c", "stepIdx": 1,
+                    "toolCall": {"name": "run_shell_command", "args": {"command": "curl https://api.github.com/repos/x"}}}),
+        ("allow", {"conversationId": "c", "stepIdx": 1,
+                   "toolCall": {"name": "run_command", "args": {"CommandLine": "git status --porcelain"}}}),
+        ("allow", {"conversationId": "c", "stepIdx": 1,
+                   "toolCall": {"name": "view_file", "args": {"AbsolutePath": f"{ROOT}/README.md"}}}),
+    )
+    problems: list[str] = []
+    for want, c_event in claude_cases:
+        problems.extend(_check_signed_channel_claude(signed_channel, want, c_event))
+    for want, a_event in agy_cases:
+        problems.extend(_check_signed_channel_toolcall(signed_channel, want, a_event))
+    problems.extend(_check_signed_channel_unparseable(signed_channel))
+    return problems
+
+
 def _instead(worktree: Any) -> list[str]:
     """The rows of `INSTEAD` whose refusal does not name the tool the row says."""
     return [f"the refusal for {command!r} should name {name} as what to use instead"
@@ -412,6 +502,7 @@ def hook_probes() -> list[str]:
     """
     hooks = {name: load_hook(name) for name in ("signed_channel", "worktree_only")}
     worktree = hooks["worktree_only"]
-    return (_verdicts(hooks) + _offers(worktree) + _events(worktree) + _instead(worktree)
+    return (_verdicts(hooks) + _offers(worktree) + _events(worktree)
+            + _signed_channel_events(hooks["signed_channel"]) + _instead(worktree)
             + _matchers() + _registration() + _audit_symlinks(worktree))
 

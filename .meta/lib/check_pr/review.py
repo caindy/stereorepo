@@ -22,6 +22,8 @@ from lib.check_pr import META, github
 # solo and an agent is indistinguishable from one party talking to itself. The
 # trailer is what separates them — the same one the commits carry.
 ACTOR = re.compile(r"^Actor:\s*(\S+)", re.M)
+AGENT = re.compile(r"^Agent:\s*(\S+)", re.M)
+GHA_ACTOR = re.compile(r"^gha-\d+$")
 
 
 # The channel itself, because `mine()` below asks it which session is speaking
@@ -266,3 +268,58 @@ def resolved_without_an_answer(
         list[str]: Validation error messages for threads resolved without independent response.
     """
     return unanswered(github.threads(ref) if thread_nodes is None else thread_nodes)
+
+
+TRAILING_BLOCK = re.compile(
+    r"(?:\n|^)(?:Actor:\s*(\S+)\s*\nAgent:\s*(\S+)|Agent:\s*(\S+)\s*\nActor:\s*(\S+))\s*$"
+)
+FENCED = re.compile(r"(`{3,}|~{3,})[\s\S]*?\1|`[^`\n]*`", re.S)
+QUOTED = re.compile(r"^\s*>.*$", re.M)
+
+
+def audit_comment_trailers(
+    comments: Sequence[dict[str, Any]],
+    role_logins: set[str],
+) -> list[str]:
+    """Audits comments posted by repository Role accounts for structural trailer integrity (solorepo's DR-260).
+
+    Args:
+        comments: Sequence of comment dictionaries containing author and body.
+        role_logins: Set of repository Role account logins to audit.
+
+    Returns:
+        list[str]: Validation error messages for comments with missing, duplicate, or malformed trailers.
+    """
+    problems: list[str] = []
+    for c in comments:
+        author = (c.get("author") or {}).get("login", "")
+        if author not in role_logins:
+            continue
+        body = c.get("body") or ""
+        stripped = body.rstrip()
+        m = TRAILING_BLOCK.search(stripped)
+        if not m:
+            if not ACTOR.search(body):
+                problems.append(f"comment by {author} missing Actor trailer: {said(body)}")
+            elif not AGENT.search(body):
+                problems.append(f"comment by {author} missing Agent trailer: {said(body)}")
+            else:
+                problems.append(f"comment by {author} does not end in an attribution trailer block: {said(body)}")
+            continue
+
+        actor = m.group(1) or m.group(4)
+        agent = m.group(2) or m.group(3)
+
+        if actor.startswith("gha-") and not GHA_ACTOR.match(actor):
+            problems.append(f"comment by {author} carries malformed workflow run Actor trailer {actor!r}: {said(body)}")
+
+        prefix = stripped[:m.start()]
+        prefix_clean = QUOTED.sub("", FENCED.sub("", prefix))
+        extra_actors = ACTOR.findall(prefix_clean)
+        if extra_actors:
+            problems.append(f"comment by {author} carries duplicate Actor trailers ({[*extra_actors, actor]}): {said(body)}")
+        extra_agents = AGENT.findall(prefix_clean)
+        if extra_agents:
+            problems.append(f"comment by {author} carries duplicate Agent trailers ({[*extra_agents, agent]}): {said(body)}")
+
+    return problems

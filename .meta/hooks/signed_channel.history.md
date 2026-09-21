@@ -39,3 +39,16 @@ segment carries, so a body the channel is given is data and a body piped into
 `curl` is still that call's.
 
 Evidence: `.meta/checks/probes/git/step.py::hook_probes`
+
+### Antigravity CLI and Gemini CLI runs bypassed hook confinement on writing endpoints
+
+`signed_channel.py` was registered solely for Claude Code in `.claude/settings.json`
+and lacked support for Antigravity CLI's `toolCall` protocol, leaving autonomous
+coder runs unconfined on raw GitHub shell commands (solorepo's #639, solorepo's DR-260).
+The hook also failed open upon receiving unparseable stdin. Established: `verdict.main()`
+sniffs raw stdin for Antigravity's `toolCall` envelope, maps `run_command` and
+`run_shell_command` with `CommandLine` arguments, and emits `{"decision": "deny", "reason": "..."}`
+on stdout with exit code 0 for Antigravity CLI while preserving stderr and exit code 2
+for Claude Code.
+
+Evidence: `.meta/checks/probes/git/step.py::hook_probes`

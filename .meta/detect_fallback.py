@@ -176,17 +176,24 @@ REVIEWER_HOOK_COMMAND: str = "$GEMINI_PROJECT_DIR/.meta/hooks/worktree_only.py"
 """Command path invoking the worktree-confinement hook under Antigravity CLI (solorepo's #454, solorepo's #456, solorepo's #682)."""
 
 
+SIGNED_CHANNEL_BEFORE_TOOL_MATCHER: str = "^(run_command|run_shell_command|Bash)$"
+"""Pre-tool hook matcher guarding shell tool execution via signed_channel.py (solorepo's DR-260)."""
+
+SIGNED_CHANNEL_HOOK_COMMAND: str = "$GEMINI_PROJECT_DIR/.meta/hooks/signed_channel.py"
+"""Command path invoking the signed-channel hook under Antigravity CLI (solorepo's DR-260)."""
+
+
 def configure_reviewer_settings(
     workspace_dir: pathlib.Path | None = None,
     settings_file: pathlib.Path | None = None,
     hooks_file: pathlib.Path | None = None,
 ) -> None:
-    """Configure tool confinement and hook registration for the reviewer Role (solorepo's DR-110, solorepo's DR-245, solorepo's #682).
+    """Configure tool confinement and hook registration for the reviewer Role (solorepo's DR-110, solorepo's DR-245, solorepo's DR-260, solorepo's #682).
 
     Writes `permissions.deny`, `tools.core`, and `BeforeTool` hook settings directly to
     `~/.gemini/antigravity-cli/settings.json` while preserving mounted credentials, and
-    registers `PreToolUse` lifecycle hooks under the `worktree-only` key in
-    `~/.gemini/config/hooks.json` while preserving any existing hook configurations.
+    registers `PreToolUse` lifecycle hooks under the `worktree-only` and `signed-channel`
+    keys in `~/.gemini/config/hooks.json` while preserving any existing hook configurations.
 
     Args:
         workspace_dir: Optional root directory of the workspace. Defaults to GEMINI_PROJECT_DIR,
@@ -203,6 +210,7 @@ def configure_reviewer_settings(
         env_ws = os.environ.get("GEMINI_PROJECT_DIR") or os.environ.get("GITHUB_WORKSPACE")
         workspace_dir = pathlib.Path(env_ws) if env_ws else pathlib.Path.cwd()
     hook_command = f"{workspace_dir.resolve()}/.meta/hooks/worktree_only.py"
+    hook_channel_command = f"{workspace_dir.resolve()}/.meta/hooks/signed_channel.py"
 
     dest_data: dict[str, Any] = {}
     if dest.is_file():
@@ -230,7 +238,17 @@ def configure_reviewer_settings(
                     "command": hook_command,
                 }
             ],
-        }
+        },
+        {
+            "matcher": SIGNED_CHANNEL_BEFORE_TOOL_MATCHER,
+            "hooks": [
+                {
+                    "type": "command",
+                    "name": "signed-channel",
+                    "command": hook_channel_command,
+                }
+            ],
+        },
     ]
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(dest_data, indent=2) + "\n", encoding="utf-8")
@@ -255,6 +273,18 @@ def configure_reviewer_settings(
             ],
         }
     ]
+    hooks_data.setdefault("signed-channel", {})["PreToolUse"] = [
+        {
+            "matcher": SIGNED_CHANNEL_BEFORE_TOOL_MATCHER,
+            "hooks": [
+                {
+                    "type": "command",
+                    "name": "signed-channel",
+                    "command": hook_channel_command,
+                }
+            ],
+        }
+    ]
     hooks_dest.parent.mkdir(parents=True, exist_ok=True)
     hooks_dest.write_text(json.dumps(hooks_data, indent=2) + "\n", encoding="utf-8")
 
@@ -262,23 +292,36 @@ def configure_reviewer_settings(
 CODER_DENIED_PERMISSIONS: list[str] = [
     "invoke_subagent(*)",
 ]
-"""Fine-grained permissions denied for the coder Role under Antigravity CLI (solorepo's DR-257)."""
+"""Fine-grained permissions denied for the coder Role under Antigravity CLI (solorepo's DR-257, solorepo's DR-260)."""
 
 
 def configure_coder_settings(
+    workspace_dir: pathlib.Path | None = None,
     settings_file: pathlib.Path | None = None,
+    hooks_file: pathlib.Path | None = None,
 ) -> None:
-    """Configure permissions denial for the coder Role under Antigravity CLI (solorepo's DR-257).
+    """Configure permissions denial and signed channel hook for the coder Role under Antigravity CLI (solorepo's DR-257, solorepo's DR-260).
 
     Denies subagent invocation (`invoke_subagent(*)`) in `~/.gemini/antigravity-cli/settings.json`
-    to enforce single-session evaluation during autonomous coder fallback.
+    to enforce single-session evaluation during autonomous coder fallback, and registers
+    PreToolUse lifecycle hooks for `signed_channel.py` under the `signed-channel` key in
+    `~/.gemini/config/hooks.json` to prevent unmediated GitHub mutation writes.
 
     Args:
+        workspace_dir: Optional root directory of the workspace. Defaults to GEMINI_PROJECT_DIR,
+            GITHUB_WORKSPACE, or current working directory.
         settings_file: Optional path to settings JSON file. Defaults to
             ~/.gemini/antigravity-cli/settings.json.
+        hooks_file: Optional path to hooks JSON file. Defaults to
+            ~/.gemini/config/hooks.json.
     """
     home = pathlib.Path.home()
     dest = settings_file or (home / ".gemini" / "antigravity-cli" / "settings.json")
+    hooks_dest = hooks_file or (home / ".gemini" / "config" / "hooks.json")
+    if workspace_dir is None:
+        env_ws = os.environ.get("GEMINI_PROJECT_DIR") or os.environ.get("GITHUB_WORKSPACE")
+        workspace_dir = pathlib.Path(env_ws) if env_ws else pathlib.Path.cwd()
+    hook_command = f"{workspace_dir.resolve()}/.meta/hooks/signed_channel.py"
 
     dest_data: dict[str, Any] = {}
     if dest.is_file():
@@ -294,8 +337,44 @@ def configure_coder_settings(
         if p not in denied:
             denied.append(p)
 
+    before_tools = dest_data.setdefault("hooks", {}).setdefault("BeforeTool", [])
+    if not any(h.get("name") == "signed-channel" for entry in before_tools for h in entry.get("hooks", [])):
+        before_tools.append({
+            "matcher": SIGNED_CHANNEL_BEFORE_TOOL_MATCHER,
+            "hooks": [
+                {
+                    "type": "command",
+                    "name": "signed-channel",
+                    "command": hook_command,
+                }
+            ],
+        })
+
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(dest_data, indent=2) + "\n", encoding="utf-8")
+
+    hooks_data: dict[str, Any] = {}
+    if hooks_dest.is_file():
+        try:
+            hooks_data = json.loads(hooks_dest.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"Error reading destination hooks {hooks_dest}: {e}", file=sys.stderr)
+            hooks_data = {}
+
+    hooks_data.setdefault("signed-channel", {})["PreToolUse"] = [
+        {
+            "matcher": SIGNED_CHANNEL_BEFORE_TOOL_MATCHER,
+            "hooks": [
+                {
+                    "type": "command",
+                    "name": "signed-channel",
+                    "command": hook_command,
+                }
+            ],
+        }
+    ]
+    hooks_dest.parent.mkdir(parents=True, exist_ok=True)
+    hooks_dest.write_text(json.dumps(hooks_data, indent=2) + "\n", encoding="utf-8")
 
 
 def write_env_file(path_env: str, content: str) -> None:

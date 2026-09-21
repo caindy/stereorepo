@@ -32,6 +32,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import select
 import subprocess
 import sys
@@ -230,11 +231,27 @@ def trailers() -> str:
     return f"Actor: {actor()}\nAgent: {agent()}"
 
 
+TRAILING_TRAILER = re.compile(
+    r"(?:\n|^)(?:Actor:\s*\S+\s*\nAgent:\s*\S+|Agent:\s*\S+\s*\nActor:\s*\S+|Actor:\s*\S+|Agent:\s*\S+)\s*$"
+)
+"""Matches terminal hand-crafted or foreign trailer blocks in input bodies (solorepo's DR-260)."""
+
+
 def signed(text: str) -> str:
-    """Appends Actor and Agent attribution trailers to a comment or issue body."""
+    """Appends Actor and Agent attribution trailers to a comment or issue body.
+
+    Refuses input bodies terminating in hand-crafted or foreign trailers that do not
+    match the attested environment trailer (solorepo's DR-260).
+    """
     body = text.rstrip("\n")
     block = trailers()
-    return body if body.endswith(block) else f"{body}\n\n{block}\n"
+    if body.endswith(block):
+        return body
+    if TRAILING_TRAILER.search(body):
+        sys.exit("say: body ends in a hand-crafted or foreign trailer; the channel signs "
+                 "automatically from workflow attestations (solorepo's DR-260). "
+                 "Omit the trailing trailer.")
+    return f"{body}\n\n{block}\n"
 
 
 def piped(timeout: float = 0.5) -> str:

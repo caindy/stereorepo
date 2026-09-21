@@ -62,15 +62,35 @@ closes the last: what is held is that a path spelled as a call to GitHub on a
 line these lists can read is refused, and what is bought is that a read naming
 these strings is not.
 
+The body is `.meta/lib/signed_channel/`: `tables` holds every list and pattern
+named above, `shell` takes a command line apart, `reach` judges each segment and
+holds the predicate `blocked`, and `verdict` reads the event and exits with the
+judgement. Each module's docstring carries the why of its part; this file is the
+contract a harness invokes, and `reach.blocked` is the predicate, separate from
+the plumbing so it can be watched failing without a harness.
+
     echo '{"tool_name":"Bash","tool_input":{"command":"..."}}' | .meta/hooks/signed_channel.py
 
-Exit 2 blocks the call and shows the message to the agent. The body is
-`.meta/lib/signed_channel/`: `tables` holds every list and pattern named above,
-`shell` takes a command line apart, `reach` judges each segment and holds the
-predicate `blocked`, and `verdict` reads the event and exits with the judgement.
-Each module's docstring carries the why of its part; this file is the contract a
-harness invokes, and `reach.blocked` is the predicate, separate from the
-plumbing so it can be watched failing without a harness.
+Input/Output Contract:
+    Reads a before-tool event JSON object from stdin.
+    Claude Code and Gemini CLI carry `tool_name` and `tool_input`:
+        {"tool_name": "Bash", "tool_input": {"command": "..."}}
+    Under those harnesses, exits with code 0 to permit execution. On refusal,
+    writes a JSON refusal to stdout, writes an explanatory diagnostic to stderr,
+    and exits with code 2 to block execution.
+    Antigravity CLI carries `toolCall` and expects a JSON decision on stdout (solorepo's DR-260):
+        {"toolCall": {"name": "run_command", "args": {"CommandLine": "..."}}}
+    Under Antigravity CLI, writes `{"decision": "allow"}` or
+    `{"decision": "deny", "reason": "..."}` to stdout and exits with code 0.
+    A payload that cannot be parsed as JSON or read from stdin is blocked across
+    all harnesses: if an Antigravity envelope is identified, outputs a JSON
+    refusal on stdout with exit 0; otherwise, outputs both a JSON refusal on
+    stdout and an explanatory diagnostic on stderr with exit 2, ensuring no
+    harness fails open.
+    Appends one line of Evidence, `<UTC timestamp, seconds> <tool>
+    permit|refuse`, to the file `SOLOREPO_HOOK_EVIDENCE` names, where the run
+    set it, so that a session this hook never confined is a run that can be told
+    apart from a confined one (solorepo's #645).
 
 History in signed_channel.history.md (solorepo's DR-171).
 """

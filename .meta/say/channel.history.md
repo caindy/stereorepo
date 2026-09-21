@@ -130,3 +130,17 @@ from the invocation fails the probe rather than leaving it asserting only that
 a timeout, once raised, is handled.
 
 Evidence: `.meta/checks/probes/channel/bound.py::gh_bound_probes`
+
+### Channel signed() hardened against foreign trailer stacking
+
+While historical trailer forgery bypassed `.meta/say/post` via unconfined tool
+execution, confining tool execution brings comment operations in-band through the
+channel; `channel.signed()` appended the attested trailer block without refusing
+foreign trailers, which would stack an attested trailer beneath a caller-provided
+trailer (solorepo's #639, solorepo's DR-260).
+Established: `channel.signed()` inspects the end of input bodies for trailing trailer blocks;
+if a foreign or hand-crafted trailer is present and does not match `channel.trailers()`, it
+refuses execution with an explanatory message directing the caller to omit the trailer.
+
+Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`
+

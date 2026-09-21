@@ -129,9 +129,34 @@ def required_contexts() -> list[str]:
             f"{WORKFLOW.name} reports" for c in missing]
 
 
+def comment_trailers(
+    ref: str | int,
+    thread_nodes: Sequence[dict[str, Any]] | None = None,
+) -> list[str]:
+    """Validates that comments from repository Role accounts carry valid attribution trailers (solorepo's DR-260).
+
+    Args:
+        ref: Pull request number, URL, or head branch reference.
+        thread_nodes: Optional pre-fetched review thread dictionaries.
+
+    Returns:
+        list[str]: Validation messages for comments with missing, duplicate, or malformed trailers.
+    """
+    threads = github.threads(ref) if thread_nodes is None else thread_nodes
+    thread_comments = [
+        c
+        for t in threads
+        for c in (t.get("comments") or {}).get("nodes", [])
+    ]
+    data = github.gh("pr", "view", str(ref), "--json", "comments")
+    issue_comments = data.get("comments") or []
+    role_logins = {github.role_login(role) for role in ("coder", "reviewer")}
+    return review.audit_comment_trailers(thread_comments + issue_comments, role_logins)
+
+
 def gate(ref: str | int,
          thread_nodes: Sequence[dict[str, Any]] | None = None) -> list[str]:
-    """Executes gate checks on a pull request: title/body form, threads, signoffs, and contexts.
+    """Executes gate checks on a pull request: title/body form, threads, signoffs, contexts, and comment trailers.
 
     Args:
         ref: Pull request number, URL, or head branch reference.
@@ -142,7 +167,8 @@ def gate(ref: str | int,
     """
     title, body = github.from_github(ref)
     return (form.check(title, body) + review.resolved_without_an_answer(ref, thread_nodes=thread_nodes)
-            + unsigned_commits(ref) + required_contexts() + cited_issues())
+            + unsigned_commits(ref) + comment_trailers(ref, thread_nodes=thread_nodes)
+            + required_contexts() + cited_issues())
 
 
 CONTEXT = "pull request"

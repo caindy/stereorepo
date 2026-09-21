@@ -13,28 +13,28 @@ from checks.collect import META, check
 from checks.probes.harness import environment, load_module
 
 
-def _probe_reviewer_hooks(hooks_file: pathlib.Path, expected_cmd: str, matcher: str) -> list[str]:
-    """Verify generated hooks.json contains expected worktree-only PreToolUse configuration."""
+def _probe_hooks_section(hooks_file: pathlib.Path, section: str, expected_cmd: str, matcher: str) -> list[str]:
+    """Verify generated hooks.json contains expected PreToolUse configuration for a named section."""
     if not hooks_file.is_file():
-        return ["fallback probes: configure_reviewer_settings failed to produce a hooks.json file"]
+        return [f"fallback probes: configure settings failed to produce a hooks.json file for {section}"]
     try:
         hooks_data = json.loads(hooks_file.read_text(encoding="utf-8"))
     except Exception as e:
         return [f"fallback probes: failed to parse generated hooks JSON: {e}"]
 
-    pre_hooks = hooks_data.get("worktree-only", {}).get("PreToolUse", [])
+    pre_hooks = hooks_data.get(section, {}).get("PreToolUse", [])
     if not pre_hooks:
-        return ["fallback probes: hooks.json worktree-only.PreToolUse is missing or empty"]
+        return [f"fallback probes: hooks.json {section}.PreToolUse is missing or empty"]
 
     pre_hook = pre_hooks[0]
     problems: list[str] = []
     if pre_hook.get("matcher") != matcher:
         problems.append(
-            f"fallback probes: hooks.json matcher {pre_hook.get('matcher')!r} != {matcher!r}"
+            f"fallback probes: hooks.json {section} matcher {pre_hook.get('matcher')!r} != {matcher!r}"
         )
     commands = [h.get("command", "") for h in pre_hook.get("hooks", [])]
     if not any(expected_cmd in cmd for cmd in commands):
-        problems.append(f"fallback probes: PreToolUse hook command does not invoke {expected_cmd}")
+        problems.append(f"fallback probes: {section} PreToolUse hook command does not invoke {expected_cmd}")
     return problems
 
 
@@ -70,19 +70,18 @@ def _probe_reviewer_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> lis
     if not before_hooks:
         problems.append("fallback probes: hooks.BeforeTool is missing or empty")
     else:
-        hook = before_hooks[0]
-        if hook.get("matcher") != detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER:
-            problems.append(
-                f"fallback probes: hook matcher {hook.get('matcher')!r} != "
-                f"{detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER!r}"
-            )
-        commands = [h.get("command", "") for h in hook.get("hooks", [])]
+        commands = [h.get("command", "") for entry in before_hooks for h in entry.get("hooks", [])]
         expected_cmd = f"{workspace}/.meta/hooks/worktree_only.py"
+        expected_channel_cmd = f"{workspace}/.meta/hooks/signed_channel.py"
         if not any(expected_cmd in cmd for cmd in commands):
             problems.append(f"fallback probes: BeforeTool hook command does not invoke {expected_cmd}")
+        if not any(expected_channel_cmd in cmd for cmd in commands):
+            problems.append(f"fallback probes: BeforeTool hook command does not invoke {expected_channel_cmd}")
 
     expected_cmd = f"{workspace}/.meta/hooks/worktree_only.py"
-    problems.extend(_probe_reviewer_hooks(hooks_file, expected_cmd, detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER))
+    expected_channel_cmd = f"{workspace}/.meta/hooks/signed_channel.py"
+    problems.extend(_probe_hooks_section(hooks_file, "worktree-only", expected_cmd, detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER))
+    problems.extend(_probe_hooks_section(hooks_file, "signed-channel", expected_channel_cmd, detect_fallback.SIGNED_CHANNEL_BEFORE_TOOL_MATCHER))
 
     hooks_file_env = tmp_dir / "hooks_env.json"
     settings_file_env = tmp_dir / "settings_env.json"
@@ -90,11 +89,73 @@ def _probe_reviewer_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> lis
         detect_fallback.configure_reviewer_settings(
             workspace_dir=None, settings_file=settings_file_env, hooks_file=hooks_file_env
         )
-    problems.extend(_probe_reviewer_hooks(hooks_file_env, expected_cmd, detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER))
+    problems.extend(_probe_hooks_section(hooks_file_env, "worktree-only", expected_cmd, detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER))
+    problems.extend(_probe_hooks_section(hooks_file_env, "signed-channel", expected_channel_cmd, detect_fallback.SIGNED_CHANNEL_BEFORE_TOOL_MATCHER))
     return problems
 
 
-def _probe_coder_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[str]:
+def _probe_coder_settings_api(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[str]:
+    """Verify configure_coder_settings programmatic configuration (solorepo's DR-257, solorepo's DR-260)."""
+    problems: list[str] = []
+    workspace = tmp_dir / "coder_workspace"
+    workspace.mkdir()
+    settings_file = tmp_dir / "coder_settings.json"
+    hooks_file = tmp_dir / "coder_hooks.json"
+
+    detect_fallback.configure_coder_settings(
+        workspace_dir=workspace, settings_file=settings_file, hooks_file=hooks_file
+    )
+    if not settings_file.is_file():
+        return ["fallback probes: configure_coder_settings failed to produce a settings file"]
+
+    try:
+        data = json.loads(settings_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        return [f"fallback probes: failed to parse generated coder settings JSON: {e}"]
+
+    denied = set(data.get("permissions", {}).get("deny", []))
+    for req in detect_fallback.CODER_DENIED_PERMISSIONS:
+        if req not in denied:
+            problems.append(f"fallback probes: configure_coder_settings omitted required denied permission `{req}`")
+
+    before_hooks = data.get("hooks", {}).get("BeforeTool", [])
+    expected_channel_cmd = f"{workspace}/.meta/hooks/signed_channel.py"
+    found_channel_before = False
+    for entry in before_hooks:
+        if entry.get("matcher") == detect_fallback.SIGNED_CHANNEL_BEFORE_TOOL_MATCHER:
+            for h in entry.get("hooks", []):
+                if h.get("name") == "signed-channel" and expected_channel_cmd in h.get("command", ""):
+                    found_channel_before = True
+    if not found_channel_before:
+        problems.append(f"fallback probes: coder settings BeforeTool hook does not invoke {expected_channel_cmd}")
+
+    problems.extend(
+        _probe_hooks_section(
+            hooks_file,
+            "signed-channel",
+            expected_channel_cmd,
+            detect_fallback.SIGNED_CHANNEL_BEFORE_TOOL_MATCHER,
+        )
+    )
+
+    hooks_file_env = tmp_dir / "coder_hooks_env.json"
+    settings_file_env = tmp_dir / "coder_settings_env.json"
+    with environment(GEMINI_PROJECT_DIR=str(workspace)):
+        detect_fallback.configure_coder_settings(
+            workspace_dir=None, settings_file=settings_file_env, hooks_file=hooks_file_env
+        )
+    problems.extend(
+        _probe_hooks_section(
+            hooks_file_env,
+            "signed-channel",
+            expected_channel_cmd,
+            detect_fallback.SIGNED_CHANNEL_BEFORE_TOOL_MATCHER,
+        )
+    )
+    return problems
+
+
+def _probe_coder_settings_cli(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[str]:
     """Verify detect_fallback.py --configure-coder creates expected permissions.deny via CLI (solorepo's DR-257)."""
     problems: list[str] = []
     coder_home = tmp_dir / "coder_home"
@@ -109,28 +170,35 @@ def _probe_coder_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[s
         check=False,
     )
     if res.returncode != 0:
-        return [f"fallback probes: detect_fallback.py --configure-coder exited {res.returncode}: {res.stderr}"]
-
-    settings_file = coder_home / ".gemini" / "antigravity-cli" / "settings.json"
-    if not settings_file.is_file():
-        return ["fallback probes: detect_fallback.py --configure-coder failed to produce settings.json"]
-
-    try:
-        data = json.loads(settings_file.read_text(encoding="utf-8"))
-    except Exception as e:
-        return [f"fallback probes: failed to parse generated coder settings JSON: {e}"]
-
-    denied = set(data.get("permissions", {}).get("deny", []))
-    for req in detect_fallback.CODER_DENIED_PERMISSIONS:
-        if req not in denied:
-            problems.append(f"fallback probes: configure-coder omitted required denied permission `{req}`")
+        problems.append(f"fallback probes: detect_fallback.py --configure-coder exited {res.returncode}: {res.stderr}")
+    else:
+        cli_settings = coder_home / ".gemini" / "antigravity-cli" / "settings.json"
+        if not cli_settings.is_file():
+            problems.append("fallback probes: detect_fallback.py --configure-coder failed to produce settings.json")
+        else:
+            try:
+                cli_data = json.loads(cli_settings.read_text(encoding="utf-8"))
+                cli_denied = set(cli_data.get("permissions", {}).get("deny", []))
+                for req in detect_fallback.CODER_DENIED_PERMISSIONS:
+                    if req not in cli_denied:
+                        problems.append(f"fallback probes: configure-coder omitted required denied permission `{req}`")
+            except Exception as e:
+                problems.append(f"fallback probes: failed to parse generated coder settings JSON: {e}")
 
     custom_settings = tmp_dir / "custom_coder_settings.json"
-    detect_fallback.configure_coder_settings(settings_file=custom_settings)
+    custom_hooks = tmp_dir / "custom_coder_hooks.json"
+    detect_fallback.configure_coder_settings(
+        settings_file=custom_settings, hooks_file=custom_hooks
+    )
     if not custom_settings.is_file():
         problems.append("fallback probes: configure_coder_settings failed to produce custom settings file")
 
     return problems
+
+
+def _probe_coder_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[str]:
+    """Verify configure_coder_settings creates expected permissions.deny, BeforeTool, and PreToolUse hooks (solorepo's DR-257, solorepo's DR-260)."""
+    return _probe_coder_settings_api(detect_fallback, tmp_dir) + _probe_coder_settings_cli(detect_fallback, tmp_dir)
 
 
 def _probe_merge_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[str]:
@@ -327,14 +395,15 @@ def _probe_run_agy(run_agy: Any) -> list[str]:
 
 @check("fallback probes", pre=True)
 def fallback_probes() -> list[str]:
-    """Reviewer and coder confinement, permission merging, toggle evaluation, and streaming runner (solorepo's DR-245, solorepo's DR-257).
+    """Reviewer and coder confinement, permission merging, toggle evaluation, and streaming runner (solorepo's DR-245, solorepo's DR-257, solorepo's DR-260).
 
     Proves that `configure_reviewer_settings()` configures `permissions.deny` with
     fine-grained denial patterns (`write_file(*)`, `read_url(*)`, `execute_url(*)`, `invoke_subagent(*)`)
-    directly in the settings JSON without clobbering credentials, that `configure_coder_settings()`
-    denies `invoke_subagent(*)`, that `merge_settings()` safely merges permissions and tools,
-    that toggle evaluation adheres to accepted truthy conventions, and that `run_agy.py`
-    builds commands, formats tool updates, and handles streaming NDJSON events.
+    and PreToolUse hooks for worktree-only and signed-channel, that `configure_coder_settings()`
+    denies `invoke_subagent(*)` and registers signed-channel PreToolUse hook directly in
+    settings and hooks JSON without clobbering credentials, that `merge_settings()` safely
+    merges permissions and tools, that toggle evaluation adheres to accepted truthy conventions,
+    and that `run_agy.py` builds commands, formats tool updates, and handles streaming NDJSON events.
     """
     detect_fallback = load_module(META / "detect_fallback.py", "detect_fallback_module", register=False)
     run_agy = load_module(META / "run_agy.py", "run_agy_module", register=False)
