@@ -158,6 +158,9 @@ artifacts:
   - id: work:artifact/github-workflows-test-specialization
     name: .github/workflows/test-specialization.yml
     path: .github/workflows/test-specialization.yml
+  - id: work:artifact/github-workflows-test-tools
+    name: .github/workflows/test-tools.yml
+    path: .github/workflows/test-tools.yml
   - id: work:artifact/gitattributes
     name: .gitattributes
     path: .gitattributes

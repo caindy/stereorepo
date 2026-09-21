@@ -22,6 +22,7 @@ NON_AI_WORKFLOWS = {
     "advance.yml",
     "release.yml",
     "test-specialization.yml",
+    "test-tools.yml",
 }
 """Workflows that do not run AI agent harnesses; watching them skips GitHub CLI job queries and reports 'n/a'."""
 
