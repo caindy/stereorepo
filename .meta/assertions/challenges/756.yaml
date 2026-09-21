@@ -1,0 +1,7 @@
+challenges:
+  - id: work:challenge/756
+    name: Scale mutation testing worker concurrency across Rust and Python seed gates
+    challenge_type: FEATURE
+    description: >-
+      Scales mutation testing worker concurrency across Rust and Python seed gates while
+      reconciling with the shared single-node runner resource model.

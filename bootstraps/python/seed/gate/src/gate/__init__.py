@@ -14,6 +14,7 @@ from __future__ import annotations
 import ast
 import dataclasses
 import io
+import os
 import re
 import shutil
 import subprocess
@@ -276,11 +277,19 @@ def mutants(root: Path) -> Outcome:
     mutmut = shutil.which("mutmut")
     if mutmut is None:
         return CouldNotRun("mutmut is not installed; `uv sync` installs it")
+    raw_max = os.environ.get("MUTMUT_MAX_CHILDREN")
+    default_max = min(os.cpu_count() or 4, 8)
+    try:
+        max_children = int(raw_max) if raw_max is not None else default_max
+    except ValueError:
+        max_children = default_max
     problems: list[str] = []
     members = [pkg for pkg in packages(root) if pkg.parent.name == "packages"]
     for package in members:
         run_ = subprocess.run(  # noqa: S603  # reason: mutmut run fixed argv, no shell, no input
-            [mutmut, "run"], cwd=package, check=False
+            [mutmut, "run", "--max-children", str(max_children)],
+            cwd=package,
+            check=False,
         )
         if run_.returncode != 0:
             problems.append(

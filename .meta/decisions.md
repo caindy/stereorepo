@@ -268,6 +268,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-257](assertions/decisions/DR-257.yaml) | Synchronizing Antigravity CLI batch execution via streaming NDJSON driver and aligning workflow hand-back | Adopted |
 | [DR-259](assertions/decisions/DR-259.yaml) | Reserve the just verb surface for operator flags and identifiers by scoping authoring to skills | Adopted |
 | [DR-261](assertions/decisions/DR-261.yaml) | An unrunnable gate step is amber where a person runs it and a failure under CI | Adopted |
+| [DR-262](assertions/decisions/DR-262.yaml) | Bounding mutation testing worker concurrency to eight across seed gates to reconcile with DR-147 burstable scheduling | Adopted |
 
 ## Holes
 
@@ -508,14 +509,14 @@ and the query a reader in a file actually has.
 | [`bootstraps/python/assertions/capabilities.yaml`](../bootstraps/python/assertions/capabilities.yaml) | [DR-208](assertions/decisions/DR-208.yaml) |
 | [`bootstraps/python/literate-programming.md`](../bootstraps/python/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-176](assertions/decisions/DR-176.yaml) |
 | [`bootstraps/python/render`](../bootstraps/python/render) | [DR-094](assertions/decisions/DR-094.yaml) |
-| [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml), [DR-193](assertions/decisions/DR-193.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-250](assertions/decisions/DR-250.yaml) |
+| [`bootstraps/python/seed/gate/src/gate/__init__.py`](../bootstraps/python/seed/gate/src/gate/__init__.py) | [DR-096](assertions/decisions/DR-096.yaml), [DR-098](assertions/decisions/DR-098.yaml), [DR-193](assertions/decisions/DR-193.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-250](assertions/decisions/DR-250.yaml), [DR-262](assertions/decisions/DR-262.yaml) |
 | [`bootstraps/python/seed/pyproject.toml`](../bootstraps/python/seed/pyproject.toml) | [DR-095](assertions/decisions/DR-095.yaml), [DR-096](assertions/decisions/DR-096.yaml), [DR-097](assertions/decisions/DR-097.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
 | [`bootstraps/python/skills/py-git-hooks/lint-gate.py`](../bootstraps/python/skills/py-git-hooks/lint-gate.py) | [DR-212](assertions/decisions/DR-212.yaml), [DR-250](assertions/decisions/DR-250.yaml) |
 | [`bootstraps/python/skills/py-quality-setup/SKILL.md`](../bootstraps/python/skills/py-quality-setup/SKILL.md) | [DR-212](assertions/decisions/DR-212.yaml) |
 | [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml), [DR-101](assertions/decisions/DR-101.yaml) |
 | [`bootstraps/rust/literate-programming.md`](../bootstraps/rust/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-176](assertions/decisions/DR-176.yaml) |
 | [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
-| [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml), [DR-228](assertions/decisions/DR-228.yaml) |
+| [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-262](assertions/decisions/DR-262.yaml) |
 | [`justfile`](../justfile) | [DR-106](assertions/decisions/DR-106.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-137](assertions/decisions/DR-137.yaml), [DR-157](assertions/decisions/DR-157.yaml), [DR-161](assertions/decisions/DR-161.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-234](assertions/decisions/DR-234.yaml), [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml), [DR-259](assertions/decisions/DR-259.yaml) |
 | [`stakeholders/README.md`](../stakeholders/README.md) | [DR-041](assertions/decisions/DR-041.yaml) |
 | [`template/.github/workflows/gate.yml`](../template/.github/workflows/gate.yml) | [DR-115](assertions/decisions/DR-115.yaml), [DR-119](assertions/decisions/DR-119.yaml), [DR-120](assertions/decisions/DR-120.yaml), [DR-128](assertions/decisions/DR-128.yaml), [DR-140](assertions/decisions/DR-140.yaml), [DR-160](assertions/decisions/DR-160.yaml) |
