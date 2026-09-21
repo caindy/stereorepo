@@ -9,8 +9,8 @@ decisions:
       Six docstrings and comments inside `.meta/say/move` and the Decision DR-133
       cited Article A6 to justify the read-back of actions on GitHub. However, A6
       states that "Every gate step has three outcomes — could not run, which is
-      loud and unmarked and exits zero; passed, which is marked; found something,
-      which is non-zero," which is strictly about gate step exit codes and reports.
+      loud and unmarked; passed, which is marked; found something, which is
+      non-zero", which is strictly about gate step exit codes and reports.
 
       The read-back idiom — verifying that state-changing operations actually took effect on
       the remote before proceeding — is a different property entirely, aiming for

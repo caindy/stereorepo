@@ -53,13 +53,13 @@ _In practice:_ `render.py --check` in the gate; `render.py` writes only when a p
 
 _Retired when:_ A step whose tool can report only by writing, so that the check is had by rewriting the tree and reading what changed.
 
-### A6. Every gate step has three outcomes — could not run, which is loud and unmarked and exits zero; passed, which is marked; found something, which is non-zero.
+### A6. Every gate step has three outcomes — could not run, which is loud and unmarked; passed, which is marked; found something, which is non-zero. Could not run exits zero where a person runs it, and non-zero under CI, which provisions its own toolchain and so has no environment to be short of.
 
 **Checked by** Each step's own reporting, and a review of the report's shape.
 
-_In practice:_ A missing `linkml` prints that it could not run and exits zero. A violation exits non-zero.
+_In practice:_ A missing `linkml` prints that it could not run and exits zero on a maintainer's machine; under CI, where the gate workflow installs it, the same report exits non-zero. A violation exits non-zero anywhere.
 
-_Retired when:_ A gate that cannot start without every step's tool, so there is no third state to report and a mark says what the exit code already said.
+_Retired when:_ A gate that cannot start without every step's tool, so there is no third state to report and a mark says what the exit code already said. Or a CI run reporting that a step could not run and exiting zero, so the mark is the only record that coverage was lost.
 
 ### A7. A check-mark is a claim about scope, so a step says what it checked.
 

@@ -1,0 +1,115 @@
+decisions:
+  - id: work:decision/261
+    name: "DR-261 · An unrunnable gate step is amber where a person runs it and a failure under CI"
+    challenge: work:challenge/735
+    status: ADOPTED
+    applies:
+      - work:article/6
+    enacted_in:
+      - work:artifact/meta-check
+    context: >-
+      Article 6 gave every gate step three outcomes and fixed the exit code of
+      each: could not run is "loud and unmarked and exits zero". DR-169 built
+      `check.py`'s `CouldNotRun`/`Passed`/`Found` contract from it, and
+      `report()` implements the amber reading directly — a step that declares it
+      could not run prints `?` and does not set `failed`.
+
+      That reading is right on a maintainer's machine, where a missing tool is a
+      fact about the environment and the alternative is a gate that will not
+      start on a fresh clone. It is wrong under CI, which installs its own
+      toolchain and therefore has no environment to be short of. There, a step
+      that could not run means the provisioning broke or the tree did, and the
+      exit code is the whole signal because nobody reads a green run's log.
+
+      Challenge #735 was filed on a live instance rather than a hypothetical.
+      `apm package` returns `CouldNotRun` when `apm` is absent from `PATH`, and
+      the `files` job of the gate workflow installs `linkml`, `pyyaml`, `ruff`,
+      `mypy` and `types-pyyaml` and no `apm`. Nothing else in the workflows
+      installs it outside the release job. So a required status check on `main`
+      has reported green on a step that has never once executed, for as long as
+      the step has existed.
+
+      The same Challenge found `check.py` already holding two answers to the
+      question: `failed |= bool(skipped)` fails the run for a schema container
+      that accepts nothing, while `report()` passes it for a step that says the
+      same thing through the typed outcome.
+    alternatives:
+      - name: Leave the contract as Article 6 stated it
+        chosen: false
+        reason: >-
+          It is what produced the live instance. A required check reporting green
+          on a step that never ran is the failure the gate exists to prevent, and
+          nothing in the tree would have surfaced it.
+      - name: Classify each site as environmental or structural
+        chosen: false
+        reason: >-
+          Considered first and rejected as both larger and less true. It asks
+          twenty call sites to be sorted by hand, and the distinction it draws
+          does not survive the CI case: "neither ruff nor uvx is installed"
+          appearing in a CI run means the provisioning line broke, which is
+          exactly as serious as the config having been deleted. The split only
+          exists on a maintainer's machine, so the environment is the thing to
+          condition on rather than the site.
+      - name: Make the gate strict everywhere and require a complete toolchain
+        chosen: false
+        reason: >-
+          Coherent, and it trips Article 6's own falsifier — a gate that cannot
+          start without every step's tool has no third state to report. It also
+          makes a fresh clone unable to run the gate at all, which is the cost
+          the amber state was introduced to avoid.
+      - name: Abort the run on the first unrunnable step under CI
+        chosen: false
+        reason: >-
+          Considered as the reading of "fail fast" and rejected with the solo. A
+          CI run is an expensive round trip, so a gate that stops at the first
+          missing tool costs one cycle per missing tool. The reason a maintainer
+          wants every step attempted — learning what is missing in one pass — is
+          the same reason CI does.
+      - name: One traversal everywhere, with the exit code conditioned on CI
+        chosen: true
+        reason: >-
+          Settled with the solo. Every step runs and every unrunnable step is
+          collected, so the report is identical in both environments and a
+          maintainer is never debugging output CI alone can produce. The single
+          environment-dependent line is the exit code, read from `CI` rather than
+          `GITHUB_ACTIONS` so that any environment may opt into strictness.
+    consequences:
+      - >-
+        Article 6's statement is narrowed: could not run exits zero where a
+        person runs it, and non-zero under CI. The three outcomes, the marks and
+        the reporting are unchanged.
+      - >-
+        `.meta/check.py` runs every registered step, collects each `CouldNotRun`
+        rather than letting one end the traversal, and closes with a block naming
+        everything that could not run and what each needs — in Article 21's
+        output grammar beside `ok`, `x` and `?` (solorepo's DR-092).
+      - >-
+        The schema containers counted by `skipped` report through the same block,
+        so the two answers `check.py` held become one.
+      - >-
+        `.github/workflows/gate.yml` installs `apm` in the `files` job, because
+        the job goes red on the `apm package` step the moment this lands.
+      - >-
+        Unblocks #735, which carries the enactment. This record settles the
+        decision the Challenge was waiting on and closes nothing: the three
+        consequences above are the work, and they are #735's.
+    falsifier: >-
+      A CI run in which a step reports that it could not run and the run exits
+      zero. Or a maintainer's run that stops at the first unrunnable step instead
+      of reporting all of them together. Or a report whose text differs between
+      the two environments.
+    rationale: |-
+      Article 6's falsifier is a gate that cannot start without every step's
+      tool, so that there is no third state to report. This amendment does not
+      approach it: the third state survives, is still loud, is still unmarked and
+      is still distinct from passed and from found. What changes is only the exit
+      code, and only where the environment cannot be short.
+
+      The Article was written for one runner and CI is a second. Article 5's
+      example already draws the same line in the same words — `render.py` "writes
+      only when a person runs it" — so conditioning on who is running is the
+      charter's existing idiom rather than a new one.
+
+      Holding the report identical across both environments is what keeps the
+      amendment from splitting the gate in two. A maintainer reads what CI read;
+      only the consequence differs.
