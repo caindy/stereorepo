@@ -5,14 +5,17 @@ command to `grammar`, and a reader naming no key of `paths.READERS` is refused
 outright. The refusal text is written here, with the nearest conforming
 command `grammar.plain_form` derives where there is one (solorepo's DR-175),
 because the sentence the agent reads is the hook's and not either boundary's.
-`main` reads the event, exits 0 to permit and 2 to block, and refuses rather
-than guesses when the hook itself fails — including when the payload is one it
-cannot read at all, which is the case a harness reading any other exit code as a
-non-blocking error would run the tool through. It also leaves one line of
-Evidence for each call it decided, where a run asked for the record: an absent
-hook fails open silently, so the record of having run is what a run that names a
-file for it can read back to tell a confined session from an unconfined one
-(solorepo's #645).
+`main` reads the event across two protocol regimes: Claude Code and Gemini CLI
+signal decisions via exit codes (0 to permit, 2 to block with refusal on
+stderr), while Antigravity CLI expects a structured JSON decision object
+`{"decision": "allow"}` or `{"decision": "deny", "reason": "..."}` on stdout
+with exit code 0 (solorepo's #682). `main` refuses rather than guesses when the
+hook itself fails: an Antigravity payload or unreadable stream emits a deny
+decision on stdout, and legacy exit code 2 is preserved with stderr diagnostics,
+ensuring no harness fails open. It also leaves one line of Evidence for each
+call it decided, where a run asked for the record: an absent hook fails open
+silently, so the record of having run is what a run that names a file for it can
+read back to tell a confined session from an unconfined one (solorepo's #645).
 """
 import datetime
 import json
@@ -38,6 +41,13 @@ def blocked(tool: str, tool_input: dict[str, Any]) -> str | None:
     try:
         tool = paths.TOOLS.get(tool, tool)
         if tool in paths.READERS:
+            if tool in paths.SEARCHES:
+                admitted = set(paths.READERS[tool]) | paths.NON_PATH_SEARCH_KEYS
+                unknown_keys = set(tool_input.keys()) - admitted
+                if unknown_keys:
+                    keys = ", ".join(f"`{k}`" for k in sorted(unknown_keys))
+                    return (f"Blocked: this call names unrecognized search argument {keys}. "
+                            "The reviewer reads the worktree and nothing else.")
             named = paths.targets(tool_input, paths.READERS[tool])
             if not named and tool not in paths.SEARCHES:
                 keys = ", ".join(f"`{key}`" for key in paths.READERS[tool])
@@ -50,11 +60,11 @@ def blocked(tool: str, tool_input: dict[str, Any]) -> str | None:
                     return f"Blocked: {problem}. The reviewer reads the worktree and nothing else."
             return None
         if tool == "Bash":
-            where = tool_input.get("dir_path")
+            where = tool_input.get("dir_path") or tool_input.get("Cwd")
             problem = paths.elsewhere(where) if where else None
             if problem:
                 return f"Blocked: {problem}. The reviewer runs its commands in the worktree and nowhere else."
-            command = tool_input.get("command", "")
+            command = tool_input.get("command") or tool_input.get("CommandLine") or ""
             problem = grammar.command_allowed(command)
             if problem:
                 plain = grammar.plain_form(command)
@@ -68,11 +78,11 @@ def blocked(tool: str, tool_input: dict[str, Any]) -> str | None:
                         "goes in single quotes, which is most regexes — `'\\bdef\\b'`."
                         + (f" This one would be taken as: {plain}" if plain else ""))
         return None
-    except Exception as exc:
-        return f"Blocked: the hook could not read this call ({type(exc).__name__}: {exc}); refusing rather than guessing."
+    except BaseException as exc:
+        return f"Blocked: hook evaluation failed ({type(exc).__name__}: {exc}); refusing rather than guessing."
 
 
-def record_evidence(tool: str, permitted: bool, evidence: str | None = None) -> None:
+def record_evidence(tool: str, permitted: bool, evidence: str | pathlib.Path | None = None) -> None:
     """Append one line of Evidence that this hook decided one call, where a run asked for the record.
 
     The line is `<UTC timestamp, seconds> <tool> permit|refuse`. A run that
@@ -100,11 +110,12 @@ def record_evidence(tool: str, permitted: bool, evidence: str | None = None) -> 
     if not named:
         return
     try:
-        when = datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
-        record = pathlib.Path(named)
-        record.parent.mkdir(parents=True, exist_ok=True)
-        with record.open("a", encoding="utf-8") as lines:
-            lines.write(f"{when} {tool} {'permit' if permitted else 'refuse'}\n")
+        path = pathlib.Path(named)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
+        verdict = "permit" if permitted else "refuse"
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(f"{stamp} {tool} {verdict}\n")
     except Exception:
         return
 
@@ -113,23 +124,45 @@ def main() -> int:
     """Execute the before-tool hook entry point reading event JSON from stdin.
 
     Returns:
-        int: Process exit code 0 to permit execution, or 2 to block. A payload
-        this entry point cannot read — bytes that are not JSON, JSON that is not
-        an object, or a stdin that cannot be read at all — blocks, since a
-        harness reads any other exit code as a non-blocking error and runs the
-        tool anyway. Records the Evidence of the decision before returning it,
-        naming the tool as `?` where the payload had no name to give
-        (solorepo's #645).
+        int: Process exit code 0 to permit execution under all harnesses. Under
+        Claude Code and Gemini CLI, exits 2 to block with an explanatory refusal
+        on stderr. Under Antigravity CLI, exits 0 to block with a JSON decision
+        `{"decision": "deny", "reason": "..."}` on stdout (solorepo's #682).
+        A payload that cannot be parsed as JSON or read from stdin is blocked across
+        all harnesses: if an Antigravity envelope is identified, outputs a JSON
+        refusal on stdout with exit 0; otherwise, outputs both a JSON refusal on
+        stdout and an explanatory diagnostic on stderr with exit 2, ensuring no
+        harness fails open. Records the Evidence of the decision before returning,
+        naming the tool as `?` where the payload had no name to give (solorepo's #645).
     """
-    tool = None
+    tool: str = ""
+    is_antigravity = False
+    raw = ""
     try:
-        event = json.load(sys.stdin)
-        tool = event.get("tool_name")
-        problem = blocked(tool, event.get("tool_input") or {})
+        raw = sys.stdin.read()
+        event = json.loads(raw)
+        if not isinstance(event, dict):
+            raise TypeError(f"expected JSON object, got {type(event).__name__}")
+        if "toolCall" in event:
+            is_antigravity = True
+            tool_call = event.get("toolCall") or {}
+            tool = tool_call.get("name") or ""
+            tool_input = tool_call.get("args") or {}
+        else:
+            tool = event.get("tool_name") or ""
+            tool_input = event.get("tool_input") or {}
+        problem = blocked(tool, tool_input)
     except BaseException as exc:
+        if "toolCall" in raw:
+            is_antigravity = True
         problem = f"Blocked: the hook failed ({type(exc).__name__}); refusing rather than guessing."
-    record_evidence(str(tool or "?"), not problem)
+    record_evidence(tool or "?", not problem)
+    if is_antigravity:
+        decision = {"decision": "deny", "reason": problem} if problem else {"decision": "allow"}
+        print(json.dumps(decision))
+        return 0
     if problem:
+        print(json.dumps({"decision": "deny", "reason": problem}))
         print(problem, file=sys.stderr)
         return 2
     return 0

@@ -13,7 +13,7 @@ from typing import Any
 
 from checks.collect import META, ROOT, check
 from checks.probes.git import events, offers, registration, verdicts
-from checks.probes.harness import environment, exit_of, load_hook, stood_in
+from checks.probes.harness import environment, load_hook, outcome, stood_in
 
 REVIEW_WORKFLOW = ROOT / ".github" / "workflows" / "review.yml"
 EVIDENCE_LINE = re.compile(
@@ -63,24 +63,49 @@ def _events(worktree: Any) -> list[str]:
     """The rows of `EVENTS` whose payload the hook's entry point did not exit as the row says.
 
     `main()` returns the code rather than exiting with it, so the call is wrapped
-    in the `sys.exit` the program's last line performs, which is what `exit_of`
+    in the `sys.exit` the program's last line performs, which is what `outcome`
     reads. It is run with no file named for the hook's Evidence: these rows run
     in this process, so a row left to inherit `SOLOREPO_HOOK_EVIDENCE` would
     append to whatever file that names — in a job that sets it for the whole
     run, the very file read back to tell that a session was confined
     (solorepo's #645). A payload that is not an object has no fields to name, so
-    the line says what was sent instead.
+    the line says what was sent instead. Under Antigravity CLI, the exit code is 0
+    and the decision object on stdout (`res.out`) says whether the call was
+    allowed or denied, with a non-empty reason on refusal (solorepo's #682).
     """
     problems = []
     for group, rows in events.EVENTS:
         for want, event in rows:
             with environment(SOLOREPO_HOOK_EVIDENCE=None), \
                     stood_in(sys, stdin=io.StringIO(json.dumps(event))):
-                code = exit_of(lambda: sys.exit(worktree.main()))
-            if code != ("2" if want == "refuse" else "0"):
-                sent = (f"a {event['hook_event_name']} for {event['tool_name']}"
-                        if isinstance(event, dict) else f"the payload {event!r}")
-                problems.append(f"{group}: {sent} should {want} and exited {code}")
+                res = outcome(lambda: sys.exit(worktree.main()))
+            code = res.code
+            if isinstance(event, dict) and "toolCall" in event:
+                tool_name = (event.get("toolCall") or {}).get("name", "?")
+                if code != "0":
+                    problems.append(f"{group}: toolCall for {tool_name} should exit 0 and exited {code}")
+                    continue
+                try:
+                    payload = json.loads(res.out)
+                    got_decision = payload.get("decision")
+                except Exception as exc:
+                    problems.append(f"{group}: toolCall for {tool_name} emitted invalid JSON ({exc})")
+                    continue
+                want_decision = "deny" if want == "refuse" else "allow"
+                if got_decision != want_decision:
+                    problems.append(f"{group}: toolCall for {tool_name} should {want_decision} and got {got_decision}")
+                elif want_decision == "deny":
+                    reason = payload.get("reason")
+                    if not isinstance(reason, str) or not reason.strip():
+                        problems.append(
+                            f"{group}: toolCall for {tool_name} denied without a non-empty reason ({payload!r})"
+                        )
+            else:
+                if code != ("2" if want == "refuse" else "0"):
+                    sent = (f"a {event['hook_event_name']} for {event['tool_name']}"
+                            if isinstance(event, dict) else f"the payload {event!r}")
+                    problems.append(f"{group}: {sent} should {want} and exited {code}")
+
     return problems
 
 
@@ -166,8 +191,151 @@ def _find_hook_registration(harness: str, text: str, pattern: re.Pattern[str]) -
     return None
 
 
+def _probe_antigravity_registration(resolved: pathlib.Path, variable: str, harness: str) -> list[str]:
+    """Execute real subprocess calls with Antigravity toolCall payloads, asserting decisions and evidence (solorepo's #682).
+
+    Args:
+        resolved: Absolute path to the resolved hook script executable.
+        variable: Project directory environment variable name (e.g. GEMINI_PROJECT_DIR).
+        harness: Display name of the harness for diagnostics.
+
+    Returns:
+        list[str]: Diagnostic failure messages, empty if all checks passed.
+    """
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as agy_d:
+        agy_evidence = pathlib.Path(agy_d) / "hook-agy.evidence"
+        agy_env = {**os.environ, variable: str(ROOT), "SOLOREPO_HOOK_EVIDENCE": str(agy_evidence)}
+        agy_allow = json.dumps({
+            "conversationId": "c",
+            "stepIdx": 1,
+            "toolCall": {"name": "run_command", "args": {"CommandLine": "git status --porcelain"}},
+        }).encode("utf-8")
+        agy_proc = subprocess.run([str(resolved)], input=agy_allow, capture_output=True, env=agy_env)
+        if agy_proc.returncode != 0:
+            problems.append(
+                f"{harness}: Antigravity toolCall should exit 0 and exited {agy_proc.returncode}"
+            )
+        else:
+            try:
+                agy_out = json.loads(agy_proc.stdout)
+            except Exception as e:
+                problems.append(
+                    f"{harness}: Antigravity toolCall stdout is not JSON ({agy_proc.stdout!r}): {e}"
+                )
+                agy_out = {}
+            if agy_out.get("decision") != "allow":
+                problems.append(f"{harness}: Antigravity toolCall should allow and got {agy_out!r}")
+
+        agy_deny = json.dumps({
+            "conversationId": "c",
+            "stepIdx": 2,
+            "toolCall": {"name": "run_command", "args": {"CommandLine": "cat /etc/passwd"}},
+        }).encode("utf-8")
+        agy_deny_proc = subprocess.run([str(resolved)], input=agy_deny, capture_output=True, env=agy_env)
+        if agy_deny_proc.returncode != 0:
+            problems.append(
+                f"{harness}: Antigravity deny toolCall should exit 0 and exited {agy_deny_proc.returncode}"
+            )
+        else:
+            try:
+                agy_deny_out = json.loads(agy_deny_proc.stdout)
+            except Exception as e:
+                problems.append(
+                    f"{harness}: Antigravity deny toolCall stdout is not JSON ({agy_deny_proc.stdout!r}): {e}"
+                )
+                agy_deny_out = {}
+            if agy_deny_out.get("decision") != "deny":
+                problems.append(f"{harness}: Antigravity deny toolCall should deny and got {agy_deny_out!r}")
+            elif not isinstance(agy_deny_out.get("reason"), str) or not agy_deny_out.get("reason").strip():
+                problems.append(
+                    f"{harness}: Antigravity deny toolCall missing non-empty reason: {agy_deny_out!r}"
+                )
+
+        agy_lines = agy_evidence.read_text(encoding="utf-8").splitlines() if agy_evidence.is_file() else []
+        wanted_agy = [("run_command", "permit"), ("run_command", "refuse")]
+        if [_decision(line) for line in agy_lines] != wanted_agy:
+            problems.append(
+                f"{harness}: Antigravity toolCall expected {wanted_agy!r} in evidence, got {agy_lines!r}"
+            )
+    return problems
+
+
+def _probe_harness_registration(
+    reg: tuple[str, str, re.Pattern[str], dict[str, Any], dict[str, Any]],
+    text: str,
+) -> list[str]:
+    """Assert hook registration, subprocess execution, and evidence recording for one harness.
+
+    Args:
+        reg: Registration tuple of (harness, variable, pattern, refuse_event, allow_event).
+        text: Content of .github/workflows/review.yml.
+
+    Returns:
+        list[str]: Diagnostic messages describing any probe failures.
+    """
+    harness, variable, pattern, refuse_event, allow_event = reg
+    pair = _find_hook_registration(harness, text, pattern)
+    if not pair:
+        action = registration.OPTIONAL_HARNESS_ACTIONS.get(harness)
+        if action and action not in text:
+            return []
+        return [f"{harness}: no hook registration found in review.yml to resolve"]
+    matcher, command = pair
+    tool_name = str(refuse_event["tool_name"])
+    if not re.fullmatch(matcher, tool_name):
+        return [f"{harness}: the registered matcher {matcher!r} does not match "
+                f"{tool_name!r}, the tool name its own before-tool event carries"]
+    resolved = pathlib.Path(command.replace(f"${variable}", str(ROOT)))
+    if not resolved.is_file():
+        return [f"{harness}: the registered command resolves to {resolved}, which is not a file"]
+    if not os.access(resolved, os.X_OK):
+        return [f"{harness}: the registered command {resolved} is not executable"]
+
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as d:
+        evidence = pathlib.Path(d) / "hook.evidence"
+        env = {**os.environ, variable: str(ROOT), "SOLOREPO_HOOK_EVIDENCE": str(evidence)}
+        calls = (
+            ("refuse", json.dumps(refuse_event).encode("utf-8"), repr(refuse_event["tool_input"]),
+             (tool_name, "refuse")),
+            ("allow", json.dumps(allow_event).encode("utf-8"), repr(allow_event["tool_input"]),
+             (tool_name, "permit")),
+            ("refuse", registration.UNREADABLE, "a payload that is not JSON at all",
+             ("?", "refuse")),
+        )
+        exited = []
+        for want, payload, shown, _ in calls:
+            proc = subprocess.run([str(resolved)], input=payload, capture_output=True, env=env)
+            code = str(proc.returncode)
+            exited.append(code == ("2" if want == "refuse" else "0"))
+            if not exited[-1]:
+                problems.append(f"{harness}: the registered command should {want} "
+                                f"{shown} and exited {code}")
+        if all(exited):
+            written = evidence.read_text(encoding="utf-8").splitlines() if evidence.is_file() else []
+            wanted = [decision for *_, decision in calls]
+            if [_decision(line) for line in written] != wanted:
+                problems.append(f"{harness}: the registered command {resolved} decided "
+                                f"{len(calls)} calls and left {written!r} in the file "
+                                f"SOLOREPO_HOOK_EVIDENCE named ({evidence}) rather than a "
+                                "`<UTC timestamp, seconds> <tool> permit|refuse` line for each, "
+                                f"naming {wanted!r} in that order — which is the record a run that "
+                                "names the file reads back to tell a confined session from an "
+                                "unconfined one")
+
+    if harness == "Gemini CLI":
+        problems.extend(_probe_antigravity_registration(resolved, variable, harness))
+
+    return problems
+
+
 def _registration() -> list[str]:
     """`REGISTRATIONS`, per harness: the registered matcher against the tool name its own event carries, the registered command resolved and run as a real subprocess over a refused call, a permitted one and a payload that is not JSON at all, and one line of Evidence left per call it decided.
+
+    Under Gemini CLI (Antigravity CLI), also runs `toolCall` payloads against the
+    resolved command as a real subprocess, asserting exit 0, the decision object on
+    stdout with non-empty refusal text, and Evidence lines (solorepo's #682).
 
     Harnesses declared in `registration.OPTIONAL_HARNESS_ACTIONS` (such as Gemini CLI when
     `run-gemini-cli` is excised under solorepo's DR-242) are skipped when their action is
@@ -179,60 +347,9 @@ def _registration() -> list[str]:
     if not REVIEW_WORKFLOW.is_file():
         return [f"{REVIEW_WORKFLOW.relative_to(ROOT).as_posix()} is missing"]
     text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
-    problems = []
-    for harness, variable, pattern, refuse_event, allow_event in registration.REGISTRATIONS:
-        pair = _find_hook_registration(harness, text, pattern)
-        if not pair:
-            action = registration.OPTIONAL_HARNESS_ACTIONS.get(harness)
-            if action and action not in text:
-                continue
-            problems.append(f"{harness}: no hook registration found in review.yml to resolve")
-            continue
-        matcher, command = pair
-        tool_name = str(refuse_event["tool_name"])
-        if not re.fullmatch(matcher, tool_name):
-            problems.append(f"{harness}: the registered matcher {matcher!r} does not match "
-                            f"{tool_name!r}, the tool name its own before-tool event carries")
-            continue
-        resolved = pathlib.Path(command.replace(f"${variable}", str(ROOT)))
-        if not resolved.is_file():
-            problems.append(f"{harness}: the registered command resolves to {resolved}, "
-                            "which is not a file")
-            continue
-        if not os.access(resolved, os.X_OK):
-            problems.append(f"{harness}: the registered command {resolved} is not executable")
-            continue
-        with tempfile.TemporaryDirectory() as d:
-            evidence = pathlib.Path(d) / "hook.evidence"
-            env = {**os.environ, variable: str(ROOT), "SOLOREPO_HOOK_EVIDENCE": str(evidence)}
-            calls = (
-                ("refuse", json.dumps(refuse_event).encode("utf-8"), repr(refuse_event["tool_input"]),
-                 (tool_name, "refuse")),
-                ("allow", json.dumps(allow_event).encode("utf-8"), repr(allow_event["tool_input"]),
-                 (tool_name, "permit")),
-                ("refuse", registration.UNREADABLE, "a payload that is not JSON at all",
-                 ("?", "refuse")),
-            )
-            exited = []
-            for want, payload, shown, _ in calls:
-                proc = subprocess.run([str(resolved)], input=payload, capture_output=True, env=env)
-                code = str(proc.returncode)
-                exited.append(code == ("2" if want == "refuse" else "0"))
-                if not exited[-1]:
-                    problems.append(f"{harness}: the registered command should {want} "
-                                    f"{shown} and exited {code}")
-            if not all(exited):
-                continue
-            written = evidence.read_text(encoding="utf-8").splitlines() if evidence.is_file() else []
-            wanted = [decision for *_, decision in calls]
-            if [_decision(line) for line in written] != wanted:
-                problems.append(f"{harness}: the registered command {resolved} decided "
-                                f"{len(calls)} calls and left {written!r} in the file "
-                                f"SOLOREPO_HOOK_EVIDENCE named ({evidence}) rather than a "
-                                "`<UTC timestamp, seconds> <tool> permit|refuse` line for each, "
-                                f"naming {wanted!r} in that order — which is the record a run that "
-                                "names the file reads back to tell a confined session from an "
-                                "unconfined one")
+    problems: list[str] = []
+    for reg in registration.REGISTRATIONS:
+        problems.extend(_probe_harness_registration(reg, text))
     return problems
 
 

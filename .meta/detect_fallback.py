@@ -162,40 +162,47 @@ REVIEWER_CORE_TOOLS: list[str] = [
     "glob",
     "list_directory",
     "run_shell_command",
+    "run_command",
+    "view_file",
 ]
-"""Core toolset admitted for the reviewer Role under Antigravity CLI (solorepo's DR-110, solorepo's DR-245)."""
+"""Core toolset admitted for the reviewer Role under Antigravity CLI (solorepo's DR-110, solorepo's DR-245, solorepo's #682)."""
 
 REVIEWER_BEFORE_TOOL_MATCHER: str = (
-    "^(run_shell_command|read_file|read_many_files|grep_search|search_file_content|glob|list_directory)$"
+    "^(run_shell_command|read_file|read_many_files|grep_search|search_file_content|glob|list_directory|run_command|view_file)$"
 )
-"""Pre-tool hook matcher guarding admitted reviewer tools via worktree_only.py (solorepo's #454)."""
+"""Pre-tool hook matcher guarding admitted reviewer tools via worktree_only.py (solorepo's #454, solorepo's #682)."""
 
 REVIEWER_HOOK_COMMAND: str = "$GEMINI_PROJECT_DIR/.meta/hooks/worktree_only.py"
-"""Command path invoking the worktree-confinement hook under Antigravity CLI (solorepo's #454, solorepo's #456)."""
+"""Command path invoking the worktree-confinement hook under Antigravity CLI (solorepo's #454, solorepo's #456, solorepo's #682)."""
 
 
 def configure_reviewer_settings(
     workspace_dir: pathlib.Path | None = None,
     settings_file: pathlib.Path | None = None,
+    hooks_file: pathlib.Path | None = None,
 ) -> None:
-    """Configure tool confinement and hook registration for the reviewer Role (solorepo's DR-110, solorepo's DR-245).
+    """Configure tool confinement and hook registration for the reviewer Role (solorepo's DR-110, solorepo's DR-245, solorepo's #682).
 
     Writes `permissions.deny`, `tools.core`, and `BeforeTool` hook settings directly to
-    `~/.gemini/antigravity-cli/settings.json` while preserving mounted credentials.
+    `~/.gemini/antigravity-cli/settings.json` while preserving mounted credentials, and
+    registers `PreToolUse` lifecycle hooks under the `worktree-only` key in
+    `~/.gemini/config/hooks.json` while preserving any existing hook configurations.
 
     Args:
         workspace_dir: Optional root directory of the workspace. Defaults to GEMINI_PROJECT_DIR,
             GITHUB_WORKSPACE, or current working directory.
         settings_file: Optional path to settings JSON file. Defaults to
             ~/.gemini/antigravity-cli/settings.json.
+        hooks_file: Optional path to hooks JSON file. Defaults to
+            ~/.gemini/config/hooks.json.
     """
     home = pathlib.Path.home()
     dest = settings_file or (home / ".gemini" / "antigravity-cli" / "settings.json")
-    hook_command = (
-        f"{workspace_dir}/.meta/hooks/worktree_only.py"
-        if workspace_dir
-        else REVIEWER_HOOK_COMMAND
-    )
+    hooks_dest = hooks_file or (home / ".gemini" / "config" / "hooks.json")
+    if workspace_dir is None:
+        env_ws = os.environ.get("GEMINI_PROJECT_DIR") or os.environ.get("GITHUB_WORKSPACE")
+        workspace_dir = pathlib.Path(env_ws) if env_ws else pathlib.Path.cwd()
+    hook_command = f"{workspace_dir.resolve()}/.meta/hooks/worktree_only.py"
 
     dest_data: dict[str, Any] = {}
     if dest.is_file():
@@ -228,6 +235,29 @@ def configure_reviewer_settings(
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(dest_data, indent=2) + "\n", encoding="utf-8")
 
+    hooks_data: dict[str, Any] = {}
+    if hooks_dest.is_file():
+        try:
+            hooks_data = json.loads(hooks_dest.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"Error reading destination hooks {hooks_dest}: {e}", file=sys.stderr)
+            hooks_data = {}
+
+    hooks_data.setdefault("worktree-only", {})["PreToolUse"] = [
+        {
+            "matcher": REVIEWER_BEFORE_TOOL_MATCHER,
+            "hooks": [
+                {
+                    "type": "command",
+                    "name": "worktree-only",
+                    "command": hook_command,
+                }
+            ],
+        }
+    ]
+    hooks_dest.parent.mkdir(parents=True, exist_ok=True)
+    hooks_dest.write_text(json.dumps(hooks_data, indent=2) + "\n", encoding="utf-8")
+
 
 def write_env_file(path_env: str, content: str) -> None:
     """Write text content to a file specified by an environment variable name if defined."""
@@ -241,7 +271,8 @@ def main() -> int:
     """Evaluate harness execution output and trigger fallback if toggle is enabled (solorepo's DR-245, solorepo's DR-246).
 
     When called with --configure-reviewer, configures reviewer tool confinement in
-    ~/.gemini/settings.json and merges into Antigravity CLI configuration (solorepo's #699).
+    ~/.gemini/antigravity-cli/settings.json and registers PreToolUse lifecycle hooks in
+    ~/.gemini/config/hooks.json (solorepo's #682, solorepo's #699).
 
     When called with --merge-settings, merges ~/.gemini/settings.json into
     ~/.gemini/antigravity-cli/settings.json to configure tools and hooks without

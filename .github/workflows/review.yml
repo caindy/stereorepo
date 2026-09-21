@@ -407,6 +407,7 @@ jobs:
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         env:
           CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS: ${{ steps.depth.outputs.agents }}
+          SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook-claude.evidence
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The action's own GitHub calls as the Role too, so nothing in the
@@ -606,6 +607,7 @@ jobs:
         timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
         env:
           GEMINI_PROJECT_DIR: ${{ github.workspace }}
+          SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook-agy.evidence
         uses: ./.meta/actions/agy
         with:
           role: reviewer
@@ -814,20 +816,25 @@ jobs:
           BEFORE: ${{ steps.before.outputs.count }}
           AFTER: ${{ steps.after.outputs.count }}
 
-      # Count `SOLOREPO_HOOK_EVIDENCE`: an empty file means the reviewer session
-      # did not start or no call reached the hook. `!cancelled()` follows the
-      # preceding verdict check, and the count asserts that the hook ran.
-      # The Gemini path is currently exempt because Antigravity CLI (`agy`) does
-      # not dispatch `BeforeTool` hooks, and an `agy`-compatible `PreToolUse`
-      # hook adapter for `worktree_only.py` is tracked under solorepo's #682;
-      # on that path `tools.core` serves as the whole confinement boundary.
+      # Count hook Evidence: an empty file means the reviewer session did not
+      # start or no call reached the hook. `!cancelled()` follows the preceding
+      # verdict check, and the count asserts that the hook ran.
+      # Claude Code registers PreToolUse via settings and Antigravity CLI registers
+      # PreToolUse via ~/.gemini/config/hooks.json (solorepo's DR-110, solorepo's #682).
       - name: the hook fired
-        if: ${{ !cancelled() && steps.review_claude.outcome == 'success' }}
+        if: ${{ !cancelled() && (steps.review_claude.outcome == 'success' || steps.review_gemini.outputs.executed == 'true') }}
         run: |
-          if [ -s "$SOLOREPO_HOOK_EVIDENCE" ]; then
-            echo "the hook decided $(wc -l < "$SOLOREPO_HOOK_EVIDENCE") calls on #$PR"
+          if [ "${{ steps.review_gemini.outputs.executed }}" = "true" ]; then
+            EVIDENCE="$GITHUB_WORKSPACE/.review/hook-agy.evidence"
+            DESC="Antigravity CLI"
           else
-            echo "::error::the hook decided no call on #$PR: either the reviewer session did not start, or the harness never invoked the hook its settings register. Inspect the Claude action's settings: block against its resolved release. The request stands either way; the next review reads this unchanged head."
+            EVIDENCE="$GITHUB_WORKSPACE/.review/hook-claude.evidence"
+            DESC="Claude Code"
+          fi
+          if [ -s "$EVIDENCE" ]; then
+            echo "the hook decided $(wc -l < "$EVIDENCE") calls on #$PR ($DESC)"
+          else
+            echo "::error::the hook decided no call on #$PR: either the reviewer session did not start, or $DESC never invoked the registered hook. Inspect the harness hook configuration. The request stands either way; the next review reads this unchanged head."
             exit 1
           fi
         env:

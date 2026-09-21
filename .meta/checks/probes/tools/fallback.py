@@ -7,7 +7,32 @@ import tempfile
 from typing import Any
 
 from checks.collect import META, check
-from checks.probes.harness import load_module
+from checks.probes.harness import environment, load_module
+
+
+def _probe_reviewer_hooks(hooks_file: pathlib.Path, expected_cmd: str, matcher: str) -> list[str]:
+    """Verify generated hooks.json contains expected worktree-only PreToolUse configuration."""
+    if not hooks_file.is_file():
+        return ["fallback probes: configure_reviewer_settings failed to produce a hooks.json file"]
+    try:
+        hooks_data = json.loads(hooks_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        return [f"fallback probes: failed to parse generated hooks JSON: {e}"]
+
+    pre_hooks = hooks_data.get("worktree-only", {}).get("PreToolUse", [])
+    if not pre_hooks:
+        return ["fallback probes: hooks.json worktree-only.PreToolUse is missing or empty"]
+
+    pre_hook = pre_hooks[0]
+    problems: list[str] = []
+    if pre_hook.get("matcher") != matcher:
+        problems.append(
+            f"fallback probes: hooks.json matcher {pre_hook.get('matcher')!r} != {matcher!r}"
+        )
+    commands = [h.get("command", "") for h in pre_hook.get("hooks", [])]
+    if not any(expected_cmd in cmd for cmd in commands):
+        problems.append(f"fallback probes: PreToolUse hook command does not invoke {expected_cmd}")
+    return problems
 
 
 def _probe_reviewer_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> list[str]:
@@ -16,8 +41,11 @@ def _probe_reviewer_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> lis
     workspace = tmp_dir / "workspace"
     workspace.mkdir()
     settings_file = tmp_dir / "settings.json"
+    hooks_file = tmp_dir / "hooks.json"
 
-    detect_fallback.configure_reviewer_settings(workspace_dir=workspace, settings_file=settings_file)
+    detect_fallback.configure_reviewer_settings(
+        workspace_dir=workspace, settings_file=settings_file, hooks_file=hooks_file
+    )
     if not settings_file.is_file():
         return ["fallback probes: configure_reviewer_settings failed to produce a settings file"]
 
@@ -50,6 +78,16 @@ def _probe_reviewer_settings(detect_fallback: Any, tmp_dir: pathlib.Path) -> lis
         if not any(expected_cmd in cmd for cmd in commands):
             problems.append(f"fallback probes: BeforeTool hook command does not invoke {expected_cmd}")
 
+    expected_cmd = f"{workspace}/.meta/hooks/worktree_only.py"
+    problems.extend(_probe_reviewer_hooks(hooks_file, expected_cmd, detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER))
+
+    hooks_file_env = tmp_dir / "hooks_env.json"
+    settings_file_env = tmp_dir / "settings_env.json"
+    with environment(GEMINI_PROJECT_DIR=str(workspace)):
+        detect_fallback.configure_reviewer_settings(
+            workspace_dir=None, settings_file=settings_file_env, hooks_file=hooks_file_env
+        )
+    problems.extend(_probe_reviewer_hooks(hooks_file_env, expected_cmd, detect_fallback.REVIEWER_BEFORE_TOOL_MATCHER))
     return problems
 
 

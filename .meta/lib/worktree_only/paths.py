@@ -10,11 +10,11 @@ alternation, neither of which the literal prefix speaks for. A reader naming no
 key of `READERS` at all is refused, a search being the exception that may mean
 the worktree by naming nothing.
 
-A working directory a call names in `dir_path`, which Gemini CLI's shell tool
-accepts and Claude Code's has no argument for, must resolve inside the worktree:
-run elsewhere, an allowed command reads what `git -C` is refused for pointing
-at. That is its own predicate, `elsewhere`, a directory commands run in carrying
-neither exemption a path read from carries.
+A working directory a call names in `dir_path` (Gemini CLI) or `Cwd`
+(Antigravity CLI), while `run_command` names its command line `CommandLine`,
+must resolve inside the worktree: run elsewhere, an allowed command reads what
+`git -C` is refused for pointing at. That is its own predicate, `elsewhere`, a
+directory commands run in carrying neither exemption a path read from carries.
 """
 import os
 import pathlib
@@ -28,11 +28,14 @@ from lib.worktree_only import ROOT
 # `PreToolUse`, so the names are all that differ: `grep_search` was
 # `search_file_content` and Gemini CLI still answers to both, `read_many_files`
 # is the `@` syntax's bulk read, and `list_directory` reads a directory as
-# `Glob` does.
+# `Glob` does. Antigravity CLI dispatches `run_command`, `view_file`,
+# `grep_search`, and `list_directory`.
 TOOLS = {
     "run_shell_command": "Bash",
+    "run_command": "Bash",
     "read_file": "Read",
     "read_many_files": "Read",
+    "view_file": "Read",
     "grep_search": "Grep",
     "search_file_content": "Grep",
     "glob": "Glob",
@@ -47,12 +50,78 @@ PATH, PATTERN = "path", "pattern"
 # filters with `glob`, its `Glob` names `path` and `pattern`; Gemini CLI's
 # `read_file` names `file_path`, its `read_many_files` names `include`, its
 # `grep_search` names `path` and filters with `include`, its `glob` names `path`
-# and `pattern`, and its `list_directory` names `dir_path`.
+# and `pattern`, and its `list_directory` names `dir_path`; Antigravity CLI's
+# `view_file` names `AbsolutePath`, its `grep_search` filters with `Includes`
+# and bounds with `SearchDirectory` or `Path`, and its `list_directory` names
+# `SearchDirectory`, `Path`, or `Directory`.
 READERS = {
-    "Read": {"file_path": PATH, "include": PATTERN},
-    "Grep": {"path": PATH, "include": PATTERN, "glob": PATTERN},
-    "Glob": {"path": PATH, "dir_path": PATH, "pattern": PATTERN},
+    "Read": {"file_path": PATH, "include": PATTERN, "AbsolutePath": PATH},
+    "Grep": {
+        "path": PATH,
+        "include": PATTERN,
+        "glob": PATTERN,
+        "SearchDirectory": PATH,
+        "Path": PATH,
+        "Directory": PATH,
+        "Dir": PATH,
+        "Includes": PATTERN,
+    },
+    "Glob": {
+        "path": PATH,
+        "dir_path": PATH,
+        "pattern": PATTERN,
+        "SearchDirectory": PATH,
+        "Path": PATH,
+        "Directory": PATH,
+        "Dir": PATH,
+        "Pattern": PATTERN,
+    },
 }
+
+# Search argument keys that specify matching criteria, output modes, or flags
+# rather than filesystem target locations or path filter patterns. Keys naming
+# target directories or paths (`path`, `SearchDirectory`, `Path`, `Directory`,
+# `Dir`) or pattern filters (`glob`, `include`, `Includes`) live in
+# `READERS[tool]` so that every admitted filesystem path is resolved and bounded.
+# Admitted keys for any search tool are derived as
+# `set(READERS[tool]) | NON_PATH_SEARCH_KEYS`, ensuring no search argument can be
+# admitted without being resolved (solorepo's #682).
+#
+# The unknown-key rule cuts both ways: for keys that name a location, an
+# unrecognized spelling must refuse, because a floating upstream must never buy a
+# permit outside the worktree; for keys that name options or formatting flags,
+# unrecognized arguments risk refusing legitimate reviewer search calls whenever
+# an upstream harness adds flags. The admitted non-path keys enumerated here cover
+# each supported harness:
+# - Claude Code (`Grep`): `output_mode`, `type`, `head_limit`, `offset`,
+#   `multiline`, `context`, and ripgrep flags `-i`, `-n`, `-o`, `-A`, `-B`, `-C`.
+# - Antigravity CLI (`grep_search`): `Query`, `IsRegex`, `CaseInsensitive`,
+#   `MatchPerLine`, `AllowAccessGitignore`.
+# - Gemini CLI (`grep_search`, `search_file_content`): `query`, `pattern`.
+NON_PATH_SEARCH_KEYS = frozenset({
+    # Common / query text:
+    "pattern",
+    "query",
+    "Query",
+    # Antigravity CLI options:
+    "IsRegex",
+    "CaseInsensitive",
+    "MatchPerLine",
+    "AllowAccessGitignore",
+    # Claude Code options and ripgrep flags:
+    "output_mode",
+    "type",
+    "head_limit",
+    "offset",
+    "multiline",
+    "context",
+    "-i",
+    "-n",
+    "-o",
+    "-A",
+    "-B",
+    "-C",
+})
 
 
 # The one reader that may name no path: a search with no `path` searches the

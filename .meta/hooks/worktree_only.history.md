@@ -183,3 +183,35 @@ and verified by `hook_probes` and repository gate checks.
 
 Evidence: `.meta/checks/probes/git/step.py::hook_probes`
 
+### Antigravity CLI toolCall payloads read as a permit by every field name the hook knew
+
+Antigravity CLI (`agy`) dispatched no `BeforeTool` hooks in reviewer workflows prior
+to this change, relying on core tool configuration alone for boundary enforcement
+(solorepo's #682). Registering `worktree_only.py` under Antigravity CLI's `PreToolUse`
+lifecycle hook without adapting its protocol would have failed open silently:
+`event.get("tool_name")` evaluates to `None` for Antigravity's camelCase `toolCall`
+envelope, `verdict.blocked(None, {})` matches neither a reader nor `Bash`, and the hook
+permits — a boundary that reports itself present while deciding nothing. Furthermore,
+unparseable payloads defaulted to exit 2 without emitting JSON on stdout, search arguments
+under Antigravity CLI risked bypassing directory confinement if unrecognized keys were
+omitted, hook configurations in `hooks.json` risked failed variable expansion if relying
+on `$GEMINI_PROJECT_DIR`, and shared evidence paths prevented verifying which reviewer ran.
+
+Established: `paths.TOOLS` maps Antigravity `run_command` to `Bash` and `view_file` to
+`Read`, `paths.READERS` bounds Antigravity search arguments (`SearchDirectory`, `Path`,
+`Directory`, `Dir`, `Includes`), and `verdict.blocked()` derives admitted search arguments
+dynamically (`set(paths.READERS[tool]) | paths.NON_PATH_SEARCH_KEYS`), ensuring no search
+argument can be admitted without being resolved and bounded while admitting Claude Code options
+(`output_mode`, `type`, `head_limit`, `offset`, `multiline`, `context`, `-i`, `-n`, `-o`, `-A`,
+`-B`, `-C`); `verdict.main()` scopes Antigravity protocol detection to parsed `"toolCall" in event`
+objects (falling back to raw stream sniffing only on unparseable streams), emitting
+`{"decision": "deny", "reason": "..."}` JSON on stdout for Antigravity envelopes while preserving
+exit 2 refusals for Claude Code payloads mentioning `toolCall` in arguments; `verdict.record_evidence()`
+guards evidence logging to ensure I/O failures fail silent without escaping into fail-open crashes;
+`detect_fallback.configure_reviewer_settings()` resolves `workspace_dir` to a concrete path before
+writing hook configurations; and `.github/workflows/review.yml` isolates hook Evidence files
+(`hook-claude.evidence`, `hook-agy.evidence`), asserting that the executed reviewer step recorded decisions.
+
+Evidence: `.meta/checks/probes/git/step.py::hook_probes`, `.meta/checks/probes/tools/fallback.py::fallback_probes`
+
+

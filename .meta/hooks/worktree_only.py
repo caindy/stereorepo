@@ -2,7 +2,8 @@
 """Worktree containment and reviewer command confinement hook (solorepo's DR-110).
 
 Before-tool hook for the reviewer role container in `.github/workflows/review.yml`,
-registered on Claude Code's `PreToolUse` event and on Gemini CLI's `BeforeTool`.
+registered on Claude Code's `PreToolUse` event, Gemini CLI's `BeforeTool`, and
+Antigravity CLI's `PreToolUse` (solorepo's #682).
 Enforces two isolation boundaries before tool execution: filesystem
 containment, which `lib.worktree_only.paths` decides, and command confinement,
 which `lib.worktree_only.grammar` decides over the lexing in
@@ -12,16 +13,20 @@ is derivable (solorepo's DR-175). Each module's docstring carries the why of its
 boundary; this file is the contract a harness invokes.
 
 Input/Output Contract:
-    Reads a before-tool event JSON object from stdin. Both harnesses carry the
-    same two fields, so one reader serves each:
+    Reads a before-tool event JSON object from stdin.
+    Claude Code and Gemini CLI carry `tool_name` and `tool_input`:
         {"tool_name": "Bash", "tool_input": {"command": "..."}}
-    Exits with code 0 to permit execution.
-    Exits with code 2 and writes an explanatory refusal message to stderr to block
-    execution; Claude Code and Gemini CLI both read code 2 as a block and stderr
-    as the reason given to the agent. A payload that is not a readable event —
-    bytes that are not JSON, JSON that is not an object, or a stdin that cannot
-    be read — is blocked in the same way, because both harnesses read any other
-    exit code as a non-blocking error and run the tool anyway.
+    Under those harnesses, exits with code 0 to permit execution, or exits with
+    code 2 and writes an explanatory refusal message to stderr to block execution.
+    Antigravity CLI carries `toolCall` and expects a JSON decision on stdout (solorepo's #682):
+        {"toolCall": {"name": "run_command", "args": {"CommandLine": "..."}}}
+    Under Antigravity CLI, writes `{"decision": "allow"}` or
+    `{"decision": "deny", "reason": "..."}` to stdout and exits with code 0.
+    A payload that cannot be parsed as JSON or read from stdin is blocked across
+    all harnesses: if an Antigravity envelope is identified, outputs a JSON
+    refusal on stdout with exit 0; otherwise, outputs both a JSON refusal on
+    stdout and an explanatory diagnostic on stderr with exit 2, ensuring no
+    harness fails open.
     Appends one line of Evidence, `<UTC timestamp, seconds> <tool>
     permit|refuse`, to the file `SOLOREPO_HOOK_EVIDENCE` names, where the run
     set it, so that a session this hook never confined is a run that can be told
