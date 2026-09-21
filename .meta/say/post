@@ -9,11 +9,11 @@ promotion looks like (solorepo's DR-127) — and then replies without resolving,
 with one voice being a second Job's to close (solorepo's DR-224); `notice` supplies the
 marker and the mention;
 `promote` files the Issue before the thread says it did; `landed` is rendered
-from the record and never typed; `review` refuses a verdict whose head moved
-under the run, which GitHub would otherwise file against a commit the run never
-read (solorepo's #566). What changes state without saying anything — a claim, a
-level, a layer, a merge — is `move`'s. History in post.history.md
-(solorepo's DR-171).
+from the record and never typed; `review`, `raise`, and `notice` refuse when
+the head moved under the run (solorepo's #566, solorepo's #572, solorepo's DR-253),
+filed otherwise against a commit never read. What changes state without saying
+anything — a claim, a level, a layer, a merge — is `move`'s. History in
+post.history.md (solorepo's DR-171).
 """
 import argparse
 import os
@@ -96,7 +96,7 @@ def raise_thread(pr: int | str, path: str, line: int | str, body: str) -> None:
         line: Line number in the diff to comment on.
         body: The markdown comment text.
     """
-    head = channel.gh("pr", "view", str(pr), "--json", "headRefOid", "--jq", ".headRefOid", parse=False)
+    head = refuse_if_head_moved(pr, action="thread")
     made = channel.gh("api", f"repos/{channel.repo()}/pulls/{pr}/comments",
                       "-f", f"body={body}", "-f", f"commit_id={head}",
                       "-f", f"path={path}", "-F", f"line={line}")
@@ -412,30 +412,48 @@ def landed(pr: int | str) -> None:
         conversation_comment(pr, channel.signed(out.stdout))
 
 
-def refuse_if_head_moved(pr: int | str) -> None:
-    """Refuses to record a review verdict if the pull request head moved during execution (solorepo's #566).
+def refuse_if_head_moved(pr: int | str, action: str = "verdict") -> str | None:
+    """Refuses to record a review utterance if the pull request head moved during execution (solorepo's #566, solorepo's #572).
 
     Compares the head commit OID recorded in `SOLOREPO_REVIEW_HEAD` against the
-    current head reported by GitHub. Prevents submitting reviews against commits
-    different from those evaluated by the review run.
+    current head reported by GitHub. Prevents submitting reviews or diff threads
+    against commits different from those evaluated by the review run.
 
     Parameters:
         pr: The pull request number under review.
+        action: The kind of utterance being posted ('verdict', 'thread').
+
+    Returns:
+        str | None: Current head commit OID if verified, or None if no head was pinned.
 
     Raises:
         SystemExit: If `SOLOREPO_REVIEW_HEAD` is set and does not match GitHub's current head.
     """
     read = (os.environ.get(REVIEW_HEAD) or "").strip()
-    if not read:
-        return
-    now = channel.gh("pr", "view", str(pr), "--json", "headRefOid", "--jq", ".headRefOid", parse=False)
-    if now == read:
-        return
-    sys.exit(f"say: refusing — this run read {read} and GitHub has #{pr} at {now}. A verdict is "
-             f"recorded against the head current when it lands, so this one would be filed "
-             f"against a commit it never read.\n"
-             f"     Nothing was posted, and nothing is owed here: the push that moved the head "
-             f"left the review request standing, so the run that reads {now} answers it.")
+    if not read and action != "thread":
+        return None
+    now = str(channel.gh("pr", "view", str(pr), "--json", "headRefOid", "--jq", ".headRefOid", parse=False))
+    if read and now != read:
+        sys.exit(f"say: refusing — this run read {read} and GitHub has #{pr} at {now}. A {action} is "
+                 f"recorded against the head current when it lands, so this one would be filed "
+                 f"against a commit it never read.\n"
+                 f"     Nothing was posted, and nothing is owed here: the push that moved the head "
+                 f"left the review request standing, so the run that reads {now} answers it.")
+    return now
+
+
+def raise_verb(pr: int | str, path: str, line: int | str, text: str) -> None:
+    """Opens a review thread on a specific diff line at the pull request's current head.
+
+    Signs the body text with attribution trailers before opening the thread.
+
+    Parameters:
+        pr: The pull request number.
+        path: Relative path to the modified file.
+        line: Line number in the diff to comment on.
+        text: Description of the finding.
+    """
+    raise_thread(pr, path, line, channel.signed(text))
 
 
 def review(pr: int | str, verdict: str) -> None:
@@ -451,7 +469,7 @@ def review(pr: int | str, verdict: str) -> None:
     Raises:
         SystemExit: If the head commit moved or a non-approval lacks body text.
     """
-    refuse_if_head_moved(pr)
+    refuse_if_head_moved(pr, action="verdict")
     body = channel.piped()
     if not body and verdict != "approve":
         sys.exit("say: nothing on stdin — a review that is not an approval says why")
@@ -473,14 +491,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="verb", required=True)
     p = sub.add_parser("comment")
     p.add_argument("number")
-    p = sub.add_parser("raise")
-    p.add_argument("pr")
-    p.add_argument("path")
-    p.add_argument("line", type=int)
-    p = sub.add_parser("notice")
-    p.add_argument("pr")
-    p.add_argument("path")
-    p.add_argument("line", type=int)
+    for verb in ("raise", "notice"):
+        p = sub.add_parser(verb)
+        p.add_argument("pr")
+        p.add_argument("path")
+        p.add_argument("line", type=int)
     p = sub.add_parser("reply")
     p.add_argument("thread")
     p = sub.add_parser("answer")
@@ -521,6 +536,9 @@ def main() -> None:
         # Signed inside, after the marker and the mention are put in front.
         notice(args.pr, args.path, args.line, channel.stdin_body())
         return
+    if args.verb == "raise":
+        raise_verb(args.pr, args.path, args.line, channel.stdin_body())
+        return
     if args.verb == "resolve":
         resolve_verb(args.thread)
         return
@@ -533,8 +551,6 @@ def main() -> None:
     body = channel.signed(channel.stdin_body())
     if args.verb == "comment":
         conversation_comment(args.number, body)
-    elif args.verb == "raise":
-        raise_thread(args.pr, args.path, args.line, body)
     elif args.verb == "reply":
         reply(args.thread, body)
     elif args.verb == "promote":

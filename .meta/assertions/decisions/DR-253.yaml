@@ -1,0 +1,87 @@
+decisions:
+  - id: work:decision/253
+    name: "DR-253 · Refuse review utterances whose head moved under the run, unifying verdict and thread mediation"
+    challenge: work:challenge/572
+    status: ADOPTED
+    applies:
+      - work:article/15
+      - work:article/16
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-say-post
+      - work:artifact/github-workflows-review
+      - work:artifact/meta-checks-probes-channel-verdict
+    context: >-
+      Pull request #570 closed Challenge #566 by introducing `refuse_if_head_moved` in
+      `.meta/say/post`, preventing a review verdict (`post review`) from being attributed
+      to a head commit the run never read. However, `raise_thread`—the shared mechanism
+      invoked by both `post raise` and `post notice`—remained unmediated, reading
+      `headRefOid` afresh from GitHub at post time.
+
+      When a coder pushes a commit while a review run is in progress, GitHub initiates
+      concurrency cancellation on `review.yml`. During the race window before the runner
+      terminates, an executing `post raise` or `post notice` resolves the new remote head
+      commit OID and attaches diff coordinates evaluated against the old commit diff. The
+      thread renders against unrelated code at that line on the new head, burdening the
+      coder with answering and resolving misanchored feedback under Article 16 (A16).
+    alternatives:
+      - name: Anchor review threads to the read head (SOLOREPO_REVIEW_HEAD)
+        chosen: false
+        reason: >-
+          Passing `SOLOREPO_REVIEW_HEAD` as the `commit_id` keeps comments attached to the
+          reviewed commit only when the push is a linear addition. If the branch was
+          force-pushed or rebased, GitHub's API rejects comments on orphaned commits with
+          HTTP 422 Unprocessable Entity (`commit_id is not part of the pull request`).
+          Even when accepted, posting feedback on an already superseded commit forces the
+          coder to answer threads that the latest push may have already resolved.
+      - name: Rely solely on workflow concurrency cancellation
+        chosen: false
+        reason: >-
+          Cancellation in GitHub Actions is asynchronous and non-instantaneous. As
+          documented in `.github/workflows/review.yml:33-35`, the race window between
+          GitHub recording a push and the runner acting on cancellation permits tool
+          invocations to execute and misanchor threads, leaving the defect active.
+      - name: Refuse review utterances whose head moved under the run, unifying verdict and thread mediation
+        chosen: true
+        reason: >-
+          Harmonizes `review`, `raise`, and `notice` under a single head-currency
+          contract. Refactoring `refuse_if_head_moved()` to verify currency and return
+          the validated head commit OID allows `raise_thread` to guard both `raise` and
+          `notice` without making duplicate GitHub API calls. When a head moves under an
+          active run, review utterances fail closed; the concurrent push emits a
+          `synchronize` event that dispatches a successor review run to evaluate the
+          new diff from scratch.
+    consequences:
+      - >-
+        `.meta/say/post` updates `refuse_if_head_moved()` to accept an utterance kind
+        and return the verified head commit OID, eliminating duplicate `gh pr view`
+        queries.
+      - >-
+        `raise_thread()` invokes `refuse_if_head_moved(pr, action="thread")`, mediating
+        both `post raise` and `post notice` against head movements.
+      - >-
+        `post raise` CLI dispatch in `main()` delegates through `raise_verb()`
+        symmetrically with `notice()`.
+      - >-
+        `.github/workflows/review.yml` updates concurrency commentary to reflect that
+        the race window is closed by channel refusal.
+      - >-
+        Regression probes in `.meta/checks/probes/channel/verdict.py` verify that review
+        threads and verdicts refuse when the head moves and post when currency holds.
+      - >-
+        `.meta/say/post.history.md` records the incident narrative and receipt under
+        solorepo's DR-171.
+      - >-
+        Challenge #572 is closed as answered.
+    falsifier: >-
+      A review thread, notice, or review verdict posted by a review run whose pull
+      request head moved between intake and post time, or a duplicate GitHub API
+      head query during mediated thread creation.
+    rationale: |-
+      Christopher, on settling Issue #572: I agree with remedy 2. However, I want to
+      include some refactoring to dedupe the review/raise/notice, if there is in fact
+      duplication. I suspect there is since the latter two were "left unmediated".
+
+      Unifying head verification and OID resolution in `refuse_if_head_moved()` establishes
+      a single checkpoint for all review mutations on GitHub, ensuring that every
+      review comment and verdict is bound to the commit the reviewer actually evaluated.

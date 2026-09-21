@@ -24,15 +24,14 @@ on:
     types: [review_requested, synchronize]
 
 # One run per pull request, on the head that is current. A head that moves
-# after the ask moves the question, and `.meta/say/post raise` anchors to the head
-# it finds at post time, so a run left going across a move reviews one head
-# and posts against another. A moved head cancels it — a push, a rebase
-# GitHub performs on a layer, a retarget — and nothing else does, because
+# after the ask moves the question: both `.meta/say/post review` and
+# `.meta/say/post raise` refuse when the head moved under the run (solorepo's #566,
+# solorepo's #572, solorepo's DR-253), so a run left going across a move posts
+# neither findings nor a verdict against another head. A moved head cancels it — a push,
+# a rebase GitHub performs on a layer, a retarget — and nothing else does, because
 # concurrency is settled before any job's `if:` and a request naming somebody
 # else would otherwise kill the run it then declines to be. A move by
-# the reviewer's account is its own doing and cancels nothing. Rarer, not
-# gone: a `raise` in the window between the move and the runner acting on
-# the cancel still anchors to the head it finds.
+# the reviewer's account is its own doing and cancels nothing.
 concurrency:
   group: review-${{ github.event.pull_request.number }}
   cancel-in-progress: ${{ github.event.action == 'synchronize' && github.actor != format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name) }}

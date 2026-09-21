@@ -1,5 +1,22 @@
 # History
 
+### Review thread anchored to a head the run never read
+
+`.meta/say/post raise` and `post notice` read the pull request's remote head
+from GitHub at post time rather than checking the head evaluated by the review
+run (solorepo's #572). When a concurrent push landed during a review run,
+GitHub initiated workflow cancellation, but during the race window before the
+runner halted, `raise_thread()` fetched the new remote head OID and anchored
+its comment to the new commit using line coordinates calculated against the
+prior commit's diff. This resulted in findings displayed against unrelated code
+on the new head, requiring answers under Article 16 (A16).
+Established: `refuse_if_head_moved()` mediates `raise_thread()`, `raise_verb()`,
+and `notice()`, refusing execution if `SOLOREPO_REVIEW_HEAD` differs from the
+remote head reported by GitHub and returning the verified head OID to eliminate
+duplicate queries (solorepo's DR-253).
+
+Evidence: `.meta/checks/probes/channel/verdict.py::verdict_probes`
+
 ### Verdict recorded against a head the run never read
 
 GitHub records a review against whatever the pull request's head is when the
