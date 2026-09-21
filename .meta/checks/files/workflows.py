@@ -532,16 +532,30 @@ def gemini_core_matches_hook_matcher() -> StepOutcome:
     return Passed(f"{len(core_tools)} tools admitted, all and only the ones the BeforeTool matcher guards")
 
 
-@check("worktree symlink verification")
-def worktree_symlinks_verified() -> StepOutcome:
-    """The repository worktree holds no outbound symlinks escaping repository boundaries (solorepo's DR-251, solorepo's #458).
+@check("reviewer symlink verification")
+def reviewer_symlinks_verified() -> StepOutcome:
+    """The reviewer workflow audits worktree symlinks before credential provisioning, and the worktree holds no outbound symlinks (solorepo's DR-251, solorepo's #458).
 
-    Validates that all symlinks within the repository resolve strictly within
-    repository boundaries, refusing any symlink pointing outside the root or
-    into `.git/`.
+    Verifies that `.github/workflows/review.yml` invokes
+    `python3 .meta/hooks/worktree_only.py --audit-symlinks` prior to
+    `hold the reviewer's credential`. Validates that all symlinks within the
+    repository resolve strictly within repository boundaries.
 
     History in files.history.md (solorepo's DR-171).
     """
+    if not REVIEW_WORKFLOW.is_file():
+        return CouldNotRun(f"{REVIEW_WORKFLOW.relative_to(ROOT)} is missing")
+
+    text = REVIEW_WORKFLOW.read_text(encoding="utf-8")
+    audit_cmd = "python3 .meta/hooks/worktree_only.py --audit-symlinks"
+    if audit_cmd not in text:
+        return Found((f"review.yml: missing step invoking `{audit_cmd}`",))
+
+    audit_pos = text.find(audit_cmd)
+    cred_pos = text.find("hold the reviewer's credential")
+    if cred_pos != -1 and audit_pos > cred_pos:
+        return Found(("review.yml: `verify worktree symlinks` occurs after `hold the reviewer's credential`",))
+
     sys.path.insert(0, str(META))
     from lib.worktree_only.paths import audit_symlinks
 
@@ -549,7 +563,7 @@ def worktree_symlinks_verified() -> StepOutcome:
     if violations:
         return Found(tuple(f"outbound symlink: {v}" for v in violations))
 
-    return Passed("worktree contains no outbound symlinks")
+    return Passed("review.yml audits symlinks before credentials, and worktree contains no outbound symlinks")
 
 
 INLINE_PYTHON = re.compile(

@@ -177,6 +177,12 @@ jobs:
         run: |
           python3 .meta/apm_compile.py --reconcile
 
+      # Verify that no symlink in the checked-out worktree escapes the repository root or enters .git/
+      # before provisioning credentials or executing reviewer tools (solorepo's DR-251, solorepo's #458).
+      - name: verify worktree symlinks
+        run: |
+          python3 .meta/hooks/worktree_only.py --audit-symlinks
+
       # The Role's credential, where `.meta/say/<program> --role reviewer` expects it
       # (solorepo's DR-073, DR-107): outside the tree, mode 600, one token in the
       # container. The same channel and the same rules as on a laptop.

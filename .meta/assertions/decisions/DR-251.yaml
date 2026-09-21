@@ -6,6 +6,7 @@ decisions:
     applies:
       - work:article/19
     enacted_in:
+      - work:artifact/github-workflows-review
       - work:artifact/meta-lib-worktree-only-paths
       - work:artifact/meta-hooks-worktree-only
       - work:artifact/meta-checks-files-workflows
@@ -44,6 +45,10 @@ decisions:
           this eliminates the escape vector at the boundary without runtime overhead during agent turns,
           guaranteeing that outside_pattern()'s prefix bound is sound.
     consequences:
+      - >-
+        .github/workflows/review.yml inspects all symlinks immediately following checkout and
+        trunk restoration, aborting the workflow with an error if any symlink points outside
+        the repository root or enters .git/.
       - >-
         .meta/lib/worktree_only/paths.py implements audit_symlinks() and outside_symlink(),
         verifying that all tracked and filesystem symlinks resolve strictly within the worktree

@@ -138,12 +138,14 @@ matched on the slugified word.
 
 Evidence: `.meta/checks/files/wiki.py::wiki_synonyms_are_not_avoided`
 
-### Worktree symlink containment verification
+### Reviewer workflow lacked symlink containment gate
 
 An unvetted pull request could check out outbound symlinks allowing pattern-based
 tools to traverse into host runner directories and access credentials (solorepo's DR-251,
-solorepo's #458). Established: `worktree_symlinks_verified` validates that all symlinks
-within the repository resolve strictly within repository boundaries and do not enter `.git/`.
+solorepo's #458). Established: `reviewer_symlinks_verified` verifies that
+`.github/workflows/review.yml` invokes `python3 .meta/hooks/worktree_only.py --audit-symlinks`
+prior to credential provisioning, and validates that the repository worktree contains no
+outbound symlinks.
 
-Evidence: `.meta/checks/files/workflows.py::worktree_symlinks_verified`
+Evidence: `.meta/checks/files/workflows.py::reviewer_symlinks_verified`
 
