@@ -76,10 +76,16 @@ def print_sweep() -> None:
             print(f"no open pull request for branch '{head}'" if head
                   else "no open pull requests")
         for number, title, owed in found:
+            notice = branch.advance_notice(number)
+            tag = " (advance notice standing)" if notice else ""
             if owed is None:
-                print(f"#{number} {title} — open, and not this branch's")
+                print(f"#{number} {title} — open, and not this branch's{tag}")
+                if notice:
+                    print(f"    advance: {notice}")
                 continue
-            print(f"#{number} {title} — {len(owed)} unaddressed")
+            print(f"#{number} {title} — {len(owed)} unaddressed{tag}")
+            if notice:
+                print(f"    advance: {notice}")
             for item in owed:
                 print(item)
     left = branch.residue()

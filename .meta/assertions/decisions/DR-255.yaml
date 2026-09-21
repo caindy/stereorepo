@@ -1,0 +1,86 @@
+decisions:
+  - id: work:decision/255
+    name: "DR-255 · Surfacing advance sweep failures via in-place pull request notices and local operator escalation"
+    challenge: work:challenge/646
+    status: ADOPTED
+    applies:
+      - work:article/7
+      - work:article/15
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-say-move
+      - work:artifact/meta-next
+      - work:artifact/meta-check-pr
+      - work:artifact/github-workflows-advance
+      - work:artifact/meta-checks-probes-loops-advance
+    context: >-
+      DR-238 established that `advance` sweep exit codes answer solely for whether
+      the sweep ran cleanly, while failures specific to individual pull requests
+      (such as rebase conflicts, mergeability timeouts, or loop dispatch refusals)
+      are printed to standard output rather than turning the workflow run red.
+      However, as documented in Challenge #646, suppressing individual pull request
+      failures from workflow exit codes left them visible only inside GitHub Actions
+      run logs. Because `advance.yml` consistently finished green, persistent branch
+      failures — such as solorepo's #565 rebase conflict standing across twenty-five
+      pushes to `main` — remained unread by authors, loops, and maintainers.
+
+      DR-238 noted posting findings directly to pull requests as a rejected alternative
+      due to the sweep lacking pull-request write credentials and the risk of comment
+      exhaustion on frequent trunk pushes. Challenge #646 demanded settling how
+      per-pull-request advance failures are surfaced so they are read where work happens.
+    alternatives:
+      - name: Retain failures in workflow logs and rely on manual inspection
+        chosen: false
+        reason: >-
+          Reading execution logs of green CI runs defeats the purpose of status
+          indicators; stalled branches remain unnoticed for weeks without notification.
+      - name: Escalate sweep workflow runs to red on repeated failures
+        chosen: false
+        reason: >-
+          Re-introducing red runs for individual branch conflicts revives the noise
+          problem DR-238 eliminated, misrepresenting sweep health and obscuring actual
+          infrastructure failures.
+      - name: Post unmanaged comments on every failing push
+        chosen: false
+        reason: >-
+          Frequent pushes to `main` would flood pull requests with duplicate failure
+          comments, creating notification exhaustion.
+      - name: In-place pull request notices paired with Local Operator Plane escalation
+        chosen: true
+        reason: >-
+          Settled with the maintainer: `advance` posts an in-place notice comment on the
+          affected pull request (marked by an HTML comment tag), updated in place if the
+          failure message changes and deleted or resolved when the branch cleanly advances.
+          `advance.yml` is provided attested session parameters and pull-request write
+          permissions. Simultaneously, the Local Operator Plane (`just sweep` and
+          `just next`) inspects and reports pull requests holding active advance findings
+          to ensure local visibility.
+    consequences:
+      - >-
+        `.meta/say/move` manages advance notices on pull requests: posting a signed comment
+        with a distinctive HTML marker (`<!-- solorepo:advance-finding -->`) when a branch
+        fails to advance, editing the comment in place if the error changes, and removing
+        it when the pull request cleanly advances.
+      - >-
+        `.github/workflows/advance.yml` configures `pull-requests: write` permissions and
+        supplies `ACTOR_SESSION="gha-${{ github.run_id }}"` and `AI_AGENT` so the coder Role
+        can post signed, attributable comments under solorepo's Article 19 and DR-233.
+      - >-
+        `.meta/check_pr.py` (`just sweep`) and `.meta/next.py` (`just next`) detect open
+        pull requests with advance notices or merge conflicts and report them prominently.
+      - >-
+        `.meta/checks/probes/loops/advance.py` adds automated regression probes verifying
+        notice creation, idempotent updates, notice removal upon recovery, and local
+        operator visibility.
+      - >-
+        Closes #646.
+    falsifier: >-
+      A pull request failing to advance that carries no notice comment on GitHub and no
+      indication in `just sweep` or `just next`, or an advance run that posts duplicate
+      comments for the same standing failure.
+    rationale: |-
+      The pull request is where collaboration, review, and branch lifecycle state reside
+      (solorepo's Article 15). Managing a single in-place comment per pull request prevents
+      comment clutter while immediately notifying the author or loop of the exact failure.
+      Pairing remote in-place notices with Local Operator Plane awareness gives maintainers
+      immediate local visibility during `just sweep` without corrupting CI exit codes.

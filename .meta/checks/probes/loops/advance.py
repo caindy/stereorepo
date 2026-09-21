@@ -8,6 +8,7 @@ from typing import Any
 from checks.collect import check
 from checks.probes.harness import (
     FakeGitHub,
+    environment,
     load_channel,
     outcome,
     run_verb,
@@ -36,7 +37,8 @@ def swept(channel: Any, move: Any, fake: FakeGitHub, problems: list[str]) -> str
     Returns:
         str: The sweep's report of the pull requests that failed, empty when none did.
     """
-    with stood_in(channel, gh=fake):
+    with (stood_in(channel, gh=fake),
+          environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe")):
         ran = outcome(lambda: move.advance())
     if ran.code is not None:
         problems.append("advance: a sweep that read every open pull request exited with "
@@ -479,6 +481,68 @@ def _merge_auto_over_a_blip_on_the_read_back(channel: Any, move: Any) -> list[st
     return problems
 
 
+def _notice_lifecycle_on_advance_failures(channel: Any, move: Any) -> list[str]:
+    """Verification of in-place advance finding notice lifecycle (solorepo's DR-255).
+
+    Verifies that:
+    1. A failing PR during sweep receives a signed advance notice comment.
+    2. An updated error message edits the existing notice comment in place without duplicates.
+    3. When the PR advances cleanly on a subsequent run, the notice comment is deleted.
+    """
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 1, "armed": True, "drops": True}}, no_rebase=[7])
+    with (stood_in(channel, gh=fake),
+          environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe")):
+        swept(channel, move, fake, problems)
+        if len(fake.posted_comments) != 1:
+            problems.append(f"advance: expected 1 posted notice comment, got {len(fake.posted_comments)}")
+        comments_7 = fake.comments.get("7", [])
+        if not comments_7 or "advance-finding" not in comments_7[0].get("body", ""):
+            problems.append(f"advance: notice comment was not recorded on PR 7: {comments_7}")
+        elif "Actor: gha-1" not in comments_7[0].get("body", ""):
+            problems.append(f"advance: notice comment missing signed Actor trailer: {comments_7[0].get('body')}")
+
+        fake.no_rebase = set()
+        fake.no_arm = {"7"}
+        fake.pulls["7"]["behind"] = 1
+        swept(channel, move, fake, problems)
+        comments_after_update = fake.comments.get("7", [])
+        if len(comments_after_update) != 1:
+            problems.append(f"advance: expected exactly 1 notice comment on PR 7 after update, got {len(comments_after_update)}")
+        elif "clean status" not in comments_after_update[0].get("body", ""):
+            problems.append(f"advance: notice comment body did not update with new failure: {comments_after_update[0].get('body')}")
+
+        fake.no_arm = set()
+        fake.pulls["7"]["drops"] = False
+        fake.pulls["7"]["armed"] = True
+        fake.pulls["7"]["head"] = "head7"
+        fake.pulls["7"]["behind"] = 1
+        swept(channel, move, fake, problems)
+        if fake.comments.get("7"):
+            problems.append(f"advance: notice comment on PR 7 was not deleted after clean advance: {fake.comments.get('7')}")
+        if not fake.cleared_comments:
+            problems.append("advance: cleared_comments did not record deleted notice comment ID")
+
+    return problems
+
+
+def _advance_notice_local_operator_visibility(channel: Any, move: Any) -> list[str]:
+    """Verification of advance notice visibility in Local Operator Plane (solorepo's DR-255)."""
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 1, "armed": True}}, no_rebase=[7])
+    with (stood_in(channel, gh=fake),
+          environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe")):
+        swept(channel, move, fake, problems)
+        from lib.check_pr import branch
+        from lib.check_pr import github as check_pr_github
+        with stood_in(check_pr_github, gh=fake):
+            notice = branch.advance_notice(7)
+            if not notice or "#7" not in notice:
+                problems.append(f"advance: branch.advance_notice(7) did not find notice: {notice!r}")
+
+    return problems
+
+
 @check("advance probes", pre=True)
 def advance_probes() -> list[str]:
     """`advance` and `merge --auto` against a fake GitHub, in the states solorepo's #98 found them in.
@@ -495,61 +559,11 @@ def advance_probes() -> list[str]:
     restores them, because the process ends with the gate.
 
     The states, in the order they run:
-
-    - The rebase and the re-arming. A rebase that drops the arming under a
-      base that moved again, where the two read-backs are two questions
-      (solorepo's #98). A refusal to rebase, a refusal to arm, and an arming
-      `gh` reported that GitHub does not hold (solorepo's #93): each is one
-      pull request's problem and not the sweep's, and the third is the one an
-      exit code cannot see, and it leaves the pull request rebased and
-      unarmed. A re-arming GitHub acts on inside the read-back window, because
-      the last check went green and the merge cleared the `autoMergeRequest`
-      that made it: the first read after it shows the pull request unarmed
-      and open, neither of the two states that end the wait, and the
-      read-back tolerates that read and ends on `MERGED` rather than spending
-      its bound and reporting a lost arming over a branch that is on trunk
-      (solorepo's #253). A rebase GitHub has taken and not yet shown, which
-      read once is a failure that did not happen (solorepo's #245). A push
-      landing between the opening `pr list` and the rebase, and one landing
-      inside the `mergeability` poll — the window that is actually open,
-      since an `UNKNOWN` sleeps and re-reads — which the compare and the wait
-      must be anchored past (solorepo's #252); and the push that is itself a
-      rebase, `leaves: 0`, where what is asserted is that `update-branch` is
-      not called on a branch with nothing to rebase, and not what GitHub
-      would answer to that, which is GitHub's fact and a fake modelling it
-      either way would be asserting it. A head GitHub never moves, reported
-      as itself and not as a branch still behind, because the rebase may yet
-      land and drop the arming, and a pull request rebased and unarmed is out
-      of reach of every later sweep, which reads only the armed ones
-      (solorepo's DR-133). Then two pull requests failing in one sweep, which
-      is the state solorepo's #635 found `advance` red in on most pushes to
-      trunk: the sweep read both, so it is green, and both are named in what
-      it printed. Then a named pull request that is not armed,
-      refused in the exit code so that `advance <n> && <next step>` does not
-      carry on, and taken with `held=True` by the caller that holds the
-      branch, which is `merge --auto`'s path.
-    - `merge --auto`. The arming happens though advancing did not, since
-      armed and behind is what the next push to trunk sweeps up and rebased
-      and unarmed is solorepo's #93. A stall is not reported over a merge that
-      landed, which would be `merged` followed by an exit claiming the pull
-      request armed and behind (solorepo's #46); nor over a branch a blip on
-      the read-back left armed and current, since the exit code is the last
-      thing the Job says.
-    - Stack advance (solorepo's DR-243). A stack advancing as one transition,
-      bottom layer first, renewing dropped review requests while leaving unchanged
-      layers untouched. An unarmed named stack base advancing explicitly, and an
-      unarmed upper layer refused. An unlinked stack base refused citing
-      solorepo's DR-243. A refused stack leaving every layer unmoved. A layer still
-      behind after advance reported as failed. Stack advance reached through an
-      approved layer or through an armed upper layer walking down to the root.
-      Deduplication of multiple armed layers in a single stack ensuring a single
-      rebase and push. A linear three-layer stack advancing in sequence, and a
-      branched stack refused. A stack with nothing behind skipped without stack
-      operations and accounted for as current. A stack with a current upper
-      layer advancing both layers. An unlinked chain swept rebasing its top
-      layer while passing over its base. A review renewal failure reported as a
-      failed transition. And a conflicting stack left for the solo with an
-      explanation printed rather than dispatched to coders.
+    - Advance notice lifecycle and local operator visibility (solorepo's DR-255).
+      A failing pull request receiving an in-place signed notice comment, updated
+      in place on subsequent errors, deleted when the branch cleanly advances,
+      and visible to local operators through branch.advance_notice.
+    - Advance sweep failure cases and stack layer transitions.
 
     The dispatch reading and the dispatch a person makes are `dispatch_probes`
     in `probes/loops/dispatch.py`.
@@ -569,6 +583,8 @@ def advance_probes() -> list[str]:
     move.SETTLES = (3, 0)
     move.MERGEABILITY = (3, 0)
     return [problem for problems in (
+        _notice_lifecycle_on_advance_failures(channel, move),
+        _advance_notice_local_operator_visibility(channel, move),
         _rebase_under_a_base_that_moved_again(channel, move),
         _refusal_to_rebase_one_pull_request(channel, move),
         _refusal_to_arm_one_pull_request(channel, move),

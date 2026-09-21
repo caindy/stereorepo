@@ -1823,16 +1823,94 @@ def _is_advance_candidate(pull: Pull, pr: int | str | None, bases: set[str],
     return bool(pr is not None and pull.get("headRefName") in bases and pull.get("baseRefName") not in heads)
 
 
-def _report_advance_sweep(open_now: Sequence[Pull], failed: list[str], refused: list[str]) -> None:
+ADVANCE_NOTICE_MARKER = "<!-- solorepo:advance-finding -->"
+"""HTML comment marker identifying an in-place advance finding notice (solorepo's DR-255)."""
+
+
+def _advance_notice_body(problem: str) -> str:
+    """Generate signed advance finding notice comment body with attribution trailers."""
+    raw = (
+        f"{ADVANCE_NOTICE_MARKER}\n"
+        "**Advance sweep finding.** `advance` could not update this branch on push to `main` (solorepo's DR-255):\n"
+        f"> {problem}\n\n"
+        "This in-place notice will be updated or removed automatically when the branch advances cleanly."
+    )
+    return channel.signed(raw)
+
+
+def _find_advance_notice_comment(pr: str | int) -> dict[str, Any] | None:
+    """Find existing advance notice comment on a pull request, or None."""
+    try:
+        comments = channel.gh("api", f"repos/{channel.repo()}/issues/{pr}/comments", tolerate_fail=True)
+    except Exception:
+        return None
+    if not isinstance(comments, list):
+        return None
+    for comment in comments:
+        if isinstance(comment, dict) and ADVANCE_NOTICE_MARKER in (comment.get("body") or ""):
+            return comment
+    return None
+
+
+def reconcile_advance_notice(pr: str | int, problem: str | None) -> None:
+    """Reconcile in-place advance failure notice on a pull request (solorepo's DR-255).
+
+    When `problem` is non-empty:
+        Posts a signed notice comment if none exists, or updates the existing
+        notice comment in place if the problem text has changed.
+    When `problem` is None:
+        Deletes any standing advance notice comment left from a prior run.
+    """
+    try:
+        if problem and not channel.speaker():
+            print(f"advance: skipping notice on #{pr} (no actor session in environment)", file=sys.stderr)
+            return
+        existing = _find_advance_notice_comment(pr)
+        if problem:
+            desired = _advance_notice_body(problem)
+            if existing:
+                existing_body = existing.get("body") or ""
+                if problem not in existing_body:
+                    comment_id = existing.get("id")
+                    channel.gh("api", f"repos/{channel.repo()}/issues/comments/{comment_id}",
+                               "-X", "PATCH", "-f", f"body={desired}",
+                               parse=False, tolerate_fail=True)
+                    print(f"advance: updated notice on #{pr}")
+            else:
+                channel.gh("api", f"repos/{channel.repo()}/issues/{pr}/comments",
+                           "-f", f"body={desired}",
+                           parse=False, tolerate_fail=True)
+                print(f"advance: posted notice on #{pr}")
+        elif existing:
+            comment_id = existing.get("id")
+            channel.gh("api", f"repos/{channel.repo()}/issues/comments/{comment_id}",
+                       "-X", "DELETE", parse=False, tolerate_fail=True)
+            print(f"advance: cleared notice on #{pr}")
+    except (Exception, SystemExit) as exc:
+        print(f"warning: could not reconcile advance notice on #{pr}: {exc}", file=sys.stderr)
+
+
+def _report_advance_sweep(open_now: Sequence[Pull], failed: list[str], refused: list[str],
+                          evaluated: Sequence[Pull] | None = None) -> None:
     """Run sweep dispatch and report pull request problems."""
     reported, dispatch_refused = dispatch(open_now)
     failed += reported
-    refused += dispatch_refused
+    refused.extend(dispatch_refused)
     if failed:
-        print(f"advance: {len(failed)} pull request(s) reported a problem of their own, "
+        print(f"advance: {len(failed)} pull request(s) "
+              "reported a problem of their own, "
               "which the next push to trunk asks about again:")
         for problem in failed:
             print(f"  {problem}")
+    problems_by_pr: dict[str, str] = {}
+    for problem in failed:
+        m = re.match(r"^#(\d+)\b", problem)
+        if m:
+            problems_by_pr[m.group(1)] = problem
+    candidates = evaluated if evaluated is not None else open_now
+    for pull in candidates:
+        number = str(pull.get("number"))
+        reconcile_advance_notice(number, problems_by_pr.get(number))
     if refused:
         sys.exit("say: " + "; ".join(refused))
 
@@ -1912,9 +1990,12 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
         if not moved and not failed and len(found) > left:
             print(f"advance: {len(found) - left} pull request(s) current with their base")
     if pr is None:
-        _report_advance_sweep(open_now, failed, refused)
-    elif failed or refused:
-        sys.exit("say: " + "; ".join(failed + refused))
+        _report_advance_sweep(open_now, failed, refused, evaluated=found)
+        return
+    problem = "; ".join(failed + refused) if (failed or refused) else None
+    reconcile_advance_notice(pr, problem)
+    if problem:
+        sys.exit("say: " + problem)
 
 
 def _merge_auto(pr: str | int, before: Pull, subject: str, stack: bool) -> None:

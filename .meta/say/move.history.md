@@ -394,3 +394,18 @@ Established: `roadmap()` moves an open Issue onto the roadmap, applying `roadmap
 and stripping `challenge` and difficulty labels symmetrically with `triage()`.
 
 Evidence: `.meta/say/move::roadmap`
+
+### Advance sweep failures invisible in green CI run logs
+
+Individual pull request advance failures were suppressed from sweep exit codes to
+keep CI runs green (solorepo's DR-238), but without notification, persistent failures
+(such as rebase conflicts or mergeability timeouts) remained unread by authors,
+loops, and maintainers in GitHub Actions logs until someone opened the log
+(solorepo's DR-255, solorepo's #646). Established: `reconcile_advance_notice()`
+manages an in-place signed notice comment on the failing pull request (identified by
+`<!-- solorepo:advance-finding -->`), updating it in place when error messages change
+and deleting it when the branch cleanly advances. Paired with this, the Local Operator
+Plane (`just sweep` and `just next`) detects and surfaces standing advance notices
+prominently during local review.
+
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`

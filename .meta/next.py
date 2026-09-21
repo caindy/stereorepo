@@ -188,6 +188,10 @@ def unlabelled(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [i for i in rows if i["kind"] == "-"]
 
 
+ADVANCE_NOTICE_MARKER = "<!-- solorepo:advance-finding -->"
+"""HTML comment marker identifying an in-place advance finding notice (solorepo's DR-255)."""
+
+
 def pull_requests() -> dict[int, int]:
     """Prints open pull requests and returns mapping of closed issue numbers to PR numbers.
 
@@ -196,7 +200,7 @@ def pull_requests() -> dict[int, int]:
     """
     prs: list[dict[str, Any]] = gh("pr", "list", "--state", "open", "--json",
                                    "number,title,autoMergeRequest,mergeStateStatus,reviewDecision,latestReviews,reviewRequests,isDraft,headRefName,"
-                                   "closingIssuesReferences",
+                                   "closingIssuesReferences,comments",
                                    default=[])
     print("pull requests — the loops' work in progress, not what is next")
     if not prs:
@@ -204,6 +208,9 @@ def pull_requests() -> dict[int, int]:
     for pr in prs:
         armed = "armed" if pr.get("autoMergeRequest") else "draft" if pr["isDraft"] else "open"
         state = (pr.get("mergeStateStatus") or "").lower()
+        has_advance = any(ADVANCE_NOTICE_MARKER in (c.get("body") or "") for c in pr.get("comments") or [])
+        notice = "(!advance) " if has_advance else ""
+        title_len = 50 if has_advance else 60
         review = (pr.get("reviewDecision") or "").lower().replace("_", " ")
         if not review:
             revs = [r for r in pr.get("latestReviews") or []
@@ -212,7 +219,7 @@ def pull_requests() -> dict[int, int]:
                 review = revs[-1].get("state", "").lower().replace("_", " ")
             elif pr.get("reviewRequests"):
                 review = "requested"
-        print(f"  #{pr['number']:<4} {armed:<7} {state:<9} {review:<17} {pr['title'][:60]}")
+        print(f"  #{pr['number']:<4} {armed:<7} {state:<9} {review:<17} {notice}{pr['title'][:title_len]}")
     print()
     return {int(ref["number"]): int(pr["number"])
             for pr in prs for ref in pr.get("closingIssuesReferences") or []}

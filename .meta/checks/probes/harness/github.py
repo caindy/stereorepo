@@ -157,6 +157,9 @@ class FakeGitHub:
         self.stack_rebase_args = []
         self.checked_out = []
         self.pushed_stacks = 0
+        self.comments: dict[str, list[dict[str, Any]]] = {}
+        self.posted_comments: list[tuple[str, str]] = []
+        self.cleared_comments: list[str] = []
 
     def view(self, number: int | str) -> dict[str, Any]:
         """One `pr view` of `number`, counted in `reads`, as GitHub would answer it at this moment.
@@ -192,6 +195,7 @@ class FakeGitHub:
                   "mergeable": mergeable,
                   "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None,
                   "statusCheckRollup": pull.get("checks", []),
+                  "comments": list(self.comments.get(str(number), [])),
                   "updatedAt": pull.get("updatedAt", (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=2)).isoformat())}
         if pull.get("pushed"):
             pull["pushed"] -= 1
@@ -256,7 +260,7 @@ class FakeGitHub:
         if head == ("workflow", "run") and args[2] == "coder.yml":
             return self.dispatch(args)
         if args[0] == "api":
-            return self.api(args[1])
+            return self.api(*args[1:])
         answered = {("pr", "update-branch"): self.update_branch, ("pr", "edit"): self.edit,
                     ("pr", "merge"): self.merge, ("issue", "view"): self.issue}
         if head in answered:
@@ -370,13 +374,39 @@ class FakeGitHub:
         return {"state": issue.get("state", "OPEN"),
                 "labels": [{"name": "challenge"}, {"name": issue.get("level", "medium")}]}
 
-    def api(self, endpoint: str) -> dict[str, Any]:
-        """Any other `api` call: the compare, the `stack` object of a layer, or the repository's own settings."""
+    def api(self, endpoint: str, *rest: str) -> Any:
+        """Any other `api` call: the compare, the `stack` object of a layer, issue comments, or the repository's own settings."""
         if "/compare/" in endpoint:
             return self.compare(endpoint)
         if "/pulls/" in endpoint:
             pull = self.pulls.get(endpoint.rsplit("/", 1)[-1]) or {}
             return {"stack": {"id": 1, "number": pull.get("stack", 1)}} if pull.get("layer") else {}
+        if "/issues/" in endpoint and endpoint.endswith("/comments"):
+            pr_str = endpoint.split("/issues/")[1].split("/comments")[0]
+            if "-f" in rest:
+                body = rest[rest.index("-f") + 1].removeprefix("body=")
+                comments = self.comments.setdefault(pr_str, [])
+                new_id = len(comments) + 1
+                entry = {"id": new_id, "body": body, "user": {"login": "o-r-coder"}}
+                comments.append(entry)
+                self.posted_comments.append((pr_str, body))
+                return {"id": new_id, "html_url": f"https://github.com/o/r/pull/{pr_str}#issuecomment-{new_id}"}
+            return list(self.comments.get(pr_str, []))
+        if "/issues/comments/" in endpoint:
+            c_id = int(endpoint.rsplit("/", 1)[-1])
+            if "-X" in rest and rest[rest.index("-X") + 1] == "DELETE":
+                for pr_str, c_list in list(self.comments.items()):
+                    self.comments[pr_str] = [c for c in c_list if c.get("id") != c_id]
+                self.cleared_comments.append(str(c_id))
+                return ""
+            if "-X" in rest and rest[rest.index("-X") + 1] == "PATCH":
+                body = rest[rest.index("-f") + 1].removeprefix("body=")
+                for c_list in self.comments.values():
+                    for c in c_list:
+                        if c.get("id") == c_id:
+                            c["body"] = body
+                return {"id": c_id, "html_url": f"https://github.com/o/r/issues/comments/{c_id}"}
+            return ""
         return {"allow_auto_merge": True}
 
 class WatchGitHub:

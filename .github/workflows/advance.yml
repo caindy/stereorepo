@@ -30,10 +30,11 @@ on:
 # The workflow's own token reads. The update goes through the coder's
 # credential, so what GitHub records is the Role and not the workflow — and a
 # push made by the workflow's token would start no checks, which is the whole
-# point of moving the branch.
+# point of moving the branch. pull-requests: write permits managing in-place
+# failure notices on branches that cannot advance (solorepo's DR-255).
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   advance:
@@ -72,8 +73,11 @@ jobs:
         env:
           CODER_GH_TOKEN: ${{ secrets.CODER_GH_TOKEN }}
 
-      # No `ACTOR_SESSION` and no `AI_AGENT`, deliberately. Nothing here is
-      # posted and nothing is written: a rebase moves commits that are already
-      # signed, and the Trailer they carry names the Job that wrote them, which
-      # is the one this must not overwrite.
+      # Attested session and agent identity so `move advance` can post and reconcile
+      # in-place advance finding notices on failing pull requests under solorepo's
+      # Article 19, solorepo's DR-233, and solorepo's DR-255.
       - run: .meta/say/move advance
+        env:
+          ACTOR_SESSION: gha-${{ github.run_id }}
+          ACTOR_AGENT: gha/advance
+          AI_AGENT: gha/advance

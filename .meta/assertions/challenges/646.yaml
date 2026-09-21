@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/646
+    name: "A failure advance finds on one pull request is read by nobody until somebody opens the log"
+    challenge_type: BUG
+    description: >-
+      DR-238 established that `advance` sweep exit codes answer for the sweep,
+      suppressing individual pull request failures to standard output. Consequently,
+      failures such as rebase conflicts or dispatch refusals remained unread in
+      green CI logs. DR-255 surfaces per-pull-request advance failures via in-place
+      pull request notices and local operator escalation.

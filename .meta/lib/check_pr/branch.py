@@ -39,6 +39,40 @@ RENDER = ["uvx", "--with", "pyyaml", "python", str(META.resolve() / "render.py")
 
 RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
 
+ADVANCE_NOTICE_MARKER = "<!-- solorepo:advance-finding -->"
+"""HTML comment marker identifying an in-place advance finding notice (solorepo's DR-255)."""
+
+
+def advance_notice(pr_number: int | str) -> str | None:
+    """Returns the advance finding text if an advance notice stands on the pull request, or None (solorepo's DR-255).
+
+    Args:
+        pr_number: The pull request number to inspect.
+
+    Returns:
+        str | None: The finding text from the active advance notice comment, or None if none stands.
+    """
+    try:
+        data = github.gh("pr", "view", str(pr_number), "--json", "comments")
+        comments = data.get("comments", [])
+        if not isinstance(comments, list):
+            return None
+        for c in comments:
+            body = c.get("body", "") if isinstance(c, dict) else ""
+            if ADVANCE_NOTICE_MARKER in body:
+                lines = [line.strip().removeprefix("> ").strip()
+                         for line in body.splitlines() if line.strip().startswith("> ")]
+                if lines and lines[0]:
+                    return lines[0]
+                for line in body.splitlines():
+                    s = line.strip()
+                    if s and not s.startswith("<!--") and not s.startswith("Actor:") and not s.startswith("Agent:"):
+                        return s
+                return "advance finding stands"
+        return None
+    except Exception:
+        return None
+
 
 def owned_and_open() -> tuple[str, list[tuple[int, str, list[str] | None]]]:
     """Identify the pull request associated with the current branch or list open ones.
