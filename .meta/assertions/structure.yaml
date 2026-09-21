@@ -422,6 +422,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-surface
     name: .meta/checks/probes/surface.py
     path: .meta/checks/probes/surface.py
+  - id: work:artifact/meta-checks-probes-wrappers
+    name: .meta/checks/probes/wrappers.py
+    path: .meta/checks/probes/wrappers.py
   - id: work:artifact/meta-checks-probes-tools
     name: .meta/checks/probes/tools/__init__.py
     path: .meta/checks/probes/tools/__init__.py
