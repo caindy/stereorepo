@@ -21,6 +21,10 @@ decisions:
       - work:artifact/github-workflows-reconcile
       - work:artifact/github-workflows-merge
       - work:artifact/meta-checks-probes-loops-reconcile
+      - work:artifact/meta-say-on
+      - work:artifact/github-workflows-triage
+      - work:artifact/meta-checks-probes-channel-on
+      - work:artifact/wiki-solorepo-door
     context: >-
       The loops are a pair of state machines, one over Issues and one over pull
       requests, whose state GitHub holds (A22). Nothing in the tree holds either
@@ -116,8 +120,10 @@ decisions:
         accelerator. Roadmap #349's supervisor lands as the reconciler rather
         than as a fifth workflow.
       - >-
-        Workflow YAML holds triggers, concurrency, permissions, and one call per
-        door. Logic in a `run:` block longer than a call is an objection at review.
+        Workflow YAML holds triggers, concurrency, permissions, and one probed
+        entry point per door, called once before the harness session and once
+        after it. Logic in a `run:` block longer than a call is an objection at
+        review.
       - >-
         The record grows by this entry and by whatever question a seam turns up,
         not by one entry per incident. An incident after the fourth seam that

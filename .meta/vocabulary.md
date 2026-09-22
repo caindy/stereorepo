@@ -60,6 +60,7 @@ _Who does work, what they may do, and what they are given to do it with._
 | **Collaboration** | The Jobs that meet on one Challenge. Two is the minimum. | — |
 | **Handoff** | The seam where one Job stops and another takes the same Challenge up, sharing no filesystem, no shell and no conversation. | — |
 | **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
+| **Door** | The seam at which a loop workflow admits a Role's run: the event it fires on, what the run reads and decides before its harness session starts, and what it reads and writes after the session ends (solorepo's DR-264). | — |
 | **Dev Loop** | The event-driven autonomous execution cycle that advances a Challenge from triage to merged pull request through decoupled coder, reviewer, and merge manager passes without continuous human supervision (solorepo's DR-111, solorepo's DR-112, solorepo's DR-178). | — |
 | **Choreography** | The coordination style in which each participant carries only its own rules and reacts to events on a shared substrate, so that no coordinator holds the process and the flow is what the local rules produce together (solorepo's DR-214, solorepo's DR-216). | — |
 
@@ -197,6 +198,8 @@ _The named ways of working, each adhered to because it is not a program._
 **Citation.** A citation is composed of an identifier (number), the claim it names, and a link where one is possible (Article 12, solorepo's DR-182). Evaluated at three progressive depths: target existence, structural correspondence of the claim, and semantic support by the target authority.
 
 **Dereference.** The verb Article 12 binds to citation. Checked mechanically for target existence and structural claims by check.py, and evaluated for semantic support by dereference.py before handoff.
+
+**Door.** Each workflow of the Dev Loop is a door: the reviewer's reading door and review door, the coder's door with its three passes. A door is edge-triggered, and what a dropped edge loses the reconciler re-delivers on the clock.
 
 **Dev Loop.** The runtime engine realizing PR First, and Choreography is the shape it takes: each pass reacts to a GitHub event under its own rules and no coordinator holds the process. Operates across those events using pull requests and branch prefixes as stateless semaphores, carrying multi-harness dispatch, resilient failure fallback, and graceful hand-backs to the solo maintainer.
 

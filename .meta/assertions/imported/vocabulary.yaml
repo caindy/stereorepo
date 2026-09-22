@@ -685,6 +685,24 @@ concept_set:
     confusable_with:
       - work:concept/apm-skill
       - work:concept/apm-prompt
+  - id: work:concept/door
+    pref_label: Door
+    definition: >-
+      The seam at which a loop workflow admits a Role's run: the event it
+      fires on, what the run reads and decides before its harness session
+      starts, and what it reads and writes after the session ends
+      (solorepo's DR-264).
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-doing
+    alt_labels:
+      - workflow door
+      - reading door
+      - take door
+    scope_note: >-
+      Each workflow of the Dev Loop is a door: the reviewer's reading door
+      and review door, the coder's door with its three passes. A door is
+      edge-triggered, and what a dropped edge loses the reconciler
+      re-delivers on the clock.
   - id: work:concept/dev-loop
     pref_label: Dev Loop
     definition: >-

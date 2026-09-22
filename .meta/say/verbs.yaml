@@ -238,3 +238,21 @@ programs:
         usage: ""
         does: which login this channel speaks as
         held_by: [coder, reviewer, workflow]
+
+  - name: "on"
+    path: .meta/say/on
+    concern: >-
+      A workflow's door, as the one program of the channel each door calls
+      (solorepo's DR-264): what the Role's run reads and decides before its
+      harness session, written where the workflow reads it, and what it reads
+      back after.
+    verbs:
+      - name: reviewer
+        usage: "before|after <n>"
+        does: >-
+          the reviewer's reading door for the Challenge the number names, a
+          pull request being refused until its door moves: before the
+          session, whether the delivery is still the reviewer's, which harness
+          reads, and what it reads written under .review/; after it, whether
+          it was read
+        held_by: [workflow]

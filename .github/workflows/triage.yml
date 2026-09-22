@@ -40,12 +40,12 @@ concurrency:
   group: triage-${{ github.event.issue.number }}-${{ github.event.action }}-${{ github.event.label.name }}
   cancel-in-progress: false
 
-# The workflow's own token reads. Every write goes through the reviewer's
-# credential, so what GitHub records is the Role and not the workflow.
+# The workflow's own token checks the tree out and nothing else. Every read
+# and write goes through the reviewer's credential, which the door's program
+# and the session both hold, so what GitHub records is the Role and not the
+# workflow.
 permissions:
   contents: read
-  issues: read
-  pull-requests: read
 
 jobs:
   reviewer:
@@ -100,90 +100,23 @@ jobs:
         env:
           REVIEWER_GH_TOKEN: ${{ secrets.REVIEWER_GH_TOKEN }}
 
-      # The payload is frozen at delivery. A level landed while this run
-      # waited — the solo's `difficulty`, or a run this one queued behind —
-      # is a verdict standing, and `triage` would refuse it; read the Issue
-      # now and stand down out loud rather than at the verb.
-      - name: is it still unread
-        id: unread
-        run: |
-          labels=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name] | join(",")')
-          level=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""')
-          if [ -n "$level" ]; then
-            echo "read=false" >> "$GITHUB_OUTPUT"
-            echo "#$ISSUE is labelled '$labels' now: a level stands, and this delivery is stale"
-          else
-            echo "read=true" >> "$GITHUB_OUTPUT"
-            echo "#$ISSUE is labelled '$labels': unread"
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
 
-      # Which harness speaks: Claude Code by default, or Gemini by label (solorepo's DR-242)
-      - name: choose the harness
-        id: harness
-        if: steps.unread.outputs.read == 'true'
-        run: |
-          harness="claude"
-          labels=$(gh issue view "$ISSUE" --json labels -q '.labels[].name' 2>/dev/null || true)
-
-          if echo "$labels" | grep -qw "harness:gemini"; then
-            harness="gemini"
-          elif echo "$labels" | grep -qw "harness:claude"; then
-            harness="claude"
-          fi
-
-          if [ "$harness" = "gemini" ]; then
-            agent="antigravity-cli"
-          else
-            agent="anthropics/claude-code-action@v1"
-          fi
-
-          echo "harness=$harness" >> "$GITHUB_OUTPUT"
-          echo "agent=$agent" >> "$GITHUB_OUTPUT"
-          echo "AI_AGENT=$agent" >> "$GITHUB_ENV"
-          # The Trailer's second half, under a name the harness does not own
-          # (solorepo's DR-233): the harness overwrites `AI_AGENT` with its own
-          # build string, so a value the agent's shell typed there cannot be
-          # told from the ordinary one, and the channel reads this one in a run.
-          echo "ACTOR_AGENT=$agent" >> "$GITHUB_ENV"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      # What the session reads, written to files before it starts. The hook
-      # below confines the session's shell to a closed list of programs, and
-      # `gh issue` is not on it, so everything the reading needs from GitHub
-      # is gathered here under the workflow's own token and read with the
-      # Read tool: the Issue whole, and the open Issues and pull requests the
-      # "Waits on." question is answered against. `.review/` is the reviewer's
-      # scratch and `.gitignore` holds it (solorepo's #196).
-      - name: write the Challenge and what is open
-        if: steps.unread.outputs.read == 'true'
-        run: |
-          rm -rf .review
-          install -d .review
-          gh issue view "$ISSUE" --json number,title,url,labels,body,createdAt,author \
-            --jq '"# #\(.number) \(.title)\n\n\(.url)\nlabels: \([.labels[].name] | join(", "))\nfiled: \(.createdAt) by \(.author.login)\n\n---\n\n\(.body)"' \
-            > .review/challenge.md
-          {
-            echo "# Open Issues"
-            echo
-            gh issue list --state open --limit 200 --json number,title,labels \
-              --jq '.[] | "- #\(.number) [\([.labels[].name] | join(", "))] \(.title)"'
-            echo
-            echo "# Open pull requests"
-            echo
-            gh pr list --state open --limit 100 --json number,title,headRefName \
-              --jq '.[] | "- #\(.number) (\(.headRefName)) \(.title)"'
-          } > .review/open.md
-          cat .review/challenge.md
-          wc -l .review/open.md
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # The door's two phases are one program of the channel, `.meta/say/on`
+      # (solorepo's DR-264). Before the session: the payload is frozen at
+      # delivery, so whether the Challenge is still unread is read now and a
+      # level landed while this run waited stands the run down out loud;
+      # which harness reads it, by the Challenge's own label, named under
+      # `ACTOR_AGENT`, which the channel reads in a run, beside the `AI_AGENT`
+      # the harness overwrites with its own build string (solorepo's DR-233);
+      # and the Challenge and what is open, written under `.review/`, since
+      # the session's reading hook admits no `gh issue` (solorepo's DR-110).
+      - name: before the session
+        id: before
+        run: .meta/say/on --role reviewer reviewer before "$ISSUE"
 
       - name: read the Challenge (claude)
         id: read_claude
-        if: steps.unread.outputs.read == 'true' && steps.harness.outputs.harness == 'claude'
+        if: steps.before.outputs.read == 'true' && steps.before.outputs.harness == 'claude'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         timeout-minutes: 20
@@ -282,7 +215,7 @@ jobs:
 
       - name: read the Challenge (gemini)
         id: read_gemini
-        if: steps.unread.outputs.read == 'true' && (steps.harness.outputs.harness == 'gemini' || steps.read_claude.outcome == 'failure')
+        if: steps.before.outputs.read == 'true' && (steps.before.outputs.harness == 'gemini' || steps.read_claude.outcome == 'failure')
         continue-on-error: true
         timeout-minutes: 20
         env:
@@ -293,7 +226,7 @@ jobs:
           model: gemini-3.8-flash
           effort: medium
           timeout-minutes: 20
-          harness: ${{ steps.harness.outputs.harness }}
+          harness: ${{ steps.before.outputs.harness }}
           claude-outcome: ${{ steps.read_claude.outcome }}
           execution-file: ${{ steps.read_claude.outputs.execution_file }}
           prompt: |
@@ -368,19 +301,12 @@ jobs:
             after this session reads the Issue's labels, and a session that landed
             no level is a red run.
 
-      # A session that ended without a level has not read, and the check says
-      # so. The action reports success when the model's turn ends, and a turn
-      # ends without a verdict as readily as with one (solorepo's DR-122). The
-      # level is read rather than the transcript believed, because GitHub holds
-      # the one and the transcript only claims the other.
-      - name: was it read
-        if: ${{ !cancelled() && steps.unread.outputs.read == 'true' }}
-        run: |
-          level=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""')
-          if [ -z "$level" ]; then
-            echo "::error::the session ended and #$ISSUE carries no level: nothing was read, and the Challenge still waits"
-            exit 1
-          fi
-          echo "#$ISSUE was read and landed at $level"
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # After the session: a session that ended without a level has not read,
+      # and the door says so. The action reports success when the model's
+      # turn ends, and a turn ends without a verdict as readily as with one
+      # (solorepo's DR-122); the level is read rather than the transcript
+      # believed, because GitHub holds the one and the transcript only claims
+      # the other.
+      - name: after the session
+        if: ${{ !cancelled() && steps.before.outputs.read == 'true' }}
+        run: .meta/say/on --role reviewer reviewer after "$ISSUE"
