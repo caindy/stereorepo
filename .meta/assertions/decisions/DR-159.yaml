@@ -77,7 +77,11 @@ decisions:
           what landed, and leave the armed pull request to merge unattended; on
           easy, the coder promotes notices before arming. The sweep reader
           unheld() is taught that an armed pull request with unresolved
-          conversations is held by nobody.
+          conversations is held by nobody. Amended on #837: solorepo's DR-161
+          withdrew arming at every level for a standing merge manager, so the
+          easy limb's "before arming" names a step that no longer runs — easy
+          now promotes at approval alongside medium, requesting review and
+          stopping rather than arming.
     consequences:
       - >-
         PR First's eighth step, the pull request template in
@@ -100,7 +104,11 @@ decisions:
         promotion that lands no level fires the reviewer's reading door and
         the loop takes nothing until a verdict lands a level, so `hard` buys
         no supervision and costs the reading, which is what every Challenge
-        promoted after a review went without.
+        promoted after a review went without. Amended on #837: solorepo's
+        DR-161 withdrew arming, so "on easy challenges" no longer names a
+        promotion moment separate from the approval promotion pass — every
+        level promotes there alike, and the merge manager lands what the
+        pass leaves eligible.
       - >-
         `.meta/check_pr.py`'s `unheld()` checks armed pull requests for
         unresolved conversations when idle for longer than longest_run(),
