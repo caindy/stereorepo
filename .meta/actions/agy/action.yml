@@ -40,6 +40,10 @@ inputs:
     description: Claude execution output file path when executing as fallback.
     required: false
     default: ""
+  agent:
+    description: The Agent the chosen harness signs by, which the door emits; the fallback's own name displaces it when a fallback activates.
+    required: false
+    default: ""
 outputs:
   fallback:
     description: Whether fallback was evaluated and activated.
@@ -114,6 +118,17 @@ runs:
         MODE: ${{ inputs.mode }}
         TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
         GEMINI_PROJECT_DIR: ${{ env.GEMINI_PROJECT_DIR || github.workspace }}
+        # Whose session this is, scoped to this step alone: the fallback's name
+        # where `check_fallback` activated one, and the chosen harness's name —
+        # `agent`, which the calling door emitted beside the harness it chose —
+        # otherwise. `detect_fallback.py` emits its name to `$GITHUB_OUTPUT`
+        # rather than `$GITHUB_ENV`, which would carry a fallback's name onto
+        # every later step of the calling job (solorepo's #836); this step's
+        # `env:` beats that job environment, so `check_fallback`'s empty output
+        # on the direct-harness path has to be caught here rather than left to
+        # override the name the door already wrote.
+        ACTOR_AGENT: ${{ steps.check_fallback.outputs.agent || inputs.agent }}
+        AI_AGENT: ${{ steps.check_fallback.outputs.agent || inputs.agent }}
       run: |
         python3 .meta/run_agy.py
         echo "executed=true" >> "$GITHUB_OUTPUT"

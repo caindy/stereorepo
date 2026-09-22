@@ -370,6 +370,7 @@ jobs:
           mode: accept-edits
           timeout-minutes: ${{ steps.before.outputs.minutes }}
           harness: ${{ steps.before.outputs.harness }}
+          agent: ${{ steps.before.outputs.agent }}
           claude-outcome: ${{ steps.take_claude.outcome }}
           execution-file: ${{ steps.take_claude.outputs.execution_file }}
           prompt: |
@@ -571,6 +572,7 @@ jobs:
           mode: accept-edits
           timeout-minutes: ${{ steps.before.outputs.minutes }}
           harness: ${{ steps.before.outputs.harness }}
+          agent: ${{ steps.before.outputs.agent }}
           claude-outcome: ${{ steps.rebase_claude.outcome }}
           execution-file: ${{ steps.rebase_claude.outputs.execution_file }}
           prompt: |
@@ -734,6 +736,7 @@ jobs:
           mode: accept-edits
           timeout-minutes: ${{ steps.before.outputs.minutes }}
           harness: ${{ steps.before.outputs.harness }}
+          agent: ${{ steps.before.outputs.agent }}
           claude-outcome: ${{ steps.answer_claude.outcome }}
           execution-file: ${{ steps.answer_claude.outputs.execution_file }}
           prompt: |
@@ -874,6 +877,7 @@ jobs:
           mode: accept-edits
           timeout-minutes: ${{ steps.before.outputs.minutes }}
           harness: ${{ steps.before.outputs.harness }}
+          agent: ${{ steps.before.outputs.agent }}
           claude-outcome: ${{ steps.promote_claude.outcome }}
           execution-file: ${{ steps.promote_claude.outputs.execution_file }}
           prompt: |
@@ -948,6 +952,14 @@ jobs:
           .meta/say/on coder after "$NUMBER" --pass "$PASS" --event "$EVENT"
           --claude "$CLAUDE" --gemini "$GEMINI" --count "$COUNT" --branch-prefix "$PREFIX"
         env:
+          # The door's own acts are the door's, named on the terms `gha/reconcile`
+          # already uses, rather than inherited from whatever the last harness
+          # step of the pass wrote to the environment — a fallback that activated
+          # and then failed left its build string standing for every step after
+          # it, and this door's post signed as a harness that never ran
+          # (solorepo's #836).
+          ACTOR_AGENT: gha/coder
+          AI_AGENT: gha/coder
           NUMBER: ${{ steps.before.outputs.pass == 'take' && (github.event.issue.number || inputs.issue) || steps.before.outputs.number }}
           PASS: ${{ steps.before.outputs.pass }}
           EVENT: ${{ github.event_name }}

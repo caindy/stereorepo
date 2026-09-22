@@ -268,6 +268,98 @@ def signed_runs_name_their_harness() -> StepOutcome:
     return Passed(f"{counted} harness names written, each under both variables")
 
 
+AGENT_FROM_STEP = re.compile(r"^\s*(ACTOR_AGENT|AI_AGENT):\s*(\$\{\{.*steps\..*\}\})\s*$", re.M)
+"""A step naming its harness from another step's output, which is empty when that step
+did not run or took a branch that wrote no such output."""
+
+
+@check("harness names from step outputs have a default")
+def harness_names_from_step_outputs_have_a_default() -> StepOutcome:
+    """A step `env:` naming its harness from a step output supplies a fallback (solorepo's #836).
+
+    A step-level `env:` beats the job environment `name_harness` wrote, and it
+    beats it with the empty string as readily as with a name: a step output is
+    the empty string wherever the emitting step was skipped or took a branch
+    that wrote no such key. `channel.agent()` then falls through to the step
+    GitHub attests, which says which step spoke and not which harness — the
+    degraded reading solorepo's DR-233 names. So an expression of this shape
+    carries `|| <the chosen harness's name>`, and this fails where one does not.
+
+    Returns:
+        Passed | Found | CouldNotRun: The expressions counted, or each file and
+        variable whose expression can resolve to nothing.
+    """
+    files = sorted(_workflow_files())
+    if not files:
+        return CouldNotRun("no workflows or composite actions found to scan")
+    problems, counted = [], 0
+    for path in files:
+        for name, expression in AGENT_FROM_STEP.findall(path.read_text(encoding="utf-8")):
+            counted += 1
+            if "||" in expression:
+                continue
+            problems.append(f"{path.relative_to(ROOT)}: sets `{name}` to `{expression}`, which is "
+                            "the empty string wherever that step wrote no such output, and an "
+                            "empty step `env:` unnames the run as surely as a wrong one; give it "
+                            "`|| <the chosen harness's name>`")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{counted} harness name(s) taken from a step output, each with a default")
+
+
+AGY_ACTION = "./.meta/actions/agy"
+"""The agy composite action's `uses:` path, as every call site names it."""
+
+
+def _steps(doc: dict[str, Any]) -> list[Any]:
+    """The steps a workflow job or a composite action's `runs:` declares."""
+    steps: list[Any] = []
+    for job in (doc.get("jobs") or {}).values():
+        steps.extend(job.get("steps") or [])
+    steps.extend((doc.get("runs") or {}).get("steps") or [])
+    return steps
+
+
+@check("agy callers pass a non-empty agent")
+def agy_callers_pass_a_non_empty_agent() -> StepOutcome:
+    """A step invoking the agy action supplies a non-empty `agent` input (solorepo's #836).
+
+    `harness_names_from_step_outputs_have_a_default` proves the default inside
+    the action reads `inputs.agent`; that default only closes solorepo's #836
+    where every caller passes a non-empty value for it. This is the other half
+    of the same invariant: a step whose `uses:` names the agy action, with no
+    `agent:` input or one that is the empty string, hands `ACTOR_AGENT` and
+    `AI_AGENT` the empty string on the direct-harness path regardless of what
+    the action defaults to.
+
+    Returns:
+        Passed | Found | CouldNotRun: The call sites counted, or each file and
+        step carrying no non-empty `agent` input.
+    """
+    files = sorted(_workflow_files())
+    if not files:
+        return CouldNotRun("no workflows or composite actions found to scan")
+    problems, counted = [], 0
+    for path in files:
+        try:
+            doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            continue
+        for step in _steps(doc):
+            if not isinstance(step, dict) or step.get("uses") != AGY_ACTION:
+                continue
+            counted += 1
+            if (step.get("with") or {}).get("agent"):
+                continue
+            problems.append(f"{path.relative_to(ROOT)}: a step using {AGY_ACTION} carries no "
+                            "non-empty `agent:` input, which hands ACTOR_AGENT and AI_AGENT the "
+                            "empty string on the direct-harness path; give it "
+                            "`agent: ${{ steps.before.outputs.agent }}`")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{counted} agy call site(s), each passing a non-empty agent")
+
+
 FALLBACK_ENV_EXPORT = re.compile(r"^\s*GEMINI_FALLBACK:\s*\${{\s*vars\.GEMINI_FALLBACK\b", re.M)
 """A workflow that invokes detect_fallback.py exports GEMINI_FALLBACK from vars.GEMINI_FALLBACK in job env (solorepo's DR-245)."""
 

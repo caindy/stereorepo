@@ -227,6 +227,7 @@ jobs:
           effort: medium
           timeout-minutes: 20
           harness: ${{ steps.before.outputs.harness }}
+          agent: ${{ steps.before.outputs.agent }}
           claude-outcome: ${{ steps.read_claude.outcome }}
           execution-file: ${{ steps.read_claude.outputs.execution_file }}
           prompt: |

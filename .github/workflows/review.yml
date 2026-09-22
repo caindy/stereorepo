@@ -432,6 +432,7 @@ jobs:
           effort: ${{ steps.before.outputs.effort }}
           timeout-minutes: ${{ steps.before.outputs.minutes }}
           harness: ${{ steps.before.outputs.harness }}
+          agent: ${{ steps.before.outputs.agent }}
           claude-outcome: ${{ steps.review_claude.outcome }}
           execution-file: ${{ steps.review_claude.outputs.execution_file }}
           prompt: |
@@ -585,6 +586,15 @@ jobs:
         timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         env:
           JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+          # Whose review this is, scoped to this step alone (solorepo's #836):
+          # jules where it was fallen back to, and the harness the pull
+          # request's own label chose otherwise, which the door named on both
+          # outputs. `jules_fallback` is skipped on a `harness:jules` review and
+          # emits nothing, and this step's `env:` beats the job environment the
+          # door wrote, so the empty output is caught here rather than left to
+          # unname the verdict `.meta/jules/client.py` posts from this step.
+          ACTOR_AGENT: ${{ steps.jules_fallback.outputs.agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.jules_fallback.outputs.agent || steps.before.outputs.agent }}
         uses: ./.meta/actions/jules
         with:
           role: reviewer

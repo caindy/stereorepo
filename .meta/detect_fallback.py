@@ -5,8 +5,9 @@ Evaluates whether automatic fallback is enabled for a target harness via reposit
 toggles (`GEMINI_FALLBACK` or `JULES_FALLBACK`). When enabled via repository variables
 (solorepo's DR-245, solorepo's DR-246, solorepo's #669, solorepo's #681), harness failures
 activate the requested fallback harness per solorepo's DR-178's multi-vendor resilience
-choice to prevent stalled loops on unhandled crashes, emitting `fallback=true` to
-`$GITHUB_OUTPUT` and exporting `AI_AGENT` and `ACTOR_AGENT` to `$GITHUB_ENV`.
+choice to prevent stalled loops on unhandled crashes, emitting `fallback=true` and
+`agent` to `$GITHUB_OUTPUT` — scoped to the step that reads it, unlike `$GITHUB_ENV`,
+which would carry the fallback's name onto every later step of the job (solorepo's #836).
 
 For `--harness gemini`, an advisory scan (`has_quota_error`) inspects the execution log
 to label whether quota or rate limit errors were detected. For `--harness jules`,
@@ -406,8 +407,10 @@ def main() -> int:
 
     When the respective fallback toggle is disabled, prints a diagnostic log, writes
     'fallback=false' to $GITHUB_OUTPUT, and exits 0. When enabled via repository
-    variable, logs the activation, writes 'fallback=true' to $GITHUB_OUTPUT, and exports
-    AI_AGENT and ACTOR_AGENT to $GITHUB_ENV.
+    variable, logs the activation and writes 'fallback=true' and
+    'agent=<the fallback harness's name>' to $GITHUB_OUTPUT. On the disabled path no
+    'agent' key is written at all, so a caller reading `steps.<id>.outputs.agent`
+    receives the empty string there.
 
     Returns:
         int: Exit status code (always 0 to allow downstream workflow steps to read outputs).
@@ -453,9 +456,8 @@ def main() -> int:
     else:
         print(f"Activating {cfg['label']} fallback ({cfg['toggle']}=true).")
 
-    write_env_file("GITHUB_OUTPUT", "fallback=true\n")
     agent = cfg["agent"]
-    write_env_file("GITHUB_ENV", f"AI_AGENT={agent}\nACTOR_AGENT={agent}\n")
+    write_env_file("GITHUB_OUTPUT", f"fallback=true\nagent={agent}\n")
     return 0
 
 
