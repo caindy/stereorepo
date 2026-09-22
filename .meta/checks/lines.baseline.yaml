@@ -123,7 +123,7 @@
 .meta/lib/move/decisions.py: 3
 .meta/lib/move/manager.py: 18
 .meta/lib/move/pull_requests.py: 11
-.meta/lib/move/reconcile.py: 1
+.meta/lib/move/reconcile.py: 0
 .meta/lib/render/decisions.py: 4
 .meta/lib/render/pages.py: 8
 .meta/lib/render/record.py: 2

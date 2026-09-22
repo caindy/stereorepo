@@ -528,9 +528,9 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
         free = not busy and idle_minutes(pull, reading.now) >= reading.bound
         if free:
             pull_requests.mergeability(pull)
-        state = check_pr.classify_pr(pull,
-                                     manager.deduplicate_checks(pull.get("statusCheckRollup") or []),
-                                     _threads_read(pull, reading) if free else None,
+        checks = manager.deduplicate_checks(pull.get("statusCheckRollup") or [])
+        state = check_pr.classify_pr(pull, checks,
+                                     _threads_read(pull, checks, reading) if free else None,
                                      reading.reviewer_login)
         act = owed_by_pull(pull, found, state, reading.reviewer_login, free)
         if act and act.kind == "rebase":
@@ -542,37 +542,59 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
     return owed
 
 
-def _threads_read(pull: common.Pull, reading: Reading) -> list[dict[str, Any]] | None:
-    """The review threads of a pull request standing under a comment verdict, or None.
+def _threads_read(pull: common.Pull, checks: Sequence[Mapping[str, Any]],
+                  reading: Reading) -> list[dict[str, Any]] | None:
+    """The review threads of a pull request whose classification turns on them, or None.
 
-    The comment-verdict arm of `classify_pr` turns on the review threads: a
-    standing verdict of `COMMENTED` with no review requested reads
-    `CHANGES_REQUESTED` where a thread is owed an answer, and owes nothing
-    where none is (solorepo's DR-265). The listing cannot answer it, since
-    `pr list` returns no `reviewThreads`, so the threads are read here,
-    through the query the merge manager already makes: one query per pass for
-    each pull request standing in that shape, and none for any other. Every
-    other pull request is classified on what the listing carries, and the
-    read is skipped.
+    Two arms of `classify_pr` turn on the review threads, and both stand with
+    no review requested. A standing verdict of `COMMENTED` reads
+    `CHANGES_REQUESTED` where a thread is owed an answer and owes nothing
+    where none is (solorepo's DR-265). An approval reads `CHANGES_REQUESTED`
+    where a thread is owed, `AWAITING_PROMOTION` where a notice is parked, and
+    `READY_TO_MERGE` where the gate is green and the threads show neither;
+    where the gate is still running it reads `AWAITING_GATE`, which is a shape
+    this read admits on purpose, a check merely unconcluded being no failure.
+    Read without the threads, no approval reaches either of the first two, so
+    a green one carrying an unanswered thread reads `READY_TO_MERGE` and is
+    dispatched no review pass, and what stops it is the merge manager refusing
+    an unresolved conversation rather than the coder being told to answer it.
+
+    The listing answers neither arm, since `pr list` returns no
+    `reviewThreads`, so the threads are read here, through the query the merge
+    manager already makes: one query per pass for each pull request standing
+    in one of those two shapes, and none for any other. A pull request
+    `classify_pr` settles before it reaches the threads is not read either —
+    a conflicting branch owes the rebase pass and a failed gate owes what its
+    checks owe, whatever the threads hold — which is what holds the read to
+    the approved pull requests awaiting merge rather than to every approved
+    one.
 
     A read GitHub refuses answers None, which `classify_pr` reads as an empty
     thread list and which owes nothing; the log says so, as it does for a run
     GitHub will not list.
 
     Parameters:
-        pull (dict): The pull request, carrying `RECONCILE_FIELDS`.
+        pull (dict): The pull request, carrying `RECONCILE_FIELDS`, its
+            `mergeable` settled.
+        checks (list): Its check rollup, deduplicated, as `classify_pr` is
+            handed it.
         reading (Reading): What the pass reads once.
 
     Returns:
         list[dict] | None: The threads, or None where the classification does
             not turn on them or GitHub refused the read.
     """
+    has_failures, _, _ = check_pr.state.checks_summary(checks)
     if (check_pr.is_review_requested(pull, reading.reviewer_login)
-            or check_pr.state.standing_verdict(pull, reading.reviewer_login) != "COMMENTED"):
+            or str(pull.get("mergeable") or "").upper() == "CONFLICTING"
+            or has_failures):
+        return None
+    if (check_pr.state.standing_verdict(pull, reading.reviewer_login) != "COMMENTED"
+            and check_pr.latest_verdict(pull, reading.reviewer_login) != "APPROVED"):
         return None
     threads, why = manager.read_threads(pull, reading.owner, reading.name)
     if threads is None:
-        print(f"reconcile: #{pull['number']} stands under a comment verdict and its threads "
+        print(f"reconcile: #{pull['number']} is classified against its threads and they "
               f"could not be read — {why}")
     return threads
 

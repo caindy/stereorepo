@@ -52,12 +52,17 @@ ANSWERED = [{"isResolved": True,
              "comments": {"nodes": [{"body": "the point"}, {"body": "the answer to it"}]}}]
 """A review thread answered and resolved."""
 
-CONVERSATIONS = {24: OWED, 25: ANSWERED}
+PARKED = [{"isResolved": False,
+           "comments": {"nodes": [{"body": "**Noticed and not done.** the item, held for the "
+                                           "solo"}]}}]
+"""A review thread parked as noticed and not done, which is held open until merge."""
+
+CONVERSATIONS = {24: OWED, 25: ANSWERED, 26: OWED, 27: ANSWERED, 28: PARKED}
 """What GraphQL holds for the fixtures the listing cannot answer for, by pull request.
 
-`RECONCILE_FIELDS` carries no `reviewThreads`, so a pull request standing
-under a comment verdict is read through GraphQL and the rest are not: pull
-request 24 owes an answer and 25 owes none."""
+`RECONCILE_FIELDS` carries no `reviewThreads`, so a pull request whose
+classification turns on them is read through GraphQL and the rest are not:
+24 and 26 owe an answer, 25 and 27 owe none, and 28 holds a parked notice."""
 
 ASKED = [{"login": REVIEWER}]
 
@@ -69,12 +74,15 @@ MINUTES = 30.0
 def reconcile_probes() -> list[str]:
     """The reconciler's two readers and its one pass (solorepo's DR-264).
 
-    `classify_pr`, over the comment verdict's arm, since `owed_by_pull` reads
-    the state and not the conditions under it: a comment verdict with a thread
-    owed an answer and no request standing reads `CHANGES_REQUESTED`, and the
-    same verdict with nothing owed, under a review request, bodiless, or left
-    by an account that is not the reviewer's reads `AWAITING_REVIEW`
-    (solorepo's DR-265).
+    `classify_pr`, over the two arms that turn on the threads, since
+    `owed_by_pull` reads the state and not the conditions under it: a
+    comment verdict with a thread owed an answer and no request standing
+    reads `CHANGES_REQUESTED`, and the same verdict with nothing owed, under
+    a review request, bodiless, or left by an account that is not the
+    reviewer's reads `AWAITING_REVIEW` (solorepo's DR-265); an approval with
+    a notice parked reads `AWAITING_PROMOTION` and one with every thread
+    answered `READY_TO_MERGE`, which is the pair no act tells apart
+    (solorepo's DR-159).
 
     `owed_by_pull`, over the classifiers' states: a conflicting branch under
     a verdict owes a rebase pass and one under nothing owes none; changes
@@ -83,9 +91,11 @@ def reconcile_probes() -> list[str]:
     verdict that withholds approval in prose (solorepo's DR-265) — the same
     verdict owes nothing with nothing owed on it or with a request standing,
     and a bodiless comment review, which is what GitHub records around a reply
-    on a thread, is no verdict and owes nothing either; a failed gate under an
-    approval owes one, and under a request whose reviewer check is the one
-    that failed owes the request again; a green pull request with no verdict,
+    on a thread, is no verdict and owes nothing either; an approval with a
+    thread owed an answer owes a review pass, and one with a notice parked
+    or every thread answered owes nothing; a failed gate under an approval
+    owes one, and under a request whose reviewer check is the one that
+    failed owes the request again; a green pull request with no verdict,
     request, or arming owes its first request, and armed owes nothing; a
     Challenge in any state but resumable is held, the claim read as nobody's
     so that `hard` under a claim is not swallowed by `TAKEN`; not free owes
@@ -104,11 +114,13 @@ def reconcile_probes() -> list[str]:
     one and not re-taken; a blocked one is not taken; a Challenge a triage
     run read is not re-delivered; without `--live` every act is reported and
     none performed; a conflict the listing answers `UNKNOWN` for is settled
-    before it is read and owes the rebase pass, not the review pass; a comment
-    verdict is read against the threads the listing cannot carry, so one with
-    a thread owed an answer is dispatched a review pass and one with every
-    thread answered is owed nothing, the read made for those two pull requests
-    and no others, and a read GitHub refuses owes nothing and says so; runs
+    before it is read and owes the rebase pass, not the review pass; a
+    comment verdict and an approval are each read against the threads the
+    listing cannot carry, so one with a thread owed an answer is dispatched
+    a review pass and one with every thread answered or a notice parked is
+    owed nothing, the read made for those pull requests and no others — a
+    conflicting branch and a failed gate are settled before the threads are
+    reached — and a read GitHub refuses owes nothing and says so; runs
     GitHub will not list hold every act and say so; and a refused act is
     printed and the next is performed.
     """
@@ -134,13 +146,14 @@ def _pull(number: int, **fields: Any) -> dict[str, Any]:
 
 
 def _classifier_cases(move: Any) -> list[str]:
-    """`classify_pr` over the comment verdict's arm, one case per condition it rests on.
+    """`classify_pr` over the two arms that turn on the threads, one condition per case.
 
     `owed_by_pull` cannot pin these: it answers `None` for a pull request under
-    a review request whatever state it was handed, so a case reading the act
+    a review request whatever state it was handed, and `None` for
+    `AWAITING_PROMOTION` and `READY_TO_MERGE` alike, so a case reading the act
     alone stays green with a condition deleted. Each shape here removes one
-    condition of the arm and asserts the state the classifier every reader asks
-    reports for it (solorepo's DR-265).
+    condition of an arm and asserts the state the classifier every reader asks
+    reports for it (solorepo's DR-265, solorepo's DR-159).
     """
     states = move.check_pr.PullRequestState
     cases: list[tuple[str, dict[str, Any], Any]] = [
@@ -159,6 +172,12 @@ def _classifier_cases(move: Any) -> list[str]:
         ("a comment verdict from a passer-by", _pull(1, latestReviews=PASSER_BY,
                                                      reviewThreads=OWED),
          states.AWAITING_REVIEW),
+        ("an approval with a notice parked", _pull(1, latestReviews=APPROVED,
+                                                   reviewThreads=PARKED),
+         states.AWAITING_PROMOTION),
+        ("an approval with every thread answered", _pull(1, latestReviews=APPROVED,
+                                                         reviewThreads=ANSWERED),
+         states.READY_TO_MERGE),
     ]
     problems = []
     for name, pull, expected in cases:
@@ -193,6 +212,13 @@ def _pull_cases(move: Any) -> list[str]:
          issues.RESUMABLE, True, None),
         ("a reply on a thread, which is no verdict", _pull(1, latestReviews=REPLY,
                                                             reviewThreads=OWED),
+         issues.RESUMABLE, True, None),
+        ("approved with a thread owed", _pull(1, latestReviews=APPROVED, reviewThreads=OWED),
+         issues.RESUMABLE, True, "review"),
+        ("approved with a notice parked", _pull(1, latestReviews=APPROVED, reviewThreads=PARKED),
+         issues.RESUMABLE, True, None),
+        ("approved with every thread answered", _pull(1, latestReviews=APPROVED,
+                                                      reviewThreads=ANSWERED),
          issues.RESUMABLE, True, None),
         ("approved with failing checks", _pull(1, latestReviews=APPROVED, statusCheckRollup=RED),
          issues.RESUMABLE, True, "review"),
@@ -335,13 +361,16 @@ class _Bench:
     conflicting draft root with 19 a conflicting approved layer on it, and
     20 a conflicting root on the solo's own branch with 21 a conflicting
     approved layer on it, and 22 a conflicting root under a claimed
-    Challenge at `hard` with 23 a conflicting approved layer on it; and two
-    under a comment verdict whose threads only GraphQL can answer for, 24
-    with one owed an answer and 25 with every one answered. The
-    Challenges: one behind each of the first three, an unread one, an
-    offered one, one claimed with no pull request, one offered but blocked,
-    one behind the draft, one offered with no `updatedAt`, and the claimed
-    ones at `hard` behind 12 and 22.
+    Challenge at `hard` with 23 a conflicting approved layer on it; two
+    under a comment verdict whose threads only GraphQL can answer for,
+    24 with one owed an answer and 25 with every one answered; and four
+    approved, 26 with a thread owed an answer, 27 with every one
+    answered, 28 with a notice parked, and 29 with a failed gate, which
+    is settled before its threads are reached. The Challenges: one
+    behind each of the first three, an unread one, an offered one, one
+    claimed with no pull request, one offered but blocked, one behind
+    the draft, one offered with no `updatedAt`, and the claimed ones at
+    `hard` behind 12 and 22.
     """
 
     def __init__(self, channel: Any, move: Any) -> None:
@@ -376,7 +405,12 @@ class _Bench:
                       _pull(23, baseRefName="claude/issue-22", mergeable="CONFLICTING",
                             latestReviews=APPROVED),
                       _pull(24, latestReviews=COMMENT, reviews=COMMENT),
-                      _pull(25, latestReviews=COMMENT, reviews=COMMENT)]
+                      _pull(25, latestReviews=COMMENT, reviews=COMMENT),
+                      _pull(26, latestReviews=APPROVED, reviews=APPROVED),
+                      _pull(27, latestReviews=APPROVED, reviews=APPROVED),
+                      _pull(28, latestReviews=APPROVED, reviews=APPROVED),
+                      _pull(29, latestReviews=APPROVED, reviews=APPROVED,
+                            statusCheckRollup=RED)]
         self.issues = [self.issue(1, "medium"), self.issue(4, None), self.issue(5, "easy"),
                        self.issue(6, "easy", claimed=True),
                        self.issue(10, "easy", blocked_by=[4]),
@@ -445,21 +479,24 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     ended = bench.run(fake, live=True)
     expected = {("merge_manager", None), ("review", 1), ("rebase", 2), ("request", 3),
                 ("relabel", (4, ("remove",))), ("relabel", (4, ("add",))), ("release", 6),
-                ("rebase", 13), ("rebase", 15), ("rebase", 17), ("review", 24)}
+                ("rebase", 13), ("rebase", 15), ("rebase", 17), ("review", 24), ("review", 26),
+                ("review", 29)}
     acted = bench.acted
     if ended.code is not None or set(acted) != expected or len(acted) != len(expected):
         problems.append(f"reconcile: live over the fixtures performed {acted} with exit "
                         f"{ended.code!r}, not one act per owed state {sorted(expected)}: the "
                         "root of a conflicting stack, a conflicting branch nobody holds, and a "
                         "layer whose root is clean are each owed a rebase, the layer above "
-                        "a conflicting root none, and a comment verdict with a thread owed an "
-                        "answer a review pass, where one with every thread answered owes "
-                        "nothing")
-    if sorted(fake.queried) != [24, 25]:
+                        "a conflicting root none, a comment verdict and an approval each with "
+                        "a thread owed an answer a review pass, where one with every thread "
+                        "answered and one with a notice parked owe nothing, and an approval "
+                        "with a failed gate the review pass its checks owe")
+    if sorted(fake.queried) != [24, 25, 26, 27, 28]:
         problems.append(f"reconcile: the threads read were those of {sorted(fake.queried)}, "
-                        "where the listing carries none and the read is owed to the two pull "
-                        "requests standing under a comment verdict with no request, and to "
-                        "no other")
+                        "where the listing carries none and the read is owed to the pull "
+                        "requests standing with no request under a comment verdict or an "
+                        "approval, and to no other: a conflicting branch and a failed gate "
+                        "are settled before the threads are reached")
     if f"holding #{12}" not in ended.out:
         problems.append(f"reconcile: a claimed Challenge at hard behind an open pull request was "
                         f"not held: {ended.out!r}")
@@ -501,11 +538,12 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     ended = bench.run(_GitHub(bench.pulls, bench.issues, busy), live=True)
     left = {a for a in acted if a[0] != "merge_manager"}
     if left != {("rebase", 2), ("release", 6), ("rebase", 13), ("rebase", 15), ("rebase", 17),
-                ("review", 24)}:
+                ("review", 24), ("review", 26), ("review", 29)}:
         problems.append(f"reconcile: with runs in flight, and a triage run that read, it "
                         f"performed {sorted(left)}, where only the rebases of the branches "
-                        "no run answers, the release, and the review pass for the comment "
-                        "verdict were owed")
+                        "no run answers, the release, and the review passes for the comment "
+                        "verdict, the approval with a thread owed, and the approval with a "
+                        "failed gate were owed")
     return problems
 
 
@@ -540,8 +578,8 @@ def _edge_cases(bench: _Bench) -> list[str]:
                         f"was owed {[a for a in bench.acted if a[1] == 9]}, where only a "
                         "conflict below holds it and the next pass reads the root settled")
 
-    talking = _pull(26, latestReviews=COMMENT, reviews=COMMENT)
-    unreadable = _GitHub([talking], [], {}, threads={26: OWED})
+    talking = _pull(30, latestReviews=COMMENT, reviews=COMMENT)
+    unreadable = _GitHub([talking], [], {}, threads={30: OWED})
     unreadable.unreadable = True
     ended = bench.run(unreadable, live=True)
     left = [a for a in bench.acted if a[0] != "merge_manager"]
