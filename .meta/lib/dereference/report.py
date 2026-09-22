@@ -5,6 +5,14 @@
 
 from typing import Any
 
+# What an `x` is, said where the `x` is read. A reader who does not know the
+# verdict is provisional re-runs until it clears, which is the habit
+# solorepo's DR-134 names as the cost of a provisional red.
+READING = ("a mark above is a model's reading, and the same pair can answer differently on "
+           "a re-run with nothing changed (solorepo's DR-134); answer it by fixing the "
+           "sentence, or by leaving it and saying why on the pull request, and not by "
+           "asking again")
+
 
 def report(
     answers: list[tuple[str, str]],
@@ -21,6 +29,8 @@ def report(
     failed and some could not be decided, which exits zero: the outcome A6
     leaves unmarked is what a step says when it could not answer, and a step
     that answered none of its pairs has found nothing.
+
+    An `x` closes with `READING`.
     """
     has_ground_moved = any(p.get("ground_moved") for p in pairs)
     if sample:
@@ -43,6 +53,7 @@ def report(
         print(f"x  dereference ({len(bad)})")
         lines(bad, "x")
         lines(held, "?")
+        print(f"     {READING}")
         return 1
     if held:
         print(f"?  dereference: {len(held)} of {len(pairs)} citation(s) undecided in {scoped}")

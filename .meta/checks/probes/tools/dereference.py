@@ -18,7 +18,9 @@ def dereference_probes() -> list[str]:
     marked as ground moved, heads itself with what this branch wrote or
     affected; handed the same pair as a sample, with a rotating sample. The
     report's printing is captured, and what it exited with, if it did, is
-    reported beside the case.
+    reported beside the case. An `x` closes by saying its marks are a model's
+    reading to be answered and not asked again, which is what keeps a
+    provisional red from teaching the re-run (solorepo's DR-134).
     """
     deref = load_module(META / "dereference.py", "dereference", register=False)
     citations_mod = deref.citations()
@@ -52,4 +54,7 @@ def dereference_probes() -> list[str]:
     heading("a sampled pair",
             lambda: deref.report([("ok", "claim")], pairs, "origin/main", False, sample=True),
             "a rotating sample")
+    heading("a failed pair",
+            lambda: deref.report([("x", "claim")], pairs, "origin/main", False),
+            "not by asking again")
     return problems

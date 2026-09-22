@@ -20,7 +20,9 @@ here reads, and it is in no Project's `gate` string. A gate's red is a fact a
 re-run cannot overturn; this one's is a model's reading, which the same input
 can answer differently, and solorepo's DR-134 says why that may not be where a
 merge is decided. Its `x` is a finding the coder answers — by fixing the
-sentence, or by leaving it and saying why — and nothing requires the step.
+sentence, or by leaving it and saying why — and nothing requires the step. The
+`x` report closes by saying that much, because a reader who does not know it
+re-runs until the finding clears.
 
 What it reads, and what it leaves alone. The durable set, the shape of a
 citation and the entry a citation names are `check.py`'s, imported rather than
@@ -37,6 +39,8 @@ day; what anyone wants read is what this branch wrote, plus any existing
 citation whose target entry moved under it (solorepo's DR-192). `--sample` offers
 a deterministic rotating window across the durable set without adding an
 external state file, and `--all` is there for the run that wants the record.
+
+History in dereference.history.md (solorepo's DR-171).
 """
 import sys
 
