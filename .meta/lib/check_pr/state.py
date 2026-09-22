@@ -37,7 +37,9 @@ class PullRequestState(StrEnum):
         AWAITING_GATE: Status checks are pending, queued, or running, or initial checks are absent.
         GATE_FAILED: One or more status checks failed or were cancelled.
         AWAITING_REVIEW: Status checks are clean, and review has been requested or verdict is pending.
-        CHANGES_REQUESTED: Reviewer requested changes, or approved with unaddressed threads owed an answer.
+        CHANGES_REQUESTED: Reviewer requested changes, approved with unaddressed threads owed an
+            answer, or left a comment verdict with threads owed and no request standing
+            (solorepo's DR-265).
         NEEDS_REBASE: Branch conflicts with base (mergeable status is CONFLICTING).
         AWAITING_PROMOTION: Reviewer approved, but parked noticed-and-not-done threads remain open.
         READY_TO_MERGE: Reviewer approved, all checks green, zero unaddressed threads, and mergeable is clean.
@@ -192,12 +194,59 @@ def latest_verdict(pr: Mapping[str, Any], reviewer_login: str | None = None) -> 
     return str(matching[-1].get("state") or "").upper()
 
 
+def is_verdict(review: Mapping[str, Any]) -> bool:
+    """Whether a review is a verdict rather than the record GitHub keeps around an inline thread.
+
+    Args:
+        review: A review mapping carrying `state` and `body`.
+
+    Returns:
+        True where the review approves, requests changes, or comments with a
+        body; False for a comment review with no body.
+    """
+    return str(review.get("state") or "").upper() != "COMMENTED" or bool(review.get("body"))
+
+
+def standing_verdict(pr: Mapping[str, Any], reviewer_login: str | None = None) -> str:
+    """The state of the reviewer's most recent verdict, upper-cased, or the empty string.
+
+    Both of GitHub's review listings are read, `reviews` before
+    `latestReviews`, and the first to yield a verdict answers. `reviews` is the
+    whole history; `latestReviews` is one review per author and holds the
+    newest whatever it is, so the bodiless record GitHub keeps around a reply
+    on a thread displaces the verdict standing beneath it there and nowhere
+    else. Reading `latestReviews` alone returns the empty string for a pull
+    request whose reviewer requested changes and has since replied on a
+    thread, which is the shape a cancelled review run leaves
+    (solorepo's DR-265). `latestReviews` remains the fallback for a caller
+    that asked GitHub for it alone.
+
+    Args:
+        pr: Pull request metadata mapping.
+        reviewer_login: Optional login of the designated reviewer.
+
+    Returns:
+        The upper-cased state of the newest review `is_verdict` admits and
+        GitHub has not dismissed ('APPROVED', 'CHANGES_REQUESTED',
+        'COMMENTED'), or the empty string where the reviewer left none.
+    """
+    for listing in ("reviews", "latestReviews"):
+        matching = [
+            r for r in pr.get(listing) or []
+            if (not reviewer_login or (r.get("author") or {}).get("login") == reviewer_login)
+            and is_verdict(r) and str(r.get("state") or "").upper() != "DISMISSED"
+        ]
+        if matching:
+            return str(matching[-1].get("state") or "").upper()
+    return ""
+
+
 def verdicts_given(pr: Mapping[str, Any], reviewer_login: str) -> int:
     """How many verdicts the reviewer has submitted on the pull request, on any head.
 
-    A verdict is a review that approves or requests changes, or a comment
-    review with a body; a comment review with no body is what GitHub records
-    around inline threads and is not one.
+    A verdict is what `is_verdict` admits, a review GitHub has since dismissed
+    included: the count is of what was submitted, and a dismissal changes a
+    review rather than adding one.
 
     Args:
         pr: Pull request metadata mapping carrying `reviews`.
@@ -207,8 +256,7 @@ def verdicts_given(pr: Mapping[str, Any], reviewer_login: str) -> int:
         The count.
     """
     return sum(1 for r in pr.get("reviews") or []
-               if (r.get("author") or {}).get("login") == reviewer_login
-               and (str(r.get("state") or "").upper() != "COMMENTED" or r.get("body")))
+               if (r.get("author") or {}).get("login") == reviewer_login and is_verdict(r))
 
 
 def is_review_requested(pr: Mapping[str, Any], reviewer_login: str | None = None) -> bool:
@@ -379,6 +427,10 @@ def classify_pr(
 
     verdict = latest_verdict(pr, reviewer_login)
     if verdict == "CHANGES_REQUESTED" and (unaddressed_owed or not review_requested):
+        return PullRequestState.CHANGES_REQUESTED
+
+    if (unaddressed_owed and not review_requested
+            and standing_verdict(pr, reviewer_login) == "COMMENTED"):
         return PullRequestState.CHANGES_REQUESTED
 
     if verdict == "APPROVED" and not review_requested:

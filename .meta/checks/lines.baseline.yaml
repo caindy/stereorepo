@@ -111,13 +111,13 @@
 .meta/lib/check_pr/github.py: 1
 .meta/lib/check_pr/polling.py: 15
 .meta/lib/check_pr/review.py: 6
-.meta/lib/check_pr/state.py: 3
+.meta/lib/check_pr/state.py: 2
 .meta/lib/check_pr/sweep.py: 15
 .meta/lib/check_pr/verdict.py: 5
 .meta/lib/dereference/asking.py: 1
 .meta/lib/dereference/cli.py: 2
 .meta/lib/dereference/reading.py: 10
-.meta/lib/move/advance.py: 22
+.meta/lib/move/advance.py: 20
 .meta/lib/move/challenges.py: 21
 .meta/lib/move/cli.py: 3
 .meta/lib/move/decisions.py: 3

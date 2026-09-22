@@ -75,7 +75,13 @@ programs:
         held_by: [coder]
       - name: review
         usage: "<pr> --approve|--request-changes|--comment < body.md"
-        does: "the verdict: approve, request changes, or comment; an approval may carry no body"
+        does: >-
+          the verdict: approve, request changes, or comment; an approval may
+          carry no body, and a verdict that withholds approval is
+          `--request-changes`, which is the state GitHub reports and every
+          reader of it moves on — a comment verdict left over threads owed an
+          answer is read as one anyway, so the prose and the state say the same
+          thing either way (solorepo's DR-265)
         held_by: [reviewer]
 
   - name: move

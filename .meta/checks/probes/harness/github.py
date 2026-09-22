@@ -69,9 +69,15 @@ class FakeGitHub:
       since the branch's number is the Issue's here; `unreadable` makes
       `issue view` fail as it does for an Issue deleted or transferred under its
       branch.
-    - `verdicts`: every review on the pull request as `(login, state)`, oldest
-      first, which is the order GitHub lists them in and so the order the newest
-      is read off. Default `[]`.
+    - `verdicts`: every review on the pull request as `(login, state)` or
+      `(login, state, body)`, oldest first, which is the order GitHub lists them
+      in and so the order the newest is read off. The body is empty where a case
+      does not give one, which is what a `COMMENTED` reply on a thread looks
+      like and what tells it from a comment verdict (solorepo's DR-265).
+      They fill both listings `pr view` answers with: `reviews` is all of them
+      and `latestReviews` the newest per author, as GitHub composes the pair,
+      so a reader that consults one and not the other is read here on the shape
+      it meets in production. Default `[]`.
     - `checks`: the `statusCheckRollup` `pr view` answers. Absent from
       `pr list`, as it is from GitHub's (solorepo's DR-153). Default `[]`.
     - `updatedAt`: an ISO timestamp. Default two hours ago, so a pull request is
@@ -198,6 +204,12 @@ class FakeGitHub:
             pull["stale"] = (was, reads - 1)
         shown = was if reads else pull
         merged = shown.get("state") == "MERGED"
+        reviews = [{"author": {"login": given[0]}, "state": given[1],
+                    "body": given[2] if len(given) > 2 else ""}
+                   for given in pull.get("verdicts") or []]
+        newest: dict[str, dict[str, Any]] = {}
+        for review in reviews:
+            newest[review["author"]["login"]] = review
         answer = {"number": int(number), "title": f"pull {number}",
                   "state": shown.get("state", "OPEN"),
                   "mergeCommit": {"oid": f"merged{number}"} if merged else None,
@@ -205,8 +217,8 @@ class FakeGitHub:
                   "headRefName": pull.get("branch", f"claude/issue-{number}"),
                   "headRefOid": shown["head"],
                   "reviewRequests": [{"login": who} for who in pull.get("requested") or []],
-                  "reviews": [{"author": {"login": who}, "state": state}
-                              for who, state in pull.get("verdicts") or []],
+                  "reviews": reviews,
+                  "latestReviews": list(newest.values()),
                   "mergeable": mergeable,
                   "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None,
                   "statusCheckRollup": pull.get("checks", []),

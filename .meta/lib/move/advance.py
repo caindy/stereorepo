@@ -234,9 +234,13 @@ def dispatch(pulls: Sequence[common.Pull]) -> tuple[list[str], list[str]]:
     return failed, refused
 
 
-# The two states of a review that decide anything. A `COMMENTED` review is what
-# every reply on a thread is submitted under and says nothing about the pull
-# request; a `DISMISSED` one is a verdict GitHub has already taken back.
+# The two states of a review that decide something in GitHub's own word for
+# it, which is what `reconcile` reads a conflicting branch as held by. A
+# `COMMENTED` review with no body is what every reply on a thread is submitted
+# under and says nothing about the pull request; one with a body is a verdict
+# that withholds approval, which `check_pr.state.standing_verdict` reads and
+# the review pass answers (solorepo's DR-265). A `DISMISSED` one is a verdict
+# GitHub has already taken back.
 VERDICTS = ("APPROVED", "CHANGES_REQUESTED")
 
 
@@ -279,15 +283,23 @@ def _check_dispatch_rebase(pr: str | int, pull: common.Pull) -> None:
 
 
 def _check_dispatch_review(pr: str | int, pull: common.Pull) -> None:
-    """Validate preconditions before dispatching a coder review pass."""
+    """Validate preconditions before dispatching a coder review pass.
+
+    The verdict read is `check_pr.state.standing_verdict`'s, so a comment
+    verdict is a request for changes here as it is in the classifier
+    (solorepo's DR-265). The classifier asks for a thread owed an answer
+    before it moves a pull request unasked; this asks for none, on the same
+    terms as the rebase pass above — the solo dispatching has decided there is
+    a verdict to answer, and a comment verdict that left no thread left its
+    ask in the body.
+    """
     reviewer = channel.role_login("reviewer")
     if reviewer in [r.get("login") for r in pull.get("reviewRequests") or []]:
         sys.exit(f"say: GitHub shows a review of #{pr} requested of {reviewer} and not yet "
                  "given, so what stands on it is the reviewer's. The review pass answers a "
                  "verdict; a verdict answered and handed back is not one to answer again.")
-    given = [r["state"] for r in pull.get("reviews") or []
-             if (r.get("author") or {}).get("login") == reviewer and r["state"] in VERDICTS]
-    if given and given[-1] == "APPROVED":
+    verdict = check_pr.state.standing_verdict(pull, reviewer)
+    if verdict == "APPROVED":
         checks = pull.get("statusCheckRollup")
         if checks is None:
             try:
@@ -298,11 +310,13 @@ def _check_dispatch_review(pr: str | int, pull: common.Pull) -> None:
         ok, msg = manager.check_green({"statusCheckRollup": checks})
         if not (not ok and "failing" in msg):
             sys.exit(f"say: the last verdict {reviewer} left on #{pr} is APPROVED, "
-                     f"and the review pass is for a request for changes or an approved PR with failing checks ({msg})")
-    elif not given or given[-1] != "CHANGES_REQUESTED":
+                     "and the review pass is for a verdict that withholds approval or an "
+                     f"approved PR with failing checks ({msg})")
+    elif verdict not in ("CHANGES_REQUESTED", "COMMENTED"):
         sys.exit(f"say: the last verdict {reviewer} left on #{pr} is "
-                 f"{given[-1] if given else 'nothing'}, and the review pass is for a request "
-                 f"for changes or an approved pull request with failing checks: `move request-review "
+                 f"{verdict or 'nothing'}, and the review pass is for a verdict that withholds "
+                 f"approval — a request for changes or a comment verdict — or an approved pull "
+                 f"request with failing checks: `move request-review "
                  f"{pr}` asks for a verdict; this dispatches the pass that answers one.")
 
 
@@ -336,11 +350,12 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
     a rebase pass that would do harm — which together are the whole of what the
     pull request can answer.
 
-    The review pass reads the threads and answers a request for changes, so it
-    needs one standing: the newest verdict the reviewer's account left, and no
-    review outstanding of that account — a request pending is the coder having
-    answered already and handed back, which is the reviewer's turn and not a
-    pass to run again.
+    The review pass reads the threads and answers a verdict that withholds
+    approval, so it needs one standing: the newest verdict the reviewer's
+    account left is a request for changes or a comment verdict
+    (solorepo's DR-265), and no review is outstanding of that account — a
+    request pending is the coder having answered already and handed back, which
+    is the reviewer's turn and not a pass to run again.
 
     The rebase pass takes three, and each of them is one `advance`'s own
     dispatch takes, for the reason solorepo's DR-133 gave it there. What is

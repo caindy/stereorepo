@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/826
+    name: "A comment verdict that withholds approval on open threads moves nothing"
+    challenge_type: DEFECT
+    description: >-
+      A reviewer run that withholds approval can submit its verdict as `COMMENTED`
+      rather than `CHANGES_REQUESTED`, and nothing then moves the pull request:
+      `classify_pr` reaches no state a dispatcher acts on, the reconciler owes
+      nothing, and `move dispatch --task review` refuses because the last verdict
+      it can read is nothing. Solorepo's #805 stood for a day with two threads its
+      coder was owed to answer. Either the reviewer's door refuses a comment
+      verdict that leaves threads owed, or the readers agree that such a verdict is
+      a request for changes.

@@ -33,6 +33,21 @@ REVIEWER_FAILED = [{"name": "gate", "conclusion": "SUCCESS"},
 
 APPROVED = [{"author": {"login": REVIEWER}, "state": "APPROVED"}]
 CHANGES = [{"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"}]
+COMMENT = [{"author": {"login": REVIEWER}, "state": "COMMENTED",
+            "body": "withholding approval on the two open threads"}]
+"""A comment verdict: approval withheld in prose rather than in GitHub's state for it."""
+
+REPLY = [{"author": {"login": REVIEWER}, "state": "COMMENTED", "body": ""}]
+"""A bodiless comment review, which is what GitHub records around a reply on a thread."""
+
+PASSER_BY = [{"author": {"login": CODER}, "state": "COMMENTED",
+              "body": "a remark from an account that is not the reviewer Role's"}]
+"""A comment verdict from somebody the classifier is not asked about."""
+
+OWED = [{"isResolved": False,
+         "comments": {"nodes": [{"body": "the point, and nobody has answered it"}]}}]
+"""A review thread owed an answer."""
+
 ASKED = [{"login": REVIEWER}]
 
 MINUTES = 30.0
@@ -43,9 +58,21 @@ MINUTES = 30.0
 def reconcile_probes() -> list[str]:
     """The reconciler's two readers and its one pass (solorepo's DR-264).
 
+    `classify_pr`, over the comment verdict's arm, since `owed_by_pull` reads
+    the state and not the conditions under it: a comment verdict with a thread
+    owed an answer and no request standing reads `CHANGES_REQUESTED`, and the
+    same verdict with nothing owed, under a review request, bodiless, or left
+    by an account that is not the reviewer's reads `AWAITING_REVIEW`
+    (solorepo's DR-265).
+
     `owed_by_pull`, over the classifiers' states: a conflicting branch under
     a verdict owes a rebase pass and one under nothing owes none; changes
-    requested with no request owes a review pass; a failed gate under an
+    requested with no request owes a review pass, and so does a comment
+    verdict with a thread owed an answer and no request standing, which is the
+    verdict that withholds approval in prose (solorepo's DR-265) — the same
+    verdict owes nothing with nothing owed on it or with a request standing,
+    and a bodiless comment review, which is what GitHub records around a reply
+    on a thread, is no verdict and owes nothing either; a failed gate under an
     approval owes one, and under a request whose reviewer check is the one
     that failed owes the request again; a green pull request with no verdict,
     request, or arming owes its first request, and armed owes nothing; a
@@ -72,7 +99,8 @@ def reconcile_probes() -> list[str]:
     """
     channel, _, programs = load_channel()
     move = programs["move"]
-    return _pull_cases(move) + _issue_cases(move) + _pass_cases(channel, move)
+    return (_classifier_cases(move) + _pull_cases(move) + _issue_cases(move)
+            + _pass_cases(channel, move))
 
 
 def _ago(minutes: float) -> str:
@@ -90,6 +118,42 @@ def _pull(number: int, **fields: Any) -> dict[str, Any]:
     return {**base, **fields}
 
 
+def _classifier_cases(move: Any) -> list[str]:
+    """`classify_pr` over the comment verdict's arm, one case per condition it rests on.
+
+    `owed_by_pull` cannot pin these: it answers `None` for a pull request under
+    a review request whatever state it was handed, so a case reading the act
+    alone stays green with a condition deleted. Each shape here removes one
+    condition of the arm and asserts the state the classifier every reader asks
+    reports for it (solorepo's DR-265).
+    """
+    states = move.check_pr.PullRequestState
+    cases: list[tuple[str, dict[str, Any], Any]] = [
+        ("a comment verdict with a thread owed", _pull(1, latestReviews=COMMENT,
+                                                       reviewThreads=OWED),
+         states.CHANGES_REQUESTED),
+        ("a comment verdict with nothing owed", _pull(1, latestReviews=COMMENT),
+         states.AWAITING_REVIEW),
+        ("a comment verdict under a review request", _pull(1, latestReviews=COMMENT,
+                                                           reviewThreads=OWED,
+                                                           reviewRequests=ASKED),
+         states.AWAITING_REVIEW),
+        ("a reply on a thread, which is no verdict", _pull(1, latestReviews=REPLY,
+                                                           reviewThreads=OWED),
+         states.AWAITING_REVIEW),
+        ("a comment verdict from a passer-by", _pull(1, latestReviews=PASSER_BY,
+                                                     reviewThreads=OWED),
+         states.AWAITING_REVIEW),
+    ]
+    problems = []
+    for name, pull, expected in cases:
+        found = move.check_pr.classify_pr(pull, move.deduplicate_checks(pull["statusCheckRollup"]),
+                                          None, REVIEWER)
+        if found is not expected:
+            problems.append(f"classify_pr: {name} read {found!r}, not {expected!r}")
+    return problems
+
+
 def _pull_cases(move: Any) -> list[str]:
     """`owed_by_pull` over each shape the classifiers name, a held Challenge, and not free."""
     issues = move.check_pr.state.IssueState
@@ -102,6 +166,18 @@ def _pull_cases(move: Any) -> list[str]:
          True, "review"),
         ("changes requested, review requested", _pull(1, latestReviews=CHANGES,
                                                        reviewRequests=ASKED),
+         issues.RESUMABLE, True, None),
+        ("comment verdict with a thread owed", _pull(1, latestReviews=COMMENT,
+                                                     reviewThreads=OWED),
+         issues.RESUMABLE, True, "review"),
+        ("comment verdict with nothing owed", _pull(1, latestReviews=COMMENT),
+         issues.RESUMABLE, True, None),
+        ("comment verdict under a review request", _pull(1, latestReviews=COMMENT,
+                                                         reviewThreads=OWED,
+                                                         reviewRequests=ASKED),
+         issues.RESUMABLE, True, None),
+        ("a reply on a thread, which is no verdict", _pull(1, latestReviews=REPLY,
+                                                            reviewThreads=OWED),
          issues.RESUMABLE, True, None),
         ("approved with failing checks", _pull(1, latestReviews=APPROVED, statusCheckRollup=RED),
          issues.RESUMABLE, True, "review"),

@@ -325,6 +325,20 @@ def _dispatch_review_on_a_standing_verdict(channel: Any, move: Any, reviewer: st
     return problems
 
 
+def _dispatch_review_on_a_comment_verdict(channel: Any, move: Any, reviewer: str) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 0, "armed": False,
+                           "verdicts": [(reviewer, "COMMENTED",
+                                         "withholding approval on the two open threads")]}})
+    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "review"))
+    if fake.dispatched != [("7", "review")]:
+        problems.append(f"dispatch: a comment verdict dispatched {fake.dispatched!r}")
+    if said:
+        problems.append("dispatch: the comment verdict it should have answered exited with "
+                        f"{said!r}")
+    return problems
+
+
 def _dispatch_review_on_approval_with_failing_checks(channel: Any, move: Any, reviewer: str) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False,
@@ -343,6 +357,7 @@ def _dispatch_review_refused_without_a_request_for_changes(channel: Any, move: A
     for case, pull in (("an approval", {"verdicts": [(reviewer, "APPROVED")]}),
                        ("somebody else's", {"verdicts": [(reviewer, "APPROVED"),
                                                          ("passer-by", "CHANGES_REQUESTED")]}),
+                       ("a reply on a thread", {"verdicts": [(reviewer, "COMMENTED")]}),
                        ("no verdict", {})):
         fake = FakeGitHub({7: {"behind": 0, "armed": False, **pull}})
         said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "review"))
@@ -477,12 +492,16 @@ def dispatch_probes() -> list[str]:
     - The dispatch a person makes. It reads the pull request and nothing
       else, because the review dispatch is the delivery solorepo's DR-142
       exempts from `coder.yml`'s guard. The review pass starts on a request
-      for changes with a `COMMENTED` review on top, which is what GitHub
-      submits every reply on a thread as and which overturns nothing, and on
-      an approval with failing checks (solorepo's DR-178); it is refused on an
-      approval, which is not a request for changes; on somebody else's
+      for changes with a bodiless `COMMENTED` review on top, which is what
+      GitHub submits every reply on a thread as and which overturns nothing; on
+      a comment verdict, a `COMMENTED` review carrying a body, which withholds
+      approval and so is a request for changes in everything but GitHub's own
+      word for it (solorepo's DR-265); and on an approval with failing checks
+      (solorepo's DR-178). It is refused on an
+      approval, which withholds nothing; on somebody else's
       request for changes, which is not the verdict `coder.yml`'s own door
-      reads; on no verdict, which is a pull request waiting on a review
+      reads; on a bodiless `COMMENTED` review alone, which is a reply and no
+      verdict at all; on no verdict, which is a pull request waiting on a review
       rather than on an answer; and while a review is outstanding of the
       reviewer, which is the coder having handed back. The rebase pass starts
       on a `CONFLICTING` branch and is refused on one that merely fell
@@ -539,6 +558,7 @@ def dispatch_probes() -> list[str]:
         _named_and_merge_auto_dispatch_nothing(channel, move),
         _named_conflicting_pull_request_refused(channel, move),
         _dispatch_review_on_a_standing_verdict(channel, move, reviewer),
+        _dispatch_review_on_a_comment_verdict(channel, move, reviewer),
         _dispatch_review_on_approval_with_failing_checks(channel, move, reviewer),
         _dispatch_review_refused_without_a_request_for_changes(channel, move, reviewer),
         _dispatch_review_refused_while_answered(channel, move, reviewer),
