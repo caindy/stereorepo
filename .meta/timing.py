@@ -87,8 +87,10 @@ __all__ = [
     "subrow",
     "summarise",
 ]
-"""The script's whole surface, so `timing probes` in `.meta/checks/probes/tools/timing.py`, which loads
-this file by path, finds `pick` and `gh` where it did."""
+"""The script's whole surface, so `timing pick probes` in
+`.meta/checks/probes/tools/timing.py`, which loads this file by path, finds
+`pick` where it did, and `gh wrapper probes` in `.meta/checks/probes/wrappers.py`,
+which loads `.meta/lib/timing/github.py` by path, finds `gh` where it did."""
 
 if __name__ == "__main__":
     cli.main(__doc__)

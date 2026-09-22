@@ -1,4 +1,4 @@
-"""The three `gh` wrappers no other step asks anything, held to the failure contract the four were converged on (solorepo's #737).
+"""The four `gh` wrappers, held to the failure contract they were converged on (solorepo's #737).
 """
 import collections
 import functools
@@ -180,14 +180,13 @@ def anchored(wrapper: Wrapper) -> list[str]:
 
 @check("gh wrapper probes", pre=True)
 def gh_wrapper_probes() -> Found | Passed:
-    """`next.py`, `check_pr`'s and the channel's `gh`, each over the three reads that go wrong and the three fallbacks a caller gives (solorepo's #737).
+    """`next.py`'s, `check_pr`'s, the channel's and `timing`'s `gh`, each over the three reads that go wrong and the three fallbacks a caller gives (solorepo's #737).
 
     Four wrappers under `.meta/` run the same GitHub CLI call, and each was
     written because the ones before it exited the process rather than
-    degrading. `timing probes` asks the fourth, `.meta/lib/timing/github.py`,
-    for its two degrades; these three are asked here, so that a fifth written
-    the old way is a convention held by the gate rather than by whoever read
-    the pull request that converged them.
+    degrading. All four are asked here, so that a fifth written the old way
+    is a convention held by the gate rather than by whoever read the pull
+    request that converged them.
 
     The contract is one sentence per limb. A read that fails, one that printed
     what is not JSON, and one that printed nothing all take the same route: the
@@ -217,6 +216,10 @@ def gh_wrapper_probes() -> Found | Passed:
                             register=False),
                 DEGRADE),
         Wrapper("channel.gh", channel, ""),
+        Wrapper("timing.gh",
+                load_module(META / "lib" / "timing" / "github.py", "timing_github_probe",
+                            register=False),
+                DEGRADE),
     )
     problems: list[str] = []
     with stood_in(channel, role_credential=dict):

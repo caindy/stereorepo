@@ -1,6 +1,6 @@
 """The tools beside the gate, run against the answers they exist to give (solorepo's DR-209).
 
-`timing.py`'s percentile and its degrade (solorepo's DR-157), `depth.py`'s
+`timing.py`'s percentile (solorepo's DR-157), `depth.py`'s
 four layers (solorepo's DR-188), `agents.py`'s count against the fan-out
 ceiling (solorepo's DR-191), `dereference.py`'s scopes and report
 (solorepo's DR-134, solorepo's DR-192), `search.py`'s index and benchmark

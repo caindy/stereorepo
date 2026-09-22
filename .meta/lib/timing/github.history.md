@@ -20,4 +20,4 @@ that reports a workflow it could not read was unreachable. Established: the
 absence of a fallback is a sentinel object no caller can pass, so `None` is a
 fallback like any other and a caller asking for it is answered with it.
 
-Evidence: `.meta/checks/probes/tools/timing.py::timing_probes`
+Evidence: `.meta/checks/probes/wrappers.py::gh_wrapper_probes`
