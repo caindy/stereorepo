@@ -11,7 +11,11 @@ from lib.move import advance, challenges, common, manager, pull_requests
 from lib.timing.github import NOT_RUN
 
 RECONCILE_FIELDS = manager.MERGE_MANAGER_FIELDS + ",updatedAt"
-"""The reconciler's read of each open pull request: the merge manager's fields, plus `updatedAt`."""
+"""The reconciler's read of each open pull request: the merge manager's fields, plus `updatedAt`.
+
+It carries no `reviewThreads`, which `pr list` cannot return: the threads of a
+pull request whose classification turns on them are read one at a time, by
+`_threads_read`."""
 
 
 RECONCILE_MINUTES = 30.0
@@ -405,8 +409,9 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
     GitHub will not list hold every act that needs the guard, and the log says
     so. A pull request that is free has its mergeability settled before it is
     read, as every other dispatch here settles it, so an `UNKNOWN` pays in a
-    wait and not in the wrong pass. Whether a Challenge has a pull request
-    open counts a draft, as the take door counts one, since the merge manager
+    wait and not in the wrong pass, and the threads its classification turns
+    on are read with it (solorepo's DR-265). Whether a Challenge has a pull
+    request open counts a draft, as the take door counts one, since the merge manager
     this has just run is what parks a stalled loop branch in draft
     (solorepo's DR-258). With `live`, each act is performed; without it,
     each is reported and none performed.
@@ -429,7 +434,7 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
     except SystemExit as exc:
         ended = exc.code
         print(f"reconcile: the merge manager ended with {ended}; reading on")
-    _, _, reviewer_login = manager.repo_context()
+    owner, name, reviewer_login = manager.repo_context()
     coder = channel.role_login("coder")
     pulls = channel.gh("pr", "list", "--state", "open", "--limit", "100",
                        "--json", RECONCILE_FIELDS)
@@ -442,7 +447,7 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
               "not be listed and nothing says whether one is")
     reading = Reading(now=datetime.datetime.now(datetime.UTC), bound=bound,
                       longest=float(check_pr.longest_run() or 75), coder=coder,
-                      reviewer_login=reviewer_login,
+                      reviewer_login=reviewer_login, owner=owner, name=name,
                       by_number={int(i["number"]): i for i in issues},
                       named={int(m.group(1)) for pull in pulls
                              if (m := pull_requests.LOOPS_BRANCH.match(
@@ -465,6 +470,8 @@ class Reading(NamedTuple):
         longest: The coder workflow's job timeout, in minutes.
         coder: The coder Role's login, whose assignment is a claim.
         reviewer_login: The reviewer Role's login.
+        owner: The repository's owner, for the thread read.
+        name: The repository's name, for the thread read.
         by_number: Every open Issue by number.
         named: The Issues an open loop-branch pull request names, drafts
             included, which is what `classify_issue` counts as a pull request.
@@ -478,6 +485,8 @@ class Reading(NamedTuple):
     longest: float
     coder: str
     reviewer_login: str
+    owner: str
+    name: str
     by_number: dict[int, Mapping[str, Any]]
     named: set[int]
     coder_runs: Runs
@@ -492,6 +501,11 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
     conflicts, since a stack is resolved from the bottom (solorepo's DR-133):
     the root's rebase pass runs first, and each layer above it is rebased onto
     its new base on a later pass, once the layers below it are clean.
+
+    The threads a free pull request's classification turns on are read before
+    it is classified, by `_threads_read`; one that is not free is classified
+    without them, since `owed_by_pull` answers None for it whatever state it
+    was handed.
 
     Parameters:
         pulls (list): The open pull requests, carrying `RECONCILE_FIELDS`.
@@ -516,7 +530,8 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
             pull_requests.mergeability(pull)
         state = check_pr.classify_pr(pull,
                                      manager.deduplicate_checks(pull.get("statusCheckRollup") or []),
-                                     None, reading.reviewer_login)
+                                     _threads_read(pull, reading) if free else None,
+                                     reading.reviewer_login)
         act = owed_by_pull(pull, found, state, reading.reviewer_login, free)
         if act and act.kind == "rebase":
             lower = pull_requests.conflicting_below(pull, pulls)
@@ -525,6 +540,41 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
         if act:
             owed.append(act)
     return owed
+
+
+def _threads_read(pull: common.Pull, reading: Reading) -> list[dict[str, Any]] | None:
+    """The review threads of a pull request standing under a comment verdict, or None.
+
+    The comment-verdict arm of `classify_pr` turns on the review threads: a
+    standing verdict of `COMMENTED` with no review requested reads
+    `CHANGES_REQUESTED` where a thread is owed an answer, and owes nothing
+    where none is (solorepo's DR-265). The listing cannot answer it, since
+    `pr list` returns no `reviewThreads`, so the threads are read here,
+    through the query the merge manager already makes: one query per pass for
+    each pull request standing in that shape, and none for any other. Every
+    other pull request is classified on what the listing carries, and the
+    read is skipped.
+
+    A read GitHub refuses answers None, which `classify_pr` reads as an empty
+    thread list and which owes nothing; the log says so, as it does for a run
+    GitHub will not list.
+
+    Parameters:
+        pull (dict): The pull request, carrying `RECONCILE_FIELDS`.
+        reading (Reading): What the pass reads once.
+
+    Returns:
+        list[dict] | None: The threads, or None where the classification does
+            not turn on them or GitHub refused the read.
+    """
+    if (check_pr.is_review_requested(pull, reading.reviewer_login)
+            or check_pr.state.standing_verdict(pull, reading.reviewer_login) != "COMMENTED"):
+        return None
+    threads, why = manager.read_threads(pull, reading.owner, reading.name)
+    if threads is None:
+        print(f"reconcile: #{pull['number']} stands under a comment verdict and its threads "
+              f"could not be read — {why}")
+    return threads
 
 
 def _challenge_reads(number: int, reading: Reading) -> Any:

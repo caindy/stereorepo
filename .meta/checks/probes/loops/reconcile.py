@@ -48,6 +48,17 @@ OWED = [{"isResolved": False,
          "comments": {"nodes": [{"body": "the point, and nobody has answered it"}]}}]
 """A review thread owed an answer."""
 
+ANSWERED = [{"isResolved": True,
+             "comments": {"nodes": [{"body": "the point"}, {"body": "the answer to it"}]}}]
+"""A review thread answered and resolved."""
+
+CONVERSATIONS = {24: OWED, 25: ANSWERED}
+"""What GraphQL holds for the fixtures the listing cannot answer for, by pull request.
+
+`RECONCILE_FIELDS` carries no `reviewThreads`, so a pull request standing
+under a comment verdict is read through GraphQL and the rest are not: pull
+request 24 owes an answer and 25 owes none."""
+
 ASKED = [{"login": REVIEWER}]
 
 MINUTES = 30.0
@@ -93,7 +104,11 @@ def reconcile_probes() -> list[str]:
     one and not re-taken; a blocked one is not taken; a Challenge a triage
     run read is not re-delivered; without `--live` every act is reported and
     none performed; a conflict the listing answers `UNKNOWN` for is settled
-    before it is read and owes the rebase pass, not the review pass; runs
+    before it is read and owes the rebase pass, not the review pass; a comment
+    verdict is read against the threads the listing cannot carry, so one with
+    a thread owed an answer is dispatched a review pass and one with every
+    thread answered is owed nothing, the read made for those two pull requests
+    and no others, and a read GitHub refuses owes nothing and says so; runs
     GitHub will not list hold every act and say so; and a refused act is
     printed and the next is performed.
     """
@@ -247,17 +262,35 @@ class _GitHub:
 
     The open pull requests and Issues, the runs of each workflow answered by
     status where one is asked for, `pr view` answered from `views` where a
-    case holds a settled read, and the takes it dispatches, recorded in
-    `dispatched`. `unlistable` refuses every run listing.
+    case holds a settled read, the review threads of each pull request
+    answered over GraphQL from `threads` with the numbers asked for recorded
+    in `queried`, and the takes it dispatches, recorded in `dispatched`.
+    `unlistable` refuses every run listing.
     """
 
     def __init__(self, pulls: list[dict[str, Any]], issues: list[dict[str, Any]],
                  runs: dict[str, list[dict[str, Any]]],
-                 views: dict[int, dict[str, Any]] | None = None) -> None:
+                 views: dict[int, dict[str, Any]] | None = None,
+                 threads: dict[int, list[dict[str, Any]]] | None = None) -> None:
         self.pulls, self.issues, self.runs = pulls, issues, runs
         self.views = views or {}
+        self.threads = CONVERSATIONS if threads is None else threads
         self.dispatched: list[tuple[str, ...]] = []
+        self.queried: list[int] = []
         self.unlistable = False
+        self.unreadable = False
+
+    def graphql(self, query: str, **variables: Any) -> dict[str, Any]:
+        """The review threads of the pull request asked for, and the ask recorded.
+
+        `unreadable` refuses the query in the words the channel exits with.
+        """
+        number = int(variables["number"])
+        self.queried.append(number)
+        if self.unreadable:
+            raise SystemExit(REFUSED)
+        return {"data": {"repository": {"pullRequest": {
+            "reviewThreads": {"nodes": self.threads.get(number, [])}}}}}
 
     def __call__(self, *args: str, **kwargs: Any) -> Any:
         if args[:2] == ("repo", "view"):
@@ -302,7 +335,9 @@ class _Bench:
     conflicting draft root with 19 a conflicting approved layer on it, and
     20 a conflicting root on the solo's own branch with 21 a conflicting
     approved layer on it, and 22 a conflicting root under a claimed
-    Challenge at `hard` with 23 a conflicting approved layer on it. The
+    Challenge at `hard` with 23 a conflicting approved layer on it; and two
+    under a comment verdict whose threads only GraphQL can answer for, 24
+    with one owed an answer and 25 with every one answered. The
     Challenges: one behind each of the first three, an unread one, an
     offered one, one claimed with no pull request, one offered but blocked,
     one behind the draft, one offered with no `updatedAt`, and the claimed
@@ -339,7 +374,9 @@ class _Bench:
                             latestReviews=APPROVED),
                       _pull(22, mergeable="CONFLICTING", latestReviews=APPROVED),
                       _pull(23, baseRefName="claude/issue-22", mergeable="CONFLICTING",
-                            latestReviews=APPROVED)]
+                            latestReviews=APPROVED),
+                      _pull(24, latestReviews=COMMENT, reviews=COMMENT),
+                      _pull(25, latestReviews=COMMENT, reviews=COMMENT)]
         self.issues = [self.issue(1, "medium"), self.issue(4, None), self.issue(5, "easy"),
                        self.issue(6, "easy", claimed=True),
                        self.issue(10, "easy", blocked_by=[4]),
@@ -368,12 +405,13 @@ class _Bench:
         """
         self.acted.clear()
         fake.dispatched.clear()
+        fake.queried.clear()
         flags.setdefault("minutes", MINUTES)
         by_module: dict[Any, dict[str, Any]] = {}
         for name, fake_verb in {**self.stood, **(stood or {})}.items():
             by_module.setdefault(_owner(self.move, name), {})[name] = fake_verb
         with contextlib.ExitStack() as stack:
-            stack.enter_context(stood_in(self.channel, gh=fake))
+            stack.enter_context(stood_in(self.channel, gh=fake, graphql=fake.graphql))
             for module, verbs in by_module.items():
                 stack.enter_context(stood_in(module, **verbs))
             return outcome(lambda: self.move.reconcile(**flags))
@@ -407,14 +445,21 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     ended = bench.run(fake, live=True)
     expected = {("merge_manager", None), ("review", 1), ("rebase", 2), ("request", 3),
                 ("relabel", (4, ("remove",))), ("relabel", (4, ("add",))), ("release", 6),
-                ("rebase", 13), ("rebase", 15), ("rebase", 17)}
+                ("rebase", 13), ("rebase", 15), ("rebase", 17), ("review", 24)}
     acted = bench.acted
     if ended.code is not None or set(acted) != expected or len(acted) != len(expected):
         problems.append(f"reconcile: live over the fixtures performed {acted} with exit "
                         f"{ended.code!r}, not one act per owed state {sorted(expected)}: the "
                         "root of a conflicting stack, a conflicting branch nobody holds, and a "
-                        "layer whose root is clean are each owed a rebase, and the layer above "
-                        "a conflicting root none")
+                        "layer whose root is clean are each owed a rebase, the layer above "
+                        "a conflicting root none, and a comment verdict with a thread owed an "
+                        "answer a review pass, where one with every thread answered owes "
+                        "nothing")
+    if sorted(fake.queried) != [24, 25]:
+        problems.append(f"reconcile: the threads read were those of {sorted(fake.queried)}, "
+                        "where the listing carries none and the read is owed to the two pull "
+                        "requests standing under a comment verdict with no request, and to "
+                        "no other")
     if f"holding #{12}" not in ended.out:
         problems.append(f"reconcile: a claimed Challenge at hard behind an open pull request was "
                         f"not held: {ended.out!r}")
@@ -455,10 +500,12 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
                             "conclusion": "success", "headBranch": "main"}]}
     ended = bench.run(_GitHub(bench.pulls, bench.issues, busy), live=True)
     left = {a for a in acted if a[0] != "merge_manager"}
-    if left != {("rebase", 2), ("release", 6), ("rebase", 13), ("rebase", 15), ("rebase", 17)}:
+    if left != {("rebase", 2), ("release", 6), ("rebase", 13), ("rebase", 15), ("rebase", 17),
+                ("review", 24)}:
         problems.append(f"reconcile: with runs in flight, and a triage run that read, it "
                         f"performed {sorted(left)}, where only the rebases of the branches "
-                        "no run answers and the release were owed")
+                        "no run answers, the release, and the review pass for the comment "
+                        "verdict were owed")
     return problems
 
 
@@ -492,6 +539,16 @@ def _edge_cases(bench: _Bench) -> list[str]:
         problems.append(f"reconcile: a layer above a root still UNKNOWN when the bound ran out "
                         f"was owed {[a for a in bench.acted if a[1] == 9]}, where only a "
                         "conflict below holds it and the next pass reads the root settled")
+
+    talking = _pull(26, latestReviews=COMMENT, reviews=COMMENT)
+    unreadable = _GitHub([talking], [], {}, threads={26: OWED})
+    unreadable.unreadable = True
+    ended = bench.run(unreadable, live=True)
+    left = [a for a in bench.acted if a[0] != "merge_manager"]
+    if left or "could not be read" not in ended.out:
+        problems.append(f"reconcile: a comment verdict whose threads GitHub would not read was "
+                        f"owed {left} and said {ended.out!r}, where nothing is owed on a read "
+                        "that failed and the log says it failed")
 
     unlistable = _GitHub(bench.pulls, bench.issues, {})
     unlistable.unlistable = True
