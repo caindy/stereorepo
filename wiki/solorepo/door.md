@@ -73,6 +73,18 @@ request it left is green and the Challenge given to the solo otherwise
 review pass it cleared; and a pass one harness failed and neither finished
 ends the run red, a cancelled pass not being a failed one.
 
+## Why the word was minted here
+
+"Door" was a figure of speech in this repository's Decisions from
+solorepo's #117 on: the take door, the door a label fires. It became a Term in
+solorepo's #807, when the reviewer's reading door was typed as one program of
+the channel and the word was given this page, a row in the [[ubiquitous-language]],
+and the concept `work:concept/door`. A session opened that pull request, and
+the mint was not put to the solo. Solorepo's DR-264 then used it as the
+name of a seam. The solo ratified the word on 2026-09-22, which is what the
+minting date above records; the rule that a term is not minted without him
+stands, and solorepo's #839 is the Challenge that has the gate hold it.
+
 ## Doors and the Reconciler
 
 A door is edge-triggered: it fires once, on its event, and a delivery that is
