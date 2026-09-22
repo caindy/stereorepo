@@ -5,6 +5,7 @@ decisions:
     supersedes:
       - work:decision/133
     enacted_in:
+      - work:artifact/meta-say
       - work:artifact/meta-lib-move-advance
       - work:artifact/meta-checks-probes-loops-advance
       - work:artifact/meta-checks-probes-harness-github
@@ -61,9 +62,11 @@ decisions:
         advancement preserves or renews a pending reviewer request but does
         not re-arm auto-merge. A refused stack operation is reported against
         every unchanged layer, and no individual fallback rebase is attempted.
-        The unattended `advance` workflow installs the `gh-stack` extension per
-        machine (solorepo's DR-100) and configures git authentication for
-        stack push operations, while `gh stack submit` remains unused.
+        `channel.gh`'s `_stack_extension` installs the `gh-stack` extension
+        per machine (solorepo's DR-100) before every `gh stack` call, so no
+        caller has to remember to, and the unattended `advance` workflow
+        configures git authentication for the stack push, while `gh stack
+        submit` remains unused.
     falsifier: >-
       An advance transition that reports a linked stack as advanced while
       leaving a layer behind its base, an advance transition that drops a

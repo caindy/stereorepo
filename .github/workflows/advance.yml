@@ -60,14 +60,13 @@ jobs:
 
       # The Role's credential, where `.meta/say/` expects it by default
       # (solorepo's DR-073, solorepo's DR-107): outside the tree, mode 600, one token in the
-      # container. Installs the gh-stack extension per machine (solorepo's DR-100) and
-      # configures git authentication for stack push operations (solorepo's DR-243).
+      # container. Configures git authentication for the stack push
+      # (solorepo's DR-243).
       - name: hold the coder's credential
         run: |
           install -d -m 700 ~/.config/solorepo
           install -m 600 /dev/null ~/.config/solorepo/coder.env
           printf 'GH_TOKEN=%s\n' "$CODER_GH_TOKEN" > ~/.config/solorepo/coder.env
-          gh stack --help >/dev/null || gh extension install github/gh-stack
           GH_TOKEN="$CODER_GH_TOKEN" gh auth setup-git
           .meta/say/whoami
         env:
