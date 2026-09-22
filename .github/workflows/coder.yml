@@ -331,17 +331,13 @@ jobs:
             What you spot is yours to act on or not; what you decide not to
             do you raise as a notice on the diff with `.meta/say/post notice`.
 
-            `easy` and `medium`: if you raised any notice on the diff, promote each
-            surviving thread with `.meta/say/post promote <thread-id> --title T < issue-body.md`,
-            proposing a level under **Difficulty.** in the body and landing none, since the
-            reviewer reads it and its verdict is the label (solorepo's DR-230),
-            and revise the body with `.meta/say/move revise <n>` to list the promoted
-            Issue(s) under `**What was noticed and not done.**`; then request review:
-            `.meta/say/move request-review <n>` and stop. The reviewer approves when clean,
-            and a standing merge manager lands what is green in order of leverage (solorepo's DR-161).
+            `easy` and `medium`: request review: `.meta/say/move request-review <n>`
+            and stop. The reviewer approves when clean, and a standing merge manager
+            lands what is green in order of leverage (solorepo's DR-161).
             Do not arm the merge and do not merge by hand: the merge manager evaluates and lands
-            eligible work. Do either the moment the branch is pushed and the body is
-            final, and do not wait for the checks (solorepo's #102).
+            eligible work. Do so the moment the branch is pushed and the body is
+            final, and do not wait for the checks (solorepo's #102). A surviving notice
+            is promoted at approval, not now (solorepo's DR-159).
 
             If you cannot finish — a decision only the solo can take, a gate
             that will not go green, work larger than it looked —
@@ -428,17 +424,13 @@ jobs:
             What you spot is yours to act on or not; what you decide not to
             do you raise as a notice on the diff with `.meta/say/post notice`.
 
-            `easy` and `medium`: if you raised any notice on the diff, promote each
-            surviving thread with `.meta/say/post promote <thread-id> --title T < issue-body.md`,
-            proposing a level under **Difficulty.** in the body and landing none, since the
-            reviewer reads it and its verdict is the label (solorepo's DR-230),
-            and revise the body with `.meta/say/move revise <n>` to list the promoted
-            Issue(s) under `**What was noticed and not done.**`; then request review:
-            `.meta/say/move request-review <n>` and stop. The reviewer approves when clean,
-            and a standing merge manager lands what is green in order of leverage (solorepo's DR-161).
+            `easy` and `medium`: request review: `.meta/say/move request-review <n>`
+            and stop. The reviewer approves when clean, and a standing merge manager
+            lands what is green in order of leverage (solorepo's DR-161).
             Do not arm the merge and do not merge by hand: the merge manager evaluates and lands
-            eligible work. Do either the moment the branch is pushed and the body is
-            final, and do not wait for the checks (solorepo's #102).
+            eligible work. Do so the moment the branch is pushed and the body is
+            final, and do not wait for the checks (solorepo's #102). A surviving notice
+            is promoted at approval, not now (solorepo's DR-159).
 
             If you cannot finish — a decision only the solo can take, a gate
             that will not go green, work larger than it looked —
