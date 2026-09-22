@@ -7,7 +7,7 @@ decisions:
       - work:article/18
       - work:article/19
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
       - work:artifact/meta-say-verbs
       - work:artifact/github-workflows-coder
       - work:artifact/meta-checks-probes-loops-advance

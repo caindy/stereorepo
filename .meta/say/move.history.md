@@ -8,7 +8,7 @@ events on challenges (solorepo's DR-116, solorepo's #113). Established: `triage(
 and `file_issue()` enforce that `challenge` and difficulty labels are applied
 in a single transactional operation, disallowing bare difficulty assignment.
 
-Evidence: `.meta/say/move::triage`
+Evidence: `.meta/lib/move/challenges.py::triage`
 
 ### Human session and autonomous loop colliding on claimed challenges
 
@@ -56,7 +56,7 @@ failures (solorepo's #102, solorepo's #192). Established: `request_review()`
 checks that the branch is clean, conflict-free, and up to date before requesting
 reviewer assignment.
 
-Evidence: `.meta/say/move::request_review`
+Evidence: `.meta/lib/move/pull_requests.py::request_review`
 
 ### Review request events suppressed for already-requested reviewer
 
@@ -65,7 +65,7 @@ on a pull request, leaving subsequent review requests silently ignored when a pr
 turn answered nothing (solorepo's #87). Established: `request_review()` withdraws any
 existing review request before requesting it again to trigger notification events.
 
-Evidence: `.meta/say/move::request_review`
+Evidence: `.meta/lib/move/pull_requests.py::request_review`
 
 ### Asynchronous rebase settlement and arming verification
 
@@ -75,7 +75,7 @@ and fail (solorepo's DR-158, solorepo's #253). Established: `advance()` polls un
 the head commit moves and verifies whether auto-merge survived the update, re-arming
 it if dropped.
 
-Evidence: `.meta/say/move::advance`
+Evidence: `.meta/lib/move/advance.py::advance`
 
 ### Detached HEAD branch detection in decision minting
 
@@ -83,7 +83,7 @@ Using `git rev-parse --abbrev-ref HEAD` printed `HEAD` on detached checkouts, wr
 unresolvable tag messages during decision reservation (solorepo's #152). Established:
 `branch_here()` uses `git symbolic-ref -q` and falls back cleanly to 'an unnamed branch'.
 
-Evidence: `.meta/say/move::branch_here`
+Evidence: `.meta/lib/move/decisions.py::branch_here`
 
 ### Decision record number collision across concurrent branches
 
@@ -92,7 +92,7 @@ multiple concurrent pull requests to claim the same identifier, requiring manual
 renumbering (solorepo's DR-125, solorepo's DR-128). Established: `mint()` allocates
 numbers via atomic tag creation on GitHub with conflict retry loops.
 
-Evidence: `.meta/say/move::mint`
+Evidence: `.meta/lib/move/decisions.py::mint`
 
 ### Workflow dispatch to nonexistent branch references
 
@@ -101,7 +101,7 @@ or were already deleted led to untracked workflow failures (solorepo's #95).
 Established: `dispatch()` verifies remote branch existence prior to triggering
 workflow runs.
 
-Evidence: `.meta/say/move::dispatch`
+Evidence: `.meta/lib/move/advance.py::dispatch`
 
 
 ### Re-arming read back as a lost arming when GitHub merged inside the window
@@ -393,7 +393,7 @@ channel had no verb to apply `roadmap` to an existing Issue (solorepo's #421).
 Established: `roadmap()` moves an open Issue onto the roadmap, applying `roadmap`
 and stripping `challenge` and difficulty labels symmetrically with `triage()`.
 
-Evidence: `.meta/say/move::roadmap`
+Evidence: `.meta/lib/move/challenges.py::roadmap`
 
 ### Advance sweep failures invisible in green CI run logs
 

@@ -734,6 +734,33 @@ artifacts:
   - id: work:artifact/meta-say-post
     name: .meta/say/post
     path: .meta/say/post
+  - id: work:artifact/meta-lib-move-init
+    name: .meta/lib/move/__init__.py
+    path: .meta/lib/move/__init__.py
+  - id: work:artifact/meta-lib-move-common
+    name: .meta/lib/move/common.py
+    path: .meta/lib/move/common.py
+  - id: work:artifact/meta-lib-move-challenges
+    name: .meta/lib/move/challenges.py
+    path: .meta/lib/move/challenges.py
+  - id: work:artifact/meta-lib-move-pull-requests
+    name: .meta/lib/move/pull_requests.py
+    path: .meta/lib/move/pull_requests.py
+  - id: work:artifact/meta-lib-move-decisions
+    name: .meta/lib/move/decisions.py
+    path: .meta/lib/move/decisions.py
+  - id: work:artifact/meta-lib-move-advance
+    name: .meta/lib/move/advance.py
+    path: .meta/lib/move/advance.py
+  - id: work:artifact/meta-lib-move-manager
+    name: .meta/lib/move/manager.py
+    path: .meta/lib/move/manager.py
+  - id: work:artifact/meta-lib-move-reconcile
+    name: .meta/lib/move/reconcile.py
+    path: .meta/lib/move/reconcile.py
+  - id: work:artifact/meta-lib-move-cli
+    name: .meta/lib/move/cli.py
+    path: .meta/lib/move/cli.py
   - id: work:artifact/meta-say-move
     name: .meta/say/move
     path: .meta/say/move

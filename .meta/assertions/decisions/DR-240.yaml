@@ -7,7 +7,7 @@ decisions:
     enacted_in:
       - work:artifact/github-workflows-review
       - work:artifact/github-workflows-coder
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
       - work:artifact/wiki-solorepo-dev-loop
     context: >-
       DR-178 expanded multi-harness fallback in review.yml and coder.yml to activate on

@@ -9,7 +9,8 @@ decisions:
     enacted_in:
       - work:artifact/meta-assertions-imported-disciplines
       - work:artifact/meta-say-verbs
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-challenges
+      - work:artifact/meta-lib-move-reconcile
       - work:artifact/meta-say-post
       - work:artifact/github-workflows-triage
       - work:artifact/meta-next

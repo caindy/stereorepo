@@ -8,7 +8,7 @@ decisions:
       - work:article/15
       - work:article/19
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
       - work:artifact/meta-next
       - work:artifact/meta-check-pr
       - work:artifact/github-workflows-advance

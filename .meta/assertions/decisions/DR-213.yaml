@@ -6,7 +6,8 @@ decisions:
     applies:
       - work:article/8
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-challenges
+      - work:artifact/meta-lib-move-reconcile
       - work:artifact/meta-say-verbs
       - work:artifact/meta-templates-issue
       - work:artifact/meta-templates-roadmap

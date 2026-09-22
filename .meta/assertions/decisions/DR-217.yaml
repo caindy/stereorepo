@@ -7,6 +7,16 @@ decisions:
       - work:article/2
     enacted_in:
       - work:artifact/meta-lib
+      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-init
+      - work:artifact/meta-lib-move-common
+      - work:artifact/meta-lib-move-challenges
+      - work:artifact/meta-lib-move-pull-requests
+      - work:artifact/meta-lib-move-decisions
+      - work:artifact/meta-lib-move-advance
+      - work:artifact/meta-lib-move-manager
+      - work:artifact/meta-lib-move-reconcile
+      - work:artifact/meta-lib-move-cli
       - work:artifact/meta-check-pr
       - work:artifact/meta-lib-check-pr
       - work:artifact/meta-lib-check-pr-branch

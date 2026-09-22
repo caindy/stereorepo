@@ -4,7 +4,8 @@ decisions:
     challenge: work:challenge/316
     status: ADOPTED
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-manager
+      - work:artifact/meta-lib-move-advance
       - work:artifact/meta-check-pr
       - work:artifact/github-workflows-coder
       - work:artifact/meta-checks-probes-loops

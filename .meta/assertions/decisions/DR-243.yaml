@@ -5,7 +5,7 @@ decisions:
     supersedes:
       - work:decision/133
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
       - work:artifact/meta-checks-probes-loops-advance
       - work:artifact/meta-checks-probes-harness-github
       - work:artifact/github-workflows-advance

@@ -7,7 +7,7 @@ decisions:
       - work:article/19
       - work:article/20
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-challenges
       - work:artifact/meta-say-verbs
       - work:artifact/meta-assertions-imported-disciplines
       - work:artifact/meta-checks-probes-channel

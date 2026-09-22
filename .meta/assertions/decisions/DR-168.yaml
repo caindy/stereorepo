@@ -4,7 +4,9 @@ decisions:
     challenge: work:challenge/293
     status: ADOPTED
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-decisions
+      - work:artifact/meta-lib-move-pull-requests
+      - work:artifact/meta-lib-move-advance
     context: >-
       Six docstrings and comments inside `.meta/say/move` and the Decision DR-133
       cited Article A6 to justify the read-back of actions on GitHub. However, A6
@@ -37,14 +39,15 @@ decisions:
     consequences:
       - >-
         The citations to A6 or "per A6" for read-backs are removed from five docstrings,
-        one comment in `.meta/say/move`, and the Decision DR-133.
+        one comment in `.meta/say/move`, since split into `.meta/lib/move/` under
+        solorepo's DR-264, and the Decision DR-133.
       - >-
         Each modified site is rewritten to explain the local reason for the read-back,
         such as why the verification of tags, reviews, or branches is necessary.
     falsifier: >-
-      Any remaining citation of A6 in `.meta/say/move` or any other file that uses A6
-      to justify a remote read-back of a state-changing verb rather than a gate step's
-      exit code.
+      Any remaining citation of A6 in `.meta/lib/move/`, the body of `.meta/say/move`,
+      or any other file that uses A6 to justify a remote read-back of a state-changing
+      verb rather than a gate step's exit code.
     rationale: |-
       A6 is about the exit code and reporting structure of a gate step. It does not
       require or describe read-backs of API operations. Citing it for read-backs

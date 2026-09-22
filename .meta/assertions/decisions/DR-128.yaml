@@ -8,7 +8,8 @@ decisions:
     applies:
       - work:article/6
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-pull-requests
+      - work:artifact/meta-lib-move-decisions
       - work:artifact/meta-check
       - work:artifact/meta-check-pr
       - work:artifact/meta-work-core

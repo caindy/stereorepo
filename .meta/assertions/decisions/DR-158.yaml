@@ -6,7 +6,7 @@ decisions:
     applies:
       - work:article/6
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
       - work:artifact/meta-checks-probes-harness
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-checks-probes-loops-advance

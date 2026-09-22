@@ -8,7 +8,7 @@ decisions:
       - work:artifact/meta-lib-check-pr-polling
       - work:artifact/meta-lib-check-pr-sweep
       - work:artifact/meta-check-pr
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-manager
       - work:artifact/wiki-solorepo-pr-first
       - work:artifact/agents
     context: >-

@@ -4,7 +4,8 @@ decisions:
     challenge: work:challenge/633
     status: ADOPTED
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
+      - work:artifact/meta-lib-move-reconcile
       - work:artifact/meta-checks-probes-loops-dispatch
     context: >-
       DR-133 gave a conflicting loop branch a pass of its own, because GitHub

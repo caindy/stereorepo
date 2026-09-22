@@ -9,7 +9,7 @@ decisions:
       - work:article/11
       - work:article/19
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
       - work:artifact/meta-say-verbs
       - work:artifact/meta-hooks-signed-channel
       - work:artifact/meta-disciplines

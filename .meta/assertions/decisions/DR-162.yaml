@@ -8,7 +8,7 @@ decisions:
       - work:article/16
       - work:article/19
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-pull-requests
       - work:artifact/github-workflows-review
     context: >-
       Autonomous coder runs frequently fail CI gate on pull request body validation

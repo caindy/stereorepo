@@ -109,12 +109,14 @@ jobs:
       # write here.
       - uses: ./.meta/actions/gh
 
-      # Eleven paths are trunk's, not the pull request's: the channel, the
-      # hooks, the checker, and the packages of the checker and of both hooks
-      # under `.meta/lib/` with the `.meta/lib/` initialiser all are imported
-      # through — these packages and not the directory, whose other packages
-      # are the bodies of scripts the pull request may change
-      # (solorepo's DR-219) — the settings that register them, and the
+      # Twelve paths are trunk's, not the pull request's: the channel, the
+      # hooks, the checker, the channel's own body, the packages of the
+      # checker and of both hooks, and the `.meta/lib/` initialiser they are
+      # all imported through — under `.meta/lib/` the initialiser and the
+      # packages of the control-plane scripts, the checker, both hooks and
+      # the channel, and not the directory, whose remaining packages are the
+      # bodies of scripts the pull request may change (solorepo's DR-219) —
+      # the settings that register them, and the
       # instructions the session loads before it reads anything. The gate step `control plane
       # restore` holds this list to `depth.CONTROL_PLANE`, and the door below
       # reads that constant for the head's copies and the constraints.
@@ -133,7 +135,7 @@ jobs:
       - name: run trunk's channel
         run: |
           git restore --quiet --source=origin/main --staged --worktree -- \
-            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr .meta/lib/worktree_only .meta/lib/signed_channel AGENTS.md CLAUDE.md GEMINI.md
+            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr .meta/lib/move .meta/lib/worktree_only .meta/lib/signed_channel AGENTS.md CLAUDE.md GEMINI.md
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 

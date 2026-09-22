@@ -1,4 +1,6 @@
 """The channel, the hooks and the scripts loaded as modules without running their `main()`, so a probe can call what they define.
+
+History in loaders.history.md (solorepo's DR-171).
 """
 import importlib.util
 import pathlib
@@ -58,13 +60,22 @@ def load_channel() -> tuple[Any, dict[str, Any], dict[str, Any]]:
     `verbs.yaml`, and a dict from each program's name to its module, loaded by
     the primitive's own `sibling()` so that programs importing each other share
     one copy (solorepo's DR-117). Each call loads the channel afresh, so what one
-    probe sets on a program does not reach the next.
+    probe sets on a program does not reach the next; the library package each
+    program in the table is the entry of, `lib.<name>` where one exists
+    (solorepo's DR-217), is evicted from `sys.modules` first for the same
+    reason, since a module that imported the channel once would otherwise keep
+    the copy a previous probe stood its fakes in on and reach GitHub past the
+    next probe's. History in loaders.history.md (solorepo's DR-171).
 
     The programs have no `.py` and are programs rather than libraries, so the
     primitive's loader is used. Importing runs nothing: everything each does is
     under `main()`, and `main()` is under `__name__`.
     """
-    channel = load_module(META / "say" / "channel.py", "channel")
     table = yaml.safe_load((META / "say" / "verbs.yaml").read_text()) or {}
+    bodies = tuple(f"lib.{p['name']}" for p in table.get("programs") or [])
+    for name in [n for n in sys.modules
+                 if n in bodies or n.startswith(tuple(f"{body}." for body in bodies))]:
+        del sys.modules[name]
+    channel = load_module(META / "say" / "channel.py", "channel")
     programs = {p["name"]: channel.sibling(p["name"]) for p in table.get("programs") or []}
     return channel, table, programs

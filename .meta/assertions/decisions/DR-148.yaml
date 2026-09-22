@@ -8,7 +8,7 @@ decisions:
       - work:article/18
     enacted_in:
       - work:artifact/meta-say
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-challenges
       - work:artifact/meta-say-verbs
       - work:artifact/meta-check
       - work:artifact/meta-lib-check-pr-review

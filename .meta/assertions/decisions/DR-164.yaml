@@ -4,7 +4,7 @@ decisions:
     challenge: work:challenge/261
     status: ADOPTED
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-pull-requests
       - work:artifact/meta-say-verbs
       - work:artifact/meta-disciplines
       - work:artifact/meta-checks-probes-channel

@@ -11,7 +11,8 @@ decisions:
       - work:artifact/github-workflows-coder
       - work:artifact/github-workflows-review
       - work:artifact/github-workflows-merge
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
+      - work:artifact/meta-lib-move-manager
       - work:artifact/meta-say-verbs
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-next

@@ -339,7 +339,7 @@ def _decisions_in_force(channel: Any, move: Any) -> list[str]:
             return [{"filename": "README.md", "additions": 1, "patch": "@@\n+a\n"}]
         return {}
 
-    with stood_in(channel, gh=crowded_gh), stood_in(move, PER_PAGE=1, PAGES=2):
+    with stood_in(channel, gh=crowded_gh), stood_in(move.manager, PER_PAGE=1, PAGES=2):
         ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
     if ok or "over 2 files" not in msg:
         problems.append(f"merge manager: a file list past the pages read was not deferred: {msg}")
@@ -474,7 +474,8 @@ def _check_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
         calls.append(args)
 
     with stood_in(channel, gh=fake.gh, repo=fake.repo, graphql=fake.graphql), \
-            stood_in(move, merge=failing_merge, advance_stranded=recording_advance_stranded):
+            stood_in(move.pull_requests, merge=failing_merge), \
+            stood_in(move.manager.advance, advance_stranded=recording_advance_stranded):
         result = outcome(lambda: move.merge_manager(dry_run=False))
 
     if result.code != refusal:

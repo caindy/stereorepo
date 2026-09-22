@@ -6,7 +6,7 @@ decisions:
     applies:
       - work:article/15
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-challenges
       - work:artifact/meta-say-post
     context: >-
       `move.file_issue` created unconditionally, and `post promote` checked no

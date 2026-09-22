@@ -8,7 +8,9 @@ decisions:
       - work:article/21
       - work:article/22
     enacted_in:
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-pull-requests
+      - work:artifact/meta-lib-move-manager
+      - work:artifact/meta-lib-move-reconcile
       - work:artifact/meta-next
       - work:artifact/meta-checks-probes-loops-merge-manager
     context: >-

@@ -6,7 +6,8 @@ decisions:
     enacted_in:
       - work:artifact/github-workflows-review
       - work:artifact/github-workflows-coder
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-advance
+      - work:artifact/meta-lib-move-reconcile
       - work:artifact/meta-check-pr
       - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-lib-check-pr-sweep

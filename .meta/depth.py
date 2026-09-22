@@ -31,6 +31,7 @@ HOOK_PATH = META / "hooks" / "depth.py"
 
 CONTROL_PLANE: tuple[str, ...] = (
     ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/__init__.py", ".meta/lib/check_pr/",
+    ".meta/lib/move/",
     ".meta/lib/worktree_only/", ".meta/lib/signed_channel/",
     ".claude/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/",
 )

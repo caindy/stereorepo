@@ -10,7 +10,9 @@ decisions:
       - work:artifact/github-workflows-coder
       - work:artifact/meta-say-on
       - work:artifact/meta-disciplines
-      - work:artifact/meta-say-move
+      - work:artifact/meta-lib-move-challenges
+      - work:artifact/meta-lib-move-advance
+      - work:artifact/meta-lib-move-reconcile
       - work:artifact/meta-check
       - work:artifact/meta-lib-check-pr-sweep
       - work:artifact/meta-checks-probes-harness-github

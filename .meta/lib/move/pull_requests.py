@@ -1,0 +1,648 @@
+"""The pull request lifecycle: opening, layering, the merge, the supersession, and the
+review request that is the handoff (solorepo's DR-264)."""
+import re
+import sys
+from collections.abc import Mapping, Sequence
+
+import channel
+import check_pr
+from lib.move import advance, common, decisions
+
+
+def revise(number: str | int, body: str | None = None, title: str | None = None) -> None:
+    """Replace a body or a title, on a pull request or an Issue.
+
+    A body is signed at creation and nowhere afterwards, so an edit that
+    bypassed the channel would leave a Trailer naming the wrong Actor under
+    prose that Actor never wrote. The title is what the index is worth, and
+    changing it is an act GitHub records.
+    """
+    if body is None and title is None:
+        sys.exit("say: nothing to revise — pipe a body in, or pass --title")
+    what = common.kind(number)
+    if what == "pull request":
+        pr_data = None
+        t, b = title, body
+        if t is None or b is None:
+            pr_data = channel.gh("pr", "view", str(number), "--json", "title,body")
+            if t is None:
+                t = pr_data["title"]
+            if b is None:
+                b = pr_data["body"]
+        problems = check_pr.check(t, b)
+        if problems:
+            formatted = "\n".join(f"  - {p}" for p in problems)
+            sys.exit(f"say: revised {'title and body' if body and title else 'title' if title else 'body'} "
+                     f"does not satisfy the form (solorepo's A15):\n{formatted}\n"
+                     "Fix the form before revising the pull request.")
+    noun = "pr" if what == "pull request" else "issue"
+    cmd = [noun, "edit", str(number)]
+    if title is not None:
+        cmd += ["--title", title]
+    if body is not None:
+        cmd += ["--body", body]
+    channel.gh(*cmd, parse=False)
+    print(f"{what} #{number}: {' and '.join(w for w, v in (('body', body), ('title', title)) if v is not None)} set")
+
+
+def stacked(pr: str | int) -> str | None:
+    """The number of the stack a pull request is a layer of, read from GitHub, or None when it is not one.
+
+    The pull request payload carries a `stack` object on a layer and nothing
+    otherwise. `gh pr view` does not expose it, so the endpoint is read.
+
+    Parameters:
+        pr (str | int): Pull request number to inspect.
+
+    Returns:
+        str | None: The stack's number as GitHub reports it, or None.
+    """
+    stack = channel.gh("api", f"repos/{channel.repo()}/pulls/{pr}").get("stack") or {}
+    number = stack.get("number")
+    return None if number is None else str(number)
+
+
+def link(below: str | int, above: str | int) -> None:
+    """Link one pull request onto another as the layer above it, as the Role.
+
+    Linking is an act GitHub records, like a merge (solorepo's DR-075), so it goes through
+    here, and it is not a verb: a layer is opened linked, `open --on`, or made
+    one, `layer --on`, and the link is half of either. Open, then link, was a
+    composition a caller assembled by hand and could leave half done (solorepo's DR-116).
+    `gh stack submit` opens pull requests unsigned and stays blocked. After a
+    layer merges, GitHub rebases the layers above it, which is the whole reason
+    for a stack over a hand-built one (solorepo's DR-100).
+
+    `gh stack link` takes either two pull requests, which starts a stack, or a
+    stack's number and the layer to add, and refuses a call naming fewer pull
+    requests than the stack already holds. So when `below` is already a layer,
+    the call names its stack's number in place of `below` (solorepo's #496).
+    """
+    stack = stacked(below)
+    print(channel.gh("stack", "link", stack if stack else str(below), str(above),
+                     parse=False, timeout=None))
+
+
+def head_branch(pr: str | int) -> str:
+    """Returns the head branch name for a pull request."""
+    return str(channel.gh("pr", "view", str(pr), "--json", "headRefName")["headRefName"])
+
+
+def layer(pr: str | int, below: str | int) -> None:
+    """Make an open pull request a layer on another: retarget its base onto the
+    lower layer's branch, and link the two.
+
+    A pull request opened against trunk and found to wait on another (solorepo's DR-100)
+    is retargeted rather than closed and reopened: it is merged, never
+    abandoned, and the edit is an act GitHub records. Retargeting without
+    linking left a pull request whose base was a branch GitHub would not
+    rebase it over when that branch merged; both halves are one verb now.
+    """
+    base = head_branch(below)
+    channel.act(
+        lambda: channel.gh("pr", "edit", str(pr), "--base", base, parse=False),
+        lambda: str(channel.gh("pr", "view", str(pr), "--json", "baseRefName")["baseRefName"]),
+        lambda now: now == base,
+        lambda now: f"say: GitHub shows #{pr} based on {now} after the call, not {base}")
+    link(below, pr)
+    print(f"#{pr} is a layer on #{below} ({base})")
+
+
+def open_pull_request(title: str, body: str, base: str = "main",
+                      on: str | int | None = None) -> None:
+    """Open a pull request, signed; with `on`, open it as a layer on that one.
+
+    The base is the lower layer's branch, read from GitHub rather than typed,
+    and the link follows the creation, so a layer is never open and unlinked.
+    """
+    problems = check_pr.check(title, body)
+    if problems:
+        formatted = "\n".join(f"  - {p}" for p in problems)
+        sys.exit(f"say: pull request body does not satisfy the form (solorepo's A15):\n{formatted}\n"
+                 "Fix the form before opening the pull request.")
+    if on:
+        base = head_branch(on)
+    url = channel.gh("pr", "create", "--title", title, "--base", base, "--body", body, parse=False)
+    print(url)
+    if on:
+        link(on, url.rstrip("/").rsplit("/", 1)[-1])
+
+
+def arm(pr: str | int, subject: str) -> None:
+    """Hand GitHub the intent to merge when the ruleset is satisfied.
+
+    One call, and two callers: the merge verb arming for the first time, and
+    `advance` arming again where moving the branch dropped it.
+    """
+    channel.gh("pr", "merge", str(pr), "--squash", "--auto", "--subject", subject, parse=False)
+
+
+def behind_by(pull: common.Pull) -> int:
+    """How many commits of its base a pull request's head is missing.
+
+    `mergeStateStatus` is the obvious question and answers a different one.
+    GitHub computes it when it is asked for, so the first read after a push to
+    trunk is `UNKNOWN`; and `BLOCKED` outranks `BEHIND`, so a pull request
+    waiting on a review reports the review and hides the fact that it is also
+    out of date — which is every `medium` pull request (solorepo's DR-112), and the case
+    where nobody is watching. A comparison answers what is actually being
+    decided: whether the head is missing commits the base has. GitHub answers
+    that the same way whatever else is outstanding.
+    """
+    return int(channel.gh("api", f"repos/{channel.repo()}/compare/"
+                               f"{pull['baseRefName']}...{pull['headRefOid']}")["behind_by"])
+
+
+ADVANCE = ("number,title,state,baseRefName,headRefName,headRefOid,autoMergeRequest,"
+           "reviewRequests,mergeable,mergeStateStatus,latestReviews,updatedAt,isDraft")
+
+
+def head_now(number: str | int) -> tuple[common.Pull, int]:
+    """The commit GitHub has a pull request on, and what that commit is behind
+    its base by — the two read beside each other, in that order.
+
+    One question in two parts: whether there is a rebase to ask for, and which
+    commit it would be asked against. `advance` asks it twice — once to find
+    out there is work, and again when the waiting is over and the call is the
+    next thing that happens — and the pair is written here so that the second
+    asking cannot anchor the compare to a different reading than the first did.
+    """
+    before = channel.gh("pr", "view", str(number), "--json", ADVANCE)
+    return before, behind_by(before)
+
+
+def stack_layers(root: common.Pull, pulls: Sequence[common.Pull]) -> list[common.Pull]:
+    """Return the open linear stack beginning with `root`.
+
+    Parameters:
+        root: The bottom pull request of the stack.
+        pulls: The complete list of all open pull requests across the repository.
+
+    Returns:
+        list[Pull]: Bottom-first open pull requests forming the linear stack.
+
+    Raises:
+        SystemExit: If the open pull requests form a fork or cycle above `root`.
+    """
+    layers = [root]
+    seen = {root["headRefName"]}
+    while True:
+        above = [pull for pull in pulls if pull["baseRefName"] == layers[-1]["headRefName"]]
+        if not above:
+            return layers
+        if len(above) != 1 or above[0]["headRefName"] in seen:
+            sys.exit(f"say: #{root['number']} does not head a linear open stack; "
+                     "GitHub cannot advance its layers as one transition")
+        layers.append(above[0])
+        seen.add(above[0]["headRefName"])
+
+
+def stack_root(pull: common.Pull, pulls: Sequence[common.Pull]) -> common.Pull:
+    """Return `pull`'s bottom layer among open pull requests.
+
+    An unstacked pull request is its own bottom layer.
+
+    Parameters:
+        pull: The pull request whose stack root is sought.
+        pulls: The complete list of all open pull requests across the repository.
+
+    Returns:
+        Pull: The bottom layer pull request in pull's stack, or pull itself if unstacked.
+
+    Raises:
+        SystemExit: If the pull request bases form a cycle.
+    """
+    by_head = {candidate["headRefName"]: candidate for candidate in pulls}
+    root = pull
+    seen = {root["headRefName"]}
+    while root["baseRefName"] in by_head:
+        root = by_head[root["baseRefName"]]
+        if root["headRefName"] in seen:
+            sys.exit(f"say: #{pull['number']} belongs to a cyclic open pull-request stack")
+        seen.add(root["headRefName"])
+    return root
+
+
+def _settle_layer(layer_number: str, expected_oid: str) -> common.Pull:
+    """Poll GitHub until layer PR headRefOid differs from expected_oid."""
+    return channel.settled(
+        lambda: channel.gh("pr", "view", layer_number, "--json", ADVANCE),
+        lambda now: now["headRefOid"] != expected_oid,
+    )
+
+
+def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
+                  must_move: Mapping[str, bool]) -> tuple[list[str], list[str]]:
+    """Advance bottom-first stack `layers` through GitHub and report per-layer failures.
+
+    Parameters:
+        layers: Open pull requests in bottom-first stack order.
+        before: Current GitHub payload by pull request number.
+        must_move: Whether each layer was behind its base or sits above a layer that was.
+
+    Returns:
+        tuple[list[str], list[str]]: A pair `(failed, refused)`, where `failed`
+        collects per-layer problems that belong to individual pull requests, and
+        `refused` collects failures of writes made on their behalf.
+
+    Raises:
+        SystemExit: If an external GitHub query or command fails outside the rebase sequence.
+
+    The three `gh stack` calls wait indefinitely rather than under
+    `channel.GH_TIMEOUT`: they rebase every layer locally and then force-push
+    each of them, so a bound cutting the sequence short would leave the
+    branches rewritten and an unknown number of them pushed, reported to every
+    layer as a failure to advance.
+    """
+    root = str(layers[0]["number"])
+    try:
+        channel.gh("stack", "checkout", layers[0]["headRefName"], parse=False, timeout=None)
+        channel.gh("stack", "rebase", "--upstack", parse=False, timeout=None)
+        channel.gh("stack", "push", parse=False, timeout=None)
+    except SystemExit as exc:
+        return [f"#{layer['number']} could not advance with #{root}'s stack: {exc.code}"
+                for layer in layers], []
+
+    failed: list[str] = []
+    refused: list[str] = []
+    reviewer = channel.role_login("reviewer")
+    for layer in layers:
+        number = str(layer["number"])
+        if must_move.get(number, False):
+            after = _settle_layer(number, before[number]["headRefOid"])
+            if after["headRefOid"] == before[number]["headRefOid"]:
+                failed.append(f"#{number} is on the head it had before #{root}'s stack advanced")
+                continue
+        else:
+            after = channel.gh("pr", "view", number, "--json", ADVANCE)
+        if behind_by(after):
+            failed.append(f"#{number} is still behind {after['baseRefName']} after #{root}'s stack advanced")
+            continue
+        asked_before = {r.get("login") for r in before[number].get("reviewRequests") or []}
+        asked_after = {r.get("login") for r in after.get("reviewRequests") or []}
+        if reviewer in asked_before and reviewer not in asked_after:
+            try:
+                request_review(number, "reviewer")
+            except RequestRefused as exc:
+                refused.append(f"#{number} lost its review request during #{root}'s stack advance and could not be re-requested — {exc.code}")
+            except SystemExit as exc:
+                failed.append(f"#{number} lost its review request during #{root}'s stack advance: {exc.code}")
+        print(f"advanced #{number} in #{root}'s stack: {layer['title']}")
+    return failed, refused
+
+
+is_approved_pull = check_pr.is_approved_pull
+
+
+is_changes_requested_pull = check_pr.is_changes_requested_pull
+
+
+# A loop's branch, and nothing else. `(claude|gemini|codex)/issue-<n>` is the shape `coder.yml`
+# cuts, so it is the shape a dispatched coder can be sent back to; the solo's
+# own pull request is the solo's to rebase, whatever it looks like from here.
+LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-(\d+)$")
+
+
+def mergeability(pull: common.Pull) -> str | None:
+    """Whether GitHub can still merge this branch into its base.
+
+    Waited for rather than read once, under `channel.MERGEABILITY`, which says
+    why. The first read is the one already in hand, so a pull request GitHub
+    has an answer for costs nothing; only an `UNKNOWN` pays, and it pays in a
+    sleep rather than in a wrong answer. Bounded, because a value that is
+    still unknown after half a minute is one the next push to trunk will ask
+    about again — and a sweep that waited forever on one branch would hold
+    up the rest.
+
+    `mergeable` and `mergeStateStatus` are both settled onto `pull` from the
+    read that answered, so a caller reading one against the other reads two
+    values GitHub computed at the same moment.
+    """
+    fresh = channel.settled(
+        lambda: channel.gh("pr", "view", str(pull["number"]), "--json", ADVANCE),
+        lambda now: now.get("mergeable") != "UNKNOWN",
+        channel.MERGEABILITY, held=pull)
+    # Settled onto the pull request the caller holds, so the sweep's two
+    # readings of one branch cost one question (solorepo's DR-149). `advance`
+    # asks before it rebases and `dispatch` asks again about the same object —
+    # `found` is filtered out of `open_now`, not copied — and the only thing
+    # that moves between the two is a rebase this run performed, which GitHub
+    # would not have performed on a branch that conflicts.
+    #
+    # `mergeStateStatus` settles beside it because GitHub computes the pair
+    # together: renewing one and leaving the other hands the caller two
+    # readings taken at different moments, and `check_mergeable_clean` refuses
+    # on both.
+    answer: str | None = fresh.get("mergeable")
+    if fresh is not pull:
+        pull["mergeStateStatus"] = fresh.get("mergeStateStatus")
+    pull["mergeable"] = answer
+    return answer
+
+
+def _merge_auto(pr: str | int, before: common.Pull, subject: str, stack: bool) -> None:
+    """Enable GitHub auto-merge on pull request once required checks pass.
+
+    Advances the branch to base head before arming. Falls back to immediate
+    merge if the branch status is already clean. Verifies that auto-merge
+    request is preserved on GitHub after branch movements.
+    """
+    if stack or stacked(pr):
+        sys.exit(f"say: #{pr} is in a stack, and GitHub does not arm a stacked pull request, "
+                 "bottom included. Merge it with --stack when it is green, and GitHub "
+                 "retargets the layers above as it lands.")
+    if not channel.gh("api", f"repos/{channel.repo()}").get("allow_auto_merge"):
+        sys.exit("say: this repository does not allow auto-merge; that is a setting on "
+                 "GitHub, not a line here")
+    stalled = None
+    try:
+        advance.advance(pr, held=True)
+    except SystemExit as exc:
+        stalled = str(exc.code)
+    try:
+        arm(pr, subject)
+    except SystemExit as exc:
+        if "clean status" not in str(exc.code):
+            raise
+    else:
+        after = channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit,autoMergeRequest")
+        if after["state"] == "MERGED":
+            print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
+        elif after.get("autoMergeRequest"):
+            print(f"armed: #{pr} merges as a squash when green — {before['title']}")
+            if stalled:
+                try:
+                    current = channel.gh("pr", "view", str(pr), "--json", ADVANCE)
+                    behind = behind_by(current)
+                except SystemExit as exc:
+                    sys.exit(f"say: #{pr} is armed, and advancing it did not finish — "
+                             f"{stalled}. GitHub would not say whether it is current "
+                             f"either — {exc.code}")
+                if behind:
+                    sys.exit(f"say: #{pr} is armed and {behind} commit(s) behind "
+                             f"{current['baseRefName']} — {stalled}")
+                print(f"#{pr} is armed and current with {current['baseRefName']}; "
+                      f"advancing it did not finish — {stalled}")
+        else:
+            sys.exit(f"say: GitHub shows #{pr} neither merged nor armed after the call")
+
+
+def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
+    """Squash-merge a pull request using its title as the commit subject.
+
+    Executes a squash merge on the specified pull request, attributing the merge to
+    the active Role (solorepo's DR-072, solorepo's DR-075). If `stack` is True, merges
+    all dependent pull requests in the stack recursively. If `auto` is True, arms
+    auto-merge once required checks pass. Deletes the remote branch unless the
+    repository is configured to delete head branches automatically.
+
+    Parameters:
+        pr (int or str): Pull request number to merge.
+        stack (bool): If True, merges all pull request layers up to this one.
+        auto (bool): If True, enables GitHub auto-merge to land when checks turn green.
+
+    Raises:
+        SystemExit: If the pull request is not open, is an unsupported stacked auto-merge,
+            or if the merge or arming operation fails on GitHub.
+
+    The stack merge waits indefinitely rather than under `channel.GH_TIMEOUT`:
+    it lands every layer up to `pr` and restacks what remains, and a bound cut
+    short would pass out of here before the read-back below that exists to
+    catch a merge that did not land, leaving some layers merged and nothing
+    reconciling them.
+
+    The read-back itself is `channel.shown` under `channel.SETTLES`, not a
+    single read: GitHub processes a squash merge asynchronously, and a `pr
+    view` issued immediately after the merge call can still report `state:
+    OPEN`. The predicate waits on the merge commit beside the state, because
+    the line that prints reads both and a state that arrived without its
+    commit would raise where the merge had in fact landed. A merge GitHub
+    never lands still reads `OPEN` once the wait runs out, and the exit says
+    so, as it always has.
+    """
+    before = channel.gh("pr", "view", str(pr), "--json", "title,state,headRefName")
+    if before["state"] != "OPEN":
+        sys.exit(f"say: #{pr} is {before['state'].lower()}, not open")
+    subject = f"{before['title']} (#{pr})"
+    if auto:
+        _merge_auto(pr, before, subject, stack)
+        return
+    if stack:
+        channel.gh("stack", "merge", str(pr), "--squash", "--yes", parse=False, timeout=None)
+    elif stacked(pr):
+        sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
+                 "Pass --stack to merge everything up to it.")
+    else:
+        channel.gh("pr", "merge", str(pr), "--squash", "--subject", subject, parse=False)
+    after = channel.shown(
+        lambda: channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit"),
+        lambda now: now["state"] == "MERGED" and now["mergeCommit"],
+        lambda now: (f"say: #{pr} is {now['state'].lower()} after the merge call; not deleting "
+                     "the branch" if now["state"] != "MERGED" else
+                     f"say: #{pr} is merged but GitHub shows no merge commit for it yet; not "
+                     "deleting the branch"),
+    )
+    print(f"merged #{pr} as {after['mergeCommit']['oid'][:7]} — {before['title']}")
+    branch = before["headRefName"]
+    if channel.gh("repo", "view", "--json", "deleteBranchOnMerge")["deleteBranchOnMerge"]:
+        print(f"GitHub deletes origin/{branch} on merge; nothing to do here")
+    else:
+        channel.gh("api", "-X", "DELETE", f"repos/{channel.repo()}/git/refs/heads/{branch}", parse=False)
+        print(f"deleted origin/{branch}")
+
+
+SUPERSEDER = re.compile(r"^(?:#?(\d+)|[Dd][Rr]-0*(\d+))$")
+
+
+def superseder(what: str) -> tuple[str, str]:
+    """Validate that a superseding reference has merged or been adopted.
+
+    Checks whether the argument refers to a merged pull request or an adopted
+    Decision Record on the trunk (solorepo's DR-164).
+
+    Parameters:
+        what (str): Pull request reference (e.g. '123', '#123') or Decision identifier
+            (e.g. 'DR-nnn').
+
+    Returns:
+        tuple[str, str]: Short name and markdown reference string for the superseder.
+
+    Raises:
+        SystemExit: If the format is invalid, if a PR is unmerged, or if a decision
+            is not yet adopted on the main branch.
+    """
+    found = SUPERSEDER.match(what.strip())
+    if not found:
+        sys.exit(f"say: --by takes a pull request, as `nnn` or `#nnn`, or a Decision, as "
+                 f"`DR-nnn`; {what!r} is neither")
+    if found.group(2):
+        name = f"DR-{int(found.group(2)):03d}"
+        entry = f"{decisions.DECISIONS.relative_to(decisions.ROOT)}/{name}.yaml"
+        if int(found.group(2)) not in decisions.numbers_on("main"):
+            sys.exit(f"say: the record on main holds no {name}, so it is not an answer anything "
+                     "has been given yet. A Decision supersedes once its entry has landed; "
+                     "until then it is a second answer in flight.")
+        status = decisions.entry_status(channel.gh("api", "-H", "Accept: application/vnd.github.raw",
+                                        f"repos/{channel.repo()}/contents/{entry}?ref=main",
+                                        parse=False))
+        if status is None:
+            sys.exit(f"say: main holds {entry} and no status can be read out of it, where every "
+                     "entry in the record is one entry with one `status` in it. Read the entry "
+                     "and name what it says: a Decision supersedes once it is adopted.")
+        if status.upper() != "ADOPTED":
+            sys.exit(f"say: the record on main has {name} as {status.lower()}, not adopted, so "
+                     "it holds the number and not an answer. A hole is not a replacement, and "
+                     "an entry still proposed is a second answer in flight. Name the Decision "
+                     "that was adopted, or the pull request that landed it.")
+        return name, f"[{name}](https://github.com/{channel.repo()}/blob/main/{entry})"
+    number = found.group(1)
+    if common.kind(number) != "pull request":
+        sys.exit(f"say: #{number} is an Issue. A Challenge does not supersede a pull request; "
+                 "the change that answered it does. Name that pull request, or the Decision "
+                 "it landed.")
+    pull = channel.gh("pr", "view", str(number), "--json", "state,title")
+    if pull["state"] != "MERGED":
+        sys.exit(f"say: #{number} is {pull['state'].lower()}, not merged, so the tree does not "
+                 "hold its answer yet. Two open pull requests are two answers in flight, and "
+                 "which of them is the wrong one is not settled by closing the other.")
+    return f"#{number}", f"#{number} — {pull['title']}"
+
+
+def supersede(pr: str | int, by: str, reason: str) -> None:
+    """Close a pull request that has been superseded by another merged change or adopted decision.
+
+    Closes an open pull request whose associated challenges have already been resolved
+    by an alternative landed change (solorepo's DR-164). Posts an explanatory signed
+    comment citing the superseding artifact and any unredeemed decision numbers
+    minted on the branch, then closes the pull request.
+
+    Parameters:
+        pr (int or str): Pull request number to supersede.
+        by (str): Superseding reference (merged PR number or adopted DR identifier).
+        reason (str): Explanatory text justifying the closure.
+
+    Raises:
+        SystemExit: If the PR is not open, if any referenced challenge remains open,
+            or if the close operation fails to register on GitHub.
+    """
+    before = channel.gh("pr", "view", str(pr), "--json",
+                        "state,title,headRefName,closingIssuesReferences")
+    if before["state"] not in ("OPEN", "CLOSED"):
+        sys.exit(f"say: #{pr} is {before['state'].lower()}, not open or closed")
+    name, cited = superseder(by)
+    closes = [c["number"] for c in before["closingIssuesReferences"]]
+    if not closes:
+        sys.exit(f"say: #{pr} closes no Challenge, so there is nothing here another answer "
+                 "could have overtaken. A Challenge that is closed already is the whole of "
+                 "what tells superseded from abandoned, and what `--by` names says nothing "
+                 f"about #{pr} — any merged pull request in the repository would satisfy it — "
+                 "so this would be the general `close` PR First's tenth step refuses to have. "
+                 f"If there is a Challenge, name it in the body with `move revise {pr}`; if "
+                 "there is not, merge is still the only exit.")
+    still_open = [n for n in closes
+                  if channel.gh("api", f"repos/{channel.repo()}/issues/{n}",
+                                "--jq", ".state", parse=False).upper() == "OPEN"]
+    if still_open:
+        listed = ", ".join(f"#{n}" for n in still_open)
+        sys.exit(f"say: #{pr} closes {listed}, still open, so nothing has answered that "
+                 "Challenge yet. Merged, never abandoned: a Challenge with no other answer "
+                 "has this pull request as the only one it has, and closing it here would "
+                 "abandon the need rather than record that it was met elsewhere.")
+
+    answered = ", ".join(f"#{n}" for n in closes)
+    said = [reason.rstrip("\n"), "",
+            f"**Superseded by {cited}.** Closed rather than merged, which is PR First's "
+            f"tenth step and its one exception: {answered} "
+            f"{'is' if len(closes) == 1 else 'are'} answered already, so this diff would "
+            "install a second answer over the one the tree holds."]
+    if unredeemed := decisions.minted_for(before["headRefName"]):
+        said += ["", f"**Minted here and never landed:** {', '.join(unredeemed)}. The tag "
+                 "stays, so nothing issues the number twice; each is closed by writing it "
+                 "back into the record as WITHDRAWN, not by releasing it (solorepo's DR-128)."]
+    channel.sibling("post").conversation_comment(pr, channel.signed("\n".join(said)))
+    channel.act(
+        lambda: channel.gh("pr", "close", str(pr), parse=False),
+        lambda: str(channel.gh("pr", "view", str(pr), "--json", "state")["state"]),
+        lambda after: after == "CLOSED",
+        lambda after: f"say: GitHub shows #{pr} {after.lower()} after the call, not closed")
+    print(f"superseded #{pr} by {name} — {before['title']}")
+    for hole in unredeemed:
+        print(f"{hole} was minted here and never landed; write it back as WITHDRAWN")
+
+
+class RequestRefused(SystemExit):
+    """GitHub's refusal of the `pr edit` write that `request_review` makes.
+
+    Raised for a refused `pr edit` that wrote nothing — the remove, or an add
+    that followed no remove — so a caller re-requesting across a list of pull
+    requests tells the refusals that reach every one of them (the credential
+    without the repository write, the Role account that is not a collaborator)
+    from the ones a single pull request causes (the remove took and the add did
+    not, leaving the pull request with nobody requested). Subclasses `SystemExit`,
+    so a caller that does not catch it exits with GitHub's message unchanged.
+    """
+
+
+def request_review(pr: str | int, to: str) -> None:
+    """Request pull request review from a designated Role account.
+
+    Signals a role handoff by requesting review on GitHub. If a review request
+    is already pending for the designated login, it is withdrawn and re-requested
+    to trigger notification events. Polls branch mergeability and refuses review
+    requests if the branch is conflicting (solorepo's DR-145). Restores an autonomous
+    loop pull request from draft to ready once open status and clean mergeability
+    are confirmed (solorepo's DR-258). Reads back requested reviewers to verify
+    the assignment took effect.
+
+    Parameters:
+        pr (int or str): Pull request number.
+        to (str): Target Role name (e.g., 'reviewer').
+
+    Raises:
+        RequestRefused: For a refused `pr edit` that wrote nothing — the remove,
+            or an add that followed no remove.
+        SystemExit: If the pull request is not open, if its branch conflicts
+            with its base, if the reviewer was removed but could not be added
+            back, or if GitHub does not show the reviewer requested after the write.
+    """
+    login = channel.role_login(to)
+    pull = channel.gh("pr", "view", str(pr), "--json", ADVANCE)
+    if pull.get("state") != "OPEN":
+        sys.exit(f"say: #{pr} is {pull.get('state', '').lower()}, not open")
+    if mergeability(pull) == "CONFLICTING":
+        sys.exit(f"say: #{pr}'s branch {pull['headRefName']} conflicts with its base, "
+                 f"{pull['baseRefName']}. GitHub builds no merge ref for one that does, "
+                 "review.yml runs on pull_request, and so a review requested on it would "
+                 f"create no run and be answered by nobody. Rebase {pull['headRefName']} "
+                 f"onto {pull['baseRefName']}, push, and the request can be made")
+    if pull.get("isDraft") and LOOPS_BRANCH.match(pull.get("headRefName") or ""):
+        try:
+            channel.gh("pr", "ready", str(pr), parse=False)
+            print(f"restored #{pr} from draft to ready for review")
+        except (SystemExit, *common.UNREACHED) as exc:
+            print(f"warning: could not mark #{pr} ready for review: {exc}", file=sys.stderr)
+
+    def asked() -> list[str]:
+        return [r.get("login") for r
+                in channel.gh("pr", "view", str(pr), "--json", "reviewRequests")["reviewRequests"]]
+
+    again = login in asked()
+
+    def request() -> None:
+        """The request, withdrawn first where one already stands so that GitHub delivers it again."""
+        if again:
+            try:
+                channel.gh("pr", "edit", str(pr), "--remove-reviewer", login, parse=False)
+            except SystemExit as exc:
+                raise RequestRefused(exc.code) from exc
+        try:
+            channel.gh("pr", "edit", str(pr), "--add-reviewer", login, parse=False)
+        except SystemExit as exc:
+            if again:
+                sys.exit(f"say: removed {login} from #{pr} but could not add them back — {exc.code}")
+            raise RequestRefused(exc.code) from exc
+
+    channel.act(request, asked, lambda who: login in who,
+                lambda who: f"say: GitHub shows {who or 'nobody'} requested on #{pr} after the "
+                            f"call, not {login}")
+    print(f"{'requested again' if again else 'requested'} review of #{pr} from {login}")

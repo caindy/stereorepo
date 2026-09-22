@@ -2,6 +2,7 @@
 
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
+import contextlib
 import datetime
 from typing import Any
 
@@ -258,13 +259,42 @@ class _Bench:
         return row
 
     def run(self, fake: _GitHub, stood: dict[str, Any] | None = None, **flags: Any) -> Any:
-        """One `reconcile` with GitHub and the verbs stood in, `stood` over the recorders."""
+        """One `reconcile` with GitHub and the verbs stood in, `stood` over the recorders.
+
+        Each verb is stood in on the module of `lib.move` that defines it,
+        which is where a caller in the package looks it up (solorepo's DR-217).
+        """
         self.acted.clear()
         fake.dispatched.clear()
         flags.setdefault("minutes", MINUTES)
-        with stood_in(self.channel, gh=fake), \
-             stood_in(self.move, **{**self.stood, **(stood or {})}):
+        by_module: dict[Any, dict[str, Any]] = {}
+        for name, fake_verb in {**self.stood, **(stood or {})}.items():
+            by_module.setdefault(_owner(self.move, name), {})[name] = fake_verb
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(stood_in(self.channel, gh=fake))
+            for module, verbs in by_module.items():
+                stack.enter_context(stood_in(module, **verbs))
             return outcome(lambda: self.move.reconcile(**flags))
+
+
+UNDEFINED = "no module of lib.move defines {name!r}"
+"""What standing in a name no module of the package defines raises."""
+
+
+def _owner(move: Any, name: str) -> Any:
+    """The module of `lib.move` that defines `name`, reached through the entry's exports.
+
+    `advance` and `reconcile` share a name with the verb they hold, so the
+    entry exports the verb and the module is reached through one that
+    imports it (solorepo's DR-217).
+    """
+    modules = (move.common, move.challenges, move.pull_requests, move.decisions,
+               move.manager.advance, move.manager, move.cli.reconcile, move.cli)
+    for module in modules:
+        held = getattr(module, name, None)
+        if held is not None and getattr(held, "__module__", None) == module.__name__:
+            return module
+    raise AssertionError(UNDEFINED.format(name=name))
 
 
 def _pass_cases(channel: Any, move: Any) -> list[str]:
