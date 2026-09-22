@@ -360,6 +360,71 @@ def agy_callers_pass_a_non_empty_agent() -> StepOutcome:
     return Passed(f"{counted} agy call site(s), each passing a non-empty agent")
 
 
+CODER_WORKFLOW = ROOT / ".github" / "workflows" / "coder.yml"
+"""The coder Role's workflow, whose passes carry a minute cap and, on the harness that takes
+one, a turn cap from `DEPTHS`."""
+
+
+TURN_CAP = "--max-turns"
+"""The argument that binds a turn cap, which Claude Code takes and the Antigravity CLI does
+not: `.meta/run_agy.py` builds its argument vector with `--print-timeout` alone, so a turn
+number told to an `agy` session binds nothing."""
+
+
+TURNS_OUTPUT, MINUTES_OUTPUT = "steps.before.outputs.turns", "steps.before.outputs.minutes"
+"""The step outputs `coder_depth` emits the two caps as."""
+
+
+@check("coder prompts name their turn budget")
+def coder_prompts_name_turn_budget() -> StepOutcome:
+    """Every coder prompt names the caps its own step binds, and no others.
+
+    `.meta/say/on`'s `coder_depth` picks a pass's turn cap and minute cap from
+    `DEPTHS` and emits them as step outputs. `timeout-minutes` binds the minute
+    cap on every pass; `--max-turns` binds the turn cap on the Claude steps
+    alone. A prompt naming neither leaves the session it runs unable to pace
+    itself or to hand off before the cap, and one naming a cap its harness does
+    not take teaches that session to discount the cap that does bind. So each
+    prompt asks for the minute cap, and for the turn cap exactly where the step
+    passes `--max-turns`. The steps are read out of the `coder` job rather than
+    enumerated, so a pass or a harness given a prompt later is read the same.
+
+    Returns:
+        Passed | Found | CouldNotRun: Validation result naming any prompt that
+        does not name the caps its own step binds.
+    """
+    if not CODER_WORKFLOW.is_file():
+        return CouldNotRun(f"{CODER_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
+    data = yaml.safe_load(CODER_WORKFLOW.read_text(encoding="utf-8")) or {}
+    steps = (data.get("jobs") or {}).get("coder", {}).get("steps") or []
+    where, problems, counted = CODER_WORKFLOW.relative_to(ROOT), [], 0
+    for step in steps:
+        given = (step.get("with") or {}) if isinstance(step, dict) else {}
+        prompt = str(given.get("prompt") or "")
+        if not prompt:
+            continue
+        counted += 1
+        named = step.get("id") or step.get("name") or "<unnamed>"
+        binds_turns = TURN_CAP in str(given.get("claude_args") or "")
+        if MINUTES_OUTPUT not in prompt:
+            problems.append(f"{where}: step {named!r}'s prompt does not name {MINUTES_OUTPUT}, "
+                            "so the session it runs cannot hand off before `timeout-minutes` "
+                            "ends it")
+        if binds_turns and TURNS_OUTPUT not in prompt:
+            problems.append(f"{where}: step {named!r} passes {TURN_CAP} and its prompt does not "
+                            f"name {TURNS_OUTPUT}, so the session it runs cannot pace itself "
+                            "against the cap it is given")
+        if not binds_turns and TURNS_OUTPUT in prompt:
+            problems.append(f"{where}: step {named!r}'s prompt names {TURNS_OUTPUT} and the step "
+                            f"passes no {TURN_CAP}, so it tells the session a number that binds "
+                            "nothing")
+    if not counted:
+        return CouldNotRun(f"{where}'s `coder` job has no prompt-bearing step")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{counted} coder prompts each name the caps their own step binds")
+
+
 FALLBACK_ENV_EXPORT = re.compile(r"^\s*GEMINI_FALLBACK:\s*\${{\s*vars\.GEMINI_FALLBACK\b", re.M)
 """A workflow that invokes detect_fallback.py exports GEMINI_FALLBACK from vars.GEMINI_FALLBACK in job env (solorepo's DR-245)."""
 

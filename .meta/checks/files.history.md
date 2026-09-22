@@ -196,3 +196,18 @@ alone against `.meta/checks/lines.baseline.yaml`, and `meta_ruff` passes the
 rule over on the command line so the declared ruleset still runs whole.
 
 Evidence: `.meta/checks/files/python.py::meta_lines`
+
+### A coder pass bounded by caps its own prompt never named
+
+`coder_depth` emitted a turn cap and a minute cap for every coder pass and
+`.github/workflows/coder.yml` spent them on `--max-turns` and `timeout-minutes`,
+but no prompt said either number, so a session learned its budget only by
+running out of it and a run cut off mid-thread left the branch where it stood
+(solorepo's #844). The first mechanization made both numbers mandatory in all
+eight prompts, which told the four Antigravity CLI passes a turn cap the harness
+does not take: `.meta/run_agy.py` passes `--print-timeout` alone. Established:
+each prompt names the minute cap, and names the turn cap exactly where its own
+step passes `--max-turns`, over the prompt-bearing steps read out of the `coder`
+job rather than a hand-written list.
+
+Evidence: `.meta/checks/files/workflows.py::coder_prompts_name_turn_budget`

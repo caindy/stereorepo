@@ -300,6 +300,13 @@ jobs:
             instead. Commit through `.meta/say/commit -m "<subject>"` and
             never `git commit`; only the channel signs.
 
+            This run has ${{ steps.before.outputs.turns }} turns and
+            ${{ steps.before.outputs.minutes }} minutes. Spend the last tenth
+            of either on the hand-off, not on more work: push what is ready
+            and request review, or
+            `.meta/say/move stop ${{ github.event.issue.number || inputs.issue }}`
+            with why if it will not fit.
+
             Claim it: `.meta/say/move claim ${{ github.event.issue.number || inputs.issue }}`.
             Read it: `gh issue view ${{ github.event.issue.number || inputs.issue }}`.
             Branch as `${{ steps.before.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
@@ -420,6 +427,13 @@ jobs:
             instead. Commit through `.meta/say/commit -m "<subject>"` and
             never `git commit`; only the channel signs.
 
+            This run has ${{ steps.before.outputs.minutes }} minutes and no
+            turn cap: the Antigravity CLI is bounded by the clock alone. Spend
+            the last tenth on the hand-off, not on more work: push what is ready
+            and request review, or
+            `.meta/say/move stop ${{ github.event.issue.number || inputs.issue }}`
+            with why if it will not fit.
+
             Claim it: `.meta/say/move claim ${{ github.event.issue.number || inputs.issue }}`.
             Read it: `gh issue view ${{ github.event.issue.number || inputs.issue }}`.
             Branch as `${{ steps.before.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
@@ -515,6 +529,12 @@ jobs:
             will update one, so neither wait can end. Your Job is to put the
             branch back where what it is waiting on can happen, and nothing
             else.
+
+            This run has ${{ steps.before.outputs.turns }} turns and
+            ${{ steps.before.outputs.minutes }} minutes. Spend the last tenth
+            of either on the hand-off, not on more work: push the rebased
+            head, or `.meta/say/move stop ${{ steps.before.outputs.issue }}`
+            with why if it will not fit.
 
             Where a review is outstanding, no review of this head can run, so
             usually none has run at all. If one was already running when the
@@ -622,6 +642,12 @@ jobs:
             branch back where what it is waiting on can happen, and nothing
             else.
 
+            This run has ${{ steps.before.outputs.minutes }} minutes and no
+            turn cap: the Antigravity CLI is bounded by the clock alone. Spend
+            the last tenth on the hand-off, not on more work: push the rebased
+            head, or `.meta/say/move stop ${{ steps.before.outputs.issue }}`
+            with why if it will not fit.
+
             Where a review is outstanding, no review of this head can run, so
             usually none has run at all. If one was already running when the
             merge landed, your push at the end cancels it — `review.yml`
@@ -720,6 +746,12 @@ jobs:
             stdin as a quoted heredoc, and a refusal names the verb to use
             instead. Commit through `.meta/say/commit` only.
 
+            This run has ${{ steps.before.outputs.turns }} turns and
+            ${{ steps.before.outputs.minutes }} minutes. Spend the last tenth
+            of either on the hand-off, not on more work: post landed and
+            request review, or, if it will not fit,
+            ${{ steps.before.outputs.issue && format('`.meta/say/move stop {0}` with why on stdin.', steps.before.outputs.issue) || format('say why on the pull request with `.meta/say/post comment {0}`, this branch naming no Challenge to hand back.', steps.before.outputs.number) }}
+
             Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`,
             and the verdict: `gh pr view ${{ steps.before.outputs.number }} --comments`.
             A point is right, right about something else, or overtaken by the
@@ -787,6 +819,12 @@ jobs:
             stdin as a quoted heredoc, and a refusal names the verb to use
             instead. Commit through `.meta/say/commit` only.
 
+            This run has ${{ steps.before.outputs.minutes }} minutes and no
+            turn cap: the Antigravity CLI is bounded by the clock alone. Spend
+            the last tenth on the hand-off, not on more work: post landed and
+            request review, or, if it will not fit,
+            ${{ steps.before.outputs.issue && format('`.meta/say/move stop {0}` with why on stdin.', steps.before.outputs.issue) || format('say why on the pull request with `.meta/say/post comment {0}`, this branch naming no Challenge to hand back.', steps.before.outputs.number) }}
+
             Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`,
             and the verdict: `gh pr view ${{ steps.before.outputs.number }} --comments`.
             A point is right, right about something else, or overtaken by the
@@ -841,6 +879,12 @@ jobs:
             branch `${{ steps.before.outputs.branch }}`, which is checked out here.
             The reviewer has approved this pull request. The argument is settled,
             and what survives the argument earns an Issue (solorepo's DR-159).
+
+            This run has ${{ steps.before.outputs.turns }} turns and
+            ${{ steps.before.outputs.minutes }} minutes. Spend the last tenth
+            of either on the hand-off, not on more work: resolve the promoted
+            threads, or `.meta/say/move stop ${{ steps.before.outputs.issue }}`
+            with why if it will not fit.
 
             Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`.
             Try the Incidental Commit first, on a thread the reviewer raised: if the surviving
@@ -921,6 +965,13 @@ jobs:
             branch `${{ steps.before.outputs.branch }}`, which is checked out here.
             The reviewer has approved this pull request. The argument is settled,
             and what survives the argument earns an Issue (solorepo's DR-159).
+
+            This run has ${{ steps.before.outputs.minutes }} minutes and no
+            turn cap: the Antigravity CLI is bounded by the clock alone. Spend
+            the last tenth on the hand-off, not on more work: resolve the
+            promoted threads, or
+            `.meta/say/move stop ${{ steps.before.outputs.issue }}` with why if
+            it will not fit.
 
             Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`.
             Try the Incidental Commit first, on a thread the reviewer raised: if the surviving
