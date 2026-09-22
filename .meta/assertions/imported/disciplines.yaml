@@ -574,9 +574,12 @@ disciplines:
         Title it with the words someone will search for. It is the index, and an
         index is worth exactly its titles.
       - >-
-        Raise what was noticed and not done as a **conversation on the diff**,
-        at the moment it is noticed — not a bullet in the body, which closes
-        with the pull request, and never a closing summary. The last comment
+        Before you hand the branch over as finished, reread the diff against
+        `origin/main` to verify quality and consistency — an in-session pass
+        alike across harnesses (solorepo's DR-181). Raise what was noticed
+        and not done as a **conversation on the diff**, at the moment it is
+        noticed — not a bullet in the body, which closes with the pull
+        request, and never a closing summary. The last comment
         is the one that counts, so replying without the marker is how an item
         the change has overtaken stops being parked, and an unresolved
         conversation blocks the merge, so nothing is walked past without

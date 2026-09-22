@@ -8,6 +8,10 @@ decisions:
     enacted_in:
       - work:artifact/github-workflows-coder
       - work:artifact/specialize
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-disciplines
+      - work:artifact/agents
+      - work:artifact/template-agents
     context: >-
       DR-165 introduced a pre-review reading pass for the Claude Code harness,
       requiring the coder agent to spawn a foreground subagent on a smaller model (`claude-sonnet-5`)
