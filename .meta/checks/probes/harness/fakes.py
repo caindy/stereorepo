@@ -293,8 +293,8 @@ class FakeWikiPath:
 class FakeFiling:
     """As much of GitHub as `file_issue` asks about: the open Issues it lists, and the ones it creates.
 
-    `open_issues` maps an Issue's number to its title and is the listing
-    `gh issue list` answers with. `created` maps the number of each Issue a call
+    `open_issues` supplies each Issue's number, title, and optional body to the
+    `gh issue list` answer. `created` maps the number of each Issue a call
     created to its `(title, body, labels)`, so a probe reads what was filed and
     not only what was said, and a created Issue joins `open_issues` — which is
     what makes the second of two identical filings in one probe the case the
@@ -307,9 +307,15 @@ class FakeFiling:
     than failing on the fake.
     """
 
-    def __init__(self, open_issues: list[tuple[int | str, str]] | None = None,
-                 list_fails: bool = False) -> None:
-        self.open_issues = {str(n): t for n, t in (open_issues or [])}
+    def __init__(
+        self,
+        open_issues: list[tuple[int | str, str] | tuple[int | str, str, str]] | None = None,
+        list_fails: bool = False,
+    ) -> None:
+        self.open_issues = {
+            str(issue[0]): (issue[1], issue[2] if len(issue) == 3 else "")
+            for issue in (open_issues or [])
+        }
         self.created: dict[str, tuple[str, str, list[str]]] = {}
         self.listings = 0
         self.list_fails = list_fails
@@ -326,9 +332,9 @@ class FakeFiling:
                     raise SystemExit(LIST_REFUSAL)
                 raise subprocess.CalledProcessError(1, ["gh", *list(args)], output="",
                                                     stderr="mock API error")
-            return [{"number": int(n), "title": t,
+            return [{"number": int(n), "title": title, "body": body,
                      "url": f"https://github.com/o/r/issues/{n}"}
-                    for n, t in self.open_issues.items()]
+                    for n, (title, body) in self.open_issues.items()]
         if args[:2] == ("issue", "create"):
             return self.create(args)
         if args[:2] == ("issue", "view"):
@@ -343,7 +349,7 @@ class FakeFiling:
         number = str(self.next_number)
         self.next_number += 1
         self.created[number] = (title, body, labels)
-        self.open_issues[number] = title
+        self.open_issues[number] = (title, body)
         return f"https://github.com/o/r/issues/{number}"
 
     def view(self, args: tuple[str, ...]) -> dict[str, Any]:

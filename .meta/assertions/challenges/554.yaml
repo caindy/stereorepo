@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/554
+    name: "Move file detects a duplicate Challenge filed under different words"
+    challenge_type: DEFECT
+    description: >-
+      `move file` prevents an exact-title retry but cannot stop a Challenge
+      whose title and body describe work already open under different words.
+      Duplicate Challenges have already reached merged pull requests. The
+      filing verb needs to compare the proposed Challenge with the open queue
+      before it creates the Issue.

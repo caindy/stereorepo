@@ -1,7 +1,7 @@
 """`file_issue` and `promote` refusing a second Issue for one Challenge (solorepo's DR-221).
 """
 
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 from checks.collect import check
 from checks.probes.harness import (
@@ -14,6 +14,7 @@ from checks.probes.harness import (
 
 TITLE = "A Challenge filed once"
 BODY = "**Waits on.** Nothing.\n\nWhat was noticed.\n"
+DISTINCT_BODY = "**Waits on.** Nothing.\n\nA separate queue concern.\n"
 
 
 @check("filing probes", pre=True)
@@ -30,8 +31,7 @@ def filing_probes() -> list[str]:
     recorded. The same title filed a second time is refused with nothing
     created, and the refusal names the standing Issue's number, since a caller
     told only that it may not file is left with the collision and no act. A
-    different title is not refused by a listing holding the first, which is what
-    says the comparison is the whole title and not a resemblance. A listing
+    unrelated title and body are not refused by a listing holding the first. A listing
     GitHub will not answer for does not stop a filing: the guard is a courtesy
     against a retry, not a gate, and an outage that made every filing impossible
     would be the worse failure.
@@ -83,7 +83,11 @@ def filing_probes() -> list[str]:
             problems.append(f"filing: a second filing under one title said {said!r} and left "
                             f"{len(fake.created)} created")
 
-        said = run_verb(channel, fake, lambda: move.file_issue(TITLE + " again", BODY, level="hard"))
+        said = run_verb(
+            channel,
+            fake,
+            lambda: move.file_issue("A separate queue", DISTINCT_BODY, level="hard"),
+        )
         if said or len(fake.created) != 2:
             problems.append(f"filing: a filing under an unused title said {said!r} and left "
                             f"{len(fake.created)} created")
@@ -101,7 +105,121 @@ def filing_probes() -> list[str]:
             problems.append(f"filing: a filing whose listing GitHub would not answer said {said!r} "
                             f"after {blind.listings} listing(s), and created {len(blind.created)}")
 
+        duplicate = FakeFiling([
+            (
+                901,
+                "Prevent duplicate Challenge filings",
+                "Refuse repeated Challenge work before it begins.",
+            ),
+            (902, "Prevent filing errors", "Document filing error recovery before work begins."),
+        ])
+        said = run_verb(
+            channel,
+            duplicate,
+            lambda: move.file_issue(
+                "Prevent duplicate Challenge filing",
+                "**Waits on.** Nothing.\n\nRefuse repeated Challenge work before it begins.",
+                level="hard",
+            ),
+        )
+        if not said or "901" not in said or duplicate.created:
+            problems.append(
+                f"filing: a semantic duplicate said {said!r} and created {duplicate.created!r}"
+            )
+
+    problems += semantic_ratio_probes(move)
+    problems += semantic_queue_probes(move)
     problems += promotion_probes(channel, post)
+    return problems
+
+
+def semantic_ratio_probes(move: ModuleType) -> list[str]:
+    """Check the solorepo's DR-266 threshold at and below the adopted boundary."""
+    class ScoredIndex:
+        def add_document(self, *args: object) -> None:
+            return None
+
+        def finalize(self) -> None:
+            return None
+
+        def search(self, _query: str, top_k: int = 5) -> list[SimpleNamespace]:
+            return scores[:top_k]
+
+    issues = [
+        {"number": 1, "title": "First", "body": "", "url": "https://github.com/o/r/issues/1"},
+        {"number": 2, "title": "Second", "body": "", "url": "https://github.com/o/r/issues/2"},
+    ]
+    problems: list[str] = []
+    scores = [
+        SimpleNamespace(identifier="1", score=1.79),
+        SimpleNamespace(identifier="2", score=1.0),
+    ]
+    with stood_in(move.challenges.bm25, SearchIndex=ScoredIndex):
+        match = move.challenges.semantic_duplicate(issues, "Proposed", "body")
+    if match != issues[0]:
+        problems.append(f"filing: the 1.79 semantic ratio matched {match!r}, not the leading Issue")
+
+    scores = [
+        SimpleNamespace(identifier="1", score=1.78),
+        SimpleNamespace(identifier="2", score=1.0),
+    ]
+    with stood_in(move.challenges.bm25, SearchIndex=ScoredIndex):
+        match = move.challenges.semantic_duplicate(issues, "Proposed", "body")
+    if match is not None:
+        problems.append(f"filing: the 1.78 semantic ratio matched {match!r}, below the 1.79 cutoff")
+    return problems
+
+
+def semantic_queue_probes(move: ModuleType) -> list[str]:
+    """Run solorepo's DR-266 corpus shapes through the real BM25F implementation."""
+    issues = [
+        {
+            "number": 901,
+            "title": "Prevent duplicate Challenge filings",
+            "body": "Refuse repeated Challenge work before it begins.",
+            "url": "https://github.com/o/r/issues/901",
+        },
+        {
+            "number": 902,
+            "title": "Prevent filing errors",
+            "body": "Document filing error recovery before work begins.",
+            "url": "https://github.com/o/r/issues/902",
+        },
+        {
+            "number": 903,
+            "title": "Document deployment gate",
+            "body": "Explain the deployment gate for release.",
+            "url": "https://github.com/o/r/issues/903",
+        },
+        {
+            "number": 904,
+            "title": "Document review gate",
+            "body": "Explain the review gate for release.",
+            "url": "https://github.com/o/r/issues/904",
+        },
+    ]
+    duplicate = move.challenges.semantic_duplicate(
+        issues[:2],
+        "Prevent duplicate Challenge filing",
+        "**Waits on.** Nothing.\n\nRefuse repeated Challenge work before it begins.",
+    )
+    adjacent = move.challenges.semantic_duplicate(
+        issues,
+        "Document release gate",
+        "**Waits on.** Nothing.\n\nExplain the release gate guide.",
+    )
+    sole_issue = move.challenges.semantic_duplicate(
+        issues[:1],
+        "Prevent duplicate Challenge filing",
+        "**Waits on.** Nothing.\n\nRefuse repeated Challenge work before it begins.",
+    )
+    problems = []
+    if duplicate != issues[0]:
+        problems.append(f"filing: the real duplicate corpus matched {duplicate!r}, not the leading Issue")
+    if adjacent is not None:
+        problems.append(f"filing: the adjacent corpus matched {adjacent!r}")
+    if sole_issue is not None:
+        problems.append(f"filing: a one-Issue queue matched {sole_issue!r}")
     return problems
 
 

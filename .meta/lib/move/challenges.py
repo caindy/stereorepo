@@ -3,11 +3,12 @@ claim, the hand-back, and the closes that are not a merge (solorepo's DR-264).""
 import re
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
 import channel
 from lib.move import advance, common, pull_requests
+from lib.search import bm25
 
 # The line both Issue forms open with, and an Issue reference in either of the
 # two spellings GitHub renders: bare, and qualified by `owner/repo`.
@@ -375,45 +376,109 @@ def roadmap(issue: str | int) -> None:
     print(f"#{issue} is on the roadmap, labelled {', '.join(now)}")
 
 
-def open_with_title(title: str) -> tuple[str, str] | None:
-    """The open Issue carrying exactly this title, as `(number, url)`, or `None`.
+SEMANTIC_DUPLICATE_RATIO = 1.79
+"""Minimum leading-to-runner-up BM25F score ratio that refuses a filing (solorepo's DR-266)."""
+
+
+def open_issue_queue() -> list[dict[str, Any]] | None:
+    """List the open Issue queue, or return None when GitHub refuses the listing.
 
     Listed rather than searched. `gh issue list` reads the API, which answers
     with what was written a moment ago; `--search` reads the code search index,
     which lags by seconds to minutes, and the window this is asked about is a
-    retry seconds after a filing (solorepo's DR-221).
-
-    The comparison is the whole title, so a second Challenge about the same area
-    under a title of its own is filed and not refused. The listing is bounded at
-    200, above the open count this repository has carried, and a title beyond
-    that bound is not found.
-
-    Parameters:
-        title (str): Title to match exactly.
+    retry seconds after a filing (solorepo's DR-221). Bodies arrive in the same
+    listing so solorepo's DR-266 can rank the live queue without a request per
+    Issue.
 
     Returns:
-        tuple[str, str] | None: Issue number and URL, or None when no open Issue
-            matches and equally when GitHub refused the listing. The two are not
-            distinguished on purpose: both mean this call has no standing Issue
-            to name, and a filing proceeds either way.
+        list[dict[str, Any]] | None: Up to 200 current open Issues, or None when
+            GitHub refuses the listing. A refusal permits filing because this
+            check is not a queue outage gate.
 
     Raises:
-        SystemExit: The listing answered nothing within `channel.GH_TIMEOUT`. A
-            refusal is an answer of a kind and a filing proceeds through it; a
-            hang says nothing about what is open, so proceeding would file a
-            second Issue under a title that already has one.
+        SystemExit: The listing times out. A timeout supplies no result, unlike
+            a refusal that definitively failed.
     """
     try:
         listed = channel.gh("issue", "list", "--state", "open", "--limit", "200",
-                            "--json", "number,title,url", tolerate_fail=True)
+                            "--json", "number,title,url,body", tolerate_fail=True)
     except subprocess.CalledProcessError as exc:
         if exc.returncode == channel.TIMEOUT_RETURNCODE:
             sys.exit(f"say: {exc.stderr}")
         return None
-    for issue in listed or []:
+    return cast(list[dict[str, Any]], listed or [])
+
+
+def open_with_title(
+    title: str, issues: Sequence[Mapping[str, Any]] | None = None,
+) -> tuple[str, str] | None:
+    """Return the `(number, url)` of an open Issue with this exact title.
+
+    When `issues` is omitted, the live queue is listed. None means either no
+    title matched or GitHub refused the listing; the two cases are intentionally
+    indistinguishable so filing remains available during a listing failure.
+
+    Raises:
+        SystemExit: If the queue listing times out.
+    """
+    for issue in (issues if issues is not None else open_issue_queue() or []):
         if issue.get("title") == title:
-            return str(issue["number"]), issue.get("url", "")
+            return str(issue["number"]), str(issue.get("url", ""))
     return None
+
+
+def semantic_body(body: str) -> str:
+    """Remove Issue-form metadata that every Challenge shares before ranking prose."""
+    return WAITS_LINE.sub("", body).strip()
+
+
+def semantic_duplicate(issues: Sequence[Mapping[str, Any]], title: str,
+                       body: str) -> Mapping[str, Any] | None:
+    """Return the uniquely dominant semantic queue match for a proposed filing."""
+    index = bm25.SearchIndex()
+    documents: dict[str, Mapping[str, Any]] = {}
+    query = f"{title}\n{semantic_body(body)}"
+    for issue in issues:
+        number = str(issue.get("number", ""))
+        if not number:
+            continue
+        documents[number] = issue
+        issue_title = str(issue.get("title", ""))
+        issue_body = semantic_body(str(issue.get("body", "")))
+        index.add_document(
+            number,
+            "issue",
+            {"title": issue_title},
+            str(issue.get("url", "")),
+            {
+                "title": bm25.tokenize(issue_title),
+                "summary": [],
+                "body": bm25.tokenize(issue_body),
+            },
+        )
+    index.finalize()
+    matches = index.search(query, top_k=2)
+    if not matches:
+        return None
+    if len(documents) > 1 and len(matches) == 1:
+        return documents[matches[0].identifier]
+    if len(matches) > 1 and matches[0].score / matches[1].score >= SEMANTIC_DUPLICATE_RATIO:
+        return documents[matches[0].identifier]
+    return None
+
+
+def refuse_if_semantic_duplicate(issues: Sequence[Mapping[str, Any]] | None,
+                                 title: str, body: str) -> None:
+    """Refuse a filing whose live queue match clears the solorepo's DR-266 cutoff."""
+    if issues is None:
+        return
+    match = semantic_duplicate(issues, title, body)
+    if not match:
+        return
+    number, url = str(match["number"]), str(match.get("url", ""))
+    sys.exit(f"say: #{number} is the uniquely dominant semantic match for this Challenge: {url}\n"
+             "     Nothing was filed. If this is distinct work, explain the distinction in "
+             "the title and body, then file it again.")
 
 
 def file_issue(title: str, body: str, level: str | None = None,
@@ -470,7 +535,8 @@ def file_issue(title: str, body: str, level: str | None = None,
     if not first.startswith("**Waits on.**"):
         sys.exit("say: the body does not open with `**Waits on.**`, which is the line "
                  f"`just next` reads; it opens with {first[:60]!r}. Both forms begin there.")
-    standing = open_with_title(title)
+    issues = open_issue_queue()
+    standing = open_with_title(title, issues) if issues is not None else None
     if standing:
         number, url = standing
         sys.exit(f"say: #{number} is open under this exact title, so this would be the "
@@ -480,6 +546,7 @@ def file_issue(title: str, body: str, level: str | None = None,
                  "unfinished: `post answer <thread-id>` with a body linking it, or "
                  "`post resolve <thread-id>` where the link is already posted. If this "
                  "Challenge is genuinely a second one, give it a title of its own.")
+    refuse_if_semantic_duplicate(issues, title, body)
     refs = sorted({int(str(n).strip().lstrip("#")) for n in blocked_by})
     line_refs = sorted({int(n) for n in re.findall(r"#(\d+)", first)})
     missing_from_flags = set(line_refs) - set(refs)
