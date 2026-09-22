@@ -8,6 +8,7 @@ decisions:
       - work:article/21
     enacted_in:
       - work:artifact/github-workflows-coder
+      - work:artifact/meta-say-on
       - work:artifact/meta-check-pr
       - work:artifact/meta-actions-sweep
       - work:artifact/meta-lib-check-pr-sweep
@@ -78,8 +79,9 @@ decisions:
           threshold, none of which GitHub reports directly.
     consequences:
       - >-
-        `coder.yml`'s `hand back what the run did not finish` step reads the
-        open pull request's checks beside its requests and its `mergeable`.
+        The coder's door after a take that did not finish, `.meta/say/on`
+        called by `coder.yml`'s `after the session`, reads the open pull
+        request's checks beside its requests and its `mergeable`.
         Green and mergeable: an account is posted on the pull request, then
         review is requested of the reviewer, and the Issue stays claimed at its
         level — which is the state a finished `medium` run leaves. Not green,

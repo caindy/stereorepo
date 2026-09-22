@@ -6,6 +6,7 @@ decisions:
     applies:
       - work:article/18
     enacted_in:
+      - work:artifact/meta-say-on
       - work:artifact/meta-run-agy
       - work:artifact/meta-actions-agy
       - work:artifact/meta-detect-fallback
@@ -77,7 +78,7 @@ decisions:
         Closes #715.
     falsifier: >-
       An autonomous coder pass under Antigravity CLI terminating due to a 5-second background task idle timeout;
-      or the `hand back what the run did not finish` step reporting Claude's outcome when Gemini fallback failed.
+      or the coder's door, `.meta/say/on`, reporting Claude's outcome when Gemini fallback failed.
     rationale: |-
       In the agentic AI era, automated failover must not trade model diversity for brittle lifecycle mechanics.
       Headless print mode in Antigravity CLI was optimized for single-turn query-response invocations, causing

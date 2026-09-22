@@ -66,7 +66,12 @@ its *before* finds the pull request a second pass answers and checks its branch
 out, chooses the harness by label and input, reads whether the delivery is
 still the loop's through the take door (solorepo's DR-142), chooses the depth
 by the pass and the level, and on approval counts the threads held for
-promotion.
+promotion. Its *after* takes how the pass's two harness steps ended: a take
+that failed or was cancelled is handed back, review requested where the pull
+request it left is green and the Challenge given to the solo otherwise
+(solorepo's DR-129, solorepo's DR-155); a rebase that succeeded redelivers the
+review pass it cleared; and a pass one harness failed and neither finished
+ends the run red, a cancelled pass not being a failed one.
 
 ## Doors and the Reconciler
 

@@ -8,6 +8,8 @@ Usage:
         --ran claude|gemini|jules|none [--transcript <path>]
     .meta/say/on coder before <n> --pass take|rebase|answer|promote --event <event> \\
         [--harness <harness>]
+    .meta/say/on coder after <n> --pass take|rebase|answer|promote --event <event> \\
+        --claude <outcome> --gemini <outcome> [--count N] [--branch-prefix <harness>]
 
 Each loop workflow is a door a Role's run arrives at: `triage.yml` and
 `review.yml` are the reviewer's, `coder.yml` the coder's. What the door's shell
@@ -26,7 +28,11 @@ number says which of the Role's doors this is: a Challenge is the reading
 door, `triage.yml`, and a pull request is the review door, `review.yml`. The
 coder's door, `coder.yml`, has four passes behind it and the workflow says
 which with `--pass`, since the event, the review's state and the dispatch's
-inputs are the workflow's to read; its `after` is still the workflow's own.
+inputs are the workflow's to read; its `after` takes how the pass's two
+harness steps ended, refused absent by the same rule as the review door's
+numbers below, and hands back a take that did not finish, redelivers the
+review pass a rebase cleared, and ends the run red where one harness failed
+a pass and neither finished it, a cancelled pass not being a failed one.
 
 The review door's `after` takes what only the workflow knows: the verdict
 count `before` emitted, the fan-out ceiling it chose, which harness step ran
@@ -516,10 +522,6 @@ DEPTHS = {"rebase": ("claude-opus-5", "high", "60", "30"),
 GEMINI_MODEL = "gemini-3.8-flash"
 """The model the Antigravity CLI fallback runs, on every coder pass."""
 
-NOT_THIS_DOOR = ("say: the coder's `after` is still `coder.yml`'s own shell; this verb decides "
-                 "`before` the session (solorepo's DR-264)")
-"""The refusal where the phase names the half of the coder's door this layer has not moved."""
-
 UNNAMED_REBASE = ("::error::#{n} is on {branch}, which names no Challenge, so a rebase pass that "
                   "could not finish would have nothing to hand back. Rebase it by hand.")
 """The refusal of a rebase dispatched for a branch that is not the loop's shape."""
@@ -711,20 +713,249 @@ def coder_before(number: str, delivery: Delivery) -> None:
         print(f"Found {len(open_threads)} unresolved thread(s) on approved #{number}")
 
 
-def coder(phase: str, number: str, delivery: Delivery) -> None:
-    """The coder's door, `before` the session, for the pass `delivery` names.
+class Ended(NamedTuple):
+    """What the workflow knows about the coder's session that the door's `after` is handed.
+
+    Attributes:
+        claude: How the pass's Claude Code step ended: `success`, `failure`,
+            `cancelled` or `skipped`.
+        gemini: How its Antigravity CLI step ended, the same way.
+        held: On a promotion, how many threads `before` found held.
+        branch_prefix: The harness `before` chose, which names the loop's branch.
+    """
+
+    claude: str | None
+    gemini: str | None
+    held: int | None
+    branch_prefix: str
+
+
+OUTCOMES_NOT_SAID = ("the coder's `after` takes how the pass's two steps ended, --claude and "
+                     "--gemini, and was handed claude={claude!r} gemini={gemini!r}: an outcome "
+                     "that did not arrive is a red run, not a pass that was skipped")
+"""The refusal where `after` is missing how the session's steps ended."""
+
+
+OUTCOMES = ("success", "failure", "cancelled", "skipped")
+"""How a step ends, as the workflow reports it: a step that never ran reports `skipped`, so an
+empty string is none of these and is refused."""
+
+DID_NOT_FINISH = ("This run ended without finishing and without saying where it stopped: its "
+                  "step ended {outcome}. What it did is in the run log, {run}.")
+"""The first sentence of every account a hand-back posts."""
+
+STAYS_OPEN = (" The pull request it opened, if it opened one, is on `{branch}` and stays open "
+              "for the run that takes this up again.")
+"""What the account says of the branch, where the Challenge goes to the solo."""
+
+NOT_REQUESTED = "\n\nNot requested of the reviewer: {why}."
+"""The account's second paragraph, where the Challenge goes to the solo."""
+
+WORTH_READING = ("\n\nEvery check on this head is green, so this is where a run stopped and not "
+                 "where one finished, and review is requested on that basis: what is here is "
+                 "worth reading, and whether it answers #{issue} is the review's question. "
+                 "#{issue} stays claimed at `{level}`, and a request for changes comes back to "
+                 "the coder as a new run.")
+"""The account's second paragraph, where the pull request is green and review is requested."""
+
+UNREADABLE_ISSUE = ("#{issue} could not be read, so whether it is still open and at what level "
+                    "is unknown here; the run log above says why")
+"""Why the reviewer is not asked where the Challenge cannot be read."""
+
+UNREADABLE_MERGE = ("whether {branch}'s pull request has merged could not be read, so whether "
+                    "the work already landed is unknown here; the run log above says why")
+"""Why the reviewer is not asked where the merged listing cannot be read."""
+
+UNREADABLE_LEFT = ("the hand-back could not read what this run left: whether a pull request is "
+                   "open on this branch, and whether it is green, is unknown here; the run log "
+                   "above says why")
+"""Why the reviewer is not asked where the pull request's state cannot be read."""
+
+CONFLICTS = ("#{number}'s branch conflicts with its base, {base}. GitHub builds no merge ref "
+             "for one that does, review.yml runs on pull_request, and so a review requested on "
+             "it would create no run and be answered by nobody. Rebase {branch} onto {base} and "
+             "the request can be made")
+"""Why the reviewer is not asked where the branch conflicts."""
+
+NOT_GREEN = "the checks on #{number} have not all passed, and a red gate is not a handoff"
+"""Why the reviewer is not asked where the gate is red."""
+
+NEITHER = ("::error::Neither Claude nor Gemini {task} pass succeeded (claude={claude}, "
+           "gemini={gemini}).")
+"""The finding where a pass ran and neither harness finished it."""
+
+
+def outcome_of(ended: Ended) -> str:
+    """How the pass ended: the fallback's word where it failed, and where it was cancelled alike.
+
+    The Antigravity CLI step runs after Claude Code's failed, so where it too
+    failed its outcome is the one the account names (solorepo's DR-257);
+    otherwise Claude Code's.
+    """
+    return str(ended.gemini if ended.gemini in ("failure", "cancelled") else ended.claude)
+
+
+def what_run_left(issue: str) -> dict[str, Any] | None:
+    """What the hand-back needs about the pull request the run left, or `None` where unreadable.
+
+    A read that cannot answer is a reason to give the solo rather than the
+    end of the handler: a handler that dies hands nothing back
+    (solorepo's DR-155).
+    """
+    try:
+        return dict(check_pr.sweep.hand_back(issue))
+    except (SystemExit, Exception) as failed:  # noqa: BLE001  # reason: a failed read here is a reason to give the solo and not the end of the handler
+        print(f"the hand-back could not read what the run left: {failed}", file=sys.stderr)
+        return None
+
+
+def stop_with(issue: str, outcome: str, branch: str, why: str) -> None:
+    """Hands the Challenge to the solo with the account and why the reviewer is not asked."""
+    body = (DID_NOT_FINISH.format(outcome=outcome, run=run_url())
+            + STAYS_OPEN.format(branch=branch) + NOT_REQUESTED.format(why=why))
+    channel.sibling("move").stop(issue, channel.signed(body))
+
+
+def hand_back(issue: str, outcome: str, prefix: str) -> None:
+    """Hands back a take whose step failed or was cancelled without saying where it stopped.
+
+    Every way a run ends releases the claim or requests review, so that a
+    Challenge is never left claimed behind a dead step. What the run left is
+    read first, since somebody holding the pull request means the run
+    finished and then ran out; then the Issue, since one GitHub has closed
+    or one already at `human` is finished whatever the branch says; then
+    whether the branch merged. Green and clean, the account is posted on the
+    pull request before review is requested, since the request carries no
+    words and the one thing the reviewer cannot otherwise know is that this
+    is where a run stopped and not where one finished; the Issue stays
+    claimed at its level (solorepo's DR-129). Otherwise the Challenge goes to the solo through
+    `stop`, with why the reviewer was not asked, and a read that failed is
+    one such reason rather than the end of the handler (solorepo's DR-155).
 
     Parameters:
-        phase (str): `before`; `after` is refused until the next layer moves it.
-        number (str): The Challenge on a take, the pull request otherwise.
-        delivery (Delivery): What the workflow knows.
+        issue (str): The Challenge.
+        outcome (str): How the take step ended.
+        prefix (str): The harness's branch prefix, naming the branch where nothing was left.
+    """
+    left = what_run_left(issue)
+    number = str(left["number"]) if left and left.get("number") else ""
+    branch = str((left or {}).get("branch") or f"{prefix}/issue-{issue}")
+    base = str((left or {}).get("base") or "main")
+    if left and left.get("handed"):
+        print(f"#{issue}'s pull request has its review requested; the run finished and then "
+              "ran out")
+        return
+    view = channel.gh("issue", "view", issue, "--json", "state,labels", default=None)
+    if view is None:
+        stop_with(issue, outcome, branch, UNREADABLE_ISSUE.format(issue=issue))
+        return
+    labels = check_pr.state.issue_labels(view)
+    level = next((lvl for lvl in channel.sibling("move").DIFFICULTIES if lvl in labels), "")
+    if view.get("state") != "OPEN":
+        print(f"#{issue} is closed; a Challenge GitHub has closed has nothing to hand back")
+        return
+    if level == "human":
+        print(f"#{issue} is already at human; the run handed it back itself")
+        return
+    merged = channel.gh("pr", "list", "--state", "merged", "--head", branch, "--json", "number",
+                        default=None)
+    if merged is None:
+        stop_with(issue, outcome, branch, UNREADABLE_MERGE.format(branch=branch))
+    elif merged:
+        print(f"#{issue}'s pull request #{merged[0]['number']} has merged; the run finished and "
+              "then ran out")
+    elif number and left and left.get("green") and not left.get("conflicting"):
+        body = DID_NOT_FINISH.format(outcome=outcome, run=run_url()) + WORTH_READING.format(
+            issue=issue, level=level)
+        channel.sibling("post").conversation_comment(number, channel.signed(body))
+        channel.sibling("move").request_review(number, "reviewer")
+    else:
+        if left is None:
+            why = UNREADABLE_LEFT
+        elif not number:
+            why = "the run opened no pull request"
+        elif left.get("conflicting"):
+            why = CONFLICTS.format(number=number, base=base, branch=branch)
+        else:
+            why = NOT_GREEN.format(number=number)
+        stop_with(issue, outcome, branch, why)
+
+
+def verify(task: str, ended: Ended) -> None:
+    """Ends the run red where a pass ran and neither harness finished it.
 
     Raises:
-        SystemExit: On `after`, whose steps are still the workflow's own shell.
+        SystemExit: Where neither step succeeded and one failed; a pass that
+            was cancelled, or never ran, is not a failure of the pass.
     """
-    if phase != "before":
-        sys.exit(NOT_THIS_DOOR)
-    coder_before(number, delivery)
+    if ended.claude != "success" and ended.gemini != "success" \
+            and "failure" in (ended.claude, ended.gemini):
+        sys.exit(NEITHER.format(task=task, claude=ended.claude, gemini=ended.gemini))
+    print(f"the {task} pass ended claude={ended.claude} gemini={ended.gemini}")
+
+
+def redeliver(number: str) -> None:
+    """Redelivers the review pass where a rebase cleared a standing request for changes.
+
+    A rebase pushes with `--force-with-lease`, which GitHub reports as
+    `synchronize`, an event the coder's door does not listen for; where the
+    reviewer had already requested changes no request is pending, so
+    nothing fires and the pull request sits answered by nobody
+    (solorepo's #777). `dispatch` reads the standing verdict and the pending
+    request before deciding, and refuses where there is nothing to redeliver,
+    which is said and not a failure.
+    """
+    try:
+        channel.sibling("move").dispatch_pass(number, "review")
+    except SystemExit as refused:
+        print(f"nothing to redeliver on #{number}: {refused}")
+
+
+def coder_after(number: str, delivery: Delivery, ended: Ended) -> None:
+    """The coder's door after the session: what each pass owes once its steps have ended.
+
+    A take that failed or was cancelled is handed back; a rebase that
+    succeeded redelivers the review pass, and one that did not is verified;
+    an answer is verified; a promotion is verified where threads were held.
+    Verification ends the run red where neither harness finished the pass.
+
+    Parameters:
+        number (str): The Challenge on a take, the pull request otherwise.
+        delivery (Delivery): What the workflow knew before the session.
+        ended (Ended): How the session's steps ended.
+    """
+    if ended.claude is None or ended.gemini is None:
+        sys.exit("::error::" + OUTCOMES_NOT_SAID.format(claude=ended.claude, gemini=ended.gemini))
+    if delivery.task == "take":
+        outcome = outcome_of(ended)
+        if outcome in ("failure", "cancelled"):
+            hand_back(number, outcome, ended.branch_prefix)
+        else:
+            print(f"the take pass ended {outcome}; nothing to hand back")
+    elif delivery.task == "rebase":
+        if "success" in (ended.claude, ended.gemini):
+            redeliver(number)
+        else:
+            verify(delivery.task, ended)
+    elif delivery.task == "promote" and not ended.held:
+        print(f"no threads were held on #{number}; no promotion pass ran")
+    else:
+        verify(delivery.task, ended)
+
+
+def coder(phase: str, number: str, delivery: Delivery, ended: Ended) -> None:
+    """The coder's door, `before` or `after` the session, for the pass `delivery` names.
+
+    Parameters:
+        phase (str): `before` or `after`.
+        number (str): The Challenge on a take, the pull request otherwise.
+        delivery (Delivery): What the workflow knows.
+        ended (Ended): How the session's steps ended, unread before it.
+    """
+    if phase == "before":
+        coder_before(number, delivery)
+    else:
+        coder_after(number, delivery, ended)
 
 
 def reviewer(phase: str, number: str, session: Session) -> None:
@@ -752,8 +983,12 @@ def reviewer(phase: str, number: str, session: Session) -> None:
 RAN = ("claude", "gemini", "jules", "none")
 """What `--ran` may say: a harness step, or that none ran."""
 
-NOT_A_HARNESS = "{text!r} is not one of {choices}"
-"""The parser's refusal of a `--ran` that names no harness step."""
+NOT_ONE_OF = "{text!r} is not one of {choices}"
+"""The parser's refusal of a flag whose value is none of the words it takes."""
+
+DID_NOT_ARRIVE = ("an outcome that did not arrive: a step id renamed, or an expression that "
+                  "resolved to nothing, is a red run and not a pass that was skipped")
+"""The parser's refusal of an empty `--claude` or `--gemini`."""
 
 
 def count(text: str) -> int | None:
@@ -766,6 +1001,23 @@ def count(text: str) -> int | None:
     return int(text) if text.strip() else None
 
 
+def step_outcome(text: str) -> str:
+    """A step's outcome as the workflow reports it; an empty string is refused.
+
+    A step that never ran reports `skipped`, so an empty outcome is one the
+    workflow did not hand over, and the hand-back that would have run on it
+    must not be skipped quietly.
+
+    Raises:
+        argparse.ArgumentTypeError: Where the text is empty or no outcome a step has.
+    """
+    if not text.strip():
+        raise argparse.ArgumentTypeError(DID_NOT_ARRIVE)
+    if text not in OUTCOMES:
+        raise argparse.ArgumentTypeError(NOT_ONE_OF.format(text=text, choices=", ".join(OUTCOMES)))
+    return text
+
+
 def harness(text: str) -> str | None:
     """A flag's harness, or `None` where the workflow handed an empty string.
 
@@ -775,7 +1027,7 @@ def harness(text: str) -> str | None:
     if not text.strip():
         return None
     if text not in RAN:
-        raise argparse.ArgumentTypeError(NOT_A_HARNESS.format(text=text, choices=", ".join(RAN)))
+        raise argparse.ArgumentTypeError(NOT_ONE_OF.format(text=text, choices=", ".join(RAN)))
     return text
 
 
@@ -800,7 +1052,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="after a review session: where Claude Code's transcript is")
     c = sub.add_parser("coder")
     c.add_argument("phase", choices=("before", "after"),
-                   help="before the harness session; after it is still the workflow's own")
+                   help="before the harness session, or after it")
     c.add_argument("number", help="the Challenge on a take, the pull request on any other pass")
     c.add_argument("--pass", dest="task", choices=PASSES, required=True,
                    help="which pass the event opened")
@@ -808,6 +1060,16 @@ def build_parser() -> argparse.ArgumentParser:
                    help="the event the delivery arrived on, as github.event_name names it")
     c.add_argument("--harness", default="",
                    help="the harness a dispatch asked for, empty on any other event")
+    c.add_argument("--claude", type=step_outcome, default=None,
+                   help="after the session: how the pass's Claude Code step ended; required "
+                        "there, and an empty string is refused")
+    c.add_argument("--gemini", type=step_outcome, default=None,
+                   help="after the session: how the pass's Antigravity CLI step ended; required "
+                        "there, and an empty string is refused")
+    c.add_argument("--count", type=count, default=None,
+                   help="after a promotion: how many threads `before` found held")
+    c.add_argument("--branch-prefix", default="",
+                   help="after a take: the harness `before` chose, naming the loop's branch")
     return ap
 
 
@@ -819,7 +1081,8 @@ def main() -> None:
         reviewer(args.phase, args.number,
                  Session(args.verdicts, args.agents, args.ran, args.transcript))
     elif args.verb == "coder":
-        coder(args.phase, args.number, Delivery(args.task, args.event, args.harness))
+        coder(args.phase, args.number, Delivery(args.task, args.event, args.harness),
+              Ended(args.claude, args.gemini, args.count, args.branch_prefix))
 
 
 if __name__ == "__main__":

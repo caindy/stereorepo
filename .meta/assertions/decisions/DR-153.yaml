@@ -58,17 +58,19 @@ decisions:
         call site *in that file* passes `statusCheckRollup` to `gh --json` any
         more.
       - >-
-        Elsewhere in the repository one call site still does, and this decision
-        does not move it: the *hand back what the run did not finish* step in
-        `.github/workflows/coder.yml` asks `gh pr list` for the same field
+        Elsewhere in the repository one call site still did, and this decision
+        did not move it: the *hand back what the run did not finish* step then in
+        `.github/workflows/coder.yml` asked `gh pr list` for the same field
         under `github.token` and a `permissions:` block holding neither
-        `actions` nor `checks`, so by this decision's own diagnosis it fails —
-        and on `bash -e` that takes the step, which is the one place a run
-        killed at its budget hands its Challenge back. The remedy is not this
+        `actions` nor `checks`, so by this decision's own diagnosis it failed —
+        and on `bash -e` that took the step, which is the one place a run
+        killed at its budget hands its Challenge back. The remedy was not this
         one repeated: `green()` here is that predicate already, and a second
         copy of `ROLLUP` in a shell heredoc is the duplication the move exists
-        to end. Moving the step's `green`/`handed` read onto this file is its
-        own change, and the falsifier below does not watch it — it watches a
+        to end. Moving the step's `green`/`handed` read onto this file was its
+        own change, taken by solorepo's DR-155, which removed that call site;
+        the step that held it moved into the coder's door under solorepo's
+        DR-264. The falsifier below does not watch it — it watches a
         scheduled `gate` run, and that one dies inside a `coder` run that has
         already failed.
       - >-

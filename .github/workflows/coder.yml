@@ -99,21 +99,13 @@ concurrency:
   group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request || inputs.issue }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || ((github.event.label.name == 'easy' || github.event.label.name == 'medium') && 'take') || github.event.label.name || 'take' }}
   cancel-in-progress: false
 
-# The workflow's own token reads in the steps after the session; the door
-# before it reads as the Role. Every write goes through the coder's
-# credential, so what GitHub records is the Role and not the workflow.
-#
-# `checks: read` is here for the hand-back step, which asks `check_pr.py`
-# whether this Challenge's pull request is green, and greenness is a check run
-# (solorepo's DR-155). The scope is named because the code names it: `ROLLUP` in
-# that file selects the rollup's contexts and nothing under them, so this is
-# the whole of what the read needs, and not the wider `actions` scope a CLI's
-# query plan asked for on its behalf (solorepo's DR-153).
+# The workflow's own token checks the tree out and nothing else. Every read
+# and write goes through the coder's credential, which the door's program
+# and the session both hold, so what GitHub records is the Role and not the
+# workflow; the check runs the hand-back reads are read under it too
+# (solorepo's DR-155).
 permissions:
   contents: read
-  issues: read
-  pull-requests: read
-  checks: read
 
 jobs:
   coder:
@@ -242,8 +234,7 @@ jobs:
       # (solorepo's DR-142), with the sign left on a pull request whose
       # verdict no Job takes; how deep, by the pass and the level the
       # Challenge holds now; and on approval how many threads are held for
-      # promotion (solorepo's DR-159). The second phase, after the session,
-      # is still the shell below.
+      # promotion (solorepo's DR-159). The second phase is the last step.
       - name: before the session
         id: before
         run: >-
@@ -459,179 +450,6 @@ jobs:
             GitHub any other way: the hook refuses `gh pr create`, `gh pr
             comment`, `gh issue edit`, `gh issue comment` and `gh api`.
 
-      # A run that ended without finishing — the step's timeout, the turn
-      # limit, a crash, a cancellation — and without saying so has left the
-      # Issue claimed and its pull request open, which is what a standing run
-      # looks like, so every later delivery would read as a duplicate and the
-      # Challenge would be unreachable except by hand. A cancellation is a
-      # member of that list distinct from a crash, because GitHub's steps
-      # context reports a cancelled step's `outcome` as `cancelled` and never
-      # as `failure`, so a condition naming only the failure misses both of
-      # the ways one arrives: a run cancelled by hand from the Actions page,
-      # and GitHub withdrawing the runner. `always()` on the condition below
-      # is what lets this step run at all under one — `success() || failure()`
-      # is the form that would exclude it. The exit status alone cannot say
-      # that: a run that finished its work and then sat waiting on the checks
-      # (solorepo's #102) ends the same way, and so does one that ran `say stop` itself
-      # and then ran out. So this asks what a finished run leaves. A finished
-      # run hands off by requesting review: both `easy` and `medium` request
-      # review from the reviewer (solorepo's DR-161). The facts that survive that are the
-      # Issue's `state`, which the guard above already reads for the same
-      # reason, and the merge on this branch, which says the work landed even
-      # where no closing keyword closed the Issue. A run that stopped itself
-      # left the level at `human`. On any of those there is nothing to hand
-      # back, and an account written from the exit status would be false.
-      #
-      # Otherwise the hand-back is the act the run would have performed,
-      # through the same verb — and which act that is depends on what the run
-      # left behind (solorepo's DR-129). A pull request open with every check
-      # green is work a reviewer can read, and the run died one step short of
-      # asking. Handing only the Issue to the solo hands the pull request to
-      # nobody, and nothing picks it up: a Job finds its work by asking what
-      # has been requested of its login, and no event fires to ask again. So a
-      # green one is requested of the reviewer, whatever the level: review is
-      # requested so the reviewer evaluates the work, and the standing merge manager
-      # lands what is green and approved in order of leverage (solorepo's DR-161). Green is not enough on
-      # its own: GitHub builds no merge ref for a branch it reports as
-      # `CONFLICTING`, `review.yml` triggers on `pull_request`, so a request
-      # made on one creates no run and is answered by nobody — which is the
-      # state this step exists to prevent, reached by the step itself. The
-      # branch a run was cut from can conflict by the time it dies, because
-      # anything merging into its base while the run lasts can do it. Anything
-      # else — no pull request, a red gate, checks that have not answered yet,
-      # or a branch that conflicts — goes to the solo through `stop`, because
-      # a red gate is not a handoff by PR First's own rule and a branch nobody
-      # can review is the solo's for the same reason. `stop` puts the
-      # Challenge at `human`, and the sweep skips `human` on purpose, so that
-      # is where it rests: the solo holds it until they read the account
-      # `stop` posted, and one whose checks go green a minute later is not
-      # picked up by anything. The account is posted on the pull request
-      # before the request
-      # is made, in the order `stop` uses and for the same reason: the request
-      # is the handoff and carries no words, so the one thing the reviewer
-      # cannot otherwise know — that this branch is where a run stopped, not
-      # where it finished — has to be on the pull request, which is all an
-      # arriving Job reads.
-      - name: hand back what the run did not finish
-        if: >-
-          always() && steps.before.outputs.pass == 'take' && steps.before.outputs.by == ''
-          && (steps.take_claude.outcome == 'failure' || steps.take_claude.outcome == 'cancelled'
-              || steps.take_gemini.outcome == 'failure' || steps.take_gemini.outcome == 'cancelled')
-        run: |
-          # `bash -e` ends the step on the first failed assignment, so every
-          # bare read here is a way for the handler to die without handing
-          # anything back — the failure solorepo's DR-155 fixed for
-          # `check_pr.py`'s read below, and the same failure on the two `gh`
-          # reads this run also makes (solorepo's #257). Each is guarded, in
-          # the `if ! X=$(...); then` shape "is it taken already" already uses
-          # on the same call. That step hard-fails on a failed read because it
-          # holds no claim yet and a red job there costs nothing but a retry;
-          # this step's run may already hold one, so its failure hands the
-          # Issue to the solo through `stop` instead of leaving the claim stuck
-          # behind a dead step.
-          #
-          # Each guard sits where its answer is consumed and not where the read
-          # is made, and the reads are ordered so that the ones needing nothing
-          # come first. A failed read is a reason to give the solo only when
-          # nothing already known says the run finished: handing back a
-          # Challenge some other fact says is finished releases a claim the
-          # reviewer is holding, posts a second account of a run that already
-          # stopped itself, or drops to `human`, where the sweep stops looking.
-          #
-          # Whether anybody holds this Challenge's pull request, whether it is
-          # green, and whether its branch conflicts: all three are
-          # `check_pr.py`'s reads, asked of it rather than written out here a
-          # second time (solorepo's DR-155). `green()` in that file is this
-          # step's predicate already, and the jq copy that stood here asked `gh
-          # pr list` for `statusCheckRollup` under a token holding no `actions`
-          # scope — so the query failed, and on `bash -e` the failed assignment
-          # took this step and the handoff with it. What each field means is in
-          # `hand_back`'s docstring, where the code that decides it is.
-          #
-          # The read is allowed to fail without taking the step, which is the
-          # whole of what went wrong before: a handler that dies hands nothing
-          # back, and a read that cannot answer is a reason to give the solo
-          # rather than the end of the handler. Empty is that case, and the
-          # chain below names it — every `jq` here reads empty input as no
-          # value and exits 0, so nothing downstream needs guarding twice.
-          pr=$(python3 .meta/check_pr.py --hand-back "$ISSUE") || pr=
-          number=$(jq -r '.number // empty' <<<"$pr")
-          handed=$(jq -r .handed <<<"$pr")
-          green=$(jq -r .green <<<"$pr")
-          conflicting=$(jq -r .conflicting <<<"$pr")
-          base=$(jq -r '.base // "main"' <<<"$pr")
-          branch=$(jq -r '.branch // empty' <<<"$pr")
-          if [ -z "$branch" ]; then
-            branch="${BRANCH_PREFIX}/issue-$ISSUE"
-          fi
-          # This read asks only about the branch, so it needs nothing the
-          # Issue says and comes first. `handed` means the run reached its own
-          # last step: somebody holds the pull request, and there is nothing to
-          # hand back whatever the Issue turns out to say. Asked here, it also
-          # means the guard below stops the handler only when no fact in hand
-          # already says the work was handed off.
-          if [ "$handed" = true ]; then
-            echo "#$ISSUE's pull request has its review requested; the run finished and then ran out"
-            exit 0
-          fi
-          if ! issue=$(gh issue view "$ISSUE" --json state,labels); then
-            .meta/say/move stop "$ISSUE" <<EOF
-          This run ended without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
-
-          Not requested of the reviewer: #$ISSUE could not be read, so whether it is still open and at what level is unknown here; the run log above says why.
-          EOF
-            exit 0
-          fi
-          state=$(jq -r .state <<<"$issue")
-          level=$(jq -r '[.labels[].name | select(. == "easy" or . == "medium" or . == "hard" or . == "human")][0] // ""' <<<"$issue")
-          # Whether the branch already merged is asked in the chain, below the
-          # two facts that need no asking: a Challenge GitHub has closed, and
-          # one already at `human`, are both finished, and a blip on this read
-          # must not be allowed to say otherwise. `if !` in an `elif` suspends
-          # errexit the same as in an `if`, so the failure reaches its own
-          # branch and `stop` names it.
-          if [ "$state" != OPEN ]; then
-            echo "#$ISSUE is closed; a Challenge GitHub has closed has nothing to hand back"
-          elif [ "$level" = human ]; then
-            echo "#$ISSUE is already at human; the run handed it back itself"
-          elif ! merged=$(gh pr list --state merged --head "$branch" --json number --jq '.[0].number // empty'); then
-            .meta/say/move stop "$ISSUE" <<EOF
-          This run ended without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
-
-          Not requested of the reviewer: whether $branch's pull request has merged could not be read, so whether the work already landed is unknown here; the run log above says why.
-          EOF
-          elif [ -n "$merged" ]; then
-            echo "#$ISSUE's pull request #$merged has merged; the run finished and then ran out"
-          elif [ -n "$number" ] && [ "$green" = true ] && [ "$conflicting" != true ]; then
-            .meta/say/post comment "$number" <<EOF
-          This run ended without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN.
-
-          Every check on this head is green, so this is where a run stopped and not where one finished, and review is requested on that basis: what is here is worth reading, and whether it answers #$ISSUE is the review's question. #$ISSUE stays claimed at \`$level\`, and a request for changes comes back to the coder as a new run.
-          EOF
-            .meta/say/move request-review "$number"
-          else
-            if [ -z "$pr" ]; then
-              why="the hand-back could not read what this run left. check_pr.py --hand-back failed, so whether a pull request is open on this branch, and whether it is green, is unknown here; the run log above says why it failed"
-            elif [ -z "$number" ]; then
-              why="the run opened no pull request"
-            elif [ "$conflicting" = true ]; then
-              why="#$number's branch conflicts with its base, $base. GitHub builds no merge ref for one that does, review.yml runs on pull_request, and so a review requested on it would create no run and be answered by nobody. Rebase $branch onto $base and the request can be made"
-            else
-              why="the checks on #$number have not all passed, and a red gate is not a handoff"
-            fi
-            .meta/say/move stop "$ISSUE" <<EOF
-          This run ended without finishing and without saying where it stopped: its step ended $OUTCOME. What it did is in the run log, $RUN. The pull request it opened, if it opened one, is on \`$branch\` and stays open for the run that takes this up again.
-
-          Not requested of the reviewer: $why.
-          EOF
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number || inputs.issue }}
-          OUTCOME: ${{ (steps.take_gemini.outcome == 'failure' || steps.take_gemini.outcome == 'cancelled') && steps.take_gemini.outcome || steps.take_claude.outcome }}
-          BRANCH_PREFIX: ${{ steps.before.outputs.branch_prefix }}
-          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
       # The pass a merge on `main` dispatches (solorepo's DR-133). Nothing here
       # is a verdict to answer: what the pull request is waiting on is a review
       # nobody can run or a landing the merge manager cannot make, and both wait
@@ -845,41 +663,6 @@ jobs:
             `gh api`; the list is what this prompt happens to name and not the
             definition, so a command not on it is not thereby allowed.
 
-      - name: verify rebase pass completed
-        if: >-
-          always() && steps.before.outputs.pass == 'rebase'
-          && steps.before.outputs.by == ''
-          && steps.rebase_claude.outcome != 'success' && steps.rebase_gemini.outcome != 'success'
-          && (steps.rebase_claude.outcome == 'failure' || steps.rebase_gemini.outcome == 'failure')
-        run: |
-          echo "::error::Neither Claude nor Gemini rebase pass succeeded (claude=${{ steps.rebase_claude.outcome }}, gemini=${{ steps.rebase_gemini.outcome }})."
-          exit 1
-
-      # A rebase that clears a conflict pushes with `git push
-      # --force-with-lease`, which GitHub reports as `synchronize` — an event
-      # `coder.yml` does not listen for. Where the review was still
-      # outstanding that costs nothing: `review.yml` runs on `synchronize`
-      # itself while a request of the reviewer is pending, so the push is
-      # answered there. Where the reviewer had already left
-      # `CHANGES_REQUESTED`, no request is pending — GitHub drops a reviewer
-      # from `requested_reviewers` the moment they submit a review — so
-      # neither event fires a Job, and the pull request sits at
-      # `CHANGES_REQUESTED` with a clean, green head and nobody dispatched to
-      # answer it (solorepo's #777). `move dispatch --task review` already
-      # reads the standing verdict and the pending request before deciding
-      # whether a review pass is owed — the same read `advance`'s own sweep
-      # makes on the next push to trunk, just made here instead of waiting for
-      # one. It refuses where there is nothing to redeliver, an approved
-      # branch that was merely conflicting being the common case, so its exit
-      # is printed and not treated as this step's failure.
-      - name: redeliver the review pass where a rebase cleared changes requested
-        if: >-
-          steps.before.outputs.pass == 'rebase' && steps.before.outputs.by == ''
-          && (steps.rebase_claude.outcome == 'success' || steps.rebase_gemini.outcome == 'success')
-        run: .meta/say/move dispatch "$PR" --task review || true
-        env:
-          PR: ${{ steps.before.outputs.number }}
-
       - name: answer the review (claude)
         id: answer_claude
         if: >-
@@ -1000,16 +783,6 @@ jobs:
             Do not merge by hand, and do not reach GitHub any other way: the
             hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
             `gh issue edit`, `gh issue comment` and `gh api`.
-
-      - name: verify answer pass completed
-        if: >-
-          always() && steps.before.outputs.pass == 'answer'
-          && steps.before.outputs.by == ''
-          && steps.answer_claude.outcome != 'success' && steps.answer_gemini.outcome != 'success'
-          && (steps.answer_claude.outcome == 'failure' || steps.answer_gemini.outcome == 'failure')
-        run: |
-          echo "::error::Neither Claude nor Gemini answer pass succeeded (claude=${{ steps.answer_claude.outcome }}, gemini=${{ steps.answer_gemini.outcome }})."
-          exit 1
 
       # The pass an approval starts (solorepo's DR-159). What survives the argument
       # earns an Issue when the argument is settled, not at merge. If no threads
@@ -1163,12 +936,38 @@ jobs:
             Do not request review: the pull request is already approved.
             Do not merge by hand, and do not make any code changes.
 
-      - name: verify promote pass completed
-        if: >-
-          always() && steps.before.outputs.pass == 'promote'
-          && steps.before.outputs.by == '' && steps.before.outputs.count != '0'
-          && steps.promote_claude.outcome != 'success' && steps.promote_gemini.outcome != 'success'
-          && (steps.promote_claude.outcome == 'failure' || steps.promote_gemini.outcome == 'failure')
-        run: |
-          echo "::error::Neither Claude nor Gemini promote pass succeeded (claude=${{ steps.promote_claude.outcome }}, gemini=${{ steps.promote_gemini.outcome }})."
-          exit 1
+
+      # The door's second phase, once the pass's steps have ended, whatever
+      # way they ended: `always()` rather than `!cancelled()`, so that a run
+      # cancelled at its budget still hands its Challenge back. How the two
+      # harness steps of the pass ended is this file's to read and reaches
+      # the door as flags, the Antigravity CLI step's word taken where it
+      # failed after Claude Code's did (solorepo's DR-257). A take that
+      # failed or was cancelled is handed back: review requested where the
+      # pull request it left is green and clean, the account posted first,
+      # and the Challenge given to the solo through `stop` otherwise, with
+      # why (solorepo's DR-129, solorepo's DR-155). A rebase that succeeded
+      # redelivers the review pass it cleared (solorepo's #777). A pass one
+      # harness failed and neither finished ends the run red; a cancelled
+      # pass is not a failed one.
+      - name: after the session
+        if: ${{ always() && steps.before.outcome == 'success' && steps.before.outputs.by == '' }}
+        run: >-
+          .meta/say/on coder after "$NUMBER" --pass "$PASS" --event "$EVENT"
+          --claude "$CLAUDE" --gemini "$GEMINI" --count "$COUNT" --branch-prefix "$PREFIX"
+        env:
+          NUMBER: ${{ steps.before.outputs.pass == 'take' && (github.event.issue.number || inputs.issue) || steps.before.outputs.number }}
+          PASS: ${{ steps.before.outputs.pass }}
+          EVENT: ${{ github.event_name }}
+          CLAUDE: >-
+            ${{ steps.before.outputs.pass == 'take' && steps.take_claude.outcome
+                || steps.before.outputs.pass == 'rebase' && steps.rebase_claude.outcome
+                || steps.before.outputs.pass == 'answer' && steps.answer_claude.outcome
+                || steps.promote_claude.outcome }}
+          GEMINI: >-
+            ${{ steps.before.outputs.pass == 'take' && steps.take_gemini.outcome
+                || steps.before.outputs.pass == 'rebase' && steps.rebase_gemini.outcome
+                || steps.before.outputs.pass == 'answer' && steps.answer_gemini.outcome
+                || steps.promote_gemini.outcome }}
+          COUNT: ${{ steps.before.outputs.count }}
+          PREFIX: ${{ steps.before.outputs.branch_prefix }}

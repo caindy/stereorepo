@@ -4,12 +4,14 @@ decisions:
     challenge: work:challenge/233
     status: ADOPTED
     enacted_in:
+      - work:artifact/meta-say-on
       - work:artifact/meta-check-pr
       - work:artifact/github-workflows-coder
       - work:artifact/meta-lib-check-pr-sweep
     context: >-
       The *hand back what the run did not finish* step in
-      `.github/workflows/coder.yml` is the handler that exists so a run killed
+      `.github/workflows/coder.yml`, since moved into the coder's door,
+      `.meta/say/on`, under solorepo's DR-264, is the handler that exists so a run killed
       at its budget still names a successor: it reads what the run left, posts
       the account, and then either requests review or hands the Challenge to
       the solo. To choose between those it needs three facts about the pull
@@ -76,26 +78,30 @@ decisions:
         `conflicting` reads `CONFLICTING` and not `UNKNOWN`, which is GitHub
         still computing.
       - >-
-        `permissions:` in `.github/workflows/coder.yml` gains `checks: read`
-        and nothing else. It is the only scope the rollup query needs, and it is
-        named because the code names it.
+        `permissions:` in `.github/workflows/coder.yml` gained `checks: read`
+        and nothing else while the hand-back read under the workflow's own
+        token, the only scope the rollup query needs, named because the code
+        names it. Since the hand-back moved into the coder's door under
+        solorepo's DR-264 every read is the Role's, and the block is
+        `contents: read` alone, for the checkout.
       - >-
-        The hand-back's read may fail without taking the step. `bash -e` ending
-        the handler is what the Challenge was, so a read that cannot answer is
-        a branch of its own: the Challenge goes to the solo through `stop`,
-        saying that what the run left could not be read. A handler that dies
-        hands nothing back; one that says it could not tell has still named
-        somebody.
+        The hand-back's read may fail without taking the handler. A handler
+        that died on its first failed read is what the Challenge was, so a read
+        that cannot answer is a branch of its own: `what_run_left` in the
+        coder's door answers `None` where `hand_back` raised, and the Challenge
+        goes to the solo through `stop`, saying that what the run left could
+        not be read. A handler that dies hands nothing back; one that says it
+        could not tell has still named somebody.
       - >-
-        The step now runs the branch's own copy of `check_pr.py`, not trunk's.
-        `actions/checkout` runs once, at the top of the job, and the
-        hand-back's `if:` requires that *take the Issue* ran — which ran the
-        model in that same workspace, under a prompt telling it to branch from
+        The handler runs the branch's own copy of the state library, not
+        trunk's. `actions/checkout` runs once, at the top of the job, and the
+        hand-back runs after the take pass's steps, which ran the model in
+        that same workspace, under a prompt telling it to branch from
         `origin/main` and commit there. Nothing restores the tree between them,
         so the handler runs whatever the dying run left on `claude/issue-<n>`,
-        committed or not. Half of that the new failure branch already covers: a
-        copy that cannot parse or that raises exits non-zero, `pr=` is empty,
-        and the Challenge goes to the solo. The other half it does not: a copy
+        committed or not. Half of that the failure branch already covers: a
+        copy that cannot parse or that raises is `what_run_left` answering
+        `None`, and the Challenge goes to the solo. The other half it does not: a copy
         left semantically half-edited exits 0 with a wrong answer, and the step
         acts on it. What bounds that is not insulation but trust — the
         container is the coder's own, holding that credential and having just

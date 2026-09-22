@@ -261,13 +261,14 @@ programs:
           fan-out ceiling was kept
         held_by: [workflow]
       - name: coder
-        usage: "before <n> --pass take|rebase|answer|promote --event E [--harness H]"
+        usage: "before|after <n> --pass take|rebase|answer|promote --event E [--harness H] [--claude O --gemini O --count N --branch-prefix P]"
         does: >-
-          the coder's door before the session, for the Challenge on a take
-          and the pull request on any other pass: which pull request a
-          second pass answers, its branch checked out; which harness runs;
-          whether the delivery is still the loop's, with the sign left where
-          a verdict has no Job; how deep; and on approval how many threads
-          are held for promotion. After the session is still coder.yml's own
-          shell
+          the coder's door, for the Challenge on a take and the pull request
+          on any other pass. Before the session: which pull request a second
+          pass answers, its branch checked out; which harness runs; whether
+          the delivery is still the loop's, with the sign left where a
+          verdict has no Job; how deep; and on approval how many threads are
+          held for promotion. After it, with how the pass's two harness
+          steps ended as flags: a take that did not finish handed back, the
+          review pass a rebase cleared redelivered, and the rest verified
         held_by: [workflow]

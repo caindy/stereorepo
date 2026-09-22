@@ -1,7 +1,8 @@
-"""`on coder`, the coder's door before its session, over a fake for each pass (solorepo's DR-264).
+"""`on coder`, the coder's door before and after its session, over a fake for each pass.
 
 One module for one verb's probes, so a history log's Evidence names the file
-holding them (solorepo's DR-209); the reviewer's verb is probed in `on.py`.
+holding them (solorepo's DR-209); the reviewer's verb is probed in `on.py`
+(solorepo's DR-264).
 """
 import contextlib
 import os
@@ -25,7 +26,7 @@ RUN = "https://github.com/o/r/actions/runs/99"
 
 @check("coder door probes", pre=True)
 def coder_door_probes() -> list[str]:
-    """`on coder before` over each pass, with what the workflow hands it as flags.
+    """`on coder before` and `after` over each pass, with what the workflow hands them as flags.
 
     A take reads the Challenge's label for the harness, the label winning
     over a dispatch's input and the input over silence, asks the take door
@@ -38,8 +39,14 @@ def coder_door_probes() -> list[str]:
     for a dispatched answer, which is the solo's own word. Where a verdict's
     delivery finds the loop stood down, the sign is posted on the pull
     request, signed. The depth follows the pass; on approval the unresolved
-    threads are counted and a failed checkout is tolerated. `after` is
-    refused, being the workflow's own shell still.
+    threads are counted and a failed checkout is tolerated. After the
+    session: a take that failed or was cancelled is handed back, review
+    requested where the pull request it left is green and clean and the
+    Challenge given to the solo otherwise, with why, every read that failed
+    among the whys and nothing owed where the run turns out to have
+    finished; a rebase that succeeded redelivers the review pass and a
+    refusal is said; and a pass neither harness finished ends the run red,
+    a cancelled one not being a failed one.
     """
     channel, _, programs = load_channel()
     on = programs["on"]
@@ -140,7 +147,8 @@ def _before(channel: Any, on: Any, fakes: _Fakes, delivery: tuple[str, str, str]
     with _workspace() as root, stood_in(channel, gh=fakes.gh), \
             stood_in(on, command=fakes.commands), stood_in(on.check_pr.sweep, take=fakes.take), \
             stood_in(on.check_pr.github, threads=lambda number: list(fakes.threads)):
-        ended = outcome(lambda: on.coder("before", number, on.Delivery(*delivery)))
+        ended = outcome(lambda: on.coder("before", number, on.Delivery(*delivery),
+                                         on.Ended("skipped", "skipped", None, "")))
         out = dict(line.split("=", 1) for line in (root / "output").read_text().splitlines()
                    if "=" in line)
         return ended, out, (root / "env").read_text()
@@ -283,11 +291,220 @@ def _rebase_promote_cases(channel: Any, on: Any) -> list[str]:
     return problems
 
 
+NOTHING_TO_REDELIVER = "say: nothing to redeliver"
+"""How the stand-in for `dispatch_pass` refuses."""
+
+READ_FAILED = "gh: `{command}` failed"
+"""How a stand-in refuses a read that was given no fallback."""
+
+SIGNED = ("Actor: gha-99", "Agent: anthropics/claude-code-action@v1")
+"""The Trailer every account the hand-back posts must carry."""
+
+
+class _Loop:
+    """A stand-in for the channel's verbs the hand-back acts through, recording each act."""
+
+    def __init__(self, refuse_dispatch: bool = False) -> None:
+        self.stopped: list[tuple[str, str]] = []
+        self.requested: list[tuple[str, str]] = []
+        self.dispatched: list[tuple[str, str | None]] = []
+        self.refuse_dispatch = refuse_dispatch
+
+    def stop(self, issue: str, body: str) -> None:
+        self.stopped.append((str(issue), body))
+
+    def request_review(self, pr: str, to: str) -> None:
+        self.requested.append((str(pr), to))
+
+    def dispatch_pass(self, pr: str, task: str | None) -> None:
+        self.dispatched.append((str(pr), task))
+        if self.refuse_dispatch:
+            raise SystemExit(NOTHING_TO_REDELIVER)
+
+
+class _Left:
+    """A stand-in for `hand_back`, answering what the run left or refusing to read it."""
+
+    def __init__(self, left: dict[str, Any] | None) -> None:
+        self.left = left
+
+    def __call__(self, issue: str) -> dict[str, Any]:
+        if self.left is None:
+            raise SystemExit(READ_FAILED.format(command="hand-back"))
+        return dict(self.left)
+
+
+class _After(_GitHub):
+    """The coder door fake after a session: an Issue's state and level, and the merged listing."""
+
+    def __init__(self, state: str = "OPEN", labels: Sequence[str] = ("challenge", "medium"),
+                 merged: list[dict[str, Any]] | None = None, unreadable: str = "") -> None:
+        super().__init__(labels=labels, state=state)
+        self.merged, self.unreadable = merged, unreadable
+
+    def __call__(self, *args: str, **kwargs: Any) -> Any:
+        if args[:2] == ("issue", "view"):
+            if self.unreadable == "issue":
+                return self.refuse(args, kwargs)
+            return {"state": self.state, "labels": [{"name": name} for name in self.labels]}
+        if args[:2] == ("pr", "list"):
+            if self.unreadable == "merged":
+                return self.refuse(args, kwargs)
+            return list(self.merged or [])
+        return super().__call__(*args, **kwargs)
+
+    @staticmethod
+    def refuse(args: tuple[str, ...], kwargs: dict[str, Any]) -> Any:
+        """Refuses as `channel.gh` does: the fallback where one was given, else an exit."""
+        if "default" in kwargs:
+            return kwargs["default"]
+        raise SystemExit(READ_FAILED.format(command=" ".join(args)))
+
+
+class _Session(NamedTuple):
+    """One `after` case: what the workflow reports, and what stands in for the reads and acts."""
+
+    delivery: tuple[str, str, str]
+    ended: tuple[str | None, str | None, int | None, str]
+    fake: _GitHub
+    left: _Left
+    loop: _Loop
+
+
+def _session(delivery: tuple[str, str, str], ended: tuple[str | None, str | None, int | None, str],
+             fake: _GitHub | None = None, left: _Left | None = None,
+             loop: _Loop | None = None) -> _Session:
+    """An `after` case, each stand-in defaulting to one that answers the ordinary way."""
+    return _Session(delivery, ended, fake or _After(), left or _Left(None), loop or _Loop())
+
+
+def _after(channel: Any, on: Any, case: _Session) -> tuple[Any, _Loop]:
+    """`on coder after` against the case's fakes: how it ended and what the loop's verbs saw.
+
+    `ACTOR_AGENT` is set as the run has it by then, `before` having written
+    it to `GITHUB_ENV` for every step after its own.
+    """
+    delivery, ended, fake, left, loop = case
+    move = channel.sibling("move")
+    number = ISSUE if delivery[0] == "take" else PULL
+    with _workspace(), environment(ACTOR_AGENT="anthropics/claude-code-action@v1"), \
+            stood_in(channel, gh=fake), stood_in(on.check_pr.sweep, hand_back=left), \
+            stood_in(move, stop=loop.stop, request_review=loop.request_review,
+                     dispatch_pass=loop.dispatch_pass):
+        ended_as = outcome(lambda: on.coder("after", number, on.Delivery(*delivery),
+                                            on.Ended(*ended)))
+    return ended_as, loop
+
+
 def _after_cases(channel: Any, on: Any) -> list[str]:
-    """`after`, refused while the second phase is the workflow's own shell."""
-    with _workspace(), stood_in(channel, gh=_GitHub()):
-        ended = outcome(lambda: on.coder("after", PULL, on.Delivery("answer", "workflow_dispatch",
-                                                                   "")))
-    if ended.code is None or "still `coder.yml`'s own shell" not in str(ended.code):
-        return [f"after: was answered with exit {ended.code!r}, not refused as the shell's still"]
-    return []
+    """`after` on each pass: the take handed back, the rebase redelivered, the rest verified."""
+    problems = _hand_back_cases(channel, on)
+    take = ("take", "issues", "")
+    ended, loop = _after(channel, on, _session(take, ("success", "skipped", None, "claude")))
+    if ended.code is not None or loop.stopped or loop.requested or "nothing to hand back" \
+            not in ended.out:
+        problems.append(f"after: a take that succeeded ended {ended.code!r} saying {ended.out!r}")
+
+    rebase = ("rebase", "workflow_dispatch", "claude")
+    ended, loop = _after(channel, on, _session(rebase, ("failure", "success", None, "")))
+    if ended.code is not None or loop.dispatched != [(PULL, "review")]:
+        problems.append(f"after: a rebase the fallback finished ended {ended.code!r} and "
+                        f"dispatched {loop.dispatched!r}, where the review pass is redelivered")
+    ended, loop = _after(channel, on, _session(rebase, ("success", "skipped", None, ""),
+                                          loop=_Loop(refuse_dispatch=True)))
+    if ended.code is not None or "nothing to redeliver" not in ended.out:
+        problems.append(f"after: a redelivery refused ended {ended.code!r} saying "
+                        f"{ended.out!r}, where the refusal is said and not a failure")
+    for task, delivery in (("rebase", rebase), ("answer", ("answer", "pull_request_review", "")),
+                           ("promote", ("promote", "pull_request_review", ""))):
+        ended, loop = _after(channel, on, _session(delivery, ("failure", "failure", 2, "")))
+        if ended.code is None or f"Neither Claude nor Gemini {task} pass succeeded" \
+                not in str(ended.code):
+            problems.append(f"after: a {task} pass neither harness finished ended "
+                            f"{ended.code!r}")
+        ended, loop = _after(channel, on, _session(delivery, ("cancelled", "skipped", 2, "")))
+        if ended.code is not None or loop.dispatched or loop.stopped or loop.requested:
+            problems.append(f"after: a {task} pass cancelled ended {ended.code!r} and acted "
+                            f"{loop.dispatched!r} {loop.stopped!r} {loop.requested!r}, where a "
+                            "cancelled pass is not a failed one and nothing is owed")
+    for name, ended_as in (("no outcomes", (None, None, 2, "")),
+                           ("no Claude Code outcome", (None, "skipped", 2, ""))):
+        ended, loop = _after(channel, on, _session(take, ended_as))
+        if ended.code is None or "did not arrive" not in str(ended.code) or loop.stopped:
+            problems.append(f"after: {name} ended {ended.code!r}, where an outcome that did not "
+                            "arrive is a red run")
+    empty = outcome(lambda: on.build_parser().parse_args(
+        ["coder", "after", ISSUE, "--pass", "take", "--event", "issues", "--claude", "",
+         "--gemini", "skipped"]))
+    if empty.code is None or "did not arrive" not in empty.err:
+        problems.append(f"after: an empty --claude was parsed as {empty.code!r} {empty.err!r}, "
+                        "where an empty outcome is refused")
+    ended, loop = _after(channel, on, _session(("promote", "pull_request_review", ""),
+                                          ("skipped", "skipped", 0, "")))
+    if ended.code is not None or "no threads were held" not in ended.out:
+        problems.append(f"after: a promotion with no threads ended {ended.code!r} saying "
+                        f"{ended.out!r}")
+    return problems
+
+
+def _hand_back_cases(channel: Any, on: Any) -> list[str]:
+    """A take that did not finish: every way the hand-back ends, in the order it reads."""
+    problems = []
+    take = ("take", "issues", "")
+    green = {"number": 12, "branch": f"claude/issue-{ISSUE}", "handed": False, "green": True,
+             "conflicting": False, "base": "main"}
+    fake = _After()
+    ended, loop = _after(channel, on, _session(take, ("failure", "skipped", None, "claude"), fake,
+                                          _Left(green)))
+    if ended.code is not None or loop.stopped or loop.requested != [(PULL, "reviewer")] \
+            or len(fake.posted) != 1 or "where a run stopped" not in fake.posted[0] \
+            or ".\n\nEvery check on this head is green" not in fake.posted[0] \
+            or any(line not in fake.posted[0] for line in SIGNED):
+        problems.append(f"hand-back: a green pull request ended {ended.code!r}, stopped "
+                        f"{loop.stopped!r}, requested {loop.requested!r}, posted "
+                        f"{fake.posted!r}, where review is requested after the signed account "
+                        "is posted")
+    ended, loop = _after(channel, on, _session(take, ("failure", "cancelled", None, "claude"),
+                                          left=_Left({**green, "green": False})))
+    account = loop.stopped[0][1] if loop.stopped else ""
+    if ended.code is not None or loop.requested or len(loop.stopped) != 1 \
+            or "ended cancelled" not in account or "red gate" not in account \
+            or "again.\n\nNot requested of the reviewer:" not in account \
+            or any(line not in account for line in SIGNED):
+        problems.append(f"hand-back: a red pull request ended {ended.code!r} with "
+                        f"{loop.stopped!r}, where the Challenge goes to the solo in a signed "
+                        "account of two paragraphs naming the fallback's outcome")
+    cases = (("what the run left unreadable", _Left(None), _After(), "could not read what"),
+             ("no pull request", _Left({**green, "number": None, "branch": None}), _After(),
+              "opened no pull request"),
+             ("a conflicting branch", _Left({**green, "conflicting": True}), _After(),
+              "conflicts with its base"),
+             ("the Issue unreadable", _Left(green), _After(unreadable="issue"),
+              "could not be read"),
+             ("the merged listing unreadable", _Left(green), _After(unreadable="merged"),
+              "has merged could not be read"))
+    for name, left, fake, why in cases:
+        ended, loop = _after(channel, on, _session(take, ("failure", "skipped", None, "gemini"),
+                                                   fake, left))
+        account = loop.stopped[0][1] if loop.stopped else ""
+        if ended.code is not None or len(loop.stopped) != 1 or why not in account \
+                or loop.requested or any(line not in account for line in SIGNED) \
+                or f"/issue-{ISSUE}`" not in account:
+            problems.append(f"hand-back: {name} ended {ended.code!r} with {loop.stopped!r}, "
+                            f"where the Challenge goes to the solo in a signed account saying "
+                            f"{why!r} and naming the branch")
+        if (left.left is None or left.left.get("branch") is None) \
+                and f"`gemini/issue-{ISSUE}`" not in account:
+            problems.append(f"hand-back: {name} named the branch as {account!r}, where the "
+                            "prefix the door was handed names it when nothing was left")
+    quiet = (("handed already", _Left({**green, "handed": True}), _After()),
+             ("the Issue closed", _Left(green), _After(state="CLOSED")),
+             ("the Issue at human", _Left(green), _After(labels=["challenge", "human"])),
+             ("the branch merged", _Left(green), _After(merged=[{"number": 12}])))
+    for name, left, fake in quiet:
+        ended, loop = _after(channel, on, _session(take, ("failure", "skipped", None, "claude"),
+                                                   fake, left))
+        if ended.code is not None or loop.stopped or loop.requested:
+            problems.append(f"hand-back: {name} ended {ended.code!r} with {loop.stopped!r} and "
+                            f"{loop.requested!r}, where the run finished and nothing is owed")
+    return problems
