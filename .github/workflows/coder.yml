@@ -308,7 +308,7 @@ jobs:
             `revise` and `comment` take either.
 
             Do what the Issue asks and no more. Gate green with
-            `.meta/gate meta`, commit and push as you go, `.meta/say/move revise <n>`
+            `just gate meta`, commit and push as you go, `.meta/say/move revise <n>`
             when the body no longer says what the head does, and
             `just dereference` and then `.meta/say/post landed <n>` before you
             hand it over. `dereference` reads the citations this branch wrote
@@ -400,9 +400,9 @@ jobs:
             `revise` and `comment` take either.
 
             Do what the Issue asks and no more. Never run `just gate` or
-            `.meta/gate meta` as an entrance check on origin/main (`main` is
+            `just gate meta` as an entrance check on origin/main (`main` is
             evergreen under PR First). Gate green with
-            `.meta/gate meta` only when your changes are complete before handoff.
+            `just gate meta` only when your changes are complete before handoff.
             Do NOT invoke subagents: evaluate and implement the Challenge
             directly in this session (solorepo's DR-257).
             Commit and push as you go, `.meta/say/move revise <n>`
@@ -531,7 +531,7 @@ jobs:
             conflict go away. Where a file is generated, take neither side —
             re-render it, as `AGENTS.md` says.
 
-            Then `.meta/gate meta` green.
+            Then `just gate meta` green.
 
             Now, push the rebased head: `git push --force-with-lease`.
             Do not arm the merge and do not merge by hand: once green and approved,
@@ -636,7 +636,7 @@ jobs:
             conflict go away. Where a file is generated, take neither side —
             re-render it, as `AGENTS.md` says.
 
-            Then `.meta/gate meta` green.
+            Then `just gate meta` green.
 
             Now, push the rebased head: `git push --force-with-lease`.
             Do not arm the merge and do not merge by hand: once green and approved,
@@ -693,12 +693,12 @@ jobs:
             stdin as a quoted heredoc, and a refusal names the verb to use
             instead. Commit through `.meta/say/commit` only.
 
-            Read the threads: `python3 .meta/check_pr.py ${{ steps.before.outputs.number }} --threads`,
+            Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`,
             and the verdict: `gh pr view ${{ steps.before.outputs.number }} --comments`.
             A point is right, right about something else, or overtaken by the
             diff, and only the first is a change to make; all three are owed
             a reply that says which. Make the changes, gate green with
-            `.meta/gate meta`, commit and push. Then `.meta/say/post answer
+            `just gate meta`, commit and push. Then `.meta/say/post answer
             <thread-id>` on every thread, which replies and resolves; a thread
             marked "Noticed and not done" stays open until approval, when surviving
             notices are promoted (solorepo's DR-159).
@@ -759,12 +759,12 @@ jobs:
             stdin as a quoted heredoc, and a refusal names the verb to use
             instead. Commit through `.meta/say/commit` only.
 
-            Read the threads: `python3 .meta/check_pr.py ${{ steps.before.outputs.number }} --threads`,
+            Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`,
             and the verdict: `gh pr view ${{ steps.before.outputs.number }} --comments`.
             A point is right, right about something else, or overtaken by the
             diff, and only the first is a change to make; all three are owed
             a reply that says which. Make the changes, gate green with
-            `.meta/gate meta`, commit and push. Then `.meta/say/post answer
+            `just gate meta`, commit and push. Then `.meta/say/post answer
             <thread-id>` on every thread, which replies and resolves; a thread
             marked "Noticed and not done" stays open until approval, when surviving
             notices are promoted (solorepo's DR-159).
@@ -814,7 +814,7 @@ jobs:
             The reviewer has approved this pull request. The argument is settled,
             and what survives the argument earns an Issue (solorepo's DR-159).
 
-            Read the threads: `python3 .meta/check_pr.py ${{ steps.before.outputs.number }} --threads`.
+            Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`.
             Try the Incidental Commit first, on a thread the reviewer raised: if the surviving
             point is mechanical, owes no Decision, implies no Challenge of its own and is
             proved by the gate already running, fix it in a commit of its own whose subject
@@ -893,11 +893,11 @@ jobs:
             The reviewer has approved this pull request. The argument is settled,
             and what survives the argument earns an Issue (solorepo's DR-159).
 
-            Read the threads: `python3 .meta/check_pr.py ${{ steps.before.outputs.number }} --threads`.
-            Try the drive-by first, on a thread the reviewer raised: if the surviving
+            Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`.
+            Try the Incidental Commit first, on a thread the reviewer raised: if the surviving
             point is mechanical, owes no Decision, implies no Challenge of its own and is
             proved by the gate already running, fix it in a commit of its own whose subject
-            begins `Drive-by:`, answer the thread naming that commit, and file no Issue
+            begins `Incidental:`, answer the thread naming that commit, and file no Issue
             (solorepo's DR-236). Ejecting a
             fix this branch can already reach costs a whole pickup to deliver. Your own
             "Noticed and not done" thread is not reachable by this — the sole-author
