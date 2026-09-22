@@ -437,6 +437,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-reconcile
     name: .meta/checks/probes/loops/reconcile.py
     path: .meta/checks/probes/loops/reconcile.py
+  - id: work:artifact/meta-checks-probes-loops-merge-lock
+    name: .meta/checks/probes/loops/merge_lock.py
+    path: .meta/checks/probes/loops/merge_lock.py
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py

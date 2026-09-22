@@ -8,6 +8,7 @@ from typing import Any
 from checks import citations
 from checks.collect import META, check
 from checks.probes.harness import (
+    LockedGitHub,
     load_channel,
     load_module,
     outcome,
@@ -428,7 +429,7 @@ def _end_to_end(channel: Any, move: Any) -> list[str]:
     """The base is chosen, the dependent deferred, and the refused candidates named with their reasons; a dry run says so and merges nothing, and the real run merges the base and nothing else."""
     problems = []
     fake = ManagerFake(*_fixtures())
-    with stood_in(channel, gh=fake.gh, repo=fake.repo, graphql=fake.graphql):
+    with stood_in(channel, gh=LockedGitHub(fake.gh), repo=fake.repo, graphql=fake.graphql):
         text = outcome(lambda: move.merge_manager(dry_run=True)).out
         if f"chosen: #{'10'}" not in text:
             problems.append(f"merge manager: expected #{'10'} to be chosen as stack base, got:\n{text}")
@@ -473,7 +474,7 @@ def _check_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
         """An `advance_stranded` that records its call rather than sweeping anything."""
         calls.append(args)
 
-    with stood_in(channel, gh=fake.gh, repo=fake.repo, graphql=fake.graphql), \
+    with stood_in(channel, gh=LockedGitHub(fake.gh), repo=fake.repo, graphql=fake.graphql), \
             stood_in(move.pull_requests, merge=failing_merge), \
             stood_in(move.manager.advance, advance_stranded=recording_advance_stranded):
         result = outcome(lambda: move.merge_manager(dry_run=False))
@@ -670,7 +671,7 @@ def _check_disjoint_bypass(channel: Any, move: Any) -> list[str]:
             return []
         return {}
 
-    with stood_in(channel, gh=gh_disjoint, repo=lambda: "owner/repo"):
+    with stood_in(channel, gh=LockedGitHub(gh_disjoint), repo=lambda: "owner/repo"):
         out = outcome(lambda: move.merge_manager(dry_run=False)).out
         if "disjoint bypass" not in out or f"chosen: #{'22'}" not in out:
             problems.append(f"merge manager: expected PR 22 to bypass disjointly, got:\n{out}")
@@ -1043,7 +1044,7 @@ def _check_stalled_pr_merge_manager_refusal(channel: Any, move: Any) -> list[str
             return [{"filename": "lib/foo.py"}]
         return {}
 
-    with stood_in(channel, gh=gh_stalled, repo=lambda: "owner/repo"):
+    with stood_in(channel, gh=LockedGitHub(gh_stalled), repo=lambda: "owner/repo"):
         out = outcome(lambda: move.merge_manager(dry_run=False)).out
         if demoted_calls != ["35"]:
             problems.append(f"merge_manager: expected PR 35 demoted to draft on GitHub, got: {demoted_calls}")

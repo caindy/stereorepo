@@ -1,0 +1,16 @@
+challenges:
+  - id: work:challenge/850
+    name: "The reconciler's scheduled pass is cancelled by the merge traffic it shares a concurrency group with"
+    challenge_type: DEFECT
+    description: >-
+      `reconcile.yml` and `merge.yml` both declared `concurrency: group: merge`,
+      because both run the merge manager and two merges in quick succession must
+      serialize. GitHub admits one running and one pending run per group and
+      cancels the pending one when a third arrives, so a reading pass scheduled
+      into a burst of merges is the run dropped — silently, a run cancelled before
+      any job starts printing nothing. On 2026-09-22 run 35787817254 was cancelled
+      that way while solorepo's #828 was landing. Under DR-264 that pass is the
+      primary loop, so what the cancellation drops is every act it performs beside
+      the merge: a rebase dispatched, a review requested again, a dead claim
+      released. Either the two workflows stop sharing a group, or the merge
+      manager's mutual exclusion stops depending on one.

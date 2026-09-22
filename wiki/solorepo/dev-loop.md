@@ -192,11 +192,55 @@ rebase pass (solorepo's DR-133). And a `pull_request` run reads the workflow
 file from the merge ref, so a review runs under the pull request's own copy of
 `review.yml`.
 
+### The Merge Manager's Two Groups and Its Lock
+
+[`.github/workflows/merge.yml`](../../.github/workflows/merge.yml) and
+[`.github/workflows/reconcile.yml`](../../.github/workflows/reconcile.yml) both
+run the merge manager, and each groups on itself. `merge.yml`:
+
+```yaml
+concurrency:
+  group: merge
+  cancel-in-progress: false
+```
+
+And `reconcile.yml`:
+
+```yaml
+concurrency:
+  group: reconcile
+  cancel-in-progress: false
+```
+
+**The invariant: a manager that does not hold the lock does not merge, and no
+pass is dropped to buy that.** The two are separate properties, and one group cannot
+hold both. A shared group holds the exclusion by cancelling: the second manager
+waits, and a third arrival deletes it. That is acceptable between two merges,
+which are interchangeable — the survivor merges what the dropped delivery would
+have — and unacceptable between a merge and a reading pass, which are not. Under
+solorepo's DR-264 the reconciler's pass is the primary loop and the merge is one
+of the acts it performs, so cancelling it drops every other act: a rebase
+dispatched, a review requested again, a dead claim released. Solorepo's #850 was
+that cancellation, and it printed nothing, a run cancelled before any job starts
+producing no log at all.
+
+So the exclusion moves out of the group system and onto a lock the manager takes
+for itself (solorepo's DR-267). `take_merge_lock` creates
+`refs/tags/merge-manager-lock`, which GitHub refuses for a second caller while
+the first holds it — the same compare-and-set `.meta/say/move mint` reserves a
+Decision number with. A manager that meets a held lock **declines rather than
+waits**, so the reconciler's run goes on to its reading and `merge.yml`'s next
+trigger brings the merge round again; a lock whose holder has stopped is broken
+by a delete and that same create, which residual 5 below is the cost of. A dry
+run is the one manager that evaluates without the lock, taking none because it
+merges nothing.
+
 ### Residuals
 
 The first two are judgements about what is acceptable to lose rather than
 defects. The third is a case the expressions do not cover, found while writing
-this account.
+this account. The fourth is what moved the merge manager's exclusion off the
+group system altogether, and the fifth is what that move cost.
 
 1. **A third rebase dispatch cancels the one waiting.** Two merges on the base
    in quick succession dispatch twice, leaving one run standing and one pending;
@@ -224,6 +268,28 @@ this account.
    labels evaluate to their own label name (`coder-<issue>-<label>`), ensuring
    a declining label delivery can never share a concurrency group with, or
    displace, a pending difficulty delivery.
+4. **A group shared by two workflows dropped the one whose work was not
+   redundant.** `reconcile.yml` declared `group: merge` because it runs the
+   merge manager, and the one pending slot then cost a scheduled reading pass
+   whenever merge traffic arrived behind it — silently, since a run cancelled
+   before any job starts prints nothing. Unlike items 1 and 2, what was lost was
+   not recoverable by the survivor: the surviving merge run does no reading.
+   Solorepo's #850 closed this case by giving each workflow a group of its own
+   and moving the mutual exclusion onto a lock (solorepo's DR-267), which is the
+   general point the first three sharpen — a concurrency group decides what may
+   be *dropped*, and a mechanism that needs mutual exclusion has to say so
+   somewhere else.
+5. **Two managers breaking one dead lock together can both come away with it.**
+   Breaking is a delete and a create, and GitHub offers a precondition on
+   neither, so the ordinary loser meets the winner's ref and is refused while a
+   breaker whose delete lands *after* the other's create removes a live ref and
+   takes the lock beside it. The window is the round trip between a breaker's
+   holder read and its delete, over a lock whose holder has already stopped.
+   Closing it needs the break taken under a second lock with a staleness bound
+   of its own, which reopens the same race one level down where a breaker
+   crashes mid-break; solorepo's DR-267 accepts the residual instead, on the
+   ground that the failure to design against is the freeze rather than the race.
+   What would reopen it is two managers observed merging together.
 
 ## Harness Agnosticism and Subscription Economics
 

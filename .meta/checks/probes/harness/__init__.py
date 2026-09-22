@@ -32,7 +32,7 @@ from checks.probes.harness.fakes import (
     FakeObviation,
     FakeWikiPath,
 )
-from checks.probes.harness.github import FakeGitHub, WatchGitHub
+from checks.probes.harness.github import FakeGitHub, GitStore, LockedGitHub, WatchGitHub
 from checks.probes.harness.loaders import load_channel, load_hook, load_module
 
 __all__ = [
@@ -41,6 +41,8 @@ __all__ = [
     "FakeIssue",
     "FakeObviation",
     "FakeWikiPath",
+    "GitStore",
+    "LockedGitHub",
     "Outcome",
     "WatchGitHub",
     "acts",

@@ -22,7 +22,10 @@
 # So the same invariant holds here too.
 name: merge
 
-# One at a time: two merges in quick succession must serialize.
+# One at a time: two merges in quick succession must serialize. The group is
+# this workflow's alone, and holds merge runs apart from each other only:
+# `reconcile.yml` runs the merge manager too, and what holds the two managers
+# apart is the lock `take_merge_lock` takes (solorepo's DR-267).
 concurrency:
   group: merge
   cancel-in-progress: false

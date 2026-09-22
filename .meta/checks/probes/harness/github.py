@@ -1,6 +1,8 @@
 """GitHub stood in for: answered from a dict for the verbs that rebase, arm, hand off and dispatch, and from a list of polls for `--watch` (solorepo's DR-158).
 """
 import datetime
+import json
+import subprocess
 import sys
 from collections.abc import Iterable
 from typing import Any
@@ -15,6 +17,197 @@ STACK_UNCHECKED_OUT = "gh stack rebase called without preceding gh stack checkou
 
 STACK_UNKNOWN_BRANCH = "gh stack rebase: branch {branch!r} not found in fake pulls"
 """What a stack rebase raises where the checked-out branch names no pull request this fake holds."""
+
+
+NOT_FOUND = "gh: Not Found (HTTP 404)"
+"""What `gh api` says of a ref or tag GitHub does not hold, which `lock_read` reads as an answer."""
+
+UNREADABLE = "gh: HTTP 500: Internal Server Error"
+"""What `gh` says of a read GitHub would not answer at all, which `lock_read` raises on."""
+
+
+class GitStore:
+    """The git object store the merge manager's lock is taken in (solorepo's DR-267).
+
+    Enough of GitHub for the compare-and-set `take_merge_lock` turns on: a tag
+    object is written and kept under the sha it is answered with, a ref is
+    created once and refused with GitHub's own words after that, and `DELETE`
+    drops it. `refs`, `tags` and `runs` are the store, so a case seeds a lock
+    already held by writing into them and reads back what a run left; a run
+    nothing names is answered `in_progress`, which is a holder still alive, and
+    a run named with None is one GitHub will not answer for.
+
+    A read of something the store does not hold fails the way `channel.gh`
+    fails, rather than raising out of a subscript: it raises what
+    `tolerate_fail` raises, answers `default` where one was given, and exits
+    otherwise. That is what lets a case seed a ref standing at no tag — the
+    state `take_merge_lock` breaks on sight — rather than stopping the probe.
+
+    `unreadable` is the other failure, which a 404 is not: it maps a mark in an
+    endpoint to the number of reads answered before that endpoint stops being
+    answered at all, so a case seeds a GitHub that refuses the lock read from
+    the first call, or one that answers the take's read-back and refuses the
+    release's. The two failures want opposite acts of the lock, and only a store
+    that can raise both observes it making the distinction.
+
+    It stands beside a `gh` rather than inside one: `FakeGitHub` holds one, and
+    so does every hand-written stub in a probe that reaches the real
+    `merge_manager`, which takes the lock before it evaluates anything.
+    """
+
+    def __init__(self) -> None:
+        self.refs: dict[str, str] = {}
+        self.tags: dict[str, dict[str, Any]] = {}
+        self.runs: dict[str, str | None] = {}
+        self.unreadable: dict[str, int] = {}
+
+    @staticmethod
+    def asked(args: Iterable[Any]) -> bool:
+        """Whether this `gh` call is the store's, which is the test a stub delegates on."""
+        call = [str(a) for a in args]
+        if call[:2] == ["run", "view"]:
+            return True
+        return bool(call[:1] == ["api"] and len(call) > 1
+                    and ("/git/" in call[1] or call[1].endswith("/commits/main")))
+
+    def __call__(self, *args: Any, parse: bool = True, **kwargs: Any) -> Any:
+        """One call the store answers: trunk's head, a run's status, or a tag or ref of the lock.
+
+        `parse` is honoured as `channel.gh` honours it, answering text rather
+        than an object, because the wrappers forward it and the lock's create
+        and delete both pass it.
+        """
+        if args[:2] == ("run", "view"):
+            status = self.runs.get(str(args[2]), "in_progress")
+            return {"status": status} if status else self.failing(args, kwargs, UNREADABLE)
+        endpoint, rest = str(args[1]), [str(a) for a in args[2:]]
+        return self.unparsed(self.answer(endpoint, rest, args, kwargs), parse)
+
+    @staticmethod
+    def unparsed(answer: Any, parse: bool) -> Any:
+        """What `gh` answers for this call, as text where the caller asked for no parse."""
+        if parse or isinstance(answer, str):
+            return answer
+        return json.dumps(answer)
+
+    def answer(self, endpoint: str, rest: list[str], args: Any, kwargs: dict[str, Any]) -> Any:
+        """One `api` call: trunk's head, a tag read or written, or a ref created, read or dropped.
+
+        Parameters:
+            endpoint (str): The `gh api` path.
+            rest (list): The call's arguments after the endpoint, which the
+                fields and `-X` are read from.
+            args (tuple): The whole `gh` call, for a failure to name.
+            kwargs (dict): The call's keywords, which say what a failure is owed.
+
+        Returns:
+            Any: What GitHub would answer, or what the failure is owed.
+        """
+        if endpoint.endswith("/commits/main"):
+            return "trunk"
+        if self.refusing(endpoint):
+            return self.failing(args, kwargs, UNREADABLE)
+        fields = dict(f.split("=", 1) for f in rest if "=" in f)
+        if "/git/tags/" in endpoint:
+            held = self.tags.get(endpoint.rsplit("/", 1)[-1])
+            return dict(held) if held else self.missing(args, kwargs)
+        if endpoint.endswith("/git/tags"):
+            return self.tag(fields)
+        if endpoint.endswith("/git/refs"):
+            if fields["ref"] in self.refs:
+                sys.exit("gh: HTTP 422: Reference already exists")
+            self.refs[fields["ref"]] = fields["sha"]
+            return {"ref": fields["ref"], "object": {"sha": fields["sha"]}}
+        named = endpoint.split("/git/", 1)[1].split("/", 1)[1]
+        return self.ref(f"refs/{named}", rest, args, kwargs)
+
+    def refusing(self, endpoint: str) -> bool:
+        """Whether this read is one GitHub will not answer, counting down what it answers first."""
+        for mark, answered in self.unreadable.items():
+            if mark not in endpoint:
+                continue
+            if answered:
+                self.unreadable[mark] = answered - 1
+                return False
+            return True
+        return False
+
+    def missing(self, args: Any, kwargs: dict[str, Any]) -> Any:
+        """Fail a read of what the store does not hold, carrying GitHub's own 404."""
+        return self.failing(args, kwargs, NOT_FOUND)
+
+    @staticmethod
+    def failing(args: Any, kwargs: dict[str, Any], said: str) -> Any:
+        """Fail one read as `channel.gh` fails one, which is what the caller's keywords decide.
+
+        Parameters:
+            args (tuple): The `gh` call, which the raised failure names.
+            kwargs (dict): The call's keywords, `tolerate_fail` and `default`
+                being the two that say what a failure is owed.
+            said (str): What `gh` puts on standard error, which `lock_read`
+                classifies the failure by.
+
+        Returns:
+            Any: The caller's `default`, where it gave one.
+
+        Raises:
+            subprocess.CalledProcessError: Under `tolerate_fail`, carrying
+                `said` on standard error.
+            SystemExit: Where the caller gave neither.
+        """
+        if kwargs.get("tolerate_fail"):
+            raise subprocess.CalledProcessError(
+                1, ["gh", *[str(a) for a in args]], output="", stderr=said)
+        if "default" in kwargs:
+            return kwargs["default"]
+        sys.exit(said)
+
+    def tag(self, fields: dict[str, str]) -> dict[str, Any]:
+        """Write a tag object, kept under the sha it is answered with, tagged at this moment."""
+        sha = f"tag{len(self.tags) + 1}"
+        self.tags[sha] = {"sha": sha, "message": fields.get("message", ""),
+                          "tagger": {"date": datetime.datetime.now(datetime.UTC).isoformat()}}
+        return dict(self.tags[sha])
+
+    def ref(self, ref: str, rest: list[str], args: Any, kwargs: dict[str, Any]) -> Any:
+        """Read or drop one ref; one nobody holds fails as GitHub's 404 does.
+
+        Parameters:
+            ref (str): The fully qualified ref, as `refs` keys it.
+            rest (list): The call's arguments after the endpoint, which `-X` is read from.
+            args (tuple): The whole `gh` call, for a failure to name.
+            kwargs (dict): The call's keywords, which say what a 404 is owed.
+
+        Returns:
+            Any: The ref object, the empty string for a delete, or `missing`'s answer.
+        """
+        verb = rest[rest.index("-X") + 1] if "-X" in rest else "GET"
+        if verb == "DELETE":
+            self.refs.pop(ref, None)
+            return ""
+        if ref not in self.refs:
+            return self.missing(args, kwargs)
+        return {"ref": ref, "object": {"sha": self.refs[ref], "type": "tag"}}
+
+
+class LockedGitHub:
+    """A `gh` stub, with the lock answered from a `GitStore` beside it (solorepo's DR-267).
+
+    Every probe reaching the real `merge_manager` meets the lock, which is taken
+    before anything is evaluated; a stub answering the empty dict to calls it
+    does not know would answer a tag object with no sha. Wrapping is what a stub
+    written before the lock needs, and `lock` is the store, so a case seeds a
+    holder and reads back what the run left.
+    """
+
+    def __init__(self, gh: Any) -> None:
+        self.gh, self.lock = gh, GitStore()
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """One `gh` call: the store's where it answers, and the wrapped stub's otherwise."""
+        if self.lock.asked(args):
+            return self.lock(*args, **kwargs)
+        return self.gh(*args, **kwargs)
 
 
 class FakeGitHub:
@@ -129,10 +322,12 @@ class FakeGitHub:
     mutation a probe reading the number alone cannot see; `edited`, the numbers
     `pr edit` touched; `checked_out`, the branch arguments passed to `stack
     checkout`; `stack_rebases`, the root pull request numbers of stacks that
-    rebased; `stack_rebase_args`, the flags passed to `stack rebase`; and
-    `pushed_stacks`, the count of `stack push` invocations. A dispatch of any
-    workflow but `coder.yml`, and any call this fake has no answer for, raise
-    `AssertionError` naming the call, which `outcome` reports as text.
+    rebased; `stack_rebase_args`, the flags passed to `stack rebase`;
+    `pushed_stacks`, the count of `stack push` invocations; and `git`, the
+    `GitStore` the merge manager's lock is taken in, which a case seeds and
+    reads back. A dispatch of any workflow but `coder.yml`, and any call this
+    fake has no answer for, raise `AssertionError` naming the call, which
+    `outcome` reports as text.
     """
 
     pulls: dict[str, dict[str, Any]]
@@ -178,6 +373,7 @@ class FakeGitHub:
         self.comments: dict[str, list[dict[str, Any]]] = {}
         self.posted_comments: list[tuple[str, str]] = []
         self.cleared_comments: list[str] = []
+        self.git = GitStore()
 
     def view(self, number: int | str) -> dict[str, Any]:
         """One `pr view` of `number`, counted in `reads`, as GitHub would answer it at this moment.
@@ -265,6 +461,8 @@ class FakeGitHub:
         repository's own settings.
         """
         head = args[:2]
+        if self.git.asked(args):
+            return self.git(*args, parse=parse, **kwargs)
         if head == ("repo", "view"):
             return {"nameWithOwner": "o/r", "deleteBranchOnMerge": True}
         if head == ("pr", "list"):
@@ -273,17 +471,8 @@ class FakeGitHub:
             if str(args[2]) in self.no_view:
                 sys.exit("gh: Post https://api.github.com/graphql: net/http: TLS handshake timeout")
             return self.view(args[2])
-        if head == ("stack", "link"):
-            self.linked.append(tuple(args[2:]))
-            return ""
-        if head == ("stack", "checkout"):
-            self.checked_out.append(args[2:])
-            return ""
-        if head == ("stack", "rebase"):
-            return self.stack_rebase(args)
-        if head == ("stack", "push"):
-            self.pushed_stacks += 1
-            return ""
+        if head[:1] == ("stack",):
+            return self.stack(args)
         if head == ("workflow", "run") and args[2] == "coder.yml":
             return self.dispatch(args)
         if args[0] == "api":
@@ -293,6 +482,18 @@ class FakeGitHub:
         if head in answered:
             return answered[head](args)
         raise unanswered(args)
+
+    def stack(self, args: Any) -> Any:
+        """One `gh stack` call: link and checkout recorded, rebase performed, push counted."""
+        answered = {"link": lambda: self.linked.append(tuple(args[2:])),
+                    "checkout": lambda: self.checked_out.append(args[2:]),
+                    "push": lambda: setattr(self, "pushed_stacks", self.pushed_stacks + 1)}
+        if args[1] == "rebase":
+            return self.stack_rebase(args)
+        if args[1] not in answered:
+            raise unanswered(args)
+        answered[str(args[1])]()
+        return ""
 
     def update_branch(self, args: Any) -> str:
         """`pr update-branch`: refused for a number in `no_rebase`; otherwise the rebase, shown after `slow` reads."""
@@ -435,6 +636,7 @@ class FakeGitHub:
                 return {"id": c_id, "html_url": f"https://github.com/o/r/issues/comments/{c_id}"}
             return ""
         return {"allow_auto_merge": True}
+
 
 class WatchGitHub:
     """GitHub as `check_pr.py --watch` polls it: one answer per poll, off a list.

@@ -14,10 +14,14 @@
 # for by hand.
 name: reconcile
 
-# The merge manager's group, because this runs it: two merges in quick
-# succession must serialize, whichever workflow asked for them.
+# A group of the reconciler's own, so that a pass queued behind merge traffic is
+# never the run GitHub cancels: it holds at most one pending run per group, and
+# a third arrival cancels the waiting second (solorepo's DR-267). The merge
+# manager this still runs holds its own mutual exclusion, on the lock
+# `take_merge_lock` takes, so the groups separate without the exclusion going
+# with them.
 concurrency:
-  group: merge
+  group: reconcile
   cancel-in-progress: false
 
 on:

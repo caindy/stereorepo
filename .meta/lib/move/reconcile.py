@@ -403,18 +403,22 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
     (solorepo's DR-264): a dropped edge costs one period of the clock rather
     than a freeze. The merge manager runs first, as it did on the clock before
     this, and its exit is held until the reading is done so that a failed
-    candidate paints the run red without starving the acts beside it. Every
-    act is qualified twice: by `minutes` of silence, and by no run for it
-    queued or running, read off the run names the loop workflows write; runs
-    GitHub will not list hold every act that needs the guard, and the log says
-    so. A pull request that is free has its mergeability settled before it is
-    read, as every other dispatch here settles it, so an `UNKNOWN` pays in a
-    wait and not in the wrong pass, and the threads its classification turns
-    on are read with it (solorepo's DR-265). Whether a Challenge has a pull
-    request open counts a draft, as the take door counts one, since the merge manager
-    this has just run is what parks a stalled loop branch in draft
-    (solorepo's DR-258). With `live`, each act is performed; without it,
-    each is reported and none performed.
+    candidate paints the run red without starving the acts beside it. That
+    manager declines the lock rather than waiting on it, which is what lets the
+    reading go on regardless (solorepo's DR-267); that this pass was not
+    cancelled behind merge traffic before reaching the reading at all is what
+    the two workflows' separate concurrency groups bought. Every act is
+    qualified twice: by `minutes` of silence, and by no run for it queued or
+    running, read off the run names the loop workflows write; runs GitHub will
+    not list hold every act that needs the guard, and the log says so. A pull
+    request that is free has its mergeability settled before it is read, as
+    every other dispatch here settles it, so an `UNKNOWN` pays in a wait and not
+    in the wrong pass, and the threads its classification turns on are read with
+    it (solorepo's DR-265). Whether a Challenge has a pull request open counts a
+    draft, as the take door counts one, since the merge manager this has just
+    run is what parks a stalled loop branch in draft (solorepo's DR-258). With
+    `live`, each act is performed; without it, each is reported and none
+    performed.
 
     Parameters:
         live (bool): Whether to perform the acts, or only report them.

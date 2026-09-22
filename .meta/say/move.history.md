@@ -495,3 +495,29 @@ before the read-back runs, and a merge that exits 0 having merged nothing is
 read off its own words.
 
 Evidence: `.meta/checks/probes/channel/extension.py::gh_stack_extension_probes`
+
+### A scheduled reconciler pass cancelled by the merge traffic it shared a group with
+
+`reconcile.yml` declared `concurrency: group: merge`, the group `merge.yml`
+declares, because both run the merge manager and two merges in quick succession
+must serialize. GitHub holds at most one pending run per concurrency group and
+cancels the waiting one when a third arrives, so the group bought that exclusion
+by throwing runs away. On 2026-09-22 the reconciler's 21:38 pass, run
+35787817254, was cancelled with no job started while solorepo's #828 was landing,
+and `merge.yml` fired four more times between 21:40 and 21:43. What the
+cancellation dropped was not a merge, which the next push brings round anyway,
+but every act the reading pass performs — a rebase dispatched, a review requested
+again, a dead claim released — and it dropped them silently, a run cancelled
+before any job starts printing nothing (solorepo's #850). Established: the two
+workflows are in concurrency groups of their own, and the exclusion the shared
+group was providing is a lock the manager takes for itself on
+`refs/tags/merge-manager-lock`, created with the compare-and-set `move mint`
+reserves a Decision number with (solorepo's DR-267). A manager meeting a held
+lock declines rather than waits, and a lock whose holder has stopped is broken by
+a delete and that same create rather than by a force-`PATCH` read back
+afterwards, which is no compare-and-set at all. The break is not one either,
+GitHub offering a precondition on neither operation: it leaves the ordering in
+which one breaker's delete lands after another's create, which is stated wherever
+the break is described rather than asserted away.
+
+Evidence: `.meta/checks/probes/loops/merge_lock.py::merge_lock_probes`
