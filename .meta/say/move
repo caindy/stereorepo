@@ -3746,8 +3746,8 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
     wait and not in the wrong pass. Whether a Challenge has a pull request
     open counts a draft, as the take door counts one, since the merge manager
     this has just run is what parks a stalled loop branch in draft
-    (solorepo's DR-258). Without `live`, each act is reported and none
-    performed, which is how the workflow lands.
+    (solorepo's DR-258). With `live`, each act is performed; without it,
+    each is reported and none performed.
 
     Parameters:
         live (bool): Whether to perform the acts, or only report them.

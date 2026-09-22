@@ -7,10 +7,11 @@
 # to the reviewer, a dead run's claim released. A dropped webhook edge then
 # costs one period rather than a freeze.
 #
-# It lands observing: on the schedule the acts are reported and not performed,
-# and the merge manager runs as it always did on the clock. `live` on a
-# dispatch performs them, and the line below moves to `--live` once the log
-# has said for a day what it would have done.
+# It landed observing, the acts reported and not performed, and moved to
+# `--live` on the schedule once the log had said for a day what it would have
+# done; the merge manager runs as it always did on the clock. `live` false on
+# a dispatch reports without performing, which is the dry run a reader asks
+# for by hand.
 name: reconcile
 
 # The merge manager's group, because this runs it: two merges in quick
@@ -25,9 +26,9 @@ on:
   workflow_dispatch:
     inputs:
       live:
-        description: perform what is owed rather than reporting it
+        description: perform what is owed; false reports it instead
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -63,10 +64,10 @@ jobs:
 
       - name: reconcile
         run: |
-          if [ "${{ inputs.live }}" = "true" ]; then
-            .meta/say/move reconcile --live
-          else
+          if [ "${{ inputs.live }}" = "false" ]; then
             .meta/say/move reconcile
+          else
+            .meta/say/move reconcile --live
           fi
         env:
           ACTOR_SESSION: gha-${{ github.run_id }}
