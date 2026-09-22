@@ -481,3 +481,17 @@ that function reads two values GitHub computed at one moment, and a value still
 `UNKNOWN` once the wait is spent is refused in words that say it was waited for.
 
 Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+
+### A stack merge that exited zero, merged nothing, and said so to no one
+
+`merge()` called `gh stack merge <pr> --squash --yes` through `channel.gh` and
+read the result back off GitHub, so the only account of what the call did was
+`settled()`'s verdict that the pull request was still open — which is also what
+a merge GitHub has not finished processing looks like. The call had in fact
+been consumed by the CLI's install of the `gh stack` extension, and said so on
+a stream nothing read (solorepo's #797). Established: the stack call passes
+`echo=True`, so its exit status and both of its streams reach standard error
+before the read-back runs, and a merge that exits 0 having merged nothing is
+read off its own words.
+
+Evidence: `.meta/checks/probes/channel/extension.py::gh_stack_extension_probes`

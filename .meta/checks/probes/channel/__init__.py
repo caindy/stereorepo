@@ -8,8 +8,9 @@ the one `reread` takes off, who the Actor is, what the Agent
 is, where a Role's signing key is, the numbers `decision numbering` reads as
 reserved, a verdict held to the head its run read, a write settled against a
 GitHub that shows it late or never, the reviewer's door before and after its
-session, the coder's door before its session, and the bound on a `gh` call that never
-answers. Not invariants over the record: each probe loads the
+session, the coder's door before its session, the bound on a `gh` call that
+never answers, and the extension a `gh stack` call needs installed before it is
+made. Not invariants over the record: each probe loads the
 channel and runs it, which is why the probes are a package of
 their own rather than steps beside the checks over assertions
 (solorepo's DR-150). One module per probe, imported in the order the steps
@@ -33,4 +34,5 @@ import checks.probes.channel.verdict
 import checks.probes.channel.settle
 import checks.probes.channel.on
 import checks.probes.channel.on_coder
-import checks.probes.channel.bound  # noqa: F401  # reason: registers check steps
+import checks.probes.channel.bound
+import checks.probes.channel.extension  # noqa: F401  # reason: registers check steps

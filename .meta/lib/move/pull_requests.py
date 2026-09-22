@@ -479,6 +479,11 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
     commit would raise where the merge had in fact landed. A merge GitHub
     never lands still reads `OPEN` once the wait runs out, and the exit says
     so, as it always has.
+
+    The stack call passes `echo=True`, so its exit status and both of its
+    streams reach standard error. The read-back says only that the pull request
+    is still open, which reads as GitHub being slow; a stack merge that exits 0
+    having merged nothing says why in its own words (solorepo's #797).
     """
     before = channel.gh("pr", "view", str(pr), "--json", "title,state,headRefName")
     if before["state"] != "OPEN":
@@ -488,7 +493,8 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
         _merge_auto(pr, before, subject, stack)
         return
     if stack:
-        channel.gh("stack", "merge", str(pr), "--squash", "--yes", parse=False, timeout=None)
+        channel.gh("stack", "merge", str(pr), "--squash", "--yes",
+                   parse=False, timeout=None, echo=True)
     elif stacked(pr):
         sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
                  "Pass --stack to merge everything up to it.")

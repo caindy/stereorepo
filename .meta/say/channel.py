@@ -344,6 +344,56 @@ from a refusal by the prose on standard error and not by `$?`.
 UNSET = object()
 """No default was given, as a value no caller can pass, so that a caller wanting `None` back from a failed read is told apart from a caller that wants the process to exit."""
 
+STACK_EXTENSION = "github/gh-stack"
+"""The extension `gh stack` is, spelled as `gh extension install` takes it.
+
+`gh stack` is not part of the CLI. On a machine that does not already hold the
+extension, the first `gh stack` invocation installs it, prints `Successfully
+installed github/gh-stack` on standard error, exits 0, and never runs the
+subcommand it was given. A runner is such a machine every time it starts, so
+that first invocation is whichever stack call the job makes — a merge, where
+the merge manager is the job (solorepo's #797).
+
+`gh extension list` prints this same spelling in the row it gives the
+extension, which is what `_stack_extension` reads the listing for.
+"""
+
+
+def _stack_extension() -> None:
+    """Puts the `gh stack` extension on this machine before a stack call is made.
+
+    The listing read falls back to an empty listing, which holds no
+    `STACK_EXTENSION` and so falls through to the install: a machine that will
+    not say what it has installed is treated as a machine that has nothing,
+    which is the right act for it and keeps a read from ending a run. The
+    install has no such fallback, because an install that failed is a stack
+    call that cannot work.
+
+    Raises:
+        SystemExit: If `gh` will not install the extension.
+    """
+    if STACK_EXTENSION in gh("extension", "list", parse=False, default=""):
+        return
+    gh("extension", "install", STACK_EXTENSION, parse=False)
+
+
+def _relay(args: tuple[str, ...], out: subprocess.CompletedProcess[str]) -> None:
+    """Prints `gh <args>: exit <status>` on standard error, and what the invocation said.
+
+    The status line is followed by whatever the invocation printed on standard
+    output and standard error, joined by a newline; or, where both streams were
+    empty after stripping, by the suffix ` and said nothing` on the status line
+    itself, so a call that printed nothing is reported as having printed
+    nothing rather than not reported.
+
+    Args:
+        args: The arguments `gh` was invoked with.
+        out: What `subprocess.run` answered.
+    """
+    said = "\n".join(part for part in (out.stdout.strip(), out.stderr.strip()) if part)
+    print(f"gh {' '.join(args)}: exit {out.returncode}"
+          + (f"\n{said}" if said else " and said nothing"), file=sys.stderr)
+
 
 def _degrade(default: Any, why: str) -> Any:
     """Answers a failed read with the caller's fallback, or exits saying what went wrong.
@@ -365,8 +415,13 @@ def _degrade(default: Any, why: str) -> Any:
 
 
 def gh(*args: str, parse: bool = True, default: Any = UNSET,
-       tolerate_fail: bool = False, timeout: float | None = GH_TIMEOUT) -> Any:
+       tolerate_fail: bool = False, timeout: float | None = GH_TIMEOUT,
+       echo: bool = False) -> Any:
     """Executes a gh CLI command using the role credential and parses JSON output.
+
+    A `gh stack` call is preceded by `_stack_extension`, which installs
+    `STACK_EXTENSION` where the machine does not hold it, so that the CLI's own
+    install-on-first-use cannot consume the call (solorepo's #797).
 
     Args:
         *args: Command arguments passed to gh.
@@ -381,6 +436,11 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
             a failed command and an unreadable body itself.
         timeout: Seconds to wait for the invocation, `GH_TIMEOUT` by default;
             `None` waits indefinitely, which is what the `gh stack` calls pass.
+        echo: Whether to relay the invocation's exit status and both of its
+            streams on standard error. A call whose success is read back from
+            GitHub rather than from its return value discards the only account
+            of what it did, and the failure that account names is a call that
+            exits 0 having done nothing.
 
     Returns:
         Any: Parsed JSON data, the stripped output where `parse` is false or the
@@ -394,6 +454,8 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
             `tolerate_fail`.
         SystemExit: If the read fails or times out and no fallback was given.
     """
+    if args[:1] == ("stack",):
+        _stack_extension()
     try:
         out = subprocess.run(["gh", *args], check=False, capture_output=True, text=True,
                              env={**os.environ, **role_credential()}, timeout=timeout)
@@ -403,6 +465,8 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
             raise subprocess.CalledProcessError(
                 TIMEOUT_RETURNCODE, ["gh", *list(args)], output="", stderr=hung) from expired
         sys.exit(f"gh: {hung}")
+    if echo:
+        _relay(args, out)
     if out.returncode:
         if tolerate_fail:
             raise subprocess.CalledProcessError(out.returncode, ["gh", *list(args)], output=out.stdout, stderr=out.stderr)

@@ -63,13 +63,18 @@ def gh_bound_probes() -> list[str]:
     stack merge is not the single API call the bound was sized for.
 
     `role_credential` is stood in as well, so the cases turn on the bound
-    rather than on whether the machine running them holds a Role's key.
+    rather than on whether the machine running them holds a Role's key, and so
+    is `_stack_extension`, whose own bounded `gh extension list` would otherwise
+    be the call the fourth case's stack invocation times out on rather than the
+    stack invocation itself; what that preflight does is
+    `.meta/checks/probes/channel/extension.py`'s subject.
     """
     channel, _, _ = load_channel()
     problems: list[str] = []
     calls: list[tuple[tuple[str, ...], float | None]] = []
 
-    with stood_in(channel, subprocess=_hung_subprocess(calls), role_credential=lambda: {}):
+    with stood_in(channel, subprocess=_hung_subprocess(calls), role_credential=lambda: {},
+                  _stack_extension=lambda: None):
         exited = outcome(lambda: channel.gh("pr", "view", "7"))
         bound = calls[0][1] if calls else "no call at all"
         try:

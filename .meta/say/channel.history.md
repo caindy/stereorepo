@@ -144,3 +144,27 @@ refuses execution with an explanatory message directing the caller to omit the t
 
 Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`
 
+
+### The first gh stack call on a machine was spent installing the extension
+
+`gh stack` is an extension rather than part of the CLI, and the CLI installs it
+on first use: on a machine that does not hold it, `gh stack merge 793 --squash
+--yes` printed `Successfully installed github/gh-stack` on standard error,
+exited 0, and never ran the merge. `channel.gh` discards both streams of a call
+that exits 0, so nothing recorded it, and the only report was the read-back in
+`merge()` saying the pull request was still open. A runner is such a machine
+every time it starts, and a session is not, which is why three consecutive runs
+of `merge.yml` on 2026-09-21 (35641044270, 35642275328, 35642532412) left
+solorepo's #793 open while the same call by hand merged it at once
+(solorepo's #797).
+Established: `channel.gh` precedes a `gh stack` call with `_stack_extension`,
+which reads `gh extension list` and installs `STACK_EXTENSION` where the
+machine does not hold it, so the install has no real call left to consume. The
+listing read falls back to an empty listing, so a machine that will not answer
+what it holds is installed on rather than exited over; the install itself keeps
+its hard exit, an install having failed being a stack call that cannot work. And
+`echo=True` relays a call's exit status and both of its streams on standard
+error, which is how a call that exits 0 having done nothing is named rather
+than inferred from what GitHub says afterwards.
+
+Evidence: `.meta/checks/probes/channel/extension.py::gh_stack_extension_probes`
