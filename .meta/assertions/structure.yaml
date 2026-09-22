@@ -398,6 +398,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-settle
     name: .meta/checks/probes/channel/settle.py
     path: .meta/checks/probes/channel/settle.py
+  - id: work:artifact/meta-checks-probes-channel-on-coder
+    name: .meta/checks/probes/channel/on_coder.py
+    path: .meta/checks/probes/channel/on_coder.py
   - id: work:artifact/meta-checks-probes-channel-on
     name: .meta/checks/probes/channel/on.py
     path: .meta/checks/probes/channel/on.py

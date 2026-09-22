@@ -8,7 +8,7 @@ the one `reread` takes off, who the Actor is, what the Agent
 is, where a Role's signing key is, the numbers `decision numbering` reads as
 reserved, a verdict held to the head its run read, a write settled against a
 GitHub that shows it late or never, the reviewer's door before and after its
-session, and the bound on a `gh` call that never
+session, the coder's door before its session, and the bound on a `gh` call that never
 answers. Not invariants over the record: each probe loads the
 channel and runs it, which is why the probes are a package of
 their own rather than steps beside the checks over assertions
@@ -32,4 +32,5 @@ import checks.probes.channel.waits
 import checks.probes.channel.verdict
 import checks.probes.channel.settle
 import checks.probes.channel.on
+import checks.probes.channel.on_coder
 import checks.probes.channel.bound  # noqa: F401  # reason: registers check steps

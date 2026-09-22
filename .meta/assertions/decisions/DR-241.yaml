@@ -47,8 +47,10 @@ decisions:
         from using direct inline Python invocations (`python3 -c`, `python -c`, `uv run python -c`,
         stdin heredocs, or piped interpreters).
       - >-
-        `.github/workflows/coder.yml` replaces its inline Python thread-counting one-liner in the
-        `check for threads to promote` step with `python3 .meta/check_pr.py "$PR" --unresolved-count`.
+        `.github/workflows/coder.yml` runs no inline Python thread count: the coder's door,
+        `.meta/say/on`, counts the unresolved threads on approval through
+        `check_pr.github.threads`, the same expression `--unresolved-count` evaluates, which
+        that option wraps for a reader at a terminal.
       - >-
         `.meta/check_pr.py` and `.meta/lib/check_pr/cli.py` expose the `--unresolved-count` CLI option,
         providing a first-class, type-checked command for retrieving unresolved review thread counts.

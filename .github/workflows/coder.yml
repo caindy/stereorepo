@@ -99,7 +99,8 @@ concurrency:
   group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request || inputs.issue }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || ((github.event.label.name == 'easy' || github.event.label.name == 'medium') && 'take') || github.event.label.name || 'take' }}
   cancel-in-progress: false
 
-# The workflow's own token reads. Every write goes through the coder's
+# The workflow's own token reads in the steps after the session; the door
+# before it reads as the Role. Every write goes through the coder's
 # credential, so what GitHub records is the Role and not the workflow.
 #
 # `checks: read` is here for the hand-back step, which asks `check_pr.py`
@@ -121,7 +122,7 @@ jobs:
     # not this Job's, and a `roadmap` Issue is deferred by definition. Or the
     # reviewer's account requesting changes or approving on a branch named
     # for a Challenge — the prefix says which Issue, not whose the branch is;
-    # `is it taken already` below reads whose it is, on this door as on the
+    # `before the session` below reads whose it is, on this door as on the
     # first (solorepo's DR-142, solorepo's DR-159). Or the solo dispatching that second
     # pass by hand.
     if: >-
@@ -175,127 +176,6 @@ jobs:
           git config core.hooksPath .meta/hooks
           python3 .meta/apm_compile.py --reconcile
 
-      # Which pull request a second pass answers: the event's, or the
-      # dispatch's. Its branch is checked out below so the work continues
-      # where the first pass left it. The base is read too, and not assumed to
-      # be `main`: a layer is based on the layer below (PR First's twelfth
-      # step), and a rebase of a layer onto trunk while that layer is open
-      # drops the lower layer's commits off the head. So is the Challenge,
-      # which is the branch's own name — `claude/issue-<n>` is the only shape
-      # `advance` dispatches — because a pass that cannot finish hands that
-      # Challenge back and has nothing else to name.
-      - name: find the pull request
-        id: pr
-        if: github.event_name != 'issues' && inputs.issue == ''
-        run: |
-          n="${EVENT_PR:-$INPUT_PR}"
-          pull=$(gh pr view "$n" --json state,headRefName,baseRefName)
-          state=$(jq -r .state <<<"$pull")
-          branch=$(jq -r .headRefName <<<"$pull")
-          base=$(jq -r .baseRefName <<<"$pull")
-          case "$branch" in
-            claude/issue-*|gemini/issue-*|codex/issue-*)
-              issue="${branch#*/issue-}" ;;
-            *) issue= ;;
-          esac
-          if [ "$TASK" = rebase ] && [ -z "$issue" ]; then
-            echo "::error::#$n is on $branch, which names no Challenge, so a rebase pass that could not finish would have nothing to hand back. Rebase it by hand."
-            exit 1
-          fi
-          if [ "$state" = MERGED ] || [ "$state" = CLOSED ]; then
-            echo "#$n is $state already; nothing for this run to do"
-            printf 'number=%s\nbranch=%s\nbase=%s\nissue=%s\nby=merged\nwhy=merged\n' \
-              "$n" "$branch" "$base" "$issue" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          printf 'number=%s\nbranch=%s\nbase=%s\nissue=%s\n' \
-            "$n" "$branch" "$base" "$issue" >> "$GITHUB_OUTPUT"
-          if [ "$EVENT" = pull_request_review ] && [ "$REVIEW_STATE" = approved ]; then
-            git checkout --quiet "$branch" 2>/dev/null || true
-          else
-            git checkout --quiet "$branch"
-          fi
-          cat "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
-          REVIEW_STATE: ${{ github.event.review.state }}
-          EVENT_PR: ${{ github.event.pull_request.number }}
-          INPUT_PR: ${{ inputs.pull_request }}
-          TASK: ${{ inputs.task }}
-
-      # Which harness speaks: Claude Code by default, or Codex by label (solorepo's DR-242)
-      - name: choose the harness
-        id: harness
-        run: |
-          # Default per repository decision: claude
-          harness="claude"
-
-          # A Challenge dispatched by number carries its own `harness:` label,
-          # which the label's door would have read; it wins over the input,
-          # whose default is never empty, and the input wins where the label
-          # names no harness, so an explicit ask still decides over silence.
-          issue_harness=""
-          if [ -n "$INPUT_ISSUE" ]; then
-            issue_labels=$(gh issue view "$INPUT_ISSUE" --json labels -q '.labels[].name' 2>/dev/null || true)
-            if echo "$issue_labels" | grep -qw "harness:codex"; then
-              issue_harness="codex"
-            elif echo "$issue_labels" | grep -qw "harness:gemini"; then
-              issue_harness="gemini"
-            elif echo "$issue_labels" | grep -qw "harness:claude"; then
-              issue_harness="claude"
-            fi
-          fi
-
-          if [ -n "$issue_harness" ]; then
-            harness="$issue_harness"
-          elif [ -n "$INPUT_HARNESS" ]; then
-            harness="$INPUT_HARNESS"
-          elif [ "$EVENT" = "issues" ]; then
-            if echo "$ISSUE_LABELS" | grep -qw "harness:codex"; then
-              harness="codex"
-            elif echo "$ISSUE_LABELS" | grep -qw "harness:gemini"; then
-              harness="gemini"
-            elif echo "$ISSUE_LABELS" | grep -qw "harness:claude"; then
-              harness="claude"
-            fi
-          elif [ -n "$PR_BRANCH" ]; then
-            pr_labels=$(gh pr view "$PR_NUMBER" --json labels -q '.labels[].name' 2>/dev/null || true)
-            if echo "$pr_labels" | grep -qw "harness:codex"; then
-              harness="codex"
-            elif echo "$pr_labels" | grep -qw "harness:gemini"; then
-              harness="gemini"
-            elif echo "$pr_labels" | grep -qw "harness:claude"; then
-              harness="claude"
-            fi
-          fi
-
-          if [ "$harness" = "gemini" ]; then
-            agent="antigravity-cli"
-          else
-            agent="anthropics/claude-code-action@v1"
-          fi
-
-          echo "harness=$harness" >> "$GITHUB_OUTPUT"
-          echo "branch_prefix=$harness" >> "$GITHUB_OUTPUT"
-          echo "agent=$agent" >> "$GITHUB_OUTPUT"
-          echo "AI_AGENT=$agent" >> "$GITHUB_ENV"
-          # The Trailer's second half, under a name the harness does not own
-          # (solorepo's DR-233): the harness overwrites `AI_AGENT` with its own
-          # build string, so a value the agent's shell typed there cannot be
-          # told from the ordinary one, and the channel reads this one in a run.
-          echo "ACTOR_AGENT=$agent" >> "$GITHUB_ENV"
-          echo "Harness chosen: $harness (agent: $agent, branch_prefix: $harness)"
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
-          INPUT_HARNESS: ${{ inputs.harness }}
-          INPUT_ISSUE: ${{ inputs.issue }}
-          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ' ') }}
-          PR_BRANCH: ${{ steps.pr.outputs.branch }}
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-
-
       # The Role's credential, where `.meta/say/` expects it by default
       # (solorepo's DR-073, DR-107, DR-197): outside the tree, mode 600, one token in the
       # container. The same channel and the same rules as on a laptop.
@@ -348,159 +228,38 @@ jobs:
         env:
           CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-      # One run per Challenge. A label supplied at creation fires `labeled`
-      # like any other — GitHub's workflow reference: an Issue opened with two
-      # labels starts three runs, one `opened` and two `labeled` — so
-      # `labeled` alone is the trigger and a Challenge filed in one act is one
-      # run. What can still arrive twice is a level moved under a run, and the
-      # event's payload is frozen at delivery, so the job's `if` cannot see
-      # what happened while the run it waited on was standing. Four facts
-      # are read now, by `check_pr.py --take`, which reads them through the
-      # Issue classifier (solorepo's DR-264): a read of the Issue which fails
-      # ends the step rather than reading as empty, and `by` carries a word
-      # for every delivery that must not run, so that it is never empty by
-      # accident: whether the Issue is still open, since one closed by its
-      # own merge since the delivery is finished work; its *current*
-      # difficulty, since a run that handed it back left it `human` and a
-      # stale delivery must not take it up again; the open pull request on
-      # its branch, which every taken Issue has, opened before the work and
-      # left open by `say stop`; and the claim,
-      # which only a run still standing holds — `say stop` releases it, and
-      # the last step below hands back a run that ended at its budget without
-      # saying so, so that this is true of every way a run ends. Claimed with
-      # a pull request open is a duplicate, skipped and said so; a pull
-      # request with no claim and a level a loop takes is a hand-back the solo
-      # has answered, and the run continues under it.
-      #
-      # The same facts on the second door (solorepo's DR-142). A request for
-      # changes names a branch, and a branch's name says which Challenge and
-      # nothing about who holds it: on solorepo's #168 a run took up a `hard`
-      # Issue's branch under a standing session because this step ran on the
-      # first door only. The level is the fact that says whose a Challenge is
-      # — `hard` is the solo's with an agent beside him, on either door — and
-      # it is the one a session can move: to `hard` to take a branch from the
-      # loop, back down to hand it back. The duplicate reading is the first
-      # door's alone; on the second the open pull request is the event's own
-      # and the claim is what a standing run looks like. A dispatch of a
-      # review pass is the solo's own word and is not read against; a rebase
-      # dispatch is `advance`'s on a push to `main` (solorepo's DR-133), with
-      # no solo in it, and `dispatch()` in `.meta/say/move` filters on the
-      # request, the branch shape, the stack and the conflict and on neither
-      # the level nor the claim — so it is read against here, or the pass it
-      # starts would force-push under a session and, on a conflict it could
-      # not settle, `stop` the Issue from `hard` to `human`: the semaphore the
-      # session set, overwritten by the run it was set to keep out.
-      #
-      # On those doors the Issue is read off the branch name by prefix, and
-      # the job's condition admits the name by prefix too, so `claude/issue-
-      # 169-followup` arrives here as `169-followup`; and an Issue can have
-      # been deleted or transferred under its branch. On the first door a
-      # read that fails aborts the step, and rightly: the delivery is not
-      # taken and the Issue is there to be re-delivered. On the others an
-      # aborted step is a red job with the verdict answered by nobody, which
-      # is worse than the verdict being answered, as it was before this step
-      # read anything here. So on those doors a name that is not a number,
-      # or an Issue that cannot be read, is a word — the branch names no
-      # Challenge the loop holds — and not a failure.
-      - name: is it taken already
-        id: taken
-        if: github.event_name != 'workflow_dispatch' || inputs.task == 'rebase' || inputs.issue != '' || steps.pr.outputs.by == 'merged'
-        run: |
-          if [ "$BY" = merged ]; then
-            printf 'by=merged\nwhy=merged\n' >> "$GITHUB_OUTPUT"
-            echo "Pull request is merged already; this delivery has nothing to do"
-            exit 0
-          fi
-          taken=$(python3 .meta/check_pr.py --take "$ISSUE" --door "$DOOR")
-          jq -r '"by=\(.by)\nwhy=\(.why)\nresume=\(.resume)\nlevel=\(.level)"' <<<"$taken" >> "$GITHUB_OUTPUT"
-          jq -r '.said' <<<"$taken"
+      # The door's first phase is one program of the channel, `.meta/say/on`
+      # (solorepo's DR-264), and what only this file knows reaches it as
+      # flags: which pass the event opened, since the event, the review's
+      # state and the dispatch's inputs are read here; the event itself; and
+      # the harness a dispatch asked for. Before the session the door reads
+      # which pull request a second pass answers and checks its branch out;
+      # which harness runs, by label and input, named under `ACTOR_AGENT`,
+      # which the channel reads in a run, beside the `AI_AGENT` the harness
+      # overwrites with its own build string (solorepo's DR-233); whether the
+      # delivery is still the loop's, read now off the Issue rather than off
+      # the frozen payload, on the verdict's door as on the label's
+      # (solorepo's DR-142), with the sign left on a pull request whose
+      # verdict no Job takes; how deep, by the pass and the level the
+      # Challenge holds now; and on approval how many threads are held for
+      # promotion (solorepo's DR-159). The second phase, after the session,
+      # is still the shell below.
+      - name: before the session
+        id: before
+        run: >-
+          .meta/say/on coder before "$NUMBER"
+          --pass "$PASS" --event "$EVENT" --harness "$HARNESS"
         env:
-          GH_TOKEN: ${{ github.token }}
-          DOOR: ${{ inputs.issue != '' && 'issues' || github.event_name }}
-          ISSUE: ${{ github.event.issue.number || inputs.issue || steps.pr.outputs.issue }}
-          BY: ${{ steps.pr.outputs.by }}
-
-      # Where the loop stood down and nobody is standing there, say so on the
-      # pull request. On `held`, `closed`, `stale` or `unnamed` — an Issue
-      # at `hard` (where a session may have ended before the review landed),
-      # closed under an open pull request, or one a run's `stop` left at
-      # `human` — the request for changes would otherwise stand with no Job
-      # and no sign, leaving the PR abandoned. The solo holds the Issue;
-      # this is one more line alerting them.
-      # The verdict's door only: it is delivered once, so the comment is the
-      # only trace the verdict gets. The rebase door is delivered on every
-      # push to `main` while the branch conflicts, and the facts behind
-      # `stale` and `closed` persist, so a sign here would be posted once per
-      # merge; `dispatch()` in `.meta/say/move` reads the Issue's state and
-      # level before it dispatches and names the branch it leaves alone in
-      # `advance`'s own log, where the repetition costs nobody.
-      - name: say the verdict has no Job
-        if: github.event_name == 'pull_request_review' && github.event.review.state != 'approved' && (steps.taken.outputs.by == 'closed' || steps.taken.outputs.by == 'stale' || steps.taken.outputs.by == 'unnamed' || steps.taken.outputs.by == 'held')
-        run: |
-          .meta/say/post comment "$PR" <<EOF
-          No run takes this up: #$ISSUE is $WHY, so what stands on this pull request is the solo's. What decided that is in the run log, $RUN.
-          EOF
-        env:
-          PR: ${{ steps.pr.outputs.number }}
-          ISSUE: ${{ steps.pr.outputs.issue }}
-          WHY: ${{ steps.taken.outputs.why }}
-          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      # Depth by the label. `easy` is the smaller model and an hour at most;
-      # `medium` is the larger and the whole budget. The guess is the
-      # raiser's, and a wrong one costs a run before anyone relabels.
-      # Differentiated thinking depth across harnesses (solorepo's DR-186): Sonnet and Opus
-      # always run high extended thinking to prevent regressions and hallucinations.
-      # A rebase is bounded by what it is: one branch's commits moved onto what
-      # landed under them, and whatever of that landing they collided with.
-      # The larger model, because a conflict in this repository is prose as
-      # often as it is code and taking the wrong side of one is how a change
-      # silently loses half of itself; half the budget, because a rebase that
-      # is taking an hour is not a rebase and belongs back with the solo.
-      # Promotion on approval gets the smaller model, thirty turns, and fifteen
-      # minutes (solorepo's DR-159): transcribing a thread into an Issue and filing
-      # it is clerical transcription rather than code synthesis or reading a
-      # deep critique, and thirty turns is ample to promote surviving notices
-      # and post what landed without letting the run wander.
-      #
-      # `reader` is the reading pass's model and not this run's: it is the one
-      # the take prompt tells the coder to spawn its subagent on, and the one
-      # the step after the take looks for in the breakdown (solorepo's DR-165).
-      # Printed once here rather than written into both places, so the model the
-      # prompt names and the model the check expects cannot drift apart.
-      - name: choose the depth
-        id: depth
-        run: |
-          printf 'level=%s\n' "$LEVEL" >> "$GITHUB_OUTPUT"
-          if [ "$TASK" = rebase ]; then
-            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\neffort=high\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
-          elif [ "$EVENT" = pull_request_review ] && [ "$STATE" = approved ]; then
-            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\neffort=medium\nturns=30\nminutes=15\n' >> "$GITHUB_OUTPUT"
-          elif [ "$LEVEL" = medium ]; then
-            printf 'model=claude-opus-5\ngemini_model=gemini-3.8-flash\neffort=high\nturns=120\nminutes=60\n' >> "$GITHUB_OUTPUT"
-          else
-            printf 'model=claude-sonnet-5\ngemini_model=gemini-3.8-flash\neffort=medium\nturns=60\nminutes=30\n' >> "$GITHUB_OUTPUT"
-          fi
-          cat "$GITHUB_OUTPUT"
-        env:
-          TASK: ${{ inputs.task }}
+          NUMBER: ${{ github.event.issue.number || inputs.issue || github.event.pull_request.number || inputs.pull_request }}
+          PASS: ${{ (github.event_name == 'issues' || inputs.issue != '') && 'take' || inputs.task == 'rebase' && 'rebase' || github.event.review.state == 'approved' && 'promote' || 'answer' }}
           EVENT: ${{ github.event_name }}
-          STATE: ${{ github.event.review.state }}
-          # The level the guard read from the Issue now, not the one the
-          # frozen delivery carried: a level moved while this run waited in
-          # the concurrency group is the level the run must take (solorepo's #117). An
-          # answering pass (changes_requested) is the larger model whatever the
-          # label was: the threads it answers were written by the deeper reviewer.
-          # A promotion pass (approved) takes the smaller model and a quarter of
-          # the budget above regardless of LEVEL.
-          LEVEL: ${{ ((github.event_name == 'issues' || inputs.issue != '') && steps.taken.outputs.level) || 'medium' }}
-
+          HARNESS: ${{ inputs.harness }}
       - name: take the Issue (claude)
         id: take_claude
-        if: (github.event_name == 'issues' || inputs.issue != '') && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude'
+        if: steps.before.outputs.pass == 'take' && steps.before.outputs.by == '' && steps.before.outputs.harness == 'claude'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         env:
           MAX_THINKING_TOKENS: "32000"
         with:
@@ -538,7 +297,7 @@ jobs:
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
             You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number || inputs.issue }}
-            of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
+            of ${{ github.repository }}, labelled `${{ steps.before.outputs.level }}`.
             Read /pr-first: it is the coder's reading of PR First, and lists
             your verbs, what each does and where the judgement is; `AGENTS.md`
             has the conventions. Every act on GitHub goes through the channel,
@@ -550,10 +309,10 @@ jobs:
 
             Claim it: `.meta/say/move claim ${{ github.event.issue.number || inputs.issue }}`.
             Read it: `gh issue view ${{ github.event.issue.number || inputs.issue }}`.
-            Branch as `${{ steps.harness.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
+            Branch as `${{ steps.before.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
             `origin/main`, push at the first commit, and open the pull request
             at once with `.meta/say/move open`, the form filled and the Issue named
-            under "What it closes". ${{ steps.taken.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.taken.outputs.resume) || 'No run has taken this Issue before.' }}
+            under "What it closes". ${{ steps.before.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.before.outputs.resume) || 'No run has taken this Issue before.' }}
             Below, `<n>` is that pull request's number, never the Issue's;
             `revise` and `comment` take either.
 
@@ -603,34 +362,34 @@ jobs:
             GitHub any other way: the hook refuses `gh pr create`, `gh pr
             comment`, `gh issue edit`, `gh issue comment` and `gh api`.
           claude_args: |
-            --model ${{ steps.depth.outputs.model }}
-            --max-turns ${{ steps.depth.outputs.turns }}
+            --model ${{ steps.before.outputs.model }}
+            --max-turns ${{ steps.before.outputs.turns }}
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
       - name: take the Issue (gemini)
         id: take_gemini
-        if: (github.event_name == 'issues' || inputs.issue != '') && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
+        if: steps.before.outputs.pass == 'take' && steps.before.outputs.by == '' && (steps.before.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
         continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
         # (shell, read, edit, write) unlike the reviewer which is bounded
         # to read-only tools.
         uses: ./.meta/actions/agy
         with:
           role: coder
-          model: ${{ steps.depth.outputs.gemini_model }}
-          effort: ${{ steps.depth.outputs.effort }}
+          model: ${{ steps.before.outputs.gemini_model }}
+          effort: ${{ steps.before.outputs.effort }}
           mode: accept-edits
-          timeout-minutes: ${{ steps.depth.outputs.minutes }}
-          harness: ${{ steps.harness.outputs.harness }}
+          timeout-minutes: ${{ steps.before.outputs.minutes }}
+          harness: ${{ steps.before.outputs.harness }}
           claude-outcome: ${{ steps.take_claude.outcome }}
           execution-file: ${{ steps.take_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
             You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number || inputs.issue }}
-            of ${{ github.repository }}, labelled `${{ steps.depth.outputs.level }}`.
+            of ${{ github.repository }}, labelled `${{ steps.before.outputs.level }}`.
             Read /pr-first: it is the coder's reading of PR First, and lists
             your verbs, what each does and where the judgement is; `AGENTS.md` (and `GEMINI.md`)
             has the conventions. Every act on GitHub goes through the channel,
@@ -642,10 +401,10 @@ jobs:
 
             Claim it: `.meta/say/move claim ${{ github.event.issue.number || inputs.issue }}`.
             Read it: `gh issue view ${{ github.event.issue.number || inputs.issue }}`.
-            Branch as `${{ steps.harness.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
+            Branch as `${{ steps.before.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
             `origin/main`, push at the first commit, and open the pull request
             at once with `.meta/say/move open`, the form filled and the Issue named
-            under "What it closes". ${{ steps.taken.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.taken.outputs.resume) || 'No run has taken this Issue before.' }}
+            under "What it closes". ${{ steps.before.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.before.outputs.resume) || 'No run has taken this Issue before.' }}
             Below, `<n>` is that pull request's number, never the Issue's;
             `revise` and `comment` take either.
 
@@ -755,7 +514,7 @@ jobs:
       # arriving Job reads.
       - name: hand back what the run did not finish
         if: >-
-          always() && (github.event_name == 'issues' || inputs.issue != '') && steps.taken.outputs.by == ''
+          always() && steps.before.outputs.pass == 'take' && steps.before.outputs.by == ''
           && (steps.take_claude.outcome == 'failure' || steps.take_claude.outcome == 'cancelled'
               || steps.take_gemini.outcome == 'failure' || steps.take_gemini.outcome == 'cancelled')
         run: |
@@ -870,7 +629,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number || inputs.issue }}
           OUTCOME: ${{ (steps.take_gemini.outcome == 'failure' || steps.take_gemini.outcome == 'cancelled') && steps.take_gemini.outcome || steps.take_claude.outcome }}
-          BRANCH_PREFIX: ${{ steps.harness.outputs.branch_prefix }}
+          BRANCH_PREFIX: ${{ steps.before.outputs.branch_prefix }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       # The pass a merge on `main` dispatches (solorepo's DR-133). Nothing here
@@ -889,10 +648,10 @@ jobs:
       # semaphores to land in order of leverage.
       - name: rebase onto the base (claude)
         id: rebase_claude
-        if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && steps.harness.outputs.harness == 'claude'
+        if: steps.before.outputs.pass == 'rebase' && steps.before.outputs.by == '' && steps.before.outputs.harness == 'claude'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         env:
           MAX_THINKING_TOKENS: "32000"
         with:
@@ -903,9 +662,9 @@ jobs:
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
             You are the coder Role (solorepo's DR-107), on pull request
-            #${{ steps.pr.outputs.number }} of ${{ github.repository }}, whose
-            branch `${{ steps.pr.outputs.branch }}` is checked out here. A
-            merge on `${{ steps.pr.outputs.base }}` has left it conflicting
+            #${{ steps.before.outputs.number }} of ${{ github.repository }}, whose
+            branch `${{ steps.before.outputs.branch }}` is checked out here. A
+            merge on `${{ steps.before.outputs.base }}` has left it conflicting
             while it was waiting to land — on a review requested of somebody,
             or on the standing merge manager landing what is green (solorepo's DR-161) — and
             GitHub neither builds a merge ref for a branch that conflicts nor
@@ -928,7 +687,7 @@ jobs:
 
             First ask whether there is anything to do:
             `git fetch origin` and `git log --oneline
-            HEAD..origin/${{ steps.pr.outputs.base }}`, which lists what the
+            HEAD..origin/${{ steps.before.outputs.base }}`, which lists what the
             base has and this branch does not and so is empty exactly when
             the branch is already current with its base. That way round and
             not the other: `origin/<base>..HEAD` lists this branch's own
@@ -938,7 +697,7 @@ jobs:
             base is one to leave alone: say so and stop, posting nothing and
             pushing nothing.
 
-            Otherwise rebase it: `git rebase origin/${{ steps.pr.outputs.base }}`.
+            Otherwise rebase it: `git rebase origin/${{ steps.before.outputs.base }}`.
             Never a merge of the base into the branch. GitHub authors that
             merge commit, or you would, and it carries no `Actor` Trailer, so
             A19 turns the required check red on the branch you are unblocking.
@@ -963,13 +722,13 @@ jobs:
 
             Say what happened on the pull request, once, so a reader arriving
             at a head nobody asked about knows why it moved:
-            `.meta/say/post comment ${{ steps.pr.outputs.number }}`. Do not answer
+            `.meta/say/post comment ${{ steps.before.outputs.number }}`. Do not answer
             any thread, and revise the body only if the rebase changed what the
             pull request does, which it should not have.
 
             If what is left is not yours to settle —
             the conflict, where the change no longer makes sense over what
-            landed or the gate will not go green — `.meta/say/move stop ${{ steps.pr.outputs.issue }}`
+            landed or the gate will not go green — `.meta/say/move stop ${{ steps.before.outputs.issue }}`
             with why on stdin, which hands the Challenge to the solo and leaves the
             pull request open. Both are a pull request waiting on a person, and
             that is what `stop` is for.
@@ -981,36 +740,36 @@ jobs:
             `gh api`; the list is what this prompt happens to name and not the
             definition, so a command not on it is not thereby allowed.
           claude_args: |
-            --model ${{ steps.depth.outputs.model }}
-            --max-turns ${{ steps.depth.outputs.turns }}
+            --model ${{ steps.before.outputs.model }}
+            --max-turns ${{ steps.before.outputs.turns }}
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
       - name: rebase onto the base (gemini)
         id: rebase_gemini
-        if: inputs.task == 'rebase' && steps.taken.outputs.by == '' && (steps.harness.outputs.harness == 'gemini' || steps.rebase_claude.outcome == 'failure')
+        if: steps.before.outputs.pass == 'rebase' && steps.before.outputs.by == '' && (steps.before.outputs.harness == 'gemini' || steps.rebase_claude.outcome == 'failure')
         continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
         # (shell, read, edit, write) unlike the reviewer which is bounded
         # to read-only tools.
         uses: ./.meta/actions/agy
         with:
           role: coder
-          model: ${{ steps.depth.outputs.gemini_model }}
-          effort: ${{ steps.depth.outputs.effort }}
+          model: ${{ steps.before.outputs.gemini_model }}
+          effort: ${{ steps.before.outputs.effort }}
           mode: accept-edits
-          timeout-minutes: ${{ steps.depth.outputs.minutes }}
-          harness: ${{ steps.harness.outputs.harness }}
+          timeout-minutes: ${{ steps.before.outputs.minutes }}
+          harness: ${{ steps.before.outputs.harness }}
           claude-outcome: ${{ steps.rebase_claude.outcome }}
           execution-file: ${{ steps.rebase_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
             You are the coder Role (solorepo's DR-107), on pull request
-            #${{ steps.pr.outputs.number }} of ${{ github.repository }}, whose
-            branch `${{ steps.pr.outputs.branch }}` is checked out here. A
-            merge on `${{ steps.pr.outputs.base }}` has left it conflicting
+            #${{ steps.before.outputs.number }} of ${{ github.repository }}, whose
+            branch `${{ steps.before.outputs.branch }}` is checked out here. A
+            merge on `${{ steps.before.outputs.base }}` has left it conflicting
             while it was waiting to land — on a review requested of somebody,
             or on the standing merge manager landing what is green (solorepo's DR-161) — and
             GitHub neither builds a merge ref for a branch that conflicts nor
@@ -1033,7 +792,7 @@ jobs:
 
             First ask whether there is anything to do:
             `git fetch origin` and `git log --oneline
-            HEAD..origin/${{ steps.pr.outputs.base }}`, which lists what the
+            HEAD..origin/${{ steps.before.outputs.base }}`, which lists what the
             base has and this branch does not and so is empty exactly when
             the branch is already current with its base. That way round and
             not the other: `origin/<base>..HEAD` lists this branch's own
@@ -1043,7 +802,7 @@ jobs:
             base is one to leave alone: say so and stop, posting nothing and
             pushing nothing.
 
-            Otherwise rebase it: `git rebase origin/${{ steps.pr.outputs.base }}`.
+            Otherwise rebase it: `git rebase origin/${{ steps.before.outputs.base }}`.
             Never a merge of the base into the branch. GitHub authors that
             merge commit, or you would, and it carries no `Actor` Trailer, so
             A19 turns the required check red on the branch you are unblocking.
@@ -1068,13 +827,13 @@ jobs:
 
             Say what happened on the pull request, once, so a reader arriving
             at a head nobody asked about knows why it moved:
-            `.meta/say/post comment ${{ steps.pr.outputs.number }}`. Do not answer
+            `.meta/say/post comment ${{ steps.before.outputs.number }}`. Do not answer
             any thread, and revise the body only if the rebase changed what the
             pull request does, which it should not have.
 
             If what is left is not yours to settle —
             the conflict, where the change no longer makes sense over what
-            landed or the gate will not go green — `.meta/say/move stop ${{ steps.pr.outputs.issue }}`
+            landed or the gate will not go green — `.meta/say/move stop ${{ steps.before.outputs.issue }}`
             with why on stdin, which hands the Challenge to the solo and leaves the
             pull request open. Both are a pull request waiting on a person, and
             that is what `stop` is for.
@@ -1088,8 +847,8 @@ jobs:
 
       - name: verify rebase pass completed
         if: >-
-          always() && (github.event_name == 'workflow_dispatch' && inputs.task == 'rebase')
-          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          always() && steps.before.outputs.pass == 'rebase'
+          && steps.before.outputs.by == ''
           && steps.rebase_claude.outcome != 'success' && steps.rebase_gemini.outcome != 'success'
           && (steps.rebase_claude.outcome == 'failure' || steps.rebase_gemini.outcome == 'failure')
         run: |
@@ -1115,23 +874,21 @@ jobs:
       # is printed and not treated as this step's failure.
       - name: redeliver the review pass where a rebase cleared changes requested
         if: >-
-          inputs.task == 'rebase' && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          steps.before.outputs.pass == 'rebase' && steps.before.outputs.by == ''
           && (steps.rebase_claude.outcome == 'success' || steps.rebase_gemini.outcome == 'success')
         run: .meta/say/move dispatch "$PR" --task review || true
         env:
-          PR: ${{ steps.pr.outputs.number }}
+          PR: ${{ steps.before.outputs.number }}
 
       - name: answer the review (claude)
         id: answer_claude
         if: >-
-          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase' && inputs.issue == ''
-           || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
-          && steps.taken.outputs.by == ''
-          && steps.pr.outputs.by == ''
-          && steps.harness.outputs.harness == 'claude'
+          steps.before.outputs.pass == 'answer'
+          && steps.before.outputs.by == ''
+          && steps.before.outputs.harness == 'claude'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         env:
           MAX_THINKING_TOKENS: "32000"
         with:
@@ -1142,9 +899,9 @@ jobs:
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
             You are the coder Role (solorepo's DR-107), answering the reviewer's request
-            for changes on pull request #${{ steps.pr.outputs.number }} of
+            for changes on pull request #${{ steps.before.outputs.number }} of
             ${{ github.repository }}, on the branch
-            `${{ steps.pr.outputs.branch }}`, which a run of yours opened and
+            `${{ steps.before.outputs.branch }}`, which a run of yours opened and
             is checked out here. Read /pr-first, the coder's reading of PR
             First, for what a reviewer's point is owed and which verbs are
             yours; `AGENTS.md` (and `GEMINI.md`) has the conventions. Every act on GitHub goes
@@ -1153,8 +910,8 @@ jobs:
             stdin as a quoted heredoc, and a refusal names the verb to use
             instead. Commit through `.meta/say/commit` only.
 
-            Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`,
-            and the verdict: `gh pr view ${{ steps.pr.outputs.number }} --comments`.
+            Read the threads: `python3 .meta/check_pr.py ${{ steps.before.outputs.number }} --threads`,
+            and the verdict: `gh pr view ${{ steps.before.outputs.number }} --comments`.
             A point is right, right about something else, or overtaken by the
             diff, and only the first is a change to make; all three are owed
             a reply that says which. Make the changes, gate green with
@@ -1162,10 +919,10 @@ jobs:
             <thread-id>` on every thread, which replies and resolves; a thread
             marked "Noticed and not done" stays open until approval, when surviving
             notices are promoted (solorepo's DR-159).
-            `.meta/say/move revise ${{ steps.pr.outputs.number }}` if the body no
+            `.meta/say/move revise ${{ steps.before.outputs.number }}` if the body no
             longer says what the head does, `just dereference`, then
-            `.meta/say/post landed ${{ steps.pr.outputs.number }}` and
-            `.meta/say/move request-review ${{ steps.pr.outputs.number }}`, and
+            `.meta/say/post landed ${{ steps.before.outputs.number }}` and
+            `.meta/say/move request-review ${{ steps.before.outputs.number }}`, and
             stop. Do not arm the merge, and do not wait for the checks.
             `dereference` reads the citations this branch wrote against the
             entries they name, and this is the pass that most needs it: a point
@@ -1178,41 +935,39 @@ jobs:
             hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
             `gh issue edit`, `gh issue comment` and `gh api`.
           claude_args: |
-            --model ${{ steps.depth.outputs.model }}
-            --max-turns ${{ steps.depth.outputs.turns }}
+            --model ${{ steps.before.outputs.model }}
+            --max-turns ${{ steps.before.outputs.turns }}
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
       - name: answer the review (gemini)
         id: answer_gemini
         if: >-
-          (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase' && inputs.issue == ''
-           || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
-          && steps.taken.outputs.by == ''
-          && steps.pr.outputs.by == ''
-          && (steps.harness.outputs.harness == 'gemini' || steps.answer_claude.outcome == 'failure')
+          steps.before.outputs.pass == 'answer'
+          && steps.before.outputs.by == ''
+          && (steps.before.outputs.harness == 'gemini' || steps.answer_claude.outcome == 'failure')
         continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
         # (shell, read, edit, write) unlike the reviewer which is bounded
         # to read-only tools.
         uses: ./.meta/actions/agy
         with:
           role: coder
-          model: ${{ steps.depth.outputs.gemini_model }}
-          effort: ${{ steps.depth.outputs.effort }}
+          model: ${{ steps.before.outputs.gemini_model }}
+          effort: ${{ steps.before.outputs.effort }}
           mode: accept-edits
-          timeout-minutes: ${{ steps.depth.outputs.minutes }}
-          harness: ${{ steps.harness.outputs.harness }}
+          timeout-minutes: ${{ steps.before.outputs.minutes }}
+          harness: ${{ steps.before.outputs.harness }}
           claude-outcome: ${{ steps.answer_claude.outcome }}
           execution-file: ${{ steps.answer_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
             You are the coder Role (solorepo's DR-107), answering the reviewer's request
-            for changes on pull request #${{ steps.pr.outputs.number }} of
+            for changes on pull request #${{ steps.before.outputs.number }} of
             ${{ github.repository }}, on the branch
-            `${{ steps.pr.outputs.branch }}`, which a run of yours opened and
+            `${{ steps.before.outputs.branch }}`, which a run of yours opened and
             is checked out here. Read /pr-first, the coder's reading of PR
             First, for what a reviewer's point is owed and which verbs are
             yours; `AGENTS.md` (and `GEMINI.md`) has the conventions. Every act on GitHub goes
@@ -1221,8 +976,8 @@ jobs:
             stdin as a quoted heredoc, and a refusal names the verb to use
             instead. Commit through `.meta/say/commit` only.
 
-            Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`,
-            and the verdict: `gh pr view ${{ steps.pr.outputs.number }} --comments`.
+            Read the threads: `python3 .meta/check_pr.py ${{ steps.before.outputs.number }} --threads`,
+            and the verdict: `gh pr view ${{ steps.before.outputs.number }} --comments`.
             A point is right, right about something else, or overtaken by the
             diff, and only the first is a change to make; all three are owed
             a reply that says which. Make the changes, gate green with
@@ -1230,10 +985,10 @@ jobs:
             <thread-id>` on every thread, which replies and resolves; a thread
             marked "Noticed and not done" stays open until approval, when surviving
             notices are promoted (solorepo's DR-159).
-            `.meta/say/move revise ${{ steps.pr.outputs.number }}` if the body no
+            `.meta/say/move revise ${{ steps.before.outputs.number }}` if the body no
             longer says what the head does, `just dereference`, then
-            `.meta/say/post landed ${{ steps.pr.outputs.number }}` and
-            `.meta/say/move request-review ${{ steps.pr.outputs.number }}`, and
+            `.meta/say/post landed ${{ steps.before.outputs.number }}` and
+            `.meta/say/move request-review ${{ steps.before.outputs.number }}`, and
             stop. Do not arm the merge, and do not wait for the checks.
             `dereference` reads the citations this branch wrote against the
             entries they name, and this is the pass that most needs it: a point
@@ -1248,9 +1003,8 @@ jobs:
 
       - name: verify answer pass completed
         if: >-
-          always() && (github.event_name == 'workflow_dispatch' && inputs.task != 'rebase' && inputs.issue == ''
-           || (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'))
-          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
+          always() && steps.before.outputs.pass == 'answer'
+          && steps.before.outputs.by == ''
           && steps.answer_claude.outcome != 'success' && steps.answer_gemini.outcome != 'success'
           && (steps.answer_claude.outcome == 'failure' || steps.answer_gemini.outcome == 'failure')
         run: |
@@ -1263,26 +1017,15 @@ jobs:
       # semaphores and lands unattended in order of leverage (solorepo's DR-161);
       # if threads are held, this pass promotes each, revises the body, posts landed,
       # and resolves the threads so the standing merge manager can land it.
-      - name: check for threads to promote
-        id: promote
-        if: github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
-        run: |
-          count=$(python3 .meta/check_pr.py "$PR" --unresolved-count)
-          printf 'count=%s\n' "$count" >> "$GITHUB_OUTPUT"
-          echo "Found $count unresolved thread(s) on approved #$PR"
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ steps.pr.outputs.number }}
-
       - name: promote on approval (claude)
         id: promote_claude
         if: >-
-          github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
-          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
-          && steps.promote.outputs.count != '0' && steps.harness.outputs.harness == 'claude'
+          steps.before.outputs.pass == 'promote'
+          && steps.before.outputs.by == ''
+          && steps.before.outputs.count != '0' && steps.before.outputs.harness == 'claude'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         env:
           MAX_THINKING_TOKENS: "32000"
         with:
@@ -1293,12 +1036,12 @@ jobs:
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
             You are the coder Role (solorepo's DR-107), on pull request
-            #${{ steps.pr.outputs.number }} of ${{ github.repository }}, on the
-            branch `${{ steps.pr.outputs.branch }}`, which is checked out here.
+            #${{ steps.before.outputs.number }} of ${{ github.repository }}, on the
+            branch `${{ steps.before.outputs.branch }}`, which is checked out here.
             The reviewer has approved this pull request. The argument is settled,
             and what survives the argument earns an Issue (solorepo's DR-159).
 
-            Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`.
+            Read the threads: `python3 .meta/check_pr.py ${{ steps.before.outputs.number }} --threads`.
             Try the Incidental Commit first, on a thread the reviewer raised: if the surviving
             point is mechanical, owes no Decision, implies no Challenge of its own and is
             proved by the gate already running, fix it in a commit of its own whose subject
@@ -1320,7 +1063,7 @@ jobs:
             **Waits on.** Nothing.
             **What was noticed.** <describe what was noticed>
             **What would make this worth doing.** <rationale>
-            **Where it was found.** On #${{ steps.pr.outputs.number }}.
+            **Where it was found.** On #${{ steps.before.outputs.number }}.
             **Difficulty.** <easy, medium, hard or human: your guess at what it takes>
 
             Promoting with `--no-resolve` files the Issue and replies on the thread
@@ -1328,9 +1071,9 @@ jobs:
             does not land the pull request prematurely (solorepo's DR-161).
 
             For every thread you promote, add its link under `**What was noticed and not done.**`
-            in the pull request body with `.meta/say/move revise ${{ steps.pr.outputs.number }}`.
+            in the pull request body with `.meta/say/move revise ${{ steps.before.outputs.number }}`.
 
-            Then post what landed: `.meta/say/post landed ${{ steps.pr.outputs.number }}`.
+            Then post what landed: `.meta/say/post landed ${{ steps.before.outputs.number }}`.
 
             Finally, resolve each promoted thread to release the merge:
             `.meta/say/post resolve <thread-id>`.
@@ -1341,43 +1084,43 @@ jobs:
             Do not request review: the pull request is already approved.
             Do not merge by hand, and do not make any code changes.
           claude_args: |
-            --model ${{ steps.depth.outputs.model }}
-            --max-turns ${{ steps.depth.outputs.turns }}
+            --model ${{ steps.before.outputs.model }}
+            --max-turns ${{ steps.before.outputs.turns }}
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
       - name: promote on approval (gemini)
         id: promote_gemini
         if: >-
-          github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
-          && steps.taken.outputs.by == '' && steps.pr.outputs.by == ''
-          && steps.promote.outputs.count != '0'
-          && (steps.harness.outputs.harness == 'gemini' || steps.promote_claude.outcome == 'failure')
+          steps.before.outputs.pass == 'promote'
+          && steps.before.outputs.by == ''
+          && steps.before.outputs.count != '0'
+          && (steps.before.outputs.harness == 'gemini' || steps.promote_claude.outcome == 'failure')
         continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.depth.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
         # Coder passes run in accept-edits mode with full tool capabilities
         # (shell, read, edit, write) unlike the reviewer which is bounded
         # to read-only tools.
         uses: ./.meta/actions/agy
         with:
           role: coder
-          model: ${{ steps.depth.outputs.gemini_model }}
-          effort: ${{ steps.depth.outputs.effort }}
+          model: ${{ steps.before.outputs.gemini_model }}
+          effort: ${{ steps.before.outputs.effort }}
           mode: accept-edits
-          timeout-minutes: ${{ steps.depth.outputs.minutes }}
-          harness: ${{ steps.harness.outputs.harness }}
+          timeout-minutes: ${{ steps.before.outputs.minutes }}
+          harness: ${{ steps.before.outputs.harness }}
           claude-outcome: ${{ steps.promote_claude.outcome }}
           execution-file: ${{ steps.promote_claude.outputs.execution_file }}
           prompt: |
             Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
 
             You are the coder Role (solorepo's DR-107), on pull request
-            #${{ steps.pr.outputs.number }} of ${{ github.repository }}, on the
-            branch `${{ steps.pr.outputs.branch }}`, which is checked out here.
+            #${{ steps.before.outputs.number }} of ${{ github.repository }}, on the
+            branch `${{ steps.before.outputs.branch }}`, which is checked out here.
             The reviewer has approved this pull request. The argument is settled,
             and what survives the argument earns an Issue (solorepo's DR-159).
 
-            Read the threads: `python3 .meta/check_pr.py ${{ steps.pr.outputs.number }} --threads`.
+            Read the threads: `python3 .meta/check_pr.py ${{ steps.before.outputs.number }} --threads`.
             Try the drive-by first, on a thread the reviewer raised: if the surviving
             point is mechanical, owes no Decision, implies no Challenge of its own and is
             proved by the gate already running, fix it in a commit of its own whose subject
@@ -1399,7 +1142,7 @@ jobs:
             **Waits on.** Nothing.
             **What was noticed.** <describe what was noticed>
             **What would make this worth doing.** <rationale>
-            **Where it was found.** On #${{ steps.pr.outputs.number }}.
+            **Where it was found.** On #${{ steps.before.outputs.number }}.
             **Difficulty.** <easy, medium, hard or human: your guess at what it takes>
 
             Promoting with `--no-resolve` files the Issue and replies on the thread
@@ -1407,9 +1150,9 @@ jobs:
             does not land the pull request prematurely (solorepo's DR-161).
 
             For every thread you promote, add its link under `**What was noticed and not done.**`
-            in the pull request body with `.meta/say/move revise ${{ steps.pr.outputs.number }}`.
+            in the pull request body with `.meta/say/move revise ${{ steps.before.outputs.number }}`.
 
-            Then post what landed: `.meta/say/post landed ${{ steps.pr.outputs.number }}`.
+            Then post what landed: `.meta/say/post landed ${{ steps.before.outputs.number }}`.
 
             Finally, resolve each promoted thread to release the merge:
             `.meta/say/post resolve <thread-id>`.
@@ -1422,8 +1165,8 @@ jobs:
 
       - name: verify promote pass completed
         if: >-
-          always() && github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
-          && steps.taken.outputs.by == '' && steps.pr.outputs.by == '' && steps.promote.outputs.count != '0'
+          always() && steps.before.outputs.pass == 'promote'
+          && steps.before.outputs.by == '' && steps.before.outputs.count != '0'
           && steps.promote_claude.outcome != 'success' && steps.promote_gemini.outcome != 'success'
           && (steps.promote_claude.outcome == 'failure' || steps.promote_gemini.outcome == 'failure')
         run: |

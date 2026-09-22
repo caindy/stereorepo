@@ -60,6 +60,14 @@ against the count *before* took (solorepo's DR-122), reads the evidence the
 reading hook left, and holds the transcript to the fan-out ceiling
 (solorepo's DR-191).
 
+The coder's door takes which pass the event opened as a flag, since the event,
+the review's state and the dispatch's inputs are the workflow's to read, and
+its *before* finds the pull request a second pass answers and checks its branch
+out, chooses the harness by label and input, reads whether the delivery is
+still the loop's through the take door (solorepo's DR-142), chooses the depth
+by the pass and the level, and on approval counts the threads held for
+promotion.
+
 ## Doors and the Reconciler
 
 A door is edge-triggered: it fires once, on its event, and a delivery that is

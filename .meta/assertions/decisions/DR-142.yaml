@@ -8,6 +8,7 @@ decisions:
       - work:article/18
     enacted_in:
       - work:artifact/github-workflows-coder
+      - work:artifact/meta-say-on
       - work:artifact/meta-disciplines
       - work:artifact/meta-say-move
       - work:artifact/meta-check
@@ -84,7 +85,8 @@ decisions:
           settle, `stop` the Issue from `hard` to `human`.
     consequences:
       - >-
-        `is it taken already` in `coder.yml` runs on the `issues` event, the
+        The coder's door, `.meta/say/on`, called by `coder.yml`'s
+        `before the session`, reads whether the delivery is still the loop's on the `issues` event, the
         `pull_request_review` event and the rebase dispatch alike, reading the
         Issue the branch names. Closed, at `hard`, or at a level the loop does
         not take, the pass skips and says which word: `closed`, `held`,
@@ -108,8 +110,10 @@ decisions:
         Where the loop stands down from a verdict and nobody is standing
         there — `closed`, `stale`, `unnamed` — it says so on the pull
         request, so the verdict does not stand with no Job and no sign, which
-        is #102's state from the other side. On `held` a session is there by
-        construction and nothing is posted. The rebase door posts nothing:
+        is #102's state from the other side. On `held` the Issue is the
+        solo's at `hard`, where a session may have ended before the review
+        landed, and the same sign is one more line alerting them. The rebase
+        door posts nothing:
         it is delivered on every push to `main` while the branch conflicts,
         so `dispatch()` in `.meta/say/move` reads the Issue's state and level
         before it dispatches and leaves a Challenge the loop does not hold

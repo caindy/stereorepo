@@ -6,6 +6,8 @@ Usage:
     .meta/say/on --role reviewer reviewer after <n>
     .meta/say/on --role reviewer reviewer after <pr> --verdicts N --agents N \\
         --ran claude|gemini|jules|none [--transcript <path>]
+    .meta/say/on coder before <n> --pass take|rebase|answer|promote --event <event> \\
+        [--harness <harness>]
 
 Each loop workflow is a door a Role's run arrives at: `triage.yml` and
 `review.yml` are the reviewer's, `coder.yml` the coder's. What the door's shell
@@ -21,7 +23,10 @@ the name the channel reads in a run, beside the `AI_AGENT` the harness
 overwrites with its own build string (solorepo's DR-233), and writes the files
 under `.review/` the session reads; `after` reads what the session left. The
 number says which of the Role's doors this is: a Challenge is the reading
-door, `triage.yml`, and a pull request is the review door, `review.yml`.
+door, `triage.yml`, and a pull request is the review door, `review.yml`. The
+coder's door, `coder.yml`, has four passes behind it and the workflow says
+which with `--pass`, since the event, the review's state and the dispatch's
+inputs are the workflow's to read; its `after` is still the workflow's own.
 
 The review door's `after` takes what only the workflow knows: the verdict
 count `before` emitted, the fan-out ceiling it chose, which harness step ran
@@ -153,9 +158,19 @@ def harness_of(labels: Sequence[str], among: Sequence[str] = READING_HARNESSES) 
 
 
 def name_harness(harness: str) -> None:
-    """The harness as a step output and under both environment names (solorepo's DR-233)."""
+    """The harness as a step output, and under both environment names the channel signs by.
+
+    `ACTOR_AGENT` is the name the channel reads in a run, written beside the
+    `AI_AGENT` the harness overwrites with its own build string
+    (solorepo's DR-233).
+
+    `GITHUB_ENV` reaches the steps after this one; the door's own process
+    is given the name too, so that what it posts before the session ends is
+    signed as the harness it has just chosen and not as the step.
+    """
     emit("GITHUB_OUTPUT", harness=harness, agent=HARNESSES[harness])
     emit("GITHUB_ENV", AI_AGENT=HARNESSES[harness], ACTOR_AGENT=HARNESSES[harness])
+    os.environ[channel.ENV_RUN_AGENT] = HARNESSES[harness]
 
 
 def challenge_page(view: dict[str, Any]) -> str:
@@ -478,6 +493,240 @@ def review_after(number: str, session: Session) -> None:
         sys.exit(1)
 
 
+CODER_HARNESSES = ("codex", "gemini", "claude")
+"""The harnesses the coder's door chooses among, in the order asked: Codex by label
+(solorepo's DR-242), Antigravity CLI by label or as the fallback (solorepo's DR-245), and
+Claude Code by default."""
+
+PASSES = ("take", "rebase", "answer", "promote")
+"""The coder's four passes (solorepo's DR-133, solorepo's DR-159), as `--pass` names them."""
+
+NO_JOB = ("closed", "stale", "unnamed", "held")
+"""The words `take` decides with where a verdict's delivery is nobody's to answer: the loop
+stands down on `closed`, `stale` and `unnamed`, and on `held` the Issue is the solo's at `hard`,
+where a session may have ended before the review landed, so the sign is one more line alerting
+them (solorepo's DR-142)."""
+
+DEPTHS = {"rebase": ("claude-opus-5", "high", "60", "30"),
+          "promote": ("claude-sonnet-5", "medium", "30", "15"),
+          "medium": ("claude-opus-5", "high", "120", "60"),
+          "easy": ("claude-sonnet-5", "medium", "60", "30")}
+"""The model, effort, turn cap and minutes of a pass, by the pass or by the level it takes at."""
+
+GEMINI_MODEL = "gemini-3.8-flash"
+"""The model the Antigravity CLI fallback runs, on every coder pass."""
+
+NOT_THIS_DOOR = ("say: the coder's `after` is still `coder.yml`'s own shell; this verb decides "
+                 "`before` the session (solorepo's DR-264)")
+"""The refusal where the phase names the half of the coder's door this layer has not moved."""
+
+UNNAMED_REBASE = ("::error::#{n} is on {branch}, which names no Challenge, so a rebase pass that "
+                  "could not finish would have nothing to hand back. Rebase it by hand.")
+"""The refusal of a rebase dispatched for a branch that is not the loop's shape."""
+
+NO_JOB_SAID = ("No run takes this up: #{issue} is {why}, so what stands on this pull request is "
+               "the solo's. What decided that is in the run log, {run}.")
+"""The sign the verdict's door leaves where the loop stood down (solorepo's DR-142)."""
+
+
+class Delivery(NamedTuple):
+    """What the workflow knows about a coder delivery before the session.
+
+    Attributes:
+        task: Which pass the event opened: `take`, `rebase`, `answer` or `promote`.
+        event: The event the delivery arrived on, as `github.event_name` names it.
+        harness: The harness a dispatch asked for, or the empty string.
+    """
+
+    task: str
+    event: str
+    harness: str
+
+
+def loop_issue(branch: str) -> str:
+    """The Challenge a loop branch names, or empty where the shape is not the loop's.
+
+    `<harness>/issue-<n>` is the only shape the loop cuts; what follows
+    `issue-` is taken whole, so `claude/issue-169-followup` names
+    `169-followup`, which the take door reads as no Challenge the loop holds.
+    """
+    prefix, cut, rest = branch.partition("/issue-")
+    return rest if cut and prefix in CODER_HARNESSES else ""
+
+
+def labelled(labels: Sequence[str], among: Sequence[str]) -> str | None:
+    """The harness a `harness:` label among `labels` names, first of `among` taken, or `None`."""
+    return next((name for name in among if f"harness:{name}" in labels), None)
+
+
+def coder_harness(delivery: Delivery, labels: Sequence[str]) -> str:
+    """Which harness runs the coder's pass.
+
+    On a take the Challenge's own label wins over a dispatch's input, whose
+    default is never empty, and the input wins where the label names no
+    harness, so an explicit ask still decides over silence; on the other
+    passes the input wins, then the pull request's label. Claude Code where
+    nothing says.
+
+    Parameters:
+        delivery (Delivery): What the workflow knows.
+        labels (Sequence[str]): The Challenge's labels on a take, the pull request's otherwise.
+    """
+    named = labelled(labels, CODER_HARNESSES)
+    if delivery.task == "take":
+        return named or delivery.harness or "claude"
+    return delivery.harness or named or "claude"
+
+
+def coder_depth(task: str, level: str) -> None:
+    """The model, effort, turn cap and minutes of the pass, as step outputs.
+
+    `easy` is the smaller model and half an hour; `medium` the larger and
+    the whole budget, and an answering pass takes it whatever the label was,
+    since the threads it answers were written by the deeper reviewer. A
+    rebase is bounded by what it is, the larger model at half the budget,
+    because a conflict here is prose as often as code and a rebase taking an
+    hour is not a rebase. Promotion on approval (solorepo's DR-159) is
+    clerical transcription, the smaller model at a quarter of the whole. Claude
+    Code's models run high extended thinking on every pass
+    (solorepo's DR-186).
+    """
+    model, effort, turns, minutes = DEPTHS.get(task) or DEPTHS.get(level) or DEPTHS["easy"]
+    emit("GITHUB_OUTPUT", level=level, model=model, gemini_model=GEMINI_MODEL, effort=effort,
+         turns=turns, minutes=minutes)
+
+
+def run_url() -> str:
+    """This run's page, from the environment a run has."""
+    return (f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
+            f"{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/"
+            f"{os.environ.get('GITHUB_RUN_ID', '')}")
+
+
+def taken(issue: str, delivery: Delivery) -> dict[str, Any]:
+    """Whether the delivery is still the loop's, read through the take door.
+
+    A dispatch of a review pass is the solo's own word and is not read
+    against; every other delivery is, on the label's door and on the
+    verdict's alike (solorepo's DR-142), and `by` carries a word for each
+    that must not run.
+    """
+    if delivery.task == "answer" and delivery.event == "workflow_dispatch":
+        decided = check_pr.sweep.Decision("")._asdict()
+    else:
+        door = check_pr.sweep.ISSUE_DOOR if delivery.task == "take" else delivery.event
+        decided = check_pr.sweep.take(issue, door)
+    emit("GITHUB_OUTPUT", by=decided["by"], why=decided["why"], resume=decided["resume"],
+         level=decided["level"])
+    if decided["said"]:
+        print(decided["said"])
+    return decided
+
+
+def find_pull(number: str, delivery: Delivery) -> dict[str, Any] | None:
+    """The pull request a pass answers: its branch, base, and Challenge, and the branch checked out.
+
+    The base is read and not assumed to be `main`, since a layer is based on
+    the layer below. The Challenge is the branch's own name, because a pass
+    that cannot finish hands that Challenge back and has nothing else to
+    name, so a rebase of a branch that names none is refused. A pull request
+    merged or closed already is nothing for the run to do, said as `by`.
+    The promotion pass tolerates a checkout that fails, since it reads
+    GitHub and writes nothing in the tree.
+
+    Returns:
+        dict[str, Any] | None: The pull request, or `None` where it is finished.
+    """
+    view: dict[str, Any] = channel.gh("pr", "view", number, "--json",
+                                      "state,headRefName,baseRefName,labels")
+    branch, base = str(view.get("headRefName") or ""), str(view.get("baseRefName") or "")
+    issue = loop_issue(branch)
+    if delivery.task == "rebase" and not issue:
+        sys.exit(UNNAMED_REBASE.format(n=number, branch=branch))
+    emit("GITHUB_OUTPUT", number=number, branch=branch, base=base, issue=issue)
+    if view.get("state") in ("MERGED", "CLOSED"):
+        print(f"#{number} is {view['state']} already; nothing for this run to do")
+        emit("GITHUB_OUTPUT", by="merged", why="merged")
+        return None
+    try:
+        command(["git", "checkout", "--quiet", branch])
+    except SystemExit:
+        if delivery.task != "promote":
+            raise
+        print(f"{branch} could not be checked out; the promotion pass reads GitHub, not the tree")
+    return view
+
+
+def coder_before(number: str, delivery: Delivery) -> None:
+    """The coder's door before the session: the pull request, the harness, whether taken, how deep.
+
+    A take reads the Challenge; the other passes read the pull request and
+    check its branch out, so the work continues where the last pass left it.
+    The harness is chosen by label and input, named as every door names it.
+    Whether the delivery is still the loop's is read now rather than off the
+    frozen payload, since a level can move while a run waits in its
+    concurrency group (solorepo's #117): a claim with a pull request open is
+    a duplicate on the label's door, and a `hard` Issue's branch is the
+    solo's on the verdict's door as on the first (solorepo's DR-142,
+    solorepo's #168). Where the loop stands down on a request for changes,
+    the sign is left on the pull request, the verdict's door being delivered
+    once; the rebase door is delivered on every push to `main` while the
+    branch conflicts, and `dispatch()` in `.meta/say/move` reads the Issue
+    before it dispatches and names the branch it leaves alone in `advance`'s
+    own log.
+    The depth follows the pass and the level the Challenge holds now. On
+    approval the unresolved threads are counted, since a pull request with
+    none lands unattended (solorepo's DR-159, solorepo's DR-161).
+
+    Parameters:
+        number (str): The Challenge on a take, the pull request otherwise.
+        delivery (Delivery): What the workflow knows.
+    """
+    emit("GITHUB_OUTPUT", **{"pass": delivery.task})
+    if delivery.task == "take":
+        view = channel.gh("issue", "view", number, "--json", "labels")
+        harness = coder_harness(delivery, check_pr.state.issue_labels(view))
+        name_harness(harness)
+        emit("GITHUB_OUTPUT", branch_prefix=harness)
+        decided = taken(number, delivery)
+        coder_depth(delivery.task, str(decided["level"]))
+        return
+    pull = find_pull(number, delivery)
+    if pull is None:
+        return
+    harness = coder_harness(delivery, check_pr.state.issue_labels(pull))
+    name_harness(harness)
+    emit("GITHUB_OUTPUT", branch_prefix=harness)
+    issue = loop_issue(str(pull.get("headRefName") or ""))
+    decided = taken(issue, delivery)
+    if delivery.task == "answer" and delivery.event == "pull_request_review" \
+            and decided["by"] in NO_JOB:
+        channel.sibling("post").conversation_comment(
+            number, channel.signed(NO_JOB_SAID.format(issue=issue, why=decided["why"],
+                                                      run=run_url())))
+    coder_depth(delivery.task, "medium")
+    if delivery.task == "promote":
+        open_threads = [t for t in check_pr.github.threads(number) if not t.get("isResolved")]
+        emit("GITHUB_OUTPUT", count=str(len(open_threads)))
+        print(f"Found {len(open_threads)} unresolved thread(s) on approved #{number}")
+
+
+def coder(phase: str, number: str, delivery: Delivery) -> None:
+    """The coder's door, `before` the session, for the pass `delivery` names.
+
+    Parameters:
+        phase (str): `before`; `after` is refused until the next layer moves it.
+        number (str): The Challenge on a take, the pull request otherwise.
+        delivery (Delivery): What the workflow knows.
+
+    Raises:
+        SystemExit: On `after`, whose steps are still the workflow's own shell.
+    """
+    if phase != "before":
+        sys.exit(NOT_THIS_DOOR)
+    coder_before(number, delivery)
+
+
 def reviewer(phase: str, number: str, session: Session) -> None:
     """The reviewer's door, `before` or `after` the session, for what `number` names.
 
@@ -549,6 +798,16 @@ def build_parser() -> argparse.ArgumentParser:
                         "finding; required there, and an empty string is absent")
     p.add_argument("--transcript", default="",
                    help="after a review session: where Claude Code's transcript is")
+    c = sub.add_parser("coder")
+    c.add_argument("phase", choices=("before", "after"),
+                   help="before the harness session; after it is still the workflow's own")
+    c.add_argument("number", help="the Challenge on a take, the pull request on any other pass")
+    c.add_argument("--pass", dest="task", choices=PASSES, required=True,
+                   help="which pass the event opened")
+    c.add_argument("--event", required=True,
+                   help="the event the delivery arrived on, as github.event_name names it")
+    c.add_argument("--harness", default="",
+                   help="the harness a dispatch asked for, empty on any other event")
     return ap
 
 
@@ -559,6 +818,8 @@ def main() -> None:
     if args.verb == "reviewer":
         reviewer(args.phase, args.number,
                  Session(args.verdicts, args.agents, args.ran, args.transcript))
+    elif args.verb == "coder":
+        coder(args.phase, args.number, Delivery(args.task, args.event, args.harness))
 
 
 if __name__ == "__main__":

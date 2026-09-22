@@ -260,3 +260,14 @@ programs:
           knows as flags, whether a verdict landed, the hook fired, and the
           fan-out ceiling was kept
         held_by: [workflow]
+      - name: coder
+        usage: "before <n> --pass take|rebase|answer|promote --event E [--harness H]"
+        does: >-
+          the coder's door before the session, for the Challenge on a take
+          and the pull request on any other pass: which pull request a
+          second pass answers, its branch checked out; which harness runs;
+          whether the delivery is still the loop's, with the sign left where
+          a verdict has no Job; how deep; and on approval how many threads
+          are held for promotion. After the session is still coder.yml's own
+          shell
+        held_by: [workflow]
