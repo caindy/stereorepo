@@ -397,6 +397,104 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
     return Passed(f"{checked} fallback workflow{'s' if checked != 1 else ''} export GEMINI_FALLBACK")
 
 
+CODER_WORKFLOW = WORKFLOWS / "coder.yml"
+"""The coder's loop, whose take pass runs two harness steps in turn (solorepo's DR-245)."""
+
+
+RESUME_READS = (("take_claude", "steps.before.outputs.resume"),
+                ("take_gemini", "steps.between.outputs.resume"))
+"""Where each take step's prompt reads its resume clause, in the order the steps run: the first
+harness step off the door's reading before the session, the second off the reading taken
+immediately before it, which is the only one later than the first step (solorepo's #835)."""
+
+
+BETWEEN_STEP = "between"
+"""The id of the step reading the branch again immediately before the second harness step."""
+
+
+BETWEEN_RUNS = "on coder between"
+"""What that step must invoke: a step keeping the id while running something else writes no
+`resume`, and an output no step wrote interpolates as the empty string."""
+
+
+def _steps_by_id(job: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """The job's steps that carry an `id`, by it, in the order the job runs them."""
+    return {step["id"]: step for step in job.get("steps") or [] if isinstance(step, dict)
+            and step.get("id")}
+
+
+@check("the second take prompt reads the branch as the step before it found it")
+def fallback_take_prompt_reads_between() -> StepOutcome:
+    """The second take step reads its resume clause off the `between` step (solorepo's #835).
+
+    The second harness step runs when the first failed, which the turn cap
+    reaches after the work rather than before it, so a pull request the first
+    step opened is already there to be continued under. `before` runs once,
+    ahead of both harness steps, and a prompt interpolating its `resume` is
+    told what was true at the start of the run. The `between` step reads the
+    branch again immediately before the second harness step, on that step's
+    own condition and running the door that writes `resume`, so that the
+    reading happens exactly where it is read. Placement is the property that
+    makes it fresh: GitHub resolves a step's `with:` before the step runs, and
+    an output whose step has not run yet is the empty string, so a reading
+    that sits after its reader reinstates the defect with every other
+    assertion here still satisfied.
+
+    Returns:
+        Passed | Found | CouldNotRun: The step each prompt reads its resume
+        clause from, or each take step reading the wrong one and each way the
+        `between` step fails to stand where and as the step below needs it.
+    """
+    if not CODER_WORKFLOW.is_file():
+        return CouldNotRun(f"{CODER_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
+    loaded = yaml.safe_load(CODER_WORKFLOW.read_text(encoding="utf-8")) or {}
+    steps = _steps_by_id((loaded.get("jobs") or {}).get("coder") or {})
+    problems = []
+    for name, reads in RESUME_READS:
+        if name not in steps:
+            problems.append(f"coder.yml: no step is `{name}`, and the take pass runs two harness "
+                            "steps one after the other")
+            continue
+        prompt = str((steps[name].get("with") or {}).get("prompt") or "")
+        if reads not in prompt:
+            problems.append(f"coder.yml: `{name}`'s prompt does not read `{reads}`, which is "
+                            "the door's reading of the branch that is fresh where that step runs")
+        for other, stale in RESUME_READS:
+            if other != name and stale in prompt:
+                problems.append(f"coder.yml: `{name}`'s prompt reads `{stale}`, which is "
+                                f"`{other}`'s reading of the branch and not its own")
+    problems.extend(_between_stands(steps))
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{len(RESUME_READS)} take prompts, each reading the branch as its step finds it")
+
+
+def _between_stands(steps: dict[str, dict[str, Any]]) -> list[str]:
+    """Each way the `between` step fails to stand where and as the step reading it needs it."""
+    if BETWEEN_STEP not in steps:
+        return [f"coder.yml: no step is `{BETWEEN_STEP}`, and the second harness step's prompt "
+                "has nothing to read the branch off later than the first step"]
+    step, problems = steps[BETWEEN_STEP], []
+    order = list(steps)
+    if all(name in steps for name, _ in RESUME_READS) and not (
+            order.index("take_claude") < order.index(BETWEEN_STEP) < order.index("take_gemini")):
+        problems.append(f"coder.yml: `{BETWEEN_STEP}` does not stand between `take_claude` and "
+                        "`take_gemini`; a step's outputs read as the empty string until it has "
+                        "run, so a reading placed after its reader is no reading at all")
+    if BETWEEN_RUNS not in str(step.get("run") or ""):
+        problems.append(f"coder.yml: `{BETWEEN_STEP}` does not run `{BETWEEN_RUNS}`, so nothing "
+                        "writes the `resume` the step below reads")
+    if "take_gemini" in steps and step.get("if") != steps["take_gemini"].get("if"):
+        problems.append(f"coder.yml: `{BETWEEN_STEP}` runs on a different condition from "
+                        "`take_gemini`; the reading is that step's, so it stands or is "
+                        "skipped with it")
+    if step.get("continue-on-error") is not True:
+        problems.append(f"coder.yml: `{BETWEEN_STEP}` carries no `continue-on-error: true`; an "
+                        "`if:` naming no status-check function carries an implicit `success()`, "
+                        "so a red reading would skip the step it exists to inform")
+    return problems
+
+
 LIB = META / "lib"
 """Where a script under `.meta/` keeps its body, one package per script (solorepo's DR-217)."""
 

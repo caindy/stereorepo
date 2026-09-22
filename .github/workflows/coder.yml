@@ -234,7 +234,9 @@ jobs:
       # (solorepo's DR-142), with the sign left on a pull request whose
       # verdict no Job takes; how deep, by the pass and the level the
       # Challenge holds now; and on approval how many threads are held for
-      # promotion (solorepo's DR-159). The second phase is the last step.
+      # promotion (solorepo's DR-159). The take pass reads the branch once
+      # more immediately before its second harness step, below; the last
+      # phase is the last step.
       - name: before the session
         id: before
         run: >-
@@ -354,6 +356,37 @@ jobs:
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
 
+      # What is open on the Challenge's branch, read immediately before the
+      # step below and on that step's own condition (solorepo's #835), so the
+      # reading happens exactly where it is read. That condition is met two
+      # ways: the step above failed, or the Challenge chose Antigravity and
+      # the step above was skipped outright, making the step below the first
+      # harness of the run rather than a fallback. On a failure, the turn cap
+      # is the common way to fail late — it lands after the work rather than
+      # before it, so the pull request is open and the commits are pushed by
+      # the time the outcome is a failure. `before` read the branch once,
+      # ahead of both harness steps, so its `resume` is what was true at the
+      # start of the run — and a step told "No run has taken this Issue
+      # before" goes to open a second pull request on a branch that already
+      # owns one, which `move open` refuses, leaving it to work out from a
+      # refusal what the door already knew. This phase reads the same branch
+      # the hand-back reads and through the same `loop_pull`, but on `take`'s
+      # terms — an empty listing as the default, so a refused read is no pull
+      # request rather than a red job — and the step below takes its resume
+      # clause from here. `continue-on-error` is what keeps a reading that
+      # went red anyway from taking that step with it: an `if:` naming no
+      # status-check function carries an implicit `success()`, so a red step
+      # here would skip the step this one exists to inform.
+      - name: what is open on the branch
+        id: between
+        if: steps.before.outputs.pass == 'take' && steps.before.outputs.by == '' && (steps.before.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
+        continue-on-error: true
+        run: >-
+          .meta/say/on coder between "$NUMBER" --pass take --event "$EVENT"
+        env:
+          NUMBER: ${{ github.event.issue.number || inputs.issue }}
+          EVENT: ${{ github.event_name }}
+
       - name: take the Issue (gemini)
         id: take_gemini
         if: steps.before.outputs.pass == 'take' && steps.before.outputs.by == '' && (steps.before.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
@@ -392,7 +425,7 @@ jobs:
             Branch as `${{ steps.before.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
             `origin/main`, push at the first commit, and open the pull request
             at once with `.meta/say/move open`, the form filled and the Issue named
-            under "What it closes". ${{ steps.before.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.before.outputs.resume) || 'No run has taken this Issue before.' }}
+            under "What it closes". ${{ steps.between.outputs.resume && format('A harness before this one left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.between.outputs.resume) || 'No harness has left a pull request on that branch.' }}
             Below, `<n>` is that pull request's number, never the Issue's;
             `revise` and `comment` take either.
 

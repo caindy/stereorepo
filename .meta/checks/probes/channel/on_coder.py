@@ -26,7 +26,7 @@ RUN = "https://github.com/o/r/actions/runs/99"
 
 @check("coder door probes", pre=True)
 def coder_door_probes() -> list[str]:
-    """`on coder before` and `after` over each pass, with what the workflow hands them as flags.
+    """`on coder` at each phase of each pass, with what the workflow hands the phase as flags.
 
     A take reads the Challenge's label for the harness, the label winning
     over a dispatch's input and the input over silence, asks the take door
@@ -39,7 +39,12 @@ def coder_door_probes() -> list[str]:
     for a dispatched answer, which is the solo's own word. Where a verdict's
     delivery finds the loop stood down, the sign is posted on the pull
     request, signed. The depth follows the pass; on approval the unresolved
-    threads are counted and a failed checkout is tolerated. After the
+    threads are counted and a failed checkout is tolerated. Before the take
+    pass's second harness step the Challenge's loop branch is read again: a
+    pull request open on it is emitted as `resume` for that step's prompt and
+    said, no pull request is an empty `resume` and its own line, the listing
+    is asked with an empty fallback so a refused read is no pull request
+    rather than a red job, and any other pass is refused. After the
     session: a take that failed or was cancelled is handed back, review
     requested where the pull request it left is green and clean and the
     Challenge given to the solo otherwise, with why, every read that failed
@@ -50,7 +55,7 @@ def coder_door_probes() -> list[str]:
     """
     channel, _, programs = load_channel()
     on = programs["on"]
-    return (_take_cases(channel, on) + _pull_cases(channel, on)
+    return (_take_cases(channel, on) + _between_cases(on) + _pull_cases(channel, on)
             + _rebase_promote_cases(channel, on) + _after_cases(channel, on))
 
 
@@ -195,6 +200,61 @@ def _take_cases(channel: Any, on: Any) -> list[str]:
                             ("take", "issues", ""), ISSUE)
     if ended.code is not None or out.get("by") != "held" or out.get("why") != "labelled hard":
         problems.append(f"take: a held Challenge decided {out!r} with exit {ended.code!r}")
+    return problems
+
+
+class _Branch:
+    """A stand-in for `loop_pull`, answering what is open on the Challenge's branch.
+
+    Every call is recorded whole, the `default` included, since the door asks
+    with an empty listing so that a read GitHub refuses is no pull request
+    rather than a red job.
+    """
+
+    def __init__(self, pull: dict[str, Any] | None) -> None:
+        self.pull = pull
+        self.asked: list[tuple[str, str, Any]] = []
+
+    def __call__(self, issue: str | int, fields: str, default: Any = None) -> Any:
+        self.asked.append((str(issue), fields, default))
+        return dict(self.pull) if self.pull else None
+
+
+def _between(on: Any, branch: _Branch, task: str = "take") -> tuple[Any, dict[str, str]]:
+    """`on coder between` against the stand-in: how it ended, and the outputs by key."""
+    with _workspace() as root, stood_in(on.check_pr.sweep, loop_pull=branch):
+        ended = outcome(lambda: on.coder("between", ISSUE, on.Delivery(task, "issues", ""),
+                                         on.Ended("failure", "skipped", None, "claude")))
+        out = dict(line.split("=", 1) for line in (root / "output").read_text().splitlines()
+                   if "=" in line)
+    return ended, out
+
+
+def _between_cases(on: Any) -> list[str]:
+    """Before the take pass's second harness step: the branch read again, any other pass refused."""
+    problems = []
+    branch = _Branch({"number": int(PULL)})
+    ended, out = _between(on, branch)
+    if ended.code is not None or out.get("resume") != PULL \
+            or f"pull request #{PULL} is already open" not in ended.out:
+        problems.append(f"between: a branch holding #{PULL} decided {out!r} with exit "
+                        f"{ended.code!r} saying {ended.out!r}, where the prompt below takes "
+                        "that number as its resume clause")
+    if branch.asked != [(ISSUE, "number", [])]:
+        problems.append(f"between: the branch was read as {branch.asked!r}, where the Challenge "
+                        "is asked for its pull request's number under an empty listing, so that "
+                        "a read GitHub refuses is no pull request and not a red job")
+    ended, out = _between(on, _Branch(None))
+    if ended.code is not None or out.get("resume") != "" \
+            or "no pull request is open" not in ended.out:
+        problems.append(f"between: a branch holding nothing decided {out!r} with exit "
+                        f"{ended.code!r} saying {ended.out!r}, where the step below opens the "
+                        "pull request itself")
+    for task in ("rebase", "answer", "promote"):
+        ended, _ = _between(on, _Branch({"number": int(PULL)}), task)
+        if ended.code is None or "only the take pass" not in str(ended.code):
+            problems.append(f"between: the {task} pass ended {ended.code!r}, where a pass whose "
+                            "prompt carries no resume clause is refused")
     return problems
 
 

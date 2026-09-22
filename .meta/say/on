@@ -8,6 +8,7 @@ Usage:
         --ran claude|gemini|jules|none [--transcript <path>]
     .meta/say/on coder before <n> --pass take|rebase|answer|promote --event <event> \\
         [--harness <harness>]
+    .meta/say/on coder between <issue> --pass take --event <event>
     .meta/say/on coder after <n> --pass take|rebase|answer|promote --event <event> \\
         --claude <outcome> --gemini <outcome> [--count N] [--branch-prefix <harness>]
 
@@ -32,7 +33,11 @@ inputs are the workflow's to read; its `after` takes how the pass's two
 harness steps ended, refused absent by the same rule as the review door's
 numbers below, and hands back a take that did not finish, redelivers the
 review pass a rebase cleared, and ends the run red where one harness failed
-a pass and neither finished it, a cancelled pass not being a failed one.
+a pass and neither finished it, a cancelled pass not being a failed one. The
+take pass has a third phase, `between`, which runs immediately before the
+second harness step and on that step's own condition, reading the branch
+again so that the step's prompt says what is open on it now rather than what
+`before` read of it ahead of both steps.
 
 The review door's `after` takes what only the workflow knows: the verdict
 count `before` emitted, the fan-out ceiling it chose, which harness step ran
@@ -713,6 +718,58 @@ def coder_before(number: str, delivery: Delivery) -> None:
         print(f"Found {len(open_threads)} unresolved thread(s) on approved #{number}")
 
 
+BETWEEN_NOT_TAKE = ("::error::`between` reads what is open on the Challenge's branch, which only "
+                    "the take pass has a prompt to say; it was asked on the {task} pass")
+"""The refusal where `between` is asked on a pass whose prompt carries no resume clause."""
+
+LEFT_OPEN = ("pull request #{number} is already open on #{issue}'s branch; the harness step that "
+             "follows takes it up rather than opening again")
+"""The line the run log gets where the branch already holds a pull request."""
+
+LEFT_NOTHING = ("no pull request is open on #{issue}'s branch; the harness step that follows "
+                "opens the one this Challenge is owed")
+"""The line the run log gets where the branch holds nothing for the step that follows to resume."""
+
+
+def coder_between(issue: str, delivery: Delivery) -> None:
+    """The coder's door before the second harness step: what is open on the branch, as `resume`.
+
+    The step runs immediately before the second harness step and on that
+    step's own condition, which is met two ways: the first harness step
+    failed, or the Challenge chose the harness that the second step runs and
+    the first was skipped outright, making it the run's first harness rather
+    than a fallback. On a failure, the turn cap is the common way to fail
+    late — it lands after the work rather than before it, with the pull
+    request already open and commits pushed. `before` read the branch once,
+    ahead of both harness steps, so its `resume` says what was true at the
+    start of the run: handed that, the step is told no run has taken this
+    Issue and goes to open a second pull request on a branch that already owns
+    one, which `move open` refuses. This reads the branch again, now, and the
+    step's prompt takes its resume clause from here.
+
+    It is the branch `sweep.hand_back` reads and the same `loop_pull`, but on
+    `take`'s terms rather than the hand-back's: an empty listing as the
+    default, so a listing GitHub refuses reads as no pull request instead of
+    ending the process. The Challenge is still there to be taken, and a
+    refusal is no reason to put a red step in the run log for a reading that
+    only feeds a prompt.
+
+    Parameters:
+        issue (str): The Challenge.
+        delivery (Delivery): What the workflow knows.
+
+    Raises:
+        SystemExit: Where the pass is not a take.
+    """
+    if delivery.task != "take":
+        sys.exit(BETWEEN_NOT_TAKE.format(task=delivery.task))
+    pull = check_pr.sweep.loop_pull(issue, "number", default=[])
+    number = str(pull["number"]) if pull else ""
+    emit("GITHUB_OUTPUT", resume=number)
+    print(LEFT_OPEN.format(number=number, issue=issue) if number
+          else LEFT_NOTHING.format(issue=issue))
+
+
 class Ended(NamedTuple):
     """What the workflow knows about the coder's session that the door's `after` is handed.
 
@@ -944,16 +1001,18 @@ def coder_after(number: str, delivery: Delivery, ended: Ended) -> None:
 
 
 def coder(phase: str, number: str, delivery: Delivery, ended: Ended) -> None:
-    """The coder's door, `before` or `after` the session, for the pass `delivery` names.
+    """The coder's door at one phase of the session, for the pass `delivery` names.
 
     Parameters:
-        phase (str): `before` or `after`.
+        phase (str): `before`, `between` the take pass's two harness steps, or `after`.
         number (str): The Challenge on a take, the pull request otherwise.
         delivery (Delivery): What the workflow knows.
         ended (Ended): How the session's steps ended, unread before it.
     """
     if phase == "before":
         coder_before(number, delivery)
+    elif phase == "between":
+        coder_between(number, delivery)
     else:
         coder_after(number, delivery, ended)
 
@@ -1051,8 +1110,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--transcript", default="",
                    help="after a review session: where Claude Code's transcript is")
     c = sub.add_parser("coder")
-    c.add_argument("phase", choices=("before", "after"),
-                   help="before the harness session, or after it")
+    c.add_argument("phase", choices=("before", "between", "after"),
+                   help="before the harness session, between the take pass's two harness "
+                        "steps, or after the session")
     c.add_argument("number", help="the Challenge on a take, the pull request on any other pass")
     c.add_argument("--pass", dest="task", choices=PASSES, required=True,
                    help="which pass the event opened")
