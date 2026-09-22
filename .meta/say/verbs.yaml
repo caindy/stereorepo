@@ -248,11 +248,15 @@ programs:
       back after.
     verbs:
       - name: reviewer
-        usage: "before|after <n>"
+        usage: "before|after <n> [--verdicts N --agents N --ran H --transcript P]"
         does: >-
-          the reviewer's reading door for the Challenge the number names, a
-          pull request being refused until its door moves: before the
-          session, whether the delivery is still the reviewer's, which harness
-          reads, and what it reads written under .review/; after it, whether
-          it was read
+          the reviewer's door for what the number names. A Challenge is the
+          reading door: before the session, whether the delivery is still the
+          reviewer's, which harness reads, and what it reads written under
+          .review/; after it, whether it was read. A pull request is the
+          review door: before, which harness reviews, how deep, the diff, the
+          head's trunk paths and the constraints written under .review/, and
+          the verdicts already given; after, with what only the workflow
+          knows as flags, whether a verdict landed, the hook fired, and the
+          fan-out ceiling was kept
         held_by: [workflow]

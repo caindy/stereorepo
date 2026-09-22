@@ -494,6 +494,7 @@ and the query a reader in a file actually has.
 | [`.meta/say/whoami`](say/whoami) | [DR-117](assertions/decisions/DR-117.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-197](assertions/decisions/DR-197.yaml) |
 | [`.meta/schemas.md`](schemas.md) | [DR-003](assertions/decisions/DR-003.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-183](assertions/decisions/DR-183.yaml) |
 | [`.meta/search.py`](search.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-204](assertions/decisions/DR-204.yaml) |
+| [`.meta/templates/constraints.md`](templates/constraints.md) | [DR-264](assertions/decisions/DR-264.yaml) |
 | [`.meta/templates/issue.md`](templates/issue.md) | [DR-112](assertions/decisions/DR-112.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-170](assertions/decisions/DR-170.yaml), [DR-213](assertions/decisions/DR-213.yaml), [DR-230](assertions/decisions/DR-230.yaml) |
 | [`.meta/templates/pull-request.md`](templates/pull-request.md) | [DR-055](assertions/decisions/DR-055.yaml), [DR-076](assertions/decisions/DR-076.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-159](assertions/decisions/DR-159.yaml), [DR-236](assertions/decisions/DR-236.yaml), [DR-249](assertions/decisions/DR-249.yaml) |
 | [`.meta/templates/roadmap.md`](templates/roadmap.md) | [DR-088](assertions/decisions/DR-088.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-170](assertions/decisions/DR-170.yaml), [DR-213](assertions/decisions/DR-213.yaml) |

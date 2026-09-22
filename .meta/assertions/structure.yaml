@@ -761,6 +761,9 @@ artifacts:
   - id: work:artifact/meta-templates-roadmap
     name: .meta/templates/roadmap.md
     path: .meta/templates/roadmap.md
+  - id: work:artifact/meta-templates-constraints
+    name: .meta/templates/constraints.md
+    path: .meta/templates/constraints.md
   - id: work:artifact/meta-work-actors
     name: .meta/work/actors.yaml
     path: .meta/work/actors.yaml

@@ -43,7 +43,22 @@ The phases are typed as one program of the channel, `.meta/say/on --role
 credential that reads, so that a probe can hold every decision a door makes
 and the YAML keeps only its triggers, concurrency, permissions, credentials,
 and the harness steps. The number says which of a Role's doors is meant: the
-reviewer reads a Challenge and reviews a pull request.
+reviewer reads a Challenge and reviews a pull request. What only the workflow
+knows after the session, such as which harness step ran it and where its
+transcript is, reaches the door's *after* as flags, so the run log says where
+every number the door judged by came from.
+
+The review door's *before* also chooses the depth, by `.meta/depth.py`
+(solorepo's DR-188), and writes what the session reads: the diff as a file,
+the head's copies of the trunk paths under `.review/head/`, the trunk paths
+being the control-plane paths the run replaces with `origin/main`'s copies
+before the session so that what runs is trunk's and the pull request's version
+is read there without being run (solorepo's DR-217), and the constraints
+every agent the review spawns is bound by, filled from
+`.meta/templates/constraints.md`. Its *after* counts the reviewer's verdicts
+against the count *before* took (solorepo's DR-122), reads the evidence the
+reading hook left, and holds the transcript to the fan-out ceiling
+(solorepo's DR-191).
 
 ## Doors and the Reconciler
 

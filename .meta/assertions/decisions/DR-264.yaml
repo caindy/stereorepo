@@ -25,6 +25,7 @@ decisions:
       - work:artifact/github-workflows-triage
       - work:artifact/meta-checks-probes-channel-on
       - work:artifact/wiki-solorepo-door
+      - work:artifact/meta-templates-constraints
     context: >-
       The loops are a pair of state machines, one over Issues and one over pull
       requests, whose state GitHub holds (A22). Nothing in the tree holds either

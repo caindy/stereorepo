@@ -192,6 +192,25 @@ def latest_verdict(pr: Mapping[str, Any], reviewer_login: str | None = None) -> 
     return str(matching[-1].get("state") or "").upper()
 
 
+def verdicts_given(pr: Mapping[str, Any], reviewer_login: str) -> int:
+    """How many verdicts the reviewer has submitted on the pull request, on any head.
+
+    A verdict is a review that approves or requests changes, or a comment
+    review with a body; a comment review with no body is what GitHub records
+    around inline threads and is not one.
+
+    Args:
+        pr: Pull request metadata mapping carrying `reviews`.
+        reviewer_login: The login whose verdicts are counted.
+
+    Returns:
+        The count.
+    """
+    return sum(1 for r in pr.get("reviews") or []
+               if (r.get("author") or {}).get("login") == reviewer_login
+               and (str(r.get("state") or "").upper() != "COMMENTED" or r.get("body")))
+
+
 def is_review_requested(pr: Mapping[str, Any], reviewer_login: str | None = None) -> bool:
     """Determines if a review is currently requested on the pull request.
 

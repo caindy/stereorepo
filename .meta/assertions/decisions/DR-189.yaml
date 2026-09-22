@@ -59,8 +59,8 @@ decisions:
       or where batched foreground agents fail to execute concurrently.
     rationale: |-
       A fact about the harness is answered by an empirical test. While DR-122 rightly
-      eliminated background agents to prevent uncollected verdicts, sequential foreground
-      execution was an accidental artifact of prompt phrasing rather than an inherent
-      harness limitation. Instructing concurrent tool use batching within a single turn
+      required every agent a review spawns to run in the foreground, so that no verdict
+      goes uncollected, sequential foreground execution was an accidental artifact of
+      prompt phrasing rather than an inherent harness limitation. Instructing concurrent tool use batching within a single turn
       and exporting the concurrency ceiling allows scoped multi-dimensional review
       passes to run in parallel, converting pass duration from O(sum) to O(max).
