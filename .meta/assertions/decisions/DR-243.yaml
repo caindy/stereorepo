@@ -42,11 +42,12 @@ decisions:
     consequences:
       - >-
         DR-133's fifth consequence excluding linked stack layers from the
-        mechanical `advance` transition is superseded. Its conflicting-stack
-        dispatch reading, its `dispatch_pass` refusal, and its exclusion for an
-        unlinked branch that is another open pull request's base (which remains
-        refused when named and passed over in a sweep) survive: a stack with
-        any conflicting layer remains the solo's to resolve from its bottom.
+        `advance` sweep's rebase of armed pull requests is superseded. Its
+        conflicting-stack dispatch reading and its `dispatch_pass` refusal
+        survive as DR-133 now states them: a layer above a conflicting lower
+        layer is left alone, named in a sweep's output and refused when named,
+        and the stack is resolved from the bottom by the reconciler's rebase
+        passes (solorepo's DR-264), the root's first.
       - >-
         The sweep reaches a stack through any armed or approved layer,
         advancing every layer in the stack from the bottom up. A named bottom

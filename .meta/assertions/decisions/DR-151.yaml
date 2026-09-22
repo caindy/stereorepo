@@ -118,10 +118,12 @@ decisions:
         would hand back to off the name, `coder.yml` refuses the rest after the
         dispatch rather than before it, and a name that only nearly fits reaches
         no refusal at all — the guard reads it as naming no Challenge and the
-        run ends green having done nothing. And a layer of a stack: rebasing one
-        moves commits the layer above may be based on with no event on it to
-        say so, and a conflicting stack is resolved from the bottom, by the
-        solo.
+        run ends green having done nothing. And a layer above one that conflicts
+        with its own base: rebasing it first would carry the lower layer's
+        unresolved commits as its own, and a conflicting stack is resolved
+        from the bottom, the lower layer's rebase first, by this verb or by
+        the reconciler; the root, and a layer whose lower layers are clean, is
+        any loop branch's rebase (solorepo's DR-133).
       - >-
         Nothing about the Challenge is read: not its level, not its state, not
         its claim. That is DR-142's exemption, and this verb is the delivery it

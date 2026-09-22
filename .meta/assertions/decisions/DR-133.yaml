@@ -13,6 +13,9 @@ decisions:
       - work:artifact/meta-checks-probes-loops-advance
       - work:artifact/meta-checks-probes-loops-merge-manager-advance
       - work:artifact/meta-checks-probes-loops-dispatch
+      - work:artifact/meta-lib-move-reconcile
+      - work:artifact/meta-lib-move-pull-requests
+      - work:artifact/meta-checks-probes-loops-reconcile
     alternatives:
       - name: Widen `advance` to every pull request with a review request outstanding
         chosen: false
@@ -113,19 +116,25 @@ decisions:
         asked to review is waiting on nothing, and a conflict on the solo's own
         branch is the solo's; the sweep names both for a reader either way.
       - >-
-        And never the lower layer of a stack, which is the third thing the
-        wider filter was rejected for and so a thing the chosen alternative
-        has to answer itself. The armed filter is what keeps the rebase off a
-        stack, because GitHub arms no layer of one (DR-100), and the second
-        reading has no armed filter — the bottom layer keeps `main` as its
-        base and a `claude/issue-<n>` head, and a merge on `main` is what
-        conflicts it — so it is excluded directly: a branch that is another
-        open pull request's base is a layer below it, which is already in the
-        list `advance` read. Rebasing the lower layer rewrites the commits the
-        layer above is on, and nothing notices, because the upper layer's head
-        never moves and so fires no event. A conflicting stack is resolved
-        from the bottom, by the solo, and the pull request left alone is named
-        in the sweep's output rather than passed over in silence.
+        And a stack from the bottom, which is the third thing the wider
+        filter was rejected for and so a thing the chosen alternative has to
+        answer itself. The armed filter is what keeps the rebase off a stack,
+        because GitHub arms no layer of one (DR-100), and the second reading
+        has no armed filter — the bottom layer keeps `main` as its base and a
+        `claude/issue-<n>` head, and a merge on `main` is what conflicts it —
+        so the reading holds the stack's order directly. Rebasing a lower
+        layer rewrites the commits the layer above is on, and nothing notices,
+        because the upper layer's head never moves and so fires no event; so
+        the harm is answered by the order of the passes rather than by a
+        refusal. A layer above a lower layer that conflicts with its own base
+        is left alone, and named in the sweep's output rather than passed
+        over in silence; the root, and a layer every lower layer of which is
+        clean, is dispatched on the same terms as an unstacked loop branch,
+        the stack being no condition on it. The layer above is dispatched on
+        a later pass, once the layers below it are clean, which is the order
+        that carries no lower layer's unresolved commits into a layer above,
+        and the clock that reads it again is the reconciler's, which
+        solorepo's DR-264 made the primary loop.
       - >-
         `coder.yml` gains a third pass and a `task` input that chooses it.
         `review` is the default and is the second run DR-112 promised;

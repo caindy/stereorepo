@@ -164,18 +164,18 @@ def _nothing_asked_dispatches_nothing(channel: Any, move: Any) -> list[str]:
     return problems
 
 
-def _lower_layer_of_a_stack_left_alone(channel: Any, move: Any) -> list[str]:
+def _stack_root_rebased_by_sweep_refused_by_name(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"},
                        8: {"behind": 0, "armed": False, "requested": ["reviewer"],
-                           "base": "claude/issue-7", "mergeable": "MERGEABLE"}})
+                           "base": "claude/issue-7", "mergeable": "CONFLICTING"}})
     said = swept(channel, move, fake, problems)
-    if fake.dispatched:
-        problems.append("advance: it dispatched the lower layer of a stack, "
-                        f"{fake.dispatched!r}")
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append("advance: a conflicting stack should have its root rebased and the "
+                        f"layer above it left alone, and it dispatched {fake.dispatched!r}")
     if said:
-        problems.append(f"advance: the stack it left alone exited with {said!r}")
+        problems.append(f"advance: the stack it resolved from the bottom exited with {said!r}")
     named_said = run_verb(channel, fake, lambda: move.advance("7"))
     if not named_said or "base of another open pull request" not in named_said:
         problems.append(f"advance: named stack base should be refused, got {named_said!r}")
@@ -389,14 +389,28 @@ def _dispatch_rebase_refused_by_hand(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     for case, pull in (("a branch that is not the loop's",
                         {"branch": "claude/issue-169-followup"}),
-                       ("the solo's own branch", {"branch": "fix-the-thing"}),
-                       ("a layer of a stack", {"layer": True})):
+                       ("the solo's own branch", {"branch": "fix-the-thing"})):
         fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING", **pull}})
         said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
         if fake.dispatched:
             problems.append(f"dispatch: {case} dispatched {fake.dispatched!r}")
         if not said or "by hand" not in said:
             problems.append(f"dispatch: {case} was refused with {said!r}")
+    stack = {6: {"behind": 0, "armed": False, "mergeable": "CONFLICTING", "layer": True},
+             7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING", "layer": True,
+                 "base": "claude/issue-6"}}
+    fake = FakeGitHub(stack)
+    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
+    if fake.dispatched or not said or "resolved from the bottom" not in said:
+        problems.append(f"dispatch: a layer above a conflicting root dispatched "
+                        f"{fake.dispatched!r} and was refused with {said!r}, where the root "
+                        "is rebased first")
+    fake = FakeGitHub(stack)
+    said = run_verb(channel, fake, lambda: move.dispatch_pass("6", "rebase"))
+    if fake.dispatched != [("6", "rebase")] or said:
+        problems.append(f"dispatch: the root of a conflicting stack dispatched "
+                        f"{fake.dispatched!r} and said {said!r}, where the root is any loop "
+                        "branch's rebase")
     return problems
 
 
@@ -430,9 +444,9 @@ def dispatch_probes() -> list[str]:
       reviewer check failed without a verdict is re-requested
       (solorepo's DR-167, solorepo's DR-178, solorepo's #316). Nothing is
       dispatched for a branch nobody asked to review or to land, on which a
-      Job may still be standing, for the solo's own branch, for the lower
-      layer of a stack, whose rebase would rewrite the layer above with no
-      event on it, or for a Challenge the loop does not hold — `hard`,
+      Job may still be standing, for the solo's own branch, for a layer above
+      a conflicting one, since a stack is resolved from the bottom and the
+      root is rebased first, or for a Challenge the loop does not hold — `hard`,
       closed, `human`, which is what `stop` leaves, or unreadable, which is
       an Issue deleted or transferred under its branch (solorepo's DR-142).
       A refused write is the sweep's own problem rather than one pull
@@ -473,15 +487,19 @@ def dispatch_probes() -> list[str]:
       reviewer, which is the coder having handed back. The rebase pass starts
       on a `CONFLICTING` branch and is refused on one that merely fell
       behind, by a sentence that does not send it to a verb refusing an
-      unarmed one; and it is refused before `mergeable` is asked for on a
-      branch that is not the loop's shape, on the solo's own, and on a layer
-      of a stack. A branch that is not the loop's shape,
+      unarmed one; it is refused before `mergeable` is asked for on a branch
+      that is not the loop's shape and on the solo's own; and it is refused
+      on a layer above a conflicting lower layer, which is the one refusal
+      that asks GitHub first, since the lower layers' mergeability is what
+      it turns on. A branch that is not the loop's shape,
       `claude/issue-169-followup` here, names no Challenge for a pass that
       could not finish to hand back to; `coder.yml` holds that refusal only
       after the dispatch, and for the nearly-right name it holds none at all,
-      so the verb refuses first. A layer of a stack is the solo's because
-      rebasing one moves commits under the layer above with no event on it
-      (solorepo's DR-133).
+      so the verb refuses first. A layer above a conflicting root is refused
+      because rebasing it first would carry the root's unresolved commits as
+      its own; the root is dispatched on the same terms as an unstacked loop
+      branch, the stack being no condition on it, and so a stack is resolved
+      from the bottom (solorepo's DR-133).
 
     `said` is read in every case whose whole assertion is an absence: a verb
     that died before dispatching leaves `dispatched` empty too, and without it
@@ -511,7 +529,7 @@ def dispatch_probes() -> list[str]:
         _approved_with_failing_checks_dispatches_review(channel, move),
         _stranded_review_request_re_requested(channel, move),
         _nothing_asked_dispatches_nothing(channel, move),
-        _lower_layer_of_a_stack_left_alone(channel, move),
+        _stack_root_rebased_by_sweep_refused_by_name(channel, move),
         _challenges_the_loop_does_not_hold(channel, move),
         _refused_dispatch_is_the_sweeps_own_problem(channel, move),
         _refused_re_request_is_the_sweeps_own_problem(channel, move),

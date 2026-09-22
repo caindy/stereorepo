@@ -77,18 +77,22 @@ def _retry_stranded_reviewer(number: str, pull: common.Pull, asked: list[str],
 
 
 def _dispatch_conflicting(number: str, pull: common.Pull, waiting: list[str],
-                          below: set[str], challenge: str) -> tuple[bool, str | None]:
+                          pulls: Sequence[common.Pull], challenge: str) -> tuple[bool, str | None]:
     """Dispatch coder rebase pass for conflicting pull request if eligible.
+
+    A layer above a conflicting lower layer is left alone and named, since a
+    stack is resolved from the bottom (solorepo's DR-133); the root, and a
+    layer whose lower layers are clean, is any loop branch's rebase.
 
     Returns:
         tuple[bool, str | None]: (handled, refused_msg)
     """
     waits = " and ".join(waiting)
-    if pull["headRefName"] in below:
-        print(f"left #{number} alone: another open pull request is based on "
-              f"{pull['headRefName']}, so rebasing it would rewrite the commits the "
-              f"layer above is on — a conflicting stack is resolved from the bottom, "
-              f"by the solo — {pull['title']}")
+    lower = pull_requests.conflicting_below(pull, pulls)
+    if lower is not None:
+        print(f"left #{number} alone: it is a layer above #{lower['number']}, which conflicts "
+              f"with its own base, and a conflicting stack is resolved from the bottom, the "
+              f"lower layer's rebase first — {pull['title']}")
         return True, None
     if not _is_autonomous_challenge(challenge, "conflict", pull):
         return True, None
@@ -138,7 +142,7 @@ def _dispatch_approved_or_redeliver(pull: common.Pull, merges: str,
     return False, None
 
 
-def _dispatch_single_pull(pull: common.Pull, below: set[str], reviewer_login: str,
+def _dispatch_single_pull(pull: common.Pull, pulls: Sequence[common.Pull], reviewer_login: str,
                           minutes: int, now: datetime.datetime) -> tuple[str | None, str | None]:
     """Evaluate and dispatch coder passes for a single pull request."""
     number = str(pull["number"])
@@ -169,7 +173,7 @@ def _dispatch_single_pull(pull: common.Pull, below: set[str], reviewer_login: st
         return f_msg, r_msg
 
     if waiting and merges == "CONFLICTING":
-        _, r_msg = _dispatch_conflicting(number, pull, waiting, below, challenge)
+        _, r_msg = _dispatch_conflicting(number, pull, waiting, pulls, challenge)
         return None, r_msg
 
     _, r_msg = _dispatch_approved_or_redeliver(pull, merges, challenge, reviewer_login, redeliver)
@@ -181,9 +185,9 @@ def dispatch(pulls: Sequence[common.Pull]) -> tuple[list[str], list[str]]:
 
     Identifies loop-owned pull requests in CONFLICTING merge state that are waiting on
     something a conflict holds up — a review requested, an arming, an approval, or a request
-    for changes the coder has not answered (solorepo's DR-237) — excluding stacked base layers,
-    and triggers workflow dispatch for rebase passes (solorepo's DR-129, solorepo's DR-133,
-    solorepo's DR-149).
+    for changes the coder has not answered (solorepo's DR-237) — excluding a layer above a
+    conflicting one, since a stack is resolved from the bottom — and triggers workflow dispatch
+    for rebase passes (solorepo's DR-129, solorepo's DR-133, solorepo's DR-149).
 
     The two writes the sweep makes on a pull request's behalf are answered for
     separately from the rest. `gh workflow run coder.yml` fails identically
@@ -215,18 +219,13 @@ def dispatch(pulls: Sequence[common.Pull]) -> tuple[list[str], list[str]]:
     """
     failed: list[str] = []
     refused: list[str] = []
-    # Every branch an open pull request is based on, which is the lower layer
-    # of every open stack. Read off the list already in hand: `open_now`
-    # carries both refs of every open pull request, so no layer has to be
-    # asked about a second time.
-    below = {pull["baseRefName"] for pull in pulls}
     reviewer_login = channel.role_login("reviewer")
     minutes = check_pr.longest_run() or 30
     now = datetime.datetime.now(datetime.UTC)
     for pull in pulls:
         if not pull_requests.LOOPS_BRANCH.match(pull["headRefName"]):
             continue
-        f_msg, r_msg = _dispatch_single_pull(pull, below, reviewer_login, minutes, now)
+        f_msg, r_msg = _dispatch_single_pull(pull, pulls, reviewer_login, minutes, now)
         if f_msg:
             failed.append(f_msg)
         if r_msg:
@@ -244,8 +243,8 @@ VERDICTS = ("APPROVED", "CHANGES_REQUESTED")
 def _check_dispatch_rebase(pr: str | int, pull: common.Pull) -> None:
     """Validate preconditions before dispatching a coder rebase pass.
 
-    Checks branch shape first because it is free, then whether the branch is
-    a layer of a stack, and finally checks mergeability against base.
+    Checks branch shape first because it is free, then whether a layer below
+    the branch still conflicts, and finally checks mergeability against base.
     """
     if not pull_requests.LOOPS_BRANCH.match(pull["headRefName"]):
         sys.exit(f"say: #{pr} is on {pull['headRefName']}, which is not a loop branch `(claude|gemini|codex)/issue-<n>`. "
@@ -256,14 +255,16 @@ def _check_dispatch_rebase(pr: str | int, pull: common.Pull) -> None:
                  "that only nearly fits, `claude/issue-<n>-followup`, does not reach even "
                  "that — the guard reads it as naming no Challenge, the rebase is skipped, "
                  "and the run ends green having done nothing. Rebase it by hand.")
-    if pull_requests.stacked(pr):
-        sys.exit(f"say: #{pr} is a layer of a stack, and rebasing one moves commits the "
-                 "layer above may be based on with no event on it to say so, so the next "
-                 "reader of that layer sees this one's work shown as its own "
-                 "(solorepo's DR-133). A conflicting stack is resolved from the bottom, "
-                 "which is a judgement about the stack and not about any one of its pull "
-                 "requests: `advance` declines the same case, and this one is the solo's "
-                 "to settle by hand.")
+    open_now = channel.gh("pr", "list", "--state", "open", "--limit", "100", "--json",
+                          "number,headRefName,baseRefName,mergeable")
+    lower = pull_requests.conflicting_below(pull, open_now)
+    if lower is not None:
+        sys.exit(f"say: #{pr} is a layer above #{lower['number']}, which conflicts with its "
+                 "own base, and rebasing a layer before the layers below it are clean "
+                 "carries their unresolved commits as its own (solorepo's DR-133). A "
+                 "conflicting stack is resolved from the bottom: dispatch the rebase for "
+                 f"#{lower['number']} first, or let the reconciler, which dispatches it on "
+                 "its next pass and this one after.")
     merges = pull_requests.mergeability(pull) or "UNKNOWN"
     if merges != "CONFLICTING":
         sys.exit(f"say: GitHub reports #{pr} as {merges} against "
@@ -342,9 +343,8 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
     pass to run again.
 
     The rebase pass takes three, and each of them is one `advance`'s own
-    dispatch takes, for the reason solorepo's DR-133 gave it there — two off
-    its filter, and the stack off the consequence that excludes that case
-    directly. What is not here is the other thing that filter reads, a review
+    dispatch takes, for the reason solorepo's DR-133 gave it there. What is
+    not here is the other thing that filter reads, a review
     request outstanding: that is what makes the machine's dispatch necessary
     rather than what makes a rebase pass sensible, and the solo dispatching has
     decided the branch needs one already. The
@@ -360,12 +360,13 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
     no check — and a name that is nearly the shape, `claude/issue-<n>-followup`,
     does not reach even that: the guard reads it as naming no Challenge, the
     rebase step is skipped, and the run ends green having done nothing at all.
-    And the pull request must not be a layer of a stack. Rebasing the bottom
-    layer rewrites the commits the layer above is based on and the harm is
-    silent, because the upper layer's head never moves and so fires no event;
-    a conflicting stack is resolved from the bottom, and that is a judgement
-    about the stack rather than about any one of its pull requests, which is
-    why this declines a layer wherever it sits rather than asking which.
+    And the pull request must not be a layer above one that conflicts with
+    its own base. Rebasing it first would carry the lower layer's unresolved
+    commits as its own, so a conflicting stack is resolved from the bottom:
+    the lower layer's rebase is dispatched first, by this verb or by the
+    reconciler on its next pass, and this one's once the layers below it are
+    clean. The root, and a layer whose lower layers are clean, is any loop
+    branch's rebase.
 
     **What stands in for the read-back.** Starting a run is asynchronous and returns no immediate run ID, so there is nothing to verify on the remote in the moment: a dispatch returns no content and
     the run is created afterwards, so a `run list` a moment later asks about a
@@ -410,7 +411,8 @@ def _advance_stack_layers(pull: common.Pull, all_open: Sequence[common.Pull],
                   for layer, (_, behind) in zip(layers, before_and_behind, strict=True)}
     if any(pull_requests.mergeability(current) == "CONFLICTING" for current in before.values()):
         print(f"left #{root_number}'s stack alone: GitHub reports a layer conflicting "
-              "with its base, so the solo must resolve the stack from the bottom")
+              "with its base, and a stack is resolved from the bottom by the reconciler's "
+              "rebase passes before it advances")
         return True, 0, [], []
     if not any(was_behind.values()):
         return True, 0, [], []

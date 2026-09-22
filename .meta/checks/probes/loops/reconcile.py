@@ -97,7 +97,7 @@ def _pull_cases(move: Any) -> list[str]:
         ("conflicting under a verdict", _pull(1, mergeable="CONFLICTING", latestReviews=CHANGES),
          issues.RESUMABLE, True, "rebase"),
         ("conflicting under nothing", _pull(1, mergeable="CONFLICTING"), issues.RESUMABLE, True,
-         None),
+         "rebase"),
         ("changes requested, unanswered", _pull(1, latestReviews=CHANGES), issues.RESUMABLE,
          True, "review"),
         ("changes requested, review requested", _pull(1, latestReviews=CHANGES,
@@ -216,12 +216,21 @@ class _Bench:
 
     `acted` records each act as `(kind, number)`, the merge manager as
     `("merge_manager", None)`; `pulls` and `issues` are the fixtures, with
-    their timestamps read off the clock: a pull request with changes
-    requested, one conflicting under an approval, one green and unheld, and
-    one in draft, and one under a claimed Challenge at `hard`; a Challenge
-    behind each of the first three, an unread one, an offered one, one
-    claimed with no pull request, one offered but blocked, one behind the
-    draft, one offered with no `updatedAt`, and the claimed one at `hard`.
+    their timestamps read off the clock. The pull requests, by number: 1
+    with changes requested, 2 conflicting under an approval, 3 green and
+    unheld, 8 in draft, 12 under a claimed Challenge at `hard`, and four
+    stacks that hold the rule that a conflicting stack is resolved from the
+    bottom: 13 a conflicting approved root with 14 a conflicting approved
+    layer on it, 15 conflicting under no request and no verdict, 16 a clean
+    root under a request with 17 a conflicting approved layer on it, 18 a
+    conflicting draft root with 19 a conflicting approved layer on it, and
+    20 a conflicting root on the solo's own branch with 21 a conflicting
+    approved layer on it, and 22 a conflicting root under a claimed
+    Challenge at `hard` with 23 a conflicting approved layer on it. The
+    Challenges: one behind each of the first three, an unread one, an
+    offered one, one claimed with no pull request, one offered but blocked,
+    one behind the draft, one offered with no `updatedAt`, and the claimed
+    ones at `hard` behind 12 and 22.
     """
 
     def __init__(self, channel: Any, move: Any) -> None:
@@ -238,13 +247,30 @@ class _Bench:
                       _pull(2, mergeable="CONFLICTING", latestReviews=APPROVED),
                       _pull(3),
                       _pull(8, isDraft=True),
-                      _pull(12, latestReviews=CHANGES)]
+                      _pull(12, latestReviews=CHANGES),
+                      _pull(13, mergeable="CONFLICTING", latestReviews=APPROVED),
+                      _pull(14, baseRefName="claude/issue-13", mergeable="CONFLICTING",
+                            latestReviews=APPROVED),
+                      _pull(15, mergeable="CONFLICTING"),
+                      _pull(16, reviewRequests=[{"login": REVIEWER}]),
+                      _pull(17, baseRefName="claude/issue-16", mergeable="CONFLICTING",
+                            latestReviews=APPROVED),
+                      _pull(18, isDraft=True, mergeable="CONFLICTING"),
+                      _pull(19, baseRefName="claude/issue-18", mergeable="CONFLICTING",
+                            latestReviews=APPROVED),
+                      _pull(20, headRefName="claude/stack-root", mergeable="CONFLICTING"),
+                      _pull(21, baseRefName="claude/stack-root", mergeable="CONFLICTING",
+                            latestReviews=APPROVED),
+                      _pull(22, mergeable="CONFLICTING", latestReviews=APPROVED),
+                      _pull(23, baseRefName="claude/issue-22", mergeable="CONFLICTING",
+                            latestReviews=APPROVED)]
         self.issues = [self.issue(1, "medium"), self.issue(4, None), self.issue(5, "easy"),
                        self.issue(6, "easy", claimed=True),
                        self.issue(10, "easy", blocked_by=[4]),
                        self.issue(8, "easy"),
                        self.issue(11, "easy", moved=False),
-                       self.issue(12, "hard", claimed=True)]
+                       self.issue(12, "hard", claimed=True),
+                       self.issue(22, "hard", claimed=True)]
 
     def issue(self, number: int, level: str | None, claimed: bool = False,
               blocked_by: list[int] | None = None, moved: bool = True) -> dict[str, Any]:
@@ -304,14 +330,32 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     fake = _GitHub(bench.pulls, bench.issues, {})
     ended = bench.run(fake, live=True)
     expected = {("merge_manager", None), ("review", 1), ("rebase", 2), ("request", 3),
-                ("relabel", (4, ("remove",))), ("relabel", (4, ("add",))), ("release", 6)}
+                ("relabel", (4, ("remove",))), ("relabel", (4, ("add",))), ("release", 6),
+                ("rebase", 13), ("rebase", 15), ("rebase", 17)}
     acted = bench.acted
     if ended.code is not None or set(acted) != expected or len(acted) != len(expected):
         problems.append(f"reconcile: live over the fixtures performed {acted} with exit "
-                        f"{ended.code!r}, not one act per owed state {sorted(expected)}")
+                        f"{ended.code!r}, not one act per owed state {sorted(expected)}: the "
+                        "root of a conflicting stack, a conflicting branch nobody holds, and a "
+                        "layer whose root is clean are each owed a rebase, and the layer above "
+                        "a conflicting root none")
     if f"holding #{12}" not in ended.out:
         problems.append(f"reconcile: a claimed Challenge at hard behind an open pull request was "
                         f"not held: {ended.out!r}")
+    if f"holding #{14}" not in ended.out or "is rebased first" not in ended.out:
+        problems.append(f"reconcile: the layer above a conflicting root was not held saying "
+                        f"why: {ended.out!r}")
+    if f"holding #{19}" not in ended.out or "in draft" not in ended.out \
+            or "solo's to resolve" not in ended.out:
+        problems.append(f"reconcile: the layer above a conflicting draft was not held naming "
+                        f"the solo as the mover: {ended.out!r}")
+    if f"holding #{21}" not in ended.out or "not the loop's branch" not in ended.out:
+        problems.append(f"reconcile: the layer above a conflicting root on the solo's own "
+                        f"branch was not held naming the solo as the mover: {ended.out!r}")
+    if f"holding #{23}" not in ended.out or "its Challenge reads" not in ended.out:
+        problems.append(f"reconcile: the layer above a conflicting root whose Challenge is "
+                        f"claimed at hard was not held naming the solo as the mover: "
+                        f"{ended.out!r}")
     taken = sorted(a[a.index("-f") + 1] for a in fake.dispatched)
     if taken != ["issue=11", "issue=5"]:
         problems.append(f"reconcile: the takes dispatched were {taken}, where the offered "
@@ -335,10 +379,10 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
                             "conclusion": "success", "headBranch": "main"}]}
     ended = bench.run(_GitHub(bench.pulls, bench.issues, busy), live=True)
     left = {a for a in acted if a[0] != "merge_manager"}
-    if left != {("rebase", 2), ("release", 6)}:
+    if left != {("rebase", 2), ("release", 6), ("rebase", 13), ("rebase", 15), ("rebase", 17)}:
         problems.append(f"reconcile: with runs in flight, and a triage run that read, it "
-                        f"performed {sorted(left)}, where only the rebase and the release were "
-                        "owed")
+                        f"performed {sorted(left)}, where only the rebases of the branches "
+                        "no run answers and the release were owed")
     return problems
 
 
@@ -363,6 +407,15 @@ def _edge_cases(bench: _Bench) -> list[str]:
         problems.append(f"reconcile: a conflict the listing answered UNKNOWN for was owed "
                         f"{[a for a in bench.acted if a[1] == 7]}, not the rebase pass the "
                         "settled read shows")
+
+    root = _pull(7, mergeable="UNKNOWN")
+    layer = _pull(9, baseRefName="claude/issue-7", mergeable="CONFLICTING", latestReviews=APPROVED)
+    with stood_in(bench.channel, MERGEABILITY=(2, 0)):
+        ended = bench.run(_GitHub([root, layer], [], {}), live=True)
+    if ("rebase", 9) not in bench.acted or f"holding #{9}" in ended.out:
+        problems.append(f"reconcile: a layer above a root still UNKNOWN when the bound ran out "
+                        f"was owed {[a for a in bench.acted if a[1] == 9]}, where only a "
+                        "conflict below holds it and the next pass reads the root settled")
 
     unlistable = _GitHub(bench.pulls, bench.issues, {})
     unlistable.unlistable = True

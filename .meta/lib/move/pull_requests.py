@@ -223,6 +223,66 @@ def stack_root(pull: common.Pull, pulls: Sequence[common.Pull]) -> common.Pull:
     return root
 
 
+def layers_below(pull: common.Pull, pulls: Sequence[common.Pull]) -> list[common.Pull]:
+    """The open pull requests `pull` is stacked on, nearest first; empty for a root.
+
+    A layer is based on the head of the layer below it, so the chain is read
+    off `baseRefName` through the open pull requests until it reaches a base
+    no open pull request heads.
+
+    Parameters:
+        pull: The pull request whose lower layers are sought.
+        pulls: Every open pull request, carrying `headRefName` and `baseRefName`.
+
+    Returns:
+        list[Pull]: The layers below, the one `pull` is based on first.
+
+    Raises:
+        SystemExit: If the pull request bases form a cycle.
+    """
+    by_head = {candidate["headRefName"]: candidate for candidate in pulls}
+    below: list[common.Pull] = []
+    seen = {pull["headRefName"]}
+    layer = pull
+    while layer["baseRefName"] in by_head:
+        layer = by_head[layer["baseRefName"]]
+        if layer["headRefName"] in seen:
+            sys.exit(f"say: #{pull['number']} belongs to a cyclic open pull-request stack")
+        seen.add(layer["headRefName"])
+        below.append(layer)
+    return below
+
+
+def conflicting_below(pull: common.Pull, pulls: Sequence[common.Pull]) -> common.Pull | None:
+    """The nearest layer below `pull` that conflicts with its own base, or None.
+
+    A conflicting stack is resolved from the bottom (solorepo's DR-133): a
+    layer is rebased only once every layer below it is clean, since rebasing
+    it earlier would carry the lower layers' unresolved commits as its own.
+    Each lower layer's mergeability is settled before it is read, as the
+    bulk listing answers `UNKNOWN` for a branch not yet recomputed; one still
+    `UNKNOWN` when the bound runs out is passed over, since only `CONFLICTING`
+    is a conflict, and the next pass reads it settled.
+
+    Parameters:
+        pull: The pull request a rebase is proposed for.
+        pulls: Every open pull request, carrying `headRefName`, `baseRefName`,
+            `number` and `mergeable`.
+
+    Returns:
+        Pull | None: The nearest lower layer whose mergeability is `CONFLICTING`,
+            or None where `pull` is a root or no layer below it conflicts.
+
+    Raises:
+        SystemExit: If the pull request bases form a cycle, or a lower layer's
+            mergeability cannot be read.
+    """
+    for layer in layers_below(pull, pulls):
+        if mergeability(layer) == "CONFLICTING":
+            return layer
+    return None
+
+
 def _settle_layer(layer_number: str, expected_oid: str) -> common.Pull:
     """Poll GitHub until layer PR headRefOid differs from expected_oid."""
     return channel.settled(

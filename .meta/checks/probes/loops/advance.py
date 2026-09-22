@@ -426,7 +426,7 @@ def _refused_stack_review_renewal_is_the_sweeps_own_problem(channel: Any, move: 
     return problems
 
 
-def _conflicting_stack_is_left_for_the_solo(channel: Any, move: Any) -> list[str]:
+def _conflicting_stack_advances_once_its_root_is_rebased(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     root = 7
     fake = FakeGitHub({
@@ -441,8 +441,10 @@ def _conflicting_stack_is_left_for_the_solo(channel: Any, move: Any) -> list[str
         problems.append(f"advance: a conflicting stack was skipped in silence rather than explained: {ran.out!r}")
     if fake.stack_rebases or any(pull.get("rebased") for pull in fake.pulls.values()):
         problems.append(f"advance: a conflicting stack was rebased: {fake.stack_rebases!r}, {fake.pulls!r}")
-    if fake.dispatched:
-        problems.append(f"advance: a conflicting stack was dispatched to coders: {fake.dispatched!r}")
+    if fake.dispatched != [(str(root), "rebase")]:
+        problems.append(f"advance: a conflicting stack was dispatched to coders as "
+                        f"{fake.dispatched!r}, where the root's rebase pass alone is dispatched "
+                        "and the stack is left to be advanced once it is clean")
     said = str(ran.out.partition(REPORTED)[2])
     if said:
         problems.append(f"advance: a conflicting stack was reported as failed: {said!r}")
@@ -643,7 +645,7 @@ def advance_probes() -> list[str]:
         _unlinked_chain_swept_rebases_top_layer_and_skips_base(channel, move),
         _stack_review_renewal_failure_is_reported(channel, move),
         _refused_stack_review_renewal_is_the_sweeps_own_problem(channel, move),
-        _conflicting_stack_is_left_for_the_solo(channel, move),
+        _conflicting_stack_advances_once_its_root_is_rebased(channel, move),
         _merge_auto_after_a_failed_advance(channel, move),
         _merge_auto_over_a_merge_that_landed(channel, move),
         _merge_auto_over_a_blip_on_the_read_back(channel, move),
