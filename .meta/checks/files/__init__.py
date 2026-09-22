@@ -25,7 +25,7 @@ from checks.files.sources import inherited, is_py, meta_sources, template_files,
 from checks.files.templates import Strict, duplicate_concept_ids, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
 from checks.files.markdown import FENCED, LINK, markdown_links
 from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wiki_synonyms_are_not_avoided, wikilinks
-from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, RESTORE_PROSE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
+from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
 from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
@@ -55,7 +55,6 @@ __all__ = [
     "RECIPE",
     "RESTORE_COUNT",
     "RESTORE_LINE",
-    "RESTORE_PROSE",
     "REVIEW_WORKFLOW",
     "RUFF",
     "RUFF_FINDING",

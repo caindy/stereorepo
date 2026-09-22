@@ -5,6 +5,7 @@ decisions:
     status: ADOPTED
     enacted_in:
       - work:artifact/github-workflows-review
+      - work:artifact/meta-say-on
       - work:artifact/meta-agents
       - work:artifact/meta-disciplines
       - work:artifact/meta-checks-probes-tools
@@ -48,9 +49,10 @@ decisions:
         added to the inherited file copy set in `.meta/assertions/disciplines.yaml` so
         specialized portfolios inherit the counting tool.
       - >-
-        `.github/workflows/review.yml` adds `the fan-out ceiling was kept` step immediately
-        following `the verdict landed`, asserting `--ceiling "${{ steps.depth.outputs.agents }}"`
-        against `${{ steps.review_claude.outputs.execution_file }}`.
+        `after the session` in `.github/workflows/review.yml` hands the review door,
+        `.meta/say/on`, the ceiling `before the session` chose and the path of Claude Code's
+        execution transcript, and the door holds the one to the other through
+        `agents.evaluate_ceiling` beside its verdict count (solorepo's DR-264).
       - >-
         `justfile` recipe `agents *args` is added to `.meta/render.py` for local and workflow
         invocation.

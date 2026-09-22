@@ -5,6 +5,7 @@ decisions:
     status: ADOPTED
     enacted_in:
       - work:artifact/github-workflows-review
+      - work:artifact/meta-say-on
       - work:artifact/meta-depth
       - work:artifact/meta-work-structure
       - work:artifact/meta-disciplines
@@ -53,8 +54,12 @@ decisions:
         handling both pull request diff resolution (incremental vs cumulative)
         and local/CLI evaluation via `--files`.
       - >-
-        `choose the depth` in `.github/workflows/review.yml` delegates directly
-        to `python3 .meta/depth.py "$PR" >> "$GITHUB_OUTPUT"`.
+        `before the session` in `.github/workflows/review.yml` calls the review
+        door, `.meta/say/on`, whose `depth_of` delegates to `depth.py`'s
+        `resolve_files_for_pr` and `evaluate` and writes every field of the
+        result to `GITHUB_OUTPUT`; the door holds the call rather than the
+        workflow because each door calls one probed entry point
+        (solorepo's DR-264).
       - >-
         `Project` in `.meta/work/structure.yaml` gains the `critical_paths` slot,
         allowing projects in `structure.yaml` to declare globs requiring deep review.

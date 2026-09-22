@@ -27,9 +27,10 @@ The review door's `after` takes what only the workflow knows: the verdict
 count `before` emitted, the fan-out ceiling it chose, which harness step ran
 the session, and where Claude Code's transcript is. Each is a step output in
 the YAML and a flag here, so the run log says where every number came from,
-and the first three are refused absent rather than defaulted: the pass is
-the branch that has to be reached, so a number that did not arrive, from a
-renamed output or a skipped step, ends the run red and not green.
+and the first three are refused absent rather than defaulted, an empty
+string counting as absent: the pass is the branch that has to be reached, so
+a number that did not arrive, from a renamed output or a skipped step, ends
+the run red and not green.
 """
 import argparse
 import json
@@ -499,6 +500,36 @@ def reviewer(phase: str, number: str, session: Session) -> None:
         reading_after(number)
 
 
+RAN = ("claude", "gemini", "jules", "none")
+"""What `--ran` may say: a harness step, or that none ran."""
+
+NOT_A_HARNESS = "{text!r} is not one of {choices}"
+"""The parser's refusal of a `--ran` that names no harness step."""
+
+
+def count(text: str) -> int | None:
+    """A flag's number, or `None` where the workflow handed an empty string.
+
+    A step output that never arrived, from a step that failed or was skipped,
+    reaches the door as `""` rather than as a missing flag, and it is the
+    door's refusal that must name it, not the parser's.
+    """
+    return int(text) if text.strip() else None
+
+
+def harness(text: str) -> str | None:
+    """A flag's harness, or `None` where the workflow handed an empty string.
+
+    Raises:
+        argparse.ArgumentTypeError: Where the text names no harness step.
+    """
+    if not text.strip():
+        return None
+    if text not in RAN:
+        raise argparse.ArgumentTypeError(NOT_A_HARNESS.format(text=text, choices=", ".join(RAN)))
+    return text
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Builds the argument parser: one verb per Role, each taking the phase and the number."""
     ap = channel.parser(__doc__)
@@ -507,14 +538,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("phase", choices=("before", "after"),
                    help="before the harness session, or after it")
     p.add_argument("number", help="the Challenge or the pull request the run is for")
-    p.add_argument("--verdicts", type=int,
-                   help="after a review session: the verdicts `before` counted; required there")
-    p.add_argument("--agents", type=int,
+    p.add_argument("--verdicts", type=count,
+                   help="after a review session: the verdicts `before` counted; required there, "
+                        "and an empty string is absent")
+    p.add_argument("--agents", type=count,
                    help="after a review session: the fan-out ceiling `before` chose; required "
-                        "there")
-    p.add_argument("--ran", choices=("claude", "gemini", "jules", "none"),
+                        "there, and an empty string is absent")
+    p.add_argument("--ran", type=harness,
                    help="after a review session: which harness step ran it, `none` being a "
-                        "finding; required there")
+                        "finding; required there, and an empty string is absent")
     p.add_argument("--transcript", default="",
                    help="after a review session: where Claude Code's transcript is")
     return ap

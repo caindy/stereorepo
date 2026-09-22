@@ -399,6 +399,12 @@ def _review_after_cases(channel: Any, on: Any) -> list[str]:
         problems.append(f"review after: no harness step running ended {ended.code!r} saying "
                         f"{ended.out!r}, where that is the finding the door exists for")
 
+    empty = on.build_parser().parse_args(
+        ["reviewer", "after", PULL, "--verdicts", "", "--agents", "", "--ran", ""])
+    if (empty.verdicts, empty.agents, empty.ran) != (None, None, None):
+        problems.append(f"review after: empty flags were parsed as {empty!r}, where an output "
+                        "that never arrived reaches the door as an empty string")
+
     for name, session in (("no flags", on.Session(*UNREAD)),
                           ("no --verdicts", on.Session(None, 3, "claude", "")),
                           ("no --agents", on.Session(1, None, "claude", "")),

@@ -7,7 +7,7 @@ decisions:
       - work:article/6
     enacted_in:
       - work:artifact/github-workflows-review
-      - work:artifact/meta-actions-verdicts
+      - work:artifact/meta-say-on
     alternatives:
       - name: The prompt says it, louder
         chosen: false
@@ -52,16 +52,18 @@ decisions:
           background is read with TaskOutput first. What it costs: two reads
           of the reviews API per run; a verdict counted rather than read, so
           one posted against a head that moved during the run still counts,
-          which a moved head's cancel makes rare; and the rule about what a
-          verdict is now stated twice, in `check_pr.py` and in the action's
-          `jq`, held equal by nothing but the comment that says they agree.
+          which a moved head's cancel makes rare; and, until the review door
+          took the count under solorepo's DR-264, the rule about what a
+          verdict is stated twice, in `check_pr.py` and in a composite
+          action's `jq`, held equal by nothing but the comment that said
+          they agreed.
     consequences:
       - >-
-        `.meta/actions/verdicts` counts the verdicts one login has submitted
-        on a pull request — every review that is not the empty `COMMENTED` a
-        raise or a reply posts under, which is what `check_pr.py --threads`
-        lists. `review.yml` runs it before the session and after, and
-        `the verdict landed` exits non-zero when the count did not rise, with
+        The review door, `.meta/say/on`, counts the verdicts the reviewer's
+        login has submitted on a pull request — every review that is not the
+        empty `COMMENTED` a raise or a reply posts under, which is what
+        `check_pr.py --threads` lists — before the session and after, and
+        `after the session` exits non-zero when the count did not rise, with
         the request named as still standing.
       - >-
         A red `reviewer` check means one of two things, and the step log
@@ -69,9 +71,10 @@ decisions:
         timed out. Only the first is answered by `.meta/say/move
         request-review`, which withdraws the pending request and asks again
         so the event fires; a session that posted its verdict and then ran
-        out its minutes is green on `the verdict landed` and red on its own
-        step, and asking again would start a second full review of an
-        answered pull request. A green check means a verdict of the Role's
+        out its minutes is red on its own step and passes the door's verdict
+        count, the door reading which step ran rather than which ended well,
+        and asking again would start a second full review of an answered
+        pull request. A green check means a verdict of the Role's
         landed during the run, whatever the transcript says it was waiting
         for.
       - >-
@@ -80,15 +83,16 @@ decisions:
         never with `run_in_background`, and one started in the background is
         read with TaskOutput before anything else.
       - >-
-        A portfolio inherits both: `.meta/actions/` and `review.yml` are in
-        the set Specialization's second step copies.
+        A portfolio inherits both: `.meta/say/` and `review.yml` are in the
+        set Specialization's second step copies.
       - >-
-        Both steps run unless the run was cancelled — `!cancelled()` rather
-        than `always()` — so a run that hit the turn cap or the timeout still
-        reports whether a verdict landed, and a run a push cancelled never
-        reaches them. The comparison fails closed: the pass is the branch
-        that has to be reached, so a count that did not arrive takes the
-        error branch rather than a green it did not earn.
+        `after the session` runs unless the run was cancelled — `!cancelled()`
+        rather than `always()` — so a run that hit the turn cap or the
+        timeout still reports whether a verdict landed, and a run a push
+        cancelled never reaches it. The comparison fails closed: the pass is
+        the branch that has to be reached, so a count that did not arrive,
+        an empty step output included, is refused by the door rather than
+        read as a green it did not earn.
     falsifier: >-
       A run that ends "waiting for the agents" after the prompt names the
       parameter — the red check will show it, and it would mean the prompt
