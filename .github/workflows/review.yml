@@ -109,15 +109,17 @@ jobs:
       # write here.
       - uses: ./.meta/actions/gh
 
-      # Twelve paths are trunk's, not the pull request's: the channel, the
+      # Thirteen paths are trunk's, not the pull request's: the channel, the
       # hooks, the checker, the channel's own body, the packages of the
       # checker and of both hooks, and the `.meta/lib/` initialiser they are
       # all imported through — under `.meta/lib/` the initialiser and the
       # packages of the control-plane scripts, the checker, both hooks and
       # the channel, and not the directory, whose remaining packages are the
       # bodies of scripts the pull request may change (solorepo's DR-219) —
-      # the settings that register them, and the
-      # instructions the session loads before it reads anything. The gate step `control plane
+      # the settings that register them, the
+      # instructions the session loads before it reads anything, and the
+      # `justfile`, which spells the gate the session runs as `just pr <n>`
+      # and is pinned so that no pull request defines its own gate. The gate step `control plane
       # restore` holds this list to `depth.CONTROL_PLANE`, and the door below
       # reads that constant for the head's copies and the constraints.
       # The action
@@ -135,7 +137,7 @@ jobs:
       - name: run trunk's channel
         run: |
           git restore --quiet --source=origin/main --staged --worktree -- \
-            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr .meta/lib/move .meta/lib/worktree_only .meta/lib/signed_channel AGENTS.md CLAUDE.md GEMINI.md
+            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/check_pr .meta/lib/move .meta/lib/worktree_only .meta/lib/signed_channel AGENTS.md CLAUDE.md GEMINI.md justfile
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 
@@ -267,7 +269,7 @@ jobs:
             shell here takes. It binds you and every agent you spawn.
 
             Then read what this Role has already said on it, before saying
-            anything: `python3 .meta/check_pr.py ${{ github.event.pull_request.number }} --threads`.
+            anything: `just pr ${{ github.event.pull_request.number }} --threads`.
             It lists every verdict with the head GitHub recorded it against
             and the login that gave it, then the threads owed an answer, the
             ones held for promotion, and the ones answered and resolved. Your
@@ -304,7 +306,7 @@ jobs:
             is pending, and the standing merge manager evaluates completed checks
             before landing. However, inspect completed checks on this head with
             `gh pr checks ${{ github.event.pull_request.number }}` and test form
-            compliance with `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`.
+            compliance with `just pr ${{ github.event.pull_request.number }}`.
 
             Then review with /code-review:code-review ${{ steps.before.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
             without --comment. Every agent the review spawns is bound by
@@ -378,7 +380,7 @@ jobs:
 
             Your approval clears the review semaphore for the merge manager. If
             any completed check on this head has failed (in `gh pr checks`), or
-            if `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`
+            if `just pr ${{ github.event.pull_request.number }}`
             exits non-zero, do NOT approve. An approval on a red head leaves the
             pull request stalled indefinitely: the merge manager will not land
             non-green work and the promotion pass performs no checks. On a
@@ -412,7 +414,7 @@ jobs:
           claude_args: |
             --model ${{ steps.before.outputs.model }}
             --max-turns ${{ steps.before.outputs.turns }}
-            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
       - name: review the pull request (agy)
@@ -449,7 +451,7 @@ jobs:
             shell here takes. It binds you and every agent you spawn.
 
             Then read what this Role has already said on it, before saying
-            anything: `python3 .meta/check_pr.py ${{ github.event.pull_request.number }} --threads`.
+            anything: `just pr ${{ github.event.pull_request.number }} --threads`.
             It lists every verdict with the head GitHub recorded it against
             and the login that gave it, then the threads owed an answer, the
             ones held for promotion, and the ones answered and resolved. Your
@@ -486,7 +488,7 @@ jobs:
             is pending, and the standing merge manager evaluates completed checks
             before landing. However, inspect completed checks on this head with
             `gh pr checks ${{ github.event.pull_request.number }}` and test form
-            compliance with `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`.
+            compliance with `just pr ${{ github.event.pull_request.number }}`.
 
             Review the pull request diff across the dimensions it touches directly in this
             session (solorepo's DR-254). Read `.review/diff.patch` whole. Do NOT invoke subagents:
@@ -541,7 +543,7 @@ jobs:
 
             Your approval clears the review semaphore for the merge manager. If
             any completed check on this head has failed (in `gh pr checks`), or
-            if `python3 .meta/check_pr.py ${{ github.event.pull_request.number }}`
+            if `just pr ${{ github.event.pull_request.number }}`
             exits non-zero, do NOT approve. An approval on a red head leaves the
             pull request stalled indefinitely: the merge manager will not land
             non-green work and the promotion pass performs no checks. On a

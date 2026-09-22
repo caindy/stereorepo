@@ -33,9 +33,16 @@ CONTROL_PLANE: tuple[str, ...] = (
     ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/__init__.py", ".meta/lib/check_pr/",
     ".meta/lib/move/",
     ".meta/lib/worktree_only/", ".meta/lib/signed_channel/",
-    ".claude/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/",
+    ".claude/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/", "justfile",
 )
-"""Path prefixes defining the agent harness control plane and security boundary (solorepo's DR-219)."""
+"""Path prefixes defining the agent harness control plane and security boundary (solorepo's DR-219).
+
+`justfile` is control plane because the reviewer's gate is spelled `just pr <n>`
+(solorepo's DR-252): the recipe is the entry point, pinned to trunk like the
+`.meta/check_pr.py` behind it, so that no pull request defines the gate that judges it.
+The reviewer's container renders nothing, so restoring the rendered file pins the recipe
+whatever `.meta/lib/render/writers.py` says on the head.
+"""
 SCAFFOLD_BOUNDARY = re.compile("^(" + "|".join(re.escape(prefix) for prefix in CONTROL_PLANE) + ")")
 """Matches a repository-relative path inside the control plane."""
 

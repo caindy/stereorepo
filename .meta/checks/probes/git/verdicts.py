@@ -212,10 +212,14 @@ VERDICTS = (
     ("worktree_only: the other programs' options, vetted like git's", "worktree_only", (
         ("refuse", "Bash", {"command": "python3 .meta/check_pr.py --file ~/.config/gh/hosts.yml"}),
         ("refuse", "Bash", {"command": "python3 .meta/check_pr.py 87 --watch"}),
+        ("refuse", "Bash", {"command": "just pr 87 --watch"}),
         ("refuse", "Bash", {"command": "gh pr view 87 --repo other/repo --json body"}),
         ("refuse", "Bash", {"command": "gh pr checkout 87"}),
         ("allow", "Bash", {"command": "gh pr view 87 --json body -q .body"}),
         ("allow", "Bash", {"command": "gh pr checks 87 --json name,state"}),
+        ("allow", "Bash", {"command": "just pr 87"}),
+        ("allow", "Bash", {"command": "just pr 87 --threads"}),
+        ("allow", "Bash", {"command": "just pr 87 --resume"}),
     )),
     ("worktree_only: an `=value` form is its subcommand's, not every subcommand's", "worktree_only", (
         ("refuse", "Bash", {"command": "git ls-files --author=x"}),

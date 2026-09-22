@@ -90,7 +90,7 @@
 .meta/checks/probes/tools/test_specialization.py: 13
 .meta/checks/probes/tools/timing.py: 0
 .meta/checks/probes/wrappers.py: 7
-.meta/depth.py: 10
+.meta/depth.py: 9
 .meta/dereference.py: 1
 .meta/detect_fallback.py: 16
 .meta/gate: 1
@@ -156,7 +156,7 @@
 .meta/lib/worktree_only/grammar.py: 8
 .meta/lib/worktree_only/paths.py: 3
 .meta/lib/worktree_only/shell.py: 6
-.meta/lib/worktree_only/verdict.py: 6
+.meta/lib/worktree_only/verdict.py: 5
 .meta/next.py: 18
 .meta/say/channel.py: 7
 .meta/say/commit: 2

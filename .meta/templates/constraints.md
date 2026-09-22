@@ -29,7 +29,8 @@ says the same thing and costs a turn for each file.
 
 **The shell runs one plain command at a time and nothing else:**
 `git log|show|diff|status|grep|ls-files|ls-tree` with plain options,
-`gh pr view|diff|checks`, `python3 .meta/check_pr.py`, or
+`gh pr view|diff|checks`, `just pr` (`python3 .meta/check_pr.py` is
+taken too, and is what to type where `just` is not on the runner), or
 `.meta/say/post` and `.meta/say/move` with their heredoc. No pipes,
 redirects or chaining, and nothing the shell would expand: a `$`, a
 backtick, a bare glob. Quoting is what stops it, either pair — a

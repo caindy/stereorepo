@@ -127,7 +127,7 @@ WHY = ("Blocked: this reaches GitHub without signing what it posts.\n"
        "makes a comment attributable at all when every login here is the solo's. "
        "Your reading of PR First lists your verbs; a program's --help lists its own. "
        "Reading is fine through "
-       "`.meta/check_pr.py --threads|--resume|--sweep`.")
+       "`just pr <n> [--threads|--resume]` and `just sweep`.")
 
 
 UNREADABLE = ("Blocked: this hook could not read this command line, and refuses rather "

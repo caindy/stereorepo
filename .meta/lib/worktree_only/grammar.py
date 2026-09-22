@@ -62,6 +62,7 @@ PROGRAMS = {
     ("gh", "pr", "diff"): ({"--name-only", "--patch", "--help"}, set()),
     ("gh", "pr", "checks"): ({"--json", "-q", "--jq", "--required", "--help"}, {"--json", "-q", "--jq"}),
     ("python3", ".meta/check_pr.py"): ({"--threads", "--resume", "--help"}, set()),
+    ("just", "pr"): ({"--threads", "--resume", "--help"}, set()),
 }
 
 
@@ -145,7 +146,7 @@ def command_allowed(command: str) -> str | None:
     """Evaluate whether a shell command string satisfies the confinement policy.
 
     Allowed commands comprise single, unchained commands from the authorized program
-    list (`git` subcommands, `gh` subcommands, `python3 .meta/check_pr.py`), `.meta/say/`
+    list (`git` subcommands, `gh` subcommands, `python3 .meta/check_pr.py`, `just pr`), `.meta/say/`
     programs, or `.meta/say/` heredocs with quoted delimiters.
 
     Parameters:

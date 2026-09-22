@@ -83,7 +83,7 @@ EVIDENCE = {"claude": (REVIEW / "hook-claude.evidence", "Claude Code"),
 """Where each harness's session leaves the reading hook's decisions, and the harness's name."""
 
 NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-                "ten", "eleven", "twelve")
+                "ten", "eleven", "twelve", "thirteen")
 """The words the constraints spell a count with."""
 
 CHALLENGE_FIELDS = "number,title,url,labels,body,createdAt,author,state,assignees"
