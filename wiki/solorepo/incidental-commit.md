@@ -24,10 +24,10 @@ write two subjects and nobody can enumerate them.
 ## Why the Bound Is Drawn Here
 
 The two routes divide what a change encounters outside its remit, and they
-divide it by who pays. Ejecting an item to an [[issue]] costs a pickup, and a
-pickup costs about the same whether three lines wait or three hundred: a Job
-arriving holds no filesystem, no shell and no conversation, so it loads the
-whole problem from the record. On a team the same fix is a separate pull
+divide it by who pays. Ejecting an item to an [[issue]] costs a Job's start,
+and that start costs about the same whether three lines wait or three hundred:
+a Job arriving holds no filesystem, no shell and no conversation, so it loads
+the whole problem from the record. On a team the same fix is a separate pull
 request because a colleague reads three lines in thirty seconds and nobody
 reloads anything; here the follow-up is an agent starting from nothing, which
 inverts the imported advice.

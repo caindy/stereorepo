@@ -892,7 +892,7 @@ jobs:
             proved by the gate already running, fix it in a commit of its own whose subject
             begins `Incidental:`, answer the thread naming that commit, and file no Issue
             (solorepo's DR-236). Ejecting a
-            fix this branch can already reach costs a whole pickup to deliver. Your own
+            fix this branch can already reach costs a whole Job's start to deliver. Your own
             "Noticed and not done" thread is not reachable by this — the sole-author
             refusal stands and promotion is its one exception (solorepo's DR-127).
 
@@ -979,7 +979,7 @@ jobs:
             proved by the gate already running, fix it in a commit of its own whose subject
             begins `Incidental:`, answer the thread naming that commit, and file no Issue
             (solorepo's DR-236). Ejecting a
-            fix this branch can already reach costs a whole pickup to deliver. Your own
+            fix this branch can already reach costs a whole Job's start to deliver. Your own
             "Noticed and not done" thread is not reachable by this — the sole-author
             refusal stands and promotion is its one exception (solorepo's DR-127).
 

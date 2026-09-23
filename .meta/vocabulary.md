@@ -58,7 +58,7 @@ _Who does work, what they may do, and what they are given to do it with._
 | **Actor** | A prototype in the division of labor: a Personality with an Identity and a Memory. | user, bot |
 | **Job** | An Actor given an Agency. An assignment. | — |
 | **Collaboration** | The Jobs that meet on one Challenge. Two is the minimum. | — |
-| **Handoff** | The seam where one Job stops and another takes the same Challenge up, sharing no filesystem, no shell and no conversation. | — |
+| **Handoff** | The seam where one Job stops and another takes the same Challenge up, sharing no filesystem, no shell and no conversation. | pickup |
 | **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 | **Door** | The seam at which a loop workflow admits a Role's run: the event it fires on, what the run reads and decides before its harness session starts, and what it reads and writes after the session ends (solorepo's DR-264). | — |
 | **Dev Loop** | The event-driven autonomous execution cycle that advances a Challenge from triage to merged pull request through decoupled coder, reviewer, and merge manager passes without continuous human supervision (solorepo's DR-111, solorepo's DR-112, solorepo's DR-178). | — |

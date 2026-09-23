@@ -5,12 +5,12 @@ challenges:
     description: >-
       PR First routes everything noticed and not done to a linked Issue and
       tests what earns one topically — whether it belongs to this change —
-      without asking what ejecting it costs. The cost is a pickup, and a pickup
-      is near-constant in the size of what waits, because an arriving Job holds
-      nothing and loads the problem from the record. solorepo's #624 is the
-      case. It was raised by the reviewer on solorepo's #610, which was already
-      editing one of the two files it needed and already regenerating the
-      other, and ejected anyway because the record it had to edit belonged to
-      another Decision; its delivery, solorepo's #626, was 3 additions and 3
-      deletions across those 2 files. Over an hour from notice to merge, and a full loop's
-      tokens, to move an identifier.
+      without asking what ejecting it costs. The cost is a Job's start, and
+      that cost is near-constant in the size of what waits, because an arriving
+      Job holds nothing and loads the problem from the record. solorepo's #624
+      is the case. It was raised by the reviewer on solorepo's #610, which was
+      already editing one of the two files it needed and already regenerating
+      the other, and ejected anyway because the record it had to edit belonged
+      to another Decision; its delivery, solorepo's #626, was 3 additions and 3
+      deletions across those 2 files. Over an hour from notice to merge, and a
+      full loop's tokens, to move an identifier.

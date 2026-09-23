@@ -40,7 +40,7 @@ decisions:
       merge. Over an hour from where it was noticed, and a full loop's tokens,
       to move an identifier.
 
-      The pickup is what costs, and it is close to constant. A Job arriving
+      A Job's start is what costs, and it is close to constant. A Job arriving
       holds no filesystem, no shell and no conversation — the seam is the point
       — so it loads the whole problem from the record whether three lines wait
       or three hundred. That is the same expense the Discipline already names
@@ -57,8 +57,8 @@ decisions:
         chosen: false
         reason: >-
           Nothing on the expensive side of this is filing. `post promote` is
-          one act and it is already scripted. The hour is in the pickup, the
-          body, the review and the merge of a second pull request, none of
+          one act and it is already scripted. The hour is in the Job's start,
+          the body, the review and the merge of a second pull request, none of
           which filing faster touches. It also concedes the wrong premise:
           that the item had to leave.
       - name: Fold the fix into the change's own commit
@@ -134,7 +134,7 @@ decisions:
     consequences:
       - >-
         PR First's description says the prior question is whether to eject at
-        all, names the pickup as the cost of ejection and states that it is
+        all, names a Job's start as the cost of ejection and states that it is
         near-constant in the size of what waits, so the four failures of the
         pile are read as an argument about work nobody is doing now rather than
         as an argument for ejecting everything out of scope.

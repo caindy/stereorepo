@@ -102,7 +102,7 @@ past silently, and the item keeps the context it was noticed in. At approval, a 
 reviewer raised that is mechanical, owes no Decision, implies no Challenge of its own
 and is proved by the gate already running is answered with an Incidental Commit on this branch whose
 subject begins `Incidental:`, the reply naming it, and no Issue is filed — ejecting a fix the branch can reach costs a whole
-pickup (solorepo's DR-236). Your own notice is not reachable by that: the sole-author
+Job's start (solorepo's DR-236). Your own notice is not reachable by that: the sole-author
 refusal stands, promotion being its one exception (solorepo's DR-127). Everything else
 that survived the argument is promoted to an Issue at approval, and the thread resolved
 with the link — which is also what satisfies A16.

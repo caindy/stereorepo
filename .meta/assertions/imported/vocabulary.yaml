@@ -528,6 +528,7 @@ concept_set:
       sharing no filesystem, no shell and no conversation.
     in_scheme: work:scheme/solorepo
     broader: work:concept/g-doing
+    avoid: [pickup]
     scope_note: >-
       A state, not a message: a review request naming the next Role. It is part
       of PR First rather than a Discipline of its own — once the note was

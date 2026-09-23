@@ -513,14 +513,14 @@ disciplines:
       The prior question is whether to eject it at all. An Issue is for work that
       is **not being done now** — out of scope, owed a decision, larger than the
       change that found it. It is not a place to put a fix already within the
-      branch's reach. Ejection costs a pickup, and a pickup costs about the same
-      whether what waits is three lines or three hundred: a Job arriving holds
-      nothing and loads the problem from the record, which is the expense the
-      four failures above were weighed against and is paid here too. Where the
-      fix is mechanical and the branch can already reach it, the cheaper act is
-      the fix — in a commit of its own, saying what it is, so the diff still
-      reads as one change with an Incidental Commit beside it rather than as
-      two changes wearing one title.
+      branch's reach. Ejection costs a Job's start, and that start costs about
+      the same whether what waits is three lines or three hundred: a Job
+      arriving holds nothing and loads the problem from the record, which is
+      the expense the four failures above were weighed against and is paid here
+      too. Where the fix is mechanical and the branch can already reach it, the
+      cheaper act is the fix — in a commit of its own, saying what it is, so the
+      diff still reads as one change with an Incidental Commit beside it rather
+      than as two changes wearing one title.
     judgement: >-
       What constitutes one pull request. Too coarse and an argument has no
       subject; too fine and the record narrates change by change without ever
@@ -677,11 +677,11 @@ disciplines:
           no Decision, implies no Challenge of its own and is proved by the gate this change is already
           running is not noticed-and-not-done at all — it is an **Incidental Commit**, and it is made
           in a commit of its own whose subject begins `Incidental:`, rather than into a conversation that
-          will cost a pickup to answer (solorepo's DR-236). The prefix is the whole form and it is there
-          to be counted: `git log --grep '^Incidental:'` is how a later reader tells whether this licence
-          is being taken. All four parts hold or it is a notice: the bound is what keeps a licence to
-          fix from becoming a licence to wander, and the coder is where that risk lives, since nobody
-          else is reading yet.
+          will cost another Job's start to answer (solorepo's DR-236). The prefix is the whole form and
+          it is there to be counted: `git log --grep '^Incidental:'` is how a later reader tells whether
+          this licence is being taken. All four parts hold or it is a notice: the bound is what keeps a
+          licence to fix from becoming a licence to wander, and the coder is where that risk lives, since
+          nobody else is reading yet.
       - id: work:discipline-step/pr-first/promote-at-approval
         name: Promote at approval
         statement: >-
