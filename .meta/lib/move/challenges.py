@@ -160,18 +160,29 @@ def difficulty(issue: str | int, level: str) -> None:
     branch (solorepo's DR-142). A run moves one to `RUN_LEVEL` and no further:
     see `refuse_a_level_from_a_run`.
 
+    A Challenge with no level standing is refused, naming `triage`
+    (solorepo's DR-278). `triage` refuses where a level stands, and this
+    refuses where none does.
+
     Parameters:
         issue (int | str): Challenge issue number.
         level (str): Difficulty level to apply (`easy`, `medium`, `hard`, `human`).
 
     Raises:
-        SystemExit: If a run asks for a level that is a verdict, or the Issue is
-            not a Challenge.
+        SystemExit: If a run asks for a level that is a verdict, the Issue is
+            not a Challenge, or no level stands on it to move.
     """
     refuse_a_level_from_a_run(level, "The level standing on the Issue is unmoved, and the "
                                      "verdict that moves it is the reviewer's or the solo's.")
     now = challenge_labels(issue)
     stale = [lbl for lbl in now if lbl in common.DIFFICULTIES and lbl != level]
+    if not stale and level not in now:
+        sys.exit(f"say: #{issue} carries no level, so there is none to move: it is a Challenge "
+                 "no reviewer has read, and landing a first level is the reading itself "
+                 "(solorepo's DR-230, solorepo's DR-278).\n"
+                 f"     Nothing was written. `move --role reviewer triage {issue} {level}` with "
+                 "the verdict on stdin is the act that lands a first level, and it is the one "
+                 "the solo types too where the level is his own.")
     now = relabel(issue, add=[level], remove=stale)
     print(f"#{issue} is labelled {', '.join(now)}")
 
@@ -845,7 +856,9 @@ def claim(issue: str | int) -> None:
             sys.exit(f"say: #{issue} is a Challenge no reviewer has read: it carries no level, "
                      "and the reviewer's verdict is what lands one (solorepo's DR-230). "
                      f"`move --role reviewer triage {issue} <level>` with the verdict on stdin "
-                     f"reads it; a level the solo mandates is `move difficulty {issue} <level>`.")
+                     "reads it, and it is the verb the solo types too where the level is his "
+                     "own: `move difficulty` moves a level that stands and refuses to land a "
+                     "first one (solorepo's DR-278).")
         taken = next((lbl for lbl in now if lbl in common.LOOP_LEVELS), None)
         if taken and "challenge" in now:
             sys.exit(f"say: #{issue} is labelled `{taken}`, which is a loop's from the moment "

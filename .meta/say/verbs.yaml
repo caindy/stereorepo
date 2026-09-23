@@ -60,11 +60,12 @@ programs:
           reviewer's run, which `move request-review` summons
         held_by: [coder, reviewer, solo]
       - name: promote
-        usage: "<thread-id> --title T [--difficulty D] [--no-resolve] < issue-body.md"
+        usage: "<thread-id> --title T [--difficulty D --mandate \"<his words>\"] [--no-resolve] < issue-body.md"
         does: >-
           at approval: file the Issue with the Issue form's body, `challenge`
           alone for the reviewer to read unless the solo mandates a level, which
-          a run may not hold, reply with the link, resolve (or defer resolution) —
+          a run may not hold and which `--mandate` quotes him asking for,
+          reply with the link, resolve (or defer resolution) —
           always deferred where the promoting Actor is the thread's sole author,
           since resolving it too would be the only voice on the thread clearing
           its own hold, and a second Job closes it instead
@@ -94,11 +95,13 @@ programs:
       Decision's number reserved.
     verbs:
       - name: file
-        usage: "--title T [--difficulty D|--roadmap] [--blocked-by <n>[,<n>]] < body.md"
+        usage: "--title T [--difficulty D --mandate \"<his words>\"|--roadmap] [--blocked-by <n>[,<n>]] < body.md"
         does: >-
           file a Challenge the form's way: `challenge` alone, for the reviewer to read
           and land a level on; with `--difficulty`, the solo's verdict given in advance,
-          which skips the reviewer, and which a run may not hold; or a roadmap Issue;
+          which skips the reviewer, which a run may not hold, and which is refused
+          unless `--mandate` quotes the words he asked for it in, since a level
+          nobody asked for is one the agent inferred; or a roadmap Issue;
           `--blocked-by` sets the native blockers and the body's `**Waits on.**` line
           is rewritten to describe them; refused where the line names an `#<n>` the
           flag omits
@@ -118,7 +121,7 @@ programs:
         held_by: [reviewer, solo]
       - name: difficulty
         usage: "<issue> <level>"
-        does: "move a Challenge's level: easy, medium, hard, human; a run lands `human` and no other, the rest being a verdict the reviewer gives"
+        does: "move a Challenge's level: easy, medium, hard, human; a run lands `human` and no other, the rest being a verdict the reviewer gives; refused where no level stands, which is a Challenge no reviewer has read, `triage` being the act that lands a first one"
         held_by: [solo]
       - name: reread
         usage: "<issue>"

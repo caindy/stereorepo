@@ -1,0 +1,17 @@
+challenges:
+  - id: work:challenge/860
+    name: nothing stops an interactive session landing a difficulty label the solo never named
+    challenge_type: ARCHITECTURE
+    description: >-
+      A level landed at filing is the solo's verdict given in advance, and
+      solorepo's DR-235 refused one to a run because the solo cannot be beside
+      it. A session can be, so `--difficulty` stayed open there and nothing
+      asked whether he had said anything: an agent told "file it as a challenge"
+      infers a level from how hard the work looks, or carries one over from an
+      earlier turn, and lands it. That is what happened on solorepo's #857,
+      where the prompt "file it as a challenge" was executed with
+      `--difficulty hard` and the solo took the label off by hand. The rule
+      against it was prose in three places a filing agent reads — PR First's
+      *Raise a Challenge with the form* step, `verbs.yaml`'s gloss on `file`,
+      and the Challenge template — and it held in none of them: three sentences
+      saying what a Job may not do, and nothing refusing it.

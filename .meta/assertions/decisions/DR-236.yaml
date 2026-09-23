@@ -177,7 +177,7 @@ decisions:
         A coder's own notice is outside the clause, which is the channel's
         rule and not a new one. `answer` asks `refuse_if_sole_author` with
         `promotion=promotes(body)`, where `promotes` is
-        `return bool(check_pr.PROMOTED.search(body))` at `.meta/say/post:176`
+        `return bool(check_pr.PROMOTED.search(body))` at `.meta/say/post:183`
         and `PROMOTED` matches an Issue URL, so a reply naming a commit is
         refused; `post resolve` refuses the same thread for want of a second
         party or a link.

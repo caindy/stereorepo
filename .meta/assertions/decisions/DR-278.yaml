@@ -1,0 +1,161 @@
+decisions:
+  - id: work:decision/278
+    name: "DR-278 · A level a session lands is refused unless `--mandate` quotes the solo asking for it"
+    challenge: work:challenge/860
+    status: ADOPTED
+    applies:
+      - work:article/20
+    enacted_in:
+      - work:artifact/meta-lib-move-common
+      - work:artifact/meta-lib-move-challenges
+      - work:artifact/meta-lib-move-cli
+      - work:artifact/meta-say-post
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-checks-probes-channel-level
+      - work:artifact/meta-checks-probes-channel-parser
+      - work:artifact/agents
+      - work:artifact/template-agents
+    context: >-
+      DR-230 put the reviewer in front of every Challenge and made its verdict
+      the label. DR-235 refused a level to a run and stopped there, on the
+      ground that the solo's mandate is real and is typed through a session: a
+      session is where he can be beside the Job, and refusing it there would
+      cost the takeover its act.
+
+      Being able to be beside it is not being beside it. An agent told "file it
+      as a challenge" has no level in front of it and produces one anyway —
+      inferred from how hard the work looks, or carried over from a level
+      discussed earlier in the same conversation — and `--difficulty` took it
+      from any session that typed it. On solorepo's #857 that is what happened,
+      and the solo removed the label by hand.
+
+      The rule was already written in three places the filing agent reads: PR
+      First's *Raise a Challenge with the form* step, `verbs.yaml`'s gloss on
+      `file`, and the Challenge template. All three say a Job with no mandate
+      leaves the level to the reviewer, and all three were in front of the Job
+      that landed one. A rule three artifacts state and nothing refuses is not
+      in force, which is why DR-230 built a reader rather than writing the
+      directive again.
+    alternatives:
+      - name: Say it again in AGENTS.md and leave the flags open
+        chosen: false
+        reason: >-
+          This is what the Challenge proposed and what the reviewer's verdict
+          objected to: three restatements did not hold, and a fourth at the top
+          of the prompt hierarchy is the alternative DR-235 already rejected for
+          the run case. The convention is worth writing — it says what to do
+          where the level is being chosen, which a refusal at the channel cannot
+          — but resting the whole answer on it would leave the observed failure
+          unrefused.
+      - name: Refuse a session every level, as a run is refused
+        chosen: false
+        reason: >-
+          It would take from the solo the act DR-235 kept for him: a level he
+          names at filing skips the reviewer on purpose, and a session is the
+          only place he can say so. Refusing it outright would route every
+          mandated Challenge through a reading he had already given, and leave
+          `move difficulty` as the only way back in, which is two acts for one
+          verdict.
+      - name: Ask the harness for the solo's prompt
+        chosen: false
+        reason: >-
+          The fact wanted is whether the words came from the solo, and only the
+          harness holds the turn they were typed in. No harness offers it to a
+          subprocess, and the four this repository serves would each have to
+          offer it the same way. This is what would make `--mandate` removable.
+      - name: A mandate flag the level is refused without
+        chosen: true
+        reason: >-
+          `--difficulty` is refused unless `--mandate` carries the solo's own
+          words asking for that level. It proves that a caller typed his words
+          rather than that he typed them, which is the most a flag can prove,
+          and it is the whole of what the failure needed: an inferred level has
+          nothing to put there, and an agent that would have to invent a
+          directive to get past the refusal is doing something it can be held
+          to, rather than passing a flag nobody asked about.
+
+          It is cheap in the case that matters. Where the solo did name the
+          level, his words are in the session and quoting them costs a phrase;
+          where he did not, the Challenge lands `challenge` alone, which is the
+          reviewer's queue and where the agent's guess belongs as a proposal
+          under `**Difficulty.**`.
+
+          `RUN_LEVEL` is exempt for the reason DR-235 exempts it: `human` starts
+          no Job and asks for the solo, so a Job reporting that the next step is
+          not its own is not asked to quote a mandate whose absence is the thing
+          it is reporting.
+    consequences:
+      - >-
+        `refuse_a_level_without_a_mandate` in `.meta/lib/move/common.py` refuses
+        any level but `RUN_LEVEL` where no mandate stands beside it, and a
+        mandate that is blank or whitespace is no mandate. It sits beside
+        `RUN_LEVEL` and the run refusal it extends rather than inside
+        `file_issue`: the mandate is not an input to filing but a fact about how
+        the caller came by the level, and it is read where the pair of flags is
+        read.
+      - >-
+        `move file` and `post promote` each take `--mandate` and each call the
+        refusal before filing, which are the two verbs that land a level on a
+        Challenge that does not exist yet.
+
+        `move difficulty` is the third way in and is closed rather than
+        mandated. It required only the `challenge` label, so on a Challenge with
+        no level it landed a first one, and `move file --title T` followed by
+        `move difficulty <n> hard` reached the #857 outcome one command past the
+        refusal. It now refuses where no level stands, naming `triage`, which is
+        the distinction its own first line already drew and which `move reread`
+        makes the same way; `claim`'s refusal on an unread Challenge named
+        `difficulty` as the solo's route and now names `triage` too. The verb
+        surface in `.meta/say/verbs.yaml` states the refusal alongside the code
+        that performs it, for the same reason `AGENTS.md` carries the
+        convention: the surface is what an agent reads before it types, and the
+        refusal message reaches it only after.
+
+        `move triage` is untouched and takes no mandate, which leaves a session
+        able to land a first level at any level by typing a verdict. That is the
+        verb's purpose rather than a hole in this one: a level landed there is a
+        four-heading verdict posted on the Issue under a Trailer, so it is a
+        reading somebody can be held to and not a label with nothing behind it.
+        Whether the reviewer's own verb should ask anything of a session
+        speaking it is DR-235's seam, where the account is the bound, and not
+        this Decision's.
+      - >-
+        `AGENTS.md` carries the convention beside the refusal, in the words the
+        filing agent needs before it chooses: file with `challenge` alone, put
+        the level you would have chosen under `**Difficulty.**` in the body, and
+        pass `--difficulty` only where the solo named the level himself in this
+        session, `human` excepted for the reason DR-235 excepts it.
+        `template/AGENTS.md` carries it too, since the channel it governs ships
+        with the clone. The convention and the refusal land together because a
+        refusal alone would not reach the agent at the moment it chooses, which
+        is this Decision's own argument rather than anything A20 requires: the
+        Article asks for at least one enacting Artifact outside the record, and
+        either half alone would satisfy it.
+      - >-
+        `.meta/checks/probes/channel/level.py` observes the refusal in two
+        places. `mandate_probes` stands the helper up on its arguments — every
+        level but `RUN_LEVEL` refused where the mandate is absent, empty or
+        whitespace, and the same level landing once words are quoted — and
+        `wiring_probes` runs `move file` and `post promote` by their argument
+        vectors, so deleting either call to the helper fails the gate. The case
+        that stands for a session's licence, filing at `hard` with no mandate,
+        is untouched in `filing_probes`: `file_issue` sits below the guard by
+        design and lands the label as it always did, so the licence still stands
+        at that seam and the refusal is observed above it.
+    falsifier: >-
+      The mechanism is falsified by a level reaching a Challenge that the solo
+      never named, which now takes an agent inventing a directive to quote
+      rather than passing a flag. The choice is falsified by `--mandate`
+      becoming a phrase agents type as a matter of course — a mandate quoted on
+      most filings, or quoted in words no solo would use — which would say the
+      flag is ceremony and that the answer is to refuse a session the level
+      outright, or to wait for a harness that can hand over the turn the words
+      were typed in. It is also falsified by the refusal firing on the solo's
+      own filings often enough to be an obstacle rather than a check.
+    rationale: |-
+      Christopher settled the shape on the Challenge after the reviewer read it
+      as `human` and said what was owed: whether a fourth restatement was
+      expected to hold where three did not, or whether the fix should be
+      technical in the way DR-235 was. His answer was both — the convention in
+      `AGENTS.md` and a guard in the channel — which is why the prose is not the
+      whole of this Decision, and why it names Artifacts on both sides.

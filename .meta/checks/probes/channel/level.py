@@ -1,7 +1,8 @@
-"""The level a run may land, the level `move reread` takes off (solorepo's DR-235), and roadmap transitions (solorepo's #421).
+"""The level a run may land, the level a session lands with the solo's words behind it (solorepo's DR-278), the level `move reread` takes off (solorepo's DR-235), and roadmap transitions (solorepo's #421).
 """
 
 
+import sys
 from typing import Any
 
 from checks.collect import META, check
@@ -9,9 +10,11 @@ from checks.probes.harness import (
     FakeFiling,
     FakeIssue,
     environment,
+    exit_of,
     load_channel,
     load_module,
     run_verb,
+    stood_in,
 )
 
 TITLE = "A Challenge a run filed"
@@ -26,7 +29,8 @@ SESSION = "a-session-beside-it"
 
 @check("level probes", pre=True)
 def level_probes() -> list[str]:
-    """The level a run may land, and the level `move reread` takes off (solorepo's DR-235).
+    """The level a run may land and the level `move reread` takes off (solorepo's DR-235),
+    and the level a session lands with a mandate behind it (solorepo's DR-278).
 
     The refusal is a branch taken on the environment, which is the one input a
     reader cannot see by reading the verb, so `ACTOR_SESSION` is set and unset
@@ -37,10 +41,16 @@ def level_probes() -> list[str]:
     A refusal's text is read, not just its presence: `run_verb` reports an
     exception as text rather than raising it, so a truthy answer alone cannot
     tell the refusal from the fake being asked something it has no answer for.
+
+    `mandate_probes` is the exception to the environment paragraph above: the
+    mandate refusal is a branch on its two arguments and on nothing else, so
+    those cases carry no environment and no fake, and `wiring_probes` is what
+    observes it at the two call sites that read the flags.
     """
     channel, _, programs = load_channel()
     move = programs["move"]
     return (moving_probes(channel, move) + filing_probes(channel, move)
+            + mandate_probes(move) + wiring_probes(channel, programs)
             + delegating_probes(channel, move) + triaging_probes(channel, move)
             + reread_probes(channel, move) + roadmap_probes(channel, move)
             + next_unlabelled_probes())
@@ -55,12 +65,19 @@ def moving_probes(channel: Any, move: Any) -> list[str]:
     and asks for the solo, which is what a run that cannot finish or has found
     a decision owed has to be able to say. A session lands `hard`, which is the
     takeover `move claim` names and solorepo's DR-142 rests on.
+
+    A Challenge with no level standing is refused whoever asks, naming `triage`
+    (solorepo's DR-278). This verb asks for no mandate, so landing a first level
+    here would be `move file` followed by `move difficulty` — a level on a
+    Challenge with nothing behind it, reached one command past the refusal that
+    stops it at filing.
     """
     problems: list[str] = []
 
-    def moved(level: str, session: str | None) -> tuple[str | None, FakeIssue]:
-        """One `difficulty` of a `medium` Challenge under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
-        fake = FakeIssue(["challenge", "medium"])
+    def moved(level: str, session: str | None,
+              labels: tuple[str, ...] = ("challenge", "medium")) -> tuple[str | None, FakeIssue]:
+        """One `difficulty` of a Challenge holding `labels` under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
+        fake = FakeIssue(list(labels))
         run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
         with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
             return run_verb(channel, fake, lambda: move.difficulty("7", level)), fake
@@ -78,6 +95,10 @@ def moving_probes(channel: Any, move: Any) -> list[str]:
     if said or "hard" not in fake.labels:
         problems.append(f"level: a session moving a Challenge to `hard` said {said!r} and left "
                         f"it labelled {fake.labels!r}")
+    said, fake = moved("hard", None, labels=("challenge",))
+    if not said or "triage" not in said or fake.labels != ["challenge"]:
+        problems.append(f"level: a session moving an unread Challenge to `hard` was told "
+                        f"{said!r} and left it labelled {fake.labels!r}")
     return problems
 
 
@@ -119,6 +140,83 @@ def filing_probes(channel: Any, move: Any) -> list[str]:
     if said or landed(fake) != ["challenge", "hard"]:
         problems.append(f"level: a session filing at `hard` said {said!r} and landed "
                         f"{landed(fake)!r}")
+    return problems
+
+
+def mandate_probes(move: Any) -> list[str]:
+    """`refuse_a_level_without_a_mandate` over the levels and the mandates (solorepo's DR-278).
+
+    The helper is a branch on its two arguments: it reads no environment and
+    touches no channel, so these cases stand it up on its arguments alone and
+    say nothing about where it is read. `wiring_probes` is what observes the two
+    verbs that read it.
+
+    Blank is not a mandate. A caller that reaches for the flag and puts nothing
+    in it has said no more than one that omitted it, and the whitespace case is
+    the one a shell produces by accident. Every level but `RUN_LEVEL` is
+    refused, and `RUN_LEVEL` and no level at all both pass.
+    """
+    problems: list[str] = []
+
+    def against(level: str | None, mandate: str | None) -> str | None:
+        """One `refuse_a_level_without_a_mandate`, as what it exited with."""
+        return exit_of(lambda: move.common.refuse_a_level_without_a_mandate(level, mandate))
+
+    for mandate in (None, "", "   "):
+        said = against("hard", mandate)
+        if not said or "--mandate" not in said:
+            problems.append(f"level: a level of `hard` with {mandate!r} behind it was "
+                            f"told {said!r}")
+    said = against("hard", "he said hard, twice")
+    if said:
+        problems.append(f"level: a level of `hard` with the solo's words quoted was "
+                        f"told {said!r}")
+    for level in (None, "human"):
+        said = against(level, None)
+        if said:
+            problems.append(f"level: a level of {level!r} with no mandate was told {said!r}")
+    return problems
+
+
+def wiring_probes(channel: Any, programs: dict[str, Any]) -> list[str]:
+    """The two verbs that read `--difficulty`, each asked for a level with no mandate.
+
+    `mandate_probes` observes the helper and could not tell a caller that reads
+    it from one that does not, and `filing_probes` enters at `file_issue`, which
+    sits below the guard and lands the label as it always did. So neither would
+    notice the call at `move`'s `_dispatch_issue_verb` or the one in `post`'s
+    `main` being deleted. These two cases enter where the flags are parsed, by
+    the argument vector, so deleting either call fails one of them
+    (solorepo's DR-278).
+
+    Both are refused with the fake asked to create nothing, which is what says
+    the refusal is read before the filing rather than after it. `stdin_body` is
+    stood in rather than piped because `post promote` signs the body before it
+    reads the level, and the Agent variables are set for the same reason:
+    signing is ahead of the guard on that path and refuses where the environment
+    names no Agent.
+    """
+    problems: list[str] = []
+    move, post = programs["move"], programs["post"]
+
+    def dispatched(argv: list[str], call: Any) -> tuple[str | None, FakeFiling]:
+        """One verb run from a session over `argv`, as `(what it exited with, the fake)`."""
+        fake = FakeFiling()
+        with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=SESSION,
+                         AI_AGENT="probe", ACTOR_AGENT="probe"), \
+                stood_in(sys, argv=argv), stood_in(channel, stdin_body=lambda: BODY):
+            return run_verb(channel, fake, call), fake
+
+    said, fake = dispatched(["move", "file", "--title", TITLE, "--difficulty", "hard"],
+                            lambda: move.cli.main(None))
+    if not said or "--mandate" not in said or fake.created:
+        problems.append(f"level: `move file --difficulty hard` with no mandate was told {said!r} "
+                        f"and created {len(fake.created)}")
+    said, fake = dispatched(["post", "promote", "PRRT_1", "--title", TITLE, "--difficulty", "hard"],
+                            post.main)
+    if not said or "--mandate" not in said or fake.created:
+        problems.append(f"level: `post promote --difficulty hard` with no mandate was told "
+                        f"{said!r} and created {len(fake.created)}")
     return problems
 
 
