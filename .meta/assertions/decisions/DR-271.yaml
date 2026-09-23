@@ -1,0 +1,128 @@
+decisions:
+  - id: work:decision/271
+    name: "DR-271 · Multiword term candidates scored against wordfreq's phrase reference, and minted labels excluded as phrases"
+    challenge: work:challenge/643
+    status: ADOPTED
+    applies:
+      - work:article/17
+    enacted_in:
+      - work:artifact/meta-terms
+      - work:artifact/meta-checks-probes-tools-terms
+    context: >-
+      Solorepo's DR-234 placed `just terms` on the operator surface as the one
+      mechanical instrument reading in the direction Article 17 cares about:
+      words that arrived by use without being minted. It modelled the corpus as
+      unigrams on both sides of its own test, and Challenge solorepo's #643
+      showed that this costs twice.
+
+      It could not propose a compound. `tokenize` matched
+      `\b[a-zA-Z]+(?:'[a-zA-Z]+)?\b`, so no bigram and no hyphenated candidate
+      was ever formed, while 38 of the 73 preferred labels in
+      `.meta/assertions/imported/vocabulary.yaml` are multiword or hyphenated —
+      *Noticed and Not Done*, *Pull Request*, *Bounded Context*, *Definition of
+      Done*. Over half the [[ubiquitous-language|Ubiquitous Language]] was of a
+      shape the instrument could not have surfaced.
+
+      Worse, minting a compound blinded it to the compound's parts. The
+      exclusion pass split every label into words and excluded each word over
+      two characters together with its plural, so 78 distinct words left
+      candidacy only because they sit inside some multiword label — `loop`,
+      `agent`, `memory`, `skill`, `prompt`, `record`, `thread`, `context`,
+      `work` and `solo` among them. None is a standalone concept, and `loop` is
+      a heavy domain noun here, so minting *[[dev-loop|Dev Loop]]* took the word
+      the repository actually leans on out of reach.
+
+      Challenge solorepo's #643 read the second part as the expensive one,
+      because scoring a compound needs a reference frequency `wordfreq` supplies
+      for words and not for arbitrary bigrams, which would mean choosing a null
+      model solorepo's DR-234 did not choose. `wordfreq` supplies one for both:
+      `_word_frequency` combines a multi-token string as `1 / f = 1 / f1 +
+      1 / f2 + …`, documenting that "the resulting frequency is less than any
+      individual frequency, and the smallest frequency dominates the sum", and
+      returns the caller's `minimum` where any token is absent from the
+      wordlist. A phrase therefore has a reference relative frequency of exactly
+      the kind a word has, and both of solorepo's DR-234's axes read it
+      unchanged.
+    alternatives:
+      - name: An independence baseline over reference unigram frequencies
+        chosen: false
+        reason: >-
+          Multiplying the component frequencies is the null hypothesis behind
+          pointwise mutual information, and it treats every collocation English
+          itself holds — *make sure*, *at least*, *in order* — as a surprise
+          worth reporting, because English overuses them relative to chance too.
+          Expected counts fall so far below observed that every phrase clears
+          any keyness threshold and the G² ranking degenerates into a frequency
+          ranking, which solorepo's DR-234 had already rejected for words.
+      - name: A collocation measure such as PMI alongside keyness
+        chosen: false
+        reason: >-
+          A third axis beside keyness and dispersion changes what the instrument
+          claims and adds a knob the solo would have to fit, when the second
+          axis already carries the load a collocation measure would: an ordinary
+          English collocation is spread across the corpus, so Gries' DP refuses
+          it exactly as it refuses a pervasive word.
+      - name: "Candidate phrases scored against wordfreq's own multi-token reference, with minted labels excluded phrase-wise"
+        chosen: true
+        reason: >-
+          Candidates become the words and the phrases of up to `--max-n` tokens
+          drawn from within one segment, scored on solorepo's DR-234's two
+          existing axes against `wordfreq.word_frequency` of the phrase. No
+          second measure, no invented null model, and no new fitted knob: the
+          Zipf floor keeps its meaning, since it reads the same reference
+          frequency the keyness axis is computed against, so a phrase built on a
+          coinage scores zero and is refused by the same floor that refuses the
+          coinage. Because that reference sits below the rarest token's own, the
+          floor asks more of a phrase than that each of its words clear 3.0 —
+          two words at Zipf 3.1 combine to 2.8 and the phrase is refused — and
+          that is the bar rather than a side effect: the floor's question is
+          whether the reference the keyness test divides by is a real English
+          frequency, and for a phrase that quantity is the combination. Three
+          bounds make the candidate set a phrase set rather than every token
+          window. A token carries its internal hyphen, so `Drive-by` is one
+          candidate rather than `drive` and `by`. A phrase is drawn only from
+          tokens sharing a line, which refuses the phrase that exists solely as
+          two structural lines abutting. And no phrase may begin or end with a
+          closed-class function word, the linguistic filter that refuses a
+          fragment of a longer construction such as *the pull* or *definition
+          of*. On the exclusion side, a single-word label excludes that word and
+          its inflections, while a multiword label excludes the phrase it is and
+          the phrases within it, and never its component words.
+    consequences:
+      - >-
+        `.meta/terms.py` proposes candidates of one to `--max-n` tokens, `--min-n`
+        restricting the report to phrases, and reports each on the two axes
+        solorepo's DR-234 fitted.
+      - >-
+        `segment`, `iter_terms` and `extract_vocab_exclusions` in `.meta/terms.py`
+        replace unigram tokenization and the word-wise exclusion set;
+        `extract_vocab_labels` is gone.
+      - >-
+        Minting a multiword label no longer removes its component words from
+        candidacy, so `loop`, `seed`, `thread` and 75 other words are audited again.
+      - >-
+        `.meta/checks/probes/tools/terms.py` holds a second probe over hyphenated
+        tokens, line-bounded segments, the function-word boundary filter, a
+        multiword candidate surfacing, a minted phrase excluded without its
+        parts, and the Zipf floor read against a phrase's combined reference
+        rather than its component words'.
+      - >-
+        Challenge solorepo's #643 is closed as answered.
+    falsifier: >-
+      A word restored to candidacy by phrase-wise exclusion that is itself a
+      minted preferred or alternative label, a minted multiword label appearing
+      in the candidate list, or an unminted multiword term with dispersion
+      DP ≥ 0.70, keyness G² ≥ 10.83 and the phrase's own English Zipf ≥ 3.0 —
+      `wordfreq`'s combination of its tokens, which sits below the rarest of
+      them — that fails to surface in the audit output.
+    rationale: |-
+      Article 17 says a term that arrived by use has not been agreed. An
+      instrument that can only see one word at a time enforces that over less
+      than half the vocabulary, and enforcing it over a compound made the
+      compound's parts invisible, which is the failure that matters: the
+      repository leans on `loop` constantly and the audit had been silent about
+      it since *Dev Loop* was minted. Extending solorepo's DR-234's two axes to
+      phrases rather than adding a third measure keeps the instrument's claim
+      intact — statistical overuse against general English, and document
+      locality — and the reference that makes it possible belongs to the library
+      the audit already depends on rather than to a model chosen here.

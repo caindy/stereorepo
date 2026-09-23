@@ -1,0 +1,16 @@
+challenges:
+  - id: work:challenge/643
+    name: "terms.py is unigram-only, so it cannot propose a compound term and minting one hides its parts"
+    challenge_type: DEFECT
+    description: >-
+      Solorepo's DR-234 placed the unminted-term audit on the operator surface.
+      `.meta/terms.py` implemented it over unigrams on both sides of its own
+      test. It could form no bigram and no hyphenated candidate, so over half the
+      Ubiquitous Language was of a shape it could not propose, and its exclusion
+      pass split every minted label into words, so 78 words left candidacy only
+      because they sit inside some multiword label — `loop`, `agent`, `memory`,
+      `prompt`, `thread` and `solo` among them.
+
+      The cost landed: `Drive-by` was coined and minted in
+      solorepo's #632 through three review rounds without the audit firing, and
+      the solo caught it reading the merged change.
