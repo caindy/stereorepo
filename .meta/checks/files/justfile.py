@@ -2,6 +2,12 @@
 flags, subcommands and atomic identifiers, every parameter reaching the tool it
 was declared for, and a doc comment for the index `just --list` prints
 (solorepo's DR-106, solorepo's DR-259).
+
+The surface this governs is the public one: a `just` private recipe (its name
+prefixed `_`) is an internal subroutine called only from another recipe's
+body, never typed by an operator and never listed by `just --list`, so it
+sits outside solorepo's DR-259's operator-facing contract and this module does
+not see it (solorepo's #771).
 """
 
 import pathlib
@@ -19,7 +25,10 @@ JUSTFILE = ROOT / "justfile"
 RECIPE = re.compile(r"^@?(?P<name>[a-z][a-z0-9_-]*)(?P<params>(?:\s+[^\s:]+)*)\s*:(?!=).*$")
 """Matches a recipe header line, capturing the verb and the parameter list before the colon.
 Dependencies after the colon are matched and discarded, so a recipe that has them is still read;
-`(?!=)` keeps a top-level `name := value` assignment out."""
+`(?!=)` keeps a top-level `name := value` assignment out. The name group excludes a leading `_`
+by design, not oversight: a `just` private recipe is outside the operator surface this contract
+governs (solorepo's #771), so this pattern is deliberately blind to it rather than admitting it
+and exempting it downstream."""
 
 ASSIGNMENT = re.compile(r"^(?:export\s+)?(?P<name>[a-z][a-z0-9_-]*)\s*:=")
 """Matches a top-level assignment, whose name a recipe body may interpolate without declaring it."""

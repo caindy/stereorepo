@@ -61,6 +61,12 @@ TOLERATED: tuple[tuple[str, str], ...] = (
         "a recipe whose body `just` runs quietly",
         "# the pull request gate\n@pr n *args:\n    python3 .meta/check_pr.py {{n}} {{args}}\n",
     ),
+    (
+        "a private recipe, which sits outside the operator surface even carrying a bare prose "
+        "positional the contract would otherwise refuse (solorepo's #771)",
+        "# the pull request gate\npr n *args:\n    python3 .meta/check_pr.py {{n}} {{args}}\n\n"
+        "_scratch note:\n    python3 .meta/check_pr.py {{note}}\n",
+    ),
 )
 """Each conforming surface: what it holds, and the justfile that holds it."""
 
@@ -80,9 +86,12 @@ def verb_surface_probes() -> list[str]:
     than refusing; a recipe implementing its own verb; a recipe carrying no doc
     comment; and a recipe carrying a dependency after its colon, which is read
     rather than skipped. Each surface in `TOLERATED` comes to `Passed`: a
-    body interpolating a name the file assigns at its top level, and a recipe
-    `just` runs quietly. A surface holding no recipe the contract declares is
-    reported as the missing recipe rather than passing silently.
+    body interpolating a name the file assigns at its top level, a recipe
+    `just` runs quietly, and a private (`_`-prefixed) recipe, which is outside
+    the operator surface the contract governs even where its own shape would
+    otherwise be refused (solorepo's #771). A surface holding no recipe the
+    contract declares is reported as the missing recipe rather than passing
+    silently.
     """
     contract: Contract = {"pr": (("n", IDENTIFIER), ("args", FLAGS))}
     problems = []
