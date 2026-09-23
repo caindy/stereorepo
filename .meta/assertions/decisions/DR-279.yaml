@@ -1,0 +1,106 @@
+decisions:
+  - id: work:decision/279
+    name: "DR-279 · The term corpus holds prose alone, code fences and backtick spans excluded"
+    challenge: work:challenge/898
+    status: ADOPTED
+    applies:
+      - work:article/17
+    supersedes:
+      - work:decision/234
+      - work:decision/271
+    enacted_in:
+      - work:artifact/meta-terms
+      - work:artifact/meta-checks-probes-tools-terms
+    context: >-
+      Solorepo's DR-234 placed the unminted-term audit on the operator surface and
+      solorepo's DR-271 extended it from words to phrases. Both read the corpus as
+      whatever a durable file holds: `_load_fs_corpus` and `_load_git_corpus`
+      admitted every markdown file entire, fences included.
+
+      For words that was tolerable. `lib`, `gh`, `ruff` and `uv` ranked below three
+      real candidates, so a reader met the vocabulary before the tooling. The
+      phrase report inverted the ratio on its first reading, because a shell
+      invocation is a run of tokens on one line and that is exactly the shape
+      phrase segmentation admits: eight of the top ten multiword candidates over
+      solorepo's #884 were command lines — `uv run`, `uv run gate`, `gh pr`,
+      `ruff check`, `gate meta`, `git commit` — leaving two lines of prose to find
+      among eight of tooling.
+
+      What made this a Decision rather than an edit is that it re-scores
+      everything. Removing code shortens every file that holds any, which moves
+      the corpus total both axes divide by, so every candidate the audit has ever
+      reported is measured against a different denominator and solorepo's DR-234's
+      two fitted knobs might no longer sit where they were fitted. That is a
+      judgment the change's own gate cannot prove, which is why Challenge
+      solorepo's #898 was read as `human` and settled by the solo before any code.
+      Measured over the whole corpus, the knobs hold: at DP ≥ 0.70, G² ≥ 10.83 and
+      Zipf ≥ 3.0 the five invocations above leave the phrase report and
+      `repository root`, `one module`, `workflow run` and `reviewer role` take
+      their places, while `ruff` and `uv` leave the head of the word report and no
+      real candidate — `assertions`, `decisions`, `probes`, `wiki`, `sweep` —
+      falls out of it.
+    alternatives:
+      - name: A denylist of tooling terms applied to the report
+        chosen: false
+        reason: >-
+          Filtering the output leaves the counts wrong. A file's length still
+          includes its code, so the corpus total every keyness and dispersion
+          figure divides by is inflated by text no candidate should have been
+          drawn from, and every real candidate is scored against it. The list
+          would also need maintaining against each new tool, and it refuses a real
+          phrase the moment one shares a word with an executable.
+      - name: Stripping code from assertion YAML as well as markdown
+        chosen: false
+        reason: >-
+          An assertion file is not prose with code in it. Its keys and enumerated
+          values are the structural vocabulary the audit reads in the direction
+          Article 17 cares about — the [[ubiquitous-language|Ubiquitous Language]]
+          itself — and a backtick inside a description is quoting an identifier the
+          assertion is about rather than an invocation a reader is meant to run.
+          Reading those files whole is what keeps the assertions contributing.
+      - name: "Fenced blocks and inline code spans removed from markdown before segmentation"
+        chosen: true
+        reason: >-
+          `strip_code` empties every fenced block — three or more backticks or
+          tildes, indented no more than three spaces, the file's end closing an
+          unterminated one — and reduces every inline span to the single backtick
+          that bounded it. That replacement is the point rather than a detail: a
+          backtick is already the run boundary `segment` reads, so dropping a
+          span's tokens never joins the prose on its two sides into a phrase
+          nobody wrote, which a space would have done. `prose` applies it to
+          markdown and passes assertion YAML through whole, and `_count_corpus`
+          reads every file through `prose`, so code contributes to neither a
+          file's length nor its candidates and both axes are computed over the
+          same corpus.
+    consequences:
+      - >-
+        `.meta/terms.py` holds `strip_code` and `prose`, and `_count_corpus` reads
+        every corpus file through the latter.
+      - >-
+        A markdown file contributes its prose alone; an assertion YAML file is read
+        whole.
+      - >-
+        Solorepo's DR-234's two fitted knobs are unchanged, the measurement above
+        being the evidence, so no figure in the audit's contract moves.
+      - >-
+        `.meta/checks/probes/tools/terms.py` holds a third probe over the four fence
+        shapes, an inline span leaving two runs rather than one, an invocation that
+        surfaces as prose and does not from inside a fence or a span, and an
+        assertion YAML file read whole.
+      - >-
+        Challenge solorepo's #898 is closed as answered.
+    falsifier: >-
+      A candidate in the audit output every occurrence of which lies inside a
+      fenced code block or an inline code span of a markdown file, or a term the
+      audit reported before this corpus change that meets DP ≥ 0.70, G² ≥ 10.83
+      and Zipf ≥ 3.0 on prose alone and no longer surfaces.
+    rationale: |-
+      An audit is worth what a reader will read, and eight lines of tooling ahead
+      of two of prose is a report nobody finishes. The noise was not a threshold
+      that needed raising but a corpus that included text no reader would call
+      prose: a fenced block is quoted machinery, and so is a backtick span. Taking
+      them out asks nothing of the statistics — the same two axes, the same two
+      knobs, measured over less text. What it replaces in solorepo's DR-234 and
+      solorepo's DR-271 is one clause of each, the durable prose both said the
+      audit reads, which is what `supersedes` is for and why neither entry is
+      rewritten.

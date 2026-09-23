@@ -286,6 +286,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-276](assertions/decisions/DR-276.yaml) | A Concept is minted by reservation, and a row in the Ubiquitous Language stands on the solo's say-so in three places | Adopted |
 | [DR-277](assertions/decisions/DR-277.yaml) | A take pass cut by its turn cap is read off the execution file, not the step conclusion, and hands over an account that names the cap | Adopted |
 | [DR-278](assertions/decisions/DR-278.yaml) | A level a session lands is refused unless `--mandate` quotes the solo asking for it | Adopted |
+| [DR-279](assertions/decisions/DR-279.yaml) | The term corpus holds prose alone, code fences and backtick spans excluded | Adopted |
 
 ## Holes
 
@@ -423,7 +424,7 @@ and the query a reader in a file actually has.
 | [`.meta/checks/probes/tools/depth.py`](checks/probes/tools/depth.py) | [DR-188](assertions/decisions/DR-188.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/probes/tools/dereference.py`](checks/probes/tools/dereference.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-192](assertions/decisions/DR-192.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/probes/tools/search.py`](checks/probes/tools/search.py) | [DR-072](assertions/decisions/DR-072.yaml), [DR-100](assertions/decisions/DR-100.yaml), [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
-| [`.meta/checks/probes/tools/terms.py`](checks/probes/tools/terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml) |
+| [`.meta/checks/probes/tools/terms.py`](checks/probes/tools/terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml), [DR-279](assertions/decisions/DR-279.yaml) |
 | [`.meta/checks/probes/tools/test_specialization.py`](checks/probes/tools/test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml) |
 | [`.meta/checks/probes/tools/timing.py`](checks/probes/tools/timing.py) | [DR-157](assertions/decisions/DR-157.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/suppressions.baseline.yaml`](checks/suppressions.baseline.yaml) | [DR-223](assertions/decisions/DR-223.yaml), [DR-225](assertions/decisions/DR-225.yaml) |
@@ -531,7 +532,7 @@ and the query a reader in a file actually has.
 | [`.meta/templates/issue.md`](templates/issue.md) | [DR-112](assertions/decisions/DR-112.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-170](assertions/decisions/DR-170.yaml), [DR-213](assertions/decisions/DR-213.yaml), [DR-230](assertions/decisions/DR-230.yaml) |
 | [`.meta/templates/pull-request.md`](templates/pull-request.md) | [DR-055](assertions/decisions/DR-055.yaml), [DR-076](assertions/decisions/DR-076.yaml), [DR-089](assertions/decisions/DR-089.yaml), [DR-159](assertions/decisions/DR-159.yaml), [DR-236](assertions/decisions/DR-236.yaml), [DR-249](assertions/decisions/DR-249.yaml) |
 | [`.meta/templates/roadmap.md`](templates/roadmap.md) | [DR-088](assertions/decisions/DR-088.yaml), [DR-114](assertions/decisions/DR-114.yaml), [DR-116](assertions/decisions/DR-116.yaml), [DR-170](assertions/decisions/DR-170.yaml), [DR-213](assertions/decisions/DR-213.yaml) |
-| [`.meta/terms.py`](terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml) |
+| [`.meta/terms.py`](terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml), [DR-279](assertions/decisions/DR-279.yaml) |
 | [`.meta/test_specialization.py`](test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml) |
 | [`.meta/timing.py`](timing.py) | [DR-157](assertions/decisions/DR-157.yaml), [DR-161](assertions/decisions/DR-161.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-189](assertions/decisions/DR-189.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-219](assertions/decisions/DR-219.yaml) |
 | [`.meta/vocabulary.md`](vocabulary.md) | [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-182](assertions/decisions/DR-182.yaml), [DR-276](assertions/decisions/DR-276.yaml) |

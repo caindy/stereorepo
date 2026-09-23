@@ -1,6 +1,7 @@
 """`terms.py`'s unminted candidate extraction, keyness, and dispersion probes (solorepo's DR-234).
 
-Covers multiword candidacy and phrase-shaped exclusion under solorepo's DR-271.
+Covers multiword candidacy and phrase-shaped exclusion under solorepo's DR-271, and
+the corpus that holds prose alone under solorepo's DR-279.
 """
 
 from checks.collect import META, ROOT, check
@@ -212,5 +213,83 @@ def terms_phrase_probes() -> list[str]:
         problems.append("terms: a phrase under the Zipf floor was scored on its component words")
     if "adaptable scaffold" not in under_floor:
         problems.append("terms: 'adaptable scaffold' failed to surface with the Zipf floor lowered")
+
+    return problems
+
+
+INVOCATION = "uv run gate meta\n"
+
+CODE_PREAMBLE = "One line of prose that names the gate without quoting it.\n\n"
+
+BARE_BODY = CODE_PREAMBLE + INVOCATION * 6
+
+FENCED_BODY = CODE_PREAMBLE + "```bash\n" + INVOCATION * 6 + "```\n"
+
+SPANNED_BODY = CODE_PREAMBLE + "Quoted as `uv run gate meta` in a span.\n" * 6
+
+CODE_FILLER = {f"filler{i}.md": PHRASE_FILLER for i in range(1, 5)}
+
+CODE_CONFIG_ARGS = {"min_zipf": 3.0, "min_dp": 0.45, "min_g2": 1.0, "min_uses": 3, "limit": 0}
+
+
+@check("terms corpus probes", pre=True)
+def terms_corpus_probes() -> list[str]:
+    """`terms.py` draws candidates from prose alone (solorepo's DR-279).
+
+    Validates that:
+    1. `strip_code` empties a backtick fence, a tilde fence, a fence indented up
+       to three spaces and a fence the file never closes, and reduces an inline
+       span to the backtick that bounded it, so the prose on the span's two sides
+       stays two runs rather than becoming one phrase.
+    2. An invocation written as prose surfaces as a candidate, which is what makes
+       the two negative fixtures a statement about the fence and the span rather
+       than about the thresholds.
+    3. The same invocation inside a fenced block surfaces neither as a phrase nor
+       as a word.
+    4. The same invocation inside inline spans surfaces neither either.
+    5. An assertion YAML file is read whole, so a fence written in one still
+       contributes.
+    """
+    terms = load_module(META / "terms.py", "terms", register=False)
+    problems: list[str] = []
+
+    fences = {
+        "backtick": "prose\n```bash\nuv run gate\n```\nprose\n",
+        "tilde": "prose\n~~~\nuv run gate\n~~~\nprose\n",
+        "indented": "prose\n   ```\nuv run gate\n   ```\nprose\n",
+        "unterminated": "prose\n```\nuv run gate\n",
+    }
+    for shape, text in fences.items():
+        expected = ["prose"] if shape == "unterminated" else ["prose", "prose"]
+        if terms.tokenize(terms.strip_code(text)) != expected:
+            problems.append(f"terms: a {shape} fence left tokens in the corpus")
+
+    spanned = terms.segment(terms.strip_code("Run `uv run gate` before pushing.\n"))
+    if spanned != [["run"], ["before", "pushing"]]:
+        problems.append(f"terms: an inline span left one run rather than two, got {spanned}")
+
+    def surfaced(body: str, path: str = "code{}.md") -> set[str]:
+        corpus = {path.format(1): body, path.format(2): body, **CODE_FILLER}
+        return {
+            c.term
+            for c in terms.extract_candidates(
+                corpus=corpus,
+                root_path=ROOT,
+                config=terms.TermsConfig(**CODE_CONFIG_ARGS),
+            )
+        }
+
+    if "uv run gate" not in surfaced(BARE_BODY):
+        problems.append("terms: 'uv run gate' failed to surface when written as prose")
+
+    for shape, body in (("fenced block", FENCED_BODY), ("inline span", SPANNED_BODY)):
+        admitted = surfaced(body)
+        leaked = [t for t in ("uv run gate", "uv run", "uv") if t in admitted]
+        if leaked:
+            problems.append(f"terms: a {shape} contributed {leaked} to the candidate rankings")
+
+    yaml_admitted = surfaced(FENCED_BODY, path=".meta/assertions/decisions/DR-{}.yaml")
+    if "uv run gate" not in yaml_admitted:
+        problems.append("terms: an assertion YAML file was read as markdown rather than whole")
 
     return problems

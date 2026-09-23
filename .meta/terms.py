@@ -10,7 +10,10 @@ prose using two complementary statistical dimensions:
 
 Candidates are words and the multiword phrases up to `--max-n` tokens that
 occur within one segment of prose, scored on the same two dimensions against the
-reference frequency `wordfreq` supplies for a phrase (solorepo's DR-271).
+reference frequency `wordfreq` supplies for a phrase (solorepo's DR-271). A
+markdown file contributes its prose alone: its fenced code blocks and inline code
+spans leave the corpus before segmentation, so a shell invocation is no candidate
+(solorepo's DR-279).
 
 Filters candidates against a Zipf frequency floor (default >= 3.0) read on that
 same reference, so a phrase is measured on its combined value rather than on its
@@ -74,6 +77,10 @@ DEFAULT_MAX_N: int = 3
 TOKEN_PATTERN = re.compile(r"[a-zA-Z]+(?:[\x27-][a-zA-Z]+)*")
 
 SEGMENT_GAP_PATTERN = re.compile(r"[ \t]*")
+
+FENCE_PATTERN = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})")
+
+INLINE_CODE_PATTERN = re.compile(r"(?P<ticks>`+)[^`\n]*(?P=ticks)")
 
 BOUNDARY_FUNCTION_WORDS: frozenset[str] = frozenset({
     "a", "an", "and", "are", "as", "at", "be", "been", "being", "but", "by",
@@ -329,6 +336,49 @@ def load_corpus(root_path: pathlib.Path, commit: str | None = None) -> dict[str,
     return _load_fs_corpus(root_path)
 
 
+def strip_code(text: str) -> str:
+    """Remove fenced code blocks and inline code spans from markdown text.
+
+    A fenced block opens on a line of three or more backticks or tildes indented by
+    no more than three spaces or tabs, and closes on the next line carrying at least
+    as many of that same character, end of file closing an unterminated one. Every
+    line of the block, its fences included, becomes empty.
+
+    An inline span becomes the single backtick that bounded it, which is the run
+    boundary `segment` already reads, so dropping the span's tokens leaves the prose
+    on its two sides two runs rather than one. A span is bounded by equal runs of
+    backticks on one line and holds no backtick of its own, which is every span the
+    corpus carries; one written to quote a backtick keeps its words.
+    """
+    kept: list[str] = []
+    fence: str | None = None
+
+    for line in text.split("\n"):
+        match = FENCE_PATTERN.match(line)
+        delimiter = match.group("fence") if match is not None else None
+        if fence is None:
+            if delimiter is None:
+                kept.append(INLINE_CODE_PATTERN.sub("`", line))
+                continue
+            fence = delimiter
+        elif delimiter is not None and delimiter[0] == fence[0] and len(delimiter) >= len(fence):
+            fence = None
+        kept.append("")
+
+    return "\n".join(kept)
+
+
+def prose(rel_path: str, content: str) -> str:
+    """Reduce one corpus file to the prose its candidates may be drawn from.
+
+    A markdown file loses its fenced code blocks and inline code spans, which
+    hold shell invocations and identifiers rather than phrases a reader would
+    call a phrase (solorepo's DR-279). An assertion YAML file is read whole, so
+    that the structural vocabulary of the assertions keeps contributing.
+    """
+    return strip_code(content) if rel_path.endswith(".md") else content
+
+
 def segment(text: str) -> list[list[str]]:
     """Split text into the runs of adjacent word tokens a phrase may be drawn from.
 
@@ -455,7 +505,8 @@ def _count_corpus(
 
     File length and corpus total are counted in words whatever `max_n` is, so a
     phrase's dispersion and expected count are measured against the same corpus
-    size a word's are.
+    size a word's are. Each file is read through `prose`, so a markdown file's
+    code contributes to neither its length nor its candidates (solorepo's DR-279).
     """
     file_lengths: dict[str, int] = {}
     term_file_counts: dict[str, dict[str, int]] = {}
@@ -463,7 +514,7 @@ def _count_corpus(
     total_tokens = 0
 
     for file_path, content in corpus.items():
-        runs = segment(content)
+        runs = segment(prose(file_path, content))
         words = sum(len(run) for run in runs)
         if not words:
             continue
