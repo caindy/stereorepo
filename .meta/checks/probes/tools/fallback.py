@@ -301,15 +301,24 @@ class FakePopen:
         self.stderr = io.StringIO()
         self.returncode = returncode
 
-    def wait(self) -> int:
+    def wait(self, timeout: float | None = None) -> int:
         """Wait for subprocess termination and return the returncode."""
         return self.returncode
 
+    def poll(self) -> int | None:
+        """Return the exit status."""
+        return self.returncode
 
-def _probe_run_agy(run_agy: Any) -> list[str]:
-    """Verify run_agy's command builder, tool formatter, and stream runner (solorepo's DR-257)."""
+    def terminate(self) -> None:
+        """Terminate mock process."""
+
+    def kill(self) -> None:
+        """Kill mock process."""
+
+
+def _probe_run_agy_builder(run_agy: Any) -> list[str]:
+    """Verify run_agy's command builder and tool formatter (solorepo's DR-257)."""
     problems: list[str] = []
-
     cmd = run_agy.build_command(
         add_dir="/tmp/test",
         options=run_agy.SessionOptions(
@@ -338,31 +347,178 @@ def _probe_run_agy(run_agy: Any) -> list[str]:
         "15m",
     ]
     if cmd != expected_args:
-        problems.append(f"fallback probes: run_agy.build_command produced {cmd!r}, expected {expected_args!r}")
+        problems.append(
+            f"fallback probes: run_agy.build_command produced {cmd!r}, expected {expected_args!r}"
+        )
 
     tool_cases = [
         ("run_command", {"parameters": {"CommandLine": "just gate"}}, "run_command: just gate"),
         ("view_file", {"parameters": {"AbsolutePath": "/a/b.py"}}, "view_file: /a/b.py"),
-        ("replace_file_content", {"parameters": {"TargetFile": "/a/b.py"}}, "replace_file_content: /a/b.py"),
+        (
+            "replace_file_content",
+            {"parameters": {"TargetFile": "/a/b.py"}},
+            "replace_file_content: /a/b.py",
+        ),
         ("unknown_tool", {}, "unknown_tool"),
     ]
     for tool_name, info, expected_str in tool_cases:
         formatted = run_agy.format_tool_call(tool_name, info)
         if formatted != expected_str:
-            problems.append(f"fallback probes: format_tool_call({tool_name}) produced {formatted!r}, expected {expected_str!r}")
+            problems.append(
+                f"fallback probes: format_tool_call({tool_name}) produced {formatted!r}, "
+                f"expected {expected_str!r}"
+            )
+    return problems
 
+
+def _probe_run_agy_retries(run_agy: Any) -> list[str]:
+    """Verify run_agy's transient retry and fast-fail paths (solorepo's DR-257, solorepo's #842)."""
+    problems: list[str] = []
+    orig_popen = run_agy.subprocess.Popen
+    try:
+        err_503 = (
+            "error: failed to send message: send failed; already reported to the user: "
+            "Eligibility check failed: failed to get load code assist response: "
+            "UNAVAILABLE (code 503): The service is currently unavailable.\n"
+        )
+        attempts_503 = [
+            FakePopen(
+                [err_503, json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n"],
+                returncode=0,
+            ),
+            FakePopen(
+                [
+                    json.dumps(
+                        {"event": "result", "result": {"status": "SUCCESS", "response": "Done"}}
+                    )
+                    + "\n",
+                ],
+                returncode=0,
+            ),
+        ]
+        sleeps_503: list[float] = []
+        run_agy.subprocess.Popen = lambda *args, **kwargs: attempts_503.pop(0)
+        code = run_agy.run_session(
+            prompt="Test prompt",
+            add_dir="/tmp/test",
+            options=run_agy.SessionOptions(max_attempts=3, initial_delay=1.0, jitter=0.0),
+            sleep_fn=sleeps_503.append,
+        )
+        if code != 0:
+            problems.append(
+                f"fallback probes: run_session returned {code}, expected 0 on 503 retry"
+            )
+        if len(sleeps_503) != 1 or sleeps_503[0] != 1.0:
+            problems.append(
+                f"fallback probes: transient 503 sleep intervals {sleeps_503!r} != [1.0]"
+            )
+
+        sleeps_429: list[float] = []
+        run_agy.subprocess.Popen = lambda *args, **kwargs: FakePopen(
+            [
+                "error: RESOURCE_EXHAUSTED (code 429): Quota exceeded for rate limit\n",
+                json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n",
+            ],
+            returncode=0,
+        )
+        code = run_agy.run_session(
+            prompt="Test prompt",
+            add_dir="/tmp/test",
+            options=run_agy.SessionOptions(
+                max_attempts=3, initial_delay=2.0, backoff_factor=2.0, jitter=0.0
+            ),
+            sleep_fn=sleeps_429.append,
+        )
+        if code != 1:
+            problems.append(
+                f"fallback probes: run_session returned {code}, expected 1 on 429 exhaustion"
+            )
+        if len(sleeps_429) != 2 or sleeps_429 != [2.0, 4.0]:
+            problems.append(
+                f"fallback probes: transient 429 sleep intervals {sleeps_429!r} != [2.0, 4.0]"
+            )
+
+        attempt_401_count = 0
+        sleeps_401: list[float] = []
+
+        def _make_401_popen(*args: Any, **kwargs: Any) -> FakePopen:
+            nonlocal attempt_401_count
+            attempt_401_count += 1
+            return FakePopen(
+                [
+                    (
+                        "error: UNAUTHENTICATED (code 401): "
+                        "Request had invalid authentication credentials.\n"
+                    ),
+                    json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n",
+                ],
+                returncode=0,
+            )
+
+        run_agy.subprocess.Popen = _make_401_popen
+        code = run_agy.run_session(
+            prompt="Test prompt",
+            add_dir="/tmp/test",
+            options=run_agy.SessionOptions(max_attempts=3),
+            sleep_fn=sleeps_401.append,
+        )
+        if code != 1:
+            problems.append(
+                f"fallback probes: run_session returned {code}, expected 1 on fatal 401"
+            )
+        if attempt_401_count != 1:
+            problems.append(
+                f"fallback probes: fatal 401 ran {attempt_401_count} attempts, expected 1"
+            )
+        if sleeps_401:
+            problems.append(f"fallback probes: fatal 401 unexpectedly slept: {sleeps_401!r}")
+    finally:
+        run_agy.subprocess.Popen = orig_popen
+    return problems
+
+
+def _probe_run_agy(run_agy: Any) -> list[str]:
+    """Verify run_agy's command builder, tool formatter, and stream runner (solorepo's DR-257)."""
+    problems: list[str] = _probe_run_agy_builder(run_agy)
     orig_popen = run_agy.subprocess.Popen
     try:
         run_agy.subprocess.Popen = lambda *args, **kwargs: FakePopen(
             [
                 json.dumps({"event": "init", "conversation_id": "test-123"}) + "\n",
-                json.dumps({"event": "step_update", "step_update": {"step_type": "tool", "state": "ACTIVE", "tool_name": "run_command", "tool_info": {"parameters": {"CommandLine": "just gate"}}}}) + "\n",
-                json.dumps({"event": "step_update", "step_update": {"step_type": "tool", "state": "DONE", "tool_name": "run_command", "duration_seconds": 12}}) + "\n",
-                json.dumps({"event": "result", "result": {"status": "SUCCESS", "response": "Done"}}) + "\n",
+                json.dumps(
+                    {
+                        "event": "step_update",
+                        "step_update": {
+                            "step_type": "tool",
+                            "state": "ACTIVE",
+                            "tool_name": "run_command",
+                            "tool_info": {"parameters": {"CommandLine": "just gate"}},
+                        },
+                    }
+                )
+                + "\n",
+                json.dumps(
+                    {
+                        "event": "step_update",
+                        "step_update": {
+                            "step_type": "tool",
+                            "state": "DONE",
+                            "tool_name": "run_command",
+                            "duration_seconds": 12,
+                        },
+                    }
+                )
+                + "\n",
+                json.dumps(
+                    {"event": "result", "result": {"status": "SUCCESS", "response": "Done"}}
+                )
+                + "\n",
             ],
             returncode=0,
         )
-        code = run_agy.run_session(prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions())
+        code = run_agy.run_session(
+            prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions()
+        )
         if code != 0:
             problems.append(f"fallback probes: run_session returned {code}, expected 0 on SUCCESS")
 
@@ -372,7 +528,9 @@ def _probe_run_agy(run_agy: Any) -> list[str]:
             ],
             returncode=0,
         )
-        code = run_agy.run_session(prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions())
+        code = run_agy.run_session(
+            prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions()
+        )
         if code != 1:
             problems.append(f"fallback probes: run_session returned {code}, expected 1 on ERROR")
 
@@ -382,17 +540,26 @@ def _probe_run_agy(run_agy: Any) -> list[str]:
             ],
             returncode=0,
         )
-        code = run_agy.run_session(prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions())
+        code = run_agy.run_session(
+            prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions()
+        )
         if code != 1:
-            problems.append(f"fallback probes: run_session returned {code}, expected 1 when result event is missing")
+            problems.append(
+                f"fallback probes: run_session returned {code}, expected 1 when result is missing"
+            )
 
         run_agy.subprocess.Popen = lambda *args, **kwargs: FakePopen([], returncode=1, broken_pipe=True)
-        code = run_agy.run_session(prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions())
+        code = run_agy.run_session(
+            prompt="Test prompt", add_dir="/tmp/test", options=run_agy.SessionOptions()
+        )
         if code != 1:
-            problems.append(f"fallback probes: run_session returned {code}, expected 1 on BrokenPipeError")
+            problems.append(
+                f"fallback probes: run_session returned {code}, expected 1 on BrokenPipeError"
+            )
     finally:
         run_agy.subprocess.Popen = orig_popen
 
+    problems.extend(_probe_run_agy_retries(run_agy))
     return problems
 
 
