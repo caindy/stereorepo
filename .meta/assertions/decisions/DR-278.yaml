@@ -86,13 +86,29 @@ decisions:
           it is reporting.
     consequences:
       - >-
-        `refuse_a_level_without_a_mandate` in `.meta/lib/move/common.py` refuses
-        any level but `RUN_LEVEL` where no mandate stands beside it, and a
-        mandate that is blank or whitespace is no mandate. It sits beside
+        `refuse_a_level_and_a_mandate_apart` in `.meta/lib/move/common.py`
+        refuses any level but `RUN_LEVEL` where no mandate stands beside it, and
+        a mandate that is blank or whitespace is no mandate. It sits beside
         `RUN_LEVEL` and the run refusal it extends rather than inside
         `file_issue`: the mandate is not an input to filing but a fact about how
         the caller came by the level, and it is read where the pair of flags is
         read.
+
+        Reading the pair is what its name says, and solorepo's #932 is why it
+        says it: the first cut returned early where no level stood, so a mandate
+        typed alone — or beside `--roadmap`, which lands no level — parsed and
+        did nothing with the words it was given. The other direction is refused
+        too, and on both verbs by the one helper, which is what keeps the two
+        surfaces from disagreeing about the same pair of flags.
+
+        The name, and the alternative it names, are left as they were, and this
+        is that deliberate rather than stale. The question this Decision settled
+        is whose say-so puts a level on a Challenge, which the second direction
+        does not reopen: a mandate with no level lands nothing either way, and
+        refusing it keeps the pair legible rather than admitting a level. So the
+        name states the question and the first consequence states the mechanism,
+        which is where a reader who searched the index for why `--mandate` alone
+        is refused will find it.
       - >-
         `move file` and `post promote` each take `--mandate` and each call the
         refusal before filing, which are the two verbs that land a level on a
@@ -137,7 +153,20 @@ decisions:
         level but `RUN_LEVEL` refused where the mandate is absent, empty or
         whitespace, and the same level landing once words are quoted — and
         `wiring_probes` runs `move file` and `post promote` by their argument
-        vectors, so deleting either call to the helper fails the gate. The case
+        vectors, so deleting either call to the helper fails the gate.
+
+        Both stand the second direction up beside the first. In
+        `mandate_probes`: `RUN_LEVEL` landing with words quoted beside it, a
+        mandate with no level refused, the same mandate beside `instead`
+        refused in the words of the flag that excluded the level, and a blank or
+        whitespace mandate with no level landing, which is the one reading of
+        blankness both directions share. In `wiring_probes`: a mandate with no
+        level typed at each of the two verbs, and `--roadmap` with a mandate
+        typed at `move file`, which is the only verb whose surface holds it. The
+        claim that a refusal names no flag its caller does not have is a claim
+        about the message, so the two bare-mandate cases ask for it as a
+        negative — `--roadmap` absent from what they are told — a property
+        nothing falsifies being a rule that is not in force. The case
         that stands for a session's licence, filing at `hard` with no mandate,
         is untouched in `filing_probes`: `file_issue` sits below the guard by
         design and lands the label as it always did, so the licence still stands
@@ -145,7 +174,11 @@ decisions:
     falsifier: >-
       The mechanism is falsified by a level reaching a Challenge that the solo
       never named, which now takes an agent inventing a directive to quote
-      rather than passing a flag. The choice is falsified by `--mandate`
+      rather than passing a flag. Its second direction is falsified by a filing
+      landing with the solo's words typed and no level to stand behind them —
+      the flag parsing and the words being discarded, which is what the first
+      cut did — or by the two verbs answering the same pair of flags
+      differently. The choice is falsified by `--mandate`
       becoming a phrase agents type as a matter of course — a mandate quoted on
       most filings, or quoted in words no solo would use — which would say the
       flag is ceremony and that the answer is to refuse a session the level

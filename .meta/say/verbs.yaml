@@ -64,7 +64,10 @@ programs:
         does: >-
           at approval: file the Issue with the Issue form's body, `challenge`
           alone for the reviewer to read unless the solo mandates a level, which
-          a run may not hold and which `--mandate` quotes him asking for,
+          a run may not hold and which `--mandate` quotes him asking for;
+          the words refused without a level to stand behind, and every level but
+          `human` refused without the words, `human` asking for the solo and so
+          asking for no mandate;
           reply with the link, resolve (or defer resolution) —
           always deferred where the promoting Actor is the thread's sole author,
           since resolving it too would be the only voice on the thread clearing
@@ -99,9 +102,12 @@ programs:
         does: >-
           file a Challenge the form's way: `challenge` alone, for the reviewer to read
           and land a level on; with `--difficulty`, the solo's verdict given in advance,
-          which skips the reviewer, which a run may not hold, and which is refused
-          unless `--mandate` quotes the words he asked for it in, since a level
-          nobody asked for is one the agent inferred; or a roadmap Issue;
+          which skips the reviewer and which a run may not hold: every level but
+          `human` is refused without `--mandate` quoting the words he asked for it
+          in, since a level nobody asked for is one the agent inferred, `human`
+          asking for the solo and so asking for no mandate; or a roadmap Issue, which
+          lands no level, so `--mandate` there — or alone — is refused in turn,
+          its words having no level to stand behind;
           `--blocked-by` sets the native blockers and the body's `**Waits on.**` line
           is rewritten to describe them; refused where the line names an `#<n>` the
           flag omits

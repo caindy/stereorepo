@@ -144,9 +144,9 @@ def filing_probes(channel: Any, move: Any) -> list[str]:
 
 
 def mandate_probes(move: Any) -> list[str]:
-    """`refuse_a_level_without_a_mandate` over the levels and the mandates (solorepo's DR-278).
+    """`refuse_a_level_and_a_mandate_apart` over the levels and the mandates (solorepo's DR-278).
 
-    The helper is a branch on its two arguments: it reads no environment and
+    The helper is a branch on its arguments: it reads no environment and
     touches no channel, so these cases stand it up on its arguments alone and
     say nothing about where it is read. `wiring_probes` is what observes the two
     verbs that read it.
@@ -155,12 +155,27 @@ def mandate_probes(move: Any) -> list[str]:
     in it has said no more than one that omitted it, and the whitespace case is
     the one a shell produces by accident. Every level but `RUN_LEVEL` is
     refused, and `RUN_LEVEL` and no level at all both pass.
+
+    The pair is read the other way round too, so the mandate is asked what level
+    it stands behind: quoted words with none are refused, and blank ones pass
+    here for the same reason they are refused above, being no mandate either
+    way. `RUN_LEVEL` is exempt from the first direction and not from the second,
+    a mandate quoted beside it standing behind a level like any other.
+
+    `instead` names the flag that excluded the level, and the case carrying it
+    asks that the refusal name it back. The two verbs hold different surfaces
+    round this pair, so a message naming a flag its caller does not have would
+    be a worse answer than one naming none, and the case with no `instead` asks
+    for the negative half: `--roadmap` absent from what a bare mandate is told,
+    since the route sentence carries `--difficulty` either way and nothing else
+    would tell the two messages apart.
     """
     problems: list[str] = []
 
-    def against(level: str | None, mandate: str | None) -> str | None:
-        """One `refuse_a_level_without_a_mandate`, as what it exited with."""
-        return exit_of(lambda: move.common.refuse_a_level_without_a_mandate(level, mandate))
+    def against(level: str | None, mandate: str | None, instead: str | None = None) -> str | None:
+        """One `refuse_a_level_and_a_mandate_apart`, as what it exited with."""
+        return exit_of(
+            lambda: move.common.refuse_a_level_and_a_mandate_apart(level, mandate, instead))
 
     for mandate in (None, "", "   "):
         said = against("hard", mandate)
@@ -175,26 +190,50 @@ def mandate_probes(move: Any) -> list[str]:
         said = against(level, None)
         if said:
             problems.append(f"level: a level of {level!r} with no mandate was told {said!r}")
+    said = against("human", "he said human")
+    if said:
+        problems.append(f"level: `human` with the solo's words quoted was told {said!r}")
+    said = against(None, "he said hard, twice")
+    if not said or "--difficulty" not in said or "--roadmap" in said:
+        problems.append(f"level: a mandate with no level behind it was told {said!r}")
+    said = against(None, "he said hard, twice", instead="--roadmap")
+    if not said or "--roadmap" not in said:
+        problems.append(f"level: a mandate beside a flag that excludes the level was "
+                        f"told {said!r}")
+    for mandate in ("", "   "):
+        said = against(None, mandate)
+        if said:
+            problems.append(f"level: a blank mandate of {mandate!r} with no level was "
+                            f"told {said!r}")
     return problems
 
 
 def wiring_probes(channel: Any, programs: dict[str, Any]) -> list[str]:
-    """The two verbs that read `--difficulty`, each asked for a level with no mandate.
+    """The two verbs that read the pair of flags, each asked for either one without the other.
 
     `mandate_probes` observes the helper and could not tell a caller that reads
     it from one that does not, and `filing_probes` enters at `file_issue`, which
     sits below the guard and lands the label as it always did. So neither would
     notice the call at `move`'s `_dispatch_issue_verb` or the one in `post`'s
-    `main` being deleted. These two cases enter where the flags are parsed, by
-    the argument vector, so deleting either call fails one of them
+    `main` being deleted. These cases enter where the flags are parsed, by the
+    argument vector, so deleting either call fails one of them
     (solorepo's DR-278).
 
-    Both are refused with the fake asked to create nothing, which is what says
-    the refusal is read before the filing rather than after it. `stdin_body` is
-    stood in rather than piped because `post promote` signs the body before it
-    reads the level, and the Agent variables are set for the same reason:
-    signing is ahead of the guard on that path and refuses where the environment
-    names no Agent.
+    The mandate with no level is asked of both verbs rather than of `move file`
+    alone, which is what says the two surfaces read the pair alike: one verb
+    refusing the combination while its twin accepts it is a worse surface than
+    both accepting it. `--roadmap` is the third case and is `move file`'s own,
+    since the flag excludes `--difficulty` and so is where a mandate can be
+    typed beside a filing no level can reach. The two bare-mandate cases ask
+    that `--roadmap` be absent from what they are told, which is what holds a
+    flag `post promote` has no surface for out of its refusal.
+
+    Every case is refused with the fake asked to create nothing, which is what
+    says the refusal is read before the filing rather than after it.
+    `stdin_body` is stood in rather than piped because `post promote` signs the
+    body before it reads the level, and the Agent variables are set for the same
+    reason: signing is ahead of the guard on that path and refuses where the
+    environment names no Agent.
     """
     problems: list[str] = []
     move, post = programs["move"], programs["post"]
@@ -217,6 +256,21 @@ def wiring_probes(channel: Any, programs: dict[str, Any]) -> list[str]:
     if not said or "--mandate" not in said or fake.created:
         problems.append(f"level: `post promote --difficulty hard` with no mandate was told "
                         f"{said!r} and created {len(fake.created)}")
+    said, fake = dispatched(["move", "file", "--title", TITLE, "--mandate", "he said hard"],
+                            lambda: move.cli.main(None))
+    if not said or "--difficulty" not in said or "--roadmap" in said or fake.created:
+        problems.append(f"level: `move file --mandate` with no level was told {said!r} "
+                        f"and created {len(fake.created)}")
+    said, fake = dispatched(["move", "file", "--title", TITLE, "--roadmap",
+                             "--mandate", "he said hard"], lambda: move.cli.main(None))
+    if not said or "--roadmap" not in said or fake.created:
+        problems.append(f"level: `move file --roadmap --mandate` was told {said!r} "
+                        f"and created {len(fake.created)}")
+    said, fake = dispatched(["post", "promote", "PRRT_1", "--title", TITLE,
+                             "--mandate", "he said hard"], post.main)
+    if not said or "--difficulty" not in said or "--roadmap" in said or fake.created:
+        problems.append(f"level: `post promote --mandate` with no level was told {said!r} "
+                        f"and created {len(fake.created)}")
     return problems
 
 

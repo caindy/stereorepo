@@ -50,7 +50,9 @@ def _add_issue_parsers(sub: Any) -> None:
                            "level needs `--mandate`")
     what.add_argument("--roadmap", action="store_true", help="a roadmap Issue: intended and deferred")
     p.add_argument("--mandate", help="the solo's own words asking for `--difficulty`, quoted; "
-                                     "without them a level is an inference and is refused")
+                                     "without them a level is an inference and is refused, and "
+                                     "without a level — beside `--roadmap`, or alone — they "
+                                     "reach nobody and are refused too")
     p.add_argument("--blocked-by", dest="blocked_by", type=numbers, default=[],
                    help="the Issues this one waits on, as `<n>[,<n>]`; the `**Waits on.**` "
                         "line describes them and does not set them")
@@ -179,7 +181,8 @@ def _dispatch_issue_verb(args: argparse.Namespace) -> bool:
     elif args.verb == "milestone":
         challenges.milestone(args.issue, args.title, clear=args.clear)
     elif args.verb == "file":
-        common.refuse_a_level_without_a_mandate(args.level, args.mandate)
+        common.refuse_a_level_and_a_mandate_apart(args.level, args.mandate,
+                                                  instead="--roadmap" if args.roadmap else None)
         challenges.file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level,
                    roadmap=args.roadmap, blocked_by=args.blocked_by)
     elif args.verb == "waits":

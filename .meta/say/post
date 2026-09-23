@@ -7,7 +7,7 @@ replies and resolves, and refuses when this Actor is the thread's sole author un
 links an Issue, which is what a promotion looks like (solorepo's DR-127) — and then replies
 without resolving, a thread with one voice being a second Job's to close (solorepo's DR-224);
 `notice` supplies the marker and the mention; `promote` files the Issue before the thread says
-it did, and refuses a level the solo did not ask for (solorepo's DR-278); `landed` is rendered
+it did, and refuses a level and a mandate given apart (solorepo's DR-278); `landed` is rendered
 from the record and never typed; `review`, `raise`, and `notice` refuse when the head moved
 under the run (solorepo's #566, solorepo's #572, solorepo's DR-253), filed otherwise against a
 commit never read. What changes state without saying anything — a claim, a level, a layer, a
@@ -506,10 +506,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("thread")
     p.add_argument("--title", required=True)
     p.add_argument("--difficulty", choices=channel.sibling("move").DIFFICULTIES, dest="level",
-                   help="the solo's verdict given in advance, which skips the reviewer and needs "
-                        "`--mandate`; without it, `challenge` alone, for the reviewer to read "
+                   help="the solo's verdict given in advance, which skips the reviewer; every "
+                        "level but `human` needs `--mandate`; without it, `challenge` alone "
                         "(solorepo's DR-230, solorepo's DR-235, solorepo's DR-278)")
-    p.add_argument("--mandate", help="the solo's own words asking for `--difficulty`, quoted")
+    p.add_argument("--mandate", help="the solo's own words asking for `--difficulty`, never alone")
     p.add_argument("--no-resolve", action="store_true", help="file and reply, but do not resolve the thread")
     p = sub.add_parser("landed")
     p.add_argument("pr")
@@ -555,7 +555,7 @@ def main() -> None:
     elif args.verb == "reply":
         reply(args.thread, body)
     elif args.verb == "promote":
-        channel.sibling("move").common.refuse_a_level_without_a_mandate(args.level, args.mandate)
+        channel.sibling("move").common.refuse_a_level_and_a_mandate_apart(args.level, args.mandate)
         promote(args.thread, args.title, body, args.level, resolve_thread=not args.no_resolve)
 
 
