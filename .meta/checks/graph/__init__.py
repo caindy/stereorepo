@@ -11,10 +11,20 @@ import checks.graph.record
 import checks.graph.artifacts  # noqa: F401  # reason: registers check steps
 from checks.graph.structure import audit_invariants, collaboration_membership, composed_of_cycles, hop, one_context_per_portfolio, served_goals, unresolved_references
 from checks.graph.record import DELETION, OPTIONS_REQUIRED_FROM, RESERVATION, decision_alternatives, decision_level, decision_numbering, decision_supersession, deleted_decision_numbers, reserved_decision_numbers, withdrawn_decisions
-from checks.graph.artifacts import RECORD, artifact_paths, enacted_decisions, reserved_article_numbers
+from checks.graph.artifacts import (
+    OPERATIONAL_GLOBS,
+    RECORD,
+    artifact_paths,
+    enacted_decisions,
+    is_path_excluded,
+    load_excluded_paths,
+    operational_artifacts,
+    reserved_article_numbers,
+)
 
 __all__ = [
     "DELETION",
+    "OPERATIONAL_GLOBS",
     "OPTIONS_REQUIRED_FROM",
     "RECORD",
     "RESERVATION",
@@ -30,7 +40,10 @@ __all__ = [
     "deleted_decision_numbers",
     "enacted_decisions",
     "hop",
+    "is_path_excluded",
+    "load_excluded_paths",
     "one_context_per_portfolio",
+    "operational_artifacts",
     "record",
     "reserved_article_numbers",
     "reserved_decision_numbers",

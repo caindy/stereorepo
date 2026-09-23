@@ -86,11 +86,16 @@ products:
     built_from:
       - work:project/python-seed
 
+# The operational paths the completeness check passes over: a file matched here
+# owes no Artifact entry, because it is a record rather than something
+# answerable.
+excluded_paths:
+  - .meta/say/*.history.md
+
 # The artifacts a Decision names under `enacted_in`, and nothing else. Listed
 # here so that naming one is a reference the gate resolves rather than a path
 # a checker matches. Partial by design: a file earns an entry by being
 # answerable for something, not by existing.
-
 artifacts:
   - id: work:artifact/agents
     name: AGENTS.md
@@ -242,6 +247,9 @@ artifacts:
   - id: work:artifact/meta-check
     name: .meta/check.py
     path: .meta/check.py
+  - id: work:artifact/meta-checks
+    name: .meta/checks/__init__.py
+    path: .meta/checks/__init__.py
   - id: work:artifact/meta-checks-collect
     name: .meta/checks/collect.py
     path: .meta/checks/collect.py
@@ -260,6 +268,9 @@ artifacts:
   - id: work:artifact/meta-checks-files
     name: .meta/checks/files/__init__.py
     path: .meta/checks/files/__init__.py
+  - id: work:artifact/meta-checks-files-conflicts
+    name: .meta/checks/files/conflicts.py
+    path: .meta/checks/files/conflicts.py
   - id: work:artifact/meta-checks-files-sources
     name: .meta/checks/files/sources.py
     path: .meta/checks/files/sources.py
@@ -353,9 +364,21 @@ artifacts:
   - id: work:artifact/meta-checks-probes-git-step
     name: .meta/checks/probes/git/step.py
     path: .meta/checks/probes/git/step.py
+  - id: work:artifact/meta-checks-probes-git-registration
+    name: .meta/checks/probes/git/registration.py
+    path: .meta/checks/probes/git/registration.py
   - id: work:artifact/meta-checks-probes-channel
     name: .meta/checks/probes/channel/__init__.py
     path: .meta/checks/probes/channel/__init__.py
+  - id: work:artifact/meta-checks-probes-channel-agent
+    name: .meta/checks/probes/channel/agent.py
+    path: .meta/checks/probes/channel/agent.py
+  - id: work:artifact/meta-checks-probes-channel-bound
+    name: .meta/checks/probes/channel/bound.py
+    path: .meta/checks/probes/channel/bound.py
+  - id: work:artifact/meta-checks-probes-channel-extension
+    name: .meta/checks/probes/channel/extension.py
+    path: .meta/checks/probes/channel/extension.py
   - id: work:artifact/meta-checks-probes-channel-parser
     name: .meta/checks/probes/channel/parser.py
     path: .meta/checks/probes/channel/parser.py
@@ -404,6 +427,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-on
     name: .meta/checks/probes/channel/on.py
     path: .meta/checks/probes/channel/on.py
+  - id: work:artifact/meta-checks-probes-channel-waits
+    name: .meta/checks/probes/channel/waits.py
+    path: .meta/checks/probes/channel/waits.py
   - id: work:artifact/meta-checks-probes-loops
     name: .meta/checks/probes/loops/__init__.py
     path: .meta/checks/probes/loops/__init__.py
@@ -440,6 +466,12 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-merge-lock
     name: .meta/checks/probes/loops/merge_lock.py
     path: .meta/checks/probes/loops/merge_lock.py
+  - id: work:artifact/meta-checks-probes-loops-concurrency
+    name: .meta/checks/probes/loops/concurrency.py
+    path: .meta/checks/probes/loops/concurrency.py
+  - id: work:artifact/meta-checks-probes-loops-sweep
+    name: .meta/checks/probes/loops/sweep.py
+    path: .meta/checks/probes/loops/sweep.py
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py
@@ -482,6 +514,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-terms
     name: .meta/checks/probes/tools/terms.py
     path: .meta/checks/probes/tools/terms.py
+  - id: work:artifact/meta-checks-probes-tools-fallback
+    name: .meta/checks/probes/tools/fallback.py
+    path: .meta/checks/probes/tools/fallback.py
   - id: work:artifact/meta-check-pr
     name: .meta/check_pr.py
     path: .meta/check_pr.py

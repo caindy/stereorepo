@@ -1,6 +1,9 @@
-"""What an Artifact owes the record: a path that exists, an Article number that is reserved, and a Decision that names what enacts it.
+"""What an Artifact owes the record: a path that exists, bidirectional coverage of operational scripts, an Article number that is reserved, and a Decision that names what enacts it.
 """
 
+import fnmatch
+import pathlib
+from collections.abc import Sequence
 from typing import Any
 
 import yaml
@@ -12,6 +15,103 @@ from checks.collect import META, ROOT, check
 # defeats the point, so it does not count. `.meta/work/decisions.yaml` is the
 # schema and is a legitimate target, which is why this is a prefix and not a word.
 RECORD = (".meta/assertions/decisions/", ".meta/decisions.md")
+
+OPERATIONAL_GLOBS = (
+    ".meta/*.py",
+    ".meta/lib/**/*.py",
+    ".meta/checks/**/*.py",
+    ".meta/say/*",
+)
+
+
+def load_excluded_paths(
+    structure_path: pathlib.Path = META / "assertions" / "structure.yaml",
+) -> list[str]:
+    """Extracts declared path exclusion patterns from structure.yaml.
+
+    Args:
+        structure_path: Path to the structure assertion document.
+
+    Returns:
+        list[str]: File paths or glob patterns excluded from completeness checks.
+    """
+    if not structure_path.is_file():
+        return []
+    data = yaml.safe_load(structure_path.read_text(encoding="utf-8")) or {}
+    excluded: list[str] = list(data.get("excluded_paths") or [])
+    for proj in data.get("projects") or []:
+        excluded.extend(proj.get("excluded_paths") or [])
+    return excluded
+
+
+def is_path_excluded(path_str: str, exclusions: Sequence[str]) -> bool:
+    """Evaluates whether a relative path matches any exclusion pattern.
+
+    Args:
+        path_str: Repository-relative POSIX path string.
+        exclusions: Patterns, directory prefixes, or exact paths to match.
+
+    Returns:
+        bool: True if the path matches an exclusion rule, False otherwise.
+    """
+    norm = path_str.strip()
+    if norm.startswith("./"):
+        norm = norm[2:]
+    for pat in exclusions:
+        p = pat.strip()
+        if p.startswith("./"):
+            p = p[2:]
+        if not p:
+            continue
+        if norm == p:
+            return True
+        if p.endswith("/") and norm.startswith(p):
+            return True
+        if fnmatch.fnmatch(norm, p):
+            return True
+    return False
+
+
+@check("operational artifacts")
+def operational_artifacts(
+    index: dict[str, Any],
+    structure_path: pathlib.Path = META / "assertions" / "structure.yaml",
+    root: pathlib.Path = ROOT,
+) -> list[str]:
+    """Every operational script and module under .meta/ is asserted as an Artifact or excluded.
+
+    Args:
+        index: Collected assertion index mapping identifiers to entity tuples.
+        structure_path: Path to structure.yaml containing declarative exclusions.
+        root: Repository root path for resolving filesystem files.
+
+    Returns:
+        list[str]: Formatting error messages for unasserted operational files.
+    """
+    asserted = {
+        obj["path"]
+        for _, (cls, obj, _) in index.items()
+        if cls == "Artifact" and "path" in obj
+    }
+    exclusions = load_excluded_paths(structure_path)
+
+    unasserted: list[str] = []
+    for pat in OPERATIONAL_GLOBS:
+        for p in root.glob(pat):
+            if not p.is_file():
+                continue
+            rel = p.relative_to(root).as_posix()
+            if rel in asserted:
+                continue
+            if is_path_excluded(rel, exclusions):
+                continue
+            unasserted.append(rel)
+
+    return [
+        f"{path}: operational file is neither asserted as an Artifact nor excluded"
+        for path in sorted(set(unasserted))
+    ]
+
 
 
 @check("artifact paths")

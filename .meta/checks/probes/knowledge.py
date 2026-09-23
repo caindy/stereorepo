@@ -479,3 +479,81 @@ def concept_duplicate_id_probes() -> list[str]:
             problems.append(f"concept duplicate id probes: expected 0 findings on clean file, got {clean_findings}")
     return problems
 
+
+@check("operational artifact probes", pre=True)
+def operational_artifact_probes() -> list[str]:
+    """`graph.operational_artifacts` enforces completeness of .meta/ operational files."""
+    import pathlib
+    import tempfile
+
+    problems = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmproot = pathlib.Path(tmpdir)
+        meta_dir = tmproot / ".meta"
+        lib_dir = meta_dir / "lib" / "sub"
+        checks_dir = meta_dir / "checks" / "sub"
+        say_dir = meta_dir / "say"
+        for d in (meta_dir, lib_dir, checks_dir, say_dir):
+            d.mkdir(parents=True, exist_ok=True)
+
+        (meta_dir / "tool.py").write_text("# tool\n", encoding="utf-8")
+        (lib_dir / "util.py").write_text("# util\n", encoding="utf-8")
+        (checks_dir / "check_step.py").write_text("# check\n", encoding="utf-8")
+        (say_dir / "custom_verb").write_text("# verb\n", encoding="utf-8")
+        (say_dir / "note.history.md").write_text("# history\n", encoding="utf-8")
+
+        structure_file = tmproot / "structure.yaml"
+        structure_file.write_text(
+            "excluded_paths:\n"
+            "  - .meta/say/*.history.md\n",
+            encoding="utf-8",
+        )
+
+        index = {
+            "work:artifact/tool": (
+                "Artifact",
+                {"path": ".meta/tool.py"},
+                "structure.yaml",
+            ),
+            "work:artifact/util": (
+                "Artifact",
+                {"path": ".meta/lib/sub/util.py"},
+                "structure.yaml",
+            ),
+        }
+
+        findings = graph.operational_artifacts(
+            index, structure_path=structure_file, root=tmproot
+        )
+        suffix = ": operational file is neither asserted as an Artifact nor excluded"
+        expected = [
+            f".meta/checks/sub/check_step.py{suffix}",
+            f".meta/say/custom_verb{suffix}",
+        ]
+        if findings != expected:
+            problems.append(
+                f"operational artifact probes: expected {expected!r}, got {findings!r}"
+            )
+
+        index["work:artifact/check"] = (
+            "Artifact",
+            {"path": ".meta/checks/sub/check_step.py"},
+            "structure.yaml",
+        )
+        index["work:artifact/verb"] = (
+            "Artifact",
+            {"path": ".meta/say/custom_verb"},
+            "structure.yaml",
+        )
+        clean_findings = graph.operational_artifacts(
+            index, structure_path=structure_file, root=tmproot
+        )
+        if clean_findings:
+            problems.append(
+                f"operational artifact probes: expected clean run, got {clean_findings!r}"
+            )
+
+    return problems
+
+
+

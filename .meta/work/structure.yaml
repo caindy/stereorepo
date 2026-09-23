@@ -101,6 +101,12 @@ slots:
       File glob patterns within this Project that require deep reviewer auditing (solorepo's DR-188).
     multivalued: true
 
+  excluded_paths:
+    description: >-
+      File paths or glob patterns excluded from artifact completeness checks.
+    multivalued: true
+
+
 classes:
 
   Portfolio:
@@ -172,6 +178,7 @@ classes:
       - language
       - gate
       - critical_paths
+      - excluded_paths
     slot_usage:
       name:
         required: true

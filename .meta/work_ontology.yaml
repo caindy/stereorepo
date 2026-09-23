@@ -203,6 +203,11 @@ slots:
     range: Artifact
     multivalued: true
     inlined_as_list: true
+  excluded_paths:
+    description: File paths or glob patterns excluded from artifact completeness checks.
+    range: string
+    multivalued: true
+    inlined_as_list: true
 
 
   # Identity
@@ -259,6 +264,7 @@ classes:
       - products
       - projects
       - artifacts
+      - excluded_paths
       # provenance
       - executions
       - boms
