@@ -58,9 +58,10 @@ disciplines:
         `container: ghcr.io/caindy/solorepo-runner:2.337.0-3` is the answer
         unless this portfolio stands up a scale set of its own (DR-160).
         The image is public on GHCR so workflows pull without credentials,
-        pre-bakes the single-source CLI toolchain alongside the base image's
-        `python3` (`Python 3.12.3`), and `.meta/arc/Dockerfile` copied above
-        gives the portfolio the recipe to rebuild, customize, or bump the image.
+        pre-bakes the single-source CLI toolchain (solorepo's DR-160) alongside
+        Python 3.13 as default `python3` (solorepo's DR-268), and
+        `.meta/arc/Dockerfile` copied above gives the portfolio the recipe to
+        rebuild, customize, or bump the image.
       - >-
         Copy every file under `template/` to its matching path, then link
         `CLAUDE.md` and `GEMINI.md` to `AGENTS.md`. These are the replacements:

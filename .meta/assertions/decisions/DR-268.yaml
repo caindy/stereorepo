@@ -1,0 +1,69 @@
+decisions:
+  - id: work:decision/268
+    name: "DR-268 · Tooling shebangs retain python3 with Python 3.13 pre-baked in the runner image and asserted as a front-door prerequisite for fresh clones"
+    challenge: work:challenge/769
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-arc-dockerfile
+      - work:artifact/meta-check
+      - work:artifact/meta-checks-files-python
+      - work:artifact/readme
+      - work:artifact/specialize
+    context: >-
+      Twenty-five files under `.meta/` carry `#!/usr/bin/env python3`: channel verbs
+      (`say/move`, `say/post`, `say/commit`, `say/whoami`), gate runners (`check.py`,
+      `check_pr.py`), utilities (`next.py`, `render.py`, `wikisplain.py`), and git
+      hooks (`hooks/signed_channel.py`). A `python3` shebang pins no version and
+      resolves whatever the host or container provides. Because `.meta/ruff.toml`
+      declares `target-version = "py313"` (DR-177), tooling is entitled to write Python
+      3.13 syntax. PR #768 pinned `--python 3.13` on all 35 `uvx` interpreter invocations
+      and added `meta interpreter`, but bare `python3` shebangs bypass `uvx`. On
+      environments whose system `python3` resolves below 3.13 (such as the base ARC
+      runner image's 3.12.3 or developer workstations), modern syntax like
+      `threading.Lock | None` fails at import with a bare traceback and no diagnostic.
+    alternatives:
+      - name: Lower target-version in .meta/ruff.toml to the oldest supported python3
+        chosen: false
+        reason: >-
+          Surrenders Python 3.13 syntax already in use across the tree and retroactively
+          weakens static lint enforcement to match unpinned runtime defaults.
+      - name: Route all 25 python3 shebangs through uvx --python 3.13
+        chosen: false
+        reason: >-
+          Uniform with #768, but imposes a dynamic `uv` resolution delay on every channel
+          verb, git commit, and git hook invocation.
+      - name: Pre-bake Python 3.13 in the runner image and assert Python 3.13 as a front-door prerequisite for fresh clones
+        chosen: true
+        reason: >-
+          Eliminates runtime resolution latency by retaining bare `python3` shebangs.
+          The runner container image pre-bakes Python 3.13 at `/usr/local/bin/python3`,
+          guaranteeing zero-overhead execution in CI. For fresh clones on unowned host
+          machines, Python 3.13+ is declared as an explicit prerequisite and enforced
+          upfront by entry-point guards in `check.py` as well as the `meta interpreter`
+          gate check, failing loudly and helpfully rather than with cryptic syntax
+          tracebacks.
+    consequences:
+      - >-
+        `.meta/arc/Dockerfile` installs Python 3.13 as `/usr/local/bin/python3`, ensuring
+        the single-source runner image provides Python 3.13 by default for all bare
+        `python3` shebangs.
+      - >-
+        `.meta/check.py` asserts `sys.hexversion` meets or exceeds Python 3.13
+        immediately at module load, rejecting obsolete host interpreters before downstream
+        code imports.
+      - >-
+        `meta interpreter` in `.meta/checks/files/python.py` asserts that the active
+        runtime interpreter meets or exceeds `.meta/ruff.toml`'s declared `target-version`.
+      - >-
+        `README.md` and `SPECIALIZE.md` (via `.meta/assertions/disciplines.yaml`)
+        state Python 3.13+ as the required host system prerequisite for fresh clones.
+    falsifier: >-
+      A `.meta/` script failing with a syntax or import error under Python < 3.13 without
+      the entry-point version guard rejecting it first; or the runner container image
+      resolving `/usr/bin/env python3` below Python 3.13.
+    rationale: |-
+      A scaffold cannot enforce toolchain versions on machines it does not own.
+      Where an environment is fully managed (CI runner containers), dependencies
+      belong pre-baked for speed. Where an environment is unmanaged (a developer's
+      fresh clone), declaring the floor and asserting it loudly at the front door
+      protects the contributor while preserving lightweight, zero-latency execution.

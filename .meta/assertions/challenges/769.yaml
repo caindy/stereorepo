@@ -1,0 +1,13 @@
+challenges:
+  - id: work:challenge/769
+    name: Settle the interpreter the python3-shebang tooling under .meta/ runs on
+    challenge_type: DEFECT
+    description: >-
+      Twenty-four executable files under `.meta/` carry `#!/usr/bin/env python3`
+      shebangs, resolving whatever interpreter the host system or container image
+      provides. Meanwhile, `.meta/ruff.toml` declares `target-version = "py313"`,
+      permitting syntax that fails to parse on older Python versions. PR #768 pinned
+      interpreter versions for `uvx` invocations and added `meta interpreter`, but bare
+      `python3` shebangs bypass `uvx`. This creates a contradiction where the repository
+      declares a 3.13 floor while running tooling on unpinned interpreters, risking
+      cryptic import tracebacks on machines with older default Python installations.

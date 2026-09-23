@@ -8,9 +8,16 @@ loaders, and step suites from `.meta/checks/`.
 
 History in check.history.md (solorepo's DR-171).
 """
+import sys
+
+if sys.hexversion < 0x030D0000:
+    sys.exit(
+        f"check.py requires Python 3.13+ (solorepo's DR-268); "
+        f"running on {sys.version.split()[0]}"
+    )
+
 import io  # noqa: I001  # reason: the step imports below stand in registration order, not sorted order
 import os
-import sys
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 

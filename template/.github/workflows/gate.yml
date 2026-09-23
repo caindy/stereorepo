@@ -56,9 +56,7 @@ jobs:
     if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
     runs-on: ubuntu-latest
     # Public runner image on GHCR, pre-baking the single-source CLI toolchain
-    # (solorepo's DR-160). The base image's own `python3` is 3.12.3, and that is
-    # not what the gate runs on: `.meta/gate` asks `uvx` for Python 3.13, which
-    # `uv` fetches on first use (solorepo's #760).
+    # (solorepo's DR-160) alongside Python 3.13 as default python3 (solorepo's DR-268).
     container: ghcr.io/caindy/solorepo-runner:2.337.0-3
     steps:
       # The whole history, because `decision numbering` asks this portfolio's own

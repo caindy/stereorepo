@@ -15,7 +15,8 @@ other seat.
 **Point an agent at this repository and tell it to read
 [`SPECIALIZE.md`](SPECIALIZE.md).** That is the whole entry point. The steps are
 an instruction to follow rather than a program to run, because the work is
-judgement about one specific portfolio.
+judgement about one specific portfolio. Running repository tooling on a fresh
+clone requires Python >= 3.13 (solorepo's DR-268).
 
 ## What you inherit
 
