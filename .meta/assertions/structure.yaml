@@ -322,6 +322,9 @@ artifacts:
   - id: work:artifact/meta-checks-comments-baseline
     name: .meta/checks/comments.baseline.yaml
     path: .meta/checks/comments.baseline.yaml
+  - id: work:artifact/meta-checks-file-sizes-baseline
+    name: .meta/checks/file_sizes.baseline.yaml
+    path: .meta/checks/file_sizes.baseline.yaml
   - id: work:artifact/meta-checks-lines-baseline
     name: .meta/checks/lines.baseline.yaml
     path: .meta/checks/lines.baseline.yaml
@@ -484,6 +487,12 @@ artifacts:
   - id: work:artifact/meta-checks-probes-ruleset
     name: .meta/checks/probes/ruleset.py
     path: .meta/checks/probes/ruleset.py
+  - id: work:artifact/meta-checks-probes-files
+    name: .meta/checks/probes/files/__init__.py
+    path: .meta/checks/probes/files/__init__.py
+  - id: work:artifact/meta-checks-probes-files-sizes
+    name: .meta/checks/probes/files/sizes.py
+    path: .meta/checks/probes/files/sizes.py
   - id: work:artifact/meta-checks-probes-tools
     name: .meta/checks/probes/tools/__init__.py
     path: .meta/checks/probes/tools/__init__.py

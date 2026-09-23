@@ -31,7 +31,7 @@ from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT,
 from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
-from checks.files.python import CONTINUATION, EDGES, INTERPRETERS, LINE_LENGTH_RULE, LINES_BASELINE, MYPY, MYPY_ERROR, RUFF, RUFF_FINDING, TARGET_VERSION, TYPES_BASELINE, UVX_FLAGS, UVX_VALUED, Invocation, declared_interpreter, meta_doc, meta_interpreter, meta_lines, meta_lints, meta_ruff, meta_types, mypy_errors, ruff_findings, tool_command, uvx_interpreter_calls
+from checks.files.python import CONTINUATION, EDGES, ENTRY_CEILING, ENTRY_LAYER, FILE_SIZES_BASELINE, INTERPRETERS, LINE_LENGTH_RULE, LINES_BASELINE, MODULE_CEILING, MYPY, MYPY_ERROR, RUFF, RUFF_FINDING, TARGET_VERSION, TYPES_BASELINE, UVX_FLAGS, UVX_VALUED, Invocation, ceiling, declared_interpreter, line_counts, meta_doc, meta_file_sizes, meta_interpreter, meta_lines, meta_lints, meta_ruff, meta_types, mypy_errors, past_ceilings, ruff_findings, tool_command, uvx_interpreter_calls
 from checks.files.rendered import apm_package, rendered_prose
 
 __all__ = [
@@ -39,7 +39,10 @@ __all__ = [
     "CONTINUATION",
     "CONTRACT",
     "EDGES",
+    "ENTRY_CEILING",
+    "ENTRY_LAYER",
     "FENCED",
+    "FILE_SIZES_BASELINE",
     "FLAGS",
     "FRONTMATTER",
     "IDENTIFIER",
@@ -51,6 +54,7 @@ __all__ = [
     "LINES_BASELINE",
     "LINE_LENGTH_RULE",
     "LINK",
+    "MODULE_CEILING",
     "MYPY",
     "MYPY_ERROR",
     "NOT_SHARED",
@@ -74,6 +78,7 @@ __all__ = [
     "Strict",
     "apm_package",
     "asserts",
+    "ceiling",
     "conflict_markers",
     "conflicts",
     "control_plane_packages",
@@ -90,9 +95,11 @@ __all__ = [
     "is_py",
     "justfile",
     "justfile_recipe_shape",
+    "line_counts",
     "markdown",
     "markdown_links",
     "meta_doc",
+    "meta_file_sizes",
     "meta_history_evidence",
     "meta_history_orphans",
     "meta_interpreter",
@@ -102,6 +109,7 @@ __all__ = [
     "meta_sources",
     "meta_types",
     "mypy_errors",
+    "past_ceilings",
     "prose",
     "python",
     "rendered",

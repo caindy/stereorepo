@@ -479,6 +479,29 @@ TYPES_BASELINE = META / "checks" / "types.baseline.yaml"
 LINES_BASELINE = META / "checks" / "lines.baseline.yaml"
 
 
+FILE_SIZES_BASELINE = META / "checks" / "file_sizes.baseline.yaml"
+
+
+# How long a module under `.meta/` may run before its body belongs in a package
+# of its own: solorepo's DR-217's number, which that decision's last consequence
+# holds the remaining scripts to.
+MODULE_CEILING = 500
+
+
+# How long a file in the entry layer may run. Tighter than `MODULE_CEILING`
+# because solorepo's DR-217 leaves an entry point its docstring, its re-exports
+# and its `__main__` guard and puts the body in `.meta/lib/<script>/`: a file on
+# the invocation surface that runs past this is carrying logic the package
+# beneath it should hold.
+ENTRY_CEILING = 350
+
+
+# The two directories whose Python is the invocation surface — the paths the
+# justfile, the workflows and the Role accounts type. Written as the parent of a
+# repository-relative path, which is what `ceiling` reads.
+ENTRY_LAYER = (".meta", ".meta/say")
+
+
 # The line-length rule, named once because two steps divide it between them:
 # `meta ruff` passes over it and `meta lines` ratchets it, so the ruleset
 # `.meta/ruff.toml` declares is run whole and no rule is switched off.
@@ -622,6 +645,84 @@ def meta_lines() -> StepOutcome:
         return Found(tuple(problems))
     return Passed(f"{sum(counts.values())} lines over the limit across {len(counts)} files, "
                   "each file at its baseline")
+
+
+def ceiling(relative: str) -> int:
+    """The line ceiling a Python source under `.meta/` is held to.
+
+    Args:
+        relative: The file's repository-relative path, in posix form.
+
+    Returns:
+        int: `ENTRY_CEILING` where the file sits directly in a directory of
+        `ENTRY_LAYER`, and `MODULE_CEILING` anywhere else under `.meta/`.
+    """
+    parent = relative.rsplit("/", 1)[0] if "/" in relative else ""
+    return ENTRY_CEILING if parent in ENTRY_LAYER else MODULE_CEILING
+
+
+def line_counts(found: Sequence[pathlib.Path]) -> dict[str, int]:
+    """How many lines each source holds, by repository-relative path.
+
+    Args:
+        found: The Python sources under `.meta/`, as absolute paths.
+
+    Returns:
+        dict[str, int]: One entry per source, in the order it was given.
+    """
+    return {source.relative_to(ROOT).as_posix(): len(source.read_text(
+        encoding="utf-8").splitlines()) for source in found}
+
+
+def past_ceilings(lengths: dict[str, int]) -> tuple[dict[str, int], dict[str, list[str]]]:
+    """Which sources run past the ceiling their path sets, and by how far.
+
+    Args:
+        lengths: Repository-relative path to how many lines the file holds.
+
+    Returns:
+        tuple[dict[str, int], dict[str, list[str]]]: How many lines past its
+        ceiling each file runs, holding only the files that run past one, and
+        the detail line behind each count, naming the length and the ceiling.
+    """
+    counts: dict[str, int] = {}
+    sites: dict[str, list[str]] = {}
+    for relative, length in lengths.items():
+        limit = ceiling(relative)
+        if length <= limit:
+            continue
+        counts[relative] = length - limit
+        sites[relative] = [f"{relative}: {length} lines against a ceiling of {limit}"]
+    return counts, sites
+
+
+@check("meta file sizes")
+def meta_file_sizes() -> StepOutcome:
+    """Every file under .meta/ sits at its baseline of lines past its ceiling (solorepo's DR-217).
+
+    A module may run to `MODULE_CEILING` lines and a file on the invocation
+    surface to `ENTRY_CEILING`, past which the body belongs in
+    `.meta/lib/<script>/`. `file_sizes.baseline.yaml` records how far past its
+    ceiling each file may still run, and a file fails on either side of its
+    number — over, because a session appended to a module already too long;
+    under, because a baseline nobody lowers has stopped being one. A file the
+    baseline does not name may run past no ceiling at all, so a new module
+    lands under its ceiling or not at all, and a decomposition ratchets the
+    baseline down.
+
+    The scope is `meta lines`'s and `meta types`'s, so what counts as Python
+    under `.meta/` is answered in one place.
+    """
+    if not FILE_SIZES_BASELINE.is_file():
+        return CouldNotRun(f"{FILE_SIZES_BASELINE.relative_to(ROOT).as_posix()} is missing")
+    lengths = line_counts(sources.meta_sources())
+    counts, sites = past_ceilings(lengths)
+    problems = against_baseline(counts, sites, recorded_baseline(FILE_SIZES_BASELINE),
+                                "lines past its ceiling", FILE_SIZES_BASELINE)
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{len(lengths)} Python files under .meta/, {len(counts)} past a ceiling "
+                  "and each at its baseline")
 
 
 def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:

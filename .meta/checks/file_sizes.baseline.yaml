@@ -1,0 +1,47 @@
+# The ratchet baseline for the `meta file sizes` step of `.meta/check.py`.
+#
+# One entry per file, holding the lines past its ceiling it may still run. The
+# ceilings themselves are `MODULE_CEILING` and `ENTRY_CEILING` in
+# `.meta/checks/files/python.py`, five hundred lines for a module and three
+# hundred and fifty for a file on the invocation surface, which is where
+# solorepo's DR-217 puts the line between a script and the package holding its
+# body.
+#
+# The Ratchet Discipline is what a checker that cannot be clean at once does: a
+# baseline that may fall and may not rise. A file absent from this map may run
+# past no ceiling, and the step fails a file on either side of its number —
+# over, because the debt grew; under, because a baseline nobody lowers has
+# stopped being one.
+#
+# Written by `python.py`, which names the file and the number in the failure.
+# Recorded as the ceilings were adopted, in caindy/solorepo#883, and it falls as
+# scripts are decomposed into `.meta/lib/<script>/`.
+
+.meta/checks/comments.py: 317
+.meta/checks/files/python.py: 337
+.meta/checks/files/workflows.py: 533
+.meta/checks/probes/channel/on_coder.py: 70
+.meta/checks/probes/git/step.py: 13
+.meta/checks/probes/harness/github.py: 174
+.meta/checks/probes/knowledge.py: 111
+.meta/checks/probes/loops/advance.py: 154
+.meta/checks/probes/loops/dispatch.py: 131
+.meta/checks/probes/loops/merge_manager.py: 578
+.meta/checks/probes/loops/reconcile.py: 111
+.meta/checks/probes/tools/fallback.py: 145
+.meta/depth.py: 119
+.meta/detect_fallback.py: 115
+.meta/jules/client.py: 60
+.meta/lib/check_pr/sweep.py: 59
+.meta/lib/move/advance.py: 285
+.meta/lib/move/challenges.py: 816
+.meta/lib/move/manager.py: 575
+.meta/lib/move/pull_requests.py: 225
+.meta/lib/move/reconcile.py: 238
+.meta/next.py: 60
+.meta/run_agy.py: 113
+.meta/say/channel.py: 349
+.meta/say/on: 799
+.meta/say/post: 213
+.meta/terms.py: 348
+.meta/test_specialization.py: 63

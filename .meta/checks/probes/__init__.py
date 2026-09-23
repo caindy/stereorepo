@@ -15,7 +15,8 @@ Importing a module registers its steps, so the order of the imports below is
 the order the probes report in: the hooks, then the channel, then the loops'
 verbs, then what the repository writes down about itself, then its verb
 surface, then the `gh` wrappers the channel and the tools both read, then the
-ruleset its own gate holds it to, then the tools. `harness.py` registers
+ruleset and the ceilings its own gate holds it to, then the tools.
+`harness.py` registers
 nothing and is what every subject module imports; it imports no sibling, so
 the package's import graph is a tree with the harness at its root.
 """
@@ -26,4 +27,5 @@ import checks.probes.knowledge
 import checks.probes.surface
 import checks.probes.wrappers
 import checks.probes.ruleset
+import checks.probes.files
 import checks.probes.tools  # noqa: F401  # reason: registers check steps
