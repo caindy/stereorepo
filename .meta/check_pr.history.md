@@ -152,7 +152,7 @@ threads on approved pull requests, bypassing static analysis and prechecks
 `--unresolved-count` flag, and `no_inline_python` fails the gate if a run
 step goes back to counting threads inline.
 
-Evidence: `.meta/checks/files/workflows.py::no_inline_python`
+Evidence: `.meta/checks/files/inline_python.py::no_inline_python`
 
 
 ### Unbounded watcher retry loop on fatal errors and persistent polling failures

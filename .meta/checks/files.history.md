@@ -80,7 +80,7 @@ open rather than shut (solorepo's #452, solorepo's #454). Established:
 `review.yml` and fails when either names either half of a `DANGEROUS_TOOLS`
 pair, so the two cannot drift apart in that direction again unnoticed.
 
-Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
+Evidence: `.meta/checks/files/reviewer.py::gemini_allowlist_matches_claude`
 
 ### `tools.core` admitting a tool the `BeforeTool` matcher never guards
 
@@ -92,7 +92,7 @@ by a review thread, with every other gate green (solorepo's #454). Established:
 `gemini_core_matches_hook_matcher` parses both lists out of `review.yml` and
 fails on any difference between them, in either direction.
 
-Evidence: `.meta/checks/files/workflows.py::gemini_core_matches_hook_matcher`
+Evidence: `.meta/checks/files/reviewer.py::gemini_core_matches_hook_matcher`
 
 ### Reviewer tool confinement duplication across review and triage workflows
 
@@ -106,7 +106,7 @@ is unified in `.meta/detect_fallback.py` under `REVIEWER_CORE_TOOLS` and
 verifying tool parity against dangerous tools and hook matcher alignment
 across `review.yml` and `triage.yml`.
 
-Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
+Evidence: `.meta/checks/files/reviewer.py::gemini_allowlist_matches_claude`
 
 ### Embedded inline Python invocation in coder workflow promotion
 
@@ -117,7 +117,7 @@ solorepo's #666). Established: `no_inline_python` scans workflow YAML files,
 composite actions, shell scripts, and recipes, rejecting embedded Python
 invocations and requiring dedicated `.meta/` scripts or CLI flags.
 
-Evidence: `.meta/checks/files/workflows.py::no_inline_python`
+Evidence: `.meta/checks/files/inline_python.py::no_inline_python`
 
 ### A wiki page declaring the words its own concept forbids
 
@@ -147,7 +147,7 @@ solorepo's #458). Established: `reviewer_symlinks_verified` verifies that
 prior to credential provisioning, and validates that the repository worktree contains no
 outbound symlinks.
 
-Evidence: `.meta/checks/files/workflows.py::reviewer_symlinks_verified`
+Evidence: `.meta/checks/files/reviewer.py::reviewer_symlinks_verified`
 
 ### Reviewer tool confinement bypassed under Antigravity CLI without fine-grained permission denials
 
@@ -158,10 +158,10 @@ unconfined if `permissions.deny` is omitted (solorepo's DR-110, solorepo's DR-24
 solorepo's #636). Established: `configure_reviewer_settings` and `merge_settings` in
 `.meta/detect_fallback.py` configure explicit `permissions.deny: ["write_file(*)", "read_url(*)", "execute_url(*)"]`
 directly in `~/.gemini/antigravity-cli/settings.json` while preserving credentials,
-audited by `gemini_allowlist_matches_claude` in `.meta/checks/files/workflows.py` and probed by
+audited by `gemini_allowlist_matches_claude` in `.meta/checks/files/reviewer.py` and probed by
 `fallback_probes`.
 
-Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
+Evidence: `.meta/checks/files/reviewer.py::gemini_allowlist_matches_claude`
 
 ### Concept set silent overwrites on duplicate concept identifiers
 
@@ -181,7 +181,7 @@ Established: `.github/workflows/review.yml` provides the concrete path
 "review the pull request (agy)", while `detect_fallback.py` adds `invoke_subagent(*)` to
 `REVIEWER_DENIED_PERMISSIONS`, audited by `gemini_allowlist_matches_claude`.
 
-Evidence: `.meta/checks/files/workflows.py::gemini_allowlist_matches_claude`
+Evidence: `.meta/checks/files/reviewer.py::gemini_allowlist_matches_claude`
 
 
 
@@ -210,7 +210,7 @@ each prompt names the minute cap, and names the turn cap exactly where its own
 step passes `--max-turns`, over the prompt-bearing steps read out of the `coder`
 job rather than a hand-written list.
 
-Evidence: `.meta/checks/files/workflows.py::coder_prompts_name_turn_budget`
+Evidence: `.meta/checks/files/harness.py::coder_prompts_name_turn_budget`
 
 ### Tracked and unignored text files contaminated by merge conflict markers
 

@@ -10,7 +10,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-depth
       - work:artifact/github-workflows-review
-      - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-checks-files-control-plane
       - work:artifact/meta-timing
       - work:artifact/meta-lib-timing-routing
       - work:artifact/meta-lib-gh

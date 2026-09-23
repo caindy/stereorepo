@@ -289,6 +289,18 @@ artifacts:
   - id: work:artifact/meta-checks-files-workflows
     name: .meta/checks/files/workflows.py
     path: .meta/checks/files/workflows.py
+  - id: work:artifact/meta-checks-files-control-plane
+    name: .meta/checks/files/control_plane.py
+    path: .meta/checks/files/control_plane.py
+  - id: work:artifact/meta-checks-files-harness
+    name: .meta/checks/files/harness.py
+    path: .meta/checks/files/harness.py
+  - id: work:artifact/meta-checks-files-reviewer
+    name: .meta/checks/files/reviewer.py
+    path: .meta/checks/files/reviewer.py
+  - id: work:artifact/meta-checks-files-inline-python
+    name: .meta/checks/files/inline_python.py
+    path: .meta/checks/files/inline_python.py
   - id: work:artifact/meta-checks-files-justfile
     name: .meta/checks/files/justfile.py
     path: .meta/checks/files/justfile.py

@@ -19,6 +19,10 @@ import checks.files.markdown
 import checks.files.wiki
 import checks.files.vocabulary
 import checks.files.workflows
+import checks.files.control_plane
+import checks.files.harness
+import checks.files.reviewer
+import checks.files.inline_python
 import checks.files.justfile
 import checks.files.prose
 import checks.files.history
@@ -31,7 +35,10 @@ from checks.files.markdown import FENCED, LINK, markdown_links
 from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wiki_synonyms_are_not_avoided, wikilinks
 from checks.files.vocabulary import (RESERVATION, VOCABULARIES, added_concepts, concepts_in,
                                      reserved_concepts, vocabulary_mints)
-from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
+from checks.files.workflows import (NOT_SHARED, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS,
+                                    SHARED_JOBS, gate_workflows_agree, scaffold_only_paths)
+from checks.files.control_plane import (LIB, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE,
+                                        control_plane_packages, control_plane_restore, scripts_of)
 from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
@@ -89,6 +96,7 @@ __all__ = [
     "concepts_in",
     "conflict_markers",
     "conflicts",
+    "control_plane",
     "control_plane_packages",
     "control_plane_restore",
     "declared",
@@ -96,10 +104,12 @@ __all__ = [
     "duplicate_concept_ids",
     "duplicate_keys",
     "gate_workflows_agree",
+    "harness",
     "history",
     "history_entries_of",
     "inherited",
     "inherited_prose",
+    "inline_python",
     "is_py",
     "justfile",
     "justfile_recipe_shape",
@@ -124,6 +134,7 @@ __all__ = [
     "rendered_prose",
     "rendering",
     "reserved_concepts",
+    "reviewer",
     "ruff_findings",
     "scaffold_only_paths",
     "scripts_of",

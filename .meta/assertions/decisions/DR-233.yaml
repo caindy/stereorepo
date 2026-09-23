@@ -9,7 +9,7 @@ decisions:
       - work:artifact/meta-say
       - work:artifact/meta-lib-check-pr-review
       - work:artifact/meta-checks-probes-channel-actor
-      - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-checks-files-harness
     context: >-
       DR-071 split the Trailer in two: `Actor:` is the session, `Agent:` the
       harness build recorded verbatim from `AI_AGENT`. DR-086 made the session

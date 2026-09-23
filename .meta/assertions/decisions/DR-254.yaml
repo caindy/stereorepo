@@ -9,7 +9,7 @@ decisions:
     enacted_in:
       - work:artifact/github-workflows-review
       - work:artifact/meta-detect-fallback
-      - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-checks-files-reviewer
     context: >-
       DR-107 established the reviewer as a dedicated Role account answering review requests.
       DR-245 restored Gemini fallback in CI by executing Antigravity CLI (`agy`) inside self-hosted
@@ -57,7 +57,7 @@ decisions:
         `.meta/detect_fallback.py` appends `invoke_subagent(*)` to `REVIEWER_DENIED_PERMISSIONS`,
         mechanically preventing subagent spawning during reviewer fallback under Antigravity CLI.
       - >-
-        `.meta/checks/files/workflows.py` verifies that `invoke_subagent(*)` is audited and enforced
+        `.meta/checks/files/reviewer.py` verifies that `invoke_subagent(*)` is audited and enforced
         in reviewer settings synthesis.
       - >-
         Closes #637.

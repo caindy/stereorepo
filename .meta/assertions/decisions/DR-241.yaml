@@ -4,7 +4,7 @@ decisions:
     status: ADOPTED
     enacted_in:
       - work:artifact/github-workflows-coder
-      - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-checks-files-inline-python
       - work:artifact/meta-lib-check-pr-cli
       - work:artifact/meta-check-pr
     context: >-
@@ -55,7 +55,7 @@ decisions:
         `.meta/check_pr.py` and `.meta/lib/check_pr/cli.py` expose the `--unresolved-count` CLI option,
         providing a first-class, type-checked command for retrieving unresolved review thread counts.
       - >-
-        `.meta/checks/files/workflows.py` registers the `inline python` gate check (`no_inline_python`),
+        `.meta/checks/files/inline_python.py` registers the `inline python` gate check (`no_inline_python`),
         which validates that all workflow files, composite actions, shell scripts, and the `justfile`
         remain free of direct inline Python invocations.
     falsifier: >-

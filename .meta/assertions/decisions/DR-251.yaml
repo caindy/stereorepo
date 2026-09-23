@@ -9,7 +9,7 @@ decisions:
       - work:artifact/github-workflows-review
       - work:artifact/meta-lib-worktree-only-paths
       - work:artifact/meta-hooks-worktree-only
-      - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-checks-files-reviewer
     context: >-
       Under solorepo's DR-110, the before-tool hook at .meta/hooks/worktree_only.py confines
       reviewer filesystem reads to the repository worktree and authorized harness scratch directories.
@@ -41,7 +41,7 @@ decisions:
           Auditing all tracked symlinks (git ls-files -s | awk '$1 == "120000"') and worktree symlinks
           immediately following checkout in review.yml prevents any outbound symlink from existing
           in the reviewer's filesystem before credentials or harness processes are initialized.
-          Complemented by an invariant check in .meta/checks/files/workflows.py and gate probes,
+          Complemented by an invariant check in .meta/checks/files/reviewer.py and gate probes,
           this eliminates the escape vector at the boundary without runtime overhead during agent turns,
           guaranteeing that outside_pattern()'s prefix bound is sound.
     consequences:
@@ -60,7 +60,7 @@ decisions:
         .meta/lib/worktree_only/paths.py:outside_pattern() documents the external boundary
         precondition that the worktree holds no outbound symlinks.
       - >-
-        A gate check in .meta/checks/files/workflows.py and probes in .meta/checks/probes/git/step.py
+        A gate check in .meta/checks/files/reviewer.py and probes in .meta/checks/probes/git/step.py
         verify symlink audit mechanics and assert that the worktree contains no outbound symlinks.
     falsifier: >-
       A symlink checked out from a pull request head pointing outside the repository root

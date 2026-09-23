@@ -87,7 +87,7 @@ decisions:
       - work:artifact/meta-checks-files
       - work:artifact/github-workflows-review
       - work:artifact/meta-readme
-      - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-checks-files-control-plane
     context: >-
       Nothing in either ruleset limits how long a Python file may be, and
       `.meta/` holds four scripts over a thousand lines: `check_pr.py` at

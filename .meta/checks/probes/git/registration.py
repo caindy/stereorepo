@@ -1,7 +1,7 @@
 """What each harness's own settings JSON in `review.yml` registers for the worktree hook: the matcher and the command line, per harness (solorepo's #456).
 
 Neither `hook_probes`' `EVENTS` table nor `gemini_core_matches_hook_matcher` in
-`checks.files.workflows` runs the string this file writes into
+`checks.files.reviewer` runs the string this file writes into
 `.claude/settings.json` or `.gemini/settings.json`: the first calls
 `worktree_only.main()` in-process, standing in for the envelope a harness
 sends but not for the registration that gets it there; the second compares

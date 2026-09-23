@@ -23,7 +23,7 @@ reader that answers `None`, which `screen.py` reports as a token without the
 `actions` scope and would have made a deleted module read as a credential
 fault.
 
-Evidence: `.meta/checks/files/workflows.py::control_plane_packages`
+Evidence: `.meta/checks/files/control_plane.py::control_plane_packages`
 
 ### A fallback of `None` meant the caller that most needs to degrade exited instead
 

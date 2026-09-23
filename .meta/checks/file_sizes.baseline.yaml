@@ -19,7 +19,6 @@
 
 .meta/checks/comments.py: 317
 .meta/checks/files/python.py: 337
-.meta/checks/files/workflows.py: 533
 .meta/checks/probes/channel/on_coder.py: 206
 .meta/checks/probes/git/step.py: 13
 .meta/checks/probes/harness/github.py: 207
