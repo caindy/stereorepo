@@ -104,7 +104,7 @@ merges (solorepo's DR-159, solorepo's #232). Established: `unheld()` identifies
 idle armed pull requests blocked by unresolved threads and prescribes the required
 promotion or reply action.
 
-Evidence: `.meta/lib/check_pr/sweep.py::unheld`
+Evidence: `.meta/lib/check_pr/remedies.py::unheld`
 
 ### Sweep fetch failure silently masked as clean triage
 

@@ -568,6 +568,9 @@ artifacts:
   - id: work:artifact/meta-lib-check-pr-sweep
     name: .meta/lib/check_pr/sweep.py
     path: .meta/lib/check_pr/sweep.py
+  - id: work:artifact/meta-lib-check-pr-remedies
+    name: .meta/lib/check_pr/remedies.py
+    path: .meta/lib/check_pr/remedies.py
   - id: work:artifact/meta-lib-check-pr-review
     name: .meta/lib/check_pr/review.py
     path: .meta/lib/check_pr/review.py

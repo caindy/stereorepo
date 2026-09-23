@@ -68,10 +68,12 @@ def handoff_probes() -> list[str]:
     conflicts, where the remedy is the rebase; an approved one with failing
     checks at `medium`, which the loop owns, and at `hard`, which the solo
     does; a review requested of the reviewer whose check failed without a
-    verdict; and an approved conflicting one at `hard`, where the loop stands
-    down (solorepo's DR-167, solorepo's DR-178, solorepo's #316). The Challenge's
-    labels are answered by standing `check_pr.gh` in with the level each case
-    names.
+    verdict; an approved conflicting one at `hard`, where the loop stands
+    down (solorepo's DR-167, solorepo's DR-178, solorepo's #316); and a
+    reviewer's top-level comment nobody has answered, on a plan-only draft,
+    which no other remedy reaches on silence alone, and on a loop branch, where
+    the dispatch is named beside the answer (solorepo's DR-273). The Challenge's labels are
+    answered by standing `check_pr.gh` in with the level each case names.
     """
     channel, _, programs = load_channel()
     move = programs["move"]
@@ -79,7 +81,8 @@ def handoff_probes() -> list[str]:
     check_pr = citations.load_check_pr()
     return (_request_review_cases(channel, move) + _watch_cases(check_pr)
             + _watch_failure_cases(check_pr) + _watch_recovery_cases(check_pr)
-            + _unheld_armed_cases(check_pr) + _unheld_idle_cases(check_pr))
+            + _unheld_armed_cases(check_pr) + _unheld_idle_cases(check_pr)
+            + _unheld_comment_cases(check_pr))
 
 
 def _pull_of(number: Any, title: Any, **fields: Any) -> dict[str, Any]:
@@ -345,4 +348,58 @@ def _unheld_idle_cases(check_pr: Any) -> list[str]:
                 owed = check_pr.unheld([pull], minutes=30, clean=clean)
             if len(owed) != 1 or any(phrase not in owed[0] for phrase in phrases):
                 problems.append(f"unheld: {case} reported {owed!r}")
+    return problems
+
+
+def _unheld_comment_cases(check_pr: Any) -> list[str]:
+    """`unheld` over a reviewer's top-level comment, on a plan-only draft and on a loop branch."""
+    problems = []
+    reviewer = check_pr.role_login("reviewer")
+    coder = check_pr.role_login("coder")
+    old_time = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=60)).isoformat()
+
+    def said(n: int, login: str, text: str) -> dict[str, Any]:
+        return {"id": f"IC_{n}", "databaseId": n, "author": {"login": login},
+                "body": f"{text}\n\nActor: actor-{n}"}
+
+    point = said(1, reviewer, "The plan reads the wrong file.")
+    answer = said(2, coder, "Right, and a change to make (#issuecomment-1).")
+    owed_nodes = check_pr.github.comment_threads([point], reviewer)
+    answered_nodes = check_pr.github.comment_threads([point, answer], reviewer)
+
+    def plan_of(**fields: Any) -> dict[str, Any]:
+        return {"number": 20, "title": "Plan for a hard Challenge", "isDraft": True,
+                "headRefName": "claude/plan-review-gates", "baseRefName": "main",
+                "reviewRequests": [], "mergeable": "MERGEABLE", **fields}
+
+    owed = check_pr.unheld([plan_of(updatedAt=old_time)], minutes=30, clean=set(),
+                           unresolved={20: owed_nodes}, reviewer_login=reviewer)
+    if len(owed) != 1 or ".meta/say/post comment 20" not in owed[0] or "draft" not in owed[0]:
+        problems.append(f"unheld: a plan objection on a plan-only draft reported {owed!r}, "
+                        "and a draft nothing reports is the stall solorepo's DR-248 refuses")
+
+    now = datetime.datetime.now(datetime.UTC).isoformat()
+    recent = check_pr.unheld([plan_of(updatedAt=now)], minutes=30, clean=set(),
+                             unresolved={20: owed_nodes}, reviewer_login=reviewer)
+    if recent:
+        problems.append(f"unheld: a plan objection a run may still be answering reported "
+                        f"{recent!r} instead of passing in silence")
+
+    settled = check_pr.unheld([plan_of(updatedAt=old_time)], minutes=30, clean=set(),
+                              unresolved={20: answered_nodes}, reviewer_login=reviewer)
+    if settled:
+        problems.append(f"unheld: an answered comment reported {settled!r}, and a point "
+                        "settled by a link is owed nothing")
+
+    loop_pull = _pull_of(21, "Loop PR with an owed comment", mergeable="MERGEABLE",
+                         updatedAt=old_time)
+    with stood_in(check_pr.github,
+                  gh=lambda *a: {"state": "OPEN", "labels": [{"name": "medium"}]}):
+        dispatched = check_pr.unheld([loop_pull], minutes=30, clean=set(),
+                                     unresolved={21: check_pr.github.comment_threads(
+                                         [point], reviewer)},
+                                     reviewer_login=reviewer)
+    if len(dispatched) != 1 or ".meta/say/move dispatch 21 --task review" not in dispatched[0]:
+        problems.append(f"unheld: an owed comment on a loop branch reported {dispatched!r}, "
+                        "which does not name the dispatch that answers it")
     return problems

@@ -32,7 +32,6 @@
 .meta/depth.py: 119
 .meta/detect_fallback.py: 115
 .meta/jules/client.py: 60
-.meta/lib/check_pr/sweep.py: 59
 .meta/lib/move/advance.py: 470
 .meta/lib/move/challenges.py: 829
 .meta/lib/move/manager.py: 714

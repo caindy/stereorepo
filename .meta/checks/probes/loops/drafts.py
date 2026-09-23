@@ -154,7 +154,7 @@ def _comment_cases(check_pr: Any) -> list[str]:
     if check_pr.review.unanswered(shaped):
         problems.append("comment threads: an answered reviewer comment fails A16's check")
     owed = check_pr.github.comment_threads([point], "o-r-reviewer")
-    if check_pr.sweep.unresolved_of({"number": 1}, {1: owed}):
+    if check_pr.remedies.unresolved_of({"number": 1}, {1: owed}):
         problems.append("comment threads: `sweep` counts a reviewer comment among the "
                         "conversations that stop GitHub merging")
     if check_pr.review.where_of(shaped[0]) != check_pr.review.COMMENT_WHERE:

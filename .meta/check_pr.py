@@ -59,6 +59,7 @@ from lib.check_pr import (
     form,
     github,
     polling,
+    remedies,
     review,
     state,
     sweep,
@@ -122,6 +123,15 @@ from lib.check_pr.polling import (
     snapshot,
     watch,
 )
+from lib.check_pr.remedies import (
+    LOOPS_BRANCH,
+    asked_of,
+    green,
+    is_approved_pull,
+    is_changes_requested_pull,
+    unanswered_comments_of,
+    unheld,
+)
 from lib.check_pr.review import (
     ACTOR,
     NOTICED,
@@ -154,16 +164,10 @@ from lib.check_pr.state import (
 from lib.check_pr.sweep import (
     CODER,
     HANDBACK_FIELDS,
-    LOOPS_BRANCH,
     SWEEP_FIELDS,
-    asked_of,
-    green,
     hand_back,
-    is_approved_pull,
-    is_changes_requested_pull,
     longest_run,
     sweep_all,
-    unheld,
     wait_for_checks,
 )
 from lib.check_pr.verdict import (
@@ -265,6 +269,7 @@ __all__ = [
     "polling",
     "publish",
     "pull",
+    "remedies",
     "repo",
     "required_contexts",
     "residue",
@@ -286,6 +291,7 @@ __all__ = [
     "touched",
     "unaddressed",
     "unanswered",
+    "unanswered_comments_of",
     "uncoded",
     "unenacted",
     "unheld",
