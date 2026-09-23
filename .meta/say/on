@@ -10,7 +10,8 @@ Usage:
         [--harness <harness>]
     .meta/say/on coder between <issue> --pass take --event <event>
     .meta/say/on coder after <n> --pass take|rebase|answer|promote --event <event> \\
-        --claude <outcome> --gemini <outcome> [--count N] [--branch-prefix <harness>]
+        --claude <outcome> --gemini <outcome> [--count N] [--branch-prefix <harness>] \\
+        [--execution-file <path>]
 
 Each loop workflow is a door a Role's run arrives at: `triage.yml` and
 `review.yml` are the reviewer's, `coder.yml` the coder's. What the door's shell
@@ -33,11 +34,15 @@ inputs are the workflow's to read; its `after` takes how the pass's two
 harness steps ended, refused absent by the same rule as the review door's
 numbers below, and hands back a take that did not finish, redelivers the
 review pass a rebase cleared, and ends the run red where one harness failed
-a pass and neither finished it, a cancelled pass not being a failed one. The
-take pass has a third phase, `between`, which runs immediately before the
-second harness step and on that step's own condition, reading the branch
-again so that the step's prompt says what is open on it now rather than what
-`before` read of it ahead of both steps.
+a pass and neither finished it, a cancelled pass not being a failed one. A
+take pass cut by its turn cap is one that did not finish and says so nowhere
+in its step conclusion, which `claude-code-action` reports as `success` when
+the model's turn ends at the cap; `--execution-file` names the transcript the
+harness writes the reason in, and the door reads the cap off it
+(solorepo's DR-277). The take pass has a third phase, `between`, which runs
+immediately before the second harness step and on that step's own condition,
+reading the branch again so that the step's prompt says what is open on it
+now rather than what `before` read of it ahead of both steps.
 
 The review door's `after` takes what only the workflow knows: the verdict
 count `before` emitted, the fan-out ceiling it chose, which harness step ran
@@ -47,6 +52,8 @@ and the first three are refused absent rather than defaulted, an empty
 string counting as absent: the pass is the branch that has to be reached, so
 a number that did not arrive, from a renamed output or a skipped step, ends
 the run red and not green.
+
+History in on.history.md (solorepo's DR-171).
 """
 import argparse
 import json
@@ -778,12 +785,15 @@ class Ended(NamedTuple):
         gemini: How its Antigravity CLI step ended, the same way.
         held: On a promotion, how many threads `before` found held.
         branch_prefix: The harness `before` chose, which names the loop's branch.
+        execution: Where Claude Code wrote the pass's execution transcript, or
+            the empty string where the step published no path.
     """
 
     claude: str | None
     gemini: str | None
     held: int | None
     branch_prefix: str
+    execution: str = ""
 
 
 OUTCOMES_NOT_SAID = ("the coder's `after` takes how the pass's two steps ended, --claude and "
@@ -798,7 +808,25 @@ empty string is none of these and is refused."""
 
 DID_NOT_FINISH = ("This run ended without finishing and without saying where it stopped: its "
                   "step ended {outcome}. What it did is in the run log, {run}.")
-"""The first sentence of every account a hand-back posts."""
+"""The first sentence of a hand-back's account, where the step conclusion is what ended the pass."""
+
+CAPPED = "error_max_turns"
+"""The `subtype` Claude Code's result entry carries where the turn cap ended the session."""
+
+CAP_MARK = "was cut by its turn cap"
+"""What a cap account says, and so what a later run reads, with its author, to find one posted."""
+
+CUT_BY_CAP = ("This run was cut by its turn cap{spent}, which the harness reports as a step that "
+              "succeeded: it stopped where the cap fell and not where the work finished. What it "
+              "did is in the run log, {run}.")
+"""The first sentence of a hand-back's account, where the turn cap cut the pass."""
+
+TURNS_SPENT = ", {turns} turns in"
+"""What the cap account says of the turns, where the transcript counted them."""
+
+CUT_TWICE = ("#{number} already carries the account of a run cut by its turn cap, so this is the "
+             "second, and a Challenge that does not fit twice is not the loop's")
+"""Why the reviewer is not asked where a second run on the same pull request hit the cap."""
 
 STAYS_OPEN = (" The pull request it opened, if it opened one, is on `{branch}` and stays open "
               "for the run that takes this up again.")
@@ -851,6 +879,123 @@ def outcome_of(ended: Ended) -> str:
     return str(ended.gemini if ended.gemini in ("failure", "cancelled") else ended.claude)
 
 
+def transcript_entries(text: str) -> list[dict[str, Any]]:
+    """Every JSON object a transcript holds, whether it is one document or a stream of lines.
+
+    The file arrives in more than one shape. `claude-code-action` publishes a
+    single JSON array, but a runner or a wrapper interleaves its own status
+    lines into the same stream, and whole-document decoding has already
+    failed on this file here: `agents.history.md` records `_from_ndjson`
+    being established for it, `agents.parse_agents` tries the document, then
+    the lines, then the raw log, and `detect_fallback.py` falls through to a
+    text scan rather than answering nothing. So the document is tried first
+    and the lines after, each unreadable line skipped rather than the
+    reading abandoned.
+
+    Parameters:
+        text (str): What the transcript file held.
+
+    Returns:
+        list[dict[str, Any]]: The objects read, in the order they arrived.
+    """
+    try:
+        whole = json.loads(text)
+    except ValueError:
+        pass
+    else:
+        return [entry for entry in (whole if isinstance(whole, list) else [whole])
+                if isinstance(entry, dict)]
+    entries: list[dict[str, Any]] = []
+    for line in text.splitlines():
+        candidate = line.strip()
+        if not (candidate.startswith("{") and candidate.endswith("}")):
+            continue
+        try:
+            entry = json.loads(candidate)
+        except ValueError:
+            continue
+        if isinstance(entry, dict):
+            entries.append(entry)
+    return entries
+
+
+def cut_by_cap(execution: str) -> int | None:
+    """The turns a take pass spent where its transcript says the turn cap cut it.
+
+    Claude Code writes the session's messages to the file
+    `claude-code-action` publishes as `execution_file`, and the result entry
+    carries `subtype: error_max_turns` where the cap ended the session,
+    beside the `num_turns` it spent. The step's conclusion is `success` in
+    that case, the process having exited in an orderly way, so the
+    transcript is the only place the reason is (solorepo's DR-277). A path
+    the step never published, a file that cannot be read, and one holding no
+    capped result entry all answer `None`, and the run log says which: a
+    reading that cannot say the cap was hit is not one that says it was. A
+    file the reader cannot decode whole is read by `transcript_entries` line
+    by line rather than treated as a session that was never capped, and a
+    capped entry whose `num_turns` is not a number answers `0`, the cap
+    named and the turns not, rather than raising out of the door.
+
+    Parameters:
+        execution (str): Where the harness step wrote the transcript.
+
+    Returns:
+        int | None: The turns the capped session spent, `0` where the
+            transcript counted none, and `None` where the cap did not cut it.
+    """
+    if not execution:
+        return None
+    try:
+        text = agents.read_content(execution, quiet=True)
+    except OSError as unreadable:
+        print(f"the turn cap could not be read from {execution}: {unreadable}", file=sys.stderr)
+        return None
+    capped = [entry for entry in transcript_entries(text) if entry.get("subtype") == CAPPED]
+    if not capped:
+        return None
+    try:
+        return int(capped[-1].get("num_turns") or 0)
+    except (TypeError, ValueError) as uncounted:
+        print(f"the cap in {execution} counted no turns this could read: {uncounted}",
+              file=sys.stderr)
+        return 0
+
+
+def cut_before(number: str) -> bool:
+    """Whether the pull request already carries the account of a run cut by its turn cap.
+
+    The account is the evidence, since a run holds nothing of the one before
+    it and the pull request is what crosses the seam. The author is matched
+    as well as the phrase: `CAP_MARK` is a sentence in English, and the
+    account invites a reviewer to quote it, so the phrase alone would read a
+    quotation as a second cap. A read GitHub refuses answers `False`, the
+    login it speaks as included, which offers the reviewer a second draft
+    rather than handing the Challenge to the solo on a failed read: the
+    first costs a review pass and the second strands work nobody is standing
+    over.
+
+    Parameters:
+        number (str): The pull request the run left.
+    """
+    view = channel.gh("pr", "view", number, "--json", "comments", default=None)
+    try:
+        mine = channel.role_login("coder")
+    except SystemExit as unreadable:
+        print(f"who this door speaks as could not be read: {unreadable}", file=sys.stderr)
+        return False
+    comments = (view or {}).get("comments") or []
+    return any(CAP_MARK in str(comment.get("body") or "")
+               and str((comment.get("author") or {}).get("login") or "") == mine
+               for comment in comments)
+
+
+def account_of(outcome: str, cap: int | None) -> str:
+    """The account's first sentence: the cap where one cut the pass, else the step's own word."""
+    if cap is None:
+        return DID_NOT_FINISH.format(outcome=outcome, run=run_url())
+    return CUT_BY_CAP.format(spent=TURNS_SPENT.format(turns=cap) if cap else "", run=run_url())
+
+
 def what_run_left(issue: str) -> dict[str, Any] | None:
     """What the hand-back needs about the pull request the run left, or `None` where unreadable.
 
@@ -865,15 +1010,15 @@ def what_run_left(issue: str) -> dict[str, Any] | None:
         return None
 
 
-def stop_with(issue: str, outcome: str, branch: str, why: str) -> None:
+def stop_with(issue: str, outcome: str, branch: str, why: str, cap: int | None = None) -> None:
     """Hands the Challenge to the solo with the account and why the reviewer is not asked."""
-    body = (DID_NOT_FINISH.format(outcome=outcome, run=run_url())
-            + STAYS_OPEN.format(branch=branch) + NOT_REQUESTED.format(why=why))
+    body = account_of(outcome, cap) + STAYS_OPEN.format(branch=branch) \
+        + NOT_REQUESTED.format(why=why)
     channel.sibling("move").stop(issue, channel.signed(body))
 
 
-def hand_back(issue: str, outcome: str, prefix: str) -> None:
-    """Hands back a take whose step failed or was cancelled without saying where it stopped.
+def hand_back(issue: str, outcome: str, prefix: str, cap: int | None = None) -> None:
+    """Hands back a take that ended without saying where it stopped.
 
     Every way a run ends releases the claim or requests review, so that a
     Challenge is never left claimed behind a dead step. What the run left is
@@ -888,10 +1033,19 @@ def hand_back(issue: str, outcome: str, prefix: str) -> None:
     `stop`, with why the reviewer was not asked, and a read that failed is
     one such reason rather than the end of the handler (solorepo's DR-155).
 
+    A pass the turn cap cut is a run that stopped and reaches here alongside
+    one whose step failed, its account naming the cap rather than the step's
+    conclusion (solorepo's DR-277). The reviewer is offered such a draft
+    once: a second cap on a pull request that already carries a cap account
+    goes to the solo, since a Challenge that does not fit twice is not the
+    loop's.
+
     Parameters:
         issue (str): The Challenge.
         outcome (str): How the take step ended.
         prefix (str): The harness's branch prefix, naming the branch where nothing was left.
+        cap (int | None): The turns a capped pass spent, and `None` where the
+            cap did not cut it.
     """
     left = what_run_left(issue)
     number = str(left["number"]) if left and left.get("number") else ""
@@ -903,7 +1057,7 @@ def hand_back(issue: str, outcome: str, prefix: str) -> None:
         return
     view = channel.gh("issue", "view", issue, "--json", "state,labels", default=None)
     if view is None:
-        stop_with(issue, outcome, branch, UNREADABLE_ISSUE.format(issue=issue))
+        stop_with(issue, outcome, branch, UNREADABLE_ISSUE.format(issue=issue), cap)
         return
     labels = check_pr.state.issue_labels(view)
     level = next((lvl for lvl in channel.sibling("move").DIFFICULTIES if lvl in labels), "")
@@ -916,25 +1070,43 @@ def hand_back(issue: str, outcome: str, prefix: str) -> None:
     merged = channel.gh("pr", "list", "--state", "merged", "--head", branch, "--json", "number",
                         default=None)
     if merged is None:
-        stop_with(issue, outcome, branch, UNREADABLE_MERGE.format(branch=branch))
+        stop_with(issue, outcome, branch, UNREADABLE_MERGE.format(branch=branch), cap)
     elif merged:
         print(f"#{issue}'s pull request #{merged[0]['number']} has merged; the run finished and "
               "then ran out")
-    elif number and left and left.get("green") and not left.get("conflicting"):
-        body = DID_NOT_FINISH.format(outcome=outcome, run=run_url()) + WORTH_READING.format(
-            issue=issue, level=level)
+    elif number and left and left.get("green") and not left.get("conflicting") \
+            and not (cap is not None and cut_before(number)):
+        body = account_of(outcome, cap) + WORTH_READING.format(issue=issue, level=level)
         channel.sibling("post").conversation_comment(number, channel.signed(body))
         channel.sibling("move").request_review(number, "reviewer")
     else:
-        if left is None:
-            why = UNREADABLE_LEFT
-        elif not number:
-            why = "the run opened no pull request"
-        elif left.get("conflicting"):
-            why = CONFLICTS.format(number=number, base=base, branch=branch)
-        else:
-            why = NOT_GREEN.format(number=number)
-        stop_with(issue, outcome, branch, why)
+        stop_with(issue, outcome, branch, not_requested(left, number, branch, base), cap)
+
+
+def not_requested(left: dict[str, Any] | None, number: str, branch: str, base: str) -> str:
+    """Why the reviewer is not asked, where the pull request the run left is no handoff.
+
+    The order is the hand-back's own: a read that failed says so before
+    anything is concluded from it, then a run that opened nothing, then a
+    branch no review could run on, then a pull request that already carries
+    the account of a turn cap, this being the second, and a red gate last,
+    that being the ordinary case.
+
+    Parameters:
+        left (dict[str, Any] | None): What the run left, or `None` where unreadable.
+        number (str): The pull request the run left, empty where it opened none.
+        branch (str): The branch the run worked on.
+        base (str): What that branch is based on.
+    """
+    if left is None:
+        return UNREADABLE_LEFT
+    if not number:
+        return "the run opened no pull request"
+    if left.get("conflicting"):
+        return CONFLICTS.format(number=number, base=base, branch=branch)
+    if left.get("green"):
+        return CUT_TWICE.format(number=number)
+    return NOT_GREEN.format(number=number)
 
 
 def verify(task: str, ended: Ended) -> None:
@@ -970,7 +1142,9 @@ def redeliver(number: str) -> None:
 def coder_after(number: str, delivery: Delivery, ended: Ended) -> None:
     """The coder's door after the session: what each pass owes once its steps have ended.
 
-    A take that failed or was cancelled is handed back; a rebase that
+    A take that failed or was cancelled is handed back, and so is one whose
+    transcript says the turn cap cut it, which the step conclusion reports as
+    a success (solorepo's DR-277); a rebase that
     succeeded redelivers the review pass, and one that did not is verified;
     an answer is verified; a promotion is verified where threads were held.
     Verification ends the run red where neither harness finished the pass.
@@ -984,8 +1158,10 @@ def coder_after(number: str, delivery: Delivery, ended: Ended) -> None:
         sys.exit("::error::" + OUTCOMES_NOT_SAID.format(claude=ended.claude, gemini=ended.gemini))
     if delivery.task == "take":
         outcome = outcome_of(ended)
-        if outcome in ("failure", "cancelled"):
-            hand_back(number, outcome, ended.branch_prefix)
+        stopped = outcome in ("failure", "cancelled")
+        cap = None if stopped else cut_by_cap(ended.execution)
+        if stopped or cap is not None:
+            hand_back(number, outcome, ended.branch_prefix, cap)
         else:
             print(f"the take pass ended {outcome}; nothing to hand back")
     elif delivery.task == "rebase":
@@ -1129,6 +1305,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="after a promotion: how many threads `before` found held")
     c.add_argument("--branch-prefix", default="",
                    help="after a take: the harness `before` chose, naming the loop's branch")
+    c.add_argument("--execution-file", dest="execution", default="",
+                   help="after a take: where Claude Code wrote the pass's transcript, which is "
+                        "where the turn cap is said")
     return ap
 
 
@@ -1141,7 +1320,7 @@ def main() -> None:
                  Session(args.verdicts, args.agents, args.ran, args.transcript))
     elif args.verb == "coder":
         coder(args.phase, args.number, Delivery(args.task, args.event, args.harness),
-              Ended(args.claude, args.gemini, args.count, args.branch_prefix))
+              Ended(args.claude, args.gemini, args.count, args.branch_prefix, args.execution))
 
 
 if __name__ == "__main__":

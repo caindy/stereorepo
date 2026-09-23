@@ -1030,11 +1030,23 @@ jobs:
       # redelivers the review pass it cleared (solorepo's #777). A pass one
       # harness failed and neither finished ends the run red; a cancelled
       # pass is not a failed one.
+      #
+      # A take pass the turn cap cut ends with the step reporting `success`,
+      # the process having exited in an orderly way, so the conclusions above
+      # cannot say it stopped. `--execution-file` hands the door the transcript
+      # `claude-code-action` publishes, whose result entry carries the cap and
+      # the turns spent, and the door reads it there and hands back on it
+      # (solorepo's DR-277). All four Claude Code steps bind that cap from
+      # `before`, and only the take pass does anything about it: the answer,
+      # rebase and promotion passes hand back nothing, so a cap that cuts one
+      # of them is still read as a pass that succeeded and is a Challenge of
+      # its own. The Antigravity CLI is bounded by the clock alone.
       - name: after the session
         if: ${{ always() && steps.before.outcome == 'success' && steps.before.outputs.by == '' }}
         run: >-
           .meta/say/on coder after "$NUMBER" --pass "$PASS" --event "$EVENT"
           --claude "$CLAUDE" --gemini "$GEMINI" --count "$COUNT" --branch-prefix "$PREFIX"
+          --execution-file "$EXECUTION"
         env:
           # The door's own acts are the door's, named on the terms `gha/reconcile`
           # already uses, rather than inherited from whatever the last harness
@@ -1059,3 +1071,4 @@ jobs:
                 || steps.promote_gemini.outcome }}
           COUNT: ${{ steps.before.outputs.count }}
           PREFIX: ${{ steps.before.outputs.branch_prefix }}
+          EXECUTION: ${{ steps.before.outputs.pass == 'take' && steps.take_claude.outputs.execution_file || '' }}

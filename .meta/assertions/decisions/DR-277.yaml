@@ -1,0 +1,95 @@
+decisions:
+  - id: work:decision/277
+    name: "DR-277 · A take pass cut by its turn cap is read off the execution file, not the step conclusion, and hands over an account that names the cap"
+    challenge: work:challenge/845
+    status: ADOPTED
+    applies:
+      - work:article/18
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-say-on
+      - work:artifact/github-workflows-coder
+    context: >-
+      DR-129 built the hand-back for a take pass that ends without finishing, and reasoned
+      that a run exhausting its turn cap ends with `claude-code-action` reporting success,
+      so that the handler is skipped entirely. DR-122 is the general case of the
+      same reading on the reviewer's side: the harness reports success when the model's
+      turn ends, and a turn ends without the work being done as readily as with it, which
+      is why the review door counts the verdict rather than believing the step. The coder's
+      door reads `--claude` and `--gemini`, which carry the step conclusion alone, so
+      `coder_after`'s `if outcome in ("failure", "cancelled")` is a branch a capped take
+      pass structurally never enters: it prints "the take pass ended success; nothing to
+      hand back" and the run ends with a green pull request nobody has been asked to read.
+      The sweep's `green_and_unheld` names it half an hour later, which is DR-129's
+      backstop working as designed, and the branch waits for the operator to act by hand.
+      Run 35779933358 on #826 is the observed case. Challenge #845 asked which door sees a
+      capped take pass, and the solo settled it: read the cap where the harness writes it.
+    alternatives:
+      - name: Leave it to the sweep, which already names a green pull request nobody holds
+        chosen: false
+        reason: >-
+          The sweep is a half-hourly clock and its output is a sentence for the operator to
+          read and a command to run by hand. What a cut run leaves is the one state a
+          handoff already exists for — green, clean, and unread — and the door that could
+          make the handoff is standing in the same job, with the evidence on the same disk.
+          Waiting half an hour to tell a human to type `request-review` is a backstop
+          rather than an answer, and DR-129 built it as one.
+      - name: Ask the harness action for a conclusion that distinguishes a cap from a finish
+        chosen: false
+        reason: >-
+          The step conclusion is GitHub's word for whether the process exited non-zero, and
+          `claude-code-action` exits zero on a cap by design: the session ended in an
+          orderly way. A fact about a system outside this repository is not changed by
+          wanting it otherwise, and the same action already writes the fact this needs to
+          the execution output file it publishes as a step output.
+      - name: Read `error_max_turns` off the execution file at the door, and name the cap in the account
+        chosen: true
+        reason: >-
+          `claude-code-action` publishes `execution_file`, the JSON transcript whose final
+          `result` entry carries `subtype: error_max_turns` and the `num_turns` the session
+          spent, and `.meta/detect_fallback.py` already reads that same file for the quota
+          scan, so the path is one the workflow passes and not one the door guesses at. The
+          door reads it after the pass and treats a cap as a run that stopped, which is
+          what it is: the existing hand-back runs unchanged — green and clean, the account
+          is posted and review requested; red, conflicting, or empty, the Challenge goes to
+          the solo — and only the account's first sentence differs, naming the cap and the
+          turns rather than a step conclusion that says `success`. The reviewer is then
+          reading a draft it has been told is a draft, which is the one thing it could not
+          otherwise know, and its verdict says whether what is there answers the Challenge.
+          A second cap on the same pull request is not offered to the reviewer again: the
+          account the first one posted is the evidence, and the Challenge goes to the solo,
+          because a Challenge that does not fit twice is not the loop's.
+    consequences:
+      - >-
+        `.meta/say/on` gains `cut_by_cap`, which reads Claude Code's execution output file
+        and answers the turns a capped session spent, or `None` where the file says the
+        session was not capped, is unreadable, or was never written.
+      - >-
+        `Ended` carries `execution`, the path the workflow hands the door, and `coder_after`
+        reads it on a take pass whose steps ended any way but `failure` or `cancelled`.
+      - >-
+        The hand-back's account opens with the cap where one was hit — the turns spent and
+        that the harness reported the step as succeeding — and with the step conclusion
+        otherwise.
+      - >-
+        A take pass cut a second time on a pull request that already carries a cap account
+        hands the Challenge to the solo through `stop` rather than requesting review again.
+      - >-
+        `.github/workflows/coder.yml` hands the `after` step `--execution-file` from the
+        take pass's Claude Code step.
+      - >-
+        Closes #845.
+    falsifier: >-
+      A take pass that exhausts its turn cap on a green, clean pull request ending with the
+      run log saying "nothing to hand back" and no review requested; or a review request
+      carrying an account that names the step conclusion where the execution file says the
+      cap was hit.
+    rationale: |-
+      A handoff is a semaphore, and the reviewer is the one reader who can say whether what
+      a branch holds answers its Challenge. What the reviewer cannot read off the branch is
+      whether it is finished, and a cut run is exactly the case where the branch looks
+      finished and is not. The step conclusion cannot carry that, because the harness
+      reports an orderly end; the execution file can, because the harness writes the reason
+      there. Reading the reason where it is written costs one file read in a job that is
+      already standing, and it converts half an hour of silence and a hand-typed command
+      into the handoff the loop already knows how to make.

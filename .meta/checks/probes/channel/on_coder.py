@@ -20,6 +20,9 @@ ISSUE = "7"
 PULL = "12"
 """The pull request a second pass answers."""
 
+CODER = "o-r-coder"
+"""The login the door speaks as, from the `o/r` the fake answers `repo view` with."""
+
 RUN = "https://github.com/o/r/actions/runs/99"
 """This run's page, as the environment names it."""
 
@@ -52,11 +55,19 @@ def coder_door_probes() -> list[str]:
     finished; a rebase that succeeded redelivers the review pass and a
     refusal is said; and a pass neither harness finished ends the run red,
     a cancelled one not being a failed one.
+
+    A take pass cut by its turn cap is the last of these and reports none of
+    them, its step ending `success`: the transcript is read for the cap and
+    the turns, every shape that cannot say the cap was hit reading as a pass
+    that was not cut, and a cap on a green pull request hands over an account
+    naming the cap rather than the step's conclusion. The second cap on the
+    same pull request goes to the solo instead (solorepo's DR-277).
     """
     channel, _, programs = load_channel()
     on = programs["on"]
     return (_take_cases(channel, on) + _between_cases(on) + _pull_cases(channel, on)
-            + _rebase_promote_cases(channel, on) + _after_cases(channel, on))
+            + _rebase_promote_cases(channel, on) + _after_cases(channel, on)
+            + _cap_cases(channel, on))
 
 
 class _GitHub:
@@ -398,9 +409,10 @@ class _After(_GitHub):
     """The coder door fake after a session: an Issue's state and level, and the merged listing."""
 
     def __init__(self, state: str = "OPEN", labels: Sequence[str] = ("challenge", "medium"),
-                 merged: list[dict[str, Any]] | None = None, unreadable: str = "") -> None:
+                 merged: list[dict[str, Any]] | None = None, unreadable: str = "",
+                 comments: Sequence[str | tuple[str, str]] = ()) -> None:
         super().__init__(labels=labels, state=state)
-        self.merged, self.unreadable = merged, unreadable
+        self.merged, self.unreadable, self.comments = merged, unreadable, list(comments)
 
     def __call__(self, *args: str, **kwargs: Any) -> Any:
         if args[:2] == ("issue", "view"):
@@ -411,7 +423,17 @@ class _After(_GitHub):
             if self.unreadable == "merged":
                 return self.refuse(args, kwargs)
             return list(self.merged or [])
+        if args[:2] == ("pr", "view") and "comments" in args:
+            if self.unreadable == "comments":
+                return self.refuse(args, kwargs)
+            return {"comments": [self.commented(comment) for comment in self.comments]}
         return super().__call__(*args, **kwargs)
+
+    @staticmethod
+    def commented(comment: str | tuple[str, str]) -> dict[str, Any]:
+        """One conversation comment as GitHub lists it: a bare body is the coder's own."""
+        login, body = comment if isinstance(comment, tuple) else (CODER, comment)
+        return {"body": body, "author": {"login": login}}
 
     @staticmethod
     def refuse(args: tuple[str, ...], kwargs: dict[str, Any]) -> Any:
@@ -425,13 +447,16 @@ class _Session(NamedTuple):
     """One `after` case: what the workflow reports, and what stands in for the reads and acts."""
 
     delivery: tuple[str, str, str]
-    ended: tuple[str | None, str | None, int | None, str]
+    ended: tuple[str | None, str | None, int | None, str] \
+        | tuple[str | None, str | None, int | None, str, str]
     fake: _GitHub
     left: _Left
     loop: _Loop
 
 
-def _session(delivery: tuple[str, str, str], ended: tuple[str | None, str | None, int | None, str],
+def _session(delivery: tuple[str, str, str],
+             ended: tuple[str | None, str | None, int | None, str]
+             | tuple[str | None, str | None, int | None, str, str],
              fake: _GitHub | None = None, left: _Left | None = None,
              loop: _Loop | None = None) -> _Session:
     """An `after` case, each stand-in defaulting to one that answers the ordinary way."""
@@ -567,4 +592,115 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
         if ended.code is not None or loop.stopped or loop.requested:
             problems.append(f"hand-back: {name} ended {ended.code!r} with {loop.stopped!r} and "
                             f"{loop.requested!r}, where the run finished and nothing is owed")
+    return problems
+
+
+CAPPED_TRANSCRIPT = ('[{"type": "assistant"}, {"type": "result", "subtype": "error_max_turns", '
+                     '"num_turns": 120, "is_error": true}]')
+"""A transcript of a session the turn cap cut, as `claude-code-action` publishes it."""
+
+FINISHED_TRANSCRIPT = ('[{"type": "result", "subtype": "success", "num_turns": 40, '
+                       '"is_error": false}]')
+"""A transcript of a session that finished within its cap."""
+
+INTERLEAVED_TRANSCRIPT = ('Running the session...\n'
+                          '{"type": "assistant"}\n'
+                          '{"type": "result", "subtype": "error_max_turns", "num_turns": 120}\n')
+"""The same capped session as JSON Lines with a runner's status line through it: the shape
+whole-document decoding has already lost on here (`agents.history.md`)."""
+
+
+def _transcript(root: pathlib.Path, name: str, content: str) -> str:
+    """Writes a transcript outside the case's workspace and answers where it is."""
+    where = root / name
+    where.write_text(content, encoding="utf-8")
+    return str(where)
+
+
+def _cut_by_cap_cases(on: Any, root: pathlib.Path) -> list[str]:
+    """`cut_by_cap` over every shape the transcript arrives in: only the cap answers a number."""
+    problems = []
+    cases = ((CAPPED_TRANSCRIPT, 120, "a capped session"),
+             (FINISHED_TRANSCRIPT, None, "a session that finished"),
+             ('{"type": "result", "subtype": "error_max_turns"}', 0,
+              "a capped session the transcript counted no turns for"),
+             (INTERLEAVED_TRANSCRIPT, 120, "a capped session logged over as JSON Lines"),
+             ('{"subtype": "error_max_turns", "num_turns": "many"}', 0,
+              "a capped session whose turn count is not a number"),
+             ("not json at all", None, "a transcript that is not JSON"),
+             ("[]", None, "a transcript with no result entry"))
+    for content, want, name in cases:
+        got = on.cut_by_cap(_transcript(root, "one.json", content))
+        if got != want:
+            problems.append(f"cut_by_cap: {name} answered {got!r}, not {want!r}")
+    for where, name in (("", "no path at all"),
+                        (str(root / "absent.json"), "a path nothing wrote")):
+        got = on.cut_by_cap(where)
+        if got is not None:
+            problems.append(f"cut_by_cap: {name} answered {got!r}, where a reading that "
+                            "cannot say the cap was hit is not one that says it was")
+    return problems
+
+
+def _cap_cases(channel: Any, on: Any) -> list[str]:
+    """A take pass the turn cap cut: the transcript read, the account, and the second cap."""
+    take = ("take", "issues", "")
+    green = {"number": 12, "branch": f"claude/issue-{ISSUE}", "handed": False, "green": True,
+             "conflicting": False, "base": "main"}
+    with tempfile.TemporaryDirectory() as where:
+        root = pathlib.Path(where)
+        problems = _cut_by_cap_cases(on, root)
+        capped = _transcript(root, "capped.json", CAPPED_TRANSCRIPT)
+        whole = _transcript(root, "whole.json", FINISHED_TRANSCRIPT)
+
+        fake = _After()
+        ended, loop = _after(channel, on, _session(
+            take, ("success", "skipped", None, "claude", capped), fake, _Left(green)))
+        posted = fake.posted[0] if fake.posted else ""
+        if ended.code is not None or loop.stopped or loop.requested != [(PULL, "reviewer")] \
+                or "was cut by its turn cap, 120 turns in" not in posted \
+                or "ended success" in posted or "Every check on this head is green" not in posted:
+            problems.append(f"cap: a capped take pass on a green pull request ended "
+                            f"{ended.code!r}, stopped {loop.stopped!r}, requested "
+                            f"{loop.requested!r}, posted {fake.posted!r}, where the account "
+                            "names the cap and review is requested")
+
+        ended, loop = _after(channel, on, _session(
+            take, ("success", "skipped", None, "claude", whole), _After(), _Left(green)))
+        if ended.code is not None or loop.stopped or loop.requested \
+                or "nothing to hand back" not in ended.out:
+            problems.append(f"cap: a take pass that finished within its cap ended "
+                            f"{ended.code!r} saying {ended.out!r} and acted {loop.requested!r}")
+
+        fake = _After(comments=["This run was cut by its turn cap, 120 turns in."])
+        ended, loop = _after(channel, on, _session(
+            take, ("success", "skipped", None, "claude", capped), fake, _Left(green)))
+        account = loop.stopped[0][1] if loop.stopped else ""
+        if ended.code is not None or loop.requested or len(loop.stopped) != 1 \
+                or "does not fit twice" not in account \
+                or "was cut by its turn cap" not in account:
+            problems.append(f"cap: a second capped take pass ended {ended.code!r}, stopped "
+                            f"{loop.stopped!r} and requested {loop.requested!r}, where a "
+                            "Challenge that does not fit twice goes to the solo")
+
+        quoted = ("o-r-reviewer", "The account says the run was cut by its turn cap, so I am "
+                                 "reading this as a draft.")
+        for fake, name in ((_After(comments=[quoted]), "a comment quoting the cap account"),
+                           (_After(unreadable="comments"), "a comment listing GitHub refuses")):
+            ended, loop = _after(channel, on, _session(
+                take, ("success", "skipped", None, "claude", capped), fake, _Left(green)))
+            if ended.code is not None or loop.stopped \
+                    or loop.requested != [(PULL, "reviewer")]:
+                problems.append(f"cap: {name} ended {ended.code!r}, stopped {loop.stopped!r} "
+                                f"and requested {loop.requested!r}, where only the door's own "
+                                "account is a cap it posted and a read it cannot make is not one")
+
+        ended, loop = _after(channel, on, _session(
+            take, ("failure", "skipped", None, "claude", capped), _After(),
+            _Left({**green, "green": False})))
+        account = loop.stopped[0][1] if loop.stopped else ""
+        if ended.code is not None or len(loop.stopped) != 1 or "ended failure" not in account:
+            problems.append(f"cap: a take pass whose step failed ended {ended.code!r} with "
+                            f"{loop.stopped!r}, where the step's own conclusion is the account "
+                            "and the transcript is not read")
     return problems
