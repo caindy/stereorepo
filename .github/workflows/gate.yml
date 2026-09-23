@@ -35,7 +35,16 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, edited, reopened, synchronize, ready_for_review]
+    # No `edited`: it changes the title, the body or the base branch, and none
+    # of the three changes a byte of the head's tree, so the three jobs that
+    # read files declined it — and a job that declines still writes a check run,
+    # which becomes the latest under that job's name and hides the `success` an
+    # earlier `synchronize` recorded for the same head (DR-274). `pull request`
+    # would have run, and gives that up: `move revise` runs `check_pr.py` before
+    # it writes, and the sweep below re-runs it on the clock, so an edit made
+    # outside the channel — a retarget included, which moves no commit and so
+    # fires no `synchronize` either — is read later rather than never.
+    types: [opened, reopened, synchronize, ready_for_review]
   # Resolving a thread fires no Actions event at all — `pull_request_review_thread`
   # is a webhook GitHub does not accept as a trigger, and using it here failed the
   # whole workflow at startup rather than being ignored. So A16 is checked on the
@@ -65,7 +74,7 @@ env:
 jobs:
   files:
     name: files
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: arc-runner-set
     steps:
       # The whole history, because `decision numbering` asks it whether a hole
@@ -95,7 +104,7 @@ jobs:
   # above.
   rust:
     name: rust seed
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
@@ -127,7 +136,7 @@ jobs:
   # here.
   python:
     name: python seed
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.action != 'edited'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
