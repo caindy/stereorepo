@@ -8,9 +8,9 @@ decisions:
       - work:artifact/meta-checks-collect
       - work:artifact/meta-checks-files
     context: >-
-      Article A6 requires that every gate step has three outcomes: could not run (loud, unmarked, exits zero);
-      passed (marked with scope); and found something (non-zero). Article A7 states that a check-mark is a
-      claim about scope, so a step must state what it checked.
+      Article A6 requires that every gate step has three outcomes: could not run (loud, unmarked, exits zero
+      where a person runs it, and non-zero under CI); passed (marked); and found something (non-zero).
+      Article A7 states that a check-mark is a claim about scope, so a step must state what it checked.
       The .meta Project's gate check.py and report did not have a way for steps to return "could not run"
       or report their scope. As a result, in a portfolio, "scaffold-only paths" and "gate workflows agree"
       both returned [] because they had nothing to read. The gate reported them as "ok", claiming coverage

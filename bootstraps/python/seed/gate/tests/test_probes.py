@@ -13,6 +13,7 @@ from gate import (
     Found,
     Passed,
     Step,
+    closing_block,
     comments,
     doc,
     evidence_against,
@@ -215,14 +216,32 @@ def test_only_a_finding_fails(tree: Tree, capsys: pytest.CaptureFixture[str]) ->
         ("ok", lambda _root: Passed("all")),
         ("bad", lambda _root: Found(("x",))),
     ]
-    assert run(tree.root, steps[:2]) == 0
-    assert run(tree.root, steps) == 1
-    assert run(tree.root, []) == 2
+    assert run(tree.root, steps[:2], environ={}) == 0
+    assert run(tree.root, steps[:2], environ={"CI": "true"}) == 1
+    assert run(tree.root, steps, environ={}) == 1
+    assert run(tree.root, [], environ={}) == 2
     out = capsys.readouterr()
     assert "?  could: no tool\n" in out.out
     assert "ok ok — all\n" in out.out
     assert "x  bad (1)\n     x\n" in out.out
+    assert "?  steps that could not run (1)" in out.out
     assert out.err.startswith("usage: uv run gate [gate | lints")
+
+
+def test_closing_block_conditions_on_ci() -> None:
+    lines, fatal = closing_block([], environ={"CI": "true"})
+    assert lines == []
+    assert not fatal
+
+    lines, fatal = closing_block(["step: missing"], environ={})
+    assert len(lines) == 2
+    assert not fatal
+    assert "zero where a person runs" in lines[0]
+    assert "  step: missing" in lines[1]
+
+    lines, fatal = closing_block(["step: missing"], environ={"CI": "true"})
+    assert len(lines) == 2
+    assert fatal
 
 
 def test_a_word_selects_one_step_at_most() -> None:

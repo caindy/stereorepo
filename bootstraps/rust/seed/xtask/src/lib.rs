@@ -77,10 +77,36 @@ pub fn select(wanted: &str) -> Vec<&'static Step> {
     }
 }
 
+/// The block naming the steps that could not run, and whether they fail the run (Article 6, solorepo's DR-261).
+///
+/// Returns the lines to print, and whether they fail the run under CI.
+#[must_use]
+pub fn closing_block(unrunnable: &[String]) -> (Vec<String>, bool) {
+    closing_block_in(unrunnable, std::env::var("CI").as_deref().ok())
+}
+
+/// Computes the closing block lines and failure condition given an explicit CI environment value (Article 6, solorepo's DR-261).
+#[must_use]
+pub fn closing_block_in(unrunnable: &[String], ci: Option<&str>) -> (Vec<String>, bool) {
+    if unrunnable.is_empty() {
+        return (Vec::new(), false);
+    }
+    let mut lines = vec![format!(
+        "?  steps that could not run ({}) — zero where a person runs the gate, non-zero under CI",
+        unrunnable.len()
+    )];
+    for item in unrunnable {
+        lines.push(format!("  {item}"));
+    }
+    let is_ci = ci.is_some_and(|v| !v.is_empty());
+    (lines, is_ci)
+}
+
 /// Executes each step in sequence and prints its formatted outcome.
 ///
 /// Returns `ExitCode::SUCCESS` if all steps pass, `ExitCode::FAILURE` if any step
-/// finds issues, or exit code 2 if `steps` is empty.
+/// finds issues or if any step could not run under CI (Article 6, solorepo's DR-261),
+/// or exit code 2 if `steps` is empty.
 #[must_use]
 pub fn run(root: &Path, steps: &[&Step]) -> ExitCode {
     if steps.is_empty() {
@@ -89,12 +115,20 @@ pub fn run(root: &Path, steps: &[&Step]) -> ExitCode {
         return ExitCode::from(2);
     }
     let mut failed = false;
+    let mut unrunnable = Vec::new();
     for (label, step) in steps {
         let outcome = step(root);
         outcome.report(label);
+        if let Outcome::CouldNotRun(why) = &outcome {
+            unrunnable.push(format!("{label}: {why}"));
+        }
         failed |= outcome.failed();
     }
-    if failed {
+    let (block, fatal) = closing_block(&unrunnable);
+    if !block.is_empty() {
+        println!("\n{}", block.join("\n"));
+    }
+    if failed || fatal {
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS
@@ -482,7 +516,10 @@ fn relative(root: &Path, path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Outcome, STEPS, run, select, subcommand_present, without_comments};
+    use super::{
+        Outcome, STEPS, closing_block, closing_block_in, run, select, subcommand_present,
+        without_comments,
+    };
     use std::path::Path;
     use std::process::ExitCode;
 
@@ -527,6 +564,34 @@ mod tests {
         assert!(!Outcome::CouldNotRun("no tool".into()).failed());
         assert!(!Outcome::Passed("everything".into()).failed());
         assert!(Outcome::Found(vec!["one".into()]).failed());
+    }
+
+    #[test]
+    fn closing_block_conditions_on_ci() {
+        let (lines, fatal) = closing_block_in(&[], Some("true"));
+        assert!(lines.is_empty());
+        assert!(!fatal);
+
+        let unrunnable = vec!["step: missing".to_owned()];
+        let (lines, fatal) = closing_block_in(&unrunnable, None);
+        assert_eq!(lines.len(), 2);
+        assert!(!fatal);
+        assert!(lines[0].contains("zero where a person runs"));
+        assert_eq!(lines[1], "  step: missing");
+
+        let (lines, fatal) = closing_block_in(&unrunnable, Some("true"));
+        assert_eq!(lines.len(), 2);
+        assert!(fatal);
+    }
+
+    #[test]
+    fn closing_block_takes_ci_from_the_environment() {
+        let unrunnable = vec!["step: missing".to_owned()];
+        let (lines, fatal) = closing_block(&unrunnable);
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].contains("zero where a person runs"));
+        assert_eq!(lines[1], "  step: missing");
+        assert_eq!(fatal, std::env::var("CI").is_ok_and(|v| !v.is_empty()));
     }
 
     #[test]

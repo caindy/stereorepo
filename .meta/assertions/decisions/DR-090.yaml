@@ -10,6 +10,11 @@ decisions:
     enacted_in:
       - work:artifact/bootstraps-rust-xtask
       - work:artifact/bootstraps-rust-readme
+    context: >-
+      A Bootstrap is where a Discipline becomes a command that can fail for one
+      language. Article A5, Article A6 (as amended by DR-261: three outcomes, exiting
+      zero where a person runs the gate and non-zero under CI), and Article A7 define
+      the gate contract that the Rust seed's xtask must uphold.
     alternatives:
       - name: Python scripts beside the seed
         chosen: false

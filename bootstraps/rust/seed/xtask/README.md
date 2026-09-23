@@ -9,8 +9,9 @@ Every step answers to four rules, and they are the whole contract:
   `--check`, a build or a test. Fixing is `cargo fmt` and `cargo clippy --fix`,
   run by a person, never from here.
 - **A6 — every step has three outcomes.** [`Outcome::CouldNotRun`] is loud,
-  unmarked and exits zero, so a missing tool is reported rather than passed.
-  [`Outcome::Passed`] is marked. [`Outcome::Found`] is non-zero.
+  unmarked and exits zero where a person runs it, and non-zero under CI, so a
+  missing tool is reported rather than passed. [`Outcome::Passed`] is marked.
+  [`Outcome::Found`] is non-zero.
 - **A7 — a check-mark is a claim about scope.** A passing step prints what it
   covered beside its mark, so `ok orphans` says how many files it looked at and
   under how many packages.

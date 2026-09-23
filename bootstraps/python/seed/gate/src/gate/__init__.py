@@ -21,7 +21,7 @@ import subprocess
 import sys
 import tokenize
 import tomllib
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 
 #: Directories that are tool output, not the tree. Skipped everywhere a step
@@ -897,28 +897,78 @@ def select(wanted: str) -> list[Step]:
     return [step for step in STEPS if step[0] == wanted][:1]
 
 
-def run(root: Path, steps: list[Step]) -> int:
+def closing_block(
+    unrunnable: Sequence[str],
+    environ: Mapping[str, str] = os.environ,
+) -> tuple[list[str], bool]:
+    """The block naming the steps that could not run, and whether they fail the run.
+
+    Upholds Article 6 and solorepo's DR-261.
+
+    The block stands outside Article 21's three step shapes, and its detail
+    lines are indented by two spaces rather than the five `.meta/gate` reads as
+    a problem of the step above it, so the whole block reaches the operator on
+    standard output, where the steps' own reports go, instead of being split by,
+    or attributed to, whichever step happened to be last.
+
+    Args:
+        unrunnable: One `<label>: <why>` line per step that could not run, in
+            the order the gate reported them.
+        environ: The environment the `CI` variable is read from.
+
+    Returns:
+        tuple[list[str], bool]: The lines to print, which are the same text in
+            every environment, and whether they fail the run. They fail where
+            `environ` holds a non-empty `CI` and at least one step could not run;
+            elsewhere the block is a report and does not fail the run. Empty
+            `unrunnable` yields no lines and no failure.
+    """
+    if not unrunnable:
+        return [], False
+    lines = [
+        f"?  steps that could not run ({len(unrunnable)}) — zero where a person runs "
+        "the gate, non-zero under CI"
+    ]
+    lines += [f"  {line}" for line in unrunnable]
+    return lines, bool(environ.get("CI"))
+
+
+def run(
+    root: Path,
+    steps: list[Step],
+    environ: Mapping[str, str] = os.environ,
+) -> int:
     """Executes a list of gate steps and prints formatted outcome reports.
 
     Args:
         root: Workspace root directory path.
         steps: List of Step tuples to execute.
+        environ: Environment mapping to inspect for CI flag (Article 6,
+            solorepo's DR-261).
 
     Returns:
-        int: Exit status code (0 for success, 1 for failures, 2 for empty step list).
+        int: Exit status code (0 for success outside CI or all passing, 1 for failures
+            or unrunnable steps under CI, 2 for empty step list).
     """
     if not steps:
         known = " | ".join(label for label, _ in STEPS)
         print(f"usage: uv run gate [gate | {known}]", file=sys.stderr)
         return 2
-    exit_code = 0
+    failed_any = False
+    unrunnable: list[str] = []
     for label, step in steps:
         outcome = step(root)
         sys.stdout.write(rendered(outcome, label))
         sys.stdout.flush()
+        if isinstance(outcome, CouldNotRun):
+            unrunnable.append(f"{label}: {outcome.why}")
         if failed(outcome):
-            exit_code = 1
-    return exit_code
+            failed_any = True
+    block, fatal = closing_block(unrunnable, environ)
+    if block:
+        sys.stdout.write("\n" + "\n".join(block) + "\n")
+        sys.stdout.flush()
+    return 1 if failed_any or fatal else 0
 
 
 def workspace_root() -> Path:
