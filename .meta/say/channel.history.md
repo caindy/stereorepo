@@ -168,3 +168,21 @@ error, which is how a call that exits 0 having done nothing is named rather
 than inferred from what GitHub says afterwards.
 
 Evidence: `.meta/checks/probes/channel/extension.py::gh_stack_extension_probes`
+
+
+### Antigravity session and agent identity unrecognized in local execution
+
+In local Antigravity sessions every `say` verb exited on `say: the environment
+does not say who is speaking`, and exporting `ACTOR_SESSION` by hand moved the
+refusal to `say: the environment does not say what is speaking`, because
+`ENV_SESSION` recognized only `CLAUDE_CODE_SESSION_ID` beside the generic
+`ACTOR_SESSION` and `agent()` had no harness fallback, so signing a commit
+required exporting both `ACTOR_SESSION` and `AI_AGENT` by hand
+(solorepo's #708). Established: `ENV_SESSION` recognizes
+`ANTIGRAVITY_CONVERSATION_ID`, and
+`channel.agent()` falls back to `channel.ANTIGRAVITY`, `"antigravity-cli"` —
+the name `.meta/say/on`'s `HARNESSES` gives that door (solorepo's DR-245) — when
+either name in `ENV_ANTIGRAVITY` is present outside a run.
+
+Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`,
+`.meta/checks/probes/channel/agent.py::agent_probes`

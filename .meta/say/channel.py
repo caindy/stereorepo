@@ -53,9 +53,15 @@ ROLE_ENV = pathlib.Path(os.environ.get("SOLOREPO_ROLE_ENV", ROLE_DIR / "coder.en
 """Path to the active role credential file, overridable via SOLOREPO_ROLE_ENV."""
 
 ENV_AGENT = ("AI_AGENT",)
-"""Environment variable names evaluated to detect local agent harness identity."""
+"""Environment variable names carrying the local agent harness name verbatim."""
 
-ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", "ACTOR_SESSION")
+ENV_ANTIGRAVITY = ("ANTIGRAVITY_AGENT", "ANTIGRAVITY_CONVERSATION_ID")
+"""Environment variable names identifying a local Antigravity session (solorepo's DR-245)."""
+
+ANTIGRAVITY = "antigravity-cli"
+"""The agent name Antigravity signs with, matching `on.HARNESSES` (solorepo's DR-245)."""
+
+ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", ENV_ANTIGRAVITY[1], "ACTOR_SESSION")
 """Environment variable names evaluated to detect local session identifiers."""
 
 RUN_MARK = "gha-"
@@ -205,7 +211,9 @@ def agent() -> str:
     """Returns the identifier of the executing agent harness component (solorepo's DR-233).
 
     In a workflow run, reads `ENV_RUN_AGENT` (`ACTOR_AGENT`) or derives identity
-    from workflow step metadata (`ENV_RUN_STEP`). Outside a run, returns `AI_AGENT`.
+    from workflow step metadata (`ENV_RUN_STEP`). Outside a run, returns
+    `AI_AGENT`, falling back to `ANTIGRAVITY` where `AI_AGENT` is unset and
+    either name in `ENV_ANTIGRAVITY` is set.
 
     Returns:
         The resolved agent harness component name.
@@ -222,8 +230,10 @@ def agent() -> str:
         return run_agent
     who = next((os.environ[k] for k in ENV_AGENT if os.environ.get(k)), None)
     if not who:
+        if any(os.environ.get(name) for name in ENV_ANTIGRAVITY):
+            return ANTIGRAVITY
         sys.exit(f"say: the environment does not say what is speaking "
-                 f"(need one of {ENV_AGENT}); refusing to post")
+                 f"(need one of {ENV_AGENT + ENV_ANTIGRAVITY}); refusing to post")
     return who
 
 

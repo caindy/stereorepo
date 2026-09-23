@@ -41,7 +41,7 @@
 .meta/checks/graph/artifacts.py: 1
 .meta/checks/graph/record.py: 2
 .meta/checks/graph/structure.py: 3
-.meta/checks/probes/channel/actor.py: 14
+.meta/checks/probes/channel/actor.py: 12
 .meta/checks/probes/channel/bound.py: 3
 .meta/checks/probes/channel/claim.py: 2
 .meta/checks/probes/channel/filing.py: 14
