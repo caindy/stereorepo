@@ -12,6 +12,7 @@ it (solorepo's DR-150).
 History in files.history.md (solorepo's DR-171).
 """
 import checks.files.sources  # noqa: I001  # reason: registration order is deliberate
+import checks.files.conflicts
 import checks.files.templates
 import checks.files.markdown
 import checks.files.wiki
@@ -22,6 +23,7 @@ import checks.files.history
 import checks.files.python
 import checks.files.rendered  # noqa: F401  # reason: registers check steps
 from checks.files.sources import inherited, is_py, meta_sources, template_files, tree
+from checks.files.conflicts import CONFLICT_MARKER, conflict_markers
 from checks.files.templates import Strict, duplicate_concept_ids, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
 from checks.files.markdown import FENCED, LINK, markdown_links
 from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wiki_synonyms_are_not_avoided, wikilinks
@@ -33,6 +35,7 @@ from checks.files.python import CONTINUATION, EDGES, INTERPRETERS, LINE_LENGTH_R
 from checks.files.rendered import apm_package, rendered_prose
 
 __all__ = [
+    "CONFLICT_MARKER",
     "CONTINUATION",
     "CONTRACT",
     "EDGES",
@@ -71,6 +74,8 @@ __all__ = [
     "Strict",
     "apm_package",
     "asserts",
+    "conflict_markers",
+    "conflicts",
     "control_plane_packages",
     "control_plane_restore",
     "declared",

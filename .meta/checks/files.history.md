@@ -211,3 +211,15 @@ step passes `--max-turns`, over the prompt-bearing steps read out of the `coder`
 job rather than a hand-written list.
 
 Evidence: `.meta/checks/files/workflows.py::coder_prompts_name_turn_budget`
+
+### Tracked and unignored text files contaminated by merge conflict markers
+
+Rebasing a branch current is routine (PR First step 14), but conflicts in
+documentation, YAML, or defect history files can append conflict markers to
+the tail of files, bypassing language syntax checkers and merging into `main`
+silently (solorepo's #772, solorepo's #742). Established: `conflict_markers`
+scans the tree as git sees it (tracked files and untracked files git does not
+ignore, excluding symlinks) via `sources.tree()`, reporting any line matching
+git's conflict marker patterns (`<<<<<<<`, `=======`, `>>>>>>>`).
+
+Evidence: `.meta/checks/files/conflicts.py::conflict_markers`
