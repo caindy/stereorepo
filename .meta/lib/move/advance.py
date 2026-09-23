@@ -179,7 +179,7 @@ def _dispatch_single_pull(pull: common.Pull, pulls: Sequence[common.Pull], revie
                           minutes: int, now: datetime.datetime) -> tuple[str | None, str | None]:
     """Evaluate and dispatch coder passes for a single pull request."""
     number = str(pull["number"])
-    challenge = re.sub(r"^(?:claude|gemini|codex)/issue-", "", pull["headRefName"])
+    challenge = re.sub(r"^(?:claude|gemini)/issue-", "", pull["headRefName"])
     asked = [r.get("login") or r.get("name") or "someone"
              for r in pull.get("reviewRequests") or []]
     moved = (datetime.datetime.fromisoformat(pull["updatedAt"].replace("Z", "+00:00"))
@@ -287,7 +287,7 @@ def _check_dispatch_rebase(pr: str | int, pull: common.Pull) -> None:
     head = str(pull.get("headRefName") or "")
     if not pull_requests.LOOPS_BRANCH.match(head):
         sys.exit(f"say: #{pr} is on {head}, which is not a loop branch "
-                 "`(claude|gemini|codex)/issue-<n>`. The rebase pass reads the Challenge it would "
+                 "`(claude|gemini)/issue-<n>`. The rebase pass reads the Challenge it would "
                  "hand back to off the branch name, so on any other shape a pass that could not "
                  "settle the conflict has nowhere to stop. `coder.yml` holds that refusal already "
                  "and holds it after the dispatch, where it is a red run attached to no check; "

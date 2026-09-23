@@ -190,10 +190,10 @@ def _take_cases(channel: Any, on: Any) -> list[str]:
         problems.append(f"take: a dispatched take asked the take door {take.asked!r}, where "
                         "the door is the label's whatever the event")
     _, out, _ = _before(channel, on, _fakes(_GitHub(["challenge", "easy"]), _Take(level="easy")),
-                        ("take", "workflow_dispatch", "codex"), ISSUE)
-    if out.get("harness") != "codex":
-        problems.append(f"take: an unlabelled Challenge under a dispatch asking for Codex "
-                        f"decided {out!r}")
+                        ("take", "workflow_dispatch", "gemini"), ISSUE)
+    if out.get("harness") != "gemini":
+        problems.append(f"take: an unlabelled Challenge under a dispatch asking for "
+                        f"Antigravity CLI decided {out!r}")
 
     ended, out, _ = _before(channel, on, _fakes(_GitHub(["challenge", "hard"]),
                                                _Take(by="held", why="labelled hard", level="")),
@@ -301,8 +301,8 @@ def _pull_cases(channel: Any, on: Any) -> list[str]:
         problems.append(f"answer: a dispatched review pass decided {out!r} and asked "
                         f"{take.asked!r}, where the solo's own word is not read against")
 
-    for label, asked, harness in (("harness:gemini", "", "gemini"), ("harness:gemini", "codex",
-                                                                      "codex")):
+    for label, asked, harness in (("harness:gemini", "", "gemini"),
+                                  ("harness:gemini", "claude", "claude")):
         _, out, _ = _before(channel, on, _fakes(_GitHub([label])),
                             ("answer", "workflow_dispatch", asked), PULL)
         if out.get("harness") != harness:

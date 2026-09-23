@@ -548,7 +548,7 @@ jobs:
             exits non-zero, do NOT approve. An approval on a red head leaves the
             pull request stalled indefinitely: the merge manager will not land
             non-green work and the promotion pass performs no checks. On a
-            `(claude|gemini|codex)/issue-*` branch, requesting changes is the semaphore that
+            `(claude|gemini)/issue-*` branch, requesting changes is the semaphore that
             wakes the coder Role to fix breakage; on other branches, it informs
             the author. Post `--request-changes` instead, naming the failing
             checks in "What was found". If all completed checks are green (or

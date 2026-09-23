@@ -66,7 +66,7 @@ def review_door_probes() -> list[str]:
     """`on reviewer before` and `after` over a pull request, with what the workflow hands `after`.
 
     Before: the harness by the pull request's label, Claude Code by default
-    and Codex, Gemini or Jules by theirs, named as the reading door names
+    and Gemini or Jules by theirs, named as the reading door names
     it; every field of the depth a step output; the diff, the head's copies
     of the trunk paths, and the constraints written under `.review/`, the
     constraints counting and enumerating `depth.CONTROL_PLANE` less the
@@ -285,8 +285,7 @@ def _review_before_cases(channel: Any, on: Any) -> list[str]:
                         "approval stands beside a bodiless comment and another login's verdict")
     problems += _review_pages(on, written, archived)
 
-    for label, harness, agent in (("harness:codex", "codex", "anthropics/claude-code-action@v1"),
-                                  ("harness:gemini", "gemini", "antigravity-cli"),
+    for label, harness, agent in (("harness:gemini", "gemini", "antigravity-cli"),
                                   ("harness:jules", "jules", "google-labs-jules")):
         ended, out, _, _, _ = _review_before(channel, on, _Pull(labels=[label]))
         if f"harness={harness}" not in out or f"agent={agent}" not in out:

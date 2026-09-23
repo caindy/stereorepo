@@ -73,15 +73,15 @@ CONSTRAINTS = pathlib.Path(__file__).resolve().parent.parent / "templates" / "co
 """The form of what bounds every agent on a review, which the review door fills."""
 
 HARNESSES = {"gemini": "antigravity-cli", "jules": "google-labs-jules",
-             "claude": "anthropics/claude-code-action@v1",
-             "codex": "anthropics/claude-code-action@v1"}
+             "claude": "anthropics/claude-code-action@v1"}
 """Each harness a door can choose, and the Agent the Trailer names it by."""
 
 READING_HARNESSES = ("gemini", "claude")
 """The harnesses the reading door chooses among, by a `harness:` label, in the order asked."""
 
-REVIEW_HARNESSES = ("codex", "gemini", "jules", "claude")
-"""The harnesses the review door chooses among (solorepo's DR-242), in the order asked."""
+REVIEW_HARNESSES = ("gemini", "jules", "claude")
+"""The harnesses the review door chooses among, in the order asked: Antigravity CLI
+(solorepo's DR-245), Google Labs Jules (solorepo's DR-246), and Claude Code by default."""
 
 EVIDENCE = {"claude": (REVIEW / "hook-claude.evidence", "Claude Code"),
             "gemini": (REVIEW / "hook-agy.evidence", "Antigravity CLI")}
@@ -504,10 +504,9 @@ def review_after(number: str, session: Session) -> None:
         sys.exit(1)
 
 
-CODER_HARNESSES = ("codex", "gemini", "claude")
-"""The harnesses the coder's door chooses among, in the order asked: Codex by label
-(solorepo's DR-242), Antigravity CLI by label or as the fallback (solorepo's DR-245), and
-Claude Code by default."""
+CODER_HARNESSES = ("gemini", "claude")
+"""The harnesses the coder's door chooses among, in the order asked: Antigravity CLI
+by label or as the fallback (solorepo's DR-245), and Claude Code by default."""
 
 PASSES = ("take", "rebase", "answer", "promote")
 """The coder's four passes (solorepo's DR-133, solorepo's DR-159), as `--pass` names them."""

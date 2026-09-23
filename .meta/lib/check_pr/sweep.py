@@ -18,7 +18,7 @@ from lib.check_pr.state import LOOP_LEVELS
 
 CODER = META.parent / ".github" / "workflows" / "coder.yml"
 
-LOOPS_BRANCH = re.compile(r"^(?:claude|gemini|codex)/issue-(\d+)$")
+LOOPS_BRANCH = re.compile(r"^(?:claude|gemini)/issue-(\d+)$")
 
 # The fields the hand-off reader needs, added to the sweep's own list so that
 # one fetch answers both. The rollup is not among them: `gh` answers that one
@@ -100,7 +100,7 @@ def loop_pull(issue: str | int, fields: str,
         dict[str, Any] | None: The pull request's fields, or None where no
             prefix has an open pull request on that Issue's branch.
     """
-    for prefix in ("gemini", "claude", "codex"):
+    for prefix in ("gemini", "claude"):
         found = github.gh("pr", "list", "--state", "open", "--head", f"{prefix}/issue-{issue}",
                           "--json", fields, default=default)
         if found:
