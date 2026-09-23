@@ -127,7 +127,7 @@
 .meta/lib/render/decisions.py: 4
 .meta/lib/render/pages.py: 8
 .meta/lib/render/record.py: 2
-.meta/lib/render/skills.py: 69
+.meta/lib/render/skills.py: 2
 .meta/lib/render/targets.py: 1
 .meta/lib/render/writers.py: 4
 .meta/lib/search/__init__.py: 1
