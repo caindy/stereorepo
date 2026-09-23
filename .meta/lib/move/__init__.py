@@ -9,13 +9,14 @@ the package either: the number minted and reserved, and a record's status.
 merge, and imports `common`, `pull_requests` and `advance`. `pull_requests` is
 the pull request's, opening, layering, the merge, the supersession, and the
 review request that is the handoff, and imports `common`, `decisions` and
-`advance`. `advance` is the sweep on a push to trunk and the passes it
-dispatches, and imports `common`, `pull_requests` and `manager`. `manager` is
-the standing merge manager and imports `common`, `challenges`, `pull_requests`
-and `advance`. `reconcile` is what every open Issue and pull request is owed
-on the clock, and imports `common`, `challenges`, `pull_requests`, `advance`
-and `manager`, every module before it but `decisions`. `cli` is the argument
-surface the script delegates to and imports every module but itself.
+`advance`. `advance` is the sweep on a push to trunk and the passes it dispatches, and
+imports `common`, `pull_requests` and `manager`; it reaches `reconcile` inside
+function bodies only. `manager` is the standing merge manager and imports
+`common`, `challenges`, `pull_requests` and `advance`. `reconcile` is what
+every open Issue and pull request is owed on the clock, and imports `common`,
+`challenges`, `pull_requests`, `advance` and `manager`, every module before it
+but `decisions`. `cli` is the argument surface the script delegates to and
+imports every module but itself.
 
 The graph is not a layering. `advance` and `manager` import each other, and
 `challenges` and `pull_requests` each import `advance`, which imports
@@ -24,8 +25,9 @@ one is an attribute read inside a function body, resolved when the verb runs
 and not when the module loads, and `from lib.move import x` answers from
 `sys.modules` while `x` is still initialising. The one exception is
 `reconcile`, which reads `manager.MERGE_MANAGER_FIELDS` at module level to
-build its own field list; that holds because nothing `reconcile` imports
-imports `reconcile`, and a module that came to must not read it at load.
+build its own field list; that holds because nothing `reconcile` imports reads
+`reconcile` at load — `advance`'s references to it resolve inside function
+bodies — and a module that came to must not read it at load.
 
 The entry exports each module beside its names (solorepo's DR-217), so a
 probe stands a seam in on the module that defines it. The modules are named so

@@ -429,6 +429,68 @@ def _dispatch_rebase_refused_by_hand(channel: Any, move: Any) -> list[str]:
     return problems
 
 
+def _three_dispatchers_agree_on_stack_order(channel: Any, move: Any) -> list[str]:
+    """The clock, sweep, and verb agree on stack order over one fixture (solorepo's DR-264)."""
+    problems: list[str] = []
+    stack = {6: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                 "mergeable": "CONFLICTING"},
+             7: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                 "base": "claude/issue-6", "mergeable": "CONFLICTING"}}
+
+    fake = FakeGitHub(stack)
+    sweep_said = swept(channel, move, fake, problems)
+    if fake.dispatched != [("6", "rebase")]:
+        problems.append(f"sweep: root of conflicting stack dispatched {fake.dispatched!r}, "
+                        "not [('6', 'rebase')]")
+    if sweep_said:
+        problems.append(f"sweep: conflicting stack sweep exited with {sweep_said!r}")
+
+    fake = FakeGitHub(stack)
+    layer_said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
+    if fake.dispatched or not layer_said or "resolved from the bottom" not in layer_said:
+        problems.append(f"verb: layer above conflicting root dispatched {fake.dispatched!r} "
+                        f"and was refused with {layer_said!r}")
+    fake = FakeGitHub(stack)
+    root_said = run_verb(channel, fake, lambda: move.dispatch_pass("6", "rebase"))
+    if fake.dispatched != [("6", "rebase")] or root_said:
+        problems.append(f"verb: root of conflicting stack dispatched {fake.dispatched!r} "
+                        f"and said {root_said!r}")
+
+    fake = FakeGitHub(stack)
+    prs = [fake.view(6), fake.view(7)]
+    reading = move.Reading(now=datetime.datetime.now(datetime.UTC), bound=0, longest=75,
+                           coder="o-r-coder", reviewer_login="o-r-reviewer",
+                           owner="o", name="r", by_number={}, named=set(),
+                           coder_runs=move.Runs([], []), review_runs=move.Runs([], []),
+                           triage_runs=move.Runs([], []))
+    clock_acts: list[Any] = []
+    run_verb(channel, fake, lambda: clock_acts.extend(move.owed_by_pulls(prs, reading)))
+    act_root = next((a for a in clock_acts if a.number == 6), None)
+    act_layer = next((a for a in clock_acts if a.number == 7), None)
+    if act_root is None or act_root.kind != "rebase":
+        problems.append(f"clock: root of conflicting stack owed {act_root!r}, not rebase")
+    if (act_layer is None or act_layer.kind != "hold" or act_layer.lower != 6
+            or "rebased first" not in act_layer.why):
+        problems.append(f"clock: layer above conflicting root owed {act_layer!r}, not hold for 6")
+
+    unreadable_stack = {6: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                            "mergeable": "CONFLICTING", "issue": {"unreadable": True}},
+                        7: {"behind": 0, "armed": False, "requested": ["reviewer"],
+                            "base": "claude/issue-6", "mergeable": "CONFLICTING"}}
+    fake_unreadable = FakeGitHub(unreadable_stack)
+    prs_unreadable = [fake_unreadable.view(6), fake_unreadable.view(7)]
+    unreadable_acts: list[Any] = []
+    run_verb(channel, fake_unreadable,
+             lambda: unreadable_acts.extend(move.owed_by_pulls(prs_unreadable, reading)))
+    act_unreadable = next((a for a in unreadable_acts if a.number == 7), None)
+    if (act_unreadable is None or act_unreadable.kind != "hold" or act_unreadable.lower != 6
+            or "no Challenge the loop can read" not in act_unreadable.why):
+        problems.append(f"clock: layer above unreadable root owed {act_unreadable!r}, "
+                        "not hold naming unreadable Challenge")
+
+    return problems
+
+
 @check("dispatch probes", pre=True)
 def dispatch_probes() -> list[str]:
     """The dispatch reading of `advance` and the by-hand `dispatch` against a fake GitHub (solorepo's DR-133).
@@ -563,6 +625,7 @@ def dispatch_probes() -> list[str]:
         _dispatch_review_refused_without_a_request_for_changes(channel, move, reviewer),
         _dispatch_review_refused_while_answered(channel, move, reviewer),
         _dispatch_rebase_on_conflicting_not_on_behind(channel, move),
-        _dispatch_rebase_refused_by_hand(channel, move)
+        _dispatch_rebase_refused_by_hand(channel, move),
+        _three_dispatchers_agree_on_stack_order(channel, move)
     ) for problem in problems]
 

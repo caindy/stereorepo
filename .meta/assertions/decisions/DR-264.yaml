@@ -36,6 +36,7 @@ decisions:
       - work:artifact/meta-lib-move-manager
       - work:artifact/meta-lib-move-reconcile
       - work:artifact/meta-lib-move-cli
+      - work:artifact/meta-checks-probes-loops-dispatch
     context: >-
       The loops are a pair of state machines, one over Issues and one over pull
       requests, whose state GitHub holds (A22). Nothing in the tree holds either
@@ -186,3 +187,14 @@ decisions:
       channel layer would dispatch on reads that race their writes. Each seam
       consumes the one before it, and each lands green, which is what makes this a
       refactor of a running system rather than a rewrite beside one.
+
+      The rebase reading consolidation (#823). The falsifier triggered in #822
+      when changing one rule — that a conflicting stack resolves from the bottom
+      (DR-133) — required touching `owed_by_pulls` in `reconcile.py`,
+      `_dispatch_conflicting` in `advance.py`, and `_check_dispatch_rebase` in
+      `advance.py`. The reconciler had subsumed `advance_stranded` and the merge
+      cron, but `advance`'s own dispatch filters and the verb's preconditions
+      still carried duplicated copies of the reading. #823 answered the trigger
+      by routing the three sites through `owed_by_pull` in `reconcile.py`,
+      parameterized by caller constraints (`pulls`, `held_only`, `reading`), so
+      the clock, the sweep, and the verb share one reading.

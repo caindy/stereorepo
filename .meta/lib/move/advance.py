@@ -26,21 +26,45 @@ def run_coder(pr: str | int, task: str) -> None:
                "-f", f"task={task}", "-f", "harness=claude", parse=False)
 
 
-def _is_autonomous_challenge(challenge: str, action: str, pull: common.Pull) -> bool:
+_UNSET = object()
+"""Sentinel distinguishing an unsupplied Challenge state from an unreadable one."""
+
+
+def _is_autonomous_challenge(challenge: str, action: str, pull: common.Pull,
+                             found: Any = _UNSET) -> bool:
     """Verify associated Challenge is open and easy/medium for loop action.
 
     An Issue deleted or transferred under its branch fails this read the same
     way on every push to trunk. This check avoids repeated red sweeps.
+
+    Parameters:
+        challenge: Identifier of the Challenge associated with the branch.
+        action: Descriptive loop action name printed on refusal.
+        pull: Pull request mapping being evaluated.
+        found: Pre-resolved Issue state, or `_UNSET` to read it live.
+            When omitted or `_UNSET`, parses `challenge` as an integer and
+            reads its state live, refusing if the branch is not numeric.
+            When `None`, treats the Challenge as already read and unreadable,
+            refusing and logging the notice. When an `IssueState` value, uses
+            the state directly, verifying it is `RESUMABLE` and refusing if
+            closed or at a non-autonomous level.
+
+    Returns:
+        True if the Challenge is open and at an autonomous level; False otherwise.
     """
-    try:
-        issue = channel.gh("issue", "view", challenge, "--json", "state,labels")
-    except SystemExit:
+    from lib.move import reconcile
+    if found is _UNSET:
+        try:
+            challenge_number = int(challenge)
+        except ValueError:
+            return False
+        found = reconcile._challenge_reads(challenge_number)
+    if found is None:
         print(f"left #{pull['number']} alone: #{challenge} cannot be read, so the {action} "
               f"is the solo's, and the sweep names it — {pull['title']}")
         return False
-    levels = {lbl["name"] for lbl in issue["labels"]} & {"easy", "medium"}
-    if issue["state"] != "OPEN" or not levels:
-        state_str = "closed" if issue["state"] != "OPEN" else "at a level no loop takes"
+    if found is not check_pr.state.IssueState.RESUMABLE:
+        state_str = "closed" if found is check_pr.state.IssueState.CLOSED else "at a level no loop takes"
         print(f"left #{pull['number']} alone: #{challenge} is {state_str}, "
               f"so the {action} is the solo's, and the sweep names it — {pull['title']}")
         return False
@@ -76,8 +100,9 @@ def _retry_stranded_reviewer(number: str, pull: common.Pull, asked: list[str],
     return False, None, None
 
 
-def _dispatch_conflicting(number: str, pull: common.Pull, waiting: list[str],
-                          pulls: Sequence[common.Pull], challenge: str) -> tuple[bool, str | None]:
+def _dispatch_conflicting(pull: common.Pull, waiting: list[str],
+                          pulls: Sequence[common.Pull], challenge: str,
+                          reviewer_login: str) -> tuple[bool, str | None]:
     """Dispatch coder rebase pass for conflicting pull request if eligible.
 
     A layer above a conflicting lower layer is left alone and named, since a
@@ -87,15 +112,23 @@ def _dispatch_conflicting(number: str, pull: common.Pull, waiting: list[str],
     Returns:
         tuple[bool, str | None]: (handled, refused_msg)
     """
+    from lib.move import reconcile
+    number = str(pull["number"])
+    try:
+        challenge_number = int(challenge)
+    except ValueError:
+        challenge_number = None
+
+    found = reconcile._challenge_reads(challenge_number) if challenge_number is not None else None
+    act = reconcile.owed_by_pull(pull, found, check_pr.PullRequestState.NEEDS_REBASE,
+                                 reviewer_login=reviewer_login,
+                                 constraints=reconcile.Constraints(pulls=pulls, held_only=True))
+    if act is not None and act.kind == "hold" and act.lower is not None:
+        print(f"left #{number} alone: it is {act.why} — {pull['title']}")
+        return True, None
+    if not _is_autonomous_challenge(challenge, "conflict", pull, found=found):
+        return True, None
     waits = " and ".join(waiting)
-    lower = pull_requests.conflicting_below(pull, pulls)
-    if lower is not None:
-        print(f"left #{number} alone: it is a layer above #{lower['number']}, which conflicts "
-              f"with its own base, and a conflicting stack is resolved from the bottom, the "
-              f"lower layer's rebase first — {pull['title']}")
-        return True, None
-    if not _is_autonomous_challenge(challenge, "conflict", pull):
-        return True, None
     try:
         run_coder(number, "rebase")
     except SystemExit as exc:
@@ -173,7 +206,7 @@ def _dispatch_single_pull(pull: common.Pull, pulls: Sequence[common.Pull], revie
         return f_msg, r_msg
 
     if waiting and merges == "CONFLICTING":
-        _, r_msg = _dispatch_conflicting(number, pull, waiting, pulls, challenge)
+        _, r_msg = _dispatch_conflicting(pull, waiting, pulls, challenge, reviewer_login)
         return None, r_msg
 
     _, r_msg = _dispatch_approved_or_redeliver(pull, merges, challenge, reviewer_login, redeliver)
@@ -250,29 +283,34 @@ def _check_dispatch_rebase(pr: str | int, pull: common.Pull) -> None:
     Checks branch shape first because it is free, then whether a layer below
     the branch still conflicts, and finally checks mergeability against base.
     """
-    if not pull_requests.LOOPS_BRANCH.match(pull["headRefName"]):
-        sys.exit(f"say: #{pr} is on {pull['headRefName']}, which is not a loop branch `(claude|gemini|codex)/issue-<n>`. "
-                 "The rebase pass reads the Challenge it would hand back to off the branch "
-                 "name, so on any other shape a pass that could not settle the conflict "
-                 "has nowhere to stop. `coder.yml` holds that refusal already and holds it "
-                 "after the dispatch, where it is a red run attached to no check; a name "
-                 "that only nearly fits, `claude/issue-<n>-followup`, does not reach even "
+    from lib.move import reconcile
+    head = str(pull.get("headRefName") or "")
+    if not pull_requests.LOOPS_BRANCH.match(head):
+        sys.exit(f"say: #{pr} is on {head}, which is not a loop branch "
+                 "`(claude|gemini|codex)/issue-<n>`. The rebase pass reads the Challenge it would "
+                 "hand back to off the branch name, so on any other shape a pass that could not "
+                 "settle the conflict has nowhere to stop. `coder.yml` holds that refusal already "
+                 "and holds it after the dispatch, where it is a red run attached to no check; "
+                 "a name that only nearly fits, `claude/issue-<n>-followup`, does not reach even "
                  "that — the guard reads it as naming no Challenge, the rebase is skipped, "
                  "and the run ends green having done nothing. Rebase it by hand.")
     open_now = channel.gh("pr", "list", "--state", "open", "--limit", "100", "--json",
                           "number,headRefName,baseRefName,mergeable")
-    lower = pull_requests.conflicting_below(pull, open_now)
-    if lower is not None:
-        sys.exit(f"say: #{pr} is a layer above #{lower['number']}, which conflicts with its "
+    act = reconcile.owed_by_pull(pull, check_pr.state.IssueState.RESUMABLE,
+                                 check_pr.PullRequestState.NEEDS_REBASE, "",
+                                 reconcile.Constraints(pulls=open_now))
+    if act is not None and act.kind == "hold" and act.lower is not None:
+        sys.exit(f"say: #{pr} is a layer above #{act.lower}, which conflicts with its "
                  "own base, and rebasing a layer before the layers below it are clean "
                  "carries their unresolved commits as its own (solorepo's DR-133). A "
                  "conflicting stack is resolved from the bottom: dispatch the rebase for "
-                 f"#{lower['number']} first, or let the reconciler, which dispatches it on "
+                 f"#{act.lower} first, or let the reconciler, which dispatches it on "
                  "its next pass and this one after.")
     merges = pull_requests.mergeability(pull) or "UNKNOWN"
     if merges != "CONFLICTING":
+        base = pull.get("baseRefName")
         sys.exit(f"say: GitHub reports #{pr} as {merges} against "
-                 f"{pull['baseRefName']}, not CONFLICTING, and the rebase pass is for a "
+                 f"{base}, not CONFLICTING, and the rebase pass is for a "
                  "branch GitHub builds no merge ref for — which is the state where no "
                  "review of the head can run and nothing but authoring can fix it. One "
                  "that has merely fallen behind is waiting on nothing and needs no Job: "

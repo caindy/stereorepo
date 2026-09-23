@@ -61,11 +61,13 @@ class Owed(NamedTuple):
             solo's.
         number: The pull request or Issue the act is owed on.
         why: The reading that owes it, in the words the log gets.
+        lower: The lower layer's number where `kind` is a stack hold, or None.
     """
 
     kind: str
     number: int
     why: str
+    lower: int | None = None
 
 
 class Runs(NamedTuple):
@@ -186,8 +188,117 @@ def idle_minutes(obj: Mapping[str, Any], now: datetime.datetime) -> float:
     return (now - since).total_seconds() / 60
 
 
+def _challenge_reads(number: int, reading: Any = None) -> Any:
+    """What `classify_issue` reads of the Challenge a loop branch names, or None if unreadable.
+
+    The pull request is counted open and the claim read as nobody's, as the
+    doors a run arrives at with its own pull request read it.
+    """
+    challenge: Mapping[str, Any] | None = None
+    if reading is not None and hasattr(reading, "by_number"):
+        challenge = reading.by_number.get(number)
+    if challenge is None:
+        try:
+            challenge = channel.gh("issue", "view", str(number), "--json", "state,labels,assignees",
+                                   default=None)
+        except SystemExit:
+            challenge = None
+    if challenge is None:
+        return None
+    return check_pr.state.classify_issue({"state": "OPEN", **challenge}, None, True)
+
+
+def _held_above(number: int, lower: common.Pull, reading: Any = None) -> Owed:
+    """The hold on a layer whose lower layer conflicts, saying who moves the lower layer.
+
+    A lower layer the reconciler will rebase, a loop branch not in draft whose
+    Challenge reads `RESUMABLE`, is rebased first and the hold clears on a
+    later pass. One it will not, the solo's own branch, a draft, or a
+    Challenge in a state that is the solo's, leaves the stack to the solo,
+    and the hold says so rather than naming a mover that will not move
+    (solorepo's DR-133).
+    """
+    lower_num = int(lower["number"])
+    match = pull_requests.LOOPS_BRANCH.match(lower.get("headRefName") or "")
+    where = f"a layer above #{lower_num}, which conflicts with its own base"
+    if not match:
+        return Owed("hold", number, f"{where} and is not the loop's branch: the stack is the "
+                                    "solo's to resolve from the bottom", lower=lower_num)
+    if lower.get("isDraft"):
+        return Owed("hold", number, f"{where} and is in draft, which the reconciler does not "
+                                    "rebase: the stack is the solo's to resolve from the bottom",
+                    lower=lower_num)
+    found = _challenge_reads(int(match.group(1)), reading)
+    if found is check_pr.state.IssueState.RESUMABLE:
+        return Owed("hold", number, f"{where} and is rebased first: a stack is resolved from "
+                                    "the bottom", lower=lower_num)
+    reads = found.value if found is not None else "no Challenge the loop can read"
+    return Owed("hold", number, f"{where} and its Challenge reads {reads}, which is the "
+                                "solo's: the stack is the solo's to resolve from the bottom",
+                lower=lower_num)
+
+
+class Constraints(NamedTuple):
+    """Caller constraints parameterizing what an act is owed (solorepo's DR-264).
+
+    Attributes:
+        free: Whether the branch is free of in-flight runs and past its idle bound.
+        pulls: All open pull requests across the repository for stack ordering, or
+            None to skip the stack evaluation.
+        held_only: When True, restricts rebase dispatches to branches held by a
+            request, an arming, or a verdict.
+        reading: Shared pass context of the reconciler providing cached issue and
+            run state (Reading), or None outside a reconcile pass.
+    """
+
+    free: bool = True
+    pulls: Sequence[common.Pull] | None = None
+    held_only: bool = False
+    reading: Any = None
+
+
+def _owed_rebase(pull: common.Pull, reviewer_login: str,
+                 constraints: Constraints) -> Owed | None:
+    """What a conflicting pull request is owed under its constraints."""
+    number = int(pull["number"])
+    if constraints.pulls is not None:
+        lower = pull_requests.conflicting_below(pull, constraints.pulls)
+        if lower is not None:
+            return _held_above(number, lower, constraints.reading)
+    asked = check_pr.is_review_requested(pull, reviewer_login)
+    verdict = check_pr.latest_verdict(pull, reviewer_login)
+    armed = bool(pull.get("autoMergeRequest"))
+    if asked or armed or verdict in advance.VERDICTS:
+        return Owed("rebase", number, "conflicting under a request, an arming, or a verdict")
+    if not constraints.held_only:
+        return Owed("rebase", number, "conflicting, and nobody holds it: no request stands, no "
+                                      "merge is armed, and no verdict was given")
+    return None
+
+
+def _owed_gate_failed(pull: common.Pull, reviewer_login: str) -> Owed | None:
+    """What a pull request with failed checks is owed.
+
+    A gate that failed owes a review pass where the reviewer had approved and
+    nobody is asked, and owes the request again where the check that failed is
+    the reviewer's own and a request stands (solorepo's DR-178).
+    """
+    number = int(pull["number"])
+    asked = check_pr.is_review_requested(pull, reviewer_login)
+    verdict = check_pr.latest_verdict(pull, reviewer_login)
+    checks = manager.deduplicate_checks(pull.get("statusCheckRollup") or [])
+    reviewer_check = next((c for c in checks if c.get("name") == "reviewer"), None)
+    reviewer_failed = str((reviewer_check or {}).get("conclusion") or "").upper() == "FAILURE"
+    if asked and reviewer_failed:
+        return Owed("request", number, "review requested, and the reviewer check failed "
+                                       "without a verdict")
+    if verdict == "APPROVED" and not asked:
+        return Owed("review", number, "approved, with failing checks")
+    return None
+
+
 def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
-                 free: bool) -> Owed | None:
+                 constraints: Constraints | bool | None = None) -> Owed | None:
     """What a loop branch's pull request is owed, read off the two classifiers' states, or None.
 
     `state` is `classify_pr`'s and `found` is `classify_issue`'s, and the act
@@ -200,20 +311,21 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
     coder has not answered being the case solorepo's DR-237 added to it; so
     does one conflicting that nobody holds, since a review that ended
     without a verdict consumed the request the branch was waiting on, and a
-    branch no review can run on waits on nothing else. A
-    request for changes nobody is answering owes a review pass, since the review event
-    was dropped or a run ended without answering. A gate that failed owes a
-    review pass where the reviewer had approved and nobody is asked, and
-    owes the request again where the check that failed is the reviewer's own
-    and a request stands (solorepo's DR-178). A green pull request with no
-    verdict, no request, and no arming owes its first request, since a run
-    ended without handing it over. A Challenge in any state but `RESUMABLE`,
-    the one a loop-level Challenge with an open pull request reads when the
-    claim is read as nobody's, is held and reported, free or not, since what
-    stands on it is the solo's: a claim read as the coder's would read `TAKEN`
-    before `hard`, and a branch the solo took over at `hard` would be acted
-    on, which is what the take door's second reading exists to prevent
-    (solorepo's DR-142).
+    branch no review can run on waits on nothing else. Stacks are resolved from
+    the bottom (solorepo's DR-133), leaving layers above a conflicting root
+    held.
+
+    A request for changes nobody is answering owes a review pass, since the
+    review event was dropped or a run ended without answering.
+
+    A green pull request with no verdict, no request, and no arming owes its
+    first request, since a run ended without handing it over. A Challenge in
+    any state but `RESUMABLE`, the one a loop-level Challenge with an open pull
+    request reads when the claim is read as nobody's, is held and reported,
+    free or not, since what stands on it is the solo's: a claim read as the
+    coder's would read `TAKEN` before `hard`, and a branch the solo took over at
+    `hard` would be acted on, which is what the take door's second reading
+    exists to prevent (solorepo's DR-142).
 
     Parameters:
         pull (dict): The pull request, carrying `RECONCILE_FIELDS`, its
@@ -224,45 +336,40 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
             the branch names, with the pull request counted open and the claim
             read as nobody's, as the doors a run arrives at with its own pull
             request read it; None where the branch names no open Challenge.
-        state (PullRequestState): What `classify_pr` read of the pull request.
+        state (PullRequestState): What `classify_pr` reads of the pull request.
         reviewer_login (str): The reviewer Role's login.
-        free (bool): Whether it has sat idle past the bound with no coder or
-            review run answering it.
+        constraints (Constraints | bool | None): Caller constraints parameterizing
+            the reading, a bare boolean for `free`, or None for defaults.
 
     Returns:
         Owed | None: The one act owed, or None.
     """
+    if isinstance(constraints, bool):
+        c = Constraints(free=constraints)
+    elif constraints is None:
+        c = Constraints()
+    else:
+        c = constraints
     number = int(pull["number"])
-    issues, pulls_ = check_pr.state.IssueState, check_pr.PullRequestState
+
     if found is None:
         return None
-    if found is not issues.RESUMABLE:
+    if found is not check_pr.state.IssueState.RESUMABLE:
         return Owed("hold", number, f"its Challenge reads {found.value}, which is the solo's")
-    if not free:
+    if not c.free:
         return None
-    asked = check_pr.is_review_requested(pull, reviewer_login)
-    verdict = check_pr.latest_verdict(pull, reviewer_login)
-    armed = bool(pull.get("autoMergeRequest"))
+
+    pulls_ = check_pr.PullRequestState
     if state is pulls_.NEEDS_REBASE:
-        if asked or armed or verdict in advance.VERDICTS:
-            return Owed("rebase", number, "conflicting under a request, an arming, or a verdict")
-        return Owed("rebase", number, "conflicting, and nobody holds it: no request stands, no "
-                                      "merge is armed, and no verdict was given")
-    if state is pulls_.CHANGES_REQUESTED:
-        if not asked:
-            return Owed("review", number, "changes requested, and no run answering them")
-        return None
+        return _owed_rebase(pull, reviewer_login, c)
+    if state is pulls_.CHANGES_REQUESTED and not check_pr.is_review_requested(pull, reviewer_login):
+        return Owed("review", number, "changes requested, and no run answering them")
     if state is pulls_.GATE_FAILED:
-        checks = manager.deduplicate_checks(pull.get("statusCheckRollup") or [])
-        reviewer_check = next((c for c in checks if c.get("name") == "reviewer"), None)
-        reviewer_failed = str((reviewer_check or {}).get("conclusion") or "").upper() == "FAILURE"
-        if asked and reviewer_failed:
-            return Owed("request", number, "review requested, and the reviewer check failed "
-                                           "without a verdict")
-        if verdict == "APPROVED" and not asked:
-            return Owed("review", number, "approved, with failing checks")
-        return None
-    if state is pulls_.AWAITING_REVIEW and not asked and not verdict and not armed:
+        return _owed_gate_failed(pull, reviewer_login)
+    if (state is pulls_.AWAITING_REVIEW
+            and not check_pr.is_review_requested(pull, reviewer_login)
+            and not check_pr.latest_verdict(pull, reviewer_login)
+            and not pull.get("autoMergeRequest")):
         return Owed("request", number, "green, and nobody holds it")
     return None
 
@@ -536,11 +643,8 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
         state = check_pr.classify_pr(pull, checks,
                                      _threads_read(pull, checks, reading) if free else None,
                                      reading.reviewer_login)
-        act = owed_by_pull(pull, found, state, reading.reviewer_login, free)
-        if act and act.kind == "rebase":
-            lower = pull_requests.conflicting_below(pull, pulls)
-            if lower is not None:
-                act = _held_above(act.number, lower, reading)
+        act = owed_by_pull(pull, found, state, reading.reviewer_login,
+                           Constraints(free=free, pulls=pulls, reading=reading))
         if act:
             owed.append(act)
     return owed
@@ -601,48 +705,6 @@ def _threads_read(pull: common.Pull, checks: Sequence[Mapping[str, Any]],
         print(f"reconcile: #{pull['number']} is classified against its threads and they "
               f"could not be read — {why}")
     return threads
-
-
-def _challenge_reads(number: int, reading: Reading) -> Any:
-    """What `classify_issue` reads of the Challenge a loop branch names, or None if unreadable.
-
-    The pull request is counted open and the claim read as nobody's, as the
-    doors a run arrives at with its own pull request read it.
-    """
-    challenge: Mapping[str, Any] | None = reading.by_number.get(number)
-    if challenge is None:
-        challenge = channel.gh("issue", "view", str(number), "--json", "state,labels,assignees",
-                               default=None)
-    if challenge is None:
-        return None
-    return check_pr.state.classify_issue({"state": "OPEN", **challenge}, None, True)
-
-
-def _held_above(number: int, lower: common.Pull, reading: Reading) -> Owed:
-    """The hold on a layer whose lower layer conflicts, saying who moves the lower layer.
-
-    A lower layer the reconciler will rebase, a loop branch not in draft whose
-    Challenge reads `RESUMABLE`, is rebased first and the hold clears on a
-    later pass. One it will not, the solo's own branch, a draft, or a
-    Challenge in a state that is the solo's, leaves the stack to the solo,
-    and the hold says so rather than naming a mover that will not move
-    (solorepo's DR-133).
-    """
-    match = pull_requests.LOOPS_BRANCH.match(lower.get("headRefName") or "")
-    where = f"a layer above #{lower['number']}, which conflicts with its own base"
-    if not match:
-        return Owed("hold", number, f"{where} and is not the loop's branch: the stack is the "
-                                    "solo's to resolve from the bottom")
-    if lower.get("isDraft"):
-        return Owed("hold", number, f"{where} and is in draft, which the reconciler does not "
-                                    "rebase: the stack is the solo's to resolve from the bottom")
-    found = _challenge_reads(int(match.group(1)), reading)
-    if found is check_pr.state.IssueState.RESUMABLE:
-        return Owed("hold", number, f"{where} and is rebased first: a stack is resolved from "
-                                    "the bottom")
-    reads = found.value if found is not None else "no Challenge the loop can read"
-    return Owed("hold", number, f"{where} and its Challenge reads {reads}, which is the "
-                                "solo's: the stack is the solo's to resolve from the bottom")
 
 
 def owed_by_issues(issues: Sequence[Mapping[str, Any]], reading: Reading) -> list[Owed]:
