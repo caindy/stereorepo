@@ -13,14 +13,19 @@ because the gate over assertions should not take its imports from a test suite
 report in (solorepo's DR-218); the re-export is what imports the module and so
 what registers its step, which is why this package suppresses nothing.
 """
+from checks.probes.files.arc import GUARD_CASES, IMAGE_CASES, ImageCase, runner_image_probes
 from checks.probes.files.mints import ADVERTISED, vocabulary_mint_probes
 from checks.probes.files.sizes import SIZE_CASES, SizeCase, file_size_ceiling_probes
 
 __all__ = [
     "ADVERTISED",
+    "GUARD_CASES",
+    "IMAGE_CASES",
     "SIZE_CASES",
+    "ImageCase",
     "SizeCase",
     "file_size_ceiling_probes",
+    "runner_image_probes",
     "vocabulary_mint_probes",
 ]
 """The package's whole surface, so `from checks.probes import files` finds every probe's cases."""

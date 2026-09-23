@@ -7,6 +7,7 @@ decisions:
       - work:artifact/meta-arc-dockerfile
       - work:artifact/meta-arc-values-runnerset
       - work:artifact/meta-arc-readme
+      - work:artifact/meta-checks-files-arc
     context: >-
       DR-137 moved coder and reviewer sessions to an ARC scale set, DR-140 moved
       gate and advance workflows to the cluster, and DR-147 bounded runner pods with
@@ -63,6 +64,11 @@ decisions:
       - >-
         `.meta/arc/README.md` documents how to build and load the custom image into
         the local `kind` cluster via `docker build` and `kind load docker-image`.
+      - >-
+        `.meta/checks/files/arc.py` fails the gate where a composite action under
+        `.meta/actions/` guards a tool `.meta/arc/Dockerfile` does not install,
+        so this Decision's falsifier is read back against the tree on every run
+        rather than when somebody happens to read a guard's comment (solorepo's #916).
     falsifier: >-
       Container image storage and extraction overhead in KIND exceeding the former
       apt-get setup time; or toolchain drift between the image and repository

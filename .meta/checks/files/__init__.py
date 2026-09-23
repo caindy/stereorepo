@@ -4,7 +4,8 @@ Steps that read the working tree rather than the index — a placeholder that
 survived, a link that resolves to nothing, a path that is the scaffold's alone,
 a generated page that is behind its assertions or whose framing prose a
 portfolio would not inherit, a row added to the Ubiquitous Language with no
-reservation behind it, and the half the two gate workflows hold equal.
+reservation behind it, the half the two gate workflows hold equal, and a tool a
+composite action guards that the runner image does not install.
 One module per family of steps, imported in the order the steps report in
 (solorepo's DR-218). `sources.tree()` is the tree as git sees it, which is
 the only list of files the gate trusts, and `citations.py` reads prose out of
@@ -23,6 +24,7 @@ import checks.files.control_plane
 import checks.files.harness
 import checks.files.reviewer
 import checks.files.inline_python
+import checks.files.arc
 import checks.files.justfile
 import checks.files.prose
 import checks.files.history
@@ -39,6 +41,8 @@ from checks.files.workflows import (NOT_SHARED, REVIEW_WORKFLOW, SCAFFOLD_ONLY, 
                                     SHARED_JOBS, gate_workflows_agree, scaffold_only_paths)
 from checks.files.control_plane import (LIB, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE,
                                         control_plane_packages, control_plane_restore, scripts_of)
+from checks.files.arc import (ACTIONS, BIN_DIRS, DOCKERFILE, GUARD, SEPARATORS, guarded_tools,
+                              guarded_tools_installed, installed_commands)
 from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
@@ -46,9 +50,12 @@ from checks.files.python import CONTINUATION, EDGES, ENTRY_CEILING, ENTRY_LAYER,
 from checks.files.rendered import apm_package, rendered_prose
 
 __all__ = [
+    "ACTIONS",
+    "BIN_DIRS",
     "CONFLICT_MARKER",
     "CONTINUATION",
     "CONTRACT",
+    "DOCKERFILE",
     "EDGES",
     "ENTRY_CEILING",
     "ENTRY_LAYER",
@@ -56,6 +63,7 @@ __all__ = [
     "FILE_SIZES_BASELINE",
     "FLAGS",
     "FRONTMATTER",
+    "GUARD",
     "IDENTIFIER",
     "INTERPOLATION",
     "INTERPRETERS",
@@ -79,6 +87,7 @@ __all__ = [
     "RUFF_FINDING",
     "SCAFFOLD_ONLY",
     "SEED_OWN_JOBS",
+    "SEPARATORS",
     "SHARED_JOBS",
     "SUBCOMMAND",
     "TARGET_VERSION",
@@ -91,6 +100,7 @@ __all__ = [
     "Strict",
     "added_concepts",
     "apm_package",
+    "arc",
     "asserts",
     "ceiling",
     "concepts_in",
@@ -104,12 +114,15 @@ __all__ = [
     "duplicate_concept_ids",
     "duplicate_keys",
     "gate_workflows_agree",
+    "guarded_tools",
+    "guarded_tools_installed",
     "harness",
     "history",
     "history_entries_of",
     "inherited",
     "inherited_prose",
     "inline_python",
+    "installed_commands",
     "is_py",
     "justfile",
     "justfile_recipe_shape",
