@@ -188,7 +188,9 @@ def test_a_family_never_selected_is_refused(tree: Tree) -> None:
     )
 
 
-FLOOR_CASES = (
+FLOOR_CASES: tuple[
+    tuple[str, dict[str, object], tuple[str, ...], tuple[str, ...]], ...
+] = (
     ("flake8-bandit is not flake8-simplify", {"select": ["S"]}, ("S",), ("SIM",)),
     ("flake8-pytest-style is not flake8-use-pathlib",
      {"select": ["PT"]}, ("PT",), ("PTH",)),
