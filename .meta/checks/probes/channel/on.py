@@ -255,9 +255,10 @@ def _review_before(channel: Any, on: Any, fake: _Pull,
     case says otherwise, since the workspace is outside any repository.
     """
     archived = _Archived()
+    review = on.review
     with _workspace() as (root, output, env), stood_in(channel, gh=fake), \
-            stood_in(on, depth_of=lambda number: on.depth.STANDARD_CONFIG, write_head=archived,
-                     tracked_scratch=lambda: tracked):
+            stood_in(review, depth_of=lambda number: on.depth.STANDARD_CONFIG,
+                     write_head=archived, tracked_scratch=lambda: tracked):
         ended = outcome(lambda: on.reviewer("before", PULL, UNREAD))
         written = {path.name: path.read_text() for path in (root / ".review").rglob("*")
                    if path.is_file()} if (root / ".review").is_dir() else {}
@@ -292,9 +293,10 @@ def _review_before_cases(channel: Any, on: Any) -> list[str]:
             problems.append(f"review before: a pull request labelled {label} decided {out!r}")
 
     archived = _Archived()
+    review = on.review
     with _workspace(), environment(SOLOREPO_REVIEW_HEAD=ASKED), stood_in(channel, gh=_Pull()), \
-            stood_in(on, depth_of=lambda number: on.depth.STANDARD_CONFIG, write_head=archived,
-                     tracked_scratch=lambda: ""):
+            stood_in(review, depth_of=lambda number: on.depth.STANDARD_CONFIG,
+                     write_head=archived, tracked_scratch=lambda: ""):
         ended = outcome(lambda: on.reviewer("before", PULL, UNREAD))
     if ended.code is not None or not archived.calls or archived.calls[0][0] != ASKED:
         problems.append(f"review before: the head the run was asked about was not the one "
@@ -342,7 +344,7 @@ def _review_after(channel: Any, on: Any, session: Any, evidence: str | None = No
     two = _Pull(reviews=[_review(REVIEWER, "CHANGES_REQUESTED", "no"),
                          _review(REVIEWER, "APPROVED")])
     with _workspace() as (root, _, _), stood_in(channel, gh=two), \
-            stood_in(on, spawned=lambda transcript: spawned):
+            stood_in(on.review, spawned=lambda transcript: spawned):
         (root / ".review").mkdir()
         if evidence is not None:
             (root / ".review" / evidence).write_text("Bash\nRead\nGrep\n")

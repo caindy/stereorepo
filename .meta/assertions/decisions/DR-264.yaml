@@ -22,6 +22,12 @@ decisions:
       - work:artifact/github-workflows-merge
       - work:artifact/meta-checks-probes-loops-reconcile
       - work:artifact/meta-say-on
+      - work:artifact/meta-lib-on
+      - work:artifact/meta-lib-on-common
+      - work:artifact/meta-lib-on-review
+      - work:artifact/meta-lib-on-coder-door
+      - work:artifact/meta-lib-on-handoff
+      - work:artifact/meta-lib-on-cli
       - work:artifact/github-workflows-triage
       - work:artifact/meta-checks-probes-channel-on
       - work:artifact/wiki-solorepo-door

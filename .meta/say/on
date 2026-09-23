@@ -55,1273 +55,171 @@ the run red and not green.
 
 History in on.history.md (solorepo's DR-171).
 """
-import argparse
-import json
-import os
-import pathlib
-import shutil
-import subprocess
-import sys
-from collections.abc import Sequence
-from typing import Any, NamedTuple
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import channel
+import pathlib
+import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+
 import agents
+import channel
 import check_pr
 import depth
-
-REVIEW = pathlib.Path(".review")
-"""Where the session's reading material is written, in the workspace the run checked out."""
-
-CONSTRAINTS = pathlib.Path(__file__).resolve().parent.parent / "templates" / "constraints.md"
-"""The form of what bounds every agent on a review, which the review door fills."""
-
-HARNESSES = {"gemini": "antigravity-cli", "jules": "google-labs-jules",
-             "claude": "anthropics/claude-code-action@v1"}
-"""Each harness a door can choose, and the Agent the Trailer names it by."""
-
-READING_HARNESSES = ("gemini", "claude")
-"""The harnesses the reading door chooses among, by a `harness:` label, in the order asked."""
-
-REVIEW_HARNESSES = ("gemini", "jules", "claude")
-"""The harnesses the review door chooses among, in the order asked: Antigravity CLI
-(solorepo's DR-245), Google Labs Jules (solorepo's DR-246), and Claude Code by default."""
-
-EVIDENCE = {"claude": (REVIEW / "hook-claude.evidence", "Claude Code"),
-            "gemini": (REVIEW / "hook-agy.evidence", "Antigravity CLI")}
-"""Where each harness's session leaves the reading hook's decisions, and the harness's name."""
-
-NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-                "ten", "eleven", "twelve", "thirteen", "fourteen")
-"""The words the constraints spell a count with."""
-
-CHALLENGE_FIELDS = "number,title,url,labels,body,createdAt,author,state,assignees"
-"""What the reading door reads off the Challenge: the classifier's fields, and the page's."""
-
-NO_VERDICT = ("no verdict landed on #{n} (before={before} after={after}): either the reviewer's "
-              "turn ended without reviewing, or its verdict was refused because the head moved "
-              "under the run (solorepo's #566). The request stands either way, and the run that "
-              "reads the new head answers it")
-"""The review door's finding where the session left no verdict (solorepo's DR-122)."""
-
-NO_HOOK = ("the hook decided no call on #{n}: either the reviewer session did not start, or "
-           "{harness} never invoked the registered hook. Inspect the harness hook configuration. "
-           "The request stands either way; the next review reads this unchanged head")
-"""The review door's finding where the session's reading hook left no evidence."""
-
-
-class Session(NamedTuple):
-    """What the workflow knows about the review session that the door's `after` is handed.
-
-    Attributes:
-        verdicts: How many verdicts the Role had given before the session, as `before` emitted.
-        agents: The fan-out ceiling `before` chose.
-        ran: Which harness step ran the session: `claude`, `gemini`, `jules` or `none`.
-        transcript: Where Claude Code's execution transcript is, or the empty string.
-
-    The first three are `None` where the workflow did not say, which the
-    review door's `after` refuses.
-    """
-
-    verdicts: int | None
-    agents: int | None
-    ran: str | None
-    transcript: str
-
-
-NOT_SAID = ("the review door's `after` takes what the workflow knows, --verdicts, --agents and "
-            "--ran, and was handed verdicts={verdicts!r} agents={agents!r} ran={ran!r}: a number "
-            "that did not arrive is a red run, not a green one it did not earn")
-"""The refusal where `after` on a pull request is missing what it judges by."""
-
-NO_HARNESS = ("no harness step ran the session on #{n}: the review was never started, and the "
-              "request stands")
-"""The review door's finding where the workflow reports that no harness step ran."""
-
-
-def emit(target: str, **pairs: str) -> None:
-    """`key=value` lines, appended to the file `target` names in the environment and printed.
-
-    `GITHUB_OUTPUT` is where a step's outputs go and `GITHUB_ENV` where the
-    job's environment does; where neither is set, which is a session running
-    the door by hand, the lines are only printed.
-
-    Parameters:
-        target (str): `GITHUB_OUTPUT` or `GITHUB_ENV`.
-        **pairs (str): The keys and values.
-    """
-    lines = [f"{key}={value}" for key, value in pairs.items()]
-    path = os.environ.get(target)
-    if path:
-        with pathlib.Path(path).open("a", encoding="utf-8") as out:
-            out.write("".join(f"{line}\n" for line in lines))
-    for line in lines:
-        print(f"{target}: {line}")
-
-
-def harness_of(labels: Sequence[str], among: Sequence[str] = READING_HARNESSES) -> str:
-    """Which harness runs the session, by a `harness:` label; Claude Code where there is none.
-
-    Parameters:
-        labels (Sequence[str]): The Issue's or pull request's labels.
-        among (Sequence[str]): The harnesses this door chooses among, first match taken.
-    """
-    for name in among:
-        if f"harness:{name}" in labels:
-            return name
-    return "claude"
-
-
-def name_harness(harness: str) -> None:
-    """The harness as a step output, and under both environment names the channel signs by.
-
-    `ACTOR_AGENT` is the name the channel reads in a run, written beside the
-    `AI_AGENT` the harness overwrites with its own build string
-    (solorepo's DR-233).
-
-    `GITHUB_ENV` reaches the steps after this one; the door's own process
-    is given the name too, so that what it posts before the session ends is
-    signed as the harness it has just chosen and not as the step.
-    """
-    emit("GITHUB_OUTPUT", harness=harness, agent=HARNESSES[harness])
-    emit("GITHUB_ENV", AI_AGENT=HARNESSES[harness], ACTOR_AGENT=HARNESSES[harness])
-    os.environ[channel.ENV_RUN_AGENT] = HARNESSES[harness]
-
-
-def challenge_page(view: dict[str, Any]) -> str:
-    """The Challenge as the session reads it: its number, title, link, labels, filing, and body."""
-    labels = ", ".join(check_pr.state.issue_labels(view))
-    filed = f"{view.get('createdAt', '')} by {(view.get('author') or {}).get('login', '')}"
-    return (f"# #{view['number']} {view.get('title', '')}\n\n{view.get('url', '')}\n"
-            f"labels: {labels}\nfiled: {filed}\n\n---\n\n{view.get('body') or ''}")
-
-
-def open_page() -> str:
-    """What is open beside the Challenge: every open Issue and pull request, one line each."""
-    issues = channel.gh("issue", "list", "--state", "open", "--limit", "200",
-                        "--json", "number,title,labels")
-    pulls = channel.gh("pr", "list", "--state", "open", "--limit", "100",
-                       "--json", "number,title,headRefName")
-    lines = ["# Open Issues", ""]
-    lines += [f"- #{i['number']} [{', '.join(check_pr.state.issue_labels(i))}] {i['title']}"
-              for i in issues]
-    lines += ["", "# Open pull requests", ""]
-    lines += [f"- #{p['number']} ({p.get('headRefName', '')}) {p['title']}" for p in pulls]
-    return "\n".join(lines) + "\n"
-
-
-def reading_before(number: str) -> None:
-    """The reading door before the session: still unread, which harness reads, and what it reads.
-
-    A Challenge that reads anything but `UNREAD` through the Issue classifier
-    is a stale delivery: a level landed while this run waited, and a level is
-    the reviewer's verdict already given (solorepo's DR-230), so the session
-    is not started. Otherwise the harness is chosen by the Challenge's own
-    label, named under `ACTOR_AGENT`, which the channel reads in a run,
-    beside the `AI_AGENT` the harness overwrites (solorepo's DR-233), and
-    the Challenge and what is open are written under `.review/`, since
-    the session's reading hook runs only the programs
-    `.meta/lib/worktree_only/grammar.py` lists, and `gh issue` is not among
-    them.
-
-    Parameters:
-        number (str): The Challenge.
-    """
-    view = channel.gh("issue", "view", number, "--json", CHALLENGE_FIELDS)
-    labels = check_pr.state.issue_labels(view)
-    found = check_pr.state.classify_issue(view, None, False)
-    if found is not check_pr.state.IssueState.UNREAD:
-        emit("GITHUB_OUTPUT", read="false")
-        print(f"#{number} is labelled '{', '.join(labels)}' now and reads {found.value}: "
-              "this delivery is stale")
-        return
-    harness = harness_of(labels)
-    emit("GITHUB_OUTPUT", read="true")
-    name_harness(harness)
-    shutil.rmtree(REVIEW, ignore_errors=True)
-    REVIEW.mkdir()
-    (REVIEW / "challenge.md").write_text(challenge_page(view), encoding="utf-8")
-    (REVIEW / "open.md").write_text(open_page(), encoding="utf-8")
-    print(f"#{number} is labelled '{', '.join(labels)}': unread, and {harness} reads it")
-
-
-def reading_after(number: str) -> None:
-    """The reading door after the session: whether it was read, which is a level landed.
-
-    The level is read rather than the transcript believed, because GitHub
-    holds the one and the transcript only claims the other
-    (solorepo's DR-122). A session that ended without landing one has not
-    read, whatever else happened to the Challenge meanwhile: one closed, or
-    stripped of `challenge`, while the session ran carries no level either,
-    and is reported as what it reads rather than as read.
-
-    Parameters:
-        number (str): The Challenge.
-
-    Raises:
-        SystemExit: Where no level stands, so the run is red and the Challenge
-            still waits.
-    """
-    view = channel.gh("issue", "view", number, "--json", "labels,state")
-    labels = check_pr.state.issue_labels(view)
-    level = next((d for d in channel.sibling("move").DIFFICULTIES if d in labels), None)
-    if level is None:
-        found = check_pr.state.classify_issue(view, None, False)
-        print(f"::error::the session ended and #{number} carries no level, reading "
-              f"{found.value}: nothing was read, and the Challenge still waits")
-        sys.exit(1)
-    print(f"#{number} was read and landed at {level}")
-
-
-def trunk_paths() -> tuple[str, ...]:
-    """The control plane less the workflows' own directory: what the run restored from trunk.
-
-    `depth.CONTROL_PLANE` is the one statement of what the control plane is
-    (solorepo's DR-217, solorepo's DR-219); the workflow that runs is the pull
-    request's own by GitHub's rule, so its directory is not restored.
-    """
-    return tuple(p for p in depth.CONTROL_PLANE if not p.startswith(".github/workflows"))
-
-
-def command(argv: Sequence[str], stdin: bytes | None = None) -> bytes:
-    """Runs a command and answers its output, or ends the run saying what failed and why.
-
-    A command that fails leaves through the same `::error::` line every other
-    failure here does, with its own words, so the run log says why the door
-    failed rather than which exit status it saw.
-
-    Parameters:
-        argv (Sequence[str]): The command and its arguments.
-        stdin (bytes | None): What the command reads, where it reads anything.
-
-    Raises:
-        SystemExit: Where the command is missing or ends with a status.
-    """
-    try:
-        return subprocess.run(list(argv), check=True, capture_output=True, input=stdin).stdout
-    except FileNotFoundError:
-        sys.exit(f"::error::`{argv[0]}` is not on this runner, and the review door runs it")
-    except subprocess.CalledProcessError as failed:
-        why = failed.stderr.decode("utf-8", "replace").strip() if failed.stderr else ""
-        sys.exit(f"::error::`{' '.join(argv)}` failed: {why or f'status {failed.returncode}'}")
-
-
-def tracked_scratch() -> str:
-    """What git tracks under `.review/`, one path per line; empty where nothing is."""
-    return command(["git", "ls-files", "--", str(REVIEW)]).decode("utf-8", "replace")
-
-
-def refuse_tracked_scratch() -> None:
-    """Ends the run where `.review/` is tracked, before anything is written there.
-
-    `.gitignore` silences an untracked `.review/`; it does not stop a branch
-    committing one, and the checkout materialises whatever the merge ref
-    tracks there before the door runs. A committed `.review/diff.patch`
-    symlink turns the write into one onto its target, and a committed
-    `.review/head` symlink lands the head's own channel and hooks on top of
-    trunk's, after the restore. Nothing legitimate is ever tracked there, so
-    the run refuses rather than guessing which shape it is looking at.
-
-    Raises:
-        SystemExit: Where anything under `.review/` is tracked.
-    """
-    if tracked_scratch().strip():
-        sys.exit("::error::.review/ is tracked in this tree, and the review door writes the "
-                 "reviewer's scratch there")
-
-
-def write_head(head: str, paths: Sequence[str]) -> list[str]:
-    """The head's copies of `paths` under `.review/head/`, to be read there and never run.
-
-    The reviewer reads the pull request's own channel and hooks there while
-    what runs is still trunk's, because the reading hook's grammar admits a
-    program spelled `.meta/say/<name>` and nothing under `.review/` is spelled
-    that way. `git ls-tree -z` names what the head holds under the paths, so
-    a name holding a space or a quote arrives whole, and `git archive` writes
-    the head's tree rather than trunk's. A path the pull request deletes is
-    simply absent, and the diff says so.
-
-    Parameters:
-        head (str): The pull request's head commit.
-        paths (Sequence[str]): The trunk paths, without trailing slashes.
-
-    Returns:
-        list[str]: Every path written.
-
-    Raises:
-        SystemExit: Where the head holds none of the paths, which is this door
-            failing and not a review.
-    """
-    listed = command(["git", "ls-tree", "-r", "-z", "--name-only", head, "--", *paths])
-    names = [name.decode("utf-8", "surrogateescape") for name in listed.split(b"\0") if name]
-    if not names:
-        sys.exit(f"::error::no trunk path is in {head}, so there is nothing for the reviewer to "
-                 "read there")
-    archive = command(["git", "archive", head, "--", *names])
-    command(["tar", "-x", "-C", str(REVIEW / "head")], stdin=archive)
-    return names
-
-
-def constraints(number: str, head: str, paths: Sequence[str]) -> str:
-    """The constraints every agent on the review reads, the form filled for this pull request.
-
-    Parameters:
-        number (str): The pull request.
-        head (str): Its head commit.
-        paths (Sequence[str]): The trunk paths, enumerated and counted in the text.
-    """
-    quoted = [f"`{path}`" for path in paths]
-    enumerated = ", ".join(quoted[:-1]) + " and " + quoted[-1] if len(quoted) > 1 else quoted[0]
-    count = NUMBER_WORDS[len(paths)] if len(paths) < len(NUMBER_WORDS) else str(len(paths))
-    return (CONSTRAINTS.read_text(encoding="utf-8")
-            .replace("<number>", number).replace("<repository>", channel.repo())
-            .replace("<head>", head).replace("<count>", count.capitalize())
-            .replace("<paths>", enumerated))
-
-
-def depth_of(number: str) -> depth.DepthConfig:
-    """The review's depth by what changed, evaluated as the Role reads (solorepo's DR-188).
-
-    `depth.py` reaches GitHub with the token in its environment, so the Role's
-    credential is lent to it for the evaluation and taken back after.
-
-    Parameters:
-        number (str): The pull request.
-    """
-    held = os.environ.get("GH_TOKEN")
-    os.environ.update(channel.role_credential())
-    try:
-        files, meta, patch = depth.resolve_files_for_pr(number)
-        return depth.evaluate(files, pr_meta=meta, diff_patch=patch)
-    finally:
-        if held is None:
-            os.environ.pop("GH_TOKEN", None)
-        else:
-            os.environ["GH_TOKEN"] = held
-
-
-def verdicts_of(number: str) -> int:
-    """How many verdicts the reviewer's account has given on the pull request, on any head.
-
-    Every page of the review list is read: an argued pull request holds a
-    review per raise and per reply, bodiless and dropped by the count, and
-    one page of a hundred loses the verdicts among them. Each review comes
-    back as one line the state module reads in the shape `pr view` gives.
-    """
-    lines = channel.gh("api", f"repos/{channel.repo()}/pulls/{number}/reviews?per_page=100",
-                       "--paginate", "--jq", ".[] | {author: {login: .user.login}, state, body}",
-                       parse=False)
-    reviews = [json.loads(line) for line in lines.splitlines() if line.strip()]
-    return check_pr.state.verdicts_given({"reviews": reviews}, channel.role_login("reviewer"))
-
-
-def review_before(number: str) -> None:
-    """The review door before the session: which harness, how deep, what it reads, and the count.
-
-    The harness is chosen by the pull request's own label (solorepo's DR-242)
-    and named as the reading door names it. The depth is `depth.py`'s
-    (solorepo's DR-188), every field of it a step output. What the session
-    reads is written as files, since a diff and the head's copies of the
-    trunk paths both exceed what a shell result carries whole
-    (solorepo's #196): the diff, the head's copies under `.review/head/`, and
-    the constraints every agent reads. The head is the one the run was asked
-    about, `SOLOREPO_REVIEW_HEAD`, or the pull request's where a session runs
-    the door by hand. The verdicts the Role has already given are counted
-    last, so that only a verdict the session itself posts satisfies `after`
-    (solorepo's DR-122).
-
-    Parameters:
-        number (str): The pull request.
-    """
-    view = channel.gh("pr", "view", number, "--json", "labels,headRefOid")
-    harness = harness_of(check_pr.state.issue_labels(view), REVIEW_HARNESSES)
-    name_harness(harness)
-    found = depth_of(number)
-    emit("GITHUB_OUTPUT", **{key: str(value) for key, value in found._asdict().items()})
-    head = os.environ.get("SOLOREPO_REVIEW_HEAD") or str(view.get("headRefOid") or "HEAD")
-    refuse_tracked_scratch()
-    shutil.rmtree(REVIEW, ignore_errors=True)
-    (REVIEW / "head").mkdir(parents=True)
-    diff = channel.gh("pr", "diff", number, parse=False)
-    (REVIEW / "diff.patch").write_text(f"{diff}\n", encoding="utf-8")
-    paths = trunk_paths()
-    write_head(head, [path.rstrip("/") for path in paths])
-    (REVIEW / "constraints.md").write_text(constraints(number, head, paths), encoding="utf-8")
-    emit("GITHUB_OUTPUT", verdicts=str(verdicts_of(number)))
-    for written in sorted(path for path in REVIEW.rglob("*") if path.is_file()):
-        print(written)
-
-
-def spawned(transcript: str) -> int:
-    """How many agents Claude Code's execution transcript shows the session spawned."""
-    content = agents.read_content(transcript, quiet=True) if transcript else ""
-    return len(agents.parse_agents(content))
-
-
-def review_after(number: str, session: Session) -> None:
-    """The review door after the session: a verdict landed, the hook fired, the ceiling was kept.
-
-    The verdict is counted rather than the transcript believed, because the
-    harness reports success when the model's turn ends and a turn ends
-    without a verdict as readily as with one (solorepo's DR-122). The hook's
-    evidence file says the session's reads went through the reading hook,
-    where Claude Code or Antigravity CLI ran it; Jules leaves none. The
-    fan-out ceiling is held against Claude Code's transcript alone
-    (solorepo's DR-191), since Antigravity CLI writes none. A session no
-    harness step ran is a finding of its own. Every finding is printed, and
-    one is enough to end the run red.
-
-    Parameters:
-        number (str): The pull request.
-        session (Session): What the workflow knows about the session.
-
-    Raises:
-        SystemExit: Where any finding stands, or the workflow did not say what
-            the door judges by.
-    """
-    if session.verdicts is None or session.agents is None or session.ran is None:
-        sys.exit("::error::" + NOT_SAID.format(**session._asdict()))
-    problems = []
-    after = verdicts_of(number)
-    if after > session.verdicts:
-        print(f"a verdict landed on #{number}")
-    else:
-        problems.append(NO_VERDICT.format(n=number, before=session.verdicts, after=after))
-    if session.ran == "none":
-        problems.append(NO_HARNESS.format(n=number))
-    if session.ran in EVIDENCE:
-        evidence, harness = EVIDENCE[session.ran]
-        calls = evidence.read_text(encoding="utf-8").splitlines() if evidence.is_file() else []
-        if calls:
-            print(f"the hook decided {len(calls)} calls on #{number} ({harness})")
-        else:
-            problems.append(NO_HOOK.format(n=number, harness=harness))
-    if session.ran == "claude":
-        kept, said = agents.evaluate_ceiling(spawned(session.transcript), session.agents)
-        if kept:
-            print(said)
-        else:
-            problems.append(said.removeprefix("::error::"))
-    for problem in problems:
-        print(f"::error::{problem}")
-    if problems:
-        sys.exit(1)
-
-
-CODER_HARNESSES = ("gemini", "claude")
-"""The harnesses the coder's door chooses among, in the order asked: Antigravity CLI
-by label or as the fallback (solorepo's DR-245), and Claude Code by default."""
-
-PASSES = ("take", "rebase", "answer", "promote")
-"""The coder's four passes (solorepo's DR-133, solorepo's DR-159), as `--pass` names them."""
-
-NO_JOB = ("closed", "stale", "unnamed", "held")
-"""The words `take` decides with where a verdict's delivery is nobody's to answer: the loop
-stands down on `closed`, `stale` and `unnamed`, and on `held` the Issue is the solo's at `hard`,
-where a session may have ended before the review landed, so the sign is one more line alerting
-them (solorepo's DR-142)."""
-
-DEPTHS = {"rebase": ("claude-opus-5", "high", "60", "30"),
-          "promote": ("claude-sonnet-5", "medium", "30", "15"),
-          "medium": ("claude-opus-5", "high", "120", "60"),
-          "easy": ("claude-sonnet-5", "medium", "60", "30")}
-"""The model, effort, turn cap and minutes of a pass, by the pass or by the level it takes at."""
-
-GEMINI_MODEL = "gemini-3.8-flash"
-"""The model the Antigravity CLI fallback runs, on every coder pass."""
-
-UNNAMED_REBASE = ("::error::#{n} is on {branch}, which names no Challenge, so a rebase pass that "
-                  "could not finish would have nothing to hand back. Rebase it by hand.")
-"""The refusal of a rebase dispatched for a branch that is not the loop's shape."""
-
-NO_JOB_SAID = ("No run takes this up: #{issue} is {why}, so what stands on this pull request is "
-               "the solo's. What decided that is in the run log, {run}.")
-"""The sign the verdict's door leaves where the loop stood down (solorepo's DR-142)."""
-
-
-class Delivery(NamedTuple):
-    """What the workflow knows about a coder delivery before the session.
-
-    Attributes:
-        task: Which pass the event opened: `take`, `rebase`, `answer` or `promote`.
-        event: The event the delivery arrived on, as `github.event_name` names it.
-        harness: The harness a dispatch asked for, or the empty string.
-    """
-
-    task: str
-    event: str
-    harness: str
-
-
-def loop_issue(branch: str) -> str:
-    """The Challenge a loop branch names, or empty where the shape is not the loop's.
-
-    `<harness>/issue-<n>` is the only shape the loop cuts; what follows
-    `issue-` is taken whole, so `claude/issue-169-followup` names
-    `169-followup`, which the take door reads as no Challenge the loop holds.
-    """
-    prefix, cut, rest = branch.partition("/issue-")
-    return rest if cut and prefix in CODER_HARNESSES else ""
-
-
-def labelled(labels: Sequence[str], among: Sequence[str]) -> str | None:
-    """The harness a `harness:` label among `labels` names, first of `among` taken, or `None`."""
-    return next((name for name in among if f"harness:{name}" in labels), None)
-
-
-def coder_harness(delivery: Delivery, labels: Sequence[str]) -> str:
-    """Which harness runs the coder's pass.
-
-    On a take the Challenge's own label wins over a dispatch's input, whose
-    default is never empty, and the input wins where the label names no
-    harness, so an explicit ask still decides over silence; on the other
-    passes the input wins, then the pull request's label. Claude Code where
-    nothing says.
-
-    Parameters:
-        delivery (Delivery): What the workflow knows.
-        labels (Sequence[str]): The Challenge's labels on a take, the pull request's otherwise.
-    """
-    named = labelled(labels, CODER_HARNESSES)
-    if delivery.task == "take":
-        return named or delivery.harness or "claude"
-    return delivery.harness or named or "claude"
-
-
-def coder_depth(task: str, level: str) -> None:
-    """The model, effort, turn cap and minutes of the pass, as step outputs.
-
-    `easy` is the smaller model and half an hour; `medium` the larger and
-    the whole budget, and an answering pass takes it whatever the label was,
-    since the threads it answers were written by the deeper reviewer. A
-    rebase is bounded by what it is, the larger model at half the budget,
-    because a conflict here is prose as often as code and a rebase taking an
-    hour is not a rebase. Promotion on approval (solorepo's DR-159) is
-    clerical transcription, the smaller model at a quarter of the whole. Claude
-    Code's models run high extended thinking on every pass
-    (solorepo's DR-186).
-    """
-    model, effort, turns, minutes = DEPTHS.get(task) or DEPTHS.get(level) or DEPTHS["easy"]
-    emit("GITHUB_OUTPUT", level=level, model=model, gemini_model=GEMINI_MODEL, effort=effort,
-         turns=turns, minutes=minutes)
-
-
-def run_url() -> str:
-    """This run's page, from the environment a run has."""
-    return (f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
-            f"{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/"
-            f"{os.environ.get('GITHUB_RUN_ID', '')}")
-
-
-def taken(issue: str, delivery: Delivery) -> dict[str, Any]:
-    """Whether the delivery is still the loop's, read through the take door.
-
-    A dispatch of a review pass is the solo's own word and is not read
-    against; every other delivery is, on the label's door and on the
-    verdict's alike (solorepo's DR-142), and `by` carries a word for each
-    that must not run.
-    """
-    if delivery.task == "answer" and delivery.event == "workflow_dispatch":
-        decided = check_pr.sweep.Decision("")._asdict()
-    else:
-        door = check_pr.sweep.ISSUE_DOOR if delivery.task == "take" else delivery.event
-        decided = check_pr.sweep.take(issue, door)
-    emit("GITHUB_OUTPUT", by=decided["by"], why=decided["why"], resume=decided["resume"],
-         level=decided["level"])
-    if decided["said"]:
-        print(decided["said"])
-    return decided
-
-
-def find_pull(number: str, delivery: Delivery) -> dict[str, Any] | None:
-    """The pull request a pass answers: its branch, base, and Challenge, and the branch checked out.
-
-    The base is read and not assumed to be `main`, since a layer is based on
-    the layer below. The Challenge is the branch's own name, because a pass
-    that cannot finish hands that Challenge back and has nothing else to
-    name, so a rebase of a branch that names none is refused. A pull request
-    merged or closed already is nothing for the run to do, said as `by`.
-    The promotion pass tolerates a checkout that fails, since it reads
-    GitHub and writes nothing in the tree.
-
-    Returns:
-        dict[str, Any] | None: The pull request, or `None` where it is finished.
-    """
-    view: dict[str, Any] = channel.gh("pr", "view", number, "--json",
-                                      "state,headRefName,baseRefName,labels")
-    branch, base = str(view.get("headRefName") or ""), str(view.get("baseRefName") or "")
-    issue = loop_issue(branch)
-    if delivery.task == "rebase" and not issue:
-        sys.exit(UNNAMED_REBASE.format(n=number, branch=branch))
-    emit("GITHUB_OUTPUT", number=number, branch=branch, base=base, issue=issue)
-    if view.get("state") in ("MERGED", "CLOSED"):
-        print(f"#{number} is {view['state']} already; nothing for this run to do")
-        emit("GITHUB_OUTPUT", by="merged", why="merged")
-        return None
-    try:
-        command(["git", "checkout", "--quiet", branch])
-    except SystemExit:
-        if delivery.task != "promote":
-            raise
-        print(f"{branch} could not be checked out; the promotion pass reads GitHub, not the tree")
-    return view
-
-
-def coder_before(number: str, delivery: Delivery) -> None:
-    """The coder's door before the session: the pull request, the harness, whether taken, how deep.
-
-    A take reads the Challenge; the other passes read the pull request and
-    check its branch out, so the work continues where the last pass left it.
-    The harness is chosen by label and input, named as every door names it.
-    Whether the delivery is still the loop's is read now rather than off the
-    frozen payload, since a level can move while a run waits in its
-    concurrency group (solorepo's #117): a claim with a pull request open is
-    a duplicate on the label's door, and a `hard` Issue's branch is the
-    solo's on the verdict's door as on the first (solorepo's DR-142,
-    solorepo's #168). Where the loop stands down on a request for changes,
-    the sign is left on the pull request, the verdict's door being delivered
-    once; the rebase door is delivered on every push to `main` while the
-    branch conflicts, and `dispatch()` in `.meta/say/move` reads the Issue
-    before it dispatches and names the branch it leaves alone in `advance`'s
-    own log.
-    The depth follows the pass and the level the Challenge holds now. On
-    approval the unresolved threads are counted, since a pull request with
-    none lands unattended (solorepo's DR-159, solorepo's DR-161).
-
-    Parameters:
-        number (str): The Challenge on a take, the pull request otherwise.
-        delivery (Delivery): What the workflow knows.
-    """
-    emit("GITHUB_OUTPUT", **{"pass": delivery.task})
-    if delivery.task == "take":
-        view = channel.gh("issue", "view", number, "--json", "labels")
-        harness = coder_harness(delivery, check_pr.state.issue_labels(view))
-        name_harness(harness)
-        emit("GITHUB_OUTPUT", branch_prefix=harness)
-        decided = taken(number, delivery)
-        coder_depth(delivery.task, str(decided["level"]))
-        return
-    pull = find_pull(number, delivery)
-    if pull is None:
-        return
-    harness = coder_harness(delivery, check_pr.state.issue_labels(pull))
-    name_harness(harness)
-    emit("GITHUB_OUTPUT", branch_prefix=harness)
-    issue = loop_issue(str(pull.get("headRefName") or ""))
-    decided = taken(issue, delivery)
-    if delivery.task == "answer" and delivery.event == "pull_request_review" \
-            and decided["by"] in NO_JOB:
-        channel.sibling("post").conversation_comment(
-            number, channel.signed(NO_JOB_SAID.format(issue=issue, why=decided["why"],
-                                                      run=run_url())))
-    coder_depth(delivery.task, "medium")
-    if delivery.task == "promote":
-        open_threads = [t for t in check_pr.github.threads(number) if not t.get("isResolved")]
-        emit("GITHUB_OUTPUT", count=str(len(open_threads)))
-        print(f"Found {len(open_threads)} unresolved thread(s) on approved #{number}")
-
-
-BETWEEN_NOT_TAKE = ("::error::`between` reads what is open on the Challenge's branch, which only "
-                    "the take pass has a prompt to say; it was asked on the {task} pass")
-"""The refusal where `between` is asked on a pass whose prompt carries no resume clause."""
-
-LEFT_OPEN = ("pull request #{number} is already open on #{issue}'s branch; the harness step that "
-             "follows takes it up rather than opening again")
-"""The line the run log gets where the branch already holds a pull request."""
-
-LEFT_NOTHING = ("no pull request is open on #{issue}'s branch; the harness step that follows "
-                "opens the one this Challenge is owed")
-"""The line the run log gets where the branch holds nothing for the step that follows to resume."""
-
-
-def coder_between(issue: str, delivery: Delivery) -> None:
-    """The coder's door before the second harness step: what is open on the branch, as `resume`.
-
-    The step runs immediately before the second harness step and on that
-    step's own condition, which is met two ways: the first harness step
-    failed, or the Challenge chose the harness that the second step runs and
-    the first was skipped outright, making it the run's first harness rather
-    than a fallback. On a failure, the turn cap is the common way to fail
-    late — it lands after the work rather than before it, with the pull
-    request already open and commits pushed. `before` read the branch once,
-    ahead of both harness steps, so its `resume` says what was true at the
-    start of the run: handed that, the step is told no run has taken this
-    Issue and goes to open a second pull request on a branch that already owns
-    one, which `move open` refuses. This reads the branch again, now, and the
-    step's prompt takes its resume clause from here.
-
-    It is the branch `sweep.hand_back` reads and the same `loop_pull`, but on
-    `take`'s terms rather than the hand-back's: an empty listing as the
-    default, so a listing GitHub refuses reads as no pull request instead of
-    ending the process. The Challenge is still there to be taken, and a
-    refusal is no reason to put a red step in the run log for a reading that
-    only feeds a prompt.
-
-    Parameters:
-        issue (str): The Challenge.
-        delivery (Delivery): What the workflow knows.
-
-    Raises:
-        SystemExit: Where the pass is not a take.
-    """
-    if delivery.task != "take":
-        sys.exit(BETWEEN_NOT_TAKE.format(task=delivery.task))
-    pull = check_pr.sweep.loop_pull(issue, "number", default=[])
-    number = str(pull["number"]) if pull else ""
-    emit("GITHUB_OUTPUT", resume=number)
-    print(LEFT_OPEN.format(number=number, issue=issue) if number
-          else LEFT_NOTHING.format(issue=issue))
-
-
-class Ended(NamedTuple):
-    """What the workflow knows about the coder's session that the door's `after` is handed.
-
-    Attributes:
-        claude: How the pass's Claude Code step ended: `success`, `failure`,
-            `cancelled` or `skipped`.
-        gemini: How its Antigravity CLI step ended, the same way.
-        held: On a promotion, how many threads `before` found held.
-        branch_prefix: The harness `before` chose, which names the loop's branch.
-        execution: Where Claude Code wrote the pass's execution transcript, or
-            the empty string where the step published no path.
-    """
-
-    claude: str | None
-    gemini: str | None
-    held: int | None
-    branch_prefix: str
-    execution: str = ""
-
-
-OUTCOMES_NOT_SAID = ("the coder's `after` takes how the pass's two steps ended, --claude and "
-                     "--gemini, and was handed claude={claude!r} gemini={gemini!r}: an outcome "
-                     "that did not arrive is a red run, not a pass that was skipped")
-"""The refusal where `after` is missing how the session's steps ended."""
-
-
-OUTCOMES = ("success", "failure", "cancelled", "skipped")
-"""How a step ends, as the workflow reports it: a step that never ran reports `skipped`, so an
-empty string is none of these and is refused."""
-
-DID_NOT_FINISH = ("This run ended without finishing and without saying where it stopped: its "
-                  "step ended {outcome}. What it did is in the run log, {run}.")
-"""The first sentence of a hand-back's account, where the step conclusion is what ended the pass."""
-
-CAPPED = "error_max_turns"
-"""The `subtype` Claude Code's result entry carries where the turn cap ended the session."""
-
-CAP_MARK = "was cut by its turn cap"
-"""What a cap account says, and so what a later run reads, with its author, to find one posted."""
-
-CUT_BY_CAP = ("This run was cut by its turn cap{spent}, which the harness reports as a step that "
-              "succeeded: it stopped where the cap fell and not where the work finished. What it "
-              "did is in the run log, {run}.")
-"""The first sentence of a hand-back's account, where the turn cap cut the pass."""
-
-TURNS_SPENT = ", {turns} turns in"
-"""What the cap account says of the turns, where the transcript counted them."""
-
-CUT_TWICE = ("#{number} already carries the account of a run cut by its turn cap, so this is the "
-             "second, and a Challenge that does not fit twice is not the loop's")
-"""Why the reviewer is not asked where a second run on the same pull request hit the cap."""
-
-STAYS_OPEN = (" The pull request it opened, if it opened one, is on `{branch}` and stays open "
-              "for the run that takes this up again.")
-"""What the account says of the branch, where the Challenge goes to the solo."""
-
-NOT_REQUESTED = "\n\nNot requested of the reviewer: {why}."
-"""The account's second paragraph, where the Challenge goes to the solo."""
-
-WORTH_READING = ("\n\nEvery check on this head is green, so this is where a run stopped and not "
-                 "where one finished, and review is requested on that basis: what is here is "
-                 "worth reading, and whether it answers #{issue} is the review's question. "
-                 "#{issue} stays claimed at `{level}`, and a request for changes comes back to "
-                 "the coder as a new run.")
-"""The account's second paragraph, where the pull request is green and review is requested."""
-
-UNREADABLE_ISSUE = ("#{issue} could not be read, so whether it is still open and at what level "
-                    "is unknown here; the run log above says why")
-"""Why the reviewer is not asked where the Challenge cannot be read."""
-
-UNREADABLE_MERGE = ("whether {branch}'s pull request has merged could not be read, so whether "
-                    "the work already landed is unknown here; the run log above says why")
-"""Why the reviewer is not asked where the merged listing cannot be read."""
-
-UNREADABLE_LEFT = ("the hand-back could not read what this run left: whether a pull request is "
-                   "open on this branch, and whether it is green, is unknown here; the run log "
-                   "above says why")
-"""Why the reviewer is not asked where the pull request's state cannot be read."""
-
-CONFLICTS = ("#{number}'s branch conflicts with its base, {base}. GitHub builds no merge ref "
-             "for one that does, review.yml runs on pull_request, and so a review requested on "
-             "it would create no run and be answered by nobody. Rebase {branch} onto {base} and "
-             "the request can be made")
-"""Why the reviewer is not asked where the branch conflicts."""
-
-NOT_GREEN = "the checks on #{number} have not all passed, and a red gate is not a handoff"
-"""Why the reviewer is not asked where the gate is red."""
-
-NEITHER = ("::error::Neither Claude nor Gemini {task} pass succeeded (claude={claude}, "
-           "gemini={gemini}).")
-"""The finding where a pass ran and neither harness finished it."""
-
-
-def outcome_of(ended: Ended) -> str:
-    """How the pass ended: the fallback's word where it failed, and where it was cancelled alike.
-
-    The Antigravity CLI step runs after Claude Code's failed, so where it too
-    failed its outcome is the one the account names (solorepo's DR-257);
-    otherwise Claude Code's.
-    """
-    return str(ended.gemini if ended.gemini in ("failure", "cancelled") else ended.claude)
-
-
-def transcript_entries(text: str) -> list[dict[str, Any]]:
-    """Every JSON object a transcript holds, whether it is one document or a stream of lines.
-
-    The file arrives in more than one shape. `claude-code-action` publishes a
-    single JSON array, but a runner or a wrapper interleaves its own status
-    lines into the same stream, and whole-document decoding has already
-    failed on this file here: `agents.history.md` records `_from_ndjson`
-    being established for it, `agents.parse_agents` tries the document, then
-    the lines, then the raw log, and `detect_fallback.py` falls through to a
-    text scan rather than answering nothing. So the document is tried first
-    and the lines after, each unreadable line skipped rather than the
-    reading abandoned.
-
-    Parameters:
-        text (str): What the transcript file held.
-
-    Returns:
-        list[dict[str, Any]]: The objects read, in the order they arrived.
-    """
-    try:
-        whole = json.loads(text)
-    except ValueError:
-        pass
-    else:
-        return [entry for entry in (whole if isinstance(whole, list) else [whole])
-                if isinstance(entry, dict)]
-    entries: list[dict[str, Any]] = []
-    for line in text.splitlines():
-        candidate = line.strip()
-        if not (candidate.startswith("{") and candidate.endswith("}")):
-            continue
-        try:
-            entry = json.loads(candidate)
-        except ValueError:
-            continue
-        if isinstance(entry, dict):
-            entries.append(entry)
-    return entries
-
-
-def cut_by_cap(execution: str) -> int | None:
-    """The turns a take pass spent where its transcript says the turn cap cut it.
-
-    Claude Code writes the session's messages to the file
-    `claude-code-action` publishes as `execution_file`, and the result entry
-    carries `subtype: error_max_turns` where the cap ended the session,
-    beside the `num_turns` it spent. The step's conclusion is `success` in
-    that case, the process having exited in an orderly way, so the
-    transcript is the only place the reason is (solorepo's DR-277). A path
-    the step never published, a file that cannot be read, and one holding no
-    capped result entry all answer `None`, and the run log says which: a
-    reading that cannot say the cap was hit is not one that says it was. A
-    file the reader cannot decode whole is read by `transcript_entries` line
-    by line rather than treated as a session that was never capped, and a
-    capped entry whose `num_turns` is not a number answers `0`, the cap
-    named and the turns not, rather than raising out of the door.
-
-    Parameters:
-        execution (str): Where the harness step wrote the transcript.
-
-    Returns:
-        int | None: The turns the capped session spent, `0` where the
-            transcript counted none, and `None` where the cap did not cut it.
-    """
-    if not execution:
-        return None
-    try:
-        text = agents.read_content(execution, quiet=True)
-    except OSError as unreadable:
-        print(f"the turn cap could not be read from {execution}: {unreadable}", file=sys.stderr)
-        return None
-    capped = [entry for entry in transcript_entries(text) if entry.get("subtype") == CAPPED]
-    if not capped:
-        return None
-    try:
-        return int(capped[-1].get("num_turns") or 0)
-    except (TypeError, ValueError) as uncounted:
-        print(f"the cap in {execution} counted no turns this could read: {uncounted}",
-              file=sys.stderr)
-        return 0
-
-
-def cut_before(number: str) -> bool:
-    """Whether the pull request already carries the account of a run cut by its turn cap.
-
-    The account is the evidence, since a run holds nothing of the one before
-    it and the pull request is what crosses the seam. The author is matched
-    as well as the phrase: `CAP_MARK` is a sentence in English, and the
-    account invites a reviewer to quote it, so the phrase alone would read a
-    quotation as a second cap. A read GitHub refuses answers `False`, the
-    login it speaks as included, which offers the reviewer a second draft
-    rather than handing the Challenge to the solo on a failed read: the
-    first costs a review pass and the second strands work nobody is standing
-    over.
-
-    Parameters:
-        number (str): The pull request the run left.
-    """
-    view = channel.gh("pr", "view", number, "--json", "comments", default=None)
-    try:
-        mine = channel.role_login("coder")
-    except SystemExit as unreadable:
-        print(f"who this door speaks as could not be read: {unreadable}", file=sys.stderr)
-        return False
-    comments = (view or {}).get("comments") or []
-    return any(CAP_MARK in str(comment.get("body") or "")
-               and str((comment.get("author") or {}).get("login") or "") == mine
-               for comment in comments)
-
-
-def account_of(outcome: str, cap: int | None) -> str:
-    """The account's first sentence: the cap where one cut the pass, else the step's own word."""
-    if cap is None:
-        return DID_NOT_FINISH.format(outcome=outcome, run=run_url())
-    return CUT_BY_CAP.format(spent=TURNS_SPENT.format(turns=cap) if cap else "", run=run_url())
-
-
-def what_run_left(issue: str) -> dict[str, Any] | None:
-    """What the hand-back needs about the pull request the run left, or `None` where unreadable.
-
-    A read that cannot answer is a reason to give the solo rather than the
-    end of the handler: a handler that dies hands nothing back
-    (solorepo's DR-155).
-    """
-    try:
-        return dict(check_pr.sweep.hand_back(issue))
-    except (SystemExit, Exception) as failed:  # noqa: BLE001  # reason: a failed read here is a reason to give the solo and not the end of the handler
-        print(f"the hand-back could not read what the run left: {failed}", file=sys.stderr)
-        return None
-
-
-def stop_with(issue: str, outcome: str, branch: str, why: str, cap: int | None = None) -> None:
-    """Hands the Challenge to the solo with the account and why the reviewer is not asked."""
-    body = account_of(outcome, cap) + STAYS_OPEN.format(branch=branch) \
-        + NOT_REQUESTED.format(why=why)
-    channel.sibling("move").stop(issue, channel.signed(body))
-
-
-def hand_back(issue: str, outcome: str, prefix: str, cap: int | None = None) -> None:
-    """Hands back a take that ended without saying where it stopped.
-
-    Every way a run ends releases the claim or requests review, so that a
-    Challenge is never left claimed behind a dead step. What the run left is
-    read first, since somebody holding the pull request means the run
-    finished and then ran out; then the Issue, since one GitHub has closed
-    or one already at `human` is finished whatever the branch says; then
-    whether the branch merged. Green and clean, the account is posted on the
-    pull request before review is requested, since the request carries no
-    words and the one thing the reviewer cannot otherwise know is that this
-    is where a run stopped and not where one finished; the Issue stays
-    claimed at its level (solorepo's DR-129). Otherwise the Challenge goes to the solo through
-    `stop`, with why the reviewer was not asked, and a read that failed is
-    one such reason rather than the end of the handler (solorepo's DR-155).
-
-    A pass the turn cap cut is a run that stopped and reaches here alongside
-    one whose step failed, its account naming the cap rather than the step's
-    conclusion (solorepo's DR-277). The reviewer is offered such a draft
-    once: a second cap on a pull request that already carries a cap account
-    goes to the solo, since a Challenge that does not fit twice is not the
-    loop's.
-
-    Parameters:
-        issue (str): The Challenge.
-        outcome (str): How the take step ended.
-        prefix (str): The harness's branch prefix, naming the branch where nothing was left.
-        cap (int | None): The turns a capped pass spent, and `None` where the
-            cap did not cut it.
-    """
-    left = what_run_left(issue)
-    number = str(left["number"]) if left and left.get("number") else ""
-    branch = str((left or {}).get("branch") or f"{prefix}/issue-{issue}")
-    base = str((left or {}).get("base") or "main")
-    if left and left.get("handed"):
-        print(f"#{issue}'s pull request has its review requested; the run finished and then "
-              "ran out")
-        return
-    view = channel.gh("issue", "view", issue, "--json", "state,labels", default=None)
-    if view is None:
-        stop_with(issue, outcome, branch, UNREADABLE_ISSUE.format(issue=issue), cap)
-        return
-    labels = check_pr.state.issue_labels(view)
-    level = next((lvl for lvl in channel.sibling("move").DIFFICULTIES if lvl in labels), "")
-    if view.get("state") != "OPEN":
-        print(f"#{issue} is closed; a Challenge GitHub has closed has nothing to hand back")
-        return
-    if level == "human":
-        print(f"#{issue} is already at human; the run handed it back itself")
-        return
-    merged = channel.gh("pr", "list", "--state", "merged", "--head", branch, "--json", "number",
-                        default=None)
-    if merged is None:
-        stop_with(issue, outcome, branch, UNREADABLE_MERGE.format(branch=branch), cap)
-    elif merged:
-        print(f"#{issue}'s pull request #{merged[0]['number']} has merged; the run finished and "
-              "then ran out")
-    elif number and left and left.get("green") and not left.get("conflicting") \
-            and not (cap is not None and cut_before(number)):
-        body = account_of(outcome, cap) + WORTH_READING.format(issue=issue, level=level)
-        channel.sibling("post").conversation_comment(number, channel.signed(body))
-        channel.sibling("move").request_review(number, "reviewer")
-    else:
-        stop_with(issue, outcome, branch, not_requested(left, number, branch, base), cap)
-
-
-def not_requested(left: dict[str, Any] | None, number: str, branch: str, base: str) -> str:
-    """Why the reviewer is not asked, where the pull request the run left is no handoff.
-
-    The order is the hand-back's own: a read that failed says so before
-    anything is concluded from it, then a run that opened nothing, then a
-    branch no review could run on, then a pull request that already carries
-    the account of a turn cap, this being the second, and a red gate last,
-    that being the ordinary case.
-
-    Parameters:
-        left (dict[str, Any] | None): What the run left, or `None` where unreadable.
-        number (str): The pull request the run left, empty where it opened none.
-        branch (str): The branch the run worked on.
-        base (str): What that branch is based on.
-    """
-    if left is None:
-        return UNREADABLE_LEFT
-    if not number:
-        return "the run opened no pull request"
-    if left.get("conflicting"):
-        return CONFLICTS.format(number=number, base=base, branch=branch)
-    if left.get("green"):
-        return CUT_TWICE.format(number=number)
-    return NOT_GREEN.format(number=number)
-
-
-def verify(task: str, ended: Ended) -> None:
-    """Ends the run red where a pass ran and neither harness finished it.
-
-    Raises:
-        SystemExit: Where neither step succeeded and one failed; a pass that
-            was cancelled, or never ran, is not a failure of the pass.
-    """
-    if ended.claude != "success" and ended.gemini != "success" \
-            and "failure" in (ended.claude, ended.gemini):
-        sys.exit(NEITHER.format(task=task, claude=ended.claude, gemini=ended.gemini))
-    print(f"the {task} pass ended claude={ended.claude} gemini={ended.gemini}")
-
-
-def redeliver(number: str) -> None:
-    """Redelivers the review pass where a rebase cleared a standing request for changes.
-
-    A rebase pushes with `--force-with-lease`, which GitHub reports as
-    `synchronize`, an event the coder's door does not listen for; where the
-    reviewer had already requested changes no request is pending, so
-    nothing fires and the pull request sits answered by nobody
-    (solorepo's #777). `dispatch` reads the standing verdict and the pending
-    request before deciding, and refuses where there is nothing to redeliver,
-    which is said and not a failure.
-    """
-    try:
-        channel.sibling("move").dispatch_pass(number, "review")
-    except SystemExit as refused:
-        print(f"nothing to redeliver on #{number}: {refused}")
-
-
-def coder_after(number: str, delivery: Delivery, ended: Ended) -> None:
-    """The coder's door after the session: what each pass owes once its steps have ended.
-
-    A take that failed or was cancelled is handed back, and so is one whose
-    transcript says the turn cap cut it, which the step conclusion reports as
-    a success (solorepo's DR-277); a rebase that
-    succeeded redelivers the review pass, and one that did not is verified;
-    an answer is verified; a promotion is verified where threads were held.
-    Verification ends the run red where neither harness finished the pass.
-
-    Parameters:
-        number (str): The Challenge on a take, the pull request otherwise.
-        delivery (Delivery): What the workflow knew before the session.
-        ended (Ended): How the session's steps ended.
-    """
-    if ended.claude is None or ended.gemini is None:
-        sys.exit("::error::" + OUTCOMES_NOT_SAID.format(claude=ended.claude, gemini=ended.gemini))
-    if delivery.task == "take":
-        outcome = outcome_of(ended)
-        stopped = outcome in ("failure", "cancelled")
-        cap = None if stopped else cut_by_cap(ended.execution)
-        if stopped or cap is not None:
-            hand_back(number, outcome, ended.branch_prefix, cap)
-        else:
-            print(f"the take pass ended {outcome}; nothing to hand back")
-    elif delivery.task == "rebase":
-        if "success" in (ended.claude, ended.gemini):
-            redeliver(number)
-        else:
-            verify(delivery.task, ended)
-    elif delivery.task == "promote" and not ended.held:
-        print(f"no threads were held on #{number}; no promotion pass ran")
-    else:
-        verify(delivery.task, ended)
-
-
-def coder(phase: str, number: str, delivery: Delivery, ended: Ended) -> None:
-    """The coder's door at one phase of the session, for the pass `delivery` names.
-
-    Parameters:
-        phase (str): `before`, `between` the take pass's two harness steps, or `after`.
-        number (str): The Challenge on a take, the pull request otherwise.
-        delivery (Delivery): What the workflow knows.
-        ended (Ended): How the session's steps ended, unread before it.
-    """
-    if phase == "before":
-        coder_before(number, delivery)
-    elif phase == "between":
-        coder_between(number, delivery)
-    else:
-        coder_after(number, delivery, ended)
-
-
-def reviewer(phase: str, number: str, session: Session) -> None:
-    """The reviewer's door, `before` or `after` the session, for what `number` names.
-
-    Parameters:
-        phase (str): `before` or `after`.
-        number (str): A Challenge, which is the reading door, or a pull
-            request, which is the review door.
-        session (Session): What the workflow knows after a review session;
-            unread on the reading door and before any session, and refused
-            absent after a review session.
-    """
-    if channel.sibling("move").kind(number) == "pull request":
-        if phase == "before":
-            review_before(number)
-        else:
-            review_after(number, session)
-    elif phase == "before":
-        reading_before(number)
-    else:
-        reading_after(number)
-
-
-RAN = ("claude", "gemini", "jules", "none")
-"""What `--ran` may say: a harness step, or that none ran."""
-
-NOT_ONE_OF = "{text!r} is not one of {choices}"
-"""The parser's refusal of a flag whose value is none of the words it takes."""
-
-DID_NOT_ARRIVE = ("an outcome that did not arrive: a step id renamed, or an expression that "
-                  "resolved to nothing, is a red run and not a pass that was skipped")
-"""The parser's refusal of an empty `--claude` or `--gemini`."""
-
-
-def count(text: str) -> int | None:
-    """A flag's number, or `None` where the workflow handed an empty string.
-
-    A step output that never arrived, from a step that failed or was skipped,
-    reaches the door as `""` rather than as a missing flag, and it is the
-    door's refusal that must name it, not the parser's.
-    """
-    return int(text) if text.strip() else None
-
-
-def step_outcome(text: str) -> str:
-    """A step's outcome as the workflow reports it; an empty string is refused.
-
-    A step that never ran reports `skipped`, so an empty outcome is one the
-    workflow did not hand over, and the hand-back that would have run on it
-    must not be skipped quietly.
-
-    Raises:
-        argparse.ArgumentTypeError: Where the text is empty or no outcome a step has.
-    """
-    if not text.strip():
-        raise argparse.ArgumentTypeError(DID_NOT_ARRIVE)
-    if text not in OUTCOMES:
-        raise argparse.ArgumentTypeError(NOT_ONE_OF.format(text=text, choices=", ".join(OUTCOMES)))
-    return text
-
-
-def harness(text: str) -> str | None:
-    """A flag's harness, or `None` where the workflow handed an empty string.
-
-    Raises:
-        argparse.ArgumentTypeError: Where the text names no harness step.
-    """
-    if not text.strip():
-        return None
-    if text not in RAN:
-        raise argparse.ArgumentTypeError(NOT_ONE_OF.format(text=text, choices=", ".join(RAN)))
-    return text
-
-
-def build_parser() -> argparse.ArgumentParser:
-    """Builds the argument parser: one verb per Role, each taking the phase and the number."""
-    ap = channel.parser(__doc__)
-    sub = ap.add_subparsers(dest="verb", required=True)
-    p = sub.add_parser("reviewer")
-    p.add_argument("phase", choices=("before", "after"),
-                   help="before the harness session, or after it")
-    p.add_argument("number", help="the Challenge or the pull request the run is for")
-    p.add_argument("--verdicts", type=count,
-                   help="after a review session: the verdicts `before` counted; required there, "
-                        "and an empty string is absent")
-    p.add_argument("--agents", type=count,
-                   help="after a review session: the fan-out ceiling `before` chose; required "
-                        "there, and an empty string is absent")
-    p.add_argument("--ran", type=harness,
-                   help="after a review session: which harness step ran it, `none` being a "
-                        "finding; required there, and an empty string is absent")
-    p.add_argument("--transcript", default="",
-                   help="after a review session: where Claude Code's transcript is")
-    c = sub.add_parser("coder")
-    c.add_argument("phase", choices=("before", "between", "after"),
-                   help="before the harness session, between the take pass's two harness "
-                        "steps, or after the session")
-    c.add_argument("number", help="the Challenge on a take, the pull request on any other pass")
-    c.add_argument("--pass", dest="task", choices=PASSES, required=True,
-                   help="which pass the event opened")
-    c.add_argument("--event", required=True,
-                   help="the event the delivery arrived on, as github.event_name names it")
-    c.add_argument("--harness", default="",
-                   help="the harness a dispatch asked for, empty on any other event")
-    c.add_argument("--claude", type=step_outcome, default=None,
-                   help="after the session: how the pass's Claude Code step ended; required "
-                        "there, and an empty string is refused")
-    c.add_argument("--gemini", type=step_outcome, default=None,
-                   help="after the session: how the pass's Antigravity CLI step ended; required "
-                        "there, and an empty string is refused")
-    c.add_argument("--count", type=count, default=None,
-                   help="after a promotion: how many threads `before` found held")
-    c.add_argument("--branch-prefix", default="",
-                   help="after a take: the harness `before` chose, naming the loop's branch")
-    c.add_argument("--execution-file", dest="execution", default="",
-                   help="after a take: where Claude Code wrote the pass's transcript, which is "
-                        "where the turn cap is said")
-    return ap
-
-
-def main() -> None:
-    """Parses arguments and runs the door's phase as the Role."""
-    args = build_parser().parse_args()
-    channel.speak_as(args.role)
-    if args.verb == "reviewer":
-        reviewer(args.phase, args.number,
-                 Session(args.verdicts, args.agents, args.ran, args.transcript))
-    elif args.verb == "coder":
-        coder(args.phase, args.number, Delivery(args.task, args.event, args.harness),
-              Ended(args.claude, args.gemini, args.count, args.branch_prefix, args.execution))
-
+from lib.on import cli, coder_door, common, handoff, review
+
+cli.DESCRIPTION = __doc__ or ""
+
+CONSTRAINTS = common.CONSTRAINTS
+EVIDENCE = common.EVIDENCE
+HARNESSES = common.HARNESSES
+NUMBER_WORDS = common.NUMBER_WORDS
+READING_HARNESSES = common.READING_HARNESSES
+REVIEW = common.REVIEW
+REVIEW_HARNESSES = common.REVIEW_HARNESSES
+Session = common.Session
+challenge_page = common.challenge_page
+command = common.command
+emit = common.emit
+harness_of = common.harness_of
+name_harness = common.name_harness
+open_page = common.open_page
+reading_after = common.reading_after
+reading_before = common.reading_before
+
+constraints = review.constraints
+depth_of = review.depth_of
+refuse_tracked_scratch = review.refuse_tracked_scratch
+review_after = review.review_after
+review_before = review.review_before
+reviewer = review.reviewer
+spawned = review.spawned
+tracked_scratch = review.tracked_scratch
+trunk_paths = review.trunk_paths
+verdicts_of = review.verdicts_of
+write_head = review.write_head
+
+CAPPED = coder_door.CAPPED
+CAP_MARK = coder_door.CAP_MARK
+CODER_HARNESSES = coder_door.CODER_HARNESSES
+DEPTHS = coder_door.DEPTHS
+DID_NOT_FINISH = coder_door.DID_NOT_FINISH
+Delivery = coder_door.Delivery
+Ended = coder_door.Ended
+GEMINI_MODEL = coder_door.GEMINI_MODEL
+NO_JOB = coder_door.NO_JOB
+OUTCOMES = coder_door.OUTCOMES
+PASSES = coder_door.PASSES
+account_of = handoff.account_of
+coder = coder_door.coder
+coder_after = handoff.coder_after
+coder_before = coder_door.coder_before
+coder_between = coder_door.coder_between
+coder_depth = coder_door.coder_depth
+coder_harness = coder_door.coder_harness
+cut_before = handoff.cut_before
+cut_by_cap = handoff.cut_by_cap
+find_pull = coder_door.find_pull
+hand_back = handoff.hand_back
+labelled = coder_door.labelled
+loop_issue = coder_door.loop_issue
+not_requested = handoff.not_requested
+outcome_of = handoff.outcome_of
+redeliver = handoff.redeliver
+run_url = coder_door.run_url
+stop_with = handoff.stop_with
+taken = coder_door.taken
+transcript_entries = handoff.transcript_entries
+verify = handoff.verify
+what_run_left = handoff.what_run_left
+
+DID_NOT_ARRIVE = cli.DID_NOT_ARRIVE
+NOT_ONE_OF = cli.NOT_ONE_OF
+RAN = cli.RAN
+build_parser = cli.build_parser
+count = cli.count
+harness = cli.harness
+main = cli.main
+step_outcome = cli.step_outcome
+
+__all__ = [
+    "CAPPED",
+    "CAP_MARK",
+    "CODER_HARNESSES",
+    "CONSTRAINTS",
+    "DEPTHS",
+    "DID_NOT_ARRIVE",
+    "DID_NOT_FINISH",
+    "EVIDENCE",
+    "GEMINI_MODEL",
+    "HARNESSES",
+    "NOT_ONE_OF",
+    "NO_JOB",
+    "NUMBER_WORDS",
+    "OUTCOMES",
+    "PASSES",
+    "RAN",
+    "READING_HARNESSES",
+    "REVIEW",
+    "REVIEW_HARNESSES",
+    "Delivery",
+    "Ended",
+    "Session",
+    "account_of",
+    "agents",
+    "build_parser",
+    "challenge_page",
+    "channel",
+    "check_pr",
+    "cli",
+    "coder",
+    "coder_after",
+    "coder_before",
+    "coder_between",
+    "coder_depth",
+    "coder_door",
+    "coder_harness",
+    "command",
+    "common",
+    "constraints",
+    "count",
+    "cut_before",
+    "cut_by_cap",
+    "depth",
+    "depth_of",
+    "emit",
+    "find_pull",
+    "hand_back",
+    "handoff",
+    "harness",
+    "harness_of",
+    "labelled",
+    "loop_issue",
+    "main",
+    "name_harness",
+    "not_requested",
+    "open_page",
+    "outcome_of",
+    "reading_after",
+    "reading_before",
+    "redeliver",
+    "refuse_tracked_scratch",
+    "review",
+    "review_after",
+    "review_before",
+    "reviewer",
+    "run_url",
+    "spawned",
+    "step_outcome",
+    "stop_with",
+    "taken",
+    "tracked_scratch",
+    "transcript_entries",
+    "trunk_paths",
+    "verdicts_of",
+    "verify",
+    "what_run_left",
+    "write_head",
+]
 
 if __name__ == "__main__":
     main()

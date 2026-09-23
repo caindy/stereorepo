@@ -862,6 +862,24 @@ artifacts:
   - id: work:artifact/meta-say-on
     name: .meta/say/on
     path: .meta/say/on
+  - id: work:artifact/meta-lib-on
+    name: .meta/lib/on/__init__.py
+    path: .meta/lib/on/__init__.py
+  - id: work:artifact/meta-lib-on-common
+    name: .meta/lib/on/common.py
+    path: .meta/lib/on/common.py
+  - id: work:artifact/meta-lib-on-review
+    name: .meta/lib/on/review.py
+    path: .meta/lib/on/review.py
+  - id: work:artifact/meta-lib-on-coder-door
+    name: .meta/lib/on/coder_door.py
+    path: .meta/lib/on/coder_door.py
+  - id: work:artifact/meta-lib-on-handoff
+    name: .meta/lib/on/handoff.py
+    path: .meta/lib/on/handoff.py
+  - id: work:artifact/meta-lib-on-cli
+    name: .meta/lib/on/cli.py
+    path: .meta/lib/on/cli.py
   - id: work:artifact/meta-say-verbs
     name: .meta/say/verbs.yaml
     path: .meta/say/verbs.yaml

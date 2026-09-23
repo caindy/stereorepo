@@ -160,8 +160,10 @@ def _fakes(gh: _GitHub | None = None, take: _Take | None = None,
 def _before(channel: Any, on: Any, fakes: _Fakes, delivery: tuple[str, str, str],
             number: str) -> tuple[Any, dict[str, str], str]:
     """`on coder before` against the fakes: how it ended, the outputs by key, the environment."""
+    common = on.common
     with _workspace() as root, stood_in(channel, gh=fakes.gh), \
-            stood_in(on, command=fakes.commands), stood_in(on.check_pr.sweep, take=fakes.take), \
+            stood_in(common, command=fakes.commands), \
+            stood_in(on.check_pr.sweep, take=fakes.take), \
             stood_in(on.check_pr.github, threads=lambda number: list(fakes.threads)):
         ended = outcome(lambda: on.coder("before", number, on.Delivery(*delivery),
                                          on.Ended("skipped", "skipped", None, "")))
