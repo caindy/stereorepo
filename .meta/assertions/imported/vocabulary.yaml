@@ -403,6 +403,7 @@ concept_set:
     broader: work:concept/g-recorded
     confusable_with:
       - work:concept/noticed-and-not-done
+      - work:concept/seed-commit
     avoid: [drive-by, drive-by commit, opportunistic fix]
     scope_note: >-
       The counterpart of Noticed and Not Done, and the two partition what a
@@ -413,6 +414,26 @@ concept_set:
       falsifier in solorepo's DR-236 runs. "Drive-by" named this in that
       Decision as first adopted, and is avoided here under A17 as a word that
       arrived by use rather than by minting.
+  - id: work:concept/seed-commit
+    pref_label: Seed Commit
+    definition: >-
+      An empty git commit authored with `.meta/say/commit --allow-empty` carrying
+      the subject line `Record initial plan for Challenge #<n>`, pushed to open
+      a pull request before modifying tracked repository files on hard and human
+      Challenges (solorepo's DR-269).
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    confusable_with:
+      - work:concept/incidental-commit
+    avoid: [dummy commit, placeholder commit, empty commit]
+    scope_note: >-
+      The counterpart of the Incidental Commit for the commencement of a change:
+      where an Incidental Commit records an opportunistic mechanical fix
+      discovered during work, a Seed Commit records the initial plan before
+      modifying tracked repository files, providing git with a commit object so
+      GitHub's pull request creation does not refuse when there are zero commits
+      between base and head. Countable across repository history via
+      `git log --grep '^Record initial plan for Challenge #'`.
   - id: work:concept/decision-record
     pref_label: Decision record
     definition: >-

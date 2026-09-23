@@ -232,7 +232,7 @@ programs:
     concern: "Git's: a commit as this Actor, the Trailers composed by the channel."
     verbs:
       - name: commit
-        usage: "-m <subject> [< body]"
+        usage: "-m <subject> [--allow-empty] [< body]"
         does: "commit as this Actor; never `git commit`, which signs nothing"
         held_by: [coder]
 

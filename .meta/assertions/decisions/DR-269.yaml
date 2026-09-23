@@ -1,0 +1,110 @@
+decisions:
+  - id: work:decision/269
+    name: "DR-269 · Prohibit pre-PR implementation edits on hard and human Challenges and codify seed commits"
+    challenge: work:challenge/866
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/22
+    enacted_in:
+      - work:artifact/agents
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-say-commit
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-lib-move-pull-requests
+      - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/wiki-solorepo-seed-commit
+    context: >-
+      Solorepo's DR-249 established that for hard and human Challenges,
+      formulating the technical approach under **The plan.** and validating it
+      with the solo before code is written is the bound that prevents unsound
+      architectures from being enacted into diffs. In practice, agents
+      frequently violated this discipline by authoring tracked repository files
+      and running local verification gates before opening the pull request on
+      GitHub via `.meta/say/move open` (observed, for example, during work on
+      Challenge solorepo's #842 in session 20260922-192113, as reported in
+      Challenge solorepo's #866, where the coder agent formulated the plan in
+      conversation but immediately authored implementation code in
+      `.meta/run_agy.py` and ran verification gates before opening the pull
+      request).
+
+      Two root factors drove this recurring failure. First, the observed recurrence
+      is hypothesized to stem from pretrained model priors defaulting to the
+      open-source pattern of implementing code and running tests before opening a
+      pull request, compounded by the absence in `AGENTS.md` and the `pr-first`
+      discipline of an explicit negative constraint prohibiting tracked repository
+      file modifications before `move open`. Second, GitHub's pull request creation
+      refuses when there are zero commits between base and head. GitHub's REST API
+      (`POST /repos/{owner}/{repo}/pulls`, as recorded in solorepo's DR-249)
+      returns HTTP 422 Unprocessable Entity (`"No commits between <base> and <head>"`),
+      and `gh pr create` (calling GraphQL `createPullRequest`, invoked via `channel.gh`
+      in `.meta/lib/move/pull_requests.py:127`) emits `GraphQL: No commits between <base> and <head> (createPullRequest)`
+      when attempting to open a pull request on a branch with zero commits ahead of base.
+      Because `.meta/say/commit` lacked `--allow-empty` and the repository held no
+      minted [[seed-commit|Seed Commit]] convention, an agent attempting to open a
+      pull request before modifying tracked repository files hit an unhandled refusal,
+      creating an impedance where agents felt compelled to author file edits to
+      produce a non-empty commit history to satisfy GitHub.
+    alternatives:
+      - name: Require a scaffolding stub or defect history entry as the seed commit
+        chosen: false
+        reason: >-
+          Requiring file modifications such as a defect history entry (`<module>.history.md`)
+          or scaffolding stub introduces file churn and uneven applicability across
+          changes. Many Challenges touch assertions, meta tooling, disciplines, or
+          multiple disparate subsystems where a module history file does not fit,
+          and scaffolding stubs risk introducing uncompilable or failing code before
+          the architecture is settled.
+      - name: Automatically create an empty seed commit inside move open
+        chosen: false
+        reason: >-
+          Hiding commit creation inside `move open` obscures git history from the
+          operator, bypassing the explicit attribution and commit message semantics
+          enforced by `.meta/say/commit`. The coder Role should deliberately author
+          the seed commit as an attested act of recording the initial plan.
+      - name: Prohibit pre-PR implementation edits and support signed empty seed commits via commit --allow-empty
+        chosen: true
+        reason: >-
+          Codifies an explicit negative constraint in `AGENTS.md` and `pr-first`
+          prohibiting modifying tracked repository files or running verification
+          gates prior to `move open` on hard and human Challenges. The prohibition
+          itself remains unmechanized — nothing in the tree observes file modifications
+          or gate runs before `move open`, and verifying Challenge level prior to
+          `move open` belongs at the classifier seam (solorepo's DR-264) — but the
+          prompt constraint eliminates prior ambiguity. Extends `.meta/say/commit` with
+          an `--allow-empty` flag to author an attested empty [[seed-commit|Seed Commit]]
+          (`Record initial plan for Challenge #<n>`) that satisfies GitHub's non-empty
+          commit requirement without modifying tracked repository files. Enhances
+          `move open` to detect zero-commit branches and provide an actionable
+          refusal citing the convention.
+    consequences:
+      - >-
+        `AGENTS.md` and the PR First discipline (`.meta/assertions/imported/disciplines.yaml`)
+        explicitly prohibit modifying tracked repository files or running
+        verification gates on hard and human Challenges before opening the pull
+        request via `.meta/say/move open`.
+      - >-
+        `.meta/say/commit` accepts `--allow-empty`, allowing coder agents to author a
+        valid signed [[seed-commit|Seed Commit]] with zero file diff.
+      - >-
+        `.meta/lib/move/pull_requests.py` intercepts GitHub's `"No commits between"`
+        refusal during `move open` and provides an actionable error guiding the
+        caller to author a [[seed-commit|Seed Commit]] first.
+      - >-
+        The [[seed-commit|Seed Commit]] concept is minted in `.meta/assertions/imported/vocabulary.yaml`
+        and explained in `wiki/solorepo/seed-commit.md`.
+      - >-
+        Challenge solorepo's #866 is closed as answered.
+    falsifier: >-
+      A hard or human pull request whose opening commit introduces file diffs
+      rather than a zero-diff [[seed-commit|Seed Commit]], or an inability to author
+      a signed empty commit via `.meta/say/commit --allow-empty`.
+    rationale: |-
+      PR First requires work to be proposed and argued on GitHub before it is
+      enacted into code. If agents write code and run gates before `move open`,
+      plan validation becomes post-facto review of a finished diff, defeating
+      solorepo's DR-249. Providing `--allow-empty` in `.meta/say/commit` eliminates
+      the platform impedance that forced agents to edit code just to satisfy
+      GitHub's PR creation requirement, and an explicit negative constraint in the
+      prompt hierarchy removes ambiguity about permissible pre-PR actions.

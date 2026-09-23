@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/866
+    name: "Enforce pre-code PR creation and seed commit conventions for hard and human Challenges"
+    challenge_type: DEFECT
+    description: >-
+      Under PR First (solorepo's DR-249), hard and human Challenges require
+      formulating the technical approach under The plan. and validating it with
+      the solo before code is written. However, agents routinely violate PR
+      First by implementing changes and executing local test gates before
+      opening the pull request on GitHub. This occurs because pretrained priors
+      default to writing code first, no explicit negative constraint in AGENTS.md
+      forbids pre-PR implementation edits, and GitHub's REST API returns HTTP 422
+      if base and head are identical while .meta/say/commit lacked --allow-empty
+      support to author a zero-diff seed commit.

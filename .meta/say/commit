@@ -2,7 +2,7 @@
 """Commit staged changes under this Actor with composed trailers (solorepo's DR-062, solorepo's DR-117).
 
 Usage:
-    .meta/say/commit -m <subject> [< body]
+    .meta/say/commit -m <subject> [--allow-empty] [< body]
 
 Composes Actor and Agent attribution trailers directly from the channel
 environment rather than an ambient hook. Configures git commit signing when
@@ -20,11 +20,14 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import channel
 
 
-def commit(subject: str) -> None:
+def commit(subject: str, allow_empty: bool = False) -> None:
     """Executes git commit with composed attribution trailers and role SSH signing.
 
     Parameters:
         subject: The commit message subject line.
+        allow_empty: Whether to record an empty commit with a tree identical to
+            its parent when nothing is staged, such as a seed commit before
+            implementation (solorepo's DR-269).
 
     Raises:
         SystemExit: Propagates the git commit exit code.
@@ -43,7 +46,11 @@ def commit(subject: str) -> None:
     elif channel.role_credential():
         print("say: speaking as role without signing key; commit is cryptographically unsigned",
               file=sys.stderr)
-    out = subprocess.run(["git", *signing_args, "commit", "-F", "-"],
+    cmd = ["git", *signing_args, "commit"]
+    if allow_empty:
+        cmd.append("--allow-empty")
+    cmd.extend(["-F", "-"])
+    out = subprocess.run(cmd,
                          check=False, input=message, text=True,
                          env={**os.environ, **channel.role_identity()})
     sys.exit(out.returncode)
@@ -53,6 +60,9 @@ def build_parser() -> argparse.ArgumentParser:
     """Builds the argument parser for the commit tool."""
     ap = channel.parser(__doc__)
     ap.add_argument("-m", "--message", required=True, help="the subject: a label, not an account (A14)")
+    ap.add_argument("--allow-empty", action="store_true",
+                    help="record an empty commit, such as a seed commit before implementation "
+                         "(solorepo's DR-269)")
     return ap
 
 
@@ -60,7 +70,7 @@ def main() -> None:
     """Parses arguments and commits staged changes with signed trailers."""
     args = build_parser().parse_args()
     channel.speak_as(args.role)
-    commit(args.message)
+    commit(args.message, allow_empty=args.allow_empty)
 
 
 if __name__ == "__main__":

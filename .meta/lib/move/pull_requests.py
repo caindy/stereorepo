@@ -1,6 +1,7 @@
 """The pull request lifecycle: opening, layering, the merge, the supersession, and the
 review request that is the handoff (solorepo's DR-264)."""
 import re
+import subprocess
 import sys
 from collections.abc import Mapping, Sequence
 
@@ -122,7 +123,16 @@ def open_pull_request(title: str, body: str, base: str = "main",
                  "Fix the form before opening the pull request.")
     if on:
         base = head_branch(on)
-    url = channel.gh("pr", "create", "--title", title, "--base", base, "--body", body, parse=False)
+    try:
+        url = channel.gh("pr", "create", "--title", title, "--base", base, "--body", body,
+                         parse=False, tolerate_fail=True)
+    except subprocess.CalledProcessError as exc:
+        if "No commits between" in exc.stderr:
+            sys.exit(f"say: head branch has no commits ahead of {base}; GitHub requires at "
+                     "least one commit to open a pull request. Author an initial plan seed "
+                     "commit with `.meta/say/commit --allow-empty -m \"Record initial plan for "
+                     "Challenge #<n>\"` before opening the pull request (solorepo's DR-269).")
+        sys.exit(f"gh: {exc.stderr.strip()}")
     print(url)
     if on:
         link(on, url.rstrip("/").rsplit("/", 1)[-1])

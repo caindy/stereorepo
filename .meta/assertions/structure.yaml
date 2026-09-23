@@ -872,6 +872,9 @@ artifacts:
   - id: work:artifact/wiki-solorepo-door
     name: wiki/solorepo/door.md
     path: wiki/solorepo/door.md
+  - id: work:artifact/wiki-solorepo-seed-commit
+    name: wiki/solorepo/seed-commit.md
+    path: wiki/solorepo/seed-commit.md
   - id: work:artifact/meta-wikisplain
     name: .meta/wikisplain.py
     path: .meta/wikisplain.py

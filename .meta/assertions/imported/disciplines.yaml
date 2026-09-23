@@ -503,7 +503,14 @@ disciplines:
         and review on the diff is the check; for `hard` and `human` Challenges,
         formulate the plan under **The plan.** and validate it with the solo
         before writing code, which is the bound that prevents unsound
-        architectures from being enacted into diffs (solorepo's DR-249).
+        architectures from being enacted into diffs (solorepo's DR-249). On
+        `hard` and `human` Challenges, modifying tracked repository files or
+        running verification gates prior to opening the pull request via
+        `move open` is strictly prohibited (solorepo's DR-269). A coder
+        records the initial plan under **The plan.** in the pull request body on
+        a zero-diff [[seed-commit|Seed Commit]] authored via
+        `commit --allow-empty -m "Record initial plan for Challenge #<n>"`
+        before writing code.
       - >-
         Take Challenges in as pull requests, whatever raised them — the solo, a
         scheduled job, another agent — and name the Challenge in the body with a

@@ -111,6 +111,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Review Thread** | One conversation on a Pull Request, opened against a line or against the change as a whole, and closed by being answered and resolved. | comment, conversation |
 | **Noticed and Not Done** | Work observed but left unexecuted during a change that falls outside its remit, formally parked on the diff as an unresolved review thread and promoted to an Issue at approval to preserve its context without blocking delivery (solorepo's Article 15, solorepo's DR-064, solorepo's DR-159, solorepo's DR-195). | backlog, technical debt, punch list, follow-up ticket |
 | **Incidental Commit** | A fix a branch can already reach that is mechanical, owes no Decision, implies no Challenge of its own and is proved by the gate already running, made in a commit of its own whose subject begins `Incidental:` (solorepo's DR-236). | drive-by, drive-by commit, opportunistic fix |
+| **Seed Commit** | An empty git commit authored with `.meta/say/commit --allow-empty` carrying the subject line `Record initial plan for Challenge #<n>`, pushed to open a pull request before modifying tracked repository files on hard and human Challenges (solorepo's DR-269). | dummy commit, placeholder commit, empty commit |
 | **Decision record** | The record of decisions at every level — the Portfolio's, a Product's or a Project's, told apart by which the entry names. One sequence, numbered DR-nnn, newest last. | ADR, architecture decision record |
 | **Trailer** | A `Key: value` line at the end of a commit message or a comment, naming the Actor that wrote it. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
@@ -168,6 +169,8 @@ _The named ways of working, each adhered to because it is not a program._
 **Noticed and Not Done.** Recorded only in an Issue or parked review thread, never buried in a commit message or lost in PR summaries (solorepo's Article 15).
 
 **Incidental Commit.** The counterpart of Noticed and Not Done, and the two partition what a change encounters outside its remit: what the branch can reach under the four-part bound is committed here, and everything else is parked on the diff. The subject prefix is the whole form and exists to be counted: `git log --grep '^Incidental:'` is the query one direction of the falsifier in solorepo's DR-236 runs. "Drive-by" named this in that Decision as first adopted, and is avoided here under A17 as a word that arrived by use rather than by minting.
+
+**Seed Commit.** The counterpart of the Incidental Commit for the commencement of a change: where an Incidental Commit records an opportunistic mechanical fix discovered during work, a Seed Commit records the initial plan before modifying tracked repository files, providing git with a commit object so GitHub's pull request creation does not refuse when there are zero commits between base and head. Countable across repository history via `git log --grep '^Record initial plan for Challenge #'`.
 
 **Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until solorepo's DR-093, and imported a qualifier the record never used.
 
@@ -259,7 +262,8 @@ more often a collision than a gap.
 | **Pull Request** | Challenge, Issue |
 | **Review Thread** | Pull Request |
 | **Noticed and Not Done** | Incidental Commit |
-| **Incidental Commit** | Noticed and Not Done |
+| **Incidental Commit** | Noticed and Not Done, Seed Commit |
+| **Seed Commit** | Incidental Commit |
 | **Journaling** | Pull Request |
 | **Evidence** | Citation |
 | **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
