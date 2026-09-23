@@ -40,7 +40,7 @@ template:
   spec:
     initContainers:
       - name: setup-gemini-creds
-        image: ghcr.io/caindy/solorepo-runner:2.337.0-3
+        image: ghcr.io/caindy/solorepo-runner:2.337.0-4
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
         args:
@@ -67,7 +67,7 @@ template:
     containers:
       - name: runner
         # Single-source runner image on GHCR (solorepo's DR-156, solorepo's DR-160)
-        image: ghcr.io/caindy/solorepo-runner:2.337.0-3
+        image: ghcr.io/caindy/solorepo-runner:2.337.0-4
         imagePullPolicy: IfNotPresent
         command: ["/home/runner/run.sh"]
         volumeMounts:

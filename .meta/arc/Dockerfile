@@ -29,13 +29,14 @@ RUN apt-get update -qq && \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | \
     bash -s -- --tag 1.58.0 --to /usr/local/bin
 
-# Install pinned uv / uvx (0.6.14) and pre-bake Python 3.13 (solorepo's DR-268)
+# Install pinned uv / uvx (0.6.14) and pre-bake Python 3.13 (solorepo's DR-268, solorepo's #775)
 #
 # The single-source runner image pre-bakes Python 3.13 as the default python3
 # (/usr/local/bin/python3). Tooling shebangs under .meta/ execute this interpreter
-# directly with zero network resolution overhead. On unowned developer machines
-# (fresh clones), Python >= 3.13 is an environment prerequisite asserted at the
-# front door (solorepo's DR-268).
+# directly with zero network resolution overhead, and uv discovers this interpreter
+# on PATH to resolve Python 3.13 locally with no network fetch on ephemeral runner
+# pods (solorepo's #775). On unowned developer machines (fresh clones), Python >= 3.13
+# is an environment prerequisite asserted at the front door (solorepo's DR-268).
 COPY --from=ghcr.io/astral-sh/uv:0.6.14 /uv /uvx /usr/local/bin/
 
 RUN uv python install --install-dir /opt/python 3.13 && \

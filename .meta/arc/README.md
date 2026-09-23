@@ -12,7 +12,7 @@ solorepo's DR-137 deliberately left hosted: **a merge cannot go green while
 this cluster is down**, so the machine being reachable is now the
 repository's business and not only the loops'. `template/`'s seeded gate
 runs on `ubuntu-latest` inside the published runner image (`container:
-ghcr.io/caindy/solorepo-runner:2.337.0-3`), a portfolio having no cluster
+ghcr.io/caindy/solorepo-runner:2.337.0-4`), a portfolio having no cluster
 of its own (solorepo's DR-160).
 
 Two layers, separately invokable:
@@ -69,20 +69,20 @@ Windows 11 Home has no Hyper-V, so `kind` needs Docker under WSL2:
 ## The runner image
 
 `values-runnerset.yaml` pins the runner container image to
-`ghcr.io/caindy/solorepo-runner:2.337.0-3` (solorepo's DR-156, solorepo's DR-160).
+`ghcr.io/caindy/solorepo-runner:2.337.0-4` (solorepo's DR-156, solorepo's DR-160, solorepo's #775).
 Defined in `.meta/arc/Dockerfile` on top of `ghcr.io/actions/actions-runner:2.337.0`
 (which carries `python3` `3.12.3`), it pre-bakes `build-essential`, `gh`,
-`jq`, `just`, `uv`, `apm`, `rustup`, `node` / `npm`, `gemini`, and `agy` (pinned
+`jq`, `just`, `uv` (with CPython 3.13), `apm`, `rustup`, `node` / `npm`, `gemini`, and `agy` (pinned
 Antigravity CLI 1.2.7).
 
 To build, load into a local `kind` cluster, and publish to GHCR:
 ```bash
-docker build -t solorepo-runner:2.337.0-3 -t ghcr.io/caindy/solorepo-runner:2.337.0-3 -f .meta/arc/Dockerfile .meta/arc
-kind load docker-image ghcr.io/caindy/solorepo-runner:2.337.0-3 --name solorepo-arc
+docker build -t solorepo-runner:2.337.0-4 -t ghcr.io/caindy/solorepo-runner:2.337.0-4 -f .meta/arc/Dockerfile .meta/arc
+kind load docker-image ghcr.io/caindy/solorepo-runner:2.337.0-4 --name solorepo-arc
 
 # Publish to GHCR for hosted workflows and specialized portfolios:
 echo "$ARC_GITHUB_TOKEN" | docker login ghcr.io -u <username> --password-stdin
-docker push ghcr.io/caindy/solorepo-runner:2.337.0-3
+docker push ghcr.io/caindy/solorepo-runner:2.337.0-4
 ```
 
 The package on GHCR (`ghcr.io/caindy/solorepo-runner`) must remain configured as
