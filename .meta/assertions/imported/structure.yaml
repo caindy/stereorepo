@@ -141,6 +141,60 @@ artifacts:
       - **MOS:LEAD:** The first paragraph must open with `**<Concept>** is ...` matching the `# <Concept>` heading exactly.
       - **Closed-World Links:** Wikilinks `[[concept]]` must resolve to an existing wiki page or minted concept.
       - **Bounded Context:** Pages must reside in `wiki/<context>/` corresponding to their Bounded Context.
+  - id: work:artifact/skill-search
+    name: .claude/skills/search/SKILL.md
+    path: .claude/skills/search/SKILL.md
+    description: >-
+      Search repository assertions, decisions, and wiki concepts by meaning using
+      the in-memory BM25F retrieval of solorepo's DR-194, against the benchmark
+      solorepo's DR-103 set, off the root verb surface since solorepo's DR-272.
+    preamble: |
+      # /search
+
+      The `/search` skill queries repository YAML assertions under `.meta/assertions/` and
+      markdown concept pages under `wiki/` using the in-memory Okapi BM25F ranking
+      solorepo's DR-194 built, scored against the eighteen benchmark queries
+      solorepo's DR-103 set, and reached as a skill rather than a `just` recipe
+      since solorepo's DR-272.
+
+      ## When to Use
+
+      - Locating relevant Decision Records, Charter Articles, or ontology concepts when
+        researching a change.
+      - Dereferencing domain terminology, conventions, and architectural precedents without
+        manual grep.
+      - Evaluating information retrieval accuracy and ranking performance against benchmark
+        queries.
+
+      ## Verbs
+
+      - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py "<query>"` — search assertions, decisions, and wiki concepts
+      - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py "<query>" --limit <n>` — return top `<n>` results (default 5)
+      - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py "<query>" --detail` — display full contextual snippets
+      - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py "<query>" --json` — output search results in JSON format
+      - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py --benchmark` — run the 18 solorepo's DR-103 benchmark queries
+
+      When running in an environment where `linkml` and `pyyaml` are installed,
+      `python3 .meta/search.py "<query>"` is equivalent.
+
+      ## Instructions
+
+      1. **Run Retrieval:** Run `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py "<query>"` with quotes to preserve multi-word phrasing and punctuation.
+      2. **Inspect Context:** Add `--detail` when a brief snippet does not show the
+         needed section.
+      3. **Structured Ingestion:** Use `--json` when parsing search results in
+         automated scripts or pipelines.
+      4. **Benchmark Invariants:** Run `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py --benchmark` to test retrieval quality against solorepo's DR-103 benchmark suite (hit@5 >= 15/18).
+
+      ## Invariants
+
+      - **Execution Dependencies:** Assertions are indexed via LinkML. If invoked outside an
+        environment with `linkml` and `pyyaml` installed, `uvx --with linkml --with pyyaml`
+        ensures assertion schemas load and are not silently skipped.
+      - **In-Memory Index:** Searches construct an in-memory index over `.meta/assertions/` and
+        `wiki/` dynamically on each invocation with zero disk persistence and zero cache drift.
+      - **Argument Quoting:** Direct execution preserves caller quotation in
+        `sys.argv`, avoiding unquoted shell splitting.
   - id: work:artifact/skill-technical-writing
     name: .claude/skills/technical-writing/SKILL.md
     path: .claude/skills/technical-writing/SKILL.md
@@ -165,7 +219,7 @@ artifacts:
 
       ## Five Overarching Invariants
 
-      1. **Every citation dereferenced (solorepo's DR-134, solorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`solorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search with `just search <query>` (solorepo's DR-103).
+      1. **Every citation dereferenced (solorepo's DR-134, solorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`solorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search via the `/search` skill, which carries the invocation (solorepo's DR-103).
       2. **Use the Ubiquitous Language (solorepo's DR-190):** The codebase and LinkML ontologies are the word list. Write `Actor` (not user/bot), `Challenge` (not ticket/issue/story), `Role`, `Remit`, `Persona`.
       3. **The Reader's Test (solorepo's DR-175):** Can a reader use this item from its docstring alone without reading commit histories or PR threads?
       4. **No Reviewer Litigation in Code (solorepo's DR-171):** Docstrings state usage contracts, parameters, and invariants. They do not argue against past reviewers. The 'why' and trade-offs belong in Decision Records (`DR-nnn.yaml`) or module docstrings. Incident narratives belong in `<module>.history.md`.
@@ -254,6 +308,6 @@ artifacts:
       - **Address the reader directly:** Use 'you' in the present tense. Reserve 'will' for things that genuinely occur later.
       - **Active voice:** 'The gate checks', not 'is checked by the gate'.
       - **Cut dead words:** 'To', not 'in order to'. 'Use', not 'utilize'. 'Do', not 'perform'.
-      - **Specific over sterile:** Name the exact symbol, file, flag, or command name (`python3 .meta/search.py`, not 'the search script').
+      - **Specific over sterile:** Name the exact symbol, file, flag, or command name (`.meta/search.py`, not 'the search script').
       - **Vary rhythm:** Mix sentence lengths on purpose. Short sentences land a point. Longer ones carry a fact with its condition or consequence.
 

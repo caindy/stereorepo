@@ -364,8 +364,9 @@ def wiki_synonyms_are_not_avoided(
     A page's frontmatter `synonyms` are folded into the title field of the BM25
     index at `.meta/lib/search/build.py`, which is the highest weight that index
     carries. A word on the entry's `avoid` list declared there therefore makes
-    `just search <word>` return the page for the very word the Ubiquitous
-    Language exists to stop denoting the concept. The two lists must be
+    a search for that word — `uvx --python 3.13 --with linkml --with pyyaml
+    python .meta/search.py <word>` — return the page for the very word the
+    Ubiquitous Language exists to stop denoting the concept. The two lists must be
     disjoint; a synonym the vocabulary merely does not mint is allowed.
     """
     problems: list[str] = []

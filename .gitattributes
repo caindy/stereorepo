@@ -8,6 +8,7 @@
 
 /.claude/skills/pr-first-reviewer/SKILL.md merge=union
 /.claude/skills/pr-first/SKILL.md merge=union
+/.claude/skills/search/SKILL.md merge=union
 /.claude/skills/technical-writing/SKILL.md merge=union
 /.claude/skills/wikisplain/SKILL.md merge=union
 /.gitattributes merge=union
@@ -36,6 +37,7 @@
 /.meta/.apm/skills/pr-first-reviewer/SKILL.md merge=union
 /.meta/.apm/skills/pr-first/SKILL.md merge=union
 /.meta/.apm/skills/review-on-github/SKILL.md merge=union
+/.meta/.apm/skills/search/SKILL.md merge=union
 /.meta/.apm/skills/speak-on-github/SKILL.md merge=union
 /.meta/.apm/skills/technical-writing/SKILL.md merge=union
 /.meta/.apm/skills/wikisplain/SKILL.md merge=union

@@ -1,8 +1,8 @@
-"""The four rendered skills, and the line sets some of them share.
+"""The five rendered skills, and the line sets some of them share.
 
 PR First's two are compiled from the Discipline through `skill()`, one for the
-coder Role and one for the reviewer (solorepo's DR-060). `wikisplain` and
-`technical-writing` are authored skills read from the structure assertions
+coder Role and one for the reviewer (solorepo's DR-060). `wikisplain`, `search`
+and `technical-writing` are authored skills read from the structure assertions
 through `authored_skill()` (solorepo's DR-144). `READING` and `BODY` reach
 the two PR First skills; `DEREFERENCE` is the coder's alone.
 """
@@ -167,6 +167,12 @@ def authored_skill(name: str) -> str:
 def wikisplain_skill() -> str:
     """Operational authoring skill for Knowledge Management wiki concepts (solorepo's DR-187)."""
     return authored_skill("wikisplain")
+
+
+def search_skill() -> str:
+    """Operational retrieval skill querying assertions and wiki concepts off the
+    root verb surface (solorepo's DR-103, solorepo's DR-194, solorepo's DR-272)."""
+    return authored_skill("search")
 
 
 def technical_writing_skill() -> str:

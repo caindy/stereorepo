@@ -1,0 +1,19 @@
+challenges:
+  - id: work:challenge/764
+    name: just search forwards a bare multi-word prose query across the root verb surface
+    challenge_type: ARCHITECTURE
+    description: >-
+      Solorepo's DR-259 settled that the root `just` verb surface takes only flags,
+      subcommands, and atomic identifiers, and recorded that the ten recipes it left
+      behind "accept flags, subcommands, or atomic identifiers". That was not true of
+      `search`: the `search *args:` recipe interpolated `{{args}}` unquoted into
+      `.meta/search.py`, whose `parser.add_argument("query", nargs="*")` in
+      `.meta/lib/search/cli.py` rejoined the tokens with `" ".join(args.query)`. So
+      `just search shell quoting` passed bare prose, and `just search "shell quoting"`
+      had its quotes discarded by `just` and silently reassembled by the tool — the
+      tolerant-tool pattern solorepo's DR-259 rejected as its second alternative,
+      naming `search.py` as the place the pattern was copied from. Settling the
+      surface for retrieval as solorepo's DR-259 had for authoring, moving search off
+      the verb surface into a dedicated agent skill invoking `.meta/search.py`
+      directly, and correcting solorepo's DR-259's count of ten conforming recipes to
+      nine.

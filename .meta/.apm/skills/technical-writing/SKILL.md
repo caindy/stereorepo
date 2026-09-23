@@ -26,7 +26,7 @@ This standard combines Diátaxis documentation architecture, Google developer st
 
 ## Five Overarching Invariants
 
-1. **Every citation dereferenced (solorepo's DR-134, solorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`solorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search with `just search <query>` (solorepo's DR-103).
+1. **Every citation dereferenced (solorepo's DR-134, solorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`solorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search via the `/search` skill, which carries the invocation (solorepo's DR-103).
 2. **Use the Ubiquitous Language (solorepo's DR-190):** The codebase and LinkML ontologies are the word list. Write `Actor` (not user/bot), `Challenge` (not ticket/issue/story), `Role`, `Remit`, `Persona`.
 3. **The Reader's Test (solorepo's DR-175):** Can a reader use this item from its docstring alone without reading commit histories or PR threads?
 4. **No Reviewer Litigation in Code (solorepo's DR-171):** Docstrings state usage contracts, parameters, and invariants. They do not argue against past reviewers. The 'why' and trade-offs belong in Decision Records (`DR-nnn.yaml`) or module docstrings. Incident narratives belong in `<module>.history.md`.
@@ -115,5 +115,5 @@ Run this audit in the pre-handoff pass, over what the branch changed (solorepo's
 - **Address the reader directly:** Use 'you' in the present tense. Reserve 'will' for things that genuinely occur later.
 - **Active voice:** 'The gate checks', not 'is checked by the gate'.
 - **Cut dead words:** 'To', not 'in order to'. 'Use', not 'utilize'. 'Do', not 'perform'.
-- **Specific over sterile:** Name the exact symbol, file, flag, or command name (`python3 .meta/search.py`, not 'the search script').
+- **Specific over sterile:** Name the exact symbol, file, flag, or command name (`.meta/search.py`, not 'the search script').
 - **Vary rhythm:** Mix sentence lengths on purpose. Short sentences land a point. Longer ones carry a fact with its condition or consequence.

@@ -78,6 +78,7 @@ TARGETS: dict[str, TargetFn] = {
     "../.claude/skills/pr-first/SKILL.md": skills.pr_first_skill,
     "../.claude/skills/pr-first-reviewer/SKILL.md": skills.pr_first_reviewer_skill,
     "../.claude/skills/wikisplain/SKILL.md": skills.wikisplain_skill,
+    "../.claude/skills/search/SKILL.md": skills.search_skill,
     "../.claude/skills/technical-writing/SKILL.md": skills.technical_writing_skill,
     "apm_primitives": writers.apm_primitives,
     "../.gitattributes": gitattributes,

@@ -59,7 +59,6 @@ CONTRACT: Contract = {
     "timing": (("args", FLAGS),),
     "agents": (("args", FLAGS),),
     "dereference": (("args", FLAGS),),
-    "search": (("args", FLAGS),),
     "terms": (("args", FLAGS),),
     "apm": (("args", FLAGS),),
     "bootstrap": (("args", FLAGS),),

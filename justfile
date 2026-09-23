@@ -52,10 +52,6 @@ agents *args:
 dereference *args:
     uvx --python 3.13 --with linkml --with pyyaml python .meta/dereference.py {{args}}
 
-# search assertions, decisions, and wiki by meaning (solorepo's DR-103)
-search *args:
-    uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py {{args}}
-
 # surface unminted candidate terms by keyness and dispersion (solorepo's DR-234)
 terms *args:
     uvx --python 3.13 --with wordfreq python .meta/terms.py {{args}}

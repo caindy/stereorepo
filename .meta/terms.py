@@ -97,6 +97,7 @@ RENDERED_TARGETS: frozenset[str] = frozenset({
     ".claude/skills/pr-first-reviewer/SKILL.md",
     ".claude/skills/technical-writing/SKILL.md",
     ".claude/skills/wikisplain/SKILL.md",
+    ".claude/skills/search/SKILL.md",
 })
 
 IGNORED_DIRECTORIES: frozenset[str] = frozenset({

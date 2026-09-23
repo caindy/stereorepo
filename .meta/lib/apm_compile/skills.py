@@ -52,6 +52,7 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
             "pr-first": render.pr_first_skill,
             "pr-first-reviewer": render.pr_first_reviewer_skill,
             "wikisplain": render.wikisplain_skill,
+            "search": render.search_skill,
             "technical-writing": render.technical_writing_skill,
         }
         for name, gen_fn in skill_gens.items():
@@ -60,7 +61,7 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
                 content = gen_fn()
                 if content:
                     out[rel_path] = content
-    except Exception:  # noqa: BLE001  # reason: best effort — the four generators read Artifacts and templates a specialization can leave absent, and a clone missing one gets the other primitives rather than an aborted compile
+    except Exception:  # noqa: BLE001  # reason: best effort — the five generators read Artifacts and templates a specialization can leave absent, and a clone missing one gets the other primitives rather than an aborted compile
         pass
 
     claude_skills = meta_dir.parent / ".claude" / "skills"

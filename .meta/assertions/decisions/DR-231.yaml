@@ -101,10 +101,12 @@ decisions:
         does not cover it.
     falsifier: >-
       A wiki page on the trunk whose `synonyms` name a word its own concept's
-      `avoid` list forbids, or a `just search` for such a word answering with
-      that page. Equally, a page refused a findable synonym that the vocabulary
-      does not forbid, which would mean the rule had become equality with
-      `alt_labels` after all.
+      `avoid` list forbids, or a query for such a word — `uvx --python 3.13
+      --with linkml --with pyyaml python .meta/search.py <word>`, the `/search`
+      skill's invocation since solorepo's DR-272 retired `just search` —
+      answering with that page. Equally, a page refused a findable synonym that
+      the vocabulary does not forbid, which would mean the rule had become
+      equality with `alt_labels` after all.
     rationale: |-
       Two lists that contradict each other are one list too many, and this pair
       contradicted in the direction that costs most: the forbidden word was not

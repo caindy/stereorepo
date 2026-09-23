@@ -32,7 +32,7 @@ Solorepo's Article 8 asks the sharper question: an artifact prevents drift only 
 
 ## What it costs
 
-Externalizing does not remove a cost. It converts recall into four problems, and much of the repository's apparatus exists to answer them: **routing**, under the [[knowledge-management|Knowledge Management]] discipline and the Diátaxis Compass; **disclosure**, under Progressive Disclosure and the load map that is deliberately insufficient on its own; **retrieval**, through `just search` and `just next`; and **freshness**, through `check.py`, dereferenced citations under solorepo's Article 12, and generation that leaves no second copy to go stale.
+Externalizing does not remove a cost. It converts recall into four problems, and much of the repository's apparatus exists to answer them: **routing**, under the [[knowledge-management|Knowledge Management]] discipline and the Diátaxis Compass; **disclosure**, under Progressive Disclosure and the load map that is deliberately insufficient on its own; **retrieval**, through `/search` (`.meta/search.py`) and `just next`; and **freshness**, through `check.py`, dereferenced citations under solorepo's Article 12, and generation that leaves no second copy to go stale.
 
 The compensation is that these are paid once and apply to everything, where curating a private store is paid per fact and forever.
 
