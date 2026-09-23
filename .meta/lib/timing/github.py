@@ -3,51 +3,9 @@
 History in github.history.md (solorepo's DR-171).
 """
 import subprocess
-import sys
-import types
 from typing import Any
 
-NO_RUNNER = ("gh: `.meta/lib/gh.py` is absent, which is the reviewer's worktree restoring the "
-             "control plane from a trunk that does not hold the shared runner yet "
-             "(solorepo's #748)")
-"""What a read exits with where the shared runner is missing, rather than a diagnosis of its own.
-
-The import below is a bootstrap shim with one live run: the pull request that
-adds `.meta/lib/gh.py` to `depth.CONTROL_PLANE` and to the reviewer workflow's
-trunk-restore pathspec. There the restore deletes the file, because
-`origin/main` does not hold it yet, while trunk's restored
-`.meta/lib/move/reconcile.py` still imports `NOT_RUN` from this module and so
-imports it. Once that pull request lands, trunk holds the runner and the
-restore restores it, so the branch is unreachable and its removal is owed.
-`.meta/next.py` imports the same module unguarded because nothing imports
-`next.py`: this module alone is reached through trunk's restored channel. An
-exit rather than a stub answering `None` is what keeps a deleted module from
-being reported as a token without the `actions` scope, which is what
-`screen.py` says of a read that answers `None`.
-"""
-
-
-def _no_runner(*_args: Any, **_options: Any) -> Any:
-    """Refuses a read the shared runner is not there to make.
-
-    Args:
-        *_args: What the runner would have been given.
-        **_options: What the runner would have been given.
-
-    Returns:
-        Any: Nothing; the type is the one it stands in for.
-
-    Raises:
-        SystemExit: Always, naming the bootstrap rather than the read.
-    """
-    sys.exit(NO_RUNNER)
-
-
-lib_gh: Any
-try:
-    from lib import gh as lib_gh
-except ImportError:
-    lib_gh = types.SimpleNamespace(UNSET=object(), gh=_no_runner)
+from lib import gh as lib_gh
 
 # The same four `next.py` reads, and for the same reason: they are the
 # workflows a portfolio inherits or writes its own of. `gate.yml` is not in
