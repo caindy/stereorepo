@@ -387,6 +387,58 @@ def wikisplain_argv_probes() -> list[str]:
     return problems
 
 
+@check("wikisplain default root probes", pre=True)
+def wikisplain_default_root_probes() -> list[str]:
+    """`find_duplicates`, `extract_known_concepts` and `cli.main`, called with
+    no `root`, read this repository (solorepo's #648).
+
+    Every other probe over these functions passes `root=ROOT` explicitly, or
+    points `cli.ROOT` at a temporary directory before calling, so the default
+    `lib.wikisplain.ROOT` the command line actually relies on is exercised by
+    nothing else in the gate — the gap that let solorepo's #528's package
+    split leave the default wrong, silently, until solorepo's #647 corrected
+    it. Called with no `root` at all, `find_duplicates` must still find the
+    wiki's own Knowledge Management page and `extract_known_concepts` must
+    still know its slug; `cli.main` takes no `root` parameter at all, so
+    `--check-duplicate` on the same concept exercises the same default by
+    construction. None of the three would pass were the default one directory
+    off, since neither the wiki nor the vocabulary exists under
+    `.meta/lib/wikisplain` or above the repository. The cheapest of the four,
+    holding independently of whether the calls above still exist to make: the
+    default itself is a directory holding `wiki/` and `.meta/assertions/`,
+    true of the repository and of nothing above or below it.
+    """
+    wikisplain = load_module(META / "wikisplain.py", "wikisplain")
+    problems = []
+    default_root = wikisplain.cli.ROOT
+    if not (default_root / "wiki").is_dir() or not (default_root / ".meta" / "assertions").is_dir():
+        problems.append(
+            f"wikisplain default root: expected a directory holding wiki/ and "
+            f".meta/assertions/, got {default_root}"
+        )
+    dups = wikisplain.find_duplicates("Knowledge Management")
+    if not any(d["source"] == "wiki" for d in dups):
+        problems.append(
+            f"find_duplicates: no root given: expected a wiki duplicate for "
+            f"'Knowledge Management', got {dups!r}"
+        )
+    known = wikisplain.extract_known_concepts()
+    if known.get("knowledge-management") != "knowledge-management":
+        problems.append(
+            f"extract_known_concepts: no root given: expected 'knowledge-management' "
+            f"known, got {known.get('knowledge-management')!r}"
+        )
+    said = io.StringIO()
+    with contextlib.redirect_stdout(said):
+        code = wikisplain.main(["Knowledge Management", "--check-duplicate"])
+    if code != 1:
+        problems.append(
+            f"cli.main: no root given: expected exit 1 for 'Knowledge Management', "
+            f"got {code} saying {said.getvalue()!r}"
+        )
+    return problems
+
+
 @check("citation form probes", pre=True)
 def citation_form_probes() -> list[str]:
     """`citations.FOREIGN` and `check_pr.FOREIGN` hold every citation character exact except its leading `S` or `s`.
