@@ -7,6 +7,7 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterable
 from typing import Any
 
 from checks.collect import META, check
@@ -278,6 +279,7 @@ class _FakeStdin:
     def __init__(self, broken: bool = False) -> None:
         self.broken = broken
         self.buffer = io.StringIO()
+        self.closed = False
 
     def write(self, s: str) -> int:
         """Write string to buffer or raise BrokenPipeError when broken."""
@@ -290,6 +292,23 @@ class _FakeStdin:
 
     def close(self) -> None:
         """Close buffer."""
+        self.closed = True
+
+
+class _FakeStdout:
+    """Mock standard output stream that records closure."""
+
+    def __init__(self, lines: list[str]) -> None:
+        self.lines = lines
+        self.closed = False
+
+    def __iter__(self) -> Iterable[str]:
+        """Iterate over configured output lines."""
+        return iter(self.lines)
+
+    def close(self) -> None:
+        """Close buffer."""
+        self.closed = True
 
 
 class FakePopen:
@@ -297,7 +316,7 @@ class FakePopen:
 
     def __init__(self, stdout_lines: list[str], returncode: int = 0, broken_pipe: bool = False) -> None:
         self.stdin = _FakeStdin(broken=broken_pipe)
-        self.stdout = stdout_lines
+        self.stdout = _FakeStdout(stdout_lines)
         self.stderr = io.StringIO()
         self.returncode = returncode
 
@@ -381,21 +400,20 @@ def _probe_run_agy_retries(run_agy: Any) -> list[str]:
             "Eligibility check failed: failed to get load code assist response: "
             "UNAVAILABLE (code 503): The service is currently unavailable.\n"
         )
-        attempts_503 = [
-            FakePopen(
-                [err_503, json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n"],
-                returncode=0,
-            ),
-            FakePopen(
-                [
-                    json.dumps(
-                        {"event": "result", "result": {"status": "SUCCESS", "response": "Done"}}
-                    )
-                    + "\n",
-                ],
-                returncode=0,
-            ),
-        ]
+        first_503 = FakePopen(
+            [err_503, json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n"],
+            returncode=0,
+        )
+        second_503 = FakePopen(
+            [
+                json.dumps(
+                    {"event": "result", "result": {"status": "SUCCESS", "response": "Done"}}
+                )
+                + "\n",
+            ],
+            returncode=0,
+        )
+        attempts_503 = [first_503, second_503]
         sleeps_503: list[float] = []
         run_agy.subprocess.Popen = lambda *args, **kwargs: attempts_503.pop(0)
         code = run_agy.run_session(
@@ -412,6 +430,8 @@ def _probe_run_agy_retries(run_agy: Any) -> list[str]:
             problems.append(
                 f"fallback probes: transient 503 sleep intervals {sleeps_503!r} != [1.0]"
             )
+        if not all(process.stdin.closed and process.stdout.closed for process in (first_503, second_503)):
+            problems.append("fallback probes: 503 recovery left a process pipe open")
 
         sleeps_429: list[float] = []
         run_agy.subprocess.Popen = lambda *args, **kwargs: FakePopen(
@@ -474,6 +494,41 @@ def _probe_run_agy_retries(run_agy: Any) -> list[str]:
             problems.append(f"fallback probes: fatal 401 unexpectedly slept: {sleeps_401!r}")
     finally:
         run_agy.subprocess.Popen = orig_popen
+    problems.extend(_probe_run_agy_429_recovery(run_agy))
+    return problems
+
+
+def _probe_run_agy_429_recovery(run_agy: Any) -> list[str]:
+    """Verify 429 failures recover in fresh sessions and close their pipes."""
+    first = FakePopen(
+        [
+            "error: RESOURCE_EXHAUSTED (code 429): Quota exceeded for rate limit\n",
+            json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n",
+        ],
+        returncode=0,
+    )
+    second = FakePopen(
+        [json.dumps({"event": "result", "result": {"status": "SUCCESS"}}) + "\n"],
+        returncode=0,
+    )
+    attempts = [first, second]
+    sleeps: list[float] = []
+    original_popen = run_agy.subprocess.Popen
+    try:
+        run_agy.subprocess.Popen = lambda *args, **kwargs: attempts.pop(0)
+        code = run_agy.run_session(
+            prompt="Test prompt",
+            add_dir="/tmp/test",
+            options=run_agy.SessionOptions(max_attempts=3, initial_delay=1.0, jitter=0.0),
+            sleep_fn=sleeps.append,
+        )
+    finally:
+        run_agy.subprocess.Popen = original_popen
+    problems: list[str] = []
+    if code != 0 or attempts or sleeps != [1.0]:
+        problems.append("fallback probes: 429 failure did not recover in a fresh session")
+    if not all(process.stdin.closed and process.stdout.closed for process in (first, second)):
+        problems.append("fallback probes: 429 recovery left a process pipe open")
     return problems
 
 
