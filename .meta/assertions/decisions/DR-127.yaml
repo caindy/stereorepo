@@ -81,7 +81,7 @@ decisions:
         past without the solo, is false where a link is present, and this entry
         carries that forward rather than rewriting it.
       - >-
-        `promote` is `held_by: [coder, solo]`, so PR First's eighth step is one
+        `promote` is `held_by: [coder, solo]`, so PR First's *Promote at approval* step is one
         act for the Role the pull request names. The exception in `answer` is
         what the step needs when the promotion and the resolve come apart — a
         `promote` whose resolve failed, or an Issue filed before the thread was
@@ -105,7 +105,7 @@ decisions:
       that is sole-authored by design: the coder's own observation on the
       coder's own diff.
 
-      So the rule and the eighth step of the Discipline disagreed, and the
+      So the rule and PR First's *Promote at approval* step disagreed, and the
       rule won on every pull request that carried a notice. The narrow fix
       is to say what an answer is rather than who may give one — which the
       gate already says, in `unanswered`, and had said all along.

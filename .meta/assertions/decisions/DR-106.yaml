@@ -66,7 +66,7 @@ decisions:
         the recipes only name, and installing a runner on the runner for the
         sake of a spelling would be the cost without the benefit.
       - >-
-        Specialization's copy step gains `.meta/gate`, which it had left
+        Specialization's *Copy what is inherited* step gains `.meta/gate`, which it had left
         behind: a portfolio inherited the runner's verb and not the runner.
     falsifier: >-
       A recipe that grows a second line of logic and stays, or a portfolio

@@ -175,7 +175,7 @@ decisions:
         can answer every half hour.
       - >-
         A portfolio inherits all of it: `.meta/say/` and `coder.yml` are both in
-        the set Specialization's second step copies.
+        the set Specialization's *Copy what is inherited* step copies.
     falsifier: >-
       A dispatched rebase that resolves a conflict the wrong way and merges,
       or one that loops — dispatched, dying, dispatched again on the next

@@ -1,0 +1,68 @@
+decisions:
+  - id: work:decision/270
+    name: "DR-270 · A Discipline step is an identified entity with a semantic slug CURIE, cited in prose by its human name, and ordinal step citations are refused"
+    challenge: work:challenge/603
+    status: ADOPTED
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-work-disciplines
+      - work:artifact/meta-assertions-disciplines
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-lib-render-pages
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-checks-citations-claims
+    context: >-
+      Discipline steps were un-identified nested strings in `disciplines.yaml`. As a
+      result, citations across code, assertions, and history relied on positional
+      ordinals (such as `PR First's eighth step` or unanchored step numbers). Every time
+      a step was inserted or reordered (such as PR #601 adding `move obviate`), every
+      subsequent ordinal citation drifted silently out of sync without triggering
+      verification failures (#603, #638, #848).
+    alternatives:
+      - name: Retain ordinal position and check numbers against step indices
+        chosen: false
+        reason: >-
+          Retaining positional ordinals means every insertion or reordering still
+          invalidates downstream references or forces tedious mechanical renumbering passes
+          across dozens of files.
+      - name: Cite steps by raw namespaced CURIEs in prose
+        chosen: false
+        reason: >-
+          Writing raw `work:discipline-step/pr-first/request-review` inline in running
+          prose is jarring and contradicts how Disciplines (`PR First`) and Concepts
+          are cited by human name rather than ontology URIs.
+      - name: Identified steps with slug CURIEs and emphasized names in prose
+        chosen: true
+        reason: >-
+          Adheres to Article 12 and solorepo's DR-125's criterion that an entity whose identity is its meaning is
+          identified by a slug. Steps receive stable CURIEs in the ontology
+          (`work:discipline-step/<discipline-slug>/<step-slug>`) and human-readable names.
+          Renderers format each step with a bold lead-in name (`{i}. **{name}.** {statement}`)
+          so the citable identifier is prominent on rendered pages. Prose cites steps by
+          Discipline name and step name (`<Discipline>'s *<Step Name>* step`), preserving natural
+          sentence rhythm. Citation checkers refuse ordinal step references mechanically,
+          preventing drift from returning.
+    consequences:
+      - >-
+        `DisciplineStep` is added to `.meta/work/disciplines.yaml` as an identified `WorkEntity`
+        with `id`, `name`, and `statement`. `Discipline.steps` ranges over `DisciplineStep`.
+      - >-
+        Every step in declared Disciplines across `.meta/assertions/disciplines.yaml` and
+        `.meta/assertions/imported/disciplines.yaml` carries a stable CURIE and human name.
+      - >-
+        `.meta/lib/render/pages.py` and `skills.py` render steps with bold lead-in names,
+        retaining numbers strictly as reading aids.
+      - >-
+        `.meta/checks/citations/claims.py` checks that step citations resolve against
+        declared disciplines and rejects number-based step citations.
+      - >-
+        All drifted ordinal step citations across `.meta/` and assertions are reconciled
+        to stable step names.
+    falsifier: >-
+      A Discipline step cited by ordinal number in durable prose passing the citation gate,
+      or a step rename invalidating existing step name citations without verification refusal.
+    rationale: |-
+      Composition in this ontology is by reference, not by nesting (solorepo's DR-152). A rule or
+      practice that requires human adherence and is cited across the repository needs an
+      identity of its own.

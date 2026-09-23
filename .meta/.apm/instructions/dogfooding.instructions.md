@@ -17,10 +17,10 @@ Telling a difficulty that is the tool's fault from one that is the task's. Worki
 
 ## Steps
 
-- Apply each adopted Discipline to this repo before applying it anywhere else.
-- Instantiate a schema before trusting it. Writing an instance is the test.
-- Run a procedure for real rather than reviewing it.
-- When use finds a gap, change the thing, and record what use found.
+- **Apply disciplines here first.** Apply each adopted Discipline to this repo before applying it anywhere else.
+- **Instantiate schemas before trusting them.** Instantiate a schema before trusting it. Writing an instance is the test.
+- **Run procedures for real.** Run a procedure for real rather than reviewing it.
+- **Fix gaps found in use.** When use finds a gap, change the thing, and record what use found.
 
 ## Produces
 

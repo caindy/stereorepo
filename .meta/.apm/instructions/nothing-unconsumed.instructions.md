@@ -19,11 +19,11 @@ Whether a consumer actually checks the artifact or merely loads it, and whether 
 
 ## Steps
 
-- Refuse speculative abstractions at the creation boundary: do not introduce schemas, coordinate systems, or metamodels ahead of concrete producers and consumers (solorepo's DR-008, solorepo's DR-203).
-- For each artifact, name what consumes it, and what that consumer checks it against.
-- Delete what nothing consumes. An unread artifact is not documentation, it is debris.
-- Hold a history log to its Evidence. An entry says what failed and what the change established — not what changed, which the diff already says — and names its **Evidence**: the test that would fail if the change were undone, which is Evidence that can fail rather than a citation that cannot (solorepo's DR-171, solorepo's DR-228). The entry is consumed by a reader; what it is checked against is the test suite, so an entry whose test is gone is stale and goes with it, and the log prunes itself. Observed Failure's argument, applied to prose: an entry naming no test is debris for the same reason a guardrail never seen to fail is evidence of nothing.
-- Detect orphans mechanically, since they accumulate faster than anyone notices.
+- **Refuse speculative abstractions.** Do not introduce schemas, coordinate systems, or metamodels ahead of concrete producers and consumers at the creation boundary (solorepo's DR-008, solorepo's DR-203).
+- **Name artifact consumers and checks.** For each artifact, name what consumes it, and what that consumer checks it against.
+- **Delete unconsumed artifacts.** Delete what nothing consumes. An unread artifact is not documentation, it is debris.
+- **Hold history logs to evidence.** Hold a history log to its Evidence. An entry says what failed and what the change established — not what changed, which the diff already says — and names its **Evidence**: the test that would fail if the change were undone, which is Evidence that can fail rather than a citation that cannot (solorepo's DR-171, solorepo's DR-228). The entry is consumed by a reader; what it is checked against is the test suite, so an entry whose test is gone is stale and goes with it, and the log prunes itself. Observed Failure's argument, applied to prose: an entry naming no test is debris for the same reason a guardrail never seen to fail is evidence of nothing.
+- **Detect orphans mechanically.** Rely on automated checks rather than visual inspection, since debris accumulates faster than anyone notices.
 
 ## Produces
 

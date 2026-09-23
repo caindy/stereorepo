@@ -25,7 +25,7 @@ decisions:
       the label. The prose followed it everywhere: the Issue form says a level
       is proposed in the body and not landed, `post promote`'s docstring says a
       level given there is the solo's mandate, `coder.yml`'s promotion prompt
-      stopped passing `--difficulty`, and PR First's third step says a Job with
+      stopped passing `--difficulty`, and PR First's *Raise a Challenge with the form* step says a Job with
       no mandate leaves the level to the reviewer. Nothing refuses one.
       `file_issue` takes a level from any caller and `difficulty` reads nothing
       about who typed it.
@@ -113,7 +113,8 @@ decisions:
           levels say which kind of Job takes the work, which is the reviewer's
           verdict to give; `human` says the next step is not a Job's at all,
           which is the one fact a run holds first and nobody else can see — a
-          decision owed, or work it could not finish. PR First's fourth step
+          decision owed, or work it could not finish.
+          PR First's *Hand it back the moment the next step is not yours* step
           already gives every Role that reading and sets the bar deliberately
           low (DR-226), and `move stop` already lands `human` on a Challenge
           the Job holds. Refusing `human` would make a run choose between an
@@ -173,7 +174,7 @@ decisions:
         the solo's verb is not what stops a run typing it, and `held_by` never
         was.
       - >-
-        PR First's third step says a run cannot hold the solo's mandate and
+        PR First's *Raise a Challenge with the form* step says a run cannot hold the solo's mandate and
         that the verbs refuse it one, with `human` named as the hand-back
         rather than the way round.
       - >-
@@ -220,8 +221,9 @@ decisions:
       The escape hatch is the part worth being careful about, because it is
       the same shape as the failure. `hard` became a parking brake for
       everything a run did not want to decide; `human` could too. The reason
-      to keep it anyway is that a run finding a decision owed is the case PR
-      First's fourth step exists for, and the bar there is deliberately low —
+      to keep it anyway is that a run finding a decision owed is the case
+      PR First's *Hand it back the moment the next step is not yours* step
+      exists for, and the bar there is deliberately low —
       a Job that cannot say "this is the solo's" will say something worse, or
       nothing. What separates the two is that `human` asks for the solo by
       name and starts no Job, where `hard` was a routing claim about work the

@@ -207,3 +207,115 @@ def path_and_line_claims() -> list[str]:
                         + ", ".join(f"`{s}`" for s in near)
                         + f", and line {number} reads `{lines[number - 1].strip()}`")
     return problems
+
+
+# A Discipline step is an identified entity with a semantic slug CURIE, cited
+# in prose by its human name, and ordinal step citations are refused (solorepo's DR-270).
+ORDINAL_WORDS = (
+    r"first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
+    r"eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|"
+    r"seventeenth|eighteenth|nineteenth|twentieth|"
+    r"opening|initial|final|closing|\d+(?:st|nd|rd|th)"
+)
+CARDINAL_WORDS = (
+    r"\d+|one|two|three|four|five|six|seven|eight|nine|ten|"
+    r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty"
+)
+
+
+def _disciplines(index: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Index declared Disciplines by human name, mapping to their declared steps."""
+    return {obj["name"]: {s["name"]: s for s in obj.get("steps") or []}
+            for _, (cls, obj, _) in index.items() if cls == "Discipline"}
+
+
+def _step_patterns(
+    disciplines: dict[str, dict[str, Any]],
+) -> tuple[re.Pattern[str], re.Pattern[str]]:
+    """Build shared regex patterns for ordinal step refusals and step name citations."""
+    disc_pattern = "|".join(re.escape(d) for d in sorted(disciplines.keys(), key=len, reverse=True))
+    ordinal_step = re.compile(
+        rf"\b(?P<disc>{disc_pattern})(?:'s\s+(?P<ord>{ORDINAL_WORDS})\s+step|"
+        rf"'s\s+step\s+(?P<card>{CARDINAL_WORDS})|\s+step\s+(?P<card2>{CARDINAL_WORDS})(?!\s+[a-z]+s\b))\b",
+        re.I,
+    )
+    any_step_cite = re.compile(
+        rf"\b(?P<disc>{disc_pattern})'s\s+(?:\*(?P<step_emp>[^*]+)\*|(?P<step_bare>[A-Z][^\n.;:?!]{{1,60}}?))\s+step\b"
+    )
+    return ordinal_step, any_step_cite
+
+
+@check("refused ordinal step citations")
+def refused_ordinal_step_citations(index: dict[str, Any]) -> list[str]:
+    """Validate that durable prose cites Discipline steps by name rather than ordinal numbers.
+
+    Enforces that references to Discipline steps use `<Discipline>'s *<Step Name>* step`
+    rather than positional ordinals to prevent silent citation drift (solorepo's DR-270).
+    Code spans (enclosed in backticks) are exempt as legitimate quotation/mention syntax.
+
+    Parameters:
+        index (dict): LinkML model index mapping URI identifiers to entity tuples.
+
+    Returns:
+        list[str]: Validation problem messages for refused ordinal step citations.
+    """
+    disciplines = _disciplines(index)
+    if not disciplines:
+        return []
+    ordinal_step, _ = _step_patterns(disciplines)
+    problems = []
+    for path in loaders.durable(loaders.copied_files()):
+        rel = path.relative_to(ROOT)
+        for span in prose.prose(path):
+            unquoted = prose.SPAN.sub(" ", span)
+            for m in ordinal_step.finditer(unquoted):
+                problems.append(
+                    f"{rel}: {m.group(0)} is an ordinal step citation; "
+                    "cite steps by name under solorepo's DR-270"
+                )
+    return problems
+
+
+@check("cited discipline steps")
+def cited_discipline_steps(index: dict[str, Any]) -> list[str]:
+    """Validate that `<Discipline>'s *<Step Name>* step` citations resolve against declared steps.
+
+    Ensures that step citations in durable prose match declared step names in LinkML
+    discipline assertions, preventing misattribution across disciplines or casing errors
+    (solorepo's DR-270).
+
+    Parameters:
+        index (dict): LinkML model index mapping URI identifiers to entity tuples.
+
+    Returns:
+        list[str]: Validation problem messages for unresolved discipline step citations.
+    """
+    disciplines = _disciplines(index)
+    if not disciplines:
+        return []
+    ordinal_step, any_step_cite = _step_patterns(disciplines)
+
+    problems = []
+    for path in loaders.durable(loaders.copied_files()):
+        rel = path.relative_to(ROOT)
+        for span in prose.prose(path):
+            unquoted = prose.SPAN.sub(" ", span)
+            for m in any_step_cite.finditer(unquoted):
+                if ordinal_step.search(m.group(0)):
+                    continue
+                disc = m.group("disc")
+                step = (m.group("step_emp") or m.group("step_bare") or "").strip()
+                declared = disciplines.get(disc, {})
+                if step not in declared:
+                    declared_lower = {s.lower(): s for s in declared}
+                    if step.lower() in declared_lower:
+                        problems.append(
+                            f"{rel}: '{step}' is cited with incorrect casing for "
+                            f"{disc}'s '{declared_lower[step.lower()]}'"
+                        )
+                    else:
+                        problems.append(
+                            f"{rel}: '{step}' is cited as a step of {disc}, and is no declared step"
+                        )
+    return problems
+

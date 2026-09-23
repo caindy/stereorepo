@@ -85,8 +85,8 @@ decisions:
         reason: >-
           The coder is the sole author of every notice it raises on its own
           diff, by construction, and DR-127's rationale for the exemption still
-          holds: a rule that counts parties and always finds one refuses PR
-          First's eighth step entirely. This resurrects #139 — the sole-author
+          holds: a rule that counts parties and always finds one refuses
+          PR First's *Promote at approval* step entirely. This resurrects #139 — the sole-author
           refusal refusing the coder's own notice — rather than fixing #560's
           narrower defect, and it loses the Issue as well as the look.
       - name: Leave the reply's wording as `Promoted to <url>.` whether or not the thread is closed
@@ -161,8 +161,9 @@ decisions:
           alone, because the falsifier is "by any sequence of these verbs": one
           door shut and another open is a hold that reads as installed and is
           not. The way out is a resolve run from a second Job, ordinarily the
-          reviewer's own run, and what summons one is the handoff PR First's
-          fifteenth step already defines — `move request-review`, which
+          reviewer's own run, and what summons one is the handoff
+          PR First's *Request review* step already defines — `move request-review`,
+          which
           `review.yml` fires on `review_requested`, arriving with its own
           `ACTOR_SESSION` and holding `resolve`. Holding the verb is not
           enough: that Job's prompt said "Do not resolve any thread", so the
@@ -203,8 +204,8 @@ decisions:
       - >-
         Every refusal and every reply names the door as a resolve from a second
         Job and not as a Role, and says what summons one: `move
-        request-review`, PR First's fifteenth step, whose `review_requested`
-        event is what `review.yml` runs on. PR First's ninth step says the same
+        request-review`, PR First's *Request review* step, whose `review_requested`
+        event is what `review.yml` runs on. PR First's *Promote at approval* step says the same
         thing where it says a promoted thread is resolved with a link.
       - >-
         `review.yml`'s two reviewer prompts carve this one thread out of "Do

@@ -87,7 +87,7 @@ decisions:
           apart by the label alone.
     consequences:
       - >-
-        PR First's third step now says a Challenge is raised with the form and
+        PR First's *Raise a Challenge with the form* step now says a Challenge is raised with the form and
         a proposed level in its body, that the reviewer reads every Challenge
         before any coder takes it, and that the reviewer's verdict is the
         label: `move triage`, which lands the level found. What the reviewer
@@ -108,7 +108,7 @@ decisions:
         A question the raiser cannot answer, because the raiser is a Job that
         has gone, is the reviewer's to answer by revising the body or to hand
         to the solo by landing `human` with the question posted beside it,
-        which is PR First's fourth step exercised from the reviewer's seat.
+        which is PR First's *Hand it back the moment the next step is not yours* step exercised from the reviewer's seat.
       - >-
         The verdict names what it checked. `move triage` takes the body on
         stdin, holds it to four headings — worth doing, waits on, already

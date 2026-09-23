@@ -93,5 +93,6 @@ def durable(copied: set[pathlib.Path]) -> Iterator[pathlib.Path]:
         if path.is_symlink() or not path.is_file() or ".git" in path.parts:
             continue
         if path.suffix == ".md" or path in copied or TEMPLATE in path.parents or (
-                path.suffix in (".yaml", ".yml") and (META / "assertions") in path.parents):
+                path.suffix in (".yaml", ".yml") and (META / "assertions") in path.parents) or (
+                path == META / "jules" / "client.py"):
             yield path

@@ -5,7 +5,7 @@ challenges:
     description: >-
       `coder.yml` takes `workflow_dispatch` with `pull_request` and `task`
       (`review` or `rebase`), and two places name that dispatch as a person's
-      act: PR First's third step, where a verdict a session leaves behind is
+      act: PR First's *Raise a Challenge with the form* step, where a verdict a session leaves behind is
       the solo's to dispatch, and DR-142, which leaves the review dispatch
       unguarded because the solo dispatching is the solo deciding. The only way
       to make it was `gh workflow run coder.yml -f pull_request=<n> -f

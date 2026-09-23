@@ -19,11 +19,11 @@ What a passing check actually covers — which is never what its name suggests, 
 
 ## Steps
 
-- Watch every new guardrail fail before trusting it. Break the thing it guards, see red, then put it back.
-- Check a Claim before asserting it, and say so on the Claim where you cannot. An unchecked Claim is the prose form of a test that passes for the wrong reason: fluent, indistinguishable from a checked one, and evidence of nothing. Where it cites an Article, a Decision or a Discipline, `just dereference` is the mechanised form of watching it fail; where it is about behaviour or history, nothing resolves it and the author is the whole of the control.
-- Watch a refusal stand aside, not only fire. A probe over a refusal carries at least one case asserting the nearest act the refusal must let through: the false positive is the expensive side, since refusing wrongly costs the act where failing to refuse costs a repeat.
-- Treat a coverage figure as a floor beneath the tests, never as a claim about them.
-- Use mutation testing, or its equivalent, as the signal behind the floor — it is the mechanised form of watching a check fail.
+- **Watch guardrails fail.** Watch every new guardrail fail before trusting it. Break the thing it guards, see red, then put it back.
+- **Check claims before asserting.** Check a Claim before asserting it, and say so on the Claim where you cannot. An unchecked Claim is the prose form of a test that passes for the wrong reason: fluent, indistinguishable from a checked one, and evidence of nothing. Where it cites an Article, a Decision or a Discipline, `just dereference` is the mechanised form of watching it fail; where it is about behaviour or history, nothing resolves it and the author is the whole of the control.
+- **Watch refusals stand aside.** Watch a refusal stand aside, not only fire. A probe over a refusal carries at least one case asserting the nearest act the refusal must let through: the false positive is the expensive side, since refusing wrongly costs the act where failing to refuse costs a repeat.
+- **Treat coverage as a floor.** Treat a coverage figure as a floor beneath the tests, never as a claim about them.
+- **Use mutation testing.** Measure the signal behind the floor with mutation analysis or its equivalent — it is the mechanised form of watching a check fail.
 
 ## Produces
 

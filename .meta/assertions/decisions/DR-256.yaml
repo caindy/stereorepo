@@ -55,7 +55,7 @@ decisions:
           before code is written. In the rare degenerate case where an `easy` or
           `medium` implementation encounters an unresolvable architectural impasse,
           the reviewer requests changes, stating clearly in the review thread that an
-          unsettled decision is owed. Under PR First step 4, the coder Role holding
+          unsettled decision is owed. Under PR First's *Hand it back the moment the next step is not yours* step, the coder Role holding
           the Challenge receives this finding and executes `move stop`, cleanly
           releasing its own claim, transitioning the Issue to `human`, and leaving
           the pull request open for the solo.
@@ -65,7 +65,7 @@ decisions:
         preserving the invariant that only Roles capable of holding an execution
         claim may release one.
       - >-
-        PR First step 4 and the reviewer Role's instructions affirm that when a
+        PR First's *Hand it back the moment the next step is not yours* step and the reviewer Role's instructions affirm that when a
         reviewer identifies an unmade architectural decision or an insurmountable
         blocker during diff review, its duty is to request changes and explicitly
         direct the coder to hand the Challenge back via `move stop`.

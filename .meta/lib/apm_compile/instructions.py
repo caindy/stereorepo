@@ -104,7 +104,8 @@ def discipline_instructions(meta_dir: pathlib.Path = META) -> dict[str, str]:
         if d.get("steps"):
             lines.extend(["## Steps", ""])
             for step in d["steps"]:
-                lines.append(f"- {step.strip()}")
+                step_name = step["name"].rstrip(".")
+                lines.append(f"- **{step_name}.** {step['statement'].strip()}")
             lines.append("")
 
         if d.get("produces"):

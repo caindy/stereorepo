@@ -359,8 +359,9 @@ def _check_dispatch_review(pr: str | int, pull: common.Pull) -> None:
 
 
 def dispatch_pass(pr: str | int, task: str | None) -> None:
-    """Start a coder pass on a pull request by hand: the act PR First's third
-    step names, as a verb rather than as a command typed at GitHub.
+    """Start a coder pass on a pull request by hand: the act PR First's
+    *Raise a Challenge with the form* step names, as a verb rather than
+    as a command typed at GitHub.
 
     `coder.yml`'s events do not reach everything the coder is for. A verdict a
     session leaves behind is delivered once and to nobody, because moving the
@@ -742,9 +743,9 @@ def advance_stranded(pulls: list[dict[str, Any]],
     no check run. The conversations are read here too: `evaluate_pr` consults
     them only while nothing else has failed, so `BEHIND_BASE` arrives with the
     threads unread, and `MERGE_MANAGER_FIELDS` does not ask `pr list` for them.
-    Rebasing on an unresolved conversation outdates the anchored comment PR
-    First's seventh step parks work on, and a pull request holding one cannot
-    merge until it is resolved anyway.
+    Rebasing on an unresolved conversation outdates the anchored comment
+    PR First's *Reread the diff and notice* step parks work on, and a pull request holding one
+    cannot merge until it is resolved anyway.
 
     The branch-safety refusals are `advance`'s, because this calls that verb by
     number rather than repeating its filter: an unlinked branch that is the

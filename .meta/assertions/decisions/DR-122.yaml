@@ -84,7 +84,7 @@ decisions:
         read with TaskOutput before anything else.
       - >-
         A portfolio inherits both: `.meta/say/` and `review.yml` are in the
-        set Specialization's second step copies.
+        set Specialization's *Copy what is inherited* step copies.
       - >-
         `after the session` runs unless the run was cancelled — `!cancelled()`
         rather than `always()` — so a run that hit the turn cap or the

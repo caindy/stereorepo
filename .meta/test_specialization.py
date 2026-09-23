@@ -115,8 +115,8 @@ def read_inherited_paths(disciplines_file: pathlib.Path) -> list[str]:
         if discipline.get("id") != "work:discipline/specialization":
             continue
         for step in discipline.get("steps") or []:
-            if step.startswith("Copy what is inherited"):
-                return re.findall(r"`([^`]+)`", step)
+            if step.get("name") == "Copy what is inherited":
+                return re.findall(r"`([^`]+)`", step.get("statement", ""))
     return []
 
 

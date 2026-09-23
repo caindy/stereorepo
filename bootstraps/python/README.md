@@ -30,7 +30,7 @@ be a second copy of it, and the second copy is the one that drifts.
 
 ## Taking it into a portfolio
 
-Specialization's fifth step, for Python:
+Specialization's *Choose languages and bootstrap* step, for Python:
 
 ```bash
 bootstraps/python/render <destination> <package-name>

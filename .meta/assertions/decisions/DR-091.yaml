@@ -31,7 +31,7 @@ decisions:
     consequences:
       - >-
         `bootstraps/rust/render <destination> <crate>` is the one copy of the
-        substitution; Specialization's fifth step runs it by hand and the
+        substitution; Specialization's *Render and check* step runs it by hand and the
         workflow runs it in CI.
       - >-
         The workflow gains a `rust seed` job that renders the seed as a crate named

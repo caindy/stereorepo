@@ -17,7 +17,20 @@ import checks.citations.claims  # noqa: F401  # reason: registers check steps
 from checks.citations.loaders import DR, FOREIGN, SCAFFOLD, copied_files, durable, issue_citation, load_check_pr, load_timing
 from checks.citations.prose import ARTICLE, BLOCK, CITE, GAP, HEDGED, NEAREST, SAYS, SPAN, entry_text, flat, normalise, prose, scalars
 from checks.citations.record import cited_decisions, enacting_citations, inherited_citations
-from checks.citations.claims import ELISION, PATH_LINE, QUOTED, RELATIONS, STATED, SUBJECT, cited_articles, path_and_line_claims, quoted_claims, stated_relations
+from checks.citations.claims import (
+    ELISION,
+    PATH_LINE,
+    QUOTED,
+    RELATIONS,
+    STATED,
+    SUBJECT,
+    cited_articles,
+    cited_discipline_steps,
+    path_and_line_claims,
+    quoted_claims,
+    refused_ordinal_step_citations,
+    stated_relations,
+)
 
 __all__ = [
     "ARTICLE",
@@ -39,6 +52,7 @@ __all__ = [
     "SUBJECT",
     "cited_articles",
     "cited_decisions",
+    "cited_discipline_steps",
     "claims",
     "copied_files",
     "durable",
@@ -55,6 +69,7 @@ __all__ = [
     "prose",
     "quoted_claims",
     "record",
+    "refused_ordinal_step_citations",
     "scalars",
     "stated_relations",
 ]

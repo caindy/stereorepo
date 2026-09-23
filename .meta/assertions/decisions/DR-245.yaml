@@ -70,7 +70,7 @@ decisions:
         In coder.yml, choose the depth exports gemini_model and effort keys alongside Claude depth parameters
         to model all agy passes deterministically.
       - >-
-        Specialization Step 2 inherits .meta/detect_fallback.py alongside coder.yml and review.yml, documenting
+        Specialization's *Copy what is inherited* step inherits .meta/detect_fallback.py alongside coder.yml and review.yml, documenting
         vars.GEMINI_FALLBACK as opt-in for portfolios that stand up ARC runners with subscription credentials.
       - >-
         wiki/solorepo/dev-loop.md is updated to reflect subscription-backed Antigravity fallback.

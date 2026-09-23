@@ -15,7 +15,7 @@ decisions:
       - work:artifact/meta-checks-probes-channel-parser
       - work:artifact/meta-checks-probes-channel-status
     context: >-
-      PR First's tenth step is *merged, never abandoned*, and the channel
+      PR First's *Merged, never abandoned* step is *merged, never abandoned*, and the channel
       enforces it by construction: `.meta/say/verbs.yaml` holds no `close` verb
       for a pull request, so `merge` is the only way one ends. The step is
       written for a change that was tried and did not work — merging records
@@ -28,8 +28,9 @@ decisions:
       #202 itself, made framing prose `preamble` and `postamble` on the
       Artifact, and DR-152 (#227), taken for #226, made prose between derived
       content a named `woven` block. #202 closed COMPLETED. Merging #206 would
-      install a third prose mechanism over two working ones, so step ten could
-      not be followed; and no verb closed it, so nothing else could be either.
+      install a third prose mechanism over two working ones, so
+      PR First's *Merged, never abandoned* step could not be followed; and no
+      verb closed it, so nothing else could be either.
       It sat `CONFLICTING` and `CHANGES_REQUESTED`, with a correct review
       finding against a mechanism that was not landing.
 
@@ -41,7 +42,7 @@ decisions:
       exist to prevent. A rule with no sanctioned exception is a rule people
       step outside of.
     alternatives:
-      - name: Rewrite step ten to say what a superseded pull request does, and leave the act to GitHub
+      - name: Rewrite PR First's *Merged, never abandoned* step to say what a superseded pull request does, and leave the act to GitHub
         chosen: false
         reason: >-
           It answers the Discipline and not the defect. The act would still be
@@ -53,7 +54,7 @@ decisions:
       - name: Merge it anyway, behind a revert or with the diff emptied
         chosen: false
         reason: >-
-          It keeps the letter of step ten and loses what the step is for. A
+          It keeps the letter of PR First's *Merged, never abandoned* step and loses what the step is for. A
           merge whose diff has been emptied records that something was tried and
           nothing of what it was; a merge that lands and is reverted puts a
           mechanism the tree already answers into the trunk for as long as the
@@ -73,8 +74,8 @@ decisions:
           means an entry the trunk adopted and not a number the trunk has a
           file for. All of them are asked of GitHub and of the record on the
           trunk, never of the caller. So a change nobody superseded still has
-          merge as its only exit, which is step ten unchanged for every case
-          step ten was written for.
+          merge as its only exit, which is PR First's *Merged, never abandoned*
+          step unchanged for every case it was written for.
       - name: Release a minted Decision number the change never used
         chosen: false
         reason: >-
@@ -119,7 +120,7 @@ decisions:
         verb, and that a reservation whose branch simply stopped still has no
         prompt.
       - >-
-        PR First's tenth step names the exception and its refusal, so the rule
+        PR First's *Merged, never abandoned* step names the exception and its refusal, so the rule
         and its one sanctioned way out are stated together. A20: a rule that
         lives only in the record is not in force, and so does an exception.
     falsifier: >-
@@ -128,10 +129,10 @@ decisions:
       `DR-nnn` the record holds as a hole rather than as an adopted entry; or a
       body whose Challenge is still open, or that names no Challenge for
       another answer to have overtaken. Any of them would make it the `close`
-      verb step ten refuses to have, and the refusals are the whole of the
+      verb PR First's *Merged, never abandoned* step refuses to have, and the refusals are the whole of the
       difference.
     rationale: |-
-      Step ten's reasoning is right and does not reach this case. It assumes
+      The reasoning in PR First's *Merged, never abandoned* step is right and does not reach this case. It assumes
       merging is always available and merely unappealing: the change was tried,
       it did not work, and the record of the attempt is worth the diff. A
       superseded change breaks the assumption rather than the preference. The
@@ -145,7 +146,7 @@ decisions:
       claim with evidence, and the evidence is already on GitHub — the
       Challenge is closed, and something merged closed it. The verb reads both
       and refuses when either is missing, which is why this is an exception to
-      step ten and not a repeal of it.
+      PR First's *Merged, never abandoned* step and not a repeal of it.
 
       The number is the smaller half of the same shape. A hole in the Decision
       sequence is cheap and a number issued twice is not, because the number is

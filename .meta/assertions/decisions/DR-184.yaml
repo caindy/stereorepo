@@ -59,7 +59,7 @@ decisions:
         maintainer documentation, seeded with foundational pages adhering to
         MOS:LEAD bold lead definitions.
       - >-
-        Specialization step 2 copies `wiki/solorepo/` so portfolios inherit the
+        Specialization's *Copy what is inherited* step copies `wiki/solorepo/` so portfolios inherit the
         scaffold's operating documentation without namespace pollution.
       - >-
         Resolves Challenge 24 and Challenge 39.

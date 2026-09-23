@@ -612,7 +612,8 @@ def supersede(pr: str | int, by: str, reason: str) -> None:
                  "could have overtaken. A Challenge that is closed already is the whole of "
                  "what tells superseded from abandoned, and what `--by` names says nothing "
                  f"about #{pr} — any merged pull request in the repository would satisfy it — "
-                 "so this would be the general `close` PR First's tenth step refuses to have. "
+                 "so this would be the general `close` "
+                 "PR First's *Merged, never abandoned* step refuses to have. "
                  f"If there is a Challenge, name it in the body with `move revise {pr}`; if "
                  "there is not, merge is still the only exit.")
     still_open = [n for n in closes
@@ -627,8 +628,8 @@ def supersede(pr: str | int, by: str, reason: str) -> None:
 
     answered = ", ".join(f"#{n}" for n in closes)
     said = [reason.rstrip("\n"), "",
-            f"**Superseded by {cited}.** Closed rather than merged, which is PR First's "
-            f"tenth step and its one exception: {answered} "
+            f"**Superseded by {cited}.** Closed rather than merged, which is "
+            f"PR First's *Merged, never abandoned* step and its one exception: {answered} "
             f"{'is' if len(closes) == 1 else 'are'} answered already, so this diff would "
             "install a second answer over the one the tree holds."]
     if unredeemed := decisions.minted_for(before["headRefName"]):

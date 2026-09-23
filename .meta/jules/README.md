@@ -52,7 +52,7 @@ Repoless mode resolves friction with repository rules by keeping mutation and ch
 
 ### B. Quality Gates & CI Status
 - **Verification Rule**: The merge manager lands what is green (solorepo's DR-161), so `review_pr` refuses to approve any head whose GitHub CI checks have failed.
-- **Repoless Resolution**: `review_pr` queries `gh pr checks --json name,state,bucket` and `.meta/check_pr.py <pr>`. If any check has failed, or if open review threads remain unresolved (PR First step 8), approval is strictly refused.
+- **Repoless Resolution**: `review_pr` queries `gh pr checks --json name,state,bucket` and `.meta/check_pr.py <pr>`. If any check has failed, or if open review threads remain unresolved (PR First's *Answer every thread and resolve it* step), approval is strictly refused.
 
 ### C. Pull Request Form Compliance
 - **Verification Rule**: Pull requests must follow the mandatory 7-heading description template defined in `.github/PULL_REQUEST_TEMPLATE.md` (PR First, verified by `check_pr.py`).

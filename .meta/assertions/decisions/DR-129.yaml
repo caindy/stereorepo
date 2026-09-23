@@ -129,7 +129,7 @@ decisions:
         this was written.
       - >-
         A portfolio inherits all of it: `coder.yml`, `check_pr.py` and
-        `.meta/actions/` are in the set Specialization's second step copies.
+        `.meta/actions/` are in the set Specialization's *Copy what is inherited* step copies.
       - >-
         What got worse: the reviewer's budget is now spent on work no run
         called finished, and the coder's second run answers points about
@@ -155,7 +155,7 @@ decisions:
       holds while no workflow can answer it looks, from every side, exactly
       like one that is about to be answered.
 
-      Requesting review is the last step of the coder's reading, so a run that
+      PR First's *Request review* step is the handoff of the coder's reading, so a run that
       dies before reaching it has done everything except say where the work
       goes. The handler already knows how to say that — it exists to perform
       the act the run would have performed — and the only new thing it needs

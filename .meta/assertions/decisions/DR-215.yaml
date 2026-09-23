@@ -53,7 +53,7 @@ decisions:
           the slash.
     consequences:
       - >-
-        PR First step 15 states the shape as a claim about whose the work is, so
+        PR First's *Read what GitHub holds on arrival* step states the shape as a claim about whose the work is, so
         a session choosing a name is told rather than deriving it from a workflow
         condition.
       - >-

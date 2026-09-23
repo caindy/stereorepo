@@ -19,12 +19,12 @@ What a future reader will not be able to reconstruct. No checker can tell you wh
 
 ## Steps
 
-- Give each unit — module, class, crate — a description carrying its reasoning rather than an inventory of its contents.
-- Record what a reader would otherwise have to reconstruct.
-- Mark departures from a canon in place, where they are made.
-- Keep the exposition in one copy, and make that copy the one the machine reads. Inline in the source, or in a file the source includes — whichever the language does well.
-- Sort the prose in a source file by what it tells the reader — the paragraph test Progressive Disclosure applies to the repository, applied inside a file. What to **do** stays with the item it documents; **why** goes where the documentation tool renders it without crowding the code; what **happened**, this once, goes to a log named for what it holds, out of the code it annotates and reached from it. The language says where each of the three sits; the test is the same in every language.
-- Where the language allows it, make the examples executable, so the prose is checked and not merely asserted.
+- **Describe units with reasoning.** Give each unit — module, class, crate — a description carrying its reasoning rather than an inventory of its contents.
+- **Record what a reader must reconstruct.** Record what a reader would otherwise have to reconstruct.
+- **Mark departures in place.** Mark departures from a canon in place, where they are made.
+- **Single machine-read copy.** Keep the exposition in one copy, and make that copy the one the machine reads. Inline in the source, or in a file the source includes — whichever the language does well.
+- **Sort prose by reader purpose.** Sort the prose in a source file by what it tells the reader — the paragraph test Progressive Disclosure applies to the repository, applied inside a file. What to **do** stays with the item it documents; **why** goes where the documentation tool renders it without crowding the code; what **happened**, this once, goes to a log named for what it holds, out of the code it annotates and reached from it. The language says where each of the three sits; the test is the same in every language.
+- **Make examples executable.** Where the language allows it, make the examples executable, so the prose is checked and not merely asserted.
 
 ## Produces
 

@@ -53,7 +53,7 @@ decisions:
           What it gives up is enforcement and history: nothing refuses on a
           regression, and the window is whatever GitHub still holds. Both are
           the right thing to give up now, because a threshold has to be per
-          repository — Specialization's second step retargets every `runs-on:`
+          repository — Specialization's *Copy what is inherited* step retargets every `runs-on:`
           from `arc-runner-set` to `ubuntu-latest` — and no number measured
           here would mean anything there.
     consequences:
@@ -64,7 +64,7 @@ decisions:
         which carries solorepo's DR-106's header saying so: a recipe added by hand
         survives until the next render and then is not there.
       - >-
-        It is named in Specialization's second step, so a portfolio inherits
+        It is named in Specialization's *Copy what is inherited* step, so a portfolio inherits
         it. A program that sat in `.meta/` without being named there would not
         travel: the step enumerates what is copied rather than naming a
         directory.

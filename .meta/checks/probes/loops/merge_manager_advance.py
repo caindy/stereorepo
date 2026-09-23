@@ -33,7 +33,7 @@ def merge_manager_advance_probes() -> list[str]:
     approved by nobody; one that is behind *and* red, which is not one rebase
     from landing and so is left alone; and one approved and green carrying an
     unresolved conversation, which is left alone too, because rebasing it would
-    outdate the anchored comment PR First's seventh step parks work on. A
+    outdate the anchored comment PR First's *Reread the diff and notice* step parks work on. A
     refusal is printed and the verb still exits 0, since `merge.yml` runs on a
     fifteen-minute schedule and a stack base that stays behind would otherwise
     paint it red on the clock. Under `--dry-run` the same GitHub is named and

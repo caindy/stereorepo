@@ -3,8 +3,9 @@ challenges:
     name: The subscription PR First asks for has no command behind it, so a session improvises one or claims it cannot
     challenge_type: DEFECT
     description: >-
-      PR First's step 14 says to stay subscribed to a pull request until it
-      closes and leaves how to the harness. The rendered skill names
+      PR First historically directed sessions to stay subscribed to a pull
+      request until it closes, leaving how to the harness. The rendered skill
+      names
       `check_pr.py` for the sweep, the threads and the gate, and nothing for
       the watch, so the one step that has to survive a push-and-walk-away is
       the one step with no command behind it. On #64 a session reported it

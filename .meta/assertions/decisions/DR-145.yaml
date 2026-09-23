@@ -91,7 +91,7 @@ decisions:
         does not exit on it.
       - >-
         A portfolio inherits all of it: `.meta/say/`, `check_pr.py` and the
-        verb table are in the set Specialization's second step copies.
+        verb table are in the set Specialization's *Copy what is inherited* step copies.
     falsifier: >-
       A handoff refused on a branch a review could in fact have run on — which
       would mean the read is answering about timing rather than about the

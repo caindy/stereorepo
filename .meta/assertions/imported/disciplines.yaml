@@ -23,26 +23,36 @@ disciplines:
       you which reasoning is worth recording, and recording all of it is its own
       failure — an exposition nobody finishes explains nothing.
     steps:
-      - >-
-        Give each unit — module, class, crate — a description carrying its
-        reasoning rather than an inventory of its contents.
-      - Record what a reader would otherwise have to reconstruct.
-      - Mark departures from a canon in place, where they are made.
-      - >-
-        Keep the exposition in one copy, and make that copy the one the machine
-        reads. Inline in the source, or in a file the source includes — whichever
-        the language does well.
-      - >-
-        Sort the prose in a source file by what it tells the reader — the
-        paragraph test Progressive Disclosure applies to the repository, applied
-        inside a file. What to **do** stays with the item it documents; **why**
-        goes where the documentation tool renders it without crowding the code;
-        what **happened**, this once, goes to a log named for what it holds,
-        out of the code it annotates and reached from it. The language says
-        where each of the three sits; the test is the same in every language.
-      - >-
-        Where the language allows it, make the examples executable, so the prose
-        is checked and not merely asserted.
+      - id: work:discipline-step/literate-programming/describe-units-with-reasoning
+        name: Describe units with reasoning
+        statement: >-
+          Give each unit — module, class, crate — a description carrying its reasoning rather than an
+          inventory of its contents.
+      - id: work:discipline-step/literate-programming/record-what-a-reader-must-reconstruct
+        name: Record what a reader must reconstruct
+        statement: Record what a reader would otherwise have to reconstruct.
+      - id: work:discipline-step/literate-programming/mark-departures-in-place
+        name: Mark departures in place
+        statement: Mark departures from a canon in place, where they are made.
+      - id: work:discipline-step/literate-programming/single-machine-read-copy
+        name: Single machine-read copy
+        statement: >-
+          Keep the exposition in one copy, and make that copy the one the machine reads. Inline in the
+          source, or in a file the source includes — whichever the language does well.
+      - id: work:discipline-step/literate-programming/sort-prose-by-reader-purpose
+        name: Sort prose by reader purpose
+        statement: >-
+          Sort the prose in a source file by what it tells the reader — the paragraph test Progressive
+          Disclosure applies to the repository, applied inside a file. What to **do** stays with the item
+          it documents; **why** goes where the documentation tool renders it without crowding the code;
+          what **happened**, this once, goes to a log named for what it holds, out of the code it annotates
+          and reached from it. The language says where each of the three sits; the test is the same in
+          every language.
+      - id: work:discipline-step/literate-programming/make-examples-executable
+        name: Make examples executable
+        statement: >-
+          Where the language allows it, make the examples executable, so the prose is checked and not
+          merely asserted.
     produces:
       - Artifacts that explain themselves.
   - id: work:discipline/progressive-disclosure
@@ -54,9 +64,15 @@ disciplines:
       Where a paragraph goes — what to do, what happened, or why. Cheap only at
       the moment of writing, and not decidable afterwards by inspection.
     steps:
-      - Keep the always-loaded core small enough to stay read.
-      - Route each paragraph as you write it, never later.
-      - Keep every digest deliberately insufficient to act on.
+      - id: work:discipline-step/progressive-disclosure/keep-the-core-small
+        name: Keep the core small
+        statement: Keep the always-loaded core small enough to stay read.
+      - id: work:discipline-step/progressive-disclosure/route-paragraphs-as-you-write
+        name: Route paragraphs as you write
+        statement: Route each paragraph as you write it, never later.
+      - id: work:discipline-step/progressive-disclosure/keep-digests-insufficient
+        name: Keep digests insufficient
+        statement: Keep every digest deliberately insufficient to act on.
     produces:
       - A core that routes, and satellites that own what they hold.
   - id: work:discipline/ubiquitous-language
@@ -84,24 +100,37 @@ disciplines:
       And whether a word is a term or is ordinary English, which is not decidable
       mechanically. The gate narrows the field; a person routes what it finds.
     steps:
-      - >-
-        Reach for the vocabulary before reaching for a word, and for a canon
-        before minting one.
-      - >-
-        Borrow rather than invent. A term with a literature behind it arrives
-        with its distinctions already argued.
-      - >-
-        Mint only with the solo, and record the decision. A word in the Charter
-        or a Discipline without one is a word nobody agreed to.
-      - >-
-        Check a candidate against what the repository already means by it,
-        including in the schemas. A collision found afterwards is a rename.
-      - Mark a confusable in both directions, at the moment the collision is noticed.
-      - Bias every output toward the vocabulary — code, prose and conversation alike.
-      - >-
-        Maintain 1:1 parity with the Knowledge Management wiki: every minted
-        concept carries a corresponding wiki page explaining its domain
-        context (solorepo's DR-190).
+      - id: work:discipline-step/ubiquitous-language/prefer-the-vocabulary-and-canon
+        name: Prefer the vocabulary and canon
+        statement: >-
+          Reach for the vocabulary before reaching for a word, and for a canon before minting one.
+      - id: work:discipline-step/ubiquitous-language/borrow-rather-than-invent
+        name: Borrow rather than invent
+        statement: >-
+          A term with a literature behind it arrives with its distinctions already argued.
+      - id: work:discipline-step/ubiquitous-language/mint-only-with-the-solo
+        name: Mint only with the solo
+        statement: >-
+          Record the decision when a term is minted. A word in the Charter or a Discipline without
+          one is a word nobody agreed to.
+      - id: work:discipline-step/ubiquitous-language/check-candidate-against-existing-meaning
+        name: Check candidate against existing meaning
+        statement: >-
+          Check a candidate against what the repository already means by it, including in the schemas.
+          A collision found afterwards is a rename.
+      - id: work:discipline-step/ubiquitous-language/mark-confusables-in-both-directions
+        name: Mark confusables in both directions
+        statement: >-
+          Mark a confusable in both directions, at the moment the collision is noticed.
+      - id: work:discipline-step/ubiquitous-language/bias-every-output-toward-the-vocabulary
+        name: Bias every output toward the vocabulary
+        statement: >-
+          Align code, prose and conversation alike with the shared vocabulary.
+      - id: work:discipline-step/ubiquitous-language/maintain-concept-and-wiki-parity
+        name: Maintain concept and wiki parity
+        statement: >-
+          Maintain 1:1 parity with the Knowledge Management wiki: every minted concept carries a corresponding
+          wiki page explaining its domain context (solorepo's DR-190).
     produces:
       - A language the repository and everyone working in it actually share.
   - id: work:discipline/dogfooding
@@ -115,10 +144,20 @@ disciplines:
       Working around the first hides a defect; redesigning for the second is
       thrashing. No test distinguishes them — only use does.
     steps:
-      - Apply each adopted Discipline to this repo before applying it anywhere else.
-      - Instantiate a schema before trusting it. Writing an instance is the test.
-      - Run a procedure for real rather than reviewing it.
-      - When use finds a gap, change the thing, and record what use found.
+      - id: work:discipline-step/dogfooding/apply-disciplines-here-first
+        name: Apply disciplines here first
+        statement: >-
+          Apply each adopted Discipline to this repo before applying it anywhere else.
+      - id: work:discipline-step/dogfooding/instantiate-schemas-before-trusting-them
+        name: Instantiate schemas before trusting them
+        statement: >-
+          Instantiate a schema before trusting it. Writing an instance is the test.
+      - id: work:discipline-step/dogfooding/run-procedures-for-real
+        name: Run procedures for real
+        statement: Run a procedure for real rather than reviewing it.
+      - id: work:discipline-step/dogfooding/fix-gaps-found-in-use
+        name: Fix gaps found in use
+        statement: When use finds a gap, change the thing, and record what use found.
     produces:
       - Findings that reasoning about the artifact does not reach.
   - id: work:discipline/modelling-the-solo
@@ -140,15 +179,24 @@ disciplines:
       than defended by its author, which it cannot be unless it says which is
       which.
     steps:
-      - >-
-        Ground each entry in something observable — a correction made, a decision
-        taken, a preference stated in so many words.
-      - >-
-        Record what would change how the work proceeds. Not character
-        assessment, and not flattery.
-      - Mark inference as inference, so its subject knows what to push back on.
-      - Update it as the work reveals things, not in a pass at the end.
-      - Surface it for correction rather than defending it.
+      - id: work:discipline-step/modelling-the-solo/ground-entries-in-observables
+        name: Ground entries in observables
+        statement: >-
+          Ground each entry in something observable — a correction made, a decision taken, a preference
+          stated in so many words.
+      - id: work:discipline-step/modelling-the-solo/record-what-changes-work
+        name: Record what changes work
+        statement: >-
+          Record what would change how the work proceeds. Not character assessment, and not flattery.
+      - id: work:discipline-step/modelling-the-solo/mark-inference-as-inference
+        name: Mark inference as inference
+        statement: Ensure its subject knows what to push back on.
+      - id: work:discipline-step/modelling-the-solo/update-as-work-reveals-things
+        name: Update as work reveals things
+        statement: Update it as the work reveals things, not in a pass at the end.
+      - id: work:discipline-step/modelling-the-solo/surface-for-correction
+        name: Surface for correction
+        statement: Surface it for correction rather than defending it.
     produces:
       - A Persona of the solo that another agent can pick up cold.
       - A visible account of how the agent is framing the work.
@@ -175,13 +223,19 @@ disciplines:
       dressed as one. And when a baseline may move down at all — rarely, and
       never merely to make today green.
     steps:
-      - Green before commit. Not after, and not "green apart from".
-      - >-
-        Suppress at the site, naming the rule and the reason. Never in
-        configuration, where the exception becomes invisible.
-      - >-
-        Where a checker cannot be clean at once, ratchet it — hold a baseline
-        that may improve and may not regress.
+      - id: work:discipline-step/ratchet/green-before-commit
+        name: Green before commit
+        statement: Never after, and never "green apart from". The gate runs before every commit; work committed red is work broken on purpose.
+      - id: work:discipline-step/ratchet/suppress-at-the-site-with-rule-and-reason
+        name: Suppress at the site with rule and reason
+        statement: >-
+          Suppress at the site, naming the rule and the reason. Never in configuration, where the exception
+          becomes invisible.
+      - id: work:discipline-step/ratchet/ratchet-baselines
+        name: Ratchet baselines
+        statement: >-
+          Where a checker cannot be clean at once, ratchet it — hold a baseline that may improve and may
+          not regress.
     produces:
       - A standard that cannot quietly fall.
   - id: work:discipline/observed-failure
@@ -202,26 +256,34 @@ disciplines:
       What a passing check actually covers — which is never what its name
       suggests, and rarely what its author intended.
     steps:
-      - >-
-        Watch every new guardrail fail before trusting it. Break the thing it
-        guards, see red, then put it back.
-      - >-
-        Check a Claim before asserting it, and say so on the Claim where you
-        cannot. An unchecked Claim is the prose form of a test that passes for
-        the wrong reason: fluent, indistinguishable from a checked one, and
-        evidence of nothing. Where it cites an Article, a Decision or a
-        Discipline, `just dereference` is the mechanised form of watching it
-        fail; where it is about behaviour or history, nothing resolves it and
-        the author is the whole of the control.
-      - >-
-        Watch a refusal stand aside, not only fire. A probe over a refusal
-        carries at least one case asserting the nearest act the refusal must let
-        through: the false positive is the expensive side, since refusing
-        wrongly costs the act where failing to refuse costs a repeat.
-      - Treat a coverage figure as a floor beneath the tests, never as a claim about them.
-      - >-
-        Use mutation testing, or its equivalent, as the signal behind the floor —
-        it is the mechanised form of watching a check fail.
+      - id: work:discipline-step/observed-failure/watch-guardrails-fail
+        name: Watch guardrails fail
+        statement: >-
+          Watch every new guardrail fail before trusting it. Break the thing it guards, see red, then
+          put it back.
+      - id: work:discipline-step/observed-failure/check-claims-before-asserting
+        name: Check claims before asserting
+        statement: >-
+          Check a Claim before asserting it, and say so on the Claim where you cannot. An unchecked Claim
+          is the prose form of a test that passes for the wrong reason: fluent, indistinguishable from
+          a checked one, and evidence of nothing. Where it cites an Article, a Decision or a Discipline,
+          `just dereference` is the mechanised form of watching it fail; where it is about behaviour or
+          history, nothing resolves it and the author is the whole of the control.
+      - id: work:discipline-step/observed-failure/watch-refusals-stand-aside
+        name: Watch refusals stand aside
+        statement: >-
+          Watch a refusal stand aside, not only fire. A probe over a refusal carries at least one case
+          asserting the nearest act the refusal must let through: the false positive is the expensive
+          side, since refusing wrongly costs the act where failing to refuse costs a repeat.
+      - id: work:discipline-step/observed-failure/treat-coverage-as-a-floor
+        name: Treat coverage as a floor
+        statement: >-
+          Treat a coverage figure as a floor beneath the tests, never as a claim about them.
+      - id: work:discipline-step/observed-failure/use-mutation-testing
+        name: Use mutation testing
+        statement: >-
+          Measure the signal behind the floor with mutation analysis or its equivalent — it is the
+          mechanised form of watching a check fail.
     produces:
       - Checks whose passing means something.
   - id: work:discipline/nothing-unconsumed
@@ -245,23 +307,34 @@ disciplines:
       speculative foresight. An abstraction built for a hypothetical future
       consumer is debris at the moment of creation.
     steps:
-      - >-
-        Refuse speculative abstractions at the creation boundary: do not introduce
-        schemas, coordinate systems, or metamodels ahead of concrete producers and
-        consumers (solorepo's DR-008, solorepo's DR-203).
-      - For each artifact, name what consumes it, and what that consumer checks it against.
-      - Delete what nothing consumes. An unread artifact is not documentation, it is debris.
-      - >-
-        Hold a history log to its Evidence. An entry says what failed and what
-        the change established — not what changed, which the diff already says —
-        and names its **Evidence**: the test that would fail if the change were
-        undone, which is Evidence that can fail rather than a citation that
-        cannot (solorepo's DR-171, solorepo's DR-228). The entry is consumed by a reader; what it is checked against is
-        the test suite, so an entry whose test is gone is stale and goes with
-        it, and the log prunes itself. Observed Failure's argument, applied to
-        prose: an entry naming no test is debris for the same reason a guardrail
-        never seen to fail is evidence of nothing.
-      - Detect orphans mechanically, since they accumulate faster than anyone notices.
+      - id: work:discipline-step/nothing-unconsumed/refuse-speculative-abstractions
+        name: Refuse speculative abstractions
+        statement: >-
+          Do not introduce schemas, coordinate systems, or metamodels ahead of concrete producers
+          and consumers at the creation boundary (solorepo's DR-008, solorepo's DR-203).
+      - id: work:discipline-step/nothing-unconsumed/name-artifact-consumers-and-checks
+        name: Name artifact consumers and checks
+        statement: >-
+          For each artifact, name what consumes it, and what that consumer checks it against.
+      - id: work:discipline-step/nothing-unconsumed/delete-unconsumed-artifacts
+        name: Delete unconsumed artifacts
+        statement: >-
+          Delete what nothing consumes. An unread artifact is not documentation, it is debris.
+      - id: work:discipline-step/nothing-unconsumed/hold-history-logs-to-evidence
+        name: Hold history logs to evidence
+        statement: >-
+          Hold a history log to its Evidence. An entry says what failed and what the change established
+          — not what changed, which the diff already says — and names its **Evidence**: the test that
+          would fail if the change were undone, which is Evidence that can fail rather than a citation
+          that cannot (solorepo's DR-171, solorepo's DR-228). The entry is consumed by a reader; what
+          it is checked against is the test suite, so an entry whose test is gone is stale and goes with
+          it, and the log prunes itself. Observed Failure's argument, applied to prose: an entry naming
+          no test is debris for the same reason a guardrail never seen to fail is evidence of nothing.
+      - id: work:discipline-step/nothing-unconsumed/detect-orphans-mechanically
+        name: Detect orphans mechanically
+        statement: >-
+          Rely on automated checks rather than visual inspection, since debris accumulates faster than
+          anyone notices.
     produces:
       - A repository where everything present is load-bearing.
   - id: work:discipline/seeded-artifacts
@@ -282,11 +355,17 @@ disciplines:
       given that it is deliberately incomplete. An empty list may be honest or may
       be an omission, and only the reason distinguishes them.
     steps:
-      - Treat a template as data. Do not lint it in place and call that proof.
-      - Gate it by rendering it and running the real gates on the result.
-      - >-
-        Hold a seed to the rules it seeds. Where it cannot yet satisfy one, say
-        why in the seed itself, where whoever fills it in will read it.
+      - id: work:discipline-step/seeded-artifacts/treat-templates-as-data
+        name: Treat templates as data
+        statement: Treat a template as data. Do not lint it in place and call that proof.
+      - id: work:discipline-step/seeded-artifacts/gate-seeds-by-rendering-and-checking
+        name: Gate seeds by rendering and checking
+        statement: Gate it by rendering it and running the real gates on the result.
+      - id: work:discipline-step/seeded-artifacts/hold-seeds-to-the-rules-they-seed
+        name: Hold seeds to the rules they seed
+        statement: >-
+          Hold a seed to the rules it seeds. Where it cannot yet satisfy one, say why in the seed itself,
+          where whoever fills it in will read it.
     produces:
       - Seeds that cannot propagate a defect.
   - id: work:discipline/written-decisions
@@ -308,76 +387,85 @@ disciplines:
       every Project of a Product does is about neither, and filing any of them
       a level off loses it to the readers it binds.
     steps:
-      - >-
-        Never invent a rejection. An option nobody weighed is not an option, and
-        a record that manufactures one is arguing with itself to look thorough.
-        An entry naming no alternative is telling the truth about what was
-        considered.
-      - >-
-        Mark an option that was closed by being built. An option implemented and
-        then found wrong — in review, or in use — is foreclosed more firmly than
-        one argued down, but it was not on the table when the question was
-        answered, and listed beside those that were it claims a deliberation that
-        did not happen. `tried` says which it is, so the option can stay in the
-        record: dropped instead, the next reader is free to reach for it and
-        re-make the mistake.
-      - >-
-        Cite a rule where it lives — an Article, or a step of a Discipline —
-        never the decision that led to it. A decision carries consequences; the
-        consequences beget rules, and a rule cited from a decision is one that
-        was never routed anywhere. Nothing checks this: the phrasings are too
-        many to match, and counting them is the instrument A17 already found
-        wanting.
-      - >-
-        Record a decision when the **question** is settled, not when the answer
-        is built. A decision begins with a question that demands an answer, and
-        the alternatives close the moment it is answered — waiting for the
-        implementation leaves them open to anyone who was not in the
-        conversation. Status carries the rest: recommended, or in force.
-      - >-
-        Never put your own decision in force. A coder writes a decision and
-        proposes it; only the solo adopts one. An entry reaching the trunk
-        already adopted, with no solo having said so, is not a decision that was
-        made — it is the form of one with the authority assumed, and it binds
-        every reader who finds it. This holds in conversation as much as on a
-        branch: a solo who sounds agreeable has not adopted anything, and the
-        coder that reads agreement as adoption is the one that needed asking.
-        Nothing records who adopted an entry, so nothing can catch a coder that
-        adopts its own — the step is the whole of the control, which is why it
-        is stated here and not left to a gate that would only ever see a pull
-        request.
-      - >-
-        A change carrying a decision waits for it. The entry travels with the
-        change that settled the question, so the change merges once the decision
-        is in force and not before: proposed on the branch, adopted by the solo,
-        the status moved, then merged. Code on the trunk under a decision nobody
-        adopted makes the same claim the entry does, in the place that is harder
-        to withdraw.
-      - Say what was decided and why, not what changed. The diff already says what changed.
-      - >-
-        Keep `rationale` to what the slots cannot hold. `alternatives` carries what was
-        rejected and why, `consequences` what is now true, `falsifier` what would
-        overturn it — a paragraph restating any of those is a second copy inside
-        the entry. What is left is the reasoning none of them reaches, and it is
-        usually short.
-      - >-
-        Never narrate the sequence of events. What happened on a change is the
-        pull request's, and an entry that recounts an afternoon buries the
-        foreclosure it exists to record — the chronology reads as authoritative,
-        goes stale first, and nothing checks it.
-      - >-
-        Keep the reasoning, including what was tried and abandoned, so the next
-        reader does not re-derive a rejected option.
-      - >-
-        Record at the level the decision is about, and name it on the entry.
-        The Portfolio's decisions are about the repository, its language and its
-        way of working, and name nothing; a Product's are what every Project
-        that builds it shares and none owns, and name the Product; a Project's
-        are about how one build unit is built, and name the Project. One record
-        holds all three, so a Project decision left unmarked reads as everyone's,
-        and a Portfolio decision marked as a Project's is hidden from every other
-        Project.
-      - Use the form in `.meta/templates/decision.md`, so the shape does not have to be re-argued.
+      - id: work:discipline-step/written-decisions/never-invent-a-rejection
+        name: Never invent a rejection
+        statement: >-
+          An option nobody weighed is not an option, and a record that manufactures
+          one is arguing with itself to look thorough. An entry naming no alternative is telling the truth
+          about what was considered.
+      - id: work:discipline-step/written-decisions/mark-options-closed-by-being-built
+        name: Mark options closed by being built
+        statement: >-
+          An option implemented and then found wrong — in review, or in use — is foreclosed more firmly
+          than one argued down, but it was not on the table when the question was answered, and listed
+          beside those that were it claims a deliberation that did not happen. `tried` says which it is,
+          so the option can stay in the record: dropped instead, the next reader is free to reach for
+          it and re-make the mistake.
+      - id: work:discipline-step/written-decisions/cite-rules-where-they-live
+        name: Cite rules where they live
+        statement: >-
+          Reference an Article or a step of a Discipline, never the decision that led to it. A decision
+          carries consequences; the consequences beget rules, and a rule cited from a decision is one
+          that was never routed anywhere. Nothing checks this: the phrasings are too many to match,
+          and counting them is the instrument A17 already found wanting.
+      - id: work:discipline-step/written-decisions/record-when-question-is-settled
+        name: Record when question is settled
+        statement: >-
+          Capture a decision when the **question** is settled, not when the answer is built. A decision
+          begins with a question that demands an answer, and the alternatives close the moment it is
+          answered — waiting for the implementation leaves them open to anyone who was not in the
+          conversation. Status carries the rest: recommended, or in force.
+      - id: work:discipline-step/written-decisions/never-put-own-decision-in-force
+        name: Never put own decision in force
+        statement: >-
+          A coder writes a decision and proposes it; only the solo adopts one. An entry reaching the
+          trunk already adopted, with no solo having said so, is not a decision that was made — it is
+          the form of one with the authority assumed, and it binds every reader who finds it. This holds
+          in conversation as much as on a branch: a solo who sounds agreeable has not adopted anything,
+          and the coder that reads agreement as adoption is the one that needed asking. Nothing records
+          who adopted an entry, so nothing can catch a coder that adopts its own — the step is the whole
+          of the control, which is why it is stated here and not left to a gate that would only ever see
+          a pull request.
+      - id: work:discipline-step/written-decisions/changes-wait-for-decisions
+        name: Changes wait for decisions
+        statement: >-
+          The entry travels with the change that settled the question, so the change merges once the
+          decision is in force and not before: proposed on the branch, adopted by the solo, the status
+          moved, then merged. Code on the trunk under a decision nobody adopted makes the same claim
+          the entry does, in the place that is harder to withdraw.
+      - id: work:discipline-step/written-decisions/say-what-was-decided-and-why
+        name: Say what was decided and why
+        statement: >-
+          Focus on the reasoning rather than the change itself; the diff already says what changed.
+      - id: work:discipline-step/written-decisions/keep-rationale-to-unslotted-reasoning
+        name: Keep rationale to unslotted reasoning
+        statement: >-
+          Confine `rationale` to what the slots cannot hold. `alternatives` carries what was rejected and
+          why, `consequences` what is now true, `falsifier` what would overturn it — a paragraph restating
+          any of those is a second copy inside the entry. What is left is the reasoning none of them reaches,
+          and it is usually short.
+      - id: work:discipline-step/written-decisions/never-narrate-event-sequences
+        name: Never narrate event sequences
+        statement: >-
+          What happened on a change is the pull request's, and an entry that recounts an afternoon buries
+          the foreclosure it exists to record — the chronology reads as authoritative, goes stale first,
+          and nothing checks it.
+      - id: work:discipline-step/written-decisions/keep-reasoning-and-abandoned-paths
+        name: Keep reasoning and abandoned paths
+        statement: >-
+          Record what was tried and abandoned so the next reader does not re-derive a rejected option.
+      - id: work:discipline-step/written-decisions/record-at-the-decisions-own-level
+        name: Record at the decision's own level
+        statement: >-
+          Name the level on the entry. The Portfolio's decisions are about the repository, its language
+          and its way of working, and name nothing; a Product's are what every Project that builds it shares
+          and none owns, and name the Product; a Project's are about how one build unit is built, and name
+          the Project. One record holds all three, so a Project decision left unmarked reads as everyone's,
+          and a Portfolio decision marked as a Project's is hidden from every other Project.
+      - id: work:discipline-step/written-decisions/use-the-decision-form
+        name: Use the decision form
+        statement: >-
+          Follow `.meta/templates/decision.md`, so the shape does not have to be re-argued.
     produces:
       - A record that answers "why is it like this" without anyone remembering.
   - id: work:discipline/pr-first
@@ -496,223 +584,205 @@ disciplines:
       Issue every seam's coder reads before opening its pull request; the
       thread resolves on the link, as a promotion does.
     steps:
-      - >-
-        Open it when the work starts, not when it is finished. Written at the
-        end it becomes a summary of the diff, which git already holds. For `easy`
-        and `medium` Challenges, state the intended shape in the opening body,
-        and review on the diff is the check; for `hard` and `human` Challenges,
-        formulate the plan under **The plan.** and validate it with the solo
-        before writing code, which is the bound that prevents unsound
-        architectures from being enacted into diffs (solorepo's DR-249). On
-        `hard` and `human` Challenges, modifying tracked repository files or
-        running verification gates prior to opening the pull request via
-        `move open` is strictly prohibited (solorepo's DR-269). A coder
-        records the initial plan under **The plan.** in the pull request body on
-        a zero-diff [[seed-commit|Seed Commit]] authored via
-        `commit --allow-empty -m "Record initial plan for Challenge #<n>"`
-        before writing code.
-      - >-
-        Take Challenges in as pull requests, whatever raised them — the solo, a
-        scheduled job, another agent — and name the Challenge in the body with a
-        closing keyword, so the merge closes it and nobody has to remember to.
-      - >-
-        Raise a Challenge with the form, and propose its level in the body
-        rather than labelling it: `easy`, `medium`, `hard` or `human`, your
-        guess at what it takes for the coder Role. The reviewer reads every
-        Challenge before any coder takes it, and its verdict is the label —
-        `move triage`, which lands the level the reviewer found after asking
-        what the form asks and what only the tree can answer: a trigger or a
-        cost that will land, a blocker on the first line, no mechanism already
-        in the tree that answers it, and no decision owed, which is `human`
-        whatever the effort (solorepo's DR-230). A loop takes `easy` and
-        `medium` the moment the label lands, so the reviewer's act is what
-        opens the door; `hard` is coder work too large for a loop, which waits
-        for the solo and a session beside him; `human` is where what the Issue
-        needs is the solo rather than a Job at all, which the next step is how
-        to reach. A Challenge no reviewer has read is nobody's to claim. A
-        level says who answers the Issue rather than how big it is
-        (solorepo's DR-226), and the reviewer says it rather than the raiser,
-        who is the one reader with a stake in the answer; the loop still
-        corrects it downward only. The verdict names what it checked — worth
-        doing, waits on, already answered, decision owed — and is posted on
-        the Issue before the level lands, so a level landed without a reading
-        shows as one. A level landed with the filing on the solo's say-so is
-        the solo's verdict given in advance and skips the reviewer on purpose;
-        a Job with no such mandate leaves the level to the reviewer, and a
-        Challenge nothing has touched for an hour unread is a reviewer door
-        that did not fire, which the sweep reports. A run cannot hold that
-        mandate, because the solo is not beside it, and the verbs refuse it
-        one: what it files and what it moves carries `human` or no level at
-        all, the reviewer's own reading excepted, which is the verdict itself
-        and is admitted by the account it speaks as rather than by the
-        workflow it runs in (solorepo's DR-235). `human` is not the way round that — it starts
-        no Job and asks for the solo, which is the fourth step said at the
-        moment a run finds a decision owed or work it cannot finish. The label is
-        also what says whose a branch is: a session that takes up a pull request
-        the loop holds has the solo move the Issue to `hard` first, and the
-        loop's next pass stands down. Moved back, the loop answers the next
-        verdict and not one already standing — a relabel fires the Issue door
-        and re-delivers no review — so a verdict the session leaves behind is
-        the session's to answer, or the solo's to dispatch, which is a verb of
-        the channel like every other act GitHub records.
-      - >-
-        Hand it back the moment the next step is not yours to take. Any Role
-        holding a Challenge may stop and give it to the solo — `move stop`,
-        which says where this Job stopped and why, releases the claim, moves
-        the Issue to `human` and leaves the pull request open for whoever
-        takes it up. A Role that holds no Challenge says the same thing where
-        it is standing rather than staying silent — the reviewer in its
-        verdict or on the thread, naming what the solo must settle — and the
-        Issue reaches `human` through whoever does hold it. The reasons are
-        open and the bar is deliberately low (solorepo's DR-226). Two are
-        examples rather than the rule: a loop that cannot finish what it
-        took, and an Issue whose next step is a decision rather than an
-        implementation, which is `human` the moment anyone notices one is
-        owed, whoever is holding it and whatever its effort.
-      - >-
-        Argue there. Review, objection and answer belong where the next reader
-        will look, not where one participant happens to be.
-      - >-
-        Answer every thread and then resolve it, including one the diff has
-        overtaken. Outdated is not answered: GitHub collapses a thread whose
-        anchor moved and leaves it open, and a reader years later cannot tell
-        a point that was addressed from one that was dropped.
-      - >-
-        Title it with the words someone will search for. It is the index, and an
-        index is worth exactly its titles.
-      - >-
-        Before you hand the branch over as finished, reread the diff against
-        `origin/main` to verify quality and consistency — an in-session pass
-        alike across harnesses (solorepo's DR-181). Raise what was noticed
-        and not done as a **conversation on the diff**, at the moment it is
-        noticed — not a bullet in the body, which closes with the pull
-        request, and never a closing summary. The last comment
-        is the one that counts, so replying without the marker is how an item
-        the change has overtaken stops being parked, and an unresolved
-        conversation blocks the merge, so nothing is walked past without
-        somebody deciding what it is.
+      - id: work:discipline-step/pr-first/open-it-when-the-work-starts
+        name: Open it when the work starts
+        statement: >-
+          Never open a pull request when work is already finished. Written at the end it becomes a summary
+          of the diff, which git already holds. For `easy` and `medium` Challenges, state the intended
+          shape in the opening body, and review on the diff is the check; for `hard` and `human` Challenges,
+          formulate the plan under **The plan.** and validate it with the solo before writing code, which
+          is the bound that prevents unsound architectures from being enacted into diffs (solorepo's DR-249).
+          On `hard` and `human` Challenges, modifying tracked repository files or running verification
+          gates prior to opening the pull request via `move open` is strictly prohibited (solorepo's DR-269).
+          A coder records the initial plan under **The plan.** in the pull request body on a zero-diff
+          [[seed-commit|Seed Commit]] authored via `commit --allow-empty -m "Record initial plan for Challenge #<n>"`
+          before writing code.
+      - id: work:discipline-step/pr-first/take-challenges-in-as-pull-requests
+        name: Take Challenges in as pull requests
+        statement: >-
+          Receive every Challenge as a pull request, whatever raised it — the solo, a scheduled job, another
+          agent — and name the Challenge in the body with a closing keyword, so the merge closes it and
+          nobody has to remember to.
+      - id: work:discipline-step/pr-first/raise-a-challenge-with-the-form
+        name: Raise a Challenge with the form
+        statement: >-
+          Propose its level in the body rather than labelling it: `easy`, `medium`, `hard` or `human`,
+          your guess at what it takes for the coder Role. The reviewer reads every Challenge before any
+          coder takes it, and its verdict is the label — `move triage`, which lands the level the reviewer
+          found after asking what the form asks and what only the tree can answer: a trigger or a cost
+          that will land, a blocker on the first line, no mechanism already in the tree that answers it,
+          and no decision owed, which is `human` whatever the effort (solorepo's DR-230). A loop takes
+          `easy` and `medium` the moment the label lands, so the reviewer's act is what opens the door;
+          `hard` is coder work too large for a loop, which waits for the solo and a session beside him;
+          `human` is where what the Issue needs is the solo rather than a Job at all, which the next step
+          is how to reach. A Challenge no reviewer has read is nobody's to claim. A level says who answers
+          the Issue rather than how big it is (solorepo's DR-226), and the reviewer says it rather than the
+          raiser, who is the one reader with a stake in the answer; the loop still corrects it downward
+          only. The verdict names what it checked — worth doing, waits on, already answered, decision
+          owed — and is posted on the Issue before the level lands, so a level landed without a reading
+          shows as one. A level landed with the filing on the solo's say-so is the solo's verdict given
+          in advance and skips the reviewer on purpose; a Job with no such mandate leaves the level to
+          the reviewer, and a Challenge nothing has touched for an hour unread is a reviewer door that
+          did not fire, which the sweep reports. A run cannot hold that mandate, because the solo is not
+          beside it, and the verbs refuse it one: what it files and what it moves carries `human` or no
+          level at all, the reviewer's own reading excepted, which is the verdict itself and is admitted
+          by the account it speaks as rather than by the workflow it runs in (solorepo's DR-235). `human`
+          is not the way round that — it starts no Job and asks for the solo, which is PR First's
+          *Hand it back the moment the next step is not yours* step said at the moment a run finds a decision
+          owed or work it cannot finish. The label is also what says whose a branch is: a session that
+          takes up a pull request the loop holds has the solo move the Issue to `hard` first, and the loop's
+          next pass stands down. Moved back, the loop answers the next verdict and not one already standing
+          — a relabel fires the Issue door and re-delivers no review — so a verdict the session leaves
+          behind is the session's to answer, or the solo's to dispatch, which is a verb of the channel like
+          every other act GitHub records.
+      - id: work:discipline-step/pr-first/hand-it-back-the-moment-the-next-step-is-not-yours
+        name: Hand it back the moment the next step is not yours
+        statement: >-
+          Any Role holding a Challenge may stop and give it to the solo — `move stop`, which says where
+          this Job stopped and why, releases the claim, moves the Issue to `human` and leaves the pull
+          request open for whoever takes it up. A Role that holds no Challenge says the same thing where
+          it is standing rather than staying silent — the reviewer in its verdict or on the thread, naming
+          what the solo must settle — and the Issue reaches `human` through whoever does hold it. The
+          reasons are open and the bar is deliberately low (solorepo's DR-226). Two are examples rather
+          than the rule: a loop that cannot finish what it took, and an Issue whose next step is a decision
+          rather than an implementation, which is `human` the moment anyone notices one is owed, whoever
+          is holding it and whatever its effort.
+      - id: work:discipline-step/pr-first/argue-there
+        name: Argue there
+        statement: >-
+          Review, objection and answer belong where the next reader will look, not where one participant
+          happens to be.
+      - id: work:discipline-step/pr-first/answer-every-thread-and-resolve-it
+        name: Answer every thread and resolve it
+        statement: >-
+          Resolve every thread after answering it, including one the diff has overtaken. Outdated is not
+          answered: GitHub collapses a thread whose anchor moved and leaves it open, and a reader years
+          later cannot tell a point that was addressed from one that was dropped.
+      - id: work:discipline-step/pr-first/title-it-with-words-someone-will-search-for
+        name: Title it with words someone will search for
+        statement: >-
+          An index is worth exactly its titles, so choose words someone will search for.
+      - id: work:discipline-step/pr-first/reread-the-diff-and-notice
+        name: Reread the diff and notice
+        statement: >-
+          Before you hand the branch over as finished, reread the diff against `origin/main` to verify
+          quality and consistency — an in-session pass alike across harnesses (solorepo's DR-181). Raise
+          what was noticed and not done as a **conversation on the diff**, at the moment it is noticed
+          — not a bullet in the body, which closes with the pull request, and never a closing summary.
+          The last comment is the one that counts, so replying without the marker is how an item the change
+          has overtaken stops being parked, and an unresolved conversation blocks the merge, so nothing
+          is walked past without somebody deciding what it is.
 
-        What you notice and *can* do, do. A fix the branch can already reach
-        that is mechanical, owes no Decision, implies no Challenge of its own
-        and is proved by the gate this change is already running is not
-        noticed-and-not-done at all — it is an **Incidental Commit**, and it is
-        made in a commit of its own whose subject begins `Incidental:`, rather
-        than into a conversation that will cost a pickup to answer
-        (solorepo's DR-236).
-        The prefix is the whole form and it is there to be counted: `git log
-        --grep '^Incidental:'` is how a later reader tells whether this licence
-        is being taken.
-        All four parts hold or it is a notice: the bound is what keeps a
-        licence to fix from becoming a licence to wander, and the coder is
-        where that risk lives, since nobody else is reading yet.
-      - >-
-        Promote at approval, not before. What survives the argument earns an
-        Issue and the thread is resolved with a link to it; what the change
-        overtook is answered and resolved where it was raised. Filing at
-        review time creates a tracker item with no relationship to the
-        outcome, which goes stale the moment the approach moves under it.
+          What you notice and *can* do, do. A fix the branch can already reach that is mechanical, owes
+          no Decision, implies no Challenge of its own and is proved by the gate this change is already
+          running is not noticed-and-not-done at all — it is an **Incidental Commit**, and it is made
+          in a commit of its own whose subject begins `Incidental:`, rather than into a conversation that
+          will cost a pickup to answer (solorepo's DR-236). The prefix is the whole form and it is there
+          to be counted: `git log --grep '^Incidental:'` is how a later reader tells whether this licence
+          is being taken. All four parts hold or it is a notice: the bound is what keeps a licence to
+          fix from becoming a licence to wander, and the coder is where that risk lives, since nobody
+          else is reading yet.
+      - id: work:discipline-step/pr-first/promote-at-approval
+        name: Promote at approval
+        statement: >-
+          Never promote before approval. What survives the argument earns an Issue and the thread is
+          resolved with a link to it; what the change overtook is answered and resolved where it was raised.
+          Filing at review time creates a tracker item with no relationship to the outcome, which goes
+          stale the moment the approach moves under it.
 
-        A thread every comment of which is this Job's own — which every notice
-        is — gets the Issue and the link and stays open, because a resolve from
-        its only voice is A16's falsifier rather than an answer to it
-        (solorepo's DR-224). Closing it is a second Job's, and the next step is
-        how one arrives: request review again, and the Job that answers it
-        resolves what the promotion left open.
+          A thread every comment of which is this Job's own — which every notice is — gets the Issue and
+          the link and stays open, because a resolve from its only voice is A16's falsifier rather than
+          an answer to it (solorepo's DR-224). Closing it is a second Job's, and the next step is how
+          one arrives: request review again, and the Job that answers it resolves what the promotion left
+          open.
 
-        A point **another party raised** that survives and meets the
-        Incidental Commit bound can be paid for here rather than later, and at
-        approval that is the first thing to try: answer it with a **commit on this
-        branch** before the merge, the reply naming the commit, and file no
-        Issue (solorepo's DR-236). This adds no fourth answer to the three a
-        point can get — it changes what *right, and a change to make* may be
-        settled with when the point belongs to a different change.
+          A point **another party raised** that survives and meets the Incidental Commit bound can be
+          paid for here rather than later, and at approval that is the first thing to try: answer it with
+          a **commit on this branch** before the merge, the reply naming the commit, and file no Issue
+          (solorepo's DR-236). This adds no fourth answer to the three a point can get — it changes what
+          *right, and a change to make* may be settled with when the point belongs to a different change.
 
-        Your own notice is not reachable by it, and the channel is what says
-        so: the sole-author refusal stands, with promotion as its one
-        exception (solorepo's DR-127), so a coder that decides its own notice
-        is moot still can only hand it on. That is a floor rather than an
-        obstacle — an item inside the bound should never have become a notice,
-        since the step above says to fix it — and the way in is the reviewer
-        saying on the thread that it is inside the bound, which makes the
-        point another party's and the judgement one two Roles have made. This is the cheap
-        case rather than the risky one — the reviewer is already reading, and
-        a commit pushed before merge is re-reviewable where an Issue is a
-        promise to reload the problem later. Promotion keeps everything the
-        bound excludes: work owed a Decision, work the branch cannot reach,
-        and anything whose size would make this change stop reading as one.
-      - >-
-        Post what landed for the Challenge before merging, generated and never
-        typed: written by hand it is the copy that flatters, and complete
-        whether or not the record was.
-      - >-
-        Merged, never abandoned, and **superseded** is the one exit that is not
-        a merge. A pull request exists because a Challenge does, and a Challenge
-        is a real need; work that turned out to be the wrong answer merges as
-        the record of that, which is worth more than a closed tab. What cannot
-        merge is work another change has already answered — the tree holds a
-        different answer to the same Challenge, so the diff would install a
-        second mechanism over a working one. That closes by `move supersede
-        <pr> --by <what answered it>`, which is refused unless what `--by`
-        names has landed — a merged pull request, or a Decision the trunk
-        adopted rather than merely holds a number for — and unless the body
-        closes a Challenge and every Challenge it closes is closed already: the
-        closing is the evidence, so a change nobody superseded still has merge
-        as its only exit, and so does one that names no Challenge at all. A Decision number the branch minted and never
-        landed is not released with it — the tag is the allocation and nothing
-        issues a number twice — but written back into the record as WITHDRAWN,
-        which `supersede` names as it closes.
-      - >-
-        An Issue closes by the merge that names it, or by **obviate**, and
-        never by hand. A Challenge split into others, or filed a second time
-        under different words, is answered without a change of its own: the
-        work is owned elsewhere and nothing is left here to merge, so the
-        Issue sits open and `just next` keeps offering it as ripe. `move
-        obviate <issue> --by <what answered it>` closes it as not planned,
-        says on the Issue what part of it went where, and puts the backlink on
-        what answered it, so the pair reads from either end. It is refused
-        unless `--by` names an open Challenge or a merged pull request: an
-        answer nobody is queued to give and one that never landed both leave
-        the need with no open record, which is an Issue closed against
-        nothing. Closed in the browser instead it is an act the record cannot
-        see, which is what the signing hook refuses.
-      - >-
-        Push before stopping, and stop at green. The gate is an exit check for
-        the Agency you hold, not an entrance check: `main` is evergreen, so do
-        not run `just gate` at session start or against an unmodified checkout.
-        Work that exists only in a worktree the next Job will never see has not
-        been handed off, and a red gate is not a handoff — it is a mess whose
-        author is gone. The gate is the completeness test for the Agency you
-        hold; nothing else is.
-      - >-
-        Bring a branch current by rebase, never by GitHub's plain **Update
-        branch** button on the pull request page: it authors a merge commit
-        with no `Actor` Trailer, which A19 refuses in the same words as a
-        commit made by hand. **Update with rebase**, and the channel's own
-        `advance`, write no such commit.
-      - >-
-        Stack what waits on what. A change that can only start once another
-        lands is a **layer**: its own branch and pull request, based on the
-        layer below and linked into a stack, so the layers merge from the
-        bottom and GitHub rebases what remains.
-      - >-
-        Hand off by requesting review of the next Role's account. The request
-        is the handoff's whole signal, and a note beside it pretends to be one.
-      - >-
-        On arrival, read what GitHub holds — the pull request, the diff, the
-        commits, the threads and the check states. There is nothing else, by
-        design. Ask what this branch already owns: one branch is one pull
-        request, so the checkout is the token and GitHub resolves it.
-        Authorship cannot answer this, since every pull request here is the
-        solo's. The shape of the branch is itself a claim: `<harness>/issue-<n>`
-        is the loop's, the number being how a later pass finds its Challenge
-        across an event it did not see, and a session names its branch
-        `<harness>/<slug>` instead, saying what the work is and never beginning
-        the slug `issue-`. A branch that takes the loop's shape asks the loop to
-        take the work, and it declines where the work is not its own — `held` at
-        `hard`, `closed` where the Challenge it names is closed already, `stale`
-        at no level a loop takes, `unnamed` where the ref names no Challenge —
-        but it declines out loud, on the pull request, and that
-        notice is a conversation the session then owns and its merge waits on.
+          Your own notice is not reachable by it, and the channel is what says so: the sole-author refusal
+          stands, with promotion as its one exception (solorepo's DR-127), so a coder that decides its
+          own notice is moot still can only hand it on. That is a floor rather than an obstacle — an item
+          inside the bound should never have become a notice, since the step above says to fix it — and
+          the way in is the reviewer saying on the thread that it is inside the bound, which makes the
+          point another party's and the judgement one two Roles have made. This is the cheap case rather
+          than the risky one — the reviewer is already reading, and a commit pushed before merge is re-reviewable
+          where an Issue is a promise to reload the problem later. Promotion keeps everything the bound
+          excludes: work owed a Decision, work the branch cannot reach, and anything whose size would
+          make this change stop reading as one.
+      - id: work:discipline-step/pr-first/post-what-landed
+        name: Post what landed
+        statement: >-
+          Record what landed for the Challenge before merging, generated and never typed: written by hand
+          it is the copy that flatters, and complete whether or not the record was.
+      - id: work:discipline-step/pr-first/merged-never-abandoned
+        name: Merged, never abandoned
+        statement: >-
+          **Superseded** is the one exit that is not a merge. A pull request exists because a Challenge
+          does, and a Challenge is a real need; work that turned out to be the wrong answer merges as the
+          record of that, which is worth more than a closed tab. What cannot merge is work another change
+          has already answered — the tree holds a different answer to the same Challenge, so the diff
+          would install a second mechanism over a working one. That closes by
+          `move supersede <pr> --by <what answered it>`, which is refused unless what `--by` names has
+          landed — a merged pull request, or a Decision the trunk adopted rather than merely holds a
+          number for — and unless the body closes a Challenge and every Challenge it closes is closed
+          already: the closing is the evidence, so a change nobody superseded still has merge as its only
+          exit, and so does one that names no Challenge at all. A Decision number the branch minted and
+          never landed is not released with it — the tag is the allocation and nothing issues a number
+          twice — but written back into the record as WITHDRAWN, which `supersede` names as it closes.
+      - id: work:discipline-step/pr-first/close-by-merge-or-obviate
+        name: Close by merge or obviate
+        statement: >-
+          An Issue closes by the merge that names it, or by **obviate**, and never by hand. A Challenge
+          split into others, or filed a second time under different words, is answered without a change
+          of its own: the work is owned elsewhere and nothing is left here to merge, so the Issue sits
+          open and `just next` keeps offering it as ripe. `move obviate <issue> --by <what answered it>`
+          closes it as not planned, says on the Issue what part of it went where, and puts the backlink
+          on what answered it, so the pair reads from either end. It is refused unless `--by` names an
+          open Challenge or a merged pull request: an answer nobody is queued to give and one that never
+          landed both leave the need with no open record, which is an Issue closed against nothing. Closed
+          in the browser instead it is an act the record cannot see, which is what the signing hook refuses.
+      - id: work:discipline-step/pr-first/push-before-stopping-and-stop-at-green
+        name: Push before stopping, and stop at green
+        statement: >-
+          The gate is an exit check for the Agency you hold, not an entrance check: `main` is evergreen,
+          so do not run `just gate` at session start or against an unmodified checkout. Work that exists
+          only in a worktree the next Job will never see has not been handed off, and a red gate is not
+          a handoff — it is a mess whose author is gone. The gate is the completeness test for the Agency
+          you hold; nothing else is.
+      - id: work:discipline-step/pr-first/bring-a-branch-current-by-rebase
+        name: Bring a branch current by rebase
+        statement: >-
+          Never update a branch with GitHub's plain **Update branch** button on the pull request page:
+          it authors a merge commit with no `Actor` Trailer, which A19 refuses in the same words as a commit
+          made by hand. **Update with rebase**, and the channel's own `advance`, write no such commit.
+      - id: work:discipline-step/pr-first/stack-what-waits-on-what
+        name: Stack what waits on what
+        statement: >-
+          A change that can only start once another lands is a **layer**: its own branch and pull
+          request, based on the layer below and linked into a stack, so the layers merge from the bottom
+          and GitHub rebases what remains.
+      - id: work:discipline-step/pr-first/request-review
+        name: Request review
+        statement: >-
+          Hand off by requesting review of the next Role's account. The request is the handoff's whole
+          signal, and a note beside it pretends to be one.
+      - id: work:discipline-step/pr-first/read-what-github-holds-on-arrival
+        name: Read what GitHub holds on arrival
+        statement: >-
+          On arrival, read what GitHub holds — the pull request, the diff, the commits, the threads and
+          the check states. There is nothing else, by design. Ask what this branch already owns: one branch
+          is one pull request, so the checkout is the token and GitHub resolves it. Authorship cannot
+          answer this, since every pull request here is the solo's. The shape of the branch is itself
+          a claim: `<harness>/issue-<n>` is the loop's, the number being how a later pass finds its Challenge
+          across an event it did not see, and a session names its branch `<harness>/<slug>` instead, saying
+          what the work is and never beginning the slug `issue-`. A branch that takes the loop's shape
+          asks the loop to take the work, and it declines where the work is not its own — `held` at `hard`,
+          `closed` where the Challenge it names is closed already, `stale` at no level a loop takes, `unnamed`
+          where the ref names no Challenge — but it declines out loud, on the pull request, and that notice
+          is a conversation the session then owns and its merge waits on.
     produces:
       - A searchable record of why each change was made, attached to the change.
       - A place two agents that share nothing else can meet.
@@ -771,20 +841,32 @@ disciplines:
       And whether the residue is worth writing at all. Where the change explains
       itself and nothing was tried and abandoned, an entry for it is a changelog.
     steps:
-      - Route it as you write it. Where an artifact owns the paragraph, it goes there.
-      - >-
-        Put finished residue in the pull request body — what changed, what the
-        ground looked like, and what would make this removable.
-      - >-
-        Put unfinished residue in a linked Issue. It is a Challenge, not a
-        paragraph, and it outlives the body.
-      - >-
-        Keep commit messages to what changed. A message that has begun explaining
-        is holding something that belongs elsewhere.
-      - >-
-        Route every finding in the same change that records it. A rule goes to the
-        Charter; a foreclosing decision goes to a decision record.
-      - Supersede by writing again and naming what is replaced. Never rewrite.
+      - id: work:discipline-step/journaling/route-as-you-write
+        name: Route as you write
+        statement: >-
+          Where an artifact owns the paragraph, it goes there.
+      - id: work:discipline-step/journaling/put-finished-residue-in-pull-request
+        name: Put finished residue in pull request
+        statement: >-
+          Place finished residue in the pull request body — what changed, what the ground looked like,
+          and what would make this removable.
+      - id: work:discipline-step/journaling/put-unfinished-residue-in-linked-issue
+        name: Put unfinished residue in linked Issue
+        statement: >-
+          Move unfinished residue to a linked Issue: it is a Challenge, not a paragraph, and it outlives
+          the body.
+      - id: work:discipline-step/journaling/keep-commit-messages-to-what-changed
+        name: Keep commit messages to what changed
+        statement: >-
+          A message that has begun explaining is holding something that belongs elsewhere.
+      - id: work:discipline-step/journaling/route-findings-in-same-change
+        name: Route findings in same change
+        statement: >-
+          Place every finding in the same change that records it: a rule goes to the Charter; a foreclosing
+          decision goes to a decision record.
+      - id: work:discipline-step/journaling/supersede-by-writing-again
+        name: Supersede by writing again
+        statement: Name what is replaced, and never rewrite.
     produces:
       - Artifacts that carry their own reasoning, and a pull request holding what none of them owns.
   - id: work:discipline/knowledge-management
@@ -812,34 +894,49 @@ disciplines:
       concept exposition (Wiki Page). Subordinating physical container depth to
       reader posture without mode-mixing across artifact boundaries.
     steps:
-      - >-
-        Route first via the Diátaxis Compass before typing prose. Match the knowledge
-        to its quadrant: Reference (Work + Understanding), Explanation (Learning +
-        Understanding), How-To (Work + Action), or Tutorial (Learning + Action).
-      - >-
-        Subordinate container placement to reader posture. A Concept may reside in a
-        schema gloss, an existing document section, a dedicated wiki page
-        (`wiki/<context>/<concept>.md`), or a subsystem subdirectory.
-      - >-
-        Structure documentation by Bounded Context (`wiki/<bounded-context>/`). Keep
-        `wiki/solorepo/` hermetic to the scaffold, while specialized portfolios house
-        their domain concepts under their own bounded context folders.
-      - >-
-        Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within
-        each Bounded Context (Article 17, solorepo's DR-190).
-      - >-
-        Open every wiki page with a MOS:LEAD first sentence that states what the
-        concept is in bold, concurring with its vocabulary definition.
-      - >-
-        Connect concepts using closed-world wikilinks (`[[concept]]` or scoped
-        `[[context/concept]]`). A link to an unminted concept or dead target is red
-        and fails verification (solorepo's DR-185).
-      - >-
-        Apply Google developer style rules: direct address in the present tense,
-        active voice, elimination of filler words, and rhythmic variation.
-      - >-
-        Dereference citations to Decision Records and Articles rather than re-litigating
-        rationale inline.
+      - id: work:discipline-step/knowledge-management/route-via-diataxis-compass
+        name: Route via Diátaxis Compass
+        statement: >-
+          Consult the Diátaxis Compass before typing prose. Match the knowledge to its quadrant:
+          Reference (Work + Understanding), Explanation (Learning + Understanding), How-To (Work + Action),
+          or Tutorial (Learning + Action).
+      - id: 
+          work:discipline-step/knowledge-management/subordinate-container-placement-to-reader-posture
+        name: Subordinate container placement to reader posture
+        statement: >-
+          A Concept may reside in a schema gloss, an existing document section, a dedicated wiki page
+          (`wiki/<context>/<concept>.md`), or a subsystem subdirectory depending on reader posture rather
+          than storage hierarchy.
+      - id: work:discipline-step/knowledge-management/structure-documentation-by-bounded-context
+        name: Structure documentation by Bounded Context
+        statement: >-
+          House concepts under `wiki/<bounded-context>/`. Keep `wiki/solorepo/` hermetic to the scaffold,
+          while specialized portfolios house their domain concepts under their own bounded context folders.
+      - id: work:discipline-step/knowledge-management/maintain-1-1-concept-and-wiki-parity
+        name: Maintain 1:1 concept and wiki parity
+        statement: >-
+          Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within each Bounded
+          Context (Article 17, solorepo's DR-190).
+      - id: work:discipline-step/knowledge-management/open-with-bold-mos-lead-lead-sentence
+        name: Open with bold MOS:LEAD lead sentence
+        statement: >-
+          Provide a MOS:LEAD first sentence that states what the concept is in bold, concurring with its
+          vocabulary definition.
+      - id: work:discipline-step/knowledge-management/connect-with-closed-world-wikilinks
+        name: Connect with closed-world wikilinks
+        statement: >-
+          Link concepts using closed-world wikilinks (`[[concept]]` or scoped `[[context/concept]]`). A link
+          to an unminted concept or dead target is red and fails verification (solorepo's DR-185).
+      - id: work:discipline-step/knowledge-management/apply-google-developer-style
+        name: Apply Google developer style
+        statement: >-
+          Follow direct address in the present tense, active voice, elimination of filler words, and rhythmic
+          variation.
+      - id: 
+          work:discipline-step/knowledge-management/dereference-citations-to-decision-records-and-articles
+        name: Dereference citations to Decision Records and Articles
+        statement: >-
+          Resolve citations rather than re-litigating rationale inline.
     produces:
       - >-
         An encyclopedic, browsable knowledge base partitioned by Bounded Context, free

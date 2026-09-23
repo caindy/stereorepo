@@ -36,7 +36,7 @@ decisions:
       - >-
         `.meta/say issue-close` is removed, one pull request after it was added.
       - >-
-        PR First's second step says the Challenge is named in the body with a
+        PR First's *Take Challenges in as pull requests* step says the Challenge is named in the body with a
         closing keyword.
     falsifier: >-
       An Issue closed by a merge that did not finish it, because the keyword

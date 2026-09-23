@@ -4,7 +4,7 @@ challenges:
     challenge_type: DEFECT
     description: >-
       The coder's hand-back handler gives the Issue to the solo and says
-      nothing about the pull request. Requesting review is the last step of
+      nothing about the pull request. PR First's *Request review* step is the handoff of
       the coder's reading, so a run that dies before it leaves a pull request
       no Role holds — and "requested of nobody" is not a state GitHub reports,
       so no Job wakes on it. #150 was green on every check by 03:23 and stood

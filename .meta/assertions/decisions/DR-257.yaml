@@ -73,7 +73,7 @@ decisions:
         checks on evergreen `main`, and aligns the `OUTCOME` environment binding in the `hand back what the run
         did not finish` step with the terminal harness outcome.
       - >-
-        Specialization Step 2 inherits `.meta/run_agy.py` alongside `.meta/detect_fallback.py` and `coder.yml`.
+        Specialization's *Copy what is inherited* step inherits `.meta/run_agy.py` alongside `.meta/detect_fallback.py` and `coder.yml`.
       - >-
         Closes #715.
     falsifier: >-

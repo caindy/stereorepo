@@ -327,7 +327,7 @@ Review Invariants:
 3. No inline Python in workflows or actions (solorepo's DR-241).
 4. Commits must name their Actor and Agent in trailers (Article 19, solorepo's DR-233).
 5. Mandatory 7-heading PR description template (PR First, verified by check_pr.py).
-6. Every review thread must be answered; do not approve if open threads remain unresolved (PR First step 8, solorepo's DR-161).
+6. Every review thread must be answered; do not approve if open threads remain unresolved (PR First's *Answer every thread and resolve it* step, solorepo's DR-161).
 7. Do not approve if GitHub CI checks have failed (solorepo's DR-161).
 {caller_block}
 Current PR Form Verification Status:

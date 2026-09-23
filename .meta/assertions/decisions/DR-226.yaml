@@ -54,8 +54,9 @@ decisions:
           would have corrected in a sentence.
     consequences:
       - >-
-        PR First's third step says a level is who answers the Issue rather
-        than how big it is, and names `human` as where what the Issue needs
+        PR First's *Raise a Challenge with the form* step says a level is who
+        answers the Issue rather than how big it is, and names `human` as where
+        what the Issue needs
         is the solo rather than a Job at all. The step that follows it is the
         act: hand it back the moment the next step is not yours to take.
       - >-
@@ -72,8 +73,9 @@ decisions:
         Challenge. Solorepo's DR-256 confirmed that this indirection is right,
         settling solorepo's #564.
       - >-
-        The meaning DR-148 located in PR First's third step and in DR-112 is
-        now here as well, and DR-112's own text is left as the record of what
+        The meaning DR-148 located in PR First's
+        *Raise a Challenge with the form* step and in DR-112 is now here as
+        well, and DR-112's own text is left as the record of what
         was decided then.
     falsifier: >-
       An Issue at `easy` or `medium` whose pull request argues a question

@@ -51,7 +51,8 @@ decisions:
           can eat. It is refused now for its surface. It doubles what `deploy`
           installs and what `teardown` removes, adds a second runner name that
           `runs-on:` must get right in four workflows and that Specialization's
-          copy step must retarget, and splits one node's capacity into two
+          *Copy what is inherited* step must retarget, and splits one node's
+          capacity into two
           ceilings that cannot lend to each other — to buy separation that a
           ceiling wide enough for both already gives on a machine with 31 GiB
           and a measured demand under half of it.

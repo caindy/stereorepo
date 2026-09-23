@@ -81,7 +81,7 @@ decisions:
         DR-119 stands in every part but the one that put the jobs' steps in
         the comparison.
       - >-
-        `.meta/actions/` is in the set Specialization's second step copies,
+        `.meta/actions/` is in the set Specialization's *Copy what is inherited* step copies,
         so a portfolio carries what its seeded workflow types, and
         `scaffold-only paths` scans it with the rest of the inherited set.
       - >-

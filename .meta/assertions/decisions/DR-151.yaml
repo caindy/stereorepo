@@ -18,7 +18,7 @@ decisions:
       - work:artifact/meta-lib-signed-channel-tables
     context: >-
       Two places in the record prescribe an act the channel had no verb for.
-      PR First's third step says a verdict a session leaves behind is "the
+      PR First's *Raise a Challenge with the form* step says a verdict a session leaves behind is "the
       session's to answer, or the solo's to dispatch"; DR-142's consequence
       says `answer the review` runs "on the solo's own dispatch of a review
       pass, which the guard does not read against because the solo dispatching
@@ -140,7 +140,7 @@ decisions:
         what refuses, and the boundary that would make both unnecessary is a
         credential no path but the channel can reach.
       - >-
-        PR First's third step says the act is a verb of the channel rather than
+        PR First's *Raise a Challenge with the form* step says the act is a verb of the channel rather than
         something done by hand. The rest of DR-142 stands: the guard on both
         doors, the difficulty label as the semaphore a session and a loop share,
         and the exemption above.
@@ -153,7 +153,7 @@ decisions:
         loop's is refused here rather than downstream.
       - >-
         A portfolio inherits it: `.meta/say/`, `.meta/hooks/` and `coder.yml`
-        are all in the set Specialization's second step copies.
+        are all in the set Specialization's *Copy what is inherited* step copies.
     falsifier: >-
       A dispatch the solo needed and this refused — a pass with real work to do
       declined by one of the five conditions — would say the refusals were

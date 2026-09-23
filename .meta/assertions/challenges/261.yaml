@@ -3,7 +3,7 @@ challenges:
     name: A pull request overtaken by another answer to the same Challenge has no exit
     challenge_type: DEFECT
     description: >-
-      PR First's tenth step is *merged, never abandoned*, and the channel holds it by
+      PR First's *Merged, never abandoned* step is *merged, never abandoned*, and the channel holds it by
       construction: `.meta/say/verbs.yaml` has no `close` verb, so `merge` is the only
       way a pull request ends. A change another answer overtook cannot take that exit —
       the tree already holds a different answer to the same Challenge, so the diff would

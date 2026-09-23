@@ -61,7 +61,7 @@ decisions:
           in their shared half, and a seed that is parsed rather than run.
     consequences:
       - >-
-        Specialization's second step names the three loop workflows it copies
+        Specialization's *Copy what is inherited* step names the three loop workflows it copies
         instead of `.github/workflows/`, and step three supplies the gate
         workflow with the rest of `template/`.
       - >-

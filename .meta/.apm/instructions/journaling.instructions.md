@@ -21,12 +21,12 @@ And whether the residue is worth writing at all. Where the change explains itsel
 
 ## Steps
 
-- Route it as you write it. Where an artifact owns the paragraph, it goes there.
-- Put finished residue in the pull request body — what changed, what the ground looked like, and what would make this removable.
-- Put unfinished residue in a linked Issue. It is a Challenge, not a paragraph, and it outlives the body.
-- Keep commit messages to what changed. A message that has begun explaining is holding something that belongs elsewhere.
-- Route every finding in the same change that records it. A rule goes to the Charter; a foreclosing decision goes to a decision record.
-- Supersede by writing again and naming what is replaced. Never rewrite.
+- **Route as you write.** Where an artifact owns the paragraph, it goes there.
+- **Put finished residue in pull request.** Place finished residue in the pull request body — what changed, what the ground looked like, and what would make this removable.
+- **Put unfinished residue in linked Issue.** Move unfinished residue to a linked Issue: it is a Challenge, not a paragraph, and it outlives the body.
+- **Keep commit messages to what changed.** A message that has begun explaining is holding something that belongs elsewhere.
+- **Route findings in same change.** Place every finding in the same change that records it: a rule goes to the Charter; a foreclosing decision goes to a decision record.
+- **Supersede by writing again.** Name what is replaced, and never rewrite.
 
 ## Produces
 

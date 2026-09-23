@@ -104,7 +104,7 @@ decisions:
         stays `ubuntu-latest`, which is what a portfolio has; the steps of both
         stubs are still held equal, which is what DR-119 was for.
       - >-
-        Specialization's copy step says to retarget `runs-on:` in every workflow
+        Specialization's *Copy what is inherited* step says to retarget `runs-on:` in every workflow
         it copies. All three it names — `coder.yml`, `review.yml` and
         `advance.yml` — are pinned to `arc-runner-set`, and none of `.meta/arc/`
         travels with them, so a portfolio that inherited them unchanged would
@@ -167,7 +167,7 @@ decisions:
       them and the carve-out cannot: `coder.yml` and `review.yml` have named the
       scale set since DR-137, and this change adds `advance.yml`, the file whose
       whole reason is that an armed merge left behind is nobody's to notice.
-      Answered at the copy — Specialization's step two now retargets `runs-on:`
+      Answered at the copy — Specialization's *Copy what is inherited* step now retargets `runs-on:`
       in every workflow it copies — rather than by seeding a fourth `template/`
       file differing from the scaffold's in that one line, which would buy a
       portfolio's answer at the price of a second copy to hold equal, and would

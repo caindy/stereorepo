@@ -52,7 +52,7 @@ per the rule that an adopted convention is defined by its canon and not by us.
   `check.py`, `.meta/gate`) are repository infrastructure and metamodels, not agent
   cognitive primitives. Packaging them as skill resources would duplicate them across
   every harness cache directory, invert CI dependencies, and break pre-compilation
-  gate validation. They are inherited via Specialization's step two copy set, leaving
+  gate validation. They are inherited via Specialization's *Copy what is inherited* step copy set, leaving
   `.meta/.apm/` strictly for agent cognitive primitives.
 - **Hook registration is decoupled from tool permissions (solorepo's DR-174).** A `hooks` primitive
   compiles into `.claude/settings.json` under its `hooks` section, but APM has no

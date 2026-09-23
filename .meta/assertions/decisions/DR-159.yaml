@@ -20,7 +20,7 @@ decisions:
       - work:artifact/meta-lib-check-pr-sweep
       - work:artifact/meta-checks-probes-loops-handoff
     context: >-
-      PR First's eighth step historically said to promote at merge. In an
+      PR First's *Promote at approval* step historically said to promote at merge. In an
       agentic loop, no Job is alive at merge: the coder's run ends when review
       is requested (or when merge is armed on easy), and the reviewer's run ends
       when the review is submitted and the merge armed. Auto-merge merges the
@@ -84,7 +84,7 @@ decisions:
           stopping rather than arming.
     consequences:
       - >-
-        PR First's eighth step, the pull request template in
+        PR First's *Promote at approval* step, the pull request template in
         `.meta/templates/pull-request.md`, and the verb summary in
         `.meta/say/verbs.yaml` move from "at merge" to "at approval",
         re-rendering `.meta/disciplines.md`, `.github/PULL_REQUEST_TEMPLATE.md`,

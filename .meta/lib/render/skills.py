@@ -88,7 +88,11 @@ def skill(name: str, discipline: str, commands: Sequence[str],
             held = [v for v in program["verbs"] if role in v["held_by"]]
             out += [f"- `{verb_line(program, v, role)}` — {v['does']}" for v in held]
         out += ["", record.woven(d, "steps") + "\n"]
-    out += ["\n".join(f"{i}. {s.strip()}" for i, s in enumerate(d["steps"], 1)) + "\n",
+    step_lines = [
+        f"{i}. **{s['name'].rstrip('.')}.** {s['statement'].strip()}"
+        for i, s in enumerate(d["steps"], 1)
+    ]
+    out += ["\n".join(step_lines) + "\n",
             "## Where the judgement is\n",
             d["judgement"].strip() + "\n",
             record.woven(d, "commands") + "\n",

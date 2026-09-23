@@ -64,7 +64,7 @@ decisions:
         `Project` in `.meta/work/structure.yaml` gains the `critical_paths` slot,
         allowing projects in `structure.yaml` to declare globs requiring deep review.
       - >-
-        Specialization step 2 in `.meta/assertions/disciplines.yaml` copies
+        Specialization's *Copy what is inherited* step in `.meta/assertions/disciplines.yaml` copies
         `.meta/depth.py` alongside `.meta/timing.py` and `.meta/gate`.
       - >-
         `.meta/checks/probes.py` gains `depth_probes` verifying all four layers

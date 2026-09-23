@@ -54,7 +54,9 @@ slots:
       What following the Discipline consists of, in order. Prose steps, not
       instructions to a machine — if they could be executed this would not be a
       Discipline.
+    range: DisciplineStep
     multivalued: true
+    inlined_as_list: true
 
   judgement:
     description: >-
@@ -113,6 +115,22 @@ classes:
         required: true
       judgement:
         recommended: true
+
+  DisciplineStep:
+    is_a: WorkEntity
+    description: >-
+      One step of a Discipline: a prescribed rule or practice that requires judgement
+      (solorepo's DR-270). Identified by a semantic slug CURIE under
+      `work:discipline-step/<discipline-slug>/<step-slug>`.
+    slots:
+      - statement
+    slot_usage:
+      name:
+        required: true
+        description: The short human name of the step (e.g. Request review), used when citing the step in prose.
+      statement:
+        required: true
+        description: What following the step consists of. Prose, not instructions to a machine.
 
   Article:
     is_a: WorkEntity

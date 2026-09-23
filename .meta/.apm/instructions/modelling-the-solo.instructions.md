@@ -18,11 +18,11 @@ What is a durable trait and what was a one-off. A correction made twice is a pre
 
 ## Steps
 
-- Ground each entry in something observable — a correction made, a decision taken, a preference stated in so many words.
-- Record what would change how the work proceeds. Not character assessment, and not flattery.
-- Mark inference as inference, so its subject knows what to push back on.
-- Update it as the work reveals things, not in a pass at the end.
-- Surface it for correction rather than defending it.
+- **Ground entries in observables.** Ground each entry in something observable — a correction made, a decision taken, a preference stated in so many words.
+- **Record what changes work.** Record what would change how the work proceeds. Not character assessment, and not flattery.
+- **Mark inference as inference.** Ensure its subject knows what to push back on.
+- **Update as work reveals things.** Update it as the work reveals things, not in a pass at the end.
+- **Surface for correction.** Surface it for correction rather than defending it.
 
 ## Produces
 

@@ -46,7 +46,7 @@ decisions:
         does, and a Challenge is a real need, so work that turned out to be the
         wrong answer merges as the record of that.
       - >-
-        PR First's merge-trail step is restored, having been deleted by accident
+        PR First's *Merged, never abandoned* step is restored, having been deleted by accident
         in DR-060's edit and shipped missing.
     falsifier: >-
       A parked conversation that outlives the pull request — promoted to nothing

@@ -177,7 +177,7 @@ _Retired when:_ A Project whose toolchain reports in a form this shape cannot ca
 
 **Checked by** Its instances, each of which carries its own check: A11, A14, A15, A16, A17, A18 and A20 say the same thing of a decision, of reasoning, of work noticed, of a thread, of a term, of work in a worktree and of a rule. The general claim is held at review, by asking what a Job with no privilege beyond the record could reconstruct (solorepo's DR-216).
 
-_In practice:_ The rule that a session's branch must not take the loop's shape existed only in `.github/workflows/coder.yml`'s job condition, so a session deriving it read the implementation and got the right answer for partly the wrong reason; solorepo's DR-215 moved it to PR First step 15, where an unprivileged reader meets it.
+_In practice:_ The rule that a session's branch must not take the loop's shape existed only in `.github/workflows/coder.yml`'s job condition, so a session deriving it read the implementation and got the right answer for partly the wrong reason; solorepo's DR-215 moved it to PR First's *Read what GitHub holds on arrival* step, where an unprivileged reader meets it.
 
 _Retired when:_ A Job that proceeds correctly on state it could not observe, which would mean a privilege nobody declared.
 

@@ -17,9 +17,9 @@ Where a paragraph goes — what to do, what happened, or why. Cheap only at the 
 
 ## Steps
 
-- Keep the always-loaded core small enough to stay read.
-- Route each paragraph as you write it, never later.
-- Keep every digest deliberately insufficient to act on.
+- **Keep the core small.** Keep the always-loaded core small enough to stay read.
+- **Route paragraphs as you write.** Route each paragraph as you write it, never later.
+- **Keep digests insufficient.** Keep every digest deliberately insufficient to act on.
 
 ## Produces
 

@@ -120,8 +120,9 @@ def refuse_a_level_from_a_run(level: str | None, instead: str) -> None:
 
     `RUN_LEVEL` is not a way round the refusal. `human` starts no Job and asks
     for the solo, which is what a run has to be able to say the moment it finds
-    a decision owed or work it cannot finish — PR First's fourth step, whose
-    bar is deliberately low (solorepo's DR-226).
+    a decision owed or work it cannot finish — PR First's
+    *Hand it back the moment the next step is not yours* step,
+    whose bar is deliberately low (solorepo's DR-226).
 
     Parameters:
         level (str | None): The level the call would land, or None where it lands none.

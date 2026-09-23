@@ -317,7 +317,7 @@ articles:
       The rule that a session's branch must not take the loop's shape existed
       only in `.github/workflows/coder.yml`'s job condition, so a session
       deriving it read the implementation and got the right answer for partly
-      the wrong reason; solorepo's DR-215 moved it to PR First step 15, where an
+      the wrong reason; solorepo's DR-215 moved it to PR First's *Read what GitHub holds on arrival* step, where an
       unprivileged reader meets it.
     falsifier: >-
       A Job that proceeds correctly on state it could not observe, which would

@@ -31,7 +31,7 @@ be a second copy of it, and the second copy is the one that drifts.
 
 ## Taking it into a portfolio
 
-Specialization's fifth step, for Rust:
+Specialization's *Choose languages and bootstrap* step, for Rust:
 
 ```bash
 bootstraps/rust/render <destination> <crate-name>

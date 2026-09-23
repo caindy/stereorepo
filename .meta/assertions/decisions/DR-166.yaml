@@ -95,7 +95,7 @@ decisions:
         miss. The falsifier says what that looks like.
       - >-
         A portfolio inherits it: `review.yml` is in the set Specialization's
-        second step copies.
+        *Copy what is inherited* step copies.
     falsifier: >-
       A defect that reaches trunk through a review whose transcript shows the
       pass stopped at the ceiling with a dimension of the diff unread — which

@@ -11,7 +11,7 @@ decisions:
       - work:artifact/meta-disciplines
       - work:artifact/meta-render
     alternatives:
-      - name: Leave step 14 as it is, and let each session build its own watch
+      - name: Leave the subscription directive as it is, and let each session build its own watch
         chosen: false
         reason: >-
           What DR-060 chose, for a good reason — a Discipline that names this
@@ -56,8 +56,8 @@ decisions:
         heading on the first poll and nothing replayed; `pr MERGED` or
         `pr CLOSED` and exit when the subscription ends.
       - >-
-        PR First's fourteenth step names the watch as the subscription, and
-        asks a harness that cannot keep it running to say so after starting
+        The harness subscription convention names the watch as the subscription,
+        and asks a harness that cannot keep it running to say so after starting
         it, not instead.
       - >-
         The rendered skill's command block carries the watch, and says how

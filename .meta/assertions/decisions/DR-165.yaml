@@ -143,7 +143,7 @@ decisions:
         one. A falsifier nobody falsifies is the thing it exists to catch, and
         this one runs on one step of one workflow.
       - >-
-        Specialization's second step names `.meta/reading_pass.py` in the set it
+        Specialization's *Copy what is inherited* step names `.meta/reading_pass.py` in the set it
         copies, beside the `coder.yml` that calls it. A portfolio taking the
         workflow without the file would have a step that dies on every take,
         which is a red run saying nothing about any reader.

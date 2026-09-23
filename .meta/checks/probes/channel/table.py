@@ -62,6 +62,7 @@ def _program_problems(program: Any, parser: Any, readers: Any) -> list[str]:
 def _steps_typing_commands(discipline: Any) -> list[str]:
     """Each step of the Discipline the table names that types a channel command: the verbs are the steps."""
     disciplines = yaml.safe_load((META / "assertions" / "imported" / "disciplines.yaml").read_text()) or {}
-    return [f"{d['name']} step {i} types a command; the verbs are the steps"
+    return [f"{d['name']}'s *{step['name']}* step types a command; the verbs are the steps"
             for d in disciplines.get("disciplines") or [] if d["name"] == discipline
-            for i, step in enumerate(d.get("steps") or [], 1) if ".meta/say" in step]
+            for step in d.get("steps") or []
+            if ".meta/say" in step.get("statement", "")]

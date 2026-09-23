@@ -19,9 +19,9 @@ Which of the rules a seed must already satisfy while it is still a seed, given t
 
 ## Steps
 
-- Treat a template as data. Do not lint it in place and call that proof.
-- Gate it by rendering it and running the real gates on the result.
-- Hold a seed to the rules it seeds. Where it cannot yet satisfy one, say why in the seed itself, where whoever fills it in will read it.
+- **Treat templates as data.** Treat a template as data. Do not lint it in place and call that proof.
+- **Gate seeds by rendering and checking.** Gate it by rendering it and running the real gates on the result.
+- **Hold seeds to the rules they seed.** Hold a seed to the rules it seeds. Where it cannot yet satisfy one, say why in the seed itself, where whoever fills it in will read it.
 
 ## Produces
 

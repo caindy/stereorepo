@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/603
+    name: A Discipline step cited by ordinal drifts when a step is inserted, and nothing reads the citation
+    challenge_type: DEFECT
+    description: >-
+      PR First's steps and other Discipline steps were cited by ordinal position in the record,
+      causing every citation past an insertion point to drift out of sync whenever a step was
+      added or reordered. Ordinal citations were not checked by citation machinery, allowing
+      drift to accumulate unnoticed across assertions, tooling, and documentation.

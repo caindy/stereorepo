@@ -11,7 +11,7 @@
 # with the filing is the solo's verdict given in advance, and this Job never
 # sees it.
 #
-# Nothing here restates how to read a Challenge. PR First's third step and the
+# Nothing here restates how to read a Challenge. PR First's *Raise a Challenge with the form* step and the
 # reviewer's reading of it are the checkout's; this file decides when the
 # reviewer runs, as whom it speaks, and what it may read. An `issues` event runs
 # the workflow file from the default branch, so this is trunk's on every
@@ -142,7 +142,7 @@ jobs:
             You are the reviewer Role (solorepo's DR-107), reading Challenge
             #${{ github.event.issue.number }} of ${{ github.repository }} before any
             coder takes it (solorepo's DR-230). Read /pr-first-reviewer first: its
-            third step says what your verdict is, what it asks, and that `move triage`
+            *Raise a Challenge with the form* step says what your verdict is, what it asks, and that `move triage`
             is the verb that lands it.
 
             Then read `.review/challenge.md` with the Read tool. It is the Issue as
@@ -236,7 +236,7 @@ jobs:
             You are the reviewer Role (solorepo's DR-107), reading Challenge
             #${{ github.event.issue.number }} of ${{ github.repository }} before any
             coder takes it (solorepo's DR-230). Read /pr-first-reviewer first: its
-            third step says what your verdict is, what it asks, and that `move triage`
+            *Raise a Challenge with the form* step says what your verdict is, what it asks, and that `move triage`
             is the verb that lands it.
 
             Then read `.review/challenge.md` with the Read tool. It is the Issue as

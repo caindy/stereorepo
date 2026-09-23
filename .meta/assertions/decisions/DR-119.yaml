@@ -72,7 +72,7 @@ decisions:
         scaffold-only: DR-114 made the queue check the sweep's, and a
         portfolio's sweep is a sweep.
       - >-
-        `.meta/next.py` is in the set Specialization's second step copies.
+        `.meta/next.py` is in the set Specialization's *Copy what is inherited* step copies.
         The seeded sweep types it, and a workflow that types a program the
         portfolio does not have is red on its first scheduled run.
       - >-

@@ -50,7 +50,7 @@ decisions:
         All Gemini CLI execution steps, fallback detection steps, and `GEMINI_FALLBACK` toggles are
         excised from `.github/workflows/review.yml` and `.github/workflows/coder.yml`.
       - >-
-        `.meta/detect_fallback.py` is removed from the repository, and Specialization Step 2 no longer
+        `.meta/detect_fallback.py` is removed from the repository, and Specialization's *Copy what is inherited* step no longer
         inherits it or mentions `vars.GEMINI_FALLBACK`.
       - >-
         Implicit branch-name prefix routing (`^gemini/`, `^codex/`) is removed from both workflows;

@@ -77,7 +77,7 @@ decisions:
           patches on an unviable premise.
     consequences:
       - >-
-        PR First's opening step now specifies that while easy and medium pull
+        PR First's *Open it when the work starts* step now specifies that while easy and medium pull
         requests document intent in the opening body and rely on diff review, hard
         and human Challenges require formulating the plan under **The plan.** and
         validating it with the solo before code is written (solorepo's DR-249).

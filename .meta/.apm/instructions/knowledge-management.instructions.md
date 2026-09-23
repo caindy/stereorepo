@@ -18,14 +18,14 @@ Executing the pre-writing routing decision tree before drafting prose: determini
 
 ## Steps
 
-- Route first via the Diátaxis Compass before typing prose. Match the knowledge to its quadrant: Reference (Work + Understanding), Explanation (Learning + Understanding), How-To (Work + Action), or Tutorial (Learning + Action).
-- Subordinate container placement to reader posture. A Concept may reside in a schema gloss, an existing document section, a dedicated wiki page (`wiki/<context>/<concept>.md`), or a subsystem subdirectory.
-- Structure documentation by Bounded Context (`wiki/<bounded-context>/`). Keep `wiki/solorepo/` hermetic to the scaffold, while specialized portfolios house their domain concepts under their own bounded context folders.
-- Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within each Bounded Context (Article 17, solorepo's DR-190).
-- Open every wiki page with a MOS:LEAD first sentence that states what the concept is in bold, concurring with its vocabulary definition.
-- Connect concepts using closed-world wikilinks (`[[concept]]` or scoped `[[context/concept]]`). A link to an unminted concept or dead target is red and fails verification (solorepo's DR-185).
-- Apply Google developer style rules: direct address in the present tense, active voice, elimination of filler words, and rhythmic variation.
-- Dereference citations to Decision Records and Articles rather than re-litigating rationale inline.
+- **Route via Diátaxis Compass.** Consult the Diátaxis Compass before typing prose. Match the knowledge to its quadrant: Reference (Work + Understanding), Explanation (Learning + Understanding), How-To (Work + Action), or Tutorial (Learning + Action).
+- **Subordinate container placement to reader posture.** A Concept may reside in a schema gloss, an existing document section, a dedicated wiki page (`wiki/<context>/<concept>.md`), or a subsystem subdirectory depending on reader posture rather than storage hierarchy.
+- **Structure documentation by Bounded Context.** House concepts under `wiki/<bounded-context>/`. Keep `wiki/solorepo/` hermetic to the scaffold, while specialized portfolios house their domain concepts under their own bounded context folders.
+- **Maintain 1:1 concept and wiki parity.** Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within each Bounded Context (Article 17, solorepo's DR-190).
+- **Open with bold MOS:LEAD lead sentence.** Provide a MOS:LEAD first sentence that states what the concept is in bold, concurring with its vocabulary definition.
+- **Connect with closed-world wikilinks.** Link concepts using closed-world wikilinks (`[[concept]]` or scoped `[[context/concept]]`). A link to an unminted concept or dead target is red and fails verification (solorepo's DR-185).
+- **Apply Google developer style.** Follow direct address in the present tense, active voice, elimination of filler words, and rhythmic variation.
+- **Dereference citations to Decision Records and Articles.** Resolve citations rather than re-litigating rationale inline.
 
 ## Produces
 

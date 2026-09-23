@@ -24,7 +24,10 @@ def disciplines() -> str:
         if d.get("judgement"):
             out.append(f"**Where the judgement is.** {d['judgement'].strip()}\n")
         if d.get("steps"):
-            out.append("\n".join(f"{i}. {s}" for i, s in enumerate(d["steps"], 1)) + "\n")
+            out.append("\n".join(
+                f"{i}. **{s['name'].rstrip('.')}.** {s['statement'].strip()}"
+                for i, s in enumerate(d["steps"], 1)
+            ) + "\n")
         if chan and d["name"] == chan.get("discipline"):
             out.append("The verbs are the steps, and each refuses its own misuse (solorepo's DR-116). Every act\n"
                        "on GitHub goes through the channel, `.meta/say/`, which names the Actor in\n"
@@ -172,7 +175,10 @@ def specialize() -> str | None:
            d["description"].strip() + "\n",
            f"**Where the judgement is.** {d['judgement'].strip()}\n",
            "## Steps\n",
-           "\n".join(f"{i}. {s}" for i, s in enumerate(d["steps"], 1)) + "\n",
+           "\n".join(
+               f"{i}. **{s['name'].rstrip('.')}.** {s['statement'].strip()}"
+               for i, s in enumerate(d["steps"], 1)
+           ) + "\n",
            "_Produces: " + "; ".join(d["produces"]).rstrip(".") + "._\n",
            record.authored("../SPECIALIZE.md", "postamble")]
     return "\n".join(out) + record.accounted_by("../SPECIALIZE.md")

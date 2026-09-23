@@ -34,7 +34,7 @@ degrades when its token cannot list runs; this would have nothing left to
 print, so it says so rather than printing zeros.
 
 **The figures are this repository's.** solorepo's runs on `arc-runner-set` and a
-portfolio's on `ubuntu-latest` (Specialization's second step retargets every
+portfolio's on `ubuntu-latest` (Specialization's *Copy what is inherited* step retargets every
 `runs-on:`), so a number measured here means nothing there. Nothing here
 carries a threshold for that reason: it reports, and what is too slow is read
 by someone who knows what the work was.

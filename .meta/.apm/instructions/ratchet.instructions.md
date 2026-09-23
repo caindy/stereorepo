@@ -18,9 +18,9 @@ Whether a suppression is a local exception with a reason, or a loosening dressed
 
 ## Steps
 
-- Green before commit. Not after, and not "green apart from".
-- Suppress at the site, naming the rule and the reason. Never in configuration, where the exception becomes invisible.
-- Where a checker cannot be clean at once, ratchet it — hold a baseline that may improve and may not regress.
+- **Green before commit.** Never after, and never "green apart from". The gate runs before every commit; work committed red is work broken on purpose.
+- **Suppress at the site with rule and reason.** Suppress at the site, naming the rule and the reason. Never in configuration, where the exception becomes invisible.
+- **Ratchet baselines.** Where a checker cannot be clean at once, ratchet it — hold a baseline that may improve and may not regress.
 
 ## Produces
 

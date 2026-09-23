@@ -20,13 +20,13 @@ And whether a word is a term or is ordinary English, which is not decidable mech
 
 ## Steps
 
-- Reach for the vocabulary before reaching for a word, and for a canon before minting one.
-- Borrow rather than invent. A term with a literature behind it arrives with its distinctions already argued.
-- Mint only with the solo, and record the decision. A word in the Charter or a Discipline without one is a word nobody agreed to.
-- Check a candidate against what the repository already means by it, including in the schemas. A collision found afterwards is a rename.
-- Mark a confusable in both directions, at the moment the collision is noticed.
-- Bias every output toward the vocabulary — code, prose and conversation alike.
-- Maintain 1:1 parity with the Knowledge Management wiki: every minted concept carries a corresponding wiki page explaining its domain context (solorepo's DR-190).
+- **Prefer the vocabulary and canon.** Reach for the vocabulary before reaching for a word, and for a canon before minting one.
+- **Borrow rather than invent.** A term with a literature behind it arrives with its distinctions already argued.
+- **Mint only with the solo.** Record the decision when a term is minted. A word in the Charter or a Discipline without one is a word nobody agreed to.
+- **Check candidate against existing meaning.** Check a candidate against what the repository already means by it, including in the schemas. A collision found afterwards is a rename.
+- **Mark confusables in both directions.** Mark a confusable in both directions, at the moment the collision is noticed.
+- **Bias every output toward the vocabulary.** Align code, prose and conversation alike with the shared vocabulary.
+- **Maintain concept and wiki parity.** Maintain 1:1 parity with the Knowledge Management wiki: every minted concept carries a corresponding wiki page explaining its domain context (solorepo's DR-190).
 
 ## Produces
 

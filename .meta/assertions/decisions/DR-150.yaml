@@ -146,7 +146,7 @@ decisions:
         nothing it runs imports `check.py`. `just dereference` did, on the first
         run after the split.
       - >-
-        Specialization's copy step names `.meta/checks/`. A portfolio that
+        Specialization's *Copy what is inherited* step names `.meta/checks/`. A portfolio that
         copied `check.py` alone would have a gate that cannot import its own
         steps, which is the failure mode the step exists to prevent.
       - >-
