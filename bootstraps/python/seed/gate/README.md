@@ -24,7 +24,7 @@ The steps, in the order they run:
 
 | Step | What it holds | Discipline |
 |---|---|---|
-| `lints` | no rule switched off in a manifest; every `noqa` and `type: ignore` carries a reason | Ratchet |
+| `lints` | no rule switched off in a manifest, every ruff configuration selecting at least `SELECT_FLOOR`; every `noqa` and `type: ignore` carries a reason | Ratchet |
 | `comments` | zero commented-out code, specific suppression codes, and the four permissible comment exceptions within function bodies | Literate Programming |
 | `ruff` | `ruff check`, with the rule set the workspace manifest selects | Ratchet |
 | `types` | `mypy --strict` over each package's source and tests | Ratchet |

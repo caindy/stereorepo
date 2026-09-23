@@ -321,9 +321,88 @@ NOQA = re.compile(
 TYPE_IGNORE = re.compile(r"#\s*type:\s*ignore(?P<codes>\[[^\]]*\])?(?P<rest>.*)$")
 REASON = re.compile(r"#\s*reason:\s*\S")
 
+#: What every ruff configuration in this workspace must select, each entry
+#: against the prefix of the ruff linter that owns it. The set is DR-096's
+#: selected families and the three Pylint refactor limits; the mechanism —
+#: a floor stated in the gate rather than read from the manifests it audits,
+#: and paired with its linter rather than left as bare text — is DR-263's.
+SELECT_FLOOR = {
+    "E": "E",
+    "W": "W",
+    "F": "F",
+    "I": "I",
+    "N": "N",
+    "UP": "UP",
+    "B": "B",
+    "C4": "C",
+    "C90": "C",
+    "SIM": "SIM",
+    "S": "S",
+    "RUF": "RUF",
+    "PT": "PT",
+    "PTH": "PTH",
+    "ARG": "ARG",
+    "PLR0912": "PL",
+    "PLR0913": "PL",
+    "PLR0915": "PL",
+}
+
+#: Ruff's selector for every rule it implements, which reaches every floor entry.
+WIDEST = "ALL"
+
+
+def reaches(selector: str, rule: str, linter: str) -> bool:
+    """Checks whether one `select` entry selects the rules a floor entry names.
+
+    A ruff selector is a linter's prefix followed by as much of a code as the
+    author wrote, and a prefix widens only inside the linter that owns it: `PL`
+    selects `PLR0912` because both are Pylint, while `P` belongs to no linter and
+    selects none of it. Reaching the linter's own prefix is what tells the two
+    apart.
+
+    Args:
+        selector: One entry of `select` or `extend-select`.
+        rule: The floor entry it is read against.
+        linter: The prefix of the ruff linter that owns `rule`.
+
+    Returns:
+        bool: True where the selector is ruff's widest, or is a prefix of the
+        rule that reaches at least the linter's own prefix.
+    """
+    if selector == WIDEST:
+        return True
+    return rule.startswith(selector) and selector.startswith(linter)
+
+
+def unselected(lint: dict[str, object]) -> list[str]:
+    """Lists the floor entries a ruff `[lint]` table does not reach.
+
+    Args:
+        lint: The `lint` table of a manifest's `[tool.ruff]` configuration, as
+            `tomllib` read it.
+
+    Returns:
+        list[str]: The floor entries no selector under `select` or
+        `extend-select` reaches, in the floor's own order.
+    """
+    selectors: list[str] = []
+    for key in ("select", "extend-select"):
+        named = lint.get(key)
+        if isinstance(named, list):
+            selectors += [str(entry) for entry in named]
+    return [
+        rule
+        for rule, linter in SELECT_FLOOR.items()
+        if not any(reaches(selector, rule, linter) for selector in selectors)
+    ]
+
 
 def lints(root: Path) -> Outcome:
     """Verifies that manifests disable no lint rules and all suppressions state reasons.
+
+    A manifest disables a rule two ways. An `ignore` entry switches one off after
+    selecting it; declining to select its family reaches the same end at none of
+    the cost, so a ruff configuration is held to `SELECT_FLOOR` as well (DR-263).
 
     Args:
         root: Workspace root directory path.
@@ -354,12 +433,17 @@ def lints(root: Path) -> Outcome:
         return Found(tuple(problems))
     return Passed(
         f"{suppression_count} suppressions across {len(sources)} source files, each "
-        f"with a reason; {len(manifests)} manifests, none switching a rule off"
+        f"with a reason; {len(manifests)} manifests, none switching a rule off, "
+        f"every ruff configuration reaching all {len(SELECT_FLOOR)} floor entries"
     )
 
 
 def manifest_ignores(root: Path, manifest: Path) -> list[str]:
     """Inspects a pyproject.toml manifest for disabled lint rules or unreasoned ignores.
+
+    A `[tool.ruff]` table shadows the workspace configuration for everything
+    under it, so each one is read against `SELECT_FLOOR` as well as against
+    `ignore`.
 
     Args:
         root: Workspace root directory path.
@@ -374,12 +458,19 @@ def manifest_ignores(root: Path, manifest: Path) -> list[str]:
     except tomllib.TOMLDecodeError as error:
         return [f"{relative(root, manifest)}: does not parse — {error}"]
     name = relative(root, manifest)
-    lint = data.get("tool", {}).get("ruff", {}).get("lint", {})
+    tools = data.get("tool", {})
+    lint = tools.get("ruff", {}).get("lint", {})
     problems = [
         f"{name}: `{key}` switches {len(lint[key])} rules off in configuration"
         for key in ("ignore", "extend-ignore")
         if lint.get(key)
     ]
+    missing = unselected(lint) if "ruff" in tools else []
+    if missing:
+        problems.append(
+            f"{name}: `select` does not reach {', '.join(missing)}, which the "
+            "floor in gate/__init__.py names"
+        )
     for number, line in enumerate(text.splitlines(), 1):
         stripped = line.strip()
         if (
@@ -392,7 +483,7 @@ def manifest_ignores(root: Path, manifest: Path) -> list[str]:
                 f"{name}:{number}: `{stripped}` ignores rules for a path and "
                 "gives no reason"
             )
-    mypy = data.get("tool", {}).get("mypy", {})
+    mypy = tools.get("mypy", {})
     for override in [mypy, *mypy.get("overrides", [])]:
         for key in ("ignore_errors", "ignore_missing_imports"):
             if override.get(key):

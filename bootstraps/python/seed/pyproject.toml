@@ -45,13 +45,24 @@ target-version = "py313"
 extend-exclude = ["mutants"]
 
 [tool.ruff.lint]
-# The rule set (DR-096). `C90` is what makes `max-complexity` able to fire.
-select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "C90", "SIM", "S", "RUF", "PT", "PTH", "ARG"]
+# The rule set (DR-096). `C90` is what makes `max-complexity` able to fire, and
+# the `PLR09*` codes are what make the three limits below able to fire. This is
+# a floor rather than a list: `SELECT_FLOOR` in the gate names every entry, and
+# `uv run gate lints` fails on a family deleted from here (DR-263).
+select = [
+    "E", "W", "F", "I", "N", "UP", "B", "C4", "C90", "SIM", "S", "RUF", "PT",
+    "PTH", "ARG", "PLR0912", "PLR0913", "PLR0915",
+]
 # Empty, and it stays empty. `uv run gate lints` fails on an entry here.
 ignore = []
 
 [tool.ruff.lint.mccabe]
 max-complexity = 12
+
+[tool.ruff.lint.pylint]
+max-args = 5
+max-branches = 12
+max-statements = 50
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S101"]  # reason: assert is the point of a test

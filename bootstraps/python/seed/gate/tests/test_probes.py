@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from gate import (
+    SELECT_FLOOR,
     CouldNotRun,
     Found,
     Passed,
@@ -22,6 +23,7 @@ from gate import (
     rendered,
     run,
     select,
+    unselected,
 )
 
 # Assembled, so that the scanner does not read the probe's own data as a
@@ -32,9 +34,11 @@ BARE_NOQA = "# " + "noqa"
 BARE_TYPE_IGNORE = "# " + "type: ignore"
 REASON = "  # " + "reason: "
 
+FLOOR = ", ".join(f'"{rule}"' for rule in SELECT_FLOOR)
 ROOT_MANIFEST = (
     '[project]\nname = "probe-workspace"\n\n[tool.uv.workspace]\n'
-    'members = ["packages/probe"]\n\n[tool.ruff.lint]\nignore = []\n'
+    'members = ["packages/probe"]\n\n[tool.ruff.lint]\n'
+    f"select = [{FLOOR}]\nignore = []\n"
 )
 PACKAGE_MANIFEST = (
     '[project]\nname = "probe"\nversion = "0.0.0"\nreadme = "README.md"\n'
@@ -128,7 +132,10 @@ def test_a_history_entry_names_a_test_that_exists(tree: Tree) -> None:
 
 
 def test_a_rule_switched_off_in_configuration_is_refused(tree: Tree) -> None:
-    assert passed(lints(tree.root)).endswith("2 manifests, none switching a rule off")
+    assert passed(lints(tree.root)).endswith(
+        "2 manifests, none switching a rule off, every ruff configuration "
+        f"reaching all {len(SELECT_FLOOR)} floor entries"
+    )
 
     tree.write(
         "pyproject.toml", ROOT_MANIFEST.replace("ignore = []", 'ignore = ["E501"]')
@@ -160,6 +167,61 @@ def test_a_rule_switched_off_in_configuration_is_refused(tree: Tree) -> None:
         ROOT_MANIFEST + "\n[tool.mypy]\nignore_missing_imports = true\n",
     )
     assert "ignore_missing_imports" in found(lints(tree.root))[0]
+
+
+def test_a_family_never_selected_is_refused(tree: Tree) -> None:
+    tree.write("pyproject.toml", ROOT_MANIFEST.replace('"C90", ', ""))
+    assert found(lints(tree.root)) == (
+        "pyproject.toml: `select` does not reach C90, which the floor in "
+        "gate/__init__.py names",
+    )
+
+    tree.write("pyproject.toml", ROOT_MANIFEST)
+    tree.write(
+        "packages/probe/pyproject.toml",
+        PACKAGE_MANIFEST + "\n[tool.ruff]\nline-length = 88\n",
+    )
+    problems = found(lints(tree.root))
+    assert len(problems) == 1
+    assert problems[0].startswith(
+        "packages/probe/pyproject.toml: `select` does not reach E, W, F"
+    )
+
+
+FLOOR_CASES = (
+    ("flake8-bandit is not flake8-simplify", {"select": ["S"]}, ("S",), ("SIM",)),
+    ("flake8-pytest-style is not flake8-use-pathlib",
+     {"select": ["PT"]}, ("PT",), ("PTH",)),
+    ("no linter answers to `P`", {"select": ["P"]}, (), ("PLR0912",)),
+    ("pylint widens its own codes",
+     {"select": ["PL"]}, ("PLR0912", "PLR0913", "PLR0915"), ("PT",)),
+    ("`C` widens both linters that answer to it",
+     {"select": ["C"]}, ("C4", "C90"), ("B",)),
+    ("flake8-bugbear does not reach flake8-comprehensions",
+     {"select": ["B"]}, ("B",), ("C4",)),
+    ("`extend-select` selects too", {"extend-select": ["ARG"]}, ("ARG",), ("E",)),
+    ("ruff's widest selector reaches everything",
+     {"select": ["ALL"]}, tuple(SELECT_FLOOR), ()),
+    ("a `select` that is not a list is no selection",
+     {"select": "SIM"}, (), ("SIM",)),
+    ("an empty table reaches nothing", {}, (), tuple(SELECT_FLOOR)),
+)
+
+
+@pytest.mark.parametrize(("name", "lint", "reached", "missed"), FLOOR_CASES)
+def test_a_selector_reaches_only_inside_its_own_linter(
+    name: str,
+    lint: dict[str, object],
+    reached: tuple[str, ...],
+    missed: tuple[str, ...],
+) -> None:
+    answer = unselected(lint)
+    assert [rule for rule in missed if rule not in answer] == [], name
+    assert [rule for rule in reached if rule in answer] == [], name
+
+
+def test_an_unreached_floor_is_answered_in_the_floors_own_order() -> None:
+    assert unselected({}) == list(SELECT_FLOOR)
 
 
 def test_a_suppression_at_a_site_carries_a_reason(tree: Tree) -> None:
