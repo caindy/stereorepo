@@ -1,9 +1,19 @@
 """The argument surface `.meta/say/move` delegates to, verb by verb (solorepo's DR-264)."""
 import argparse
+from collections.abc import Callable
 from typing import Any
 
 import channel
-from lib.move import advance, challenges, common, decisions, manager, pull_requests, reconcile
+from lib.move import (
+    advance,
+    challenges,
+    common,
+    decisions,
+    drafts,
+    manager,
+    pull_requests,
+    reconcile,
+)
 
 
 def numbers(text: str) -> list[int]:
@@ -81,6 +91,11 @@ def _add_pr_parsers(sub: Any) -> None:
     where = p.add_mutually_exclusive_group()
     where.add_argument("--base", default="main")
     where.add_argument("--on", help="open as a layer on this pull request, and link the stack")
+    p.add_argument("--draft", action="store_true",
+                   help="open as a draft, which merge, advance and the reconciler pass over; "
+                        "move ready takes it out")
+    p = sub.add_parser("ready")
+    p.add_argument("pr")
     p = sub.add_parser("layer")
     p.add_argument("pr")
     p.add_argument("--on", required=True)
@@ -171,7 +186,16 @@ def _dispatch_issue_verb(args: argparse.Namespace) -> bool:
 
 def _dispatch_pr_verb(args: argparse.Namespace) -> None:
     """Dispatch a Pull Request or Decision state transition verb."""
-    if args.verb == "layer":
+    plain: dict[str, Callable[[], object]] = {
+        "advance": lambda: advance.advance(args.pr),
+        "dispatch": lambda: advance.dispatch_pass(args.pr, args.task),
+        "request-review": lambda: pull_requests.request_review(args.pr, args.to),
+        "mint": decisions.mint,
+        "ready": lambda: drafts.ready(args.pr),
+    }
+    if args.verb in plain:
+        plain[args.verb]()
+    elif args.verb == "layer":
         pull_requests.layer(args.pr, args.on)
     elif args.verb == "merge":
         pull_requests.merge(args.pr, stack=args.stack, auto=args.auto)
@@ -179,14 +203,6 @@ def _dispatch_pr_verb(args: argparse.Namespace) -> None:
         manager.merge_manager(dry_run=args.dry_run, stranded=not args.no_advance)
     elif args.verb == "reconcile":
         reconcile.reconcile(live=args.live, dry_run=args.dry_run, minutes=args.minutes)
-    elif args.verb == "advance":
-        advance.advance(args.pr)
-    elif args.verb == "dispatch":
-        advance.dispatch_pass(args.pr, args.task)
-    elif args.verb == "request-review":
-        pull_requests.request_review(args.pr, args.to)
-    elif args.verb == "mint":
-        decisions.mint()
     elif args.verb == "revise":
         text = channel.piped()
         pull_requests.revise(args.number, body=channel.signed(text) if text else None,
@@ -195,7 +211,7 @@ def _dispatch_pr_verb(args: argparse.Namespace) -> None:
         pull_requests.supersede(args.pr, args.by, channel.stdin_body())
     elif args.verb == "open":
         pull_requests.open_pull_request(args.title, channel.signed(channel.stdin_body()),
-                                        base=args.base, on=args.on)
+                                        base=args.base, on=args.on, draft=args.draft)
 
 
 def main(description: str | None) -> None:

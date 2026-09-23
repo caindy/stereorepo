@@ -596,7 +596,16 @@ disciplines:
           gates prior to opening the pull request via `move open` is strictly prohibited (solorepo's DR-269).
           A coder records the initial plan under **The plan.** in the pull request body on a zero-diff
           [[seed-commit|Seed Commit]] authored via `commit --allow-empty -m "Record initial plan for Challenge #<n>"`
-          before writing code.
+          before writing code. The plan passes two gates before any code, and both are required
+          (solorepo's DR-273): the solo's approval in session, which lets the coder go ahead under this
+          Discipline and skips no step of it, and then the reviewer's approval of the plan on the pull
+          request. Open that pull request with `move open --draft`, so that the merge manager, `advance`
+          and the reconciler pass over it and an approval of the plan cannot merge the empty commit;
+          nothing takes a branch that changes no file out of draft. The reviewer raises points on a
+          plan-only pull request with `comment`, since there is no line for a thread, and an approval
+          there approves the plan and not a merge. A plan that changes materially in answer to the review
+          goes back to the solo before code. Once both gates pass, push the implementation, take the pull
+          request out of draft with `move ready`, and request review again.
       - id: work:discipline-step/pr-first/take-challenges-in-as-pull-requests
         name: Take Challenges in as pull requests
         statement: >-
@@ -657,7 +666,10 @@ disciplines:
         statement: >-
           Resolve every thread after answering it, including one the diff has overtaken. Outdated is not
           answered: GitHub collapses a thread whose anchor moved and leaves it open, and a reader years
-          later cannot tell a point that was addressed from one that was dropped.
+          later cannot tell a point that was addressed from one that was dropped. A reviewer's top-level
+          comment on the pull request is a thread too, owed until it is answered with a `post comment`
+          that links it (solorepo's DR-273): GitHub cannot resolve one, and a reply carries no reference
+          to what it answers, so the link is what settles it.
       - id: work:discipline-step/pr-first/title-it-with-words-someone-will-search-for
         name: Title it with words someone will search for
         statement: >-

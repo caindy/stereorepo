@@ -302,10 +302,10 @@ class Standing(NamedTuple):
 def unresolved_of(pr: dict[str, Any],
                   unresolved: Mapping[int, list[dict[str, Any]]] | None
                   ) -> list[dict[str, Any]] | None:
-    """The unresolved threads of `pr`, from `unresolved` where the caller read them and from GitHub otherwise."""
-    if unresolved is not None:
-        return unresolved.get(pr["number"])
-    return [t for t in github.threads(str(pr["number"])) if not t["isResolved"]]
+    """The unresolved conversations of `pr`, a reviewer's comment being none (solorepo's DR-273)."""
+    found = (github.threads(str(pr["number"])) if unresolved is None
+             else unresolved.get(pr["number"]))
+    return None if found is None else [t for t in found if not (t["isResolved"] or t.get("comment"))]
 
 
 def waiting_on_conflict(standing: Standing) -> list[str]:

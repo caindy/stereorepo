@@ -11,7 +11,7 @@ from typing import Any, cast
 
 import channel
 import check_pr
-from lib.move import advance, challenges, common, pull_requests
+from lib.move import advance, challenges, common, drafts, pull_requests
 
 LOCK_REF = "tags/merge-manager-lock"
 """The ref whose creation is the merge manager's mutual exclusion (solorepo's DR-267).
@@ -63,7 +63,7 @@ STALL_CHANGES_REQUESTED_THRESHOLD = 3
 MERGE_MANAGER_FIELDS = (
     "number,title,headRefName,baseRefName,headRefOid,isDraft,mergeable,"
     "mergeStateStatus,latestReviews,reviews,reviewRequests,closingIssuesReferences,"
-    "additions,deletions,statusCheckRollup,body"
+    "additions,deletions,changedFiles,statusCheckRollup,body"
 )
 
 
@@ -539,8 +539,8 @@ def evict_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str = "review
 
 
 def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: bool) -> None:
-    """Restore approved and green loop pull request from draft to ready (solorepo's DR-258)."""
-    if not (pull.get("isDraft")
+    """Restore an approved, green loop draft with changes (solorepo's DR-258, DR-273)."""
+    if not (pull.get("isDraft") and drafts.holds_changes(pull)
             and pull_requests.LOOPS_BRANCH.match(pull.get("headRefName") or "")):
         return
     approved, _ = check_reviewer_approval(pull, reviewer_login)

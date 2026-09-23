@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 
 import channel
 import check_pr
-from lib.move import advance, common, decisions
+from lib.move import advance, common, decisions, drafts
 
 
 def revise(number: str | int, body: str | None = None, title: str | None = None) -> None:
@@ -110,11 +110,14 @@ def layer(pr: str | int, below: str | int) -> None:
 
 
 def open_pull_request(title: str, body: str, base: str = "main",
-                      on: str | int | None = None) -> None:
+                      on: str | int | None = None, draft: bool = False) -> None:
     """Open a pull request, signed; with `on`, open it as a layer on that one.
 
     The base is the lower layer's branch, read from GitHub rather than typed,
     and the link follows the creation, so a layer is never open and unlinked.
+    With `draft`, a draft, which the merge manager, `advance` and the reconciler
+    pass over; `move ready` takes it out once the branch holds changes
+    (solorepo's DR-273).
     """
     problems = check_pr.check(title, body)
     if problems:
@@ -125,7 +128,7 @@ def open_pull_request(title: str, body: str, base: str = "main",
         base = head_branch(on)
     try:
         url = channel.gh("pr", "create", "--title", title, "--base", base, "--body", body,
-                         parse=False, tolerate_fail=True)
+                         *(["--draft"] if draft else []), parse=False, tolerate_fail=True)
     except subprocess.CalledProcessError as exc:
         if "No commits between" in exc.stderr:
             sys.exit(f"say: head branch has no commits ahead of {base}; GitHub requires at "
@@ -164,7 +167,7 @@ def behind_by(pull: common.Pull) -> int:
 
 
 ADVANCE = ("number,title,state,baseRefName,headRefName,headRefOid,autoMergeRequest,"
-           "reviewRequests,mergeable,mergeStateStatus,latestReviews,updatedAt,isDraft")
+           "reviewRequests,mergeable,mergeStateStatus,latestReviews,updatedAt,isDraft,changedFiles")
 
 
 def head_now(number: str | int) -> tuple[common.Pull, int]:
@@ -668,7 +671,8 @@ def request_review(pr: str | int, to: str) -> None:
     to trigger notification events. Polls branch mergeability and refuses review
     requests if the branch is conflicting (solorepo's DR-145). Restores an autonomous
     loop pull request from draft to ready once open status and clean mergeability
-    are confirmed (solorepo's DR-258). Reads back requested reviewers to verify
+    are confirmed (solorepo's DR-258), and never one whose branch holds no changes
+    (solorepo's DR-273). Reads back requested reviewers to verify
     the assignment took effect.
 
     Parameters:
@@ -693,11 +697,7 @@ def request_review(pr: str | int, to: str) -> None:
                  f"create no run and be answered by nobody. Rebase {pull['headRefName']} "
                  f"onto {pull['baseRefName']}, push, and the request can be made")
     if pull.get("isDraft") and LOOPS_BRANCH.match(pull.get("headRefName") or ""):
-        try:
-            channel.gh("pr", "ready", str(pr), parse=False)
-            print(f"restored #{pr} from draft to ready for review")
-        except (SystemExit, *common.UNREACHED) as exc:
-            print(f"warning: could not mark #{pr} ready for review: {exc}", file=sys.stderr)
+        drafts.restore(pr, pull)
 
     def asked() -> list[str]:
         return [r.get("login") for r

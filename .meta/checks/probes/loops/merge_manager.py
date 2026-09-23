@@ -900,7 +900,7 @@ def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
         return {}
 
     draft_loop_pr = {
-        "number": 31, "headRefName": "gemini/issue-31", "isDraft": True,
+        "number": 31, "headRefName": "gemini/issue-31", "isDraft": True, "changedFiles": 1,
         "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
     }
     with stood_in(channel, gh=gh_restore):
@@ -918,7 +918,7 @@ def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
         return {}
 
     failing_draft_pr = {
-        "number": 36, "headRefName": "gemini/issue-36", "isDraft": True,
+        "number": 36, "headRefName": "gemini/issue-36", "isDraft": True, "changedFiles": 1,
         "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
     }
     with stood_in(channel, gh=gh_fail_restore):
@@ -982,7 +982,7 @@ def _check_request_review_draft_restoration(channel: Any, move: Any) -> list[str
     ready_calls.clear()
     pull_data = {
         "number": 42, "headRefName": "gemini/issue-42", "baseRefName": "main",
-        "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE",
+        "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE", "changedFiles": 1,
     }
     with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):
         move.request_review(42, "reviewer")

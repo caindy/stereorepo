@@ -1,0 +1,14 @@
+challenges:
+  - id: work:challenge/879
+    name: "A plan review on a pull request with no diff has no thread to answer, and DR-249 reads as if the solo's approval were the whole gate"
+    challenge_type: DEFECT
+    description: >-
+      Under PR First (solorepo's DR-249, solorepo's DR-269), a `hard` or `human`
+      Challenge's plan goes on a pull request with an empty Seed Commit before
+      code. Nothing said that the reviewer's approval of that plan is a second
+      gate after the solo's, and the plan-only pull request had no line for a
+      review thread, so the reviewer's objection on #878 was a top-level comment
+      that `just pr <n> --threads` and `just watch` did not report as owed. An
+      approval of the plan was also what the merge manager merges on, which on
+      #877 would have landed the empty commit and closed the Challenge with
+      nothing done.

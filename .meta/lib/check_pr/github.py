@@ -33,6 +33,7 @@ query($owner: String!, $name: String!, $number: Int!) {
       reviews(last: 100) {
         nodes { author { login } state submittedAt commit { abbreviatedOid } body }
       }
+      comments(last: 100) { nodes { id databaseId author { login } body } }
     }
   }
 }
@@ -195,7 +196,45 @@ def pull(ref: str | int) -> dict[str, Any]:
     data = gh("api", "graphql", "-f", f"query={THREADS}",
               "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}")
     node: dict[str, Any] = data["data"]["repository"]["pullRequest"]
+    comments = (node.get("comments") or {}).get("nodes") or []
+    node["reviewThreads"]["nodes"] += comment_threads(comments, role_login("reviewer"))
     return node
+
+
+def comment_threads(comments: list[dict[str, Any]], reviewer: str) -> list[dict[str, Any]]:
+    """The reviewer's top-level comments, each shaped as a review thread (solorepo's DR-273).
+
+    A plan-only pull request has no line for a thread to sit on, so the
+    reviewer's point on it is a top-level comment, which GitHub cannot resolve,
+    and a reply carries no reference to what it answers. Each one reads as a
+    thread marked `comment`, resolved once a later comment from an account other
+    than the reviewer's links it (`#issuecomment-<id>`), and carrying that answer.
+    Proximity is not an answer: the reviewer's own next run, or a notice posted
+    in between, leaves the point owed.
+
+    Args:
+        comments: The pull request's top-level comment nodes, oldest first.
+        reviewer: The reviewer Role's login.
+
+    Returns:
+        list[dict]: One thread-shaped node per comment the reviewer's account wrote.
+    """
+    def login(c: dict[str, Any]) -> str:
+        return str((c.get("author") or {}).get("login", ""))
+
+    shaped: list[dict[str, Any]] = []
+    for i, c in enumerate(comments):
+        if login(c) != reviewer:
+            continue
+        link = f"issuecomment-{c.get('databaseId')}"
+        answer = next((a for a in comments[i + 1:]
+                       if login(a) != reviewer and link in (a.get("body") or "")), None)
+        shaped.append({
+            "id": c.get("id"), "comment": True, "isResolved": answer is not None,
+            "isOutdated": False, "resolvedBy": None, "path": None, "line": None,
+            "comments": {"nodes": [c] + ([answer] if answer else [])},
+        })
+    return shaped
 
 
 def threads(ref: str | int) -> list[dict[str, Any]]:

@@ -76,6 +76,8 @@ def snapshot(ref: str | int) -> Snapshot:
 
 def where_of(thread: dict[str, Any]) -> str:
     """The path and line a thread is anchored to, or `the pull request` for one on the conversation."""
+    if thread.get("comment"):
+        return review.COMMENT_WHERE
     return str(thread["path"] or "the pull request") + (f":{thread['line']}" if thread.get("line") else "")
 
 
@@ -205,10 +207,18 @@ def _report_exit(
     state: str,
     pr_state: PullRequestState,
     detail: str = "",
+    draft: bool = False,
 ) -> None:
-    """Formats and prints the termination message when watch exits."""
+    """Formats and prints the termination message when watch exits.
+
+    An approved draft is not ready to merge: it is a plan-only pull request
+    whose plan passed, and its next step is the implementation and `move ready`.
+    """
     if pr_state in (PullRequestState.MERGED, PullRequestState.CLOSED):
         print(f"pr {state}", flush=True)
+    elif draft and pr_state is PullRequestState.READY_TO_MERGE:
+        print(f"watch exiting on #{number}: plan approved on a draft — push the "
+              "implementation, then `.meta/say/move ready`", flush=True)
     else:
         suffix = f" ({detail})" if detail else ""
         print(f"watch exiting on #{number}: {pr_state.value}{suffix}", flush=True)
@@ -220,6 +230,11 @@ def _evaluate_poll(
     merges: str | None,
 ) -> tuple[bool, Snapshot, str | None]:
     """Evaluates pull request state and deltas for a single watch polling turn.
+
+    A draft is classified as if it were not one. A plan-only pull request is a
+    draft while its plan is argued, and a verdict, an owed comment or a
+    conflict on it is still the coder's to act on (solorepo's DR-273). This is
+    local to `watch`: `classify_pr` and `sweep` read the real flag.
 
     Returns:
         tuple[bool, Snapshot, str | None]: (should_exit, current_snapshot, merges).
@@ -241,20 +256,22 @@ def _evaluate_poll(
     }
     reviewer_login = github.role_login("reviewer")
 
-    pr_state = classify_pr(pr_data, checks, list(threads_.values()), reviewer_login)
+    pr_state = classify_pr({**pr_data, "isDraft": False}, checks, list(threads_.values()),
+                           reviewer_login)
 
     if previous is None:
         owed = len(review.unaddressed(list(threads_.values())))
         print(f"watching #{number}: {owed} thread(s) owed an answer, mergeable={mergeable}, "
               + ", ".join(f"{k}={v}" for k, (v, _) in checks.items()), flush=True)
         if pr_state in CODER_ACTIONABLE_STATES:
-            _report_exit(number, state, pr_state)
+            _report_exit(number, state, pr_state, draft=bool(pr_data.get("isDraft")))
             return True, current, merges
         return False, current, mergeable if mergeable != "UNKNOWN" else merges
 
     actionable = changes_since(current, previous, merges)
     if pr_state in CODER_ACTIONABLE_STATES:
-        _report_exit(number, state, pr_state, ", ".join(actionable))
+        _report_exit(number, state, pr_state, ", ".join(actionable),
+                     draft=bool(pr_data.get("isDraft")))
         return True, current, merges
 
     if actionable:

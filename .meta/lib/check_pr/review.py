@@ -55,9 +55,16 @@ NOTICED = re.compile(r"^\W*\*\*Noticed and not done\.?\*\*", re.M)
 
 PROMOTED = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/issues/\d+")
 
+COMMENT_WHERE = ("a top-level comment on the pull request — answer it with "
+                 "`.meta/say/post comment` linking it; GitHub cannot resolve one "
+                 "(solorepo's DR-273)")
+"""Where a reviewer's top-level comment sits, said so that nobody tries `post resolve` on it."""
+
 
 def where_of(thread: dict[str, Any], owed: bool = True) -> str:
     """Where a thread sits, as a reader would look for it."""
+    if thread.get("comment"):
+        return COMMENT_WHERE
     where = thread["path"] or "the pull request"
     if thread.get("line"):
         where += f":{thread['line']}"
