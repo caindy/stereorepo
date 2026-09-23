@@ -9,6 +9,7 @@ from checks import citations
 from checks.collect import META, check
 from checks.probes.harness import (
     LockedGitHub,
+    environment,
     load_channel,
     load_module,
     outcome,
@@ -64,9 +65,11 @@ def merge_manager_probes() -> list[str]:
     based on the first. The base is chosen, the dependent deferred, and the
     unreviewed and layered candidates refused with their reasons; a dry run says
     so and merges nothing; the real run merges the base and nothing else. A
-    winning candidate whose `merge` raises `SystemExit` sweeps the rest of the
-    queue through `advance_stranded` and then exits on the merge's own code, so
-    one failing candidate starves nothing and the run still goes red. Last,
+    winning candidate whose `merge` raises `SystemExit` posts a diagnostic
+    comment to the pull request conversation, demotes the pull request to draft
+    to prevent head-of-line blocking, sweeps the rest of the queue through
+    `advance_stranded` and then exits on the merge's own code, so one failing
+    candidate starves nothing and the run still goes red. Last,
     `issue_blockers` and `next.waits_on` prefer GitHub's native `blockedBy` over
     the body's prose and fall back to the prose, and `waits_on` returns a
     blocker that is not an Issue as the text it was (solorepo's DR-170).
@@ -77,6 +80,7 @@ def merge_manager_probes() -> list[str]:
             + _mergeable_unknown_is_waited_out(channel, move)
             + _lifecycle_is_the_classifiers(channel, move)
             + _eligible(channel, move) + _decisions_in_force(channel, move)
+            + _check_merge_refusal_evaluated(channel, move)
             + _end_to_end(channel, move) + _check_merge_failure_isolation(channel, move)
             + _blockers(move)
             + _check_contention_hold(channel, move)
@@ -354,6 +358,49 @@ def _decisions_in_force(channel: Any, move: Any) -> list[str]:
     return problems
 
 
+def _check_merge_refusal_evaluated(channel: Any, move: Any) -> list[str]:
+    """An active merge refusal causes evaluate_pr to refuse until head commit advances.
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    pull = {
+        **CLEARED,
+        "number": 80,
+        "headRefOid": "sha-refused",
+    }
+    with environment(GITHUB_RUN_ID="776", ACTOR_SESSION="gha-776",
+                     ACTOR_AGENT="coder", AI_AGENT="probe"):
+        refusal_body = move.manager._refusal_notice_body("rebase failed", head_oid="sha-refused")
+
+        def gh_eval(*args: Any, **kwargs: Any) -> Any:
+            if args[0] == "api" and any("/issues/80/comments" in str(a) for a in args):
+                return [{"body": refusal_body}]
+            if args[0] == "api" and "/files?per_page=" in str(args[-1]):
+                return []
+            return {}
+
+        with stood_in(channel, gh=gh_eval, repo=lambda: "owner/repo"):
+            ok, reasons = _evaluated(move, pull)
+            if ok or reasons != ["merge previously refused"]:
+                problems.append(
+                    f"merge manager: expected refusal ['merge previously refused'], got: {reasons}")
+
+            pull_advanced = {**pull, "headRefOid": "sha-advanced"}
+            ok_adv, reasons_adv = _evaluated(move, pull_advanced)
+            if not ok_adv or reasons_adv != ["eligible"]:
+                problems.append(
+                    "merge manager: expected clearance after head commit advanced, "
+                    f"got: {reasons_adv}")
+
+    return problems
+
+
 def _fixtures() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """The four pull requests and two Issues the end-to-end run answers GitHub from: a stack base, a dependent that waits on it, an unreviewed one and a layer based on the first."""
     pulls = [
@@ -394,7 +441,7 @@ class ManagerFake:
         self.pulls, self.issues = pulls, issues
         self.merged: list[Any] = []
 
-    def gh(self, *args: Any, parse: bool = True) -> Any:
+    def gh(self, *args: Any, parse: bool = True, **kwargs: Any) -> Any:
         """One `gh` call, answered as the class docstring says."""
         head = args[:2]
         if head == ("repo", "view") or args[0] == "repo":
@@ -432,7 +479,8 @@ def _end_to_end(channel: Any, move: Any) -> list[str]:
     with stood_in(channel, gh=LockedGitHub(fake.gh), repo=fake.repo, graphql=fake.graphql):
         text = outcome(lambda: move.merge_manager(dry_run=True)).out
         if f"chosen: #{'10'}" not in text:
-            problems.append(f"merge manager: expected #{'10'} to be chosen as stack base, got:\n{text}")
+            problems.append(
+                f"merge manager: expected #{'10'} to be chosen as stack base, got:\n{text}")
         if f"deferred: #{'11'}" not in text:
             problems.append(f"merge manager: expected #{'11'} to be deferred, got:\n{text}")
         if f"  #{'12'} (unreviewed PR): no review from {REVIEWER}" not in text:
@@ -452,41 +500,260 @@ def _end_to_end(channel: Any, move: Any) -> list[str]:
     return problems
 
 
-def _check_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
-    """A winning candidate's `merge` raising `SystemExit` sweeps the queue
-    through `advance_stranded` and then exits on the merge's own code, so the
-    scheduled run goes red (solorepo's #776).
-
-    `winner` is the stack base among `_fixtures`, which the leverage ranking
-    chooses; `failing_merge` refuses it in the words `merge` itself uses.
-    """
+def _verify_stop_calls(stop_calls: list[Any], expected_issue: str, winner: int) -> list[str]:
+    """Verify challenges.stop invocation attributes and signed trailer."""
+    if not stop_calls:
+        return ["merge manager: challenges.stop was not called"]
+    if len(stop_calls) != 1:
+        return [f"merge manager: expected 1 stop call, got: {stop_calls}"]
+    issue, body = stop_calls[0]
     problems = []
-    fake = ManagerFake(*_fixtures())
+    if issue != expected_issue:
+        problems.append(f"merge manager: expected stop on #{expected_issue}, got #{issue}")
+    if f"Merge refusal on #{winner}" not in body:
+        problems.append(f"merge manager: expected refusal text in stop body, got: {body}")
+    if "Actor:" not in body:
+        problems.append(f"merge manager: expected signed Actor: trailer in stop body, got: {body}")
+    return problems
+
+
+def _verify_loop_failure_result(
+    move: Any,
+    result: Any,
+    pulls: list[dict[str, Any]],
+    recorded: dict[str, list[Any]],
+) -> list[str]:
+    """Verify loop merge failure outcome, comments, and draft demotion."""
+    problems = []
+    winner = pulls[0]["number"]
+    refusal = f"say: #{winner} is open after the merge call; not deleting the branch"
+    calls = recorded["calls"]
+    comment_calls = recorded["comments"]
+    patch_calls = recorded.get("patches", [])
+    draft_calls = recorded["drafts"]
+    stop_calls = recorded["stops"]
+    if result.code != refusal:
+        problems.append(
+            f"merge manager: failing merge did not exit on the merge's own code: {result.code}")
+    if f"could not merge #{winner}" not in result.out:
+        problems.append(f"merge manager: failing merge was not logged, got:\n{result.out}")
+    if not comment_calls:
+        problems.append(
+            f"merge manager: failure diagnosis comment was not posted to PR #{winner}")
+    elif not any(move.manager.MERGE_REFUSAL_MARKER in c and "head:sha-refused-10" in c
+                 and "Actor:" in c for c in comment_calls):
+        problems.append(
+            f"merge manager: refusal comment missing marker, head OID, or Actor: {comment_calls}")
+    if not patch_calls:
+        problems.append(
+            "merge manager: existing refusal comment was not updated in place via PATCH")
+    if pulls[0].get("isDraft") is not True:
+        problems.append("merge manager: winner PR dict was not updated with isDraft=True")
+    if draft_calls != [str(winner)]:
+        problems.append(
+            f"merge manager: expected PR #{winner} demoted to draft, got: {draft_calls}")
+    if f"demoted unmergeable PR #{winner} to draft" not in result.out:
+        problems.append(f"merge manager: draft demotion was not logged, got:\n{result.out}")
+    if not calls:
+        problems.append("merge manager: advance_stranded did not run after a failing merge")
+    problems.extend(_verify_stop_calls(stop_calls, expected_issue="742", winner=winner))
+    return problems
+
+
+def _check_loop_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
+    """A winning loop candidate failing `merge` demotes to draft with diagnosis (solorepo's DR-258).
+
+    Posts a diagnosis comment, demotes the autonomous loop PR to draft, sweeps
+    the queue through `advance_stranded`, and exits on the merge's own code
+    (solorepo's #776, solorepo's #780).
+    """
+    pulls, issues = _fixtures()
+    pulls[0]["headRefName"] = "claude/issue-742"
+    pulls[0]["headRefOid"] = "sha-refused-10"
+    fake = ManagerFake(pulls, issues)
     winner = 10
     refusal = f"say: #{winner} is open after the merge call; not deleting the branch"
     calls: list[Any] = []
+    comment_calls: list[str] = []
+    patch_calls: list[str] = []
+    draft_calls: list[str] = []
+    stop_calls: list[tuple[str, str]] = []
 
     def failing_merge(pr: Any, stack: bool = False, auto: bool = False) -> None:
-        """A `merge` that always refuses, as GitHub's own would on a candidate that never settles."""
+        """A `merge` that always refuses, as GitHub's own would on an unmergeable candidate."""
         raise SystemExit(refusal)
 
     def recording_advance_stranded(*args: Any, **kwargs: Any) -> None:
         """An `advance_stranded` that records its call rather than sweeping anything."""
         calls.append(args)
 
-    with stood_in(channel, gh=LockedGitHub(fake.gh), repo=fake.repo, graphql=fake.graphql), \
+    def recording_stop(issue_num: str, reason: str) -> None:
+        """A `stop` that records its call."""
+        stop_calls.append((str(issue_num), reason))
+
+    orig_gh = fake.gh
+    standing_comment = {
+        "id": 101,
+        "body": (
+            f"{move.manager.MERGE_REFUSAL_MARKER} head:sha-old-10\n\n"
+            "> Merge refusal: old failure\n\nold"
+        ),
+    }
+
+    def gh_inspect(*args: Any, **kwargs: Any) -> Any:
+        cmd = args[:2]
+        if cmd == ("pr", "ready") and "--undo" in args:
+            draft_calls.append(str(args[2]))
+            return {}
+        has_comment = any(f"/issues/{winner}/comments" in str(a) for a in args)
+        if (args[0] == "api" and any("/issues/comments/101" in str(a) for a in args)
+                and "-X" in args and "PATCH" in args):
+            patch_calls.append(str(args))
+            comment_calls.append(str(args))
+            return {
+                "id": 101,
+                "html_url": "https://github.com/owner/repo/issues/10#issuecomment-101",
+            }
+        if args[0] == "api" and has_comment and "-f" in args:
+            comment_calls.append(str(args))
+            return {"html_url": "https://github.com/owner/repo/issues/10#issuecomment-1"}
+        if args[0] == "api" and has_comment:
+            return [dict(standing_comment)]
+        return orig_gh(*args, **kwargs)
+
+    with environment(GITHUB_RUN_ID="776", ACTOR_SESSION="gha-776",
+                     ACTOR_AGENT="coder", AI_AGENT="probe"), \
+            stood_in(channel, gh=LockedGitHub(gh_inspect),
+                     repo=fake.repo, graphql=fake.graphql), \
             stood_in(move.pull_requests, merge=failing_merge), \
-            stood_in(move.manager.advance, advance_stranded=recording_advance_stranded):
+            stood_in(move.manager.advance, advance_stranded=recording_advance_stranded), \
+            stood_in(move.manager.challenges, stop=recording_stop):
         result = outcome(lambda: move.merge_manager(dry_run=False))
 
+    recorded = {
+        "calls": calls,
+        "comments": comment_calls,
+        "patches": patch_calls,
+        "drafts": draft_calls,
+        "stops": stop_calls,
+    }
+    return _verify_loop_failure_result(move, result, pulls, recorded)
+
+
+def _verify_session_failure_result(
+    move: Any,
+    result: Any,
+    pulls: list[dict[str, Any]],
+    recorded: dict[str, list[Any]],
+) -> list[str]:
+    """Verify session merge failure outcome, comments, and draft preservation."""
+    problems = []
+    winner = pulls[0]["number"]
+    refusal = f"say: #{winner} is open after the merge call; not deleting the branch"
+    session_comment_calls = recorded["comments"]
+    session_draft_calls = recorded["drafts"]
+    session_advance_calls = recorded["advance"]
+    session_stop_calls = recorded["stops"]
     if result.code != refusal:
         problems.append(
-            f"merge manager: a failing merge did not exit on the merge's own code: {result.code}")
+            f"merge manager: session merge failure did not exit on refusal code: {result.code}")
     if f"could not merge #{winner}" not in result.out:
-        problems.append(f"merge manager: failing merge was not logged, got:\n{result.out}")
-    if not calls:
-        problems.append("merge manager: advance_stranded did not run after a failing merge")
+        problems.append(
+            f"merge manager: session merge failure was not logged, got:\n{result.out}")
+    if not session_comment_calls:
+        problems.append(
+            f"merge manager: diagnosis comment was not posted to session PR #{winner}")
+    elif not any(move.manager.MERGE_REFUSAL_MARKER in c and "head:sha-refused-session" in c
+                 for c in session_comment_calls):
+        problems.append(
+            f"merge manager: session refusal comment missing marker or head OID: "
+            f"{session_comment_calls}")
+    if session_draft_calls:
+        problems.append(
+            f"merge manager: session PR #{winner} must not be demoted to draft: "
+            f"{session_draft_calls}")
+    if pulls[0].get("isDraft") is not False:
+        problems.append("merge manager: session PR isDraft must remain False")
+    if not session_advance_calls:
+        problems.append("merge manager: advance_stranded was not called after session PR refusal")
+    if session_stop_calls:
+        problems.append(
+            f"merge manager: challenges.stop must not be called for session PR: "
+            f"{session_stop_calls}")
     return problems
+
+
+def _check_session_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
+    """A winning session candidate failing `merge` posts diagnosis without draft demotion.
+
+    Diagnostic comment is posted to the PR conversation, but draft demotion is skipped
+    to preserve human/session PR status under solorepo's DR-258.
+    """
+    pulls, issues = _fixtures()
+    pulls[0]["headRefName"] = "gemini/session-branch"
+    pulls[0]["headRefOid"] = "sha-refused-session"
+    fake = ManagerFake(pulls, issues)
+    winner = 10
+    refusal = f"say: #{winner} is open after the merge call; not deleting the branch"
+    session_draft_calls: list[str] = []
+    session_comment_calls: list[str] = []
+    session_advance_calls: list[Any] = []
+    session_stop_calls: list[tuple[str, str]] = []
+    orig_gh = fake.gh
+
+    def failing_merge(pr: Any, stack: bool = False, auto: bool = False) -> None:
+        """A `merge` that always refuses, as GitHub's own would on an unmergeable candidate."""
+        raise SystemExit(refusal)
+
+    def recording_advance_stranded(*args: Any, **kwargs: Any) -> None:
+        """An `advance_stranded` that records its call rather than sweeping anything."""
+        session_advance_calls.append(args)
+
+    def recording_stop(issue_num: str, reason: str) -> None:
+        """A `stop` that records its call."""
+        session_stop_calls.append((str(issue_num), reason))
+
+    def session_gh_inspect(*args: Any, **kwargs: Any) -> Any:
+        cmd = args[:2]
+        if cmd == ("pr", "ready") and "--undo" in args:
+            session_draft_calls.append(str(args[2]))
+            return {}
+        has_comment = any(f"/issues/{winner}/comments" in str(a) for a in args)
+        if args[0] == "api" and has_comment and "-f" in args:
+            session_comment_calls.append(str(args))
+            return {"html_url": "https://github.com/owner/repo/issues/10#issuecomment-1"}
+        if args[0] == "api" and has_comment:
+            return []
+        return orig_gh(*args, **kwargs)
+
+    with environment(GITHUB_RUN_ID="776", ACTOR_SESSION="gha-776",
+                     ACTOR_AGENT="coder", AI_AGENT="probe"), \
+            stood_in(channel, gh=LockedGitHub(session_gh_inspect),
+                     repo=fake.repo, graphql=fake.graphql), \
+            stood_in(move.pull_requests, merge=failing_merge), \
+            stood_in(move.manager.advance, advance_stranded=recording_advance_stranded), \
+            stood_in(move.manager.challenges, stop=recording_stop):
+        result = outcome(lambda: move.merge_manager(dry_run=False))
+
+    recorded = {
+        "comments": session_comment_calls,
+        "drafts": session_draft_calls,
+        "advance": session_advance_calls,
+        "stops": session_stop_calls,
+    }
+    return _verify_session_failure_result(move, result, pulls, recorded)
+
+
+def _check_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
+    """A winning candidate's `merge` raising `SystemExit` isolates failure (solorepo's DR-258).
+
+    Loop PRs demote to draft; session PRs receive in-place diagnosis comments
+    without draft demotion (solorepo's #776, solorepo's #780).
+    """
+    return (
+        _check_loop_merge_failure_isolation(channel, move)
+        + _check_session_merge_failure_isolation(channel, move)
+    )
 
 
 def _blockers(move: Any) -> list[str]:
@@ -922,9 +1189,116 @@ def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
         "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
     }
     with stood_in(channel, gh=gh_fail_restore):
-        move.evaluate_open_pulls([failing_draft_pr], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=False)
+        move.evaluate_open_pulls([failing_draft_pr], reviewer_login=REVIEWER,
+                                 owner="owner", name="repo", dry_run=False)
         if failing_draft_pr.get("isDraft") is not True:
-            problems.append("evaluate_open_pulls: failed pr ready call must not clear isDraft in local dictionary")
+            problems.append(
+                "evaluate_open_pulls: failed pr ready call must not clear isDraft in local dictionary")
+
+    return problems
+
+
+def _check_refused_draft_restoration(channel: Any, move: Any) -> list[str]:
+    """A draft PR with an active merge refusal is not restored until head changes.
+
+    Under solorepo's DR-258, active merge refusals suppress draft restoration until new commits.
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    refused_restored: list[str] = []
+    deleted_comments: list[str] = []
+
+    with environment(GITHUB_RUN_ID="776", ACTOR_SESSION="gha-776",
+                     ACTOR_AGENT="coder", AI_AGENT="probe"):
+        refusal_body = move.manager._refusal_notice_body("failed", head_oid="commit-refused")
+        comments_37 = [{"id": 371, "body": refusal_body}]
+
+        def gh_refused(*args: Any, **kwargs: Any) -> Any:
+            if args[:2] == ("pr", "ready") and "--undo" not in args:
+                refused_restored.append(str(args[2]))
+                return {}
+            if args[0] == "api" and any("/issues/37/comments" in str(a) for a in args):
+                return list(comments_37)
+            if (args[0] == "api" and any("/issues/comments/371" in str(a) for a in args)
+                    and "-X" in args and "DELETE" in args):
+                deleted_comments.append(str(args))
+                comments_37.clear()
+                return {}
+            return {}
+
+        refused_draft_pr = {
+            "number": 37, "headRefName": "gemini/issue-37", "isDraft": True,
+            "headRefOid": "commit-refused", "changedFiles": 1,
+            "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
+        }
+        with stood_in(channel, gh=gh_refused, repo=lambda: "owner/repo"):
+            move.evaluate_open_pulls([refused_draft_pr], reviewer_login=REVIEWER,
+                                     owner="owner", name="repo", dry_run=False)
+            if refused_restored:
+                problems.append(
+                    f"evaluate_open_pulls: active merge refusal must not be restored: "
+                    f"{refused_restored}")
+            if refused_draft_pr.get("isDraft") is not True:
+                problems.append("evaluate_open_pulls: active merge refusal must remain in draft")
+
+            refused_draft_pr["headRefOid"] = "commit-fixed"
+            move.evaluate_open_pulls([refused_draft_pr], reviewer_login=REVIEWER,
+                                     owner="owner", name="repo", dry_run=False)
+            if refused_restored != ["37"] or refused_draft_pr.get("isDraft") is not False:
+                problems.append(
+                    f"evaluate_open_pulls: expected PR 37 restored after commit update: "
+                    f"{refused_restored}")
+            if not deleted_comments or not any("371" in d for d in deleted_comments):
+                problems.append(
+                    "evaluate_open_pulls: expected notice comment 371 deleted upon draft "
+                    "restoration")
+
+    return problems
+
+
+def _check_multi_refusal_draft_restoration(channel: Any, move: Any) -> list[str]:
+    """A draft PR with multiple refusal notices matches the active head notice.
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    problems = []
+    multi_restored: list[str] = []
+    with environment(GITHUB_RUN_ID="776", ACTOR_SESSION="gha-776",
+                     ACTOR_AGENT="coder", AI_AGENT="probe"):
+        old_body = move.manager._refusal_notice_body("failed-old", head_oid="commit-old")
+        current_body = move.manager._refusal_notice_body("failed-current", head_oid="commit-current")
+
+        def gh_multi(*args: Any, **kwargs: Any) -> Any:
+            if args[:2] == ("pr", "ready") and "--undo" not in args:
+                multi_restored.append(str(args[2]))
+                return {}
+            if args[0] == "api" and any("/issues/39/comments" in str(a) for a in args):
+                return [{"body": old_body}, {"body": current_body}]
+            return {}
+
+        multi_draft_pr = {
+            "number": 39, "headRefName": "gemini/issue-39", "isDraft": True,
+            "headRefOid": "commit-current", "changedFiles": 1,
+            "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
+        }
+        with stood_in(channel, gh=gh_multi, repo=lambda: "owner/repo"):
+            move.evaluate_open_pulls([multi_draft_pr], reviewer_login=REVIEWER,
+                                     owner="owner", name="repo", dry_run=False)
+            if multi_restored or multi_draft_pr.get("isDraft") is not True:
+                problems.append(
+                    "evaluate_open_pulls: multiple refusal comments must not cause active refusal "
+                    "to be missed")
 
     return problems
 
@@ -1059,7 +1433,7 @@ def _check_stalled_pr_merge_manager_refusal(channel: Any, move: Any) -> list[str
 
 
 def _stall_eviction(channel: Any, move: Any) -> list[str]:
-    """Stalled autonomous PRs are demoted to draft, and answered green PRs restored (solorepo's DR-258).
+    """Stalled loop PRs are demoted to draft, and answered green PRs restored (solorepo's DR-258).
 
     Parameters:
         channel: The mock communication channel.
@@ -1072,6 +1446,8 @@ def _stall_eviction(channel: Any, move: Any) -> list[str]:
         _check_stall_thresholds(move)
         + _check_stall_eviction_dry_run(channel, move)
         + _check_draft_restoration(channel, move)
+        + _check_refused_draft_restoration(channel, move)
+        + _check_multi_refusal_draft_restoration(channel, move)
         + _check_request_review_draft_restoration(channel, move)
         + _check_stalled_pr_merge_manager_refusal(channel, move)
     )

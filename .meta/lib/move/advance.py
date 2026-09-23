@@ -558,18 +558,86 @@ def _advance_notice_body(problem: str) -> str:
     return channel.signed(raw)
 
 
+def find_notice_comments(pr: str | int, marker: str) -> list[dict[str, Any]]:
+    """Find all existing notice comments on a pull request matching marker."""
+    try:
+        comments = channel.gh(
+            "api", "--paginate", f"repos/{channel.repo()}/issues/{pr}/comments",
+            tolerate_fail=True,
+        )
+    except common.UNREACHED:
+        return []
+    if not isinstance(comments, list):
+        return []
+    return [c for c in comments if isinstance(c, dict) and marker in (c.get("body") or "")]
+
+
+def find_notice_comment(pr: str | int, marker: str) -> dict[str, Any] | None:
+    """Find primary notice comment on a pull request matching marker, or None."""
+    matches = find_notice_comments(pr, marker)
+    return matches[0] if matches else None
+
+
 def _find_advance_notice_comment(pr: str | int) -> dict[str, Any] | None:
     """Find existing advance notice comment on a pull request, or None."""
+    return find_notice_comment(pr, ADVANCE_NOTICE_MARKER)
+
+
+def reconcile_notice(pr: str | int, marker: str, body_or_fn: Any,
+                     problem: str | None, label: str = "notice") -> None:
+    """Reconcile in-place failure notice on a pull request (solorepo's DR-255).
+
+    Enforces a single standing notice comment per marker. Callers owe an attributed
+    and signed comment body satisfying Article 19 and solorepo's DR-233.
+
+    Parameters:
+        pr: Pull request number to inspect and mutate.
+        marker: HTML comment marker string identifying the notice class.
+        body_or_fn: Callable taking `problem` and returning a signed markdown body,
+            or a string coerced via `str()`.
+        problem: Finding or diagnostic text. If non-empty, posts or updates the notice
+            in place. If None, deletes any standing notices matching `marker`.
+        label: Prefix for status logging and warning messages (default "notice").
+    """
     try:
-        comments = channel.gh("api", f"repos/{channel.repo()}/issues/{pr}/comments", tolerate_fail=True)
-    except common.UNREACHED:
-        return None
-    if not isinstance(comments, list):
-        return None
-    for comment in comments:
-        if isinstance(comment, dict) and ADVANCE_NOTICE_MARKER in (comment.get("body") or ""):
-            return comment
-    return None
+        if problem and not channel.speaker():
+            print(f"{label}: skipping notice on #{pr} (no actor session in environment)",
+                  file=sys.stderr)
+            return
+        matches = find_notice_comments(pr, marker)
+        if problem:
+            desired = body_or_fn(problem) if callable(body_or_fn) else str(body_or_fn)
+            if matches:
+                existing = matches[0]
+                existing_body = existing.get("body") or ""
+                head_match = re.search(r"head:(\S+)", desired)
+                head_tag = head_match.group(0) if head_match else None
+                needs_update = (
+                    problem not in existing_body
+                    or (head_tag is not None and head_tag not in existing_body)
+                )
+                if needs_update:
+                    comment_id = existing.get("id")
+                    channel.gh("api", f"repos/{channel.repo()}/issues/comments/{comment_id}",
+                               "-X", "PATCH", "-f", f"body={desired}",
+                               parse=False, tolerate_fail=True)
+                    print(f"{label}: updated notice on #{pr}")
+                for surplus in matches[1:]:
+                    channel.gh("api", f"repos/{channel.repo()}/issues/comments/{surplus.get('id')}",
+                               "-X", "DELETE", parse=False, tolerate_fail=True)
+            else:
+                channel.gh("api", f"repos/{channel.repo()}/issues/{pr}/comments",
+                           "-f", f"body={desired}",
+                           parse=False, tolerate_fail=True)
+                print(f"{label}: posted notice on #{pr}")
+        elif matches:
+            for standing in matches:
+                comment_id = standing.get("id")
+                channel.gh("api", f"repos/{channel.repo()}/issues/comments/{comment_id}",
+                           "-X", "DELETE", parse=False, tolerate_fail=True)
+            print(f"{label}: cleared notice on #{pr}")
+    except (SystemExit, *common.UNREACHED) as exc:
+        print(f"warning: could not reconcile {label} on #{pr}: {exc}", file=sys.stderr)
 
 
 def reconcile_advance_notice(pr: str | int, problem: str | None) -> None:
@@ -581,33 +649,7 @@ def reconcile_advance_notice(pr: str | int, problem: str | None) -> None:
     When `problem` is None:
         Deletes any standing advance notice comment left from a prior run.
     """
-    try:
-        if problem and not channel.speaker():
-            print(f"advance: skipping notice on #{pr} (no actor session in environment)", file=sys.stderr)
-            return
-        existing = _find_advance_notice_comment(pr)
-        if problem:
-            desired = _advance_notice_body(problem)
-            if existing:
-                existing_body = existing.get("body") or ""
-                if problem not in existing_body:
-                    comment_id = existing.get("id")
-                    channel.gh("api", f"repos/{channel.repo()}/issues/comments/{comment_id}",
-                               "-X", "PATCH", "-f", f"body={desired}",
-                               parse=False, tolerate_fail=True)
-                    print(f"advance: updated notice on #{pr}")
-            else:
-                channel.gh("api", f"repos/{channel.repo()}/issues/{pr}/comments",
-                           "-f", f"body={desired}",
-                           parse=False, tolerate_fail=True)
-                print(f"advance: posted notice on #{pr}")
-        elif existing:
-            comment_id = existing.get("id")
-            channel.gh("api", f"repos/{channel.repo()}/issues/comments/{comment_id}",
-                       "-X", "DELETE", parse=False, tolerate_fail=True)
-            print(f"advance: cleared notice on #{pr}")
-    except (SystemExit, *common.UNREACHED) as exc:
-        print(f"warning: could not reconcile advance notice on #{pr}: {exc}", file=sys.stderr)
+    reconcile_notice(pr, ADVANCE_NOTICE_MARKER, _advance_notice_body, problem, label="advance")
 
 
 def _report_advance_sweep(open_now: Sequence[common.Pull], failed: list[str], refused: list[str],

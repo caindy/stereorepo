@@ -521,3 +521,33 @@ which one breaker's delete lands after another's create, which is stated whereve
 the break is described rather than asserted away.
 
 Evidence: `.meta/checks/probes/loops/merge_lock.py::merge_lock_probes`
+
+### Unmergeable pull requests blocked queue throughput on merge refusal
+
+`merge_manager` caught a winning candidate's `merge` failure and advanced
+stranded branches, but left the failed candidate open and in ready state on
+GitHub with no diagnostic comment on the conversation timeline (solorepo's #776).
+Because approved pull requests were exempt from changes-requested stall eviction
+under solorepo's DR-258 and the candidate remained green, subsequent cycles
+repeatedly re-selected it as the highest-leverage candidate, producing
+head-of-line blocking across scheduled runs until a human intervened (solorepo's #780).
+Established: pre-merge read inspection via `pull_requests.stacked` runs outside
+the mutation `try` block so transient GitHub API read errors are never treated as
+merge refusals. When `pull_requests.merge()` refuses a candidate or raises
+`SystemExit`, `merge_manager` catches the exit, reconciles an in-place failure
+diagnosis notice on the pull request conversation via `advance.reconcile_notice`
+(solorepo's DR-255), pruning surplus notice comments to enforce the single standing
+notice invariant while scanning all comments across the conversation in
+`find_active_merge_refusal`. Because repeating a squash-merge
+against an unchanged head commit cannot succeed at the final gate and blocks queue
+throughput across cycles, autonomous loop candidates demote to draft status via
+`demote_to_draft`, and their Challenge is handed back to `human` via `move stop`
+under an attributable signed trailer (solorepo's DR-112, solorepo's DR-233,
+solorepo's DR-258) to alert a maintainer rather than silently stranding the draft.
+Active merge refusal notices suppress draft restoration until a new commit changes
+`headRefOid`, while surfacing standing refusal notices prominently across the Local
+Operator Plane in `just next` and `just sweep` (solorepo's DR-255). Remaining
+candidates are swept via `advance_stranded()`, and the refusal exit code is re-raised
+so the workflow run surfaces the failure.
+
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`

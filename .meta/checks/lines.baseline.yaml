@@ -73,7 +73,7 @@
 .meta/checks/probes/loops/dispatch.py: 8
 .meta/checks/probes/loops/enacted.py: 5
 .meta/checks/probes/loops/handoff.py: 30
-.meta/checks/probes/loops/merge_manager.py: 68
+.meta/checks/probes/loops/merge_manager.py: 65
 .meta/checks/probes/loops/merge_manager_advance.py: 4
 .meta/checks/probes/loops/stop.py: 2
 .meta/checks/probes/loops/sweep.py: 4
@@ -105,7 +105,7 @@
 .meta/lib/apm_compile/instructions.py: 3
 .meta/lib/apm_compile/primitives.py: 2
 .meta/lib/apm_compile/skills.py: 1
-.meta/lib/check_pr/branch.py: 5
+.meta/lib/check_pr/branch.py: 4
 .meta/lib/check_pr/cli.py: 8
 .meta/lib/check_pr/form.py: 3
 .meta/lib/check_pr/github.py: 0
@@ -117,7 +117,7 @@
 .meta/lib/dereference/asking.py: 1
 .meta/lib/dereference/cli.py: 2
 .meta/lib/dereference/reading.py: 10
-.meta/lib/move/advance.py: 20
+.meta/lib/move/advance.py: 18
 .meta/lib/move/challenges.py: 14
 .meta/lib/move/cli.py: 3
 .meta/lib/move/decisions.py: 3
@@ -157,7 +157,7 @@
 .meta/lib/worktree_only/paths.py: 3
 .meta/lib/worktree_only/shell.py: 6
 .meta/lib/worktree_only/verdict.py: 5
-.meta/next.py: 17
+.meta/next.py: 16
 .meta/say/channel.py: 3
 .meta/say/commit: 2
 .meta/say/post: 16

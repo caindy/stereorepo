@@ -343,6 +343,17 @@ def lifecycle_refusal(pull: common.Pull, found: check_pr.PullRequestState, revie
     return ""
 
 
+def _evaluate_candidate_readiness(pull: common.Pull, owner: str,
+                                  name: str) -> str | None:
+    """Check post-classification candidate readiness: active refusals and decisions."""
+    if find_active_merge_refusal(pull) is not None:
+        return "merge previously refused"
+    decisions_ok, decisions_msg = check_decisions_in_force(pull, owner, name)
+    if not decisions_ok:
+        return decisions_msg
+    return None
+
+
 def evaluate_pr(pull: common.Pull, reviewer_login: str, owner: str,
                 name: str) -> tuple[bool, list[str]]:
     """Evaluate a pull request against all semaphores (solorepo's DR-161, solorepo's DR-248).
@@ -394,9 +405,9 @@ def evaluate_pr(pull: common.Pull, reviewer_login: str, owner: str,
         elif not reasons:
             reasons.append(f"state is {found.value}, not READY_TO_MERGE")
     if not reasons:
-        decisions_ok, decisions_msg = check_decisions_in_force(pull, owner, name)
-        if not decisions_ok:
-            reasons.append(decisions_msg)
+        unready = _evaluate_candidate_readiness(pull, owner, name)
+        if unready:
+            reasons.append(unready)
     if reasons:
         return False, reasons
     return True, ["eligible"]
@@ -511,6 +522,93 @@ def is_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str) -> bool:
     return not (head_oid and last_cr_oid and head_oid != last_cr_oid)
 
 
+MERGE_REFUSAL_MARKER = "<!-- solorepo:merge-refusal -->"
+"""HTML comment marker identifying an in-place merge refusal diagnosis notice (solorepo's DR-255)."""
+
+
+def _refusal_notice_body(exc_code: Any, head_oid: str = "") -> str:
+    """Generate signed merge refusal diagnosis comment body with attribution trailers.
+
+    Emits `head:<head_oid>` as a marker tag when provided, allowing
+    `find_active_merge_refusal` to correlate the notice with the specific head commit.
+
+    Parameters:
+        exc_code: The refusal exit code or message.
+        head_oid: The git commit SHA of the refused head commit.
+
+    Returns:
+        str: Attributed and signed markdown comment body.
+    """
+    oid_tag = f" head:{head_oid}" if head_oid else ""
+    raw = (
+        f"{MERGE_REFUSAL_MARKER}{oid_tag}\n\n"
+        f"> Merge refusal: {exc_code}\n\n"
+        f"Merge refusal diagnosis:\n\n{exc_code}"
+    )
+    return channel.signed(raw)
+
+
+def find_active_merge_refusal(pull: common.Pull) -> dict[str, Any] | None:
+    """Find active merge refusal notice on a pull request.
+
+    A standing merge refusal notice is active when it carries the pull request's
+    current head commit (`head:<head_oid>`). A pull dictionary without
+    `headRefOid` has no active refusal, so callers must request that field to
+    prevent a refused draft from being restored.
+
+    Parameters:
+        pull: The pull request metadata dictionary.
+
+    Returns:
+        dict[str, Any] | None: The matching refusal comment if active, or None.
+    """
+    head_oid = pull.get("headRefOid") or ""
+    if not head_oid:
+        return None
+    for comment in advance.find_notice_comments(pull["number"], MERGE_REFUSAL_MARKER):
+        if not isinstance(comment, dict):
+            continue
+        body = comment.get("body") or ""
+        if MERGE_REFUSAL_MARKER in body and f"head:{head_oid}" in body:
+            return comment
+    return None
+
+
+def demote_to_draft(pull: common.Pull, action: str = "demote",
+                    reason: str = "unmergeable", dry_run: bool = False) -> bool:
+    """Demote a pull request to draft to prevent head-of-line blocking (solorepo's DR-258).
+
+    In dry-run mode, logs the planned transition and returns True without mutating
+    the pull metadata dictionary or issuing GitHub API mutations. In live execution,
+    sets `pull["isDraft"] = True` locally before issuing the GitHub API mutation,
+    leaving it set even if the remote mutation fails so in-memory queue evaluation
+    reflects the demotion intent across subsequent checks.
+
+    Parameters:
+        pull (dict): The pull request metadata dictionary.
+        action (str): Action verb for logging ('evict' or 'demote').
+        reason (str): Reason description for logging.
+        dry_run (bool): If True, log action without mutating GitHub state.
+
+    Returns:
+        bool: True if the pull request was demoted (or would be in dry run).
+    """
+    action_verb = "evict" if action == "evict" else "demote"
+    action_past = "evicted" if action == "evict" else "demoted"
+    if dry_run:
+        print(f"merge-manager: dry run — would {action_verb} {reason} "
+              f"PR #{pull['number']} to draft")
+        return True
+    pull["isDraft"] = True
+    try:
+        channel.gh("pr", "ready", str(pull["number"]), "--undo", parse=False)
+        print(f"merge-manager: {action_past} {reason} PR #{pull['number']} to draft")
+        return True
+    except (SystemExit, *common.UNREACHED) as exc:
+        print(f"warning: could not demote PR #{pull['number']} to draft: {exc}", file=sys.stderr)
+        return False
+
+
 def evict_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str = "reviewer",
                                 dry_run: bool = False) -> bool:
     """Demote stalled autonomous loop PR to draft to prevent head-of-line blocking (solorepo's DR-258).
@@ -525,23 +623,15 @@ def evict_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str = "review
     """
     if not is_stalled_autonomous_pr(pull, reviewer_login):
         return False
-    if dry_run:
-        print(f"merge-manager: dry run — would evict stalled autonomous PR #{pull['number']} to draft")
-        return True
-    pull["isDraft"] = True
-    try:
-        channel.gh("pr", "ready", str(pull["number"]), "--undo", parse=False)
-        print(f"merge-manager: evicted stalled autonomous PR #{pull['number']} to draft")
-        return True
-    except (SystemExit, *common.UNREACHED) as exc:
-        print(f"warning: could not demote PR #{pull['number']} to draft: {exc}", file=sys.stderr)
-        return False
+    return demote_to_draft(pull, action="evict", reason="stalled autonomous", dry_run=dry_run)
 
 
 def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: bool) -> None:
     """Restore an approved, green loop draft with changes (solorepo's DR-258, DR-273)."""
     if not (pull.get("isDraft") and drafts.holds_changes(pull)
             and pull_requests.LOOPS_BRANCH.match(pull.get("headRefName") or "")):
+        return
+    if find_active_merge_refusal(pull) is not None:
         return
     approved, _ = check_reviewer_approval(pull, reviewer_login)
     if not approved:
@@ -552,6 +642,8 @@ def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: boo
             try:
                 channel.gh("pr", "ready", str(pull["number"]), parse=False)
                 pull["isDraft"] = False
+                advance.reconcile_notice(
+                    pull["number"], MERGE_REFUSAL_MARKER, None, None, label="merge refusal")
                 print(f"merge-manager: restored answered and green PR #{pull['number']} from draft")
             except (SystemExit, *common.UNREACHED) as exc:
                 print(f"warning: could not mark PR #{pull['number']} ready: {exc}", file=sys.stderr)
@@ -1001,6 +1093,38 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
         drop_merge_lock(lock)
 
 
+def _handle_refused_loop_branch(winner: common.Pull, exc_code: Any, dry_run: bool) -> None:
+    """Demote autonomous loop PR to draft and hand back Challenge to human.
+
+    Guards against mutating session or human-authored pull requests by inspecting
+    `headRefName` against `pull_requests.LOOPS_BRANCH`; if the branch does not
+    match autonomous loop naming conventions, returns immediately without mutation.
+
+    When a candidate squash-merge fails at the final gate, repeating the merge
+    mutation against an unchanged head commit cannot succeed and blocks queue
+    throughput across scheduled runs. Following solorepo's DR-112 and
+    solorepo's DR-258, the autonomous loop pull request is demoted to draft
+    status via the shared mutation door `demote_to_draft`, and its associated
+    Challenge is handed back to `human` via `challenges.stop` under an
+    attributable signed trailer. This alerts a human maintainer to remediate
+    the unmergeable branch rather than leaving the work silently parked in draft
+    without an active semaphore.
+    """
+    match = pull_requests.LOOPS_BRANCH.match(winner.get("headRefName") or "")
+    if not match:
+        return
+    demote_to_draft(winner, action="demote", reason="unmergeable", dry_run=dry_run)
+    issue_num = match.group(1)
+    if not dry_run:
+        try:
+            body = channel.signed(f"Merge refusal on #{winner['number']}:\n\n{exc_code}")
+            challenges.stop(issue_num, body)
+        except (SystemExit, *common.UNREACHED) as stop_err:
+            print(f"warning: could not stop Challenge #{issue_num}: {stop_err}", file=sys.stderr)
+    else:
+        print(f"merge-manager: dry run — would hand back Challenge #{issue_num} to human")
+
+
 def _manage(dry_run: bool = False, stranded: bool = True) -> None:
     """Evaluate open pull requests against semaphores, rank eligible candidates
     by leverage, assert choices, deferrals, and semaphore refusals out loud, and
@@ -1064,12 +1188,27 @@ def _manage(dry_run: bool = False, stranded: bool = True) -> None:
         print(f"merge-manager: dry run — not merging #{winner['number']}")
         return
 
+    is_stacked = bool(pull_requests.stacked(winner["number"]))
     print(f"merge-manager: merging #{winner['number']}...")
     try:
-        pull_requests.merge(str(winner["number"]),
-                            stack=bool(pull_requests.stacked(winner["number"])), auto=False)
+        pull_requests.merge(str(winner["number"]), stack=is_stacked, auto=False)
+        advance.reconcile_notice(
+            winner["number"], MERGE_REFUSAL_MARKER, None, None, label="merge refusal")
     except SystemExit as exc:
         print(f"merge-manager: could not merge #{winner['number']} — {exc.code}")
+        try:
+            head_oid = winner.get("headRefOid") or ""
+            advance.reconcile_notice(
+                winner["number"],
+                MERGE_REFUSAL_MARKER,
+                lambda p: _refusal_notice_body(p, head_oid),
+                str(exc.code),
+                label="merge refusal",
+            )
+        except (SystemExit, *common.UNREACHED) as comment_err:
+            print(f"warning: could not reconcile refusal diagnosis on #{winner['number']}: "
+                  f"{comment_err}", file=sys.stderr)
+        _handle_refused_loop_branch(winner, exc.code, dry_run)
         if stranded:
             advance.advance_stranded(pulls, evaluations, owner, name, dry_run)
         sys.exit(exc.code)

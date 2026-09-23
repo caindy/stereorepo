@@ -476,7 +476,8 @@ class FakeGitHub:
         if head == ("workflow", "run") and args[2] == "coder.yml":
             return self.dispatch(args)
         if args[0] == "api":
-            return self.api(*args[1:])
+            return self.api(*(a for a in args[1:] if a != "--paginate"),
+                            paginated="--paginate" in args)
         answered = {("pr", "update-branch"): self.update_branch, ("pr", "edit"): self.edit,
                     ("pr", "merge"): self.merge, ("issue", "view"): self.issue}
         if head in answered:
@@ -602,14 +603,18 @@ class FakeGitHub:
         return {"state": issue.get("state", "OPEN"),
                 "labels": [{"name": "challenge"}, {"name": issue.get("level", "medium")}]}
 
-    def api(self, endpoint: str, *rest: str) -> Any:
-        """Any other `api` call: the compare, the `stack` object of a layer, issue comments, or the repository's own settings."""
-        if "/compare/" in endpoint:
-            return self.compare(endpoint)
-        if "/pulls/" in endpoint:
-            pull = self.pulls.get(endpoint.rsplit("/", 1)[-1]) or {}
-            return {"stack": {"id": 1, "number": pull.get("stack", 1)}} if pull.get("layer") else {}
-        if "/issues/" in endpoint and endpoint.endswith("/comments"):
+    def _comments_api(self, endpoint: str, rest: tuple[str, ...], paginated: bool) -> Any:
+        """Handle issue and review comment endpoints for GitHub API fakes.
+
+        Parameters:
+            endpoint: GitHub API route being accessed.
+            rest: Additional command arguments such as flags and payloads.
+            paginated: Whether pagination was requested on the API call.
+
+        Returns:
+            Any: JSON response payload matching GitHub API schema.
+        """
+        if endpoint.endswith("/comments"):
             pr_str = endpoint.split("/issues/")[1].split("/comments")[0]
             if "-f" in rest:
                 body = rest[rest.index("-f") + 1].removeprefix("body=")
@@ -618,23 +623,38 @@ class FakeGitHub:
                 entry = {"id": new_id, "body": body, "user": {"login": "o-r-coder"}}
                 comments.append(entry)
                 self.posted_comments.append((pr_str, body))
-                return {"id": new_id, "html_url": f"https://github.com/o/r/pull/{pr_str}#issuecomment-{new_id}"}
-            return list(self.comments.get(pr_str, []))
-        if "/issues/comments/" in endpoint:
-            c_id = int(endpoint.rsplit("/", 1)[-1])
-            if "-X" in rest and rest[rest.index("-X") + 1] == "DELETE":
-                for pr_str, c_list in list(self.comments.items()):
-                    self.comments[pr_str] = [c for c in c_list if c.get("id") != c_id]
-                self.cleared_comments.append(str(c_id))
-                return ""
-            if "-X" in rest and rest[rest.index("-X") + 1] == "PATCH":
-                body = rest[rest.index("-f") + 1].removeprefix("body=")
-                for c_list in self.comments.values():
-                    for c in c_list:
-                        if c.get("id") == c_id:
-                            c["body"] = body
-                return {"id": c_id, "html_url": f"https://github.com/o/r/issues/comments/{c_id}"}
+                return {
+                    "id": new_id,
+                    "html_url": f"https://github.com/o/r/pull/{pr_str}#issuecomment-{new_id}",
+                }
+            comments = list(self.comments.get(pr_str, []))
+            if not paginated and len(comments) > 1:
+                return comments[:1]
+            return comments
+        c_id = int(endpoint.rsplit("/", 1)[-1])
+        if "-X" in rest and rest[rest.index("-X") + 1] == "DELETE":
+            for pr_str, c_list in list(self.comments.items()):
+                self.comments[pr_str] = [c for c in c_list if c.get("id") != c_id]
+            self.cleared_comments.append(str(c_id))
             return ""
+        if "-X" in rest and rest[rest.index("-X") + 1] == "PATCH":
+            body = rest[rest.index("-f") + 1].removeprefix("body=")
+            for c_list in self.comments.values():
+                for c in c_list:
+                    if c.get("id") == c_id:
+                        c["body"] = body
+            return {"id": c_id, "html_url": f"https://github.com/o/r/issues/comments/{c_id}"}
+        return ""
+
+    def api(self, endpoint: str, *rest: str, paginated: bool = False) -> Any:
+        """Any other `api` call: the compare, the `stack` object of a layer, issue comments, or the repository's own settings."""
+        if "/compare/" in endpoint:
+            return self.compare(endpoint)
+        if "/pulls/" in endpoint:
+            pull = self.pulls.get(endpoint.rsplit("/", 1)[-1]) or {}
+            return {"stack": {"id": 1, "number": pull.get("stack", 1)}} if pull.get("layer") else {}
+        if "/issues/" in endpoint:
+            return self._comments_api(endpoint, rest, paginated)
         return {"allow_auto_merge": True}
 
 

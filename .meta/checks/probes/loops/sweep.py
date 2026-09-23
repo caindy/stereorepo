@@ -84,7 +84,7 @@ class _Tree:
 
 
 def _print_sweep_cases(check_pr: Any) -> list[str]:
-    """`print_sweep()` over a refused lookup, and over one GitHub answers."""
+    """`print_sweep()` over a refused lookup, open pull request, and both notice kinds."""
     problems = []
     left = ["  claude/issue-1 — no pull request", "    git branch -D claude/issue-1"]
     with stood_in(check_pr.github, gh=_refuses), stood_in(check_pr.branch, residue=lambda: left):
@@ -110,6 +110,21 @@ def _print_sweep_cases(check_pr: Any) -> list[str]:
     if "#42 A pull request this branch owns" not in shown.out or "?" in shown.out:
         problems.append(f"print_sweep: a lookup GitHub answered printed {shown.out!r}, and the "
                         "degrade is for a refusal rather than for every run")
+
+    comments = {
+        "comments": [
+            {"body": "<!-- solorepo:merge-refusal -->\n> Merge refused"},
+            {"body": "<!-- solorepo:advance-finding -->\n> Rebase failed"},
+        ],
+    }
+    with stood_in(check_pr.branch,
+                  owned_and_open=lambda: ("claude/issue-1", [(42, "A pull request", [])]),
+                  residue=lambda: []), \
+            stood_in(check_pr.github, gh=lambda *_args: comments):
+        shown = outcome(check_pr.cli.print_sweep)
+    if "refusal: Merge refused" not in shown.out or "advance: Rebase failed" not in shown.out:
+        problems.append(
+            f"print_sweep: both active notice kinds were not reported: {shown.out!r}")
     return problems
 
 

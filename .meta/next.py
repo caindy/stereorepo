@@ -199,6 +199,9 @@ def unlabelled(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 ADVANCE_NOTICE_MARKER = "<!-- solorepo:advance-finding -->"
 """HTML comment marker identifying an in-place advance finding notice (solorepo's DR-255)."""
 
+MERGE_REFUSAL_MARKER = "<!-- solorepo:merge-refusal -->"
+"""HTML comment marker identifying an in-place merge refusal notice (solorepo's DR-255)."""
+
 WIP_LIMIT = 2
 """Maximum concurrent active non-draft pull requests allowed before intake congestion warning (solorepo's DR-258)."""
 
@@ -222,9 +225,14 @@ def pull_requests() -> dict[int, int]:
     for pr in prs:
         armed = "armed" if pr.get("autoMergeRequest") else "draft" if pr["isDraft"] else "open"
         state = (pr.get("mergeStateStatus") or "").lower()
-        has_advance = any(ADVANCE_NOTICE_MARKER in (c.get("body") or "") for c in pr.get("comments") or [])
-        notice = "(!advance) " if has_advance else ""
-        title_len = 50 if has_advance else 60
+        has_refusal = any(
+            MERGE_REFUSAL_MARKER in (c.get("body") or "") for c in pr.get("comments") or []
+        )
+        has_advance = any(
+            ADVANCE_NOTICE_MARKER in (c.get("body") or "") for c in pr.get("comments") or []
+        )
+        notice = "(!refused) " if has_refusal else "(!advance) " if has_advance else ""
+        title_len = 50 if (has_advance or has_refusal) else 60
         review = (pr.get("reviewDecision") or "").lower().replace("_", " ")
         if not review:
             revs = [r for r in pr.get("latestReviews") or []
