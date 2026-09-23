@@ -400,6 +400,55 @@ def _dispatch_rebase_on_conflicting_not_on_behind(channel: Any, move: Any) -> li
     return problems
 
 
+def _dispatch_rebase_on_a_behind_branch_the_sweep_was_refused_on(channel: Any,
+                                                                 move: Any) -> list[str]:
+    """The stall the rebase pass now admits, read off the tag the sweep's finding carries.
+
+    Three notices over one shape, so the tag is what decides and not the
+    marker: one for a replay refused on this head, which dispatches; none at
+    all, which the sweep is still to bring current; and one the sweep raised
+    for something else, which is every other problem it reports under the same
+    marker and is not a refused replay. The fourth reading, a tag against a
+    head a later rebase replaced, is the third case's shape with an oid that
+    is not this one's.
+    """
+    problems: list[str] = []
+    stalled = {"behind": 2, "armed": False, "mergeable": "MERGEABLE",
+               "mergeStateStatus": "BEHIND",
+               "verdicts": [("o-r-reviewer", "APPROVED")]}
+
+    def notice(tag: str) -> list[dict[str, Any]]:
+        return [{"id": 1, "body": f"{move.ADVANCE_NOTICE_MARKER}{tag}\n"
+                                  "> the sweep could not advance this branch"}]
+
+    fake = FakeGitHub({7: dict(stalled)})
+    fake.comments["7"] = notice(f" {move.REPLAY_REFUSED_TAG} head:head7")
+    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append("dispatch: a branch behind its base with a replay refused on its head "
+                        f"dispatched {fake.dispatched!r}")
+    if said:
+        problems.append(f"dispatch: the stalled branch it should have rebased exited with {said!r}")
+    for case, comments, refusal in (
+        ("with no notice standing", [], "no advance notice stands"),
+        ("under a notice the sweep raised for something else", notice(""),
+         "something other than a replay refused on this head"),
+        ("under a notice tagged against a head it no longer has",
+         notice(f" {move.REPLAY_REFUSED_TAG} head:head99"),
+         "something other than a replay refused on this head"),
+    ):
+        bare = FakeGitHub({7: dict(stalled)})
+        bare.comments["7"] = list(comments)
+        said = run_verb(channel, bare, lambda: move.dispatch_pass("7", "rebase"))
+        if bare.dispatched:
+            problems.append(f"dispatch: a branch behind its base {case} dispatched "
+                            f"{bare.dispatched!r}, where the sweep brings it current")
+        if not said or refusal not in said:
+            problems.append(f"dispatch: the branch behind its base {case} was refused "
+                            f"with {said!r}, which does not report {refusal!r}")
+    return problems
+
+
 def _dispatch_rebase_refused_by_hand(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     for case, pull in (("a branch that is not the loop's",
@@ -566,21 +615,25 @@ def dispatch_probes() -> list[str]:
       verdict at all; on no verdict, which is a pull request waiting on a review
       rather than on an answer; and while a review is outstanding of the
       reviewer, which is the coder having handed back. The rebase pass starts
-      on a `CONFLICTING` branch and is refused on one that merely fell
-      behind, by a sentence that does not send it to a verb refusing an
-      unarmed one; it is refused before `mergeable` is asked for on a branch
-      that is not the loop's shape and on the solo's own; and it is refused
-      on a layer above a conflicting lower layer, which is the one refusal
-      that asks GitHub first, since the lower layers' mergeability is what
-      it turns on. A branch that is not the loop's shape,
-      `claude/issue-169-followup` here, names no Challenge for a pass that
-      could not finish to hand back to; `coder.yml` holds that refusal only
-      after the dispatch, and for the nearly-right name it holds none at all,
-      so the verb refuses first. A layer above a conflicting root is refused
-      because rebasing it first would carry the root's unresolved commits as
-      its own; the root is dispatched on the same terms as an unstacked loop
-      branch, the stack being no condition on it, and so a stack is resolved
-      from the bottom (solorepo's DR-133).
+      on a `CONFLICTING` branch and on one GitHub calls `BEHIND` carrying the
+      sweep's notice for a replay refused on its head; it is refused on one
+      that merely fell behind with no notice standing, by a sentence that
+      does not send it to a verb refusing an unarmed one, and on one whose
+      notice was raised for anything else or against a head it no longer has,
+      which is the width the marker alone would have admitted; it is refused
+      before `mergeable` is asked for on a branch that is not the loop's
+      shape and on the solo's own; and it is refused on a layer above a
+      conflicting lower layer, which is the one refusal that asks GitHub
+      first, since the lower layers' mergeability is what it turns on. A
+      branch that is not the loop's shape, `claude/issue-169-followup` here,
+      names no Challenge for a pass that could not finish to hand back to;
+      `coder.yml` holds that refusal only after the dispatch, and for the
+      nearly-right name it holds none at all, so the verb refuses first. A
+      layer above a conflicting root is refused because rebasing it first
+      would carry the root's unresolved commits as its own; the root is
+      dispatched on the same terms as an unstacked loop branch, the stack
+      being no condition on it, and so a stack is resolved from the bottom
+      (solorepo's DR-133).
 
     `said` is read in every case whose whole assertion is an absence: a verb
     that died before dispatching leaves `dispatched` empty too, and without it
@@ -625,6 +678,7 @@ def dispatch_probes() -> list[str]:
         _dispatch_review_refused_without_a_request_for_changes(channel, move, reviewer),
         _dispatch_review_refused_while_answered(channel, move, reviewer),
         _dispatch_rebase_on_conflicting_not_on_behind(channel, move),
+        _dispatch_rebase_on_a_behind_branch_the_sweep_was_refused_on(channel, move),
         _dispatch_rebase_refused_by_hand(channel, move),
         _three_dispatchers_agree_on_stack_order(channel, move)
     ) for problem in problems]

@@ -205,7 +205,8 @@ programs:
         usage: "<pr> --task review|rebase"
         does: >-
           start a coder pass on a pull request by hand: `review` for a verdict
-          standing unanswered, `rebase` for a branch that conflicts
+          standing unanswered, `rebase` for a branch that conflicts or one
+          behind its base that `gh pr update-branch --rebase` was refused on
         held_by: [solo]
       - name: delegate
         usage: "<issue|pr> [--level easy|medium]"

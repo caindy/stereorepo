@@ -280,6 +280,38 @@ def _stack_layer_still_behind_after_advance_is_reported(channel: Any, move: Any)
     return problems
 
 
+def _stalled_stack_layer_is_tagged_as_a_refused_replay(channel: Any, move: Any) -> list[str]:
+    """A layer its stack's advance left stalled carries the tag a stalled branch's notice carries.
+
+    Both conditions `advance_stack` reports as a refused replay, one layer
+    each: the middle layer still behind its base after the stack advanced, and
+    the top layer on the head it had before it. Untagged,
+    `advance.stalled_behind` answers False on a layer GitHub calls `BEHIND`
+    and nothing owes it a rebase, which is the stall solorepo's #805 stood in
+    (solorepo's #853). The root advances cleanly, so nothing tags it.
+    """
+    problems: list[str] = []
+    root, behind_after, unmoved = 7, 8, 9
+    fake = FakeGitHub({
+        root: {"behind": 1, "armed": True, "layer": True},
+        behind_after: {"behind": 1, "armed": True, "layer": True,
+                       "base": f"claude/issue-{root}", "again": 1},
+        unmoved: {"behind": 0, "armed": True, "layer": True,
+                  "base": f"claude/issue-{behind_after}", "slow": 9},
+    })
+    swept(channel, move, fake, problems)
+    for number, head in ((behind_after, f"moved{behind_after}"), (unmoved, f"head{unmoved}")):
+        bodies = [comment.get("body", "") for comment in fake.comments.get(str(number), [])]
+        tag = f"{move.REPLAY_REFUSED_TAG} head:{head}"
+        if len(bodies) != 1 or tag not in bodies[0]:
+            problems.append(f"advance: the notice on stalled layer #{number} does not carry "
+                            f"{tag!r}, so the reconciler owes it no rebase: {bodies!r}")
+    if fake.comments.get(str(root)):
+        problems.append("advance: a root that advanced cleanly was left a notice: "
+                        f"{fake.comments.get(str(root))!r}")
+    return problems
+
+
 def _stack_reaches_advance_via_approved_layer(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({
@@ -635,6 +667,7 @@ def advance_probes() -> list[str]:
         _named_unlinked_stack_base_is_refused(channel, move),
         _refused_stack_leaves_every_layer_unmoved(channel, move),
         _stack_layer_still_behind_after_advance_is_reported(channel, move),
+        _stalled_stack_layer_is_tagged_as_a_refused_replay(channel, move),
         _stack_reaches_advance_via_approved_layer(channel, move),
         _stack_reaches_advance_via_armed_upper_layer(channel, move),
         _stack_with_multiple_armed_layers_rebases_once(channel, move),

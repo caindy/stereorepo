@@ -551,3 +551,32 @@ candidates are swept via `advance_stranded()`, and the refusal exit code is re-r
 so the workflow run surfaces the failure.
 
 Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+
+### Branch behind its base with a refused replay owed a rebase by no reader
+
+`gh pr update-branch --rebase` can be refused on a branch GitHub still reports
+as `mergeable: MERGEABLE`: the mergeability answers whether the head merges
+into the base, while the update replays the branch's commits onto it, and the
+two can disagree. Nothing read the difference. The merge manager called the
+pull request ineligible on `mergeStateStatus: BEHIND`, `advance` reported the
+refusal in a notice nobody else read, and the reconciler's rebase arm turned
+on `CONFLICTING` alone — so the branch was owed a pass by no reader and stood
+until it was rebased by hand (solorepo's #805, behind solorepo's #853).
+Established: `advance.stalled_behind` is the one reading, taken off the pull
+request as the listing already holds it — `mergeStateStatus: BEHIND` beside a
+standing advance notice tagged `replay-refused head:<oid>` against the current
+`headRefOid`. The tag is what narrows the marker to the state the predicate is
+named for: a sweep posts one notice per pull request for whatever it reported,
+and only the head that did not move within the wait and the head still behind
+after the update are a refused replay — from `_advance_single_pull` for a
+branch advancing on its own and from `pull_requests.advance_stack` for a layer
+advancing with its stack, so a stalled layer above a clean root is admitted
+too. A refused mergeability read, an arming lost after a successful update and
+a `gh stack` sequence that raised are not. `reconcile._owed_stalled`
+owes that branch the coder's rebase pass, held above a conflicting lower layer
+on solorepo's DR-133's terms, and `move dispatch --task rebase` admits it by
+hand beside a conflicting one. `RECONCILE_FIELDS` and `dispatch_pass` both
+carry `comments`, which `pr list` answers for every pull request at once, so
+the reading costs no read of its own.
+
+Evidence: `.meta/checks/probes/loops/reconcile.py::reconcile_probes`

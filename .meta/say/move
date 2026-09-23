@@ -27,6 +27,7 @@ import check_pr
 from lib.move import challenges, cli, common, concepts, decisions, drafts, manager, pull_requests
 from lib.move.advance import (
     ADVANCE_NOTICE_MARKER,
+    REPLAY_REFUSED_TAG,
     VERDICTS,
     advance,
     advance_stranded,
@@ -211,6 +212,7 @@ __all__ = [
     "PER_PAGE",
     "RECONCILE_FIELDS",
     "RECONCILE_MINUTES",
+    "REPLAY_REFUSED_TAG",
     "RESERVATION",
     "ROOT",
     "RUN_FIELDS",

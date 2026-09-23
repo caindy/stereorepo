@@ -4,7 +4,7 @@ import datetime
 import json
 import subprocess
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from checks.probes.harness.acts import unanswered
@@ -244,6 +244,9 @@ class FakeGitHub:
       already lists, and who it lists after the call. Default `[]`.
     - `mergeable`: what GitHub says about merging the branch. Default
       `MERGEABLE`.
+    - `mergeStateStatus`: GitHub's word for what stops the merge — `BEHIND` for
+      a branch out of date against a base that requires currency. Default
+      unset, which is what every caller that does not ask about it already saw.
     - `unknown`: how many reads answer `UNKNOWN` for `mergeable` before the value
       above, since GitHub computes it in the background and a read can arrive
       first. Default `0`.
@@ -375,8 +378,15 @@ class FakeGitHub:
         self.cleared_comments: list[str] = []
         self.git = GitStore()
 
-    def view(self, number: int | str) -> dict[str, Any]:
+    def view(self, number: int | str, asked: Sequence[str] = ()) -> dict[str, Any]:
         """One `pr view` of `number`, counted in `reads`, as GitHub would answer it at this moment.
+
+        `asked` is the value of the call's `--json`, and only those fields are
+        answered, as GitHub answers only those: a caller that reads a field it
+        did not ask for reads `None` here as it would there, so a field
+        dropped from one of the verbs' constants is a probe that fails rather
+        than a payload that quietly still carries it. An empty `asked` is
+        every field, which is what a caller with no `--json` gets.
 
         `mergeable` is `UNKNOWN` while the pull request's `unknown` reads
         remain, counted down here rather than in the caller, because what is
@@ -416,6 +426,7 @@ class FakeGitHub:
                   "reviews": reviews,
                   "latestReviews": list(newest.values()),
                   "mergeable": mergeable,
+                  "mergeStateStatus": pull.get("mergeStateStatus"),
                   "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None,
                   "statusCheckRollup": pull.get("checks", []),
                   "comments": list(self.comments.get(str(number), [])),
@@ -426,7 +437,7 @@ class FakeGitHub:
                 pull["stale"] = (dict(pull), 0)
                 pull["head"] = f"pushed{number}"
                 pull["behind"] = pull.get("leaves", pull["behind"])
-        return answer
+        return {k: v for k, v in answer.items() if k in asked} if asked else answer
 
     def __call__(self, *args: Any, parse: bool = True, **kwargs: Any) -> Any:
         """One `gh` call, answered from the dict.
@@ -465,12 +476,14 @@ class FakeGitHub:
             return self.git(*args, parse=parse, **kwargs)
         if head == ("repo", "view"):
             return {"nameWithOwner": "o/r", "deleteBranchOnMerge": True}
+        asked = tuple(args[args.index("--json") + 1].split(",")) if "--json" in args else ()
         if head == ("pr", "list"):
-            return [{k: v for k, v in self.view(n).items() if k != "statusCheckRollup"} for n in self.pulls]
+            return [{k: v for k, v in self.view(n, asked).items() if k != "statusCheckRollup"}
+                    for n in self.pulls]
         if head == ("pr", "view"):
             if str(args[2]) in self.no_view:
                 sys.exit("gh: Post https://api.github.com/graphql: net/http: TLS handshake timeout")
-            return self.view(args[2])
+            return self.view(args[2], asked)
         if head[:1] == ("stack",):
             return self.stack(args)
         if head == ("workflow", "run") and args[2] == "coder.yml":

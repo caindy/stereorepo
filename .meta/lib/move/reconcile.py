@@ -10,8 +10,14 @@ import check_pr
 from lib.move import advance, challenges, common, manager, pull_requests
 from lib.timing.github import NOT_RUN
 
-RECONCILE_FIELDS = manager.MERGE_MANAGER_FIELDS + ",updatedAt"
-"""The reconciler's read of each open pull request: the merge manager's fields, plus `updatedAt`.
+RECONCILE_FIELDS = manager.MERGE_MANAGER_FIELDS + ",updatedAt,comments"
+"""The reconciler's read of each open pull request: the merge manager's fields, and two more.
+
+The two more are `updatedAt` and `comments`. The comments carry the sweep's
+standing advance notice, which is what `advance.stalled_behind` reads and
+`pr list` answers for every pull request at once, so the arm that owes a
+rebase to a branch `gh pr update-branch --rebase` was refused on costs no
+read of its own.
 
 It carries no `reviewThreads`, which `pr list` cannot return: the threads of a
 pull request whose classification turns on them are read one at a time, by
@@ -276,6 +282,25 @@ def _owed_rebase(pull: common.Pull, reviewer_login: str,
     return None
 
 
+def _owed_stalled(pull: common.Pull, constraints: Constraints) -> Owed | None:
+    """What a branch behind its base that `gh pr update-branch --rebase` was refused on is owed.
+
+    The rebase pass, on the same terms a conflicting branch gets it and held
+    above a conflicting layer for the same reason (solorepo's DR-133). What is
+    read is `advance.stalled_behind`, which owns the reading and says why the
+    sweep's own finding rather than GitHub's mergeability answers it.
+    """
+    number = int(pull["number"])
+    if not advance.stalled_behind(pull):
+        return None
+    if constraints.pulls is not None:
+        lower = pull_requests.conflicting_below(pull, constraints.pulls)
+        if lower is not None:
+            return _held_above(number, lower, constraints.reading)
+    return Owed("rebase", number, "behind its base with `gh pr update-branch --rebase` refused "
+                                  "on this head, which no merge of the head answers")
+
+
 def _owed_gate_failed(pull: common.Pull, reviewer_login: str) -> Owed | None:
     """What a pull request with failed checks is owed.
 
@@ -306,7 +331,9 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
     is asked and whether the merge is armed, is read off the pull request.
     The shapes are the ones the sweep's `unheld` names, each qualified by
     `free`, which the caller reads as the bound's silence with no run
-    answering. A branch conflicting under a request, an arming, or a verdict
+    answering — all but the stalled branch below, which is this function's
+    own and which `unheld` has no arm for. A branch conflicting under a
+    request, an arming, or a verdict
     owes a rebase pass, which is the sweep's own dispatch, the verdict the
     coder has not answered being the case solorepo's DR-237 added to it; so
     does one conflicting that nobody holds, since a review that ended
@@ -314,6 +341,15 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
     branch no review can run on waits on nothing else. Stacks are resolved from
     the bottom (solorepo's DR-133), leaving layers above a conflicting root
     held.
+
+    A branch ready to merge that GitHub reports as `mergeStateStatus: BEHIND`
+    with the sweep's advance notice standing on this head for a refused
+    `gh pr update-branch --rebase` owes the rebase pass too. GitHub calls the
+    same branch `MERGEABLE`, that answer being about merging the head rather
+    than about the replay it refused, so every reader asking about a conflict
+    owes it nothing and it stalls. `advance.stalled_behind` owns the reading
+    and says why; the coder's `git rebase` on a checkout is the pass that
+    answers it.
 
     A request for changes nobody is answering owes a review pass, since the
     review event was dropped or a run ended without answering.
@@ -371,6 +407,8 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
             and not check_pr.latest_verdict(pull, reviewer_login)
             and not pull.get("autoMergeRequest")):
         return Owed("request", number, "green, and nobody holds it")
+    if state is pulls_.READY_TO_MERGE:
+        return _owed_stalled(pull, c)
     return None
 
 

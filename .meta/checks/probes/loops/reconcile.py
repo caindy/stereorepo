@@ -57,12 +57,14 @@ PARKED = [{"isResolved": False,
                                            "solo"}]}}]
 """A review thread parked as noticed and not done, which is held open until merge."""
 
-CONVERSATIONS = {24: OWED, 25: ANSWERED, 26: OWED, 27: ANSWERED, 28: PARKED}
+CONVERSATIONS = {24: OWED, 25: ANSWERED, 26: OWED, 27: ANSWERED, 28: PARKED,
+                 30: ANSWERED, 31: ANSWERED}
 """What GraphQL holds for the fixtures the listing cannot answer for, by pull request.
 
 `RECONCILE_FIELDS` carries no `reviewThreads`, so a pull request whose
 classification turns on them is read through GraphQL and the rest are not:
-24 and 26 owe an answer, 25 and 27 owe none, and 28 holds a parked notice."""
+24 and 26 owe an answer, 25, 27, 30 and 31 owe none, and 28 holds a parked
+notice."""
 
 ASKED = [{"login": REVIEWER}]
 
@@ -88,7 +90,10 @@ def reconcile_probes() -> list[str]:
     a verdict owes a rebase pass and one under nothing owes none; changes
     requested with no request owes a review pass, and so does a comment
     verdict with a thread owed an answer and no request standing, which is the
-    verdict that withholds approval in prose (solorepo's DR-265) — the same
+    verdict that withholds approval in prose (solorepo's DR-265); an approval
+    ready to merge but behind its base owes the rebase pass where the sweep's
+    own advance notice stands on it and nothing where it does not, or where
+    the branch is current with a notice the sweep has yet to clear — the same
     verdict owes nothing with nothing owed on it or with a request standing,
     and a bodiless comment review, which is what GitHub records around a reply
     on a thread, is no verdict and owes nothing either; an approval with a
@@ -136,9 +141,22 @@ def _ago(minutes: float) -> str:
     return when.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _notice(move: Any, number: int, tagged: bool = True) -> list[dict[str, Any]]:
+    """The sweep's standing advance notice on a pull request (solorepo's DR-255).
+
+    Tagged `replay-refused head:<oid>` against the pull request's own head,
+    which is the finding `advance.stalled_behind` admits, or untagged, which
+    is every other problem a sweep reports under the same marker.
+    """
+    tag = f" {move.REPLAY_REFUSED_TAG} head:head{number}" if tagged else ""
+    return [{"id": 1, "body": f"{move.ADVANCE_NOTICE_MARKER}{tag}\n"
+                              "> the sweep could not advance this branch"}]
+
+
 def _pull(number: int, **fields: Any) -> dict[str, Any]:
     """A loop branch's pull request as `RECONCILE_FIELDS` lists it, over shared defaults."""
     base = {"number": number, "title": f"pull {number}", "headRefName": f"claude/issue-{number}",
+            "headRefOid": f"head{number}",
             "baseRefName": "main", "isDraft": False, "mergeable": "MERGEABLE",
             "statusCheckRollup": GREEN, "latestReviews": [], "reviews": [], "reviewRequests": [],
             "autoMergeRequest": None, "updatedAt": _ago(120)}
@@ -191,6 +209,8 @@ def _classifier_cases(move: Any) -> list[str]:
 def _pull_cases(move: Any) -> list[str]:
     """`owed_by_pull` over each shape the classifiers name, a held Challenge, and not free."""
     issues = move.check_pr.state.IssueState
+    notice = _notice(move, 1)
+    untagged = _notice(move, 1, tagged=False)
     cases: list[tuple[str, dict[str, Any], Any, bool, str | None]] = [
         ("conflicting under a verdict", _pull(1, mergeable="CONFLICTING", latestReviews=CHANGES),
          issues.RESUMABLE, True, "rebase"),
@@ -219,6 +239,26 @@ def _pull_cases(move: Any) -> list[str]:
          issues.RESUMABLE, True, None),
         ("approved with every thread answered", _pull(1, latestReviews=APPROVED,
                                                       reviewThreads=ANSWERED),
+         issues.RESUMABLE, True, None),
+        ("approved and behind with a replay refused on this head",
+         _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
+               mergeStateStatus="BEHIND", comments=notice),
+         issues.RESUMABLE, True, "rebase"),
+        ("approved and behind with no finding, which is the sweep's to bring current",
+         _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
+               mergeStateStatus="BEHIND"),
+         issues.RESUMABLE, True, None),
+        ("approved and behind under a finding that is not a refused replay",
+         _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
+               mergeStateStatus="BEHIND", comments=untagged),
+         issues.RESUMABLE, True, None),
+        ("approved and behind under a finding against a head it no longer has",
+         _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
+               mergeStateStatus="BEHIND", comments=_notice(move, 99)),
+         issues.RESUMABLE, True, None),
+        ("approved and current with a finding the sweep has not cleared",
+         _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
+               mergeStateStatus="CLEAN", comments=notice),
          issues.RESUMABLE, True, None),
         ("approved with failing checks", _pull(1, latestReviews=APPROVED, statusCheckRollup=RED),
          issues.RESUMABLE, True, "review"),
@@ -306,6 +346,17 @@ class _GitHub:
         self.unlistable = False
         self.unreadable = False
 
+    @staticmethod
+    def asked_for(pull: dict[str, Any], asked: list[str]) -> dict[str, Any]:
+        """A pull request as `--json` asked for it, which is all of it where nothing was asked.
+
+        GitHub answers the fields named and no others, so a field dropped from
+        `RECONCILE_FIELDS` is one no reader here can still read: the arm that
+        turns on it fails rather than staying green off a payload the fake
+        hands back regardless.
+        """
+        return {k: v for k, v in pull.items() if k in asked} if asked else dict(pull)
+
     def graphql(self, query: str, **variables: Any) -> dict[str, Any]:
         """The review threads of the pull request asked for, and the ask recorded.
 
@@ -321,12 +372,14 @@ class _GitHub:
     def __call__(self, *args: str, **kwargs: Any) -> Any:
         if args[:2] == ("repo", "view"):
             return {"nameWithOwner": "o/r"}
+        asked = args[args.index("--json") + 1].split(",") if "--json" in args else []
         if args[:2] == ("pr", "list"):
-            return list(self.pulls)
+            return [self.asked_for(pull, asked) for pull in self.pulls]
         if args[:2] == ("pr", "view"):
             number = int(args[2])
-            return dict(self.views.get(number)
-                        or next(p for p in self.pulls if int(p["number"]) == number))
+            return self.asked_for(self.views.get(number)
+                                  or next(p for p in self.pulls if int(p["number"]) == number),
+                                  asked)
         if args[:2] == ("issue", "list"):
             return list(self.issues)
         if args[:2] == ("issue", "view"):
@@ -363,10 +416,12 @@ class _Bench:
     approved layer on it, and 22 a conflicting root under a claimed
     Challenge at `hard` with 23 a conflicting approved layer on it; two
     under a comment verdict whose threads only GraphQL can answer for,
-    24 with one owed an answer and 25 with every one answered; and four
+    24 with one owed an answer and 25 with every one answered; four
     approved, 26 with a thread owed an answer, 27 with every one
     answered, 28 with a notice parked, and 29 with a failed gate, which
-    is settled before its threads are reached. The Challenges: one
+    is settled before its threads are reached; and two approved and
+    `BEHIND` with a replay refused on their heads, 30 unstacked and 31 a
+    layer above the conflicting root 13, which holds it. The Challenges: one
     behind each of the first three, an unread one, an offered one, one
     claimed with no pull request, one offered but blocked, one behind
     the draft, one offered with no `updatedAt`, and the claimed ones at
@@ -410,7 +465,12 @@ class _Bench:
                       _pull(27, latestReviews=APPROVED, reviews=APPROVED),
                       _pull(28, latestReviews=APPROVED, reviews=APPROVED),
                       _pull(29, latestReviews=APPROVED, reviews=APPROVED,
-                            statusCheckRollup=RED)]
+                            statusCheckRollup=RED),
+                      _pull(30, latestReviews=APPROVED, reviews=APPROVED,
+                            mergeStateStatus="BEHIND", comments=_notice(move, 30)),
+                      _pull(31, baseRefName="claude/issue-13", latestReviews=APPROVED,
+                            reviews=APPROVED, mergeStateStatus="BEHIND",
+                            comments=_notice(move, 31))]
         self.issues = [self.issue(1, "medium"), self.issue(4, None), self.issue(5, "easy"),
                        self.issue(6, "easy", claimed=True),
                        self.issue(10, "easy", blocked_by=[4]),
@@ -480,7 +540,7 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     expected = {("merge_manager", None), ("review", 1), ("rebase", 2), ("request", 3),
                 ("relabel", (4, ("remove",))), ("relabel", (4, ("add",))), ("release", 6),
                 ("rebase", 13), ("rebase", 15), ("rebase", 17), ("review", 24), ("review", 26),
-                ("review", 29)}
+                ("review", 29), ("rebase", 30)}
     acted = bench.acted
     if ended.code is not None or set(acted) != expected or len(acted) != len(expected):
         problems.append(f"reconcile: live over the fixtures performed {acted} with exit "
@@ -489,9 +549,11 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
                         "layer whose root is clean are each owed a rebase, the layer above "
                         "a conflicting root none, a comment verdict and an approval each with "
                         "a thread owed an answer a review pass, where one with every thread "
-                        "answered and one with a notice parked owe nothing, and an approval "
-                        "with a failed gate the review pass its checks owe")
-    if sorted(fake.queried) != [24, 25, 26, 27, 28]:
+                        "answered and one with a notice parked owe nothing, an approval "
+                        "with a failed gate the review pass its checks owe, and an approval "
+                        "behind its base with a replay refused on its head the rebase pass, "
+                        "where the layer of that shape above a conflicting root is held")
+    if sorted(fake.queried) != [24, 25, 26, 27, 28, 30, 31]:
         problems.append(f"reconcile: the threads read were those of {sorted(fake.queried)}, "
                         "where the listing carries none and the read is owed to the pull "
                         "requests standing with no request under a comment verdict or an "
@@ -538,7 +600,7 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     ended = bench.run(_GitHub(bench.pulls, bench.issues, busy), live=True)
     left = {a for a in acted if a[0] != "merge_manager"}
     if left != {("rebase", 2), ("release", 6), ("rebase", 13), ("rebase", 15), ("rebase", 17),
-                ("review", 24), ("review", 26), ("review", 29)}:
+                ("review", 24), ("review", 26), ("review", 29), ("rebase", 30)}:
         problems.append(f"reconcile: with runs in flight, and a triage run that read, it "
                         f"performed {sorted(left)}, where only the rebases of the branches "
                         "no run answers, the release, and the review passes for the comment "
@@ -578,8 +640,8 @@ def _edge_cases(bench: _Bench) -> list[str]:
                         f"was owed {[a for a in bench.acted if a[1] == 9]}, where only a "
                         "conflict below holds it and the next pass reads the root settled")
 
-    talking = _pull(30, latestReviews=COMMENT, reviews=COMMENT)
-    unreadable = _GitHub([talking], [], {}, threads={30: OWED})
+    talking = _pull(40, latestReviews=COMMENT, reviews=COMMENT)
+    unreadable = _GitHub([talking], [], {}, threads={40: OWED})
     unreadable.unreadable = True
     ended = bench.run(unreadable, live=True)
     left = [a for a in bench.acted if a[0] != "merge_manager"]

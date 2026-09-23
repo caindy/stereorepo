@@ -305,7 +305,7 @@ def _settle_layer(layer_number: str, expected_oid: str) -> common.Pull:
 
 
 def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
-                  must_move: Mapping[str, bool]) -> tuple[list[str], list[str]]:
+                  must_move: Mapping[str, bool]) -> tuple[list[str], list[str], dict[str, str]]:
     """Advance bottom-first stack `layers` through GitHub and report per-layer failures.
 
     Parameters:
@@ -314,9 +314,13 @@ def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
         must_move: Whether each layer was behind its base or sits above a layer that was.
 
     Returns:
-        tuple[list[str], list[str]]: A pair `(failed, refused)`, where `failed`
-        collects per-layer problems that belong to individual pull requests, and
-        `refused` collects failures of writes made on their behalf.
+        tuple[list[str], list[str], dict[str, str]]: A triple
+        `(failed, refused, replay_refused)`, where `failed` collects per-layer
+        problems that belong to individual pull requests, `refused` collects
+        failures of writes made on their behalf, and `replay_refused` names, by
+        layer, the head a refused replay was refused against — the layer's
+        counterpart of the two heads `advance._advance_single_pull` tags, and
+        what `advance.stalled_behind` reads.
 
     Raises:
         SystemExit: If an external GitHub query or command fails outside the rebase sequence.
@@ -326,6 +330,11 @@ def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
     each of them, so a bound cutting the sequence short would leave the
     branches rewritten and an unknown number of them pushed, reported to every
     layer as a failure to advance.
+
+    A sequence that raised is no layer's refused replay and is left untagged:
+    it reports the same failure for every layer whatever each one's own state,
+    and a stack whose rebase GitHub refuses over conflicts is the conflicting
+    branch another reader already owes a pass.
     """
     root = str(layers[0]["number"])
     try:
@@ -334,10 +343,11 @@ def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
         channel.gh("stack", "push", parse=False, timeout=None)
     except SystemExit as exc:
         return [f"#{layer['number']} could not advance with #{root}'s stack: {exc.code}"
-                for layer in layers], []
+                for layer in layers], [], {}
 
     failed: list[str] = []
     refused: list[str] = []
+    replay_refused: dict[str, str] = {}
     reviewer = channel.role_login("reviewer")
     for layer in layers:
         number = str(layer["number"])
@@ -345,11 +355,13 @@ def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
             after = _settle_layer(number, before[number]["headRefOid"])
             if after["headRefOid"] == before[number]["headRefOid"]:
                 failed.append(f"#{number} is on the head it had before #{root}'s stack advanced")
+                replay_refused[number] = after["headRefOid"]
                 continue
         else:
             after = channel.gh("pr", "view", number, "--json", ADVANCE)
         if behind_by(after):
             failed.append(f"#{number} is still behind {after['baseRefName']} after #{root}'s stack advanced")
+            replay_refused[number] = after["headRefOid"]
             continue
         asked_before = {r.get("login") for r in before[number].get("reviewRequests") or []}
         asked_after = {r.get("login") for r in after.get("reviewRequests") or []}
@@ -361,7 +373,7 @@ def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
             except SystemExit as exc:
                 failed.append(f"#{number} lost its review request during #{root}'s stack advance: {exc.code}")
         print(f"advanced #{number} in #{root}'s stack: {layer['title']}")
-    return failed, refused
+    return failed, refused, replay_refused
 
 
 is_approved_pull = check_pr.is_approved_pull

@@ -281,7 +281,9 @@ def _check_dispatch_rebase(pr: str | int, pull: common.Pull) -> None:
     """Validate preconditions before dispatching a coder rebase pass.
 
     Checks branch shape first because it is free, then whether a layer below
-    the branch still conflicts, and finally checks mergeability against base.
+    the branch still conflicts, then mergeability against base, and finally
+    whether the sweep's own `gh pr update-branch --rebase` stands refused on
+    this head.
     """
     from lib.move import reconcile
     head = str(pull.get("headRefName") or "")
@@ -307,17 +309,23 @@ def _check_dispatch_rebase(pr: str | int, pull: common.Pull) -> None:
                  f"#{act.lower} first, or let the reconciler, which dispatches it on "
                  "its next pass and this one after.")
     merges = pull_requests.mergeability(pull) or "UNKNOWN"
-    if merges != "CONFLICTING":
-        base = pull.get("baseRefName")
-        sys.exit(f"say: GitHub reports #{pr} as {merges} against "
-                 f"{base}, not CONFLICTING, and the rebase pass is for a "
-                 "branch GitHub builds no merge ref for — which is the state where no "
-                 "review of the head can run and nothing but authoring can fix it. One "
-                 "that has merely fallen behind is waiting on nothing and needs no Job: "
-                 "its merge ref exists, so a review runs on the head as it stands, and "
-                 "the branch comes onto its base when it is armed — `merge --auto` "
-                 "advances before it arms, and `advance` sweeps up an armed one on the "
-                 "next push to trunk.")
+    if merges == "CONFLICTING" or stalled_behind(pull):
+        return
+    base = pull.get("baseRefName")
+    state = str(pull.get("mergeStateStatus") or "UNKNOWN").upper()
+    sys.exit(f"say: GitHub reports #{pr} as {merges} against {base} in state {state}, and "
+             f"{_advance_notice_reading(pull)}. The rebase pass is for a branch GitHub "
+             "builds no merge ref for — which is the state where no review of the head "
+             "can run and nothing but authoring can fix it — and for one GitHub refused "
+             "`gh pr update-branch --rebase` on, which the sweep's notice records against "
+             "the head it was refused against. Both readings above are limbs of the same "
+             "refusal, so read which one declined you: `CONFLICTING` admits the branch, "
+             "and so does `BEHIND` with a refused replay standing on this head. Where "
+             "neither holds, the branch has merely fallen behind with the sweep untried "
+             "and is waiting on nothing: its merge ref exists, so a review runs on the "
+             "head as it stands, and the branch comes onto its base when it is armed — "
+             "`merge --auto` advances before it arms, and `advance` sweeps up an armed "
+             "one on the next push to trunk.")
 
 
 def _check_dispatch_review(pr: str | int, pull: common.Pull) -> None:
@@ -396,18 +404,26 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
     request pending is the coder having answered already and handed back, which
     is the reviewer's turn and not a pass to run again.
 
-    The rebase pass takes three, and each of them is one `advance`'s own
-    dispatch takes, for the reason solorepo's DR-133 gave it there. What is
-    not here is the other thing that filter reads, a review
-    request outstanding: that is what makes the machine's dispatch necessary
-    rather than what makes a rebase pass sensible, and the solo dispatching has
-    decided the branch needs one already. The
-    branch must be one GitHub reports as `CONFLICTING`: that is the state with
-    no merge ref, where no review of the head can run and where `gh pr
-    update-branch` is refused. A branch that has merely fallen behind is
-    waiting on nothing — its merge ref exists, so the review runs on the head
-    as it stands, and the branch is brought onto its base when it is armed, by
-    `merge --auto` before the arming or by `advance` on the next push to trunk.
+    The rebase pass takes three. Two of them are ones `advance`'s own dispatch
+    takes, for the reason solorepo's DR-133 gave it there; the third is this
+    verb's alone. What is not here is the other thing that filter reads, a
+    review request outstanding: that is what makes the machine's dispatch
+    necessary rather than what makes a rebase pass sensible, and the solo
+    dispatching has decided the branch needs one already.
+
+    The branch must be in one of two states GitHub reports. `CONFLICTING` is
+    the state with no merge ref, where no review of the head can run and where
+    `gh pr update-branch` is refused; that one the sweep's own dispatch takes
+    too. `BEHIND` with a replay GitHub refused on this head — the sweep's
+    notice tagged `replay-refused head:<oid>`, which `stalled_behind` reads —
+    is the other, and the sweep's dispatch does not take it, because that
+    dispatch turns on mergeability alone and GitHub calls this branch
+    `MERGEABLE`. A branch that has merely fallen behind with the sweep untried
+    is waiting on nothing — its merge ref exists, so the review runs on the
+    head as it stands, and the branch is brought onto its base when it is
+    armed, by `merge --auto` before the arming or by `advance` on the next
+    push to trunk.
+
     The branch must be `claude/issue-<n>`, because that name is how the pass
     finds the Challenge it would hand back to: `coder.yml` refuses the rest
     itself, but after the dispatch, where the refusal is a red run attached to
@@ -429,7 +445,8 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
     own key, so a dispatch that was one too many waits behind the run already
     going rather than racing it. What is printed is where the run will appear.
     """
-    pull = channel.gh("pr", "view", str(pr), "--json", f"{pull_requests.ADVANCE},reviews")
+    pull = channel.gh("pr", "view", str(pr), "--json",
+                      f"{pull_requests.ADVANCE},reviews,comments")
     if task is None:
         task = "rebase" if pull.get("mergeable") == "CONFLICTING" else "review"
     if task == "rebase":
@@ -443,19 +460,26 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
 
 
 def _advance_stack_layers(pull: common.Pull, all_open: Sequence[common.Pull],
-                          advanced_stacks: set[str]) -> tuple[bool, int, list[str], list[str]]:
+                          advanced_stacks: set[str]
+                          ) -> tuple[bool, int, list[str], list[str], dict[str, str]]:
     """Advance linked stack layers if pull is part of a stack.
 
+    The fifth element names, by layer, the head a refused replay was refused
+    against, as `_advance_single_pull` names the one for a pull request that
+    advances on its own: it is what tags the notice for `stalled_behind` to
+    read, so a stalled layer is admitted on the same terms as a stalled
+    branch.
+
     Returns:
-        tuple: (handled, moved_count, failed_list, refused_list)
+        tuple: (handled, moved_count, failed_list, refused_list, replay_refused_heads)
     """
     root = pull_requests.stack_root(pull, all_open)
     root_number = str(root["number"])
     if root_number in advanced_stacks:
-        return True, 0, [], []
+        return True, 0, [], [], {}
     stack = pull_requests.stacked(root_number)
     if not stack:
-        return False, 0, [], []
+        return False, 0, [], [], {}
     advanced_stacks.add(root_number)
     layers = pull_requests.stack_layers(root, all_open)
     before_and_behind = [pull_requests.head_now(str(layer["number"])) for layer in layers]
@@ -467,46 +491,51 @@ def _advance_stack_layers(pull: common.Pull, all_open: Sequence[common.Pull],
         print(f"left #{root_number}'s stack alone: GitHub reports a layer conflicting "
               "with its base, and a stack is resolved from the bottom by the reconciler's "
               "rebase passes before it advances")
-        return True, 0, [], []
+        return True, 0, [], [], {}
     if not any(was_behind.values()):
-        return True, 0, [], []
+        return True, 0, [], [], {}
     must_move: dict[str, bool] = {}
     seen_behind = False
     for layer, (_, behind) in zip(layers, before_and_behind, strict=True):
         seen_behind = seen_behind or bool(behind)
         must_move[str(layer["number"])] = seen_behind
-    errors, stack_refused = pull_requests.advance_stack(layers, before, must_move)
+    errors, stack_refused, replay_refused = pull_requests.advance_stack(layers, before, must_move)
     moved = 1 if not errors and not stack_refused else 0
-    return True, moved, errors, stack_refused
+    return True, moved, errors, stack_refused, replay_refused
 
 
 def _advance_single_pull(pull: common.Pull, pr: int | str | None,
-                         bases: set[str]) -> tuple[int, int, list[str]]:
+                         bases: set[str]) -> tuple[int, int, list[str], str]:
     """Advance a single non-stacked pull request onto its base branch.
 
+    The fourth element is the head the replay was refused against, where that
+    is what failed, and empty where nothing failed or where what failed was
+    not a replay: it is what tags the notice for `stalled_behind` to read.
+
     Returns:
-        tuple: (moved_count, left_count, failed_list)
+        tuple: (moved_count, left_count, failed_list, replay_refused_head)
     """
     number = str(pull["number"])
     if pull["headRefName"] in bases:
         if pr is not None:
             sys.exit(f"say: #{pr} is the base of another open pull request; "
                      "it is not linked as a GitHub stack and cannot advance atomically (solorepo's DR-243)")
-        return 0, 0, []
+        return 0, 0, [], ""
     before, behind = pull_requests.head_now(number)
     if not behind:
-        return 0, 0, []
+        return 0, 0, [], ""
     if pr is None and pull_requests.mergeability(pull) == "CONFLICTING":
         print(f"left #{number} to the dispatch below: {behind} commit(s) behind "
               f"{pull['baseRefName']} and conflicting with it, which GitHub "
               f"will not rebase — {pull['title']}")
-        return 0, 1, []
+        return 0, 1, [], ""
     before, behind = pull_requests.head_now(number)
     if not behind:
-        return 0, 0, []
+        return 0, 0, [], ""
     channel.gh("pr", "update-branch", number, "--rebase", parse=False)
     print(f"advanced #{number}: {behind} commit(s) behind {pull['baseRefName']} — {pull['title']}")
     failed: list[str] = []
+    replay_refused = ""
     before_oid = before["headRefOid"]
     after = channel.settled(lambda: channel.gh("pr", "view", number, "--json",
                                                pull_requests.ADVANCE),
@@ -516,8 +545,10 @@ def _advance_single_pull(pull: common.Pull, pr: int | str | None,
                       "GitHub has not moved it within the wait, so whether the "
                       "rebase drops the arming is unread — and dropped, it is "
                       "out of reach of every later sweep")
+        replay_refused = before_oid
     elif pull_requests.behind_by(after):
         failed.append(f"#{number} is still behind {pull['baseRefName']} after the update")
+        replay_refused = after["headRefOid"]
     if pull.get("autoMergeRequest") and not after.get("autoMergeRequest") and after.get("state") != "MERGED":
         pull_requests.arm(number, f"{pull['title']} (#{number})")
         now = channel.settled(lambda: channel.gh("pr", "view", number, "--json",
@@ -530,7 +561,7 @@ def _advance_single_pull(pull: common.Pull, pr: int | str | None,
                           "does not show it armed after the call that re-armed it")
         else:
             print(f"armed #{number} again: moving the head had dropped it")
-    return 1, 0, failed
+    return 1, 0, failed, replay_refused
 
 
 def _is_advance_candidate(pull: common.Pull, pr: int | str | None, bases: set[str],
@@ -546,11 +577,102 @@ def _is_advance_candidate(pull: common.Pull, pr: int | str | None, bases: set[st
 ADVANCE_NOTICE_MARKER = "<!-- solorepo:advance-finding -->"
 """HTML comment marker identifying an in-place advance finding notice (solorepo's DR-255)."""
 
+REPLAY_REFUSED_TAG = "replay-refused"
+"""Marker tag on the advance notice whose finding is a refused `gh pr update-branch --rebase`."""
 
-def _advance_notice_body(problem: str) -> str:
-    """Generate signed advance finding notice comment body with attribution trailers."""
+
+def _standing_advance_notices(pull: common.Pull) -> list[str]:
+    """The bodies of the advance notices standing on a pull request as it is held."""
+    return [body for comment in pull.get("comments") or []
+            if ADVANCE_NOTICE_MARKER in (body := comment.get("body") or "")]
+
+
+def stalled_behind(pull: common.Pull) -> bool:
+    """Whether a branch is behind its base with `gh pr update-branch --rebase` refused on this head.
+
+    Read off the pull request as it is held — `mergeStateStatus`, `headRefOid`
+    and the comments, which `RECONCILE_FIELDS` and `dispatch_pass` both carry.
+    Nothing is queried, so the reconciler pays no read per pull request.
+
+    `BEHIND` is GitHub's word for a branch whose being out of date is what
+    stops the merge: `BLOCKED` outranks it, so one still waiting on a review
+    reports the review instead, and one behind a base requiring no currency
+    reports `CLEAN` and lands unrebased.
+
+    The marker alone is too wide to read this off. A sweep posts one notice per
+    pull request for whatever that pull request reported (solorepo's DR-255),
+    and only two of the conditions it reports are a refused replay: the head
+    that did not move within the wait, and the head still behind after the
+    update. Each is reported from two places — `_advance_single_pull`, for a
+    branch that advances on its own, and `pull_requests.advance_stack`, for a
+    layer that advances with its stack — and all four carry
+    `replay-refused head:<oid>`, so a layer stalled above a clean root is
+    admitted on the same terms as a branch stalled alone. What wears the same
+    marker without being a refused replay: a mergeability read refused before
+    `update-branch` was called at all, an arming lost after it succeeded, and
+    a `gh stack` sequence that raised, which reports every layer alike and
+    leaves them conflicting rather than behind. This reads the tag against the
+    pull request's current `headRefOid`, so a notice raised against a head
+    some later rebase has already replaced no longer stands.
+
+    Both together are the stall, and neither alone names it: GitHub answers
+    `MERGEABLE` there, its answer being about merging the head while its
+    refusal was about replaying the commits, so no reader asking about a
+    conflict owes the branch anything — while the coder's rebase pass, a
+    `git rebase` on a checkout, replays them cleanly. `move.history.md` holds
+    the branch that stood in it.
+
+    Parameters:
+        pull (dict): The pull request, carrying `mergeStateStatus`,
+            `headRefOid` and `comments`.
+
+    Returns:
+        bool: Whether the branch is behind with a refused replay standing on its head.
+    """
+    head_oid = pull.get("headRefOid") or ""
+    if not head_oid:
+        return False
+    if str(pull.get("mergeStateStatus") or "").upper() != "BEHIND":
+        return False
+    return any(f"{REPLAY_REFUSED_TAG} head:{head_oid}" in body
+               for body in _standing_advance_notices(pull))
+
+
+def _advance_notice_reading(pull: common.Pull) -> str:
+    """What the advance notices standing on a pull request say about its current head.
+
+    The three readings `stalled_behind` distinguishes, in the words a refusal
+    reports them in: no notice at all, one for a replay refused on this head,
+    and one for anything else the sweep found.
+    """
+    head_oid = pull.get("headRefOid") or ""
+    standing = _standing_advance_notices(pull)
+    if not standing:
+        return "no advance notice stands on it"
+    if any(f"{REPLAY_REFUSED_TAG} head:{head_oid}" in body for body in standing):
+        return "an advance notice stands on it for a replay GitHub refused on this head"
+    return ("the advance notice standing on it reports something other than a replay "
+            "refused on this head")
+
+
+def _advance_notice_body(problem: str, head_oid: str = "") -> str:
+    """Generate signed advance finding notice comment body with attribution trailers.
+
+    Emits `replay-refused head:<head_oid>` as a marker tag when provided, which
+    is the fact `stalled_behind` admits: the finding is GitHub refusing to
+    replay this head's commits rather than any other problem a sweep reports.
+
+    Parameters:
+        problem: The finding the sweep reported for this pull request.
+        head_oid: The git commit SHA the replay was refused against, where the
+            finding is a refused replay and empty where it is not.
+
+    Returns:
+        str: Attributed and signed markdown comment body.
+    """
+    tag = f" {REPLAY_REFUSED_TAG} head:{head_oid}" if head_oid else ""
     raw = (
-        f"{ADVANCE_NOTICE_MARKER}\n"
+        f"{ADVANCE_NOTICE_MARKER}{tag}\n"
         "**Advance sweep finding.** `advance` could not update this branch on push to `main` (solorepo's DR-255):\n"
         f"> {problem}\n\n"
         "This in-place notice will be updated or removed automatically when the branch advances cleanly."
@@ -640,7 +762,7 @@ def reconcile_notice(pr: str | int, marker: str, body_or_fn: Any,
         print(f"warning: could not reconcile {label} on #{pr}: {exc}", file=sys.stderr)
 
 
-def reconcile_advance_notice(pr: str | int, problem: str | None) -> None:
+def reconcile_advance_notice(pr: str | int, problem: str | None, head_oid: str = "") -> None:
     """Reconcile in-place advance failure notice on a pull request (solorepo's DR-255).
 
     When `problem` is non-empty:
@@ -648,13 +770,27 @@ def reconcile_advance_notice(pr: str | int, problem: str | None) -> None:
         notice comment in place if the problem text has changed.
     When `problem` is None:
         Deletes any standing advance notice comment left from a prior run.
+
+    `head_oid` is the head a refused replay was refused against, and tags the
+    notice as one `stalled_behind` admits; a problem of any other kind leaves
+    it empty and the notice untagged.
     """
-    reconcile_notice(pr, ADVANCE_NOTICE_MARKER, _advance_notice_body, problem, label="advance")
+    reconcile_notice(pr, ADVANCE_NOTICE_MARKER,
+                     lambda text: _advance_notice_body(text, head_oid),
+                     problem, label="advance")
 
 
 def _report_advance_sweep(open_now: Sequence[common.Pull], failed: list[str], refused: list[str],
-                          evaluated: Sequence[common.Pull] | None = None) -> None:
-    """Run sweep dispatch and report pull request problems."""
+                          evaluated: Sequence[common.Pull] | None = None,
+                          replay_refused: dict[str, str] | None = None) -> None:
+    """Run sweep dispatch and report pull request problems.
+
+    `replay_refused` names, by pull request, the head a refused replay was
+    refused against, so that the notice raised for it carries the tag and the
+    notice raised for anything else the sweep reported does not; a pull
+    request whose advance refused no replay is held there as an empty string,
+    which is the same as absent to every reader of it.
+    """
     reported, dispatch_refused = dispatch(open_now)
     failed += reported
     refused.extend(dispatch_refused)
@@ -672,7 +808,8 @@ def _report_advance_sweep(open_now: Sequence[common.Pull], failed: list[str], re
     candidates = evaluated if evaluated is not None else open_now
     for pull in candidates:
         number = str(pull.get("number"))
-        reconcile_advance_notice(number, problems_by_pr.get(number))
+        reconcile_advance_notice(number, problems_by_pr.get(number),
+                                 (replay_refused or {}).get(number, ""))
     if refused:
         sys.exit("say: " + "; ".join(refused))
 
@@ -725,6 +862,7 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     moved, left = 0, 0
     failed: list[str] = []
     refused: list[str] = []
+    replay_refused: dict[str, str] = {}
     advanced_stacks: set[str] = set()
     if not found:
         if pr is not None:
@@ -735,27 +873,32 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
             number = str(pull["number"])
             try:
                 if pull.get("headRefName") in bases or pull.get("baseRefName") in heads:
-                    handled, stack_moved, errors, stack_refused = _advance_stack_layers(
+                    handled, stack_moved, errors, stack_refused, stalled = _advance_stack_layers(
                         pull, all_open, advanced_stacks
                     )
                     if handled:
                         moved += stack_moved
                         failed += errors
                         refused += stack_refused
+                        replay_refused.update(stalled)
                         continue
-                single_moved, single_left, single_failed = _advance_single_pull(pull, pr, bases)
+                single_moved, single_left, single_failed, single_head = _advance_single_pull(
+                    pull, pr, bases
+                )
                 moved += single_moved
                 left += single_left
                 failed += single_failed
+                replay_refused[number] = single_head
             except SystemExit as exc:
                 failed.append(f"#{number}: {exc.code}")
         if not moved and not failed and len(found) > left:
             print(f"advance: {len(found) - left} pull request(s) current with their base")
     if pr is None:
-        _report_advance_sweep(open_now, failed, refused, evaluated=found)
+        _report_advance_sweep(open_now, failed, refused, evaluated=found,
+                              replay_refused=replay_refused)
         return
     problem = "; ".join(failed + refused) if (failed or refused) else None
-    reconcile_advance_notice(pr, problem)
+    reconcile_advance_notice(pr, problem, replay_refused.get(str(pr), ""))
     if problem:
         sys.exit("say: " + problem)
 
