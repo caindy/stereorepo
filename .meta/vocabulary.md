@@ -7,8 +7,11 @@
 _The words this repo uses, and what they mean._
 
 A Concept is a unit of meaning, not a word — which is why two entries
-below share a label. Use the preferred label; do not mint a term without
-the solo. Check DDD first, then this vocabulary, then ask.
+below share a label. Use the preferred label; do not mint a Concept
+without the solo. `.meta/say/move mint --concept '<id>'` is how he mints
+one: it reserves the identifier, it is refused inside a run, and the gate
+fails a row that stands on no reservation (solorepo's DR-276). Check DDD first, then
+this vocabulary, then ask.
 
 ### DDD canon
 
@@ -275,4 +278,4 @@ more often a collision than a gap.
 
 ---
 
-**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-182](assertions/decisions/DR-182.yaml)
+**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-182](assertions/decisions/DR-182.yaml), [DR-276](assertions/decisions/DR-276.yaml)

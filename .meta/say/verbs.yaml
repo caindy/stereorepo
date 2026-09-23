@@ -227,8 +227,13 @@ programs:
         does: put an Issue in a Milestone, creating it if new
         held_by: [solo]
       - name: mint
-        usage: ""
-        does: "issue the next Decision number and reserve it on GitHub, so two branches cannot take the same one"
+        usage: "[--concept <ident>]"
+        does: >-
+          issue the next Decision number and reserve it on GitHub, so two
+          branches cannot take the same one; `--concept` reserves a Concept of
+          the Ubiquitous Language instead, named by the identifier its row will
+          carry, the first of the three layers a new vocabulary row stands on,
+          and it is refused to a run (solorepo's DR-276)
         held_by: [coder]
 
   - name: commit

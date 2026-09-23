@@ -283,6 +283,9 @@ artifacts:
   - id: work:artifact/meta-checks-files-wiki
     name: .meta/checks/files/wiki.py
     path: .meta/checks/files/wiki.py
+  - id: work:artifact/meta-checks-files-vocabulary
+    name: .meta/checks/files/vocabulary.py
+    path: .meta/checks/files/vocabulary.py
   - id: work:artifact/meta-checks-files-workflows
     name: .meta/checks/files/workflows.py
     path: .meta/checks/files/workflows.py
@@ -412,6 +415,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-reservation
     name: .meta/checks/probes/channel/reservation.py
     path: .meta/checks/probes/channel/reservation.py
+  - id: work:artifact/meta-checks-probes-channel-mint
+    name: .meta/checks/probes/channel/mint.py
+    path: .meta/checks/probes/channel/mint.py
   - id: work:artifact/meta-checks-probes-channel-filing
     name: .meta/checks/probes/channel/filing.py
     path: .meta/checks/probes/channel/filing.py
@@ -493,6 +499,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-files
     name: .meta/checks/probes/files/__init__.py
     path: .meta/checks/probes/files/__init__.py
+  - id: work:artifact/meta-checks-probes-files-mints
+    name: .meta/checks/probes/files/mints.py
+    path: .meta/checks/probes/files/mints.py
   - id: work:artifact/meta-checks-probes-files-sizes
     name: .meta/checks/probes/files/sizes.py
     path: .meta/checks/probes/files/sizes.py
@@ -805,6 +814,9 @@ artifacts:
   - id: work:artifact/meta-lib-move-decisions
     name: .meta/lib/move/decisions.py
     path: .meta/lib/move/decisions.py
+  - id: work:artifact/meta-lib-move-concepts
+    name: .meta/lib/move/concepts.py
+    path: .meta/lib/move/concepts.py
   - id: work:artifact/meta-lib-move-advance
     name: .meta/lib/move/advance.py
     path: .meta/lib/move/advance.py

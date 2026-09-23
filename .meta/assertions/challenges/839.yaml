@@ -1,0 +1,21 @@
+challenges:
+  - id: work:challenge/839
+    name: a vocabulary row is a mint, and nothing refuses one a Job adds without the solo's say-so
+    challenge_type: ARCHITECTURE
+    description: >-
+      A new row in the Ubiquitous Language is a mint, and nothing refused one from a
+      Job with no mandate to make it. The load map's rule — "do not mint a term
+      without the solo" — was prose, and every check over the vocabulary read a row
+      or a page taken alone: `ubiquitous_language_wiki_parity`, `wikilinks`,
+      `wiki_lead_paragraphs` and `wiki_synonyms_are_not_avoided` each ask whether one
+      artifact is well formed, and none asks who wrote it. So a session that added a
+      row to `.meta/assertions/imported/vocabulary.yaml`, a line to
+      `.meta/vocabulary.md` and a page under `wiki/` passed the gate and the review
+      with the term already in the language. It happened twice. "Forge" was minted by
+      a session without agreement and spread until the solo withdrew it. "Door" was a
+      figure of speech in the Decisions from solorepo's #117 on and became a Term in
+      solorepo's #807 — the row, the concept and the wiki page landing together —
+      after which solorepo's DR-264 used it as the name of a workflow's entry
+      point, and the solo learned it was a Term by reading a sentence that called
+      it the repository's word. He ratified it, and the record had no slot saying a
+      term was ratified rather than minted by him, and no gate that would have asked.

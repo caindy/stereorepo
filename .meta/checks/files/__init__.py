@@ -3,7 +3,8 @@
 Steps that read the working tree rather than the index — a placeholder that
 survived, a link that resolves to nothing, a path that is the scaffold's alone,
 a generated page that is behind its assertions or whose framing prose a
-portfolio would not inherit, and the half the two gate workflows hold equal.
+portfolio would not inherit, a row added to the Ubiquitous Language with no
+reservation behind it, and the half the two gate workflows hold equal.
 One module per family of steps, imported in the order the steps report in
 (solorepo's DR-218). `sources.tree()` is the tree as git sees it, which is
 the only list of files the gate trusts, and `citations.py` reads prose out of
@@ -16,6 +17,7 @@ import checks.files.conflicts
 import checks.files.templates
 import checks.files.markdown
 import checks.files.wiki
+import checks.files.vocabulary
 import checks.files.workflows
 import checks.files.justfile
 import checks.files.prose
@@ -27,6 +29,8 @@ from checks.files.conflicts import CONFLICT_MARKER, conflict_markers
 from checks.files.templates import Strict, duplicate_concept_ids, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
 from checks.files.markdown import FENCED, LINK, markdown_links
 from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wiki_synonyms_are_not_avoided, wikilinks
+from checks.files.vocabulary import (RESERVATION, VOCABULARIES, added_concepts, concepts_in,
+                                     reserved_concepts, vocabulary_mints)
 from checks.files.workflows import LIB, NOT_SHARED, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS, SHARED_JOBS, control_plane_packages, control_plane_restore, gate_workflows_agree, scaffold_only_paths, scripts_of
 from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
@@ -60,6 +64,7 @@ __all__ = [
     "NOT_SHARED",
     "NUMBER_WORDS",
     "RECIPE",
+    "RESERVATION",
     "RESTORE_COUNT",
     "RESTORE_LINE",
     "REVIEW_WORKFLOW",
@@ -73,12 +78,15 @@ __all__ = [
     "TYPES_BASELINE",
     "UVX_FLAGS",
     "UVX_VALUED",
+    "VOCABULARIES",
     "WIKILINK",
     "Invocation",
     "Strict",
+    "added_concepts",
     "apm_package",
     "asserts",
     "ceiling",
+    "concepts_in",
     "conflict_markers",
     "conflicts",
     "control_plane_packages",
@@ -115,6 +123,7 @@ __all__ = [
     "rendered",
     "rendered_prose",
     "rendering",
+    "reserved_concepts",
     "ruff_findings",
     "scaffold_only_paths",
     "scripts_of",
@@ -129,6 +138,8 @@ __all__ = [
     "ubiquitous_language_wiki_parity",
     "unread_prose",
     "uvx_interpreter_calls",
+    "vocabulary",
+    "vocabulary_mints",
     "wiki",
     "wiki_lead_paragraphs",
     "wiki_synonyms_are_not_avoided",

@@ -5,15 +5,15 @@ Each verb is a whole step of a Discipline and refuses its own misuse
 (solorepo's DR-116): a composition a caller could assemble by hand and leave
 half done is not typeable here. The body is `.meta/lib/move/`, one module per
 lifecycle (solorepo's DR-264): `common`, `challenges`, `pull_requests`, `decisions`,
-`drafts`, `advance`, `manager`, `reconcile` and `cli`. This entry holds no logic
+`drafts`, `advance`, `manager`, `reconcile`, `concepts` and `cli`. This entry holds no logic
 (solorepo's DR-217): it exports each module beside the names it defines, so a
 caller reaches a verb by the script's own name and a probe reaches the seam
 it stands in through the module. Two modules share a name with the verb
 they hold, `advance` and `reconcile`, and there the name wins and the module
 is reached by the package path or through a module that imports it, as
-`manager` does `advance`. `channel`, which every module draws on, and
-`check_pr`, which four of them do, are exported beside them as they always
-were.
+`manager` does `advance`. `concepts` is reached through the module alone: this
+entry sits on its line ceiling, where a name costs two lines. `channel` and
+`check_pr` are exported beside them as they always were.
 
 History in move.history.md (solorepo's DR-171).
 """
@@ -24,7 +24,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import channel
 import check_pr
-from lib.move import challenges, cli, common, decisions, drafts, manager, pull_requests
+from lib.move import challenges, cli, common, concepts, decisions, drafts, manager, pull_requests
 from lib.move.advance import (
     ADVANCE_NOTICE_MARKER,
     VERDICTS,
@@ -255,6 +255,7 @@ __all__ = [
     "claim",
     "cli",
     "common",
+    "concepts",
     "decisions",
     "deduplicate_checks",
     "delegate",

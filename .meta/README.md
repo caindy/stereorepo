@@ -18,7 +18,7 @@ long: nothing loads it until you are already in the thing it owns.
 
 | Touching… | Load first |
 | :-- | :-- |
-| naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a term without the solo |
+| naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a Concept without the solo: `.meta/say/move mint --concept` reserves one, and the gate refuses a row standing on no reservation (solorepo's DR-276) |
 | what this repo asserts | [`assertions/`](assertions/) — the ABox, and the source the prose derives from |
 | a term for **this** domain | `assertions/domain_vocabulary.yaml` — owned here, never synced |
 | anything under `assertions/imported/` | do not edit it. It is solorepo's, and a sync overwrites it |

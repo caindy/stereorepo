@@ -17,7 +17,7 @@ for what it owns. This file routes. It does not restate.
 
 | Touching… | Load first |
 | :-- | :-- |
-| naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a term without the solo |
+| naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a Concept without the solo: `.meta/say/move mint --concept` reserves one, and the gate refuses a row standing on no reservation (solorepo's DR-276) |
 | what this repo asserts | [`assertions/`](assertions/) — the ABox. The prose satellites derive from it. |
 | a term for **this** domain | `assertions/domain_vocabulary.yaml` — owned here, never synced |
 | anything under `assertions/imported/` | do not edit it. It came from the scaffold, and a sync overwrites it. |

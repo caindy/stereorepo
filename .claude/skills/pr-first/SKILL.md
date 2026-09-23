@@ -48,7 +48,7 @@ The verbs are the steps, and each refuses its own misuse. Yours, as the coder:
 - `.meta/say/move merge-manager [--dry-run]` — evaluate open pull requests against semaphores, rank eligible candidates by leverage, assert choices and deferrals out loud, and squash-merge the top candidate
 - `.meta/say/move reconcile [--live] [--dry-run]` — run the merge manager, then read every open Issue and pull request through the classifiers and perform what each is owed where no run is answering it — a rebase or review pass dispatched, a review requested again, a take dispatched, an unread Challenge re-delivered to the reviewer, a dead run's claim released; reported and not performed without --live
 - `.meta/say/move request-review <pr> [--to R]` — hand off: request review from Role R's account, the reviewer's by default; refused on a branch GitHub reports as conflicting, which no review can run on
-- `.meta/say/move mint` — issue the next Decision number and reserve it on GitHub, so two branches cannot take the same one
+- `.meta/say/move mint [--concept <ident>]` — issue the next Decision number and reserve it on GitHub, so two branches cannot take the same one; `--concept` reserves a Concept of the Ubiquitous Language instead, named by the identifier its row will carry, the first of the three layers a new vocabulary row stands on, and it is refused to a run (solorepo's DR-276)
 - `.meta/say/commit -m <subject> [--allow-empty] [< body]` — commit as this Actor; never `git commit`, which signs nothing
 - `.meta/say/whoami` — which login this channel speaks as
 

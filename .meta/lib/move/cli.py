@@ -8,6 +8,7 @@ from lib.move import (
     advance,
     challenges,
     common,
+    concepts,
     decisions,
     drafts,
     manager,
@@ -134,7 +135,11 @@ def _add_pr_parsers(sub: Any) -> None:
     p = sub.add_parser("request-review")
     p.add_argument("pr")
     p.add_argument("--to", default="reviewer")
-    sub.add_parser("mint")
+    p = sub.add_parser("mint")
+    p.add_argument("--concept", metavar="IDENT",
+                   help="reserve a Concept of the Ubiquitous Language instead of a Decision "
+                        "number, named by the identifier its row will carry, as the say-so "
+                        "that row stands on; refused to a run")
 
 
 def build_parser(description: str | None = None) -> argparse.ArgumentParser:
@@ -184,13 +189,21 @@ def _dispatch_issue_verb(args: argparse.Namespace) -> bool:
     return True
 
 
+def _mint(ident: str | None) -> None:
+    """Reserve the Concept `ident` names, and the next Decision number where the flag is absent."""
+    if ident is None:
+        decisions.mint()
+    else:
+        concepts.mint_concept(ident)
+
+
 def _dispatch_pr_verb(args: argparse.Namespace) -> None:
     """Dispatch a Pull Request or Decision state transition verb."""
     plain: dict[str, Callable[[], object]] = {
         "advance": lambda: advance.advance(args.pr),
         "dispatch": lambda: advance.dispatch_pass(args.pr, args.task),
         "request-review": lambda: pull_requests.request_review(args.pr, args.to),
-        "mint": decisions.mint,
+        "mint": lambda: _mint(args.concept),
         "ready": lambda: drafts.ready(args.pr),
     }
     if args.verb in plain:

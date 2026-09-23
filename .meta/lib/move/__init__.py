@@ -5,6 +5,8 @@ import` line. `common` imports nothing in the package: the levels, the pull
 request shape, the failures a call through the channel raises short of
 exiting, and which of the two a number names. `decisions` imports nothing in
 the package either: the number minted and reserved, and a record's status.
+`concepts` imports nothing in the package either: the reservation a row in the
+Ubiquitous Language stands on.
 `challenges` is the Issue lifecycle, from filing to the closes that are not a
 merge, and imports `common`, `pull_requests` and `advance`. `pull_requests` is
 the pull request's, opening, layering, the merge, the supersession, and the
