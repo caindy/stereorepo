@@ -10,9 +10,9 @@ import os
 import pathlib
 import re
 import subprocess
-import sys
 from typing import Any
 
+from lib import gh as lib_gh
 from lib.check_pr import ROOT
 
 THREADS = """
@@ -82,8 +82,9 @@ query($owner: String!, $name: String!) {
 """ % ROLLUP  # noqa: UP031  # reason: GraphQL query templates have literal curly braces
 
 
-UNSET = object()
-"""No default was given, as a value no caller can pass, so that a caller wanting `None` back from a failed read is told apart from a caller that wants the process to exit."""
+UNSET = lib_gh.UNSET
+GH_TIMEOUT = lib_gh.GH_TIMEOUT
+GhTimeout = lib_gh.GhTimeout
 
 
 def _role_token() -> str | None:
@@ -100,59 +101,15 @@ def _role_token() -> str | None:
     return None
 
 
-GH_TIMEOUT = 60
-"""Seconds one `gh` invocation is given before it is abandoned as hung (solorepo's #738).
-
-Every read this module makes is a single API call behind a CLI that refreshes
-its own auth, so a minute is far longer than any of them takes and far shorter
-than the indefinite wait a hung call would otherwise impose on `watch`.
-"""
-
-
-class GhTimeout(SystemExit):
-    """A `gh` invocation abandoned at its bound, rather than refused by GitHub.
-
-    A `SystemExit`, so a caller that does nothing about it leaves on the prose
-    as it always did; its own class so that a caller catching a refusal can
-    decline to catch a hang. `repo()` is the one such caller, and the
-    distinction is the difference between GitHub saying this is not a
-    repository — which the git remote answers — and GitHub saying nothing,
-    which no fallback answers.
-    """
-
-
-GH_HUNG = "gh: `gh {cmd}` answered nothing within {timeout}s"
-"""What an abandoned `gh` invocation exits with, which no fatal poll pattern matches."""
-
-
-def _degrade(default: Any, why: str) -> Any:
-    """Answers a failed read with the caller's fallback, or exits saying what went wrong.
-
-    Args:
-        default: The fallback the caller gave, or `UNSET` if it gave none.
-        why: What failed, in `gh`'s words or `json`'s, which `gh`'s stderr may
-            spread over several lines.
-
-    Returns:
-        Any: The caller's fallback.
-
-    Raises:
-        SystemExit: When the caller gave no fallback.
-    """
-    if default is not UNSET:
-        return default
-    sys.exit(f"gh: {why}")
-
-
 def gh(*args: str, default: Any = UNSET, timeout: float = GH_TIMEOUT) -> Any:
     """Invokes the GitHub CLI with the role credential and parses JSON output.
 
-    Args:
+    Parameters:
         *args: Command arguments passed to gh.
         default: Fallback value returned if the command fails, prints nothing,
-            or prints output that is not JSON. If `default` is omitted, any of
+            or prints output that is not JSON. If default is omitted, any of
             the three exits the process.
-        timeout: Seconds to wait for the invocation, `GH_TIMEOUT` by default.
+        timeout: Seconds to wait for the invocation, GH_TIMEOUT by default.
 
     Returns:
         Any: Parsed JSON data or the fallback.
@@ -168,20 +125,14 @@ def gh(*args: str, default: Any = UNSET, timeout: float = GH_TIMEOUT) -> Any:
         token = _role_token()
         if token:
             env = dict(os.environ, GH_TOKEN=token)
-    try:
-        out = subprocess.run(["gh", *args], check=False, capture_output=True, text=True, env=env,
-                             timeout=timeout)
-    except subprocess.TimeoutExpired:
-        raise GhTimeout(GH_HUNG.format(cmd=" ".join(args), timeout=timeout)) from None
-    if out.returncode:
-        return _degrade(default, out.stderr.strip())
-    text = out.stdout.strip()
-    if not text:
-        return _degrade(default, "answered nothing")
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as exc:
-        return _degrade(default, f"answered what is not JSON: {exc}")
+    return lib_gh.gh(
+        *args,
+        default=default,
+        env=env,
+        timeout=timeout,
+        prefix="gh",
+        subprocess_module=subprocess,
+    )
 
 
 def reason(exc: SystemExit) -> str:

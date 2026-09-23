@@ -2,11 +2,52 @@
 
 History in github.history.md (solorepo's DR-171).
 """
-import json
 import subprocess
 import sys
-from collections.abc import Sequence
+import types
 from typing import Any
+
+NO_RUNNER = ("gh: `.meta/lib/gh.py` is absent, which is the reviewer's worktree restoring the "
+             "control plane from a trunk that does not hold the shared runner yet "
+             "(solorepo's #748)")
+"""What a read exits with where the shared runner is missing, rather than a diagnosis of its own.
+
+The import below is a bootstrap shim with one live run: the pull request that
+adds `.meta/lib/gh.py` to `depth.CONTROL_PLANE` and to the reviewer workflow's
+trunk-restore pathspec. There the restore deletes the file, because
+`origin/main` does not hold it yet, while trunk's restored
+`.meta/lib/move/reconcile.py` still imports `NOT_RUN` from this module and so
+imports it. Once that pull request lands, trunk holds the runner and the
+restore restores it, so the branch is unreachable and its removal is owed.
+`.meta/next.py` imports the same module unguarded because nothing imports
+`next.py`: this module alone is reached through trunk's restored channel. An
+exit rather than a stub answering `None` is what keeps a deleted module from
+being reported as a token without the `actions` scope, which is what
+`screen.py` says of a read that answers `None`.
+"""
+
+
+def _no_runner(*_args: Any, **_options: Any) -> Any:
+    """Refuses a read the shared runner is not there to make.
+
+    Args:
+        *_args: What the runner would have been given.
+        **_options: What the runner would have been given.
+
+    Returns:
+        Any: Nothing; the type is the one it stands in for.
+
+    Raises:
+        SystemExit: Always, naming the bootstrap rather than the read.
+    """
+    sys.exit(NO_RUNNER)
+
+
+lib_gh: Any
+try:
+    from lib import gh as lib_gh
+except ImportError:
+    lib_gh = types.SimpleNamespace(UNSET=object(), gh=_no_runner)
 
 # The same four `next.py` reads, and for the same reason: they are the
 # workflows a portfolio inherits or writes its own of. `gate.yml` is not in
@@ -21,37 +62,22 @@ NOT_RUN = {"skipped", "cancelled", ""}
 RUN_FIELDS = "databaseId,createdAt,startedAt,updatedAt,conclusion,event,status,headBranch,headSha,displayTitle"
 
 
-UNSET = object()
-"""No default was given, as a value no caller can pass, so that a caller wanting `None` back from a failed read is told apart from a caller that wants the process to exit."""
-
-
-def _degrade(args: Sequence[str], default: Any, why: str) -> Any:
-    """Answers a failed read with the caller's fallback, or exits saying what went wrong.
-
-    Args:
-        args: The arguments the call was made with, the first two of which name it.
-        default: The fallback the caller gave, or `UNSET` if it gave none.
-        why: What failed, in `gh`'s words or `json`'s, which `gh`'s stderr may
-            spread over several lines.
-
-    Returns:
-        Any: The caller's fallback.
-
-    Raises:
-        SystemExit: When the caller gave no fallback.
-    """
-    if default is not UNSET:
-        return default
-    sys.exit(f"gh {' '.join(args[:2])}: {why}")
+UNSET = lib_gh.UNSET
 
 
 def gh(*args: str, default: Any = UNSET) -> Any:
     """Executes a GitHub CLI command and parses its JSON output.
 
-    Args:
+    The read is unbounded, which is `timeout=None` here and was the absence of
+    a `timeout` argument before the runner was shared: `.meta/lib/gh.py` raises
+    `GhTimeout` without consulting `default`, so a bound would take the whole
+    timing screen on a slow `gh run list` where `screen.py` is built to report
+    the one workflow it could not read (solorepo's DR-153).
+
+    Parameters:
         *args: Command arguments passed to gh.
         default: Fallback value returned if the command fails, prints nothing,
-            or prints output that is not JSON. If `default` is omitted, any of
+            or prints output that is not JSON. If default is omitted, any of
             the three exits the process.
 
     Returns:
@@ -60,16 +86,7 @@ def gh(*args: str, default: Any = UNSET) -> Any:
     Raises:
         SystemExit: If the read fails and no fallback was given.
     """
-    out = subprocess.run(["gh", *args], check=False, capture_output=True, text=True)
-    if out.returncode:
-        return _degrade(args, default, out.stderr.strip())
-    text = out.stdout.strip()
-    if not text:
-        return _degrade(args, default, "answered nothing")
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as exc:
-        return _degrade(args, default, f"answered what is not JSON: {exc}")
+    return lib_gh.gh(*args, default=default, timeout=None, subprocess_module=subprocess)
 
 
 def runs_of(workflow: str, limit: int) -> list[dict[str, Any]] | None:

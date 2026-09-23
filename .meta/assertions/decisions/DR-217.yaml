@@ -7,6 +7,7 @@ decisions:
       - work:article/2
     enacted_in:
       - work:artifact/meta-lib
+      - work:artifact/meta-lib-gh
       - work:artifact/meta-say-move
       - work:artifact/meta-lib-move-init
       - work:artifact/meta-lib-move-common
@@ -178,6 +179,11 @@ decisions:
       - >-
         The remaining scripts over five hundred lines are split the same way,
         one pull request each, before the complexity ceiling is turned on.
+      - >-
+        `.meta/lib/gh.py` provides the credential-free base `gh` CLI execution
+        logic (`UNSET`, `_degrade`, `GH_TIMEOUT`, subprocess calling, and JSON
+        decoding) shared across read-only tools and mutation channels without
+        being the body of a single script (solorepo's #748).
     falsifier: >-
       A script under `.meta/` whose body lives in a package the Specialization
       copy set does not carry; a module under `.meta/lib/` that imports a

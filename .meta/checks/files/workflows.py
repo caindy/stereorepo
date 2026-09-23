@@ -9,6 +9,7 @@ import os
 import pathlib
 import re
 import sys
+import types
 from collections.abc import Sequence
 from typing import Any
 
@@ -171,7 +172,7 @@ the number is a word."""
 
 
 NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-                "ten", "eleven", "twelve", "thirteen")
+                "ten", "eleven", "twelve", "thirteen", "fourteen")
 """The number words the workflow's prose may spell a count with."""
 
 
@@ -180,8 +181,9 @@ def control_plane_restore() -> StepOutcome:
     """The reviewer workflow restores exactly the control plane from trunk (solorepo's DR-217).
 
     `depth.CONTROL_PLANE` is the one statement of what the control plane is,
-    and under `.meta/lib/` it names the initialiser and the packages of
-    control-plane scripts rather than the directory (solorepo's DR-219).
+    and under `.meta/lib/` it names the initialiser, the shared `gh` runner and
+    the packages of control-plane scripts rather than the directory
+    (solorepo's DR-219).
     `.github/workflows/review.yml` states the trunk-restore set once, as the
     pathspec of the `run trunk's channel` step, with its count in that step's
     comment. The review door, `.meta/say/on`, reads the constant itself for
@@ -589,9 +591,56 @@ def scripts_of(package: str) -> tuple[pathlib.Path, ...]:
     return tuple(candidate for candidate in candidates if candidate.is_file())
 
 
+def _shared_modules(depth_module: types.ModuleType) -> tuple[str, ...]:
+    """The bare modules `depth.CONTROL_PLANE` admits directly under `.meta/lib/` (solorepo's #748).
+
+    Args:
+        depth_module: The loaded `depth` module, read for `CONTROL_PLANE`.
+
+    Returns:
+        tuple[str, ...]: Each admitted module's path, repository-relative.
+    """
+    lib = LIB.relative_to(ROOT).as_posix()
+    return tuple(entry for entry in depth_module.CONTROL_PLANE
+                 if entry.startswith(f"{lib}/") and entry.endswith(".py")
+                 and not entry.endswith("/__init__.py"))
+
+
+def _unadmitted_modules(depth_module: types.ModuleType) -> list[str]:
+    """The bare modules under `.meta/lib/` the envelope does not admit (solorepo's #748).
+
+    Solorepo's DR-217 fixes one package per script under `.meta/lib/<script>/`,
+    so a module sitting loose beside those packages is either shared control
+    plane, which `depth.CONTROL_PLANE` says and this reads back, or a package
+    that was never made. The admitted set is derived from the constant rather
+    than listed again here, so the constant stays the one statement of what the
+    control plane is; a module the constant names and the tree does not hold is
+    reported by `control_plane_packages` itself, with every other missing path.
+
+    Args:
+        depth_module: The loaded `depth` module, read for `CONTROL_PLANE`.
+
+    Returns:
+        list[str]: One finding per bare module the constant does not name.
+    """
+    lib = LIB.relative_to(ROOT).as_posix()
+    admitted = _shared_modules(depth_module)
+    named = ", ".join(f"`{entry}`" for entry in admitted)
+    admits = f"depth.CONTROL_PLANE admits {named}" if named else "it admits no bare module"
+    return [f"`{lib}/{item.name}` is a bare module under {lib}/ the envelope does not admit; "
+            f"solorepo's DR-217 fixes one package per script under {lib}/<script>/, and "
+            f"{admits}"
+            for item in sorted(LIB.iterdir())
+            if item.is_file() and item.suffix == ".py" and item.name != "__init__.py"
+            and f"{lib}/{item.name}" not in admitted]
+
+
 @check("control plane packages")
 def control_plane_packages() -> StepOutcome:
-    """A package under `.meta/lib/` is control plane exactly when the script it is the body of is (solorepo's DR-219).
+    """A package under `.meta/lib/` is control plane when the script it is the body of is.
+
+    Recognizes `.meta/lib/gh.py` as the shared control-plane runner (solorepo's DR-217,
+    solorepo's DR-219, solorepo's #748).
 
     Those packages are listed in `depth.CONTROL_PLANE` rather than derived
     (solorepo's DR-219), because the reviewer workflow restores what a list says
@@ -609,7 +658,9 @@ def control_plane_packages() -> StepOutcome:
     adds. Two scripts of one name that fall on opposite sides of the boundary
     leave the package's side undecided, and that is reported rather than guessed.
     A package the constant names and the tree does not hold fails too: the
-    restore would name a path that is gone.
+    restore would name a path that is gone. A bare module under `.meta/lib/` is
+    refused unless `depth.CONTROL_PLANE` names it, which is what admits the
+    shared `gh` runner and nothing else.
     """
     if not LIB.is_dir():
         return CouldNotRun(f"{LIB.relative_to(ROOT).as_posix()} is missing")
@@ -643,6 +694,7 @@ def control_plane_packages() -> StepOutcome:
             problems.append(f"`{prefix}` is control plane and {named}, which it is the body of, "
                             "is not; drop it from depth.CONTROL_PLANE, or name the script there "
                             "if the envelope is meant to hold it")
+    problems.extend(_unadmitted_modules(depth))
     for listed in depth.CONTROL_PLANE:
         if listed.startswith(f"{lib}/") and not (ROOT / listed.rstrip("/")).exists():
             problems.append(f"depth.CONTROL_PLANE names `{listed}`, which the tree does not hold; "

@@ -30,12 +30,19 @@ STRUCTURE_PATH = META / "assertions" / "structure.yaml"
 HOOK_PATH = META / "hooks" / "depth.py"
 
 CONTROL_PLANE: tuple[str, ...] = (
-    ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/__init__.py", ".meta/lib/check_pr/",
-    ".meta/lib/move/",
+    ".meta/say", ".meta/hooks/", ".meta/check_pr.py", ".meta/lib/__init__.py",
+    ".meta/lib/gh.py", ".meta/lib/check_pr/", ".meta/lib/move/",
     ".meta/lib/worktree_only/", ".meta/lib/signed_channel/",
     ".claude/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/workflows/", "justfile",
 )
 """Path prefixes defining the agent harness control plane and security boundary (solorepo's DR-219).
+
+Under `.meta/lib/` it names the initialiser, `.meta/lib/gh.py`, and the packages
+of control-plane scripts rather than the directory. `.meta/lib/gh.py` is the
+one member that is the body of no script: the shared
+`gh` runner is imported by control-plane and non-control-plane callers alike,
+so trunk's copy has to be what the reviewer's worktree executes, and it is
+inside the envelope on its own account rather than as some script's body.
 
 `justfile` is control plane because the reviewer's gate is spelled `just pr <n>`
 (solorepo's DR-252): the recipe is the entry point, pinned to trunk like the

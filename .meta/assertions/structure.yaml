@@ -488,6 +488,9 @@ artifacts:
   - id: work:artifact/meta-lib
     name: .meta/lib/__init__.py
     path: .meta/lib/__init__.py
+  - id: work:artifact/meta-lib-gh
+    name: .meta/lib/gh.py
+    path: .meta/lib/gh.py
   - id: work:artifact/meta-lib-check-pr
     name: .meta/lib/check_pr/__init__.py
     path: .meta/lib/check_pr/__init__.py

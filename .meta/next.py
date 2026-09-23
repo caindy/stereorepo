@@ -44,14 +44,13 @@ What it reads, and from where:
 Reads only, through `gh`, which the hook permits. Nothing here writes.
 """
 import argparse
-import json
 import re
 import subprocess
 import sys
-from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from lib import gh as lib_gh
 from lib.timing.github import NOT_RUN
 
 DIFFICULTY = ("easy", "medium", "hard", "human")
@@ -65,37 +64,22 @@ WAITS = re.compile(r"^\*\*Waits on\.\*\*\s*(.*?)\s*$", re.M)
 OLD_WAITS = re.compile(r"\*\*What it waits on\.\*\*\s*(.*?)(?:\n\s*\n|\Z)", re.S)
 REF = re.compile(r"#(\d+)")
 
-UNSET = object()
-"""No default was given, as a value no caller can pass, so that a caller wanting `None` back from a failed read is told apart from a caller that wants the process to exit."""
-
-
-def _degrade(args: Sequence[str], default: Any, why: str) -> Any:
-    """Answers a failed read with the caller's fallback, or exits saying what went wrong.
-
-    Args:
-        args: The arguments the call was made with, the first two of which name it.
-        default: The fallback the caller gave, or `UNSET` if it gave none.
-        why: What failed, in `gh`'s words or `json`'s, which `gh`'s stderr may
-            spread over several lines.
-
-    Returns:
-        Any: The caller's fallback.
-
-    Raises:
-        SystemExit: When the caller gave no fallback.
-    """
-    if default is not UNSET:
-        return default
-    sys.exit(f"gh {' '.join(args[:2])}: {why}")
+UNSET = lib_gh.UNSET
 
 
 def gh(*args: str, default: Any = UNSET) -> Any:
     """Executes a GitHub CLI command and parses its JSON output.
 
-    Args:
+    The read is unbounded, which is `timeout=None` here and was the absence of
+    a `timeout` argument before the runner was shared: `.meta/lib/gh.py` raises
+    `GhTimeout` without consulting `default`, so a bound would exit the screen
+    on a slow read where every caller here passes a fallback precisely so one
+    unreadable read costs one section and not the whole screen.
+
+    Parameters:
         *args: Command arguments passed to gh.
         default: Fallback value returned if the command fails, prints nothing,
-            or prints output that is not JSON. If `default` is omitted, any of
+            or prints output that is not JSON. If default is omitted, any of
             the three exits the process.
 
     Returns:
@@ -104,16 +88,7 @@ def gh(*args: str, default: Any = UNSET) -> Any:
     Raises:
         SystemExit: If the read fails and no fallback was given.
     """
-    out = subprocess.run(["gh", *args], check=False, capture_output=True, text=True)
-    if out.returncode:
-        return _degrade(args, default, out.stderr.strip())
-    text = out.stdout.strip()
-    if not text:
-        return _degrade(args, default, "answered nothing")
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as exc:
-        return _degrade(args, default, f"answered what is not JSON: {exc}")
+    return lib_gh.gh(*args, default=default, timeout=None, subprocess_module=subprocess)
 
 
 def waits_on(issue: dict[str, Any] | str | None) -> list[int] | str | None:

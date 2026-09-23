@@ -13,6 +13,7 @@ decisions:
       - work:artifact/meta-checks-files-workflows
       - work:artifact/meta-timing
       - work:artifact/meta-lib-timing-routing
+      - work:artifact/meta-lib-gh
     context: >-
       Solorepo's DR-217 put `.meta/lib/` into `depth.CONTROL_PLANE` as a
       directory, so that the package initialiser and every later package would
@@ -68,11 +69,24 @@ decisions:
         DR-217's consequence that `.meta/lib/` is inside the envelope as a
         directory, and every later package with it, is superseded: a package
         is inside the envelope when the script it is the body of is.
+      - >-
+        `depth.CONTROL_PLANE` names `.meta/lib/gh.py` as the shared
+        control-plane runner module beside the control-plane packages and
+        `.meta/lib/__init__.py`, restored from trunk in the reviewer workflow
+        (solorepo's #748). It is the one member the rule above cannot account
+        for, because it is a package of nothing and the body of no script: the
+        runner is imported by control-plane and non-control-plane callers
+        alike, so trunk's copy has to be what the reviewer's worktree executes,
+        and it is inside the envelope on its own account rather than as some
+        script's body. A bare module under `.meta/lib/` the constant does not
+        name is refused by the gate, so the exception is admitted one module at
+        a time rather than opened as a class.
     falsifier: >-
       A pull request adding a package under `.meta/lib/` for a script that is
       not control plane whose reviewer run fails to import it; or a
-      control-plane script's package that the reviewer's worktree takes from
-      the pull request rather than from trunk.
+      control-plane script's package, or a shared control-plane module under
+      `.meta/lib/`, that the reviewer's worktree takes from the pull request
+      rather than from trunk.
     rationale: |-
       The envelope is a set of scripts, and a script's package belongs to the
       script. Naming the directory was shorter and it overreached by exactly

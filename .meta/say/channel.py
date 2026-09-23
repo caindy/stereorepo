@@ -29,7 +29,6 @@ Bodies are read from stdin rather than command-line arguments to preserve
 multiline text and quotes without shell escaping issues.
 """
 import argparse
-import json
 import os
 import pathlib
 import re
@@ -41,8 +40,9 @@ import types
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-NO_SPEC = "no module spec for {path}"
-"""What loading a sibling raises where `importlib` declines to describe the file as a module."""
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+
+from lib import gh as lib_gh
 
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -106,6 +106,10 @@ def speak_as(role: str) -> None:
     global ROLE_ENV
     if not os.environ.get("SOLOREPO_ROLE_ENV"):
         ROLE_ENV = ROLE_DIR / f"{role}.env"
+
+
+NO_SPEC = "no module spec for {path}"
+"""What loading a sibling raises where `importlib` declines to describe the file as a module."""
 
 
 def sibling(name: str) -> types.ModuleType:
@@ -331,28 +335,9 @@ def role_credential() -> dict[str, str]:
     return {"GH_TOKEN": found["GH_TOKEN"]}
 
 
-GH_TIMEOUT = 60
-"""Seconds one `gh` invocation is given before it is abandoned as hung (solorepo's #738).
-
-The bound is the default and not the rule. A verb that waits on `gh` for a
-single API call is bounded by it, and a minute is far longer than one of those
-takes. The `gh stack` invocations in `.meta/say/move` are the exception and
-pass `timeout=None`: rebasing and force-pushing every layer of a stack, or
-merging every layer up to one, can take longer than a minute with nothing
-wrong, and abandoned at a bound they would report a half-rewritten stack or a
-merge whose landing nothing reconciled as a hang.
-"""
-
-TIMEOUT_RETURNCODE = 124
-"""The `returncode` a tolerated timeout's `CalledProcessError` carries, which is what `timeout(1)` reports one under.
-
-It is not an exit status of anything here: where failure is not tolerated a
-timeout leaves through `sys.exit`, whose status is 1, so a shell tells a hang
-from a refusal by the prose on standard error and not by `$?`.
-"""
-
-UNSET = object()
-"""No default was given, as a value no caller can pass, so that a caller wanting `None` back from a failed read is told apart from a caller that wants the process to exit."""
+GH_TIMEOUT = lib_gh.GH_TIMEOUT
+TIMEOUT_RETURNCODE = lib_gh.TIMEOUT_RETURNCODE
+UNSET = lib_gh.UNSET
 
 STACK_EXTENSION = "github/gh-stack"
 """The extension `gh stack` is, spelled as `gh extension install` takes it.
@@ -387,43 +372,6 @@ def _stack_extension() -> None:
     gh("extension", "install", STACK_EXTENSION, parse=False)
 
 
-def _relay(args: tuple[str, ...], out: subprocess.CompletedProcess[str]) -> None:
-    """Prints `gh <args>: exit <status>` on standard error, and what the invocation said.
-
-    The status line is followed by whatever the invocation printed on standard
-    output and standard error, joined by a newline; or, where both streams were
-    empty after stripping, by the suffix ` and said nothing` on the status line
-    itself, so a call that printed nothing is reported as having printed
-    nothing rather than not reported.
-
-    Args:
-        args: The arguments `gh` was invoked with.
-        out: What `subprocess.run` answered.
-    """
-    said = "\n".join(part for part in (out.stdout.strip(), out.stderr.strip()) if part)
-    print(f"gh {' '.join(args)}: exit {out.returncode}"
-          + (f"\n{said}" if said else " and said nothing"), file=sys.stderr)
-
-
-def _degrade(default: Any, why: str) -> Any:
-    """Answers a failed read with the caller's fallback, or exits saying what went wrong.
-
-    Args:
-        default: The fallback the caller gave, or `UNSET` if it gave none.
-        why: What failed, in `gh`'s words or `json`'s, which `gh`'s stderr may
-            spread over several lines.
-
-    Returns:
-        Any: The caller's fallback.
-
-    Raises:
-        SystemExit: When the caller gave no fallback.
-    """
-    if default is not UNSET:
-        return default
-    sys.exit(f"gh: {why}")
-
-
 def gh(*args: str, parse: bool = True, default: Any = UNSET,
        tolerate_fail: bool = False, timeout: float | None = GH_TIMEOUT,
        echo: bool = False) -> Any:
@@ -433,19 +381,19 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
     `STACK_EXTENSION` where the machine does not hold it, so that the CLI's own
     install-on-first-use cannot consume the call (solorepo's #797).
 
-    Args:
+    Parameters:
         *args: Command arguments passed to gh.
         parse: Whether to read the output as JSON. False returns it as stripped text,
             which is what a write that prints nothing answers with.
         default: Fallback value returned if the command fails, or prints output
-            that `parse` cannot read as JSON. If `default` is omitted, either
+            that `parse` cannot read as JSON. If default is omitted, either
             exits the process.
         tolerate_fail: Whether to raise the failure rather than answer it, which
             is how `gh_with_retry` sees the attempt it has to repeat. It is read
-            before `default` on both failures, so a caller that sets it handles
+            before default on both failures, so a caller that sets it handles
             a failed command and an unreadable body itself.
-        timeout: Seconds to wait for the invocation, `GH_TIMEOUT` by default;
-            `None` waits indefinitely, which is what the `gh stack` calls pass.
+        timeout: Seconds to wait for the invocation, GH_TIMEOUT by default;
+            None waits indefinitely, which is what the `gh stack` calls pass.
         echo: Whether to relay the invocation's exit status and both of its
             streams on standard error. A call whose success is read back from
             GitHub rather than from its return value discards the only account
@@ -453,43 +401,31 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
             exits 0 having done nothing.
 
     Returns:
-        Any: Parsed JSON data, the stripped output where `parse` is false or the
+        Any: Parsed JSON data, the stripped output where parse is false or the
             command printed nothing, or the fallback.
 
     Raises:
         subprocess.CalledProcessError: If the command fails or times out under
-            `tolerate_fail`; a timeout carries `TIMEOUT_RETURNCODE`, so
+            tolerate_fail; a timeout carries TIMEOUT_RETURNCODE, so
             `gh_with_retry` retries it as it retries any other failure.
         json.JSONDecodeError: If the output cannot be read as JSON under
-            `tolerate_fail`.
+            tolerate_fail.
         SystemExit: If the read fails or times out and no fallback was given.
     """
     if args[:1] == ("stack",):
         _stack_extension()
-    try:
-        out = subprocess.run(["gh", *args], check=False, capture_output=True, text=True,
-                             env={**os.environ, **role_credential()}, timeout=timeout)
-    except subprocess.TimeoutExpired as expired:
-        hung = f"`gh {' '.join(args)}` answered nothing within {timeout}s"
-        if tolerate_fail:
-            raise subprocess.CalledProcessError(
-                TIMEOUT_RETURNCODE, ["gh", *list(args)], output="", stderr=hung) from expired
-        sys.exit(f"gh: {hung}")
-    if echo:
-        _relay(args, out)
-    if out.returncode:
-        if tolerate_fail:
-            raise subprocess.CalledProcessError(out.returncode, ["gh", *list(args)], output=out.stdout, stderr=out.stderr)
-        return _degrade(default, out.stderr.strip())
-    text = out.stdout.strip()
-    if not parse or not text:
-        return text
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as exc:
-        if tolerate_fail:
-            raise
-        return _degrade(default, f"answered what is not JSON: {exc}")
+    return lib_gh.gh(
+        *args,
+        default=default,
+        env={**os.environ, **role_credential()},
+        timeout=timeout,
+        parse=parse,
+        tolerate_fail=tolerate_fail,
+        echo=echo,
+        blank="",
+        prefix="gh",
+        subprocess_module=subprocess,
+    )
 
 
 def gh_with_retry(*args: str, parse: bool = True, tries: int = 3, delay: float = 2,

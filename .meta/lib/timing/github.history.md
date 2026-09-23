@@ -9,6 +9,22 @@ diff has that.>
 Evidence: `<path>::<symbol>`
 -->
 
+### The reviewer's own worktree deleted the shared runner this module imports
+
+The pull request that moved the `gh` invocation into `.meta/lib/gh.py` also
+named that file in the reviewer workflow's trunk-restore pathspec, and
+`origin/main` did not hold it yet: the no-overlay restore deleted it, while
+trunk's restored `.meta/lib/move/reconcile.py` went on importing `NOT_RUN` from
+this module and so importing the module that was gone. Every `.meta/say/move`
+invocation in that one reviewer run died on the `ImportError`. Established: the
+import is guarded for the single run in which trunk cannot yet hold the runner,
+and the guard exits saying the runner is absent rather than standing in a
+reader that answers `None`, which `screen.py` reports as a token without the
+`actions` scope and would have made a deleted module read as a credential
+fault.
+
+Evidence: `.meta/checks/files/workflows.py::control_plane_packages`
+
 ### A fallback of `None` meant the caller that most needs to degrade exited instead
 
 `runs_of` reads the runs of a workflow on a token with no `actions` scope,
