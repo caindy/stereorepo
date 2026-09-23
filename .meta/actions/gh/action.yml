@@ -2,15 +2,17 @@
 #
 # `.meta/check_pr.py`, `.meta/next.py` and `.meta/say/channel.py` all shell out
 # to `gh` for every read and write, so every job that runs one of them needs it.
-# `ubuntu-latest` ships it and the self-hosted scale set's image
-# (solorepo's DR-137) does not, and since solorepo's DR-140 the same job may run
-# on either — a portfolio's gate is hosted, this repository's is not. So the
-# gap is closed once, here, rather than by a `runs-on:` a reader has to check
-# before trusting a step.
+# `ubuntu-latest` ships it; a self-hosted runner ships whatever its image was
+# built with, which is nothing a portfolio can assume. Since solorepo's DR-140
+# the same job may run on either — a portfolio's gate is hosted, this
+# repository's is not. So the gap is closed once, here, rather than by a
+# `runs-on:` a reader has to check before trusting a step.
 #
 # Guarded, not unconditional: on a runner that already has `gh` this is a
 # `type -p` and nothing else, which is what makes it safe to put in the shared
 # half of the two gate workflows (solorepo's DR-119) instead of in one of them.
+# That is the case on this repository's own scale set, whose image bakes `gh`
+# in (solorepo's DR-156): the guard costs it nothing and is not there for it.
 name: gh
 description: Ensure the GitHub CLI is on the runner, installing it only where it is missing.
 runs:
