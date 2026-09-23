@@ -454,12 +454,12 @@ def redeliver(number: int) -> None:
     try:
         challenges.relabel(number, add=["challenge"])
     except SystemExit as refused:
-        try:
-            channel.gh_with_retry("issue", "edit", str(number), "--add-label", "challenge",
-                                  parse=False, tolerate_fail=True)
-        except common.UNREACHED as again:
+        again = channel.gh_with_retry("issue", "edit", str(number), "--add-label", "challenge",
+                                      parse=False, default=None)
+        if again is None:
             sys.exit(f"{refused.code}; and putting `challenge` back on #{number} was refused "
-                     f"too — {again} — so it is unlabelled, and `just next` is what reports it")
+                     "too — the warnings above carry what `gh` said of each attempt — so it "
+                     "is unlabelled, and `just next` is what reports it")
         raise
 
 

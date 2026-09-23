@@ -44,10 +44,10 @@ def gh_bound_probes() -> list[str]:
     bound is what turns that into a failure, and a failure is a shape the
     channel already has answers for.
 
-    Four cases, each over a `run` that raises `TimeoutExpired` rather than
+    Five cases, each over a `run` that raises `TimeoutExpired` rather than
     waiting the seconds out, so the probe costs no wall clock. The stand-in
     answers a call that carries no `timeout=` successfully, so what the first
-    three cases assert is that `GH_TIMEOUT` reached `subprocess.run`: strip the
+    four cases assert is that `GH_TIMEOUT` reached `subprocess.run`: strip the
     bound from the call and every one of them stops failing. A plain call
     exits, and the refusal names both the call and the bound it passed, because
     a timeout indistinguishable from a refusal sends its reader to the wrong
@@ -58,14 +58,23 @@ def gh_bound_probes() -> list[str]:
     stand-in counts the invocations, so a bound that stopped the first call and
     then gave up is told from one that tried again.
 
-    The fourth is the opt-out the `gh stack` calls take: `timeout=None` reaches
+    The fourth is the same hang under a fallback: a call carrying `default={}`
+    answers that fallback rather than exiting, having still made all three
+    attempts. `{}` is the fallback rather than `None` because a wrapper that
+    ignored `default` and returned bare would answer `None` too, and the two
+    would be one observation. What the whole failure contract says a fallback
+    answers, over every read that goes wrong, is
+    `.meta/checks/probes/wrappers.py`'s subject; what is asserted here is that
+    the attempts are spent before the fallback is reached.
+
+    The fifth is the opt-out the `gh stack` calls take: `timeout=None` reaches
     `subprocess.run` as `None` and the call waits, because a stack rebase or a
     stack merge is not the single API call the bound was sized for.
 
     `role_credential` is stood in as well, so the cases turn on the bound
     rather than on whether the machine running them holds a Role's key, and so
     is `_stack_extension`, whose own bounded `gh extension list` would otherwise
-    be the call the fourth case's stack invocation times out on rather than the
+    be the call the fifth case's stack invocation times out on rather than the
     stack invocation itself; what that preflight does is
     `.meta/checks/probes/channel/extension.py`'s subject.
     """
@@ -85,6 +94,12 @@ def gh_bound_probes() -> list[str]:
         calls.clear()
         retried = outcome(lambda: channel.gh_with_retry("pr", "view", "7", tries=3, delay=0))
         attempts = len(calls)
+        calls.clear()
+        answers: list[Any] = []
+        fell_back = outcome(lambda: answers.append(
+            channel.gh_with_retry("pr", "view", "7", tries=3, delay=0, default={})))
+        degraded: Any = answers[0] if answers else f"an exit saying {fell_back.code!r}"
+        degraded_attempts = len(calls)
         calls.clear()
         channel.gh("stack", "push", parse=False, timeout=None)
         opted_out = calls[0][1] if calls else "no call at all"
@@ -108,6 +123,14 @@ def gh_bound_probes() -> list[str]:
     if attempts != 3:
         problems.append(f"gh_with_retry: a hung call was invoked {attempts} time(s) of the three "
                         "it asked for, and a hang it does not retry is a hang it cannot outlast")
+    if degraded != {}:
+        problems.append(f"gh_with_retry: a hung call carrying a fallback of {{}} came to "
+                        f"{degraded!r} rather than that fallback, and a wrapper that answers "
+                        "only `None` is one that never read `default` at all")
+    if degraded_attempts != 3:
+        problems.append(f"gh_with_retry: a hung call carrying a fallback was invoked "
+                        f"{degraded_attempts} time(s) of the three it asked for, and a fallback "
+                        "reached before the attempts are spent is a hang it did not outlast")
     if opted_out is not None:
         problems.append(f"gh: a call passing `timeout=None` reached `subprocess.run` with "
                         f"timeout={opted_out!r}, and a stack rebase cut off at a minute "

@@ -32,6 +32,14 @@ NOT_AN_ISSUE = "{item!r} is not an Issue number"
 """What the `--on`/`--off` parser raises for an item that is not digits."""
 
 
+UNREAD = "the {field} of #{issue} could not be read"
+"""What a read that answered its fallback raises.
+
+A best-effort helper catches it and warns that GitHub said nothing, rather than
+settling on an answer nobody read.
+"""
+
+
 def labels_of(issue: str | int) -> list[str]:
     """Retrieve the set of label names attached to an Issue.
 
@@ -875,25 +883,32 @@ def release(issue: str | int) -> None:
 def _stop_check_challenge(issue: str | int) -> None:
     """Best-effort check that the issue is a challenge before stopping."""
     try:
-        res = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
-        if res is not None:
-            now = [lbl["name"] for lbl in res["labels"]]
-            if "challenge" not in now:
-                sys.exit(f"say: #{issue} is not a Challenge (labelled {now or 'nothing'}); a difficulty "
-                         "is a Challenge's, and a loop reads it only beside `challenge`. "
-                         "`move triage` makes it one, at a level, in one act.")
+        res = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", default=None)
+        if res is None:
+            print(f"warning: could not read labels of #{issue} to verify Challenge",
+                  file=sys.stderr)
+            return
+        now = [lbl["name"] for lbl in res["labels"]]
+        if "challenge" not in now:
+            sys.exit(f"say: #{issue} is not a Challenge (labelled {now or 'nothing'}); "
+                     "a difficulty is a Challenge's, and a loop reads it only beside `challenge`. "
+                     "`move triage` makes it one, at a level, in one act.")
     except SystemExit:
         raise
     except common.UNREACHED as exc:
-        print(f"warning: could not read labels of #{issue} to verify Challenge: {exc}", file=sys.stderr)
+        print(f"warning: could not read labels of #{issue} to verify Challenge: {exc}",
+              file=sys.stderr)
 
 
 def _stop_post_comment(issue: str | int, body: str) -> None:
     """Best-effort posting of explanation comment when stopping."""
     try:
-        made = channel.gh_with_retry("api", f"repos/{channel.repo()}/issues/{issue}/comments", "-f", f"body={body}", tolerate_fail=True)
-        if made and "html_url" in made:
-            print(made["html_url"])
+        made = channel.gh_with_retry("api", f"repos/{channel.repo()}/issues/{issue}/comments",
+                                     "-f", f"body={body}", default=None)
+        if made is None:
+            print(f"warning: could not post comment on #{issue}", file=sys.stderr)
+            return
+        print(made["html_url"])
     except common.UNREACHED as exc:
         print(f"warning: could not post comment on #{issue}: {exc}", file=sys.stderr)
 
@@ -902,17 +917,27 @@ def _stop_release_assignee(issue: str | int) -> None:
     """Best-effort removal of the current assignee when stopping."""
     try:
         login = channel.login()
-        channel.gh_with_retry("issue", "edit", str(issue), "--remove-assignee", login, parse=False, tolerate_fail=True)
+        channel.gh_with_retry("issue", "edit", str(issue), "--remove-assignee", login,
+                              parse=False, default="")
 
         def who_now() -> list[str]:
-            """The assignees, read as tolerantly as the write was, so a refusal warns here."""
+            """The assignees, read as tolerantly as the write was.
+
+            Raises:
+                TypeError: Where the read was refused and answered its `None`
+                    fallback, so the enclosing handler warns that nothing was
+                    read rather than `settled` polling an invented answer.
+            """
             seen = channel.gh_with_retry("issue", "view", str(issue), "--json", "assignees",
-                                         tolerate_fail=True)
+                                         default=None)
+            if seen is None:
+                raise TypeError(UNREAD.format(field="assignees", issue=issue))
             return [str(a["login"]) for a in seen["assignees"]]
 
         who = channel.settled(who_now, lambda who: login not in who)
         if login in who:
-            print(f"warning: GitHub shows #{issue} still assigned to {login} after release", file=sys.stderr)
+            print(f"warning: GitHub shows #{issue} still assigned to {login} after release",
+                  file=sys.stderr)
         else:
             print(f"released #{issue}; it is assigned to {', '.join(who) or 'nobody'}")
     except common.UNREACHED as exc:
@@ -922,23 +947,37 @@ def _stop_release_assignee(issue: str | int) -> None:
 def _stop_move_human(issue: str | int) -> None:
     """Best-effort move of difficulty level to human when stopping."""
     try:
-        res_diff = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels", tolerate_fail=True)
-        if res_diff is not None:
-            now = [lbl["name"] for lbl in res_diff["labels"]]
-            stale = [lbl for lbl in now if lbl in common.DIFFICULTIES and lbl != "human"]
-            cmd = ["issue", "edit", str(issue), "--add-label", "human"]
-            for name in stale:
-                cmd += ["--remove-label", name]
-            channel.gh_with_retry(*cmd, parse=False, tolerate_fail=True)
+        res_diff = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels",
+                                         default=None)
+        if res_diff is None:
+            print(f"warning: could not set difficulty of #{issue} to human", file=sys.stderr)
+            return
+        now = [lbl["name"] for lbl in res_diff["labels"]]
+        stale = [lbl for lbl in now if lbl in common.DIFFICULTIES and lbl != "human"]
+        cmd = ["issue", "edit", str(issue), "--add-label", "human"]
+        for name in stale:
+            cmd += ["--remove-label", name]
+        channel.gh_with_retry(*cmd, parse=False, default="")
 
-            def labels_now() -> list[str]:
-                """The labels, read as tolerantly as the write was, so a refusal warns here."""
-                seen = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels",
-                                             tolerate_fail=True)
-                return [str(lbl["name"]) for lbl in seen["labels"]]
+        def labels_now() -> list[str]:
+            """The labels, read as tolerantly as the write was.
 
-            now_back = channel.settled(
-                labels_now, lambda back: "human" in back and not any(lbl in back for lbl in stale))
+            Raises:
+                TypeError: Where the read was refused and answered its `None`
+                    fallback, so the enclosing handler warns that nothing was
+                    read rather than `settled` polling an invented answer.
+            """
+            seen = channel.gh_with_retry("issue", "view", str(issue), "--json", "labels",
+                                         default=None)
+            if seen is None:
+                raise TypeError(UNREAD.format(field="labels", issue=issue))
+            return [str(lbl["name"]) for lbl in seen["labels"]]
+
+        now_back = channel.settled(
+            labels_now, lambda back: "human" in back and not any(lbl in back for lbl in stale))
+        if "human" not in now_back:
+            print(f"warning: could not set difficulty of #{issue} to human", file=sys.stderr)
+        else:
             print(f"#{issue} is labelled {', '.join(now_back)}")
     except common.UNREACHED as exc:
         print(f"warning: could not set difficulty of #{issue} to human: {exc}", file=sys.stderr)

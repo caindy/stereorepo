@@ -27,8 +27,22 @@ and wins.
 
 Bodies are read from stdin rather than command-line arguments to preserve
 multiline text and quotes without shell escaping issues.
+
+Every GitHub reader under `.meta/` answers a failed read the same way: the
+caller's `default` where it gave one, and `sys.exit` where it did not, which is
+what `UNSET` exists to tell apart (solorepo's #737). `gh_with_retry` is the
+retry layer over that contract rather than a second one, so a caller chooses
+between exiting and degrading at the call site whether or not it wants the
+attempts repeated. Degrading is silent in `lib.gh`'s `_degrade`, which is where
+a single invocation's failure is answered, because a caller that
+gave a fallback asked for a value and not for a report; a caller that spent
+every attempt has no exception left to quote, so `_degrade_relayed` puts what
+`gh` said on standard error before it hands the fallback back, and the warning
+a best-effort helper prints afterwards names the act it could not make while
+`gh`'s own words stand above it.
 """
 import argparse
+import json
 import os
 import pathlib
 import re
@@ -372,6 +386,27 @@ def _stack_extension() -> None:
     gh("extension", "install", STACK_EXTENSION, parse=False)
 
 
+def _degrade_relayed(args: tuple[str, ...], why: str, default: Any) -> Any:
+    """Answers a failed read with the caller's fallback, having relayed what `gh` said.
+
+    Args:
+        args: The invocation, as `gh_with_retry` was given it.
+        why: What the last attempt failed with, in `gh`'s words or `json`'s.
+        default: The fallback the caller gave, or `UNSET` if it gave none.
+
+    Returns:
+        Any: The caller's fallback.
+
+    Raises:
+        SystemExit: When the caller gave no fallback.
+    """
+    if default is not UNSET:
+        print(f"warning: gh {' '.join(args)} failed and answered the fallback: {why}",
+              file=sys.stderr)
+        return default
+    sys.exit(f"gh: {why}")
+
+
 def gh(*args: str, parse: bool = True, default: Any = UNSET,
        tolerate_fail: bool = False, timeout: float | None = GH_TIMEOUT,
        echo: bool = False) -> Any:
@@ -428,45 +463,49 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
     )
 
 
-def gh_with_retry(*args: str, parse: bool = True, tries: int = 3, delay: float = 2,
-                  backoff: float = 2, tolerate_fail: bool = False) -> Any:
+def gh_with_retry(*args: str, parse: bool = True, default: Any = UNSET,
+                  tries: int = 3, delay: float = 2, backoff: float = 2) -> Any:
     """Run gh, retrying on subprocess/API failure with exponential backoff.
 
     A call that answers nothing within `GH_TIMEOUT` seconds is a failure like
     any other here, so a hung invocation is abandoned and retried rather than
-    waited on (solorepo's #738).
+    waited on (solorepo's #738). Each attempt drives `gh` under
+    `tolerate_fail=True`, so the attempt's failure comes back here to be
+    repeated; `default` is read here, once the attempts are spent, and never
+    by `gh` itself.
 
     Args:
         *args: Command arguments passed to gh.
         parse: Whether to read the output as JSON, as `gh` takes it.
+        default: Fallback value returned once every attempt has failed, or as
+            soon as an attempt prints output that `parse` cannot read as JSON,
+            which is not retried and spends no further attempt. If `default` is
+            omitted, either exits the process.
         tries: How many attempts to make before the failure is final.
         delay: Seconds to wait after the first failed attempt.
         backoff: What each further wait is multiplied by.
-        tolerate_fail: Whether to raise the final failure rather than exit on it.
 
     Returns:
-        Any: What `gh` answered on the first attempt that succeeded.
+        Any: Parsed JSON data, the stripped output where `parse` is false or the
+            command printed nothing, or the fallback.
 
     Raises:
-        subprocess.CalledProcessError: If every attempt fails under `tolerate_fail`.
-        json.JSONDecodeError: If an attempt answers a body that is not JSON. That
-            failure is not retried and reaches the caller whatever `tolerate_fail`
-            was set to, since a body `gh` printed once it will print again.
-        SystemExit: If every attempt fails and the failure is not tolerated.
+        SystemExit: If every attempt fails and no fallback was given, or if an
+            attempt answers a body that is not JSON and no fallback was given.
     """
-    import time
     current_delay = delay
     for attempt in range(tries):
         try:
             return gh(*args, parse=parse, tolerate_fail=True)
         except subprocess.CalledProcessError as exc:
             if attempt == tries - 1:
-                if tolerate_fail:
-                    raise
-                sys.exit(f"gh: {exc.stderr.strip()}")
-            print(f"warning: gh {' '.join(args)} failed (attempt {attempt + 1}/{tries}): {exc.stderr.strip()}. Retrying in {current_delay}s...", file=sys.stderr)
+                return _degrade_relayed(args, exc.stderr.strip(), default)
+            print(f"warning: gh {' '.join(args)} failed (attempt {attempt + 1}/{tries}): "
+                  f"{exc.stderr.strip()}. Retrying in {current_delay}s...", file=sys.stderr)
             time.sleep(current_delay)
             current_delay *= backoff
+        except json.JSONDecodeError as exc:
+            return _degrade_relayed(args, f"answered what is not JSON: {exc}", default)
     sys.exit(f"gh: {' '.join(args)} was never attempted — `tries` is {tries}")
 
 

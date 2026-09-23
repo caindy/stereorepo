@@ -1,4 +1,4 @@
-"""The four `gh` wrappers, held to the failure contract they were converged on (solorepo's #737).
+"""The five `gh` wrappers, held to the failure contract they were converged on (solorepo's #737).
 """
 import collections
 import functools
@@ -21,8 +21,9 @@ BLANK = object()
 MISSING = ("wrapper-probe-no-such-subcommand",)
 """The `gh` subcommand every read is made over, which does not exist, so that a real failure needs neither network nor credential."""
 
-Wrapper = collections.namedtuple("Wrapper", "name module blank")
-"""A wrapper under probe: what a finding calls it, the module holding its `gh`, and what it answers a read that succeeded and printed nothing."""
+Wrapper = collections.namedtuple("Wrapper", "name module blank verb binding",
+                                 defaults=("gh", {}))
+"""A wrapper under probe: what a finding calls it, the module holding it, what it answers a read that succeeded and printed nothing, the attribute it is reached by, and the arguments every read of it carries besides the subcommand and the fallback."""
 
 Case = collections.namedtuple("Case", "name code out rule")
 """One read: what it did, the exit status and output `gh` is stood in to give it, and what the contract says it answers."""
@@ -79,7 +80,7 @@ def contract(wrapper: Wrapper, case: Case, default: Any) -> tuple[Any, bool]:
 
 
 def read(wrapper: Wrapper, default: Any) -> Any:
-    """Call `wrapper`'s `gh` over `MISSING`, passing `default` where one is given.
+    """Call `wrapper` over `MISSING`, passing `default` where one is given.
 
     Parameters:
         wrapper (Wrapper): The wrapper to read from.
@@ -91,9 +92,10 @@ def read(wrapper: Wrapper, default: Any) -> Any:
     Raises:
         SystemExit: Where the wrapper exits rather than answering.
     """
+    call = getattr(wrapper.module, wrapper.verb)
     if default is NO_DEFAULT:
-        return wrapper.module.gh(*MISSING)
-    return wrapper.module.gh(*MISSING, default=default)
+        return call(*MISSING, **wrapper.binding)
+    return call(*MISSING, default=default, **wrapper.binding)
 
 
 def named(default: Any) -> str:
@@ -180,13 +182,26 @@ def anchored(wrapper: Wrapper) -> list[str]:
 
 @check("gh wrapper probes", pre=True)
 def gh_wrapper_probes() -> Found | Passed:
-    """`next.py`'s, `check_pr`'s, the channel's and `timing`'s `gh`, each over the three reads that go wrong and the three fallbacks a caller gives (solorepo's #737).
+    """`next.py`'s, `check_pr`'s, the channel's and `timing`'s `gh`, and the channel's `gh_with_retry`, each over the three reads that go wrong and the three fallbacks a caller gives (solorepo's #737).
 
-    Four wrappers under `.meta/` run the same GitHub CLI call, and each was
+    Five wrappers under `.meta/` run the same GitHub CLI call, and each was
     written because the ones before it exited the process rather than
-    degrading. All four are asked here, so that a fifth written the old way
+    degrading. All five are asked here, so that a sixth written the old way
     is a convention held by the gate rather than by whoever read the pull
     request that converged them.
+
+    `gh_with_retry` is the retry layer over the channel's own `gh` and answers
+    the same three reads the same way, so it is a subject here rather than a
+    case of its own (solorepo's #747). It is bound at `tries=1, delay=0`, since
+    what this table asks is what a spent call answers and not how many attempts
+    spend it, which is `.meta/checks/probes/channel/bound.py`'s subject; left at
+    its default of three it would sleep for two seconds and then four on every
+    limb that reaches the retry loop, which is the `failed` case over its three
+    fallbacks and the real-`gh` anchor: four limbs at six seconds, twenty-four
+    seconds of wall clock. Its `printed what is not JSON` case is the only reach
+    anywhere in `.meta/checks/` into the `json.JSONDecodeError` clause that
+    routes an unreadable body to the fallback without spending a further
+    attempt, and its three limbs are three of the six that never sleep.
 
     The contract is one sentence per limb. A read that fails, one that printed
     what is not JSON, and one that printed nothing all take the same route: the
@@ -220,6 +235,8 @@ def gh_wrapper_probes() -> Found | Passed:
                 load_module(META / "lib" / "timing" / "github.py", "timing_github_probe",
                             register=False),
                 DEGRADE),
+        Wrapper("channel.gh_with_retry", channel, "", "gh_with_retry",
+                {"tries": 1, "delay": 0}),
     )
     problems: list[str] = []
     with stood_in(channel, role_credential=dict):
