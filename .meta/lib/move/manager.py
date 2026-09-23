@@ -1,6 +1,24 @@
 """The standing merge manager: the gate over an open pull request, the mutual exclusion
 the two workflows that run it hold it under, and the landing in order of leverage
-(solorepo's DR-161, solorepo's DR-264, solorepo's DR-267)."""
+(solorepo's DR-161, solorepo's DR-264, solorepo's DR-267).
+
+Why a refusal over a running check is deferred. A pass that takes a pull request
+out of draft starts a gate run on the same head, because `ready_for_review` is
+one of the gate's triggers. The check states that pass is holding were read
+before that run existed, so the pull request reads green on them, and the merge
+the pass then asks for is one GitHub refuses while the run is in progress. That
+refusal names a moment in a gate run rather than a branch that cannot land: the
+same head merges once the run concludes. Demoting the pull request over it parks
+the work instead, because the notice the demotion posts carries the current head
+and `find_active_merge_refusal` then holds `_restore_draft_if_ready` off the pull
+request until a new commit lands, which is the defect solorepo's #944 reports. So
+the refusal is deferred, and the next pass reads the same head with the run
+concluded.
+
+Two mechanisms carry that, and the order matters. `evaluate_open_pulls` refuses a
+pull request this pass restored before it can become a candidate, so the merge is
+never asked for. `_refusal_is_deferral` reads the refusal GitHub gave where one
+was asked for anyway, which is the case a pass did not start itself."""
 import datetime
 import json
 import re
@@ -526,6 +544,21 @@ MERGE_REFUSAL_MARKER = "<!-- solorepo:merge-refusal -->"
 """HTML comment marker identifying an in-place merge refusal diagnosis notice (solorepo's DR-255)."""
 
 
+RESTORED_THIS_PASS = ("taken out of draft in this pass, and the gate run that restore "
+                      "started has not concluded")
+"""Why a pull request this pass restored from draft is no candidate of this pass's own."""
+
+
+REFUSAL_DEFERRED = ("status check", "in progress")
+"""Every fragment GitHub's refusal holds where the merge waits on a check still running.
+
+Both fragments are required, because only their conjunction says that a check
+has yet to finish. GitHub also names a required status check in a refusal that is
+permanent, where the check failed rather than started, and that refusal carries
+the first fragment without the second.
+"""
+
+
 def _refusal_notice_body(exc_code: Any, head_oid: str = "") -> str:
     """Generate signed merge refusal diagnosis comment body with attribution trailers.
 
@@ -626,16 +659,27 @@ def evict_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str = "review
     return demote_to_draft(pull, action="evict", reason="stalled autonomous", dry_run=dry_run)
 
 
-def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: bool) -> None:
-    """Restore an approved, green loop draft with changes (solorepo's DR-258, DR-273)."""
+def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: bool) -> bool:
+    """Restore an approved, green loop draft with changes (solorepo's DR-258, DR-273).
+
+    Parameters:
+        pull: The pull request, as `MERGE_MANAGER_FIELDS` lists it.
+        reviewer_login (str): The reviewer Role's login.
+        dry_run (bool): If True, say what would be restored and mutate nothing.
+
+    Returns:
+        bool: True where this call took the pull request out of draft on GitHub,
+        which is what `evaluate_open_pulls` reads to keep it out of this pass's
+        merge candidates.
+    """
     if not (pull.get("isDraft") and drafts.holds_changes(pull)
             and pull_requests.LOOPS_BRANCH.match(pull.get("headRefName") or "")):
-        return
+        return False
     if find_active_merge_refusal(pull) is not None:
-        return
+        return False
     approved, _ = check_reviewer_approval(pull, reviewer_login)
     if not approved:
-        return
+        return False
     ok_green, _ = check_green(pull)
     if ok_green and pull.get("mergeable") != "CONFLICTING":
         if not dry_run:
@@ -645,10 +689,12 @@ def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: boo
                 advance.reconcile_notice(
                     pull["number"], MERGE_REFUSAL_MARKER, None, None, label="merge refusal")
                 print(f"merge-manager: restored answered and green PR #{pull['number']} from draft")
+                return True
             except (SystemExit, *common.UNREACHED) as exc:
                 print(f"warning: could not mark PR #{pull['number']} ready: {exc}", file=sys.stderr)
         else:
             print(f"merge-manager: dry run — would restore PR #{pull['number']} from draft")
+    return False
 
 
 def repo_context() -> tuple[str, str, str]:
@@ -681,6 +727,11 @@ def evaluate_open_pulls(
 ) -> tuple[list[common.Pull], dict[int, tuple[bool, list[str]]]]:
     """Evaluate open PRs against semaphores after evicting stalled loop branches.
 
+    A pull request this pass took out of draft is refused rather than evaluated,
+    for the reason this module's docstring gives under "Why a refusal over a
+    running check is deferred". Such a pull request appears in `evaluations` as
+    `(False, [RESTORED_THIS_PASS])` and never in the eligible list.
+
     Parameters:
         pulls (list): All open pull requests in the repository.
         reviewer_login (str): Login of the reviewer Role.
@@ -691,16 +742,20 @@ def evaluate_open_pulls(
     Returns:
         tuple[list[Pull], dict[int, tuple[bool, list[str]]]]: Pair of eligible PRs and evaluations.
     """
+    restored: set[int] = set()
     for pull in pulls:
         if not pull.get("isDraft"):
             evict_stalled_autonomous_pr(pull, reviewer_login, dry_run=dry_run)
-        else:
-            _restore_draft_if_ready(pull, reviewer_login, dry_run=dry_run)
+        elif _restore_draft_if_ready(pull, reviewer_login, dry_run=dry_run):
+            restored.add(pull["number"])
 
     evaluations: dict[int, tuple[bool, list[str]]] = {}
     eligible: list[common.Pull] = []
     for pull in pulls:
         num = pull["number"]
+        if num in restored:
+            evaluations[num] = (False, [RESTORED_THIS_PASS])
+            continue
         ok, reasons = evaluate_pr(pull, reviewer_login, owner, name)
         evaluations[num] = (ok, reasons)
         if ok:
@@ -1093,6 +1148,24 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
         drop_merge_lock(lock)
 
 
+def _refusal_is_deferral(exc_code: Any) -> bool:
+    """Whether a merge refusal names a required check still running.
+
+    GitHub's words for that refusal are `N of M required status checks are in
+    progress`. Why the pass defers such a refusal rather than diagnosing it is in
+    this module's docstring, under "Why a refusal over a running check is
+    deferred".
+
+    Parameters:
+        exc_code: The exit code or message `pull_requests.merge` refused with.
+
+    Returns:
+        bool: True where every fragment of `REFUSAL_DEFERRED` is in the refusal.
+    """
+    words = str(exc_code).lower()
+    return all(word in words for word in REFUSAL_DEFERRED)
+
+
 def _handle_refused_loop_branch(winner: common.Pull, exc_code: Any, dry_run: bool) -> None:
     """Demote autonomous loop PR to draft and hand back Challenge to human.
 
@@ -1146,6 +1219,11 @@ def _manage(dry_run: bool = False, stranded: bool = True) -> None:
     can clear, so unlike `advance_stranded`'s own refusals it paints the
     scheduled run red, which is what surfaces a stall.
 
+    A refusal `_refusal_is_deferral` recognises is the exception, and takes none
+    of that: no diagnosis notice, no demotion to draft, no Challenge handed back,
+    and no red run. A check still running is the state the next pass finds
+    settled, so nothing is owed beyond saying that the candidate waits.
+
     Parameters:
         dry_run (bool): If True, name the winner and merge nothing.
         stranded (bool): If False, leave a stranded pull request alone. The
@@ -1196,6 +1274,12 @@ def _manage(dry_run: bool = False, stranded: bool = True) -> None:
             winner["number"], MERGE_REFUSAL_MARKER, None, None, label="merge refusal")
     except SystemExit as exc:
         print(f"merge-manager: could not merge #{winner['number']} — {exc.code}")
+        if _refusal_is_deferral(exc.code):
+            print(f"merge-manager: deferring #{winner['number']} — a required check is still "
+                  "running, which the next pass reads once it has concluded")
+            if stranded:
+                advance.advance_stranded(pulls, evaluations, owner, name, dry_run)
+            return
         try:
             head_oid = winner.get("headRefOid") or ""
             advance.reconcile_notice(

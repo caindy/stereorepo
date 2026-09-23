@@ -69,7 +69,11 @@ def merge_manager_probes() -> list[str]:
     comment to the pull request conversation, demotes the pull request to draft
     to prevent head-of-line blocking, sweeps the rest of the queue through
     `advance_stranded` and then exits on the merge's own code, so one failing
-    candidate starves nothing and the run still goes red. Last,
+    candidate starves nothing and the run still goes red. A refusal naming a
+    required check still running is the one exception, deferred with no notice,
+    no demotion, no Challenge handed back and no red run, and a pull request one
+    pass takes out of draft is refused by that pass rather than merged under the
+    check states it read before the restore (solorepo's #944). Last,
     `issue_blockers` and `next.waits_on` prefer GitHub's native `blockedBy` over
     the body's prose and fall back to the prose, and `waits_on` returns a
     blocker that is not an Issue as the text it was (solorepo's DR-170).
@@ -1432,6 +1436,184 @@ def _check_stalled_pr_merge_manager_refusal(channel: Any, move: Any) -> list[str
     return problems
 
 
+def _restored_draft_pull() -> dict[str, Any]:
+    """An approved, green loop draft holding changes, which one pass restores and must not merge."""
+    return {
+        "number": 44,
+        "title": "restored loop PR",
+        "headRefName": "claude/issue-44",
+        "baseRefName": "main",
+        "headRefOid": "sha-restored-44",
+        "isDraft": True,
+        "changedFiles": 1,
+        "mergeable": "MERGEABLE",
+        "statusCheckRollup": GREEN,
+        "latestReviews": APPROVED,
+        "reviewThreads": [{"isResolved": True}],
+        "reviewRequests": [],
+        "body": "",
+        "additions": 10,
+        "deletions": 5,
+    }
+
+
+def _verify_restore_deferral(move: Any, out: str, recorded: dict[str, list[str]]) -> list[str]:
+    """Verify that the pass restored PR 44 and deferred it, merging and demoting nothing."""
+    problems = []
+    if recorded["restored"] != ["44"]:
+        problems.append(
+            f"merge_manager: expected PR 44 restored from draft, got: {recorded['restored']}")
+    if recorded["merged"]:
+        problems.append(
+            f"merge_manager: merged a PR it restored in the same pass: {recorded['merged']}")
+    if recorded["demoted"]:
+        problems.append(
+            f"merge_manager: demoted the PR it restored in the same pass: {recorded['demoted']}")
+    reason = getattr(move.manager, "RESTORED_THIS_PASS", None)
+    if reason is None:
+        problems.append("merge_manager: move.manager names no RESTORED_THIS_PASS refusal reason")
+    elif reason not in out:
+        problems.append(
+            f"merge_manager: expected the restore named as PR 44's refusal reason, got:\n{out}")
+    return problems
+
+
+def _check_restore_is_not_merged_in_the_same_pass(channel: Any, move: Any) -> list[str]:
+    """One pass's own restoration from draft is no merge candidate of that pass (solorepo's #944).
+
+    Taking it out of draft starts a gate run on the same head, and the check
+    states the pass holds were read before that, so evaluating it on them reads
+    green and asks GitHub for a merge it refuses. The pass restores and defers,
+    naming the restore as the reason, and merges nothing.
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    pull = _restored_draft_pull()
+    restored_calls: list[str] = []
+    demoted_calls: list[str] = []
+    merged_calls: list[str] = []
+
+    def gh_pass(*args: Any, **kwargs: Any) -> Any:
+        cmd = args[:2]
+        if cmd == ("pr", "ready"):
+            (demoted_calls if "--undo" in args else restored_calls).append(str(args[2]))
+        elif cmd in (("pr", "merge"), ("stack", "merge")):
+            merged_calls.append(str(args[2]))
+        elif cmd == ("pr", "list"):
+            return [pull]
+        elif cmd in (("repo", "view"), ("repo",)):
+            return {"nameWithOwner": "owner/repo", "deleteBranchOnMerge": True}
+        elif cmd == ("pr", "view"):
+            state = "MERGED" if merged_calls else "OPEN"
+            return {"number": int(args[2]), "title": "restored loop PR", "state": state,
+                    "mergeCommit": {"oid": "sha44444"}, "headRefName": "claude/issue-44"}
+        elif args[0] == "api" and str(args[1]).endswith(f"/pulls/{pull['number']}"):
+            return {"stack": {"id": "stack-44"}}
+        elif args[0] == "api":
+            return []
+        return {}
+
+    def silent_advance_stranded(*args: Any, **kwargs: Any) -> None:
+        """An `advance_stranded` that sweeps nothing, so the pass reads only what it restored."""
+
+    with stood_in(channel, gh=LockedGitHub(gh_pass), repo=lambda: "owner/repo"), \
+            stood_in(move.manager.advance, advance_stranded=silent_advance_stranded):
+        out = outcome(lambda: move.merge_manager(dry_run=False)).out
+    return _verify_restore_deferral(move, out, {
+        "restored": restored_calls, "merged": merged_calls, "demoted": demoted_calls})
+
+
+def _verify_deferred_refusal(result: Any, pull: dict[str, Any],
+                             recorded: dict[str, list[Any]]) -> list[str]:
+    """Verify that a refusal over a running check cost the candidate nothing but its turn."""
+    problems = []
+    number = pull["number"]
+    if result.code is not None:
+        problems.append(
+            f"merge manager: a deferred refusal should not paint the run red, got: {result.code}")
+    if f"deferring #{number}" not in result.out:
+        problems.append(f"merge manager: expected #{number} deferred, got:\n{result.out}")
+    if recorded["comments"]:
+        problems.append(
+            f"merge manager: posted a refusal notice for a running check: {recorded['comments']}")
+    if recorded["drafts"] or pull.get("isDraft") is not False:
+        problems.append(
+            f"merge manager: demoted a PR whose checks are still running: {recorded['drafts']}")
+    if recorded["stops"]:
+        problems.append(
+            f"merge manager: handed back a Challenge over a running check: {recorded['stops']}")
+    if not recorded["advance"]:
+        problems.append("merge manager: advance_stranded did not run after a deferred refusal")
+    return problems
+
+
+def _check_in_progress_refusal_is_deferred(channel: Any, move: Any) -> list[str]:
+    """A merge refused over a running check is deferred, not read as unmergeable (solorepo's #944).
+
+    Nothing is owed on a check that has yet to conclude: no diagnosis notice, no
+    demotion to draft, no Challenge handed back to `human`, and no red run, since
+    the next pass reads the same head with the run concluded.
+
+    Parameters:
+        channel: The mock communication channel.
+        move: The move module under test.
+
+    Returns:
+        list[str]: Identified probe violations.
+    """
+    pulls, issues = _fixtures()
+    pulls[0]["headRefName"] = "claude/issue-742"
+    pulls[0]["headRefOid"] = "sha-running-10"
+    fake = ManagerFake(pulls, issues)
+    refusal = "say: 4 of 4 required status checks are in progress."
+    swept: list[Any] = []
+    comment_calls: list[str] = []
+    demoted_calls: list[str] = []
+    stop_calls: list[str] = []
+
+    def running_checks_merge(pr: Any, stack: bool = False, auto: bool = False) -> None:
+        """A `merge` refusing in GitHub's own words for a required check still running."""
+        raise SystemExit(refusal)
+
+    def recording_advance_stranded(*args: Any, **kwargs: Any) -> None:
+        """An `advance_stranded` that records its call rather than sweeping anything."""
+        swept.append(args)
+
+    def recording_stop(issue_num: str, reason: str) -> None:
+        """A `stop` that records the Challenge it was asked to hand back."""
+        stop_calls.append(str(issue_num))
+
+    orig_gh = fake.gh
+
+    def gh_deferred(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("pr", "ready") and "--undo" in args:
+            demoted_calls.append(str(args[2]))
+            return {}
+        if args[0] == "api" and any("/issues/10/comments" in str(a) for a in args):
+            if "-f" in args:
+                comment_calls.append(str(args))
+                return {"html_url": "https://github.com/owner/repo/issues/10#issuecomment-1"}
+            return []
+        return orig_gh(*args, **kwargs)
+
+    with environment(GITHUB_RUN_ID="944", ACTOR_SESSION="gha-944",
+                     ACTOR_AGENT="coder", AI_AGENT="probe"), \
+            stood_in(channel, gh=LockedGitHub(gh_deferred),
+                     repo=fake.repo, graphql=fake.graphql), \
+            stood_in(move.pull_requests, merge=running_checks_merge), \
+            stood_in(move.manager.advance, advance_stranded=recording_advance_stranded), \
+            stood_in(move.manager.challenges, stop=recording_stop):
+        result = outcome(lambda: move.merge_manager(dry_run=False))
+    return _verify_deferred_refusal(result, pulls[0], {
+        "comments": comment_calls, "drafts": demoted_calls,
+        "stops": stop_calls, "advance": swept})
+
+
 def _stall_eviction(channel: Any, move: Any) -> list[str]:
     """Stalled loop PRs are demoted to draft, and answered green PRs restored (solorepo's DR-258).
 
@@ -1450,5 +1632,7 @@ def _stall_eviction(channel: Any, move: Any) -> list[str]:
         + _check_multi_refusal_draft_restoration(channel, move)
         + _check_request_review_draft_restoration(channel, move)
         + _check_stalled_pr_merge_manager_refusal(channel, move)
+        + _check_restore_is_not_merged_in_the_same_pass(channel, move)
+        + _check_in_progress_refusal_is_deferred(channel, move)
     )
 
