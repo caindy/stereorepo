@@ -14,9 +14,11 @@ import checks.citations.loaders  # noqa: I001  # reason: registration order is d
 import checks.citations.prose
 import checks.citations.record
 import checks.citations.claims  # noqa: F401  # reason: registers check steps
+from checks.citations import slots as slots
 from checks.citations.loaders import DR, FOREIGN, SCAFFOLD, copied_files, durable, issue_citation, load_check_pr, load_timing
-from checks.citations.prose import ARTICLE, BLOCK, CITE, GAP, HEDGED, NEAREST, SAYS, SPAN, entry_text, flat, normalise, prose, scalars
+from checks.citations.prose import ARTICLE, BLOCK, CITE, GAP, HEDGED, NEAREST, SAYS, SPAN, comments, entry_text, flat, normalise, prose, scalars
 from checks.citations.record import cited_decisions, enacting_citations, inherited_citations
+from checks.citations.slots import cited_schema_slots
 from checks.citations.claims import (
     ELISION,
     PATH_LINE,
@@ -53,7 +55,9 @@ __all__ = [
     "cited_articles",
     "cited_decisions",
     "cited_discipline_steps",
+    "cited_schema_slots",
     "claims",
+    "comments",
     "copied_files",
     "durable",
     "enacting_citations",
@@ -71,6 +75,7 @@ __all__ = [
     "record",
     "refused_ordinal_step_citations",
     "scalars",
+    "slots",
     "stated_relations",
 ]
 """The module's whole surface, so every importer finds what it did."""

@@ -66,16 +66,49 @@ def scalars(node: object) -> Iterator[str]:
             yield from scalars(value)
 
 
-def prose(path: pathlib.Path) -> list[str]:
-    """Extract prose spans from a file, excluding code blocks and structural comments.
+def comments(text: str) -> list[str]:
+    """Extract comment blocks from YAML or source text as normalized prose spans.
 
-    For Markdown, strips fenced code blocks; for YAML, extracts flattened scalar strings.
+    Parameters:
+        text (str): Source text containing comments.
+
+    Returns:
+        list[str]: Normalized prose spans for contiguous comment blocks.
+    """
+    blocks: list[str] = []
+    current: list[str] = []
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            content = stripped.lstrip("#").strip()
+            if content:
+                current.append(content)
+            elif current:
+                blocks.append(flat(" ".join(current)))
+                current = []
+        else:
+            if current:
+                blocks.append(flat(" ".join(current)))
+                current = []
+    if current:
+        blocks.append(flat(" ".join(current)))
+    return blocks
+
+
+def prose(path: pathlib.Path) -> list[str]:
+    """Extract an assertion's leaf scalars or a page flattened to a single span.
+
+    For YAML, yields each parsed scalar string as its own span. For Markdown, strips
+    fenced code blocks and flattens the remaining page into a single span. Comments
+    are not prose here: the YAML parser ignores them and Markdown retains them in the
+    flattened page; callers that need comment blocks call `comments()` beside this.
 
     Parameters:
         path (pathlib.Path): Path of file to extract prose from.
 
     Returns:
-        list[str]: List of flattened whitespace-normalized prose spans.
+        list[str]: An assertion's leaf scalars (one span each for YAML), or a single
+        flattened page span with fenced code blocks removed (for Markdown).
     """
     try:
         text = path.read_text()

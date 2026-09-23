@@ -334,6 +334,9 @@ artifacts:
   - id: work:artifact/meta-checks-citations-claims
     name: .meta/checks/citations/claims.py
     path: .meta/checks/citations/claims.py
+  - id: work:artifact/meta-checks-citations-slots
+    name: .meta/checks/citations/slots.py
+    path: .meta/checks/citations/slots.py
   - id: work:artifact/meta-checks-comments
     name: .meta/checks/comments.py
     path: .meta/checks/comments.py
@@ -502,6 +505,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py
+  - id: work:artifact/meta-checks-probes-citations
+    name: .meta/checks/probes/citations.py
+    path: .meta/checks/probes/citations.py
   - id: work:artifact/meta-checks-probes-surface
     name: .meta/checks/probes/surface.py
     path: .meta/checks/probes/surface.py

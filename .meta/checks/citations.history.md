@@ -91,3 +91,18 @@ leading letter of `solorepo's`/`Solorepo's` case-insensitive and every other
 character exact.
 
 Evidence: `.meta/checks/probes/knowledge.py::citation_form_probes`
+
+### Stale schema slot names cited in prose after schema refactoring
+
+Prose in assertion preambles and documentation cited schema slot names in backticks
+that had been removed or replaced in LinkML ontologies, leaving dangling slot
+references unchecked (caindy/solorepo#595). In solorepo's DR-087, `Article.origin`
+was removed from `.meta/work/disciplines.yaml` and replaced with `example`, but a
+preamble comment in `.meta/assertions/imported/charter.yaml` retained
+"`origin` is the receipt" silently until caindy/solorepo#581. Established:
+assertion comment blocks are parsed as prose alongside scalar fields, and
+`cited_schema_slots()` verifies qualified `Class.slot` citations, explicit slot phrases,
+and document-scoped former slot names against LinkML schema declarations across
+living durable prose (excluding historical decision records and challenges).
+
+Evidence: `.meta/checks/probes/citations.py::cited_schema_slot_probes`
