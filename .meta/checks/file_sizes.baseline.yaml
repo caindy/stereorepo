@@ -19,7 +19,7 @@
 
 .meta/checks/comments.py: 317
 .meta/checks/files/python.py: 337
-.meta/checks/probes/channel/on_coder.py: 215
+.meta/checks/probes/channel/on_coder.py: 195
 .meta/checks/probes/git/step.py: 13
 .meta/checks/probes/harness/github.py: 256
 .meta/checks/probes/knowledge.py: 111

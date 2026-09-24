@@ -122,28 +122,26 @@ was found:
 
 Never `gh pr review`, `gh pr comment` or `gh api`: the hook
 refuses them. Resolve no thread but one a promotion left open.
-Where every comment on a thread carries one Trailer, the reply
-that promotes it says `Left open: ...` and the thread stays open —
-`promote` writing `Promoted to <url>. Left open: ...`, and `post
-answer` putting the same sentence behind the coder's own words:
-A16 accepts a second party's reply or a link, and
-solorepo's DR-224 narrows the link limb, so a thread carrying one
-Trailer waits for a second Job even with the link on it. This run
-is that Job, its `ACTOR_SESSION` being this run's. So before the verdict,
-for each unresolved thread whose last comment is one of those:
+At approval, promote each unresolved coder notice that survives the
+argument, then resolve it in this review pass. You are the second
+Job that inspected the notice, so this preserves solorepo's DR-224's guarantee
+without a closure-only handoff. File the Challenge without a
+difficulty level:
 
-    .meta/say/post --role reviewer resolve <thread-id>
+    .meta/say/post --role reviewer promote <thread-id> --title "<title>" <<'BODY'
+    **Waits on.** Nothing.
 
-and name in the verdict what you closed. Telling that thread
-from the rest is yours: read the last comment, and resolve only
-where it carries the Issue's URL and the words `Left open:`.
-The verb is a backstop and not the test — it
-refuses a thread every comment of which carries your own Trailer,
-and one with neither a second party nor a promotion link, and
-permits everything else, so a live point you misread as promoted
-would resolve without a murmur. Every other thread is owed an
-answer by whoever the point is for: reply to it, or raise a new
-one, and leave it open.
+    **What was noticed.** <what survives review>
+
+    **What would make this worth doing.** <trigger or cost>
+
+    **Where it was found.** On #<number>.
+    BODY
+
+`promote` posts the Challenge link and resolves the thread. Add the
+Challenge link under **What was noticed and not done.** with
+`.meta/say/move revise <number>` before your verdict. Leave every
+other unresolved thread open for its owner to answer or promote.
 
 Your approval clears the review semaphore for the merge manager. If
 any completed check on this head has failed (in `gh pr checks`), or

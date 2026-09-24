@@ -313,9 +313,8 @@ def coder_after(number: str, delivery: coder_door.Delivery, ended: coder_door.En
 
     A take that failed or was cancelled is handed back, and so is one whose
     transcript says the turn cap cut it, which the step conclusion reports as
-    a success (solorepo's DR-277); a rebase that
-    succeeded redelivers the review pass, and one that did not is verified;
-    an answer is verified; a promotion is verified where threads were held.
+    a success (solorepo's DR-277); a rebase that succeeded redelivers the
+    review pass, and one that did not is verified; an answer is verified.
     Verification ends the run red where neither harness finished the pass.
 
     Parameters:
@@ -338,7 +337,5 @@ def coder_after(number: str, delivery: coder_door.Delivery, ended: coder_door.En
             redeliver(number)
         else:
             verify(delivery.task, ended)
-    elif delivery.task == "promote" and not ended.held:
-        print(f"no threads were held on #{number}; no promotion pass ran")
     else:
         verify(delivery.task, ended)

@@ -10,11 +10,11 @@
 # standing merge manager lands what is green in order of leverage. What it
 # cannot finish it hands to the solo by relabelling `human` and saying why.
 #
-# Four passes, and the trigger says which: an Issue taken, a request for
-# changes answered, promotion on approval, and a branch rebased back to
-# where its outstanding review can be answered at all (solorepo's DR-133,
-# solorepo's DR-159). The last has no event of its own and is dispatched by
-# `.meta/say/move advance` on the merge that caused it.
+# Three passes, and the trigger says which: an Issue taken, a request for
+# changes answered, and a branch rebased back to where its outstanding review
+# can be answered at all (solorepo's DR-133, solorepo's DR-159). The last has
+# no event of its own and is dispatched by `.meta/say/move advance` on the merge
+# that caused it.
 #
 # Nothing here restates how to work. `AGENTS.md`, the Disciplines and the two
 # forms are the checkout's; this file decides when the coder runs, as whom it
@@ -112,18 +112,17 @@ jobs:
     name: coder
     # Only a difficulty a loop takes, on a Challenge: `hard` and `human` are
     # not this Job's, and a `roadmap` Issue is deferred by definition. Or the
-    # reviewer's account requesting changes or approving on a branch named
-    # for a Challenge — the prefix says which Issue, not whose the branch is;
-    # `before the session` below reads whose it is, on this door as on the
-    # first (solorepo's DR-142, solorepo's DR-159). Or the solo dispatching that second
-    # pass by hand.
+    # reviewer's account requesting changes on a branch named for a Challenge
+    # — the prefix says which Issue, not whose the branch is; `before the session`
+    # below reads whose it is, on this door as on the first (solorepo's DR-142,
+    # solorepo's DR-159). Or the solo dispatching that second pass by hand.
     if: >-
       (github.event_name == 'issues'
         && github.event.issue.state == 'open'
         && (github.event.label.name == 'easy' || github.event.label.name == 'medium')
         && contains(github.event.issue.labels.*.name, 'challenge'))
       || (github.event_name == 'pull_request_review'
-        && (github.event.review.state == 'changes_requested' || github.event.review.state == 'approved')
+        && github.event.review.state == 'changes_requested'
         && github.event.review.user.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
         && (startsWith(github.event.pull_request.head.ref, 'claude/issue-') || startsWith(github.event.pull_request.head.ref, 'gemini/issue-')))
       || github.event_name == 'workflow_dispatch'
@@ -232,10 +231,9 @@ jobs:
       # delivery is still the loop's, read now off the Issue rather than off
       # the frozen payload, on the verdict's door as on the label's
       # (solorepo's DR-142), with the sign left on a pull request whose
-      # verdict no Job takes; how deep, by the pass and the level the
-      # Challenge holds now; and on approval how many threads are held for
-      # promotion (solorepo's DR-159). The door runs again between the two
-      # rungs below, on every pass, and on a take reads the branch once more
+      # verdict no Job takes; and how deep, by the pass and the level the
+      # Challenge holds now. The door runs again between the two rungs
+      # below, on every pass, and on a take reads the branch once more
       # there; the last phase is the last step.
       - name: before the session
         id: before
@@ -247,7 +245,7 @@ jobs:
           fi
         env:
           NUMBER: ${{ github.event.issue.number || inputs.issue || github.event.pull_request.number || inputs.pull_request }}
-          PASS: ${{ (github.event_name == 'issues' || inputs.issue != '') && 'take' || inputs.task == 'rebase' && 'rebase' || github.event.review.state == 'approved' && 'promote' || 'answer' }}
+          PASS: ${{ (github.event_name == 'issues' || inputs.issue != '') && 'take' || inputs.task == 'rebase' && 'rebase' || 'answer' }}
           EVENT: ${{ github.event_name }}
           HARNESS: ${{ inputs.harness }}
 
@@ -269,19 +267,19 @@ jobs:
       # in the door's `tier_<n>_*` outputs, so the attempt steps are the
       # same whatever the pass and whatever harness each rung names: the
       # runner holds the one guarded step per harness. Rung 1 runs where
-      # the delivery is the loop's, on a take, a rebase or an answer, and on
-      # a promotion where threads are held; rung 2 where the door between
-      # them said rung 1 failed and a second rung exists. `continue-on-error`
-      # keeps a failed rung from ending the job before the next rung and the
-      # door's `after`. Which harness a rung ran is the door's `tier_<n>_harness`
-      # output in the run log, not the step's name: a name carrying an
-      # expression renders only when the step runs, and a skipped rung would
-      # show the template forever. The turn cap and the minutes are
-      # the rung's; the second rung's minutes fall back to the first's for
-      # the expression alone, since a chain of one rung names no second.
+      # the delivery is the loop's, on a take, a rebase or an answer; rung 2
+      # where the door between them said rung 1 failed and a second rung
+      # exists. `continue-on-error` keeps a failed rung from ending the job
+      # before the next rung and the door's `after`. Which harness a rung ran
+      # is the door's `tier_<n>_harness` output in the run log, not the
+      # step's name: a name carrying an expression renders only when the step
+      # runs, and a skipped rung would show the template forever. The turn cap
+      # and the minutes are the rung's; the second rung's minutes fall back
+      # to the first's for the expression alone, since a chain of one rung
+      # names no second.
       - name: attempt 1
         id: attempt_1
-        if: steps.before.outputs.by == '' && (steps.before.outputs.pass != 'promote' || steps.before.outputs.count != '0')
+        if: steps.before.outputs.by == ''
         continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_1_minutes) }}
         env:
@@ -386,7 +384,7 @@ jobs:
       # the turns spent, and the door reads it there and hands back on it
       # (solorepo's DR-277): the first rung that published one is the Claude
       # Code rung, whichever number it ran as. Only the take pass does anything
-      # about a cap; the answer, rebase and promotion passes hand back nothing,
+      # about a cap; the answer and rebase passes hand back nothing,
       # so a cap that cuts one of them is still read as a pass that succeeded
       # and is a Challenge of its own. The Antigravity CLI is bounded by the
       # clock alone.
@@ -395,11 +393,11 @@ jobs:
         run: |
           if [ -f .meta/coder_door.py ]; then
             .meta/coder_door.py coder after "$NUMBER" --pass "$PASS" --event "$EVENT" \
-              --outcomes "$OUTCOMES" --count "$COUNT" --branch-prefix "$PREFIX" \
+              --outcomes "$OUTCOMES" --branch-prefix "$PREFIX" \
               --execution-file "$EXECUTION"
           else
             .meta/say/on coder after "$NUMBER" --pass "$PASS" --event "$EVENT" \
-              --outcomes "$OUTCOMES" --count "$COUNT" --branch-prefix "$PREFIX" \
+              --outcomes "$OUTCOMES" --branch-prefix "$PREFIX" \
               --execution-file "$EXECUTION"
           fi
         env:
@@ -414,6 +412,5 @@ jobs:
           PASS: ${{ steps.before.outputs.pass }}
           EVENT: ${{ github.event_name }}
           OUTCOMES: ${{ steps.attempt_1.outcome }},${{ steps.attempt_2.outcome }}
-          COUNT: ${{ steps.before.outputs.count }}
           PREFIX: ${{ steps.before.outputs.branch_prefix }}
           EXECUTION: ${{ steps.attempt_1.outputs.execution_file || steps.attempt_2.outputs.execution_file }}

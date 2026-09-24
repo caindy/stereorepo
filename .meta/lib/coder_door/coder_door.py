@@ -15,8 +15,8 @@ CODER_HARNESSES = ("gemini", "claude")
 """The harnesses the coder's door chooses among, in the order asked: Antigravity CLI
 by label or as the fallback (solorepo's DR-245), and Claude Code by default."""
 
-PASSES = ("take", "rebase", "answer", "promote")
-"""The coder's four passes (solorepo's DR-133, solorepo's DR-159), as `--pass` names them."""
+PASSES = ("take", "rebase", "answer")
+"""The coder's three passes (solorepo's DR-133, solorepo's DR-159), as `--pass` names them."""
 
 NO_JOB = ("closed", "stale", "unnamed", "held")
 """The words `take` decides with where a verdict's delivery is nobody's to answer: the loop
@@ -58,7 +58,7 @@ class Delivery(NamedTuple):
     """What the workflow knows about a coder delivery before the session.
 
     Attributes:
-        task: Which pass the event opened: `take`, `rebase`, `answer` or `promote`.
+        task: Which pass the event opened: `take`, `rebase` or `answer`.
         event: The event the delivery arrived on, as `github.event_name` names it.
         harness: The harness a dispatch asked for, or the empty string.
     """
@@ -196,12 +196,7 @@ def find_pull(number: str, delivery: Delivery) -> dict[str, Any] | None:
         print(f"#{number} is {view['state']} already; nothing for this run to do")
         common.emit("GITHUB_OUTPUT", by="merged", why="merged")
         return None
-    try:
-        common.command(["git", "checkout", "--quiet", branch])
-    except SystemExit:
-        if delivery.task != "promote":
-            raise
-        print(f"{branch} could not be checked out; the promotion pass reads GitHub, not the tree")
+    common.command(["git", "checkout", "--quiet", branch])
     return view
 
 
@@ -222,9 +217,7 @@ def coder_before(number: str, delivery: Delivery) -> None:
     branch conflicts, and `dispatch()` in `.meta/say/move` reads the Issue
     before it dispatches and names the branch it leaves alone in `advance`'s
     own log.
-    The depth follows the pass and the level the Challenge holds now. On
-    approval the unresolved threads are counted, since a pull request with
-    none lands unattended (solorepo's DR-159, solorepo's DR-161).
+    The depth follows the pass and the level the Challenge holds now.
 
     Parameters:
         number (str): The Challenge on a take, the pull request otherwise.
@@ -258,10 +251,6 @@ def coder_before(number: str, delivery: Delivery) -> None:
             number, channel.signed(NO_JOB_SAID.format(issue=issue, why=decided["why"],
                                                       run=run_url())))
     coder_depth(delivery.task, "medium", harness, pull_fields(number, pull, issue, delivery.task))
-    if delivery.task == "promote":
-        open_threads = [t for t in check_pr.github.threads(number) if not t.get("isResolved")]
-        common.emit("GITHUB_OUTPUT", count=str(len(open_threads)))
-        print(f"Found {len(open_threads)} unresolved thread(s) on approved #{number}")
 
 
 BETWEEN_NOT_TAKE = ("::error::`between` reads what is open on the Challenge's branch, which only "
@@ -330,14 +319,12 @@ class Ended(NamedTuple):
         outcomes: How each rung of the pass ended, in rung order: `success`,
             `failure`, `cancelled` or `skipped` each; `None` where the workflow
             did not say, which `after` refuses.
-        held: On a promotion, how many threads `before` found held.
         branch_prefix: The harness `before` chose, which names the loop's branch.
         execution: Where Claude Code wrote the pass's execution transcript, or
             the empty string where no rung published a path.
     """
 
     outcomes: tuple[str, ...] | None
-    held: int | None
     branch_prefix: str
     execution: str = ""
 

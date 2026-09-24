@@ -1,0 +1,8 @@
+challenges:
+  - id: work:challenge/967
+    name: "Eliminate repetitive job cycles when creating tracker items from diff comments"
+    challenge_type: DEFECT
+    description: >-
+      A coder notice that survives approval requires a second Job solely to
+      promote or resolve its linked Challenge, delaying the pull request after
+      the reviewer has already inspected the notice.

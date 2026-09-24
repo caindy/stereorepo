@@ -86,7 +86,6 @@ GEMINI_MODEL = "gemini-3.8-flash"
 """The model the Antigravity CLI runs, on every pass of every Role."""
 
 CODER_DEPTHS = {"rebase": Depth("claude-opus-5", "high", "60", "30"),
-                "promote": Depth("claude-sonnet-5", "medium", "30", "15"),
                 "medium": Depth("claude-opus-5", "high", "120", "60"),
                 "easy": Depth("claude-sonnet-5", "medium", "60", "30")}
 """The coder's depth by the pass, or by the level a take is at.
@@ -96,8 +95,7 @@ whole budget, and an answering pass takes it whatever the label was, since
 the threads it answers were written by the deeper reviewer. A rebase is
 bounded by what it is, the larger model at half the budget, because a
 conflict here is prose as often as code and a rebase taking an hour is not
-a rebase. Promotion on approval (solorepo's DR-159) is clerical
-transcription, the smaller model at a quarter of the whole.
+a rebase.
 """
 
 REVIEW_DEPTHS = {"deep": Depth("claude-opus-5", "high", "120", "45"),
@@ -116,7 +114,7 @@ def coder_depth(task: str, level: str) -> Depth:
     """The coder's depth for a pass, by the pass first and the level after.
 
     Parameters:
-        task (str): `take`, `rebase`, `answer` or `promote`.
+        task (str): `take`, `rebase` or `answer`.
         level (str): The level a take is at; ignored where the pass names its own depth.
     """
     return CODER_DEPTHS.get(task) or CODER_DEPTHS.get(level) or CODER_DEPTHS["easy"]

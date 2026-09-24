@@ -134,12 +134,6 @@ def build_parser() -> argparse.ArgumentParser:
         "rung order; required there, and an empty entry is refused",
     )
     c.add_argument(
-        "--count",
-        type=count,
-        default=None,
-        help="after a promotion: how many threads `before` found held",
-    )
-    c.add_argument(
         "--branch-prefix",
         default="",
         help="after a take: the harness `before` chose, naming the loop's branch",
@@ -163,6 +157,6 @@ def main() -> None:
             args.phase,
             args.number,
             coder_door.Delivery(args.task, args.event, args.harness),
-            coder_door.Ended(args.outcomes, args.count, args.branch_prefix, args.execution),
+            coder_door.Ended(args.outcomes, args.branch_prefix, args.execution),
             common.Attempt(args.attempt, args.outcome, args.execution),
         )

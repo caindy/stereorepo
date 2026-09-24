@@ -72,7 +72,7 @@ programs:
           always deferred where the promoting Actor is the thread's sole author,
           since resolving it too would be the only voice on the thread clearing
           its own hold, and a second Job closes it instead
-        held_by: [coder, solo]
+        held_by: [coder, reviewer, solo]
       - name: landed
         usage: "<pr>"
         does: post what landed for every Challenge the body closes, rendered from the record

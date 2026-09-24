@@ -1,0 +1,81 @@
+decisions:
+  - id: work:decision/285
+    name: "DR-285 · The approving reviewer promotes and resolves a coder notice"
+    challenge: work:challenge/967
+    status: ADOPTED
+    supersedes:
+      - work:decision/224
+    applies:
+      - work:article/15
+      - work:article/16
+    enacted_in:
+      - work:artifact/meta-say-post
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-disciplines
+      - work:artifact/github-workflows-coder
+      - work:artifact/github-workflows-review
+      - work:artifact/meta-coder-door
+      - work:artifact/meta-lib-coder-door
+      - work:artifact/meta-lib-coder-door-cli
+      - work:artifact/meta-lib-coder-door-lifecycle
+      - work:artifact/meta-lib-coder-door-handoff
+      - work:artifact/meta-lib-on-routing
+    context: >-
+      DR-224 correctly refused a coder resolving its own notice after promoting
+      it into an Issue. In #541, the same Actor raised, promoted, and resolved a
+      notice about 22 type-soundness suppressions; the pull request merged
+      without another Actor examining them. Its remedy made the coder promote
+      the notice and required a second Job only to resolve it, costing #967
+      roughly 20 minutes per promotion.
+    alternatives:
+      - name: Let the coder resolve its own notice after promoting it into an Issue
+        chosen: false
+        reason: >-
+          This repeats the #541 falsifier. A Challenge link records work for
+          later, but does not show that another Actor inspected the current
+          pull request.
+      - name: Keep the closure-only reviewer Job
+        chosen: false
+        reason: >-
+          The reviewer already examines the notice to approve the pull
+          request. Starting a second Job solely to close that same notice
+          duplicates that inspection and adds avoidable latency.
+      - name: Have the approving reviewer promote and resolve the notice
+        chosen: true
+        reason: >-
+          The reviewer's review pass is the second Job whose distinct Actor
+          Trailer DR-224 required to inspect and resolve the notice. Filing
+          the Challenge and resolving the notice during that review records
+          both survival and independent examination without another handoff.
+    consequences:
+      - >-
+        At approval, the reviewer promotes each surviving coder notice to an
+        unlevelled Challenge, adds its link to the pull request body, and
+        resolves the thread in the same review pass.
+      - >-
+        A coder promoting its own sole-authored notice still leaves the thread
+        open. `post resolve` and `post answer` continue refusing a
+        sole-authored self-resolution.
+      - >-
+        The coder workflow no longer starts an approval promotion pass. A
+        reviewer request for changes still starts the coder answer pass.
+      - >-
+        The orphaned `coder-promote.md` prompt and the coder door's `promote`
+        pass are removed from the tree and routing policy; coder door passes
+        narrow to `take`, `rebase`, and `answer`, dropping dead parameter
+        plumbing (`Ended.held` and `--count`).
+      - >-
+        Channel filing probes pin reviewer promotion of coder notices, proving
+        that `post promote` executed under the reviewer's Actor Trailer files
+        unlevelled and resolves in a single pass without leaving the thread open.
+    falsifier: >-
+      A coder notice promoted and resolved under one Actor trailer, or an
+      approved reviewer promotion that needs another Job only to resolve it.
+    rationale: |-
+      DR-224 established that an Issue link is not evidence of independent
+      review. This decision preserves that distinction: the reviewer’s
+      promotion occurs only after its own inspection has found the notice
+      worth preserving, and its distinct Actor trailer is the evidence that
+      #541 lacked. The reviewer already holds both the review context and the
+      resolve responsibility. Giving it promotion removes duplicate work
+      rather than weakening Article 16's guarantee.

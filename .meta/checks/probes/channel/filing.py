@@ -381,17 +381,60 @@ def multi_voice_probes(channel: ModuleType, post: ModuleType) -> list[str]:
     return problems
 
 
-def promotion_probes(channel: ModuleType, post: ModuleType) -> list[str]:
-    """`promote` against a thread that already carries a promotion link, and one that does not (solorepo's DR-127); then every verb against one voice and two (solorepo's DR-224).
+def reviewer_promotion_probes(channel: ModuleType, post: ModuleType) -> list[str]:
+    """The approving reviewer promoting a coder-authored notice (solorepo's DR-285).
 
-    The cases on the standing link are below; `sole_author_probes` and
-    `multi_voice_probes` carry the rest, and each states its own.
+    `sole_author` is caller-relative: against a thread carrying only the coder's
+    Trailer, `promote` run under the reviewer's Actor Trailer finds a second voice
+    and resolves the thread in the same pass, without leaving it open for a follow-up
+    Job.
+    """
+    problems = []
+    replied_to: list[tuple[str, str]] = []
+    resolved: list[str] = []
+    filed: list[tuple[str, str | None]] = []
+    coder_notice_body = "noticed and not done\n\nActor: gha-1\nAgent: probe"
+
+    with (environment(GITHUB_RUN_ID="2", ACTOR_SESSION="gha-2",
+                      ACTOR_AGENT="probe", AI_AGENT="probe"),
+          stood_in(post, thread_comments=lambda _: [coder_notice_body],
+                   reply=lambda t, b: replied_to.append((t, b)),
+                   resolve=lambda t: resolved.append(t)),
+          stood_in(channel, sibling=lambda _: Filer(filed))):
+        said = run_verb(channel, FakeFiling(),
+                        lambda: post.promote("t1", TITLE, BODY, None))
+
+    if said:
+        problems.append(f"filing: reviewer promoting coder notice exited with error: {said!r}")
+    if len(filed) != 1 or filed != [(TITLE, None)]:
+        problems.append("filing: reviewer promoting coder notice did not file unlevelled: "
+                        f"{filed!r}")
+    if (len(replied_to) != 1 or "Promoted to" not in replied_to[0][1]
+            or "Left open" in replied_to[0][1]):
+        problems.append("filing: reviewer promoting coder notice reply was incorrect: "
+                        f"{replied_to!r}")
+    if len(resolved) != 1 or resolved[0] != "t1":
+        problems.append("filing: reviewer promoting coder notice did not resolve: "
+                        f"{resolved!r}")
+
+    return problems
+
+
+def promotion_probes(channel: ModuleType, post: ModuleType) -> list[str]:
+    """`promote` against a thread that already carries a promotion link, and one that does not
+    (solorepo's DR-127); then every verb against one voice and two (solorepo's DR-224); then
+    reviewer promotion under solorepo's DR-285.
+
+    The cases on the standing link are below; `sole_author_probes`,
+    `multi_voice_probes` and `reviewer_promotion_probes` carry the rest, and each
+    states its own.
     """
     problems = []
     filed: list[tuple[str, str | None]] = []
 
     def promoting(bodies: list[str]) -> tuple[str | None, int]:
-        """One `promote` of thread `t1` over a thread holding `bodies`, as `(what it exited with, thread reads)`; the exit is `None` where the verb returned.
+        """One `promote` of thread `t1` over a thread holding `bodies`, as `(what it exited with,
+        thread reads)`; the exit is `None` where the verb returned.
 
         `channel.signed` is not stood in and is reached whichever way the verb
         goes, since `promote` composes its reply as an argument and Python
@@ -437,6 +480,7 @@ def promotion_probes(channel: ModuleType, post: ModuleType) -> list[str]:
 
     problems += sole_author_probes(channel, post)
     problems += multi_voice_probes(channel, post)
+    problems += reviewer_promotion_probes(channel, post)
     return problems
 
 

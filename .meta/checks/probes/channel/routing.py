@@ -30,7 +30,6 @@ FIELDS_BY_PASS: dict[tuple[str, str], tuple[str, ...]] = {
     ("coder", "take"): ("number", "repository", "level", "branch_prefix", "resume"),
     ("coder", "rebase"): ("number", "repository", "branch", "base", "issue"),
     ("coder", "answer"): ("number", "repository", "branch", "base", "issue", "stop"),
-    ("coder", "promote"): ("number", "repository", "branch", "base", "issue"),
     ("reviewer", "review"): ("number", "repository", "head", "login", "agents"),
     ("reviewer", "read"): ("number", "repository", "login"),
 }
@@ -131,8 +130,7 @@ def _chain_cases(on: Any) -> list[str]:
     depths = (("take", "medium", ("claude-opus-5", "high", "120", "60")),
               ("take", "easy", ("claude-sonnet-5", "medium", "60", "30")),
               ("rebase", "medium", ("claude-opus-5", "high", "60", "30")),
-              ("answer", "medium", ("claude-opus-5", "high", "120", "60")),
-              ("promote", "medium", ("claude-sonnet-5", "medium", "30", "15")))
+              ("answer", "medium", ("claude-opus-5", "high", "120", "60")))
     for task, level, numbers in depths:
         depth = tuple(routing.coder_depth(task, level))
         if depth != numbers:
@@ -299,7 +297,7 @@ def _between(on: Any, coder_door: Any, case: _Rung) -> tuple[Any, dict[str, str]
         (root / ".review" / "prompt.md").unlink()
         ended_as = outcome(lambda: coder_door.coder(
             "between", FIELDS["number"], coder_door.Delivery(case.task, "issues", ""),
-            coder_door.Ended(("failure", "skipped"), None, "claude"),
+            coder_door.Ended(("failure", "skipped"), "claude"),
             on.Attempt(case.attempt, case.ended)))
         out = dict(line.split("=", 1) for line in (root / "output").read_text().splitlines()
                    if "=" in line)
