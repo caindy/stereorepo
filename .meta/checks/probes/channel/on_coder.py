@@ -8,11 +8,13 @@ import contextlib
 import functools
 import os
 import pathlib
+import subprocess
+import sys
 import tempfile
 from collections.abc import Iterator, Sequence
 from typing import Any, NamedTuple
 
-from checks.collect import check
+from checks.collect import ROOT, check
 from checks.probes.harness import (
     environment,
     load_channel,
@@ -74,8 +76,8 @@ def coder_door_probes() -> list[str]:
     channel, _, _ = load_channel()
     on = load_module(".meta/coder_door.py")
     return (_take_cases(channel, on) + _between_cases(on) + _pull_cases(channel, on)
-            + _rebase_cases(channel, on) + _after_cases(channel, on)
-            + _cap_cases(channel, on))
+            + _rebase_cases(channel, on) + _after_cases(channel, on) + _cap_cases(channel, on)
+            + _invocation_cases())
 
 
 class _GitHub:
@@ -197,9 +199,8 @@ def _take_cases(channel: Any, on: Any) -> list[str]:
     if "ACTOR_AGENT=anthropics/claude-code-action@v1" not in env:
         problems.append(f"take: the harness was named in the environment as {env!r}")
 
-    take = _Take(level="easy", resume="9")
     _, out, _ = _before(channel, on, _fakes(_GitHub(["challenge", "easy", "harness:gemini"]),
-                                           take),
+                                           take := _Take(level="easy", resume="9")),
                         ("take", "workflow_dispatch", "claude"), ISSUE)
     if out.get("harness") != "gemini" or out.get("tier_1_harness") != "gemini" \
             or out.get("tier_2_model") != "claude-sonnet-5" or out.get("tier_2_minutes") != "30" \
@@ -297,8 +298,7 @@ def _pull_cases(channel: Any, on: Any) -> list[str]:
     if ("git", "checkout", "--quiet", f"claude/issue-{ISSUE}") not in commands.calls:
         problems.append(f"answer: the branch was not checked out: {commands.calls!r}")
 
-    fake = _GitHub()
-    held = _Take(by="held", why="labelled hard", level="")
+    fake, held = _GitHub(), _Take(by="held", why="labelled hard", level="")
     ended, out, _ = _before(channel, on, _fakes(fake, held),
                             ("answer", "pull_request_review", ""), PULL)
     if ended.code is not None or out.get("by") != "held" or len(fake.posted) != 1 \
@@ -315,9 +315,8 @@ def _pull_cases(channel: Any, on: Any) -> list[str]:
         problems.append(f"answer: a checkout that failed ended {ended.code!r}, where the "
                         "session must not run against whatever tree the runner holds")
 
-    take, fake = _Take(), _GitHub()
-    ended, out, _ = _before(channel, on, _fakes(fake, take), ("answer", "workflow_dispatch", ""),
-                            PULL)
+    ended, out, _ = _before(channel, on, _fakes(fake := _GitHub(), take := _Take()),
+                            ("answer", "workflow_dispatch", ""), PULL)
     if ended.code is not None or out.get("by") != "" or take.asked or fake.posted:
         problems.append(f"answer: a dispatched review pass decided {out!r} and asked "
                         f"{take.asked!r}, where the solo's own word is not read against")
@@ -446,16 +445,14 @@ class _Session(NamedTuple):
     """One `after` case: what the workflow reports, and what stands in for the reads and acts."""
 
     delivery: tuple[str, str, str]
-    ended: tuple[tuple[str, ...] | None, str] \
-        | tuple[tuple[str, ...] | None, str, str]
+    ended: tuple[tuple[str, ...] | None, str] | tuple[tuple[str, ...] | None, str, str]
     fake: _GitHub
     left: _Left
     loop: _Loop
 
 
 def _session(delivery: tuple[str, str, str],
-             ended: tuple[tuple[str, ...] | None, str]
-             | tuple[tuple[str, ...] | None, str, str],
+             ended: tuple[tuple[str, ...] | None, str] | tuple[tuple[str, ...] | None, str, str],
              fake: _GitHub | None = None, left: _Left | None = None,
              loop: _Loop | None = None) -> _Session:
     """An `after` case, each stand-in defaulting to one that answers the ordinary way."""
@@ -502,8 +499,7 @@ def _after_cases(channel: Any, on: Any) -> list[str]:
     for task, delivery in (("rebase", rebase), ("answer", ("answer", "pull_request_review", ""))):
         ended, loop = _after(channel, on, _session(delivery, (("failure", "failure"), "")))
         if ended.code is None or f"No rung of the {task} pass succeeded" not in str(ended.code):
-            problems.append(f"after: a {task} pass neither harness finished ended "
-                            f"{ended.code!r}")
+            problems.append(f"after: a {task} pass neither harness finished ended {ended.code!r}")
         ended, loop = _after(channel, on, _session(delivery, (("cancelled", "skipped"), "")))
         if ended.code is not None or loop.dispatched or loop.stopped or loop.requested:
             problems.append(f"after: a {task} pass cancelled ended {ended.code!r} and acted "
@@ -601,9 +597,8 @@ whole-document decoding has already lost on here (`agents.history.md`)."""
 
 def _transcript(root: pathlib.Path, name: str, content: str) -> str:
     """Writes a transcript outside the case's workspace and answers where it is."""
-    where = root / name
-    where.write_text(content, encoding="utf-8")
-    return str(where)
+    (root / name).write_text(content, encoding="utf-8")
+    return str(root / name)
 
 
 def _cut_by_cap_cases(on: Any, root: pathlib.Path) -> list[str]:
@@ -665,9 +660,8 @@ def _cap_cases(channel: Any, on: Any) -> list[str]:
         ended, loop = _after(channel, on, _session(
             take, (("success", "skipped"), "claude", capped), fake, _Left(green)))
         account = loop.stopped[0][1] if loop.stopped else ""
-        if ended.code is not None or loop.requested or len(loop.stopped) != 1 \
-                or "does not fit twice" not in account \
-                or "was cut by its turn cap" not in account:
+        if (ended.code is not None or loop.requested or len(loop.stopped) != 1
+                or "does not fit twice" not in account or "was cut by its turn cap" not in account):
             problems.append(f"cap: a second capped take pass ended {ended.code!r}, stopped "
                             f"{loop.stopped!r} and requested {loop.requested!r}, where a "
                             "Challenge that does not fit twice goes to the solo")
@@ -678,8 +672,7 @@ def _cap_cases(channel: Any, on: Any) -> list[str]:
                            (_After(unreadable="comments"), "a comment listing GitHub refuses")):
             ended, loop = _after(channel, on, _session(
                 take, (("success", "skipped"), "claude", capped), fake, _Left(green)))
-            if ended.code is not None or loop.stopped \
-                    or loop.requested != [(PULL, "reviewer")]:
+            if ended.code is not None or loop.stopped or loop.requested != [(PULL, "reviewer")]:
                 problems.append(f"cap: {name} ended {ended.code!r}, stopped {loop.stopped!r} "
                                 f"and requested {loop.requested!r}, where only the door's own "
                                 "account is a cap it posted and a read it cannot make is not one")
@@ -693,3 +686,10 @@ def _cap_cases(channel: Any, on: Any) -> list[str]:
                             f"{loop.stopped!r}, where the step's own conclusion is the account "
                             "and the transcript is not read")
     return problems
+
+
+def _invocation_cases() -> list[str]:
+    """Direct execution of .meta/coder_door.py in a clean subprocess resolves channel."""
+    proc = subprocess.run([sys.executable, str(ROOT / ".meta" / "coder_door.py"), "--help"],
+                          capture_output=True, text=True, check=False)
+    return [f"coder_door.py failed ({proc.returncode}): {proc.stderr}"] if proc.returncode else []

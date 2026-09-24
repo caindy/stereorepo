@@ -13,6 +13,11 @@ Usage:
 History in coder_door.history.md (solorepo's DR-171).
 """
 
+import pathlib
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "say"))
+
 import check_pr
 from lib.coder_door import cli, coder_door, handoff
 from lib.on import common

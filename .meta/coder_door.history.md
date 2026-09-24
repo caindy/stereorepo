@@ -28,3 +28,14 @@ and a second cap hands the Challenge to the solo through `stop`, because a
 Challenge that does not fit twice is not the loop's.
 
 Evidence: `.meta/checks/probes/channel/on_coder.py::coder_door_probes`
+
+### Direct invocation failed to import channel module
+
+Commit a043bdc8 extracted the coder door into `.meta/coder_door.py` and
+`.meta/lib/coder_door/`. Direct invocation of `.meta/coder_door.py` from workflow
+runners failed with `ModuleNotFoundError: No module named 'channel'` because
+`.meta/say/` was not in `sys.path`. Established: `.meta/coder_door.py` inserts
+`.meta/say/` at the front of `sys.path` so submodules importing `channel`
+resolve cleanly in standalone subprocesses.
+
+Evidence: `.meta/checks/probes/channel/on_coder.py::coder_door_probes`
