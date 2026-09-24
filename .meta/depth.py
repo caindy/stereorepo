@@ -5,7 +5,7 @@ Determines model tier, reasoning effort, agent turn budget, execution timeout,
 and concurrent subagent fan-out ceiling across four evaluation layers (solorepo's DR-188,
 solorepo's DR-219):
 scaffold control plane invariants, declared project critical paths, programmatic hooks,
-and standard defaults.
+and standard defaults. The two tiers' values are the routing policy's (solorepo's DR-281).
 
 History in depth.history.md (solorepo's DR-171).
 """
@@ -23,6 +23,8 @@ import re
 import subprocess
 import sys
 from typing import Any, NamedTuple
+
+from lib.on import routing
 
 META = pathlib.Path(__file__).resolve().parent
 ROOT = META.parent
@@ -92,25 +94,27 @@ class DepthConfig(NamedTuple):
         )
 
 
-DEEP_CONFIG = DepthConfig(
-    model="claude-opus-5",
-    gemini_model="gemini-3.8-flash",
-    effort="high",
-    turns=120,
-    minutes=45,
-    agents=3,
-    reason="deep path",
-)
+def tier_config(name: str) -> DepthConfig:
+    """Builds a review tier's configuration from the routing policy (solorepo's DR-281).
 
-STANDARD_CONFIG = DepthConfig(
-    model="claude-sonnet-5",
-    gemini_model="gemini-3.8-flash",
-    effort="medium",
-    turns=120,
-    minutes=15,
-    agents=1,
-    reason="standard path",
-)
+    Args:
+        name: `deep` or `standard`, the two tiers the policy holds.
+
+    Returns:
+        DepthConfig: The tier's model, effort, caps and fan-out ceiling, its reason naming it.
+
+    Raises:
+        KeyError: If `name` is neither tier the policy holds.
+    """
+    depth = routing.REVIEW_DEPTHS[name]
+    return DepthConfig(model=depth.model, gemini_model=routing.GEMINI_MODEL, effort=depth.effort,
+                       turns=int(depth.turns), minutes=int(depth.minutes),
+                       agents=routing.REVIEW_FANOUT[name], reason=f"{name} path")
+
+
+DEEP_CONFIG = tier_config("deep")
+
+STANDARD_CONFIG = tier_config("standard")
 
 
 def load_structure_projects(structure_file: pathlib.Path = STRUCTURE_PATH) -> list[dict[str, Any]]:

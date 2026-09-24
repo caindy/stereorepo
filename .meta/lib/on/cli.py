@@ -18,7 +18,8 @@ DID_NOT_ARRIVE = (
     "an outcome that did not arrive: a step id renamed, or an expression that "
     "resolved to nothing, is a red run and not a pass that was skipped"
 )
-"""The parser's refusal of an empty `--claude` or `--gemini`."""
+"""The parser's refusal of an `--outcomes` list with an empty entry; a list not given at all
+is `None`, which the door's `after` refuses in its own words."""
 
 
 def count(text: str) -> int | None:
@@ -48,6 +49,19 @@ def step_outcome(text: str) -> str:
             NOT_ONE_OF.format(text=text, choices=", ".join(coder_door.OUTCOMES))
         )
     return text
+
+
+def rung_outcomes(text: str) -> tuple[str, ...]:
+    """How each rung of the pass ended, comma-separated in rung order; an empty entry is refused.
+
+    A rung that never ran reports `skipped`, so an entry that is empty is
+    one the workflow did not hand over, and the hand-back that would have
+    run on it must not be skipped quietly (solorepo's DR-281).
+
+    Raises:
+        argparse.ArgumentTypeError: Where any entry is empty or no outcome a step has.
+    """
+    return tuple(step_outcome(entry.strip()) for entry in text.split(","))
 
 
 def rung_outcome(text: str) -> str | None:
@@ -157,18 +171,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--harness", default="", help="the harness a dispatch asked for, empty on any other event"
     )
     c.add_argument(
-        "--claude",
-        type=step_outcome,
+        "--outcomes",
+        type=rung_outcomes,
         default=None,
-        help="after the session: how the pass's Claude Code step ended; required "
-        "there, and an empty string is refused",
-    )
-    c.add_argument(
-        "--gemini",
-        type=step_outcome,
-        default=None,
-        help="after the session: how the pass's Antigravity CLI step ended; required "
-        "there, and an empty string is refused",
+        help="after the session: how each rung of the pass ended, comma-separated in "
+        "rung order; required there, and an empty entry is refused",
     )
     c.add_argument(
         "--count",
@@ -207,8 +214,6 @@ def main() -> None:
             args.phase,
             args.number,
             coder_door.Delivery(args.task, args.event, args.harness),
-            coder_door.Ended(
-                args.claude, args.gemini, args.count, args.branch_prefix, args.execution
-            ),
+            coder_door.Ended(args.outcomes, args.count, args.branch_prefix, args.execution),
             common.Attempt(args.attempt, args.outcome, args.execution),
         )

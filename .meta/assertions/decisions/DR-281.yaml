@@ -17,6 +17,18 @@ decisions:
       - work:artifact/meta-say-on
       - work:artifact/meta-templates-readme
       - work:artifact/meta-checks-probes-channel-routing
+      - work:artifact/meta-actions-harness
+      - work:artifact/meta-actions-agy
+      - work:artifact/github-workflows-coder
+      - work:artifact/github-workflows-review
+      - work:artifact/github-workflows-triage
+      - work:artifact/meta-depth
+      - work:artifact/meta-detect-fallback
+      - work:artifact/meta-checks-files-harness
+      - work:artifact/meta-lib-on-handoff
+      - work:artifact/meta-checks-probes-channel-on
+      - work:artifact/meta-checks-probes-channel-on-coder
+      - work:artifact/meta-arc-watch
     context: >-
       Solorepo's #928 counted six places where a model, a reasoning effort, a
       turn cap, a timeout or a fallback order was written: the reviewer's two

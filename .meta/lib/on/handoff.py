@@ -11,13 +11,14 @@ from lib.on import coder_door
 
 
 def outcome_of(ended: coder_door.Ended) -> str:
-    """How the pass ended: the fallback's word where it failed, and where it was cancelled alike.
+    """How the pass ended: the word of the last rung that ran, `skipped` where none did.
 
-    The Antigravity CLI step runs after Claude Code's failed, so where it too
-    failed its outcome is the one the account names (solorepo's DR-257);
-    otherwise Claude Code's.
+    A later rung runs only where the one before it failed, so the last rung
+    that was not skipped is the one whose word the account names
+    (solorepo's DR-257, solorepo's DR-281).
     """
-    return str(ended.gemini if ended.gemini in ("failure", "cancelled") else ended.claude)
+    ran = [outcome for outcome in (ended.outcomes or ()) if outcome != "skipped"]
+    return ran[-1] if ran else "skipped"
 
 
 def transcript_entries(text: str) -> list[dict[str, Any]]:
@@ -273,19 +274,16 @@ def not_requested(left: dict[str, Any] | None, number: str, branch: str, base: s
 
 
 def verify(task: str, ended: coder_door.Ended) -> None:
-    """Ends the run red where a pass ran and neither harness finished it.
+    """Ends the run red where a pass ran and no rung finished it.
 
     Raises:
-        SystemExit: Where neither step succeeded and one failed; a pass that
-            was cancelled, or never ran, is not a failure of the pass.
+        SystemExit: Where no rung succeeded and one failed; a pass that was
+            cancelled, or never ran, is not a failure of the pass.
     """
-    if (
-        ended.claude != "success"
-        and ended.gemini != "success"
-        and "failure" in (ended.claude, ended.gemini)
-    ):
-        sys.exit(coder_door.NEITHER.format(task=task, claude=ended.claude, gemini=ended.gemini))
-    print(f"the {task} pass ended claude={ended.claude} gemini={ended.gemini}")
+    outcomes = ended.outcomes or ()
+    if "success" not in outcomes and "failure" in outcomes:
+        sys.exit(coder_door.NEITHER.format(task=task, outcomes=",".join(outcomes)))
+    print(f"the {task} pass ended {','.join(outcomes)}")
 
 
 def redeliver(number: str) -> None:
@@ -320,11 +318,8 @@ def coder_after(number: str, delivery: coder_door.Delivery, ended: coder_door.En
         delivery (coder_door.Delivery): What the workflow knew before the session.
         ended (coder_door.Ended): How the session's steps ended.
     """
-    if ended.claude is None or ended.gemini is None:
-        sys.exit(
-            "::error::"
-            + coder_door.OUTCOMES_NOT_SAID.format(claude=ended.claude, gemini=ended.gemini)
-        )
+    if ended.outcomes is None:
+        sys.exit("::error::" + coder_door.OUTCOMES_NOT_SAID)
     if delivery.task == "take":
         outcome = outcome_of(ended)
         stopped = outcome in ("failure", "cancelled")
@@ -334,7 +329,7 @@ def coder_after(number: str, delivery: coder_door.Delivery, ended: coder_door.En
         else:
             print(f"the take pass ended {outcome}; nothing to hand back")
     elif delivery.task == "rebase":
-        if "success" in (ended.claude, ended.gemini):
+        if "success" in (ended.outcomes or ()):
             redeliver(number)
         else:
             verify(delivery.task, ended)

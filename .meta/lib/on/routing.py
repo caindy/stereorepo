@@ -11,12 +11,14 @@ opted in to that harness by the toggle solorepo's DR-240, DR-245 and DR-246
 name. Claude Code needs no toggle: it is the harness every portfolio has.
 
 The module imports nothing from the package and nothing that reaches
-GitHub, so `.meta/depth.py` can take its tier values from here whatever
-else is loaded. It does not yet: the reviewer runs trunk's copy of this
-package against the head's `depth.py`, so a `depth.py` importing this
-module cannot be reviewed until the module is trunk's. Until the layer
-that moves it, `depth.py` keeps its two tiers' literal values and a probe
-holds them equal to `REVIEW_DEPTHS` and `REVIEW_FANOUT`.
+GitHub, so `.meta/depth.py` takes its tier values from here whatever else
+is loaded. One hazard follows from where the two files sit: `review.yml`
+restores `.meta/lib/on/` from `origin/main` before the door runs and does
+not restore `.meta/depth.py`, so a pull request's review runs trunk's copy
+of this module against the head's `depth.py`. A change that renames a
+symbol here and updates `depth.py` in the same commit is consistent locally
+and fails its own review at import, on the attribute rather than on the
+restore; such a rename lands in two pull requests, the module first.
 """
 
 import os
@@ -191,7 +193,10 @@ def outputs(tiers: Sequence[Tier]) -> dict[str, str]:
 
     An attempt step reads its rung by number, so a workflow's ladder is the
     same whatever harness each rung names; `tiers` is how many rungs the
-    ladder has, so the step after the last knows there is no next.
+    ladder has, so the step after the last knows there is no next; and a
+    step named from the `tier_<n>_harness` outputs shows the chain in the
+    run's step list while the run is live, where `.meta/arc/watch` reads a
+    rung's harness.
     """
     named = {"tiers": str(len(tiers))}
     for position, rung in enumerate(tiers, 1):

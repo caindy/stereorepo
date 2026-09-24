@@ -66,6 +66,9 @@ jobs:
       # Fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle
       # (solorepo's DR-178, solorepo's DR-245); set vars.GEMINI_FALLBACK to 'true' to enable.
       GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
+      # Fall back to Google Labs Jules if enabled by the JULES_FALLBACK toggle
+      # (solorepo's DR-246); the door reads it for the chain (solorepo's DR-281).
+      JULES_FALLBACK: ${{ vars.JULES_FALLBACK || 'false' }}
       # The head this run reads, and the one its verdict must be recorded
       # against (solorepo's #566). Two of the three things the run reads are
       # pinned to it: the head's trunk paths under `.review/head/` and the
@@ -216,29 +219,56 @@ jobs:
         env:
           PR: ${{ github.event.pull_request.number }}
 
-      - name: review the pull request (claude)
-        id: review_claude
-        if: steps.before.outputs.harness == 'claude'
+      # The chain the door resolved, which the rungs below read by number
+      # (solorepo's DR-281), shown in the run's step list while the run is
+      # live: this step's name is rendered from the door's `tier_<n>_harness`
+      # outputs the moment it runs, which is before any rung, so
+      # `.meta/arc/watch` reads a rung's harness here off the job steps it
+      # already fetches; a rung the chain does not reach renders empty. Why
+      # the watch reads a step's name and not the log, the annotations or an
+      # attempt step's own name, and what showed it, is at `CHAIN` and `RUNG`
+      # in `.meta/arc/watch`.
+      - name: chain ${{ steps.before.outputs.tier_1_harness }},${{ steps.before.outputs.tier_2_harness }},${{ steps.before.outputs.tier_3_harness }}
+        id: chain
+        run: ":"
+
+
+      # The ladder (solorepo's DR-281): three rungs, each the same attempt
+      # step on the harness runner, reading its harness and its caps off
+      # the door's `tier_<n>_*` outputs by number, so the chain the door
+      # resolved runs in that order whatever it is. Rung 1 runs where the
+      # door before it succeeded; each later rung runs where the door between
+      # it and the one before said the one before failed and this rung exists. The fan-out ceiling
+      # reaches Claude Code through the environment on every rung, and binds
+      # nothing on the others. Which harness a rung ran is the door's
+      # `tier_<n>_harness` output in the run log, not the step's name.
+      - name: attempt 1
+        id: attempt_1
+        if: steps.before.outcome == 'success'
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_1_minutes) }}
         env:
+          # Whose session this rung is, with the primary's name as the default
+          # an empty output would otherwise unname the run with (solorepo's #836).
+          ACTOR_AGENT: ${{ steps.before.outputs.tier_1_agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.before.outputs.tier_1_agent || steps.before.outputs.agent }}
           CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS: ${{ steps.before.outputs.agents }}
-          SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook-claude.evidence
+        uses: ./.meta/actions/harness
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          harness: ${{ steps.before.outputs.tier_1_harness }}
+          role: reviewer
+          model: ${{ steps.before.outputs.tier_1_model }}
+          effort: ${{ steps.before.outputs.tier_1_effort }}
+          turns: ${{ steps.before.outputs.tier_1_turns }}
+          minutes: ${{ steps.before.outputs.tier_1_minutes }}
+          agent: ${{ steps.before.outputs.tier_1_agent }}
+          number: ${{ github.event.pull_request.number }}
+          claude-agents: ${{ steps.before.outputs.agents }}
+          claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The action's own GitHub calls as the Role too, so nothing in the
           # run is authored by an App or a bot.
-          github_token: ${{ secrets.REVIEWER_GH_TOKEN }}
-          # The transcript, in the run log. Hidden by default; here the run is
-          # the only record of what the reviewer did, and its first run posted
-          # nothing while reporting success (solorepo's #85). `gh run view
-          # <id> --log` prints this step cut off at about two minutes; the
-          # whole of it is in the archive the CLI caches at
-          # `~/.cache/gh/run-log-<id>-*.zip`, where `0_reviewer.txt` holds the
-          # complete transcript and the `result` event with turns and cost
-          # (solorepo's #122).
-          show_full_output: "true"
+          github-token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          jules-api-key: ${{ secrets.JULES_API_KEY }}
           # The bound on reading, registered here and nowhere else (solorepo's DR-110):
           # a `Read`, `Grep` or `Glob` resolves inside the worktree and
           # outside `.git/`, and a `git` command carries no option that runs
@@ -247,161 +277,11 @@ jobs:
           # shell and `git log --output=.meta/say` rewrites the channel, and
           # no prefix list excludes an option. The script is one of the trunk
           # paths restored above, so it is trunk's.
-          settings: |
+          claude-settings: |
             {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
               "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}
-          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
-          plugins: "code-review@claude-code-plugins"
-          prompt: |
-            Your Personality is work:personality/reviewer: Analytical and thorough. Holds the diff to the Disciplines and the Charter strictly. Clear and precise in identification of issues; concise yet unambiguous in argument.
-
-            You are the reviewer Role (solorepo's DR-107), answering a review request on
-            pull request #${{ github.event.pull_request.number }} of
-            ${{ github.repository }}. Read /pr-first-reviewer first: it is
-            the reviewer's reading of PR First, and says what a pull request
-            here must hold, what a reviewer's point owes, and which verbs
-            are yours.
-
-            Then read `.review/constraints.md` with the Read tool. It was
-            written before this session and says where the diff is, which
-            paths in the worktree are trunk's and not this pull request's,
-            where the pull request's own version of those is, and what the
-            shell here takes. It binds you and every agent you spawn.
-
-            Then read what this Role has already said on it, before saying
-            anything: `just pr ${{ github.event.pull_request.number }} --threads`.
-            It lists every verdict with the head GitHub recorded it against
-            and the login that gave it, then the threads owed an answer, the
-            ones held for promotion, and the ones answered and resolved. Your
-            login is `${{ github.repository_owner }}-${{ github.event.repository.name }}-reviewer`;
-            a verdict by any other login, the solo's approval among them, is
-            not this Role's and decides nothing here, and a `DISMISSED` one
-            was withdrawn and decides nothing, whatever head it names. A run before this one may have raised
-            points and been cancelled by a push before its verdict. A point
-            already on the pull request is not raised again; where the new
-            head changes it, answer in its thread.
-
-            A long argument makes a long listing, and a shell result past
-            about 30 KB arrives as its first 2 KB and the path of a file
-            holding the whole; the verdicts print before everything else so
-            the preview holds the newest, and the file is read with the Read
-            tool before anything is decided from the preview.
-
-            If the listing shows a verdict of this Role and threads it raised
-            answered and resolved, this is a re-review, not a review: read
-            each answer against the diff between the head the verdict names
-            and this one, `git diff <that-head> ${{ github.event.pull_request.head.sha }}`.
-            The head GitHub records on a verdict is the head current when it
-            was posted, which is newer than the one the run read if a push
-            landed during the run; and a rebase of an open branch orphans
-            the old head, so where `git diff` cannot resolve that head, read
-            the pull request's whole diff at `.review/diff.patch` and each
-            answer in its thread instead. Say in the thread where an answer does not hold,
-            and post the verdict. Do not run the code-review skill again on
-            a head a verdict of this Role already names, nor on a head that
-            differs from one only by the answers; its agents cost the turns the verdict
-            needs (solorepo's #102), and on solorepo's #117 every pass ran it again because the
-            listing hid what had been resolved (solorepo's #122). Do not wait for
-            pending checks to finish: `gh pr checks` exits non-zero while a check
-            is pending, and the standing merge manager evaluates completed checks
-            before landing. However, inspect completed checks on this head with
-            `gh pr checks ${{ github.event.pull_request.number }}` and test form
-            compliance with `just pr ${{ github.event.pull_request.number }}`.
-
-            Then review with /code-review:code-review ${{ steps.before.outputs.effort }} ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
-            without --comment. Every agent the review spawns is bound by
-            `.review/constraints.md` too, and hand it that line rather than
-            the paragraphs: writing them out once per agent is what made the
-            fourth agent start nearly a minute after the first (solorepo's #196).
-
-            Scope that pass before you spawn it (solorepo's DR-166). Every
-            agent runs in the foreground and the pass has been costing the sum
-            of its agents: that is where an initial review's 11 to 15 minutes
-            go (solorepo's #303). Name
-            the dimensions this diff actually has, from `.review/diff.patch`
-            which you have already read, and spawn no more than
-            ${{ steps.before.outputs.agents }} of them, one to a dimension. When
-            launching multiple agents for independent work, send them in a
-            single message with multiple tool uses so they execute concurrently
-            in the foreground, returning together in the same turn rather than
-            costing the sum of their sequential executions (solorepo's DR-189).
-            If the diff
-            modifies docstrings, comments, Decision Records, or markdown files, include
-            the Technical Writer pass (evaluating against `work:personality/technical-writer`
-            and the Literate Programming rubric of solorepo's DR-175, solorepo's DR-176). A
-            dimension this diff does not touch is not reviewed by an agent
-            that finds nothing in it; one you can settle from the diff
-            yourself does not need an agent either; and no two agents get the
-            same dimension in different words. That number is a ceiling and
-            not a quota, so a diff with one dimension gets one agent whatever
-            the path, and a diff you have read whole gets none.
-
-            Post only through the channel, so every word carries the Trailer.
-            Every posting command begins with `.meta/say/post` and takes its
-            body as a quoted heredoc on stdin; a command that begins with
-            anything else, `cat` or `printf` or `echo`, is not permitted to
-            run. Each finding goes on a line of the diff:
-
-                .meta/say/post --role reviewer raise <n> <path> <line> <<'BODY'
-                ...
-                BODY
-
-            and the verdict carries a body saying what was checked and what
-            was found:
-
-                .meta/say/post --role reviewer review <n> --approve|--request-changes|--comment <<'BODY'
-                ...
-                BODY
-
-            Never `gh pr review`, `gh pr comment` or `gh api`: the hook
-            refuses them. Resolve no thread but one a promotion left open.
-            Where every comment on a thread carries one Trailer, the reply
-            that promotes it says `Left open: ...` and the thread stays open —
-            `promote` writing `Promoted to <url>. Left open: ...`, and `post
-            answer` putting the same sentence behind the coder's own words:
-            A16 accepts a second party's reply or a link, and
-            solorepo's DR-224 narrows the link limb, so a thread carrying one
-            Trailer waits for a second Job even with the link on it. This run
-            is that Job, its `ACTOR_SESSION` being this run's. So before the verdict,
-            for each unresolved thread whose last comment is one of those:
-
-                .meta/say/post --role reviewer resolve <thread-id>
-
-            and name in the verdict what you closed. Telling that thread
-            from the rest is yours: read the last comment, and resolve only
-            where it carries the Issue's URL and the words `Left open:`.
-            The verb is a backstop and not the test — it
-            refuses a thread every comment of which carries your own Trailer,
-            and one with neither a second party nor a promotion link, and
-            permits everything else, so a live point you misread as promoted
-            would resolve without a murmur. Every other thread is owed an
-            answer by whoever the point is for: reply to it, or raise a new
-            one, and leave it open.
-
-            Your approval clears the review semaphore for the merge manager. If
-            any completed check on this head has failed (in `gh pr checks`), or
-            if `just pr ${{ github.event.pull_request.number }}`
-            exits non-zero, do NOT approve. An approval on a red head leaves the
-            pull request stalled indefinitely: the merge manager will not land
-            non-green work and the promotion pass performs no checks. On a
-            `claude/issue-*` branch, requesting changes is the semaphore that
-            wakes the coder Role to fix breakage; on other branches, it informs
-            the author. Post `--request-changes` instead, naming the failing
-            checks in "What was found". If all completed checks are green (or
-            pending) and the diff is clean, post your approval with
-            `.meta/say/post --role reviewer review <n> --approve`. A standing
-            merge manager lands what is green in order of leverage
-            (solorepo's DR-161). Do not arm the merge and do not merge by hand.
-
-            Your turn ends when the verdict is posted, and not before. The
-            run ends when your turn ends: nothing here waits for a background
-            agent, whatever the harness's own reference says, and a turn that
-            ended "waiting for the agents" is a run that posted nothing —
-            solorepo's #130, #138 and #140. So an Agent you spawn runs in the foreground,
-            never with `run_in_background`, and its result arrives in the
-            same turn; one you did start in the background is read with
-            TaskOutput before anything else. The step after this session
-            counts your verdicts, and a session that added none is a red run.
+          claude-plugin-marketplaces: "https://github.com/anthropics/claude-code.git"
+          claude-plugins: "code-review@claude-code-plugins"
           # Which programs, by prefix; what they may reach, by the hook above.
           # The run holds a token, its input is a diff nobody here has vetted,
           # and `signed_channel.py` bounds only the paths to GitHub, not a
@@ -411,197 +291,151 @@ jobs:
           # reviewer's own runs argued a blanket allowance back out, then
           # found `git grep -O` inside the list. The shell is the channel,
           # the checker and git; reading is the tools, under the hook.
-          claude_args: |
-            --model ${{ steps.before.outputs.model }}
-            --max-turns ${{ steps.before.outputs.turns }}
+          claude-args: |
             --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
-      - name: review the pull request (agy)
-        id: review_gemini
-        if: steps.before.outputs.harness == 'gemini' || steps.review_claude.outcome == 'failure'
+      # The door between rungs 1 and 2: told how rung 1 ended, it says
+      # whether rung 2 runs and writes that rung's prompt (solorepo's DR-281).
+      # It runs wherever rung 1 ran, and `continue-on-error` keeps a red
+      # reading from ending the job: an `if:` naming no status function
+      # carries an implicit `success()`, and `run` left empty skips the
+      # next rung rather than guessing.
+      - name: between rungs 1 and 2
+        id: between_1
+        if: steps.attempt_1.outcome != 'skipped'
         continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
+        run: >-
+          .meta/say/on --role reviewer reviewer between "$PR" --attempt 1 --outcome "$OUTCOME" --transcript "$EXECUTION"
         env:
-          GEMINI_PROJECT_DIR: ${{ github.workspace }}
-          SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook-agy.evidence
-        uses: ./.meta/actions/agy
+          PR: ${{ github.event.pull_request.number }}
+          OUTCOME: ${{ steps.attempt_1.outcome }}
+          EXECUTION: ${{ steps.attempt_1.outputs.execution_file }}
+
+
+      - name: attempt 2
+        id: attempt_2
+        if: steps.between_1.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_2_minutes || steps.before.outputs.tier_1_minutes) }}
+        env:
+          # Whose session this rung is, with the primary's name as the default
+          # an empty output would otherwise unname the run with (solorepo's #836).
+          ACTOR_AGENT: ${{ steps.before.outputs.tier_2_agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.before.outputs.tier_2_agent || steps.before.outputs.agent }}
+          CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS: ${{ steps.before.outputs.agents }}
+        uses: ./.meta/actions/harness
         with:
+          harness: ${{ steps.before.outputs.tier_2_harness }}
           role: reviewer
-          model: ${{ steps.before.outputs.gemini_model }}
-          effort: ${{ steps.before.outputs.effort }}
-          timeout-minutes: ${{ steps.before.outputs.minutes }}
-          harness: ${{ steps.before.outputs.harness }}
-          agent: ${{ steps.before.outputs.agent }}
-          claude-outcome: ${{ steps.review_claude.outcome }}
-          execution-file: ${{ steps.review_claude.outputs.execution_file }}
-          prompt: |
-            Your Personality is work:personality/reviewer: Analytical and thorough. Holds the diff to the Disciplines and the Charter strictly. Clear and precise in identification of issues; concise yet unambiguous in argument.
+          model: ${{ steps.before.outputs.tier_2_model }}
+          effort: ${{ steps.before.outputs.tier_2_effort }}
+          turns: ${{ steps.before.outputs.tier_2_turns }}
+          minutes: ${{ steps.before.outputs.tier_2_minutes }}
+          agent: ${{ steps.before.outputs.tier_2_agent }}
+          number: ${{ github.event.pull_request.number }}
+          claude-agents: ${{ steps.before.outputs.agents }}
+          claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The action's own GitHub calls as the Role too, so nothing in the
+          # run is authored by an App or a bot.
+          github-token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          jules-api-key: ${{ secrets.JULES_API_KEY }}
+          # The bound on reading, registered here and nowhere else (solorepo's DR-110):
+          # a `Read`, `Grep` or `Glob` resolves inside the worktree and
+          # outside `.git/`, and a `git` command carries no option that runs
+          # a program or writes a file. A hook, because it is the one layer
+          # that sees an argument rather than a prefix: `git grep -O` runs a
+          # shell and `git log --output=.meta/say` rewrites the channel, and
+          # no prefix list excludes an option. The script is one of the trunk
+          # paths restored above, so it is trunk's.
+          claude-settings: |
+            {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
+              "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}
+          claude-plugin-marketplaces: "https://github.com/anthropics/claude-code.git"
+          claude-plugins: "code-review@claude-code-plugins"
+          # Which programs, by prefix; what they may reach, by the hook above.
+          # The run holds a token, its input is a diff nobody here has vetted,
+          # and `signed_channel.py` bounds only the paths to GitHub, not a
+          # `curl` to anywhere else with the token file as its body. The
+          # first two runs (solorepo's #85, #86) posted nothing because `Skill` was
+          # missing from the list, not because the list was a list; the
+          # reviewer's own runs argued a blanket allowance back out, then
+          # found `git grep -O` inside the list. The shell is the channel,
+          # the checker and git; reading is the tools, under the hook.
+          claude-args: |
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --disallowedTools "Read(./.git/**)"
 
-            You are the reviewer Role (solorepo's DR-107, solorepo's DR-254), answering a review request on
-            pull request #${{ github.event.pull_request.number }} of
-            ${{ github.repository }}. Read `.agents/skills/pr-first-reviewer/SKILL.md` first with
-            the Read tool: it is the reviewer's reading of PR First, and says what a pull request
-            here must hold, what a reviewer's point owes, and which verbs
-            are yours; `AGENTS.md` (and `GEMINI.md`) has the conventions.
-
-            Then read `.review/constraints.md` with the Read tool. It was
-            written before this session and says where the diff is, which
-            paths in the worktree are trunk's and not this pull request's,
-            where the pull request's own version of those is, and what the
-            shell here takes. It binds you and every agent you spawn.
-
-            Then read what this Role has already said on it, before saying
-            anything: `just pr ${{ github.event.pull_request.number }} --threads`.
-            It lists every verdict with the head GitHub recorded it against
-            and the login that gave it, then the threads owed an answer, the
-            ones held for promotion, and the ones answered and resolved. Your
-            login is `${{ github.repository_owner }}-${{ github.event.repository.name }}-reviewer`;
-            a verdict by any other login, the solo's approval among them, is
-            not this Role's and decides nothing here, and a `DISMISSED` one
-            was withdrawn and decides nothing, whatever head it names. A run before this one may have raised
-            points and been cancelled by a push before its verdict. A point
-            already on the pull request is not raised again; where the new
-            head changes it, answer in its thread.
-
-            A long argument makes a long listing, and a shell result past
-            about 30 KB arrives as its first 2 KB and the path of a file
-            holding the whole; the verdicts print before everything else so
-            the preview holds the newest, and the file is read with the Read
-            tool before anything is decided from the preview.
-
-            If the listing shows a verdict of this Role and threads it raised
-            answered and resolved, this is a re-review, not a review: read
-            each answer against the diff between the head the verdict names
-            and this one, `git diff <that-head> ${{ github.event.pull_request.head.sha }}`.
-            The head GitHub records on a verdict is the head current when it
-            was posted, which is newer than the one the run read if a push
-            landed during the run; and a rebase of an open branch orphans
-            the old head, so where `git diff` cannot resolve that head, read
-            the pull request's whole diff at `.review/diff.patch` and each
-            answer in its thread instead. Say in the thread where an answer does not hold,
-            and post the verdict. Do not run the code-review skill again on
-            a head a verdict of this Role already names, nor on a head that
-            differs from one only by the answers; its agents cost the turns the verdict
-            needs (solorepo's #102), and on solorepo's #117 every pass ran it again because the
-            listing hid what had been resolved (solorepo's #122). Do not wait for
-            pending checks to finish: `gh pr checks` exits non-zero while a check
-            is pending, and the standing merge manager evaluates completed checks
-            before landing. However, inspect completed checks on this head with
-            `gh pr checks ${{ github.event.pull_request.number }}` and test form
-            compliance with `just pr ${{ github.event.pull_request.number }}`.
-
-            Review the pull request diff across the dimensions it touches directly in this
-            session (solorepo's DR-254). Read `.review/diff.patch` whole. Do NOT invoke subagents:
-            in headless batch execution, delegating to asynchronous subagents yields the turn and
-            terminates the run prematurely before any verdict lands (solorepo's #637). Evaluate
-            all dimensions yourself in this session. If the diff modifies docstrings, comments,
-            Decision Records, or markdown files, apply the Technical Writer pass directly
-            (evaluating against `work:personality/technical-writer` and the Literate Programming
-            rubric of solorepo's DR-175, solorepo's DR-176).
-
-            Post only through the channel, so every word carries the Trailer.
-            Every posting command begins with `.meta/say/post` and takes its
-            body as a quoted heredoc on stdin; a command that begins with
-            anything else, `cat` or `printf` or `echo`, is not permitted to
-            run. Each finding goes on a line of the diff:
-
-                .meta/say/post --role reviewer raise ${{ github.event.pull_request.number }} <path> <line> <<'BODY'
-                ...
-                BODY
-
-            and the verdict carries a body saying what was checked and what
-            was found:
-
-                .meta/say/post --role reviewer review ${{ github.event.pull_request.number }} --approve|--request-changes|--comment <<'BODY'
-                ...
-                BODY
-
-            Never `gh pr review`, `gh pr comment` or `gh api`: the hook
-            refuses them. Resolve no thread but one a promotion left open.
-            Where every comment on a thread carries one Trailer, the reply
-            that promotes it says `Left open: ...` and the thread stays open —
-            `promote` writing `Promoted to <url>. Left open: ...`, and `post
-            answer` putting the same sentence behind the coder's own words:
-            A16 accepts a second party's reply or a link, and
-            solorepo's DR-224 narrows the link limb, so a thread carrying one
-            Trailer waits for a second Job even with the link on it. This run
-            is that Job, its `ACTOR_SESSION` being this run's. So before the verdict,
-            for each unresolved thread whose last comment is one of those:
-
-                .meta/say/post --role reviewer resolve <thread-id>
-
-            and name in the verdict what you closed. Telling that thread
-            from the rest is yours: read the last comment, and resolve only
-            where it carries the Issue's URL and the words `Left open:`.
-            The verb is a backstop and not the test — it
-            refuses a thread every comment of which carries your own Trailer,
-            and one with neither a second party nor a promotion link, and
-            permits everything else, so a live point you misread as promoted
-            would resolve without a murmur. Every other thread is owed an
-            answer by whoever the point is for: reply to it, or raise a new
-            one, and leave it open.
-
-            Your approval clears the review semaphore for the merge manager. If
-            any completed check on this head has failed (in `gh pr checks`), or
-            if `just pr ${{ github.event.pull_request.number }}`
-            exits non-zero, do NOT approve. An approval on a red head leaves the
-            pull request stalled indefinitely: the merge manager will not land
-            non-green work and the promotion pass performs no checks. On a
-            `(claude|gemini)/issue-*` branch, requesting changes is the semaphore that
-            wakes the coder Role to fix breakage; on other branches, it informs
-            the author. Post `--request-changes` instead, naming the failing
-            checks in "What was found". If all completed checks are green (or
-            pending) and the diff is clean, post your approval with
-            `.meta/say/post --role reviewer review ${{ github.event.pull_request.number }} --approve`. A standing
-            merge manager lands what is green in order of leverage
-            (solorepo's DR-161). Do not arm the merge and do not merge by hand.
-
-            Your turn ends when the verdict is posted, and not before. The
-            run ends when your turn ends: nothing here waits for a background
-            agent, whatever the harness's own reference says, and a turn that
-            ended "waiting for the agents" is a run that posted nothing —
-            solorepo's #130, #138, #140, and #637. Do not call `invoke_subagent` or
-            yield the turn; post your review verdict via `.meta/say/post --role reviewer review ...`
-            before ending your turn. The step after this session counts your verdicts,
-            and a session that added none is a red run.
-
-      # When Claude Code and Antigravity both fail (or when Antigravity fallback is unconfigured
-      # in a clone without ARC), evaluate Google Labs Jules API fallback if enabled by the
-      # JULES_FALLBACK toggle under Google AI Ultra subscription quota (solorepo's DR-246).
-      - name: detect jules fallback
-        id: jules_fallback
-        if: >-
-          steps.before.outputs.harness != 'jules' && (
-            steps.review_gemini.outcome == 'failure' ||
-            (steps.review_claude.outcome == 'failure' && steps.review_gemini.outputs.fallback != 'true')
-          )
+      # The door between rungs 2 and 3: told how rung 2 ended, it says
+      # whether rung 3 runs and writes that rung's prompt (solorepo's DR-281).
+      # It runs wherever rung 2 ran, and `continue-on-error` keeps a red
+      # reading from ending the job: an `if:` naming no status function
+      # carries an implicit `success()`, and `run` left empty skips the
+      # next rung rather than guessing.
+      - name: between rungs 2 and 3
+        id: between_2
+        if: steps.attempt_2.outcome != 'skipped'
+        continue-on-error: true
+        run: >-
+          .meta/say/on --role reviewer reviewer between "$PR" --attempt 2 --outcome "$OUTCOME" --transcript "$EXECUTION"
         env:
-          JULES_FALLBACK: ${{ vars.JULES_FALLBACK }}
-        run: python3 .meta/detect_fallback.py --harness jules
+          PR: ${{ github.event.pull_request.number }}
+          OUTCOME: ${{ steps.attempt_2.outcome }}
+          EXECUTION: ${{ steps.attempt_2.outputs.execution_file }}
 
-      - name: review the pull request (jules)
-        id: review_jules
-        if: steps.before.outputs.harness == 'jules' || steps.jules_fallback.outputs.fallback == 'true'
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
+
+      - name: attempt 3
+        id: attempt_3
+        if: steps.between_2.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_3_minutes || steps.before.outputs.tier_1_minutes) }}
         env:
-          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
-          # Whose review this is, scoped to this step alone (solorepo's #836):
-          # jules where it was fallen back to, and the harness the pull
-          # request's own label chose otherwise, which the door named on both
-          # outputs. `jules_fallback` is skipped on a `harness:jules` review and
-          # emits nothing, and this step's `env:` beats the job environment the
-          # door wrote, so the empty output is caught here rather than left to
-          # unname the verdict `.meta/jules/client.py` posts from this step.
-          ACTOR_AGENT: ${{ steps.jules_fallback.outputs.agent || steps.before.outputs.agent }}
-          AI_AGENT: ${{ steps.jules_fallback.outputs.agent || steps.before.outputs.agent }}
-        uses: ./.meta/actions/jules
+          # Whose session this rung is, with the primary's name as the default
+          # an empty output would otherwise unname the run with (solorepo's #836).
+          ACTOR_AGENT: ${{ steps.before.outputs.tier_3_agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.before.outputs.tier_3_agent || steps.before.outputs.agent }}
+          CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS: ${{ steps.before.outputs.agents }}
+        uses: ./.meta/actions/harness
         with:
+          harness: ${{ steps.before.outputs.tier_3_harness }}
           role: reviewer
-          pr: ${{ github.event.pull_request.number }}
-          timeout-minutes: ${{ steps.before.outputs.minutes }}
-          prompt: |
-            Review pull request #${{ github.event.pull_request.number }}
+          model: ${{ steps.before.outputs.tier_3_model }}
+          effort: ${{ steps.before.outputs.tier_3_effort }}
+          turns: ${{ steps.before.outputs.tier_3_turns }}
+          minutes: ${{ steps.before.outputs.tier_3_minutes }}
+          agent: ${{ steps.before.outputs.tier_3_agent }}
+          number: ${{ github.event.pull_request.number }}
+          claude-agents: ${{ steps.before.outputs.agents }}
+          claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The action's own GitHub calls as the Role too, so nothing in the
+          # run is authored by an App or a bot.
+          github-token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          jules-api-key: ${{ secrets.JULES_API_KEY }}
+          # The bound on reading, registered here and nowhere else (solorepo's DR-110):
+          # a `Read`, `Grep` or `Glob` resolves inside the worktree and
+          # outside `.git/`, and a `git` command carries no option that runs
+          # a program or writes a file. A hook, because it is the one layer
+          # that sees an argument rather than a prefix: `git grep -O` runs a
+          # shell and `git log --output=.meta/say` rewrites the channel, and
+          # no prefix list excludes an option. The script is one of the trunk
+          # paths restored above, so it is trunk's.
+          claude-settings: |
+            {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
+              "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}
+          claude-plugin-marketplaces: "https://github.com/anthropics/claude-code.git"
+          claude-plugins: "code-review@claude-code-plugins"
+          # Which programs, by prefix; what they may reach, by the hook above.
+          # The run holds a token, its input is a diff nobody here has vetted,
+          # and `signed_channel.py` bounds only the paths to GitHub, not a
+          # `curl` to anywhere else with the token file as its body. The
+          # first two runs (solorepo's #85, #86) posted nothing because `Skill` was
+          # missing from the list, not because the list was a list; the
+          # reviewer's own runs argued a blanket allowance back out, then
+          # found `git grep -O` inside the list. The shell is the channel,
+          # the checker and git; reading is the tools, under the hook.
+          claude-args: |
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --disallowedTools "Read(./.git/**)"
 
       # A session that ended without a verdict has not reviewed, and the door
       # says so. The action reports success when the model's turn ends, and a
@@ -630,28 +464,17 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           VERDICTS: ${{ steps.before.outputs.verdicts }}
           AGENTS: ${{ steps.before.outputs.agents }}
-          # Which step ran the session, not which ended well: a session that
+          # Which rung ran the session, not which ended well: a session that
           # posted its verdict and then ran out its minutes is red on its own
           # step and is still the session that ran, so the door reads its
           # evidence and its transcript rather than reporting that none
-          # started. The limbs are ordered by which step ran it and not by
-          # harness preference. Antigravity CLI ran it where its action says
-          # so, which it says only after the session returned. Jules runs
-          # only as the chosen harness or as a real fallback, so it never
-          # claims another step's run, and a Jules session that ran is the
-          # one that posted. After those, the Antigravity CLI step that was
-          # the chosen harness and was not skipped is the session that
-          # posted and then timed out, which its action does not say; read
-          # before Jules, that limb would also claim a step that failed
-          # before its session, which is what a Jules fallback fires on.
-          # Last, Claude Code, whose failed step is what a fallback fired
-          # on, and whose step is skipped whenever it is not the chosen
-          # harness, which is what lets its limb read the outcome alone.
+          # started. The last rung that was not skipped is the one that ran,
+          # and the door's `tier_<n>_harness` says which harness it was
+          # (solorepo's DR-281). The transcript is the first a rung published,
+          # which is the Claude Code rung's, whichever number it ran as.
           RAN: >-
-            ${{ steps.review_gemini.outputs.executed == 'true' && 'gemini'
-                || steps.review_jules.outcome != 'skipped' && 'jules'
-                || (steps.before.outputs.harness == 'gemini'
-                    && steps.review_gemini.outcome != 'skipped') && 'gemini'
-                || steps.review_claude.outcome != 'skipped' && 'claude'
+            ${{ steps.attempt_3.outcome != 'skipped' && steps.before.outputs.tier_3_harness
+                || steps.attempt_2.outcome != 'skipped' && steps.before.outputs.tier_2_harness
+                || steps.attempt_1.outcome != 'skipped' && steps.before.outputs.tier_1_harness
                 || 'none' }}
-          TRANSCRIPT: ${{ steps.review_claude.outputs.execution_file }}
+          TRANSCRIPT: ${{ steps.attempt_1.outputs.execution_file || steps.attempt_2.outputs.execution_file || steps.attempt_3.outputs.execution_file }}

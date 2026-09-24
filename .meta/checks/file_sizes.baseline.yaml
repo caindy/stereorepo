@@ -28,8 +28,8 @@
 .meta/checks/probes/loops/merge_manager.py: 1138
 .meta/checks/probes/loops/reconcile.py: 173
 .meta/checks/probes/tools/fallback.py: 145
-.meta/depth.py: 119
-.meta/detect_fallback.py: 115
+.meta/depth.py: 123
+.meta/detect_fallback.py: 23
 .meta/jules/client.py: 60
 .meta/lib/move/advance.py: 470
 .meta/lib/move/challenges.py: 750

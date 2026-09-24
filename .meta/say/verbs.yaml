@@ -278,7 +278,7 @@ programs:
       back after.
     verbs:
       - name: reviewer
-        usage: "before|after <n> [--verdicts N --agents N --ran H --transcript P]"
+        usage: "before|between|after <n> [--verdicts N --agents N --ran H --transcript P]"
         does: >-
           the reviewer's door for what the number names. A Challenge is the
           reading door: before the session, whether the delivery is still the
@@ -286,19 +286,23 @@ programs:
           .review/; after it, whether it was read. A pull request is the
           review door: before, which harness reviews, how deep, the diff, the
           head's trunk paths and the constraints written under .review/, and
-          the verdicts already given; after, with what only the workflow
-          knows as flags, whether a verdict landed, the hook fired, and the
-          fan-out ceiling was kept
+          the verdicts already given, and the chain of rungs with the first
+          rung's prompt; between two rungs, whether the next runs; after,
+          with what only the workflow knows as flags, whether a verdict
+          landed, the hook fired, and the fan-out ceiling was kept
         held_by: [workflow]
       - name: coder
-        usage: "before|after <n> --pass take|rebase|answer|promote --event E [--harness H] [--claude O --gemini O --count N --branch-prefix P]"
+        usage: "before|between|after <n> --pass take|rebase|answer|promote --event E [--harness H] [--attempt N --outcome O] [--outcomes O[,O] --count N --branch-prefix P --execution-file F]"
         does: >-
           the coder's door, for the Challenge on a take and the pull request
           on any other pass. Before the session: which pull request a second
           pass answers, its branch checked out; which harness runs; whether
           the delivery is still the loop's, with the sign left where a
           verdict has no Job; how deep; and on approval how many threads are
-          held for promotion. After it, with how the pass's two harness
-          steps ended as flags: a take that did not finish handed back, the
-          review pass a rebase cleared redelivered, and the rest verified
+          held for promotion; the chain of rungs, and the first rung's prompt
+          written under .review/. Between two rungs, told how the one before
+          ended: whether the next runs, and its prompt. After it, with how
+          each rung ended as one flag: a take that did not finish handed
+          back, the review pass a rebase cleared redelivered, and the rest
+          verified
         held_by: [workflow]

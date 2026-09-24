@@ -292,10 +292,10 @@ def _review_before_cases(channel: Any, on: Any) -> list[str]:
                         f"{ended.code!r}, not reviewed by Claude Code")
     if "ACTOR_AGENT=anthropics/claude-code-action@v1" not in env:
         problems.append(f"review before: the harness was named in the environment as {env!r}")
-    for key, value in on.depth.STANDARD_CONFIG._asdict().items():
-        if f"{key}={value}" not in out.splitlines():
-            problems.append(f"review before: the depth's {key}={value} is not among the outputs "
-                            f"{out!r}")
+    for line in (f"agents={on.depth.STANDARD_CONFIG.agents}",
+                 f"reason={on.depth.STANDARD_CONFIG.reason}"):
+        if line not in out.splitlines():
+            problems.append(f"review before: the depth's {line} is not among the outputs {out!r}")
     problems += _review_chain(on, out, written)
     if "verdicts=1" not in out:
         problems.append(f"review before: the verdicts given were counted as {out!r}, where one "

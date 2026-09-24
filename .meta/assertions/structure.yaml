@@ -640,6 +640,9 @@ artifacts:
   - id: work:artifact/meta-actions-agy
     name: .meta/actions/agy/action.yml
     path: .meta/actions/agy/action.yml
+  - id: work:artifact/meta-actions-harness
+    name: .meta/actions/harness/action.yml
+    path: .meta/actions/harness/action.yml
   - id: work:artifact/meta-actions-jules
     name: .meta/actions/jules/action.yml
     path: .meta/actions/jules/action.yml
@@ -667,6 +670,9 @@ artifacts:
   - id: work:artifact/meta-arc-dockerfile
     name: .meta/arc/Dockerfile
     path: .meta/arc/Dockerfile
+  - id: work:artifact/meta-arc-watch
+    name: .meta/arc/watch
+    path: .meta/arc/watch
   - id: work:artifact/meta-ddd-ontology
     name: .meta/ddd_ontology.yaml
     path: .meta/ddd_ontology.yaml

@@ -10,12 +10,9 @@ import functools
 import json
 import os
 import pathlib
-import re
 import tempfile
 from collections.abc import Iterator
 from typing import Any, NamedTuple
-
-import yaml
 
 from checks.collect import ROOT, check
 from checks.probes.harness import environment, load_channel, outcome, stood_in
@@ -45,61 +42,6 @@ DELIBERATE = {("reviewer", "read"): ("level",)}
 """Angle brackets that survive rendering on purpose: the reading form's `<level>` is the verdict
 the session is there to decide, shown in the command it will type."""
 
-PROMPT_STEPS = {
-    "coder.yml": {"take_claude": ("coder", "take", "claude"),
-                  "take_gemini": ("coder", "take", "gemini"),
-                  "rebase_claude": ("coder", "rebase", "claude"),
-                  "rebase_gemini": ("coder", "rebase", "gemini"),
-                  "answer_claude": ("coder", "answer", "claude"),
-                  "answer_gemini": ("coder", "answer", "gemini"),
-                  "promote_claude": ("coder", "promote", "claude"),
-                  "promote_gemini": ("coder", "promote", "gemini")},
-    "review.yml": {"review_claude": ("reviewer", "review", "claude"),
-                   "review_gemini": ("reviewer", "review", "gemini"),
-                   "review_jules": ("reviewer", "review", "jules")},
-    "triage.yml": {"read_claude": ("reviewer", "read", "claude"),
-                   "read_gemini": ("reviewer", "read", "gemini")},
-}
-"""Each workflow step whose prompt a form was extracted from, and the Role, pass and harness the
-form is rendered for. Held while both copies exist, which is until the second layer of
-solorepo's DR-281 points the workflows at the forms."""
-
-EXPRESSIONS = {
-    "github.event.issue.number || inputs.issue": "number",
-    "github.event.issue.number": "number",
-    "github.event.pull_request.number": "number",
-    "github.event.pull_request.head.sha": "head",
-    "github.repository": "repository",
-    "steps.before.outputs.level": "level",
-    "steps.before.outputs.turns": "turns",
-    "steps.before.outputs.minutes": "minutes",
-    "steps.before.outputs.effort": "effort",
-    "steps.before.outputs.agents": "agents",
-    "steps.before.outputs.branch_prefix": "branch_prefix",
-    "steps.before.outputs.number": "number",
-    "steps.before.outputs.branch": "branch",
-    "steps.before.outputs.base": "base",
-    "steps.before.outputs.issue": "issue",
-}
-"""Each GitHub expression a workflow prompt interpolates, and the field the form names it by."""
-
-UNIFIED = (("`AGENTS.md` (and `GEMINI.md`)", "`AGENTS.md`"), ("<n>", "<number>"),
-           ("(claude|gemini)/issue-*", "claude/issue-*"),
-           ("enforced by solorepo's DR-176", "solorepo's DR-176"))
-"""What the forms say one way where the two workflow prompts said it two ways, each read as the
-same words on both sides: the conventions file both harnesses read, the pull request's number
-where one prompt wrote `<n>`, the branch shapes both loops cut, and a citation corrected."""
-
-LOGIN = "${{ github.repository_owner }}-${{ github.event.repository.name }}-reviewer"
-"""How a workflow prompt spells the reviewer's login, which the form names `<login>`."""
-
-JULES_LINE = f"Review pull request #{FIELDS['number']}"
-"""The one line the review form is on Jules."""
-
-PASSES = (("coder", "take"), ("coder", "rebase"), ("coder", "answer"), ("coder", "promote"),
-          ("reviewer", "review"), ("reviewer", "read"))
-"""Each Role's passes, which is each form."""
-
 OFF: dict[str, str | None] = {"GEMINI_FALLBACK": None, "JULES_FALLBACK": None}
 """No fallback toggled."""
 
@@ -108,6 +50,9 @@ ON: dict[str, str | None] = {"GEMINI_FALLBACK": "true", "JULES_FALLBACK": "true"
 
 OPEN = "12"
 """The pull request a take's branch already holds, in the cases that say one does."""
+
+JULES_LINE = f"Review pull request #{FIELDS['number']}"
+"""The one line the review form is on Jules."""
 
 
 @check("routing probes", pre=True)
@@ -140,8 +85,7 @@ def routing_probes() -> list[str]:
     """
     _, _, programs = load_channel()
     on = programs["on"]
-    return (_chain_cases(on) + _output_cases(on) + _form_cases(on) + _parity_cases(on)
-            + _between_cases(on))
+    return _chain_cases(on) + _output_cases(on) + _form_cases(on) + _between_cases(on)
 
 
 def _chain_cases(on: Any) -> list[str]:
@@ -187,13 +131,6 @@ def _chain_cases(on: Any) -> list[str]:
         if depth != numbers:
             problems.append(f"routing: the coder's depth on {task} at {level} is {depth!r}, "
                             f"not {numbers!r}")
-    for name, config in (("deep", on.depth.DEEP_CONFIG), ("standard", on.depth.STANDARD_CONFIG)):
-        held = routing.Depth(config.model, config.effort, str(config.turns), str(config.minutes))
-        if held != routing.REVIEW_DEPTHS[name] or config.agents != routing.REVIEW_FANOUT[name] \
-                or config.gemini_model != routing.GEMINI_MODEL:
-            problems.append(f"routing: depth.py's {name} tier {config!r} differs from the "
-                            f"policy's {routing.REVIEW_DEPTHS[name]!r}, which it is held equal "
-                            "to until the layer that reads it from there (solorepo's DR-281)")
     gemini = routing.tier("gemini", routing.REVIEW_DEPTHS["standard"], "gemini-x")
     jules = routing.tier("jules", routing.REVIEW_DEPTHS["standard"])
     if gemini.model != "gemini-x" or jules.model != "":
@@ -208,7 +145,8 @@ def _output_cases(on: Any) -> list[str]:
     routing = on.routing
     tiers = routing.coder_chain("claude", "take", "medium", environ=dict(ON))
     named = routing.outputs(tiers)
-    expected = {"tiers": "2", "tier_1_harness": "claude", "tier_1_model": "claude-opus-5",
+    expected = {"tiers": "2", "tier_1_harness": "claude",
+                "tier_1_model": "claude-opus-5",
                 "tier_1_turns": "120", "tier_1_agent": "anthropics/claude-code-action@v1",
                 "tier_2_harness": "gemini", "tier_2_model": routing.GEMINI_MODEL,
                 "tier_2_minutes": "60", "tier_2_agent": "antigravity-cli"}
@@ -261,80 +199,6 @@ def _form_cases(on: Any) -> list[str]:
     return problems
 
 
-def _placeholders(prompt: str) -> tuple[str, list[str]]:
-    """A workflow prompt with each GitHub expression read as the field the form names it by.
-
-    Returns:
-        tuple[str, list[str]]: The prompt over placeholders, and each expression the table
-            does not know, which is a prompt that moved under the form.
-    """
-    unknown: list[str] = []
-    text = prompt.replace(LOGIN, "<login>")
-
-    def named(found: re.Match[str]) -> str:
-        inner = " ".join(found.group(1).split())
-        if "format(" in inner and "resume" in inner:
-            return "<resume>"
-        if "format(" in inner and "stop" in inner:
-            return "<stop>"
-        if inner in EXPRESSIONS:
-            return f"<{EXPRESSIONS[inner]}>"
-        unknown.append(inner)
-        return f"<?{inner}?>"
-
-    return re.sub(r"\$\{\{(.*?)\}\}", named, text, flags=re.S), unknown
-
-
-def _same_words(text: str) -> str:
-    """The text with the deliberate unifications applied and its whitespace collapsed."""
-    for before, after in UNIFIED:
-        text = text.replace(before, after)
-    return " ".join(text.split())
-
-
-def _parity_cases(on: Any) -> list[str]:
-    """Each form says what the workflow prompt it was extracted from says, for its harness.
-
-    The workflow prompt is read over placeholders, each GitHub expression
-    replaced by the field the form names it by, and the form is rendered
-    for the harness with every field left as its own angle bracket, so the
-    two are the same text wherever the extraction was faithful. The
-    unifications the forms made on purpose are read the same on both sides,
-    and any other difference is reported at the first place it appears.
-    """
-    problems = []
-    routing, prompts = on.routing, on.prompts
-    same = routing.Depth("<model>", "<effort>", "<turns>", "<minutes>")
-    for workflow, steps in PROMPT_STEPS.items():
-        path = ROOT / ".github" / "workflows" / workflow
-        if not path.is_file():
-            problems.append(f"forms: {workflow} is missing, and the forms were extracted from it")
-            continue
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        by_id = {step.get("id"): step for job in (loaded.get("jobs") or {}).values()
-                 for step in job.get("steps") or [] if isinstance(step, dict)}
-        for step_id, (role, task, harness) in steps.items():
-            if step_id not in by_id:
-                problems.append(f"forms: {workflow} has no step `{step_id}`; the form probe "
-                                "reads the prompt there")
-                continue
-            prompt = str((by_id[step_id].get("with") or {}).get("prompt") or "")
-            expected, unknown = _placeholders(prompt)
-            for expression in unknown:
-                problems.append(f"forms: {workflow} `{step_id}` interpolates `{expression}`, "
-                                "which the probe cannot read as a field")
-            rendered = prompts.render(role, task, routing.tier(harness, same),
-                                      {name: f"<{name}>" for name in FIELDS})
-            want, got = _same_words(expected), _same_words(rendered)
-            if want != got:
-                at = next((i for i, (a, b) in enumerate(zip(want, got, strict=False)) if a != b),
-                          min(len(want), len(got)))
-                problems.append(f"forms: {role}-{task} on {harness} differs from {workflow} "
-                                f"`{step_id}` at {at}: form says {got[at:at + 90]!r}, workflow "
-                                f"says {want[at:at + 90]!r}")
-    return problems
-
-
 @contextlib.contextmanager
 def _workspace() -> Iterator[pathlib.Path]:
     """A temporary working directory with `GITHUB_OUTPUT` and `GITHUB_ENV` files, as a run has."""
@@ -383,7 +247,7 @@ def _between(on: Any, case: _Rung) -> tuple[Any, dict[str, str], str]:
         (root / ".review" / "prompt.md").unlink()
         ended_as = outcome(lambda: on.coder(
             "between", FIELDS["number"], on.Delivery(case.task, "issues", ""),
-            on.Ended("failure", "skipped", None, "claude"), on.Attempt(case.attempt, case.ended)))
+            on.Ended(("failure", "skipped"), None, "claude"), on.Attempt(case.attempt, case.ended)))
         out = dict(line.split("=", 1) for line in (root / "output").read_text().splitlines()
                    if "=" in line)
         prompt = root / ".review" / "prompt.md"

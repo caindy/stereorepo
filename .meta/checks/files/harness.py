@@ -1,10 +1,11 @@
 """
 What a loop workflow's steps owe the harness they start: a signed run names the
 harness under the variable the channel reads (solorepo's DR-233), an agy call
-site passes a harness rather than the empty string, each coder prompt names the
-caps its own step binds, a workflow that reads the fallback exports it
-(solorepo's DR-245), and the take pass's second prompt reads the branch as the
-step before it found it.
+site passes a harness rather than the empty string, every coder form carries
+the budget the door fills and the runner binds the turn cap on Claude Code
+alone, a workflow that runs the runner exports the toggles the chain reads
+(solorepo's DR-245, solorepo's DR-246), and each ladder stands as the door
+needs it, a `between` before every rung after the first (solorepo's DR-281).
 
 History in files.history.md (solorepo's DR-171).
 """
@@ -15,6 +16,7 @@ from typing import Any
 import yaml
 
 from checks.collect import (
+    META,
     ROOT,
     CouldNotRun,
     Found,
@@ -158,88 +160,34 @@ def agy_callers_pass_a_non_empty_agent() -> StepOutcome:
     return Passed(f"{counted} agy call site(s), each passing a non-empty agent")
 
 
-CODER_WORKFLOW = WORKFLOWS / "coder.yml"
-"""The coder Role's loop: its passes carry a minute cap and, on the harness that takes one, a
-turn cap from `DEPTHS`, and its take pass runs two harness steps in turn (solorepo's DR-245)."""
-
-
-TURN_CAP = "--max-turns"
-"""The argument that binds a turn cap, which Claude Code takes and the Antigravity CLI does
-not: `.meta/run_agy.py` builds its argument vector with `--print-timeout` alone, so a turn
-number told to an `agy` session binds nothing."""
-
-
-TURNS_OUTPUT, MINUTES_OUTPUT = "steps.before.outputs.turns", "steps.before.outputs.minutes"
-"""The step outputs `coder_depth` emits the two caps as."""
-
-
-@check("coder prompts name their turn budget")
-def coder_prompts_name_turn_budget() -> StepOutcome:
-    """Every coder prompt names the caps its own step binds, and no others.
-
-    `.meta/say/on`'s `coder_depth` picks a pass's turn cap and minute cap from
-    `DEPTHS` and emits them as step outputs. `timeout-minutes` binds the minute
-    cap on every pass; `--max-turns` binds the turn cap on the Claude steps
-    alone. A prompt naming neither leaves the session it runs unable to pace
-    itself or to hand off before the cap, and one naming a cap its harness does
-    not take teaches that session to discount the cap that does bind. So each
-    prompt asks for the minute cap, and for the turn cap exactly where the step
-    passes `--max-turns`. The steps are read out of the `coder` job rather than
-    enumerated, so a pass or a harness given a prompt later is read the same.
-
-    Returns:
-        Passed | Found | CouldNotRun: Validation result naming any prompt that
-        does not name the caps its own step binds.
-    """
-    if not CODER_WORKFLOW.is_file():
-        return CouldNotRun(f"{CODER_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
-    data = yaml.safe_load(CODER_WORKFLOW.read_text(encoding="utf-8")) or {}
-    steps = (data.get("jobs") or {}).get("coder", {}).get("steps") or []
-    where, problems, counted = CODER_WORKFLOW.relative_to(ROOT), [], 0
-    for step in steps:
-        given = (step.get("with") or {}) if isinstance(step, dict) else {}
-        prompt = str(given.get("prompt") or "")
-        if not prompt:
-            continue
-        counted += 1
-        named = step.get("id") or step.get("name") or "<unnamed>"
-        binds_turns = TURN_CAP in str(given.get("claude_args") or "")
-        if MINUTES_OUTPUT not in prompt:
-            problems.append(f"{where}: step {named!r}'s prompt does not name {MINUTES_OUTPUT}, "
-                            "so the session it runs cannot hand off before `timeout-minutes` "
-                            "ends it")
-        if binds_turns and TURNS_OUTPUT not in prompt:
-            problems.append(f"{where}: step {named!r} passes {TURN_CAP} and its prompt does not "
-                            f"name {TURNS_OUTPUT}, so the session it runs cannot pace itself "
-                            "against the cap it is given")
-        if not binds_turns and TURNS_OUTPUT in prompt:
-            problems.append(f"{where}: step {named!r}'s prompt names {TURNS_OUTPUT} and the step "
-                            f"passes no {TURN_CAP}, so it tells the session a number that binds "
-                            "nothing")
-    if not counted:
-        return CouldNotRun(f"{where}'s `coder` job has no prompt-bearing step")
-    if problems:
-        return Found(tuple(problems))
-    return Passed(f"{counted} coder prompts each name the caps their own step binds")
-
-
 FALLBACK_ENV_EXPORT = re.compile(r"^\s*GEMINI_FALLBACK:\s*\${{\s*vars\.GEMINI_FALLBACK\b", re.M)
-"""A workflow that invokes detect_fallback.py exports GEMINI_FALLBACK from vars.GEMINI_FALLBACK in job env (solorepo's DR-245)."""
+"""A workflow that runs the harness runner exports GEMINI_FALLBACK from vars.GEMINI_FALLBACK in
+its job env, which is where the door reads the toggle for the chain (solorepo's DR-245,
+solorepo's DR-281)."""
 
 
-@check("fallback workflows export GEMINI_FALLBACK")
+JULES_ENV_EXPORT = re.compile(r"^\s*JULES_FALLBACK:\s*\${{\s*vars\.JULES_FALLBACK\b", re.M)
+"""The review workflow exports JULES_FALLBACK the same way, since Jules is a rung of the
+reviewer's chain alone (solorepo's DR-246, solorepo's DR-281)."""
+
+
+HARNESS_ACTION = "./.meta/actions/harness"
+"""The harness runner's `uses:` path, as every attempt step names it."""
+
+
+@check("fallback workflows export the toggles")
 def fallback_workflows_export_gemini_fallback() -> StepOutcome:
-    """Workflows that run detect_fallback.py or actions/agy map vars.GEMINI_FALLBACK into job env (solorepo's DR-245, solorepo's #699).
+    """Workflows running the harness runner export the fallback toggles (solorepo's DR-245, DR-246).
 
     GitHub Actions does not populate repository variables into runner environments
-    automatically. Without an explicit mapping under job-level `env:`,
-    `.meta/detect_fallback.py` sees `GEMINI_FALLBACK` unset and defaults to false,
+    automatically. Without an explicit mapping under job-level `env:`, the door's
+    routing policy sees `GEMINI_FALLBACK` unset and resolves a chain of one rung,
     silently disabling fallback on quota exhaustion even when configured in the
-    repository.
+    repository. `review.yml` exports `JULES_FALLBACK` too, for its third rung.
 
     Returns:
         Passed | Found | CouldNotRun: Validation result checking that workflows
-        invoking `detect_fallback.py` or `actions/agy` export `GEMINI_FALLBACK`.
+        running the harness runner export the toggles the chain reads.
     """
     if not WORKFLOWS.is_dir():
         return CouldNotRun(f"{WORKFLOWS.relative_to(ROOT).as_posix()} is missing")
@@ -247,33 +195,31 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
     checked = 0
     for path in sorted(WORKFLOWS.glob("*.yml")):
         text = path.read_text(encoding="utf-8")
-        if "detect_fallback.py" not in text and "actions/agy" not in text:
+        if HARNESS_ACTION not in text and "actions/agy" not in text:
             continue
         checked += 1
         if not FALLBACK_ENV_EXPORT.search(text):
             problems.append(
-                f"{path.relative_to(ROOT)}: runs `detect_fallback.py` or `actions/agy` but does not export "
+                f"{path.relative_to(ROOT)}: runs the harness runner but does not export "
                 "`GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK ... }}` in job `env:`"
+            )
+        if path.name == "review.yml" and not JULES_ENV_EXPORT.search(text):
+            problems.append(
+                f"{path.relative_to(ROOT)}: runs the reviewer's three-rung ladder but does not "
+                "export `JULES_FALLBACK: ${{ vars.JULES_FALLBACK ... }}` in job `env:`"
             )
     if problems:
         return Found(tuple(problems))
-    return Passed(f"{checked} fallback workflow{'s' if checked != 1 else ''} export GEMINI_FALLBACK")
+    return Passed(f"{checked} fallback workflow{'s' if checked != 1 else ''} export the toggles")
 
 
-RESUME_READS = (("take_claude", "steps.before.outputs.resume"),
-                ("take_gemini", "steps.between.outputs.resume"))
-"""Where each take step's prompt reads its resume clause, in the order the steps run: the first
-harness step off the door's reading before the session, the second off the reading taken
-immediately before it, which is the only one later than the first step (solorepo's #835)."""
+LADDERS = {"coder.yml": ("coder", 2), "review.yml": ("reviewer", 3), "triage.yml": ("reviewer", 2)}
+"""Each loop workflow, the job its ladder stands in, and how many rungs the ladder has: as many
+as the longest chain the routing policy resolves for that door (solorepo's DR-281)."""
 
 
-BETWEEN_STEP = "between"
-"""The id of the step reading the branch again immediately before the second harness step."""
-
-
-BETWEEN_RUNS = "on coder between"
-"""What that step must invoke: a step keeping the id while running something else writes no
-`resume`, and an output no step wrote interpolates as the empty string."""
+FORMS = ROOT / ".meta" / "templates" / "prompts"
+"""Where the prompt forms are, one per Role and pass."""
 
 
 def _steps_by_id(job: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -282,73 +228,175 @@ def _steps_by_id(job: dict[str, Any]) -> dict[str, dict[str, Any]]:
             and step.get("id")}
 
 
-@check("the second take prompt reads the branch as the step before it found it")
-def fallback_take_prompt_reads_between() -> StepOutcome:
-    """The second take step reads its resume clause off the `between` step (solorepo's #835).
+def _attempt_problems(where: str, attempt: dict[str, Any], rung: int) -> list[str]:
+    """Each way `attempt_<rung>` in `where` fails to stand as the door needs it."""
+    problems = []
+    if attempt.get("uses") != HARNESS_ACTION:
+        problems.append(f"{where}: `attempt_{rung}` does not use {HARNESS_ACTION}, which is "
+                        "the one place a harness is named")
+    if str(attempt.get("name") or "") != f"attempt {rung}":
+        problems.append(f"{where}: `attempt_{rung}` is not named `attempt {rung}`, which is "
+                        "the one name `.meta/arc/watch` reads a rung by; an expression in the "
+                        "name would render only when the step runs and show as the template "
+                        "on a skipped rung")
+    if attempt.get("continue-on-error") is not True:
+        problems.append(f"{where}: `attempt_{rung}` carries no `continue-on-error: true`; a "
+                        "failed rung would end the job before the next rung and the door")
+    given = attempt.get("with") or {}
+    for field in ("harness", "model", "effort", "turns", "minutes", "agent"):
+        if f"tier_{rung}_{field}" not in str(given.get(field) or ""):
+            problems.append(f"{where}: `attempt_{rung}` does not pass `{field}` off "
+                            f"`tier_{rung}_{field}`")
+    wanted = f"steps.between_{rung - 1}.outputs.run == 'true'"
+    if rung > 1 and wanted not in str(attempt.get("if") or ""):
+        problems.append(f"{where}: `attempt_{rung}` does not run on `{wanted}`, which is the "
+                        "door's word on whether it runs")
+    return problems
 
-    The second harness step runs when the first failed, which the turn cap
-    reaches after the work rather than before it, so a pull request the first
-    step opened is already there to be continued under. `before` runs once,
-    ahead of both harness steps, and a prompt interpolating its `resume` is
-    told what was true at the start of the run. The `between` step reads the
-    branch again immediately before the second harness step, on that step's
-    own condition and running the door that writes `resume`, so that the
-    reading happens exactly where it is read. Placement is the property that
-    makes it fresh: GitHub resolves a step's `with:` before the step runs, and
-    an output whose step has not run yet is the empty string, so a reading
-    that sits after its reader reinstates the defect with every other
-    assertion here still satisfied.
+
+def _between_problems(where: str, steps: dict[str, dict[str, Any]], rung: int) -> list[str]:
+    """Each way `between_<rung>` in `where` fails to stand between its two rungs."""
+    between = steps.get(f"between_{rung}")
+    if between is None:
+        return [f"{where}: no step is `between_{rung}`, and rung {rung + 1} has nothing to read "
+                "whether it runs off"]
+    problems, order = [], list(steps)
+    if f"attempt_{rung + 1}" in order and not order.index(f"attempt_{rung}") \
+            < order.index(f"between_{rung}") < order.index(f"attempt_{rung + 1}"):
+        problems.append(f"{where}: `between_{rung}` does not stand between `attempt_{rung}` "
+                        f"and `attempt_{rung + 1}`; a step's outputs read as the empty string "
+                        "until it has run")
+    run = str(between.get("run") or "")
+    if " between " not in run or f"--attempt {rung}" not in run or "--outcome" not in run:
+        problems.append(f"{where}: `between_{rung}` does not run the door's `between` with "
+                        f"`--attempt {rung}` and `--outcome`")
+    if f"steps.attempt_{rung}.outcome != 'skipped'" not in str(between.get("if") or ""):
+        problems.append(f"{where}: `between_{rung}` does not run wherever `attempt_{rung}` ran")
+    if between.get("continue-on-error") is not True:
+        problems.append(f"{where}: `between_{rung}` carries no `continue-on-error: true`; an "
+                        "`if:` naming no status-check function carries an implicit `success()`, "
+                        "so a red reading would end the job")
+    return problems
+
+
+def _chain_name(last: int) -> str:
+    """The `chain` step's name for a ladder of `last` rungs: each rung's harness output."""
+    return "chain " + ",".join(f"${{{{ steps.before.outputs.tier_{n}_harness }}}}"
+                               for n in range(1, last + 1))
+
+
+def _chain_problems(where: str, steps: dict[str, dict[str, Any]], last: int) -> list[str]:
+    """Each way the `chain` step in `where` fails to show the chain in the run's step list."""
+    chain = steps.get("chain")
+    if chain is None:
+        return [f"{where}: no step is `chain`, and the run's step list would not say which "
+                "harness each rung runs while the run is live"]
+    problems = []
+    if str(chain.get("name") or "") != _chain_name(last):
+        problems.append(f"{where}: `chain` is not named `{_chain_name(last)}`, which is the "
+                        "name `.meta/arc/watch` reads the chain off")
+    order = list(steps)
+    if "before" not in order:
+        return [*problems, f"{where}: no step is `before`, and `chain` is named off its outputs"]
+    if "attempt_1" in order and not order.index("before") < order.index("chain") \
+            < order.index("attempt_1"):
+        problems.append(f"{where}: `chain` does not stand between `before` and `attempt_1`; "
+                        "its name is rendered when it runs, and must be by the first rung")
+    return problems
+
+
+def _rung_problems(where: str, steps: dict[str, dict[str, Any]], rung: int,
+                   last: int) -> list[str]:
+    """Each way rung `rung` of the ladder in `where` fails to stand as the door needs it."""
+    attempt = steps.get(f"attempt_{rung}")
+    if attempt is None:
+        return [f"{where}: no step is `attempt_{rung}`, and the ladder runs {last} rungs"]
+    problems = _attempt_problems(where, attempt, rung)
+    if rung < last:
+        problems.extend(_between_problems(where, steps, rung))
+    return problems
+
+
+@check("the ladders stand as the door needs them")
+def ladders_stand() -> StepOutcome:
+    """Each loop workflow runs a ladder of attempt steps on the runner (solorepo's DR-281).
+
+    The door resolves a chain and emits it as `tier_<n>_*`; the workflow
+    realizes it as rungs read by number. A `chain` step between the door and
+    the first rung is named from the door's `tier_<n>_harness` outputs, so
+    the run's step list says which harness each rung runs while the run
+    is live, on trunk's door as on the head's.
+    Every rung uses the runner, is named plainly, carries
+    `continue-on-error`, and takes its six fields off its tier; every rung
+    after the first runs on the door's
+    `run`; and every `between` stands between its two rungs, runs the door
+    with `--attempt` and `--outcome`, runs wherever its rung ran, and
+    carries `continue-on-error`. Placement is the property that makes the
+    reading fresh: a step's outputs read as the empty string until it has
+    run, so a `between` after its reader is no reading at all
+    (solorepo's #835).
 
     Returns:
-        Passed | Found | CouldNotRun: The step each prompt reads its resume
-        clause from, or each take step reading the wrong one and each way the
-        `between` step fails to stand where and as the step below needs it.
+        Passed | Found | CouldNotRun: The rungs counted, or each way the
+        `chain` step, a rung or a `between` fails to stand as the door needs
+        it: the `chain` step missing, not named off the door's outputs, or
+        not between the door and the first rung.
     """
-    if not CODER_WORKFLOW.is_file():
-        return CouldNotRun(f"{CODER_WORKFLOW.relative_to(ROOT).as_posix()} is missing")
-    loaded = yaml.safe_load(CODER_WORKFLOW.read_text(encoding="utf-8")) or {}
-    steps = _steps_by_id((loaded.get("jobs") or {}).get("coder") or {})
-    problems = []
-    for name, reads in RESUME_READS:
-        if name not in steps:
-            problems.append(f"coder.yml: no step is `{name}`, and the take pass runs two harness "
-                            "steps one after the other")
-            continue
-        prompt = str((steps[name].get("with") or {}).get("prompt") or "")
-        if reads not in prompt:
-            problems.append(f"coder.yml: `{name}`'s prompt does not read `{reads}`, which is "
-                            "the door's reading of the branch that is fresh where that step runs")
-        for other, stale in RESUME_READS:
-            if other != name and stale in prompt:
-                problems.append(f"coder.yml: `{name}`'s prompt reads `{stale}`, which is "
-                                f"`{other}`'s reading of the branch and not its own")
-    problems.extend(_between_stands(steps))
+    problems, counted = [], 0
+    for name, (job_name, last) in LADDERS.items():
+        path = WORKFLOWS / name
+        if not path.is_file():
+            return CouldNotRun(f"{path.relative_to(ROOT).as_posix()} is missing")
+        loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        steps = _steps_by_id((loaded.get("jobs") or {}).get(job_name) or {})
+        problems.extend(_chain_problems(name, steps, last))
+        for rung in range(1, last + 1):
+            counted += 1
+            problems.extend(_rung_problems(name, steps, rung, last))
     if problems:
         return Found(tuple(problems))
-    return Passed(f"{len(RESUME_READS)} take prompts, each reading the branch as its step finds it")
+    return Passed(f"{counted} rungs across {len(LADDERS)} ladders, each standing as the door needs")
 
 
-def _between_stands(steps: dict[str, dict[str, Any]]) -> list[str]:
-    """Each way the `between` step fails to stand where and as the step reading it needs it."""
-    if BETWEEN_STEP not in steps:
-        return [f"coder.yml: no step is `{BETWEEN_STEP}`, and the second harness step's prompt "
-                "has nothing to read the branch off later than the first step"]
-    step, problems = steps[BETWEEN_STEP], []
-    order = list(steps)
-    if all(name in steps for name, _ in RESUME_READS) and not (
-            order.index("take_claude") < order.index(BETWEEN_STEP) < order.index("take_gemini")):
-        problems.append(f"coder.yml: `{BETWEEN_STEP}` does not stand between `take_claude` and "
-                        "`take_gemini`; a step's outputs read as the empty string until it has "
-                        "run, so a reading placed after its reader is no reading at all")
-    if BETWEEN_RUNS not in str(step.get("run") or ""):
-        problems.append(f"coder.yml: `{BETWEEN_STEP}` does not run `{BETWEEN_RUNS}`, so nothing "
-                        "writes the `resume` the step below reads")
-    if "take_gemini" in steps and step.get("if") != steps["take_gemini"].get("if"):
-        problems.append(f"coder.yml: `{BETWEEN_STEP}` runs on a different condition from "
-                        "`take_gemini`; the reading is that step's, so it stands or is "
-                        "skipped with it")
-    if step.get("continue-on-error") is not True:
-        problems.append(f"coder.yml: `{BETWEEN_STEP}` carries no `continue-on-error: true`; an "
-                        "`if:` naming no status-check function carries an implicit `success()`, "
-                        "so a red reading would skip the step it exists to inform")
-    return problems
+TURN_CAP = "--max-turns"
+"""The argument that binds a turn cap, which Claude Code takes and the Antigravity CLI does
+not: `.meta/run_agy.py` builds its argument vector with `--print-timeout` alone, so a turn
+number told to an `agy` session binds nothing."""
+
+
+@check("coder forms name their budget")
+def coder_prompts_name_turn_budget() -> StepOutcome:
+    """Every coder form carries `<budget>`, and the runner binds the turn cap on Claude Code alone.
+
+    The door fills `<budget>` with the sentence naming the caps the rung's
+    harness binds (solorepo's DR-281): the turn cap and the minutes on Claude
+    Code, the minutes alone elsewhere. A form without it leaves the session
+    unable to pace itself or to hand off before the cap. The runner passes
+    `--max-turns` to the Claude Code step alone: a turn number told to the
+    Antigravity CLI binds nothing there and would teach that session to
+    discount the cap that does bind.
+
+    Returns:
+        Passed | Found | CouldNotRun: The forms counted, or each form without
+        `<budget>` and each runner step binding the cap where it should not.
+    """
+    forms = sorted(FORMS.glob("coder-*.md"))
+    runner = META / "actions" / "harness" / "action.yml"
+    if not forms or not runner.is_file():
+        return CouldNotRun("no coder forms under .meta/templates/prompts/, or no harness runner")
+    problems = [f"{form.relative_to(ROOT)}: does not carry `<budget>`" for form in forms
+                if "<budget>" not in form.read_text(encoding="utf-8")]
+    loaded = yaml.safe_load(runner.read_text(encoding="utf-8")) or {}
+    for step in (loaded.get("runs") or {}).get("steps") or []:
+        given = (step.get("with") or {}) if isinstance(step, dict) else {}
+        binds = TURN_CAP in str(given.get("claude_args") or "")
+        if step.get("id") == "claude" and not binds:
+            problems.append(f"{runner.relative_to(ROOT)}: the Claude Code step passes no "
+                            f"{TURN_CAP}, so the cap the policy chose binds nothing")
+        if step.get("id") != "claude" and (binds or "turns" in given):
+            problems.append(f"{runner.relative_to(ROOT)}: step `{step.get('id')}` is told a "
+                            "turn number that binds nothing there")
+    if problems:
+        return Found(tuple(problems))
+    return Passed(f"{len(forms)} coder forms carry the budget, and the runner binds the cap on "
+                  "Claude Code alone")

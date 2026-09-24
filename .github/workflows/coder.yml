@@ -234,9 +234,9 @@ jobs:
       # (solorepo's DR-142), with the sign left on a pull request whose
       # verdict no Job takes; how deep, by the pass and the level the
       # Challenge holds now; and on approval how many threads are held for
-      # promotion (solorepo's DR-159). The take pass reads the branch once
-      # more immediately before its second harness step, below; the last
-      # phase is the last step.
+      # promotion (solorepo's DR-159). The door runs again between the two
+      # rungs below, on every pass, and on a take reads the branch once more
+      # there; the last phase is the last step.
       - name: before the session
         id: before
         run: >-
@@ -247,828 +247,160 @@ jobs:
           PASS: ${{ (github.event_name == 'issues' || inputs.issue != '') && 'take' || inputs.task == 'rebase' && 'rebase' || github.event.review.state == 'approved' && 'promote' || 'answer' }}
           EVENT: ${{ github.event_name }}
           HARNESS: ${{ inputs.harness }}
-      - name: take the Issue (claude)
-        id: take_claude
-        if: steps.before.outputs.pass == 'take' && steps.before.outputs.by == '' && steps.before.outputs.harness == 'claude'
+
+      # The chain the door resolved, which the rungs below read by number
+      # (solorepo's DR-281), shown in the run's step list while the run is
+      # live: this step's name is rendered from the door's `tier_<n>_harness`
+      # outputs the moment it runs, which is before any rung, so
+      # `.meta/arc/watch` reads a rung's harness here off the job steps it
+      # already fetches; a rung the chain does not reach renders empty. Why
+      # the watch reads a step's name and not the log, the annotations or an
+      # attempt step's own name, and what showed it, is at `CHAIN` and `RUNG`
+      # in `.meta/arc/watch`.
+      - name: chain ${{ steps.before.outputs.tier_1_harness }},${{ steps.before.outputs.tier_2_harness }}
+        id: chain
+        run: ":"
+
+      # One ladder for every pass (solorepo's DR-281). The pass is in the
+      # prompt the door rendered under `.review/prompt.md`, and the rung is
+      # in the door's `tier_<n>_*` outputs, so the attempt steps are the
+      # same whatever the pass and whatever harness each rung names: the
+      # runner holds the one guarded step per harness. Rung 1 runs where
+      # the delivery is the loop's, on a take, a rebase or an answer, and on
+      # a promotion where threads are held; rung 2 where the door between
+      # them said rung 1 failed and a second rung exists. `continue-on-error`
+      # keeps a failed rung from ending the job before the next rung and the
+      # door's `after`. Which harness a rung ran is the door's `tier_<n>_harness`
+      # output in the run log, not the step's name: a name carrying an
+      # expression renders only when the step runs, and a skipped rung would
+      # show the template forever. The turn cap and the minutes are
+      # the rung's; the second rung's minutes fall back to the first's for
+      # the expression alone, since a chain of one rung names no second.
+      - name: attempt 1
+        id: attempt_1
+        if: steps.before.outputs.by == '' && (steps.before.outputs.pass != 'promote' || steps.before.outputs.count != '0')
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_1_minutes) }}
         env:
-          MAX_THINKING_TOKENS: "32000"
+          # Whose session this rung is, with the primary's name as the default
+          # an empty output would otherwise unname the run with (solorepo's #836).
+          ACTOR_AGENT: ${{ steps.before.outputs.tier_1_agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.before.outputs.tier_1_agent || steps.before.outputs.agent }}
+        uses: ./.meta/actions/harness
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          harness: ${{ steps.before.outputs.tier_1_harness }}
+          role: coder
+          model: ${{ steps.before.outputs.tier_1_model }}
+          effort: ${{ steps.before.outputs.tier_1_effort }}
+          turns: ${{ steps.before.outputs.tier_1_turns }}
+          minutes: ${{ steps.before.outputs.tier_1_minutes }}
+          agent: ${{ steps.before.outputs.tier_1_agent }}
+          claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The action's own GitHub calls and the push as the Role too, so
           # nothing in the run is authored by an App or a bot.
-          github_token: ${{ secrets.CODER_GH_TOKEN }}
-          # The transcript, in the run log: the run is the only record of
-          # what the coder did between the Issue and the pull request.
-          # `gh run view <id> --log` prints this step cut off at about two
-          # minutes; the whole of it is in the archive the CLI caches at
-          # `~/.cache/gh/run-log-<id>-*.zip`, where `0_coder.txt` holds the
-          # complete transcript and the `result` event with turns and cost
-          # (solorepo's #122).
-          show_full_output: "true"
-          # The last paragraph before the hand-off buys a reader who did not
-          # write the diff, which between the last commit and the reviewer's
-          # first read there is otherwise none of. The small model belongs
-          # there and not on the answering pass because of the direction it
-          # fails in: handed a diff and no verdict to interpret it fails by
-          # missing something, and the reviewer is still there unchanged;
-          # handed a deep critique it would fail by misreading a thread and
-          # writing something plausible and slightly wrong, which nothing
-          # downstream catches. Same money, opposite risk (solorepo's #220).
-          # The paragraph binds this step's hand-off and nothing else: whether
-          # the rebase and answering passes want the same reader is a separate
-          # question. The hand-off and not the difficulty, because a trigger
-          # named for one level's last verb is a guardrail on the other levels
-          # only by coincidence (solorepo's DR-163): written as "before you
-          # request the review" it fired on `medium` alone, since `easy` then
-          # armed the merge instead, and an `easy` diff reached `main` with no
-          # reader at all (solorepo's #256) until solorepo's DR-161 ended that
-          # arming: both levels hand off by requesting review below.
-          prompt: |
-            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
-
-            You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number || inputs.issue }}
-            of ${{ github.repository }}, labelled `${{ steps.before.outputs.level }}`.
-            Read /pr-first: it is the coder's reading of PR First, and lists
-            your verbs, what each does and where the judgement is; `AGENTS.md`
-            has the conventions. Every act on GitHub goes through the channel,
-            `.meta/say/post` to say something and `.meta/say/move` to change
-            state; each verb is a step of the Discipline, takes its body on
-            stdin as a quoted heredoc, and a refusal names the verb to use
-            instead. Commit through `.meta/say/commit -m "<subject>"` and
-            never `git commit`; only the channel signs.
-
-            This run has ${{ steps.before.outputs.turns }} turns and
-            ${{ steps.before.outputs.minutes }} minutes. Spend the last tenth
-            of either on the hand-off, not on more work: push what is ready
-            and request review, or
-            `.meta/say/move stop ${{ github.event.issue.number || inputs.issue }}`
-            with why if it will not fit.
-
-            Claim it: `.meta/say/move claim ${{ github.event.issue.number || inputs.issue }}`.
-            Read it: `gh issue view ${{ github.event.issue.number || inputs.issue }}`.
-            Branch as `${{ steps.before.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
-            `origin/main`, push at the first commit, and open the pull request
-            at once with `.meta/say/move open`, the form filled and the Issue named
-            under "What it closes". ${{ steps.before.outputs.resume && format('A run before this one stopped and left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.before.outputs.resume) || 'No run has taken this Issue before.' }}
-            Below, `<n>` is that pull request's number, never the Issue's;
-            `revise` and `comment` take either.
-
-            Do what the Issue asks and no more. Gate green with
-            `just gate meta`, commit and push as you go, `.meta/say/move revise <n>`
-            when the body no longer says what the head does, and
-            `just dereference` and then `.meta/say/post landed <n>` before you
-            hand it over. `dereference` reads the citations this branch wrote
-            against the entries they name; it is not a gate and blocks nothing,
-            so answer its `x` by fixing the sentence, or by leaving it and
-            saying why on the pull request (solorepo's DR-134).
-
-            When authoring or modifying docstrings, comments, or documentation,
-            apply the /technical-writing skill (solorepo's DR-194, solorepo's DR-198,
-            solorepo's DR-207): ensure item docstrings are Diátaxis Reference
-            contracts without reviewer litigation (solorepo's DR-175), hold source
-            comments to the four permissible exceptions (pruning inline narration,
-            routing defect narratives to companion <module>.history.md logs naming probe
-            Evidence under solorepo's DR-171, and mechanizing informal constraints
-            before pruning), audit lint and type suppressions as defects, and
-            dereference all citations.
-
-            Before you hand the branch over as finished, reread your diff
-            against origin/main to verify quality and consistency.
-            What you spot is yours to act on or not; what you decide not to
-            do you raise as a notice on the diff with `.meta/say/post notice`.
-
-            `easy` and `medium`: request review: `.meta/say/move request-review <n>`
-            and stop. The reviewer approves when clean, and a standing merge manager
-            lands what is green in order of leverage (solorepo's DR-161).
-            Do not arm the merge and do not merge by hand: the merge manager evaluates and lands
-            eligible work. Do so the moment the branch is pushed and the body is
-            final, and do not wait for the checks (solorepo's #102). A surviving notice
-            is promoted at approval, not now (solorepo's DR-159).
-
-            If you cannot finish — a decision only the solo can take, a gate
-            that will not go green, work larger than it looked —
-            `.meta/say/move stop ${{ github.event.issue.number || inputs.issue }}` with why on
-            stdin. It hands the Issue to the solo and leaves the pull request
-            open for the run that takes it up again.
-
-            Do not answer any thread, do not merge by hand, and do not reach
-            GitHub any other way: the hook refuses `gh pr create`, `gh pr
-            comment`, `gh issue edit`, `gh issue comment` and `gh api`.
-          claude_args: |
-            --model ${{ steps.before.outputs.model }}
-            --max-turns ${{ steps.before.outputs.turns }}
+          github-token: ${{ secrets.CODER_GH_TOKEN }}
+          # Coder passes run in accept-edits mode with full tool capabilities
+          # (shell, read, edit, write), unlike the reviewer, which is bounded to
+          # read-only tools.
+          claude-args: |
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
+          agy-mode: accept-edits
 
-      # What is open on the Challenge's branch, read immediately before the
-      # step below and on that step's own condition (solorepo's #835), so the
-      # reading happens exactly where it is read. That condition is met two
-      # ways: the step above failed, or the Challenge chose Antigravity and
-      # the step above was skipped outright, making the step below the first
-      # harness of the run rather than a fallback. On a failure, the turn cap
-      # is the common way to fail late — it lands after the work rather than
-      # before it, so the pull request is open and the commits are pushed by
-      # the time the outcome is a failure. `before` read the branch once,
-      # ahead of both harness steps, so its `resume` is what was true at the
-      # start of the run — and a step told "No run has taken this Issue
-      # before" goes to open a second pull request on a branch that already
-      # owns one, which `move open` refuses, leaving it to work out from a
-      # refusal what the door already knew. This phase reads the same branch
-      # the hand-back reads and through the same `loop_pull`, but on `take`'s
-      # terms — an empty listing as the default, so a refused read is no pull
-      # request rather than a red job — and the step below takes its resume
-      # clause from here. `continue-on-error` is what keeps a reading that
-      # went red anyway from taking that step with it: an `if:` naming no
-      # status-check function carries an implicit `success()`, so a red step
-      # here would skip the step this one exists to inform.
-      - name: what is open on the branch
-        id: between
-        if: steps.before.outputs.pass == 'take' && steps.before.outputs.by == '' && (steps.before.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
+      # The door between rungs 1 and 2: told how rung 1 ended, it says
+      # whether rung 2 runs and writes that rung's prompt, and on a take
+      # reads the branch again for the resume clause (solorepo's DR-281).
+      # It runs wherever rung 1 ran, and `continue-on-error` keeps a red
+      # reading from ending the job: an `if:` naming no status function
+      # carries an implicit `success()`, and `run` left empty skips the
+      # next rung rather than guessing.
+      - name: between rungs 1 and 2
+        id: between_1
+        if: steps.attempt_1.outcome != 'skipped'
         continue-on-error: true
         run: >-
-          .meta/say/on coder between "$NUMBER" --pass take --event "$EVENT"
+          .meta/say/on coder between "$NUMBER" --pass "$PASS" --event "$EVENT" --attempt 1 --outcome "$OUTCOME" --execution-file "$EXECUTION"
         env:
-          NUMBER: ${{ github.event.issue.number || inputs.issue }}
+          NUMBER: ${{ steps.before.outputs.pass == 'take' && (github.event.issue.number || inputs.issue) || steps.before.outputs.number }}
+          PASS: ${{ steps.before.outputs.pass }}
           EVENT: ${{ github.event_name }}
+          OUTCOME: ${{ steps.attempt_1.outcome }}
+          EXECUTION: ${{ steps.attempt_1.outputs.execution_file }}
 
-      - name: take the Issue (gemini)
-        id: take_gemini
-        if: steps.before.outputs.pass == 'take' && steps.before.outputs.by == '' && (steps.before.outputs.harness == 'gemini' || steps.take_claude.outcome == 'failure')
+
+      - name: attempt 2
+        id: attempt_2
+        if: steps.between_1.outputs.run == 'true'
         continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
-        # Coder passes run in accept-edits mode with full tool capabilities
-        # (shell, read, edit, write) unlike the reviewer which is bounded
-        # to read-only tools.
-        uses: ./.meta/actions/agy
-        with:
-          role: coder
-          model: ${{ steps.before.outputs.gemini_model }}
-          effort: ${{ steps.before.outputs.effort }}
-          mode: accept-edits
-          timeout-minutes: ${{ steps.before.outputs.minutes }}
-          harness: ${{ steps.before.outputs.harness }}
-          agent: ${{ steps.before.outputs.agent }}
-          claude-outcome: ${{ steps.take_claude.outcome }}
-          execution-file: ${{ steps.take_claude.outputs.execution_file }}
-          prompt: |
-            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
-
-            You are the coder Role (solorepo's DR-107), taking Issue #${{ github.event.issue.number || inputs.issue }}
-            of ${{ github.repository }}, labelled `${{ steps.before.outputs.level }}`.
-            Read /pr-first: it is the coder's reading of PR First, and lists
-            your verbs, what each does and where the judgement is; `AGENTS.md` (and `GEMINI.md`)
-            has the conventions. Every act on GitHub goes through the channel,
-            `.meta/say/post` to say something and `.meta/say/move` to change
-            state; each verb is a step of the Discipline, takes its body on
-            stdin as a quoted heredoc, and a refusal names the verb to use
-            instead. Commit through `.meta/say/commit -m "<subject>"` and
-            never `git commit`; only the channel signs.
-
-            This run has ${{ steps.before.outputs.minutes }} minutes and no
-            turn cap: the Antigravity CLI is bounded by the clock alone. Spend
-            the last tenth on the hand-off, not on more work: push what is ready
-            and request review, or
-            `.meta/say/move stop ${{ github.event.issue.number || inputs.issue }}`
-            with why if it will not fit.
-
-            Claim it: `.meta/say/move claim ${{ github.event.issue.number || inputs.issue }}`.
-            Read it: `gh issue view ${{ github.event.issue.number || inputs.issue }}`.
-            Branch as `${{ steps.before.outputs.branch_prefix }}/issue-${{ github.event.issue.number || inputs.issue }}` from
-            `origin/main`, push at the first commit, and open the pull request
-            at once with `.meta/say/move open`, the form filled and the Issue named
-            under "What it closes". ${{ steps.between.outputs.resume && format('A harness before this one left pull request #{0} open on that branch: check the branch out and continue under it, and do not branch or open again.', steps.between.outputs.resume) || 'No harness has left a pull request on that branch.' }}
-            Below, `<n>` is that pull request's number, never the Issue's;
-            `revise` and `comment` take either.
-
-            Do what the Issue asks and no more. Never run `just gate` or
-            `just gate meta` as an entrance check on origin/main (`main` is
-            evergreen under PR First). Gate green with
-            `just gate meta` only when your changes are complete before handoff.
-            Do NOT invoke subagents: evaluate and implement the Challenge
-            directly in this session (solorepo's DR-257).
-            Commit and push as you go, `.meta/say/move revise <n>`
-            when the body no longer says what the head does, and
-            `just dereference` and then `.meta/say/post landed <n>` before you
-            hand it over. `dereference` reads the citations this branch wrote
-            against the entries they name; it is not a gate and blocks nothing,
-            so answer its `x` by fixing the sentence, or by leaving it and
-            saying why on the pull request (solorepo's DR-134).
-
-            When authoring or modifying docstrings, comments, or documentation,
-            apply the /technical-writing skill (solorepo's DR-194, solorepo's DR-198,
-            solorepo's DR-207): ensure item docstrings are Diátaxis Reference
-            contracts without reviewer litigation (solorepo's DR-175), hold source
-            comments to the four permissible exceptions (pruning inline narration,
-            routing defect narratives to companion <module>.history.md logs naming probe
-            Evidence under solorepo's DR-171, and mechanizing informal constraints
-            before pruning), audit lint and type suppressions as defects, and
-            dereference all citations.
-
-            Before you hand the branch over as finished, reread your diff
-            against origin/main to verify quality and consistency.
-            What you spot is yours to act on or not; what you decide not to
-            do you raise as a notice on the diff with `.meta/say/post notice`.
-
-            `easy` and `medium`: request review: `.meta/say/move request-review <n>`
-            and stop. The reviewer approves when clean, and a standing merge manager
-            lands what is green in order of leverage (solorepo's DR-161).
-            Do not arm the merge and do not merge by hand: the merge manager evaluates and lands
-            eligible work. Do so the moment the branch is pushed and the body is
-            final, and do not wait for the checks (solorepo's #102). A surviving notice
-            is promoted at approval, not now (solorepo's DR-159).
-
-            If you cannot finish — a decision only the solo can take, a gate
-            that will not go green, work larger than it looked —
-            `.meta/say/move stop ${{ github.event.issue.number || inputs.issue }}` with why on
-            stdin. It hands the Issue to the solo and leaves the pull request
-            open for the run that takes it up again.
-
-            Do not answer any thread, do not merge by hand, and do not reach
-            GitHub any other way: the hook refuses `gh pr create`, `gh pr
-            comment`, `gh issue edit`, `gh issue comment` and `gh api`.
-
-      # The pass a merge on `main` dispatches (solorepo's DR-133). Nothing here
-      # is a verdict to answer: what the pull request is waiting on is a review
-      # nobody can run or a landing the merge manager cannot make, and both wait
-      # on the same thing — the branch moved onto what landed under it, which is
-      # the one thing no workflow can do for it. `gh pr update-branch` is refused
-      # on a conflicting branch, and a conflict is the change made again over what
-      # landed. A review request outstanding has never been answerable, because
-      # GitHub builds no merge ref for a branch that conflicts and `review.yml`
-      # runs on `pull_request`; and the standing merge manager defers a
-      # conflicting branch until clean (solorepo's DR-149, solorepo's DR-161). The push at
-      # the end is the whole handoff, and what it hands over is whichever of the
-      # two the pull request was waiting on: the `synchronize` that finally starts
-      # the review, or the clean head that satisfies the merge manager's
-      # semaphores to land in order of leverage.
-      - name: rebase onto the base (claude)
-        id: rebase_claude
-        if: steps.before.outputs.pass == 'rebase' && steps.before.outputs.by == '' && steps.before.outputs.harness == 'claude'
-        continue-on-error: true
-        uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_2_minutes || steps.before.outputs.tier_1_minutes) }}
         env:
-          MAX_THINKING_TOKENS: "32000"
+          # Whose session this rung is, with the primary's name as the default
+          # an empty output would otherwise unname the run with (solorepo's #836).
+          ACTOR_AGENT: ${{ steps.before.outputs.tier_2_agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.before.outputs.tier_2_agent || steps.before.outputs.agent }}
+        uses: ./.meta/actions/harness
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.CODER_GH_TOKEN }}
-          show_full_output: "true"
-          prompt: |
-            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
-
-            You are the coder Role (solorepo's DR-107), on pull request
-            #${{ steps.before.outputs.number }} of ${{ github.repository }}, whose
-            branch `${{ steps.before.outputs.branch }}` is checked out here. A
-            merge on `${{ steps.before.outputs.base }}` has left it conflicting
-            while it was waiting to land — on a review requested of somebody,
-            or on the standing merge manager landing what is green (solorepo's DR-161) — and
-            GitHub neither builds a merge ref for a branch that conflicts nor
-            will update one, so neither wait can end. Your Job is to put the
-            branch back where what it is waiting on can happen, and nothing
-            else.
-
-            This run has ${{ steps.before.outputs.turns }} turns and
-            ${{ steps.before.outputs.minutes }} minutes. Spend the last tenth
-            of either on the hand-off, not on more work: push the rebased
-            head, or `.meta/say/move stop ${{ steps.before.outputs.issue }}`
-            with why if it will not fit.
-
-            Where a review is outstanding, no review of this head can run, so
-            usually none has run at all. If one was already running when the
-            merge landed, your push at the end cancels it — `review.yml`
-            cancels a review in progress on a `synchronize` by anyone but the
-            reviewer — and the same push starts a fresh one, on a head that
-            can merge, which is what was wanted; the request stays outstanding
-            throughout. Do not request review: it is already requested, and
-            your push is what lets it be answered.
-            Read /pr-first for which verbs are yours; `AGENTS.md` has the
-            conventions. Every act on GitHub goes through the channel,
-            `.meta/say/post` and `.meta/say/move`, each taking its body on
-            stdin as a quoted heredoc.
-
-            First ask whether there is anything to do:
-            `git fetch origin` and `git log --oneline
-            HEAD..origin/${{ steps.before.outputs.base }}`, which lists what the
-            base has and this branch does not and so is empty exactly when
-            the branch is already current with its base. That way round and
-            not the other: `origin/<base>..HEAD` lists this branch's own
-            commits, which every open pull request has, before a rebase and
-            after one. A run before this one may have done the work — two
-            merges dispatch two runs — and a branch already current with its
-            base is one to leave alone: say so and stop, posting nothing and
-            pushing nothing.
-
-            Otherwise rebase it: `git rebase origin/${{ steps.before.outputs.base }}`.
-            Never a merge of the base into the branch. GitHub authors that
-            merge commit, or you would, and it carries no `Actor` Trailer, so
-            A19 turns the required check red on the branch you are unblocking.
-            A rebase writes no new commit: the branch's own commits move with
-            their messages and so with their Trailers, which is what keeps
-            them attributable, so do not squash them, do not reword them and
-            do not `git commit` — resolve each conflict and
-            `git rebase --continue`.
-
-            Resolve for what this pull request is for, which its body says and
-            the Issue it closes says: what landed under you is not yours to
-            undo, and your own change is not to be dropped to make the
-            conflict go away. Where a file is generated, take neither side —
-            re-render it, as `AGENTS.md` says.
-
-            Then `just gate meta` green.
-
-            Now, push the rebased head: `git push --force-with-lease`.
-            Do not arm the merge and do not merge by hand: once green and approved,
-            the standing merge manager evaluates open pull requests and lands them
-            in order of leverage (solorepo's DR-161).
-
-            Say what happened on the pull request, once, so a reader arriving
-            at a head nobody asked about knows why it moved:
-            `.meta/say/post comment ${{ steps.before.outputs.number }}`. Do not answer
-            any thread, and revise the body only if the rebase changed what the
-            pull request does, which it should not have.
-
-            If what is left is not yours to settle —
-            the conflict, where the change no longer makes sense over what
-            landed or the gate will not go green — `.meta/say/move stop ${{ steps.before.outputs.issue }}`
-            with why on stdin, which hands the Challenge to the solo and leaves the
-            pull request open. Both are a pull request waiting on a person, and
-            that is what `stop` is for.
-
-            Do not merge by hand and do not reach GitHub any other way. The
-            hook refuses `gh pr merge`, which is the one "by hand" is about,
-            and also `gh pr create`, `gh pr comment`, `gh pr review`,
-            `gh pr update-branch`, `gh issue edit`, `gh issue comment` and
-            `gh api`; the list is what this prompt happens to name and not the
-            definition, so a command not on it is not thereby allowed.
-          claude_args: |
-            --model ${{ steps.before.outputs.model }}
-            --max-turns ${{ steps.before.outputs.turns }}
+          harness: ${{ steps.before.outputs.tier_2_harness }}
+          role: coder
+          model: ${{ steps.before.outputs.tier_2_model }}
+          effort: ${{ steps.before.outputs.tier_2_effort }}
+          turns: ${{ steps.before.outputs.tier_2_turns }}
+          minutes: ${{ steps.before.outputs.tier_2_minutes }}
+          agent: ${{ steps.before.outputs.tier_2_agent }}
+          claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The action's own GitHub calls and the push as the Role too, so
+          # nothing in the run is authored by an App or a bot.
+          github-token: ${{ secrets.CODER_GH_TOKEN }}
+          # Coder passes run in accept-edits mode with full tool capabilities
+          # (shell, read, edit, write), unlike the reviewer, which is bounded to
+          # read-only tools.
+          claude-args: |
             --permission-mode acceptEdits
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
+          agy-mode: accept-edits
 
-      - name: rebase onto the base (gemini)
-        id: rebase_gemini
-        if: steps.before.outputs.pass == 'rebase' && steps.before.outputs.by == '' && (steps.before.outputs.harness == 'gemini' || steps.rebase_claude.outcome == 'failure')
-        continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
-        # Coder passes run in accept-edits mode with full tool capabilities
-        # (shell, read, edit, write) unlike the reviewer which is bounded
-        # to read-only tools.
-        uses: ./.meta/actions/agy
-        with:
-          role: coder
-          model: ${{ steps.before.outputs.gemini_model }}
-          effort: ${{ steps.before.outputs.effort }}
-          mode: accept-edits
-          timeout-minutes: ${{ steps.before.outputs.minutes }}
-          harness: ${{ steps.before.outputs.harness }}
-          agent: ${{ steps.before.outputs.agent }}
-          claude-outcome: ${{ steps.rebase_claude.outcome }}
-          execution-file: ${{ steps.rebase_claude.outputs.execution_file }}
-          prompt: |
-            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
-
-            You are the coder Role (solorepo's DR-107), on pull request
-            #${{ steps.before.outputs.number }} of ${{ github.repository }}, whose
-            branch `${{ steps.before.outputs.branch }}` is checked out here. A
-            merge on `${{ steps.before.outputs.base }}` has left it conflicting
-            while it was waiting to land — on a review requested of somebody,
-            or on the standing merge manager landing what is green (solorepo's DR-161) — and
-            GitHub neither builds a merge ref for a branch that conflicts nor
-            will update one, so neither wait can end. Your Job is to put the
-            branch back where what it is waiting on can happen, and nothing
-            else.
-
-            This run has ${{ steps.before.outputs.minutes }} minutes and no
-            turn cap: the Antigravity CLI is bounded by the clock alone. Spend
-            the last tenth on the hand-off, not on more work: push the rebased
-            head, or `.meta/say/move stop ${{ steps.before.outputs.issue }}`
-            with why if it will not fit.
-
-            Where a review is outstanding, no review of this head can run, so
-            usually none has run at all. If one was already running when the
-            merge landed, your push at the end cancels it — `review.yml`
-            cancels a review in progress on a `synchronize` by anyone but the
-            reviewer — and the same push starts a fresh one, on a head that
-            can merge, which is what was wanted; the request stays outstanding
-            throughout. Do not request review: it is already requested, and
-            your push is what lets it be answered.
-            Read /pr-first for which verbs are yours; `AGENTS.md` (and `GEMINI.md`) has the
-            conventions. Every act on GitHub goes through the channel,
-            `.meta/say/post` and `.meta/say/move`, each taking its body on
-            stdin as a quoted heredoc.
-
-            First ask whether there is anything to do:
-            `git fetch origin` and `git log --oneline
-            HEAD..origin/${{ steps.before.outputs.base }}`, which lists what the
-            base has and this branch does not and so is empty exactly when
-            the branch is already current with its base. That way round and
-            not the other: `origin/<base>..HEAD` lists this branch's own
-            commits, which every open pull request has, before a rebase and
-            after one. A run before this one may have done the work — two
-            merges dispatch two runs — and a branch already current with its
-            base is one to leave alone: say so and stop, posting nothing and
-            pushing nothing.
-
-            Otherwise rebase it: `git rebase origin/${{ steps.before.outputs.base }}`.
-            Never a merge of the base into the branch. GitHub authors that
-            merge commit, or you would, and it carries no `Actor` Trailer, so
-            A19 turns the required check red on the branch you are unblocking.
-            A rebase writes no new commit: the branch's own commits move with
-            their messages and so with their Trailers, which is what keeps
-            them attributable, so do not squash them, do not reword them and
-            do not `git commit` — resolve each conflict and
-            `git rebase --continue`.
-
-            Resolve for what this pull request is for, which its body says and
-            the Issue it closes says: what landed under you is not yours to
-            undo, and your own change is not to be dropped to make the
-            conflict go away. Where a file is generated, take neither side —
-            re-render it, as `AGENTS.md` says.
-
-            Then `just gate meta` green.
-
-            Now, push the rebased head: `git push --force-with-lease`.
-            Do not arm the merge and do not merge by hand: once green and approved,
-            the standing merge manager evaluates open pull requests and lands them
-            in order of leverage (solorepo's DR-161).
-
-            Say what happened on the pull request, once, so a reader arriving
-            at a head nobody asked about knows why it moved:
-            `.meta/say/post comment ${{ steps.before.outputs.number }}`. Do not answer
-            any thread, and revise the body only if the rebase changed what the
-            pull request does, which it should not have.
-
-            If what is left is not yours to settle —
-            the conflict, where the change no longer makes sense over what
-            landed or the gate will not go green — `.meta/say/move stop ${{ steps.before.outputs.issue }}`
-            with why on stdin, which hands the Challenge to the solo and leaves the
-            pull request open. Both are a pull request waiting on a person, and
-            that is what `stop` is for.
-
-            Do not merge by hand and do not reach GitHub any other way. The
-            hook refuses `gh pr merge`, which is the one "by hand" is about,
-            and also `gh pr create`, `gh pr comment`, `gh pr review`,
-            `gh pr update-branch`, `gh issue edit`, `gh issue comment` and
-            `gh api`; the list is what this prompt happens to name and not the
-            definition, so a command not on it is not thereby allowed.
-
-      - name: answer the review (claude)
-        id: answer_claude
-        if: >-
-          steps.before.outputs.pass == 'answer'
-          && steps.before.outputs.by == ''
-          && steps.before.outputs.harness == 'claude'
-        continue-on-error: true
-        uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
-        env:
-          MAX_THINKING_TOKENS: "32000"
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.CODER_GH_TOKEN }}
-          show_full_output: "true"
-          prompt: |
-            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
-
-            You are the coder Role (solorepo's DR-107), answering the reviewer's request
-            for changes on pull request #${{ steps.before.outputs.number }} of
-            ${{ github.repository }}, on the branch
-            `${{ steps.before.outputs.branch }}`, which a run of yours opened and
-            is checked out here. Read /pr-first, the coder's reading of PR
-            First, for what a reviewer's point is owed and which verbs are
-            yours; `AGENTS.md` (and `GEMINI.md`) has the conventions. Every act on GitHub goes
-            through the channel, `.meta/say/post` to say something and
-            `.meta/say/move` to change state; each verb takes its body on
-            stdin as a quoted heredoc, and a refusal names the verb to use
-            instead. Commit through `.meta/say/commit` only.
-
-            This run has ${{ steps.before.outputs.turns }} turns and
-            ${{ steps.before.outputs.minutes }} minutes. Spend the last tenth
-            of either on the hand-off, not on more work: post landed and
-            request review, or, if it will not fit,
-            ${{ steps.before.outputs.issue && format('`.meta/say/move stop {0}` with why on stdin.', steps.before.outputs.issue) || format('say why on the pull request with `.meta/say/post comment {0}`, this branch naming no Challenge to hand back.', steps.before.outputs.number) }}
-
-            Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`,
-            and the verdict: `gh pr view ${{ steps.before.outputs.number }} --comments`.
-            A point is right, right about something else, or overtaken by the
-            diff, and only the first is a change to make; all three are owed
-            a reply that says which. Make the changes, gate green with
-            `just gate meta`, commit and push. Then `.meta/say/post answer
-            <thread-id>` on every thread, which replies and resolves; a thread
-            marked "Noticed and not done" stays open until approval, when surviving
-            notices are promoted (solorepo's DR-159).
-            `.meta/say/move revise ${{ steps.before.outputs.number }}` if the body no
-            longer says what the head does, `just dereference`, then
-            `.meta/say/post landed ${{ steps.before.outputs.number }}` and
-            `.meta/say/move request-review ${{ steps.before.outputs.number }}`, and
-            stop. Do not arm the merge, and do not wait for the checks.
-            `dereference` reads the citations this branch wrote against the
-            entries they name, and this is the pass that most needs it: a point
-            answered is prose rewritten, and rewriting prose is where a
-            paraphrase gets written. It is not a gate and blocks nothing, so
-            answer its `x` by fixing the sentence, or by leaving it and saying
-            why on the pull request (solorepo's DR-134).
-
-            Do not merge by hand, and do not reach GitHub any other way: the
-            hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
-            `gh issue edit`, `gh issue comment` and `gh api`.
-          claude_args: |
-            --model ${{ steps.before.outputs.model }}
-            --max-turns ${{ steps.before.outputs.turns }}
-            --permission-mode acceptEdits
-            --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
-
-      - name: answer the review (gemini)
-        id: answer_gemini
-        if: >-
-          steps.before.outputs.pass == 'answer'
-          && steps.before.outputs.by == ''
-          && (steps.before.outputs.harness == 'gemini' || steps.answer_claude.outcome == 'failure')
-        continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
-        # Coder passes run in accept-edits mode with full tool capabilities
-        # (shell, read, edit, write) unlike the reviewer which is bounded
-        # to read-only tools.
-        uses: ./.meta/actions/agy
-        with:
-          role: coder
-          model: ${{ steps.before.outputs.gemini_model }}
-          effort: ${{ steps.before.outputs.effort }}
-          mode: accept-edits
-          timeout-minutes: ${{ steps.before.outputs.minutes }}
-          harness: ${{ steps.before.outputs.harness }}
-          agent: ${{ steps.before.outputs.agent }}
-          claude-outcome: ${{ steps.answer_claude.outcome }}
-          execution-file: ${{ steps.answer_claude.outputs.execution_file }}
-          prompt: |
-            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
-
-            You are the coder Role (solorepo's DR-107), answering the reviewer's request
-            for changes on pull request #${{ steps.before.outputs.number }} of
-            ${{ github.repository }}, on the branch
-            `${{ steps.before.outputs.branch }}`, which a run of yours opened and
-            is checked out here. Read /pr-first, the coder's reading of PR
-            First, for what a reviewer's point is owed and which verbs are
-            yours; `AGENTS.md` (and `GEMINI.md`) has the conventions. Every act on GitHub goes
-            through the channel, `.meta/say/post` to say something and
-            `.meta/say/move` to change state; each verb takes its body on
-            stdin as a quoted heredoc, and a refusal names the verb to use
-            instead. Commit through `.meta/say/commit` only.
-
-            This run has ${{ steps.before.outputs.minutes }} minutes and no
-            turn cap: the Antigravity CLI is bounded by the clock alone. Spend
-            the last tenth on the hand-off, not on more work: post landed and
-            request review, or, if it will not fit,
-            ${{ steps.before.outputs.issue && format('`.meta/say/move stop {0}` with why on stdin.', steps.before.outputs.issue) || format('say why on the pull request with `.meta/say/post comment {0}`, this branch naming no Challenge to hand back.', steps.before.outputs.number) }}
-
-            Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`,
-            and the verdict: `gh pr view ${{ steps.before.outputs.number }} --comments`.
-            A point is right, right about something else, or overtaken by the
-            diff, and only the first is a change to make; all three are owed
-            a reply that says which. Make the changes, gate green with
-            `just gate meta`, commit and push. Then `.meta/say/post answer
-            <thread-id>` on every thread, which replies and resolves; a thread
-            marked "Noticed and not done" stays open until approval, when surviving
-            notices are promoted (solorepo's DR-159).
-            `.meta/say/move revise ${{ steps.before.outputs.number }}` if the body no
-            longer says what the head does, `just dereference`, then
-            `.meta/say/post landed ${{ steps.before.outputs.number }}` and
-            `.meta/say/move request-review ${{ steps.before.outputs.number }}`, and
-            stop. Do not arm the merge, and do not wait for the checks.
-            `dereference` reads the citations this branch wrote against the
-            entries they name, and this is the pass that most needs it: a point
-            answered is prose rewritten, and rewriting prose is where a
-            paraphrase gets written. It is not a gate and blocks nothing, so
-            answer its `x` by fixing the sentence, or by leaving it and saying
-            why on the pull request (solorepo's DR-134).
-
-            Do not merge by hand, and do not reach GitHub any other way: the
-            hook refuses `gh pr create`, `gh pr comment`, `gh pr review`,
-            `gh issue edit`, `gh issue comment` and `gh api`.
-
-      # The pass an approval starts (solorepo's DR-159). What survives the argument
-      # earns an Issue when the argument is settled, not at merge. If no threads
-      # are held for promotion, the pull request satisfies the merge manager
-      # semaphores and lands unattended in order of leverage (solorepo's DR-161);
-      # if threads are held, this pass promotes each, revises the body, posts landed,
-      # and resolves the threads so the standing merge manager can land it.
-      - name: promote on approval (claude)
-        id: promote_claude
-        if: >-
-          steps.before.outputs.pass == 'promote'
-          && steps.before.outputs.by == ''
-          && steps.before.outputs.count != '0' && steps.before.outputs.harness == 'claude'
-        continue-on-error: true
-        uses: anthropics/claude-code-action@v1
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
-        env:
-          MAX_THINKING_TOKENS: "32000"
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.CODER_GH_TOKEN }}
-          show_full_output: "true"
-          prompt: |
-            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
-
-            You are the coder Role (solorepo's DR-107), on pull request
-            #${{ steps.before.outputs.number }} of ${{ github.repository }}, on the
-            branch `${{ steps.before.outputs.branch }}`, which is checked out here.
-            The reviewer has approved this pull request. The argument is settled,
-            and what survives the argument earns an Issue (solorepo's DR-159).
-
-            This run has ${{ steps.before.outputs.turns }} turns and
-            ${{ steps.before.outputs.minutes }} minutes. Spend the last tenth
-            of either on the hand-off, not on more work: resolve the promoted
-            threads, or `.meta/say/move stop ${{ steps.before.outputs.issue }}`
-            with why if it will not fit.
-
-            Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`.
-            Try the Incidental Commit first, on a thread the reviewer raised: if the surviving
-            point is mechanical, owes no Decision, implies no Challenge of its own and is
-            proved by the gate already running, fix it in a commit of its own whose subject
-            begins `Incidental:`, answer the thread naming that commit, and file no Issue
-            (solorepo's DR-236). Ejecting a
-            fix this branch can already reach costs a whole Job's start to deliver. Your own
-            "Noticed and not done" thread is not reachable by this — the sole-author
-            refusal stands and promotion is its one exception (solorepo's DR-127).
-
-            Every unresolved thread that is left — one outside that bound, and every
-            surviving notice of your own — is promoted now to an Issue, proposing a level
-            under **Difficulty.** in the body
-            and landing none, since the reviewer reads it and its verdict is the label
-            (solorepo's DR-230), with:
-            `.meta/say/post promote <thread-id> --title "<title>" --no-resolve <<'BODY'`
-            `...`
-            `BODY`
-            The body is the Issue form:
-            **Waits on.** Nothing.
-            **What was noticed.** <describe what was noticed>
-            **What would make this worth doing.** <rationale>
-            **Where it was found.** On #${{ steps.before.outputs.number }}.
-            **Difficulty.** <easy, medium, hard or human: your guess at what it takes>
-
-            Promoting with `--no-resolve` files the Issue and replies on the thread
-            with the link, but leaves the thread open so the standing merge manager
-            does not land the pull request prematurely (solorepo's DR-161).
-
-            For every thread you promote, add its link under `**What was noticed and not done.**`
-            in the pull request body with `.meta/say/move revise ${{ steps.before.outputs.number }}`.
-
-            Then post what landed: `.meta/say/post landed ${{ steps.before.outputs.number }}`.
-
-            Finally, resolve each promoted thread to release the merge:
-            `.meta/say/post resolve <thread-id>`.
-            Resolving the threads clears the remaining merge requirement, allowing
-            the standing merge manager to land the pull request cleanly in order of
-            leverage (solorepo's DR-161). Do not arm the merge.
-
-            Do not request review: the pull request is already approved.
-            Do not merge by hand, and do not make any code changes.
-          claude_args: |
-            --model ${{ steps.before.outputs.model }}
-            --max-turns ${{ steps.before.outputs.turns }}
-            --permission-mode acceptEdits
-            --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
-
-      - name: promote on approval (gemini)
-        id: promote_gemini
-        if: >-
-          steps.before.outputs.pass == 'promote'
-          && steps.before.outputs.by == ''
-          && steps.before.outputs.count != '0'
-          && (steps.before.outputs.harness == 'gemini' || steps.promote_claude.outcome == 'failure')
-        continue-on-error: true
-        timeout-minutes: ${{ fromJSON(steps.before.outputs.minutes) }}
-        # Coder passes run in accept-edits mode with full tool capabilities
-        # (shell, read, edit, write) unlike the reviewer which is bounded
-        # to read-only tools.
-        uses: ./.meta/actions/agy
-        with:
-          role: coder
-          model: ${{ steps.before.outputs.gemini_model }}
-          effort: ${{ steps.before.outputs.effort }}
-          mode: accept-edits
-          timeout-minutes: ${{ steps.before.outputs.minutes }}
-          harness: ${{ steps.before.outputs.harness }}
-          agent: ${{ steps.before.outputs.agent }}
-          claude-outcome: ${{ steps.promote_claude.outcome }}
-          execution-file: ${{ steps.promote_claude.outputs.execution_file }}
-          prompt: |
-            Your Personality is work:personality/coder: Concise. Recommendation before survey, decision before rationale. Cite an Article by number and move on. Err toward concision rather than tedium: unpacking can be asked for, and asking is cheaper than reading past what was not wanted. Tedium cannot be un-read.
-
-            You are the coder Role (solorepo's DR-107), on pull request
-            #${{ steps.before.outputs.number }} of ${{ github.repository }}, on the
-            branch `${{ steps.before.outputs.branch }}`, which is checked out here.
-            The reviewer has approved this pull request. The argument is settled,
-            and what survives the argument earns an Issue (solorepo's DR-159).
-
-            This run has ${{ steps.before.outputs.minutes }} minutes and no
-            turn cap: the Antigravity CLI is bounded by the clock alone. Spend
-            the last tenth on the hand-off, not on more work: resolve the
-            promoted threads, or
-            `.meta/say/move stop ${{ steps.before.outputs.issue }}` with why if
-            it will not fit.
-
-            Read the threads: `just pr ${{ steps.before.outputs.number }} --threads`.
-            Try the Incidental Commit first, on a thread the reviewer raised: if the surviving
-            point is mechanical, owes no Decision, implies no Challenge of its own and is
-            proved by the gate already running, fix it in a commit of its own whose subject
-            begins `Incidental:`, answer the thread naming that commit, and file no Issue
-            (solorepo's DR-236). Ejecting a
-            fix this branch can already reach costs a whole Job's start to deliver. Your own
-            "Noticed and not done" thread is not reachable by this — the sole-author
-            refusal stands and promotion is its one exception (solorepo's DR-127).
-
-            Every unresolved thread that is left — one outside that bound, and every
-            surviving notice of your own — is promoted now to an Issue, proposing a level
-            under **Difficulty.** in the body
-            and landing none, since the reviewer reads it and its verdict is the label
-            (solorepo's DR-230), with:
-            `.meta/say/post promote <thread-id> --title "<title>" --no-resolve <<'BODY'`
-            `...`
-            `BODY`
-            The body is the Issue form:
-            **Waits on.** Nothing.
-            **What was noticed.** <describe what was noticed>
-            **What would make this worth doing.** <rationale>
-            **Where it was found.** On #${{ steps.before.outputs.number }}.
-            **Difficulty.** <easy, medium, hard or human: your guess at what it takes>
-
-            Promoting with `--no-resolve` files the Issue and replies on the thread
-            with the link, but leaves the thread open so the standing merge manager
-            does not land the pull request prematurely (solorepo's DR-161).
-
-            For every thread you promote, add its link under `**What was noticed and not done.**`
-            in the pull request body with `.meta/say/move revise ${{ steps.before.outputs.number }}`.
-
-            Then post what landed: `.meta/say/post landed ${{ steps.before.outputs.number }}`.
-
-            Finally, resolve each promoted thread to release the merge:
-            `.meta/say/post resolve <thread-id>`.
-            Resolving the threads clears the remaining merge requirement, allowing
-            the standing merge manager to land the pull request cleanly in order of
-            leverage (solorepo's DR-161). Do not arm the merge.
-
-            Do not request review: the pull request is already approved.
-            Do not merge by hand, and do not make any code changes.
-
-
-      # The door's second phase, once the pass's steps have ended, whatever
+      # The door's second phase, once the pass's rungs have ended, whatever
       # way they ended: `always()` rather than `!cancelled()`, so that a run
-      # cancelled at its budget still hands its Challenge back. How the two
-      # harness steps of the pass ended is this file's to read and reaches
-      # the door as flags, the Antigravity CLI step's word taken where it
-      # failed after Claude Code's did (solorepo's DR-257). A take that
-      # failed or was cancelled is handed back: review requested where the
-      # pull request it left is green and clean, the account posted first,
-      # and the Challenge given to the solo through `stop` otherwise, with
-      # why (solorepo's DR-129, solorepo's DR-155). A rebase that succeeded
-      # redelivers the review pass it cleared (solorepo's #777). A pass one
-      # harness failed and neither finished ends the run red; a cancelled
-      # pass is not a failed one.
+      # cancelled at its budget still hands its Challenge back. How each rung
+      # ended is this file's to read and reaches the door as `--outcomes`,
+      # one per rung in order, and the door answers with the last rung that
+      # ran (solorepo's DR-281). A take that failed or was cancelled is handed
+      # back: review requested where the pull request it left is green and
+      # clean, the account posted first, and the Challenge given to the solo
+      # through `stop` otherwise, with why (solorepo's DR-129 and
+      # solorepo's DR-155). A rebase that succeeded redelivers the review pass it
+      # cleared (solorepo's #777). A pass one rung failed and none finished
+      # ends the run red; a cancelled pass is not a failed one.
       #
       # A take pass the turn cap cut ends with the step reporting `success`,
       # the process having exited in an orderly way, so the conclusions above
       # cannot say it stopped. `--execution-file` hands the door the transcript
       # `claude-code-action` publishes, whose result entry carries the cap and
       # the turns spent, and the door reads it there and hands back on it
-      # (solorepo's DR-277). All four Claude Code steps bind that cap from
-      # `before`, and only the take pass does anything about it: the answer,
-      # rebase and promotion passes hand back nothing, so a cap that cuts one
-      # of them is still read as a pass that succeeded and is a Challenge of
-      # its own. The Antigravity CLI is bounded by the clock alone.
+      # (solorepo's DR-277): the first rung that published one is the Claude
+      # Code rung, whichever number it ran as. Only the take pass does anything
+      # about a cap; the answer, rebase and promotion passes hand back nothing,
+      # so a cap that cuts one of them is still read as a pass that succeeded
+      # and is a Challenge of its own. The Antigravity CLI is bounded by the
+      # clock alone.
       - name: after the session
         if: ${{ always() && steps.before.outcome == 'success' && steps.before.outputs.by == '' }}
         run: >-
           .meta/say/on coder after "$NUMBER" --pass "$PASS" --event "$EVENT"
-          --claude "$CLAUDE" --gemini "$GEMINI" --count "$COUNT" --branch-prefix "$PREFIX"
+          --outcomes "$OUTCOMES" --count "$COUNT" --branch-prefix "$PREFIX"
           --execution-file "$EXECUTION"
         env:
           # The door's own acts are the door's, named on the terms `gha/reconcile`
-          # already uses, rather than inherited from whatever the last harness
-          # step of the pass wrote to the environment — a fallback that activated
-          # and then failed left its build string standing for every step after
-          # it, and this door's post signed as a harness that never ran
-          # (solorepo's #836).
+          # already uses, rather than inherited from whatever the last rung
+          # wrote to the environment: a fallback that activated and then failed
+          # left its build string standing for every step after it, and this
+          # door's post signed as a harness that never ran (solorepo's #836).
           ACTOR_AGENT: gha/coder
           AI_AGENT: gha/coder
           NUMBER: ${{ steps.before.outputs.pass == 'take' && (github.event.issue.number || inputs.issue) || steps.before.outputs.number }}
           PASS: ${{ steps.before.outputs.pass }}
           EVENT: ${{ github.event_name }}
-          CLAUDE: >-
-            ${{ steps.before.outputs.pass == 'take' && steps.take_claude.outcome
-                || steps.before.outputs.pass == 'rebase' && steps.rebase_claude.outcome
-                || steps.before.outputs.pass == 'answer' && steps.answer_claude.outcome
-                || steps.promote_claude.outcome }}
-          GEMINI: >-
-            ${{ steps.before.outputs.pass == 'take' && steps.take_gemini.outcome
-                || steps.before.outputs.pass == 'rebase' && steps.rebase_gemini.outcome
-                || steps.before.outputs.pass == 'answer' && steps.answer_gemini.outcome
-                || steps.promote_gemini.outcome }}
+          OUTCOMES: ${{ steps.attempt_1.outcome }},${{ steps.attempt_2.outcome }}
           COUNT: ${{ steps.before.outputs.count }}
           PREFIX: ${{ steps.before.outputs.branch_prefix }}
-          EXECUTION: ${{ steps.before.outputs.pass == 'take' && steps.take_claude.outputs.execution_file || '' }}
+          EXECUTION: ${{ steps.attempt_1.outputs.execution_file || steps.attempt_2.outputs.execution_file }}

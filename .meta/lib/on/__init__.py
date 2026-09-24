@@ -9,7 +9,7 @@ door's `before` and `between` phases, and `handoff` holds its `after` phase.
 `cli` is the command-line surface.
 
 `routing` imports nothing in the package, so `.meta/depth.py` can import it
-alone once trunk's door holds it; `prompts` imports `routing`; `common` imports both. `review` and
+alone; `prompts` imports `routing`; `common` imports both. `review` and
 `coder_door` import `common` and `routing`; `handoff` imports `coder_door`;
 and `cli` imports `coder_door`, `common`, and `review`. `coder_door` defers
 its import of `handoff` until `coder()` runs, because `handoff` imports

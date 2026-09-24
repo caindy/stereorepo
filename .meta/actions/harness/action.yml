@@ -1,0 +1,162 @@
+# The harness runner: one rung of a pass, on whichever harness the door's chain
+# names for it (solorepo's DR-281).
+#
+# A workflow's attempt step is the same whatever harness its rung runs,
+# because this action holds the one guarded step per harness and the
+# workflow passes it the rung's fields off `tier_<n>_*`. The prompt is the
+# one the door rendered under `.review/`, read here into a step output so
+# the stock `anthropics/claude-code-action@v1` receives it as its `prompt`
+# input, which is a string and not a path. `continue-on-error` and
+# `timeout-minutes` sit on the calling step, since an inner `uses:` step of
+# a composite can carry neither; the transcript Claude Code writes is
+# re-exported so the workflow's `between` and `after` steps can read it,
+# and a declared output survives the inner step failing, which
+# solorepo's DR-281 tested on run 36004641448. Each inner step names where its
+# reading hook leaves Evidence, since the door after the session reads it
+# by harness.
+name: harness
+description: Run one rung of a pass on the harness the door's chain names for it.
+inputs:
+  harness:
+    description: The rung's harness, `claude`, `gemini` or `jules`.
+    required: true
+  role:
+    description: The Role the session speaks as, `coder` or `reviewer`.
+    required: true
+  model:
+    description: The model the rung runs; empty for Jules, which chooses its own.
+    required: false
+    default: ""
+  effort:
+    description: The reasoning effort.
+    required: false
+    default: ""
+  turns:
+    description: The turn cap, which Claude Code alone binds.
+    required: false
+    default: ""
+  minutes:
+    description: The minute cap, told to the harness that takes one.
+    required: true
+  agent:
+    description: The Agent the rung signs by, which the door emitted beside the harness.
+    required: true
+  prompt-file:
+    description: Where the door wrote the rung's prompt.
+    required: false
+    default: .review/prompt.md
+  number:
+    description: The pull request, which Jules reviews by number.
+    required: false
+    default: ""
+  claude-oauth-token:
+    description: Claude Code's credential.
+    required: false
+    default: ""
+  github-token:
+    description: The Role's GitHub token, for the action's own calls and the push.
+    required: false
+    default: ""
+  claude-args:
+    description: Claude Code's arguments after `--model` and `--max-turns`, the permission mode and the tools.
+    required: false
+    default: ""
+  claude-settings:
+    description: The settings JSON registering the reading hook, on the reviewer's passes.
+    required: false
+    default: ""
+  claude-plugin-marketplaces:
+    description: The plugin marketplaces Claude Code loads, on the review pass.
+    required: false
+    default: ""
+  claude-plugins:
+    description: The plugins Claude Code loads, on the review pass.
+    required: false
+    default: ""
+  claude-agents:
+    description: The concurrent subagent ceiling Claude Code runs under, on the review pass.
+    required: false
+    default: ""
+  agy-mode:
+    description: The Antigravity CLI's execution mode, `accept-edits` on the coder's passes.
+    required: false
+    default: ""
+  jules-api-key:
+    description: The Jules API key, on the review pass.
+    required: false
+    default: ""
+outputs:
+  execution_file:
+    description: Where Claude Code wrote the rung's transcript; empty on any other harness.
+    value: ${{ steps.claude.outputs.execution_file }}
+runs:
+  using: composite
+  steps:
+    - name: read the prompt
+      id: prompt
+      shell: bash
+      env:
+        PROMPT_FILE: ${{ inputs.prompt-file }}
+      run: |
+        {
+          echo "text<<SOLOREPO_PROMPT_EOF"
+          cat "$PROMPT_FILE"
+          echo "SOLOREPO_PROMPT_EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: claude
+      id: claude
+      if: inputs.harness == 'claude'
+      uses: anthropics/claude-code-action@v1
+      env:
+        # Whose session this rung is and how wide it may fan out, restated
+        # on the step that runs it from this action's own inputs rather than
+        # left to reach a nested third-party action through two levels of
+        # `env:` inheritance, as the Antigravity step below restates its own
+        # (solorepo's #836, solorepo's DR-191).
+        ACTOR_AGENT: ${{ inputs.agent }}
+        AI_AGENT: ${{ inputs.agent }}
+        CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS: ${{ inputs.claude-agents }}
+        SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook-claude.evidence
+      with:
+        claude_code_oauth_token: ${{ inputs.claude-oauth-token }}
+        github_token: ${{ inputs.github-token }}
+        # The transcript, in the run log: the run is the only record of what
+        # the session did (solorepo's #122).
+        show_full_output: "true"
+        settings: ${{ inputs.claude-settings }}
+        plugin_marketplaces: ${{ inputs.claude-plugin-marketplaces }}
+        plugins: ${{ inputs.claude-plugins }}
+        prompt: ${{ steps.prompt.outputs.text }}
+        claude_args: |
+          --model ${{ inputs.model }}
+          --max-turns ${{ inputs.turns }}
+          ${{ inputs.claude-args }}
+
+    - name: gemini
+      id: gemini
+      if: inputs.harness == 'gemini'
+      uses: ./.meta/actions/agy
+      env:
+        GEMINI_PROJECT_DIR: ${{ github.workspace }}
+        SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook-agy.evidence
+      with:
+        role: ${{ inputs.role }}
+        model: ${{ inputs.model }}
+        effort: ${{ inputs.effort }}
+        mode: ${{ inputs.agy-mode }}
+        timeout-minutes: ${{ inputs.minutes }}
+        agent: ${{ inputs.agent }}
+        prompt: ${{ steps.prompt.outputs.text }}
+
+    - name: jules
+      id: jules
+      if: inputs.harness == 'jules'
+      uses: ./.meta/actions/jules
+      env:
+        JULES_API_KEY: ${{ inputs.jules-api-key }}
+      with:
+        role: ${{ inputs.role }}
+        pr: ${{ inputs.number }}
+        timeout-minutes: ${{ inputs.minutes }}
+        prompt: ${{ steps.prompt.outputs.text }}

@@ -1,0 +1,21 @@
+challenges:
+  - id: work:challenge/963
+    name: "Land the harness runner and the attempt ladders the routing policy resolves for"
+    challenge_type: FEATURE
+    description: >-
+      Solorepo's DR-281 lands in two layers, and solorepo's #961 was the
+      first: the routing policy in the door's package, the `tier_<n>_*`
+      outputs every door emits beside the outputs the workflows read, the
+      `between` phase that says whether the next rung runs, and the prompt
+      forms. The three workflows still ran their harness-named steps, so the
+      chain the door resolved was emitted and not executed: `harness:gemini`
+      still reached no Claude Code fallback, the Antigravity action still
+      decided the fallback in its own step, and eight copies of the coder
+      prompt still sat in `coder.yml`.
+
+      The second layer is what makes the policy run: a composite harness
+      runner with one guarded step per harness, and each pass of the three
+      workflows as a linear ladder of identical attempt steps reading the
+      door's outputs by number, with a `between` step before each rung after
+      the first. It could not be reviewed before the first layer merged,
+      since the reviewer runs trunk's door against the head's workflow.

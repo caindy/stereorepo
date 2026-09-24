@@ -1,7 +1,10 @@
 # Antigravity CLI (agy) execution in the repository workspace (solorepo's #669).
 #
 # Runs `agy` against the checked-out workspace with subscription credentials
-# mounted in the ARC runner pod, avoiding metered API consumption.
+# mounted in the ARC runner pod, avoiding metered API consumption. Whether
+# this rung runs is not this action's to decide: the door's `between` phase
+# says so, and the workflow's attempt step calls the harness runner with this
+# harness only where it does (solorepo's DR-281).
 name: agy
 description: Run the Antigravity CLI (agy) within the repository workspace.
 inputs:
@@ -28,71 +31,18 @@ inputs:
     description: Role executing the session (coder or reviewer).
     required: false
     default: "coder"
-  harness:
-    description: Active run harness (claude, gemini, etc.).
-    required: false
-    default: "gemini"
-  claude-outcome:
-    description: Outcome of preceding Claude step when executing as fallback.
-    required: false
-    default: ""
-  execution-file:
-    description: Claude execution output file path when executing as fallback.
-    required: false
-    default: ""
   agent:
-    description: The Agent the chosen harness signs by, which the door emits; the fallback's own name displaces it when a fallback activates.
-    required: false
-    default: ""
+    description: The Agent this rung signs by, which the door emitted beside the harness.
+    required: true
 outputs:
-  fallback:
-    description: Whether fallback was evaluated and activated.
-    value: ${{ steps.check_fallback.outputs.fallback || 'false' }}
   executed:
     description: Whether agy was executed.
     value: ${{ steps.run_agy.outputs.executed || 'false' }}
 runs:
   using: composite
   steps:
-    - name: evaluate fallback
-      id: check_fallback
-      shell: bash
-      env:
-        HARNESS: ${{ inputs.harness }}
-        CLAUDE_OUTCOME: ${{ inputs.claude-outcome }}
-        EXECUTION_FILE: ${{ inputs.execution-file }}
-      run: |
-        # If harness is explicit gemini, run directly without fallback evaluation
-        if [ "$HARNESS" = "gemini" ]; then
-          echo "run=true" >> "$GITHUB_OUTPUT"
-          echo "fallback=false" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        # If claude outcome is provided, evaluate fallback condition
-        if [ -n "$CLAUDE_OUTCOME" ]; then
-          if [ "$CLAUDE_OUTCOME" != "failure" ]; then
-            echo "Claude outcome was '$CLAUDE_OUTCOME'; skipping Antigravity fallback."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "fallback=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          python3 .meta/detect_fallback.py
-          if grep -q "fallback=true" "$GITHUB_OUTPUT" 2>/dev/null; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-          exit 0
-        fi
-
-        # Default: direct execution when no claude-outcome is provided
-        echo "run=true" >> "$GITHUB_OUTPUT"
-        echo "fallback=false" >> "$GITHUB_OUTPUT"
-
     - name: configure reviewer confinement
-      if: steps.check_fallback.outputs.run == 'true' && inputs.role == 'reviewer'
+      if: inputs.role == 'reviewer'
       shell: bash
       env:
         GEMINI_PROJECT_DIR: ${{ env.GEMINI_PROJECT_DIR || github.workspace }}
@@ -100,7 +50,7 @@ runs:
         python3 .meta/detect_fallback.py --configure-reviewer
 
     - name: configure coder confinement
-      if: steps.check_fallback.outputs.run == 'true' && inputs.role == 'coder'
+      if: inputs.role == 'coder'
       shell: bash
       env:
         GEMINI_PROJECT_DIR: ${{ env.GEMINI_PROJECT_DIR || github.workspace }}
@@ -109,7 +59,6 @@ runs:
 
     - name: run agy
       id: run_agy
-      if: steps.check_fallback.outputs.run == 'true'
       shell: bash
       env:
         PROMPT: ${{ inputs.prompt }}
@@ -118,17 +67,12 @@ runs:
         MODE: ${{ inputs.mode }}
         TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
         GEMINI_PROJECT_DIR: ${{ env.GEMINI_PROJECT_DIR || github.workspace }}
-        # Whose session this is, scoped to this step alone: the fallback's name
-        # where `check_fallback` activated one, and the chosen harness's name —
-        # `agent`, which the calling door emitted beside the harness it chose —
-        # otherwise. `detect_fallback.py` emits its name to `$GITHUB_OUTPUT`
-        # rather than `$GITHUB_ENV`, which would carry a fallback's name onto
-        # every later step of the calling job (solorepo's #836); this step's
-        # `env:` beats that job environment, so `check_fallback`'s empty output
-        # on the direct-harness path has to be caught here rather than left to
-        # override the name the door already wrote.
-        ACTOR_AGENT: ${{ steps.check_fallback.outputs.agent || inputs.agent }}
-        AI_AGENT: ${{ steps.check_fallback.outputs.agent || inputs.agent }}
+        # Whose session this is, scoped to this step alone: the Agent the
+        # door emitted for this rung, which the attempt step already carries
+        # in the job environment and which is named here so that the step's
+        # own `env:` never resolves to the empty string (solorepo's #836).
+        ACTOR_AGENT: ${{ inputs.agent }}
+        AI_AGENT: ${{ inputs.agent }}
       run: |
         python3 .meta/run_agy.py
         echo "executed=true" >> "$GITHUB_OUTPUT"

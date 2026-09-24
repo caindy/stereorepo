@@ -21,13 +21,6 @@ stands down on `closed`, `stale` and `unnamed`, and on `held` the Issue is the s
 where a session may have ended before the review landed, so the sign is one more line alerting
 them (solorepo's DR-142)."""
 
-DEPTHS = routing.CODER_DEPTHS
-"""The depth of a pass, by the pass or by the level it takes at, which the routing policy holds
-(solorepo's DR-281)."""
-
-GEMINI_MODEL = routing.GEMINI_MODEL
-"""The model the Antigravity CLI runs, which the routing policy holds (solorepo's DR-281)."""
-
 RUN_LEFT = ("A run before this one stopped and left pull request #{number} open on that branch: "
             "check the branch out and continue under it, and do not branch or open again.")
 """The take prompt's resume clause, where `before` found a pull request on the branch."""
@@ -112,10 +105,9 @@ def coder_depth(task: str, level: str, harness: str, fields: Mapping[str, str]) 
 
     The depth is the routing policy's, by the pass first and the level after
     (solorepo's DR-281); Claude Code's models run high extended thinking on
-    every pass (solorepo's DR-186). `model`, `gemini_model`, `effort`, `turns`
-    and `minutes` are emitted as the workflow reads them today, and beside
-    them the chain, `tier_<n>_*` for each rung from the primary, which a
-    ladder of attempt steps reads by number. The chain and the fields go
+    every pass (solorepo's DR-186). The chain is emitted as `tier_<n>_*` for
+    each rung from the primary, which the ladder of attempt steps reads by
+    number. The chain and the fields go
     under `.review/` for `between` to read, with the first rung's prompt,
     after the tree is checked for tracking anything there: on every pass but
     a take the pull request's branch is checked out by now, and a branch that
@@ -128,11 +120,7 @@ def coder_depth(task: str, level: str, harness: str, fields: Mapping[str, str]) 
         harness (str): The primary, by label, input or default.
         fields (Mapping[str, str]): What the prompt's form is filled with.
     """
-    depth = routing.coder_depth(task, level)
-    common.emit(
-        "GITHUB_OUTPUT", level=level, model=depth.model, gemini_model=GEMINI_MODEL,
-        effort=depth.effort, turns=depth.turns, minutes=depth.minutes,
-    )
+    common.emit("GITHUB_OUTPUT", level=level)
     tiers = routing.coder_chain(harness, task, level)
     common.name_tiers(tiers)
     common.refuse_tracked_scratch()
@@ -336,26 +324,25 @@ class Ended(NamedTuple):
     """What the workflow knows about the coder's session that the door's `after` is handed.
 
     Attributes:
-        claude: How the pass's Claude Code step ended: `success`, `failure`,
-            `cancelled` or `skipped`.
-        gemini: How its Antigravity CLI step ended, the same way.
+        outcomes: How each rung of the pass ended, in rung order: `success`,
+            `failure`, `cancelled` or `skipped` each; `None` where the workflow
+            did not say, which `after` refuses.
         held: On a promotion, how many threads `before` found held.
         branch_prefix: The harness `before` chose, which names the loop's branch.
         execution: Where Claude Code wrote the pass's execution transcript, or
-            the empty string where the step published no path.
+            the empty string where no rung published a path.
     """
 
-    claude: str | None
-    gemini: str | None
+    outcomes: tuple[str, ...] | None
     held: int | None
     branch_prefix: str
     execution: str = ""
 
 
-OUTCOMES_NOT_SAID = ("the coder's `after` takes how the pass's two steps ended, --claude and "
-                     "--gemini, and was handed claude={claude!r} gemini={gemini!r}: an outcome "
-                     "that did not arrive is a red run, not a pass that was skipped")
-"""The refusal where `after` is missing how the session's steps ended."""
+OUTCOMES_NOT_SAID = ("the coder's `after` takes how the pass's rungs ended, --outcomes, and was "
+                     "handed none: an outcome that did not arrive is a red run, not a pass "
+                     "that was skipped")
+"""The refusal where `after` is missing how the session's rungs ended."""
 
 
 OUTCOMES = ("success", "failure", "cancelled", "skipped")
@@ -420,9 +407,8 @@ CONFLICTS = ("#{number}'s branch conflicts with its base, {base}. GitHub builds 
 NOT_GREEN = "the checks on #{number} have not all passed, and a red gate is not a handoff"
 """Why the reviewer is not asked where the gate is red."""
 
-NEITHER = ("::error::Neither Claude nor Gemini {task} pass succeeded (claude={claude}, "
-           "gemini={gemini}).")
-"""The finding where a pass ran and neither harness finished it."""
+NEITHER = "::error::No rung of the {task} pass succeeded (outcomes={outcomes})."
+"""The finding where a pass ran and no rung finished it."""
 
 
 def coder(phase: str, number: str, delivery: Delivery, ended: Ended,

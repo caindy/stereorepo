@@ -13,7 +13,7 @@ Usage:
     .meta/say/on coder between <n> --pass take|rebase|answer|promote --event <event> \\
         [--attempt N --outcome <outcome>] [--execution-file <path>]
     .meta/say/on coder after <n> --pass take|rebase|answer|promote --event <event> \\
-        --claude <outcome> --gemini <outcome> [--count N] [--branch-prefix <harness>] \\
+        --outcomes <outcome>[,<outcome>] [--count N] [--branch-prefix <harness>] \\
         [--execution-file <path>]
 
 Each loop workflow is a door a Role's run arrives at: `triage.yml` and
@@ -33,11 +33,11 @@ number says which of the Role's doors this is: a Challenge is the reading
 door, `triage.yml`, and a pull request is the review door, `review.yml`. The
 coder's door, `coder.yml`, has four passes behind it and the workflow says
 which with `--pass`, since the event, the review's state and the dispatch's
-inputs are the workflow's to read; its `after` takes how the pass's two
-harness steps ended, refused absent by the same rule as the review door's
+inputs are the workflow's to read; its `after` takes how each rung of the
+pass ended, in order, refused absent by the same rule as the review door's
 numbers below, and hands back a take that did not finish, redelivers the
-review pass a rebase cleared, and ends the run red where one harness failed
-a pass and neither finished it, a cancelled pass not being a failed one. A
+review pass a rebase cleared, and ends the run red where a rung failed a
+pass and none finished it, a cancelled pass not being a failed one. A
 take pass cut by its turn cap is one that did not finish and says so nowhere
 in its step conclusion, which `claude-code-action` reports as `success` when
 the model's turn ends at the cap; `--execution-file` names the transcript the
@@ -124,11 +124,9 @@ write_head = review.write_head
 CAPPED = coder_door.CAPPED
 CAP_MARK = coder_door.CAP_MARK
 CODER_HARNESSES = coder_door.CODER_HARNESSES
-DEPTHS = coder_door.DEPTHS
 DID_NOT_FINISH = coder_door.DID_NOT_FINISH
 Delivery = coder_door.Delivery
 Ended = coder_door.Ended
-GEMINI_MODEL = coder_door.GEMINI_MODEL
 NO_JOB = coder_door.NO_JOB
 OUTCOMES = coder_door.OUTCOMES
 PASSES = coder_door.PASSES
@@ -164,6 +162,7 @@ count = cli.count
 harness = cli.harness
 main = cli.main
 rung_outcome = cli.rung_outcome
+rung_outcomes = cli.rung_outcomes
 step_outcome = cli.step_outcome
 
 __all__ = [
@@ -171,11 +170,9 @@ __all__ = [
     "CAP_MARK",
     "CODER_HARNESSES",
     "CONSTRAINTS",
-    "DEPTHS",
     "DID_NOT_ARRIVE",
     "DID_NOT_FINISH",
     "EVIDENCE",
-    "GEMINI_MODEL",
     "HARNESSES",
     "NOT_ONE_OF",
     "NO_JOB",
@@ -250,6 +247,7 @@ __all__ = [
     "routing",
     "run_url",
     "rung_outcome",
+    "rung_outcomes",
     "spawned",
     "step_outcome",
     "stop_with",

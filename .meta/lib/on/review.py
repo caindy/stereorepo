@@ -147,9 +147,10 @@ def review_before(number: str) -> None:
 
     The harness is chosen by the pull request's own label (solorepo's DR-242)
     and named as the reading door names it. The depth is `depth.py`'s
-    (solorepo's DR-188), every field of it a step output, and the chain is
-    the routing policy's at that depth, the primary first, `tier_<n>_*` for
-    each rung (solorepo's DR-281). What the session reads is written as
+    (solorepo's DR-188), its fan-out ceiling and its reason step outputs, and
+    the chain is the routing policy's at that depth, the primary first,
+    `tier_<n>_*` for each rung, which the ladder reads by number
+    (solorepo's DR-281). What the session reads is written as
     files, since a diff and the head's copies of the trunk paths both exceed
     what a shell result carries whole (solorepo's #196): the diff, the head's
     copies under `.review/head/`, the constraints every agent reads, and the
@@ -166,7 +167,7 @@ def review_before(number: str) -> None:
     harness = common.harness_of(check_pr.state.issue_labels(view), common.REVIEW_HARNESSES)
     common.name_harness(harness)
     found = depth_of(number)
-    common.emit("GITHUB_OUTPUT", **{key: str(value) for key, value in found._asdict().items()})
+    common.emit("GITHUB_OUTPUT", agents=str(found.agents), reason=found.reason)
     tiers = routing.review_chain(
         harness, routing.Depth(found.model, found.effort, str(found.turns), str(found.minutes)),
         found.gemini_model)

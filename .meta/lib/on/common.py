@@ -195,7 +195,7 @@ def refuse_tracked_scratch(listing: Callable[[], str] | None = None) -> None:
 
 
 def name_tiers(tiers: Sequence[routing.Tier]) -> None:
-    """The chain as step outputs, `tiers` and `tier_<n>_<field>` for every rung from one."""
+    """The chain as step outputs: `tiers`, and `tier_<n>_<field>` for each rung from one."""
     emit("GITHUB_OUTPUT", **routing.outputs(tiers))
 
 

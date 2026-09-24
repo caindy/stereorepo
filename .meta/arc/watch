@@ -2,7 +2,7 @@
 """Actions Runner Controller worker monitor.
 
 Streams or snapshots ephemeral runner custom resource events from Kubernetes,
-correlating workflow runs, pull request numbers, execution harnesses, and models.
+correlating workflow runs, pull request numbers and execution harnesses.
 """
 import argparse
 import datetime
@@ -79,59 +79,78 @@ def fetch_run_title(run_id: int | str) -> str:
     return ""
 
 
-def _inspect_steps(steps: list[dict[str, Any]]) -> tuple[str, str]:
-    """Extracts execution harness and language model metadata from workflow steps.
+RUNG = re.compile(r"^attempt (\d+)$")
+"""A rung's step on the ladder (solorepo's DR-281), named by its number and nothing else: a
+name carrying an expression renders only when the step runs, so a pending rung's would not
+parse, as the solo saw on the reviewer's step list for solorepo's #966."""
+
+CHAIN = re.compile(r"^chain (\S*)$")
+"""The `chain` step's name once it has run: the door's harnesses in rung order, comma-joined.
+The step runs right after the door, before any rung, and the jobs listing renders a finished
+step's name while later steps are live, so the chain is readable for the whole time a rung
+runs. The run's log and the job's annotations are not: run 36021477232 answered no annotation
+while `attempt 1` was live, and `gh run view --log` refuses a run in progress."""
+
+
+def chain_of(steps: list[dict[str, Any]]) -> dict[int, str]:
+    """The chain the door resolved, read off the `chain` step's rendered name.
 
     Args:
         steps: List of GitHub Actions step status dictionaries.
 
     Returns:
-        tuple[str, str]: Tuple of harness identifier and language model name.
+        dict[int, str]: The harness of each rung from one; empty where the
+            `chain` step has not run yet.
+    """
+    for s in steps:
+        found = CHAIN.match(s.get("name", ""))
+        if found and s.get("status") == "completed":
+            return {number: harness for number, harness
+                    in enumerate(found.group(1).split(","), 1) if harness}
+    return {}
+
+
+def _inspect_steps(steps: list[dict[str, Any]], chain: dict[int, str]) -> tuple[str, str]:
+    """The harness a run's active or finished rung ran, read off the chain by the rung's number.
+
+    Args:
+        steps: List of GitHub Actions step status dictionaries.
+        chain: Each rung's harness by number, as `chain_of` read it.
+
+    Returns:
+        tuple[str, str]: The harness identifier, `(fallback)` where a later rung
+            ran it and `rung <n>` where the `chain` step has not run yet,
+            and `-` for the model, which the routing policy holds and a
+            run does not say.
     """
     harness, model = "-", "-"
     active_step = None
-    claude_ran = any(
-        "(claude)" in s.get("name", "")
-        and s.get("status") == "completed"
-        and s.get("conclusion") not in ("", "skipped")
-        for s in steps
-    )
-
     for s in steps:
         name = s.get("name", "")
         status = s.get("status", "")
         conclusion = s.get("conclusion", "")
-
         if status == "in_progress":
             active_step = name
-
-        if "(gemini)" in name and (status == "in_progress" or conclusion == "success"):
-            harness = "agy (fallback)" if claude_ran else "agy"
-            model = "gemini-3.8-flash"
-        elif "(claude)" in name and (status == "in_progress" or conclusion == "success"):
-            harness = "claude"
-            model = ("claude-opus-5" if "rebase" in name
-                     else "claude-sonnet-5" if "promote" in name
-                     else "opus/sonnet")
-        elif "(jules)" in name and (status == "in_progress" or conclusion == "success"):
-            harness = "jules (fallback)" if claude_ran else "jules"
-            model = "jules"
-
+        found = RUNG.match(name)
+        if found and (status == "in_progress" or conclusion == "success"):
+            rung = int(found.group(1))
+            named = chain.get(rung, f"rung {rung}")
+            harness = f"{named} (fallback)" if rung > 1 else named
     if harness == "-" and active_step:
         harness = f"prep ({active_step[:9]}…)" if len(active_step) > 10 else f"prep ({active_step})"
-
     return harness, model
 
 
 def fetch_run_details(run_id: int | str, workflow: str = "") -> tuple[str, str, str]:
-    """Queries GitHub CLI for active or chosen harness, model, and workflow run title.
+    """Queries GitHub CLI for the harness a run's active or finished rung ran, and its title.
 
     Args:
         run_id: Workflow run identifier.
         workflow: Workflow file name used to skip non-AI workflow queries. Defaults to "".
 
     Returns:
-        tuple[str, str, str]: Tuple of harness identifier, model name, and run title.
+        tuple[str, str, str]: The harness identifier, `-` where a model would have been
+            named, and the run title.
     """
     if not run_id or str(run_id) == "-" or not shutil.which("gh"):
         return "-", "-", ""
@@ -162,7 +181,7 @@ def fetch_run_details(run_id: int | str, workflow: str = "") -> tuple[str, str, 
 
     job = jobs[0]
     steps = job.get("steps", [])
-    harness, model = _inspect_steps(steps)
+    harness, model = _inspect_steps(steps, chain_of(steps))
 
     if job.get("status") == "completed":
         DETAILS_CACHE[run_id] = (harness, model, title)

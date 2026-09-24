@@ -27,7 +27,7 @@
 .meta/checks/collect.py: 2
 .meta/checks/comments.py: 6
 .meta/checks/files/__init__.py: 6
-.meta/checks/files/harness.py: 4
+.meta/checks/files/harness.py: 0
 .meta/checks/files/history.py: 9
 .meta/checks/files/inline_python.py: 2
 .meta/checks/files/justfile.py: 4
@@ -95,7 +95,7 @@
 .meta/checks/probes/wrappers.py: 7
 .meta/depth.py: 8
 .meta/dereference.py: 1
-.meta/detect_fallback.py: 16
+.meta/detect_fallback.py: 11
 .meta/gate: 1
 .meta/hooks/signed_channel.py: 1
 .meta/jules/client.py: 23

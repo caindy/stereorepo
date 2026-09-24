@@ -5,6 +5,7 @@ holding them (solorepo's DR-209); the reviewer's verb is probed in `on.py`
 (solorepo's DR-264).
 """
 import contextlib
+import functools
 import os
 import pathlib
 import tempfile
@@ -48,8 +49,9 @@ def coder_door_probes() -> list[str]:
     said, no pull request is an empty `resume` and its own line, the listing
     is asked with an empty fallback so a refused read is no pull request
     rather than a red job, and any other pass is refused. After the
-    session: a take that failed or was cancelled is handed back, review
-    requested where the pull request it left is green and clean and the
+    session, per rung (solorepo's DR-281): a take that failed or was cancelled
+    is handed back, review requested where the pull request it left is green
+    and clean and the
     Challenge given to the solo otherwise, with why, every read that failed
     among the whys and nothing owed where the run turns out to have
     finished; a rebase that succeeded redelivers the review pass and a
@@ -166,7 +168,7 @@ def _before(channel: Any, on: Any, fakes: _Fakes, delivery: tuple[str, str, str]
             stood_in(on.check_pr.sweep, take=fakes.take), \
             stood_in(on.check_pr.github, threads=lambda number: list(fakes.threads)):
         ended = outcome(lambda: on.coder("before", number, on.Delivery(*delivery),
-                                         on.Ended("skipped", "skipped", None, "")))
+                                         on.Ended(("skipped", "skipped"), None, "")))
         out = dict(line.split("=", 1) for line in (root / "output").read_text().splitlines()
                    if "=" in line)
         return ended, out, (root / "env").read_text()
@@ -179,8 +181,8 @@ def _take_cases(channel: Any, on: Any) -> list[str]:
                               ("take", "issues", ""), ISSUE)
     expected = {"pass": "take", "harness": "claude", "branch_prefix": "claude",
                 "agent": "anthropics/claude-code-action@v1", "by": "", "level": "medium",
-                "model": "claude-opus-5", "effort": "high", "turns": "120", "minutes": "60",
-                "tiers": "1", "tier_1_harness": "claude", "tier_1_model": "claude-opus-5"}
+                "tiers": "1", "tier_1_harness": "claude", "tier_1_model": "claude-opus-5",
+                "tier_1_effort": "high", "tier_1_turns": "120", "tier_1_minutes": "60"}
     if ended.code is not None or any(out.get(k) != v for k, v in expected.items()):
         problems.append(f"take: a medium Challenge decided {out!r} with exit {ended.code!r}, "
                         f"not {expected!r}")
@@ -193,9 +195,9 @@ def _take_cases(channel: Any, on: Any) -> list[str]:
     _, out, _ = _before(channel, on, _fakes(_GitHub(["challenge", "easy", "harness:gemini"]),
                                            take),
                         ("take", "workflow_dispatch", "claude"), ISSUE)
-    if out.get("harness") != "gemini" or out.get("model") != "claude-sonnet-5" \
-            or out.get("minutes") != "30" or out.get("resume") != "9" \
-            or out.get("gemini_model") != on.GEMINI_MODEL:
+    if out.get("harness") != "gemini" or out.get("tier_1_harness") != "gemini" \
+            or out.get("tier_2_model") != "claude-sonnet-5" or out.get("tier_2_minutes") != "30" \
+            or out.get("resume") != "9":
         problems.append(f"take: a Gemini-labelled easy Challenge under a dispatch asking for "
                         f"Claude Code decided {out!r}, where the label wins, easy is the "
                         "smaller model, and the hand-back left is named")
@@ -237,7 +239,7 @@ def _between(on: Any, branch: _Branch, task: str = "take") -> tuple[Any, dict[st
     """`on coder between` against the stand-in: how it ended, and the outputs by key."""
     with _workspace() as root, stood_in(on.check_pr.sweep, loop_pull=branch):
         ended = outcome(lambda: on.coder("between", ISSUE, on.Delivery(task, "issues", ""),
-                                         on.Ended("failure", "skipped", None, "claude")))
+                                         on.Ended(("failure", "skipped"), None, "claude")))
         out = dict(line.split("=", 1) for line in (root / "output").read_text().splitlines()
                    if "=" in line)
     return ended, out
@@ -279,7 +281,7 @@ def _pull_cases(channel: Any, on: Any) -> list[str]:
                             ("answer", "pull_request_review", ""), PULL)
     expected = {"pass": "answer", "number": PULL, "branch": f"claude/issue-{ISSUE}",
                 "base": "claude/issue-3", "issue": ISSUE, "by": "", "harness": "claude",
-                "model": "claude-opus-5", "minutes": "60", "gemini_model": on.GEMINI_MODEL}
+                "tier_1_model": "claude-opus-5", "tier_1_minutes": "60"}
     if ended.code is not None or any(out.get(k) != v for k, v in expected.items()):
         problems.append(f"answer: a request for changes decided {out!r} with exit "
                         f"{ended.code!r}, not {expected!r}")
@@ -345,8 +347,9 @@ def _rebase_promote_cases(channel: Any, on: Any) -> list[str]:
     take = _Take()
     ended, out, _ = _before(channel, on, _fakes(take=take),
                             ("rebase", "workflow_dispatch", "claude"), PULL)
-    if ended.code is not None or out.get("model") != "claude-opus-5" or out.get("minutes") != "30" \
-            or out.get("turns") != "60" or take.asked != [(ISSUE, "workflow_dispatch")]:
+    if ended.code is not None or out.get("tier_1_model") != "claude-opus-5" \
+            or out.get("tier_1_minutes") != "30" or out.get("tier_1_turns") != "60" \
+            or take.asked != [(ISSUE, "workflow_dispatch")]:
         problems.append(f"rebase: decided {out!r} and asked {take.asked!r}, where the larger "
                         "model takes half the budget and the take door is asked")
 
@@ -354,8 +357,9 @@ def _rebase_promote_cases(channel: Any, on: Any) -> list[str]:
     refusing = _Commands(refuse="checkout")
     ended, out, _ = _before(channel, on, _fakes(commands=refusing, threads=threads),
                             ("promote", "pull_request_review", ""), PULL)
-    if ended.code is not None or out.get("count") != "2" or out.get("model") != "claude-sonnet-5" \
-            or out.get("turns") != "30" or out.get("minutes") != "15" \
+    if ended.code is not None or out.get("count") != "2" \
+            or out.get("tier_1_model") != "claude-sonnet-5" \
+            or out.get("tier_1_turns") != "30" or out.get("tier_1_minutes") != "15" \
             or ("git", "checkout", "--quiet", f"claude/issue-{ISSUE}") not in refusing.calls:
         problems.append(f"promote: decided {out!r} with exit {ended.code!r} after "
                         f"{refusing.calls!r}, where two threads are held, the smaller model "
@@ -449,16 +453,16 @@ class _Session(NamedTuple):
     """One `after` case: what the workflow reports, and what stands in for the reads and acts."""
 
     delivery: tuple[str, str, str]
-    ended: tuple[str | None, str | None, int | None, str] \
-        | tuple[str | None, str | None, int | None, str, str]
+    ended: tuple[tuple[str, ...] | None, int | None, str] \
+        | tuple[tuple[str, ...] | None, int | None, str, str]
     fake: _GitHub
     left: _Left
     loop: _Loop
 
 
 def _session(delivery: tuple[str, str, str],
-             ended: tuple[str | None, str | None, int | None, str]
-             | tuple[str | None, str | None, int | None, str, str],
+             ended: tuple[tuple[str, ...] | None, int | None, str]
+             | tuple[tuple[str, ...] | None, int | None, str, str],
              fake: _GitHub | None = None, left: _Left | None = None,
              loop: _Loop | None = None) -> _Session:
     """An `after` case, each stand-in defaulting to one that answers the ordinary way."""
@@ -487,47 +491,43 @@ def _after_cases(channel: Any, on: Any) -> list[str]:
     """`after` on each pass: the take handed back, the rebase redelivered, the rest verified."""
     problems = _hand_back_cases(channel, on)
     take = ("take", "issues", "")
-    ended, loop = _after(channel, on, _session(take, ("success", "skipped", None, "claude")))
+    ended, loop = _after(channel, on, _session(take, (("success", "skipped"), None, "claude")))
     if ended.code is not None or loop.stopped or loop.requested or "nothing to hand back" \
             not in ended.out:
         problems.append(f"after: a take that succeeded ended {ended.code!r} saying {ended.out!r}")
 
     rebase = ("rebase", "workflow_dispatch", "claude")
-    ended, loop = _after(channel, on, _session(rebase, ("failure", "success", None, "")))
+    ended, loop = _after(channel, on, _session(rebase, (("failure", "success"), None, "")))
     if ended.code is not None or loop.dispatched != [(PULL, "review")]:
         problems.append(f"after: a rebase the fallback finished ended {ended.code!r} and "
                         f"dispatched {loop.dispatched!r}, where the review pass is redelivered")
-    ended, loop = _after(channel, on, _session(rebase, ("success", "skipped", None, ""),
+    ended, loop = _after(channel, on, _session(rebase, (("success", "skipped"), None, ""),
                                           loop=_Loop(refuse_dispatch=True)))
     if ended.code is not None or "nothing to redeliver" not in ended.out:
         problems.append(f"after: a redelivery refused ended {ended.code!r} saying "
                         f"{ended.out!r}, where the refusal is said and not a failure")
     for task, delivery in (("rebase", rebase), ("answer", ("answer", "pull_request_review", "")),
                            ("promote", ("promote", "pull_request_review", ""))):
-        ended, loop = _after(channel, on, _session(delivery, ("failure", "failure", 2, "")))
-        if ended.code is None or f"Neither Claude nor Gemini {task} pass succeeded" \
-                not in str(ended.code):
+        ended, loop = _after(channel, on, _session(delivery, (("failure", "failure"), 2, "")))
+        if ended.code is None or f"No rung of the {task} pass succeeded" not in str(ended.code):
             problems.append(f"after: a {task} pass neither harness finished ended "
                             f"{ended.code!r}")
-        ended, loop = _after(channel, on, _session(delivery, ("cancelled", "skipped", 2, "")))
+        ended, loop = _after(channel, on, _session(delivery, (("cancelled", "skipped"), 2, "")))
         if ended.code is not None or loop.dispatched or loop.stopped or loop.requested:
             problems.append(f"after: a {task} pass cancelled ended {ended.code!r} and acted "
                             f"{loop.dispatched!r} {loop.stopped!r} {loop.requested!r}, where a "
                             "cancelled pass is not a failed one and nothing is owed")
-    for name, ended_as in (("no outcomes", (None, None, 2, "")),
-                           ("no Claude Code outcome", (None, "skipped", 2, ""))):
-        ended, loop = _after(channel, on, _session(take, ended_as))
-        if ended.code is None or "did not arrive" not in str(ended.code) or loop.stopped:
-            problems.append(f"after: {name} ended {ended.code!r}, where an outcome that did not "
-                            "arrive is a red run")
-    empty = outcome(lambda: on.build_parser().parse_args(
-        ["coder", "after", ISSUE, "--pass", "take", "--event", "issues", "--claude", "",
-         "--gemini", "skipped"]))
-    if empty.code is None or "did not arrive" not in empty.err:
-        problems.append(f"after: an empty --claude was parsed as {empty.code!r} {empty.err!r}, "
-                        "where an empty outcome is refused")
+    ended, loop = _after(channel, on, _session(take, (None, 2, "")))
+    if ended.code is None or "did not arrive" not in str(ended.code) or loop.stopped:
+        problems.append(f"after: no outcomes ended {ended.code!r}, where none arriving is red")
+    for handed in ("", "failure,", "success,done"):
+        empty = outcome(functools.partial(on.build_parser().parse_args, [
+            "coder", "after", ISSUE, "--pass", "take", "--event", "issues", "--outcomes", handed]))
+        if empty.code is None or not ("did not arrive" in empty.err or "not one of" in empty.err):
+            problems.append(f"after: --outcomes {handed!r} was parsed as {empty.code!r} "
+                            f"{empty.err!r}, where an empty or unknown rung outcome is refused")
     ended, loop = _after(channel, on, _session(("promote", "pull_request_review", ""),
-                                          ("skipped", "skipped", 0, "")))
+                                          (("skipped", "skipped"), 0, "")))
     if ended.code is not None or "no threads were held" not in ended.out:
         problems.append(f"after: a promotion with no threads ended {ended.code!r} saying "
                         f"{ended.out!r}")
@@ -541,7 +541,7 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
     green = {"number": 12, "branch": f"claude/issue-{ISSUE}", "handed": False, "green": True,
              "conflicting": False, "base": "main"}
     fake = _After()
-    ended, loop = _after(channel, on, _session(take, ("failure", "skipped", None, "claude"), fake,
+    ended, loop = _after(channel, on, _session(take, (("failure", "skipped"), None, "claude"), fake,
                                           _Left(green)))
     if ended.code is not None or loop.stopped or loop.requested != [(PULL, "reviewer")] \
             or len(fake.posted) != 1 or "where a run stopped" not in fake.posted[0] \
@@ -551,7 +551,7 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
                         f"{loop.stopped!r}, requested {loop.requested!r}, posted "
                         f"{fake.posted!r}, where review is requested after the signed account "
                         "is posted")
-    ended, loop = _after(channel, on, _session(take, ("failure", "cancelled", None, "claude"),
+    ended, loop = _after(channel, on, _session(take, (("failure", "cancelled"), None, "claude"),
                                           left=_Left({**green, "green": False})))
     account = loop.stopped[0][1] if loop.stopped else ""
     if ended.code is not None or loop.requested or len(loop.stopped) != 1 \
@@ -571,7 +571,7 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
              ("the merged listing unreadable", _Left(green), _After(unreadable="merged"),
               "has merged could not be read"))
     for name, left, fake, why in cases:
-        ended, loop = _after(channel, on, _session(take, ("failure", "skipped", None, "gemini"),
+        ended, loop = _after(channel, on, _session(take, (("failure", "skipped"), None, "gemini"),
                                                    fake, left))
         account = loop.stopped[0][1] if loop.stopped else ""
         if ended.code is not None or len(loop.stopped) != 1 or why not in account \
@@ -589,7 +589,7 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
              ("the Issue at human", _Left(green), _After(labels=["challenge", "human"])),
              ("the branch merged", _Left(green), _After(merged=[{"number": 12}])))
     for name, left, fake in quiet:
-        ended, loop = _after(channel, on, _session(take, ("failure", "skipped", None, "claude"),
+        ended, loop = _after(channel, on, _session(take, (("failure", "skipped"), None, "claude"),
                                                    fake, left))
         if ended.code is not None or loop.stopped or loop.requested:
             problems.append(f"hand-back: {name} ended {ended.code!r} with {loop.stopped!r} and "
@@ -657,7 +657,7 @@ def _cap_cases(channel: Any, on: Any) -> list[str]:
 
         fake = _After()
         ended, loop = _after(channel, on, _session(
-            take, ("success", "skipped", None, "claude", capped), fake, _Left(green)))
+            take, (("success", "skipped"), None, "claude", capped), fake, _Left(green)))
         posted = fake.posted[0] if fake.posted else ""
         if ended.code is not None or loop.stopped or loop.requested != [(PULL, "reviewer")] \
                 or "was cut by its turn cap, 120 turns in" not in posted \
@@ -668,7 +668,7 @@ def _cap_cases(channel: Any, on: Any) -> list[str]:
                             "names the cap and review is requested")
 
         ended, loop = _after(channel, on, _session(
-            take, ("success", "skipped", None, "claude", whole), _After(), _Left(green)))
+            take, (("success", "skipped"), None, "claude", whole), _After(), _Left(green)))
         if ended.code is not None or loop.stopped or loop.requested \
                 or "nothing to hand back" not in ended.out:
             problems.append(f"cap: a take pass that finished within its cap ended "
@@ -676,7 +676,7 @@ def _cap_cases(channel: Any, on: Any) -> list[str]:
 
         fake = _After(comments=["This run was cut by its turn cap, 120 turns in."])
         ended, loop = _after(channel, on, _session(
-            take, ("success", "skipped", None, "claude", capped), fake, _Left(green)))
+            take, (("success", "skipped"), None, "claude", capped), fake, _Left(green)))
         account = loop.stopped[0][1] if loop.stopped else ""
         if ended.code is not None or loop.requested or len(loop.stopped) != 1 \
                 or "does not fit twice" not in account \
@@ -690,7 +690,7 @@ def _cap_cases(channel: Any, on: Any) -> list[str]:
         for fake, name in ((_After(comments=[quoted]), "a comment quoting the cap account"),
                            (_After(unreadable="comments"), "a comment listing GitHub refuses")):
             ended, loop = _after(channel, on, _session(
-                take, ("success", "skipped", None, "claude", capped), fake, _Left(green)))
+                take, (("success", "skipped"), None, "claude", capped), fake, _Left(green)))
             if ended.code is not None or loop.stopped \
                     or loop.requested != [(PULL, "reviewer")]:
                 problems.append(f"cap: {name} ended {ended.code!r}, stopped {loop.stopped!r} "
@@ -698,7 +698,7 @@ def _cap_cases(channel: Any, on: Any) -> list[str]:
                                 "account is a cap it posted and a read it cannot make is not one")
 
         ended, loop = _after(channel, on, _session(
-            take, ("failure", "skipped", None, "claude", capped), _After(),
+            take, (("failure", "skipped"), None, "claude", capped), _After(),
             _Left({**green, "green": False})))
         account = loop.stopped[0][1] if loop.stopped else ""
         if ended.code is not None or len(loop.stopped) != 1 or "ended failure" not in account:

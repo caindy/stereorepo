@@ -1,57 +1,22 @@
 #!/usr/bin/env python3
-"""Evaluate harness execution output to activate multi-vendor fallback, or merge reviewer settings (solorepo's DR-178, solorepo's DR-245, solorepo's DR-246).
+"""Antigravity CLI confinement and settings, and the quota scan `between` reads (solorepo's DR-281).
 
-Evaluates whether automatic fallback is enabled for a target harness via repository
-toggles (`GEMINI_FALLBACK` or `JULES_FALLBACK`). When enabled via repository variables
-(solorepo's DR-245, solorepo's DR-246, solorepo's #669, solorepo's #681), harness failures
-activate the requested fallback harness per solorepo's DR-178's multi-vendor resilience
-choice to prevent stalled loops on unhandled crashes, emitting `fallback=true` and
-`agent` to `$GITHUB_OUTPUT` — scoped to the step that reads it, unlike `$GITHUB_ENV`,
-which would carry the fallback's name onto every later step of the job (solorepo's #836).
-
-For `--harness gemini`, an advisory scan (`has_quota_error`) inspects the execution log
-to label whether quota or rate limit errors were detected. For `--harness jules`,
-activation occurs on the repository toggle alone without scanning execution logs.
-When disabled or unset (the default per solorepo's DR-240, solorepo's DR-245, solorepo's DR-246),
-the script cleanly emits `fallback=false` to `$GITHUB_OUTPUT` and skips fallback activation
-to avoid unauthenticated failures in portfolios lacking local ARC or Jules credential infrastructure.
-
-When invoked with `--merge-settings`, merges tool allowances and hook registrations
-from `~/.gemini/settings.json` into `~/.gemini/antigravity-cli/settings.json` while
-preserving mounted subscription credentials.
+`--configure-reviewer` and `--configure-coder` write the confinement each Role's
+Antigravity session runs under; `--merge-settings` merges tool allowances and hook
+registrations from `~/.gemini/settings.json` into
+`~/.gemini/antigravity-cli/settings.json` while preserving mounted subscription
+credentials. Whether a fallback rung runs is not decided here: the door's `between`
+phase reads the chain the routing policy resolved and the toggles solorepo's DR-240,
+solorepo's DR-245 and solorepo's DR-246 name, and calls `has_quota_error` for the advisory
+scan of Claude Code's transcript where the next rung is the Antigravity CLI
+(solorepo's DR-245).
 """
 
-import argparse
 import json
 import os
 import pathlib
 import sys
-from typing import Any, TypedDict
-
-
-class HarnessConfig(TypedDict):
-    """Configuration mapping for a supported fallback harness."""
-
-    toggle: str
-    agent: str
-    label: str
-    scan_quota: bool
-
-
-HARNESS_CONFIGS: dict[str, HarnessConfig] = {
-    "gemini": {
-        "toggle": "GEMINI_FALLBACK",
-        "agent": "antigravity-cli",
-        "label": "Gemini",
-        "scan_quota": True,
-    },
-    "jules": {
-        "toggle": "JULES_FALLBACK",
-        "agent": "google-labs-jules",
-        "label": "Jules",
-        "scan_quota": False,
-    },
-}
+from typing import Any
 
 
 def is_toggle_enabled(name: str, default: bool = False) -> bool:
@@ -378,87 +343,30 @@ def configure_coder_settings(
     hooks_dest.write_text(json.dumps(hooks_data, indent=2) + "\n", encoding="utf-8")
 
 
-def write_env_file(path_env: str, content: str) -> None:
-    """Write text content to a file specified by an environment variable name if defined."""
-    target = os.environ.get(path_env)
-    if target:
-        with pathlib.Path(target).open("a", encoding="utf-8") as f:
-            f.write(content)
-
-
 def main() -> int:
-    """Evaluate harness execution output and trigger fallback if toggle is enabled (solorepo's DR-245, solorepo's DR-246, solorepo's DR-257).
+    """Configure a Role's Antigravity confinement, or merge the settings (solorepo's DR-254, solorepo's DR-257).
 
-    When called with --configure-reviewer, configures reviewer tool confinement in
-    ~/.gemini/antigravity-cli/settings.json and registers PreToolUse lifecycle hooks in
-    ~/.gemini/config/hooks.json (solorepo's #682, solorepo's #699).
-
-    When called with --configure-coder, configures coder permission denials in
-    ~/.gemini/antigravity-cli/settings.json to prohibit subagent spawning (solorepo's DR-257).
-
-    When called with --merge-settings, merges ~/.gemini/settings.json into
-    ~/.gemini/antigravity-cli/settings.json to configure tools and hooks without
-    overwriting mounted subscription credentials.
-
-    When called with --harness jules, checks JULES_FALLBACK (defaulting to False) and
-    skips execution log scans, activating Jules cloud fallback directly when enabled.
-    When called with --harness gemini (default), checks GEMINI_FALLBACK (defaulting to False)
-    and performs an advisory quota scan of Claude Code's execution log.
-
-    When the respective fallback toggle is disabled, prints a diagnostic log, writes
-    'fallback=false' to $GITHUB_OUTPUT, and exits 0. When enabled via repository
-    variable, logs the activation and writes 'fallback=true' and
-    'agent=<the fallback harness's name>' to $GITHUB_OUTPUT. On the disabled path no
-    'agent' key is written at all, so a caller reading `steps.<id>.outputs.agent`
-    receives the empty string there.
+    `--configure-reviewer` configures reviewer tool confinement in
+    `~/.gemini/antigravity-cli/settings.json` and registers PreToolUse lifecycle hooks in
+    `~/.gemini/config/hooks.json` (solorepo's #682, solorepo's #699); `--configure-coder`
+    denies the coder subagent spawning (solorepo's DR-257); `--merge-settings` merges
+    `~/.gemini/settings.json` into the Antigravity settings, keeping mounted credentials.
 
     Returns:
-        int: Exit status code (always 0 to allow downstream workflow steps to read outputs).
+        int: 0 on each of the three flag paths, and 2 where no flag named what to do.
     """
     if "--configure-reviewer" in sys.argv:
         configure_reviewer_settings()
         return 0
-
     if "--configure-coder" in sys.argv:
         configure_coder_settings()
         return 0
-
     if "--merge-settings" in sys.argv:
         merge_settings()
         return 0
-
-    parser = argparse.ArgumentParser(
-        description="Evaluate execution output and toggle fallback harness (solorepo's DR-245, solorepo's DR-246)."
-    )
-    parser.add_argument(
-        "--harness",
-        choices=list(HARNESS_CONFIGS.keys()),
-        default="gemini",
-        help="Target fallback harness to evaluate (default: gemini)",
-    )
-    args = parser.parse_args()
-    cfg = HARNESS_CONFIGS[args.harness]
-
-    if not is_toggle_enabled(cfg["toggle"], default=False):
-        print(f"{cfg['label']} fallback is disabled ({cfg['toggle']} != true); skipping.")
-        write_env_file("GITHUB_OUTPUT", "fallback=false\n")
-        return 0
-
-    if cfg["scan_quota"]:
-        custom_path = os.environ.get("EXECUTION_FILE")
-        file_path: pathlib.Path | str = (
-            custom_path
-            if custom_path
-            else pathlib.Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "claude-execution-output.json"
-        )
-        quota_detected = has_quota_error(file_path)
-        print(f"Claude failure detected (quota={quota_detected}); activating {cfg['label']} fallback.")
-    else:
-        print(f"Activating {cfg['label']} fallback ({cfg['toggle']}=true).")
-
-    agent = cfg["agent"]
-    write_env_file("GITHUB_OUTPUT", f"fallback=true\nagent={agent}\n")
-    return 0
+    print("detect_fallback: name --configure-reviewer, --configure-coder or --merge-settings",
+          file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":
