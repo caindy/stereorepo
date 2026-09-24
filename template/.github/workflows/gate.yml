@@ -13,9 +13,11 @@
 # which this portfolio carries (solorepo's DR-120); the stubs, the triggers and the
 # permissions solorepo's `check.py` holds equal to its own (solorepo's DR-119), so a
 # portfolio specialized later runs what the scaffold runs and not a version
-# behind. All of each stub but `runs-on:` (solorepo's DR-140): the scaffold's
-# gate runs on a self-hosted runner that exists on one machine, and a
-# portfolio has `ubuntu-latest` until it says otherwise here.
+# behind. All of each stub but `runs-on:` and `container:` (solorepo's DR-140,
+# solorepo's DR-275): the scaffold's gate runs on a self-hosted runner that exists on one
+# machine, whose pods already run the single-source runner image (solorepo's DR-160), and a
+# portfolio has `ubuntu-latest` naming that image as each job's `container:` until it says
+# otherwise here.
 #
 # Nothing here restates a Discipline. What a pull request body must contain is
 # derived from `.meta/templates/pull-request.md` by the checker; this file only
@@ -83,6 +85,11 @@ jobs:
     name: pull request
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    # The pull request action's step types the gate as `just pr <n>`
+    # (solorepo's DR-252, solorepo's DR-275); a hosted runner carries no `just`,
+    # and the single-source runner image does (solorepo's DR-160), which is also
+    # what the scaffold's own runner pods run.
+    container: ghcr.io/caindy/solorepo-runner:2.337.0-4
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: ./.meta/actions/pull-request
@@ -98,6 +105,10 @@ jobs:
     name: sweep
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    # The sweep action's steps type `just pr-all` and `just next --check`
+    # (solorepo's DR-252, solorepo's DR-275); a hosted runner carries no `just`,
+    # and the single-source runner image does (solorepo's DR-160).
+    container: ghcr.io/caindy/solorepo-runner:2.337.0-4
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: ./.meta/actions/sweep

@@ -28,6 +28,10 @@ watch n:
 sweep:
     python3 .meta/check_pr.py --sweep
 
+# the pull request gate on every open pull request, each verdict published as its check
+pr-all:
+    python3 .meta/check_pr.py --all --publish
+
 # evaluate open pull requests and merge the top candidate in order of leverage
 merge-manager *args:
     .meta/say/move merge-manager {{args}}
@@ -37,8 +41,8 @@ landed n:
     uvx --python 3.13 --with pyyaml python .meta/render.py --landed {{n}}
 
 # what to work on next: pull requests, loops, the milestone, and what is ripe
-next:
-    python3 .meta/next.py
+next *args:
+    python3 .meta/next.py {{args}}
 
 # what the workflows cost in time: waiting for a runner, and running
 timing *args:

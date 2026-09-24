@@ -21,10 +21,12 @@
 # hosted account's spending limit then forced: a required check that cannot
 # start because the minutes are gone stalls a merge exactly as a cluster that
 # is off does, and only one of the two is a machine the solo can switch on.
-# `runs-on:` is the one line of the shared half `check.py` no longer holds
-# equal to the seed's, because where a job runs is a property of the machine
-# this repository has and not of what the job does; the seed stays
-# `ubuntu-latest`, which is what a fresh clone has.
+# `runs-on:` and `container:` are the two lines of the shared half `check.py`
+# no longer holds equal to the seed's, because where a job runs is a property
+# of the machine this repository has and not of what the job does; the seed
+# stays `ubuntu-latest`, which is what a fresh clone has, and names the
+# single-source runner image (solorepo's DR-160) as each job's `container:`,
+# which the scale set's pods here already run (solorepo's DR-275).
 #
 # Nothing here restates a Discipline. What a pull request body must contain is
 # derived from `.meta/templates/pull-request.md` by the checker; this file only

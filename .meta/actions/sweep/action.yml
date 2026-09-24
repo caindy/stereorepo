@@ -20,9 +20,14 @@ runs:
   steps:
     # Both checkers below shell out to `gh`, and since solorepo's DR-140 this
     # job runs self-hosted here and hosted in a portfolio; the step is a
-    # `type -p` on an image that already carries it.
+    # `type -p` on an image that already carries it. Both are typed as the
+    # operator plane types them rather than as the scripts beneath them
+    # (solorepo's DR-252, solorepo's DR-275). `just` comes from the
+    # single-source runner image (solorepo's DR-160): the scaffold's runner pods
+    # run that image, and a portfolio's gate workflow names it as each job's
+    # `container:`.
     - uses: ./.meta/actions/gh
-    - run: python3 .meta/check_pr.py --all --publish
+    - run: just pr-all
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
@@ -31,7 +36,7 @@ runs:
     # one (solorepo's DR-114, solorepo's DR-230). Red here is a reviewer door
     # that did not fire — no triage run within an hour of the filing, or one
     # that ended red — which is a Job to re-run, not a label the solo owes.
-    - run: python3 .meta/next.py --check
+    - run: just next --check
       if: ${{ always() }}
       shell: bash
       env:

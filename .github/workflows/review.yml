@@ -290,9 +290,11 @@ jobs:
           # missing from the list, not because the list was a list; the
           # reviewer's own runs argued a blanket allowance back out, then
           # found `git grep -O` inside the list. The shell is the channel,
-          # the checker and git; reading is the tools, under the hook.
+          # the gate and git; reading is the tools, under the hook. The gate is
+          # `just pr` and not the script beneath it, so the grant admits only
+          # what the operator plane types (solorepo's DR-252, solorepo's DR-275).
           claude-args: |
-            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
       # The door between rungs 1 and 2: told how rung 1 ended, it says
@@ -363,7 +365,7 @@ jobs:
           # found `git grep -O` inside the list. The shell is the channel,
           # the checker and git; reading is the tools, under the hook.
           claude-args: |
-            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
       # The door between rungs 2 and 3: told how rung 2 ended, it says
@@ -434,7 +436,7 @@ jobs:
           # found `git grep -O` inside the list. The shell is the channel,
           # the checker and git; reading is the tools, under the hook.
           claude-args: |
-            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(python3 .meta/check_pr.py:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
       # A session that ended without a verdict has not reviewed, and the door

@@ -2,13 +2,19 @@
 # scaffold's gate workflow and of a portfolio's both run exactly this, so it
 # is typed once here and travels with `.meta/`; each workflow's job is a
 # checkout and a `uses:` of this path, and the two stubs are held equal by
-# `check.py`. The checker is stdlib only and needs `gh`, which the step below
-# ensures rather than assumes: since solorepo's DR-140 this job runs
-# self-hosted here and hosted in a portfolio, and only one of the two images
-# carries it. On the one that does the step is a `type -p`, so this stays fast
-# enough to run on every edit to the body.
+# `check.py`. The gate is typed as the operator plane types it, `just pr <n>`
+# and not the script beneath it (solorepo's DR-252, solorepo's DR-275), so a
+# session reading this file is taught the command it should itself run. `just`
+# comes from the single-source runner image (solorepo's DR-160): the scaffold's
+# runner pods run that image, and a portfolio's gate workflow names it as each
+# job's `container:`. The checker beneath the recipe is stdlib only and needs
+# `gh`, which the step below ensures rather than assumes. Where each half runs
+# still differs — since solorepo's DR-140 this job is self-hosted here and
+# hosted in a portfolio — but from this commit what each runs in does not, so
+# the step does the same work on both, and whether that work is a `type -p` or
+# an install turns on the one image rather than on the `runs-on:`.
 name: pull request gate
-description: Run check_pr.py on one pull request, as both gate workflows do.
+description: Run the pull request gate on one pull request, as both gate workflows do.
 inputs:
   number:
     description: the pull request to check
@@ -20,7 +26,7 @@ runs:
   using: composite
   steps:
     - uses: ./.meta/actions/gh
-    - run: python3 .meta/check_pr.py "$PR"
+    - run: just pr "$PR"
       shell: bash
       env:
         PR: ${{ inputs.number }}

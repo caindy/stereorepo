@@ -53,9 +53,10 @@ CONTRACT: Contract = {
     "pr": (("n", IDENTIFIER), ("args", FLAGS)),
     "watch": (("n", IDENTIFIER),),
     "sweep": (),
+    "pr-all": (),
     "merge-manager": (("args", FLAGS),),
     "landed": (("n", IDENTIFIER),),
-    "next": (),
+    "next": (("args", FLAGS),),
     "timing": (("args", FLAGS),),
     "agents": (("args", FLAGS),),
     "dereference": (("args", FLAGS),),
@@ -69,7 +70,8 @@ CONTRACT: Contract = {
 """The declared shape of every root recipe: each parameter in signature order, paired with
 the kind of value it carries. There is no prose kind to declare, so a recipe taking a bare
 multi-word positional cannot be written down here and fails the step until it is redesigned
-(solorepo's DR-259)."""
+(solorepo's DR-259). `pr-all` takes nothing and `next` a flags tail, which is the shape the
+composite actions under `.meta/actions/` call them in (solorepo's DR-275)."""
 
 
 def _parameters(raw: str) -> list[tuple[str, str]]:

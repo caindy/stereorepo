@@ -109,12 +109,16 @@ SHARED_JOBS = ("pull-request", "sweep")
 SEED_OWN_JOBS = ("gate",)
 
 
-# Except where the job runs (solorepo's DR-140). This repository's gate runs on a
-# self-hosted scale set that exists on one machine; a fresh clone has no cluster
-# and every runner GitHub will give it. That is a fact about the machine each
-# repository has, not about what the job does, and holding it equal would force
-# one of the two to name a runner it does not have.
-NOT_SHARED = ("runs-on",)
+# Except where and in what each job runs (solorepo's DR-140, solorepo's DR-275). This
+# repository's gate runs on a self-hosted scale set that exists on one machine, whose runner
+# pods already run the single-source runner image (solorepo's DR-160) and which accepts no
+# container job. A fresh clone has no cluster and every runner GitHub will give it, and its
+# seeded gate workflow names that image as each job's `container:`, which is how a hosted
+# runner gets `just`. Both are facts about the machine each repository has, not about what
+# the job does, and holding either equal would force one of the two to name a mechanism it
+# does not have. The seed side of `container:` is asserted on its own below, since excluding
+# it from equality leaves nothing else reading it.
+NOT_SHARED = ("runs-on", "container")
 
 
 def _first_difference(a: Any, b: Any, path: str) -> tuple[str, str] | None:
@@ -138,12 +142,26 @@ def _first_difference(a: Any, b: Any, path: str) -> tuple[str, str] | None:
     return None if a == b else (path, f"{a!r} against {b!r}")
 
 
+def _container_problems(jobs: dict[str, Any], where: str) -> list[str]:
+    """Where the seeded workflow's jobs name no `container:`, or disagree on which image."""
+    named = {name: job.get("container") for name, job in jobs.items()}
+    problems = [f"jobs.{name}.container: absent from {where}, and naming the single-source "
+                "runner image there is the only thing that puts `just` on a hosted runner "
+                "(solorepo's DR-160, solorepo's DR-275)"
+                for name, image in named.items() if image is None]
+    images = sorted({image for image in named.values() if image is not None})
+    if len(images) > 1:
+        problems.append(f"jobs.*.container: {' against '.join(images)} in {where}, and the "
+                        "single-source runner image is one image (solorepo's DR-160)")
+    return problems
+
+
 @check("gate workflows agree")
 def gate_workflows_agree() -> StepOutcome:
     """Validate that the root gate workflow and seeded template workflow agree on shared jobs.
 
     Verifies structural and semantic parity across triggers, permissions, and shared jobs
-    (`pull-request`, `sweep`) between `.github/workflows/gate.yml` and `template/.github/workflows/gate.yml` (solorepo's DR-115, solorepo's DR-119, solorepo's DR-140).
+    (`pull-request`, `sweep`) between `.github/workflows/gate.yml` and `template/.github/workflows/gate.yml` (solorepo's DR-115, solorepo's DR-119, solorepo's DR-140), and that every job of the seeded workflow names one and the same single-source runner image as its `container:` (solorepo's DR-160, solorepo's DR-275).
 
     Returns:
         Passed | Found | CouldNotRun: Validation result detailing any discrepancy between shared workflow halves.
@@ -177,6 +195,7 @@ def gate_workflows_agree() -> StepOutcome:
             problems.append(f"jobs.{name}: in {seed.relative_to(ROOT)} and neither shared "
                             f"nor the seed's own; the seed's jobs are {', '.join(SEED_OWN_JOBS)} "
                             f"and the shared {', '.join(SHARED_JOBS)}")
+    problems += _container_problems(jobs_b, str(seed.relative_to(ROOT)))
     for label, (x, y) in shared.items():
         found = _first_difference(x, y, label)
         if found:
