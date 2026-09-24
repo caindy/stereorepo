@@ -35,7 +35,7 @@
 .meta/lib/move/challenges.py: 750
 .meta/lib/move/manager/__init__.py: 533
 .meta/lib/move/pull_requests.py: 184
-.meta/lib/move/reconcile.py: 276
+.meta/lib/move/reconcile.py: 162
 .meta/next.py: 68
 .meta/run_agy.py: 113
 .meta/say/channel.py: 349

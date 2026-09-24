@@ -502,6 +502,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-reconcile
     name: .meta/checks/probes/loops/reconcile.py
     path: .meta/checks/probes/loops/reconcile.py
+  - id: work:artifact/meta-checks-probes-loops-trunk
+    name: .meta/checks/probes/loops/trunk.py
+    path: .meta/checks/probes/loops/trunk.py
   - id: work:artifact/meta-checks-probes-loops-merge-lock
     name: .meta/checks/probes/loops/merge_lock.py
     path: .meta/checks/probes/loops/merge_lock.py
@@ -877,6 +880,9 @@ artifacts:
   - id: work:artifact/meta-lib-move-reconcile
     name: .meta/lib/move/reconcile.py
     path: .meta/lib/move/reconcile.py
+  - id: work:artifact/meta-lib-move-actions
+    name: .meta/lib/move/actions.py
+    path: .meta/lib/move/actions.py
   - id: work:artifact/meta-lib-move-cli
     name: .meta/lib/move/cli.py
     path: .meta/lib/move/cli.py

@@ -518,12 +518,12 @@ UNDEFINED = "no module of lib.move defines {name!r}"
 def _owner(move: Any, name: str) -> Any:
     """The module of `lib.move` that defines `name`, reached through the entry's exports.
 
-    Three modules absent from the entry's `from lib.move import` line are reached
-    through one that imports them (solorepo's DR-217): `advance` and `reconcile` share
-    a name with the verb they hold, and `handoff` is priced out by its line ceiling.
+    Four modules absent from the entry's `from lib.move import` line are reached through
+    one that imports them (solorepo's DR-217); `lib/move/__init__.py` gives each its reason.
     """
     modules = (move.common, move.challenges, move.pull_requests, move.decisions,
-               move.cli.handoff, move.manager.advance, move.manager, move.cli.reconcile, move.cli)
+               move.cli.handoff, move.manager.advance, move.manager, move.cli.reconcile,
+               move.cli.reconcile.actions, move.cli)
     for module in modules:
         held = getattr(module, name, None)
         if held is not None and getattr(held, "__module__", None) == module.__name__:
@@ -659,9 +659,9 @@ def _edge_cases(bench: _Bench) -> list[str]:
                         f"dispatched {unlistable.dispatched}, and said {ended.out!r}, where "
                         "every act is held and the log says why")
 
-    ended = bench.run(_GitHub(bench.pulls, bench.issues, {}), {"run_coder": _refusing}, live=True)
-    if ended.code is not None or ("request", 3) not in bench.acted or "could not" not in ended.out:
-        problems.append(f"reconcile: a refused dispatch ended the pass with {ended.code!r} and "
+    got = bench.run(_GitHub(bench.pulls, bench.issues, {}), {"run_coder": _refusing}, live=True)
+    if got.code is not None or ("request", 3) not in bench.acted or "not dispatch" not in got.out:
+        problems.append(f"reconcile: a refused dispatch ended the pass with {got.code!r} and "
                         f"{bench.acted}, where the refusal is printed and the next act performed")
 
     ended = bench.run(_GitHub(bench.pulls, bench.issues, {}), {"merge_manager": _failing},

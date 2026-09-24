@@ -29,5 +29,6 @@ import checks.probes.loops.drafts
 import checks.probes.loops.delegate
 import checks.probes.loops.take
 import checks.probes.loops.reconcile
+import checks.probes.loops.trunk
 import checks.probes.loops.concurrency
 import checks.probes.loops.merge_lock  # noqa: F401  # reason: registers check steps

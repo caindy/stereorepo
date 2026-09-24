@@ -9,8 +9,11 @@ sits here because `challenges` rewrites it as the relationship moves and
 reach it. `decisions` imports nothing in the package either: the number minted
 and reserved, and a record's status.
 `concepts` imports nothing in the package either: the reservation a row in the
-Ubiquitous Language stands on. `drafts` is the one check before every way out of
-draft and the verb that makes it, and imports `common`.
+Ubiquitous Language stands on. `actions` imports nothing in the package either:
+what GitHub's check machinery says that neither listing answers — which of the
+loop workflows' runs are flying, and whether trunk's own HEAD commit is green.
+`drafts` is the one check before every way out of draft and the verb that makes
+it, and imports `common`.
 `challenges` is the Issue lifecycle, from filing to the closes that are not a
 merge, and imports `common`, `pull_requests` and `advance`. `pull_requests` is
 the pull request's, opening, layering, the merge and the supersession, and
@@ -24,8 +27,8 @@ is the one package here rather than a module: `manager.lock` holds the git tag
 lease the queue is managed under and imports nothing else in `lib.move`, which
 is what lets a probe reach the lease apart from the gate and the ranking.
 `reconcile` is what every open Issue and pull request is owed on the clock, and
-imports `common`, `challenges`, `handoff`, `pull_requests`, `advance` and
-`manager`, every module before it but `decisions`, `concepts` and `drafts`.
+imports `actions`, `common`, `challenges`, `handoff`, `pull_requests`, `advance`
+and `manager`, every module before it but `decisions`, `concepts` and `drafts`.
 `cli` is the argument surface the script delegates to and imports every module
 but itself.
 
@@ -45,17 +48,18 @@ probe stands a seam in on the module that defines it. The modules are named so
 that no verb's own local, `pulls` or `issues` among them, shadows the module it
 must reach.
 
-Three modules the entry exports the names of and not the module itself, and
-they are reached through one that imports them. `advance` and `reconcile` share
-a name with the verb they hold, and there the name wins. `handoff` is priced out
-by the entry's own line ceiling: its `from lib.move import` line stands at 97
-columns, so `, handoff` takes it past the hundred of `.meta/ruff.toml`, after
-which ruff's isort wants one name to a line and the eight names cost ten. A
-probe reaching one of the three goes through a module that imports it —
-`manager` for `advance`, `cli` for `handoff` and `reconcile` — which is what the
-reconciler's probe does.
+Four modules the entry exports the names of and not the module itself, and they
+are reached through one that imports them. `advance` and `reconcile` share a
+name with the verb they hold, and there the name wins. `handoff` and `actions`
+are each priced out by the entry's own line ceiling: the `from lib.move import`
+line stands at 97 columns, so either `, handoff` or `, actions` takes it past
+the hundred of `.meta/ruff.toml`, after which ruff's isort wants one name to a
+line and the eight names cost ten. A probe reaching one of the four goes through
+a module that imports it — `manager` for `advance`, `cli` for `handoff` and
+`reconcile`, and `reconcile` for `actions` — which is what the reconciler's
+probe does.
 
-`concepts` is the other way about and is none of the three: the entry exports
+`concepts` is the other way about and is none of the four: the entry exports
 the module and not the names, because the module on that same line costs only
 its line in `__all__`, where each name would cost two, one in a `from
 lib.move.concepts import` block of its own and one in `__all__` beside it.

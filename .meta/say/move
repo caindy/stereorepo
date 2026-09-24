@@ -7,9 +7,10 @@ done is not typeable here. The body is `.meta/lib/move/`, one module per lifecyc
 (solorepo's DR-264), and this entry holds no logic (solorepo's DR-217): it exports
 each module beside the names it defines, so a caller reaches a verb by the script's
 own name and a probe reaches the seam it stands in through the module, `channel`
-and `check_pr` beside them as they always were. `advance`, `reconcile` and
-`handoff` are reached through a module that imports them; `concepts` the other
-way about, its module exported and its names not. `lib/move/__init__.py` gives each reason.
+and `check_pr` beside them as they always were. `advance`, `reconcile`,
+`handoff` and `actions` are reached through a module that imports them;
+`concepts` the other way about, its module exported and its names not.
+`lib/move/__init__.py` gives each reason.
 
 History in move.history.md (solorepo's DR-171).
 """
@@ -21,6 +22,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import channel
 import check_pr
 from lib.move import challenges, cli, common, concepts, decisions, drafts, manager, pull_requests
+from lib.move.actions import IN_FLIGHT, RUN_FIELDS, Runs, in_flight, read_by, runs_of
 from lib.move.advance import (
     ADVANCE_NOTICE_MARKER,
     REPLAY_REFUSED_TAG,
@@ -161,29 +163,23 @@ from lib.move.pull_requests import (
     superseder,
 )
 from lib.move.reconcile import (
-    IN_FLIGHT,
     ISSUE_FIELDS,
     PERFORMED,
     RECONCILE_FIELDS,
     RECONCILE_MINUTES,
-    RUN_FIELDS,
     UNREAD_MINUTES,
     Constraints,
     Owed,
     Quiet,
     Reading,
-    Runs,
     idle_minutes,
-    in_flight,
     owed_by_issue,
     owed_by_issues,
     owed_by_pull,
     owed_by_pulls,
     perform,
-    read_by,
     reconcile,
     redeliver,
-    runs_of,
 )
 
 __all__ = [

@@ -7,8 +7,8 @@ from typing import Any, NamedTuple
 
 import channel
 import check_pr
-from lib.move import advance, challenges, common, handoff, manager, pull_requests
-from lib.timing.github import NOT_RUN
+from lib.move import actions, advance, challenges, common, handoff, manager, pull_requests
+from lib.move.actions import Runs, in_flight, read_by, runs_of
 
 RECONCILE_FIELDS = manager.MERGE_MANAGER_FIELDS + ",updatedAt,comments"
 """The reconciler's read of each open pull request: the merge manager's fields, and two more.
@@ -40,17 +40,6 @@ is this verb's own choice: a re-delivery moves it, so a Challenge re-delivered
 once is not re-delivered every period."""
 
 
-IN_FLIGHT = ("queued", "in_progress")
-"""The statuses a run has before it concludes, each listed by name so volume does not bound it."""
-
-
-RUN_FIELDS = "displayTitle,status,conclusion,headBranch"
-"""What `runs_of` reads off each run: its name, its status, its conclusion, and its branch.
-
-The loop workflows write the name with the number they run for, which is how a
-run for one Issue or pull request is told from the rest."""
-
-
 ISSUE_FIELDS = "number,title,labels,assignees,blockedBy,updatedAt,createdAt"
 """What the reconciler reads off each open Issue, the blockers among it (solorepo's DR-213)."""
 
@@ -74,115 +63,6 @@ class Owed(NamedTuple):
     number: int
     why: str
     lower: int | None = None
-
-
-class Runs(NamedTuple):
-    """What GitHub lists of a workflow's runs, or that it would not.
-
-    Attributes:
-        flying: The runs queued or running, listed by status so that the
-            hundred newest do not bound them.
-        recent: The hundred newest runs, for a completed run's conclusion; None
-            where GitHub would not list them.
-    """
-
-    flying: list[dict[str, Any]]
-    recent: list[dict[str, Any]] | None
-
-    @property
-    def listed(self) -> bool:
-        """Whether GitHub answered every listing; unlistable runs hold every guarded act."""
-        return self.recent is not None
-
-
-def runs_of(workflow: str) -> Runs:
-    """The runs of a workflow, or that GitHub would not list them, said out loud.
-
-    A listing refused is not nothing in flight: the guard that keeps two coder
-    runs off one branch is what the listing is for, and a token without
-    `actions: read` would otherwise disable it in silence. So a refusal is
-    printed and answered as `Runs` with `recent` None, which holds every act
-    the guard qualifies. A call that hangs exits the channel without asking
-    for a fallback, and is caught here for the same reason.
-
-    Parameters:
-        workflow (str): The workflow file's name, as `gh run list` takes it.
-
-    Returns:
-        Runs: What was listed.
-    """
-    def listing(*args: str) -> list[dict[str, Any]] | None:
-        try:
-            found = channel.gh("run", "list", "--workflow", workflow, *args,
-                               "--json", RUN_FIELDS, default=None)
-        except SystemExit as exc:
-            found, why = None, str(exc.code)
-        else:
-            why = "GitHub refused the listing"
-        if found is None:
-            print(f"reconcile: could not list {workflow} runs — {why}")
-            return None
-        return list(found)
-
-    flying: list[dict[str, Any]] = []
-    for status in IN_FLIGHT:
-        got = listing("--status", status, "--limit", "100")
-        if got is None:
-            return Runs([], None)
-        flying += got
-    return Runs(flying, listing("--limit", "100"))
-
-
-def in_flight(runs: Runs, title: str = "", branch: str = "") -> bool:
-    """Whether a run named `title`, or running on `branch`, is queued or running.
-
-    Unlistable runs answer True: where nothing says whether a run is
-    answering, nothing is dispatched beside it.
-
-    Parameters:
-        runs (Runs): A workflow's runs, as `runs_of` lists them.
-        title (str): A run's whole display title, as the loop workflows write
-            it: `coder-issue-#<n>`, `triage-issue-#<n>`.
-        branch (str): A head branch, which is how a review run is found.
-
-    Returns:
-        bool: True where a run matching either has not concluded, or where
-            the runs could not be listed.
-    """
-    if not runs.listed:
-        return True
-    for run in runs.flying:
-        if title and str(run.get("displayTitle") or "") == title:
-            return True
-        if branch and run.get("headBranch") == branch:
-            return True
-    return False
-
-
-def read_by(runs: Runs, title: str) -> bool:
-    """Whether the newest run named `title` whose job ran concluded `success`, as `next` reads it.
-
-    A run the job declined or one displaced before it started concludes in
-    `NOT_RUN` and is passed over, so the run read is one that owed a reading.
-    Unlistable runs answer True, since a re-delivery nothing can check against
-    is one too many.
-
-    Parameters:
-        runs (Runs): The triage runs, as `runs_of` lists them.
-        title (str): The run name `triage.yml` writes for the Issue.
-
-    Returns:
-        bool: True where a reader read it and finished, or where nothing can say.
-    """
-    if not runs.listed:
-        return True
-    for run in runs.recent or []:
-        if str(run.get("displayTitle") or "") != title:
-            continue
-        if run.get("status") == "completed" and str(run.get("conclusion") or "") in NOT_RUN:
-            continue
-        return run.get("status") == "completed" and run.get("conclusion") == "success"
-    return False
 
 
 def idle_minutes(obj: Mapping[str, Any], now: datetime.datetime) -> float:
@@ -561,9 +441,14 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
     in the wrong pass, and the threads its classification turns on are read with
     it (solorepo's DR-265). Whether a Challenge has a pull request open counts a
     draft, as the take door counts one, since the merge manager this has just
-    run is what parks a stalled loop branch in draft (solorepo's DR-258). With
-    `live`, each act is performed; without it, each is reported and none
-    performed.
+    run is what parks a stalled loop branch in draft (solorepo's DR-258).
+    Trunk's own HEAD commit is read beside them and reported, which no other
+    reader here does: every rollup the loops read belongs to an open pull
+    request's head, so a commit that landed red is noticed only once a branch
+    rebased onto it fails. The reading owes nothing yet — what a red trunk is
+    owed is solorepo's #984 and solorepo's #985 — and it is made whether or not
+    the pass is live, a read of GitHub being no act. With `live`, each act is
+    performed; without it, each is reported and none performed.
 
     Parameters:
         live (bool): Whether to perform the acts, or only report them.
@@ -584,6 +469,7 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
         ended = exc.code
         print(f"reconcile: the merge manager ended with {ended}; reading on")
     owner, name, reviewer_login = manager.repo_context()
+    actions.report_trunk(owner, name)
     coder = channel.role_login("coder")
     pulls = channel.gh("pr", "list", "--state", "open", "--limit", "100",
                        "--json", RECONCILE_FIELDS)
