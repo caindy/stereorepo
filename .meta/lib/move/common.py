@@ -1,11 +1,54 @@
-"""What every module of the package shares: the levels, the pull request shape, and the
-failures a call through the channel raises short of exiting (solorepo's DR-264)."""
+"""What every module of the package shares: the levels, the pull request shape, the
+failures a call through the channel raises short of exiting, and the `**Waits on.**`
+line both lifecycles write (solorepo's DR-264).
+
+The blocker line lives here because both lifecycles reach it and neither may
+import the other to do so: `challenges` rewrites it as the relationship moves,
+and `pull_requests` holds a revised body to it.
+"""
 import json
+import re
 import subprocess
 import sys
+from collections.abc import Sequence
 from typing import Any
 
 import channel
+
+# The paragraph both Issue forms open with, and an Issue reference in either of
+# the two spellings GitHub renders: bare, and qualified by `owner/repo`. The
+# match runs to the blank line, the next bold heading or the end of the body
+# rather than to the first newline, because an editor wraps the paragraph and a
+# rewrite anchored on one line leaves the wrapped remainder standing beside its
+# replacement. Every terminator admits a carriage return, because a paragraph
+# whose own terminator is not recognised is one this pattern runs past, and the
+# span it would then rewrite is the rest of the body.
+WAITS_LINE = re.compile(
+    r"^\*\*Waits on\.\*\*(?P<text>.*?)(?=\r?\n[ \t]*\r?\n|\r?\n\*\*|\r?\n?\Z)", re.M | re.S)
+
+
+ISSUE_REF = re.compile(r"(?:[\w.-]+/[\w.-]+)?#(\d+)")
+
+
+# What a `**Waits on.**` line may hold besides its references and still be one
+# this program can rewrite: the words that join references, and the words for
+# none of them.
+WAITS_FILLER = frozenset(("and", "nothing", "none", ""))
+
+
+# The words a comma segment opens with when it continues the sentence before it
+# rather than naming a blocker of its own. What such a segment costs a rewrite is
+# `severed_clauses`.
+CLAUSE_OPENERS = frozenset((
+    "which", "who", "whom", "whose", "that", "where", "when", "while",
+    "and", "but", "or", "nor", "so", "because", "since", "though",
+    "although", "whereas", "both", "all", "each", "either", "neither",
+))
+
+
+NO_WAITS_LINE = "no `**Waits on.**` line"
+"""What rewriting a blocker line raises where the Issue body holds none."""
+
 
 Pull = dict[str, Any]
 """One pull request as GitHub answers for it, whichever fields were asked for."""
@@ -103,3 +146,214 @@ def kind(number: str | int) -> str:
     caller say which."""
     found = channel.gh("api", f"repos/{channel.repo()}/issues/{number}")
     return "pull request" if found.get("pull_request") else "issue"
+
+
+def native_blockers(issue: int | str) -> list[int]:
+    """The Issue numbers GitHub records as blocking `issue`.
+
+    Parameters:
+        issue (int | str): Issue number to read.
+
+    Returns:
+        list[int]: Blocker Issue numbers, in GitHub's order.
+    """
+    view = channel.gh("issue", "view", str(issue), "--json", "blockedBy")
+    return [n["number"] for n in (view.get("blockedBy") or {}).get("nodes", []) if "number" in n]
+
+
+def waits_line(blockers: Sequence[int], prose: Sequence[str] = ()) -> str:
+    """The `**Waits on.**` line describing `blockers` and any surviving `prose` items.
+
+    Parameters:
+        blockers (Sequence[int]): Blocker Issue numbers.
+        prose (Sequence[str]): Non-Issue prose items (Decisions, accounts).
+
+    Returns:
+        str: The line, naming each blocker/prose, or `Nothing.` for an empty sequence.
+    """
+    items = list(prose) + [f"#{n}" for n in blockers]
+    return "**Waits on.** " + (", ".join(items) if items else "Nothing.")
+
+
+def waits_items(text: str) -> tuple[list[str], list[str]]:
+    """The comma segments of a `**Waits on.**` paragraph: all of them, then the prose.
+
+    A segment is prose where what remains of it once its citations and
+    punctuation are struck out is not filler, which is what distinguishes a
+    blocker the rewrite must carry forward from the words that join citations.
+
+    Parameters:
+        text (str): The paragraph's text, as `WAITS_LINE` groups it.
+
+    Returns:
+        tuple[list[str], list[str]]: Every segment, and the prose ones.
+    """
+    line_text = " ".join(text.split())
+    raw_items = [p.strip().rstrip(".") for p in line_text.split(",") if p.strip()]
+    prose_items = []
+    for item in raw_items:
+        cleaned = re.sub(r"[^\w\s]+", " ", ISSUE_REF.sub(" ", item)).lower().split()
+        if not set(cleaned) <= WAITS_FILLER:
+            prose_items.append(item)
+    return raw_items, prose_items
+
+
+def severed_clause(item: str) -> bool:
+    """Whether a `**Waits on.**` comma segment continues the sentence before it.
+
+    Parameters:
+        item (str): One comma segment of the line, stripped.
+
+    Returns:
+        bool: True where the segment cites an Issue of its own or opens with a
+            word from `CLAUSE_OPENERS`.
+    """
+    if ISSUE_REF.search(item):
+        return True
+    words = re.sub(r"[^\w\s]+", " ", item).lower().split()
+    return bool(words) and words[0] in CLAUSE_OPENERS
+
+
+def severed_clauses(body: str) -> list[str]:
+    """The prose segments a rewrite of this `**Waits on.**` paragraph would strand.
+
+    A rewrite emits the surviving prose ahead of the citations, so a segment
+    that only reads beside its neighbours is one the rewrite would move away
+    from what it explains — as surely when a blocker is added as when one is
+    taken off. `severed_clause` says which segments read that way.
+
+    A paragraph citing no Issue at all has none, whatever its words: there is no
+    sentence for a segment to be severed from, the rewrite appends its citations
+    after prose that is already first, and the ordinary English openers in
+    `CLAUSE_OPENERS` — `all`, `both`, `each`, `when` — would otherwise refuse the
+    free-standing prose blocker solorepo's DR-170 preserves.
+
+    Parameters:
+        body (str): The Issue's body Markdown text.
+
+    Returns:
+        list[str]: The segments that read as part of a citation's sentence, in
+            the order the paragraph holds them; empty where there is no
+            paragraph, no citation in it, or no such segment.
+    """
+    found = WAITS_LINE.search(body or "")
+    if not found:
+        return []
+    raw_items, prose_items = waits_items(found.group("text"))
+    if not any(ISSUE_REF.search(item) for item in raw_items):
+        return []
+    return [item for item in prose_items if severed_clause(item)]
+
+
+def retarget_waits(body: str, want: Sequence[int]) -> str:
+    """`body` with its `**Waits on.**` paragraph rewritten to describe `want`.
+
+    The paragraph is replaced by one line preserving non-Issue prose blockers
+    (Decisions, accounts, the solo per solorepo's DR-170). Whether the paragraph
+    is one a rewrite may touch at all is `severed_clauses`'s to answer and each
+    caller's to refuse in its own words, since the two that reach here are a
+    filing that has no Issue number yet and a verb that has one.
+
+    Parameters:
+        body (str): The Issue's body Markdown text.
+        want (Sequence[int]): Blocker Issue numbers now recorded on GitHub.
+
+    Returns:
+        str: The rewritten body.
+
+    Raises:
+        LookupError: If `body` has no `**Waits on.**` line.
+    """
+    found = WAITS_LINE.search(body or "")
+    if not found:
+        raise LookupError(NO_WAITS_LINE)
+    _, prose_items = waits_items(found.group("text"))
+    new_line = waits_line(want, prose_items)
+    return body[:found.start()] + new_line + body[found.end():]
+
+
+def cited_waits(body: str) -> list[int]:
+    """The Issue numbers a body's `**Waits on.**` paragraph cites, ascending.
+
+    Every caller reading citations off the line reads the same span the rewrite
+    replaces, so a citation on the paragraph's second physical line is one no
+    guard can miss and the rewrite then drop.
+
+    Parameters:
+        body (str): The Issue's body Markdown text.
+
+    Returns:
+        list[int]: The cited numbers, ascending; empty where there is no paragraph.
+    """
+    found = WAITS_LINE.search(body or "")
+    if not found:
+        return []
+    return sorted({int(n) for n in ISSUE_REF.findall(found.group("text"))})
+
+
+def unbacked_waits(body: str, recorded: Sequence[int]) -> list[int]:
+    """The Issues a body's `**Waits on.**` paragraph cites that `recorded` does not hold.
+
+    Parameters:
+        body (str): The Issue's body Markdown text.
+        recorded (Sequence[int]): The blockers GitHub's relationship holds.
+
+    Returns:
+        list[int]: The cited numbers the relationship omits, ascending.
+    """
+    return sorted(set(cited_waits(body)) - {int(n) for n in recorded})
+
+
+def refuse_unbacked_waits(issue: int | str, body: str) -> None:
+    """Refuse a body whose `**Waits on.**` paragraph cites a blocker GitHub does not hold.
+
+    The check `move file --blocked-by` makes at filing, made again wherever the
+    line is rewritten afterwards (solorepo's DR-213).
+
+    Parameters:
+        issue (int | str): The Issue whose body is being replaced.
+        body (str): The body about to be written.
+
+    Raises:
+        SystemExit: If the paragraph cites an Issue the relationship omits.
+    """
+    recorded = native_blockers(issue)
+    unbacked = unbacked_waits(body, recorded)
+    if not unbacked:
+        return
+    cited = ", ".join(f"#{n}" for n in unbacked)
+    whole = sorted(set(recorded) | set(unbacked))
+    sys.exit(f"say: the revised `**Waits on.**` line of #{issue} cites {cited}, which GitHub's "
+             "blocked-by relationship does not hold: the line would say one thing and the "
+             "relationship another, and the relationship is the record every classifier reads "
+             "(solorepo's DR-213). So the sweep would call #" f"{issue} ripe and the run that "
+             "took it would stand down on reading the line.\n"
+             f"     Nothing was written. `move waits {issue} --on "
+             f"{','.join(str(n) for n in whole)}` sets both records together — `--on` replaces "
+             "the relationship, so it names every blocker and not only the new one — and this "
+             "verb writes the rest of the body afterwards.")
+
+
+def parse_waits_on(body: str | None) -> list[int]:
+    """The blockers an Issue or pull request declares in prose.
+
+    Either form is read: the `**Waits on.**` paragraph both Issue forms open
+    with, and the `**What it waits on.**` heading a pull request body carries.
+
+    Parameters:
+        body (str | None): The body Markdown text, or None.
+
+    Returns:
+        list[int]: The numbers the line cites, in the order it holds them;
+            empty for a body with no such line and for one saying nothing.
+    """
+    if not body:
+        return []
+    m = WAITS_LINE.search(body) or \
+        re.search(r"\*\*What it waits on\.\*\*\s*(.*?)(?:\n\s*\n|\Z)", body, re.S)
+    if not m:
+        return []
+    text = " ".join(m.group(1).split())
+    if text.lower().rstrip(".") in ("nothing", "none", ""):
+        return []
+    return [int(n) for n in re.findall(r"#(\d+)", text)]

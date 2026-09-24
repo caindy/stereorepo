@@ -39,7 +39,7 @@ decisions:
       (`POST /repos/{owner}/{repo}/pulls`, as recorded in solorepo's DR-249)
       returns HTTP 422 Unprocessable Entity (`"No commits between <base> and <head>"`),
       and `gh pr create` (calling GraphQL `createPullRequest`, invoked via `channel.gh`
-      in `.meta/lib/move/pull_requests.py:129`) emits `GraphQL: No commits between <base> and <head> (createPullRequest)`
+      in `.meta/lib/move/pull_requests.py:152`) emits `GraphQL: No commits between <base> and <head> (createPullRequest)`
       when attempting to open a pull request on a branch with zero commits ahead of base.
       Because `.meta/say/commit` lacked `--allow-empty` and the repository held no
       minted [[seed-commit|Seed Commit]] convention, an agent attempting to open a

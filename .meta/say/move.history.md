@@ -606,3 +606,35 @@ run that raised threads and died before its verdict would otherwise read as one
 that gave it.
 
 Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
+
+### A wrapped `**Waits on.**` line left its remainder standing beside its replacement
+
+The line is one line in the form and several in a body an editor wrapped, and
+`WAITS_LINE` read only as far as the first newline. `move waits` rewrote that
+first physical line and left the rest of the paragraph where it was, so
+`**Waits on.** #2 and\n#3.` under `--off 3` became a line citing `#2` with `#3.`
+standing under it, citing a blocker the relationship no longer held
+(solorepo's #957). Established: `WAITS_LINE` runs to the blank line, the next
+bold heading or the end of the body, every terminator admitting a carriage
+return, and `common.cited_waits` reads the citations off that same span, so the
+guard in `file_issue` that refuses a citation `--blocked-by` omits reads the
+text the rewrite will replace rather than its first line.
+
+Evidence: `.meta/checks/probes/channel/waits.py::waits_probes`
+
+### A clause refusal raised where there was no sentence to sever and no rewrite to make
+
+`retarget_waits` refused any line whose prose opened with one of
+`CLAUSE_OPENERS`, which holds ordinary sentence openers — `all`, `both`, `each`,
+`when` — so `**Waits on.** All three seed repositories being migrated` was
+refused as a severed clause on a line citing nothing, the free-standing prose
+blocker solorepo's DR-170 preserves. The same refusal exited before `waits`
+reached its no-op short-circuit, so repeating a call that had already settled
+both records failed instead of reporting them settled, which is the recovery
+`channel.act`'s read-back of both records exists for.
+Established: `common.severed_clauses` reads no clause on a paragraph citing no
+Issue, `retarget_waits` rewrites and refuses nothing, and each caller refuses in
+its own words after testing what its own call would change — `file_issue`
+naming the body on stdin, since at filing there is no Issue to revise.
+
+Evidence: `.meta/checks/probes/channel/waits.py::waits_probes`

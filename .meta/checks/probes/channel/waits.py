@@ -100,6 +100,12 @@ def _refusal_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> list
         ("removing a blocker with an attached explanatory clause", "says",
          {1: {"state": "open", "body": f"**Waits on.** #{'2'}, which settles who may put a decision in force.\n\n**What was noticed.** Detail.\n"},
           2: {"state": "open", "body": ""}}, {1: [2]}, lambda m: m.waits(1, off=[2])),
+        ("adding a blocker to a line whose citations carry an explanatory clause", "says",
+         {1: {"state": "open",
+              "body": f"**Waits on.** #{'2'} and #{'3'}, both open, whose\n"
+                      "pull requests are in flight.\n\n**What was noticed.** Detail.\n"},
+          2: {"state": "open", "body": ""}, 3: {"state": "open", "body": ""}},
+         {1: [2]}, lambda m: m.waits(1, on=[2, 3])),
     )
     for case, phrase, issues, blockers, call in refusals:
         fake = FakeBlockers(issues, blockers)
@@ -154,6 +160,94 @@ def _mutation_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> lis
     answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
     if fake.edits:
         problems.append(f"waits: idempotent call made {fake.edits} edits")
+
+    return problems
+
+
+def _wrapping_probes(channel: Any, move: Any) -> list[str]:
+    """Problems found rewriting a `**Waits on.**` line that wraps across more than one line.
+
+    The paragraph is one line in the form and several in the body an editor
+    wrapped, and a rewrite that reads only as far as the first newline leaves
+    the remainder standing beside its replacement.
+    """
+    problems: list[str] = []
+    wrapped = {"state": "open",
+               "body": f"**Waits on.** #{'2'} and\n#{'3'}.\n\n**What was noticed.** Text.\n"}
+    fake = FakeBlockers({1: wrapped, 2: {"state": "open", "body": ""},
+                         3: {"state": "open", "body": ""}}, {1: [2, 3]})
+    answer = _said(channel, fake, lambda: move.waits(1, off=[3]))
+    if answer or fake.blockers.get(1) != [2]:
+        problems.append(f"waits: a wrapped line said {answer!r} and left {fake.blockers}")
+    if f"#{'3'}" in fake.bodies.get(1, ""):
+        problems.append(f"waits: the wrapped remainder was left standing: {fake.bodies.get(1)!r}")
+
+    crlf = {"state": "open",
+            "body": "**Waits on.** Nothing.\r\n\r\n**What was noticed.** Text.\r\n"}
+    fake = FakeBlockers({1: crlf, 2: {"state": "open", "body": ""}})
+    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    written = fake.bodies.get(1, "")
+    if answer or f"**Waits on.** #{'2'}" not in written:
+        problems.append(f"waits: a body with CRLF endings said {answer!r} and left {written!r}")
+    if "**What was noticed.**" not in written or "\r\n\r\n" not in written:
+        problems.append(f"waits: a body with CRLF endings lost the break "
+                        f"below the line: {written!r}")
+    return problems
+
+
+def _severing_probes(channel: Any, move: Any) -> list[str]:
+    """Problems found where the clause refusal fires on a line it cannot reason about.
+
+    The refusal exists because a rewrite emits prose ahead of the citations, so
+    a line citing nothing has no sentence for its prose to be severed from, and
+    a call with no rewrite to make makes none.
+    """
+    problems: list[str] = []
+    standing = "All three seed repositories being migrated"
+
+    free = {"state": "open", "body": f"**Waits on.** {standing}.\n\n**What was noticed.** Text.\n"}
+    fake = FakeBlockers({1: free, 2: {"state": "open", "body": ""}})
+    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    if answer or fake.blockers.get(1) != [2]:
+        problems.append(f"waits: a free-standing prose blocker said {answer!r} "
+                        f"and left {fake.blockers}")
+    if f"**Waits on.** {standing}, #{'2'}" not in fake.bodies.get(1, ""):
+        problems.append("waits: a free-standing prose blocker left the line as "
+                        f"{fake.bodies.get(1)!r}")
+
+    settled = {"state": "open",
+               "body": f"**Waits on.** {standing}, #{'2'}\n\n**What was noticed.** Text.\n"}
+    fake = FakeBlockers({1: settled, 2: {"state": "open", "body": ""}}, {1: [2]})
+    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    if answer or fake.edits:
+        problems.append(f"waits: repeating a settled call on that line said {answer!r} "
+                        f"and made {fake.edits} edits")
+    return problems
+
+
+def _revise_probes(channel: Any, move: Any) -> list[str]:
+    """Problems found running `move revise` over an Issue body's `**Waits on.**` line.
+
+    The line is a second copy of GitHub's blocked-by relationship, and this is
+    the verb that rewrites it after filing: a citation the relationship does not
+    hold is the drift `move file --blocked-by` refuses at filing.
+    """
+    problems: list[str] = []
+    revised = f"**Waits on.** #{'2'}\n\n**What was noticed.** Text.\n"
+
+    fake = FakeBlockers({1: {"state": "open", "body": "**Waits on.** Nothing.\n"},
+                         2: {"state": "open", "body": ""}})
+    answer = _said(channel, fake, lambda: move.revise(1, body=revised))
+    if not answer or "blocked-by relationship does not hold" not in answer:
+        problems.append(f"revise: a line citing an unbacked blocker was told {answer!r}")
+    if fake.edits:
+        problems.append(f"revise: an unbacked blocker made {fake.edits} edits having refused")
+
+    fake = FakeBlockers({1: {"state": "open", "body": "**Waits on.** Nothing.\n"},
+                         2: {"state": "open", "body": ""}}, {1: [2]})
+    answer = _said(channel, fake, lambda: move.revise(1, body=revised))
+    if answer or fake.bodies.get(1) != revised:
+        problems.append(f"revise: a line citing a blocker the relationship holds said {answer!r}")
 
     return problems
 
@@ -213,6 +307,29 @@ def _filing_probes(channel: Any, move: Any) -> list[str]:
     if f"DR-{'041'}" not in fake.bodies.get(901, "") or f"#{'2'}" not in fake.bodies.get(901, ""):
         problems.append(f"file_issue: rendering over a prose blocker left the line as {fake.bodies.get(901)!r}")
 
+    fake = FakeBlockers({2: {"state": "open", "body": ""}, 3: {"state": "open", "body": ""}})
+    answer = _said(channel, fake, lambda: move.file_issue(
+        "Title", f"**Waits on.** #{'2'} and\n#{'3'}.\n\nWhat was noticed.\n", blocked_by=[2]))
+    if not answer or f"#{'3'}" not in answer:
+        problems.append("file_issue: a citation on the line's second physical "
+                        f"line was told {answer!r}")
+    if fake.edits:
+        problems.append(f"file_issue: a citation the flag omits made {fake.edits} "
+                        "edits having refused")
+
+    fake = FakeBlockers({2: {"state": "open", "body": ""}})
+    answer = _said(channel, fake, lambda: move.file_issue(
+        "Title", f"**Waits on.** #{'2'}, which must land before this.\n\nWhat was noticed.\n",
+        blocked_by=[2]))
+    if not answer or "Nothing was filed" not in answer:
+        problems.append("file_issue: a line whose prose the rendering would "
+                        f"sever was told {answer!r}")
+    if "move revise" in answer or "Title" in answer:
+        problems.append("file_issue: the refusal spoke of an Issue that does "
+                        f"not exist: {answer!r}")
+    if fake.edits:
+        problems.append(f"file_issue: a severed clause made {fake.edits} edits having refused")
+
     return problems
 
 
@@ -227,4 +344,7 @@ def waits_probes() -> list[str]:
     problems += _mutation_probes(channel, move, open_issue)
     problems += _readback_probes(channel, move, open_issue)
     problems += _filing_probes(channel, move)
+    problems += _wrapping_probes(channel, move)
+    problems += _severing_probes(channel, move)
+    problems += _revise_probes(channel, move)
     return problems

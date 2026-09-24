@@ -33,13 +33,9 @@ from lib.move.advance import (
     run_coder,
 )
 from lib.move.challenges import (
-    ISSUE_REF,
-    NO_WAITS_LINE,
     NOT_AN_ISSUE,
     OBVIATOR,
     VERDICT,
-    WAITS_FILLER,
-    WAITS_LINE,
     assignees_of,
     blockers_mismatch,
     challenge_labels,
@@ -52,23 +48,19 @@ from lib.move.challenges import (
     issue_of,
     labels_of,
     milestone,
-    native_blockers,
     obviate,
     obviator,
     open_with_title,
-    parse_waits_on,
     refuse_a_level_from_a_run,
     refuse_on_cycle,
     relabel,
     release,
     reread,
-    retarget_waits,
     roadmap,
     stop,
     triage,
     verdict_posted,
     waits,
-    waits_line,
 )
 from lib.move.cli import (
     build_parser,
@@ -77,11 +69,19 @@ from lib.move.cli import (
 )
 from lib.move.common import (
     DIFFICULTIES,
+    ISSUE_REF,
     LOOP_LEVELS,
+    NO_WAITS_LINE,
     RUN_LEVEL,
     UNREACHED,
+    WAITS_FILLER,
+    WAITS_LINE,
     Pull,
     kind,
+    native_blockers,
+    parse_waits_on,
+    retarget_waits,
+    waits_line,
 )
 from lib.move.decisions import (
     ATTEMPTS,

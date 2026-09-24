@@ -3,8 +3,11 @@
 What each module holds, and what it imports, read off its `from lib.move
 import` line. `common` imports nothing in the package: the levels, the pull
 request shape, the failures a call through the channel raises short of
-exiting, and which of the two a number names. `decisions` imports nothing in
-the package either: the number minted and reserved, and a record's status.
+exiting, which of the two a number names, and the `**Waits on.**` line, which
+sits here because `challenges` rewrites it as the relationship moves and
+`pull_requests` holds a revised body to it, and neither may import the other to
+reach it. `decisions` imports nothing in the package either: the number minted
+and reserved, and a record's status.
 `concepts` imports nothing in the package either: the reservation a row in the
 Ubiquitous Language stands on. `drafts` is the one check before every way out of
 draft and the verb that makes it, and imports `common`.

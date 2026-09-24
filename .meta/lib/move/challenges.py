@@ -10,24 +10,6 @@ import channel
 from lib.move import advance, common, pull_requests
 from lib.search import bm25
 
-# The line both Issue forms open with, and an Issue reference in either of the
-# two spellings GitHub renders: bare, and qualified by `owner/repo`.
-WAITS_LINE = re.compile(r"^\*\*Waits on\.\*\*(?P<text>.*)$", re.M)
-
-
-ISSUE_REF = re.compile(r"(?:[\w.-]+/[\w.-]+)?#(\d+)")
-
-
-# What a `**Waits on.**` line may hold besides its references and still be one
-# this program can rewrite: the words that join references, and the words for
-# none of them.
-WAITS_FILLER = frozenset(("and", "nothing", "none", ""))
-
-
-NO_WAITS_LINE = "no `**Waits on.**` line"
-"""What rewriting a blocker line raises where the Issue body holds none."""
-
-
 NOT_AN_ISSUE = "{item!r} is not an Issue number"
 """What the `--on`/`--off` parser raises for an item that is not digits."""
 
@@ -449,7 +431,7 @@ def open_with_title(
 
 def semantic_body(body: str) -> str:
     """Remove Issue-form metadata that every Challenge shares before ranking prose."""
-    return WAITS_LINE.sub("", body).strip()
+    return common.WAITS_LINE.sub("", body).strip()
 
 
 def semantic_duplicate(issues: Sequence[Mapping[str, Any]], title: str,
@@ -543,7 +525,8 @@ def file_issue(title: str, body: str, level: str | None = None,
         SystemExit: If a run asks for a level that is a verdict, if the body does
             not open with `**Waits on.**`, if an open Issue already carries this
             title, if the body's `**Waits on.**` line names an `#<n>` that
-            `blocked_by` omits, if a blocker is not an open Issue, or if GitHub
+            `blocked_by` omits or carries prose the rendered line would sever
+            from the citations it explains, if a blocker is not an open Issue, or if GitHub
             does not show the labels, the blocked-by relationships and the line
             the call asked for.
     """
@@ -568,7 +551,7 @@ def file_issue(title: str, body: str, level: str | None = None,
                  "Challenge is genuinely a second one, give it a title of its own.")
     refuse_if_semantic_duplicate(issues, title, body)
     refs = sorted({int(str(n).strip().lstrip("#")) for n in blocked_by})
-    line_refs = sorted({int(n) for n in re.findall(r"#(\d+)", first)})
+    line_refs = common.cited_waits(body)
     missing_from_flags = set(line_refs) - set(refs)
     if missing_from_flags:
         sys.exit(f"say: the body names #{sorted(missing_from_flags)[0]} in its `**Waits on.**` line, "
@@ -577,7 +560,16 @@ def file_issue(title: str, body: str, level: str | None = None,
                  f"{','.join(str(n) for n in line_refs)}`.")
     for n in refs:
         issue_of(n, as_blocker=True)
-    body = retarget_waits(body, refs, issue=title)
+    clauses = common.severed_clauses(body)
+    if clauses:
+        sys.exit(f"say: the `**Waits on.**` line says {clauses[0]!r} beside its citations, which "
+                 "reads as part of their sentence rather than as a blocker of its own, and the "
+                 "line is rendered from `--blocked-by` (solorepo's DR-213), which would put the "
+                 "prose ahead of the citations it explains and scramble the sentence.\n"
+                 "     Nothing was filed. Nothing is filed to revise, either: the body on stdin "
+                 "is the only copy, so write the line as segments that each stand alone — the "
+                 "citations, and prose naming a blocker no `#<n>` can — and file it again.")
+    body = common.retarget_waits(body, refs)
     labels = ["roadmap"] if roadmap else ["challenge"] + ([level] if level else [])
     cmd = ["issue", "create", "--title", title, "--body", body]
     for name in labels:
@@ -617,7 +609,7 @@ def blockers_mismatch(view: dict[str, Any], issue: int | str, want: Sequence[int
     wanted = sorted(want)
     if recorded != wanted:
         return f"say: GitHub shows #{issue} with blockedBy {recorded} after the call, not {wanted}"
-    match = WAITS_LINE.search(view.get("body") or "")
+    match = common.WAITS_LINE.search(view.get("body") or "")
     if not match:
         return f"say: GitHub shows #{issue} with no `**Waits on.**` line after the call"
     line_text = match.group(0)
@@ -666,19 +658,6 @@ def issue_of(number: int | str, as_blocker: bool = False) -> dict[str, Any]:
     return cast(dict[str, Any], found)
 
 
-def native_blockers(issue: int | str) -> list[int]:
-    """The Issue numbers GitHub records as blocking `issue`.
-
-    Parameters:
-        issue (int | str): Issue number to read.
-
-    Returns:
-        list[int]: Blocker Issue numbers, in GitHub's order.
-    """
-    view = channel.gh("issue", "view", str(issue), "--json", "blockedBy")
-    return [n["number"] for n in (view.get("blockedBy") or {}).get("nodes", []) if "number" in n]
-
-
 def refuse_on_cycle(issue: int, blocker: int) -> None:
     """Refuse a blocker `issue` already blocks, at any depth.
 
@@ -699,67 +678,11 @@ def refuse_on_cycle(issue: int, blocker: int) -> None:
         if here in seen:
             continue
         seen.add(here)
-        for further in native_blockers(here):
+        for further in common.native_blockers(here):
             if further == issue:
                 sys.exit(f"say: #{issue} already blocks #{here}, so waiting on #{blocker} would "
                          "close a cycle and neither Issue would ever be ripe.")
             frontier.append(further)
-
-
-def waits_line(blockers: Sequence[int], prose: Sequence[str] = ()) -> str:
-    """The `**Waits on.**` line describing `blockers` and any surviving `prose` items.
-
-    Parameters:
-        blockers (Sequence[int]): Blocker Issue numbers.
-        prose (Sequence[str]): Non-Issue prose items (Decisions, accounts).
-
-    Returns:
-        str: The line, naming each blocker/prose, or `Nothing.` for an empty sequence.
-    """
-    items = list(prose) + [f"#{n}" for n in blockers]
-    return "**Waits on.** " + (", ".join(items) if items else "Nothing.")
-
-
-def retarget_waits(body: str, want: Sequence[int],
-                   removing: Sequence[int] = (),
-                   issue: int | str = "") -> str:
-    """`body` with its `**Waits on.**` line rewritten to describe `want`.
-
-    The line is rewritten preserving non-Issue prose blockers (Decisions,
-    accounts, the solo per solorepo's DR-170). If `removing` names a blocker
-    embedded in an explanatory clause, the rewrite is refused rather than leaving
-    a severed clause.
-
-    Parameters:
-        body (str): The Issue's body Markdown text.
-        want (Sequence[int]): Blocker Issue numbers now recorded on GitHub.
-        removing (Sequence[int]): Blocker Issue numbers being removed.
-        issue (int | str): Issue number, for error messages.
-
-    Returns:
-        str: The rewritten body.
-
-    Raises:
-        LookupError: If `body` has no `**Waits on.**` line.
-        SystemExit: If removing a blocker would sever an explanatory clause.
-    """
-    found = WAITS_LINE.search(body or "")
-    if not found:
-        raise LookupError(NO_WAITS_LINE)
-    line_text = found.group("text").strip()
-    raw_items = [p.strip().rstrip(".") for p in line_text.split(",") if p.strip()]
-    prose_items = []
-    for item in raw_items:
-        cleaned = re.sub(r"[^\w\s]+", " ", ISSUE_REF.sub(" ", item)).lower().split()
-        if not set(cleaned) <= WAITS_FILLER:
-            prose_items.append(item)
-    if removing and prose_items:
-        sys.exit(f"say: the `**Waits on.**` line of #{issue} says {prose_items[0]!r} beside its "
-                 f"citations, so taking #{removing[0]} off it is a rewrite and not a deletion. "
-                 f"`move revise {issue}` writes the line, and this verb takes the relationship "
-                 "off once the line no longer contradicts it.")
-    new_line = waits_line(want, prose_items)
-    return body[:found.start()] + new_line + body[found.end():]
 
 
 def waits(issue: int | str, on: Sequence[int | str] | None = None,
@@ -770,9 +693,11 @@ def waits(issue: int | str, on: Sequence[int | str] | None = None,
     `--on` replaces the relationship with the Issues given, `--off` drops the
     named blockers, and `--clear` removes every blocker. The `**Waits on.**` line
     is rewritten to follow, preserving non-Issue prose blockers (solorepo's DR-170).
-    A line whose citations carry explanatory clauses is refused when dropping a
-    blocker, rather than leaving a severed clause. Both sources are read back
-    and verified before the call reports success.
+    A line whose citations carry explanatory clauses is refused whichever
+    direction the call runs, rather than leaving a severed clause — but only
+    where there is a rewrite to make, so a call repeated after one that
+    succeeded reports the settled state rather than the refusal.
+    Both sources are read back and verified before the call reports success.
 
     Parameters:
         issue (int | str): Issue whose blockers are being set.
@@ -789,7 +714,7 @@ def waits(issue: int | str, on: Sequence[int | str] | None = None,
     issue_num = int(str(issue).strip().lstrip("#"))
     issue_data = issue_of(issue_num)
     body = issue_data.get("body") or ""
-    have = sorted(native_blockers(issue_num))
+    have = sorted(common.native_blockers(issue_num))
 
     if clear:
         want: list[int] = []
@@ -811,7 +736,7 @@ def waits(issue: int | str, on: Sequence[int | str] | None = None,
         refuse_on_cycle(issue_num, n)
 
     try:
-        described = retarget_waits(body, want, removing=removing, issue=issue_num)
+        described = common.retarget_waits(body, want)
     except LookupError:
         sys.exit(f"say: #{issue_num} has no `**Waits on.**` line for this to rewrite, which both "
                  f"Issue forms open with. `move revise {issue_num}` writes one, and this runs after.")
@@ -820,6 +745,15 @@ def waits(issue: int | str, on: Sequence[int | str] | None = None,
         print(f"#{issue_num} already {'waits on ' + ', '.join(f'#{n}' for n in want) if want else 'waits on nothing'}, "
               "in the relationship and on the line")
         return
+
+    clauses = common.severed_clauses(body)
+    if clauses:
+        act = f"taking #{removing[0]} off it" if removing else "rewriting it"
+        sys.exit(f"say: the `**Waits on.**` line of #{issue_num} says {clauses[0]!r} beside its "
+                 "citations, which reads as part of their sentence rather than as a blocker "
+                 f"of its own, so {act} is a rewrite this verb cannot make without scrambling "
+                 f"the sentence. `move revise {issue_num}` writes the line, and this verb sets "
+                 "the relationship once the line no longer contradicts it.")
 
     flags = [f for n in want if n not in have for f in ("--add-blocked-by", str(n))]
     flags += [f for n in have if n not in want for f in ("--remove-blocked-by", str(n))]
@@ -1152,19 +1086,6 @@ def milestone(issue: str | int, title: str | None, clear: bool = False) -> None:
                     f"not {title!r}")
     print(f"#{issue} is in Milestone {title!r}")
 
-
-def parse_waits_on(body: str | None) -> list[int]:
-    """The blockers an Issue or PR declares: a list of numbers."""
-    if not body:
-        return []
-    m = re.search(r"^\*\*Waits on\.\*\*\s*(.*?)\s*$", body, re.M) or \
-        re.search(r"\*\*What it waits on\.\*\*\s*(.*?)(?:\n\s*\n|\Z)", body, re.S)
-    if not m:
-        return []
-    text = m.group(1).strip()
-    if text.lower().rstrip(".") in ("nothing", "none", ""):
-        return []
-    return [int(n) for n in re.findall(r"#(\d+)", text)]
 
 
 def issue_blockers(issue: dict[str, Any]) -> list[int]:

@@ -843,7 +843,7 @@ def rank_by_leverage(
         unblocks_issues = sum(1 for iss in issues
                               if any(t in targets for t in challenges.issue_blockers(iss)))
         unblocks_prs = sum(1 for other in pulls if other.get("baseRefName") == pull.get("headRefName")
-                           or any(t in targets for t in challenges.parse_waits_on(other.get("body"))))
+                           or any(t in targets for t in common.parse_waits_on(other.get("body"))))
         total_unblocks = unblocks_issues + unblocks_prs
         churn = (pull.get("additions") or 0) + (pull.get("deletions") or 0)
         metrics[num] = {

@@ -32,9 +32,9 @@
 .meta/detect_fallback.py: 115
 .meta/jules/client.py: 60
 .meta/lib/move/advance.py: 470
-.meta/lib/move/challenges.py: 829
+.meta/lib/move/challenges.py: 750
 .meta/lib/move/manager.py: 798
-.meta/lib/move/pull_requests.py: 161
+.meta/lib/move/pull_requests.py: 184
 .meta/lib/move/reconcile.py: 276
 .meta/next.py: 68
 .meta/run_agy.py: 113

@@ -9,6 +9,35 @@ import check_pr
 from lib.move import advance, common, decisions, handoff
 
 
+def refuse_unformed(pull: int | str, body: str | None, title: str | None) -> None:
+    """Refuse a revision that would leave a pull request off the form (solorepo's A15).
+
+    Whichever half the caller passes, the other is read from GitHub, because the
+    form is a property of the pair and a title revised alone can still leave a
+    body that no longer answers it.
+
+    Parameters:
+        pull (int | str): The pull request being revised.
+        body (str | None): The body about to be written, or None to read GitHub's.
+        title (str | None): The title about to be written, or None to read GitHub's.
+
+    Raises:
+        SystemExit: If the resulting pair does not satisfy the form.
+    """
+    revised, now = title, body
+    if revised is None or now is None:
+        held = channel.gh("pr", "view", str(pull), "--json", "title,body")
+        revised = held["title"] if revised is None else revised
+        now = held["body"] if now is None else now
+    problems = check_pr.check(revised, now)
+    if not problems:
+        return
+    formatted = "\n".join(f"  - {p}" for p in problems)
+    sys.exit(f"say: revised {'title and body' if body and title else 'title' if title else 'body'} "
+             f"does not satisfy the form (solorepo's A15):\n{formatted}\n"
+             "Fix the form before revising the pull request.")
+
+
 def revise(number: str | int, body: str | None = None, title: str | None = None) -> None:
     """Replace a body or a title, on a pull request or an Issue.
 
@@ -16,25 +45,19 @@ def revise(number: str | int, body: str | None = None, title: str | None = None)
     bypassed the channel would leave a Trailer naming the wrong Actor under
     prose that Actor never wrote. The title is what the index is worth, and
     changing it is an act GitHub records.
+
+    A pull request's body is held to the form (solorepo's A15). An Issue's is
+    held to GitHub's blocked-by relationship: a revision may say in prose what
+    the relationship already holds, and may not introduce a blocker it does not,
+    which is `move waits`'s to set (solorepo's DR-213).
     """
     if body is None and title is None:
         sys.exit("say: nothing to revise — pipe a body in, or pass --title")
     what = common.kind(number)
     if what == "pull request":
-        pr_data = None
-        t, b = title, body
-        if t is None or b is None:
-            pr_data = channel.gh("pr", "view", str(number), "--json", "title,body")
-            if t is None:
-                t = pr_data["title"]
-            if b is None:
-                b = pr_data["body"]
-        problems = check_pr.check(t, b)
-        if problems:
-            formatted = "\n".join(f"  - {p}" for p in problems)
-            sys.exit(f"say: revised {'title and body' if body and title else 'title' if title else 'body'} "
-                     f"does not satisfy the form (solorepo's A15):\n{formatted}\n"
-                     "Fix the form before revising the pull request.")
+        refuse_unformed(number, body, title)
+    elif body is not None:
+        common.refuse_unbacked_waits(number, body)
     noun = "pr" if what == "pull request" else "issue"
     cmd = [noun, "edit", str(number)]
     if title is not None:
