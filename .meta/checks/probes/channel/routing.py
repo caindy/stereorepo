@@ -75,6 +75,11 @@ def routing_probes() -> list[str]:
     the turn cap on Claude Code and the clock alone on the Antigravity CLI.
     The review form on Jules is its one line.
 
+    Every form renders the same way again with the forms' directory emptied,
+    as the worktree of a branch cut before the form landed carries it: the
+    text comes from trunk, the harness's own form is tried there first, and
+    a pass no revision carries is refused by name (solorepo's #975).
+
     `between`, handed the chain `before` wrote: a rung that failed with a
     rung after it answers `run=true` and writes the next rung's prompt, a
     rung that finished answers `run=false`, a cancelled one likewise, and
@@ -85,7 +90,8 @@ def routing_probes() -> list[str]:
     """
     _, _, programs = load_channel()
     on = programs["on"]
-    return _chain_cases(on) + _output_cases(on) + _form_cases(on) + _between_cases(on)
+    return _chain_cases(on) + _output_cases(on) + _form_cases(on) + _trunk_cases(on) \
+        + _between_cases(on)
 
 
 def _chain_cases(on: Any) -> list[str]:
@@ -196,6 +202,51 @@ def _form_cases(on: Any) -> list[str]:
     if "turns" in prompts.budget(jules) or "Jules" not in prompts.budget(jules):
         problems.append(f"prompts: the budget sentence on Jules is {prompts.budget(jules)!r}, "
                         "where a harness binding no turn cap is told none")
+    return problems
+
+
+def _reader(name: str) -> str | None:
+    """The form `name` as `FORMS` holds it, or `None` where the forms' directory carries no
+    such form.
+
+    Stands in for `prompts.trunk`, so that the fallback route is exercised without the probe
+    reading a revision.
+    """
+    form = FORMS / name
+    return form.read_text(encoding="utf-8") if form.is_file() else None
+
+
+def _trunk_cases(on: Any) -> list[str]:
+    """Every form rendered again with the forms' directory emptied, which is the worktree the
+    coder's door finds after it checks out a branch cut before the form landed (solorepo's #975)."""
+    problems = []
+    routing, prompts = on.routing, on.prompts
+    depth = routing.Depth("claude-opus-5", "high", "120", "60")
+    with tempfile.TemporaryDirectory() as empty:
+        emptied = {"TEMPLATES": pathlib.Path(empty), "trunk": _reader}
+        for (role, task), names in FIELDS_BY_PASS.items():
+            fields = {name: FIELDS[name] for name in names}
+            for harness in ("claude", "gemini"):
+                rung = routing.tier(harness, depth)
+                carried = prompts.render(role, task, rung, fields)
+                with stood_in(prompts, **emptied):
+                    fell_back = prompts.render(role, task, rung, fields)
+                if fell_back != carried:
+                    problems.append(f"prompts: {role}-{task} on {harness} renders differently "
+                                    "from trunk than from a worktree carrying the form")
+        with stood_in(prompts, **emptied):
+            jules = prompts.render("reviewer", "review", routing.tier("jules", depth), FIELDS)
+            if jules.strip() != JULES_LINE:
+                problems.append("prompts: the review form on Jules read from trunk is not its "
+                                "one line, so the harness's own form is not tried there first")
+            try:
+                prompts.render("coder", "invented", routing.tier("claude", depth), FIELDS)
+            except FileNotFoundError as refused:
+                if "coder-invented.md" not in str(refused):
+                    problems.append("prompts: a pass no revision carries is refused with "
+                                    f"{str(refused)!r}, which does not name the form looked for")
+            else:
+                problems.append("prompts: a pass no revision carries rendered from nothing")
     return problems
 
 

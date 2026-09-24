@@ -15,17 +15,42 @@ bind.
 The rendered prompt is written under `.review/`, where the workflow's
 attempt step reads it as a file: a prompt inlined in a workflow is copied
 once per harness step, which is the duplication solorepo's DR-281 ends.
+
+A form is read from the worktree where the checkout carries one and from
+trunk where it carries none. The coder's door checks the pull request's
+head branch out before it renders, so a branch cut before the commit that
+added a form has no such file on disk by the time the rendering reads it,
+and the door is running trunk's own code (solorepo's DR-219) against a
+worktree that predates it. Trunk answers for what the branch does not
+carry, the way `review.yml` restores the control plane under
+solorepo's DR-217, and without writing into the worktree the coder is about
+to commit from.
 """
 
 import pathlib
 import re
+import subprocess
 from collections.abc import Mapping
 
 from lib.on import routing
 
-TEMPLATES = pathlib.Path(__file__).resolve().parents[2] / "templates" / "prompts"
+ROOT = pathlib.Path(__file__).resolve().parents[3]
+"""The repository root, which is where a form is read from trunk."""
+
+TEMPLATES = ROOT / ".meta" / "templates" / "prompts"
 """Where the prompt forms are, one per Role and pass, and one more where a harness takes a
 form of its own."""
+
+TRUNK = "origin/main"
+"""The revision a form is read from where the worktree carries none."""
+
+WHERE = TEMPLATES.relative_to(ROOT).as_posix()
+"""The forms' path from the repository root, which is how `git show` names a file."""
+
+MISSING = ("no prompt form for the {role}'s {task} pass on {harness}: neither {names} is under "
+           "{where}, in this worktree or on {trunk}")
+"""The `FileNotFoundError` message where a pass has no form in the worktree and none on `TRUNK`,
+formatted with `role`, `task`, `harness`, `names`, `where` and `trunk`."""
 
 BLOCK = re.compile(r"^<!-- (?P<harness>\w+) -->\n(?P<body>.*?)^<!-- /(?P=harness) -->\n",
                    re.S | re.M)
@@ -48,10 +73,45 @@ NAMES = {"gemini": "Antigravity CLI", "jules": "Jules session"}
 """What a clocked harness's budget sentence calls the session."""
 
 
-def template(role: str, task: str, harness: str) -> pathlib.Path:
-    """The form for a Role's pass: the harness's own where one exists, the pass's otherwise."""
-    own = TEMPLATES / f"{role}-{task}-{harness}.md"
-    return own if own.is_file() else TEMPLATES / f"{role}-{task}.md"
+def forms(role: str, task: str, harness: str) -> tuple[str, str]:
+    """The forms a Role's pass may be read from: the harness's own first, the pass's after."""
+    return f"{role}-{task}-{harness}.md", f"{role}-{task}.md"
+
+
+def trunk(name: str) -> str | None:
+    """The form `name` as `TRUNK` holds it, or `None` where that revision carries no such form."""
+    found = subprocess.run(["git", "show", f"{TRUNK}:{WHERE}/{name}"],
+                           capture_output=True, cwd=ROOT, check=False)
+    return found.stdout.decode("utf-8") if found.returncode == 0 else None
+
+
+def template(role: str, task: str, harness: str) -> str:
+    """The text of the form for a Role's pass: the harness's own where one exists, the pass's
+    otherwise.
+
+    The worktree decides where it carries either form, so a branch that
+    changes one is rendered from its own; trunk answers only where it
+    carries neither, which is the checkout cut before the form landed.
+
+    Parameters:
+        role (str): `coder` or `reviewer`.
+        task (str): The pass, which names the form.
+        harness (str): The rung's harness, which may take a form of its own.
+
+    Raises:
+        FileNotFoundError: Where neither the worktree nor `TRUNK` carries a form for the pass.
+    """
+    wanted = forms(role, task, harness)
+    for name in wanted:
+        path = TEMPLATES / name
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    for name in wanted:
+        text = trunk(name)
+        if text is not None:
+            return text
+    raise FileNotFoundError(MISSING.format(role=role, task=task, harness=harness,
+                                           names=" nor ".join(wanted), where=WHERE, trunk=TRUNK))
 
 
 def budget(rung: routing.Tier) -> str:
@@ -71,7 +131,7 @@ def render(role: str, task: str, rung: routing.Tier, fields: Mapping[str, str]) 
         rung (routing.Tier): The harness and its caps.
         fields (Mapping[str, str]): What the door knows, by the name its angle bracket carries.
     """
-    text = template(role, task, rung.harness).read_text(encoding="utf-8")
+    text = template(role, task, rung.harness)
     text = BLOCK.sub(lambda found: found["body"] if found["harness"] == rung.harness else "",
                      text)
     filled = {**fields, "budget": budget(rung), "turns": rung.turns, "minutes": rung.minutes,
