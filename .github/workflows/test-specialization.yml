@@ -27,4 +27,4 @@ jobs:
 
       - name: Verify Specialization End-to-End
         run: |
-          python3 .meta/test_specialization.py
+          just test-specialization

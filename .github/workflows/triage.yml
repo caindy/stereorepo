@@ -87,7 +87,7 @@ jobs:
       # reading of PR First is where the skill loader looks (solorepo's DR-201).
       - name: reconcile multi-harness cognitive assets
         run: |
-          python3 .meta/apm_compile.py --reconcile
+          just apm --reconcile
 
       # The Role's credential, where `.meta/say/<program> --role reviewer`
       # expects it (solorepo's DR-073, DR-107): outside the tree, mode 600.

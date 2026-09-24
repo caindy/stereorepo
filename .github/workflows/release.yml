@@ -39,16 +39,16 @@ jobs:
       - name: Run Full Gate Verification
         run: |
           export PATH="$HOME/.apm/bin:$PATH"
-          .meta/gate
+          just gate
 
       - name: Validate APM Package Conformance
         run: |
           export PATH="$HOME/.apm/bin:$PATH"
-          python3 .meta/apm_compile.py validate
+          just apm validate
 
       - name: Verify Specialization End-to-End
         run: |
-          python3 .meta/test_specialization.py
+          just test-specialization
 
       - name: Publish GitHub Release
         env:

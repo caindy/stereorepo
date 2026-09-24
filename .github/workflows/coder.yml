@@ -166,7 +166,7 @@ jobs:
       - name: reconcile multi-harness cognitive assets
         run: |
           git config core.hooksPath .meta/hooks
-          python3 .meta/apm_compile.py --reconcile
+          just apm --reconcile
 
       # The Role's credential, where `.meta/say/` expects it by default
       # (solorepo's DR-073, DR-107, DR-197): outside the tree, mode 600, one token in the
