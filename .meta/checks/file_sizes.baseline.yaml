@@ -21,7 +21,7 @@
 .meta/checks/files/python.py: 337
 .meta/checks/probes/channel/on_coder.py: 208
 .meta/checks/probes/git/step.py: 13
-.meta/checks/probes/harness/github.py: 207
+.meta/checks/probes/harness/github.py: 256
 .meta/checks/probes/knowledge.py: 111
 .meta/checks/probes/loops/advance.py: 187
 .meta/checks/probes/loops/dispatch.py: 185
@@ -34,7 +34,7 @@
 .meta/lib/move/advance.py: 470
 .meta/lib/move/challenges.py: 829
 .meta/lib/move/manager.py: 798
-.meta/lib/move/pull_requests.py: 237
+.meta/lib/move/pull_requests.py: 358
 .meta/lib/move/reconcile.py: 276
 .meta/next.py: 68
 .meta/run_agy.py: 113

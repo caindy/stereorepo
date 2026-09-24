@@ -48,7 +48,9 @@ class GitStore:
     answered at all, so a case seeds a GitHub that refuses the lock read from
     the first call, or one that answers the take's read-back and refuses the
     release's. The two failures want opposite acts of the lock, and only a store
-    that can raise both observes it making the distinction.
+    that can raise both observes it making the distinction. `FakeGitHub`
+    consults the same marks against the calls it answers itself, so the mark,
+    the countdown and the failure are one mechanism and not two.
 
     It stands beside a `gh` rather than inside one: `FakeGitHub` holds one, and
     so does every hand-written stub in a probe that reaches the real
@@ -285,6 +287,16 @@ class FakeGitHub:
     - `drops_review`: whether a stack rebase drops reviewer requests from `requested`.
       Default `False`.
     - `state`: `OPEN`, or `MERGED` once a landing sets it.
+    - `runs`: the `review.yml` runs `gh run list` answers for the head branch,
+      each `(headSha, status)`, which is what `request-review` reads to tell a
+      request a run already answers from a stale one (solorepo's #950). Default
+      `[]`, which is no run, and what any workflow but `review.yml` is answered.
+    - `reviewed`: the reviews the reviews endpoint answers, each
+      `(login, commit_id)` or `(login, commit_id, state, body)`, since the
+      commit a review names is the one field `pr view --json reviews` does not
+      carry, and since the bodiless `COMMENTED` wrapper and the `DISMISSED`
+      verdict are shapes a reader of that endpoint must drop. Default a
+      standing `CHANGES_REQUESTED` with a body, and `[]` for no review at all.
 
     The head commit is held as a value, `head<number>`, and moved to
     `moved<number>` by a rebase and `pushed<number>` by a push, because GitHub
@@ -331,6 +343,13 @@ class FakeGitHub:
     reads back. A dispatch of any workflow but `coder.yml`, and any call this
     fake has no answer for, raise `AssertionError` naming the call, which
     `outcome` reports as text.
+
+    The store's `unreadable` marks reach every call this fake answers itself
+    and not the store's own endpoints alone. A mark is any text in the call as
+    it was typed — `/reviews`, `run list` — and a call it matches is refused
+    with the caller's `default`, which is the ordinary failure a 403, a rate
+    limit or a 5xx arrives as (`.meta/lib/gh.py:81-82`) rather than the hang
+    that raises `GhTimeout` before a `default` is read.
     """
 
     pulls: dict[str, dict[str, Any]]
@@ -462,18 +481,25 @@ class FakeGitHub:
         holds by `slow` reads, sets the arming unless the number is in
         `no_stick`, and merges it if in `lands`. `workflow run coder.yml`
         refuses a number in `no_dispatch` and otherwise records
-        `(pull_request, task)`. `api .../compare/...` answers about the commit it
+        `(pull_request, task)`. `run list --branch` answers that branch's pull
+        request's `runs`, and `api .../pulls/<n>/reviews` its `reviewed`, which
+        is where the commit a verdict names is read from.
+        `api .../compare/...` answers about the commit it
         was asked about: the head GitHub has not moved yet is behind by what it
         was behind by before the rebase, which is the true answer to the wrong
         question and what solorepo's #245 read as a rebase that had not
         happened; a number in `blip` gets one rate-limit exit first, once its
         rebase has happened. `issue view` answers the branch's Challenge. Any
         other `api` call answers the `stack` object for a layer, or the
-        repository's own settings.
+        repository's own settings. A call any `unreadable` mark of the store
+        matches is refused before all of that, as GitHub refuses an ordinary
+        read.
         """
         head = args[:2]
         if self.git.asked(args):
             return self.git(*args, parse=parse, **kwargs)
+        if self.git.refusing(" ".join(str(a) for a in args)):
+            return self.git.failing(args, kwargs, UNREADABLE)
         if head == ("repo", "view"):
             return {"nameWithOwner": "o/r", "deleteBranchOnMerge": True}
         asked = tuple(args[args.index("--json") + 1].split(",")) if "--json" in args else ()
@@ -484,6 +510,8 @@ class FakeGitHub:
             if str(args[2]) in self.no_view:
                 sys.exit("gh: Post https://api.github.com/graphql: net/http: TLS handshake timeout")
             return self.view(args[2], asked)
+        if head == ("run", "list"):
+            return self.runs(args)
         if head[:1] == ("stack",):
             return self.stack(args)
         if head == ("workflow", "run") and args[2] == "coder.yml":
@@ -496,6 +524,21 @@ class FakeGitHub:
         if head in answered:
             return answered[head](args)
         raise unanswered(args)
+
+    def runs(self, args: Any) -> list[dict[str, Any]]:
+        """`run list`: the `runs` of the pull request on that branch, newest first.
+
+        `--workflow` is read as GitHub reads it, so that only `review.yml` is
+        answered the runs: a caller that named another workflow is answered
+        none, which is what GitHub answers for one that has never run on the
+        branch. A branch no pull request here holds is answered none likewise.
+        """
+        branch = args[args.index("--branch") + 1]
+        workflow = args[args.index("--workflow") + 1] if "--workflow" in args else ""
+        pull = next((p for number, p in self.pulls.items()
+                     if p.get("branch", f"claude/issue-{number}") == branch), {})
+        return [{"headSha": run[0], "status": run[1]}
+                for run in (pull.get("runs") or [] if workflow == "review.yml" else [])]
 
     def stack(self, args: Any) -> Any:
         """One `gh stack` call: link and checkout recorded, rebase performed, push counted."""
@@ -660,9 +703,15 @@ class FakeGitHub:
         return ""
 
     def api(self, endpoint: str, *rest: str, paginated: bool = False) -> Any:
-        """Any other `api` call: the compare, the `stack` object of a layer, issue comments, or the repository's own settings."""
+        """Any other `api` call: the compare, a pull request's verdicts, the `stack` object of a layer, issue comments, or the repository's own settings."""
         if "/compare/" in endpoint:
             return self.compare(endpoint)
+        if endpoint.split("?")[0].endswith("/reviews"):
+            pull = self.pulls.get(endpoint.split("?")[0].rsplit("/", 2)[-2]) or {}
+            return [{"user": {"login": review[0]}, "commit_id": review[1],
+                     "state": review[2] if len(review) > 2 else "CHANGES_REQUESTED",
+                     "body": review[3] if len(review) > 3 else "asked for changes"}
+                    for review in pull.get("reviewed") or []]
         if "/pulls/" in endpoint:
             pull = self.pulls.get(endpoint.rsplit("/", 1)[-1]) or {}
             return {"stack": {"id": 1, "number": pull.get("stack", 1)}} if pull.get("layer") else {}

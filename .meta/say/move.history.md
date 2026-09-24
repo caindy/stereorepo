@@ -580,3 +580,29 @@ carry `comments`, which `pr list` answers for every pull request at once, so
 the reading costs no read of its own.
 
 Evidence: `.meta/checks/probes/loops/reconcile.py::reconcile_probes`
+
+### A pending review request asked again, starting a second run on the head one already stood on
+
+`review.yml` runs on `synchronize` while a review request is pending, and PR
+First tells the coder to request review after a push, so the push starts one
+run and the re-request seconds later starts another. The concurrency group
+cancels an in-progress run only on `synchronize`, so the second is not
+cancelled: it waits the first out and then reviews the same commit, holding a
+self-hosted runner (solorepo's DR-137) to post a verdict saying nothing had
+changed since the last one. That is what happened on solorepo's #934 at head
+`f46a2df`, where three runs answered one request (solorepo's #950).
+Established: `pull_requests.reviewing` reads what already answers a standing
+request before `request_review` withdraws and re-adds it — a `review.yml` run
+listed on the current head that has not completed, or one that has, with the
+Role's verdict standing at that head, which is read from the reviews endpoint
+because `pr view --json reviews` carries no commit. Either leaves the request
+as GitHub holds it. A request nothing answers is stale rather than pending —
+the run at this head finished without that verdict, or the push moved the head
+off the run that ran — and so is a listing GitHub refuses, since a duplicate
+run costs a runner and a review never delivered costs the branch. What
+`is_verdict` drops is dropped here too: GitHub wraps every raise and every
+reply in a bodiless review carrying the head's commit (solorepo's DR-118), so a
+run that raised threads and died before its verdict would otherwise read as one
+that gave it.
+
+Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`

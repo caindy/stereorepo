@@ -675,12 +675,129 @@ class RequestRefused(SystemExit):
     """
 
 
+REVIEW_WORKFLOW = "review.yml"
+"""The workflow a review request starts, whose runs say whether one already stands on a head."""
+
+RUN_STATE = "headSha,status"
+"""The run fields `runs_at_head` asks for: which commit a run took, and whether it has finished.
+
+What a completed run concluded is not among them, because no branch turns on
+it: a run that skipped, that was cancelled and one that failed each posted no
+verdict, which is the condition `reviewing` already reads, and a run that
+posted one before failing left a verdict that stands.
+"""
+
+
+def runs_at_head(pull: common.Pull) -> list[Mapping[str, object]] | None:
+    """The `review.yml` runs GitHub lists for a pull request's current head.
+
+    Parameters:
+        pull (dict): The pull request, carrying `headRefName` and `headRefOid`.
+
+    Returns:
+        list[Mapping] | None: The runs whose head is the commit the pull request
+            is on, newest first, or None where GitHub would not list them at
+            all — a credential without `actions: read`, or a call that hung,
+            each printed rather than passed over, since a guard that is off
+            reads exactly like one that found nothing.
+    """
+    try:
+        runs = channel.gh("run", "list", "--workflow", REVIEW_WORKFLOW,
+                          "--branch", str(pull.get("headRefName") or ""), "--limit", "50",
+                          "--json", RUN_STATE, default=None)
+    except SystemExit as exc:
+        runs, why = None, str(exc.code)
+    else:
+        why = "GitHub refused the listing"
+    if runs is None:
+        print(f"say: could not list {REVIEW_WORKFLOW} runs on "
+              f"{pull.get('headRefName')} — {why}")
+        return None
+    return [run for run in runs
+            if str(run.get("headSha") or "") == str(pull.get("headRefOid") or "")]
+
+
+def spoke_at(pr: str | int, head: str, login: str) -> bool:
+    """Whether a Role's verdict on a pull request names the commit it is now on.
+
+    `pr view --json reviews` carries no commit, so the reviews endpoint is read
+    for the `commit_id` GitHub records each verdict against. A verdict is what
+    `check_pr.state.is_verdict` admits and GitHub has not dismissed: the
+    bodiless review GitHub wraps every raise and every reply in carries the
+    head's commit and answers nothing (solorepo's DR-118), and a dismissal is
+    how a fresh review is summoned at a head that has not moved. Every page is
+    asked for a hundred, as the endpoint's other readers do, since an argued
+    pull request holds a review per raise and per reply and thirty at a time
+    loses the verdicts among them.
+
+    Parameters:
+        pr (str | int): Pull request number.
+        head (str): The commit the pull request is on.
+        login (str): The Role account whose verdicts count.
+
+    Returns:
+        bool: True where that login has a verdict at `head`. False where
+            GitHub would not answer the listing, so that nothing is taken to
+            answer the request.
+    """
+    try:
+        reviews = channel.gh("api",
+                             f"repos/{channel.repo()}/pulls/{pr}/reviews?per_page=100",
+                             "--paginate", default=None)
+    except SystemExit as exc:
+        reviews, why = None, str(exc.code)
+    else:
+        why = "GitHub refused the listing"
+    if reviews is None:
+        print(f"say: could not list the verdicts on #{pr} — {why}")
+        return False
+    return any(str(review.get("commit_id") or "") == head
+               and ((review.get("user") or {}).get("login")) == login
+               and check_pr.state.is_verdict(review)
+               and str(review.get("state") or "").upper() != "DISMISSED"
+               for review in reviews)
+
+
+def reviewing(pull: common.Pull, login: str) -> str:
+    """What answers a standing request on this head, or the empty string where nothing does.
+
+    Parameters:
+        pull (dict): The pull request, carrying `number`, `headRefName` and
+            `headRefOid`.
+        login (str): The Role account the review is requested of.
+
+    Returns:
+        str: What was found, for the caller to print — a `review.yml` run
+            listed on this head that has not completed, or `login`'s own
+            verdict standing at it. The empty string where neither does: a run
+            on this head that finished without that verdict, a run only on the
+            head a push moved off, no run at all, and a listing GitHub would
+            not answer, which is read as nothing rather than as something
+            (solorepo's #950).
+    """
+    runs = runs_at_head(pull)
+    if not runs:
+        return ""
+    head = str(pull.get("headRefOid") or "")
+    short = head[:7]
+    flying = [run for run in runs if str(run.get("status") or "") != "completed"]
+    if flying:
+        return (f"a {REVIEW_WORKFLOW} run on {short} is "
+                f"{str(flying[0].get('status') or 'queued').replace('_', ' ')}")
+    if spoke_at(pull["number"], head, login):
+        return f"{REVIEW_WORKFLOW} has run on {short} and {login}'s verdict on it stands"
+    return ""
+
+
 def request_review(pr: str | int, to: str) -> None:
     """Request pull request review from a designated Role account.
 
     Signals a role handoff by requesting review on GitHub. If a review request
     is already pending for the designated login, it is withdrawn and re-requested
-    to trigger notification events. Polls branch mergeability and refuses review
+    to trigger notification events — but only where the request is stale, since
+    a run already standing on this head would be duplicated by one that fires
+    again, and `reviewing` says which of the two this is (solorepo's #950).
+    Polls branch mergeability and refuses review
     requests if the branch is conflicting (solorepo's DR-145). Restores an autonomous
     loop pull request from draft to ready once open status and clean mergeability
     are confirmed (solorepo's DR-258), and never one whose branch holds no changes
@@ -716,6 +833,10 @@ def request_review(pr: str | int, to: str) -> None:
                 in channel.gh("pr", "view", str(pr), "--json", "reviewRequests")["reviewRequests"]]
 
     again = login in asked()
+    if again and (answered := reviewing(pull, login)):
+        print(f"review of #{pr} stands requested of {login}, and {answered}; nothing was "
+              "asked again, which would have started a second run on the same head")
+        return
 
     def request() -> None:
         """The request, withdrawn first where one already stands so that GitHub delivers it again."""

@@ -44,7 +44,20 @@ def handoff_probes() -> list[str]:
     which is the pull request's own so that a layer is not sent to trunk; a
     branch GitHub can merge is requested and the read-back agrees; and
     `UNKNOWN`, which is GitHub still computing after the push the request
-    follows, is waited out rather than refused on timing.
+    follows, is waited out rather than refused on timing. Then the request
+    already standing, eleven cases of it, since asking again is what fires
+    `review_requested` and the run it starts is a second one on a head a run
+    already stands on (solorepo's #950): a run on this head in progress and a
+    run on this head queued, both left alone; a run on this head that finished
+    with the Role's verdict at that head, left alone; and eight stale requests
+    asked again — the run at this head finished without a verdict, the only run
+    in flight is on the head the push moved off, no run is listed at all, the
+    verdict at this head is another login's while the Role's names an older
+    head, the Role's review at this head is the bodiless wrapper GitHub keeps
+    around a raise, the Role's verdict at this head was dismissed, and the two
+    listings the guard rests on refused one at a time, each seeded under the
+    state that would otherwise withhold the handoff, so that a guard reading an
+    unreadable listing as an answer reports.
 
     `--watch`, answered one poll at a time: a branch that goes conflicting
     under a standing request says so once, because the push that invalidated
@@ -92,7 +105,7 @@ def _pull_of(number: Any, title: Any, **fields: Any) -> dict[str, Any]:
 
 
 def _request_review_cases(channel: Any, move: Any) -> list[str]:
-    """`request-review` refused on a conflicting branch, made on a mergeable one, and made after waiting out `UNKNOWN`."""
+    """`request-review` refused on a conflicting branch, made on a mergeable one, made after waiting out `UNKNOWN`, and weighed against a request already standing."""
     problems = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "base": "claude/issue-6",
                            "mergeable": "CONFLICTING"}})
@@ -119,6 +132,78 @@ def _request_review_cases(channel: Any, move: Any) -> list[str]:
                         f"GitHub holding {fake.pulls['9'].get('requested')!r}")
     if said:
         problems.append(f"request-review: waiting out an `UNKNOWN` exited with {said!r}")
+    return problems + _pending_request_cases(channel, move)
+
+
+PENDING = ["o-r-reviewer"]
+"""A review already requested of the reviewer: the state a re-request meets (solorepo's #950)."""
+
+
+def _pending_request_cases(channel: Any, move: Any) -> list[str]:
+    """A pending request a run on this head answers is left alone; a stale one is asked again.
+
+    A case's `unreadable` is lifted out of the seed and onto the fake's store,
+    where it marks the one call GitHub refuses rather than answers from the
+    first read, so the two listings the guard rests on can be taken away one at
+    a time from under a state that would otherwise withhold the handoff.
+    """
+    problems = []
+    for number, pull, asked, why in (
+            (10, {"runs": [("head10", "in_progress")]}, False,
+             "a run on this head was already in progress"),
+            (11, {"runs": [("head11", "queued")]}, False,
+             "a run on this head was already queued"),
+            (12, {"runs": [("head12", "completed")],
+                  "reviewed": [("o-r-reviewer", "head12")]}, False,
+             "the reviewer's verdict on this head already stands"),
+            (13, {"runs": [("head13", "completed")]}, True,
+             "the run on this head finished without a verdict"),
+            (14, {"runs": [("older", "in_progress")]}, True,
+             "the only run in flight is on a head the push moved off"),
+            (15, {}, True, "no run has been listed on this head at all"),
+            (16, {"runs": [("head16", "completed")],
+                  "reviewed": [("o-r-solo", "head16"), ("o-r-reviewer", "older")]}, True,
+             "the verdict at this head is another login's and the reviewer's names an older head"),
+            (17, {"runs": [("head17", "completed")],
+                  "reviewed": [("o-r-reviewer", "head17", "COMMENTED", "")]}, True,
+             "the run raised a thread on this head and died before its verdict"),
+            (18, {"runs": [("head18", "completed")],
+                  "reviewed": [("o-r-reviewer", "head18", "DISMISSED", "asked for changes")]}, True,
+             "the verdict at this head was dismissed to summon a fresh one"),
+            (19, {"runs": [("head19", "completed")],
+                  "reviewed": [("o-r-reviewer", "head19")],
+                  "unreadable": "/reviews"}, True,
+             "the verdicts on this head are a listing GitHub would not answer"),
+            (20, {"runs": [("head20", "in_progress")],
+                  "unreadable": "run list"}, True,
+             "the runs on this branch are a listing GitHub would not answer")):
+        seeded = dict(pull)
+        refused = seeded.pop("unreadable", "")
+        fake = FakeGitHub({number: {"behind": 0, "armed": False, "requested": list(PENDING),
+                                    **seeded}})
+        if refused:
+            fake.git.unreadable[str(refused)] = 0
+        def ask(n: int = number) -> None:
+            """The verb under this case's GitHub."""
+            move.request_review(str(n), "reviewer")
+
+        with stood_in(channel, gh=fake):
+            ended = outcome(ask)
+        if ended.code:
+            problems.append(f"request-review: a pending request where {why} exited with "
+                            f"{ended.code!r}")
+        if refused and "could not list" not in ended.out:
+            problems.append(f"request-review: {why}, and the verb said {ended.out!r}, so a "
+                            "guard that is off reads exactly like one that found nothing")
+        if fake.edited and not asked:
+            problems.append(f"request-review: {why}, and the request was withdrawn and made "
+                            "again, which starts a second run on the same head")
+        if asked and not fake.edited:
+            problems.append(f"request-review: {why}, and the request was left as GitHub held "
+                            "it, so a stale request is answered by nobody")
+        if fake.pulls[str(number)].get("requested") != PENDING:
+            problems.append(f"request-review: #{number} was left with GitHub holding "
+                            f"{fake.pulls[str(number)].get('requested')!r}, not {PENDING!r}")
     return problems
 
 
