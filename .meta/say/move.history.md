@@ -661,3 +661,21 @@ carrying a citation is severed wherever it stands, since the rewrite renders
 that citation a second time from the relationship.
 
 Evidence: `.meta/checks/probes/channel/waits.py::waits_probes`
+
+### A draft rebased by advance, its Seed Commit replayed away
+
+`_is_advance_candidate` read a pull request as a candidate whenever it was
+armed or approved, and said nothing about drafts. A plan-only draft changes no
+file against its base, so the server-side rebase replayed its Seed Commit away
+and left GitHub nothing ahead of the base, which closed the pull request:
+solorepo's #974 went that way on Challenge solorepo's #967, taking with it the
+reviewer's approval of the plan, the second of the two gates a `hard` Challenge
+passes before any code (solorepo's DR-273, solorepo's #998). Established: the
+draft is refused ahead of every other arm of the filter, so a sweep passes it
+over and reports nothing; and `_no_candidate_reason` refuses a named draft in
+words of its own, because the general sentence — nothing has asked it to land —
+is false about a draft the reviewer approved and names a remedy already taken.
+The carve-out is the filter's alone: a draft that is a layer of a stack still
+moves with the stack, and `advance(pr, held=True)` skips the filter outright.
+
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`

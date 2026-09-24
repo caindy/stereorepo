@@ -196,6 +196,35 @@ def _named_pull_request_not_armed(channel: Any, move: Any) -> list[str]:
     return problems
 
 
+def _draft_is_never_an_advance_candidate(channel: Any, move: Any) -> list[str]:
+    """A sweep passes over an approved draft and an armed one; a named advance refuses the first.
+
+    Both shapes are here because the guard is an ordering as much as a
+    condition: read after the approval branch, the approved draft still
+    advances, and read after the arming branch, the armed one does. The sweep
+    is where that ordering is falsified, since it reaches the filter with both.
+    The named path takes the approved one alone, whose refusal reads the same
+    whichever number reaches `_no_candidate_reason`. Arming a draft is refused
+    in production, which is why the armed one is the second case and not the
+    only one.
+    """
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 1, "armed": False, "draft": True,
+                           "verdicts": [("o-r-reviewer", "APPROVED")]},
+                       8: {"behind": 1, "armed": True, "draft": True}})
+    said = swept(channel, move, fake, problems)
+    if not fake.pulls["7"]["behind"] or not fake.pulls["8"]["behind"]:
+        problems.append("advance: a sweep rebased a draft, replaying its Seed Commit away")
+    if said:
+        problems.append(f"advance: a draft it passed over was reported as a problem: {said!r}")
+    refusal = run_verb(channel, fake, lambda: move.advance("7"))
+    if not refusal or "is a draft" not in refusal:
+        problems.append(f"advance: it declined a named approved draft and said {refusal!r}")
+    if not fake.pulls["7"]["behind"]:
+        problems.append("advance: it rebased a named draft")
+    return problems
+
+
 def _stack_advances_as_one_transition(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({
@@ -624,6 +653,9 @@ def advance_probes() -> list[str]:
       in place on subsequent errors, deleted when the branch cleanly advances,
       and visible to local operators through branch.advance_notice.
     - Advance sweep failure cases and stack layer transitions.
+    - A draft held out of the candidate filter (solorepo's DR-273): an approved
+      draft and an armed one, the pair passed over by a sweep, and the approved
+      one refused when named.
     - The plain merge's read-back (solorepo's DR-158, solorepo's #773): a squash
       GitHub has accepted but not yet shown, which the read-back waits out, and
       one GitHub never shows, where the refusal the wait is wrapped around still
@@ -661,6 +693,7 @@ def advance_probes() -> list[str]:
         _head_github_never_moved(channel, move),
         _two_pull_requests_failing_in_one_sweep(channel, move),
         _named_pull_request_not_armed(channel, move),
+        _draft_is_never_an_advance_candidate(channel, move),
         _stack_advances_as_one_transition(channel, move),
         _named_stack_base_advances_without_arming(channel, move),
         _named_unarmed_upper_layer_is_refused(channel, move),

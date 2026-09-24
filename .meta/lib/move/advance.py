@@ -566,12 +566,34 @@ def _advance_single_pull(pull: common.Pull, pr: int | str | None,
 
 def _is_advance_candidate(pull: common.Pull, pr: int | str | None, bases: set[str],
                           heads: set[str], reviewer_login: str) -> bool:
-    """Check if an open pull request is candidate for advance."""
+    """Check if an open pull request is candidate for advance.
+
+    A draft is never one, whatever else it reports: its Seed Commit changes no
+    file, and a server-side rebase replays an empty commit away and leaves the
+    branch with nothing to be a pull request for, which is what closed
+    solorepo's #974 (solorepo's DR-273).
+    """
+    if pull.get("isDraft"):
+        return False
     if pull.get("autoMergeRequest"):
         return True
     if pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login):
         return True
     return bool(pr is not None and pull.get("headRefName") in bases and pull.get("baseRefName") not in heads)
+
+
+def _no_candidate_reason(pr: int | str, pull: common.Pull) -> str:
+    """Why a named pull request is no candidate for advance, in the words its operator is owed.
+
+    A draft gets its own sentence because the general one is false about it: a
+    draft on a Seed Commit the reviewer approved *is* approved, and being told
+    that nothing has asked it to land names a remedy already taken. What
+    actually holds it back is solorepo's DR-273, which the sentence says.
+    """
+    if pull.get("isDraft"):
+        return (f"say: #{pr} is a draft; advance holds a draft out of the rebase that would "
+                "replay its Seed Commit away (solorepo's DR-273)")
+    return f"say: #{pr} is not armed or approved; nothing has asked it to land"
 
 
 ADVANCE_NOTICE_MARKER = "<!-- solorepo:advance-finding -->"
@@ -828,6 +850,14 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     general sweep (pr=None), delegates conflicting branches to autonomous coder
     dispatch passes.
 
+    An armed or approved draft is none of the above: the candidate filter holds
+    it out, refusing it when named and passing over it in a sweep, because a
+    rebase replays a Seed Commit away (solorepo's DR-273). That carve-out is the
+    filter's alone. A draft that is a layer of a stack still moves with the
+    stack, because the layers are taken from the open list unfiltered and `gh
+    stack rebase --upstack` can skip no layer; and `held=True` skips the filter
+    outright.
+
     A sweep succeeds when it reads every open pull request, whatever those pull
     requests report: one branch's failed rebase or stranded review request is
     printed under `advance: ... reported a problem of their own` and leaves the
@@ -837,7 +867,8 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     Parameters:
         pr (int or str, optional): Specific pull request number to advance. When None,
             sweeps all open pull requests.
-        held (bool): If True, bypasses the armed/approved check for the caller's held branch.
+        held (bool): If True, bypasses the candidate filter — the armed/approved
+            check and the draft carve-out alike — for the caller's held branch.
 
     Raises:
         SystemExit: If an explicit pull request cannot be advanced, if a read the
@@ -866,7 +897,7 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
     advanced_stacks: set[str] = set()
     if not found:
         if pr is not None:
-            sys.exit(f"say: #{pr} is not armed or approved; nothing has asked it to land")
+            sys.exit(_no_candidate_reason(pr, open_now[0]))
         print("advance: nothing armed or approved is open")
     else:
         for pull in found:

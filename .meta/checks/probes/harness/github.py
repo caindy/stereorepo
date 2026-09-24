@@ -225,6 +225,9 @@ class FakeGitHub:
 
     - `behind`: commits the head is missing from its base. Required.
     - `armed`: whether auto-merge is enabled. Required.
+    - `draft`: whether the pull request is a draft, which GitHub answers as
+      `isDraft` and which `advance` reads to hold a Seed Commit out of a rebase
+      that would replay it away (solorepo's DR-273). Default `False`.
     - `drops`: a rebase drops the arming. Default `False`.
     - `again`: what the branch is behind by after a rebase, for a base that moved
       again under it. Default `0`.
@@ -447,6 +450,7 @@ class FakeGitHub:
                   "mergeable": mergeable,
                   "mergeStateStatus": pull.get("mergeStateStatus"),
                   "autoMergeRequest": {"enabledAt": "now"} if shown["armed"] else None,
+                  "isDraft": pull.get("draft", False),
                   "statusCheckRollup": pull.get("checks", []),
                   "comments": list(self.comments.get(str(number), [])),
                   "updatedAt": pull.get("updatedAt", (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=2)).isoformat())}
