@@ -7,7 +7,7 @@ from typing import Any, NamedTuple
 
 import channel
 import check_pr
-from lib.move import advance, challenges, common, manager, pull_requests
+from lib.move import advance, challenges, common, handoff, manager, pull_requests
 from lib.timing.github import NOT_RUN
 
 RECONCILE_FIELDS = manager.MERGE_MANAGER_FIELDS + ",updatedAt,comments"
@@ -527,7 +527,7 @@ def perform(owed: Sequence[Owed], live: bool) -> None:
             elif act.kind == "review":
                 advance.run_coder(act.number, "review")
             elif act.kind == "request":
-                pull_requests.request_review(act.number, "reviewer")
+                handoff.request_review(act.number, "reviewer")
             elif act.kind == "take":
                 channel.gh("workflow", "run", "coder.yml", "-f", f"issue={act.number}",
                            parse=False)

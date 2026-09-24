@@ -8,7 +8,7 @@ from typing import Any
 
 import channel
 import check_pr
-from lib.move import common, manager, pull_requests
+from lib.move import common, handoff, manager, pull_requests
 
 
 def run_coder(pr: str | int, task: str) -> None:
@@ -91,8 +91,8 @@ def _retry_stranded_reviewer(number: str, pull: common.Pull, asked: list[str],
     reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
     if reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE":
         try:
-            pull_requests.request_review(number, "reviewer")
-        except pull_requests.RequestRefused as exc:
+            handoff.request_review(number, "reviewer")
+        except handoff.RequestRefused as exc:
             return True, None, f"#{number} has a review request stranded and the reviewer could not be re-requested for it — {exc.code}"
         except SystemExit as exc:
             return True, f"#{number} review request stranded and could not be re-requested — {exc.code}", None

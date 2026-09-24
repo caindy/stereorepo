@@ -56,7 +56,7 @@ failures (solorepo's #102, solorepo's #192). Established: `request_review()`
 checks that the branch is clean, conflict-free, and up to date before requesting
 reviewer assignment.
 
-Evidence: `.meta/lib/move/pull_requests.py::request_review`
+Evidence: `.meta/lib/move/handoff.py::request_review`
 
 ### Review request events suppressed for already-requested reviewer
 
@@ -65,7 +65,7 @@ on a pull request, leaving subsequent review requests silently ignored when a pr
 turn answered nothing (solorepo's #87). Established: `request_review()` withdraws any
 existing review request before requesting it again to trigger notification events.
 
-Evidence: `.meta/lib/move/pull_requests.py::request_review`
+Evidence: `.meta/lib/move/handoff.py::request_review`
 
 ### Asynchronous rebase settlement and arming verification
 

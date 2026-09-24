@@ -835,6 +835,9 @@ artifacts:
   - id: work:artifact/meta-lib-move-pull-requests
     name: .meta/lib/move/pull_requests.py
     path: .meta/lib/move/pull_requests.py
+  - id: work:artifact/meta-lib-move-handoff
+    name: .meta/lib/move/handoff.py
+    path: .meta/lib/move/handoff.py
   - id: work:artifact/meta-lib-move-drafts
     name: .meta/lib/move/drafts.py
     path: .meta/lib/move/drafts.py

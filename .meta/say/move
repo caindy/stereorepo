@@ -2,18 +2,14 @@
 """What changes state on GitHub: the transitions (solorepo's DR-117).
 
 Each verb is a whole step of a Discipline and refuses its own misuse
-(solorepo's DR-116): a composition a caller could assemble by hand and leave
-half done is not typeable here. The body is `.meta/lib/move/`, one module per
-lifecycle (solorepo's DR-264): `common`, `challenges`, `pull_requests`, `decisions`,
-`drafts`, `advance`, `manager`, `reconcile`, `concepts` and `cli`. This entry holds no logic
-(solorepo's DR-217): it exports each module beside the names it defines, so a
-caller reaches a verb by the script's own name and a probe reaches the seam
-it stands in through the module. Two modules share a name with the verb
-they hold, `advance` and `reconcile`, and there the name wins and the module
-is reached by the package path or through a module that imports it, as
-`manager` does `advance`. `concepts` is reached through the module alone: this
-entry sits on its line ceiling, where a name costs two lines. `channel` and
-`check_pr` are exported beside them as they always were.
+(solorepo's DR-116): a composition a caller could assemble by hand and leave half
+done is not typeable here. The body is `.meta/lib/move/`, one module per lifecycle
+(solorepo's DR-264), and this entry holds no logic (solorepo's DR-217): it exports
+each module beside the names it defines, so a caller reaches a verb by the script's
+own name and a probe reaches the seam it stands in through the module, `channel`
+and `check_pr` beside them as they always were. `advance`, `reconcile` and
+`handoff` are reached through a module that imports them; `concepts` the other
+way about, its module exported and its names not. `lib/move/__init__.py` gives each reason.
 
 History in move.history.md (solorepo's DR-171).
 """
@@ -102,6 +98,10 @@ from lib.move.decisions import (
     numbers_on,
     reserved,
 )
+from lib.move.handoff import (
+    RequestRefused,
+    request_review,
+)
 from lib.move.manager import (
     BEHIND_BASE,
     DECISION_ENTRY,
@@ -141,7 +141,6 @@ from lib.move.pull_requests import (
     ADVANCE,
     LOOPS_BRANCH,
     SUPERSEDER,
-    RequestRefused,
     advance_stack,
     arm,
     behind_by,
@@ -154,7 +153,6 @@ from lib.move.pull_requests import (
     merge,
     mergeability,
     open_pull_request,
-    request_review,
     revise,
     stack_layers,
     stack_root,

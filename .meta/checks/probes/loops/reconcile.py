@@ -518,12 +518,12 @@ UNDEFINED = "no module of lib.move defines {name!r}"
 def _owner(move: Any, name: str) -> Any:
     """The module of `lib.move` that defines `name`, reached through the entry's exports.
 
-    `advance` and `reconcile` share a name with the verb they hold, so the
-    entry exports the verb and the module is reached through one that
-    imports it (solorepo's DR-217).
+    Three modules absent from the entry's `from lib.move import` line are reached
+    through one that imports them (solorepo's DR-217): `advance` and `reconcile` share
+    a name with the verb they hold, and `handoff` is priced out by its line ceiling.
     """
     modules = (move.common, move.challenges, move.pull_requests, move.decisions,
-               move.manager.advance, move.manager, move.cli.reconcile, move.cli)
+               move.cli.handoff, move.manager.advance, move.manager, move.cli.reconcile, move.cli)
     for module in modules:
         held = getattr(module, name, None)
         if held is not None and getattr(held, "__module__", None) == module.__name__:

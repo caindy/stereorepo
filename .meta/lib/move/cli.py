@@ -11,6 +11,7 @@ from lib.move import (
     concepts,
     decisions,
     drafts,
+    handoff,
     manager,
     pull_requests,
     reconcile,
@@ -209,7 +210,7 @@ def _dispatch_pr_verb(args: argparse.Namespace) -> None:
     plain: dict[str, Callable[[], object]] = {
         "advance": lambda: advance.advance(args.pr),
         "dispatch": lambda: advance.dispatch_pass(args.pr, args.task),
-        "request-review": lambda: pull_requests.request_review(args.pr, args.to),
+        "request-review": lambda: handoff.request_review(args.pr, args.to),
         "mint": lambda: _mint(args.concept),
         "ready": lambda: drafts.ready(args.pr),
     }
