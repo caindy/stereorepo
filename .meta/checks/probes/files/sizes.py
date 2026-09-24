@@ -34,7 +34,7 @@ SIZE_CASES = (
     SizeCase(".meta/render.py", 349, 350, 0),
     SizeCase(".meta/say/channel.py", 714, 350, 364),
     SizeCase(".meta/checks/files/python.py", 500, 500, 0),
-    SizeCase(".meta/lib/move/manager.py", 501, 500, 1),
+    SizeCase(".meta/lib/move/manager/__init__.py", 501, 500, 1),
     SizeCase(".meta/checks/probes/loops/merge_manager.py", 1078, 500, 578),
     SizeCase(".meta/arc/deploy", 399, 500, 0),
     SizeCase(".meta/jules/client.py", 560, 500, 60),

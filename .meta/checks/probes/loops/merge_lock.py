@@ -242,7 +242,7 @@ def _lock() -> list[str]:
     now = datetime.datetime.now(datetime.UTC)
     channel, _, programs = load_channel()
     move = programs["move"]
-    stale = datetime.timedelta(minutes=move.manager.LOCK_STALE_MINUTES + 1)
+    stale = datetime.timedelta(minutes=move.manager.lock.LOCK_STALE_MINUTES + 1)
 
     free = quiet()
     with stood_in(channel, gh=free):

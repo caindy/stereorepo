@@ -19,7 +19,10 @@ request that names the Role a Challenge passes to, and imports `drafts` and
 `pull_requests`. `advance` is the sweep on a push to trunk and the passes it dispatches, and
 imports `common`, `handoff`, `pull_requests` and `manager`; it reaches
 `reconcile` inside function bodies only. `manager` is the standing merge manager
-and imports `common`, `challenges`, `drafts`, `pull_requests` and `advance`.
+and imports `common`, `challenges`, `drafts`, `pull_requests` and `advance`. It
+is the one package here rather than a module: `manager.lock` holds the git tag
+lease the queue is managed under and imports nothing else in `lib.move`, which
+is what lets a probe reach the lease apart from the gate and the ranking.
 `reconcile` is what every open Issue and pull request is owed on the clock, and
 imports `common`, `challenges`, `handoff`, `pull_requests`, `advance` and
 `manager`, every module before it but `decisions`, `concepts` and `drafts`.

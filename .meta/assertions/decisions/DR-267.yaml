@@ -9,6 +9,7 @@ decisions:
       - work:artifact/github-workflows-merge
       - work:artifact/github-workflows-reconcile
       - work:artifact/meta-lib-move-manager
+      - work:artifact/meta-lib-move-manager-lock
       - work:artifact/meta-lib-move-reconcile
       - work:artifact/meta-checks-probes-harness-github
       - work:artifact/meta-checks-probes-loops-merge-lock
