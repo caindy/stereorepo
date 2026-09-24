@@ -367,6 +367,7 @@ and the query a reader in a file actually has.
 | [`.meta/checks/comments.py`](checks/comments.py) | [DR-210](assertions/decisions/DR-210.yaml), [DR-223](assertions/decisions/DR-223.yaml), [DR-225](assertions/decisions/DR-225.yaml), [DR-250](assertions/decisions/DR-250.yaml) |
 | [`.meta/checks/files/__init__.py`](checks/files/__init__.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-169](assertions/decisions/DR-169.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-183](assertions/decisions/DR-183.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-210](assertions/decisions/DR-210.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-276](assertions/decisions/DR-276.yaml) |
 | [`.meta/checks/files/arc.py`](checks/files/arc.py) | [DR-156](assertions/decisions/DR-156.yaml) |
+| [`.meta/checks/files/boundary.py`](checks/files/boundary.py) | [DR-275](assertions/decisions/DR-275.yaml) |
 | [`.meta/checks/files/control_plane.py`](checks/files/control_plane.py) | [DR-217](assertions/decisions/DR-217.yaml), [DR-219](assertions/decisions/DR-219.yaml) |
 | [`.meta/checks/files/harness.py`](checks/files/harness.py) | [DR-233](assertions/decisions/DR-233.yaml), [DR-281](assertions/decisions/DR-281.yaml) |
 | [`.meta/checks/files/history.py`](checks/files/history.py) | [DR-171](assertions/decisions/DR-171.yaml), [DR-228](assertions/decisions/DR-228.yaml) |
@@ -405,6 +406,7 @@ and the query a reader in a file actually has.
 | [`.meta/checks/probes/channel/table.py`](checks/probes/channel/table.py) | [DR-117](assertions/decisions/DR-117.yaml), [DR-123](assertions/decisions/DR-123.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/probes/channel/verdict.py`](checks/probes/channel/verdict.py) | [DR-253](assertions/decisions/DR-253.yaml) |
 | [`.meta/checks/probes/files/__init__.py`](checks/probes/files/__init__.py) | [DR-276](assertions/decisions/DR-276.yaml) |
+| [`.meta/checks/probes/files/boundary.py`](checks/probes/files/boundary.py) | [DR-275](assertions/decisions/DR-275.yaml) |
 | [`.meta/checks/probes/files/mints.py`](checks/probes/files/mints.py) | [DR-276](assertions/decisions/DR-276.yaml), [DR-282](assertions/decisions/DR-282.yaml) |
 | [`.meta/checks/probes/git/__init__.py`](checks/probes/git/__init__.py) | [DR-110](assertions/decisions/DR-110.yaml), [DR-117](assertions/decisions/DR-117.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/probes/git/events.py`](checks/probes/git/events.py) | [DR-218](assertions/decisions/DR-218.yaml) |

@@ -16,6 +16,8 @@ decisions:
       - work:artifact/meta-lib-render-writers
       - work:artifact/meta-checks-files-justfile
       - work:artifact/meta-checks-files-workflows
+      - work:artifact/meta-checks-files-boundary
+      - work:artifact/meta-checks-probes-files-boundary
       - work:artifact/github-workflows-gate
       - work:artifact/github-workflows-review
       - work:artifact/template-github-workflows-gate
@@ -52,18 +54,36 @@ decisions:
       `container:` job, having no container mode configured in
       `.meta/arc/values-runnerset.yaml`.
 
-      The class settled here is the gate's own invocation: the two composite
-      actions' `run:` steps and the reviewer's tool grant, which is what
-      solorepo's #830 named. It is not every `run:` step in the tree that
-      invokes a `.meta/` script owning a recipe. `.github/workflows/review.yml`,
-      `coder.yml` and `triage.yml` each run `python3 .meta/apm_compile.py
-      --reconcile` where `just apm --reconcile` exists; `release.yml` runs
-      `apm_compile.py validate` and `test_specialization.py`, as
-      `test-specialization.yml` does; and `template/.github/workflows/gate.yml`'s
-      `gate` job runs `.meta/gate`, which `just gate` wraps. Those are the same
-      question asked of a wider class, on files this Challenge did not reach, and
-      the falsifier below is scoped so that it reports drift from what was
-      decided rather than firing on the day of adoption.
+      The class solorepo's #830 settled was the gate's own invocation: the two
+      composite actions' `run:` steps and the reviewer's tool grant. It was not
+      every `run:` step in the tree that invokes a `.meta/` script owning a
+      recipe, and the falsifier was scoped so that it reported drift from what
+      had been decided rather than firing on the day of adoption. The wider
+      class stood open beside it. `.github/workflows/review.yml`, `coder.yml`
+      and `triage.yml` each ran `python3 .meta/apm_compile.py --reconcile` where
+      `just apm --reconcile` exists; `release.yml` ran `.meta/gate`,
+      `apm_compile.py validate` and `test_specialization.py`, the last of which
+      `test-specialization.yml` ran too; and
+      `template/.github/workflows/gate.yml`'s `gate` job ran `.meta/gate`.
+
+      Solorepo's #915 converted those call sites to their recipes, and
+      solorepo's #921 raised what that left behind: a converted site with no
+      check standing behind it, revertible the next day with CI green, and a
+      scoping sentence here naming as exceptions three files that had stopped
+      being any. The solo settled the widening on solorepo's #921. The falsifier
+      covers every `run:` step under `.github/workflows/` as well as under
+      `.meta/actions/`, and a gate step asserts it, the tools it reads coming
+      off the root `justfile` rather than a list, so that a recipe added
+      tomorrow brings its own call sites under the rule.
+
+      Two exclusions survive the widening, and are named here rather than left
+      to reading. `.meta/say/` is the Attested Mutation Plane (solorepo's
+      DR-252), which `advance.yml` and `merge.yml` address directly by design,
+      so a recipe wrapping one of its verbs — `merge-manager` — is an operator's
+      convenience rather than the one statement of how CI runs it. And
+      `template/.github/workflows/` holds a portfolio's files rather than files
+      that run here: its `gate` job still types `.meta/gate`, and the third
+      clause of the falsifier below is what reads that workflow.
     alternatives:
       - name: Read the boundary as reaching only what a session types, and leave the action.yml run steps
         chosen: false
@@ -126,15 +146,28 @@ decisions:
         as `just: command not found` on its first pull request, and it now fails
         here.
       - >-
+        `.meta/checks/files/boundary.py`'s `operator boundary` step reads the
+        root `justfile` for the tool each recipe wraps, then every `run:` step
+        under `.github/workflows/` and `.meta/actions/` for a command whose head
+        is one of them, and fails on each. It is what a revert of any converted
+        call site back to the script meets, which nothing met before
+        (solorepo's #921). `.meta/checks/probes/files/boundary.py` drives it
+        against the shapes it must find — a bare tool, an interpreted script,
+        one run through `uvx`, one behind an environment assignment, one past a
+        shell operator, one in a composite action — and the shapes it must not,
+        of which an agent workflow's `prompt:` naming a tool in prose is the one
+        the tree holds most of.
+      - >-
         `.github/workflows/review.yml`'s `--allowedTools` drops
         `Bash(python3 .meta/check_pr.py:*)`, leaving `Bash(just pr:*)`, so a
         reviewer session that reaches for the script is refused by the grant
         rather than only by the prose.
     falsifier: >-
-      A `run:` step under `.meta/actions/`, or an entry of an agent workflow's
-      `--allowedTools`, that invokes an internal script under `.meta/` for which
-      a `just` recipe exists; or a job of `template/.github/workflows/gate.yml`
-      naming no `container:`, or naming a different image from its siblings.
+      A `run:` step under `.github/workflows/` or `.meta/actions/`, or an entry
+      of an agent workflow's `--allowedTools`, that invokes an internal script
+      under `.meta/` for which a `just` recipe exists, the channel's own verbs
+      excepted; or a job of `template/.github/workflows/gate.yml` naming no
+      `container:`, or naming a different image from its siblings.
     rationale: |-
       Settled by the solo (@caindy) on Challenge solorepo's #830, which the
       reviewer's verdict had labelled `human` for exactly this question: the

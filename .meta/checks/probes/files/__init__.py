@@ -14,17 +14,22 @@ report in (solorepo's DR-218); the re-export is what imports the module and so
 what registers its step, which is why this package suppresses nothing.
 """
 from checks.probes.files.arc import GUARD_CASES, IMAGE_CASES, ImageCase, runner_image_probes
+from checks.probes.files.boundary import DEPARTURES, SURFACE, TOLERATED, operator_boundary_probes
 from checks.probes.files.mints import ADVERTISED, vocabulary_mint_probes
 from checks.probes.files.sizes import SIZE_CASES, SizeCase, file_size_ceiling_probes
 
 __all__ = [
     "ADVERTISED",
+    "DEPARTURES",
     "GUARD_CASES",
     "IMAGE_CASES",
     "SIZE_CASES",
+    "SURFACE",
+    "TOLERATED",
     "ImageCase",
     "SizeCase",
     "file_size_ceiling_probes",
+    "operator_boundary_probes",
     "runner_image_probes",
     "vocabulary_mint_probes",
 ]

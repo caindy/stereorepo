@@ -307,6 +307,9 @@ artifacts:
   - id: work:artifact/meta-checks-files-justfile
     name: .meta/checks/files/justfile.py
     path: .meta/checks/files/justfile.py
+  - id: work:artifact/meta-checks-files-boundary
+    name: .meta/checks/files/boundary.py
+    path: .meta/checks/files/boundary.py
   - id: work:artifact/meta-checks-files-prose
     name: .meta/checks/files/prose.py
     path: .meta/checks/files/prose.py
@@ -532,6 +535,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-files-arc
     name: .meta/checks/probes/files/arc.py
     path: .meta/checks/probes/files/arc.py
+  - id: work:artifact/meta-checks-probes-files-boundary
+    name: .meta/checks/probes/files/boundary.py
+    path: .meta/checks/probes/files/boundary.py
   - id: work:artifact/meta-checks-probes-tools
     name: .meta/checks/probes/tools/__init__.py
     path: .meta/checks/probes/tools/__init__.py

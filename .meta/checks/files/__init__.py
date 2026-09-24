@@ -26,6 +26,7 @@ import checks.files.reviewer
 import checks.files.inline_python
 import checks.files.arc
 import checks.files.justfile
+import checks.files.boundary
 import checks.files.prose
 import checks.files.history
 import checks.files.python
@@ -44,6 +45,7 @@ from checks.files.control_plane import (LIB, NUMBER_WORDS, RESTORE_COUNT, RESTOR
 from checks.files.arc import (ACTIONS, BIN_DIRS, DOCKERFILE, GUARD, SEPARATORS, guarded_tools,
                               guarded_tools_installed, installed_commands)
 from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
+from checks.files.boundary import CHANNEL, WORKFLOWS, operator_boundary
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
 from checks.files.history import history_entries_of, meta_history_orphans, meta_history_evidence, without_comments
 from checks.files.python import CONTINUATION, EDGES, ENTRY_CEILING, ENTRY_LAYER, FILE_SIZES_BASELINE, INTERPRETERS, LINE_LENGTH_RULE, LINES_BASELINE, MODULE_CEILING, MYPY, MYPY_ERROR, RUFF, RUFF_FINDING, TARGET_VERSION, TYPES_BASELINE, UVX_FLAGS, UVX_VALUED, Invocation, ceiling, declared_interpreter, line_counts, meta_doc, meta_file_sizes, meta_interpreter, meta_lines, meta_lints, meta_ruff, meta_types, mypy_errors, past_ceilings, ruff_findings, tool_command, uvx_interpreter_calls
@@ -52,6 +54,7 @@ from checks.files.rendered import apm_package, rendered_prose
 __all__ = [
     "ACTIONS",
     "BIN_DIRS",
+    "CHANNEL",
     "CONFLICT_MARKER",
     "CONTINUATION",
     "CONTRACT",
@@ -96,12 +99,14 @@ __all__ = [
     "UVX_VALUED",
     "VOCABULARIES",
     "WIKILINK",
+    "WORKFLOWS",
     "Invocation",
     "Strict",
     "added_concepts",
     "apm_package",
     "arc",
     "asserts",
+    "boundary",
     "ceiling",
     "concepts_in",
     "conflict_markers",
@@ -140,6 +145,7 @@ __all__ = [
     "meta_sources",
     "meta_types",
     "mypy_errors",
+    "operator_boundary",
     "past_ceilings",
     "prose",
     "python",
