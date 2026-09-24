@@ -448,6 +448,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-verdict
     name: .meta/checks/probes/channel/verdict.py
     path: .meta/checks/probes/channel/verdict.py
+  - id: work:artifact/meta-checks-probes-channel-resolution
+    name: .meta/checks/probes/channel/resolution.py
+    path: .meta/checks/probes/channel/resolution.py
   - id: work:artifact/meta-checks-probes-channel-settle
     name: .meta/checks/probes/channel/settle.py
     path: .meta/checks/probes/channel/settle.py
