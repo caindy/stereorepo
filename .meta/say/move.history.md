@@ -638,3 +638,26 @@ its own words after testing what its own call would change — `file_issue`
 naming the body on stdin, since at filing there is no Issue to revise.
 
 Evidence: `.meta/checks/probes/channel/waits.py::waits_probes`
+
+### A continuation clause read as a blocker because its first word was not on a list
+
+`severed_clause` called a `**Waits on.**` comma segment a continuation of the
+citations beside it only where the segment opened with one of the twenty-one
+words in `CLAUSE_OPENERS`, or cited an Issue of its own. A segment doing
+neither read as a free-standing prose blocker and was re-emitted ahead of the
+citations it explained, which is the reordering solorepo's #957 exists to stop:
+`**Waits on.** #950, open until the schema lands` under `--on 950,952` became
+`**Waits on.** open until the schema lands, #950, #952`, the citations reading
+as an afterthought to a sentence fragment they began. No list closes this,
+since the next word it lacks is the next line someone writes.
+Established: the reading is structural. `waits_line` renders prose ahead of the
+citations however the source line ordered them, so `severed_clause` takes where
+the segment stands — a segment after a citation is a continuation whatever its
+first word — and `CLAUSE_OPENERS` is gone with the lexical reading. Prose
+standing *before* every citation and carrying none is a blocker of its own,
+which is the free-standing `Decision DR-041, #2` solorepo's DR-170 preserves,
+and the paragraph citing nothing at all needs no exception to be admitted. One
+carrying a citation is severed wherever it stands, since the rewrite renders
+that citation a second time from the relationship.
+
+Evidence: `.meta/checks/probes/channel/waits.py::waits_probes`

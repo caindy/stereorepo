@@ -200,7 +200,12 @@ def _severing_probes(channel: Any, move: Any) -> list[str]:
 
     The refusal exists because a rewrite emits prose ahead of the citations, so
     a line citing nothing has no sentence for its prose to be severed from, and
-    a call with no rewrite to make makes none.
+    a call with no rewrite to make makes none. Which side of a citation the
+    prose stands on is most of the reading: before it, the prose is a blocker of
+    its own the rewrite carries forward; after it, a continuation of the
+    citation's sentence whatever word it opens with. The rest is the segment
+    that stands before every citation and carries one, which the rewrite would
+    render a second time from the relationship.
     """
     problems: list[str] = []
     standing = "All three seed repositories being migrated"
@@ -222,6 +227,45 @@ def _severing_probes(channel: Any, move: Any) -> list[str]:
     if answer or fake.edits:
         problems.append(f"waits: repeating a settled call on that line said {answer!r} "
                         f"and made {fake.edits} edits")
+
+    carried = {"state": "open",
+               "body": f"**Waits on.** Decision DR-{'041'}, #{'2'}"
+                       "\n\n**What was noticed.** Text.\n"}
+    fake = FakeBlockers({1: carried, 2: {"state": "open", "body": ""},
+                         3: {"state": "open", "body": ""}}, {1: [2]})
+    answer = _said(channel, fake, lambda: move.waits(1, on=[2, 3]))
+    if answer or fake.blockers.get(1) != [2, 3]:
+        problems.append(f"waits: prose standing before a citation said {answer!r} "
+                        f"and left {fake.blockers}")
+    if f"**Waits on.** Decision DR-{'041'}, #{'2'}, #{'3'}" not in fake.bodies.get(1, ""):
+        problems.append("waits: prose standing before a citation left the line as "
+                        f"{fake.bodies.get(1)!r}")
+
+    trailing = {"state": "open",
+                "body": f"**Waits on.** #{'2'}, open until the schema lands"
+                        "\n\n**What was noticed.** Text.\n"}
+    fake = FakeBlockers({1: trailing, 2: {"state": "open", "body": ""},
+                         3: {"state": "open", "body": ""}}, {1: [2]})
+    answer = _said(channel, fake, lambda: move.waits(1, on=[2, 3]))
+    if not answer or "open until the schema lands" not in answer:
+        problems.append("waits: prose standing after a citation under no listed "
+                        f"opener was told {answer!r}")
+    if fake.edits:
+        problems.append(f"waits: prose standing after a citation made {fake.edits} "
+                        "edits having refused")
+
+    carrying = {"state": "open",
+                "body": f"**Waits on.** #{'2'} for the schema"
+                        "\n\n**What was noticed.** Text.\n"}
+    fake = FakeBlockers({1: carrying, 2: {"state": "open", "body": ""},
+                         3: {"state": "open", "body": ""}}, {1: [2]})
+    answer = _said(channel, fake, lambda: move.waits(1, on=[2, 3]))
+    if not answer or "for the schema" not in answer:
+        problems.append("waits: prose carrying its own citation ahead of every other "
+                        f"was told {answer!r}")
+    if fake.edits:
+        problems.append(f"waits: prose carrying its own citation made {fake.edits} "
+                        "edits having refused")
     return problems
 
 

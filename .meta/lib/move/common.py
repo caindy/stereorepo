@@ -36,16 +36,6 @@ ISSUE_REF = re.compile(r"(?:[\w.-]+/[\w.-]+)?#(\d+)")
 WAITS_FILLER = frozenset(("and", "nothing", "none", ""))
 
 
-# The words a comma segment opens with when it continues the sentence before it
-# rather than naming a blocker of its own. What such a segment costs a rewrite is
-# `severed_clauses`.
-CLAUSE_OPENERS = frozenset((
-    "which", "who", "whom", "whose", "that", "where", "when", "while",
-    "and", "but", "or", "nor", "so", "because", "since", "though",
-    "although", "whereas", "both", "all", "each", "either", "neither",
-))
-
-
 NO_WAITS_LINE = "no `**Waits on.**` line"
 """What rewriting a blocker line raises where the Issue body holds none."""
 
@@ -175,43 +165,57 @@ def waits_line(blockers: Sequence[int], prose: Sequence[str] = ()) -> str:
     return "**Waits on.** " + (", ".join(items) if items else "Nothing.")
 
 
-def waits_items(text: str) -> tuple[list[str], list[str]]:
-    """The comma segments of a `**Waits on.**` paragraph: all of them, then the prose.
+def prose_segment(item: str) -> bool:
+    """Whether a `**Waits on.**` comma segment says anything besides its citations.
 
     A segment is prose where what remains of it once its citations and
     punctuation are struck out is not filler, which is what distinguishes a
     blocker the rewrite must carry forward from the words that join citations.
 
     Parameters:
-        text (str): The paragraph's text, as `WAITS_LINE` groups it.
-
-    Returns:
-        tuple[list[str], list[str]]: Every segment, and the prose ones.
-    """
-    line_text = " ".join(text.split())
-    raw_items = [p.strip().rstrip(".") for p in line_text.split(",") if p.strip()]
-    prose_items = []
-    for item in raw_items:
-        cleaned = re.sub(r"[^\w\s]+", " ", ISSUE_REF.sub(" ", item)).lower().split()
-        if not set(cleaned) <= WAITS_FILLER:
-            prose_items.append(item)
-    return raw_items, prose_items
-
-
-def severed_clause(item: str) -> bool:
-    """Whether a `**Waits on.**` comma segment continues the sentence before it.
-
-    Parameters:
         item (str): One comma segment of the line, stripped.
 
     Returns:
-        bool: True where the segment cites an Issue of its own or opens with a
-            word from `CLAUSE_OPENERS`.
+        bool: True where the segment says something besides its citations.
     """
-    if ISSUE_REF.search(item):
-        return True
-    words = re.sub(r"[^\w\s]+", " ", item).lower().split()
-    return bool(words) and words[0] in CLAUSE_OPENERS
+    cleaned = re.sub(r"[^\w\s]+", " ", ISSUE_REF.sub(" ", item)).lower().split()
+    return not set(cleaned) <= WAITS_FILLER
+
+
+def waits_items(text: str) -> tuple[list[str], list[str]]:
+    """The comma segments of a `**Waits on.**` paragraph: all of them, then the prose.
+
+    Parameters:
+        text (str): The paragraph's text, as `WAITS_LINE` groups it.
+
+    Returns:
+        tuple[list[str], list[str]]: Every segment, and the ones `prose_segment`
+            calls prose.
+    """
+    line_text = " ".join(text.split())
+    raw_items = [p.strip().rstrip(".") for p in line_text.split(",") if p.strip()]
+    return raw_items, [item for item in raw_items if prose_segment(item)]
+
+
+def severed_clause(item: str, after_citation: bool) -> bool:
+    """Whether a `**Waits on.**` comma segment continues the sentence before it.
+
+    The reading is where the segment stands rather than what word it opens with.
+    `waits_line` renders prose ahead of the citations however the source line
+    ordered them, so a segment standing after a citation is a continuation of
+    the sentence that citation began, whatever its first word. A segment citing
+    an Issue of its own reads that way too: the rewrite renders the citation a
+    second time from the relationship, leaving the prose around it beside a
+    number the line already carries.
+
+    Parameters:
+        item (str): One comma segment of the line, stripped.
+        after_citation (bool): Whether a segment before this one cites an Issue.
+
+    Returns:
+        bool: True where the segment reads as part of a citation's sentence.
+    """
+    return after_citation or bool(ISSUE_REF.search(item))
 
 
 def severed_clauses(body: str) -> list[str]:
@@ -220,13 +224,13 @@ def severed_clauses(body: str) -> list[str]:
     A rewrite emits the surviving prose ahead of the citations, so a segment
     that only reads beside its neighbours is one the rewrite would move away
     from what it explains — as surely when a blocker is added as when one is
-    taken off. `severed_clause` says which segments read that way.
+    taken off. `severed_clause` says which segments read that way, each read
+    against what stands before it.
 
-    A paragraph citing no Issue at all has none, whatever its words: there is no
-    sentence for a segment to be severed from, the rewrite appends its citations
-    after prose that is already first, and the ordinary English openers in
-    `CLAUSE_OPENERS` — `all`, `both`, `each`, `when` — would otherwise refuse the
-    free-standing prose blocker solorepo's DR-170 preserves.
+    A paragraph citing no Issue at all has none, whatever its words: no segment
+    stands after a citation and none carries one, so the free-standing prose
+    blocker solorepo's DR-170 preserves — `All three seed repositories being
+    migrated` — is admitted by the rule rather than by an exception to it.
 
     Parameters:
         body (str): The Issue's body Markdown text.
@@ -239,10 +243,13 @@ def severed_clauses(body: str) -> list[str]:
     found = WAITS_LINE.search(body or "")
     if not found:
         return []
-    raw_items, prose_items = waits_items(found.group("text"))
-    if not any(ISSUE_REF.search(item) for item in raw_items):
-        return []
-    return [item for item in prose_items if severed_clause(item)]
+    raw_items, _ = waits_items(found.group("text"))
+    severed, after_citation = [], False
+    for item in raw_items:
+        if prose_segment(item) and severed_clause(item, after_citation):
+            severed.append(item)
+        after_citation = after_citation or bool(ISSUE_REF.search(item))
+    return severed
 
 
 def retarget_waits(body: str, want: Sequence[int]) -> str:
