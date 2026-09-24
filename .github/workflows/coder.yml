@@ -88,7 +88,7 @@ on:
 # succession dispatch twice, and this group leaves one run standing and one
 # waiting rather than two rebasing the same branch; a third cancels the one
 # waiting. What the survivor finds is a branch already current with its base,
-# which the pass is told to leave alone.
+# which the pass evaluates for a stranded mergeability cache (solorepo's DR-283).
 #
 # An Issue delivery is keyed by its difficulty label for taking passes (`easy`
 # or `medium` mapped to `take`), and by the label itself for non-taking passes

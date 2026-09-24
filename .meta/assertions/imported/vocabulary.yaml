@@ -434,6 +434,17 @@ concept_set:
       GitHub's pull request creation does not refuse when there are zero commits
       between base and head. Countable across repository history via
       `git log --grep '^Record initial plan for Challenge #'`.
+  - id: work:concept/mergeability-refresh-commit
+    pref_label: Mergeability Refresh Commit
+    definition: An empty commit force-pushed to a branch already current with its base to clear a stuck CONFLICTING state in GitHub's mergeable cache.
+    in_scheme: work:scheme/solorepo
+    broader: work:concept/g-recorded
+    avoid: [dummy commit, empty commit]
+    confusable_with:
+      - work:concept/seed-commit
+      - work:concept/incidental-commit
+    scope_note: >-
+      Countable across repository history via `git log --grep '^Mergeability Refresh Commit$'`.
   - id: work:concept/decision-record
     pref_label: Decision record
     definition: >-

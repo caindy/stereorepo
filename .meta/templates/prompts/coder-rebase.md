@@ -35,10 +35,21 @@ base has and this branch does not and so is empty exactly when
 the branch is already current with its base. That way round and
 not the other: `origin/<base>..HEAD` lists this branch's own
 commits, which every open pull request has, before a rebase and
-after one. A run before this one may have done the work — two
-merges dispatch two runs — and a branch already current with its
-base is one to leave alone: say so and stop, posting nothing and
-pushing nothing.
+after one. A branch already current with its base might be a
+dispatch that was one too many, or it might be stranded by a stale
+cache. Check GitHub's view: `gh pr view <number> --json mergeable`.
+If it returns `CONFLICTING`, the cache is stuck. To bound the refresh
+to one per branch (solorepo's DR-283), check the branch
+tip's subject: `git log -1 --format=%s`. If the subject is
+`Mergeability Refresh Commit`, then GitHub was asked and did
+not answer: the empty commit failed to clear the state, so hand the
+Challenge to the solo with `.meta/say/move stop <issue>` and why, and stop.
+Otherwise, author an empty commit with
+`.meta/say/commit --allow-empty -m "Mergeability Refresh Commit"`,
+push it with `git push --force-with-lease`, post a comment on the pull
+request using `.meta/say/post comment <number>`, and stop.
+If it returns anything else, a run before this one did the work:
+say so and stop, posting nothing and pushing nothing.
 
 Otherwise rebase it: `git rebase origin/<base>`.
 Never a merge of the base into the branch. GitHub authors that
