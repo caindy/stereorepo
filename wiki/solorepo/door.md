@@ -38,15 +38,17 @@ verdict as readily as with one (solorepo's DR-122): a level landed, a verdict
 given, a pull request handed off. What it finds missing it says out loud, and a
 run that could not finish hands its Challenge back.
 
-The phases are typed as one program of the channel, `.meta/say/on --role
-<role> <role> <phase> <n>`, one verb per Role and the flag naming the
-credential that reads, so that a probe can hold every decision a door makes
-and the YAML keeps only its triggers, concurrency, permissions, credentials,
-and the harness steps. The number says which of a Role's doors is meant: the
-reviewer reads a Challenge and reviews a pull request. What only the workflow
-knows after the session, such as which harness step ran it and where its
-transcript is, reaches the door's *after* as flags, so the run log says where
-every number the door judged by came from.
+The phases are typed as programs rather than in workflow YAML so that a probe
+can hold every decision a door makes and the YAML keeps only its triggers,
+concurrency, permissions, credentials, and the harness steps. Under
+solorepo's DR-284, the reviewer phases are typed in the trunk-pinned channel program,
+`.meta/say/on --role reviewer reviewer <phase> <n>`, while the coder phases
+are typed in `.meta/coder_door.py coder <phase> <n>`, which the coder workflow
+runs from its pull request head. This keeps the reviewer's judgement outside
+the change it judges while allowing the coder's workflow and execution protocol
+to evolve together. What only a workflow knows after a session, such as which
+harness step ran it and where its transcript is, reaches its door's *after* as
+flags, so the run log says where every number the door judged by came from.
 
 The review door's *before* also chooses the depth, by `.meta/depth.py`
 (solorepo's DR-188), and writes what the session reads: the diff as a file,
@@ -60,14 +62,14 @@ against the count *before* took (solorepo's DR-122), reads the evidence the
 reading hook left, and holds the transcript to the fan-out ceiling
 (solorepo's DR-191).
 
-The coder's door takes which pass the event opened as a flag, since the event,
-the review's state and the dispatch's inputs are the workflow's to read, and
-its *before* finds the pull request a second pass answers and checks its branch
-out, chooses the harness by label and input, reads whether the delivery is
-still the loop's through the take door (solorepo's DR-142), chooses the depth
-by the pass and the level, and on approval counts the threads held for
-promotion. Its *after* takes how the pass's two harness steps ended: a take
-that failed or was cancelled is handed back, review requested where the pull
+The coder's door, `.meta/coder_door.py`, takes which pass the event opened as a
+flag, since the event, the review's state and the dispatch's inputs are the
+workflow's to read, and its *before* finds the pull request a second pass answers
+and checks its branch out, chooses the harness by label and input, reads whether
+the delivery is still the loop's through the take door (solorepo's DR-142),
+chooses the depth by the pass and the level, and on approval counts the threads
+held for promotion. Its *after* takes how the pass's two harness steps ended: a
+take that failed or was cancelled is handed back, review requested where the pull
 request it left is green and the Challenge given to the solo otherwise
 (solorepo's DR-129, solorepo's DR-155); a rebase that succeeded redelivers the
 review pass it cleared; and a pass one harness failed and neither finished

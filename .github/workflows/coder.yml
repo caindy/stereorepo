@@ -220,7 +220,7 @@ jobs:
         env:
           CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-      # The door's first phase is one program of the channel, `.meta/say/on`
+      # The coder door runs from the pull request head, `.meta/coder_door.py`
       # (solorepo's DR-264), and what only this file knows reaches it as
       # flags: which pass the event opened, since the event, the review's
       # state and the dispatch's inputs are read here; the event itself; and
@@ -239,9 +239,12 @@ jobs:
       # there; the last phase is the last step.
       - name: before the session
         id: before
-        run: >-
-          .meta/say/on coder before "$NUMBER"
-          --pass "$PASS" --event "$EVENT" --harness "$HARNESS"
+        run: |
+          if [ -f .meta/coder_door.py ]; then
+            .meta/coder_door.py coder before "$NUMBER" --pass "$PASS" --event "$EVENT" --harness "$HARNESS"
+          else
+            .meta/say/on coder before "$NUMBER" --pass "$PASS" --event "$EVENT" --harness "$HARNESS"
+          fi
         env:
           NUMBER: ${{ github.event.issue.number || inputs.issue || github.event.pull_request.number || inputs.pull_request }}
           PASS: ${{ (github.event_name == 'issues' || inputs.issue != '') && 'take' || inputs.task == 'rebase' && 'rebase' || github.event.review.state == 'approved' && 'promote' || 'answer' }}
@@ -318,8 +321,12 @@ jobs:
         id: between_1
         if: steps.attempt_1.outcome != 'skipped'
         continue-on-error: true
-        run: >-
-          .meta/say/on coder between "$NUMBER" --pass "$PASS" --event "$EVENT" --attempt 1 --outcome "$OUTCOME" --execution-file "$EXECUTION"
+        run: |
+          if [ -f .meta/coder_door.py ]; then
+            .meta/coder_door.py coder between "$NUMBER" --pass "$PASS" --event "$EVENT" --attempt 1 --outcome "$OUTCOME" --execution-file "$EXECUTION"
+          else
+            .meta/say/on coder between "$NUMBER" --pass "$PASS" --event "$EVENT" --attempt 1 --outcome "$OUTCOME" --execution-file "$EXECUTION"
+          fi
         env:
           NUMBER: ${{ steps.before.outputs.pass == 'take' && (github.event.issue.number || inputs.issue) || steps.before.outputs.number }}
           PASS: ${{ steps.before.outputs.pass }}
@@ -385,10 +392,16 @@ jobs:
       # clock alone.
       - name: after the session
         if: ${{ always() && steps.before.outcome == 'success' && steps.before.outputs.by == '' }}
-        run: >-
-          .meta/say/on coder after "$NUMBER" --pass "$PASS" --event "$EVENT"
-          --outcomes "$OUTCOMES" --count "$COUNT" --branch-prefix "$PREFIX"
-          --execution-file "$EXECUTION"
+        run: |
+          if [ -f .meta/coder_door.py ]; then
+            .meta/coder_door.py coder after "$NUMBER" --pass "$PASS" --event "$EVENT" \
+              --outcomes "$OUTCOMES" --count "$COUNT" --branch-prefix "$PREFIX" \
+              --execution-file "$EXECUTION"
+          else
+            .meta/say/on coder after "$NUMBER" --pass "$PASS" --event "$EVENT" \
+              --outcomes "$OUTCOMES" --count "$COUNT" --branch-prefix "$PREFIX" \
+              --execution-file "$EXECUTION"
+          fi
         env:
           # The door's own acts are the door's, named on the terms `gha/reconcile`
           # already uses, rather than inherited from whatever the last rung

@@ -1,25 +1,18 @@
 #!/usr/bin/env python3
-"""A workflow's door, before and after its harness session (solorepo's DR-264).
+"""The reviewer workflow door, before and after its session (solorepo's DR-264, solorepo's DR-284).
 
 Usage:
     .meta/say/on --role reviewer reviewer before <n>
-    .meta/say/on --role reviewer reviewer between <n> --attempt N --outcome <outcome> \\
+    .meta/say/on --role reviewer reviewer between <n> --attempt N --outcome <outcome> \
         [--transcript <path>]
     .meta/say/on --role reviewer reviewer after <n>
-    .meta/say/on --role reviewer reviewer after <pr> --verdicts N --agents N \\
+    .meta/say/on --role reviewer reviewer after <pr> --verdicts N --agents N \
         --ran claude|gemini|jules|none [--transcript <path>]
-    .meta/say/on coder before <n> --pass take|rebase|answer|promote --event <event> \\
-        [--harness <harness>]
-    .meta/say/on coder between <n> --pass take|rebase|answer|promote --event <event> \\
-        [--attempt N --outcome <outcome>] [--execution-file <path>]
-    .meta/say/on coder after <n> --pass take|rebase|answer|promote --event <event> \\
-        --outcomes <outcome>[,<outcome>] [--count N] [--branch-prefix <harness>] \\
-        [--execution-file <path>]
 
 Each loop workflow is a door a Role's run arrives at: `triage.yml` and
-`review.yml` are the reviewer's, `coder.yml` the coder's. What the door's shell
-steps read and decided around the harness session is typed here as one program
-of the channel, so that a probe can hold it and the YAML keeps its triggers,
+`review.yml` are the reviewer's. What the door's shell steps read and decided
+around the harness session is typed here as the trunk-pinned program of the
+channel, so that a probe can hold it and the YAML keeps its triggers,
 concurrency, permissions, credentials, and the harness steps. The verb names
 the Role whose door it is, and `--role` names the credential that reads
 GitHub, which is that Role's: `channel.parser` defaults it to the coder's, so
@@ -30,25 +23,9 @@ the name the channel reads in a run, beside the `AI_AGENT` the harness
 overwrites with its own build string (solorepo's DR-233), and writes the files
 under `.review/` the session reads; `after` reads what the session left. The
 number says which of the Role's doors this is: a Challenge is the reading
-door, `triage.yml`, and a pull request is the review door, `review.yml`. The
-coder's door, `coder.yml`, has four passes behind it and the workflow says
-which with `--pass`, since the event, the review's state and the dispatch's
-inputs are the workflow's to read; its `after` takes how each rung of the
-pass ended, in order, refused absent by the same rule as the review door's
-numbers below, and hands back a take that did not finish, redelivers the
-review pass a rebase cleared, and ends the run red where a rung failed a
-pass and none finished it, a cancelled pass not being a failed one. A
-take pass cut by its turn cap is one that did not finish and says so nowhere
-in its step conclusion, which `claude-code-action` reports as `success` when
-the model's turn ends at the cap; `--execution-file` names the transcript the
-harness writes the reason in, and the door reads the cap off it
-(solorepo's DR-277). Every pass has a third phase, `between`, which runs
-between two rungs of the harness ladder and on the next rung's own
-condition: told which rung ended and how, it says whether the next runs and
-writes that rung's prompt, and on a take it reads the branch again so that
-the prompt says what is open on it now rather than what `before` read of it
-ahead of every rung (solorepo's DR-281). The reviewer's door has the same
-phase, for the review ladder and the reading ladder alike.
+door, `triage.yml`, and a pull request is the review door, `review.yml`.
+The reviewer's door has a `between` phase for the review ladder and the
+reading ladder alike (solorepo's DR-281).
 
 The review door's `after` takes what only the workflow knows: the verdict
 count `before` emitted, the fan-out ceiling it chose, which harness step ran
@@ -58,8 +35,6 @@ and the first three are refused absent rather than defaulted, an empty
 string counting as absent: the pass is the branch that has to be reached, so
 a number that did not arrive, from a renamed output or a skipped step, ends
 the run red and not green.
-
-History in on.history.md (solorepo's DR-171).
 """
 
 import pathlib
@@ -71,7 +46,7 @@ import agents
 import channel
 import check_pr
 import depth
-from lib.on import cli, coder_door, common, handoff, prompts, review, routing
+from lib.on import cli, common, prompts, review, routing
 
 cli.DESCRIPTION = __doc__ or ""
 
@@ -102,7 +77,6 @@ write_routing = common.write_routing
 Depth = routing.Depth
 Tier = routing.Tier
 chain = routing.chain
-coder_chain = routing.coder_chain
 reading_chain = routing.reading_chain
 review_chain = routing.review_chain
 toggled = routing.toggled
@@ -121,64 +95,22 @@ trunk_paths = review.trunk_paths
 verdicts_of = review.verdicts_of
 write_head = review.write_head
 
-CAPPED = coder_door.CAPPED
-CAP_MARK = coder_door.CAP_MARK
-CODER_HARNESSES = coder_door.CODER_HARNESSES
-DID_NOT_FINISH = coder_door.DID_NOT_FINISH
-Delivery = coder_door.Delivery
-Ended = coder_door.Ended
-NO_JOB = coder_door.NO_JOB
-OUTCOMES = coder_door.OUTCOMES
-PASSES = coder_door.PASSES
-account_of = handoff.account_of
-coder = coder_door.coder
-coder_after = handoff.coder_after
-coder_before = coder_door.coder_before
-coder_between = coder_door.coder_between
-coder_depth = coder_door.coder_depth
-coder_harness = coder_door.coder_harness
-cut_before = handoff.cut_before
-cut_by_cap = handoff.cut_by_cap
-find_pull = coder_door.find_pull
-hand_back = handoff.hand_back
-labelled = coder_door.labelled
-loop_issue = coder_door.loop_issue
-not_requested = handoff.not_requested
-outcome_of = handoff.outcome_of
-pull_fields = coder_door.pull_fields
-redeliver = handoff.redeliver
-run_url = coder_door.run_url
-stop_with = handoff.stop_with
-taken = coder_door.taken
-transcript_entries = handoff.transcript_entries
-verify = handoff.verify
-what_run_left = handoff.what_run_left
-
-DID_NOT_ARRIVE = cli.DID_NOT_ARRIVE
 NOT_ONE_OF = cli.NOT_ONE_OF
+OUTCOMES = cli.OUTCOMES
 RAN = cli.RAN
 build_parser = cli.build_parser
 count = cli.count
 harness = cli.harness
 main = cli.main
 rung_outcome = cli.rung_outcome
-rung_outcomes = cli.rung_outcomes
-step_outcome = cli.step_outcome
 
 __all__ = [
-    "CAPPED",
-    "CAP_MARK",
-    "CODER_HARNESSES",
     "CONSTRAINTS",
-    "DID_NOT_ARRIVE",
-    "DID_NOT_FINISH",
     "EVIDENCE",
     "HARNESSES",
     "NOT_ONE_OF",
-    "NO_JOB",
     "NUMBER_WORDS",
     "OUTCOMES",
-    "PASSES",
     "PROMPT",
     "RAN",
     "READING_HARNESSES",
@@ -186,12 +118,9 @@ __all__ = [
     "REVIEW_HARNESSES",
     "ROUTING",
     "Attempt",
-    "Delivery",
     "Depth",
-    "Ended",
     "Session",
     "Tier",
-    "account_of",
     "agents",
     "build_parser",
     "chain",
@@ -199,44 +128,25 @@ __all__ = [
     "channel",
     "check_pr",
     "cli",
-    "coder",
-    "coder_after",
-    "coder_before",
-    "coder_between",
-    "coder_chain",
-    "coder_depth",
-    "coder_door",
-    "coder_harness",
     "command",
     "common",
     "constraints",
     "count",
-    "cut_before",
-    "cut_by_cap",
     "depth",
     "depth_of",
     "emit",
     "fallback",
-    "find_pull",
-    "hand_back",
-    "handoff",
     "harness",
     "harness_of",
-    "labelled",
-    "loop_issue",
     "main",
     "name_harness",
     "name_tiers",
-    "not_requested",
     "open_page",
-    "outcome_of",
     "prompts",
-    "pull_fields",
     "read_routing",
     "reading_after",
     "reading_before",
     "reading_chain",
-    "redeliver",
     "refuse_tracked_scratch",
     "render",
     "review",
@@ -245,20 +155,12 @@ __all__ = [
     "review_chain",
     "reviewer",
     "routing",
-    "run_url",
     "rung_outcome",
-    "rung_outcomes",
     "spawned",
-    "step_outcome",
-    "stop_with",
-    "taken",
     "toggled",
     "tracked_scratch",
-    "transcript_entries",
     "trunk_paths",
     "verdicts_of",
-    "verify",
-    "what_run_left",
     "write_head",
     "write_routing",
 ]

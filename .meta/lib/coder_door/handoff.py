@@ -1,4 +1,9 @@
-"""Coder-door handoff and completion behavior for `.meta/say/on` (solorepo's DR-217, DR-264)."""
+"""Coder-door handoff and completion behavior for `.meta/coder_door.py`.
+
+Enacts solorepo's DR-217, solorepo's DR-264, and solorepo's DR-284.
+
+Defect history in .meta/coder_door.history.md (solorepo's DR-171).
+"""
 
 import json
 import sys
@@ -7,7 +12,7 @@ from typing import Any
 import agents
 import channel
 import check_pr
-from lib.on import coder_door
+from lib.coder_door import coder_door
 
 
 def outcome_of(ended: coder_door.Ended) -> str:

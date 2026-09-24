@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/972
+    name: "Scope reviewer trunk restoration to the judging boundary and channel, freeing execution doors"
+    challenge_type: FEATURE
+    description: >-
+      The reviewer restores its judging boundary from trunk, while the coder
+      workflow needs its execution path to evolve with the pull request that
+      invokes it. Preserve the reviewer's policy, constraints, and lifecycle
+      checks while extracting the coder door from the signed channel.

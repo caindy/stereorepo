@@ -1,4 +1,7 @@
-"""Coder door lifecycle for `.meta/say/on` (solorepo's DR-217, DR-264)."""
+"""Coder door lifecycle for `.meta/coder_door.py`.
+
+Enacts solorepo's DR-217, solorepo's DR-264, and solorepo's DR-284.
+"""
 import os
 import sys
 from collections.abc import Mapping, Sequence
@@ -427,5 +430,5 @@ def coder(phase: str, number: str, delivery: Delivery, ended: Ended,
     elif phase == "between":
         coder_between(number, delivery, handed)
     else:
-        from lib.on import handoff
+        from lib.coder_door import handoff
         handoff.coder_after(number, delivery, ended)

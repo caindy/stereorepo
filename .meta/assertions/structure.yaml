@@ -886,6 +886,9 @@ artifacts:
   - id: work:artifact/meta-say-on
     name: .meta/say/on
     path: .meta/say/on
+  - id: work:artifact/meta-coder-door
+    name: .meta/coder_door.py
+    path: .meta/coder_door.py
   - id: work:artifact/meta-lib-on
     name: .meta/lib/on/__init__.py
     path: .meta/lib/on/__init__.py
@@ -895,12 +898,6 @@ artifacts:
   - id: work:artifact/meta-lib-on-review
     name: .meta/lib/on/review.py
     path: .meta/lib/on/review.py
-  - id: work:artifact/meta-lib-on-coder-door
-    name: .meta/lib/on/coder_door.py
-    path: .meta/lib/on/coder_door.py
-  - id: work:artifact/meta-lib-on-handoff
-    name: .meta/lib/on/handoff.py
-    path: .meta/lib/on/handoff.py
   - id: work:artifact/meta-lib-on-cli
     name: .meta/lib/on/cli.py
     path: .meta/lib/on/cli.py
@@ -910,6 +907,18 @@ artifacts:
   - id: work:artifact/meta-lib-on-prompts
     name: .meta/lib/on/prompts.py
     path: .meta/lib/on/prompts.py
+  - id: work:artifact/meta-lib-coder-door
+    name: .meta/lib/coder_door/__init__.py
+    path: .meta/lib/coder_door/__init__.py
+  - id: work:artifact/meta-lib-coder-door-cli
+    name: .meta/lib/coder_door/cli.py
+    path: .meta/lib/coder_door/cli.py
+  - id: work:artifact/meta-lib-coder-door-lifecycle
+    name: .meta/lib/coder_door/coder_door.py
+    path: .meta/lib/coder_door/coder_door.py
+  - id: work:artifact/meta-lib-coder-door-handoff
+    name: .meta/lib/coder_door/handoff.py
+    path: .meta/lib/coder_door/handoff.py
   - id: work:artifact/meta-say-verbs
     name: .meta/say/verbs.yaml
     path: .meta/say/verbs.yaml

@@ -55,6 +55,14 @@ whatever `.meta/lib/render/writers.py` says on the head.
 SCAFFOLD_BOUNDARY = re.compile("^(" + "|".join(re.escape(prefix) for prefix in CONTROL_PLANE) + ")")
 """Matches a repository-relative path inside the control plane."""
 
+EXECUTION_DOOR: tuple[str, ...] = (".meta/coder_door.py", ".meta/lib/coder_door/")
+"""Head-owned coder-door paths that require the deep review tier (solorepo's DR-284)."""
+
+REVIEW_BOUNDARY = re.compile(
+    "^(" + "|".join(re.escape(prefix) for prefix in (*CONTROL_PLANE, *EXECUTION_DOOR)) + ")"
+)
+"""Matches a path that requires deep review without making it trunk-restored."""
+
 
 class DepthConfig(NamedTuple):
     """Reviewer runtime parameters determined by depth evaluation.
@@ -183,7 +191,7 @@ def check_scaffold_boundary(files: list[str]) -> DepthConfig | None:
     """
     for path in files:
         norm = normalize_path(path)
-        if SCAFFOLD_BOUNDARY.search(norm):
+        if REVIEW_BOUNDARY.search(norm):
             return DepthConfig(
                 model=DEEP_CONFIG.model,
                 gemini_model=DEEP_CONFIG.gemini_model,

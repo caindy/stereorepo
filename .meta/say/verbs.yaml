@@ -272,10 +272,10 @@ programs:
   - name: "on"
     path: .meta/say/on
     concern: >-
-      A workflow's door, as the one program of the channel each door calls
-      (solorepo's DR-264): what the Role's run reads and decides before its
-      harness session, written where the workflow reads it, and what it reads
-      back after.
+      The reviewer workflow's door, as the trunk-pinned program of the channel
+      (solorepo's DR-264, solorepo's DR-284): what the reviewer's run reads and
+      decides before its harness session, written where the workflow reads it,
+      and what it reads back after.
     verbs:
       - name: reviewer
         usage: "before|between|after <n> [--verdicts N --agents N --ran H --transcript P]"
@@ -290,19 +290,4 @@ programs:
           rung's prompt; between two rungs, whether the next runs; after,
           with what only the workflow knows as flags, whether a verdict
           landed, the hook fired, and the fan-out ceiling was kept
-        held_by: [workflow]
-      - name: coder
-        usage: "before|between|after <n> --pass take|rebase|answer|promote --event E [--harness H] [--attempt N --outcome O] [--outcomes O[,O] --count N --branch-prefix P --execution-file F]"
-        does: >-
-          the coder's door, for the Challenge on a take and the pull request
-          on any other pass. Before the session: which pull request a second
-          pass answers, its branch checked out; which harness runs; whether
-          the delivery is still the loop's, with the sign left where a
-          verdict has no Job; how deep; and on approval how many threads are
-          held for promotion; the chain of rungs, and the first rung's prompt
-          written under .review/. Between two rungs, told how the one before
-          ended: whether the next runs, and its prompt. After it, with how
-          each rung ended as one flag: a take that did not finish handed
-          back, the review pass a rebase cleared redelivered, and the rest
-          verified
         held_by: [workflow]

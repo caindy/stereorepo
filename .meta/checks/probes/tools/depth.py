@@ -40,7 +40,8 @@ def depth_probes() -> list[str]:
             problems.append(f"depth: {case} expected {', '.join(asked)}, got {cfg}")
 
     for boundary in (".meta/say/post", ".meta/hooks/worktree_only.py",
-                     ".claude/settings.json", ".github/workflows/gate.yml"):
+                     ".claude/settings.json", ".github/workflows/gate.yml",
+                     ".meta/coder_door.py", ".meta/lib/coder_door/handoff.py"):
         cfg = depth.evaluate([boundary])
         expect(f"scaffold boundary {boundary}", cfg, model=opus, agents=3)
         expect(f"scaffold boundary {boundary}", cfg, reason_has="scaffold boundary")

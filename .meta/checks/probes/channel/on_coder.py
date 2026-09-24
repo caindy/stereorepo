@@ -1,4 +1,4 @@
-"""`on coder`, the coder's door before and after its session, over a fake for each pass.
+"""The coder's door before and after its session, over a fake for each pass (solorepo's DR-284).
 
 One module for one verb's probes, so a history log's Evidence names the file
 holding them (solorepo's DR-209); the reviewer's verb is probed in `on.py`
@@ -13,7 +13,14 @@ from collections.abc import Iterator, Sequence
 from typing import Any, NamedTuple
 
 from checks.collect import check
-from checks.probes.harness import environment, load_channel, outcome, stood_in, unanswered
+from checks.probes.harness import (
+    environment,
+    load_channel,
+    load_module,
+    outcome,
+    stood_in,
+    unanswered,
+)
 
 ISSUE = "7"
 """The Challenge the loop's branch names."""
@@ -65,8 +72,8 @@ def coder_door_probes() -> list[str]:
     naming the cap rather than the step's conclusion. The second cap on the
     same pull request goes to the solo instead (solorepo's DR-277).
     """
-    channel, _, programs = load_channel()
-    on = programs["on"]
+    channel, _, _ = load_channel()
+    on = load_module(".meta/coder_door.py")
     return (_take_cases(channel, on) + _between_cases(on) + _pull_cases(channel, on)
             + _rebase_promote_cases(channel, on) + _after_cases(channel, on)
             + _cap_cases(channel, on))

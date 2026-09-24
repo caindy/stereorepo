@@ -1,9 +1,9 @@
-"""Command-line parser and dispatch for `.meta/say/on` (solorepo's DR-217, DR-264)."""
+"""Command-line parser and dispatch for the reviewer door (solorepo's DR-217, DR-264)."""
 
 import argparse
 
 import channel
-from lib.on import coder_door, common, review
+from lib.on import common, review
 
 DESCRIPTION = ""
 """The entry-point documentation shown by the command-line parser."""
@@ -14,12 +14,8 @@ RAN = ("claude", "gemini", "jules", "none")
 NOT_ONE_OF = "{text!r} is not one of {choices}"
 """The parser's refusal of a flag whose value is none of the words it takes."""
 
-DID_NOT_ARRIVE = (
-    "an outcome that did not arrive: a step id renamed, or an expression that "
-    "resolved to nothing, is a red run and not a pass that was skipped"
-)
-"""The parser's refusal of an `--outcomes` list with an empty entry; a list not given at all
-is `None`, which the door's `after` refuses in its own words."""
+OUTCOMES = ("success", "failure", "cancelled", "skipped")
+"""The four conclusions a workflow step may end with."""
 
 
 def count(text: str) -> int | None:
@@ -30,38 +26,6 @@ def count(text: str) -> int | None:
     door's refusal that must name it, not the parser's.
     """
     return int(text) if text.strip() else None
-
-
-def step_outcome(text: str) -> str:
-    """A step's outcome as the workflow reports it; an empty string is refused.
-
-    A step that never ran reports `skipped`, so an empty outcome is one the
-    workflow did not hand over, and the hand-back that would have run on it
-    must not be skipped quietly.
-
-    Raises:
-        argparse.ArgumentTypeError: Where the text is empty or no outcome a step has.
-    """
-    if not text.strip():
-        raise argparse.ArgumentTypeError(DID_NOT_ARRIVE)
-    if text not in coder_door.OUTCOMES:
-        raise argparse.ArgumentTypeError(
-            NOT_ONE_OF.format(text=text, choices=", ".join(coder_door.OUTCOMES))
-        )
-    return text
-
-
-def rung_outcomes(text: str) -> tuple[str, ...]:
-    """How each rung of the pass ended, comma-separated in rung order; an empty entry is refused.
-
-    A rung that never ran reports `skipped`, so an entry that is empty is
-    one the workflow did not hand over, and the hand-back that would have
-    run on it must not be skipped quietly (solorepo's DR-281).
-
-    Raises:
-        argparse.ArgumentTypeError: Where any entry is empty or no outcome a step has.
-    """
-    return tuple(step_outcome(entry.strip()) for entry in text.split(","))
 
 
 def rung_outcome(text: str) -> str | None:
@@ -76,9 +40,9 @@ def rung_outcome(text: str) -> str | None:
     """
     if not text.strip():
         return None
-    if text not in coder_door.OUTCOMES:
+    if text not in OUTCOMES:
         raise argparse.ArgumentTypeError(
-            NOT_ONE_OF.format(text=text, choices=", ".join(coder_door.OUTCOMES))
+            NOT_ONE_OF.format(text=text, choices=", ".join(OUTCOMES))
         )
     return text
 
@@ -114,7 +78,7 @@ def harness(text: str) -> str | None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Builds the argument parser: one verb per Role, each taking the phase and the number."""
+    """Builds the argument parser: the reviewer verb taking the phase and the number."""
     ap = channel.parser(DESCRIPTION or __doc__)
     sub = ap.add_subparsers(dest="verb", required=True)
     p = sub.add_parser("reviewer")
@@ -146,55 +110,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--transcript", default="", help="after a review session: where Claude Code's transcript is"
     )
-    c = sub.add_parser("coder")
-    c.add_argument(
-        "phase",
-        choices=("before", "between", "after"),
-        help="before the harness session, between two rungs of its ladder, or after "
-        "the session",
-    )
-    c.add_argument("number", help="the Challenge on a take, the pull request on any other pass")
-    between_flags(c)
-    c.add_argument(
-        "--pass",
-        dest="task",
-        choices=coder_door.PASSES,
-        required=True,
-        help="which pass the event opened",
-    )
-    c.add_argument(
-        "--event",
-        required=True,
-        help="the event the delivery arrived on, as github.event_name names it",
-    )
-    c.add_argument(
-        "--harness", default="", help="the harness a dispatch asked for, empty on any other event"
-    )
-    c.add_argument(
-        "--outcomes",
-        type=rung_outcomes,
-        default=None,
-        help="after the session: how each rung of the pass ended, comma-separated in "
-        "rung order; required there, and an empty entry is refused",
-    )
-    c.add_argument(
-        "--count",
-        type=count,
-        default=None,
-        help="after a promotion: how many threads `before` found held",
-    )
-    c.add_argument(
-        "--branch-prefix",
-        default="",
-        help="after a take: the harness `before` chose, naming the loop's branch",
-    )
-    c.add_argument(
-        "--execution-file",
-        dest="execution",
-        default="",
-        help="after a take, or between two rungs: where Claude Code wrote the pass's "
-        "transcript, which is where the turn cap is said",
-    )
     return ap
 
 
@@ -208,12 +123,4 @@ def main() -> None:
             args.number,
             common.Session(args.verdicts, args.agents, args.ran, args.transcript),
             common.Attempt(args.attempt, args.outcome, args.transcript),
-        )
-    elif args.verb == "coder":
-        coder_door.coder(
-            args.phase,
-            args.number,
-            coder_door.Delivery(args.task, args.event, args.harness),
-            coder_door.Ended(args.outcomes, args.count, args.branch_prefix, args.execution),
-            common.Attempt(args.attempt, args.outcome, args.execution),
         )

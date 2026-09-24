@@ -15,7 +15,7 @@ from collections.abc import Iterator
 from typing import Any, NamedTuple
 
 from checks.collect import ROOT, check
-from checks.probes.harness import environment, load_channel, outcome, stood_in
+from checks.probes.harness import environment, load_channel, load_module, outcome, stood_in
 
 FORMS = ROOT / ".meta" / "templates" / "prompts"
 """Where the prompt forms are."""
@@ -90,8 +90,9 @@ def routing_probes() -> list[str]:
     """
     _, _, programs = load_channel()
     on = programs["on"]
-    return _chain_cases(on) + _output_cases(on) + _form_cases(on) + _trunk_cases(on) \
-        + _between_cases(on)
+    coder_door = load_module(".meta/coder_door.py")
+    return (_chain_cases(on) + _output_cases(on) + _form_cases(on) + _trunk_cases(on)
+            + _between_cases(on, coder_door))
 
 
 def _chain_cases(on: Any) -> list[str]:
@@ -288,17 +289,18 @@ class _Rung(NamedTuple):
     pull: dict[str, Any] | None = None
 
 
-def _between(on: Any, case: _Rung) -> tuple[Any, dict[str, str], str]:
-    """`on coder between` after `before` wrote a chain: how it ended, the outputs, the prompt."""
+def _between(on: Any, coder_door: Any, case: _Rung) -> tuple[Any, dict[str, str], str]:
+    """Coder door `between` after `before` wrote a chain: how it ended, outputs, prompt."""
     routing = on.routing
     depth = routing.coder_depth(case.task, "medium")
     with _workspace() as root, stood_in(on.check_pr.sweep, loop_pull=_Branch(case.pull)):
         chain = tuple(routing.tier(name, depth) for name in case.tiers)
         on.write_routing("coder", case.task, chain, FIELDS)
         (root / ".review" / "prompt.md").unlink()
-        ended_as = outcome(lambda: on.coder(
-            "between", FIELDS["number"], on.Delivery(case.task, "issues", ""),
-            on.Ended(("failure", "skipped"), None, "claude"), on.Attempt(case.attempt, case.ended)))
+        ended_as = outcome(lambda: coder_door.coder(
+            "between", FIELDS["number"], coder_door.Delivery(case.task, "issues", ""),
+            coder_door.Ended(("failure", "skipped"), None, "claude"),
+            on.Attempt(case.attempt, case.ended)))
         out = dict(line.split("=", 1) for line in (root / "output").read_text().splitlines()
                    if "=" in line)
         prompt = root / ".review" / "prompt.md"
@@ -336,34 +338,45 @@ def _unnumbered_cases(on: Any) -> list[str]:
     return problems
 
 
-def _between_cases(on: Any) -> list[str]:
+def _between_cases(on: Any, coder_door: Any) -> list[str]:
     """Between two rungs: the next runs on a failure alone, and the take's resume clause."""
     problems = []
-    ended, out, prompt = _between(on, _Rung("answer", ("claude", "gemini"), 1, "failure"))
+    ended, out, prompt = _between(
+        on, coder_door, _Rung("answer", ("claude", "gemini"), 1, "failure")
+    )
     if ended.code is not None or out.get("run") != "true" or "no turn cap" not in prompt \
             or f"#{FIELDS['number']}" not in prompt:
         problems.append(f"between: rung 1 of 2 failing decided {out!r} with exit {ended.code!r} "
                         f"and wrote {prompt[:80]!r}, where rung 2 runs on the Antigravity CLI")
     for outcome_of_rung in ("success", "cancelled", "skipped"):
-        ended, out, prompt = _between(on, _Rung("answer", ("claude", "gemini"), 1, outcome_of_rung))
+        ended, out, prompt = _between(
+            on, coder_door, _Rung("answer", ("claude", "gemini"), 1, outcome_of_rung)
+        )
         if ended.code is not None or out.get("run") != "false" or prompt:
             problems.append(f"between: rung 1 ending {outcome_of_rung} decided {out!r}, where "
                             "only a failure hands the pass on")
-    ended, out, prompt = _between(on, _Rung("answer", ("claude", "gemini"), 2, "failure"))
+    ended, out, prompt = _between(
+        on, coder_door, _Rung("answer", ("claude", "gemini"), 2, "failure")
+    )
     if ended.code is not None or out.get("run") != "false" or prompt:
         problems.append(f"between: the last rung failing decided {out!r}, where nothing follows")
-    ended, out, prompt = _between(on, _Rung("take", ("gemini", "claude"), 1, "failure",
-                                            {"number": int(OPEN)}))
+    ended, out, prompt = _between(
+        on, coder_door, _Rung("take", ("gemini", "claude"), 1, "failure", {"number": int(OPEN)})
+    )
     if ended.code is not None or out.get("run") != "true" or out.get("resume") != OPEN \
             or f"left pull request #{OPEN} open" not in prompt or "120 turns" not in prompt:
         problems.append(f"between: a take's rung 1 failing over open pull request {OPEN} decided "
                         f"{out!r} and wrote {prompt[:80]!r}, where rung 2 is Claude Code told to "
                         "resume")
-    ended, out, prompt = _between(on, _Rung("take", ("claude", "gemini"), 1, "failure"))
+    ended, out, prompt = _between(
+        on, coder_door, _Rung("take", ("claude", "gemini"), 1, "failure")
+    )
     if out.get("resume") != "" or "No harness has left a pull request" not in prompt:
         problems.append(f"between: a take's rung 1 failing over nothing decided {out!r} and "
                         f"wrote {prompt[:80]!r}")
-    ended, out, prompt = _between(on, _Rung("rebase", ("claude", "gemini"), None, "failure"))
+    ended, out, prompt = _between(
+        on, coder_door, _Rung("rebase", ("claude", "gemini"), None, "failure")
+    )
     if ended.code is None or "named no rung" not in str(ended.code):
         problems.append(f"between: the rebase pass asked the older question ended {ended.code!r}, "
                         "where a pass whose prompt carries no resume clause is refused")
