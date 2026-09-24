@@ -10,8 +10,9 @@ mint of a Concept a run may not make, a verdict held to the head its run read,
 the boundary an unpromoted thread may not cross at any door that could close
 one, a write settled against a GitHub that shows it late or never, the
 reviewer's door before and after its session, the coder's door before its
-session, the bound on a `gh` call that never answers, and the extension a
-`gh stack` call needs installed before it is made. Not invariants over the
+session, the bound on a `gh` call that never answers, the extension a
+`gh stack` call needs installed before it is made, and the merge refusal that
+costs a candidate its turn rather than its landing. Not invariants over the
 record: each probe
 loads the channel and runs it, which is why the probes are a package of their
 own rather than steps beside the checks over assertions
@@ -40,4 +41,5 @@ import checks.probes.channel.on
 import checks.probes.channel.on_coder
 import checks.probes.channel.routing
 import checks.probes.channel.bound
-import checks.probes.channel.extension  # noqa: F401  # reason: registers check steps
+import checks.probes.channel.extension
+import checks.probes.channel.deferral  # noqa: F401  # reason: registers check steps

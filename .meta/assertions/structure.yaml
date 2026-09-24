@@ -406,6 +406,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-extension
     name: .meta/checks/probes/channel/extension.py
     path: .meta/checks/probes/channel/extension.py
+  - id: work:artifact/meta-checks-probes-channel-deferral
+    name: .meta/checks/probes/channel/deferral.py
+    path: .meta/checks/probes/channel/deferral.py
   - id: work:artifact/meta-checks-probes-channel-parser
     name: .meta/checks/probes/channel/parser.py
     path: .meta/checks/probes/channel/parser.py

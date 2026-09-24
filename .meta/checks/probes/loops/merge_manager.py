@@ -1570,15 +1570,15 @@ def _check_in_progress_refusal_is_deferred(channel: Any, move: Any) -> list[str]
     pulls[0]["headRefName"] = "claude/issue-742"
     pulls[0]["headRefOid"] = "sha-running-10"
     fake = ManagerFake(pulls, issues)
-    refusal = "say: 4 of 4 required status checks are in progress."
+    refusal = "4 of 4 required status checks are in progress."
     swept: list[Any] = []
     comment_calls: list[str] = []
     demoted_calls: list[str] = []
     stop_calls: list[str] = []
 
     def running_checks_merge(pr: Any, stack: bool = False, auto: bool = False) -> None:
-        """A `merge` refusing in GitHub's own words for a required check still running."""
-        raise SystemExit(refusal)
+        """A `merge` deferring in GitHub's own words for a required check still running."""
+        raise move.pull_requests.MergeDeferredError(refusal)
 
     def recording_advance_stranded(*args: Any, **kwargs: Any) -> None:
         """An `advance_stranded` that records its call rather than sweeping anything."""

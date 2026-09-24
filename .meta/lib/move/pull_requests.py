@@ -2,7 +2,7 @@
 import re
 import subprocess
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 
 import channel
 import check_pr
@@ -494,6 +494,82 @@ def _merge_auto(pr: str | int, before: common.Pull, subject: str, stack: bool) -
             sys.exit(f"say: GitHub shows #{pr} neither merged nor armed after the call")
 
 
+MERGE_DEFERRED = ("status check", "in progress")
+"""Every fragment GitHub's refusal holds where the merge waits on a check still running.
+
+Both fragments are required, because only their conjunction says that a check
+has yet to finish. GitHub also names a required status check in a refusal that
+is permanent, where the check failed rather than started, and that refusal
+carries the first fragment without the second.
+"""
+
+
+class MergeDeferredError(Exception):
+    """A merge GitHub refused over a required check that has yet to conclude.
+
+    The refusal names a moment in a check run rather than a branch that cannot
+    land: the same head merges once the run concludes. A caller catching this
+    leaves the pull request as it stands and asks again on its next pass, where
+    the `SystemExit` `merge` raises for every other refusal is a landing GitHub
+    will not give this head.
+
+    Attributes:
+        refusal (str): GitHub's own words for the refusal, as the CLI buffered
+            them on standard error.
+    """
+
+    def __init__(self, refusal: str) -> None:
+        super().__init__(refusal)
+        self.refusal = refusal
+
+
+def deferred_refusal(diagnostics: str) -> bool:
+    """Whether a refused merge's diagnostics name a required check still running.
+
+    GitHub's words for that refusal are `N of M required status checks are in
+    progress`.
+
+    Parameters:
+        diagnostics (str): What the CLI wrote on standard error for the refusal.
+
+    Returns:
+        bool: True where every fragment of `MERGE_DEFERRED` is in the diagnostics.
+    """
+    words = diagnostics.lower()
+    return all(word in words for word in MERGE_DEFERRED)
+
+
+def _classified(call: Callable[[], object]) -> None:
+    """Run a merge call made under `tolerate_fail`, and classify the refusal it buffers.
+
+    Both of `merge`'s merge calls come through here, so a stacked merge defers
+    on the same words an unstacked one does: written inside one branch instead,
+    the classification covers whichever call it stands beside, and a caller
+    with only `MergeDeferredError` to catch cannot tell which it had.
+
+    A tolerated timeout is not a refusal GitHub gave, whatever its standard
+    error happens to say, so it is read off `channel.TIMEOUT_RETURNCODE` and
+    not off its words: nothing bounds what a command that answered nothing left
+    on the stream before it hung.
+
+    Parameters:
+        call (Callable): The `channel.gh` merge call, under `tolerate_fail`.
+
+    Raises:
+        MergeDeferredError: Where GitHub refused over a required check that has
+            yet to conclude.
+        SystemExit: For every other refusal, in the words `channel.gh` would
+            have exited in.
+    """
+    try:
+        call()
+    except subprocess.CalledProcessError as exc:
+        refusal = (exc.stderr or "").strip()
+        if exc.returncode != channel.TIMEOUT_RETURNCODE and deferred_refusal(refusal):
+            raise MergeDeferredError(refusal) from exc
+        sys.exit(f"gh: {refusal}")
+
+
 def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
     """Squash-merge a pull request using its title as the commit subject.
 
@@ -509,8 +585,17 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
         auto (bool): If True, enables GitHub auto-merge to land when checks turn green.
 
     Raises:
+        MergeDeferredError: If GitHub refused the merge over a required check that has
+            yet to conclude, which the same head lands on once the run finishes.
         SystemExit: If the pull request is not open, is an unsupported stacked auto-merge,
-            or if the merge or arming operation fails on GitHub.
+            or if the merge or arming operation fails on GitHub for any other reason.
+
+    Both merge calls tolerate their own failure so that the refusal reaches
+    this layer rather than leaving through `channel.gh`: the CLI buffers
+    GitHub's words on standard error, and a caller that has to read them out of
+    an exit message cannot tell a check still queued from a landing refused for
+    good. `_classified` takes either call's refusal, so a stacked merge waiting
+    on a check defers as an unstacked one does.
 
     The stack merge waits indefinitely rather than under `channel.GH_TIMEOUT`:
     it lands every layer up to `pr` and restacks what remains, and a bound cut
@@ -540,13 +625,15 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
         _merge_auto(pr, before, subject, stack)
         return
     if stack:
-        channel.gh("stack", "merge", str(pr), "--squash", "--yes",
-                   parse=False, timeout=None, echo=True)
+        _classified(lambda: channel.gh("stack", "merge", str(pr), "--squash", "--yes",
+                                       parse=False, timeout=None, echo=True,
+                                       tolerate_fail=True))
     elif stacked(pr):
         sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
                  "Pass --stack to merge everything up to it.")
     else:
-        channel.gh("pr", "merge", str(pr), "--squash", "--subject", subject, parse=False)
+        _classified(lambda: channel.gh("pr", "merge", str(pr), "--squash", "--subject", subject,
+                                       parse=False, tolerate_fail=True))
     after = channel.shown(
         lambda: channel.gh("pr", "view", str(pr), "--json", "state,mergeCommit"),
         lambda now: now["state"] == "MERGED" and now["mergeCommit"],

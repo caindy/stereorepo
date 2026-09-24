@@ -17,8 +17,10 @@ concluded.
 
 Two mechanisms carry that, and the order matters. `evaluate_open_pulls` refuses a
 pull request this pass restored before it can become a candidate, so the merge is
-never asked for. `_refusal_is_deferral` reads the refusal GitHub gave where one
-was asked for anyway, which is the case a pass did not start itself.
+never asked for. `pull_requests.MergeDeferredError` carries the refusal GitHub gave
+where one was asked for anyway, which is the case a pass did not start itself:
+the merge layer classifies its own refusal, and this one catches the type rather
+than reading the words back out of an exit message.
 
 The mutual exclusion itself is `lock`, which imports nothing else in `lib.move`:
 the lease is a compare-and-set over a git ref and is read by a probe of its own,
@@ -508,16 +510,6 @@ RESTORED_THIS_PASS = ("taken out of draft in this pass, and the gate run that re
 """Why a pull request this pass restored from draft is no candidate of this pass's own."""
 
 
-REFUSAL_DEFERRED = ("status check", "in progress")
-"""Every fragment GitHub's refusal holds where the merge waits on a check still running.
-
-Both fragments are required, because only their conjunction says that a check
-has yet to finish. GitHub also names a required status check in a refusal that is
-permanent, where the check failed rather than started, and that refusal carries
-the first fragment without the second.
-"""
-
-
 def _refusal_notice_body(exc_code: Any, head_oid: str = "") -> str:
     """Generate signed merge refusal diagnosis comment body with attribution trailers.
 
@@ -883,24 +875,6 @@ def merge_manager(dry_run: bool = False, stranded: bool = True) -> None:
         lock.drop_merge_lock(held)
 
 
-def _refusal_is_deferral(exc_code: Any) -> bool:
-    """Whether a merge refusal names a required check still running.
-
-    GitHub's words for that refusal are `N of M required status checks are in
-    progress`. Why the pass defers such a refusal rather than diagnosing it is in
-    this module's docstring, under "Why a refusal over a running check is
-    deferred".
-
-    Parameters:
-        exc_code: The exit code or message `pull_requests.merge` refused with.
-
-    Returns:
-        bool: True where every fragment of `REFUSAL_DEFERRED` is in the refusal.
-    """
-    words = str(exc_code).lower()
-    return all(word in words for word in REFUSAL_DEFERRED)
-
-
 def _handle_refused_loop_branch(winner: common.Pull, exc_code: Any, dry_run: bool) -> None:
     """Demote autonomous loop PR to draft and hand back Challenge to human.
 
@@ -954,8 +928,8 @@ def _manage(dry_run: bool = False, stranded: bool = True) -> None:
     can clear, so unlike `advance_stranded`'s own refusals it paints the
     scheduled run red, which is what surfaces a stall.
 
-    A refusal `_refusal_is_deferral` recognises is the exception, and takes none
-    of that: no diagnosis notice, no demotion to draft, no Challenge handed back,
+    A `pull_requests.MergeDeferredError` is the exception, and takes none of
+    that: no diagnosis notice, no demotion to draft, no Challenge handed back,
     and no red run. A check still running is the state the next pass finds
     settled, so nothing is owed beyond saying that the candidate waits.
 
@@ -1007,14 +981,15 @@ def _manage(dry_run: bool = False, stranded: bool = True) -> None:
         pull_requests.merge(str(winner["number"]), stack=is_stacked, auto=False)
         advance.reconcile_notice(
             winner["number"], MERGE_REFUSAL_MARKER, None, None, label="merge refusal")
+    except pull_requests.MergeDeferredError as deferral:
+        print(f"merge-manager: could not merge #{winner['number']} — {deferral.refusal}")
+        print(f"merge-manager: deferring #{winner['number']} — a required check is still "
+              "running, which the next pass reads once it has concluded")
+        if stranded:
+            advance.advance_stranded(pulls, evaluations, owner, name, dry_run)
+        return
     except SystemExit as exc:
         print(f"merge-manager: could not merge #{winner['number']} — {exc.code}")
-        if _refusal_is_deferral(exc.code):
-            print(f"merge-manager: deferring #{winner['number']} — a required check is still "
-                  "running, which the next pass reads once it has concluded")
-            if stranded:
-                advance.advance_stranded(pulls, evaluations, owner, name, dry_run)
-            return
         try:
             head_oid = winner.get("headRefOid") or ""
             advance.reconcile_notice(

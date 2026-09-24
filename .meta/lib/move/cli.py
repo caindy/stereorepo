@@ -1,5 +1,6 @@
 """The argument surface `.meta/say/move` delegates to, verb by verb (solorepo's DR-264)."""
 import argparse
+import sys
 from collections.abc import Callable
 from typing import Any
 
@@ -219,7 +220,11 @@ def _dispatch_pr_verb(args: argparse.Namespace) -> None:
     elif args.verb == "layer":
         pull_requests.layer(args.pr, args.on)
     elif args.verb == "merge":
-        pull_requests.merge(args.pr, stack=args.stack, auto=args.auto)
+        try:
+            pull_requests.merge(args.pr, stack=args.stack, auto=args.auto)
+        except pull_requests.MergeDeferredError as deferral:
+            sys.exit(f"say: #{args.pr} waits on a required check still running, and the "
+                     f"same head lands once it concludes — {deferral.refusal}")
     elif args.verb == "merge-manager":
         manager.merge_manager(dry_run=args.dry_run, stranded=not args.no_advance)
     elif args.verb == "reconcile":
