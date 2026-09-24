@@ -1,0 +1,121 @@
+decisions:
+  - id: work:decision/282
+    name: "DR-282 · A run mints a Concept on the Challenge's say-so, and the pull request gate asks for no approval"
+    challenge: work:challenge/956
+    status: ADOPTED
+    applies:
+      - work:article/17
+      - work:article/19
+      - work:article/20
+    supersedes:
+      - work:decision/276
+    enacted_in:
+      - work:artifact/meta-lib-move-concepts
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-lib-check-pr-verdict
+      - work:artifact/meta-checks-probes-channel-mint
+      - work:artifact/meta-checks-probes-files-mints
+      - work:artifact/meta-templates-issue
+    context: >-
+      Solorepo's DR-276 put a Concept's mint on three layers: a reservation
+      tag `move mint --concept` writes and refuses to a run, a gate step that
+      fails a vocabulary row standing on no reservation, and a pull request
+      gate that fails a diff adding a Concept unless the solo's own approving
+      review stands on its current head. The third layer was the one that
+      fired in practice, and it fired on the wrong thing. Solorepo's #934
+      minted three Concepts with the solo's say-so given in session, and its
+      `pull request` check went red each time the head moved past the
+      approval he had given: two approvals landed, two commits followed them,
+      and the check was red at the end. The approval is anchored to a commit,
+      and a pull request's head moves with every answer to a review, so the
+      layer asks the solo to approve again for every push and blocks the loop
+      between his approvals.
+
+      The solo settled it on the Challenge: his say-so for a word is
+      sufficient where the Challenge that originated the work asks for the
+      word, since a Challenge is where he states what a Job is to do, and a
+      loop's branch names its Challenge by number. That moves the say-so from
+      the end of the work, where it must be renewed, to its definition, where
+      it is given once.
+    alternatives:
+      - name: Keep the third layer and accept a stale approval
+        chosen: false
+        reason: >-
+          Accepting an approval of any earlier head would pass a row the solo
+          never saw, which is the failure the layer was built against, and
+          would still ask him to approve every pull request that mints a word
+          rather than the Challenge that asked for it.
+      - name: Revert solorepo's #906 whole
+        chosen: false
+        reason: >-
+          The reservation tag and the gate step are the layers that close the
+          case with nobody watching, "forge", and neither has fired on
+          legitimate work. Removing them would put the vocabulary back where a
+          Job could write a row and three well-formed artifacts around it with
+          no fact outside the tree behind the word.
+      - name: "The third layer retired, and a run's mint permitted where its Challenge asks by identifier"
+        chosen: true
+        reason: >-
+          `unratified_concepts` leaves the pull request gate, with the patch
+          reading and the approval reading behind it. `move mint --concept`
+          keeps refusing a run, except where the branch the run is on names a
+          Challenge, `<harness>/issue-<n>`, and that Challenge's body asks for
+          the word on a line of its own, `**Mint.**` and then the identifier
+          the row will carry in backticks, `<context>:concept/<slug>`; then
+          the run reserves the tag as a session would, saying which Challenge
+          asked. The line is the ask: an identifier mentioned in a sentence,
+          quoted, argued about or rejected, asks for nothing, and a line
+          asking for a longer word asks for no word it prefixes. A branch
+          naming no Challenge, and a Challenge with no such line for this
+          identifier, are each refused with why. The gate step
+          `vocabulary mints` stays as it was, so a row still stands on a
+          reservation and nothing else, and the reservation's message names
+          its ground: the solo, or the Challenge by number that asked and the
+          run that minted on it.
+    consequences:
+      - >-
+        `.meta/lib/check_pr/verdict.py` holds no `unratified_concepts`,
+        `solo_approved`, `added_concepts` or `vocabulary_patches`; the pull
+        request gate is the form, the threads, the Trailers, the required
+        contexts and the Issue citations.
+      - >-
+        `.meta/lib/move/concepts.py` holds `asked_for`, which reads the
+        Challenge a run's branch names and answers its number where a line of
+        the body is `**Mint.**` and the identifier in backticks, and
+        `mint_concept` reserves the Concept on it inside a run rather than
+        refusing, after the identifier's own form is checked. The tag's
+        message names the Challenge that asked, and the run log says so too.
+      - >-
+        The convention for asking a loop for a word is a line of the
+        Challenge body of its own, `**Mint.**` followed by the identifier the
+        vocabulary row will carry in backticks, one identifier to a line. A
+        Challenge a run itself filed
+        by promotion carries the raiser's words, and the reviewer's reading of
+        it under solorepo's DR-230 is where a word asked for by a Job is seen
+        before a run mints it.
+      - >-
+        `.meta/checks/probes/channel/mint.py` observes a run on a branch naming
+        no Challenge refused, a run whose Challenge asks for no Concept, or
+        mentions the identifier in prose, or asks for a longer word, refused
+        before any tag is written, a malformed identifier refused as such, and
+        a run whose Challenge asks on a `**Mint.**` line writing the ref. `.meta/checks/probes/files/mints.py` no
+        longer drives the retired layer.
+      - >-
+        Solorepo's DR-276's third layer is superseded; its first two stand.
+        Challenge solorepo's #956 is closed as answered.
+    falsifier: >-
+      A Concept reaching the Ubiquitous Language on a run's mint where no
+      Challenge the run's branch names asked for that identifier on a
+      `**Mint.**` line of its own; or a run refused a mint its Challenge asked
+      for that way; or the gate step
+      `vocabulary mints` passing a row with no reservation behind it, which
+      would be the layer this record keeps having stopped firing.
+    rationale: |-
+      The third layer answered "door", the case with the solo one room away
+      and not asked. What it cost was every case where he had been asked, on
+      the Challenge, and was then asked again on each head. A say-so given at
+      task definition is given once and read by every run on the branch; a
+      say-so given on a head is given per push. The Challenge is also where a
+      reviewer reads what a Job is about to do, so a word asked for by a Job
+      rather than by the solo passes a reader before a run can mint it, which
+      is the reading the third layer never had.

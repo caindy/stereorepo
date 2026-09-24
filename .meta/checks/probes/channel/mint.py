@@ -1,12 +1,29 @@
-"""The mint of a Concept: refused to a run, reserved by a session, and reserved
-once (solorepo's DR-276).
+"""The mint of a Concept: refused to a run whose Challenge does not ask, reserved by a session
+or by a run whose Challenge asks by identifier, and reserved once (solorepo's DR-276,
+solorepo's DR-282).
 """
 
 
 from typing import Any
 
 from checks.collect import check
-from checks.probes.harness import environment, load_channel, run_verb
+from checks.probes.harness import environment, load_channel, run_verb, stood_in
+
+ASKING = "**What was noticed.** The loop needs a word for it.\n\n**Mint.** `work:concept/door`\n"
+"""A Challenge body that asks for the Concept in the form `ASKS` reads."""
+
+SILENT = "**What was noticed.** The loop needs a word for it, and this body names none."
+"""A Challenge body that asks for no Concept."""
+
+MENTIONING = ("**What was noticed.** Do not mint `work:concept/door`; the record rejected it "
+              "(solorepo's DR-282 says to write **Mint.** and the identifier to ask).")
+"""A Challenge body that mentions the identifier in prose and asks for nothing."""
+
+LONGER = "**What was noticed.** The loop needs a word.\n\n**Mint.** `work:concept/door-frame`\n"
+"""A Challenge body asking for a longer word, which the shorter one prefixes."""
+
+ISSUE = "7"
+"""The Challenge a run's loop branch names in the cases below."""
 
 UNMODELLED = "the mint asked the fake for {args!r}"
 """What the fake raises on a call no case models, so the step reports what was asked."""
@@ -41,11 +58,12 @@ class FakeGitHub:
     """
 
     def __init__(self, reserved: tuple[str, ...] = (), silent: bool = False,
-                 taken: bool = False) -> None:
+                 taken: bool = False, body: str = "") -> None:
         self.calls: list[tuple[str, ...]] = []
         self.reserved = reserved
         self.silent = silent
         self.taken = taken
+        self.body = body
 
     def __call__(self, *args: str, **kwargs: Any) -> Any:
         """What the fake answers one call with, raising `AssertionError` on a
@@ -53,6 +71,8 @@ class FakeGitHub:
         self.calls.append(args)
         if args[:2] == ("repo", "view"):
             return {"nameWithOwner": "caindy/solorepo"}
+        if args[:2] == ("issue", "view"):
+            return {"body": self.body}
         where = args[1] if len(args) > 1 else ""
         if "matching-refs/tags/" in where:
             if self.silent:
@@ -79,15 +99,18 @@ class FakeGitHub:
 
 @check("mint probes", pre=True)
 def mint_probes() -> list[str]:
-    """`move mint --concept` refuses a run, reserves a Concept for a session, and
-    reserves one once (solorepo's DR-276).
+    """`move mint --concept` refuses a run whose Challenge does not ask, reserves a Concept for a
+    session or for a run whose Challenge asks by identifier, and reserves one once
+    (solorepo's DR-276, solorepo's DR-282).
 
     A Concept is the solo's word, and a run is not beside him — the same line
     `move claim` and `move difficulty` draw on `channel.in_a_run()`
-    (solorepo's DR-148, solorepo's DR-235). The refusal is a branch on the
-    environment, so `ACTOR_SESSION` and `GITHUB_RUN_ID` are set and unset
+    (solorepo's DR-148, solorepo's DR-235) — unless the Challenge the run's
+    branch names asks for the word by its identifier, which is where the solo
+    asks a loop for one (solorepo's DR-282). The run boundary is a branch on
+    the environment, so `ACTOR_SESSION` and `GITHUB_RUN_ID` are set and unset
     around each case rather than stood in for, as `probes/channel/level.py`
-    does of the same mark.
+    does of the same mark, and the branch is stood in.
 
     What the refusal is observed by is that the fake was never called: a mint
     refused after the tag object exists has reserved the word anyway. The
@@ -107,17 +130,49 @@ def mint_probes() -> list[str]:
                             f"not {expected!r}")
 
     fake = FakeGitHub()
-    with environment(GITHUB_RUN_ID=RUN.removeprefix("gha-"), ACTOR_SESSION=RUN):
+    with environment(GITHUB_RUN_ID=RUN.removeprefix("gha-"), ACTOR_SESSION=RUN), \
+            stood_in(concepts, branch=lambda: "claude/routing-policy"):
         said = run_verb(channel, fake, lambda: concepts.mint_concept("work:concept/door"))
-    if not said or "may not mint" not in said or fake.calls:
-        problems.append(f"mint: a run minting a Concept was told {said!r} and made {fake.calls!r}")
+    if not said or "names no Challenge" not in said or fake.calls:
+        problems.append(f"mint: a run on a branch naming no Challenge was told {said!r} and "
+                        f"made {fake.calls!r}")
+
+    for body, name in ((SILENT, "asks for no Concept"), (MENTIONING, "mentions the identifier "
+                       "in prose"), (LONGER, "asks for a word this one prefixes")):
+        fake = FakeGitHub(body=body)
+        with environment(GITHUB_RUN_ID=RUN.removeprefix("gha-"), ACTOR_SESSION=RUN), \
+                stood_in(concepts, branch=lambda: f"claude/issue-{ISSUE}"):
+            said = run_verb(channel, fake, lambda: concepts.mint_concept("work:concept/door"))
+        if not said or f"#{ISSUE}'s body has no such line" not in said \
+                or fake.wrote("git/tags"):
+            problems.append(f"mint: a run whose Challenge {name} was told {said!r} and "
+                            f"made {fake.calls!r}, where only a `**Mint.**` line asks")
+
+    fake = FakeGitHub()
+    with environment(GITHUB_RUN_ID=RUN.removeprefix("gha-"), ACTOR_SESSION=RUN), \
+            stood_in(concepts, branch=lambda: f"claude/issue-{ISSUE}"):
+        said = run_verb(channel, fake, lambda: concepts.mint_concept("Door"))
+    if not said or "not a Concept identifier" not in said or fake.calls:
+        problems.append(f"mint: a run minting a malformed identifier was told {said!r}, where "
+                        "the refusal names the malformation before any Challenge is read")
+
+    fake = FakeGitHub(body=ASKING)
+    with environment(GITHUB_RUN_ID=RUN.removeprefix("gha-"), ACTOR_SESSION=RUN), \
+            stood_in(concepts, branch=lambda: f"gemini/issue-{ISSUE}"):
+        said = run_verb(channel, fake, lambda: concepts.mint_concept("work:concept/door"))
+    if said or not fake.wrote("ref=refs/tags/concept/door") \
+            or not fake.wrote(f"Challenge #{ISSUE} asked for this Concept"):
+        problems.append(f"mint: a run whose Challenge asks for the Concept said {said!r} and "
+                        f"wrote {fake.calls!r}, where the Challenge's say-so is the solo's and "
+                        "the tag's message names the Challenge (solorepo's DR-282)")
 
     fake = FakeGitHub()
     with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=None):
         said = run_verb(channel, fake, lambda: concepts.mint_concept("work:concept/seed-commit"))
-    if said or not fake.wrote("ref=refs/tags/concept/seed-commit"):
+    if said or not fake.wrote("ref=refs/tags/concept/seed-commit") \
+            or not fake.wrote("The solo minted this Concept"):
         problems.append(f"mint: a session minting a Concept said {said!r} "
-                        f"and wrote {fake.calls!r}")
+                        f"and wrote {fake.calls!r}, where the tag's message names the solo")
 
     fake = FakeGitHub(reserved=("door",))
     with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=None):

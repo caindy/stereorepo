@@ -1,5 +1,5 @@
 """`vocabulary mints` over a row reserved, a row that is not, and each read it
-cannot make (solorepo's DR-276).
+cannot make (solorepo's DR-276, solorepo's DR-282).
 
 The step is run by the gate, so a wrong answer from it shows as a failure —
 but only on a branch that adds a row, which is the branch a real run almost
@@ -31,54 +31,6 @@ concept_set:
     pref_label: Door
   - definition: a row with no identifier, which names no Concept
 """
-
-MOVED = ("@@\n-  - id: work:concept/door\n context\n",
-         "@@\n+\n+  - id: work:concept/door\n+  - id: work:concept/hatch\n")
-"""One row moved between the two vocabularies and one coined, as the pull
-request's patches carry them: the deletion in the file it left, the addition in
-the file it reached, and a blank line added above an existing row."""
-
-HEAD = "9f8e7d6c5b4a39281706f5e4d3c2b1a098765432"
-
-ROLE = "caindy-solorepo-reviewer"
-"""A Role's login, written out rather than asked for: `role_login` reads the
-repository, and a precheck reaches nothing."""
-
-
-def ratification_problems() -> list[str]:
-    """`unratified_concepts`'s two readings: what a patch adds, and whose
-    approval stands on the head that carries it (solorepo's DR-276).
-
-    The pull request gate reads a diff rather than a tree, so the cases it can
-    get wrong are the ones a tree never shows it: a row moved between the two
-    vocabularies, a blank line added above a row already on trunk, and an
-    approval submitted against an earlier head.
-
-    Returns:
-        list[str]: One line per reading that did not hold.
-    """
-    from lib.check_pr import verdict
-
-    problems: list[str] = []
-    added = verdict.added_concepts(MOVED)
-    if added != ["work:concept/hatch"]:
-        problems.append(f"mint ratification: the patches read as {added!r}, and a row moved "
-                        "between the two vocabularies is not a row this change mints")
-
-    solo = [{"author": {"login": "christopher"}, "state": "APPROVED",
-             "commit": {"abbreviatedOid": HEAD[:7]}}]
-    stale = [{"author": {"login": "christopher"}, "state": "APPROVED",
-              "commit": {"abbreviatedOid": "0123456"}}]
-    role = [{"author": {"login": ROLE}, "state": "APPROVED",
-             "commit": {"abbreviatedOid": HEAD[:7]}}]
-    for reviews, expected, what in ((solo, True, "the solo's approval of this head"),
-                                    (stale, False, "an approval of an earlier head"),
-                                    (role, False, "a Role account's approval")):
-        said = verdict.solo_approved(reviews, HEAD, {ROLE})
-        if said is not expected:
-            problems.append(f"mint ratification: {what} read as {said}, not {expected}")
-    return problems
-
 
 @check("vocabulary mint probes", pre=True)
 def vocabulary_mint_probes() -> list[str]:
@@ -140,4 +92,4 @@ def vocabulary_mint_probes() -> list[str]:
     if not isinstance(said, CouldNotRun):
         problems.append(f"vocabulary mints: a remote that would not say which Concepts it "
                         f"reserves came to {said!r}, not CouldNotRun")
-    return problems + ratification_problems()
+    return problems

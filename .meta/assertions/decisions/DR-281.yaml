@@ -1,0 +1,195 @@
+decisions:
+  - id: work:decision/281
+    name: "DR-281 · Every harness runs through one runner, and execution order is a policy table in the door's package"
+    challenge: work:challenge/960
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-lib-on-routing
+      - work:artifact/meta-lib-on-prompts
+      - work:artifact/meta-lib-on-common
+      - work:artifact/meta-lib-on-coder-door
+      - work:artifact/meta-lib-on-review
+      - work:artifact/meta-lib-on-cli
+      - work:artifact/meta-lib-on
+      - work:artifact/meta-say-on
+      - work:artifact/meta-templates-readme
+      - work:artifact/meta-checks-probes-channel-routing
+    context: >-
+      Solorepo's #928 counted six places where a model, a reasoning effort, a
+      turn cap, a timeout or a fallback order was written: the reviewer's two
+      tiers in `.meta/depth.py`, the coder's depths and the Antigravity model
+      in `.meta/lib/on/coder_door.py`, the step topology of `coder.yml` and
+      `review.yml`, a string-matching heuristic in `.meta/arc/watch`, two
+      probes, and the example depth hook. Its pull request, solorepo's #934,
+      built an ordered execution plan and then spent ten rounds of the plan
+      gate trying to express that order in step conditions. It could not.
+      GitHub Actions runs steps in file order and cannot iterate or reorder
+      a `uses:` step at run time, so a ladder of steps each named for a
+      harness realizes exactly one order: Claude Code first with the
+      Antigravity CLI behind it on failure, and a `harness:gemini` label
+      running the Antigravity CLI with nothing behind it. The pull request
+      fixed one pass by adding a second Claude Code step with a copy of the
+      hundred-line prompt and left the other passes as they were, and its
+      last open thread is exactly those passes.
+
+      Two more facts surfaced on it. The Antigravity composite action carried
+      its own gate, `evaluate fallback`, reading the previous Claude Code
+      step's outcome and transcript, so the fallback was decided in two
+      places, the workflow's step condition and the action's own script. And
+      `review.yml` restores `.meta/lib/on/` from `origin/main` before the
+      door runs, so a pull request that changes the door's output contract is
+      reviewed by a door that does not emit the new outputs; the pull request
+      answered that with compatibility branches that existed for its own
+      review alone and contradicted its decision record's falsifier. Solorepo's
+      #960 was filed at `human` to put the shape in front of the solo, and
+      solorepo's #928 was closed as obviated by it.
+
+      One fact the pull request did not surface: `.meta/depth.py` is not in
+      `depth.CONTROL_PLANE`, so the head's copy evaluates the reviewer's own
+      depth, and a pull request could already choose the model and turn cap
+      of its own review.
+    alternatives:
+      - name: Consolidate the constants and leave the order fixed
+        chosen: false
+        reason: >-
+          One table for model, effort, turns and minutes, read by both doors,
+          with Claude Code always primary and the Antigravity CLI always the
+          fallback. This answers the tuning half of solorepo's #928 and none
+          of the ordering half: `harness:gemini` keeps no fallback, and the
+          Gemini-first coder solorepo's #929 asks for stays impossible.
+      - name: One job per attempt, through a reusable workflow
+        chosen: false
+        reason: >-
+          Each rung a job with `needs:` on the one before, calling one
+          reusable workflow with the harness as an input. Order becomes data
+          and each rung can choose its runner, but the in-job state the
+          design depends on is lost across jobs: the resume notice read
+          between rungs (solorepo's #835) and the transcript the quota scan
+          reads would need an artifact hop, and every rung pays checkout,
+          credential and cognitive-asset setup again.
+      - name: Compatibility branches in the workflow for the door's own review
+        chosen: false
+        reason: >-
+          Conditions in `review.yml` that read the toggles directly where
+          trunk's door emits no chain, so the pull request that changes the
+          door can be reviewed. They exist for one review and are dead the
+          moment it merges, and reading a toggle in the workflow is the
+          out-of-policy routing the policy exists to end.
+      - name: "One harness runner, and order as a policy table in the door's package, landed as two layers"
+        chosen: true
+        reason: >-
+          The unit of GitHub Actions that takes a harness as a parameter and
+          still runs inside the job is a composite action. A harness runner
+          under `.meta/actions/` holds one guarded step per harness, the
+          stock `anthropics/claude-code-action@v1` among them, and forwards
+          the credentials it is given as inputs and the Claude action's
+          `execution_file` through its own `outputs:`; `continue-on-error`
+          and `timeout-minutes` stay on the calling step, since a composite's
+          inner `uses:` step can carry neither. Each pass of each workflow is
+          then a linear ladder of identical attempt steps reading
+          `tier_<n>_*` outputs by number, and any order of any length runs on
+          as many steps as it has rungs. The order is `.meta/lib/on/routing.py`:
+          a chain per Role, pass and level, the primary chosen by a
+          `harness:` label or a dispatch input and Claude Code by default,
+          each fallback a rung only where its toggle (solorepo's DR-240,
+          DR-245, DR-246) is on, and Claude Code needing none. The module is
+          control plane by the rule that already covers `.meta/lib/on/`
+          (solorepo's DR-219), so a pull request's review runs trunk's
+          policy, and `.meta/depth.py` takes its tier values from it, once
+          the module is trunk's, and keeps only the choice of tier. The fallback decision is the door's
+          `between` phase, told which rung ended and how, so the Antigravity
+          action's own gate has nothing left to decide. Prompts are one form
+          per pass under `.meta/templates/prompts/`, rendered by the door
+          for the rung about to run, which is what ends the copy per harness
+          step.
+
+          The bootstrap problem is answered by landing in two layers. The
+          first is the door alone: the policy, the `tier_<n>_*` outputs
+          emitted beside the outputs trunk's workflows already read, the
+          `between` phase's `run`, the forms, and this record. Its review
+          runs trunk's door and the head's workflows read only outputs trunk
+          already emits, so it reviews clean. The second, a layer on the
+          first, is the runner and the three workflows, the retirement of the
+          old outputs and of the Antigravity gate, and the checks that read
+          the ladder; by then trunk's door emits the chain. One property of
+          GitHub Actions was tested before the second layer was written rather
+          than assumed: that a composite's declared outputs are populated
+          when the inner step that produced them failed. A scratch composite
+          whose one step wrote an output and exited non-zero, called from a
+          step with `continue-on-error: true`, reported outcome `failure`,
+          conclusion `success`, and the output filled, on solorepo's run
+          36004641448 of 2026-09-24.
+    consequences:
+      - >-
+        `.meta/lib/on/routing.py` holds every model, effort, turn cap and
+        timeout a door emits, the chain of each Role by its primary and the
+        toggles, and the step outputs the chain is named by, and imports
+        nothing from the package or from GitHub.
+      - >-
+        `.meta/depth.py` keeps its two tiers' literal values in the first
+        layer, since the reviewer runs the head's copy against trunk's door
+        and a `depth.py` importing the policy could not be reviewed until the
+        policy is trunk's; a probe holds those values equal to the policy's,
+        and the second layer builds them from it. A portfolio's depth hook
+        keeps the `DepthConfig` contract, and no number the doors emitted
+        moves.
+      - >-
+        The coder door, the review door and the reading door emit `tiers` and
+        `tier_<n>_harness`, `_model`, `_effort`, `_turns`, `_minutes` and
+        `_agent` for each rung, beside the outputs the workflows read today,
+        and write the chain and the prompt's fields to `.review/routing.json`.
+      - >-
+        Every door has a `between` phase, `on <role> between <n> --attempt N
+        --outcome <outcome>`, which answers `run` and writes the next rung's
+        prompt to `.review/prompt.md` where a rung failed and one follows; on
+        a take it reads the branch again for the resume clause as before.
+      - >-
+        `.meta/lib/on/prompts.py` renders a rung's prompt from its pass's
+        form under `.meta/templates/prompts/`, resolving the harness blocks
+        and filling the fields, with the budget sentence naming the caps the
+        harness binds.
+      - >-
+        `.meta/checks/probes/channel/routing.py` holds the chain by Role,
+        primary and toggles, the outputs, every form on every harness, and
+        the `between` phase over a written chain.
+      - >-
+        The second layer, on a pull request stacked on this one, adds
+        `.meta/actions/harness/action.yml`, rewrites the harness steps of
+        `coder.yml`, `review.yml` and `triage.yml` as ladders of attempt
+        steps, retires the Antigravity action's `evaluate fallback` gate and
+        the door's older outputs, and reads the ladder in
+        `.meta/checks/files/harness.py` and `.meta/arc/watch`.
+      - >-
+        The Decision number solorepo's #934 minted is written back as
+        withdrawn when that pull request is superseded by this record. The
+        three Concepts it reserved, `harness`, `execution-plan` and
+        `fallback`, get no vocabulary row from this change: the words appear
+        in its prose and code as ordinary words, and none is minted into the
+        Ubiquitous Language on those reservations.
+      - >-
+        Challenge solorepo's #960 is closed as answered.
+    falsifier: >-
+      This is the stack's falsifier, read once the second layer lands, since
+      the first layer emits the chain and leaves the workflows to run their
+      old ladders until then: a model, effort, turn cap, timeout or fallback
+      order read by a door or a workflow from anywhere but
+      `.meta/lib/on/routing.py`; a chain the policy resolves that a
+      workflow's ladder cannot run in that order; or a fallback decided
+      anywhere but the door's `between` phase.
+    rationale: |-
+      Solorepo's #934 failed by answering the reviewer's points one at a time
+      inside a framing that could not hold them: every round added a step
+      condition, and the approved plan was a specification of expressions
+      rather than a design. The question it never asked was which unit of
+      GitHub Actions takes a harness as a parameter. A matrix job and a
+      reusable workflow were rejected for a real reason, the loss of in-job
+      state, and a composite action, the third parameterizable unit, was
+      never distinguished from them. Once the step is harness-agnostic, the
+      order is data, the conditions that named other steps disappear, and
+      the fallback is decided once, in Python the probes can hold, rather
+      than in a step condition and an action's script that had to agree.
+      Two layers cost one extra pull request and buy a door that reviews
+      itself without branches it will never use again.

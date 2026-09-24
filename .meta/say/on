@@ -3,12 +3,15 @@
 
 Usage:
     .meta/say/on --role reviewer reviewer before <n>
+    .meta/say/on --role reviewer reviewer between <n> --attempt N --outcome <outcome> \\
+        [--transcript <path>]
     .meta/say/on --role reviewer reviewer after <n>
     .meta/say/on --role reviewer reviewer after <pr> --verdicts N --agents N \\
         --ran claude|gemini|jules|none [--transcript <path>]
     .meta/say/on coder before <n> --pass take|rebase|answer|promote --event <event> \\
         [--harness <harness>]
-    .meta/say/on coder between <issue> --pass take --event <event>
+    .meta/say/on coder between <n> --pass take|rebase|answer|promote --event <event> \\
+        [--attempt N --outcome <outcome>] [--execution-file <path>]
     .meta/say/on coder after <n> --pass take|rebase|answer|promote --event <event> \\
         --claude <outcome> --gemini <outcome> [--count N] [--branch-prefix <harness>] \\
         [--execution-file <path>]
@@ -39,10 +42,13 @@ take pass cut by its turn cap is one that did not finish and says so nowhere
 in its step conclusion, which `claude-code-action` reports as `success` when
 the model's turn ends at the cap; `--execution-file` names the transcript the
 harness writes the reason in, and the door reads the cap off it
-(solorepo's DR-277). The take pass has a third phase, `between`, which runs
-immediately before the second harness step and on that step's own condition,
-reading the branch again so that the step's prompt says what is open on it
-now rather than what `before` read of it ahead of both steps.
+(solorepo's DR-277). Every pass has a third phase, `between`, which runs
+between two rungs of the harness ladder and on the next rung's own
+condition: told which rung ended and how, it says whether the next runs and
+writes that rung's prompt, and on a take it reads the branch again so that
+the prompt says what is open on it now rather than what `before` read of it
+ahead of every rung (solorepo's DR-281). The reviewer's door has the same
+phase, for the review ladder and the reading ladder alike.
 
 The review door's `after` takes what only the workflow knows: the verdict
 count `before` emitted, the fan-out ceiling it chose, which harness step ran
@@ -65,26 +71,43 @@ import agents
 import channel
 import check_pr
 import depth
-from lib.on import cli, coder_door, common, handoff, review
+from lib.on import cli, coder_door, common, handoff, prompts, review, routing
 
 cli.DESCRIPTION = __doc__ or ""
 
+Attempt = common.Attempt
 CONSTRAINTS = common.CONSTRAINTS
 EVIDENCE = common.EVIDENCE
 HARNESSES = common.HARNESSES
 NUMBER_WORDS = common.NUMBER_WORDS
+PROMPT = common.PROMPT
 READING_HARNESSES = common.READING_HARNESSES
 REVIEW = common.REVIEW
 REVIEW_HARNESSES = common.REVIEW_HARNESSES
+ROUTING = common.ROUTING
 Session = common.Session
 challenge_page = common.challenge_page
 command = common.command
 emit = common.emit
+fallback = common.fallback
 harness_of = common.harness_of
 name_harness = common.name_harness
+name_tiers = common.name_tiers
 open_page = common.open_page
+read_routing = common.read_routing
 reading_after = common.reading_after
 reading_before = common.reading_before
+write_routing = common.write_routing
+
+Depth = routing.Depth
+Tier = routing.Tier
+chain = routing.chain
+coder_chain = routing.coder_chain
+reading_chain = routing.reading_chain
+review_chain = routing.review_chain
+toggled = routing.toggled
+
+render = prompts.render
 
 constraints = review.constraints
 depth_of = review.depth_of
@@ -124,6 +147,7 @@ labelled = coder_door.labelled
 loop_issue = coder_door.loop_issue
 not_requested = handoff.not_requested
 outcome_of = handoff.outcome_of
+pull_fields = coder_door.pull_fields
 redeliver = handoff.redeliver
 run_url = coder_door.run_url
 stop_with = handoff.stop_with
@@ -139,6 +163,7 @@ build_parser = cli.build_parser
 count = cli.count
 harness = cli.harness
 main = cli.main
+rung_outcome = cli.rung_outcome
 step_outcome = cli.step_outcome
 
 __all__ = [
@@ -157,16 +182,22 @@ __all__ = [
     "NUMBER_WORDS",
     "OUTCOMES",
     "PASSES",
+    "PROMPT",
     "RAN",
     "READING_HARNESSES",
     "REVIEW",
     "REVIEW_HARNESSES",
+    "ROUTING",
+    "Attempt",
     "Delivery",
+    "Depth",
     "Ended",
     "Session",
+    "Tier",
     "account_of",
     "agents",
     "build_parser",
+    "chain",
     "challenge_page",
     "channel",
     "check_pr",
@@ -175,6 +206,7 @@ __all__ = [
     "coder_after",
     "coder_before",
     "coder_between",
+    "coder_chain",
     "coder_depth",
     "coder_door",
     "coder_harness",
@@ -187,6 +219,7 @@ __all__ = [
     "depth",
     "depth_of",
     "emit",
+    "fallback",
     "find_pull",
     "hand_back",
     "handoff",
@@ -196,22 +229,32 @@ __all__ = [
     "loop_issue",
     "main",
     "name_harness",
+    "name_tiers",
     "not_requested",
     "open_page",
     "outcome_of",
+    "prompts",
+    "pull_fields",
+    "read_routing",
     "reading_after",
     "reading_before",
+    "reading_chain",
     "redeliver",
     "refuse_tracked_scratch",
+    "render",
     "review",
     "review_after",
     "review_before",
+    "review_chain",
     "reviewer",
+    "routing",
     "run_url",
+    "rung_outcome",
     "spawned",
     "step_outcome",
     "stop_with",
     "taken",
+    "toggled",
     "tracked_scratch",
     "transcript_entries",
     "trunk_paths",
@@ -219,6 +262,7 @@ __all__ = [
     "verify",
     "what_run_left",
     "write_head",
+    "write_routing",
 ]
 
 if __name__ == "__main__":

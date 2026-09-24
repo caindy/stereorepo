@@ -451,6 +451,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-on-coder
     name: .meta/checks/probes/channel/on_coder.py
     path: .meta/checks/probes/channel/on_coder.py
+  - id: work:artifact/meta-checks-probes-channel-routing
+    name: .meta/checks/probes/channel/routing.py
+    path: .meta/checks/probes/channel/routing.py
   - id: work:artifact/meta-checks-probes-channel-on
     name: .meta/checks/probes/channel/on.py
     path: .meta/checks/probes/channel/on.py
@@ -889,12 +892,21 @@ artifacts:
   - id: work:artifact/meta-lib-on-cli
     name: .meta/lib/on/cli.py
     path: .meta/lib/on/cli.py
+  - id: work:artifact/meta-lib-on-routing
+    name: .meta/lib/on/routing.py
+    path: .meta/lib/on/routing.py
+  - id: work:artifact/meta-lib-on-prompts
+    name: .meta/lib/on/prompts.py
+    path: .meta/lib/on/prompts.py
   - id: work:artifact/meta-say-verbs
     name: .meta/say/verbs.yaml
     path: .meta/say/verbs.yaml
   - id: work:artifact/meta-schemas
     name: .meta/schemas.md
     path: .meta/schemas.md
+  - id: work:artifact/meta-templates-readme
+    name: .meta/templates/README.md
+    path: .meta/templates/README.md
   - id: work:artifact/meta-templates-issue
     name: .meta/templates/issue.md
     path: .meta/templates/issue.md

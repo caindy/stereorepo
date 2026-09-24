@@ -1,0 +1,18 @@
+challenges:
+  - id: work:challenge/956
+    name: "Revert PR 906 Ubiquitous Language gate in favor of Challenge-level specification"
+    challenge_type: DEFECT
+    description: >-
+      Solorepo's #906 enacted solorepo's DR-276 to refuse a Concept a Job
+      mints without the solo's say-so, in three layers. Its third layer, an
+      approving review from the solo on the pull request's current head,
+      proved a high-friction failure in practice: it obstructed legitimate
+      work on solorepo's #934 and went red whenever the head advanced past
+      the approval. The solo concluded that formal sign-off on the pull
+      request is unnecessary where the Challenge that originated the work
+      asked for the word, which is where his intent is stated.
+
+      Retiring the third layer removes the sign-off bottleneck for changes
+      that extend the vocabulary; shifting the say-so to the Challenge keeps
+      it at task definition, where the solo writes or reads it, and lets the
+      loops proceed on it.

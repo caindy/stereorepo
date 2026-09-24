@@ -47,6 +47,13 @@ waits for the solo with an agent beside him.
 GitHub reads the front matter and removes it from the issue it creates, so what
 is inside the fence is exactly what ships.
 
+**A Challenge that asks a loop to mint a word says so on a line of its own**,
+`**Mint.**` and then the identifier the vocabulary row will carry in backticks,
+such as `work:concept/harness`, one identifier to a line. That line is the
+say-so `move mint --concept` reads inside a run on the Challenge's branch
+(solorepo's DR-282): an identifier mentioned in a sentence asks for nothing, and
+the line is optional, so no check asks for it.
+
 **Do not paraphrase the headings.** `.meta/check_pr.py` derives what a pull
 request must contain from the form beside this one, and the two forms are read
 the same way. A renamed heading is a check that stops asking for anything.

@@ -166,7 +166,8 @@ def _workspace() -> Iterator[tuple[pathlib.Path, pathlib.Path, pathlib.Path]]:
 def _before(channel: Any, on: Any,
             fake: _GitHub) -> tuple[Any, str, str, pathlib.Path | tuple[str, str]]:
     """`on reviewer before 7` against `fake`: how it ended, the two files, and the two pages."""
-    with _workspace() as (root, output, env), stood_in(channel, gh=fake):
+    with _workspace() as (root, output, env), stood_in(channel, gh=fake), \
+            stood_in(on.common, tracked_scratch=lambda: ""):
         ended = outcome(lambda: on.reviewer("before", "7", on.Session(*UNREAD)))
         challenge = root / ".review" / "challenge.md"
         opened = root / ".review" / "open.md"
@@ -265,6 +266,20 @@ def _review_before(channel: Any, on: Any, fake: _Pull,
         return ended, output.read_text(), env.read_text(), written, archived
 
 
+def _review_chain(on: Any, out: str, written: dict[str, str]) -> list[str]:
+    """The chain among the outputs, and the first rung's prompt written (solorepo's DR-281)."""
+    problems = []
+    for line in ("tiers=1", "tier_1_harness=claude",
+                 f"tier_1_model={on.depth.STANDARD_CONFIG.model}"):
+        if line not in out.splitlines():
+            problems.append(f"review before: the chain's {line} is not among the outputs {out!r}")
+    prompt = written.get("prompt.md", "")
+    if "Review pull request" in prompt or f"#{PULL}" not in prompt:
+        problems.append("review before: the first rung's prompt was not written for Claude Code "
+                        f"on #{PULL}: {prompt[:80]!r}")
+    return problems
+
+
 def _review_before_cases(channel: Any, on: Any) -> list[str]:
     """The review door before the session: the harness, the depth, the files, and the count."""
     problems = []
@@ -281,6 +296,7 @@ def _review_before_cases(channel: Any, on: Any) -> list[str]:
         if f"{key}={value}" not in out.splitlines():
             problems.append(f"review before: the depth's {key}={value} is not among the outputs "
                             f"{out!r}")
+    problems += _review_chain(on, out, written)
     if "verdicts=1" not in out:
         problems.append(f"review before: the verdicts given were counted as {out!r}, where one "
                         "approval stands beside a bodiless comment and another login's verdict")

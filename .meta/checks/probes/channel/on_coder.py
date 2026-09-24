@@ -174,13 +174,13 @@ def _before(channel: Any, on: Any, fakes: _Fakes, delivery: tuple[str, str, str]
 
 def _take_cases(channel: Any, on: Any) -> list[str]:
     """The take pass: the harness, the take door on the label's event, and the depth."""
-    problems = []
-    take = _Take(level="medium")
+    problems, take = [], _Take(level="medium")
     ended, out, env = _before(channel, on, _fakes(_GitHub(["challenge", "medium"]), take),
                               ("take", "issues", ""), ISSUE)
     expected = {"pass": "take", "harness": "claude", "branch_prefix": "claude",
                 "agent": "anthropics/claude-code-action@v1", "by": "", "level": "medium",
-                "model": "claude-opus-5", "effort": "high", "turns": "120", "minutes": "60"}
+                "model": "claude-opus-5", "effort": "high", "turns": "120", "minutes": "60",
+                "tiers": "1", "tier_1_harness": "claude", "tier_1_model": "claude-opus-5"}
     if ended.code is not None or any(out.get(k) != v for k, v in expected.items()):
         problems.append(f"take: a medium Challenge decided {out!r} with exit {ended.code!r}, "
                         f"not {expected!r}")
@@ -267,7 +267,7 @@ def _between_cases(on: Any) -> list[str]:
         ended, _ = _between(on, _Branch({"number": int(PULL)}), task)
         if ended.code is None or "only the take pass" not in str(ended.code):
             problems.append(f"between: the {task} pass ended {ended.code!r}, where a pass whose "
-                            "prompt carries no resume clause is refused")
+                            "prompt carries no resume clause is refused the older question")
     return problems
 
 

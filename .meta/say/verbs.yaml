@@ -246,8 +246,9 @@ programs:
           issue the next Decision number and reserve it on GitHub, so two
           branches cannot take the same one; `--concept` reserves a Concept of
           the Ubiquitous Language instead, named by the identifier its row will
-          carry, the first of the three layers a new vocabulary row stands on,
-          and it is refused to a run (solorepo's DR-276)
+          carry, the reservation a new vocabulary row stands on; refused to a run
+          unless the Challenge its branch names asks for the word by that
+          identifier (solorepo's DR-276, solorepo's DR-282)
         held_by: [coder]
 
   - name: commit

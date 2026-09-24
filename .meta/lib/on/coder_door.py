@@ -1,12 +1,12 @@
 """Coder door lifecycle for `.meta/say/on` (solorepo's DR-217, DR-264)."""
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 
 import channel
 import check_pr
-from lib.on import common
+from lib.on import common, routing
 
 CODER_HARNESSES = ("gemini", "claude")
 """The harnesses the coder's door chooses among, in the order asked: Antigravity CLI
@@ -21,14 +21,33 @@ stands down on `closed`, `stale` and `unnamed`, and on `held` the Issue is the s
 where a session may have ended before the review landed, so the sign is one more line alerting
 them (solorepo's DR-142)."""
 
-DEPTHS = {"rebase": ("claude-opus-5", "high", "60", "30"),
-          "promote": ("claude-sonnet-5", "medium", "30", "15"),
-          "medium": ("claude-opus-5", "high", "120", "60"),
-          "easy": ("claude-sonnet-5", "medium", "60", "30")}
-"""The model, effort, turn cap and minutes of a pass, by the pass or by the level it takes at."""
+DEPTHS = routing.CODER_DEPTHS
+"""The depth of a pass, by the pass or by the level it takes at, which the routing policy holds
+(solorepo's DR-281)."""
 
-GEMINI_MODEL = "gemini-3.8-flash"
-"""The model the Antigravity CLI fallback runs, on every coder pass."""
+GEMINI_MODEL = routing.GEMINI_MODEL
+"""The model the Antigravity CLI runs, which the routing policy holds (solorepo's DR-281)."""
+
+RUN_LEFT = ("A run before this one stopped and left pull request #{number} open on that branch: "
+            "check the branch out and continue under it, and do not branch or open again.")
+"""The take prompt's resume clause, where `before` found a pull request on the branch."""
+
+RUN_LEFT_NOTHING = "No run has taken this Issue before."
+"""The take prompt's resume clause, where `before` found nothing on the branch."""
+
+HARNESS_LEFT = ("A harness before this one left pull request #{number} open on that branch: "
+                "check the branch out and continue under it, and do not branch or open again.")
+"""The take prompt's resume clause on a later rung, where `between` found a pull request."""
+
+HARNESS_LEFT_NOTHING = "No harness has left a pull request on that branch."
+"""The take prompt's resume clause on a later rung, where `between` found nothing."""
+
+STOP_ISSUE = "`.meta/say/move stop {issue}` with why on stdin."
+"""How the answering prompt says to stop, where the branch names a Challenge to hand back."""
+
+STOP_COMMENT = ("say why on the pull request with `.meta/say/post comment {number}`, this branch "
+                "naming no Challenge to hand back.")
+"""How the answering prompt says to stop, where the branch names no Challenge."""
 
 UNNAMED_REBASE = ("::error::#{n} is on {branch}, which names no Challenge, so a rebase pass that "
                   "could not finish would have nothing to hand back. Rebase it by hand.")
@@ -88,24 +107,48 @@ def coder_harness(delivery: Delivery, labels: Sequence[str]) -> str:
     return delivery.harness or named or "claude"
 
 
-def coder_depth(task: str, level: str) -> None:
-    """The model, effort, turn cap and minutes of the pass, as step outputs.
+def coder_depth(task: str, level: str, harness: str, fields: Mapping[str, str]) -> None:
+    """The pass's depth and its chain as step outputs, and the first rung's prompt written.
 
-    `easy` is the smaller model and half an hour; `medium` the larger and
-    the whole budget, and an answering pass takes it whatever the label was,
-    since the threads it answers were written by the deeper reviewer. A
-    rebase is bounded by what it is, the larger model at half the budget,
-    because a conflict here is prose as often as code and a rebase taking an
-    hour is not a rebase. Promotion on approval (solorepo's DR-159) is
-    clerical transcription, the smaller model at a quarter of the whole. Claude
-    Code's models run high extended thinking on every pass
-    (solorepo's DR-186).
+    The depth is the routing policy's, by the pass first and the level after
+    (solorepo's DR-281); Claude Code's models run high extended thinking on
+    every pass (solorepo's DR-186). `model`, `gemini_model`, `effort`, `turns`
+    and `minutes` are emitted as the workflow reads them today, and beside
+    them the chain, `tier_<n>_*` for each rung from the primary, which a
+    ladder of attempt steps reads by number. The chain and the fields go
+    under `.review/` for `between` to read, with the first rung's prompt,
+    after the tree is checked for tracking anything there: on every pass but
+    a take the pull request's branch is checked out by now, and a branch that
+    tracks a symlink under `.review/` would turn the write into one onto its
+    target.
+
+    Parameters:
+        task (str): The pass.
+        level (str): The level a take is at; `medium` on every other pass.
+        harness (str): The primary, by label, input or default.
+        fields (Mapping[str, str]): What the prompt's form is filled with.
     """
-    model, effort, turns, minutes = DEPTHS.get(task) or DEPTHS.get(level) or DEPTHS["easy"]
+    depth = routing.coder_depth(task, level)
     common.emit(
-        "GITHUB_OUTPUT", level=level, model=model, gemini_model=GEMINI_MODEL,
-        effort=effort, turns=turns, minutes=minutes,
+        "GITHUB_OUTPUT", level=level, model=depth.model, gemini_model=GEMINI_MODEL,
+        effort=depth.effort, turns=depth.turns, minutes=depth.minutes,
     )
+    tiers = routing.coder_chain(harness, task, level)
+    common.name_tiers(tiers)
+    common.refuse_tracked_scratch()
+    common.write_routing("coder", task, tiers, fields)
+
+
+def pull_fields(number: str, pull: Mapping[str, Any], issue: str, task: str) -> dict[str, str]:
+    """What a pass on a pull request fills its prompt with: the pull request, its branches, the
+    Challenge, and on the answering pass how to stop, which depends on whether one is named."""
+    fields = {"number": number, "repository": channel.repo(),
+              "branch": str(pull.get("headRefName") or ""),
+              "base": str(pull.get("baseRefName") or ""), "issue": issue}
+    if task == "answer":
+        fields["stop"] = STOP_ISSUE.format(issue=issue) if issue \
+            else STOP_COMMENT.format(number=number)
+    return fields
 
 
 def run_url() -> str:
@@ -203,7 +246,12 @@ def coder_before(number: str, delivery: Delivery) -> None:
         common.name_harness(harness)
         common.emit("GITHUB_OUTPUT", branch_prefix=harness)
         decided = taken(number, delivery)
-        coder_depth(delivery.task, str(decided["level"]))
+        left = str(decided["resume"] or "")
+        coder_depth(delivery.task, str(decided["level"]), harness, {
+            "number": number, "repository": channel.repo(), "level": str(decided["level"]),
+            "branch_prefix": harness,
+            "resume": RUN_LEFT.format(number=left) if left else RUN_LEFT_NOTHING,
+        })
         return
     pull = find_pull(number, delivery)
     if pull is None:
@@ -218,7 +266,7 @@ def coder_before(number: str, delivery: Delivery) -> None:
         channel.sibling("post").conversation_comment(
             number, channel.signed(NO_JOB_SAID.format(issue=issue, why=decided["why"],
                                                       run=run_url())))
-    coder_depth(delivery.task, "medium")
+    coder_depth(delivery.task, "medium", harness, pull_fields(number, pull, issue, delivery.task))
     if delivery.task == "promote":
         open_threads = [t for t in check_pr.github.threads(number) if not t.get("isResolved")]
         common.emit("GITHUB_OUTPUT", count=str(len(open_threads)))
@@ -226,8 +274,10 @@ def coder_before(number: str, delivery: Delivery) -> None:
 
 
 BETWEEN_NOT_TAKE = ("::error::`between` reads what is open on the Challenge's branch, which only "
-                    "the take pass has a prompt to say; it was asked on the {task} pass")
-"""The refusal where `between` is asked on a pass whose prompt carries no resume clause."""
+                    "the take pass has a prompt to say; it was asked on the {task} pass and "
+                    "named no rung")
+"""The refusal where `between` is asked the two-step question on a pass whose prompt carries no
+resume clause: with no rung named there is nothing else for it to answer."""
 
 LEFT_OPEN = ("pull request #{number} is already open on #{issue}'s branch; the harness step that "
              "follows takes it up rather than opening again")
@@ -238,43 +288,48 @@ LEFT_NOTHING = ("no pull request is open on #{issue}'s branch; the harness step 
 """The line the run log gets where the branch holds nothing for the step that follows to resume."""
 
 
-def coder_between(issue: str, delivery: Delivery) -> None:
-    """The coder's door before the second harness step: what is open on the branch, as `resume`.
+def coder_between(issue: str, delivery: Delivery, handed: common.Attempt) -> None:
+    """The coder's door between two rungs: what is open on the branch, and whether the next runs.
 
-    The step runs immediately before the second harness step and on that
-    step's own condition, which is met two ways: the first harness step
-    failed, or the Challenge chose the harness that the second step runs and
-    the first was skipped outright, making it the run's first harness rather
-    than a fallback. On a failure, the turn cap is the common way to fail
-    late — it lands after the work rather than before it, with the pull
-    request already open and commits pushed. `before` read the branch once,
-    ahead of both harness steps, so its `resume` says what was true at the
-    start of the run: handed that, the step is told no run has taken this
-    Issue and goes to open a second pull request on a branch that already owns
-    one, which `move open` refuses. This reads the branch again, now, and the
-    step's prompt takes its resume clause from here.
-
-    It is the branch `sweep.hand_back` reads and the same `loop_pull`, but on
+    On a take the branch is read again, now, and the next rung's prompt
+    takes its resume clause from here: `before` read the branch once, ahead
+    of every rung, so its `resume` says what was true at the start of the
+    run, and a rung told no run has taken this Issue goes to open a second
+    pull request on a branch that already owns one, which `move open`
+    refuses. A rung that failed late, at its turn cap, is the common case,
+    the pull request already open and the commits pushed. The reading is on
     `take`'s terms rather than the hand-back's: an empty listing as the
-    default, so a listing GitHub refuses reads as no pull request instead of
-    ending the process. The Challenge is still there to be taken, and a
-    refusal is no reason to put a red step in the run log for a reading that
-    only feeds a prompt.
+    default, so a listing GitHub refuses reads as no pull request instead
+    of ending the process, since a refusal is no reason to put a red step in
+    the run log for a reading that only feeds a prompt.
+
+    Where the workflow names the rung that ended and how, `run` says whether
+    the next rung of the chain runs and its prompt is written where the
+    attempt step reads it (solorepo's DR-281). Asked the older two-step
+    question, with no rung named, the phase answers `resume` alone, and is
+    refused on any pass but a take, whose prompt alone carries the clause.
 
     Parameters:
-        issue (str): The Challenge.
+        issue (str): The Challenge on a take, the pull request otherwise.
         delivery (Delivery): What the workflow knows.
+        handed (common.Attempt): Which rung ended and how, where the workflow said.
 
     Raises:
-        SystemExit: Where the pass is not a take.
+        SystemExit: Where no rung is named and the pass is not a take.
     """
-    if delivery.task != "take":
+    fields: dict[str, str] = {}
+    if delivery.task == "take":
+        pull = check_pr.sweep.loop_pull(issue, "number", default=[])
+        number = str(pull["number"]) if pull else ""
+        common.emit("GITHUB_OUTPUT", resume=number)
+        print(LEFT_OPEN.format(number=number, issue=issue) if number
+              else LEFT_NOTHING.format(issue=issue))
+        fields["resume"] = HARNESS_LEFT.format(number=number) if number \
+            else HARNESS_LEFT_NOTHING
+    elif handed.attempt is None:
         sys.exit(BETWEEN_NOT_TAKE.format(task=delivery.task))
-    pull = check_pr.sweep.loop_pull(issue, "number", default=[])
-    number = str(pull["number"]) if pull else ""
-    common.emit("GITHUB_OUTPUT", resume=number)
-    print(LEFT_OPEN.format(number=number, issue=issue) if number
-          else LEFT_NOTHING.format(issue=issue))
+    if handed.attempt is not None:
+        common.fallback(handed, fields)
 
 
 class Ended(NamedTuple):
@@ -370,19 +425,21 @@ NEITHER = ("::error::Neither Claude nor Gemini {task} pass succeeded (claude={cl
 """The finding where a pass ran and neither harness finished it."""
 
 
-def coder(phase: str, number: str, delivery: Delivery, ended: Ended) -> None:
+def coder(phase: str, number: str, delivery: Delivery, ended: Ended,
+          handed: common.Attempt = common.NO_RUNG) -> None:
     """The coder's door at one phase of the session, for the pass `delivery` names.
 
     Parameters:
-        phase (str): `before`, `between` the take pass's two harness steps, or `after`.
+        phase (str): `before`, `between` two rungs of the pass's ladder, or `after`.
         number (str): The Challenge on a take, the pull request otherwise.
         delivery (Delivery): What the workflow knows.
         ended (Ended): How the session's steps ended, unread before it.
+        handed (common.Attempt): Between two rungs, which ended and how; unread elsewhere.
     """
     if phase == "before":
         coder_before(number, delivery)
     elif phase == "between":
-        coder_between(number, delivery)
+        coder_between(number, delivery, handed)
     else:
         from lib.on import handoff
         handoff.coder_after(number, delivery, ended)

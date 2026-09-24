@@ -1,0 +1,19 @@
+challenges:
+  - id: work:challenge/960
+    name: "Replan execution routing across reviewer and coder doors"
+    challenge_type: ARCHITECTURE
+    description: >-
+      Solorepo's #928 asked for one routing policy in place of the six places
+      a model, effort, turn cap, timeout or fallback order was written, and
+      its pull request, solorepo's #934, built a central ordered execution plan
+      that the static step ladders of `coder.yml` and `review.yml` could not
+      execute: a ladder of harness-named steps realizes one order, so a
+      Gemini-first chain never reached its Claude Code fallback on any pass
+      but the one the pull request duplicated a step for. It also found that
+      the reviewer runs trunk's door against the pull request's workflow, so
+      a door emitting a new output contract cannot review itself.
+
+      Execution routing controls the harness, model, effort, turn cap,
+      timeout and fallback order of every reviewer and coder pass, so the
+      replacement shape needed the solo's decision before another
+      implementation could safely proceed.

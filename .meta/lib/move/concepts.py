@@ -1,6 +1,9 @@
 """The mint of a Concept: the reservation a row in the Ubiquitous Language
-stands on (solorepo's DR-276)."""
+stands on (solorepo's DR-276), given by the solo in a session or by the
+Challenge a run works, where that Challenge asks for the word by identifier
+(solorepo's DR-282)."""
 import re
+import subprocess
 import sys
 
 import channel
@@ -13,9 +16,25 @@ TAGS = "concept/"
 """The namespace the reservation tags sit in, so `git ls-remote --tags origin
 'concept/*'` reads them all and no Decision reservation answers."""
 
-REFUSED = ("say: a run may not mint `{ident}` into the Ubiquitous Language. A Concept is the "
-           "solo's word, and a run is not beside him (solorepo's DR-235, solorepo's DR-276). "
-           "Say what the word is for on the pull request and leave the row out.")
+REFUSED = ("say: a run may not mint `{ident}` into the Ubiquitous Language on a branch that "
+           "names no Challenge. A Concept is the solo's word, and a run is not beside him "
+           "(solorepo's DR-235, solorepo's DR-276); the Challenge a loop branch names is where he "
+           "asks for one (solorepo's DR-282). Say what the word is for on the pull request and "
+           "leave the row out.")
+
+NOT_ASKED = ("say: a run may mint `{ident}` only where the Challenge its branch names asks for "
+             "it on a line of its own, `**Mint.** `{ident}``, and #{issue}'s body has no such "
+             "line (solorepo's DR-282). Say what the word is for on the pull request and leave "
+             "the row out.")
+
+ASKS = re.compile(r"^\s*\*\*Mint\.\*\*\s+`"
+                  r"([a-z0-9]+(?:-[a-z0-9]+)*:concept/[a-z0-9]+(?:-[a-z0-9]+)*)`\s*$", re.M)
+"""A line of a Challenge body that asks for a Concept: the lead-in `**Mint.**` and the
+identifier in backticks, one to a line, and nothing else on it. A mention in prose asks for
+nothing, and an identifier asks for itself alone and not for any word it prefixes."""
+
+ASKED = "#{issue} asks for `{ident}`, and this run mints it on that Challenge's say-so"
+"""What the run log says where the Challenge names the Concept (solorepo's DR-282)."""
 
 MALFORMED = ("say: `{ident}` is not a Concept identifier; write it as "
              "`<context>:concept/<slug>`, which is the row the vocabulary will carry")
@@ -56,6 +75,45 @@ def is_reserved(name: str) -> bool | None:
     return any(ref.get("ref") == f"refs/tags/{TAGS}{name}" for ref in found)
 
 
+def branch() -> str:
+    """The branch checked out here, as `git` names it, or the empty string where it cannot say."""
+    try:
+        found = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True,
+                               capture_output=True, text=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+    return found
+
+
+def asked_for(ident: str) -> str:
+    """The Challenge that asks a run for `ident`, or the run ended where none does.
+
+    A run's branch is `<harness>/issue-<n>`, and the Challenge it names is
+    where the solo asks for a word. The ask is a line of the body of its own,
+    `**Mint.**` and then `<context>:concept/<slug>` in backticks, one to a line, which
+    is the form `ASKS` reads (solorepo's DR-282): a body that mentions the
+    identifier in a sentence asks for nothing, and a line asking for a longer
+    word asks for no word it prefixes. A branch naming no Challenge, and a
+    Challenge with no such line for this identifier, are each refused with why.
+
+    Parameters:
+        ident (str): The Concept identifier.
+
+    Returns:
+        str: The Challenge's number.
+
+    Raises:
+        SystemExit: Where the branch names no Challenge or the Challenge does not ask.
+    """
+    _, cut, rest = branch().partition("/issue-")
+    if not cut or not rest.isdigit():
+        sys.exit(REFUSED.format(ident=ident))
+    body = str(channel.gh("issue", "view", rest, "--json", "body").get("body") or "")
+    if ident.strip() not in ASKS.findall(body):
+        sys.exit(NOT_ASKED.format(ident=ident, issue=rest))
+    return rest
+
+
 def mint_concept(ident: str) -> str:
     """Reserve a Concept on GitHub as the say-so a vocabulary row stands on (solorepo's DR-276).
 
@@ -75,24 +133,27 @@ def mint_concept(ident: str) -> str:
         str: The identifier's tail, which is the reservation's name.
 
     Raises:
-        SystemExit: If called inside a workflow run, if `ident` is not a
-            Concept identifier, or if GitHub refuses the tag for any reason but
-            the ref existing already or answers with a ref this call did not
-            write.
+        SystemExit: If called inside a workflow run whose Challenge does not
+            ask for the Concept, if `ident` is not a Concept identifier, or if
+            GitHub refuses the tag for any reason but the ref existing already
+            or answers with a ref this call did not write.
     """
-    if channel.in_a_run():
-        sys.exit(REFUSED.format(ident=ident))
     name = slug(ident)
     if not name:
         sys.exit(MALFORMED.format(ident=ident))
+    asked = asked_for(ident) if channel.in_a_run() else ""
+    if asked:
+        print(ASKED.format(issue=asked, ident=ident))
     if is_reserved(name):
         print(STANDING.format(slug=name))
         return name
     head = channel.gh("api", f"repos/{channel.repo()}/commits/main", "--jq", ".sha", parse=False)
-    message = (f"{TAGS}{name} reserved for {ident}.\n\nThe solo minted this Concept into the "
-               "Ubiquitous Language. The reservation outlives the row: a Concept withdrawn is "
-               "recorded as withdrawn rather than untagged, so the tag never says a word is "
-               "current, only that it was minted with the solo's say-so.")
+    ground = (f"Challenge #{asked} asked for this Concept on a `**Mint.**` line, and a run on "
+              "its branch minted it on that say-so (solorepo's DR-282)." if asked
+              else "The solo minted this Concept into the Ubiquitous Language.")
+    message = (f"{TAGS}{name} reserved for {ident}.\n\n{ground} The reservation outlives the "
+               "row: a Concept withdrawn is recorded as withdrawn rather than untagged, so the "
+               "tag never says a word is current, only on whose say-so it was minted.")
     tag = channel.gh("api", f"repos/{channel.repo()}/git/tags",
                      "-f", f"tag={TAGS}{name}", "-f", f"message={message}",
                      "-f", f"object={head}", "-f", "type=commit")

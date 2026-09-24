@@ -1,11 +1,13 @@
 """The gate itself: every check a pull request on GitHub is held to, and the check run that publishes it.
 
-The form (A15), the threads (A16), the commit Trailers (A19), the solo's
-say-so on a Concept the diff mints (solorepo's DR-276), the required status
-contexts, and the Issue citations that resolve to nothing (A12).
+The form (A15), the threads (A16), the commit Trailers (A19), the required
+status contexts, and the Issue citations that resolve to nothing (A12). A
+Concept the diff mints is not this gate's question: its say-so is the
+reservation `vocabulary mints` reads, given by the solo or by the Challenge
+that asked for the word (solorepo's DR-282).
 """
 import re
-from collections.abc import Container, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 from lib.check_pr import META, form, github, review
@@ -155,132 +157,9 @@ def comment_trailers(
     return review.audit_comment_trailers(thread_comments + issue_comments, role_logins)
 
 
-VOCABULARIES = (".meta/assertions/imported/vocabulary.yaml",
-                ".meta/assertions/domain_vocabulary.yaml")
-"""The two files a Concept is declared in, as `checks/files/vocabulary.py` names them."""
-
-# A line of a vocabulary patch that opens a Concept, on the added side and on
-# the removed side. Read off the patch rather than the file, because the
-# question is what this pull request adds and not what the file holds. The
-# intra-line whitespace is horizontal alone: `\s` matches a newline, and a
-# pattern free to cross the break reads the next line's marker as its own.
-ADDED_CONCEPT = re.compile(r"^\+[ \t]*-[ \t]*id:[ \t]*(\S+concept/\S+)[ \t]*$", re.M)
-REMOVED_CONCEPT = re.compile(r"^-[ \t]*-[ \t]*id:[ \t]*(\S+concept/\S+)[ \t]*$", re.M)
-
-ROLES = ("coder", "reviewer", "technical-writer")
-
-UNREADABLE = ("the Ubiquitous Language could not be read against GitHub, so what this pull "
-              "request adds to it is unchecked: {why}")
-
-UNRATIFIED = ("{ident} is added to the Ubiquitous Language and the solo has not approved this "
-              "pull request at its head. A Concept is his word to mint, and a Role account's "
-              "approval is not his say-so (solorepo's DR-235, solorepo's DR-276)")
-
-
-def vocabulary_patches(number: int, paths: Sequence[str]) -> list[str]:
-    """The unified diffs a pull request holds over the vocabulary files.
-
-    Args:
-        number: Pull request number.
-        paths: Every path the pull request touches.
-
-    Returns:
-        list[str]: One patch per vocabulary file the pull request touches,
-            empty where it touches none, which is the case that asks GitHub
-            nothing.
-
-    Raises:
-        SystemExit: If the patches cannot be read, which `unratified_concepts`
-            turns into a problem of this pull request's own.
-    """
-    if not set(paths) & set(VOCABULARIES):
-        return []
-    files = github.gh("api", "--paginate", "-X", "GET", "-f", "per_page=100",
-                      f"repos/{github.repo()}/pulls/{number}/files")
-    return [entry.get("patch") or "" for entry in files
-            if entry.get("filename") in VOCABULARIES]
-
-
-def added_concepts(patches: Sequence[str]) -> list[str]:
-    """The Concept identifiers a pull request's diff adds to the Ubiquitous Language.
-
-    Args:
-        patches: The vocabulary patches, read as one language: an identifier on
-            the removed side of any of them is a row this pull request moved,
-            reindented or reordered rather than one it mints.
-
-    Returns:
-        list[str]: Each identifier added and not removed, in the order the
-            patches give them and without repeats.
-    """
-    gone = {ident for patch in patches for ident in REMOVED_CONCEPT.findall(patch)}
-    came = (ident for patch in patches for ident in ADDED_CONCEPT.findall(patch))
-    return [ident for ident in dict.fromkeys(came) if ident not in gone]
-
-
-def solo_approved(reviews: Sequence[dict[str, Any]], head: str,
-                  roles: Container[str]) -> bool:
-    """Whether an account no Role holds approved the pull request at `head`.
-
-    Args:
-        reviews: The pull request's reviews, oldest first.
-        head: The pull request's current head commit.
-        roles: The logins the Roles hold, whose approval is not the solo's.
-
-    Returns:
-        bool: True where the newest verdict from a login outside `roles`
-            approves and names the head it was submitted against, which is what
-            an approval of the row now in the diff looks like.
-    """
-    outside = [r for r in reviews
-               if (r.get("author") or {}).get("login") not in roles
-               and str(r.get("state") or "").upper() in ("APPROVED", "CHANGES_REQUESTED")]
-    if not outside:
-        return False
-    standing = outside[-1]
-    named = ((standing.get("commit") or {}).get("abbreviatedOid") or "")
-    return (str(standing.get("state") or "").upper() == "APPROVED"
-            and bool(named) and head.startswith(named))
-
-
-def unratified_concepts(ref: str | int) -> list[str]:
-    """A pull request that mints a Concept carries the solo's own approval (solorepo's DR-276).
-
-    The third layer of the mint: an approving review at this head from an
-    account no Role holds, which is the one thing in the mechanism a Job cannot
-    type for itself.
-
-    Args:
-        ref: Pull request number, URL, or head branch reference.
-
-    A read this step cannot make is this pull request's failure rather than an
-    answer of none, and it is reported rather than raised: the sweep runs the
-    gate over every open pull request in one loop, and an exit here would leave
-    every later one with no verdict published at all.
-
-    Returns:
-        list[str]: One message per Concept the diff adds without the solo's
-            approval standing on the head that carries it, or one naming a read
-            that could not be made.
-    """
-    try:
-        pull = github.gh("pr", "view", str(ref), "--json", "number,headRefOid,files")
-        paths = [entry.get("path") or "" for entry in (pull.get("files") or [])]
-        added = added_concepts(vocabulary_patches(pull["number"], paths))
-    except SystemExit as exc:
-        return [UNREADABLE.format(why=exc.code)]
-    if not added:
-        return []
-    reviews = github.pull(ref)["reviews"]["nodes"]
-    if solo_approved(reviews, pull["headRefOid"],
-                     {github.role_login(role) for role in ROLES}):
-        return []
-    return [UNRATIFIED.format(ident=ident) for ident in added]
-
-
 def gate(ref: str | int,
          thread_nodes: Sequence[dict[str, Any]] | None = None) -> list[str]:
-    """Executes gate checks on a pull request: title/body form, threads, signoffs, vocabulary mints, contexts, and comment trailers.
+    """Executes gate checks on a pull request: title/body form, threads, signoffs, contexts, and comment trailers.
 
     Args:
         ref: Pull request number, URL, or head branch reference.
@@ -292,7 +171,7 @@ def gate(ref: str | int,
     title, body = github.from_github(ref)
     return (form.check(title, body) + review.resolved_without_an_answer(ref, thread_nodes=thread_nodes)
             + unsigned_commits(ref) + comment_trailers(ref, thread_nodes=thread_nodes)
-            + unratified_concepts(ref) + required_contexts() + cited_issues())
+            + required_contexts() + cited_issues())
 
 
 CONTEXT = "pull request"

@@ -50,6 +50,42 @@ def step_outcome(text: str) -> str:
     return text
 
 
+def rung_outcome(text: str) -> str | None:
+    """A rung's outcome, or `None` where the workflow handed an empty string.
+
+    Between two rungs an outcome is what decides whether the next runs, so
+    an empty one is refused there by the door's `fallback` and not by the
+    parser, which also serves the phases that take none.
+
+    Raises:
+        argparse.ArgumentTypeError: Where the text is no outcome a step has.
+    """
+    if not text.strip():
+        return None
+    if text not in coder_door.OUTCOMES:
+        raise argparse.ArgumentTypeError(
+            NOT_ONE_OF.format(text=text, choices=", ".join(coder_door.OUTCOMES))
+        )
+    return text
+
+
+def between_flags(p: argparse.ArgumentParser) -> None:
+    """The two flags `between` takes on either Role: which rung ended, and how."""
+    p.add_argument(
+        "--attempt",
+        type=count,
+        default=None,
+        help="between two rungs: which rung has just ended, counted from one; "
+        "absent, the phase answers the older two-step question",
+    )
+    p.add_argument(
+        "--outcome",
+        type=rung_outcome,
+        default=None,
+        help="between two rungs: how that rung ended; required beside --attempt",
+    )
+
+
 def harness(text: str) -> str | None:
     """A flag's harness, or `None` where the workflow handed an empty string.
 
@@ -69,9 +105,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="verb", required=True)
     p = sub.add_parser("reviewer")
     p.add_argument(
-        "phase", choices=("before", "after"), help="before the harness session, or after it"
+        "phase",
+        choices=("before", "between", "after"),
+        help="before the harness session, between two rungs of its ladder, or after it",
     )
     p.add_argument("number", help="the Challenge or the pull request the run is for")
+    between_flags(p)
     p.add_argument(
         "--verdicts",
         type=count,
@@ -97,10 +136,11 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument(
         "phase",
         choices=("before", "between", "after"),
-        help="before the harness session, between the take pass's two harness "
-        "steps, or after the session",
+        help="before the harness session, between two rungs of its ladder, or after "
+        "the session",
     )
     c.add_argument("number", help="the Challenge on a take, the pull request on any other pass")
+    between_flags(c)
     c.add_argument(
         "--pass",
         dest="task",
@@ -145,8 +185,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--execution-file",
         dest="execution",
         default="",
-        help="after a take: where Claude Code wrote the pass's transcript, which is "
-        "where the turn cap is said",
+        help="after a take, or between two rungs: where Claude Code wrote the pass's "
+        "transcript, which is where the turn cap is said",
     )
     return ap
 
@@ -160,6 +200,7 @@ def main() -> None:
             args.phase,
             args.number,
             common.Session(args.verdicts, args.agents, args.ran, args.transcript),
+            common.Attempt(args.attempt, args.outcome, args.transcript),
         )
     elif args.verb == "coder":
         coder_door.coder(
@@ -169,4 +210,5 @@ def main() -> None:
             coder_door.Ended(
                 args.claude, args.gemini, args.count, args.branch_prefix, args.execution
             ),
+            common.Attempt(args.attempt, args.outcome, args.execution),
         )

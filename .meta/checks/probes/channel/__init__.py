@@ -35,5 +35,6 @@ import checks.probes.channel.verdict
 import checks.probes.channel.settle
 import checks.probes.channel.on
 import checks.probes.channel.on_coder
+import checks.probes.channel.routing
 import checks.probes.channel.bound
 import checks.probes.channel.extension  # noqa: F401  # reason: registers check steps

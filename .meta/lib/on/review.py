@@ -10,7 +10,7 @@ import agents
 import channel
 import check_pr
 import depth
-from lib.on import common
+from lib.on import common, routing
 
 
 def trunk_paths() -> tuple[str, ...]:
@@ -23,30 +23,23 @@ def trunk_paths() -> tuple[str, ...]:
     return tuple(p for p in depth.CONTROL_PLANE if not p.startswith(".github/workflows"))
 
 
-def tracked_scratch() -> str:
-    """What git tracks under `.review/`, one path per line; empty where nothing is."""
-    return common.command(["git", "ls-files", "--", str(common.REVIEW)]).decode("utf-8", "replace")
+tracked_scratch = common.tracked_scratch
+"""What git tracks under `.review/`, as `common` reads it; a probe stands this name in."""
 
 
 def refuse_tracked_scratch() -> None:
     """Ends the run where `.review/` is tracked, before anything is written there.
 
-    `.gitignore` silences an untracked `.review/`; it does not stop a branch
-    committing one, and the checkout materialises whatever the merge ref
-    tracks there before the door runs. A committed `.review/diff.patch`
-    symlink turns the write into one onto its target, and a committed
-    `.review/head` symlink lands the head's own channel and hooks on top of
-    trunk's, after the restore. Nothing legitimate is ever tracked there, so
-    the run refuses rather than guessing which shape it is looking at.
+    The review door's case of `common.refuse_tracked_scratch`: a committed
+    `.review/diff.patch` symlink turns the write into one onto its target,
+    and a committed `.review/head` symlink lands the head's own channel and
+    hooks on top of trunk's, after the restore. The listing is this module's
+    `tracked_scratch`, so a probe standing that name in is read.
 
     Raises:
         SystemExit: Where anything under `.review/` is tracked.
     """
-    if tracked_scratch().strip():
-        sys.exit(
-            "::error::.review/ is tracked in this tree, and the review door writes the "
-            "reviewer's scratch there"
-        )
+    common.refuse_tracked_scratch(tracked_scratch)
 
 
 def write_head(head: str, paths: Sequence[str]) -> list[str]:
@@ -154,14 +147,16 @@ def review_before(number: str) -> None:
 
     The harness is chosen by the pull request's own label (solorepo's DR-242)
     and named as the reading door names it. The depth is `depth.py`'s
-    (solorepo's DR-188), every field of it a step output. What the session
-    reads is written as files, since a diff and the head's copies of the
-    trunk paths both exceed what a shell result carries whole
-    (solorepo's #196): the diff, the head's copies under `.review/head/`, and
-    the constraints every agent reads. The head is the one the run was asked
-    about, `SOLOREPO_REVIEW_HEAD`, or the pull request's where a session runs
-    the door by hand. The verdicts the Role has already given are counted
-    last, so that only a verdict the session itself posts satisfies `after`
+    (solorepo's DR-188), every field of it a step output, and the chain is
+    the routing policy's at that depth, the primary first, `tier_<n>_*` for
+    each rung (solorepo's DR-281). What the session reads is written as
+    files, since a diff and the head's copies of the trunk paths both exceed
+    what a shell result carries whole (solorepo's #196): the diff, the head's
+    copies under `.review/head/`, the constraints every agent reads, and the
+    first rung's prompt. The head is the one the run was asked about,
+    `SOLOREPO_REVIEW_HEAD`, or the pull request's where a session runs the
+    door by hand. The verdicts the Role has already given are counted last,
+    so that only a verdict the session itself posts satisfies `after`
     (solorepo's DR-122).
 
     Parameters:
@@ -172,6 +167,10 @@ def review_before(number: str) -> None:
     common.name_harness(harness)
     found = depth_of(number)
     common.emit("GITHUB_OUTPUT", **{key: str(value) for key, value in found._asdict().items()})
+    tiers = routing.review_chain(
+        harness, routing.Depth(found.model, found.effort, str(found.turns), str(found.minutes)),
+        found.gemini_model)
+    common.name_tiers(tiers)
     head = os.environ.get("SOLOREPO_REVIEW_HEAD") or str(view.get("headRefOid") or "HEAD")
     refuse_tracked_scratch()
     shutil.rmtree(common.REVIEW, ignore_errors=True)
@@ -183,6 +182,10 @@ def review_before(number: str) -> None:
     (common.REVIEW / "constraints.md").write_text(
         constraints(number, head, paths), encoding="utf-8"
     )
+    common.write_routing("reviewer", "review", tiers, {
+        "number": number, "repository": channel.repo(), "head": head,
+        "login": channel.role_login("reviewer"), "agents": str(found.agents),
+    })
     common.emit("GITHUB_OUTPUT", verdicts=str(verdicts_of(number)))
     for written in sorted(path for path in common.REVIEW.rglob("*") if path.is_file()):
         print(written)
@@ -244,18 +247,26 @@ def review_after(number: str, session: common.Session) -> None:
         sys.exit(1)
 
 
-def reviewer(phase: str, number: str, session: common.Session) -> None:
-    """The reviewer's door, `before` or `after` the session, for what `number` names.
+def reviewer(phase: str, number: str, session: common.Session,
+             handed: common.Attempt = common.NO_RUNG) -> None:
+    """The reviewer's door, `before`, `between` two rungs, or `after` the session.
+
+    Between two rungs the review door and the reading door answer alike:
+    whether the next rung runs, and its prompt where it does
+    (solorepo's DR-281).
 
     Parameters:
-        phase (str): `before` or `after`.
+        phase (str): `before`, `between` or `after`.
         number (str): A Challenge, which is the reading door, or a pull
             request, which is the review door.
         session (common.Session): What the workflow knows after a review session;
             unread on the reading door and before any session, and refused
             absent after a review session.
+        handed (common.Attempt): Between two rungs, which ended and how; unread elsewhere.
     """
-    if channel.sibling("move").kind(number) == "pull request":
+    if phase == "between":
+        common.fallback(handed)
+    elif channel.sibling("move").kind(number) == "pull request":
         if phase == "before":
             review_before(number)
         else:

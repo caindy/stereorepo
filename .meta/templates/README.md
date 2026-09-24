@@ -29,6 +29,35 @@ The door fills five of its angle brackets, `<number>`, `<repository>`, `<head>`,
 bracket in the form, such as the `<path>` in a command it shows, is the
 reviewer's to read as written.
 
+## The prompts are filled by a program too
+
+`prompts/` holds the prompt each Role's pass runs with, one form per pass
+and one more where a harness takes a form of its own (`reviewer-review-jules.md`),
+and the door fills it for the rung about to run (solorepo's DR-281). Each pass
+has its own fields, which are what its door writes and all a form may ask for:
+
+| Form | Fields the door fills |
+|---|---|
+| `coder-take.md` | `<number>`, `<repository>`, `<level>`, `<branch_prefix>`, `<resume>` |
+| `coder-rebase.md`, `coder-promote.md` | `<number>`, `<repository>`, `<branch>`, `<base>`, `<issue>` |
+| `coder-answer.md` | those five and `<stop>` |
+| `reviewer-review.md` | `<number>`, `<repository>`, `<head>`, `<login>`, `<agents>` |
+| `reviewer-read.md` | `<number>`, `<repository>`, `<login>` |
+
+Every form may also use `<effort>`, `<turns>`, `<minutes>` and `<budget>`, which
+come from the rung rather than the door, the last a sentence naming the caps the
+rung's harness binds. The reading form's `<level>` is not a field: it is the
+verdict the session is there to decide, shown in the command it will type, and
+the probe names it as the one angle bracket that survives on purpose. A block
+between `<!-- claude -->` and `<!-- /claude -->`, or
+`gemini`, is kept where its name is the rung's harness and dropped otherwise,
+which is how one form says the one thing that differs by harness. Every other
+angle bracket, such as the `<thread-id>` in a command the prompt shows, is the
+session's to read as written. The rendered prompt is written to
+`.review/prompt.md`, where the attempt step reads it, and `.review/routing.json`
+beside it holds the chain and the fields, for the phase between two rungs to
+render the next rung's prompt from.
+
 ## Three of them are the source for `.github/`
 
 `pull-request.md`, `issue.md` and `roadmap.md` each hold their form in a
