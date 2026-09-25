@@ -11,8 +11,8 @@ def main() -> None:
     `--landed <n>` prints what a Challenge got and exits. Otherwise every
     target is rendered: written to disk, or under `--check` compared with what
     is on disk. Writing also runs `apm_compile.reconcile_root`, which rewrites
-    `CLAUDE.md` and `GEMINI.md` at the repository root as symlinks to
-    `AGENTS.md`; those two paths are in no target, and `--check` does not
+    `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` as symlinks to
+    `AGENTS.md`; those paths are in no target, and `--check` does not
     touch them. `--check` answers with two prefixes, because they are not the
     same answer and neither is the other's repair: `stale:` names pages made
     current by running this program, and `unrendered:` names pages nothing

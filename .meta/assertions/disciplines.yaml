@@ -65,9 +65,9 @@ disciplines:
       - id: work:discipline-step/specialization/copy-template-replacements-and-link-agents
         name: Copy template replacements and link agents
         statement: >-
-          Copy every file under `template/` to its matching path, then link `CLAUDE.md` and `GEMINI.md`
-          to `AGENTS.md`. These are the replacements: the files that must carry none of the scaffold's
-          content.
+          Copy every file under `template/` to its matching path, then link `CLAUDE.md`, `GEMINI.md`,
+          and `.github/copilot-instructions.md` to `AGENTS.md`. These are the replacements: the files
+          that must carry none of the scaffold's content.
       - id: work:discipline-step/specialization/fill-placeholders-and-write-assertions
         name: Fill placeholders and write assertions
         statement: >-

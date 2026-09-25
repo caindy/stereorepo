@@ -108,11 +108,14 @@ def skill(name: str, discipline: str, commands: Sequence[str],
     return "\n".join(out)
 
 
-READING = ["just sweep                                # what this branch owns, and what it owes",
-           "just pr <n> --threads                     # the threads: owed, held, answered; and each verdict with its head",
-           "just pr <n>                               # the gate: A15 and A16",
-           "#   Watching the pull request, and removing what a merge leaves behind, are the",
-           "#   harness's business, not yours: AGENTS.md says how this one does both."]
+READING = [
+    "just watch <n>                            # monitor the handoff semaphore (solorepo's DR-248)",
+    "just sweep                                # what this branch owns, and what it owes",
+    "just pr <n> --threads                     # the threads: owed, held, answered; and each verdict with its head",
+    "just pr <n>                               # the gate: A15 and A16",
+    "#   Start `just watch <n>` under a persistent Monitor upon handoff as AGENTS.md directs;",
+    "#   run `just sweep` to clean up branches once the pull request closes.",
+]
 
 
 # The coder's alone, and only in the coder's reading of the Discipline: the

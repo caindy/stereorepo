@@ -10,7 +10,7 @@ _None yet._
 
 ## Working here
 
-[`AGENTS.md`](AGENTS.md) — and `CLAUDE.md` and `GEMINI.md`, which are symlinks
+[`AGENTS.md`](AGENTS.md) — and `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md`, which are symlinks
 to it — orients an agent working in this repository. From there,
 [`.meta/README.md`](.meta/README.md) is the load map.
 

@@ -24,7 +24,7 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 
 ## Conventions
 
-- `CLAUDE.md` and `GEMINI.md` are symlinks to this file. Edit `AGENTS.md`.
+- `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are symlinks to this file. Edit `AGENTS.md`.
 - `SPECIALIZE.md` is generated from the Specialization Discipline. Edit the
   assertion, not the file.
 - Use the vocabulary from the ontology of work in preference to synonyms: a

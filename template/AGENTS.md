@@ -21,7 +21,7 @@ ceremonies — is a poor fit here unless an agent can hold the other seat.
 
 ## Conventions
 
-- `CLAUDE.md` and `GEMINI.md` are symlinks to this file. Edit `AGENTS.md`.
+- `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are symlinks to this file. Edit `AGENTS.md`.
 - Use the vocabulary in `.meta/vocabulary.md` in preference to synonyms, and do
   not mint a term without an explicit decision. Check DDD first, then the
   inherited vocabulary, then ask.

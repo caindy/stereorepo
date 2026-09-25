@@ -225,7 +225,10 @@ def template_conventions_agree() -> StepOutcome:
         return CouldNotRun("one or more required convention files are absent")
 
     agents_conventions = (
-        ("symlinks to AGENTS.md", ("`CLAUDE.md` and `GEMINI.md` are symlinks",)),
+        (
+            "symlinks to AGENTS.md",
+            ("`CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are symlinks",),
+        ),
         ("minting decisions", (".meta/say/move mint",)),
         ("operator surface", ("`just --list`",)),
         ("review handoff", (".meta/say/move request-review",)),

@@ -233,16 +233,16 @@ def step_3_copy_template(target_path: pathlib.Path) -> int:
     for src_file in sorted(template_dir.rglob("*")):
         if not src_file.is_file():
             continue
-        rel = src_file.relative_to(template_dir)
-        dest = target_path / rel
+        dest = target_path / src_file.relative_to(template_dir)
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_file, dest)
 
-    for link_name in ("CLAUDE.md", "GEMINI.md"):
-        link_dest = target_path / link_name
-        if link_dest.exists() or link_dest.is_symlink():
-            link_dest.unlink()
-        link_dest.symlink_to("AGENTS.md")
+    for name, target in (("CLAUDE.md", "AGENTS.md"), ("GEMINI.md", "AGENTS.md"),
+                         (".github/copilot-instructions.md", "../AGENTS.md")):
+        link = target_path / name
+        link.unlink(missing_ok=True)
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target)
     return 0
 
 
