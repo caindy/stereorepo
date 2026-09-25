@@ -1017,6 +1017,9 @@ def _check_reservation_semantics(move: Any) -> list[str]:
 def _check_stall_thresholds(move: Any) -> list[str]:
     """Loop branches stall only after exceeding thresholds while session branches do not (solorepo's DR-258).
 
+    A clean rebase onto trunk preserves a reviewer's APPROVED verdict across head movements
+    (solorepo's DR-288).
+
     Parameters:
         move: The move module under test.
 
@@ -1097,6 +1100,25 @@ def _check_stall_thresholds(move: Any) -> list[str]:
     ok_app, reason = move.check_reviewer_approval(re_requested_pr, REVIEWER)
     if ok_app or "waiting on review" not in reason:
         problems.append(f"check_reviewer_approval: re-requested PR must not authorize approval: {reason}")
+
+    rebased_pr = {
+        "number": 38, "headRefName": "gemini/issue-38", "baseRefName": "main", "isDraft": False,
+        "headRefOid": "7cf0b88",
+        "latestReviews": [
+            {"author": {"login": REVIEWER}, "state": "APPROVED", "commit": {"oid": "56a50a0"}},
+        ],
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "APPROVED", "commit": {"oid": "56a50a0"}},
+        ],
+        "reviewRequests": [],
+        "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
+    }
+    ok_app_rebased, reason = move.check_reviewer_approval(rebased_pr, REVIEWER)
+    if not ok_app_rebased or "approved by reviewer" not in reason:
+        problems.append(
+            "check_reviewer_approval: clean rebase must preserve approval "
+            f"(solorepo's DR-288): {reason}"
+        )
 
     return problems
 

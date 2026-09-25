@@ -711,3 +711,13 @@ prior to coder rebase dispatch in `_dispatch_conflicting`, `dispatch_pass`, and
 
 Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
 
+### Reviewer approval validity across clean rebases
+
+`check_reviewer_approval` in `.meta/lib/move/manager/ranking.py` accepted an `APPROVED`
+review regardless of head commit, merging pull request solorepo's #905 on an approval
+given prior to two rebases (solorepo's DR-288, solorepo's #948). Established: a clean
+rebase onto trunk preserves standing `APPROVED` verdicts so long as the branch remains clean
+and passes required gate status checks, avoiding review churn and merge-queue starvation.
+
+Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
+

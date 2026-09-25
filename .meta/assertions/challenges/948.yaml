@@ -1,0 +1,8 @@
+challenges:
+  - id: work:challenge/948
+    name: "Settle whether a rebase invalidates a reviewer's APPROVED verdict"
+    challenge_type: DEFECT
+    description: >-
+      check_reviewer_approval accepts the reviewer's latest APPROVED review
+      regardless of which head commit it was given on. Settle whether a rebase
+      invalidates a prior approval, and if not, what does.

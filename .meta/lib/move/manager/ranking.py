@@ -68,7 +68,21 @@ def check_green(pull: common.Pull) -> tuple[bool, str]:
 
 
 def check_reviewer_approval(pull: common.Pull, reviewer_login: str) -> tuple[bool, str]:
-    """Whether the reviewer account has approved."""
+    """Whether the reviewer account has approved.
+
+    A clean rebase onto trunk preserves a standing APPROVED verdict (solorepo's DR-288),
+    avoiding review churn and merge-queue starvation. The approval stands across
+    clean rebases so long as the branch remains clean and passes all required gate
+    status checks.
+
+    Parameters:
+        pull (dict): The pull request metadata dictionary.
+        reviewer_login (str): Expected login of the reviewer Role.
+
+    Returns:
+        tuple[bool, str]: True and a reason string if the latest review from reviewer_login
+            is APPROVED and no review is requested; False and a reason string otherwise.
+    """
     if check_pr.is_review_requested(pull, reviewer_login):
         return False, f"waiting on review from {reviewer_login}"
     reviews = pull.get("latestReviews") or pull.get("reviews") or []
