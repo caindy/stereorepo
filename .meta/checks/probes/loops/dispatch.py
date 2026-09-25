@@ -70,6 +70,22 @@ def _approved_conflicting_dispatches_rebase(channel: Any, move: Any) -> list[str
     return problems
 
 
+def _approved_conflicting_with_handed_back_challenge_dispatches_rebase(
+        channel: Any, move: Any) -> list[str]:
+    problems: list[str] = []
+    fake = FakeGitHub({7: {"behind": 1, "armed": False, "mergeable": "CONFLICTING",
+                           "verdicts": [("o-r-reviewer", "APPROVED")],
+                           "issue": {"level": "human"}}})
+    said = swept(channel, move, fake, problems)
+    if fake.dispatched != [("7", "rebase")]:
+        problems.append("advance: the approved conflicting PR with handed-back challenge "
+                        f"dispatched {fake.dispatched!r}")
+    if said:
+        problems.append("advance: the approved conflicting PR with handed-back challenge exited "
+                        f"with {said!r}")
+    return problems
+
+
 def _conflicting_changes_requested_dispatches_rebase(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING",
@@ -656,6 +672,7 @@ def dispatch_probes() -> list[str]:
         _unknown_is_waited_out(channel, move),
         _armed_conflicting_dispatched_not_rebased(channel, move),
         _approved_conflicting_dispatches_rebase(channel, move),
+        _approved_conflicting_with_handed_back_challenge_dispatches_rebase(channel, move),
         _conflicting_changes_requested_dispatches_rebase(channel, move),
         _recent_conflicting_changes_requested_left_to_the_run(channel, move),
         _unanswered_changes_requested_dispatches_review(channel, move),

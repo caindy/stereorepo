@@ -31,7 +31,8 @@ _UNSET = object()
 
 
 def _is_autonomous_challenge(challenge: str, action: str, pull: common.Pull,
-                             found: Any = _UNSET) -> bool:
+                             found: Any = _UNSET,
+                             reviewer_login: str | None = None) -> bool:
     """Verify associated Challenge is open and easy/medium for loop action.
 
     An Issue deleted or transferred under its branch fails this read the same
@@ -46,8 +47,10 @@ def _is_autonomous_challenge(challenge: str, action: str, pull: common.Pull,
             reads its state live, refusing if the branch is not numeric.
             When `None`, treats the Challenge as already read and unreadable,
             refusing and logging the notice. When an `IssueState` value, uses
-            the state directly, verifying it is `RESUMABLE` and refusing if
-            closed or at a non-autonomous level.
+            the state directly, verifying it is `RESUMABLE` (or `HANDED_BACK`
+            for conflicting approved pull requests undergoing mechanical
+            rebase) and refusing if closed or at a non-autonomous level.
+        reviewer_login: Optional login of the designated reviewer Role.
 
     Returns:
         True if the Challenge is open and at an autonomous level; False otherwise.
@@ -64,6 +67,10 @@ def _is_autonomous_challenge(challenge: str, action: str, pull: common.Pull,
               f"is the solo's, and the sweep names it — {pull['title']}")
         return False
     if found is not check_pr.state.IssueState.RESUMABLE:
+        is_approved = (pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login)
+                       or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED")
+        if action == "conflict" and is_approved and found is check_pr.state.IssueState.HANDED_BACK:
+            return True
         state_str = "closed" if found is check_pr.state.IssueState.CLOSED else "at a level no loop takes"
         print(f"left #{pull['number']} alone: #{challenge} is {state_str}, "
               f"so the {action} is the solo's, and the sweep names it — {pull['title']}")
@@ -126,7 +133,8 @@ def _dispatch_conflicting(pull: common.Pull, waiting: list[str],
     if act is not None and act.kind == "hold" and act.lower is not None:
         print(f"left #{number} alone: it is {act.why} — {pull['title']}")
         return True, None
-    if not _is_autonomous_challenge(challenge, "conflict", pull, found=found):
+    if not _is_autonomous_challenge(challenge, "conflict", pull, found=found,
+                                     reviewer_login=reviewer_login):
         return True, None
     waits = " and ".join(waiting)
     try:
@@ -188,7 +196,8 @@ def _dispatch_single_pull(pull: common.Pull, pulls: Sequence[common.Pull], revie
     waiting = [f"requested of {', '.join(asked)}"] if asked else []
     if pull.get("autoMergeRequest"):
         waiting.append("armed")
-    if pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login):
+    if (pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login)
+            or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED"):
         waiting.append("approved")
     redeliver = (pull_requests.is_changes_requested_pull(pull, reviewer_login=reviewer_login)
                  and idle >= minutes)
@@ -577,7 +586,8 @@ def _is_advance_candidate(pull: common.Pull, pr: int | str | None, bases: set[st
         return False
     if pull.get("autoMergeRequest"):
         return True
-    if pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login):
+    if (pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login)
+            or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED"):
         return True
     return bool(pr is not None and pull.get("headRefName") in bases and pull.get("baseRefName") not in heads)
 

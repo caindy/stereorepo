@@ -679,3 +679,21 @@ The carve-out is the filter's alone: a draft that is a layer of a stack still
 moves with the stack, and `advance(pr, held=True)` skips the filter outright.
 
 Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
+
+### An approved loop pull request refused rebase or held because its challenge was handed back
+
+When a coder agent stopped work on a Challenge due to an external blocker (`move stop`),
+the Challenge was demoted to `human` (`IssueState.HANDED_BACK`). Even after the blocker
+resolved and the pull request on that loop branch was reviewed and approved
+(`standing_verdict: APPROVED`), the advance sweep (`_is_autonomous_challenge`) and
+reconciler (`owed_by_pull`, `_held_above`) checked whether the Challenge was `RESUMABLE`
+(solorepo's #1019). Because the Challenge remained labeled `human`, `_dispatch_conflicting`
+refused to trigger coder rebase passes (`left #<pr> alone: #<issue> is at a level no loop takes`)
+and `reconcile` held the pull request as the solo's.
+Established: an approved pull request has completed its creative authoring phase.
+Mechanical maintenance (rebasing against trunk under `NEEDS_REBASE` or `READY_TO_MERGE`) is
+admitted as loop agency in `_is_autonomous_challenge`, `owed_by_pull`, and `_held_above`
+even when its parent Challenge is in the hand-back state (`HANDED_BACK`).
+
+Evidence: `.meta/checks/probes/loops/dispatch.py::dispatch_probes`
+

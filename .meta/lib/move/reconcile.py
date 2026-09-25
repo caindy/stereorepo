@@ -115,7 +115,11 @@ def _held_above(number: int, lower: common.Pull, reading: Any = None) -> Owed:
                                     "rebase: the stack is the solo's to resolve from the bottom",
                     lower=lower_num)
     found = _challenge_reads(int(match.group(1)), reading)
-    if found is check_pr.state.IssueState.RESUMABLE:
+    reviewer_login = reading.reviewer_login if reading else None
+    is_lower_approved = (pull_requests.is_approved_pull(lower, reviewer_login=reviewer_login)
+                         or check_pr.state.standing_verdict(lower, reviewer_login) == "APPROVED")
+    if (found is check_pr.state.IssueState.RESUMABLE
+            or (is_lower_approved and found is check_pr.state.IssueState.HANDED_BACK)):
         return Owed("hold", number, f"{where} and is rebased first: a stack is resolved from "
                                     "the bottom", lower=lower_num)
     reads = found.value if found is not None else "no Challenge the loop can read"
@@ -154,7 +158,9 @@ def _owed_rebase(pull: common.Pull, reviewer_login: str,
     asked = check_pr.is_review_requested(pull, reviewer_login)
     verdict = check_pr.latest_verdict(pull, reviewer_login)
     armed = bool(pull.get("autoMergeRequest"))
-    if asked or armed or verdict in advance.VERDICTS:
+    is_approved = (verdict == "APPROVED"
+                   or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED")
+    if asked or armed or is_approved or verdict in advance.VERDICTS:
         return Owed("rebase", number, "conflicting under a request, an arming, or a verdict")
     if not constraints.held_only:
         return Owed("rebase", number, "conflicting, and nobody holds it: no request stands, no "
@@ -241,7 +247,10 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
     free or not, since what stands on it is the solo's: a claim read as the
     coder's would read `TAKEN` before `hard`, and a branch the solo took over at
     `hard` would be acted on, which is what the take door's second reading
-    exists to prevent (solorepo's DR-142).
+    exists to prevent (solorepo's DR-142). Approved loop pull requests whose
+    creative authoring phase is complete are exempted for mechanical rebase
+    under `NEEDS_REBASE` or `READY_TO_MERGE` when their Challenge is in the
+    hand-back state (`HANDED_BACK`).
 
     Parameters:
         pull (dict): The pull request, carrying `RECONCILE_FIELDS`, its
@@ -266,7 +275,14 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
 
     if found is None:
         return None
-    if found is not check_pr.state.IssueState.RESUMABLE:
+
+    pulls_ = check_pr.PullRequestState
+    is_approved = (pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login)
+                   or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED")
+    rebase_agency = is_approved and state in (pulls_.NEEDS_REBASE, pulls_.READY_TO_MERGE)
+
+    if (found is not check_pr.state.IssueState.RESUMABLE
+            and not (rebase_agency and found is check_pr.state.IssueState.HANDED_BACK)):
         return Owed("hold", number, f"its Challenge reads {found.value}, which is the solo's")
     if not c.free:
         return None
