@@ -121,6 +121,11 @@ class Trunk(NamedTuple):
         """Whether a check on trunk's HEAD failed, which is the break there is anything to heal."""
         return bool(self.failing)
 
+    @property
+    def green(self) -> bool:
+        """Whether trunk's HEAD commit is green: no check failed and none is pending."""
+        return not self.red and not self.pending
+
 
 def runs_of(workflow: str) -> Runs:
     """The runs of a workflow, or that GitHub would not list them, said out loud.

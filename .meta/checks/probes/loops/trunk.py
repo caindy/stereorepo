@@ -103,6 +103,9 @@ def _reading_cases(channel: Any, actions: Any) -> list[str]:
         got = (found.red, found.pending, found.failing)
         if got != expected:
             problems.append(f"trunk_health: {name} read {got}, not {expected}")
+        if found.green != (not found.red and not found.pending):
+            problems.append(f"trunk_health: {name} green read {found.green!r}, where green is "
+                            "not red and not pending")
         if found.ref != "main" or found.oid != "0123456789abcdef":
             problems.append(f"trunk_health: {name} named {found.ref} at {found.oid}, not the "
                             "branch and commit GitHub answered with")

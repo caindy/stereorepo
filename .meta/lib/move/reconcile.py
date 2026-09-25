@@ -152,12 +152,16 @@ class Constraints(NamedTuple):
             request, an arming, or a verdict.
         reading: Shared pass context of the reconciler providing cached issue and
             run state (Reading), or None outside a reconcile pass.
+        trunk_green: Whether trunk's check rollup is green, for re-dispatching
+            pull requests stranded on a broken baseline once trunk recovers
+            (solorepo's #985).
     """
 
     free: bool = True
     pulls: Sequence[common.Pull] | None = None
     held_only: bool = False
     reading: Any = None
+    trunk_green: bool = False
 
 
 def _owed_rebase(pull: common.Pull, reviewer_login: str,
@@ -200,12 +204,15 @@ def _owed_stalled(pull: common.Pull, constraints: Constraints) -> Owed | None:
                                   "on this head, which no merge of the head answers")
 
 
-def _owed_gate_failed(pull: common.Pull, reviewer_login: str) -> Owed | None:
+def _owed_gate_failed(pull: common.Pull, reviewer_login: str,
+                      constraints: Constraints | None = None) -> Owed | None:
     """What a pull request with failed checks is owed.
 
     A gate that failed owes a review pass where the reviewer had approved and
-    nobody is asked, and owes the request again where the check that failed is
-    the reviewer's own and a request stands (solorepo's DR-178).
+    nobody is asked, owes the request again where the check that failed is
+    the reviewer's own and a request stands (solorepo's DR-178), and owes a
+    rebase pass where trunk is green and the branch is behind its base, to
+    clear inherited breakage from a previous broken baseline (solorepo's #985).
     """
     number = int(pull["number"])
     asked = check_pr.is_review_requested(pull, reviewer_login)
@@ -216,6 +223,17 @@ def _owed_gate_failed(pull: common.Pull, reviewer_login: str) -> Owed | None:
     if asked and reviewer_failed:
         return Owed("request", number, "review requested, and the reviewer check failed "
                                        "without a verdict")
+    c = constraints or Constraints()
+    reading_trunk = getattr(c.reading, "trunk", None)
+    is_trunk_green = (c.trunk_green
+                      or bool(getattr(c.reading, "trunk_green", False))
+                      or bool(getattr(reading_trunk, "green", False)))
+    if is_trunk_green and str(pull.get("mergeStateStatus") or "").upper() == "BEHIND":
+        if c.pulls is not None:
+            lower = pull_requests.conflicting_below(pull, c.pulls)
+            if lower is not None:
+                return _held_above(number, lower, c.reading)
+        return Owed("rebase", number, "failing checks while behind trunk, which is green")
     if verdict == "APPROVED" and not asked:
         return Owed("review", number, "approved, with failing checks")
     return None
@@ -252,6 +270,10 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
 
     A request for changes nobody is answering owes a review pass, since the
     review event was dropped or a run ended without answering.
+
+    A pull request with failing checks while behind base owes a rebase pass
+    when trunk is green, to clear inherited breakage from a previous broken
+    baseline (solorepo's #985).
 
     A green pull request with no verdict, no request, and no arming owes its
     first request, since a run ended without handing it over. A Challenge in
@@ -306,7 +328,7 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
     if state is pulls_.CHANGES_REQUESTED and not check_pr.is_review_requested(pull, reviewer_login):
         return Owed("review", number, "changes requested, and no run answering them")
     if state is pulls_.GATE_FAILED:
-        return _owed_gate_failed(pull, reviewer_login)
+        return _owed_gate_failed(pull, reviewer_login, c)
     if (state is pulls_.AWAITING_REVIEW
             and not check_pr.is_review_requested(pull, reviewer_login)
             and not check_pr.latest_verdict(pull, reviewer_login)
@@ -671,10 +693,11 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
     Trunk's own HEAD commit is read beside them and reported, which no other
     reader here does: every rollup the loops read belongs to an open pull
     request's head, so a commit that landed red is noticed only once a branch
-    rebased onto it fails. The reading owes nothing yet — what a red trunk is
-    owed is solorepo's #984 and solorepo's #985 — and it is made whether or not
-    the pass is live, a read of GitHub being no act. With `live`, each act is
-    performed; without it, each is reported and none performed.
+    rebased onto it fails. A red trunk owes the heal Challenge filed, dispatched,
+    or escalated (solorepo's #984), and a green trunk re-dispatches open pull
+    requests stranded on an older, broken baseline (solorepo's #985); the reading
+    is made whether or not the pass is live, a read of GitHub being no act. With
+    `live`, each act is performed; without it, each is reported and none performed.
 
     Parameters:
         live (bool): Whether to perform the acts, or only report them.
@@ -713,7 +736,8 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
                       named={int(m.group(1)) for pull in pulls
                              if (m := pull_requests.LOOPS_BRANCH.match(
                                  pull.get("headRefName") or ""))},
-                      coder_runs=coder_runs, review_runs=review_runs, triage_runs=triage_runs)
+                      coder_runs=coder_runs, review_runs=review_runs, triage_runs=triage_runs,
+                      trunk=trunk)
     owed = owed_by_pulls(pulls, reading) + owed_by_issues(issues, reading)
     healing = owed_by_trunk(breaking(trunk, issues, reading)) if trunk else None
     if healing is not None:
@@ -742,6 +766,7 @@ class Reading(NamedTuple):
         coder_runs: `coder.yml`'s runs.
         review_runs: `review.yml`'s runs.
         triage_runs: `triage.yml`'s runs.
+        trunk: Trunk's HEAD commit and check rollup, or None if unreadable.
     """
 
     now: datetime.datetime
@@ -756,6 +781,12 @@ class Reading(NamedTuple):
     coder_runs: Runs
     review_runs: Runs
     triage_runs: Runs
+    trunk: actions.Trunk | None = None
+
+    @property
+    def trunk_green(self) -> bool:
+        """Whether trunk's check rollup is green."""
+        return bool(self.trunk and self.trunk.green)
 
 
 def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
@@ -797,7 +828,8 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
                                      _threads_read(pull, checks, reading) if free else None,
                                      reading.reviewer_login)
         act = owed_by_pull(pull, found, state, reading.reviewer_login,
-                           Constraints(free=free, pulls=pulls, reading=reading))
+                           Constraints(free=free, pulls=pulls, reading=reading,
+                                       trunk_green=reading.trunk_green))
         if act:
             owed.append(act)
     return owed

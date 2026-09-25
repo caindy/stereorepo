@@ -100,11 +100,13 @@ def reconcile_probes() -> list[str]:
     thread owed an answer owes a review pass, and one with a notice parked
     or every thread answered owes nothing; a failed gate under an approval
     owes one, and under a request whose reviewer check is the one that
-    failed owes the request again; a green pull request with no verdict,
-    request, or arming owes its first request, and armed owes nothing; a
-    Challenge in any state but resumable is held, the claim read as nobody's
-    so that `hard` under a claim is not swallowed by `TAKEN`; not free owes
-    nothing.
+    failed owes the request again; a pull request failing checks while behind
+    base owes a rebase pass when trunk is green, to clear inherited breakage
+    from a previous broken baseline (solorepo's #985); a green pull request
+    with no verdict, request, or arming owes its first request, and armed owes
+    nothing; a Challenge in any state but resumable is held, the claim read as
+    nobody's so that `hard` under a claim is not swallowed by `TAKEN`; not free
+    owes nothing.
 
     `owed_by_issue`, one case per state, ten in all: unread and quiet owes the
     door again and read or within the hour does not; offered and free owes
@@ -300,6 +302,29 @@ def _pull_cases(move: Any) -> list[str]:
         ("read as the coder's, which a claim at hard would be", _pull(1), issues.TAKEN, True,
          "hold"),
         ("unread", _pull(1), issues.UNREAD, True, "hold"),
+        ("failing checks while behind green trunk",
+         _pull(1, statusCheckRollup=RED, mergeStateStatus="BEHIND"),
+         issues.RESUMABLE, move.Constraints(free=True, trunk_green=True), "rebase"),
+        ("failing checks while behind red trunk",
+         _pull(1, statusCheckRollup=RED, mergeStateStatus="BEHIND"),
+         issues.RESUMABLE, move.Constraints(free=True, trunk_green=False), None),
+        ("failing checks while current on green trunk",
+         _pull(1, statusCheckRollup=RED, mergeStateStatus="CLEAN"),
+         issues.RESUMABLE, move.Constraints(free=True, trunk_green=True), None),
+        ("approved with failing checks while behind green trunk",
+         _pull(1, latestReviews=APPROVED, statusCheckRollup=RED, mergeStateStatus="BEHIND"),
+         issues.RESUMABLE, move.Constraints(free=True, trunk_green=True), "rebase"),
+        ("failing checks while behind green trunk in stack above conflicting layer",
+         _pull(2, baseRefName="claude/issue-1", statusCheckRollup=RED, mergeStateStatus="BEHIND"),
+         issues.RESUMABLE,
+         move.Constraints(free=True, trunk_green=True,
+                          pulls=[_pull(1, mergeable="CONFLICTING"),
+                                 _pull(2, baseRefName="claude/issue-1", statusCheckRollup=RED,
+                                       mergeStateStatus="BEHIND")]),
+         "hold"),
+        ("failing checks while behind green trunk not free",
+         _pull(1, statusCheckRollup=RED, mergeStateStatus="BEHIND"),
+         issues.RESUMABLE, move.Constraints(free=False, trunk_green=True), None),
         ("no open Challenge", _pull(1), None, True, None),
         ("not free", _pull(1, latestReviews=CHANGES), issues.RESUMABLE, False, None),
     ]
@@ -758,7 +783,9 @@ def _failing(**_: Any) -> None:
 
 
 def _edge_cases(bench: _Bench) -> list[str]:
-    """An `UNKNOWN` off the listing, unlistable runs, a refused dispatch, and a failed merge."""
+    """An `UNKNOWN` off the listing, unlistable runs, a refused dispatch, a failed merge,
+    and a green trunk re-dispatching stranded pull requests.
+    """
     problems = []
     unknown = _pull(7, mergeable="UNKNOWN", latestReviews=CHANGES)
     settling = _GitHub([unknown], [], {}, views={7: {**unknown, "mergeable": "CONFLICTING"}})
@@ -787,6 +814,21 @@ def _edge_cases(bench: _Bench) -> list[str]:
         problems.append(f"reconcile: a comment verdict whose threads GitHub would not read was "
                         f"owed {left} and said {ended.out!r}, where nothing is owed on a read "
                         "that failed and the log says it failed")
+
+    green_trunk = _trunk(bench.move, [])
+    stranded = _pull(45, statusCheckRollup=RED, mergeStateStatus="BEHIND")
+    dry_pass = bench.run(_GitHub([stranded], [bench.issue(45, "medium")], {}),
+                         {"report_trunk": lambda *_: green_trunk}, live=False)
+    if ("rebase", 45) in [a for a in bench.acted if a[0] != "merge_manager"] \
+            or f"would dispatch a rebase pass for #{45}" not in dry_pass.out:
+        problems.append(f"reconcile: not live did not report rebase for stranded PR: "
+                        f"{dry_pass.out!r}")
+
+    bench.run(_GitHub([stranded], [bench.issue(45, "medium")], {}),
+              {"report_trunk": lambda *_: green_trunk}, live=True)
+    if ("rebase", 45) not in bench.acted:
+        problems.append(f"reconcile: a stranded pull request behind green trunk was not rebased: "
+                        f"{bench.acted}")
 
     unlistable = _GitHub(bench.pulls, bench.issues, {})
     unlistable.unlistable = True
