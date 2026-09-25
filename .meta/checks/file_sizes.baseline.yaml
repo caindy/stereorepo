@@ -26,7 +26,7 @@
 .meta/checks/probes/loops/advance.py: 220
 .meta/checks/probes/loops/dispatch.py: 185
 .meta/checks/probes/loops/merge_manager.py: 1138
-.meta/checks/probes/loops/reconcile.py: 173
+.meta/checks/probes/loops/reconcile.py: 172
 .meta/checks/probes/tools/fallback.py: 145
 .meta/depth.py: 132
 .meta/detect_fallback.py: 23
@@ -39,6 +39,6 @@
 .meta/next.py: 68
 .meta/run_agy.py: 113
 .meta/say/channel.py: 349
-.meta/say/post: 233
+.meta/say/post: 230
 .meta/terms.py: 399
 .meta/test_specialization.py: 63

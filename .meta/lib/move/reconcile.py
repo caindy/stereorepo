@@ -260,12 +260,8 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
     Returns:
         Owed | None: The one act owed, or None.
     """
-    if isinstance(constraints, bool):
-        c = Constraints(free=constraints)
-    elif constraints is None:
-        c = Constraints()
-    else:
-        c = constraints
+    c = (Constraints(free=constraints) if isinstance(constraints, bool)
+         else (constraints or Constraints()))
     number = int(pull["number"])
 
     if found is None:
@@ -287,6 +283,10 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
             and not check_pr.latest_verdict(pull, reviewer_login)
             and not pull.get("autoMergeRequest")):
         return Owed("request", number, "green, and nobody holds it")
+    if (state is pulls_.AWAITING_PROMOTION
+            and not check_pr.is_review_requested(pull, reviewer_login)):
+        return Owed("request", number,
+                    "approved, but notices held for promotion at approval (solorepo's DR-285)")
     if state is pulls_.READY_TO_MERGE:
         return _owed_stalled(pull, c)
     return None

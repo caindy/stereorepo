@@ -484,10 +484,11 @@ def review(pr: int | str, verdict: str) -> None:
     body = channel.piped()
     if not body and verdict != "approve":
         sys.exit("say: nothing on stdin — a review that is not an approval says why")
-    cmd = ["pr", "review", str(pr), f"--{verdict}"]
-    if body:
-        cmd += ["--body", channel.signed(refuse_a_typed_trailer(body))]
-    channel.gh(*cmd, parse=False)
+    if verdict == "approve":
+        from lib.post import approval
+        approval.refuse_unpromoted_notices(pr)
+    body_args = ["--body", channel.signed(refuse_a_typed_trailer(body))] if body else []
+    channel.gh("pr", "review", str(pr), f"--{verdict}", *body_args, parse=False)
     latest = channel.gh("pr", "view", str(pr), "--json", "reviews")["reviews"]
     print(f"reviewed #{pr}: {latest[-1]['state'].lower() if latest else 'GitHub shows no review'}")
 
@@ -507,12 +508,8 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("pr")
         p.add_argument("path")
         p.add_argument("line", type=int)
-    p = sub.add_parser("reply")
-    p.add_argument("thread")
-    p = sub.add_parser("answer")
-    p.add_argument("thread")
-    p = sub.add_parser("resolve")
-    p.add_argument("thread")
+    for verb in ("reply", "answer", "resolve"):
+        sub.add_parser(verb).add_argument("thread")
     p = sub.add_parser("promote")
     p.add_argument("thread")
     p.add_argument("--title", required=True)

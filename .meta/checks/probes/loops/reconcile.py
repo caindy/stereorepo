@@ -226,32 +226,30 @@ def _pull_cases(move: Any) -> list[str]:
          issues.RESUMABLE, True, "review"),
         ("comment verdict with nothing owed", _pull(1, latestReviews=COMMENT),
          issues.RESUMABLE, True, None),
-        ("comment verdict under a review request", _pull(1, latestReviews=COMMENT,
-                                                         reviewThreads=OWED,
-                                                         reviewRequests=ASKED),
+        ("comment verdict under a review request",
+         _pull(1, latestReviews=COMMENT, reviewThreads=OWED, reviewRequests=ASKED),
          issues.RESUMABLE, True, None),
-        ("a reply on a thread, which is no verdict", _pull(1, latestReviews=REPLY,
-                                                            reviewThreads=OWED),
-         issues.RESUMABLE, True, None),
+        ("a reply on a thread, which is no verdict",
+         _pull(1, latestReviews=REPLY, reviewThreads=OWED), issues.RESUMABLE, True, None),
         ("approved with a thread owed", _pull(1, latestReviews=APPROVED, reviewThreads=OWED),
          issues.RESUMABLE, True, "review"),
         ("approved with a notice parked", _pull(1, latestReviews=APPROVED, reviewThreads=PARKED),
+         issues.RESUMABLE, True, "request"),
+        ("approved with a notice parked under a review request",
+         _pull(1, latestReviews=APPROVED, reviewThreads=PARKED, reviewRequests=ASKED),
          issues.RESUMABLE, True, None),
-        ("approved with every thread answered", _pull(1, latestReviews=APPROVED,
-                                                      reviewThreads=ANSWERED),
-         issues.RESUMABLE, True, None),
+        ("approved with every thread answered",
+         _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED), issues.RESUMABLE, True, None),
         ("approved and behind with a replay refused on this head",
          _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
                mergeStateStatus="BEHIND", comments=notice),
          issues.RESUMABLE, True, "rebase"),
         ("approved and behind with no finding, which is the sweep's to bring current",
-         _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
-               mergeStateStatus="BEHIND"),
+         _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED, mergeStateStatus="BEHIND"),
          issues.RESUMABLE, True, None),
         ("approved and behind under a finding that is not a refused replay",
          _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
-               mergeStateStatus="BEHIND", comments=untagged),
-         issues.RESUMABLE, True, None),
+               mergeStateStatus="BEHIND", comments=untagged), issues.RESUMABLE, True, None),
         ("approved and behind under a finding against a head it no longer has",
          _pull(1, latestReviews=APPROVED, reviewThreads=ANSWERED,
                mergeStateStatus="BEHIND", comments=_notice(move, 99)),
@@ -540,7 +538,7 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     expected = {("merge_manager", None), ("review", 1), ("rebase", 2), ("request", 3),
                 ("relabel", (4, ("remove",))), ("relabel", (4, ("add",))), ("release", 6),
                 ("rebase", 13), ("rebase", 15), ("rebase", 17), ("review", 24), ("review", 26),
-                ("review", 29), ("rebase", 30)}
+                ("request", 28), ("review", 29), ("rebase", 30)}
     acted = bench.acted
     if ended.code is not None or set(acted) != expected or len(acted) != len(expected):
         problems.append(f"reconcile: live over the fixtures performed {acted} with exit "
@@ -549,10 +547,11 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
                         "layer whose root is clean are each owed a rebase, the layer above "
                         "a conflicting root none, a comment verdict and an approval each with "
                         "a thread owed an answer a review pass, where one with every thread "
-                        "answered and one with a notice parked owe nothing, an approval "
-                        "with a failed gate the review pass its checks owe, and an approval "
-                        "behind its base with a replay refused on its head the rebase pass, "
-                        "where the layer of that shape above a conflicting root is held")
+                        "answered owes nothing, an approval with a notice parked owes a "
+                        "request pass, an approval with a failed gate the review pass its checks "
+                        "owe, and an approval behind its base with a replay refused on its head "
+                        "the rebase pass, where the layer of that shape above a conflicting root "
+                        "is held")
     if sorted(fake.queried) != [24, 25, 26, 27, 28, 30, 31]:
         problems.append(f"reconcile: the threads read were those of {sorted(fake.queried)}, "
                         "where the listing carries none and the read is owed to the pull "
@@ -600,12 +599,12 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     ended = bench.run(_GitHub(bench.pulls, bench.issues, busy), live=True)
     left = {a for a in acted if a[0] != "merge_manager"}
     if left != {("rebase", 2), ("release", 6), ("rebase", 13), ("rebase", 15), ("rebase", 17),
-                ("review", 24), ("review", 26), ("review", 29), ("rebase", 30)}:
+                ("review", 24), ("review", 26), ("request", 28), ("review", 29), ("rebase", 30)}:
         problems.append(f"reconcile: with runs in flight, and a triage run that read, it "
                         f"performed {sorted(left)}, where only the rebases of the branches "
-                        "no run answers, the release, and the review passes for the comment "
-                        "verdict, the approval with a thread owed, and the approval with a "
-                        "failed gate were owed")
+                        "no run answers, the release, the request pass for the parked notice, "
+                        "and the review passes for the comment verdict, the approval with a "
+                        "thread owed, and the approval with a failed gate were owed")
     return problems
 
 

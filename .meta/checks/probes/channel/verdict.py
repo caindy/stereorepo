@@ -2,6 +2,8 @@
 """
 
 
+from typing import Any
+
 from checks.collect import check
 from checks.probes.harness import (
     environment,
@@ -32,10 +34,11 @@ class FakeVerdict:
     `outcome` reports as text.
     """
 
-    def __init__(self, head: str) -> None:
+    def __init__(self, head: str, threads: list[dict[str, Any]] | None = None) -> None:
         self.head, self.reads = head, 0
         self.posted: list[str] = []
         self.comments: list[dict[str, str]] = []
+        self.threads = threads or []
 
     def __call__(self, *args: str, parse: bool = True, **kwargs: object) -> object:
         """One `gh` call: the pull request's head, a verdict posted, or the reviews/threads read back."""
@@ -51,6 +54,18 @@ class FakeVerdict:
             return {"nameWithOwner": "caindy/solorepo"}
         if args[:2] == ("repo", "view") and "owner" in args:
             return {"owner": {"login": "solo"}}
+        if args[:2] == ("api", "graphql"):
+            return {
+                "data": {
+                    "repository": {
+                        "pullRequest": {
+                            "reviewThreads": {
+                                "nodes": self.threads,
+                            }
+                        }
+                    }
+                }
+            }
         if args[:2] == ("api", "repos/caindy/solorepo/pulls/7/comments"):
             parsed: dict[str, str] = {}
             for i in range(2, len(args), 2):
@@ -61,6 +76,41 @@ class FakeVerdict:
             self.comments.append(parsed)
             return {"html_url": f"https://github.com/caindy/solorepo/pull/7#discussion_r{len(self.comments)}"}
         raise unanswered(args)
+
+
+def _notice_verdict_cases(reviewed: Any) -> list[str]:
+    """Verify coder notice promotion enforcement on approval."""
+    problems: list[str] = []
+    notice_thread = {
+        "id": "T_1",
+        "isResolved": False,
+        "comments": {
+            "nodes": [
+                {"id": "C_1", "body": "**Noticed and not done.** Here is a parked notice"}
+            ]
+        },
+    }
+    said, fake = reviewed(READ, READ, threads=[notice_thread])
+    if not said or "coder notice(s) must be promoted" not in said or fake.posted:
+        problems.append(
+            f"verdict: approval with unpromoted notice said {said!r} and posted {fake.posted!r}"
+        )
+
+    resolved_thread = {
+        "id": "T_1",
+        "isResolved": True,
+        "comments": {
+            "nodes": [
+                {"id": "C_1", "body": "**Noticed and not done.** Here is a parked notice"}
+            ]
+        },
+    }
+    said, fake = reviewed(READ, READ, threads=[resolved_thread])
+    if said or fake.posted != ["--approve"]:
+        problems.append(
+            f"verdict: approval with resolved notice said {said!r} and posted {fake.posted!r}"
+        )
+    return problems
 
 
 @check("verdict probes", pre=True)
@@ -81,9 +131,10 @@ def verdict_probes() -> list[str]:
     post = programs["post"]
     problems = []
 
-    def reviewed(head: str, pinned: str | None) -> tuple[str | None, "FakeVerdict"]:
+    def reviewed(head: str, pinned: str | None,
+                 threads: list[dict[str, Any]] | None = None) -> tuple[str | None, "FakeVerdict"]:
         """One `--approve` of pull request 7 with GitHub at `head` and the run pinned to `pinned`."""
-        fake = FakeVerdict(head)
+        fake = FakeVerdict(head, threads=threads)
         with (environment(SOLOREPO_REVIEW_HEAD=pinned, GITHUB_RUN_ID="1",
                           ACTOR_SESSION="gha-1", ACTOR_AGENT="probe"),
               stood_in(channel, piped=lambda timeout=0.5: "what was checked, and what was found")):
@@ -110,6 +161,8 @@ def verdict_probes() -> list[str]:
     said, fake = reviewed(READ, READ)
     if said or fake.posted != ["--approve"]:
         problems.append(f"verdict: a run whose head is unchanged said {said!r} and posted {fake.posted!r}")
+
+    problems.extend(_notice_verdict_cases(reviewed))
 
     said, fake = reviewed(PUSHED, None)
     if said or fake.posted != ["--approve"] or fake.reads:
