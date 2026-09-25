@@ -116,16 +116,16 @@ def read_threads(pull: common.Pull, owner: str,
 def unresolved_conversations(threads: Sequence[dict[str, Any]]) -> str:
     """The refusal an unresolved thread is, or the empty string where every thread is resolved.
 
-    Counts the threads GitHub still reports unresolved, whatever their last
-    comment says. `check_threads` is its one caller.
+    Counts unresolved review conversations, excluding parked coder notices held
+    for promotion at approval (solorepo's DR-159). `check_threads` is its one caller.
 
     Parameters:
-        threads (list): Review thread nodes, each carrying `isResolved`.
+        threads: Review thread nodes, each carrying `isResolved` and `comments`.
 
     Returns:
         str: `<n> unresolved conversation(s)`, or the empty string.
     """
-    unresolved = [t for t in threads if not t.get("isResolved")]
+    unresolved = check_pr.state.unaddressed_threads(threads, parked=False)
     return f"{len(unresolved)} unresolved conversation(s)" if unresolved else ""
 
 

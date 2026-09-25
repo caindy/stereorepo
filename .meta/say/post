@@ -41,13 +41,13 @@ from lib.post.correction import (
     corrected_body,
     refuse_a_typed_marker,
     refuse_a_typed_trailer,
+    refuse_if_unpromoted_notices,
 )
 
 REVIEW_HEAD = "SOLOREPO_REVIEW_HEAD"
 """The environment variable naming the head a review run was given to read.
 
-`review.yml` writes it and nothing else does, so a verdict posted from anywhere
-else finds it unset and is held to no head.
+`review.yml` writes it; a verdict from elsewhere is held to no head.
 """
 
 THREAD = """
@@ -485,8 +485,7 @@ def review(pr: int | str, verdict: str) -> None:
     if not body and verdict != "approve":
         sys.exit("say: nothing on stdin — a review that is not an approval says why")
     if verdict == "approve":
-        from lib.post import approval
-        approval.refuse_unpromoted_notices(pr)
+        refuse_if_unpromoted_notices(pr)
     body_args = ["--body", channel.signed(refuse_a_typed_trailer(body))] if body else []
     channel.gh("pr", "review", str(pr), f"--{verdict}", *body_args, parse=False)
     latest = channel.gh("pr", "view", str(pr), "--json", "reviews")["reviews"]

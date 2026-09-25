@@ -5,8 +5,9 @@ comment whose Trailer is doubled, missing or not last, and no verb of the
 channel could change one. `correct` replaces the body of a comment this account
 posted, or withdraws it. The refusals beside it are what make that verb rare:
 the channel declines a body typing a Trailer of its own, which is what the audit
-reds and what `signed` saw only at the tail of a body (solorepo's DR-260), and
-declines a notice body that already carries the marker `notice` supplies.
+reds and what `signed` saw only at the tail of a body (solorepo's DR-260),
+declines a notice body that already carries the marker `notice` supplies, and
+declines approval when unpromoted coder notices remain (solorepo's DR-285).
 """
 import json
 import re
@@ -198,3 +199,51 @@ def correct(reference: str, text: str | None) -> None:
         return
     channel.gh("api", at, "-X", "PATCH", "-f", f"body={channel.signed(text)}", parse=False)
     print(held.get("html_url", at))
+
+
+THREADS_QUERY = """
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          comments(first: 50) {
+            nodes {
+              id
+              body
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+
+def refuse_if_unpromoted_notices(pr: int | str) -> None:
+    """Refuses approval if the pull request holds unresolved coder notices (solorepo's DR-285).
+
+    Parameters:
+        pr: The pull request number being reviewed.
+
+    Raises:
+        SystemExit: If unresolved coder notices are present on the pull request.
+    """
+    repo_slug = channel.repo()
+    owner, name = repo_slug.split("/", 1)
+    res = channel.graphql(THREADS_QUERY, owner=owner, name=name, number=int(pr))
+    repo_data = (res.get("data") or {}).get("repository") or {}
+    pr_data = repo_data.get("pullRequest") or {}
+    nodes = (pr_data.get("reviewThreads") or {}).get("nodes", [])
+    parked = check_pr.state.unaddressed_threads(nodes, parked=True)
+    if parked:
+        ids = ", ".join(t.get("id") or "" for t in parked)
+        sys.exit(f"say: cannot approve #{pr} — {len(parked)} coder notice(s) must be promoted "
+                 f"via 'post promote' first (solorepo's DR-285): {ids}")
+
+
+refuse_unpromoted_notices = refuse_if_unpromoted_notices
+

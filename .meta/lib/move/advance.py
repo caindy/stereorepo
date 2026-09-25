@@ -952,16 +952,12 @@ def advance_stranded(pulls: list[dict[str, Any]],
     review completion, so the rebase no longer waits on an unrelated merge
     (solorepo's DR-161).
 
-    Two filters decide a candidate, and they have different owners. The
-    readiness one is this function's. A reason list of exactly `[BEHIND_BASE]`
-    is what keeps out a pull request that is behind *and* red, since a second
-    failure puts a second reason in the list and `advance`'s own filter reads
-    no check run. The conversations are read here too: `evaluate_pr` consults
-    them only while nothing else has failed, so `BEHIND_BASE` arrives with the
-    threads unread, and `MERGE_MANAGER_FIELDS` does not ask `pr list` for them.
-    Rebasing on an unresolved conversation outdates the anchored comment
-    PR First's *Reread the diff and notice* step parks work on, and a pull request holding one
-    cannot merge until it is resolved anyway.
+    Two filters decide a candidate: readiness and branch safety. A reason list
+    of `BEHIND_BASE` alone or alongside notices held for promotion excludes a
+    pull request that is behind *and* red, since a second failure adds reasons
+    and `advance` reads no check run. Conversations are checked here too:
+    rebasing on unresolved conversations outdates anchored comments, and a pull
+    request holding one cannot merge until resolved anyway.
 
     The branch-safety refusals are `advance`'s, because this calls that verb by
     number rather than repeating its filter: an unlinked branch that is the
@@ -971,10 +967,8 @@ def advance_stranded(pulls: list[dict[str, Any]],
     gives that its own reason, which this reads for the one; a branch both
     behind and conflicting collects `BEHIND_BASE` and the conflict reason,
     and two reasons fail the exact-list test as one did. A refusal is printed
-    rather than exited on:
-    `merge.yml` runs on a fifteen-minute schedule, and a stack base that stays
-    behind would otherwise paint the workflow red on the clock over a state
-    only the solo settles.
+    rather than exited on: `merge.yml` runs on a fifteen-minute schedule, and a
+    stack base that stays behind would otherwise paint the workflow red.
 
     Parameters:
         pulls (list): The open pull requests `merge_manager` evaluated.
@@ -985,7 +979,10 @@ def advance_stranded(pulls: list[dict[str, Any]],
         dry_run (bool): If True, name what would be rebased and rebase nothing.
     """
     for pull in pulls:
-        if evaluations[pull["number"]][1] != [manager.ranking.BEHIND_BASE]:
+        reasons = evaluations[pull["number"]][1]
+        if manager.ranking.BEHIND_BASE not in reasons or not all(
+            r == manager.ranking.BEHIND_BASE or "held for promotion" in r for r in reasons
+        ):
             continue
         number = str(pull["number"])
         threads_ok, threads_msg = manager.ranking.check_threads(pull, owner, name)

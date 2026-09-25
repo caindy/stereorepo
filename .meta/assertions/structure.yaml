@@ -856,9 +856,6 @@ artifacts:
   - id: work:artifact/meta-lib-post-correction
     name: .meta/lib/post/correction.py
     path: .meta/lib/post/correction.py
-  - id: work:artifact/meta-lib-post-approval
-    name: .meta/lib/post/approval.py
-    path: .meta/lib/post/approval.py
   - id: work:artifact/meta-lib-move-init
     name: .meta/lib/move/__init__.py
     path: .meta/lib/move/__init__.py

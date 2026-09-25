@@ -53,7 +53,8 @@ def merge_manager_advance_probes() -> list[str]:
     move = programs["move"]
     channel.SETTLES = (3, 0)
     channel.MERGEABILITY = (3, 0)
-    return _dry_run(channel, move) + _held_run(channel, move) + _real_run(channel, move)
+    return (_dry_run(channel, move) + _held_run(channel, move) + _real_run(channel, move)
+            + _stall_eviction_exemptions(move) + _unresolved_conversations_carve_out(move))
 
 
 REVIEWER = "o-r-reviewer"
@@ -62,6 +63,8 @@ RED = [{"name": "gate", "conclusion": "FAILURE"}]
 APPROVED = [{"author": {"login": REVIEWER}, "state": "APPROVED"}]
 TALKING = {24}
 """The pull request whose conversation is unresolved."""
+PARKED = {25}
+"""The pull request holding a parked coder notice."""
 
 
 def stranded(checks: Any = GREEN, reviews: Any = APPROVED, **fields: Any) -> dict[str, Any]:
@@ -71,13 +74,26 @@ def stranded(checks: Any = GREEN, reviews: Any = APPROVED, **fields: Any) -> dic
 
 
 def conversations(query: Any, number: int = 0, **_: Any) -> Any:
-    """The review threads GitHub answers for `number`: resolved, unless the case is talking."""
-    return {"data": {"repository": {"pullRequest": {
-        "reviewThreads": {"nodes": [{"isResolved": number not in TALKING}]}}}}}
+    """The review threads GitHub answers for `number`: resolved, talking, or parked."""
+    if number in PARKED:
+        nodes = [{
+            "isResolved": False,
+            "comments": {
+                "nodes": [{"author": {"login": REVIEWER}, "body": "**Noticed and not done.** wait"}]
+            },
+        }]
+    elif number in TALKING:
+        nodes = [{
+            "isResolved": False,
+            "comments": {"nodes": [{"author": {"login": REVIEWER}, "body": "active question"}]},
+        }]
+    else:
+        nodes = [{"isResolved": True, "comments": {"nodes": []}}]
+    return {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": nodes}}}}}
 
 
 def github() -> Any:
-    """The five pull requests, fresh, so a dry run and a real run do not share a state."""
+    """The six pull requests, fresh, so a dry run and a real run do not share a state."""
     return FakeGitHub({
         20: {"behind": 2, "armed": False, "verdicts": [(REVIEWER, "APPROVED")],
              "manager": stranded()},
@@ -88,6 +104,8 @@ def github() -> Any:
         23: {"behind": 2, "armed": False, "verdicts": [(REVIEWER, "APPROVED")],
              "manager": stranded(checks=RED)},
         24: {"behind": 2, "armed": False, "verdicts": [(REVIEWER, "APPROVED")],
+             "manager": stranded()},
+        25: {"behind": 2, "armed": False, "verdicts": [(REVIEWER, "APPROVED")],
              "manager": stranded()},
     })
 
@@ -164,4 +182,87 @@ def _real_run(channel: Any, move: Any) -> list[str]:
         problems.append("merge manager: it rebased a pull request with an unresolved conversation")
     if f"not advancing #{'24'}" not in ran.out:
         problems.append(f"merge manager: the unresolved conversation was not named:\n{ran.out}")
+    if not fake.pulls["25"].get("rebased"):
+        problems.append("merge manager: approved PR holding parked notices was not rebased")
+    if fake.pulls["25"]["behind"]:
+        problems.append("merge manager: rebase of PR holding parked notices left branch behind")
     return problems
+
+
+def _stall_eviction_exemptions(move: Any) -> list[str]:
+    """Loop PRs with approval or in AWAITING_PROMOTION are exempt from stall (solorepo's DR-258)."""
+    problems: list[str] = []
+    re_requested_approved_pr = {
+        "number": 37,
+        "headRefName": "gemini/issue-37",
+        "baseRefName": "main",
+        "isDraft": False,
+        "latestReviews": APPROVED,
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "APPROVED"},
+        ],
+        "reviewRequests": [{"login": REVIEWER}],
+        "mergeable": "MERGEABLE",
+        "statusCheckRollup": GREEN,
+    }
+    if move.is_stalled_autonomous_pr(re_requested_approved_pr, REVIEWER):
+        problems.append(
+            "is_stalled_autonomous_pr: standing APPROVED verdict must exempt loop PR from stall"
+        )
+    awaiting_promotion_pr = {
+        "number": 38,
+        "headRefName": "claude/issue-38",
+        "baseRefName": "main",
+        "isDraft": False,
+        "latestReviews": APPROVED,
+        "reviews": [
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
+            {"author": {"login": REVIEWER}, "state": "APPROVED"},
+        ],
+        "reviewRequests": [],
+        "reviewThreads": [
+            {
+                "isResolved": False,
+                "comments": {"nodes": [{"body": "**Noticed and not done.** wait"}]},
+            }
+        ],
+        "mergeable": "MERGEABLE",
+        "statusCheckRollup": GREEN,
+    }
+    if move.is_stalled_autonomous_pr(awaiting_promotion_pr, REVIEWER):
+        problems.append("is_stalled_autonomous_pr: AWAITING_PROMOTION PR must be exempt from stall")
+    return problems
+
+
+def _unresolved_conversations_carve_out(move: Any) -> list[str]:
+    """Parked coder notices are carved out from conversation counts (solorepo's DR-159)."""
+    problems: list[str] = []
+    parked = [
+        {
+            "isResolved": False,
+            "comments": {"nodes": [{"body": "**Noticed and not done.** parked notice"}]},
+        }
+    ]
+    refusal = move.unresolved_conversations(parked)
+    if refusal != "":
+        problems.append(
+            f"unresolved_conversations: expected empty string for parked notice, got: {refusal!r}"
+        )
+    owed = [
+        {
+            "isResolved": False,
+            "comments": {"nodes": [{"body": "active question"}]},
+        }
+    ]
+    refusal_owed = move.unresolved_conversations(owed)
+    if refusal_owed != "1 unresolved conversation(s)":
+        problems.append(
+            f"unresolved_conversations: expected 1 conversation, got: {refusal_owed!r}"
+        )
+    return problems
+

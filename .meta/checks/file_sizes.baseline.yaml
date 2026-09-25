@@ -31,7 +31,7 @@
 .meta/depth.py: 132
 .meta/detect_fallback.py: 23
 .meta/jules/client.py: 60
-.meta/lib/move/advance.py: 501
+.meta/lib/move/advance.py: 498
 .meta/lib/move/challenges.py: 750
 .meta/lib/move/manager/ranking.py: 171
 .meta/lib/move/pull_requests.py: 271
@@ -39,6 +39,6 @@
 .meta/next.py: 68
 .meta/run_agy.py: 113
 .meta/say/channel.py: 349
-.meta/say/post: 230
+.meta/say/post: 229
 .meta/terms.py: 399
 .meta/test_specialization.py: 63

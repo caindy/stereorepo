@@ -47,6 +47,7 @@ from collections.abc import Sequence
 from typing import Any
 
 import channel
+import check_pr
 from lib.move import advance, challenges, common, drafts, pull_requests
 from lib.move.manager import lock, ranking
 
@@ -64,6 +65,8 @@ MERGE_MANAGER_FIELDS = (
 def is_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str) -> bool:
     """Whether an autonomous loop pull request has stalled beyond recovery thresholds (solorepo's DR-258).
 
+    Exempts pull requests with standing APPROVED verdicts or in AWAITING_PROMOTION state.
+
     Parameters:
         pull (dict): The pull request metadata dictionary.
         reviewer_login (str): Expected login of the reviewer Role.
@@ -77,6 +80,10 @@ def is_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str) -> bool:
     if pull.get("mergeable") == "CONFLICTING" \
             and advance._find_advance_notice_comment(pull["number"]) is not None:
         return True
+    if (check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED"
+            or check_pr.classify_pr(pull, reviewer_login=reviewer_login)
+            is check_pr.PullRequestState.AWAITING_PROMOTION):
+        return False
     approved, _ = ranking.check_reviewer_approval(pull, reviewer_login)
     if approved:
         return False
