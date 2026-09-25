@@ -895,6 +895,9 @@ artifacts:
   - id: work:artifact/meta-lib-move-manager-ranking
     name: .meta/lib/move/manager/ranking.py
     path: .meta/lib/move/manager/ranking.py
+  - id: work:artifact/meta-lib-move-manager-eviction
+    name: .meta/lib/move/manager/eviction.py
+    path: .meta/lib/move/manager/eviction.py
   - id: work:artifact/meta-lib-move-reconcile
     name: .meta/lib/move/reconcile.py
     path: .meta/lib/move/reconcile.py

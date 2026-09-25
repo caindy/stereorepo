@@ -39,7 +39,6 @@
 .meta/next.py: 68
 .meta/run_agy.py: 113
 .meta/say/channel.py: 354
-.meta/say/move: 2
 .meta/say/post: 229
 .meta/terms.py: 399
 .meta/test_specialization.py: 63

@@ -100,17 +100,13 @@ from lib.move.decisions import (
     numbers_on,
     reserved,
 )
-from lib.move.handoff import (
-    RequestRefused,
-    request_review,
-)
-from lib.move.manager import (
-    MERGE_MANAGER_FIELDS,
+from lib.move.handoff import RequestRefused, request_review
+from lib.move.manager import MERGE_MANAGER_FIELDS, merge_manager
+from lib.move.manager.eviction import (
     STALL_CHANGES_REQUESTED_THRESHOLD,
     evaluate_open_pulls,
     evict_stalled_autonomous_pr,
     is_stalled_autonomous_pr,
-    merge_manager,
 )
 from lib.move.manager.ranking import (
     BEHIND_BASE,

@@ -621,13 +621,13 @@ def _make(act: Owed) -> None:
     """
     if act.kind == "rebase":
         if act.why.startswith("conflicting"):
-            manager.demote_to_draft({"number": act.number}, action="demote",
-                                    reason="conflicting")
+            manager.eviction.demote_to_draft({"number": act.number}, action="demote",
+                                             reason="conflicting")
         advance.run_coder(act.number, "rebase")
     elif act.kind == "review":
         if act.why.startswith("approved"):
-            manager.demote_to_draft({"number": act.number}, action="demote",
-                                    reason="failing checks")
+            manager.eviction.demote_to_draft({"number": act.number}, action="demote",
+                                             reason="failing checks")
         advance.run_coder(act.number, "review")
     elif act.kind == "request":
         handoff.request_review(act.number, "reviewer")
