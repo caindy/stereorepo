@@ -625,6 +625,9 @@ def _make(act: Owed) -> None:
                                     reason="conflicting")
         advance.run_coder(act.number, "rebase")
     elif act.kind == "review":
+        if act.why.startswith("approved"):
+            manager.demote_to_draft({"number": act.number}, action="demote",
+                                    reason="failing checks")
         advance.run_coder(act.number, "review")
     elif act.kind == "request":
         handoff.request_review(act.number, "reviewer")

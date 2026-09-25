@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 import channel
 import check_pr
-from lib.move import common, pull_requests
+from lib.move import common, drafts, pull_requests
 
 
 class RequestRefused(SystemExit):
@@ -143,9 +143,9 @@ def request_review(pr: str | int, to: str) -> None:
     a run already standing on this head would be duplicated by one that fires
     again, and `reviewing` says which of the two this is (solorepo's #950).
     Polls branch mergeability and refuses review
-    requests if the branch is conflicting (solorepo's DR-145). Draft status
-    remains unchanged: it is the work-in-progress semaphore until final
-    reviewer approval (solorepo's DR-287). Reads back requested reviewers to verify
+    requests if the branch is conflicting (solorepo's DR-145). Demotes ready pull
+    requests back to draft before requesting review, restoring the
+    work-in-progress semaphore (solorepo's DR-287). Reads back requested reviewers to verify
     the assignment took effect.
 
     Parameters:
@@ -178,6 +178,10 @@ def request_review(pr: str | int, to: str) -> None:
         print(f"review of #{pr} stands requested of {login}, and {answered}; nothing was "
               "asked again, which would have started a second run on the same head")
         return
+
+    if not pull.get("isDraft"):
+        drafts.draft(pr)
+        pull["isDraft"] = True
 
     def request() -> None:
         """The request, withdrawn first where one already stands so that GitHub delivers it again."""

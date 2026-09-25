@@ -104,6 +104,8 @@ def _add_pr_parsers(sub: Any) -> None:
                         "move ready takes it out")
     p = sub.add_parser("ready")
     p.add_argument("pr")
+    p = sub.add_parser("draft")
+    p.add_argument("pr")
     p = sub.add_parser("layer")
     p.add_argument("pr")
     p.add_argument("--on", required=True)
@@ -214,6 +216,7 @@ def _dispatch_pr_verb(args: argparse.Namespace) -> None:
         "request-review": lambda: handoff.request_review(args.pr, args.to),
         "mint": lambda: _mint(args.concept),
         "ready": lambda: drafts.ready(args.pr),
+        "draft": lambda: drafts.draft(args.pr),
     }
     if args.verb in plain:
         plain[args.verb]()

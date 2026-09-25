@@ -169,6 +169,8 @@ def _dispatch_approved_or_redeliver(pull: common.Pull, merges: str,
         if not ok and "failing" in msg:
             if not _is_autonomous_challenge(challenge, "review", pull):
                 return True, None
+            if not pull.get("isDraft"):
+                manager.demote_to_draft(pull, action="demote", reason="failing checks")
             try:
                 run_coder(number, "review")
             except SystemExit as exc:
@@ -178,6 +180,8 @@ def _dispatch_approved_or_redeliver(pull: common.Pull, merges: str,
     elif redeliver and merges != "CONFLICTING":
         if not _is_autonomous_challenge(challenge, "review", pull):
             return True, None
+        if not pull.get("isDraft"):
+            manager.demote_to_draft(pull, action="demote", reason="changes requested")
         try:
             run_coder(number, "review")
         except SystemExit as exc:
@@ -464,10 +468,13 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
         task = "rebase" if pull.get("mergeable") == "CONFLICTING" else "review"
     if task == "rebase":
         _check_dispatch_rebase(pr, pull)
-        if pull.get("mergeable") == "CONFLICTING" and not pull.get("isDraft"):
-            manager.demote_to_draft(pull, action="demote", reason="conflicting")
+        if not pull.get("isDraft"):
+            reason = "conflicting" if pull.get("mergeable") == "CONFLICTING" else "rebase"
+            manager.demote_to_draft(pull, action="demote", reason=reason)
     else:
         _check_dispatch_review(pr, pull)
+        if not pull.get("isDraft"):
+            manager.demote_to_draft(pull, action="demote", reason="review")
     run_coder(pr, task)
     print(f"dispatched the coder's {task} pass for #{pr} — {pull['title']}. GitHub creates the "
           "run after it answers the dispatch, so there is nothing to read back yet: "

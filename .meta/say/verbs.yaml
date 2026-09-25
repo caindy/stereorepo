@@ -178,6 +178,10 @@ programs:
         usage: "<pr>"
         does: "take a draft out of draft; refused while its branch changes no file against its base, so a plan-only pull request stays a draft (solorepo's DR-273)"
         held_by: [coder]
+      - name: draft
+        usage: "<pr>"
+        does: "return an undrafted pull request to draft; the work-in-progress semaphore until final reviewer approval (solorepo's DR-287)"
+        held_by: [coder]
       - name: layer
         usage: "<pr> --on <pr>"
         does: make an open pull request a layer on another

@@ -1,4 +1,4 @@
-"""The final transition from work-in-progress draft to merge-ready pull request."""
+"""Draft to merge-ready pull request transitions (solorepo's DR-287)."""
 import sys
 
 import channel
@@ -16,6 +16,30 @@ def holds_changes(pull: object) -> bool:
         and isinstance(pull.get("changedFiles"), int)
         and pull["changedFiles"] > 0
     )
+
+
+def draft(pr: str | int) -> None:
+    """Return an undrafted pull request to draft (solorepo's DR-287).
+
+    Parameters:
+        pr: Pull request number.
+
+    Raises:
+        SystemExit: If the pull request is not open or remains undrafted after
+            the mutation.
+    """
+    pull = channel.gh("pr", "view", str(pr), "--json", "state,isDraft")
+    if pull.get("state") != "OPEN":
+        sys.exit(f"say: #{pr} is {pull.get('state', '').lower()}, not open")
+    if pull.get("isDraft"):
+        print(f"#{pr} is draft already")
+        return
+    channel.act(
+        lambda: channel.gh("pr", "ready", str(pr), "--undo", parse=False),
+        lambda: bool(channel.gh("pr", "view", str(pr), "--json", "isDraft")["isDraft"]),
+        lambda is_draft: is_draft,
+        lambda _: f"say: GitHub shows #{pr} still not a draft after the call")
+    print(f"#{pr} returned to draft")
 
 
 def ready(pr: str | int) -> None:

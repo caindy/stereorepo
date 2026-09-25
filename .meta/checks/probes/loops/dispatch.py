@@ -148,6 +148,8 @@ def _approved_with_failing_checks_dispatches_review(channel: Any, move: Any) -> 
     said = swept(channel, move, fake, problems)
     if fake.dispatched != [("7", "review")]:
         problems.append(f"advance: approved PR with failing checks dispatched {fake.dispatched!r}")
+    if not fake.pulls["7"].get("draft"):
+        problems.append("advance: approved PR with failing checks was not demoted to draft")
     if said:
         problems.append(f"advance: approved PR with failing checks exited with {said!r}")
     return problems
@@ -363,6 +365,8 @@ def _dispatch_review_on_approval_with_failing_checks(channel: Any, move: Any, re
     said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "review"))
     if fake.dispatched != [("7", "review")]:
         problems.append(f"dispatch: approved PR with failing checks dispatched {fake.dispatched!r}")
+    if not fake.pulls["7"].get("draft"):
+        problems.append("dispatch: approved PR with failing checks was not demoted to draft")
     if said:
         problems.append(f"dispatch: approved PR with failing checks exited with {said!r}")
     return problems

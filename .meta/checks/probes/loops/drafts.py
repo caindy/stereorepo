@@ -19,12 +19,13 @@ APPROVED = [{"author": {"login": REVIEWER}, "state": "APPROVED"}]
 
 @check("draft probes", pre=True)
 def draft_probes() -> list[str]:
-    """`move ready`, both automatic ways out of draft, `watch` on a draft, and comment threads."""
+    """`move ready`, `move draft`, ways out of draft, `watch`, and comments."""
     channel, _, programs = load_channel()
     move = programs["move"]
     check_pr = citations.load_check_pr()
-    return (_ready_cases(channel, move) + _restore_cases(channel, move)
-            + _watch_cases(check_pr) + _comment_cases(check_pr))
+    return (_ready_cases(channel, move) + _draft_cases(channel, move)
+            + _restore_cases(channel, move) + _watch_cases(check_pr)
+            + _comment_cases(check_pr))
 
 
 def _ready_cases(channel: Any, move: Any) -> list[str]:
@@ -62,6 +63,44 @@ def _ready_cases(channel: Any, move: Any) -> list[str]:
     return problems
 
 
+def _draft_cases(channel: Any, move: Any) -> list[str]:
+    """`move draft` returns an undrafted PR to draft, and no-ops on an already draft PR."""
+    problems = []
+    undo_calls: list[str] = []
+    pull: dict[str, Any] = {}
+
+    def gh(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("repo", "view"):
+            return {"nameWithOwner": "owner/repo"}
+        if args[:2] == ("pr", "view"):
+            return {"isDraft": bool(undo_calls)} if args[-1] == "isDraft" else pull
+        if args[:2] == ("pr", "ready") and "--undo" in args:
+            undo_calls.append(str(args[2]))
+        return {}
+
+    pull = {"number": 52, "state": "CLOSED", "isDraft": False}
+    with stood_in(channel, gh=gh):
+        said = outcome(lambda: move.drafts.draft(52)).code
+    if "is closed, not open" not in str(said) or undo_calls:
+        problems.append(f"draft: a closed PR exited {said!r} and undo called {undo_calls!r}")
+
+    pull = {"number": 53, "state": "OPEN", "isDraft": True}
+    undo_calls.clear()
+    with stood_in(channel, gh=gh):
+        out = outcome(lambda: move.drafts.draft(53)).out
+    if "is draft already" not in out or undo_calls:
+        problems.append(f"draft: an already-draft PR printed {out!r} and called {undo_calls!r}")
+
+    pull = {"number": 54, "state": "OPEN", "isDraft": False}
+    undo_calls.clear()
+    with stood_in(channel, gh=gh):
+        out = outcome(lambda: move.drafts.draft(54)).out
+    if "returned to draft" not in out or undo_calls != ["54"]:
+        problems.append(f"draft: a ready PR printed {out!r} and called {undo_calls!r}")
+
+    return problems
+
+
 def _restore_cases(channel: Any, move: Any) -> list[str]:
     """Review requests and queue evaluation leave draft state to final approval."""
     ready_calls: list[str] = []
@@ -86,6 +125,27 @@ def _restore_cases(channel: Any, move: Any) -> list[str]:
                                  dry_run=False)
     if ready_calls or pull.get("isDraft") is not True:
         return ["draft lifecycle: a request or queue pass cleared draft before final approval"]
+
+    undo_calls: list[str] = []
+    pull_ready: dict[str, Any] = {
+        "number": 44, "headRefName": "claude/issue-44", "baseRefName": "main",
+        "state": "OPEN", "isDraft": False, "mergeable": "MERGEABLE",
+        "reviewRequests": [], "latestReviews": [], "statusCheckRollup": GREEN,
+    }
+
+    def gh_undo(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("pr", "view"):
+            if "reviewRequests" in args:
+                return {"reviewRequests": [{"login": REVIEWER}]}
+            return {"isDraft": bool(undo_calls)} if args[-1] == "isDraft" else pull_ready
+        if args[:2] == ("pr", "ready") and "--undo" in args:
+            undo_calls.append(str(args[2]))
+        return {}
+
+    with stood_in(channel, gh=gh_undo, role_login=lambda r: REVIEWER):
+        move.request_review(44, "reviewer")
+    if undo_calls != ["44"]:
+        return [f"request-review: undrafted PR was not returned to draft, got {undo_calls!r}"]
     return []
 
 

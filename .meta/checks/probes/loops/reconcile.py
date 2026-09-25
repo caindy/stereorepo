@@ -682,10 +682,14 @@ def _check_reconcile_draft_demotions(fake: _GitHub) -> list[str]:
     """Verify that conflicting PRs were demoted to draft while maintenance rebases were not."""
     problems: list[str] = []
     p2 = next(p for p in fake.pulls if p["number"] == 2)
+    p29 = next(p for p in fake.pulls if p["number"] == 29)
     p30 = next(p for p in fake.pulls if p["number"] == 30)
     if not p2.get("isDraft"):
         problems.append("reconcile: conflicting pull request 2 was not demoted to draft "
                         "before rebase dispatch")
+    if not p29.get("isDraft"):
+        problems.append("reconcile: approved pull request 29 with failing checks "
+                        "was not demoted to draft before review dispatch")
     if p30.get("isDraft"):
         problems.append("reconcile: non-conflict maintenance rebase pull request 30 "
                         "was demoted to draft")
