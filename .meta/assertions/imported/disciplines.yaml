@@ -415,24 +415,6 @@ disciplines:
           begins with a question that demands an answer, and the alternatives close the moment it is
           answered — waiting for the implementation leaves them open to anyone who was not in the
           conversation. Status carries the rest: recommended, or in force.
-      - id: work:discipline-step/written-decisions/never-put-own-decision-in-force
-        name: Never put own decision in force
-        statement: >-
-          A coder writes a decision and proposes it; only the solo adopts one. An entry reaching the
-          trunk already adopted, with no solo having said so, is not a decision that was made — it is
-          the form of one with the authority assumed, and it binds every reader who finds it. This holds
-          in conversation as much as on a branch: a solo who sounds agreeable has not adopted anything,
-          and the coder that reads agreement as adoption is the one that needed asking. Nothing records
-          who adopted an entry, so nothing can catch a coder that adopts its own — the step is the whole
-          of the control, which is why it is stated here and not left to a gate that would only ever see
-          a pull request.
-      - id: work:discipline-step/written-decisions/changes-wait-for-decisions
-        name: Changes wait for decisions
-        statement: >-
-          The entry travels with the change that settled the question, so the change merges once the
-          decision is in force and not before: proposed on the branch, adopted by the solo, the status
-          moved, then merged. Code on the trunk under a decision nobody adopted makes the same claim
-          the entry does, in the place that is harder to withdraw.
       - id: work:discipline-step/written-decisions/say-what-was-decided-and-why
         name: Say what was decided and why
         statement: >-
