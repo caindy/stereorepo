@@ -1,6 +1,6 @@
 # The gate, run where it cannot be skipped.
 #
-# One job runs `.meta/gate`, which reads this portfolio's `structure.yaml` and
+# One job runs `just gate` (solorepo's DR-252, solorepo's DR-275), which reads this portfolio's `structure.yaml` and
 # runs the gate every Project it declares asserts. So this file lists no
 # Project and does not change when one arrives: a Project is added by being
 # asserted, and its gate runs here by the same act. What can still need an edit
@@ -77,9 +77,9 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      # `.meta/gate` and `check.py` run through `uvx`, pre-installed in the
-      # single-source runner container (solorepo's DR-160).
-      - run: .meta/gate
+      # `just gate` types the recipe over the script (solorepo's DR-252, solorepo's DR-275),
+      # available in the single-source runner container (solorepo's DR-160).
+      - run: just gate
 
   pull-request:
     name: pull request

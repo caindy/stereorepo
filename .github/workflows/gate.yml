@@ -2,8 +2,8 @@
 #
 # solorepo's own, and no portfolio's: the two seed jobs below render
 # `bootstraps/`, which stays here. A portfolio's gate workflow is seeded at
-# `template/.github/workflows/gate.yml`, where one job runs `.meta/gate` over
-# the Projects its assertions declare (DR-115). The triggers, the permissions
+# `template/.github/workflows/gate.yml`, where one job runs `just gate` over
+# the Projects its assertions declare (DR-115, solorepo's DR-275). The triggers, the permissions
 # and the `pull request` and `sweep` jobs are the half the two share. What
 # those two jobs run is typed once, under `.meta/actions/`, and each job here
 # is a checkout and a `uses:` of it (DR-120); the residue — the triggers, the

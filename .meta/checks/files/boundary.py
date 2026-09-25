@@ -2,12 +2,10 @@
 tool under `.meta/`, the step types the recipe rather than the tool
 (solorepo's DR-252, solorepo's DR-275).
 
-The scope is this repository's own CI — every `run:` step under
-`.github/workflows/` and under `.meta/actions/`. `template/.github/workflows/`
-is outside it: those files are seeded into a portfolio rather than run here, and
-`workflows.gate_workflows_agree` is what reads them.
+The scope is every `run:` step under `.github/workflows/`, under `.meta/actions/`,
+and under `template/.github/workflows/` (solorepo's DR-275, as widened on solorepo's #940).
 
-The channel is outside it too. `.meta/say/` is the Attested Mutation Plane
+The channel is outside it. `.meta/say/` is the Attested Mutation Plane
 (solorepo's DR-252), addressed directly by every workflow that changes shared
 state, and a recipe wrapping one of its verbs is an operator's convenience
 rather than the one statement of how CI runs it.
@@ -28,6 +26,9 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 ACTIONS = META / "actions"
 """The composite actions those workflows reach through `uses:`, which travel
 with `.meta/` into a portfolio (solorepo's DR-120)."""
+
+TEMPLATE_WORKFLOWS = ROOT / "template" / ".github" / "workflows"
+"""The seeded template workflows for a portfolio (solorepo's DR-115, solorepo's DR-275)."""
 
 CHANNEL = ".meta/say/"
 """The Attested Mutation Plane's prefix, whose verbs a workflow addresses
@@ -195,7 +196,9 @@ def _problems(path: pathlib.Path, recipes: dict[str, str]) -> list[str]:
 
 @check("operator boundary")
 def operator_boundary(justfile: pathlib.Path = JUSTFILE,
-                      roots: tuple[pathlib.Path, ...] = (WORKFLOWS, ACTIONS)) -> StepOutcome:
+                      roots: tuple[pathlib.Path, ...] = (
+                          WORKFLOWS, ACTIONS, TEMPLATE_WORKFLOWS
+                      )) -> StepOutcome:
     """No `run:` step runs a tool a root `just` recipe wraps (solorepo's DR-275).
 
     The recipe is meant to be the one statement of how a check is run, so that the
@@ -218,7 +221,7 @@ def operator_boundary(justfile: pathlib.Path = JUSTFILE,
     recipes = _wrapped(justfile)
     if not recipes:
         return CouldNotRun("no recipe on the root verb surface wraps a tool under .meta/")
-    paths = sorted(path for root in roots for path in root.rglob("*")
+    paths = sorted(path for root in roots if root.exists() for path in root.rglob("*")
                    if path.suffix in (".yml", ".yaml") and path.is_file())
     if not paths:
         return CouldNotRun("no workflow or composite action to scan")

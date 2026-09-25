@@ -12,7 +12,7 @@ import pathlib
 import tempfile
 
 from checks.collect import Found, Passed, check
-from checks.files.boundary import operator_boundary
+from checks.files.boundary import TEMPLATE_WORKFLOWS, operator_boundary
 
 SURFACE = """# every Project's gate
 gate target="":
@@ -105,7 +105,7 @@ TOLERATED: tuple[tuple[str, str], ...] = (
 def operator_boundary_probes() -> list[str]:
     """`operator_boundary` finds a step that types a wrapped tool, and no step that only names one.
 
-    The rule is solorepo's DR-275's, as solorepo's #921 widened it.
+    The rule is solorepo's DR-275's, as solorepo's #921 and solorepo's #940 widened it.
     Driven through the step's `justfile` and `roots` seams against a four-recipe
     surface. Each departure in `DEPARTURES` comes to `Found` naming the recipe the step
     owed: a bare tool, an interpreted script, one run through `uvx`, one behind an
@@ -117,6 +117,10 @@ def operator_boundary_probes() -> list[str]:
     `CouldNotRun` rather than passing on an empty scan.
     """
     problems = []
+
+    default_roots = operator_boundary.__defaults__[1] if operator_boundary.__defaults__ else ()
+    if TEMPLATE_WORKFLOWS not in default_roots:
+        problems.append("operator boundary: TEMPLATE_WORKFLOWS is not in default roots")
 
     with tempfile.TemporaryDirectory() as directory:
         root = pathlib.Path(directory)

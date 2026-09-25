@@ -223,3 +223,9 @@ ignore, excluding symlinks) via `sources.tree()`, reporting any line matching
 git's conflict marker patterns (`<<<<<<<`, `=======`, `>>>>>>>`).
 
 Evidence: `.meta/checks/files/conflicts.py::conflict_markers`
+
+### Seeded template gate workflow calling `.meta/gate` directly outside operator boundary
+
+`template/.github/workflows/gate.yml`'s `gate` job invoked `.meta/gate` directly instead of `just gate`, and `.meta/checks/files/boundary.py`'s `operator_boundary` check scoped its scan to `.github/workflows/` and `.meta/actions/`, leaving seeded portfolio workflows unchecked and allowing the root verb surface and seeded CI to drift apart (solorepo's DR-252, solorepo's DR-275, solorepo's #940). Established: solorepo's DR-106's fourth consequence is amended in-place to reflect that runner containers already carry `just`; `template/.github/workflows/gate.yml` types `just gate`; and `operator_boundary` scans `template/.github/workflows/` alongside repository workflows and composite actions.
+
+Evidence: `.meta/checks/files/boundary.py::operator_boundary`
