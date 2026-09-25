@@ -33,7 +33,6 @@ class PullRequestState(StrEnum):
     """Lifecycle states of a pull request.
 
     Attributes:
-        DRAFT: Pull request is in draft mode.
         AWAITING_GATE: Status checks are pending, queued, or running, or initial checks are absent.
         GATE_FAILED: One or more status checks failed or were cancelled.
         AWAITING_REVIEW: Status checks are clean, and review has been requested or verdict is pending.
@@ -47,7 +46,6 @@ class PullRequestState(StrEnum):
         CLOSED: Pull request is closed unmerged.
     """
 
-    DRAFT = "DRAFT"
     AWAITING_GATE = "AWAITING_GATE"
     GATE_FAILED = "GATE_FAILED"
     AWAITING_REVIEW = "AWAITING_REVIEW"
@@ -405,9 +403,6 @@ def classify_pr(
     state_str = str(pr.get("state", "OPEN")).upper()
     if state_str in ("MERGED", "CLOSED"):
         return PullRequestState(state_str)
-
-    if pr.get("isDraft"):
-        return PullRequestState.DRAFT
 
     mergeable = str(pr.get("mergeable") or "UNKNOWN").upper()
     if mergeable == "CONFLICTING":

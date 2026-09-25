@@ -34,6 +34,8 @@ def _ready_cases(channel: Any, move: Any) -> list[str]:
     pull: dict[str, Any] = {}
 
     def gh(*args: Any, **kwargs: Any) -> Any:
+        if args[:2] == ("repo", "view"):
+            return {"nameWithOwner": "owner/repo"}
         if args[:2] == ("pr", "view"):
             return {"isDraft": not ready_calls} if args[-1] == "isDraft" else pull
         if args[:2] == ("pr", "ready"):
@@ -48,7 +50,11 @@ def _ready_cases(channel: Any, move: Any) -> list[str]:
         problems.append(f"ready: a plan-only draft exited {said!r} and was readied "
                         f"{ready_calls!r}, where it should be refused and left a draft")
 
-    pull = {**pull, "number": 51, "changedFiles": 3}
+    pull = {
+        **pull, "number": 51, "changedFiles": 3, "mergeable": "MERGEABLE",
+        "latestReviews": APPROVED, "reviews": APPROVED, "reviewRequests": [],
+        "statusCheckRollup": GREEN,
+    }
     with stood_in(channel, gh=gh):
         move.drafts.ready(51)
     if ready_calls != ["51"]:
@@ -57,10 +63,13 @@ def _ready_cases(channel: Any, move: Any) -> list[str]:
 
 
 def _restore_cases(channel: Any, move: Any) -> list[str]:
-    """Neither `request-review` nor the merge manager lifts a loop draft that changes no file."""
-    problems = []
+    """Review requests and queue evaluation leave draft state to final approval."""
     ready_calls: list[str] = []
-    pull: dict[str, Any] = {}
+    pull: dict[str, Any] = {
+        "number": 43, "headRefName": "claude/issue-43", "baseRefName": "main",
+        "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE",
+        "reviewRequests": [], "latestReviews": [], "statusCheckRollup": GREEN,
+    }
 
     def gh(*args: Any, **kwargs: Any) -> Any:
         if args[:2] == ("pr", "view"):
@@ -71,23 +80,13 @@ def _restore_cases(channel: Any, move: Any) -> list[str]:
             ready_calls.append(str(args[2]))
         return {}
 
-    pull = {"number": 43, "headRefName": "claude/issue-43", "baseRefName": "main",
-            "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE", "changedFiles": 0}
     with stood_in(channel, gh=gh, role_login=lambda r: REVIEWER):
         move.request_review(43, "reviewer")
-    if ready_calls:
-        problems.append("request-review: a loop-shaped draft that changes no file was taken "
-                        f"out of draft by its branch name alone: {ready_calls!r}")
-
-    plan = {"number": 37, "headRefName": "gemini/issue-37", "isDraft": True, "changedFiles": 0,
-            "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE"}
-    with stood_in(channel, gh=gh):
-        move.evaluate_open_pulls([plan], reviewer_login=REVIEWER, owner="owner", name="repo",
+        move.evaluate_open_pulls([pull], reviewer_login=REVIEWER, owner="owner", name="repo",
                                  dry_run=False)
-    if ready_calls or plan.get("isDraft") is not True:
-        problems.append("merge manager: an approved draft that changes no file was restored, "
-                        f"so a plan's approval could merge it: {ready_calls!r}")
-    return problems
+    if ready_calls or pull.get("isDraft") is not True:
+        return ["draft lifecycle: a request or queue pass cleared draft before final approval"]
+    return []
 
 
 def _watch_cases(check_pr: Any) -> list[str]:
@@ -123,10 +122,9 @@ def _watch_cases(check_pr: Any) -> list[str]:
     polls[0] = 0
     with stood_in(check_pr.github, gh=gh, role_login=lambda role: f"o-r-{role}"):
         lines = outcome(lambda: check_pr.watch("7", every=0)).out.splitlines()
-    if not any("plan approved" in line for line in lines) or any(
-            "READY_TO_MERGE" in line for line in lines):
-        problems.append(f"watch: an approved plan-only draft printed {lines!r}, where it is a "
-                        "plan approved and not a pull request ready to merge")
+    if not any("READY_TO_MERGE" in line for line in lines):
+        problems.append(f"watch: a final-approved draft printed {lines!r}, "
+                        "rather than reporting that it is ready to merge")
     return problems
 
 

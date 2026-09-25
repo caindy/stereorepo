@@ -604,8 +604,10 @@ disciplines:
           nothing takes a branch that changes no file out of draft. The reviewer raises points on a
           plan-only pull request with `comment`, since there is no line for a thread, and an approval
           there approves the plan and not a merge. A plan that changes materially in answer to the review
-          goes back to the solo before code. Once both gates pass, push the implementation, take the pull
-          request out of draft with `move ready`, and request review again.
+          goes back to the solo before code. Once both gates pass, push the implementation and request
+          review again while the pull request remains a draft. Final reviewer approval takes the pull
+          request out of draft, making it ready to merge; a merge conflict returns it to draft until the
+          coder resolves it and requests review again.
       - id: work:discipline-step/pr-first/take-challenges-in-as-pull-requests
         name: Take Challenges in as pull requests
         statement: >-

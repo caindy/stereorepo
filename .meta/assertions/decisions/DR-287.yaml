@@ -1,0 +1,55 @@
+decisions:
+  - id: work:decision/287
+    name: "DR-287 · A pull request stays draft until its final reviewer approval"
+    status: ADOPTED
+    applies:
+      - work:article/16
+      - work:article/22
+    enacted_in:
+      - work:artifact/agents
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-lib-check-pr-state
+      - work:artifact/meta-lib-check-pr-polling
+      - work:artifact/meta-lib-move-drafts
+      - work:artifact/meta-lib-move-manager
+      - work:artifact/meta-lib-move-handoff
+      - work:artifact/github-workflows-review
+    context: >-
+      solorepo's DR-273 used draft state to isolate plan validation before
+      implementation. The resulting state classifier could not observe work
+      on a draft, so the watcher replaced `isDraft` locally. Merge-queue
+      rebases also synchronized reviewer requests and caused redundant review
+      workflow runs.
+    alternatives:
+      - name: Keep the plan-only draft boundary and filter redundant workflow runs
+        chosen: false
+        reason: >-
+          It preserves a meaning for draft that conflicts with GitHub's
+          work-in-progress semantics and retains a special watcher path.
+      - name: Keep a pull request draft until final reviewer approval
+        chosen: true
+        reason: >-
+          Draft becomes the single work-in-progress semaphore. The classifier
+          can read operational state directly, review runs stop once a pull
+          request enters the merge queue, and conflicts return the work to the
+          same visible state.
+    consequences:
+      - >-
+        A pull request remains draft during plan validation, implementation,
+        review, and thread resolution. Final reviewer approval transitions a
+        clean pull request to ready for merge.
+      - >-
+        `classify_pr` evaluates operational state regardless of `isDraft`;
+        merge eligibility continues to refuse a draft pull request.
+      - >-
+        The reviewer workflow runs only for drafts, so merge-queue
+        synchronization does not start duplicate reviewer runs.
+    falsifier: >-
+      A draft pull request whose operational state cannot be classified, a
+      ready pull request that has not received final reviewer approval, or a
+      reviewer run started by synchronization after a pull request is ready.
+    rationale: >-
+      GitHub draft status is the durable semaphore separating work in progress
+      from work eligible to merge. Making that meaning hold throughout the
+      lifecycle eliminates a local classifier exception and makes merge-queue
+      maintenance invisible to review automation.

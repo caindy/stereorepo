@@ -48,10 +48,11 @@ jobs:
     # Only a request of this Role's account, made now or still pending. A
     # request of the solo, or of anyone else, is not this Job's.
     if: >-
-      (github.event.action == 'review_requested'
+      github.event.pull_request.draft
+      && ((github.event.action == 'review_requested'
         && github.event.requested_reviewer.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name))
       || (github.event.action == 'synchronize'
-        && contains(github.event.pull_request.requested_reviewers.*.login, format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)))
+        && contains(github.event.pull_request.requested_reviewers.*.login, format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name))))
     # The self-hosted scale set (solorepo's DR-137): this Job is what actually
     # spends GitHub Actions minutes, holding a runner for up to the timeout
     # below on every review. It moved here first, ahead of `gate.yml`'s

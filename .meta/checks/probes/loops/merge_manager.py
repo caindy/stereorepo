@@ -1615,7 +1615,7 @@ def _check_in_progress_refusal_is_deferred(channel: Any, move: Any) -> list[str]
 
 
 def _stall_eviction(channel: Any, move: Any) -> list[str]:
-    """Stalled loop PRs are demoted to draft, and answered green PRs restored (solorepo's DR-258).
+    """Stalled loop PRs are demoted to draft without automatic restoration.
 
     Parameters:
         channel: The mock communication channel.
@@ -1628,11 +1628,7 @@ def _stall_eviction(channel: Any, move: Any) -> list[str]:
         _check_stall_thresholds(move)
         + _check_stall_eviction_dry_run(channel, move)
         + _check_draft_restoration(channel, move)
-        + _check_refused_draft_restoration(channel, move)
-        + _check_multi_refusal_draft_restoration(channel, move)
-        + _check_request_review_draft_restoration(channel, move)
         + _check_stalled_pr_merge_manager_refusal(channel, move)
         + _check_restore_is_not_merged_in_the_same_pass(channel, move)
         + _check_in_progress_refusal_is_deferred(channel, move)
     )
-

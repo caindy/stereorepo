@@ -126,7 +126,7 @@
 .meta/lib/move/cli.py: 3
 .meta/lib/move/decisions.py: 3
 .meta/lib/move/handoff.py: 2
-.meta/lib/move/manager/__init__.py: 6
+.meta/lib/move/manager/__init__.py: 7
 .meta/lib/move/manager/ranking.py: 11
 .meta/lib/move/pull_requests.py: 8
 .meta/lib/move/reconcile.py: 0

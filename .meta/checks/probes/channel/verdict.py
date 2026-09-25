@@ -36,19 +36,37 @@ class FakeVerdict:
 
     def __init__(self, head: str, threads: list[dict[str, Any]] | None = None) -> None:
         self.head, self.reads = head, 0
+        self.is_draft = True
         self.posted: list[str] = []
         self.comments: list[dict[str, str]] = []
         self.threads = threads or []
+
+    def pull(self, fields: str) -> dict[str, object]:
+        """Return the pull request fields that final approval reads."""
+        reviews = [{"state": "APPROVED", "author": {"login": "caindy-solorepo-reviewer"}}
+                   for _ in self.posted]
+        if fields == "reviews":
+            return {"reviews": reviews}
+        if fields == "isDraft":
+            return {"isDraft": self.is_draft}
+        return {
+            "state": "OPEN", "isDraft": self.is_draft, "mergeable": "MERGEABLE",
+            "reviews": reviews, "latestReviews": reviews, "reviewRequests": [],
+            "statusCheckRollup": [{"conclusion": "SUCCESS"}],
+        }
 
     def __call__(self, *args: str, parse: bool = True, **kwargs: object) -> object:
         """One `gh` call: the pull request's head, a verdict posted, or the reviews/threads read back."""
         if args[:2] == ("pr", "view") and "headRefOid" in args:
             self.reads += 1
             return self.head
-        if args[:2] == ("pr", "view") and "reviews" in args:
-            return {"reviews": [{"state": "APPROVED"} for _ in self.posted]}
+        if args[:2] == ("pr", "view") and ("reviews" in args[-1] or args[-1] == "isDraft"):
+            return self.pull(args[-1])
         if args[:2] == ("pr", "review"):
             self.posted.append(args[3])
+            return ""
+        if args[:2] == ("pr", "ready"):
+            self.is_draft = False
             return ""
         if args[:2] == ("repo", "view") and "nameWithOwner" in args:
             return {"nameWithOwner": "caindy/solorepo"}

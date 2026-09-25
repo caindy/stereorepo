@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 import channel
 import check_pr
-from lib.move import common, drafts, pull_requests
+from lib.move import common, pull_requests
 
 
 class RequestRefused(SystemExit):
@@ -143,10 +143,9 @@ def request_review(pr: str | int, to: str) -> None:
     a run already standing on this head would be duplicated by one that fires
     again, and `reviewing` says which of the two this is (solorepo's #950).
     Polls branch mergeability and refuses review
-    requests if the branch is conflicting (solorepo's DR-145). Restores an autonomous
-    loop pull request from draft to ready once open status and clean mergeability
-    are confirmed (solorepo's DR-258), and never one whose branch holds no changes
-    (solorepo's DR-273). Reads back requested reviewers to verify
+    requests if the branch is conflicting (solorepo's DR-145). Draft status
+    remains unchanged: it is the work-in-progress semaphore until final
+    reviewer approval (solorepo's DR-287). Reads back requested reviewers to verify
     the assignment took effect.
 
     Parameters:
@@ -170,9 +169,6 @@ def request_review(pr: str | int, to: str) -> None:
                  "review.yml runs on pull_request, and so a review requested on it would "
                  f"create no run and be answered by nobody. Rebase {pull['headRefName']} "
                  f"onto {pull['baseRefName']}, push, and the request can be made")
-    if pull.get("isDraft") and pull_requests.LOOPS_BRANCH.match(pull.get("headRefName") or ""):
-        drafts.restore(pr, pull)
-
     def asked() -> list[str]:
         return [r.get("login") for r
                 in channel.gh("pr", "view", str(pr), "--json", "reviewRequests")["reviewRequests"]]

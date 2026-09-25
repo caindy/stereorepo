@@ -175,7 +175,7 @@ def evict_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str = "review
 
 
 def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: bool) -> bool:
-    """Restore an approved, green loop draft with changes (solorepo's DR-258, DR-273).
+    """Mark an approved, green implementation pull request ready to merge.
 
     Parameters:
         pull: The pull request, as `MERGE_MANAGER_FIELDS` lists it.
@@ -187,8 +187,7 @@ def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: boo
         which is what `evaluate_open_pulls` reads to keep it out of this pass's
         merge candidates.
     """
-    if not (pull.get("isDraft") and drafts.holds_changes(pull)
-            and pull_requests.LOOPS_BRANCH.match(pull.get("headRefName") or "")):
+    if not (pull.get("isDraft") and drafts.holds_changes(pull)):
         return False
     if ranking.find_active_merge_refusal(pull) is not None:
         return False
@@ -203,12 +202,12 @@ def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: boo
                 pull["isDraft"] = False
                 advance.reconcile_notice(
                     pull["number"], ranking.MERGE_REFUSAL_MARKER, None, None, label="merge refusal")
-                print(f"merge-manager: restored answered and green PR #{pull['number']} from draft")
+                print(f"merge-manager: marked approved and green PR #{pull['number']} ready to merge")
                 return True
             except (SystemExit, *common.UNREACHED) as exc:
                 print(f"warning: could not mark PR #{pull['number']} ready: {exc}", file=sys.stderr)
         else:
-            print(f"merge-manager: dry run — would restore PR #{pull['number']} from draft")
+            print(f"merge-manager: dry run — would mark PR #{pull['number']} ready to merge")
     return False
 
 
@@ -219,7 +218,7 @@ def evaluate_open_pulls(
     name: str,
     dry_run: bool = False,
 ) -> tuple[list[common.Pull], dict[int, tuple[bool, list[str]]]]:
-    """Evict what has stalled, restore what is answered, and evaluate what is left.
+    """Evict what has stalled, transition final approvals, and evaluate what remains.
 
     The eviction pass is this module's and the evaluation is `ranking`'s, so the
     two are joined here rather than in either: a pull request this pass took out
