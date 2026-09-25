@@ -132,6 +132,7 @@ def _request_review_cases(channel: Any, move: Any) -> list[str]:
                         f"GitHub holding {fake.pulls['9'].get('requested')!r}")
     if said:
         problems.append(f"request-review: waiting out an `UNKNOWN` exited with {said!r}")
+
     return problems + _pending_request_cases(channel, move)
 
 

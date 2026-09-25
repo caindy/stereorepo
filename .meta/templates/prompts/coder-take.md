@@ -21,7 +21,8 @@ Read it: `gh issue view <number>`.
 Branch as `<branch_prefix>/issue-<number>` from
 `origin/main`, push at the first commit, and open the pull request
 at once with `.meta/say/move open`, the form filled and the Issue named
-under "What it closes". <resume>
+under "What it closes". `move open` opens a draft pull request and requests
+review automatically. <resume>
 Below, `<n>` is that pull request's number, never the Issue's;
 `revise` and `comment` take either.
 
@@ -60,8 +61,10 @@ against origin/main to verify quality and consistency.
 What you spot is yours to act on or not; what you decide not to
 do you raise as a notice on the diff with `.meta/say/post notice`.
 
-`easy` and `medium`: request review: `.meta/say/move request-review <n>`
-and stop. The reviewer approves when clean, and a standing merge manager
+`easy` and `medium`: request review of the finished implementation with
+`.meta/say/move request-review <n>` and stop. `move open` requested review
+of the opening draft; the pushed implementation needs its own handoff. The
+reviewer approves when clean, and a standing merge manager
 lands what is green in order of leverage (solorepo's DR-161).
 Do not arm the merge and do not merge by hand: the merge manager evaluates and lands
 eligible work. Do so the moment the branch is pushed and the body is

@@ -599,9 +599,9 @@ disciplines:
           before writing code. The plan passes two gates before any code, and both are required
           (solorepo's DR-273): the solo's approval in session, which lets the coder go ahead under this
           Discipline and skips no step of it, and then the reviewer's approval of the plan on the pull
-          request. Open that pull request with `move open --draft`, so that the merge manager, `advance`
-          and the reconciler pass over it and an approval of the plan cannot merge the empty commit;
-          nothing takes a branch that changes no file out of draft. The reviewer raises points on a
+          request. `move open` opens that pull request as a draft and requests review, so that the merge
+          manager, `advance` and the reconciler pass over it and an approval of the plan cannot merge the
+          empty commit; nothing takes a branch that changes no file out of draft. The reviewer raises points on a
           plan-only pull request with `comment`, since there is no line for a thread, and an approval
           there approves the plan and not a merge. A plan that changes materially in answer to the review
           goes back to the solo before code. Once both gates pass, push the implementation and request

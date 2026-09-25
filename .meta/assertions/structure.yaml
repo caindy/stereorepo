@@ -487,6 +487,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-handoff
     name: .meta/checks/probes/loops/handoff.py
     path: .meta/checks/probes/loops/handoff.py
+  - id: work:artifact/meta-checks-probes-loops-open-pull-request
+    name: .meta/checks/probes/loops/open_pull_request.py
+    path: .meta/checks/probes/loops/open_pull_request.py
   - id: work:artifact/meta-checks-probes-loops-enacted
     name: .meta/checks/probes/loops/enacted.py
     path: .meta/checks/probes/loops/enacted.py

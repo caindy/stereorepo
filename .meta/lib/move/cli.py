@@ -99,9 +99,6 @@ def _add_pr_parsers(sub: Any) -> None:
     where = p.add_mutually_exclusive_group()
     where.add_argument("--base", default="main")
     where.add_argument("--on", help="open as a layer on this pull request, and link the stack")
-    p.add_argument("--draft", action="store_true",
-                   help="open as a draft, which merge, advance and the reconciler pass over; "
-                        "move ready takes it out")
     p = sub.add_parser("ready")
     p.add_argument("pr")
     p = sub.add_parser("draft")
@@ -240,7 +237,7 @@ def _dispatch_pr_verb(args: argparse.Namespace) -> None:
         pull_requests.supersede(args.pr, args.by, channel.stdin_body())
     elif args.verb == "open":
         pull_requests.open_pull_request(args.title, channel.signed(channel.stdin_body()),
-                                        base=args.base, on=args.on, draft=args.draft)
+                                        base=args.base, on=args.on)
 
 
 def main(description: str | None) -> None:

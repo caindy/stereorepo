@@ -171,8 +171,8 @@ programs:
           request
         held_by: [coder]
       - name: open
-        usage: "--title T [--base B|--on <pr>] [--draft] < body.md"
-        does: "open a pull request, the form filled; --on opens a layer on that one and links the stack; --draft opens it as a draft, which the merge manager, advance and the reconciler pass over; move ready takes it out"
+        usage: "--title T [--base B|--on <pr>] < body.md"
+        does: "open a draft pull request, the form filled, and request review; --on opens a layer on that one and links the stack; the merge manager, advance and the reconciler pass over the draft; move ready takes it out"
         held_by: [coder]
       - name: ready
         usage: "<pr>"

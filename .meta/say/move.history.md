@@ -735,4 +735,13 @@ and allow the entire stack to advance cleanly.
 
 Evidence: `.meta/checks/probes/channel/extension.py::gh_stack_extension_probes`
 
+### Opening a pull request did not request review automatically
+
+Opening a pull request with `move open` created the pull request without
+requesting review, requiring authors to run `move request-review` as a separate
+command to signal handoff (solorepo's #1042). Established: `open_pull_request`
+atomically requests review from the reviewer role upon creation.
+
+Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
+
 

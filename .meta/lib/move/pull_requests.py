@@ -132,14 +132,11 @@ def layer(pr: str | int, below: str | int) -> None:
 
 
 def open_pull_request(title: str, body: str, base: str = "main",
-                      on: str | int | None = None, draft: bool = False) -> None:
-    """Open a pull request, signed; with `on`, open it as a layer on that one.
+                      on: str | int | None = None) -> None:
+    """Open a signed draft pull request, request review, and link it with `on`.
 
-    The base is the lower layer's branch, read from GitHub rather than typed,
-    and the link follows the creation, so a layer is never open and unlinked.
-    With `draft`, a draft, which the merge manager, `advance` and the reconciler
-    pass over; `move ready` takes it out once the branch holds changes
-    (solorepo's DR-273).
+    The draft passes merge management, `advance`, and reconciliation; `move ready`
+    takes it out once the branch holds changes (solorepo's DR-273).
     """
     problems = check_pr.check(title, body)
     if problems:
@@ -150,7 +147,7 @@ def open_pull_request(title: str, body: str, base: str = "main",
         base = head_branch(on)
     try:
         url = channel.gh("pr", "create", "--title", title, "--base", base, "--body", body,
-                         *(["--draft"] if draft else []), parse=False, tolerate_fail=True)
+                         "--draft", parse=False, tolerate_fail=True)
     except subprocess.CalledProcessError as exc:
         if "No commits between" in exc.stderr:
             sys.exit(f"say: head branch has no commits ahead of {base}; GitHub requires at "
@@ -159,8 +156,10 @@ def open_pull_request(title: str, body: str, base: str = "main",
                      "Challenge #<n>\"` before opening the pull request (solorepo's DR-269).")
         sys.exit(f"gh: {exc.stderr.strip()}")
     print(url)
+    pr_number = url.rstrip("/").rsplit("/", 1)[-1]
     if on:
-        link(on, url.rstrip("/").rsplit("/", 1)[-1])
+        link(on, pr_number)
+    handoff.request_review(pr_number, "reviewer")
 
 
 def arm(pr: str | int, subject: str) -> None:
