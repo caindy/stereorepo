@@ -145,8 +145,8 @@ class Decision(NamedTuple):
     """The take door's outputs, as `--take` prints them.
 
     Attributes:
-        by: A word for a delivery that must not run — `closed`, `held`, `stale`,
-            `unnamed`, or the number of the pull request a standing run holds —
+        by: A word for a delivery that must not run — `closed`, `held`, `blocked`,
+            `stale`, `unnamed`, or the number of the pull request a standing run holds —
             and empty for one that does. The one field every branch writes, so
             that it is never empty by accident.
         why: Why the delivery must not run, beside a `by` that says so.
@@ -209,7 +209,8 @@ def take(issue: str, door: str) -> dict[str, Any]:
         return _decided("unnamed", UNNAMED,
                         said=f"'{issue}' is not an Issue number; the branch is not the loop's "
                              "shape, and this delivery is not its")
-    read = github.gh("issue", "view", issue, "--json", "state,assignees,labels", default=None)
+    read = github.gh("issue", "view", issue, "--json", "state,assignees,labels,blockedBy",
+                     default=None)
     if read is None:
         if door == ISSUE_DOOR:
             sys.exit(f"take: #{issue} could not be read")
@@ -234,6 +235,9 @@ def take(issue: str, door: str) -> dict[str, Any]:
         return _decided("held", "labelled hard", state=found,
                         said=f"#{issue} is hard now: the solo's, with a session beside him; "
                              "this loop stands down")
+    if found is state.IssueState.BLOCKED:
+        return _decided("blocked", "has open blockers", state=found,
+                        said=f"#{issue} has open blockers; this loop stands down")
     if found in state.NOT_TAKEN_STATES:
         shown = f"'{labels}'" if labels else "nothing"
         return _decided("stale", f"labelled {labels or 'nothing'} now, which no loop takes",

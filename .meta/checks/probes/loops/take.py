@@ -30,9 +30,10 @@ def take_probes() -> list[str]:
     standing; `hard` is `HELD` without one; a Challenge with no level is
     `UNREAD`, one at `human` is `HANDED_BACK`, a roadmap Issue is `ROADMAP`
     and one with neither label is `UNLABELLED`; and at a level a loop takes,
-    a claim alone is `CLAIMED`, a pull request alone is `RESUMABLE`, and
-    neither is `OFFERED`. A claim by somebody other than the coder is no
-    claim, and `coder_login=None` reads every claim as nobody's.
+    an Issue with open blockers is `BLOCKED`, a claim alone is `CLAIMED`,
+    a pull request alone is `RESUMABLE`, and neither is `OFFERED`. A claim
+    by somebody other than the coder is no claim, and `coder_login=None` reads
+    every claim as nobody's.
 
     `take`, against a GitHub answered from a dict, every field of every
     decision held: each state's `by` is the word the take door wrote for it,
@@ -79,6 +80,13 @@ def _classify_cases(check_pr: Any) -> list[str]:
          CODER, False, states.CLAIMED),
         ("medium, unclaimed, pull request open", _issue(["challenge", "medium"]),
          CODER, True, states.RESUMABLE),
+        ("easy, unclaimed, with open blocker",
+         {**_issue(["challenge", "easy"]), "blockedBy": {"nodes": [{"number": 42}]}},
+         CODER, False, states.BLOCKED),
+        ("medium, unclaimed, with closed blocker",
+         {**_issue(["challenge", "medium"]),
+          "blockedBy": {"nodes": [{"number": 42, "state": "CLOSED"}]}},
+         CODER, False, states.OFFERED),
         ("easy, unclaimed, no pull request", _issue(["challenge", "easy"]),
          CODER, False, states.OFFERED),
         ("claimed by somebody else with a pull request",
@@ -154,6 +162,11 @@ def _take_cases(check_pr: Any) -> list[str]:
          _decision("held", "labelled hard", state="HELD",
                    said="#5 is hard now: the solo's, with a session beside him; this loop "
                         "stands down")),
+        ("blocked with open blocker",
+         _Answers({**_issue(["challenge", "easy"]), "blockedBy": {"nodes": [{"number": 42}]}},
+                  None, unset), door,
+         _decision("blocked", "has open blockers", state="BLOCKED",
+                   said="#5 has open blockers; this loop stands down")),
         ("human", _Answers(_issue(["challenge", "human"]), None, unset), other,
          _decision("stale", "labelled challenge, human now, which no loop takes",
                    state="HANDED_BACK", said=f"#5 is labelled 'challenge, human' {STALE}")),

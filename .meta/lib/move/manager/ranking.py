@@ -12,7 +12,7 @@ raise `ImportError` on a name not bound yet. That is a constraint rather than a
 convenience, and the package docstring is where it is argued.
 """
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
 import channel
@@ -308,14 +308,49 @@ def lifecycle_refusal(pull: common.Pull, found: check_pr.PullRequestState, revie
     return ""
 
 
+def check_closed_issues_unblocked(pull: common.Pull) -> tuple[bool, str]:
+    """Whether every Issue closed by this pull request has no active unresolved blockers."""
+    closing_refs = [
+        int(ref["number"])
+        for ref in (pull.get("closingIssuesReferences") or [])
+        if isinstance(ref, Mapping) and "number" in ref
+    ]
+    body = pull.get("body") or ""
+    if not closing_refs and body:
+        closing_refs = check_pr.form.closed_issues(body)
+    if not closing_refs:
+        return True, ""
+    closed_set = set(closing_refs)
+    for num in closing_refs:
+        view = channel.gh("issue", "view", str(num), "--json", "blockedBy", default=None)
+        if not isinstance(view, Mapping):
+            continue
+        raw_blockers = (view.get("blockedBy") or {}).get("nodes", [])
+        open_blockers = [
+            int(n["number"]) for n in raw_blockers
+            if isinstance(n, Mapping) and "number" in n
+            and str(n.get("state") or "OPEN").upper() != "CLOSED"
+        ]
+        unresolved = [b for b in open_blockers if b not in closed_set]
+        if unresolved:
+            return False, (
+                f"closes #{num} with active unresolved blockers "
+                f"({', '.join(f'#{b}' for b in unresolved)})"
+            )
+    return True, ""
+
+
 def _evaluate_candidate_readiness(pull: common.Pull, owner: str,
                                   name: str) -> str | None:
-    """Check post-classification candidate readiness: active refusals and decisions."""
+    """Check post-classification candidate readiness: active refusals, decisions, and blockers."""
     if find_active_merge_refusal(pull) is not None:
         return "merge previously refused"
     decisions_ok, decisions_msg = check_decisions_in_force(pull, owner, name)
     if not decisions_ok:
         return decisions_msg
+    blocked_ok, blocked_msg = check_closed_issues_unblocked(pull)
+    if not blocked_ok:
+        return blocked_msg
     return None
 
 

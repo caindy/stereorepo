@@ -74,6 +74,7 @@ class IssueState(StrEnum):
         UNREAD: A Challenge with no level; no reviewer has read it (solorepo's DR-230).
         HANDED_BACK: `human`; the solo's, and no Job's.
         HELD: `hard`; the solo's with a session beside them, and a loop stands down.
+        BLOCKED: At a loop level, but with open blockers in blockedBy; not taken.
         TAKEN: Claimed by the coder with its pull request open; a run is standing.
         CLAIMED: Claimed by the coder with no pull request; a run that has not
             opened yet, or one that ended holding the claim.
@@ -89,6 +90,7 @@ class IssueState(StrEnum):
     UNREAD = "UNREAD"
     HANDED_BACK = "HANDED_BACK"
     HELD = "HELD"
+    BLOCKED = "BLOCKED"
     TAKEN = "TAKEN"
     CLAIMED = "CLAIMED"
     RESUMABLE = "RESUMABLE"
@@ -105,6 +107,7 @@ NOT_TAKEN_STATES = frozenset({
     IssueState.ROADMAP,
     IssueState.UNREAD,
     IssueState.HANDED_BACK,
+    IssueState.BLOCKED,
 })
 """Issue states at no level a loop takes, which the take door calls stale."""
 
@@ -113,6 +116,24 @@ def issue_labels(issue: Mapping[str, Any]) -> list[str]:
     """The label names on an Issue, as `gh issue view --json labels` lists them."""
     return [str(lbl.get("name") or "") for lbl in issue.get("labels") or []
             if isinstance(lbl, Mapping)]
+
+
+def open_blockers(issue: Mapping[str, Any]) -> list[int]:
+    """Numbers of open issues blocking this issue from GitHub's `blockedBy`."""
+    raw = issue.get("blockedBy")
+    if isinstance(raw, Mapping):
+        nodes = raw.get("nodes") or []
+    elif isinstance(raw, Sequence) and not isinstance(raw, (str, bytes)):
+        nodes = raw
+    else:
+        nodes = []
+    open_nums: list[int] = []
+    for node in nodes:
+        if isinstance(node, Mapping) and "number" in node:
+            st = str(node.get("state") or "OPEN").upper()
+            if st != "CLOSED":
+                open_nums.append(int(node["number"]))
+    return open_nums
 
 
 def classify_issue(
@@ -153,6 +174,8 @@ def classify_issue(
         if "roadmap" in labels:
             return IssueState.ROADMAP
         return IssueState.UNLABELLED
+    if open_blockers(issue):
+        return IssueState.BLOCKED
     if claimed:
         return IssueState.CLAIMED
     if open_pull:

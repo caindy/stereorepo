@@ -6,8 +6,9 @@ heading added to the form is required by that act alone (A15, solorepo's DR-089)
 
 import pathlib
 import re
+from collections.abc import Mapping
 
-from lib.check_pr import META
+from lib.check_pr import META, github
 
 FORM = META / "templates" / "pull-request.md"
 
@@ -90,6 +91,47 @@ def listed(section: str, heading: str, takes: str, carries: re.Pattern[str],
     return [f"{otherwise}: {item}" for item in items if not carries.search(item)]
 
 
+def closed_issues(body: str) -> list[int]:
+    """Issue numbers declared under What it closes."""
+    found = sections(body)
+    closing = found.get(CLOSES, "")
+    if not closing or NONE.match(closing):
+        return []
+    numbers: list[int] = []
+    for item in BULLET.finditer(closing):
+        ref = KEYWORD.search(item.group(1))
+        if ref:
+            match = re.search(r"(\d+)$", ref.group(0))
+            if match:
+                numbers.append(int(match.group(1)))
+    return numbers
+
+
+def check_closing_blockers(body: str) -> list[str]:
+    """Inspects targeted closing issues for active unresolved blockers."""
+    targets = closed_issues(body)
+    if not targets:
+        return []
+    closed_set = set(targets)
+    problems: list[str] = []
+    for num in targets:
+        view = github.gh("issue", "view", str(num), "--json", "blockedBy", default=None)
+        if not isinstance(view, Mapping):
+            continue
+        raw_blockers = (view.get("blockedBy") or {}).get("nodes", [])
+        open_blockers = [
+            int(n["number"]) for n in raw_blockers
+            if isinstance(n, Mapping) and "number" in n
+            and str(n.get("state") or "OPEN").upper() != "CLOSED"
+        ]
+        unresolved = [b for b in open_blockers if b not in closed_set]
+        if unresolved:
+            problems.append(
+                f"#{num} has active unresolved blockers: {', '.join(f'#{b}' for b in unresolved)}"
+            )
+    return problems
+
+
 def check(title: str, body: str) -> list[str]:
     """Validates pull request title and body against template requirements.
 
@@ -100,13 +142,14 @@ def check(title: str, body: str) -> list[str]:
     Returns:
         list[str]: Validation error messages.
 
-    Four things are asked of a body, in order. Every heading the form declares
+    Five things are asked of a body, in order. Every heading the form declares
     is present and not blank. No placeholder the form spells in angle brackets
     survives into the title or the body. Each item under **What it closes**
     carries a closing keyword, so the merge closes the Issue and nobody has to
-    remember to (solorepo's DR-089). And each item under **What was noticed and
-    not done** is a link, which is Article 15 itself: everything before it is
-    the form being present, and this is the rule the form exists to carry.
+    remember to (solorepo's DR-089), and carries no active unresolved blockers.
+    And each item under **What was noticed and not done** is a link, which is
+    Article 15 itself: everything before it is the form being present, and this
+    is the rule the form exists to carry.
     """
     required = [m.group(1) for m in HEADING.finditer(fence(FORM))]
     found = sections(body)
@@ -119,6 +162,7 @@ def check(title: str, body: str) -> list[str]:
     problems += unfilled(title, body)
     problems += listed(found.get(CLOSES, ""), CLOSES, "one `Closes #n` per item", KEYWORD,
                        "no closing keyword, so the merge leaves it open")
+    problems += check_closing_blockers(body)
     problems += listed(found.get(DEFERRED, ""), DEFERRED, "one link per item", LINK,
                        "not a link, so it closes with this pull request")
     return problems

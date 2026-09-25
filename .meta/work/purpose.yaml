@@ -172,6 +172,13 @@ classes:
       challenge_type:
         required: true
 
+  Epic:
+    is_a: Challenge
+    description: >-
+      A composite Challenge decomposed into constituent child Challenges.
+      A parent Challenge whose completion depends on the resolution of its child
+      dependencies.
+
   AcceptanceCriterion:
     description: >-
       One checkable condition in a Definition of Done. State the metric and

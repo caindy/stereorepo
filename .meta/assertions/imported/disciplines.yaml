@@ -611,9 +611,11 @@ disciplines:
       - id: work:discipline-step/pr-first/take-challenges-in-as-pull-requests
         name: Take Challenges in as pull requests
         statement: >-
-          Receive every Challenge as a pull request, whatever raised it — the solo, a scheduled job, another
-          agent — and name the Challenge in the body with a closing keyword, so the merge closes it and
-          nobody has to remember to.
+          Receive every Challenge as a pull request, whatever raised it — the solo, a scheduled
+          job, another agent — and name the Challenge in the body with a closing keyword, so the
+          merge closes it and nobody has to remember to. Leaf pull requests must close child
+          Challenges rather than parent Epics, ensuring composite parent Challenges remain open
+          while unresolved child dependencies remain.
       - id: work:discipline-step/pr-first/raise-a-challenge-with-the-form
         name: Raise a Challenge with the form
         statement: >-

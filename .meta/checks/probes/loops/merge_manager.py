@@ -778,6 +778,27 @@ def _blockers(move: Any) -> list[str]:
     text_blocker = {"number": 3, "body": f"**Waits on.** Decision DR-{'041'}", "blockedBy": {"nodes": []}}
     if screen.waits_on(text_blocker) != f"Decision DR-{'041'}":
         problems.append(f"next.waits_on did not return non-issue blocker string: {screen.waits_on(text_blocker)}")
+
+    def fake_view(*args: Any, **kw: Any) -> Any:
+        return {"blockedBy": {"nodes": [{"number": 42}]}} if args[:2] == ("issue", "view") else None
+
+    pull_blocked = {"number": 10, "closingIssuesReferences": [{"number": 1}]}
+    with stood_in(move.channel, gh=fake_view):
+        ok, why = move.manager.ranking.check_closed_issues_unblocked(pull_blocked)
+        if ok or "active unresolved blockers" not in why:
+            problems.append(
+                f"check_closed_issues_unblocked did not refuse blocked closing issue: {why}"
+            )
+
+    check_pr = citations.load_check_pr()
+    body_blocked = f"**What it closes.**\n- Closes {'#'}1 — blocked issue"
+    with stood_in(check_pr.github, gh=fake_view):
+        pr_problems = check_pr.form.check_closing_blockers(body_blocked)
+        if not any("active unresolved blockers" in p for p in pr_problems):
+            problems.append(
+                f"check_closing_blockers did not refuse closing issue with blockers: {pr_problems}"
+            )
+
     return problems
 
 
