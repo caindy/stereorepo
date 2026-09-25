@@ -63,7 +63,7 @@ decisions:
         exiting 0 immediately when an actionable state is reached, eliminating
         indefinite loops on green approved pull requests and startup deadlocks.
       - >-
-        .meta/lib/check_pr/sweep.py delegates check status and reviewer verdict predicates
+        .meta/lib/check_pr/remedies.py delegates check status and reviewer verdict predicates
         to state.py.
       - >-
         .meta/say/move evaluate_pr() consults classify_pr() == PullRequestState.READY_TO_MERGE

@@ -99,7 +99,7 @@ decisions:
       - >-
         The doors that read the verdict themselves rather than through `classify_pr`
         keep GitHub's own word for it, and a comment verdict moves none of them:
-        `is_changes_requested_pull` in `.meta/lib/check_pr/sweep.py` tests
+        `is_changes_requested_pull` in `.meta/lib/check_pr/remedies.py` tests
         `latest_verdict` against the literal `CHANGES_REQUESTED`, which is what the
         sweep's `unanswered_changes` line, `move delegate` and `advance.dispatch`'s
         push-time re-delivery each ask, and `just next` prints GitHub's
