@@ -39,7 +39,8 @@ from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_lan
 from checks.files.vocabulary import (RESERVATION, VOCABULARIES, added_concepts, concepts_in,
                                      reserved_concepts, vocabulary_mints)
 from checks.files.workflows import (NOT_SHARED, REVIEW_WORKFLOW, SCAFFOLD_ONLY, SEED_OWN_JOBS,
-                                    SHARED_JOBS, gate_workflows_agree, scaffold_only_paths)
+                                    SHARED_JOBS, VERIFICATION_JOBS, gate_workflows_agree,
+                                    scaffold_only_paths)
 from checks.files.control_plane import (LIB, NUMBER_WORDS, RESTORE_COUNT, RESTORE_LINE,
                                         control_plane_packages, control_plane_restore, scripts_of)
 from checks.files.arc import (ACTIONS, BIN_DIRS, DOCKERFILE, GUARD, SEPARATORS, guarded_tools,
@@ -97,6 +98,7 @@ __all__ = [
     "TYPES_BASELINE",
     "UVX_FLAGS",
     "UVX_VALUED",
+    "VERIFICATION_JOBS",
     "VOCABULARIES",
     "WIKILINK",
     "WORKFLOWS",

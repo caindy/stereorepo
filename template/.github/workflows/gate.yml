@@ -65,7 +65,7 @@ permissions:
 jobs:
   gate:
     name: gate
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && (github.event_name != 'pull_request' || github.event.pull_request.changed_files != 0)
     runs-on: ubuntu-latest
     # Public runner image on GHCR, pre-baking the single-source CLI toolchain
     # (solorepo's DR-160) alongside Python 3.13 as default python3 (solorepo's DR-268, solorepo's #775).

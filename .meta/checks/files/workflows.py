@@ -109,6 +109,10 @@ SHARED_JOBS = ("pull-request", "sweep")
 SEED_OWN_JOBS = ("gate",)
 
 
+VERIFICATION_JOBS = ("files", "rust", "python")
+"""Heavy verification jobs in root gate workflow skipped on zero-diff PRs (solorepo's #1044)."""
+
+
 # Except where and in what each job runs (solorepo's DR-140, solorepo's DR-275). This
 # repository's gate runs on a self-hosted scale set that exists on one machine, whose runner
 # pods already run the single-source runner image (solorepo's DR-160) and which accepts no
@@ -156,15 +160,46 @@ def _container_problems(jobs: dict[str, Any], where: str) -> list[str]:
     return problems
 
 
+def _zero_diff_problems(
+    jobs_a: dict[str, Any],
+    jobs_b: dict[str, Any],
+    ours: pathlib.Path,
+    seed: pathlib.Path,
+) -> list[str]:
+    """Where gate verification jobs fail to skip on zero-diff pull requests (solorepo's #1044)."""
+    problems: list[str] = []
+    for name in VERIFICATION_JOBS:
+        if name in jobs_a and "changed_files" not in str(jobs_a[name].get("if") or ""):
+            problems.append(
+                f"jobs.{name}.if: missing zero-diff skip condition in {ours.relative_to(ROOT)} "
+                "(solorepo's #1044)"
+            )
+    if "gate" in jobs_b and "changed_files" not in str(jobs_b["gate"].get("if") or ""):
+        problems.append(
+            f"jobs.gate.if: missing zero-diff skip condition in {seed.relative_to(ROOT)} "
+            "(solorepo's #1044)"
+        )
+    if "changed_files" in str(jobs_a.get("pull-request", {}).get("if") or ""):
+        problems.append(
+            f"jobs.pull-request.if: pull-request must not skip on zero-diff pull requests in "
+            f"{ours.relative_to(ROOT)} (solorepo's DR-273)"
+        )
+    return problems
+
+
 @check("gate workflows agree")
 def gate_workflows_agree() -> StepOutcome:
     """Validate that the root gate workflow and seeded template workflow agree on shared jobs.
 
     Verifies structural and semantic parity across triggers, permissions, and shared jobs
-    (`pull-request`, `sweep`) between `.github/workflows/gate.yml` and `template/.github/workflows/gate.yml` (solorepo's DR-115, solorepo's DR-119, solorepo's DR-140), and that every job of the seeded workflow names one and the same single-source runner image as its `container:` (solorepo's DR-160, solorepo's DR-275).
+    (`pull-request`, `sweep`) between `.github/workflows/gate.yml` and
+    `template/.github/workflows/gate.yml` (solorepo's DR-115, solorepo's DR-119,
+    solorepo's DR-140), that every job of the seeded workflow names the single-source runner
+    image as its `container:` (solorepo's DR-160, solorepo's DR-275), and that code verification
+    jobs conditionally skip on zero-diff pull requests (solorepo's #1044).
 
     Returns:
-        Passed | Found | CouldNotRun: Validation result detailing any discrepancy between shared workflow halves.
+        Passed | Found | CouldNotRun: Validation result detailing any discrepancy between halves.
 
     The `on` key is read under the boolean `True` before its own name: YAML 1.1
     reads a bare `on` as a boolean and pyyaml is a 1.1 parser, so a workflow
@@ -196,6 +231,7 @@ def gate_workflows_agree() -> StepOutcome:
                             f"nor the seed's own; the seed's jobs are {', '.join(SEED_OWN_JOBS)} "
                             f"and the shared {', '.join(SHARED_JOBS)}")
     problems += _container_problems(jobs_b, str(seed.relative_to(ROOT)))
+    problems += _zero_diff_problems(jobs_a, jobs_b, ours, seed)
     for label, (x, y) in shared.items():
         found = _first_difference(x, y, label)
         if found:

@@ -39,7 +39,7 @@
 .meta/checks/files/sources.py: 2
 .meta/checks/files/templates.py: 11
 .meta/checks/files/wiki.py: 22
-.meta/checks/files/workflows.py: 5
+.meta/checks/files/workflows.py: 3
 .meta/checks/graph/__init__.py: 2
 .meta/checks/graph/artifacts.py: 1
 .meta/checks/graph/record.py: 2

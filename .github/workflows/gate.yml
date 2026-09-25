@@ -76,7 +76,7 @@ env:
 jobs:
   files:
     name: files
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && (github.event_name != 'pull_request' || github.event.pull_request.changed_files != 0)
     runs-on: arc-runner-set
     steps:
       # The whole history, because `decision numbering` asks it whether a hole
@@ -106,7 +106,7 @@ jobs:
   # above.
   rust:
     name: rust seed
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && (github.event_name != 'pull_request' || github.event.pull_request.changed_files != 0)
     runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1
@@ -138,7 +138,7 @@ jobs:
   # here.
   python:
     name: python seed
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && (github.event_name != 'pull_request' || github.event.pull_request.changed_files != 0)
     runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v7.0.1

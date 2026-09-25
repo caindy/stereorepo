@@ -229,3 +229,9 @@ Evidence: `.meta/checks/files/conflicts.py::conflict_markers`
 `template/.github/workflows/gate.yml`'s `gate` job invoked `.meta/gate` directly instead of `just gate`, and `.meta/checks/files/boundary.py`'s `operator_boundary` check scoped its scan to `.github/workflows/` and `.meta/actions/`, leaving seeded portfolio workflows unchecked and allowing the root verb surface and seeded CI to drift apart (solorepo's DR-252, solorepo's DR-275, solorepo's #940). Established: solorepo's DR-106's fourth consequence is amended in-place to reflect that runner containers already carry `just`; `template/.github/workflows/gate.yml` types `just gate`; and `operator_boundary` scans `template/.github/workflows/` alongside repository workflows and composite actions.
 
 Evidence: `.meta/checks/files/boundary.py::operator_boundary`
+
+### Redundant verification gate execution on zero-diff seed commits
+
+When a draft pull request was opened on a zero-diff seed commit under PR First (solorepo's DR-273), `.github/workflows/gate.yml` and `template/.github/workflows/gate.yml` unconditionally scheduled and executed heavy code verification jobs (`files`, `rust seed`, `python seed`, and the seeded `gate` job) across runner pods despite zero changed files against `main` (solorepo's #1044). Established: `gate_workflows_agree` verifies that code verification jobs in root and seeded gate workflows conditionally skip execution when `github.event.pull_request.changed_files == 0` (`changed_files != 0`), preserving gate integrity on pushes while saving CI compute on plan-only draft pull requests.
+
+Evidence: `.meta/checks/files/workflows.py::gate_workflows_agree`
