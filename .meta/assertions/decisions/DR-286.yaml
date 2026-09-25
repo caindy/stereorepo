@@ -1,0 +1,176 @@
+decisions:
+  - id: work:decision/286
+    name: "DR-286 · A comment already said is corrected or withdrawn by the account that said it, and no body may type a Trailer of its own"
+    challenge: work:challenge/1001
+    status: ADOPTED
+    applies:
+      - work:article/15
+      - work:article/19
+    enacted_in:
+      - work:artifact/meta-say-post
+      - work:artifact/meta-lib-post-init
+      - work:artifact/meta-lib-post-correction
+      - work:artifact/meta-say-verbs
+      - work:artifact/meta-lib-check-pr-review
+      - work:artifact/meta-check-pr
+      - work:artifact/meta-checks-probes-channel
+      - work:artifact/meta-checks-probes-channel-correction
+      - work:artifact/meta-checks-probes-channel-parser
+    context: >-
+      Solorepo's DR-260 made the form gate audit every comment a Role account
+      posted on a pull request: a duplicate `Actor:` or `Agent:` trailer, a
+      missing one, or a body that does not end in the attribution block is a
+      failure of `just pr <n>` and of the `pull request` check. Nothing in the
+      channel could then reach the comment. `.meta/say/post` held `comment`,
+      `raise`, `notice`, `reply`, `answer`, `resolve`, `promote`, `landed` and
+      `review`, none of which amends or withdraws what was said; `move revise`
+      replaces the body of a pull request or an Issue and not a comment's; and
+      reaching GitHub any other way is what the signing hook refuses.
+
+      So a comment posted malformed once redded the gate on every head
+      thereafter, for the life of the pull request, with no act available to any
+      Role that cleared it. It stood on solorepo's #996: a notice posted with
+      its body doubled and an `Actor: recorded by the channel` line typed into
+      the text `post notice` then signed, so the comment carried two Actor
+      trailers. Reposting clean does not reach the original, and de-parking it
+      moves the thread from `parked` to `owed`, where solorepo's DR-224 refuses
+      its sole author the resolve. Both routes left a red line; one of them also
+      left two parked notices for one item. The exits were editing the
+      comment directly in the browser — an unmediated act leaving no record of
+      the Job that amended it — or abandoning the pull request, which PR First
+      does not admit.
+
+      The capability was already in the tree and only the verb was missing:
+      `reconcile_notice` in `.meta/lib/move/advance.py` issues
+      `gh api ... -X PATCH` and `-X DELETE` against `issues/comments/<id>`, but
+      only for the channel's own transient advance notices, identified by a
+      marker and declared disposable in their own text, and carrying none of the
+      refusals a Role-invoked verb owes.
+
+      The refusal solorepo's DR-260 built reads only the tail of a body:
+      `channel.signed()` declines a body *ending* in a hand-crafted or foreign
+      trailer. A trailer typed into running text, with prose after it, is
+      exactly what the audit reds and exactly what nothing declined, which is
+      how the comment on solorepo's #996 came to be posted through the channel.
+    alternatives:
+      - name: Leave the malformed comment and waive the audit for it
+        chosen: false
+        reason: >-
+          A waiver is a second mechanism over the first, and the thing waived is
+          the attribution integrity solorepo's DR-260 guarantees under shared
+          credentials. It would also have to be carried somewhere a later reader
+          trusts — a marker in the comment, or a list beside the gate — which is
+          a record of what was not fixed rather than a fix.
+      - name: A general `edit` verb over any comment the repository holds
+        chosen: false
+        reason: >-
+          Every comment here is authored by one of a handful of accounts, and a
+          repository token can delete what another account said. A verb with
+          that reach makes the record editable by whoever is running, which is
+          the opposite of what the Trailer is for: an argument could be rewritten
+          after it was answered and nothing would say so.
+      - name: Scope the correction to the Actor Trailer that signed the comment
+        chosen: false
+        reason: >-
+          It is the narrowest reading of a comment this Actor made, and it
+          reaches nothing that needs correcting. The `Actor:` Trailer names the
+          session that wrote the comment (solorepo's DR-233), and the Job that
+          session was running has ended by the time anybody reads the gate;
+          solorepo's #996's comment would stay unreachable under it. The Job
+          that corrects is always a later one.
+      - name: A `correct` verb scoped to the account, paired with a refusal over the whole body
+        chosen: true
+        reason: >-
+          The account is the bound a later Job can satisfy and another Role
+          cannot: GitHub would let the token delete another account's comment,
+          so the verb refuses it itself, read off `gh api user` rather than off
+          the Role name the credential was picked by. The correction carries the
+          correcting run's own Trailer, so the record says which Job last spoke
+          rather than pretending the original one did. And the refusal widens to
+          where the audit looks, which is the half that stops the defect
+          recurring: a verb that cleans up after a mistake nothing prevents is a
+          mechanism that will be used repeatedly.
+    consequences:
+      - >-
+        `.meta/say/post correct <comment> [--withdraw] < body.md` is a verb of
+        the channel, the coder's and the reviewer's: it replaces the body of a
+        comment with the words on stdin, signed by the run that corrects it, or
+        deletes the comment with `--withdraw`, which says nothing in its place
+        and so refuses a body. A withdrawal of the comment that opened a review
+        thread takes the thread with it, which is what makes a notice posted
+        twice recoverable rather than merely repostable, and which takes every
+        reply on that thread too, other accounts' included. The verb's own
+        description says so, since it is the only account of the verb a Role
+        reads before typing it.
+      - >-
+        A comment is named by the URL the verb that posted it printed — the
+        fragment saying which collection holds it, `#issuecomment-<id>` for the
+        conversation and `#discussion_r<id>` for the diff — or by that
+        identifier alone, in which case both collections are asked and the first
+        holding it answers. A reference naming neither is refused, and so is an
+        identifier neither collection holds: a correction that changed nothing
+        would leave the gate red with nothing said about it.
+      - >-
+        A comment another account posted is refused, naming who posted it and
+        who this channel speaks as. GitHub's own permission is not the bound
+        here, since a repository token may delete comments it did not write.
+      - >-
+        A withdrawal asks who is speaking before it deletes, and a run the
+        environment does not name is refused as it is on every other act of the
+        channel (solorepo's Article 19, solorepo's DR-233). A deleted comment
+        leaves no Trailer behind, which is inherent to deleting; the run's own
+        output carries one, so the destructive verb is not the one act of the
+        channel that runs unattested.
+      - >-
+        Every body `post` takes on stdin is read before it is signed, and one
+        carrying an `Actor:` or `Agent:` line in its own running text is refused
+        rather than posted. Fenced code and block quotes are exempt, since the
+        audit exempts them, and a body already ending in this run's own
+        attribution block is still accepted, since `signed` is idempotent and a
+        caller that re-signs is not typing a Trailer.
+      - >-
+        `post notice` additionally refuses a body already carrying the
+        **Noticed and not done.** marker, the marker and the mention being the
+        verb's to supply.
+      - >-
+        The refusal and the audit read the same text through one function,
+        `typed_trailers` in `.meta/lib/check_pr/review.py`, which strips fenced
+        code and block quotes and reports the `Actor:` and `Agent:` lines that
+        remain. `audit_comment_trailers` reads the part of a body before its
+        attribution block through it; the channel reads the whole body. A
+        channel that took a body the gate reds would be the disagreement
+        solorepo's DR-260 closed at the tail of a body and this closes in the
+        middle of one.
+      - >-
+        Closes #1001.
+    falsifier: >-
+      A comment corrected or withdrawn through this verb that the speaking
+      account did not post; a correction that lands without the correcting run's
+      Trailer; or a body the channel signs and posts that
+      `audit_comment_trailers` reds, which would mean the refusal and the gate
+      read the same comment differently again.
+    rationale: |-
+      Two halves, and the second is what stops the first from being a mop. A
+      verb that corrects a malformed comment makes the gate satisfiable; a
+      refusal that declines the body which produced it makes the verb rare. The
+      Challenge asked for both together for that reason, and the cost of the
+      first alone is a channel that tolerates malformed comments because it can
+      now clean them.
+
+      Scoping by account rather than by Actor is the point where the obvious
+      reading — a comment this Actor made — is the wrong one. The Trailer names
+      the session that wrote it (solorepo's DR-233), and the Job that session
+      was running is over before anybody reads the gate it redded, so a verb
+      held to it would refuse every correction anybody could ever want to make.
+      A Job is what ends; an Actor is a prototype and does not. The account is
+      what persists across Jobs, it is what GitHub itself will let a credential
+      amend, and it is a bound a reader can check: a coder credential cannot
+      reach the reviewer's words, and the correcting run signs its own name to
+      what it did.
+
+      The refusal widening is a smaller claim than it looks. `signed()` already
+      declined a hand-crafted trailer at the tail of a body; the audit already
+      read the middle of one. All that changes is that they now read through the
+      same function, so the set of bodies the channel will post and the set the
+      gate calls sound are the same set. Where they differ, the difference is a
+      comment nobody can fix — which is the defect this Decision is about.

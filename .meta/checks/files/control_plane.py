@@ -36,7 +36,8 @@ the number is a word."""
 
 
 NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-                "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen")
+                "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+                "sixteen")
 """The number words the workflow's prose may spell a count with."""
 
 

@@ -54,6 +54,9 @@ def channel_parser_probes() -> list[str]:
              {"verb": "promote", "level": "easy", "mandate": "promote-it-as-easy"}),
             ("promote T_1 --title t", {"verb": "promote", "level": None, "no_resolve": False,
                                        "mandate": None}),
+            ("correct 5736004158", {"verb": "correct", "comment": "5736004158",
+                                    "withdraw": False}),
+            ("correct 5736004158 --withdraw", {"verb": "correct", "withdraw": True}),
             ("landed 13", {"verb": "landed", "pr": "13"}),
         ],
         "move": [

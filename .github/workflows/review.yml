@@ -112,7 +112,7 @@ jobs:
       # write here.
       - uses: ./.meta/actions/gh
 
-      # Fifteen paths are trunk's, not the pull request's: the channel, the
+      # Sixteen paths are trunk's, not the pull request's: the channel, the
       # hooks, the checker, the channel's own body, the packages of the
       # checker and of both hooks, the shared gh runner, and the `.meta/lib/` initialiser
       # they are all imported through — under `.meta/lib/` the initialiser, the
@@ -140,7 +140,7 @@ jobs:
       - name: run trunk's channel
         run: |
           git restore --quiet --source=origin/main --staged --worktree -- \
-            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/gh.py .meta/lib/check_pr .meta/lib/move .meta/lib/on .meta/lib/worktree_only .meta/lib/signed_channel AGENTS.md CLAUDE.md GEMINI.md justfile
+            .claude .meta/say .meta/hooks .meta/check_pr.py .meta/lib/__init__.py .meta/lib/gh.py .meta/lib/check_pr .meta/lib/move .meta/lib/on .meta/lib/post .meta/lib/worktree_only .meta/lib/signed_channel AGENTS.md CLAUDE.md GEMINI.md justfile
           test -x .meta/hooks/worktree_only.py
           test -x .meta/hooks/signed_channel.py
 

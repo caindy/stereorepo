@@ -287,6 +287,23 @@ FENCED = re.compile(r"(`{3,}|~{3,})[\s\S]*?\1|`[^`\n]*`", re.S)
 QUOTED = re.compile(r"^\s*>.*$", re.M)
 
 
+def typed_trailers(text: str) -> tuple[list[str], list[str]]:
+    """Reads the `Actor:` and `Agent:` lines a body types into its text (solorepo's DR-286).
+
+    Fenced code and block quotes are removed before the read, so a trailer shown
+    as an example is not read as one the body claims.
+
+    Args:
+        text: The body, or the part of it before its attribution block.
+
+    Returns:
+        tuple[list[str], list[str]]: The Actor identifiers and the Agent
+            identifiers found, each in the order the text carries them.
+    """
+    clean = QUOTED.sub("", FENCED.sub("", text))
+    return ACTOR.findall(clean), AGENT.findall(clean)
+
+
 def audit_comment_trailers(
     comments: Sequence[dict[str, Any]],
     role_logins: set[str],
@@ -323,12 +340,9 @@ def audit_comment_trailers(
         if actor.startswith("gha-") and not GHA_ACTOR.match(actor):
             problems.append(f"comment by {author} carries malformed workflow run Actor trailer {actor!r}: {said(body)}")
 
-        prefix = stripped[:m.start()]
-        prefix_clean = QUOTED.sub("", FENCED.sub("", prefix))
-        extra_actors = ACTOR.findall(prefix_clean)
+        extra_actors, extra_agents = typed_trailers(stripped[:m.start()])
         if extra_actors:
             problems.append(f"comment by {author} carries duplicate Actor trailers ({[*extra_actors, actor]}): {said(body)}")
-        extra_agents = AGENT.findall(prefix_clean)
         if extra_agents:
             problems.append(f"comment by {author} carries duplicate Agent trailers ({[*extra_agents, agent]}): {said(body)}")
 

@@ -46,3 +46,25 @@ request. Established: `thread_nodes()` and `thread_comments()` retrieve review
 threads directly by GraphQL node identifier.
 
 Evidence: `.meta/checks/probes/channel/parser.py::channel_parser_probes`
+
+### A notice posted doubled on solorepo's #996 redded the gate with nothing able to reach it
+
+`post notice` on solorepo's #996 was piped a body that already carried the
+**Noticed and not done.** marker and an `Actor: recorded by the channel` line in
+its running text, and doubled back on itself. The verb put its own marker and
+mention in front and signed the whole thing, so the comment stood with two
+`Actor:` trailers, which `audit_comment_trailers` reds. Nothing in `post` or in
+`move` could then amend or delete a comment, so the form gate stayed red for the
+life of that pull request: reposting clean does not reach the original, and
+de-parking the notice hands the resolve to a sole author solorepo's DR-224
+refuses. `channel.signed` had declined the same line at the tail of a body since
+solorepo's DR-260 and never in the middle of one, which is how this body reached
+GitHub through the channel at all. Established, on Challenge solorepo's #1001:
+`post correct` replaces or withdraws a comment the speaking account posted, and
+every body `post` takes on stdin is read before it is signed — the whole of it
+for a Trailer typed in, and for `notice` the marker that verb supplies as well
+(solorepo's DR-286). The two readers are `refuse_a_typed_trailer` and
+`refuse_a_typed_marker` in `.meta/lib/post/correction.py`; the first reads
+through `typed_trailers`, which is what the form gate's audit reads through.
+
+Evidence: `.meta/checks/probes/channel/correction.py::correction_probes`

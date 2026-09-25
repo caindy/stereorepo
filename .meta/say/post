@@ -10,13 +10,20 @@ without resolving, a thread with one voice being a second Job's to close (solore
 it did, and refuses a level and a mandate given apart (solorepo's DR-278); `landed` is rendered
 from the record and never typed; `review`, `raise`, and `notice` refuse when the head moved
 under the run (solorepo's #566, solorepo's #572, solorepo's DR-253), filed otherwise against a
-commit never read. What changes state without saying anything — a claim, a level, a layer, a
-merge — is `move`'s. History in post.history.md (solorepo's DR-171).
+commit never read; `correct` replaces the body of a comment this account posted, or withdraws it,
+which is the only reach any Role has into a sentence already said (solorepo's DR-286). Every body
+typed here is read before it is signed, and one carrying a Trailer of its own is refused rather
+than posted beside the Trailer the channel composes: `signed` declined a body *ending* in one
+(solorepo's DR-260), and the refusal now reads all of a body but its own attribution block, which
+is where the form gate's audit was already looking (solorepo's DR-286). What changes state
+without saying anything — a claim, a level, a layer, a merge — is `move`'s. The refusals are in
+`.meta/lib/post/correction.py` (solorepo's DR-217). History in post.history.md (solorepo's DR-171).
 """
 import argparse
 import os
 import pathlib
 import re
+import subprocess
 import sys
 from typing import Any
 
@@ -28,8 +35,13 @@ import channel
 # passed is one the channel then calls wrong (solorepo's #117).
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import check_pr
-
-NOTICED = "**Noticed and not done.**"
+from lib.post.correction import (
+    NOTICED,
+    correct,
+    corrected_body,
+    refuse_a_typed_marker,
+    refuse_a_typed_trailer,
+)
 
 REVIEW_HEAD = "SOLOREPO_REVIEW_HEAD"
 """The environment variable naming the head a review run was given to read.
@@ -383,7 +395,6 @@ def landed(pr: int | str) -> None:
         pr: Pull request number whose closed challenges are to be reported.
     """
     import importlib.util
-    import subprocess
 
     numbers = closed_by(pr)
     if numbers is None:
@@ -475,7 +486,7 @@ def review(pr: int | str, verdict: str) -> None:
         sys.exit("say: nothing on stdin — a review that is not an approval says why")
     cmd = ["pr", "review", str(pr), f"--{verdict}"]
     if body:
-        cmd += ["--body", channel.signed(body)]
+        cmd += ["--body", channel.signed(refuse_a_typed_trailer(body))]
     channel.gh(*cmd, parse=False)
     latest = channel.gh("pr", "view", str(pr), "--json", "reviews")["reviews"]
     print(f"reviewed #{pr}: {latest[-1]['state'].lower() if latest else 'GitHub shows no review'}")
@@ -511,6 +522,11 @@ def build_parser() -> argparse.ArgumentParser:
                         "(solorepo's DR-230, solorepo's DR-235, solorepo's DR-278)")
     p.add_argument("--mandate", help="the solo's own words asking for `--difficulty`, never alone")
     p.add_argument("--no-resolve", action="store_true", help="file and reply, but do not resolve the thread")
+    p = sub.add_parser("correct")
+    p.add_argument("comment")
+    p.add_argument("--withdraw", action="store_true",
+                   help="delete the comment rather than replace its body; takes no body; on a "
+                        "thread's opening comment it takes the thread and every reply, no undo")
     p = sub.add_parser("landed")
     p.add_argument("pr")
     p = sub.add_parser("review")
@@ -533,12 +549,16 @@ def main() -> None:
     if args.verb == "review":
         review(args.pr, args.verdict)
         return
+    if args.verb == "correct":
+        correct(args.comment, corrected_body(args.withdraw, channel.piped()))
+        return
     if args.verb == "notice":
         # Signed inside, after the marker and the mention are put in front.
-        notice(args.pr, args.path, args.line, channel.stdin_body())
+        notice(args.pr, args.path, args.line,
+               refuse_a_typed_marker(refuse_a_typed_trailer(channel.stdin_body())))
         return
     if args.verb == "raise":
-        raise_verb(args.pr, args.path, args.line, channel.stdin_body())
+        raise_verb(args.pr, args.path, args.line, refuse_a_typed_trailer(channel.stdin_body()))
         return
     if args.verb == "resolve":
         resolve_verb(args.thread)
@@ -546,10 +566,10 @@ def main() -> None:
     if args.verb == "answer":
         # Signed inside, after the sentence that leaves a sole-authored thread
         # open is put behind the caller's words.
-        answer(args.thread, channel.stdin_body())
+        answer(args.thread, refuse_a_typed_trailer(channel.stdin_body()))
         return
 
-    body = channel.signed(channel.stdin_body())
+    body = channel.signed(refuse_a_typed_trailer(channel.stdin_body()))
     if args.verb == "comment":
         conversation_comment(args.number, body)
     elif args.verb == "reply":

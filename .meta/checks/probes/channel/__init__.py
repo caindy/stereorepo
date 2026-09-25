@@ -8,7 +8,8 @@ the one `reread` takes off, who the Actor is, what the Agent is, where a
 Role's signing key is, the numbers `decision numbering` reads as reserved, the
 mint of a Concept a run may not make, a verdict held to the head its run read,
 the boundary an unpromoted thread may not cross at any door that could close
-one, a write settled against a GitHub that shows it late or never, the
+one, the correction of a comment already said and the Trailer no body may
+type, a write settled against a GitHub that shows it late or never, the
 reviewer's door before and after its session, the coder's door before its
 session, the bound on a `gh` call that never answers, the extension a
 `gh stack` call needs installed before it is made, and the merge refusal that
@@ -36,6 +37,7 @@ import checks.probes.channel.mint
 import checks.probes.channel.waits
 import checks.probes.channel.verdict
 import checks.probes.channel.resolution
+import checks.probes.channel.correction
 import checks.probes.channel.settle
 import checks.probes.channel.on
 import checks.probes.channel.on_coder
