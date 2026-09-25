@@ -412,6 +412,19 @@ def _degrade_relayed(args: tuple[str, ...], why: str, default: Any) -> Any:
     sys.exit(f"gh: {why}")
 
 
+def _git_config_env(key: str, value: str) -> dict[str, str]:
+    """Environment variables applying one git configuration key (solorepo's DR-273)."""
+    count = int(os.environ.get("GIT_CONFIG_COUNT", 0))
+    for i in range(count):
+        if os.environ.get(f"GIT_CONFIG_KEY_{i}") == key:
+            return {f"GIT_CONFIG_VALUE_{i}": value}
+    return {
+        "GIT_CONFIG_COUNT": str(count + 1),
+        f"GIT_CONFIG_KEY_{count}": key,
+        f"GIT_CONFIG_VALUE_{count}": value,
+    }
+
+
 def gh(*args: str, parse: bool = True, default: Any = UNSET,
        tolerate_fail: bool = False, timeout: float | None = GH_TIMEOUT,
        echo: bool = False) -> Any:
@@ -419,7 +432,10 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
 
     A `gh stack` call is preceded by `_stack_extension`, which installs
     `STACK_EXTENSION` where the machine does not hold it, so that the CLI's own
-    install-on-first-use cannot consume the call (solorepo's #797).
+    install-on-first-use cannot consume the call (solorepo's #797). A `gh stack
+    rebase` invocation preserves empty commits via `rebase.empty = keep` in the
+    git environment, protecting zero-diff Seed Commits on draft stack layers
+    from being pruned away (solorepo's DR-273, solorepo's #1006).
 
     Parameters:
         *args: Command arguments passed to gh.
@@ -452,12 +468,15 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
             tolerate_fail.
         SystemExit: If the read fails or times out and no fallback was given.
     """
+    extra_env: dict[str, str] = {}
     if args[:1] == ("stack",):
         _stack_extension()
+        if len(args) > 1 and args[1] == "rebase":
+            extra_env = _git_config_env("rebase.empty", "keep")
     return lib_gh.gh(
         *args,
         default=default,
-        env={**os.environ, **role_credential()},
+        env={**os.environ, **role_credential(), **extra_env},
         timeout=timeout,
         parse=parse,
         tolerate_fail=tolerate_fail,

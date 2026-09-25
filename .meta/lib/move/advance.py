@@ -875,11 +875,11 @@ def advance(pr: int | str | None = None, held: bool = False) -> None:
 
     An armed or approved draft is none of the above: the candidate filter holds
     it out, refusing it when named and passing over it in a sweep, because a
-    rebase replays a Seed Commit away (solorepo's DR-273). That carve-out is the
-    filter's alone. A draft that is a layer of a stack still moves with the
-    stack, because the layers are taken from the open list unfiltered and `gh
-    stack rebase --upstack` can skip no layer; and `held=True` skips the filter
-    outright.
+    server-side rebase replays a Seed Commit away (solorepo's DR-273). That
+    carve-out is the filter's alone. A draft that is a layer of a stack moves
+    with the stack, preserving its Seed Commit via `rebase.empty = keep` during
+    the cascading rebase (solorepo's DR-273, solorepo's #1006); and `held=True`
+    skips the filter outright.
 
     A sweep succeeds when it reads every open pull request, whatever those pull
     requests report: one branch's failed rebase or stranded review request is

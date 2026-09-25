@@ -351,7 +351,10 @@ def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
     `channel.GH_TIMEOUT`: they rebase every layer locally and then force-push
     each of them, so a bound cutting the sequence short would leave the
     branches rewritten and an unknown number of them pushed, reported to every
-    layer as a failure to advance.
+    layer as a failure to advance. Rebasing preserves empty commits via
+    `rebase.empty = keep` in the channel environment so zero-diff Seed Commits
+    on draft layers survive cascading rebases intact (solorepo's DR-273,
+    solorepo's #1006).
 
     A sequence that raised is no layer's refused replay and is left untagged:
     it reports the same failure for every layer whatever each one's own state,

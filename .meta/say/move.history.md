@@ -721,3 +721,18 @@ and passes required gate status checks, avoiding review churn and merge-queue st
 
 Evidence: `.meta/checks/probes/loops/merge_manager.py::merge_manager_probes`
 
+### A draft layer in an advancing stack preserved its Seed Commit
+
+The candidate filter held out individual draft pull requests from server-side
+rebase, but a draft that was a layer of a stack was still reached when trunk
+moved because `gh stack rebase --upstack` operates across the stack unfiltered:
+the rebase could replay a zero-diff Seed Commit away, closing the draft pull
+request and losing reviewer approval of the plan (solorepo's DR-273,
+solorepo's #1006). Option A settled the trade: `channel.gh` sets
+`rebase.empty = keep` in the git environment for `gh stack rebase` calls,
+so cascading stack rebases preserve empty Seed Commits across draft layers
+and allow the entire stack to advance cleanly.
+
+Evidence: `.meta/checks/probes/channel/extension.py::gh_stack_extension_probes`
+
+

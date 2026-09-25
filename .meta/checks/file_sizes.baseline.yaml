@@ -34,11 +34,11 @@
 .meta/lib/move/advance.py: 521
 .meta/lib/move/challenges.py: 750
 .meta/lib/move/manager/ranking.py: 220
-.meta/lib/move/pull_requests.py: 271
+.meta/lib/move/pull_requests.py: 274
 .meta/lib/move/reconcile.py: 426
 .meta/next.py: 68
 .meta/run_agy.py: 113
-.meta/say/channel.py: 354
+.meta/say/channel.py: 373
 .meta/say/post: 229
 .meta/terms.py: 399
 .meta/test_specialization.py: 63

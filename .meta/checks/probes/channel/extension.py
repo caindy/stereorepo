@@ -15,7 +15,8 @@ from checks.probes.harness import (
 
 
 def _gh_subprocess(calls: list[tuple[str, ...]], installed: bool, extension: str,
-                   answers: dict[tuple[str, ...], tuple[int, str, str]]) -> Any:
+                   answers: dict[tuple[str, ...], tuple[int, str, str]],
+                   envs: list[dict[str, str]] | None = None) -> Any:
     """As much of `subprocess` as `channel.gh` uses, over a machine holding the extension or not.
 
     Each invocation is recorded in `calls` as the arguments `gh` was given,
@@ -33,6 +34,8 @@ def _gh_subprocess(calls: list[tuple[str, ...]], installed: bool, extension: str
     def run(cmd: list[str], **kwargs: Any) -> Any:
         args = tuple(cmd[1:])
         calls.append(args)
+        if envs is not None:
+            envs.append(dict(kwargs.get("env") or {}))
         if args in answers:
             code, out, err = answers[args]
             return subprocess.CompletedProcess(cmd, code, stdout=out, stderr=err)
@@ -84,6 +87,9 @@ def gh_stack_extension_probes() -> list[str]:
 
     `role_credential` is stood in as well, so the cases turn on the extension
     rather than on whether the machine running them holds a Role's key.
+    A `gh stack rebase` invocation sets `rebase.empty = keep` in the environment
+    so that zero-diff Seed Commits on draft layers survive cascading rebases
+    (solorepo's DR-273, solorepo's #1006).
     """
     channel, _, _ = load_channel()
     problems: list[str] = []
@@ -113,7 +119,8 @@ def gh_stack_extension_probes() -> list[str]:
     consumed: dict[tuple[str, ...], tuple[int, str, str]] = {
         merge: (0, "", f"Successfully installed {extension}")}
     said: list[tuple[str, ...]] = []
-    with stood_in(channel, subprocess=_gh_subprocess(said, True, extension, consumed),
+    envs: list[dict[str, str]] = []
+    with stood_in(channel, subprocess=_gh_subprocess(said, True, extension, consumed, envs),
                   role_credential=lambda: {}):
         relayed = outcome(lambda: channel.gh(*merge, parse=False, timeout=None, echo=True))
         nothing = outcome(
@@ -144,4 +151,17 @@ def gh_stack_extension_probes() -> list[str]:
     if quiet.err:
         problems.append(f"gh: a call not asked to echo relayed {quiet.err!r}, and a channel that "
                         "narrates every call has nowhere left to say the one thing that matters")
+    rebase_envs = [env for call, env in zip(said, envs, strict=True)
+                   if call[:2] == ("stack", "rebase")]
+    if (not rebase_envs or rebase_envs[0].get("GIT_CONFIG_KEY_0") != "rebase.empty"
+            or rebase_envs[0].get("GIT_CONFIG_VALUE_0") != "keep"):
+        problems.append("gh: stack rebase did not set rebase.empty = keep "
+                        "in git environment (solorepo's #1006)")
+    merge_envs = [env for call, env in zip(said, envs, strict=True)
+                  if call[:2] == ("stack", "merge")]
+    if any("GIT_CONFIG_KEY_0" in env for env in merge_envs):
+        problems.append("gh: stack merge call unexpectedly set git rebase configuration")
     return problems
+
+
+
