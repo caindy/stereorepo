@@ -191,7 +191,7 @@ def _owed_gate_failed(pull: common.Pull, reviewer_login: str) -> Owed | None:
     number = int(pull["number"])
     asked = check_pr.is_review_requested(pull, reviewer_login)
     verdict = check_pr.latest_verdict(pull, reviewer_login)
-    checks = manager.deduplicate_checks(pull.get("statusCheckRollup") or [])
+    checks = manager.ranking.deduplicate_checks(pull.get("statusCheckRollup") or [])
     reviewer_check = next((c for c in checks if c.get("name") == "reviewer"), None)
     reviewer_failed = str((reviewer_check or {}).get("conclusion") or "").upper() == "FAILURE"
     if asked and reviewer_failed:
@@ -468,7 +468,7 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
     except SystemExit as exc:
         ended = exc.code
         print(f"reconcile: the merge manager ended with {ended}; reading on")
-    owner, name, reviewer_login = manager.repo_context()
+    owner, name, reviewer_login = manager.ranking.repo_context()
     actions.report_trunk(owner, name)
     coder = channel.role_login("coder")
     pulls = channel.gh("pr", "list", "--state", "open", "--limit", "100",
@@ -563,7 +563,7 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
         free = not busy and idle_minutes(pull, reading.now) >= reading.bound
         if free:
             pull_requests.mergeability(pull)
-        checks = manager.deduplicate_checks(pull.get("statusCheckRollup") or [])
+        checks = manager.ranking.deduplicate_checks(pull.get("statusCheckRollup") or [])
         state = check_pr.classify_pr(pull, checks,
                                      _threads_read(pull, checks, reading) if free else None,
                                      reading.reviewer_login)
@@ -624,7 +624,7 @@ def _threads_read(pull: common.Pull, checks: Sequence[Mapping[str, Any]],
     if (check_pr.state.standing_verdict(pull, reading.reviewer_login) != "COMMENTED"
             and check_pr.latest_verdict(pull, reading.reviewer_login) != "APPROVED"):
         return None
-    threads, why = manager.read_threads(pull, reading.owner, reading.name)
+    threads, why = manager.ranking.read_threads(pull, reading.owner, reading.name)
     if threads is None:
         print(f"reconcile: #{pull['number']} is classified against its threads and they "
               f"could not be read — {why}")

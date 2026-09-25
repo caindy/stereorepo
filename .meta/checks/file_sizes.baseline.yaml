@@ -33,7 +33,7 @@
 .meta/jules/client.py: 60
 .meta/lib/move/advance.py: 501
 .meta/lib/move/challenges.py: 750
-.meta/lib/move/manager/__init__.py: 508
+.meta/lib/move/manager/ranking.py: 171
 .meta/lib/move/pull_requests.py: 271
 .meta/lib/move/reconcile.py: 162
 .meta/next.py: 68

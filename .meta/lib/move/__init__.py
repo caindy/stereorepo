@@ -23,9 +23,13 @@ request that names the Role a Challenge passes to, and imports `drafts` and
 imports `common`, `handoff`, `pull_requests` and `manager`; it reaches
 `reconcile` inside function bodies only. `manager` is the standing merge manager
 and imports `common`, `challenges`, `drafts`, `pull_requests` and `advance`. It
-is the one package here rather than a module: `manager.lock` holds the git tag
+is the one package here rather than a module. `manager.lock` holds the git tag
 lease the queue is managed under and imports nothing else in `lib.move`, which
-is what lets a probe reach the lease apart from the gate and the ranking.
+is what lets a probe reach the lease apart from the gate and the ranking;
+`manager.ranking` is that reading, one pass's judgement of every open pull
+request and the order the eligible ones are landed in, and imports `advance`,
+`challenges`, `common` and `pull_requests`. Neither names anything out of the
+package root, which imports both as modules.
 `reconcile` is what every open Issue and pull request is owed on the clock, and
 imports `actions`, `common`, `challenges`, `handoff`, `pull_requests`, `advance`
 and `manager`, every module before it but `decisions`, `concepts` and `drafts`.

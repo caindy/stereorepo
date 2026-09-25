@@ -87,7 +87,7 @@ def _retry_stranded_reviewer(number: str, pull: common.Pull, asked: list[str],
             checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
         except SystemExit:
             checks = []
-    contexts = manager.deduplicate_checks(checks or [])
+    contexts = manager.ranking.deduplicate_checks(checks or [])
     reviewer_check = next((c for c in contexts if c.get("name") == "reviewer"), None)
     if reviewer_check and (reviewer_check.get("conclusion") or "").upper() == "FAILURE":
         try:
@@ -153,7 +153,7 @@ def _dispatch_approved_or_redeliver(pull: common.Pull, merges: str,
                 checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
             except SystemExit:
                 checks = []
-        ok, msg = manager.check_green({"statusCheckRollup": checks})
+        ok, msg = manager.ranking.check_green({"statusCheckRollup": checks})
         if not ok and "failing" in msg:
             if not _is_autonomous_challenge(challenge, "review", pull):
                 return True, None
@@ -353,7 +353,7 @@ def _check_dispatch_review(pr: str | int, pull: common.Pull) -> None:
                 checks = view_res.get("statusCheckRollup") if isinstance(view_res, dict) else []
             except SystemExit:
                 checks = []
-        ok, msg = manager.check_green({"statusCheckRollup": checks})
+        ok, msg = manager.ranking.check_green({"statusCheckRollup": checks})
         if not (not ok and "failing" in msg):
             sys.exit(f"say: the last verdict {reviewer} left on #{pr} is APPROVED, "
                      "and the review pass is for a verdict that withholds approval or an "
@@ -985,10 +985,10 @@ def advance_stranded(pulls: list[dict[str, Any]],
         dry_run (bool): If True, name what would be rebased and rebase nothing.
     """
     for pull in pulls:
-        if evaluations[pull["number"]][1] != [manager.BEHIND_BASE]:
+        if evaluations[pull["number"]][1] != [manager.ranking.BEHIND_BASE]:
             continue
         number = str(pull["number"])
-        threads_ok, threads_msg = manager.check_threads(pull, owner, name)
+        threads_ok, threads_msg = manager.ranking.check_threads(pull, owner, name)
         if not threads_ok:
             print(f"merge-manager: not advancing #{number} — {threads_msg}")
             continue

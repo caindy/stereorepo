@@ -245,10 +245,10 @@ def trunk_health(owner: str, name: str) -> tuple[Trunk | None, str]:
 
     Nothing the read can do fails the pass around it. A refusal, and an answer
     that is not the shape the query asked for, are each no reading and are
-    handed back as one, in the same closed shape `manager.read_threads` fails
-    in: detection sits beside the acts the reconciler performs and must never be
-    able to stop them, and a pass that died reading trunk would leave every
-    rebase, review and take it owed undispatched for the period. The guard
+    handed back as one, in the same closed shape `manager.ranking.read_threads`
+    fails in: detection sits beside the acts the reconciler performs and must
+    never be able to stop them, and a pass that died reading trunk would leave
+    every rebase, review and take it owed undispatched for the period. The guard
     reaches the shaping of the answer as well as the asking, since a rollup
     holding something that is not a check fails where it is read.
 

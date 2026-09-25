@@ -348,7 +348,7 @@ def _decisions_in_force(channel: Any, move: Any) -> list[str]:
             return [{"filename": "README.md", "additions": 1, "patch": "@@\n+a\n"}]
         return {}
 
-    with stood_in(channel, gh=crowded_gh), stood_in(move.manager, PER_PAGE=1, PAGES=2):
+    with stood_in(channel, gh=crowded_gh), stood_in(move.manager.ranking, PER_PAGE=1, PAGES=2):
         ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
     if ok or "over 2 files" not in msg:
         problems.append(f"merge manager: a file list past the pages read was not deferred: {msg}")
@@ -544,7 +544,7 @@ def _verify_loop_failure_result(
     if not comment_calls:
         problems.append(
             f"merge manager: failure diagnosis comment was not posted to PR #{winner}")
-    elif not any(move.manager.MERGE_REFUSAL_MARKER in c and "head:sha-refused-10" in c
+    elif not any(move.manager.ranking.MERGE_REFUSAL_MARKER in c and "head:sha-refused-10" in c
                  and "Actor:" in c for c in comment_calls):
         problems.append(
             f"merge manager: refusal comment missing marker, head OID, or Actor: {comment_calls}")
@@ -599,7 +599,7 @@ def _check_loop_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
     standing_comment = {
         "id": 101,
         "body": (
-            f"{move.manager.MERGE_REFUSAL_MARKER} head:sha-old-10\n\n"
+            f"{move.manager.ranking.MERGE_REFUSAL_MARKER} head:sha-old-10\n\n"
             "> Merge refusal: old failure\n\nold"
         ),
     }
@@ -667,7 +667,7 @@ def _verify_session_failure_result(
     if not session_comment_calls:
         problems.append(
             f"merge manager: diagnosis comment was not posted to session PR #{winner}")
-    elif not any(move.manager.MERGE_REFUSAL_MARKER in c and "head:sha-refused-session" in c
+    elif not any(move.manager.ranking.MERGE_REFUSAL_MARKER in c and "head:sha-refused-session" in c
                  for c in session_comment_calls):
         problems.append(
             f"merge manager: session refusal comment missing marker or head OID: "
@@ -1469,9 +1469,9 @@ def _verify_restore_deferral(move: Any, out: str, recorded: dict[str, list[str]]
     if recorded["demoted"]:
         problems.append(
             f"merge_manager: demoted the PR it restored in the same pass: {recorded['demoted']}")
-    reason = getattr(move.manager, "RESTORED_THIS_PASS", None)
+    reason = getattr(move.manager.ranking, "RESTORED_THIS_PASS", None)
     if reason is None:
-        problems.append("merge_manager: move.manager names no RESTORED_THIS_PASS refusal reason")
+        problems.append("merge_manager: ranking names no RESTORED_THIS_PASS refusal reason")
     elif reason not in out:
         problems.append(
             f"merge_manager: expected the restore named as PR 44's refusal reason, got:\n{out}")
