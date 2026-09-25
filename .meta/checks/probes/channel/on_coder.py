@@ -473,8 +473,7 @@ def _after(channel: Any, on: Any, case: _Session) -> tuple[Any, _Loop]:
 
 def _after_cases(channel: Any, on: Any) -> list[str]:
     """`after` on each pass: the take handed back, the rebase redelivered, the rest verified."""
-    problems = _hand_back_cases(channel, on)
-    take = ("take", "issues", "")
+    problems, take = _hand_back_cases(channel, on), ("take", "issues", "")
     ended, loop = _after(channel, on, _session(take, (("success", "skipped"), "claude")))
     if ended.code is not None or loop.stopped or loop.requested or "nothing to hand back" \
             not in ended.out:
@@ -513,13 +512,12 @@ def _after_cases(channel: Any, on: Any) -> list[str]:
 
 def _hand_back_cases(channel: Any, on: Any) -> list[str]:
     """A take that did not finish: every way the hand-back ends, in the order it reads."""
-    problems = []
-    take = ("take", "issues", "")
-    green = {"number": 12, "branch": f"claude/issue-{ISSUE}", "handed": False, "green": True,
-             "conflicting": False, "base": "main"}
+    problems, take = [], ("take", "issues", "")
+    green = {"number": 12, "branch": f"claude/issue-{ISSUE}", "green": True,
+             "base": "main"}
     fake = _After()
-    ended, loop = _after(channel, on, _session(take, (("failure", "skipped"), "claude"), fake,
-                                          _Left(green)))
+    step, gemini = (("failure", "skipped"), "claude"), (("failure", "skipped"), "gemini")
+    ended, loop = _after(channel, on, _session(take, step, fake, _Left(green)))
     if ended.code is not None or loop.stopped or loop.requested != [(PULL, "reviewer")] \
             or len(fake.posted) != 1 or "where a run stopped" not in fake.posted[0] \
             or ".\n\nEvery check on this head is green" not in fake.posted[0] \
@@ -543,13 +541,14 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
               "opened no pull request"),
              ("a conflicting branch", _Left({**green, "conflicting": True}), _After(),
               "conflicts with its base"),
+             ("only initial plan commit", _Left({**green, "only_plan": True}), _After(),
+              "holds only the initial plan commit and needs continuation"),
              ("the Issue unreadable", _Left(green), _After(unreadable="issue"),
               "could not be read"),
              ("the merged listing unreadable", _Left(green), _After(unreadable="merged"),
               "has merged could not be read"))
     for name, left, fake, why in cases:
-        ended, loop = _after(channel, on, _session(take, (("failure", "skipped"), "gemini"),
-                                                   fake, left))
+        ended, loop = _after(channel, on, _session(take, gemini, fake, left))
         account = loop.stopped[0][1] if loop.stopped else ""
         if ended.code is not None or len(loop.stopped) != 1 or why not in account \
                 or loop.requested or any(line not in account for line in SIGNED) \
@@ -566,8 +565,7 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
              ("the Issue at human", _Left(green), _After(labels=["challenge", "human"])),
              ("the branch merged", _Left(green), _After(merged=[{"number": 12}])))
     for name, left, fake in quiet:
-        ended, loop = _after(channel, on, _session(take, (("failure", "skipped"), "claude"),
-                                                   fake, left))
+        ended, loop = _after(channel, on, _session(take, step, fake, left))
         if ended.code is not None or loop.stopped or loop.requested:
             problems.append(f"hand-back: {name} ended {ended.code!r} with {loop.stopped!r} and "
                             f"{loop.requested!r}, where the run finished and nothing is owed")

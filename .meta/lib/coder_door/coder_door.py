@@ -397,6 +397,9 @@ CONFLICTS = ("#{number}'s branch conflicts with its base, {base}. GitHub builds 
 NOT_GREEN = "the checks on #{number} have not all passed, and a red gate is not a handoff"
 """Why the reviewer is not asked where the gate is red."""
 
+ONLY_PLAN = "#{number} holds only the initial plan commit and needs continuation"
+"""Why the reviewer is not asked where the pull request holds only the plan commit."""
+
 NEITHER = "::error::No rung of the {task} pass succeeded (outcomes={outcomes})."
 """The finding where a pass ran and no rung finished it."""
 
@@ -406,7 +409,7 @@ def coder(phase: str, number: str, delivery: Delivery, ended: Ended,
     """The coder's door at one phase of the session, for the pass `delivery` names.
 
     Parameters:
-        phase (str): `before`, `between` two rungs of the pass's ladder, or `after`.
+        phase (str): `before`, `between` two rungs of the pass's ladder, `rescue`, or `after`.
         number (str): The Challenge on a take, the pull request otherwise.
         delivery (Delivery): What the workflow knows.
         ended (Ended): How the session's steps ended, unread before it.
@@ -416,6 +419,9 @@ def coder(phase: str, number: str, delivery: Delivery, ended: Ended,
         coder_before(number, delivery)
     elif phase == "between":
         coder_between(number, delivery, handed)
+    elif phase == "rescue":
+        from lib.coder_door import handoff
+        handoff.coder_rescue(number, delivery, ended.branch_prefix)
     else:
         from lib.coder_door import handoff
         handoff.coder_after(number, delivery, ended)

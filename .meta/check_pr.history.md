@@ -9,6 +9,16 @@ diff has that.>
 Evidence: `<path>::<symbol>`
 -->
 
+### Hand-back evaluated plan-only empty diff pull requests as green handoffs
+
+Pull requests containing only an initial plan commit returned an empty diff with
+zero changed files, but because CI checks passed, `hand_back` treated the branch as
+green and clean and requested review (solorepo's #946). Established: `hand_back()`
+inspects `changedFiles` and `commits` via `is_only_plan()`, emitting `only_plan` so
+the coder door skips requesting review on empty plan diffs (solorepo's DR-264, solorepo's #946).
+
+Evidence: `.meta/checks/probes/channel/on_coder.py::coder_door_probes`
+
 ### Fabricated attribution trailers on pull request comments
 
 Autonomous workflow runs posted pull request comments with fabricated or duplicated attribution trailers by bypassing the signing channel, leaving pull requests unverifiable under shared repository credentials (solorepo's #639, solorepo's DR-260). Established: `audit_comment_trailers()` and `comment_trailers()` enforce structural trailer validity on all pull request comments posted by repository Role accounts, requiring exactly one Actor trailer, one Agent trailer, and conforming workflow run identifiers.

@@ -39,3 +39,17 @@ runners failed with `ModuleNotFoundError: No module named 'channel'` because
 resolve cleanly in standalone subprocesses.
 
 Evidence: `.meta/checks/probes/channel/on_coder.py::coder_door_probes`
+
+### Unpushed coder run modifications lost upon runner teardown and empty diff reviewed
+
+When a coder loop pass was cut off by turn cap or runner timeout before pushing,
+uncommitted working tree modifications were destroyed upon container teardown.
+Additionally, when a pull request contained only an initial plan commit,
+`hand_back` found the head green and clean and requested review of an empty diff
+(solorepo's #946). Established: `coder_rescue` commits uncommitted working tree
+modifications using `[rescue] Uncommitted session work on Challenge #<n>` and
+pushes commits directly to the active PR branch before teardown; `hand_back`
+skips requesting review and records that the pull request needs continuation when
+it contains only the initial plan commit (solorepo's DR-264, solorepo's #946).
+
+Evidence: `.meta/checks/probes/channel/rescue.py::coder_rescue_probes`

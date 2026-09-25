@@ -13,6 +13,7 @@ import agents
 import channel
 import check_pr
 from lib.coder_door import coder_door
+from lib.on import common as common
 
 
 def outcome_of(ended: coder_door.Ended) -> str:
@@ -243,6 +244,7 @@ def hand_back(issue: str, outcome: str, prefix: str, cap: int | None = None) -> 
         and left
         and left.get("green")
         and not left.get("conflicting")
+        and not left.get("only_plan")
         and not (cap is not None and cut_before(number))
     ):
         body = account_of(outcome, cap) + coder_door.WORTH_READING.format(issue=issue, level=level)
@@ -257,9 +259,10 @@ def not_requested(left: dict[str, Any] | None, number: str, branch: str, base: s
 
     The order is the hand-back's own: a read that failed says so before
     anything is concluded from it, then a run that opened nothing, then a
-    branch no review could run on, then a pull request that already carries
-    the account of a turn cap, this being the second, and a red gate last,
-    that being the ordinary case.
+    branch no review could run on, then a branch holding only the initial plan
+    commit, then a pull request that already carries the account of a turn
+    cap, this being the second, and a red gate last, that being the ordinary
+    case.
 
     Parameters:
         left (dict[str, Any] | None): What the run left, or `None` where unreadable.
@@ -273,6 +276,8 @@ def not_requested(left: dict[str, Any] | None, number: str, branch: str, base: s
         return "the run opened no pull request"
     if left.get("conflicting"):
         return coder_door.CONFLICTS.format(number=number, base=base, branch=branch)
+    if left.get("only_plan"):
+        return coder_door.ONLY_PLAN.format(number=number)
     if left.get("green"):
         return coder_door.CUT_TWICE.format(number=number)
     return coder_door.NOT_GREEN.format(number=number)
@@ -339,3 +344,54 @@ def coder_after(number: str, delivery: coder_door.Delivery, ended: coder_door.En
             verify(delivery.task, ended)
     else:
         verify(delivery.task, ended)
+
+
+def coder_rescue(number: str, delivery: coder_door.Delivery, branch_prefix: str) -> None:
+    """Rescue a coder run's unpushed work before after door hands it back.
+
+    Enacts solorepo's DR-264 and solorepo's #946.
+
+    Parameters:
+        number (str): The Challenge number on a take, the pull request otherwise.
+        delivery (coder_door.Delivery): What the workflow knows before the session.
+        branch_prefix (str): The harness prefix naming the branch where work occurs.
+    """
+    raw_branch = common.command(["git", "branch", "--show-current"]).decode("utf-8", "replace")
+    current_branch = raw_branch.strip()
+    raw_status = common.command(["git", "status", "--porcelain"]).decode("utf-8", "replace")
+    status = raw_status.strip()
+
+    if delivery.task == "take":
+        fallback = branch_prefix or "claude"
+        target_branch = f"{fallback}/issue-{number}"
+    else:
+        target_branch = current_branch or f"{branch_prefix}/issue-{number}"
+
+    on_main = (
+        not current_branch
+        or current_branch == "main"
+        or current_branch.startswith("refs/heads/main")
+    )
+    if on_main:
+        if not status:
+            print("rescue: on main with clean tree; nothing to rescue")
+            return
+        common.command(["git", "checkout", "-B", target_branch])
+        branch = target_branch
+    else:
+        branch = current_branch
+
+    if branch == "main" or branch.startswith("refs/heads/main"):
+        print("rescue: on main branch, refusing to push to main", file=sys.stderr)
+        return
+
+    if status:
+        common.command(["git", "add", "-A"])
+        issue = number if delivery.task == "take" else (coder_door.loop_issue(branch) or number)
+        message = f"[rescue] Uncommitted session work on Challenge #{issue}"
+        commit_script = str(check_pr.ROOT / ".meta" / "say" / "commit")
+        common.command([sys.executable, commit_script, "-m", message])
+        print(f"rescue: committed uncommitted session work on {branch}")
+
+    common.command(["git", "push", "-u", "origin", branch])
+    print(f"rescue: pushed {branch} to origin")

@@ -388,6 +388,24 @@ jobs:
       # so a cap that cuts one of them is still read as a pass that succeeded
       # and is a Challenge of its own. The Antigravity CLI is bounded by the
       # clock alone.
+      # Rescue unpushed work before container teardown: commit uncommitted
+      # modifications in the working tree and push unpushed commits directly
+      # to the active PR branch (solorepo's #946).
+      - name: rescue unpushed work
+        if: ${{ always() && steps.before.outcome == 'success' && steps.before.outputs.by == '' }}
+        run: |
+          if [ -f .meta/coder_door.py ]; then
+            .meta/coder_door.py coder rescue "$NUMBER" --pass "$PASS" --event "$EVENT" \
+              --branch-prefix "$PREFIX"
+          fi
+        env:
+          ACTOR_AGENT: gha/coder
+          AI_AGENT: gha/coder
+          NUMBER: ${{ steps.before.outputs.pass == 'take' && (github.event.issue.number || inputs.issue) || steps.before.outputs.number }}
+          PASS: ${{ steps.before.outputs.pass }}
+          EVENT: ${{ github.event_name }}
+          PREFIX: ${{ steps.before.outputs.branch_prefix }}
+
       - name: after the session
         if: ${{ always() && steps.before.outcome == 'success' && steps.before.outputs.by == '' }}
         run: |

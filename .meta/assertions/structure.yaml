@@ -463,6 +463,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-channel-on-coder
     name: .meta/checks/probes/channel/on_coder.py
     path: .meta/checks/probes/channel/on_coder.py
+  - id: work:artifact/meta-checks-probes-channel-rescue
+    name: .meta/checks/probes/channel/rescue.py
+    path: .meta/checks/probes/channel/rescue.py
   - id: work:artifact/meta-checks-probes-channel-routing
     name: .meta/checks/probes/channel/routing.py
     path: .meta/checks/probes/channel/routing.py

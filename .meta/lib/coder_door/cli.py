@@ -105,9 +105,9 @@ def build_parser() -> argparse.ArgumentParser:
     c = sub.add_parser("coder")
     c.add_argument(
         "phase",
-        choices=("before", "between", "after"),
-        help="before the harness session, between two rungs of its ladder, or after "
-        "the session",
+        choices=("before", "between", "after", "rescue"),
+        help="before the harness session, between two rungs of its ladder, after "
+        "the session, or rescue unpushed work",
     )
     c.add_argument("number", help="the Challenge on a take, the pull request on any other pass")
     between_flags(c)
@@ -120,7 +120,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     c.add_argument(
         "--event",
-        required=True,
+        default="",
         help="the event the delivery arrived on, as github.event_name names it",
     )
     c.add_argument(

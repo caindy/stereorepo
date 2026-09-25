@@ -6,6 +6,8 @@ Usage:
         [--harness <harness>]
     .meta/coder_door.py coder between <n> --pass take|rebase|answer --event <event> \
         [--attempt N --outcome <outcome>] [--execution-file <path>]
+    .meta/coder_door.py coder rescue <n> --pass take|rebase|answer [--event <event>] \
+        [--branch-prefix <harness>]
     .meta/coder_door.py coder after <n> --pass take|rebase|answer --event <event> \
         --outcomes <outcome>[,<outcome>] [--branch-prefix <harness>] \
         [--execution-file <path>]

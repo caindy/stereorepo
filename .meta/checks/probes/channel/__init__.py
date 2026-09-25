@@ -41,6 +41,7 @@ import checks.probes.channel.correction
 import checks.probes.channel.settle
 import checks.probes.channel.on
 import checks.probes.channel.on_coder
+import checks.probes.channel.rescue
 import checks.probes.channel.routing
 import checks.probes.channel.bound
 import checks.probes.channel.extension

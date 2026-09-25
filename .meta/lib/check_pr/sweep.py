@@ -45,7 +45,8 @@ def longest_run() -> int | None:
 # rollup: those fields are a pull request's own and the step's token reads them
 # at `pull-requests: read`, while the check states come through `ROLLUP` in
 # `github`, whose scope is `checks: read` and nothing wider (solorepo's DR-155).
-HANDBACK_FIELDS = "number,headRefName,baseRefName,reviewRequests,autoMergeRequest,mergeable"
+HANDBACK_FIELDS = ("number,headRefName,baseRefName,reviewRequests,autoMergeRequest,mergeable,"
+                   "changedFiles,commits")
 
 
 def wait_for_checks(pr_number: int, timeout: int = 120,
@@ -92,6 +93,16 @@ def loop_pull(issue: str | int, fields: str,
     return None
 
 
+def is_only_plan(pr: dict[str, Any]) -> bool:
+    """Return whether the pull request branch contains only the initial plan commit."""
+    if pr.get("changedFiles") != 0:
+        return False
+    commits = pr.get("commits") or []
+    return not commits or all(
+        "Record initial plan for Challenge" in (c.get("messageHeadline") or "") for c in commits
+    )
+
+
 def hand_back(issue: str | int) -> dict[str, Any]:
     """Provides pull request status metrics for challenge hand-back automation.
 
@@ -99,12 +110,13 @@ def hand_back(issue: str | int) -> dict[str, Any]:
         issue: Challenge issue number string or integer.
 
     Returns:
-        dict[str, Any]: Status summary containing handed, green, conflicting, number, base.
+        dict[str, Any]: Status summary containing handed, green, conflicting,
+            number, base, only_plan.
     """
     pr = loop_pull(issue, HANDBACK_FIELDS)
     if pr is None:
         return {"number": None, "branch": None, "handed": False, "green": False,
-                "conflicting": False, "base": None}
+                "conflicting": False, "base": None, "only_plan": False}
     raw_contexts = github.rollup_of(pr["number"])
     pending = [c for c in raw_contexts if (c.get("conclusion") or c.get("state") or c.get("status") or "").upper() in state.UNCONCLUDED]
     if pending:
@@ -115,7 +127,8 @@ def hand_back(issue: str | int) -> dict[str, Any]:
             "handed": bool(remedies.asked_of(pr)) or pr.get("autoMergeRequest") is not None,
             "green": remedies.green(pr),
             "conflicting": pr.get("mergeable") == "CONFLICTING",
-            "base": pr.get("baseRefName") or "main"}
+            "base": pr.get("baseRefName") or "main",
+            "only_plan": is_only_plan(pr)}
 
 
 ISSUE_DOOR = "issues"
