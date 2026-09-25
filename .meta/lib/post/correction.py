@@ -163,9 +163,9 @@ def correct(reference: str, text: str | None) -> None:
     """Replaces the body of a comment this account posted, or withdraws it (solorepo's DR-286).
 
     The replacement carries the correcting run's own Trailer, so the record says
-    which Job last spoke. A withdrawal deletes the comment, and deletes the
-    thread with it where the comment is the one that opened it, replies by other
-    accounts included.
+    which Job last spoke. A withdrawal deletes the comment alone; child replies
+    on a review thread remain, and GitHub removes the thread only when no
+    replies remain.
 
     A withdrawal leaves no comment behind to carry a Trailer, which is inherent
     to deleting; running unattested is not. So the run is asked who is speaking

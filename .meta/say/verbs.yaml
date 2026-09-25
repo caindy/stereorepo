@@ -80,12 +80,11 @@ programs:
           conversation or on the diff, named by the URL the verb that posted it
           printed or by that identifier alone — or withdraw it with
           `--withdraw`, which says nothing in its place and so takes no body,
-          and which, on the comment that opened a review thread, deletes the
-          thread and every reply on it, other accounts' included, with no undo
-          and no record left of what stood there; the replacement carries the
-          correcting run's own Trailer, and a comment another account posted is
-          refused, the account that said it being the one that corrects it
-          (solorepo's DR-286)
+          and which deletes that comment alone, preserving child replies on a
+          review thread and removing the thread only when no replies remain; the
+          replacement carries the correcting run's own Trailer, and a comment
+          another account posted is refused, the account that said it being the
+          one that corrects it (solorepo's DR-286)
         held_by: [coder, reviewer]
       - name: landed
         usage: "<pr>"

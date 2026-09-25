@@ -525,8 +525,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("correct")
     p.add_argument("comment")
     p.add_argument("--withdraw", action="store_true",
-                   help="delete the comment rather than replace its body; takes no body; on a "
-                        "thread's opening comment it takes the thread and every reply, no undo")
+                   help="delete the comment rather than replace its body; takes no body; deletes "
+                        "the comment alone, preserving child replies on a review thread")
     p = sub.add_parser("landed")
     p.add_argument("pr")
     p = sub.add_parser("review")

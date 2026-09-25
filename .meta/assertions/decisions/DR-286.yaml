@@ -96,12 +96,14 @@ decisions:
         the channel, the coder's and the reviewer's: it replaces the body of a
         comment with the words on stdin, signed by the run that corrects it, or
         deletes the comment with `--withdraw`, which says nothing in its place
-        and so refuses a body. A withdrawal of the comment that opened a review
-        thread takes the thread with it, which is what makes a notice posted
-        twice recoverable rather than merely repostable, and which takes every
-        reply on that thread too, other accounts' included. The verb's own
-        description says so, since it is the only account of the verb a Role
-        reads before typing it.
+        and so refuses a body. A withdrawal deletes the comment alone: GitHub's
+        `DELETE /repos/{owner}/{repo}/pulls/comments/{comment_id}` does not
+        cascade to child replies, which remain on the thread. Where the comment
+        was the thread's only comment, removing it leaves the thread empty and
+        GitHub removes the thread, which is what makes a notice posted twice
+        recoverable rather than merely repostable. The verb's own description
+        says so, since it is the only account of the verb a Role reads before
+        typing it.
       - >-
         A comment is named by the URL the verb that posted it printed — the
         fragment saying which collection holds it, `#issuecomment-<id>` for the
