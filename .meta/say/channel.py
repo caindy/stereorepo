@@ -265,9 +265,14 @@ def trailers() -> str:
 
 
 TRAILING_TRAILER = re.compile(
-    r"(?:\n|^)(?:Actor:\s*\S+\s*\nAgent:\s*\S+|Agent:\s*\S+\s*\nActor:\s*\S+|Actor:\s*\S+|Agent:\s*\S+)\s*$"
+    r"(?:\n|^)(?:Actor:[^\n]*\S\s*\nAgent:[^\n]*\S|Agent:[^\n]*\S\s*\nActor:[^\n]*\S"
+    r"|Actor:[^\n]*\S|Agent:[^\n]*\S)\s*$"
 )
-"""Matches terminal hand-crafted or foreign trailer blocks in input bodies (solorepo's DR-260)."""
+"""Matches terminal hand-crafted or foreign trailer blocks in input bodies (solorepo's DR-260).
+
+The value runs to the end of its line rather than to the first space, so a
+typed `Actor: recorded by the channel` is refused like a typed `Actor: gha-1`.
+"""
 
 
 def signed(text: str) -> str:

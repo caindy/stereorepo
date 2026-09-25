@@ -112,6 +112,18 @@ def reconcile_probes() -> list[str]:
     the longest run owes the release and within it does not; the rest owe
     nothing.
 
+    `breaking`, over the title that says which break a heal Challenge stands
+    for: the Challenge naming this commit is found and one naming another is
+    not, and a green trunk looks for none.
+
+    `owed_by_trunk`, over a green trunk and each state its heal Challenge can
+    stand in: green owes nothing; a break no Challenge stands for owes the
+    filing, with a title and a body `file_issue` takes; one offered to the loop
+    owes the take pass, and one a run, a claim or a pull request stands on owes
+    nothing; one read at `hard` or handed back already is held; and one filed
+    longer ago than a coder run lasts owes the escalation, which names the red
+    commit, where within that bound the loop is still answering it.
+
     `reconcile`, against a GitHub answered from a dict with timestamps read
     off the clock: the merge manager runs first and its exit is held to the
     end; one act is performed per owed state and none where a run is in
@@ -132,7 +144,7 @@ def reconcile_probes() -> list[str]:
     channel, _, programs = load_channel()
     move = programs["move"]
     return (_classifier_cases(move) + _pull_cases(move) + _issue_cases(move)
-            + _pass_cases(channel, move))
+            + _breaking_cases(move) + _trunk_cases(move) + _pass_cases(channel, move))
 
 
 def _ago(minutes: float) -> str:
@@ -299,6 +311,98 @@ def _pull_cases(move: Any) -> list[str]:
         kind = act.kind if act else None
         if kind != expected:
             problems.append(f"owed_by_pull: {name} owed {kind!r}, not {expected!r}")
+    return problems
+
+
+TRUNK = {"branch": "main", "commit": "abc1234", "checks": "gate", "longest": 75.0}
+"""A red trunk as `Break` carries one, over which each case names what stands beside it."""
+
+
+def _trunk_cases(move: Any) -> list[str]:
+    """`owed_by_trunk` over a green trunk and each state the heal Challenge can stand in.
+
+    The bound is `longest`, the coder workflow's job timeout, read against the
+    time since the Challenge was filed: within it the loop is still answering
+    the break, past it the loop was offered it and opened nothing. Both arms
+    stand on `OFFERED`, so an unread Challenge past the bound owes nothing here
+    however long it has stood — a level never landed, so no loop was offered
+    anything, and the re-delivery that wakes the reviewer's door is
+    `owed_by_issue`'s.
+    """
+    states = move.check_pr.state.IssueState
+    standing = {**TRUNK, "challenge": 50, "idle": 10.0}
+    cases: list[tuple[str, dict[str, Any], str | None]] = [
+        ("green", {**TRUNK, "checks": ""}, None),
+        ("red with no Challenge for the commit", TRUNK, "file"),
+        ("offered, and within the longest run", {**standing, "found": states.OFFERED}, "take"),
+        ("offered under a coder run", {**standing, "found": states.OFFERED, "busy": True}, None),
+        ("its pull request open", {**standing, "found": states.RESUMABLE}, None),
+        ("claimed", {**standing, "found": states.CLAIMED}, None),
+        ("taken", {**standing, "found": states.TAKEN}, None),
+        ("read at hard", {**standing, "found": states.HELD}, "hold"),
+        ("handed back already", {**standing, "found": states.HANDED_BACK}, "hold"),
+        ("unread within the longest run", {**standing, "found": states.UNREAD}, None),
+        ("unread past the longest run, which is the reviewer's door and not an escalation",
+         {**standing, "found": states.UNREAD, "idle": 600.0}, None),
+        ("offered past the longest run", {**standing, "found": states.OFFERED, "idle": 600.0},
+         "escalate"),
+        ("past the longest run under a coder run",
+         {**standing, "found": states.OFFERED, "idle": 600.0, "busy": True}, None),
+    ]
+    problems = []
+    for name, fields, expected in cases:
+        act = move.owed_by_trunk(move.Break(**fields))
+        kind = act.kind if act else None
+        if kind != expected:
+            problems.append(f"owed_by_trunk: {name} owed {kind!r}, not {expected!r}")
+        if kind == "file" and (not act.title or not act.body.startswith("**Waits on.**")):
+            problems.append(f"owed_by_trunk: the heal Challenge would be filed as {act.title!r} "
+                            f"with a body opening {act.body[:20]!r}, where `file_issue` takes a "
+                            "title and a body opening on `**Waits on.**`")
+        if kind == "escalate" and TRUNK["commit"] not in act.body:
+            problems.append(f"owed_by_trunk: the escalation says {act.body!r}, where what the "
+                            "solo is handed names the commit that is red")
+    return problems
+
+
+def _reading(move: Any) -> Any:
+    """A pass's shared reading with nothing standing in it, for the readers that take one."""
+    empty = move.Runs([], [])
+    return move.Reading(now=datetime.datetime.now(datetime.UTC), bound=MINUTES, longest=75.0,
+                        coder=CODER, reviewer_login=REVIEWER, owner="o", name="r",
+                        by_number={}, named=set(), coder_runs=empty, review_runs=empty,
+                        triage_runs=empty)
+
+
+def _trunk(move: Any, failing: list[str], oid: str = "abc1234def") -> Any:
+    """Trunk's HEAD rollup as `report_trunk` answers with one, red where `failing` names a check."""
+    return move.cli.reconcile.actions.Trunk(
+        ref="main", oid=oid, headline="the commit that landed",
+        checks=[{"name": name} for name in failing], failing=failing, pending=False)
+
+
+def _breaking_cases(move: Any) -> list[str]:
+    """`breaking`: one heal Challenge per broken commit, found by the title naming it."""
+    reading = _reading(move)
+    issues = [{"number": 50,
+               "title": move.HEAL_TITLE.format(branch="main", commit=TRUNK["commit"]),
+               "labels": [{"name": "challenge"}, {"name": "medium"}], "assignees": [],
+               "createdAt": _ago(10)}]
+    problems = []
+    found = move.breaking(_trunk(move, ["gate", "python seed"]), issues, reading)
+    if found.challenge != 50 or found.checks != "gate, python seed" \
+            or found.found is not move.check_pr.state.IssueState.OFFERED:
+        problems.append(f"breaking: a break a Challenge already stands for read {found}, where "
+                        "the Challenge whose title names the commit is the one standing for it "
+                        "and both failing checks are named")
+    again = move.breaking(_trunk(move, ["gate"], oid="def5678abcdef"), issues, reading)
+    if again.challenge is not None:
+        problems.append(f"breaking: a second break read #{again.challenge} as its Challenge, "
+                        "where a title naming another commit stands for another break")
+    green = move.breaking(_trunk(move, []), issues, reading)
+    if green.checks or green.challenge is not None:
+        problems.append(f"breaking: a green trunk read {green}, where nothing failed and no "
+                        "Challenge is looked for")
     return problems
 
 

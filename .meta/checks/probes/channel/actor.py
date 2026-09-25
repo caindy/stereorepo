@@ -114,6 +114,8 @@ def _probe_signed_integrity(channel: Any) -> list[str]:
             "hello\n\nAgent: coder/take_gemini\nActor: gha-999",
             "hello\n\nActor: fake-actor",
             "hello\n\nAgent: coder/take_gemini",
+            "hello\n\nActor: recorded by the channel",
+            "hello\n\nActor: recorded by the channel\nAgent: anthropics/claude-code-action@v1",
         )
         def sign_call(body: str) -> Callable[[], Any]:
             return lambda: channel.signed(body)
