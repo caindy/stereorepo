@@ -742,7 +742,7 @@ requesting review, requiring authors to run `move request-review` as a separate
 command to signal handoff (solorepo's #1042). Established: `open_pull_request`
 atomically requests review from the reviewer role upon creation.
 
-Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
+Evidence: `.meta/checks/probes/loops/open_pull_request.py::open_pull_request_probes`
 
 ### Trunk-heal arm decomposed from reconcile into actions
 

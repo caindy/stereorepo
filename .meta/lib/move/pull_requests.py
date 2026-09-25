@@ -136,7 +136,7 @@ def open_pull_request(title: str, body: str, base: str = "main",
     """Open a signed draft pull request, request review, and link it with `on`.
 
     The draft passes merge management, `advance`, and reconciliation; `move ready`
-    takes it out once the branch holds changes (solorepo's DR-273).
+    takes it out at final reviewer approval (solorepo's DR-287).
     """
     problems = check_pr.check(title, body)
     if problems:
