@@ -27,7 +27,7 @@
 .meta/checks/probes/loops/dispatch.py: 206
 .meta/checks/probes/loops/merge_manager.py: 1177
 .meta/checks/probes/loops/reconcile.py: 357
-.meta/checks/probes/tools/fallback.py: 145
+.meta/checks/probes/tools/fallback.py: 277
 .meta/depth.py: 132
 .meta/detect_fallback.py: 23
 .meta/jules/client.py: 60
@@ -37,7 +37,7 @@
 .meta/lib/move/pull_requests.py: 273
 .meta/lib/move/reconcile.py: 426
 .meta/next.py: 68
-.meta/run_agy.py: 113
+.meta/run_agy.py: 218
 .meta/say/channel.py: 373
 .meta/say/post: 229
 .meta/terms.py: 399

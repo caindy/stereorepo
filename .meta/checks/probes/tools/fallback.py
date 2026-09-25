@@ -458,6 +458,19 @@ def _probe_run_agy_retries(run_agy: Any) -> list[str]:
                 f"fallback probes: transient 429 sleep intervals {sleeps_429!r} != [2.0, 4.0]"
             )
 
+    finally:
+        run_agy.subprocess.Popen = orig_popen
+    problems.extend(_probe_run_agy_401(run_agy))
+    problems.extend(_probe_run_agy_quota(run_agy))
+    problems.extend(_probe_run_agy_429_recovery(run_agy))
+    return problems
+
+
+def _probe_run_agy_401(run_agy: Any) -> list[str]:
+    """Verify run_agy fast-fails on fatal 401 authentication errors (solorepo's DR-257)."""
+    problems: list[str] = []
+    orig_popen = run_agy.subprocess.Popen
+    try:
         attempt_401_count = 0
         sleeps_401: list[float] = []
 
@@ -494,7 +507,90 @@ def _probe_run_agy_retries(run_agy: Any) -> list[str]:
             problems.append(f"fallback probes: fatal 401 unexpectedly slept: {sleeps_401!r}")
     finally:
         run_agy.subprocess.Popen = orig_popen
-    problems.extend(_probe_run_agy_429_recovery(run_agy))
+    return problems
+
+
+def _probe_run_agy_quota(run_agy: Any) -> list[str]:
+    """Verify run_agy fast-fails on quota exhaustion and long reset delays."""
+    problems: list[str] = []
+    orig_popen = run_agy.subprocess.Popen
+    try:
+        attempt_quota_count = 0
+        sleeps_quota: list[float] = []
+
+        def _make_quota_popen(*args: Any, **kwargs: Any) -> FakePopen:
+            nonlocal attempt_quota_count
+            attempt_quota_count += 1
+            return FakePopen(
+                [
+                    (
+                        "error: Individual quota reached. Please upgrade your subscription "
+                        "to increase your limits. Resets in 44m32s.\n"
+                    ),
+                    json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n",
+                ],
+                returncode=3,
+            )
+
+        run_agy.subprocess.Popen = _make_quota_popen
+        code = run_agy.run_session(
+            prompt="Test prompt",
+            add_dir="/tmp/test",
+            options=run_agy.SessionOptions(max_attempts=3),
+            sleep_fn=sleeps_quota.append,
+        )
+        if code != 3:
+            problems.append(
+                f"fallback probes: run_session returned {code}, expected 3 on fatal 429 quota"
+            )
+        if attempt_quota_count != 1:
+            problems.append(
+                f"fallback probes: fatal 429 quota ran {attempt_quota_count} attempts, expected 1"
+            )
+        if sleeps_quota:
+            problems.append(
+                f"fallback probes: fatal 429 quota unexpectedly slept: {sleeps_quota!r}"
+            )
+
+        attempt_reset_exceeded_count = 0
+        sleeps_reset_exceeded: list[float] = []
+
+        def _make_reset_exceeded_popen(*args: Any, **kwargs: Any) -> FakePopen:
+            nonlocal attempt_reset_exceeded_count
+            attempt_reset_exceeded_count += 1
+            return FakePopen(
+                [
+                    (
+                        "error: RESOURCE_EXHAUSTED (code 429): Quota exceeded for rate limit. "
+                        "Resets in 15m.\n"
+                    ),
+                    json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n",
+                ],
+                returncode=1,
+            )
+
+        run_agy.subprocess.Popen = _make_reset_exceeded_popen
+        code = run_agy.run_session(
+            prompt="Test prompt",
+            add_dir="/tmp/test",
+            options=run_agy.SessionOptions(max_attempts=3, max_delay=60.0),
+            sleep_fn=sleeps_reset_exceeded.append,
+        )
+        if code != 1:
+            problems.append(
+                f"fallback probes: run_session returned {code}, expected 1 on reset exceeded 429"
+            )
+        if attempt_reset_exceeded_count != 1:
+            problems.append(
+                f"fallback probes: reset exceeded 429 ran {attempt_reset_exceeded_count} attempts, "
+                "expected 1"
+            )
+        if sleeps_reset_exceeded:
+            problems.append(
+                f"fallback probes: reset exceeded 429 unexpectedly slept: {sleeps_reset_exceeded!r}"
+            )
+    finally:
+        run_agy.subprocess.Popen = orig_popen
     return problems
 
 
@@ -529,6 +625,42 @@ def _probe_run_agy_429_recovery(run_agy: Any) -> list[str]:
         problems.append("fallback probes: 429 failure did not recover in a fresh session")
     if not all(process.stdin.closed and process.stdout.closed for process in (first, second)):
         problems.append("fallback probes: 429 recovery left a process pipe open")
+
+    first_short_reset = FakePopen(
+        [
+            (
+                "error: RESOURCE_EXHAUSTED (code 429): Quota exceeded for rate limit. "
+                "Resets in 1s.\n"
+            ),
+            json.dumps({"event": "result", "result": {"status": "ERROR"}}) + "\n",
+        ],
+        returncode=0,
+    )
+    second_short_reset = FakePopen(
+        [json.dumps({"event": "result", "result": {"status": "SUCCESS"}}) + "\n"],
+        returncode=0,
+    )
+    attempts_short = [first_short_reset, second_short_reset]
+    sleeps_short: list[float] = []
+    try:
+        run_agy.subprocess.Popen = lambda *args, **kwargs: attempts_short.pop(0)
+        code = run_agy.run_session(
+            prompt="Test prompt",
+            add_dir="/tmp/test",
+            options=run_agy.SessionOptions(max_attempts=3, initial_delay=1.0, jitter=0.0),
+            sleep_fn=sleeps_short.append,
+        )
+    finally:
+        run_agy.subprocess.Popen = original_popen
+    if code != 0 or attempts_short or sleeps_short != [1.0]:
+        problems.append(
+            "fallback probes: 429 short reset failure did not recover in a fresh session"
+        )
+    if not all(
+        process.stdin.closed and process.stdout.closed
+        for process in (first_short_reset, second_short_reset)
+    ):
+        problems.append("fallback probes: 429 short reset recovery left a process pipe open")
     return problems
 
 

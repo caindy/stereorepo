@@ -24,6 +24,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 FATAL_401 = "fatal_401"
+FATAL_429 = "fatal_429"
+FATAL_429_QUOTA = FATAL_429
 TRANSIENT_503 = "transient_503"
 TRANSIENT_429 = "transient_429"
 
@@ -37,6 +39,28 @@ TRANSIENT_503_PATTERN = re.compile(
 )
 TRANSIENT_429_PATTERN = re.compile(
     r"(?:\b429\b|\bRESOURCE_EXHAUSTED\b|rate limit|quota burst|quota exceeded)",
+    re.IGNORECASE,
+)
+SUBSCRIPTION_QUOTA_PATTERN = re.compile(
+    r"(?:individual quota|upgrade your subscription|subscription quota|"
+    r"quota reached|quota exhausted|weekly limit|daily limit|monthly limit)",
+    re.IGNORECASE,
+)
+RESET_DURATION_PATTERN = re.compile(
+    r"(?:resets?\s+(?:in\b|after\b|at\b)?|retry(?:-after|\s+after))\s*:?\s*([^\n.;]+)",
+    re.IGNORECASE,
+)
+CALENDAR_PATTERN = re.compile(
+    r"\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|"
+    r"aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|"
+    r"tomorrow|utc|gmt|\d{1,2}:\d{2})\b",
+    re.IGNORECASE,
+)
+COMPONENT_PATTERN = re.compile(
+    r"(?P<days>\d+(?:\.\d+)?)\s*(?:d(?:ays?)?)(?=\b|\d|\s|$)|"
+    r"(?P<hours>\d+(?:\.\d+)?)\s*(?:h(?:ours?|rs?)?)(?=\b|\d|\s|$)|"
+    r"(?P<minutes>\d+(?:\.\d+)?)\s*(?:m(?:in(?:ute)?s?)?)(?=\b|\d|\s|$)|"
+    r"(?P<seconds>\d+(?:\.\d+)?)\s*(?:s(?:ec(?:ond)?s?)?)(?=\b|\d|\s|$)",
     re.IGNORECASE,
 )
 
@@ -149,29 +173,97 @@ def process_step_update(step: dict[str, Any]) -> None:
             print(text_delta, end="", flush=True)
 
 
-def classify_error(diagnostic_lines: Iterable[str]) -> str | None:
+def parse_reset_seconds(text: str) -> float | None:
+    """Extract quota reset delay in seconds from diagnostic text if present.
+
+    Parameters:
+        text (str): Diagnostic line or error message to inspect.
+
+    Returns:
+        float | None: Delay in seconds, infinity if a calendar date is matched,
+        or None if no reset indicator is present.
+    """
+    match = RESET_DURATION_PATTERN.search(text)
+    if not match:
+        return None
+    raw_val = match.group(1).strip()
+    if raw_val.isdigit():
+        return float(raw_val)
+
+    if CALENDAR_PATTERN.search(raw_val):
+        return float("inf")
+
+    total_seconds = 0.0
+    matched_any = False
+    for m in COMPONENT_PATTERN.finditer(raw_val):
+        matched_any = True
+        if m.group("days"):
+            total_seconds += float(m.group("days")) * 86400
+        elif m.group("hours"):
+            total_seconds += float(m.group("hours")) * 3600
+        elif m.group("minutes"):
+            total_seconds += float(m.group("minutes")) * 60
+        elif m.group("seconds"):
+            total_seconds += float(m.group("seconds"))
+
+    if matched_any:
+        return total_seconds
+    return None
+
+
+def _is_fatal_429(line: str, max_backoff: float) -> bool:
+    """Determine whether diagnostic line indicates fatal 429 quota exhaustion.
+
+    Parameters:
+        line (str): Diagnostic line to examine.
+        max_backoff (float): Maximum backoff retry delay in seconds.
+
+    Returns:
+        bool: True if line indicates subscription quota or reset delay exceeding backoff.
+    """
+    reset_seconds = parse_reset_seconds(line)
+    if SUBSCRIPTION_QUOTA_PATTERN.search(line):
+        return reset_seconds is None or reset_seconds > max_backoff
+    if TRANSIENT_429_PATTERN.search(line):
+        return reset_seconds is not None and reset_seconds > max_backoff
+    return False
+
+
+def classify_error(
+    diagnostic_lines: Iterable[str],
+    max_backoff: float = 60.0,
+) -> str | None:
     """Classify failure mode from diagnostic output lines.
 
     Parameters:
         diagnostic_lines (Iterable[str]): Unparsed lines and error payloads from session.
+        max_backoff (float): Maximum backoff retry delay in seconds.
 
     Returns:
-        str | None: FATAL_401, TRANSIENT_503, TRANSIENT_429, or None if unclassified.
+        str | None: FATAL_401, FATAL_429, TRANSIENT_503, TRANSIENT_429, or None if unclassified.
     """
-    found_transient_503 = False
-    found_transient_429 = False
+    lines = list(diagnostic_lines)
+    if any(FATAL_401_PATTERN.search(line) for line in lines):
+        return FATAL_401
 
-    for line in diagnostic_lines:
-        if FATAL_401_PATTERN.search(line):
-            return FATAL_401
-        if TRANSIENT_503_PATTERN.search(line):
-            found_transient_503 = True
-        if TRANSIENT_429_PATTERN.search(line):
-            found_transient_429 = True
+    if any(_is_fatal_429(line, max_backoff) for line in lines):
+        return FATAL_429
 
-    if found_transient_503:
+    found_503 = any(TRANSIENT_503_PATTERN.search(line) for line in lines)
+    found_429 = any(
+        TRANSIENT_429_PATTERN.search(line) or SUBSCRIPTION_QUOTA_PATTERN.search(line)
+        for line in lines
+    )
+
+    if found_429:
+        for line in lines:
+            reset_seconds = parse_reset_seconds(line)
+            if reset_seconds is not None and reset_seconds > max_backoff:
+                return FATAL_429
+
+    if found_503:
         return TRANSIENT_503
-    if found_transient_429:
+    if found_429:
         return TRANSIENT_429
     return None
 
@@ -293,7 +385,8 @@ def run_session(
     unset, merges standard error into stdout to eliminate pipe buffer deadlocks,
     requires an explicit terminal SUCCESS event from the agy session, and executes
     bounded exponential backoff with jitter on transient 503 and 429 API errors
-    while failing fast on fatal 401 authentication errors.
+    while failing fast on fatal 401 authentication errors and subscription quota
+    exhaustion or delays exceeding retry backoff.
 
     Parameters:
         prompt (str): Full prompt instructions to deliver on stdin.
@@ -346,10 +439,22 @@ def run_session(
         if proc.returncode == 0 and terminal_status == "SUCCESS" and not broken_pipe:
             return 0
 
-        classification = classify_error(stream_result.diagnostic_lines)
+        classification = classify_error(
+            stream_result.diagnostic_lines,
+            max_backoff=opts.max_delay,
+        )
         if classification == FATAL_401:
             print(
                 "[agy] Fatal authentication error (401 UNAUTHENTICATED); "
+                "failing fast without retry",
+                file=sys.stderr,
+                flush=True,
+            )
+            return proc.returncode if proc.returncode != 0 else 1
+
+        if classification == FATAL_429:
+            print(
+                "[agy] Fatal quota exhaustion (429 RESOURCE_EXHAUSTED); "
                 "failing fast without retry",
                 file=sys.stderr,
                 flush=True,
