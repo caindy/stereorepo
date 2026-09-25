@@ -24,6 +24,7 @@ from checks.probes.harness.acts import (
     run_verb,
     stood_in,
     unanswered,
+    workspace,
     written,
 )
 from checks.probes.harness.fakes import (
@@ -59,6 +60,7 @@ __all__ = [
     "run_verb",
     "stood_in",
     "unanswered",
+    "workspace",
     "written",
 ]
 """The module's whole surface, so every probe's `from checks.probes.harness import ...` still resolves."""

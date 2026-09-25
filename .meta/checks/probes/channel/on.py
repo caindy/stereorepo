@@ -5,14 +5,19 @@ holding them (solorepo's DR-209).
 """
 import contextlib
 import json
-import os
 import pathlib
-import tempfile
 from collections.abc import Iterator, Sequence
 from typing import Any
 
 from checks.collect import check
-from checks.probes.harness import environment, load_channel, outcome, stood_in, unanswered
+from checks.probes.harness import (
+    environment,
+    load_channel,
+    outcome,
+    stood_in,
+    unanswered,
+    workspace,
+)
 
 OPEN_ISSUES = [{"number": 3, "title": "another Challenge", "labels": [{"name": "challenge"}]}]
 """What `issue list` answers: one other open Issue."""
@@ -147,20 +152,13 @@ def _issue(labels: list[str], state: str = "OPEN") -> dict[str, Any]:
 
 @contextlib.contextmanager
 def _workspace() -> Iterator[tuple[pathlib.Path, pathlib.Path, pathlib.Path]]:
-    """A temporary working directory with `GITHUB_OUTPUT` and `GITHUB_ENV` files, as a run has."""
-    held = pathlib.Path.cwd()
-    with tempfile.TemporaryDirectory() as where:
-        root = pathlib.Path(where)
-        output, env = root / "output", root / "env"
-        output.touch()
-        env.touch()
-        os.chdir(root)
-        try:
-            with environment(GITHUB_OUTPUT=str(output), GITHUB_ENV=str(env),
-                             SOLOREPO_REVIEW_HEAD=None):
-                yield root, output, env
-        finally:
-            os.chdir(held)
+    """A run's workspace and the two files it writes, with the head asked about unset.
+
+    The head is the one variable a case here sets for itself; the toggles
+    `workspace` stands down hold for every case.
+    """
+    with workspace(SOLOREPO_REVIEW_HEAD=None) as root:
+        yield root, root / "output", root / "env"
 
 
 def _before(channel: Any, on: Any,

@@ -78,6 +78,44 @@ def environment(**variables: str | None) -> Iterator[None]:
         apply(held)
 
 
+@contextlib.contextmanager
+def workspace(**variables: str | None) -> Iterator[pathlib.Path]:
+    """A temporary directory a door runs in, holding the two files it writes and no ambient toggle.
+
+    The working directory is the temporary one for the block and is put back
+    after it. `GITHUB_OUTPUT` and `GITHUB_ENV` name the `output` and `env`
+    files, as a run has them, and both fallback toggles are stood down: the
+    routing policy's `toggled()` reads `os.environ` where no caller passes an
+    environment, so a container carrying `GEMINI_FALLBACK=true` lengthens every
+    chain a door resolves and answers `tiers=2` where a case expects one rung.
+    The gate runs in a loop's container and on a laptop alike, and a case that
+    reads the ambient environment is a different case in each
+    (solorepo's #1000). What a toggle does when it is on is
+    `probes/channel/routing.py`'s subject, whose cases pass an `environ` of
+    their own.
+
+    Args:
+        **variables: Further environment variables the caller stands in, `None`
+            unsetting one; a name already held above is a repeated keyword
+            argument.
+
+    Yields:
+        pathlib.Path: The directory, holding an empty `output` and `env`.
+    """
+    held = pathlib.Path.cwd()
+    with tempfile.TemporaryDirectory() as where:
+        root = pathlib.Path(where)
+        (root / "output").touch()
+        (root / "env").touch()
+        os.chdir(root)
+        try:
+            with environment(GITHUB_OUTPUT=str(root / "output"), GITHUB_ENV=str(root / "env"),
+                             GEMINI_FALLBACK=None, JULES_FALLBACK=None, **variables):
+                yield root
+        finally:
+            os.chdir(held)
+
+
 def outcome(call: Callable[[], object]) -> Outcome:
     """What `call` came to, as an `Outcome`, with its printing captured rather than shown.
 

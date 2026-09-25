@@ -6,7 +6,6 @@ holding them (solorepo's DR-209); the reviewer's verb is probed in `on.py`
 """
 import contextlib
 import functools
-import os
 import pathlib
 import subprocess
 import sys
@@ -22,6 +21,7 @@ from checks.probes.harness import (
     outcome,
     stood_in,
     unanswered,
+    workspace,
 )
 
 ISSUE = "7"
@@ -136,20 +136,14 @@ class _Commands:
 
 @contextlib.contextmanager
 def _workspace() -> Iterator[pathlib.Path]:
-    """A temporary working directory with `GITHUB_OUTPUT` and `GITHUB_ENV` files, as a run has."""
-    held = pathlib.Path.cwd()
-    with tempfile.TemporaryDirectory() as where:
-        root = pathlib.Path(where)
-        (root / "output").touch()
-        (root / "env").touch()
-        os.chdir(root)
-        try:
-            with environment(GITHUB_OUTPUT=str(root / "output"), GITHUB_ENV=str(root / "env"),
-                             GITHUB_SERVER_URL="https://github.com", GITHUB_REPOSITORY="o/r",
-                             GITHUB_RUN_ID="99", ACTOR_SESSION="gha-99", ACTOR_AGENT=None):
-                yield root
-        finally:
-            os.chdir(held)
+    """A run's workspace, naming the run the coder door reads itself out of, with no Agent.
+
+    The Agent is the one variable a case here sets for itself; the toggles
+    `workspace` stands down hold for every case.
+    """
+    with workspace(GITHUB_SERVER_URL="https://github.com", GITHUB_REPOSITORY="o/r",
+                   GITHUB_RUN_ID="99", ACTOR_SESSION="gha-99", ACTOR_AGENT=None) as root:
+        yield root
 
 
 class _Fakes(NamedTuple):
