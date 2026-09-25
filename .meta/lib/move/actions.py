@@ -14,8 +14,11 @@ where the pass begins and shared by every decision in it.
 
 They sit in a module of the package rather than in `reconcile`, which is their
 one caller, because that is where a script's body goes and `reconcile.py` stood
-past the module ceiling (solorepo's DR-217).
+past the module ceiling (solorepo's DR-217). The trunk-heal arm (`Break`,
+`breaking`, `owed_by_trunk`, and heal constants) relocates here from
+`reconcile.py` under the same boundary (solorepo's DR-217, solorepo's #1027).
 """
+from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 
 import channel
@@ -319,3 +322,178 @@ def report_trunk(owner: str, name: str) -> Trunk | None:
     else:
         print(f"reconcile: trunk is green — {at}")
     return found
+
+
+HEAL_TITLE = "Heal a red {branch} at {commit}"
+"""The title the heal Challenge for a red trunk is filed under, one per broken commit.
+
+The commit is in the title because a break belongs to the commit and not to the
+branch. `file_issue` refuses a second open Issue under a title one already
+carries (solorepo's DR-221), so a title naming the commit files one Challenge
+for one break however many passes read it, while a trunk that goes green and red
+again is a second break and files a second."""
+
+
+HEAL_BODY = """**Waits on.** Nothing.
+
+**What was noticed.** `{branch}`'s own HEAD, {commit}, fails {checks}. Every
+open pull request is rebased onto that commit and inherits the failure, and the
+merge manager lands nothing while it stands.
+
+**What would make this worth doing.** A red trunk stops every merge and turns
+every open pull request red, and each hour it stands costs every loop in flight
+(solorepo's #913). The failing check's log names the defect and the commit that
+broke it names its cause, which is what makes the fix a Job's rather than the
+solo's.
+
+**Where it was found.** The reconciler's reading of trunk's own check rollup, on
+the pass that filed this.
+
+**Difficulty.**
+`medium`: read the failing check's log, fix what it names, and land it.
+"""
+"""The heal Challenge's body, filed at no level, which is the reviewer's queue.
+
+A run holds no mandate for a level (solorepo's DR-235), so the level goes under
+`**Difficulty.**` as the proposal the reviewer answers. That reading is the
+expedited path rather than a detour around one: the reviewer's door fires on
+`challenge` landing and the coder's on the level landing, so neither waits for
+the ripe list or for this verb's own idle bound (solorepo's DR-230)."""
+
+
+HEAL_ESCALATION = """The reconciler filed this for a red `{branch}` and dispatched the loop at it.
+{idle} minutes later — past the longest a coder run lasts — trunk is still red
+and no pull request stands on this Challenge, so no Job is answering it and the
+next step is yours (solorepo's #913).
+
+{branch}'s HEAD is {commit}, and it fails {checks}.
+"""
+"""What `escalate` says on the heal Challenge as it hands it to the solo.
+
+The escalation of solorepo's #913's *Escalate* arm, mechanized: *no Job can fix
+it* is read as the loop having been offered the break for longer than a coder
+run lasts and having opened no pull request on it."""
+
+
+class Break(NamedTuple):
+    """A red trunk read against the Challenge standing for it (solorepo's #913).
+
+    Attributes:
+        branch: The default branch's name, as trunk's reading names it.
+        commit: Trunk's HEAD commit, abbreviated as the title carries it.
+        checks: The names of the checks failing on that commit, in the words
+            the Challenge and the log get; empty where trunk is green.
+        challenge: The open heal Challenge for this commit, or None where none
+            stands.
+        found: What `classify_issue` read of that Challenge, or None with none.
+        busy: Whether a coder run for it is queued or running.
+        idle: Minutes since it was filed, and 0 where none stands.
+        longest: The coder workflow's job timeout, in minutes.
+    """
+
+    branch: str
+    commit: str
+    checks: str
+    challenge: int | None = None
+    found: Any = None
+    busy: bool = False
+    idle: float = 0.0
+    longest: float = 0.0
+
+
+def breaking(trunk: Trunk, issues: Sequence[Mapping[str, Any]],
+             reading: Any) -> Break:
+    """Trunk's own check rollup read against the heal Challenge standing for that commit.
+
+    The commit is abbreviated to the seven characters `report_trunk` logs it
+    under, since it is written into a title a person reads and matches on.
+
+    Parameters:
+        trunk (Trunk): Trunk's HEAD and its rollup, as `report_trunk` read it.
+        issues (Sequence[Mapping[str, Any]]): The open Issues, carrying `ISSUE_FIELDS`.
+        reading (Any): What the pass reads once.
+
+    Returns:
+        Break: Trunk, and the Challenge standing for its break where one is.
+    """
+    from lib.move import reconcile
+
+    branch, commit = trunk.ref, trunk.oid[:7]
+    checks = ", ".join(trunk.failing)
+    broken = Break(branch=branch, commit=commit, checks=checks, longest=reading.longest)
+    if not checks:
+        return broken
+    title = HEAL_TITLE.format(branch=branch, commit=commit)
+    standing = next((issue for issue in issues
+                     if str(issue.get("title") or "") == title), None)
+    if standing is None:
+        return broken
+    number = int(standing["number"])
+    return broken._replace(
+        challenge=number,
+        found=check_pr.state.classify_issue({**standing, "state": "OPEN"}, reading.coder,
+                                            number in reading.named),
+        busy=in_flight(reading.coder_runs, title=f"coder-issue-#{number}"),
+        idle=reconcile.idle_minutes(standing, reading.now, "createdAt"))
+
+
+def owed_by_trunk(broken: Break) -> Any:
+    """What a red trunk is owed: the heal Challenge filed, dispatched, or handed to the solo.
+
+    solorepo's #913's three arms, of which the reading is solorepo's #983's and these two
+    are this one's. *Fix*: a break nothing stands for is filed as a Challenge,
+    which fires the reviewer's door and then the coder's, and one already
+    offered to the loop is dispatched the take pass on the pass that reads it
+    rather than on the pass its idle bound comes up — a red trunk is what every
+    other act in the queue is waiting behind. *Escalate*: a break the loop has
+    held longer than a coder run lasts with no pull request on it is handed to
+    the solo, since the loop has been offered it and produced no change.
+
+    Both arms stand on the offer, which is why both are read under one bound on
+    `OFFERED`. A Challenge no reviewer has read carries no level, so no loop was
+    ever dispatched at it and nothing has been offered anything: what failed
+    there is the reviewer's door, which is `owed_by_issue`'s `reread` and not a
+    break to hand the solo under a sentence saying a coder produced nothing.
+
+    A Challenge a Job is standing on owes nothing: a claim, an open pull
+    request, or a coder run in flight each says one is. A claim with neither,
+    left by a run that died holding it, is `owed_by_issue`'s `release` and not
+    this reading's, and the pass after it reads the Challenge offered again.
+    A Challenge the solo already holds — `hard`, or `human` from an escalation
+    this verb made — is reported and nothing more.
+
+    Parameters:
+        broken (Break): Trunk read against the Challenge standing for it.
+
+    Returns:
+        Any: The one act owed (`Owed`), or None where trunk is green or a Job is
+            answering the break.
+    """
+    from lib.move import reconcile
+
+    if not broken.checks:
+        return None
+    where = f"`{broken.branch}`'s HEAD {broken.commit} fails {broken.checks}"
+    b, c = broken.branch, broken.commit
+    if broken.challenge is None:
+        return reconcile.Owed("file", 0, f"{where}, and no heal Challenge stands for that commit",
+                              title=HEAL_TITLE.format(branch=b, commit=c),
+                              body=HEAL_BODY.format(branch=b, commit=c, checks=broken.checks))
+    number = broken.challenge
+    states = check_pr.state.IssueState
+    if broken.busy or broken.found in (states.TAKEN, states.RESUMABLE, states.CLAIMED):
+        return None
+    if broken.found in (states.HELD, states.HANDED_BACK):
+        return reconcile.Owed("hold", number, f"the heal Challenge for a red trunk, and it reads "
+                                              f"{broken.found.value}, which is the solo's")
+    if broken.found is not states.OFFERED:
+        return None
+    if broken.idle >= broken.longest:
+        why = (f"{where} still, {int(broken.idle)} minutes after this Challenge was filed for "
+               "it and with no pull request on it: the loop was offered the break and opened none")
+        body = HEAL_ESCALATION.format(branch=b, commit=c, checks=broken.checks,
+                                      idle=int(broken.idle))
+        return reconcile.Owed("escalate", number, why, body=body)
+    why = (f"{where}, and the heal Challenge for it is offered: the take pass on the pass "
+           "that read it, ahead of the ripe list")
+    return reconcile.Owed("take", number, why)

@@ -22,7 +22,18 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import channel
 import check_pr
 from lib.move import challenges, cli, common, concepts, decisions, drafts, manager, pull_requests
-from lib.move.actions import IN_FLIGHT, RUN_FIELDS, Runs, in_flight, read_by, runs_of
+from lib.move.actions import (
+    HEAL_TITLE,
+    IN_FLIGHT,
+    RUN_FIELDS,
+    Break,
+    Runs,
+    breaking,
+    in_flight,
+    owed_by_trunk,
+    read_by,
+    runs_of,
+)
 from lib.move.advance import (
     ADVANCE_NOTICE_MARKER,
     REPLAY_REFUSED_TAG,
@@ -64,11 +75,7 @@ from lib.move.challenges import (
     verdict_posted,
     waits,
 )
-from lib.move.cli import (
-    build_parser,
-    main,
-    numbers,
-)
+from lib.move.cli import build_parser, main, numbers
 from lib.move.common import (
     DIFFICULTIES,
     ISSUE_REF,
@@ -159,24 +166,20 @@ from lib.move.pull_requests import (
     superseder,
 )
 from lib.move.reconcile import (
-    HEAL_TITLE,
     ISSUE_FIELDS,
     PERFORMED,
     RECONCILE_FIELDS,
     RECONCILE_MINUTES,
     UNREAD_MINUTES,
-    Break,
     Constraints,
     Owed,
     Quiet,
     Reading,
-    breaking,
     idle_minutes,
     owed_by_issue,
     owed_by_issues,
     owed_by_pull,
     owed_by_pulls,
-    owed_by_trunk,
     perform,
     reconcile,
     redeliver,
@@ -221,10 +224,8 @@ __all__ = [
     "VERDICTS",
     "WAITS_FILLER",
     "WAITS_LINE",
-    "Break",
-    "Constraints",
-    "Owed",
-    "Pull",
+    "Break", "Constraints",
+    "Owed", "Pull",
     "Quiet",
     "Reading",
     "RequestRefused",

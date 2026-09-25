@@ -11,7 +11,8 @@ and reserved, and a record's status.
 `concepts` imports nothing in the package either: the reservation a row in the
 Ubiquitous Language stands on. `actions` imports nothing in the package either:
 what GitHub's check machinery says that neither listing answers — which of the
-loop workflows' runs are flying, and whether trunk's own HEAD commit is green.
+loop workflows' runs are flying, whether trunk's own HEAD commit is green, and
+what a red trunk owes (solorepo's #913, solorepo's #1027).
 `drafts` is the one check before every way out of draft and the verb that makes
 it, and imports `common`.
 `challenges` is the Issue lifecycle, from filing to the closes that are not a

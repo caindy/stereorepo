@@ -744,4 +744,16 @@ atomically requests review from the reviewer role upon creation.
 
 Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
 
+### Trunk-heal arm decomposed from reconcile into actions
+
+The trunk-healing additions (`Break`, `breaking`, `owed_by_trunk`, and heal
+constants) introduced in solorepo's #996 caused `.meta/lib/move/reconcile.py` to
+exceed the 500-line module ceiling, ratcheting its baseline debt upward to 426 lines
+(solorepo's DR-217, solorepo's #1027). Relocating the trunk-heal arm into
+`.meta/lib/move/actions.py` alongside trunk health detection leaves
+`reconcile.py` as the pass coordinator, keeps `actions.py` under the 500-line
+ceiling, and ratchets `reconcile.py`'s baseline debt down to 256 lines.
+
+Evidence: `.meta/checks/probes/loops/reconcile.py::reconcile_probes`
+
 
