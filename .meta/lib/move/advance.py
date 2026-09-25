@@ -112,9 +112,11 @@ def _dispatch_conflicting(pull: common.Pull, waiting: list[str],
                           reviewer_login: str) -> tuple[bool, str | None]:
     """Dispatch coder rebase pass for conflicting pull request if eligible.
 
-    A layer above a conflicting lower layer is left alone and named, since a
-    stack is resolved from the bottom (solorepo's DR-133); the root, and a
-    layer whose lower layers are clean, is any loop branch's rebase.
+    Demotes conflicting pull requests to draft before dispatch to ensure the
+    rebased head receives required review (solorepo's DR-273). A layer above a
+    conflicting lower layer is left alone and named, since a stack is resolved
+    from the bottom (solorepo's DR-133); the root, and a layer whose lower
+    layers are clean, is any loop branch's rebase.
 
     Returns:
         tuple[bool, str | None]: (handled, refused_msg)
@@ -136,6 +138,8 @@ def _dispatch_conflicting(pull: common.Pull, waiting: list[str],
     if not _is_autonomous_challenge(challenge, "conflict", pull, found=found,
                                      reviewer_login=reviewer_login):
         return True, None
+    if not pull.get("isDraft"):
+        manager.demote_to_draft(pull, action="demote", reason="conflicting")
     waits = " and ".join(waiting)
     try:
         run_coder(number, "rebase")
@@ -460,6 +464,8 @@ def dispatch_pass(pr: str | int, task: str | None) -> None:
         task = "rebase" if pull.get("mergeable") == "CONFLICTING" else "review"
     if task == "rebase":
         _check_dispatch_rebase(pr, pull)
+        if pull.get("mergeable") == "CONFLICTING" and not pull.get("isDraft"):
+            manager.demote_to_draft(pull, action="demote", reason="conflicting")
     else:
         _check_dispatch_review(pr, pull)
     run_coder(pr, task)
@@ -584,12 +590,12 @@ def _is_advance_candidate(pull: common.Pull, pr: int | str | None, bases: set[st
     """
     if pull.get("isDraft"):
         return False
+    if pr is not None and pull.get("headRefName") in bases and pull.get("baseRefName") not in heads:
+        return True
     if pull.get("autoMergeRequest"):
         return True
-    if (pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login)
-            or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED"):
-        return True
-    return bool(pr is not None and pull.get("headRefName") in bases and pull.get("baseRefName") not in heads)
+    return bool(pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login)
+                or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED")
 
 
 def _no_candidate_reason(pr: int | str, pull: common.Pull) -> str:

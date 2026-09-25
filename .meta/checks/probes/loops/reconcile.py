@@ -453,7 +453,8 @@ class _GitHub:
                  runs: dict[str, list[dict[str, Any]]],
                  views: dict[int, dict[str, Any]] | None = None,
                  threads: dict[int, list[dict[str, Any]]] | None = None) -> None:
-        self.pulls, self.issues, self.runs = pulls, issues, runs
+        self.pulls = [dict(p) for p in pulls]
+        self.issues, self.runs = issues, runs
         self.views = views or {}
         self.threads = CONVERSATIONS if threads is None else threads
         self.dispatched: list[tuple[str, ...]] = []
@@ -510,6 +511,12 @@ class _GitHub:
             return runs
         if args[:2] == ("workflow", "run"):
             self.dispatched.append(args)
+            return ""
+        if args[:2] == ("pr", "ready"):
+            number = int(args[2])
+            pull = next((p for p in self.pulls if int(p["number"]) == number), None)
+            if pull is not None:
+                pull["isDraft"] = "--undo" in args
             return ""
         raise unanswered(args, "the reconcile fake")
 
@@ -646,6 +653,20 @@ def _owner(move: Any, name: str) -> Any:
     raise AssertionError(UNDEFINED.format(name=name))
 
 
+def _check_reconcile_draft_demotions(fake: _GitHub) -> list[str]:
+    """Verify that conflicting PRs were demoted to draft while maintenance rebases were not."""
+    problems: list[str] = []
+    p2 = next(p for p in fake.pulls if p["number"] == 2)
+    p30 = next(p for p in fake.pulls if p["number"] == 30)
+    if not p2.get("isDraft"):
+        problems.append("reconcile: conflicting pull request 2 was not demoted to draft "
+                        "before rebase dispatch")
+    if p30.get("isDraft"):
+        problems.append("reconcile: non-conflict maintenance rebase pull request 30 "
+                        "was demoted to draft")
+    return problems
+
+
 def _pass_cases(channel: Any, move: Any) -> list[str]:
     """`reconcile` end to end: each act once live, reported otherwise, none under a run."""
     bench = _Bench(channel, move)
@@ -675,6 +696,7 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
                         "requests standing with no request under a comment verdict or an "
                         "approval, and to no other: a conflicting branch and a failed gate "
                         "are settled before the threads are reached")
+    problems.extend(_check_reconcile_draft_demotions(fake))
     if f"holding #{12}" not in ended.out:
         problems.append(f"reconcile: a claimed Challenge at hard behind an open pull request was "
                         f"not held: {ended.out!r}")

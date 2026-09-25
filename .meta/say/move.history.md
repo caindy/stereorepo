@@ -697,3 +697,17 @@ even when its parent Challenge is in the hand-back state (`HANDED_BACK`).
 
 Evidence: `.meta/checks/probes/loops/dispatch.py::dispatch_probes`
 
+### Conflicting pull request dispatched for coder rebase without returning to draft
+
+When an open pull request conflicted with its base, the reconciler and advance sweep
+dispatched coder rebase passes while leaving the pull request ready for merge (solorepo's #1024).
+Because `.github/workflows/review.yml` is guarded to run only on draft pull requests,
+the coder's subsequent push resolving conflicts bypassed reviewer triggering, stranding
+the review semaphore and risking unreviewed rebased code progressing toward merge in violation
+of solorepo's DR-273.
+Established: conflicting pull requests are demoted to draft via `manager.demote_to_draft`
+prior to coder rebase dispatch in `_dispatch_conflicting`, `dispatch_pass`, and
+`reconcile.perform`, while non-conflict maintenance rebases retain their state.
+
+Evidence: `.meta/checks/probes/loops/advance.py::advance_probes`
+

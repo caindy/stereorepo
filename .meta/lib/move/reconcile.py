@@ -598,6 +598,9 @@ def _make(act: Owed) -> None:
             from.
     """
     if act.kind == "rebase":
+        if act.why.startswith("conflicting"):
+            manager.demote_to_draft({"number": act.number}, action="demote",
+                                    reason="conflicting")
         advance.run_coder(act.number, "rebase")
     elif act.kind == "review":
         advance.run_coder(act.number, "review")

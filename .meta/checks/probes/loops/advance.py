@@ -506,6 +506,9 @@ def _conflicting_stack_advances_once_its_root_is_rebased(channel: Any, move: Any
         problems.append(f"advance: a conflicting stack was dispatched to coders as "
                         f"{fake.dispatched!r}, where the root's rebase pass alone is dispatched "
                         "and the stack is left to be advanced once it is clean")
+    if not fake.pulls[str(root)].get("draft"):
+        problems.append(f"advance: conflicting root #{root} was not demoted to draft "
+                        "before rebase dispatch")
     said = str(ran.out.partition(REPORTED)[2])
     if said:
         problems.append(f"advance: a conflicting stack was reported as failed: {said!r}")

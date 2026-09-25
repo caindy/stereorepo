@@ -524,7 +524,8 @@ class FakeGitHub:
             return self.api(*(a for a in args[1:] if a != "--paginate"),
                             paginated="--paginate" in args)
         answered = {("pr", "update-branch"): self.update_branch, ("pr", "edit"): self.edit,
-                    ("pr", "merge"): self.merge, ("issue", "view"): self.issue}
+                    ("pr", "merge"): self.merge, ("pr", "ready"): self.ready,
+                    ("issue", "view"): self.issue}
         if head in answered:
             return answered[head](args)
         raise unanswered(args)
@@ -633,6 +634,14 @@ class FakeGitHub:
         pull["armed"] = number not in self.no_stick
         if number in self.lands:
             pull.update(state="MERGED", armed=False)
+        return ""
+
+    def ready(self, args: Any) -> str:
+        """`pr ready`: marks pull request ready or undoes ready status."""
+        number = str(args[2])
+        pull = self.pulls.get(number)
+        if pull is not None:
+            pull["draft"] = "--undo" in args
         return ""
 
     def dispatch(self, args: Any) -> str:

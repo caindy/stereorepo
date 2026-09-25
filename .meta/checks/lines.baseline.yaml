@@ -121,7 +121,7 @@
 .meta/lib/dereference/asking.py: 1
 .meta/lib/dereference/cli.py: 2
 .meta/lib/dereference/reading.py: 10
-.meta/lib/move/advance.py: 18
+.meta/lib/move/advance.py: 17
 .meta/lib/move/challenges.py: 14
 .meta/lib/move/cli.py: 3
 .meta/lib/move/decisions.py: 3

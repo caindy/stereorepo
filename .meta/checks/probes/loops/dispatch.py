@@ -182,16 +182,16 @@ def _nothing_asked_dispatches_nothing(channel: Any, move: Any) -> list[str]:
 
 def _stack_root_rebased_by_sweep_refused_by_name(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
-    fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": ["reviewer"],
-                           "mergeable": "CONFLICTING"},
-                       8: {"behind": 0, "armed": False, "requested": ["reviewer"],
-                           "base": "claude/issue-7", "mergeable": "CONFLICTING"}})
+    p = {"behind": 0, "armed": False, "requested": ["reviewer"], "mergeable": "CONFLICTING"}
+    fake = FakeGitHub({7: dict(p),
+                       8: dict(p, base="claude/issue-7")})
     said = swept(channel, move, fake, problems)
     if fake.dispatched != [("7", "rebase")]:
         problems.append("advance: a conflicting stack should have its root rebased and the "
                         f"layer above it left alone, and it dispatched {fake.dispatched!r}")
     if said:
         problems.append(f"advance: the stack it resolved from the bottom exited with {said!r}")
+    fake = FakeGitHub({7: dict(p), 8: dict(p, base="claude/issue-7")})
     named_said = run_verb(channel, fake, lambda: move.advance("7"))
     if not named_said or "base of another open pull request" not in named_said:
         problems.append(f"advance: named stack base should be refused, got {named_said!r}")
