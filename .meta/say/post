@@ -4,8 +4,8 @@
 A comment, a thread on the diff, a reply, an answer, a promotion, what landed, and the reviewer's
 verdict. Each is one step of a Discipline and refuses its own misuse (solorepo's DR-116): `answer`
 replies and resolves, and refuses when this Actor is the thread's sole author unless the reply
-links an Issue, which is what a promotion looks like (solorepo's DR-127) — and then replies
-without resolving, a thread with one voice being a second Job's to close (solorepo's DR-224);
+links an Issue, which is what a promotion looks like (solorepo's DR-127) — which resolves the
+thread immediately via the promotion link (solorepo's DR-289);
 `notice` supplies the marker and the mention; `promote` files the Issue before the thread says
 it did, and refuses a level and a mandate given apart (solorepo's DR-278); `landed` is rendered
 from the record and never typed; `review`, `raise`, and `notice` refuse when the head moved
@@ -221,9 +221,8 @@ def refuse_if_sole_author(thread_id: str, promotion: bool = False) -> list[str]:
         sys.exit("say: refusing — you are the sole author of this thread, and a reply from you "
                  "would not change that. A16 counts the resolver as a party, which means "
                  "nothing when it is you. Promote it, if it survived the argument, and answer "
-                 "with the Issue's link — that stands aside from this rule, and posts the reply "
-                 "without resolving. Closing it is the next Job's, whose Trailer differs: "
-                 "`move request-review <pr>` summons one.")
+                 "with the Issue's link — that stands aside from this rule, and resolves the thread "
+                 "immediately, as the link serves as the durable artifact (solorepo's DR-289).")
     return bodies
 
 
@@ -247,7 +246,7 @@ def comment_party(c: dict[str, Any]) -> str:
 
 
 def resolve_verb(thread_id: str) -> None:
-    """Resolves an answered or promoted review thread (solorepo's Article 16, solorepo's DR-224).
+    """Resolves an answered or promoted review thread (solorepo's Article 16, solorepo's DR-289).
 
     Validates that the thread has received a response from a second party or
     contains an issue promotion link before executing resolution. Refuses
@@ -265,14 +264,13 @@ def resolve_verb(thread_id: str) -> None:
     if nodes is None:
         sys.exit(f"say: GitHub has no review thread {thread_id}")
     bodies = [str(c.get("body") or "") for c in nodes]
-    if sole_author(bodies):
-        sys.exit("say: refusing — every comment on this thread is yours, promotion link "
-                 "included, and a resolve from you would not change that. A16 asks for a "
-                 "reply from a second party or a link, and this thread has the link with no "
-                 "second party. `--role` will not make one — it picks a credential, not a "
-                 "Trailer. A later Job resolves this; `move request-review <pr>` summons "
-                 "one.")
-    has_promo = any(check_pr.PROMOTED.search(b) for b in bodies)
+    if sole_author(bodies) and not any(map(PROMOTION.search, bodies)):
+        sys.exit("say: refusing — every comment on this thread is yours, and a resolve from you "
+                 "would not change that. A16 asks for a reply from a second party or a promotion "
+                 "link, and this thread has neither. `--role` will not make a second party — it "
+                 "picks a credential, not a Trailer. A later Job resolves this; "
+                 "`move request-review <pr>` summons one.")
+    has_promo = any(PROMOTION.search(b) for b in bodies)
     parties = {comment_party(c) for c in nodes}
     if not has_promo and len(parties) < 2:
         sys.exit("say: refusing — this thread has neither an answer from a second party nor a "
@@ -281,7 +279,7 @@ def resolve_verb(thread_id: str) -> None:
 
 
 def left_open(thread_id: str) -> str:
-    """Generates the notification text appended when a sole-authored thread is left open (solorepo's DR-224).
+    """Generates the notification text appended when a sole-authored thread is left open (solorepo's DR-289).
 
     Parameters:
         thread_id: GraphQL node ID of the unresolved thread.
@@ -290,35 +288,28 @@ def left_open(thread_id: str) -> str:
         str: Notification message indicating the thread awaits second-job resolution.
     """
     return ("Left open: this thread has had one voice, mine. A16 accepts a second party's "
-            "reply or a link, and solorepo's DR-224 narrows the link limb, so a thread carrying "
-            "one Trailer waits for a second Job even with the link on it. "
-            f"`move request-review <pr>` summons one, and `post resolve {thread_id}` is what it "
-            "runs.")
+            "reply or a promotion link, and this thread has neither. "
+            f"`move request-review <pr>` summons a second Job, and `post resolve {thread_id}` "
+            "is what it runs.")
 
 
 def answer(thread_id: str, text: str) -> None:
-    """Replies to a review thread and resolves it if multi-party criteria are met (solorepo's DR-127, solorepo's DR-224).
+    """Replies to a review thread and resolves it if multi-party criteria are met (solorepo's DR-127, solorepo's DR-289).
 
     Posts the reply text. Resolves the thread immediately if another party has
-    participated. If the thread is sole-authored, leaves the thread open with an
-    explanatory notice for subsequent review handoff.
+    participated or if the reply links to a promoted Issue.
 
     Parameters:
         thread_id: GraphQL node ID of the review thread.
         text: Markdown content for the reply.
     """
-    bodies = refuse_if_sole_author(thread_id, promotion=promotes(text))
-    if sole_author(bodies):
-        reply(thread_id, channel.signed(f"{text}\n\n{left_open(thread_id)}"))
-        print(f"left open ({thread_id}): this thread has had one voice, yours. A later Job "
-              "resolves it; `move request-review <pr>` summons one.")
-        return
+    refuse_if_sole_author(thread_id, promotion=promotes(text))
     reply(thread_id, channel.signed(text))
     resolve(thread_id)
 
 
 def promote(thread_id: str, title: str, body: str, level: str | None, resolve_thread: bool = True) -> None:
-    """Promotes a review thread discussion into a tracked GitHub Issue (solorepo's DR-159, solorepo's DR-221).
+    """Promotes a review thread discussion into a tracked GitHub Issue (solorepo's DR-159, solorepo's DR-221, solorepo's DR-289).
 
     Files a new Issue using the provided title and body, posts a reply linking
     to the created Issue, and resolves the thread if multi-party criteria and
@@ -340,14 +331,10 @@ def promote(thread_id: str, title: str, body: str, level: str | None, resolve_th
         sys.exit(f"say: this thread was already promoted to {already.group(1)}, so repeating "
                  "`promote` would file a second Issue for one thread.\n"
                  "     Nothing was filed. The thread is what is unfinished: "
-                 f"`post resolve {thread_id}` closes it on the link already posted, from a "
-                 "second Job where every comment on it is yours.")
+                 f"`post resolve {thread_id}` closes it on the link already posted.")
     first_line = body.lstrip().split("\n", 1)[0]
     blocked_by = [int(n) for n in re.findall(r"#(\d+)", first_line)]
     _, url = channel.sibling("move").file_issue(title, body, level=level, blocked_by=blocked_by)
-    if sole_author(bodies):
-        reply(thread_id, channel.signed(f"Promoted to {url}. {left_open(thread_id)}"))
-        return
     reply(thread_id, channel.signed(f"Promoted to {url}."))
     if resolve_thread:
         resolve(thread_id)

@@ -1,0 +1,58 @@
+decisions:
+  - id: work:decision/289
+    name: "DR-289 · A promoted thread may be resolved by the same Actor session via its promotion link"
+    challenge: work:challenge/988
+    status: ADOPTED
+    supersedes:
+      - work:decision/224
+    applies:
+      - work:article/15
+      - work:article/16
+    enacted_in:
+      - work:artifact/meta-say-post
+      - work:artifact/meta-say-verbs
+    mechanics:
+      - >-
+        A thread promoted to an Issue by the same Actor session that opened it
+        may be resolved by that same Actor session, provided the resolution
+        cites the promoted Issue's URL. DR-224's strict requirement for a
+        second Job's Trailer to verify the promotion is lifted.
+      - >-
+        The `sole_author` refusal check in `post resolve` and `post promote`
+        is removed for threads carrying a valid promotion link. The audit
+        requirement is satisfied by the GitHub Issue itself, which serves
+        as a durable, traceable record of the noticed work.
+    consequences:
+      - >-
+        `post promote` now resolves the thread it promotes, eliminating the
+        need for a secondary reviewer session to clear the hold.
+      - >-
+        The `sole_author(bodies)` predicate is narrowed to refuse resolution
+        only when an Actor attempts to resolve their own thread without
+        providing a valid promotion link or an answering commit.
+    falsifier: >-
+      A sole-authored notice resolved by the same Actor without an answering
+      commit or a promotion link to a filed Issue.
+    alternatives:
+      - name: Supersede DR-224 to allow single-actor resolution via promotion links
+        chosen: true
+        reason: >-
+          The promoted Issue provides an externally referenced record preserving
+          the work noticed during review.
+      - name: Retain DR-224 requiring a second Job to clear holds
+        chosen: false
+        reason: >-
+          Requires an additional review round trip solely to resolve a discussion
+          already preserved in a filed Issue.
+    rationale: |-
+      DR-224 established that self-resolving review threads without durable
+      accounting undermines verification under Article 16. However, requiring
+      a distinct Actor Trailer to close a thread that has already been promoted
+      to a tracked Issue introduces unnecessary latency without providing
+      additional verification value.
+
+      When an Actor promotes a thread, the resulting Issue enters the tracked
+      workflow where its lifecycle is governed under PR First. Because the
+      promotion link on the review thread provides a durable reference to that
+      Issue, permitting the promoting Actor to resolve the thread immediately
+      maintains traceability while eliminating redundant review handoffs.

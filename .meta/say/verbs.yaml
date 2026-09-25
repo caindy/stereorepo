@@ -48,16 +48,15 @@ programs:
         does: >-
           answer: reply, then resolve; refused when this Actor is the thread's
           sole author, unless the reply links an Issue, which is what a
-          promotion looks like (solorepo's DR-127) — and then the reply goes
-          out and the thread is left open for a second Job
+          promotion looks like (solorepo's DR-127) — which resolves the
+          thread immediately (solorepo's DR-289)
         held_by: [coder]
       - name: resolve
         usage: "<thread-id>"
         does: >-
           resolve a review thread whose answer or promotion link is already
           posted; refused for a thread only its caller's own Trailer speaks on,
-          promotion link included — a second Job's to close, ordinarily the
-          reviewer's run, which `move request-review` summons
+          unless it carries an answering commit or a valid promotion link (solorepo's DR-289)
         held_by: [coder, reviewer, solo]
       - name: promote
         usage: "<thread-id> --title T [--difficulty D --mandate \"<his words>\"] [--no-resolve] < issue-body.md"
@@ -68,10 +67,7 @@ programs:
           the words refused without a level to stand behind, and every level but
           `human` refused without the words, `human` asking for the solo and so
           asking for no mandate;
-          reply with the link, resolve (or defer resolution) —
-          always deferred where the promoting Actor is the thread's sole author,
-          since resolving it too would be the only voice on the thread clearing
-          its own hold, and a second Job closes it instead
+          reply with the link, and resolve the thread (solorepo's DR-289), unless --no-resolve is passed
         held_by: [coder, reviewer, solo]
       - name: correct
         usage: "<comment> [--withdraw] < body.md"

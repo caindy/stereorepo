@@ -688,12 +688,11 @@ disciplines:
           Filing at review time creates a tracker item with no relationship to the outcome, which goes
           stale the moment the approach moves under it.
 
-          A coder's notice has one voice until the reviewer reads it. Where the reviewer finds that it
-          survives approval, that reviewer promotes it to an unlevelled Challenge, links it, and resolves
-          it in the same review pass. The reviewer's pass is the second Job whose distinct Actor Trailer
-          solorepo's DR-224 required to inspect and resolve the notice, so the thread says
-          both that the work survived and that another Actor examined it; no closure-only handoff follows.
-          The coder may still promote a sole-authored notice, but it stays open for a second Job.
+          A coder's notice has one voice until the reviewer reads it. Where a party finds that it
+          survives approval, they promote it to an unlevelled Challenge, link it, and resolve
+          it. Under solorepo's DR-289, the promotion link itself serves as the durable artifact,
+          so the coder may promote and resolve their own sole-authored notice immediately
+          without waiting for a second Job's Actor Trailer to close it.
 
           A point **another party raised** that survives and meets the Incidental Commit bound can be
           paid for here rather than later, and at approval that is the first thing to try: answer it with
