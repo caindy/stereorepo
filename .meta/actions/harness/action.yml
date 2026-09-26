@@ -18,7 +18,7 @@ name: harness
 description: Run one rung of a pass on the harness the door's chain names for it.
 inputs:
   harness:
-    description: The rung's harness, `claude`, `gemini` or `jules`.
+    description: The rung's harness, `claude`, `gemini`, `copilot`, or `jules`.
     required: true
   role:
     description: The Role the session speaks as, `coder` or `reviewer`.
@@ -159,4 +159,15 @@ runs:
         role: ${{ inputs.role }}
         pr: ${{ inputs.number }}
         timeout-minutes: ${{ inputs.minutes }}
+        prompt: ${{ steps.prompt.outputs.text }}
+
+    - name: copilot
+      id: copilot
+      if: inputs.harness == 'copilot'
+      env:
+        SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook-copilot.evidence
+      uses: ./.meta/actions/copilot
+      with:
+        model: ${{ inputs.model }}
+        agent: ${{ inputs.agent }}
         prompt: ${{ steps.prompt.outputs.text }}

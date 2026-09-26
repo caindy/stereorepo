@@ -35,6 +35,9 @@ RUNNERSET_RELEASE = "arc-runner-set"
 RUNNER_NAMESPACE = "arc-runners"
 SECRET_NAME = "arc-github-token"
 GEMINI_SECRET_NAME = "arc-gemini-credentials"
+COPILOT_SECRET_NAME = "arc-copilot-credentials"
+COPILOT_TOKEN_ENV = "COPILOT_GITHUB_TOKEN"
+COPILOT_TOKEN_FILE = pathlib.Path("~/.config/solorepo/copilot.env").expanduser()
 
 
 def find_gemini_dir() -> pathlib.Path | None:
@@ -166,6 +169,45 @@ def apply_gemini_secret() -> None:
     subprocess.run(["kubectl", "apply", "-f", "-"], input=yaml.safe_dump(secret),
                    text=True, check=True)
     print(f"arc: applied {GEMINI_SECRET_NAME} ({len(string_data)} files)", file=sys.stderr)
+
+
+def copilot_token() -> str | None:
+    """Read the Copilot CLI token from the environment or its mode-600 configuration file."""
+    found = os.environ.get(COPILOT_TOKEN_ENV)
+    if found:
+        return found
+    if not COPILOT_TOKEN_FILE.exists():
+        print(f"arc: notice: no {COPILOT_TOKEN_ENV} or {COPILOT_TOKEN_FILE}; "
+              f"skipping {COPILOT_SECRET_NAME}", file=sys.stderr)
+        return None
+    mode = COPILOT_TOKEN_FILE.stat().st_mode
+    if mode & 0o077:
+        sys.exit(f"arc: {COPILOT_TOKEN_FILE} is readable by others (mode {mode & 0o777:o}); "
+                 "refusing to use it. chmod 600 it.")
+    for line in COPILOT_TOKEN_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip().removeprefix("export ").strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == COPILOT_TOKEN_ENV and (value := value.strip().strip("\"'")):
+            return value
+    sys.exit(f"arc: {COPILOT_TOKEN_FILE} has no {COPILOT_TOKEN_ENV}")
+
+
+def apply_copilot_secret() -> None:
+    """Apply the Copilot CLI token as a Secret in the runner namespace."""
+    if not (credential := copilot_token()):
+        return
+    secret = {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "metadata": {"name": COPILOT_SECRET_NAME, "namespace": RUNNER_NAMESPACE},
+        "type": "Opaque",
+        "stringData": {COPILOT_TOKEN_ENV: credential},
+    }
+    subprocess.run(["kubectl", "apply", "-f", "-"], input=yaml.safe_dump(secret),
+                   text=True, check=True)
+    print(f"arc: applied {COPILOT_SECRET_NAME}", file=sys.stderr)
 
 
 def helm_upgrade(release: str, namespace: str, chart: str | pathlib.Path, values: pathlib.Path) -> None:
@@ -387,6 +429,7 @@ def main() -> None:
                  HERE / "values-controller.yaml")
     apply_secret(pat)
     apply_gemini_secret()
+    apply_copilot_secret()
     helm_upgrade(RUNNERSET_RELEASE, RUNNER_NAMESPACE, RUNNERSET_CHART,
                  HERE / "values-runnerset.yaml")
     reset_stale_registration(start_time)

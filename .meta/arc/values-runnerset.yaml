@@ -73,6 +73,13 @@ template:
         volumeMounts:
           - name: gemini-home
             mountPath: /home/runner/.gemini
+        env:
+          - name: COPILOT_GITHUB_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: arc-copilot-credentials
+                key: COPILOT_GITHUB_TOKEN
+                optional: true
         resources:
           requests:
             cpu: "1"

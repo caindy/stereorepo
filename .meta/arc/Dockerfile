@@ -45,7 +45,7 @@ RUN uv python install --install-dir /opt/python 3.13 && \
     ln -sf "$PY_BIN" /usr/local/bin/python && \
     chmod -R a+rx /opt/python
 
-# Install pinned Node.js (22.14.0 LTS) and pinned Gemini CLI (0.59.0)
+# Install pinned Node.js (22.14.0 LTS), Gemini CLI (0.59.0), and Copilot CLI (1.0.86)
 RUN ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
         amd64) NODE_ARCH="x64" ;; \
@@ -54,7 +54,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
     esac && \
     curl -fsSL "https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-${NODE_ARCH}.tar.xz" | \
     tar -xJ -C /usr/local --strip-components=1 && \
-    npm install -g @google/gemini-cli@0.59.0 && \
+    npm install -g @google/gemini-cli@0.59.0 @github/copilot@1.0.86 && \
     chown -R runner:runner /usr/local/lib/node_modules /usr/local/bin
 
 # Install pinned Antigravity CLI (1.2.7)

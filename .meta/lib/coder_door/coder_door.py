@@ -12,9 +12,8 @@ import check_pr
 from lib.move import epics
 from lib.on import common, routing
 
-CODER_HARNESSES = ("gemini", "claude")
-"""The harnesses the coder's door chooses among, in the order asked: Antigravity CLI
-by label or as the fallback (solorepo's DR-245), and Claude Code by default."""
+CODER_HARNESSES = ("gemini", "copilot", "claude")
+"""The harnesses the coder's door chooses among, in the order asked."""
 
 PASSES = ("take", "rebase", "answer", "decompose")
 """The coder's passes (solorepo's DR-133, solorepo's DR-159, solorepo's DR-292),

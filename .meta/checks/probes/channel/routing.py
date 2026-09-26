@@ -41,10 +41,14 @@ DELIBERATE = {("reviewer", "read"): ("level",)}
 """Angle brackets that survive rendering on purpose: the reading form's `<level>` is the verdict
 the session is there to decide, shown in the command it will type."""
 
-OFF: dict[str, str | None] = {"GEMINI_FALLBACK": None, "JULES_FALLBACK": None}
+OFF: dict[str, str | None] = {
+    "GEMINI_FALLBACK": None, "JULES_FALLBACK": None, "COPILOT_FALLBACK": None,
+}
 """No fallback toggled."""
 
-ON: dict[str, str | None] = {"GEMINI_FALLBACK": "true", "JULES_FALLBACK": "true"}
+ON: dict[str, str | None] = {
+    "GEMINI_FALLBACK": "true", "JULES_FALLBACK": "true", "COPILOT_FALLBACK": "true",
+}
 """Every fallback toggled."""
 
 OPEN = "12"
@@ -100,9 +104,10 @@ def _chain_cases(on: Any) -> list[str]:
     routing = on.routing
     cases: tuple[tuple[str, tuple[str, ...], dict[str, str | None], tuple[str, ...]], ...] = (
         ("coder", ("claude", "take", "medium"), OFF, ("claude",)),
-        ("coder", ("claude", "take", "medium"), ON, ("claude", "gemini")),
+        ("coder", ("claude", "take", "medium"), ON, ("claude", "gemini", "copilot")),
         ("coder", ("gemini", "take", "easy"), OFF, ("gemini", "claude")),
-        ("coder", ("gemini", "answer", "medium"), ON, ("gemini", "claude")),
+        ("coder", ("gemini", "answer", "medium"), ON, ("gemini", "claude", "copilot")),
+        ("coder", ("copilot", "take", "easy"), OFF, ("copilot", "claude")),
         ("reviewer", ("claude",), OFF, ("claude",)),
         ("reviewer", ("claude",), ON, ("claude", "gemini", "jules")),
         ("reviewer", ("jules",), ON, ("jules", "claude", "gemini")),
@@ -150,11 +155,13 @@ def _output_cases(on: Any) -> list[str]:
     routing = on.routing
     tiers = routing.coder_chain("claude", "take", "medium", environ=dict(ON))
     named = routing.outputs(tiers)
-    expected = {"tiers": "2", "tier_1_harness": "claude",
+    expected = {"tiers": "3", "tier_1_harness": "claude",
                 "tier_1_model": "claude-opus-5",
                 "tier_1_turns": "120", "tier_1_agent": "anthropics/claude-code-action@v1",
                 "tier_2_harness": "gemini", "tier_2_model": routing.GEMINI_MODEL,
-                "tier_2_minutes": "60", "tier_2_agent": "antigravity-cli"}
+                "tier_2_minutes": "60", "tier_2_agent": "antigravity-cli",
+                "tier_3_harness": "copilot", "tier_3_model": routing.COPILOT_MODEL,
+                "tier_3_agent": "copilot-cli"}
     missing = {key: value for key, value in expected.items() if named.get(key) != value}
     if missing:
         return [f"routing: the outputs {named!r} do not carry {missing!r}"]
@@ -173,7 +180,7 @@ def _form_cases(on: Any) -> list[str]:
             continue
         fields = {name: FIELDS[name] for name in names}
         allowed = DELIBERATE.get((role, task), ())
-        for harness in ("claude", "gemini"):
+        for harness in ("claude", "gemini", "copilot"):
             text = prompts.render(role, task, routing.tier(harness, depth), fields)
             if "<!--" in text:
                 problems.append(f"prompts: a block marker survives in {role}-{task} on {harness}")
@@ -185,7 +192,7 @@ def _form_cases(on: Any) -> list[str]:
                 problems.append(f"prompts: {role}-{task} on {harness} names no number")
             capped = "120 turns and 60 minutes" in text
             clocked = "60 minutes and no turn cap" in text
-            if role == "coder" and (capped, clocked) != (harness == "claude", harness == "gemini"):
+            if role == "coder" and (capped, clocked) != (harness == "claude", harness != "claude"):
                 problems.append(f"prompts: {role}-{task} on {harness} names the caps as "
                                 f"capped={capped} clocked={clocked}")
             if harness == "gemini" and role == "coder" and task == "take" \
@@ -225,7 +232,7 @@ def _trunk_cases(on: Any) -> list[str]:
         emptied = {"TEMPLATES": pathlib.Path(empty), "trunk": _reader}
         for (role, task), names in FIELDS_BY_PASS.items():
             fields = {name: FIELDS[name] for name in names}
-            for harness in ("claude", "gemini"):
+            for harness in ("claude", "gemini", "copilot"):
                 rung = routing.tier(harness, depth)
                 carried = prompts.render(role, task, rung, fields)
                 with stood_in(prompts, **emptied):

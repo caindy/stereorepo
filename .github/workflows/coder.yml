@@ -70,7 +70,7 @@ on:
       harness:
         description: which harness runs
         type: choice
-        options: [claude, gemini]
+        options: [claude, gemini, copilot]
         default: claude
 
 # One run per Issue or per pull request at a time. A second label on the
@@ -131,7 +131,7 @@ jobs:
       || (github.event_name == 'pull_request_review'
         && github.event.review.state == 'changes_requested'
         && github.event.review.user.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
-        && (startsWith(github.event.pull_request.head.ref, 'claude/issue-') || startsWith(github.event.pull_request.head.ref, 'gemini/issue-')))
+        && (startsWith(github.event.pull_request.head.ref, 'claude/issue-') || startsWith(github.event.pull_request.head.ref, 'gemini/issue-') || startsWith(github.event.pull_request.head.ref, 'copilot/issue-')))
       || (github.event_name == 'issues'
         && github.event.action == 'labeled'
         && github.event.issue.state == 'open'
@@ -162,6 +162,8 @@ jobs:
       # Fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle
       # (solorepo's DR-178, solorepo's DR-245); set vars.GEMINI_FALLBACK to 'true' to enable.
       GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
+      # Fall back to Copilot CLI only when the portfolio enables its subscription token.
+      COPILOT_FALLBACK: ${{ vars.COPILOT_FALLBACK || 'false' }}
       # Differentiated thinking depth across harnesses (solorepo's DR-186): Sonnet and Opus
       # always run high extended thinking to prevent regressions and hallucinations.
       MAX_THINKING_TOKENS: "32000"
@@ -250,7 +252,7 @@ jobs:
       # the frozen payload, on the verdict's door as on the label's
       # (solorepo's DR-142), with the sign left on a pull request whose
       # verdict no Job takes; and how deep, by the pass and the level the
-      # Challenge holds now. The door runs again between the two rungs
+      # Challenge holds now. The door runs again between every pair of rungs
       # below, on every pass, and on a take reads the branch once more
       # there; the last phase is the last step.
       - name: before the session
@@ -276,7 +278,7 @@ jobs:
       # the watch reads a step's name and not the log, the annotations or an
       # attempt step's own name, and what showed it, is at `CHAIN` and `RUNG`
       # in `.meta/arc/watch`.
-      - name: chain ${{ steps.before.outputs.tier_1_harness }},${{ steps.before.outputs.tier_2_harness }}
+      - name: chain ${{ steps.before.outputs.tier_1_harness }},${{ steps.before.outputs.tier_2_harness }},${{ steps.before.outputs.tier_3_harness }}
         id: chain
         run: ":"
 
@@ -285,16 +287,15 @@ jobs:
       # in the door's `tier_<n>_*` outputs, so the attempt steps are the
       # same whatever the pass and whatever harness each rung names: the
       # runner holds the one guarded step per harness. Rung 1 runs where
-      # the delivery is the loop's, on a take, a rebase or an answer; rung 2
-      # where the door between them said rung 1 failed and a second rung
-      # exists. `continue-on-error` keeps a failed rung from ending the job
+      # the delivery is the loop's, on a take, a rebase or an answer; every
+      # later rung runs where the door after the preceding rung said it exists.
+      # `continue-on-error` keeps a failed rung from ending the job
       # before the next rung and the door's `after`. Which harness a rung ran
       # is the door's `tier_<n>_harness` output in the run log, not the
       # step's name: a name carrying an expression renders only when the step
       # runs, and a skipped rung would show the template forever. The turn cap
-      # and the minutes are the rung's; the second rung's minutes fall back
-      # to the first's for the expression alone, since a chain of one rung
-      # names no second.
+      # and the minutes are the rung's; later rungs' minutes fall back to the
+      # preceding rung's for expressions where a shorter chain names none.
       - name: attempt 1
         id: attempt_1
         if: steps.before.outputs.by == ''
@@ -382,6 +383,46 @@ jobs:
             --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
           agy-mode: accept-edits
 
+      - name: between rungs 2 and 3
+        id: between_2
+        if: steps.attempt_2.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          if [ -f .meta/coder_door.py ]; then
+            .meta/coder_door.py coder between "$NUMBER" --pass "$PASS" --event "$EVENT" --attempt 2 --outcome "$OUTCOME"
+          else
+            .meta/say/on coder between "$NUMBER" --pass "$PASS" --event "$EVENT" --attempt 2 --outcome "$OUTCOME"
+          fi
+        env:
+          NUMBER: ${{ steps.before.outputs.pass == 'take' && (github.event.issue.number || inputs.issue) || steps.before.outputs.number }}
+          PASS: ${{ steps.before.outputs.pass }}
+          EVENT: ${{ github.event_name }}
+          OUTCOME: ${{ steps.attempt_2.outcome }}
+
+      - name: attempt 3
+        id: attempt_3
+        if: steps.between_2.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_3_minutes || steps.before.outputs.tier_2_minutes || steps.before.outputs.tier_1_minutes) }}
+        env:
+          ACTOR_AGENT: ${{ steps.before.outputs.tier_3_agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.before.outputs.tier_3_agent || steps.before.outputs.agent }}
+        uses: ./.meta/actions/harness
+        with:
+          harness: ${{ steps.before.outputs.tier_3_harness }}
+          role: coder
+          model: ${{ steps.before.outputs.tier_3_model }}
+          effort: ${{ steps.before.outputs.tier_3_effort }}
+          turns: ${{ steps.before.outputs.tier_3_turns }}
+          minutes: ${{ steps.before.outputs.tier_3_minutes }}
+          agent: ${{ steps.before.outputs.tier_3_agent }}
+          claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github-token: ${{ secrets.CODER_GH_TOKEN }}
+          claude-args: |
+            --permission-mode acceptEdits
+            --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Skill,Agent"
+          agy-mode: accept-edits
+
       # The door's second phase, once the pass's rungs have ended, whatever
       # way they ended: `always()` rather than `!cancelled()`, so that a run
       # cancelled at its budget still hands its Challenge back. How each rung
@@ -404,8 +445,8 @@ jobs:
       # Code rung, whichever number it ran as. Only the take pass does anything
       # about a cap; the answer and rebase passes hand back nothing,
       # so a cap that cuts one of them is still read as a pass that succeeded
-      # and is a Challenge of its own. The Antigravity CLI is bounded by the
-      # clock alone.
+      # and is a Challenge of its own. Antigravity and Copilot CLI are bounded
+      # by the clock alone.
       # Rescue unpushed work before container teardown: commit uncommitted
       # modifications in the working tree and push unpushed commits directly
       # to the active PR branch (solorepo's #946).
@@ -447,6 +488,6 @@ jobs:
           NUMBER: ${{ steps.before.outputs.pass == 'take' && (github.event.issue.number || inputs.issue) || steps.before.outputs.number }}
           PASS: ${{ steps.before.outputs.pass }}
           EVENT: ${{ github.event_name }}
-          OUTCOMES: ${{ steps.attempt_1.outcome }},${{ steps.attempt_2.outcome }}
+          OUTCOMES: ${{ steps.attempt_1.outcome }},${{ steps.attempt_2.outcome }},${{ steps.attempt_3.outcome }}
           PREFIX: ${{ steps.before.outputs.branch_prefix }}
-          EXECUTION: ${{ steps.attempt_1.outputs.execution_file || steps.attempt_2.outputs.execution_file }}
+          EXECUTION: ${{ steps.attempt_1.outputs.execution_file || steps.attempt_2.outputs.execution_file || steps.attempt_3.outputs.execution_file }}

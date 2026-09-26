@@ -171,6 +171,10 @@ JULES_ENV_EXPORT = re.compile(r"^\s*JULES_FALLBACK:\s*\${{\s*vars\.JULES_FALLBAC
 reviewer's chain alone (solorepo's DR-246, solorepo's DR-281)."""
 
 
+COPILOT_ENV_EXPORT = re.compile(r"^\s*COPILOT_FALLBACK:\s*\${{\s*vars\.COPILOT_FALLBACK\b", re.M)
+"""The coder workflow exports COPILOT_FALLBACK, which controls Copilot CLI's fallback rung."""
+
+
 HARNESS_ACTION = "./.meta/actions/harness"
 """The harness runner's `uses:` path, as every attempt step names it."""
 
@@ -203,6 +207,11 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
                 f"{path.relative_to(ROOT)}: runs the harness runner but does not export "
                 "`GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK ... }}` in job `env:`"
             )
+        if path.name == "coder.yml" and not COPILOT_ENV_EXPORT.search(text):
+            problems.append(
+                f"{path.relative_to(ROOT)}: runs the coder's Copilot CLI rung but does not export "
+                "`COPILOT_FALLBACK: ${{ vars.COPILOT_FALLBACK ... }}` in job `env:`"
+            )
         if path.name == "review.yml" and not JULES_ENV_EXPORT.search(text):
             problems.append(
                 f"{path.relative_to(ROOT)}: runs the reviewer's three-rung ladder but does not "
@@ -213,7 +222,7 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
     return Passed(f"{checked} fallback workflow{'s' if checked != 1 else ''} export the toggles")
 
 
-LADDERS = {"coder.yml": ("coder", 2), "review.yml": ("reviewer", 3), "triage.yml": ("reviewer", 2)}
+LADDERS = {"coder.yml": ("coder", 3), "review.yml": ("reviewer", 3), "triage.yml": ("reviewer", 2)}
 """Each loop workflow, the job its ladder stands in, and how many rungs the ladder has: as many
 as the longest chain the routing policy resolves for that door (solorepo's DR-281)."""
 

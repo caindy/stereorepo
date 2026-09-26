@@ -69,7 +69,7 @@ CAPPING = ("claude",)
 builds the Antigravity CLI's argument vector with `--print-timeout` alone, so a turn number
 told to any other session binds nothing (solorepo's DR-277)."""
 
-NAMES = {"gemini": "Antigravity CLI", "jules": "Jules session"}
+NAMES = {"gemini": "Antigravity CLI", "jules": "Jules session", "copilot": "Copilot CLI"}
 """What a clocked harness's budget sentence calls the session."""
 
 
