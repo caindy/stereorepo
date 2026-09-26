@@ -47,6 +47,7 @@ from lib.move.manager import eviction, lock, ranking
 __all__ = ["challenges"]
 
 _refusal_notice_body = eviction._refusal_notice_body
+record_draft_recovery = eviction.record_draft_recovery
 
 MERGE_MANAGER_FIELDS = (
     "number,title,headRefName,baseRefName,headRefOid,isDraft,mergeable,"

@@ -10,6 +10,84 @@ ISSUE = 50
 """The Challenge and pull request number in this probe's isolated fixture."""
 
 
+def _recovery_probes(
+    move: Any, draft: dict[str, Any], reading: Any, issue: dict[str, Any]
+) -> list[str]:
+    """Verify autonomous draft recovery and subsequent escalation on failing checks."""
+    failing_check = [{"name": "files", "conclusion": "FAILURE"}]
+    failing_draft = {**draft, "statusCheckRollup": failing_check}
+    marker = move.manager.eviction.DRAFT_RECOVERY_MARKER
+    stall_marker = move.manager.eviction.STALL_ESCALATION_MARKER
+    head_oid = draft["headRefOid"]
+    recovered_draft = {
+        **failing_draft,
+        "comments": [{"body": f"{marker} head:{head_oid} check:files"}],
+    }
+    recovered_observed = {
+        **failing_draft,
+        "comments": [
+            {"body": f"{marker} head:{head_oid} check:files"},
+            {"body": f"{stall_marker} head:{head_oid}"},
+        ],
+    }
+    pending_check = [{"name": "files", "status": "IN_PROGRESS", "conclusion": None}]
+    cancelled_check = [{"name": "files", "conclusion": "CANCELLED"}]
+    non_required = [{"name": "sweep", "conclusion": "FAILURE"}]
+    hard_issue = {**issue, "labels": [{"name": "challenge"}, {"name": "hard"}]}
+
+    problems = []
+    cases: list[tuple[str, dict[str, Any], Any, str | None]] = [
+        ("failing required check dispatches repair", failing_draft, reading, "repair"),
+        ("failing required check already recovered observes stall",
+         recovered_draft, reading, "escalate"),
+        ("failing required check already observed hands to solo",
+         recovered_observed, reading, "escalate"),
+        ("failing required check on plan-only draft",
+         {**failing_draft, "changedFiles": 0}, reading, None),
+        ("failing required check on hard challenge",
+         failing_draft, reading._replace(by_number={ISSUE: hard_issue}), None),
+    ]
+    for name, pull, when, expected in cases:
+        acts = move.manager.eviction.draft_escalations([pull], when)
+        kind = acts[0].kind if acts else None
+        if kind != expected:
+            problems.append(f"draft recovery: {name} owed {kind!r}, not {expected!r}")
+
+    repairs = move.manager.eviction.draft_escalations([failing_draft], reading)
+    if not repairs or repairs[0].title != "files" or marker not in repairs[0].body:
+        problems.append("draft recovery: failing required check did not dispatch tagged repair")
+
+    obs = move.manager.eviction.draft_escalations([recovered_draft], reading)
+    if not obs or obs[0].title != "observe" or "recovery attempt" not in obs[0].body:
+        problems.append("draft recovery: observation lacked recovery context")
+
+    handback = move.manager.eviction.draft_escalations([recovered_observed], reading)
+    if not handback or handback[0].title or "recovery attempt" not in handback[0].body:
+        problems.append("draft recovery: handback lacked recovery context")
+
+    for label, rollup in (
+        ("pending", pending_check),
+        ("cancelled", cancelled_check),
+        ("non-required", non_required),
+    ):
+        if move.manager.eviction.failing_required_check({**draft, "statusCheckRollup": rollup}):
+            problems.append(f"draft recovery: {label} check was identified as failing required")
+
+    cancelled_acts = move.manager.eviction.draft_escalations(
+        [{**draft, "statusCheckRollup": cancelled_check}], reading
+    )
+    if any(a.kind == "repair" for a in cancelled_acts):
+        problems.append("draft recovery: cancelled check dispatched repair")
+
+    sweep_acts = move.manager.eviction.draft_escalations(
+        [{**draft, "statusCheckRollup": non_required}], reading
+    )
+    if any(a.kind == "repair" for a in sweep_acts):
+        problems.append("draft recovery: non-required check dispatched repair")
+
+    return problems
+
+
 @check("draft escalation probes", pre=True)
 def escalation_probes() -> list[str]:
     """Escalate only an inactive autonomous draft that no Actions run answers."""
@@ -71,4 +149,5 @@ def escalation_probes() -> list[str]:
     )
     if conflict and "rebase attempt completed" not in conflict[0].body:
         problems.append(f"draft escalation: conflict diagnostic was {conflict[0].body!r}")
+    problems.extend(_recovery_probes(move, draft, reading, issue))
     return problems

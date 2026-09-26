@@ -48,20 +48,15 @@ class Owed(NamedTuple):
     """One act the reconciler owes: its kind, the number it is owed on, and why.
 
     Attributes:
-        kind: `rebase` or `review`, a coder pass dispatched on a pull request;
-            `request`, a review requested again; `take`, the coder's take pass
-            dispatched for a Challenge; `reread`, the reviewer's door
-            re-delivered; `release`, a dead run's claim released; `file`, the
-            heal Challenge filed for a red trunk; `escalate`, that Challenge
-            handed to the solo; or `hold`, which is reported and never
-            performed, since what it names is the solo's.
-        number: The pull request or Issue the act is owed on, and 0 for `file`,
-            whose Issue does not exist yet.
+        kind: `rebase`, `review`, or `repair` (coder passes), `request` (review
+            requested), `take` (coder take pass), `reread` (reviewer door
+            re-delivered), `release` (claim released), `file` (trunk heal
+            filed), `escalate` (solo hand-off), or `hold` (reported only).
+        number: Pull request or Issue number (0 for `file`).
         why: The reading that owes it, in the words the log gets.
-        lower: The lower layer's number where `kind` is a stack hold, or None.
-        title: The Issue title `file` writes, and empty for every other kind.
-        body: The Markdown `file` and `escalate` write, and empty for every
-            other kind, which writes none.
+        lower: Lower layer's number where `kind` is a stack hold, or None.
+        title: Issue title (`file`), failing check (`repair`), else empty.
+        body: Markdown body (`file`, `escalate`, `repair`), else empty.
     """
 
     kind: str
@@ -381,6 +376,7 @@ def owed_by_issue(issue: Mapping[str, Any], found: Any, quiet: Quiet) -> Owed | 
 
 PERFORMED = {"rebase": ("dispatch a rebase pass for", "dispatched a rebase pass for"),
              "review": ("dispatch a review pass for", "dispatched a review pass for"),
+             "repair": ("dispatch a coder repair pass for", "dispatched a coder repair pass for"),
              "request": ("request review of", "requested review of"),
              "take": ("dispatch the take pass for", "dispatched the take pass for"),
              "reread": ("re-deliver to the reviewer", "re-delivered to the reviewer"),
@@ -443,6 +439,9 @@ def _make(act: Owed) -> None:
         if act.why.startswith("approved"):
             manager.eviction.demote_to_draft({"number": act.number}, action="demote",
                                              reason="failing checks")
+        advance.run_coder(act.number, "review")
+    elif act.kind == "repair":
+        manager.eviction.record_draft_recovery(act.number, act.body)
         advance.run_coder(act.number, "review")
     elif act.kind == "request":
         handoff.request_review(act.number, "reviewer")

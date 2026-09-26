@@ -807,3 +807,19 @@ facade to ~58 lines and requiring callers and test probes to qualify symbols by
 submodule.
 
 Evidence: `.meta/checks/probes/loops/open_pull_request.py::open_pull_request_probes`
+
+### Autonomous draft pull requests with failing required checks stalled indefinitely
+
+Autonomous draft pull requests closing `easy` or `medium` Challenges that
+encountered substantive failures on required status checks were classified
+as idle drafts with "nothing owed", stalling indefinitely without notifying
+the coder loop or escalating (solorepo's #1080). Established: `reconcile`
+and `draft_escalations` inspect open draft pull requests for failing required
+checks, dispatching exactly one dedicated coder repair pass keyed to the head
+commit SHA and check name via `advance.run_coder(pr, "review")` and recording an
+in-place recovery notice. If repair fails, leaves the head unchanged, or the
+check remains red on subsequent reconciliations, execution falls through to the
+standing draft-escalation path to hand the Challenge back to the solo.
+
+Evidence: `.meta/checks/probes/loops/escalation.py::escalation_probes`
+

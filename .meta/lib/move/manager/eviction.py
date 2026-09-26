@@ -23,6 +23,17 @@ evicted to draft (solorepo's DR-258)."""
 STALL_ESCALATION_MARKER = "<!-- solorepo:draft-escalation -->"
 """Marker on the first durable observation of an autonomous draft stall."""
 
+DRAFT_RECOVERY_MARKER = "<!-- solorepo:draft-recovery -->"
+"""Marker on a dedicated coder repair dispatch for a failed required check on an
+autonomous draft."""
+
+REQUIRED_CHECKS = frozenset({"files", "pull request", "rust seed", "python seed", "gate"})
+"""Check names considered required status checks on main."""
+
+SUBSTANTIVE_FAILURES = frozenset({"FAILURE", "TIMED_OUT", "START_FAILURE", "ACTION_REQUIRED"})
+"""Check run conclusions representing substantive failures eligible for automated recovery."""
+
+
 
 def idle_minutes(obj: Mapping[str, Any], now: datetime.datetime,
                  field: str = "updatedAt") -> float:
@@ -152,21 +163,114 @@ def evict_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str = "review
     return demote_to_draft(pull, action="evict", reason="stalled autonomous", dry_run=dry_run)
 
 
-def draft_escalations(pulls: Sequence[common.Pull], reading: Any) -> list[Any]:
-    """Return escalations owed on autonomous implementation drafts that remain stalled.
+def failing_required_check(
+    pull: common.Pull,
+    required_checks: frozenset[str] = REQUIRED_CHECKS,
+) -> str | None:
+    """Returns the name of a completed required status check with a substantive failure, or None.
 
-    The first qualified reconciliation writes an in-place observation tagged
-    with the current head. A later reconciliation can hand the Challenge back
-    only when that observation still names the unchanged draft, no GitHub
-    Actions run answers it, and every other guard still holds. A conflict also
-    needs the rebase run dispatched by the first phase to have completed.
+    Excludes pull requests with unconcluded (pending) checks, passed checks,
+    skipped checks, and cancelled checks.
 
     Parameters:
-        pulls (Sequence[Pull]): The open pull requests in one reconciliation.
-        reading (Reading): The reconciliation's cached Issues, times, and runs.
+        pull: Pull request metadata mapping carrying statusCheckRollup.
+        required_checks: Frozenset of check names considered required.
 
     Returns:
-        list[Owed]: The Challenge hand-backs owed by qualifying drafts.
+        The name of the first failing required check, or None if no completed
+        required check has a substantive failure.
+    """
+    checks = ranking.deduplicate_checks(pull.get("statusCheckRollup") or [])
+    _, _, any_unconcluded = check_pr.state.checks_summary(checks)
+    if any_unconcluded:
+        return None
+    for c in sorted(checks, key=lambda x: str(x.get("name") or x.get("context") or "")):
+        name = str(c.get("name") or c.get("context") or "")
+        if name not in required_checks and c.get("workflowName") != "gate":
+            continue
+        if name == "sweep":
+            continue
+        conclusion = str(c.get("conclusion") or c.get("state") or c.get("status") or "").upper()
+        if conclusion in check_pr.state.UNCONCLUDED:
+            continue
+        if conclusion in check_pr.state.GREEN:
+            continue
+        if conclusion == "CANCELLED":
+            continue
+        if conclusion in SUBSTANTIVE_FAILURES or conclusion == "FAILURE":
+            return name
+    return None
+
+
+def find_draft_recovery_record(pull: common.Pull, head_oid: str, check_name: str) -> bool:
+    """Returns True if a recovery record exists on the pull request for the head SHA and check.
+
+    Parameters:
+        pull: Pull request metadata mapping carrying comments.
+        head_oid: Git commit SHA of the draft pull request head.
+        check_name: Name of the failing required check.
+
+    Returns:
+        True if an existing comment contains the draft recovery marker keyed to
+        the head SHA and check name; False otherwise.
+    """
+    tag = f"head:{head_oid} check:{check_name}"
+    for comment in pull.get("comments") or []:
+        body = str(comment.get("body") or "")
+        if DRAFT_RECOVERY_MARKER in body and tag in body:
+            return True
+    return False
+
+
+def draft_recovery_body(pull_num: int, head_oid: str, check_name: str) -> str:
+    """Generates the recovery dispatch notice body.
+
+    Parameters:
+        pull_num: Number of the draft pull request.
+        head_oid: Git commit SHA of the draft pull request head.
+        check_name: Name of the failing required status check.
+
+    Returns:
+        Markdown body for the recovery notice comment.
+    """
+    return (
+        f"{DRAFT_RECOVERY_MARKER} head:{head_oid} check:{check_name}\n\n"
+        f"> Draft recovery: `{check_name}` failed on `{head_oid[:7]}`\n\n"
+        f"Automated recovery dispatched one coder repair pass for failed required "
+        f"check `{check_name}`."
+    )
+
+
+def record_draft_recovery(pull: int, body: str) -> None:
+    """Records the recovery dispatch notice on the draft pull request.
+
+    Parameters:
+        pull: Pull request number.
+        body: Attributed recovery notice comment body.
+    """
+    advance.reconcile_notice(pull, DRAFT_RECOVERY_MARKER, channel.signed(body), body,
+                             label="draft recovery dispatch")
+
+
+def draft_escalations(pulls: Sequence[common.Pull], reading: Any) -> list[Any]:
+    """Return escalations or repairs owed on autonomous implementation drafts.
+
+    When an autonomous draft closing an easy or medium Challenge encounters a
+    substantive failure on a completed required status check, dispatches one
+    dedicated coder repair pass keyed to the head commit SHA and check name.
+    If the repair fails, leaves the head unchanged, or the check remains red
+    on subsequent reconciliations, falls back to the standing draft-escalation
+    path. The first qualified reconciliation writes an in-place observation
+    tagged with the current head. A later reconciliation hands the Challenge
+    back to the solo when that observation still names the unchanged draft, no
+    GitHub Actions run answers it, and every other guard still holds.
+
+    Parameters:
+        pulls: The open pull requests in one reconciliation pass.
+        reading: The reconciliation's cached Issues, times, and runs.
+
+    Returns:
+        List of acts owed by qualifying autonomous drafts.
     """
     from lib.move import reconcile
 
@@ -184,19 +288,35 @@ def draft_escalations(pulls: Sequence[common.Pull], reading: Any) -> list[Any]:
         if idle < reading.bound or in_flight(reading.action_runs, branch=head):
             continue
         number = int(pull["number"])
+        head_oid = str(pull.get("headRefOid") or "")
+        failing_check = failing_required_check(pull)
+        if failing_check and not find_draft_recovery_record(pull, head_oid, failing_check):
+            body = draft_recovery_body(number, head_oid, failing_check)
+            owed.append(reconcile.Owed(
+                "repair", number,
+                f"failed required check '{failing_check}' on autonomous draft",
+                title=failing_check, body=body,
+            ))
+            continue
         conflicting = str(pull.get("mergeable") or "").upper() == "CONFLICTING"
         rebase_finished = any(
             run.get("status") == "completed"
             and str(run.get("displayTitle") or "") == f"coder-issue-#{number}"
             for run in reading.coder_runs.recent or []
         )
-        if conflicting and (not reading.coder_runs.listed or not rebase_finished):
+        rebase_pending = conflicting and (not reading.coder_runs.listed or not rebase_finished)
+        if not failing_check and rebase_pending:
             continue
         diagnosis = (
             f"Autonomous pull request #{number} on `{head}` remains a draft after "
             f"{int(idle)} inactive minutes with no queued or in-progress GitHub Actions run."
         )
-        if conflicting:
+        if failing_check:
+            diagnosis += (
+                f" A dispatched recovery attempt for failed required check '{failing_check}' "
+                f"left the check red on head {head_oid}."
+            )
+        elif conflicting:
             diagnosis += (" A dispatched rebase attempt completed, but GitHub still reports the "
                           "pull request conflicting.")
         else:
@@ -264,6 +384,10 @@ def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: boo
                 advance.reconcile_notice(
                     pull["number"], ranking.MERGE_REFUSAL_MARKER, None, None,
                     label="merge refusal",
+                )
+                advance.reconcile_notice(
+                    pull["number"], DRAFT_RECOVERY_MARKER, None, None,
+                    label="draft recovery",
                 )
                 print(f"merge-manager: marked approved and green PR #{pull['number']} "
                       "ready to merge")
