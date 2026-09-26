@@ -49,6 +49,10 @@ inputs:
     description: The pull request, which Jules reviews by number.
     required: false
     default: ""
+  issue-number:
+    description: The Challenge, which Jules reads by number.
+    required: false
+    default: ""
   claude-oauth-token:
     description: Claude Code's credential.
     required: false
@@ -158,6 +162,7 @@ runs:
       with:
         role: ${{ inputs.role }}
         pr: ${{ inputs.number }}
+        issue: ${{ inputs.issue-number }}
         timeout-minutes: ${{ inputs.minutes }}
         prompt: ${{ steps.prompt.outputs.text }}
 

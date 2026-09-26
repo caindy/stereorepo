@@ -52,7 +52,7 @@ CODER_FALLBACKS = ("claude", "agy", "copilot")
 REVIEW_FALLBACKS = ("claude", "agy", "jules")
 """The reviewer's harnesses in the order a fallback is tried, after whichever is primary."""
 
-READING_FALLBACKS = ("claude", "agy")
+READING_FALLBACKS = ("claude", "agy", "jules")
 """The reading door's harnesses in the order a fallback is tried, after whichever is primary."""
 
 

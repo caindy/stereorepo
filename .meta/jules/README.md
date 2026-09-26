@@ -1,12 +1,12 @@
-# Google Labs Jules Autonomous Reviewer Harness
+# Google Labs Jules Reviewer Harness
 
-Integration and driver tooling for the Google AI Ultra **Jules API** as an autonomous reviewer fallback harness (Challenge [#681](https://github.com/caindy/solorepo/issues/681), solorepo's DR-246).
+Integration and driver tooling for the Google AI Ultra **Jules API** as a reviewer fallback harness (Challenge [#681](https://github.com/caindy/solorepo/issues/681), solorepo's DR-246).
 
 ---
 
 ## 1. Architectural Overview
 
-| Dimension | Self-Hosted ARC Runner (`review.yml`) | Google Labs Jules (`.meta/actions/jules`) |
+| Dimension | Self-Hosted ARC Runner (`review.yml`, `triage.yml`) | Google Labs Jules (`.meta/actions/jules`) |
 |---|---|---|
 | **Execution Host** | Local Kubernetes cluster (`kind` / WSL2 / Desktop) | Google Cloud sandboxed session (`jules.googleapis.com`) |
 | **Compute Cost** | Workstation CPU/RAM; zero GitHub-hosted minutes | Zero local compute; cloud evaluation |
@@ -34,11 +34,11 @@ The Jules REST API operates under base URL `https://jules.googleapis.com/v1alpha
 
 ## 3. Prerequisite Setup
 
-To enable Jules fallback execution:
+To enable Jules fallback execution for pull request review and Challenge triage:
 
 1. Generate a Jules API key at [jules.google.com/settings](https://jules.google.com/settings).
 2. Set the `JULES_API_KEY` repository secret for GitHub Actions runs, or record it in `~/.config/solorepo/jules.env` for local workstation testing.
-3. Enable the opt-in repository variable `vars.JULES_FALLBACK = true` to activate Jules fallback when Claude Code and Antigravity reviewer passes fail.
+3. Enable the opt-in repository variable `vars.JULES_FALLBACK = true`. Pull request review tries Jules after Claude Code and Antigravity. Challenge triage tries Jules after Claude Code and before Antigravity.
 
 ---
 
@@ -65,8 +65,9 @@ Repoless mode resolves friction with repository rules by keeping mutation and ch
 The module **[`client.py`](client.py)** provides the CLI interface and library for Jules interactions:
 
 ### Workflow Subcommands
-- **`dispatch`**: Entry point invoked by [`.meta/actions/jules/action.yml`](../actions/jules/action.yml). Accepts `--role reviewer`, `--pr <number>`, `--prompt <text>`, and `--timeout-minutes <int>`.
+- **`dispatch`**: Entry point invoked by [`.meta/actions/jules/action.yml`](../actions/jules/action.yml). Accepts `--role reviewer`, exactly one of `--pr <number>` or `--issue <number>`, `--prompt <text>`, and `--timeout-minutes <int>`.
 - **`review-pr`**: Executes repoless PR review. Gathers diff and thread context, runs CI and form status queries, creates a Jules cloud session, extracts anchored line findings, and posts signed review verdicts via `.meta/say/post --role reviewer`.
+- **Challenge triage**: Reads the Issue and open work prepared under `.review/`, supplies bounded tracked-file evidence to a repoless Jules session, waits for its [completion activity](https://developers.google.com/jules/api/reference/rest/v1alpha/sessions.activities), validates four verdict paragraphs and one level, then posts through `.meta/say/move --role reviewer triage`. Jules cannot inspect files outside the supplied context; uncertain readings must return `human`.
 
 ### Inspection Subcommands
 - **`sources`**: Lists connected repository sources:

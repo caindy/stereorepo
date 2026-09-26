@@ -11,7 +11,6 @@ import contextlib
 import json
 import os
 import pathlib
-import re
 import subprocess
 import sys
 import time
@@ -20,6 +19,14 @@ import urllib.parse
 import urllib.request
 from collections.abc import Mapping
 from typing import Any
+
+import triage as issue_triage
+from review_support import (
+    check_pr_ci_status,
+    determine_verdict,
+    extract_findings,
+    post_review_and_findings,
+)
 
 EMPTY_REVIEW = "Jules session {session} returned an empty review response; aborting verdict."
 """What a review raises where the session produced no agent text to read a verdict from."""
@@ -199,83 +206,6 @@ def extract_agent_text(activities: list[dict[str, Any]]) -> str:
     return "\n\n".join(messages).strip()
 
 
-FINDING_PATTERN = re.compile(
-    r"FINDING:\s*([^\s:\n]+):(\d+)\s*\n(.*?)\nEND_FINDING",
-    re.DOTALL,
-)
-
-
-def extract_findings(text: str) -> list[tuple[str, int, str]]:
-    """Extract anchored file/line findings from Jules review text."""
-    findings = []
-    for match in FINDING_PATTERN.finditer(text):
-        path_str, line_str, body = match.groups()
-        try:
-            line_no = int(line_str)
-            findings.append((path_str.strip(), line_no, body.strip()))
-        except ValueError:
-            continue
-    return findings
-
-
-def check_pr_ci_status(pr_number: str) -> tuple[bool, str]:
-    """Check whether any completed GitHub CI check on the pull request has failed."""
-    cmd = ["gh", "pr", "checks", pr_number, "--json", "name,state,bucket"]
-    res = subprocess.run(cmd, check=False, capture_output=True, text=True)
-    if res.returncode != 0:
-        return False, "Checks pending or status query unavailable."
-    try:
-        checks = json.loads(res.stdout)
-        if not isinstance(checks, list):
-            return False, res.stdout.strip()
-        failed_checks = []
-        for c in checks:
-            if not isinstance(c, dict):
-                continue
-            name = str(c.get("name", "unknown"))
-            state = str(c.get("state", "")).upper()
-            bucket = str(c.get("bucket", "")).lower()
-            if bucket == "fail" or state in ("FAILURE", "FAILED", "ERROR"):
-                failed_checks.append(f"{name} ({state})")
-        if failed_checks:
-            return True, f"Failed CI checks: {', '.join(failed_checks)}"
-        return False, "All completed CI checks passed."
-    except json.JSONDecodeError as e:
-        return False, f"Could not parse checks JSON: {e}"
-
-
-def determine_verdict(
-    form_passed: bool,
-    has_failed_ci: bool,
-    unresolved_count: int,
-    findings_count: int,
-    review_body: str,
-) -> str:
-    """Determine the review verdict flag based on gate checks, CI state, and model recommendation."""
-    if not form_passed or has_failed_ci or unresolved_count > 0 or findings_count > 0:
-        return "--request-changes"
-    if "RECOMMENDED_VERDICT: REQUEST_CHANGES" in review_body or "RECOMMENDED_VERDICT: REQUEST CHANGES" in review_body:
-        return "--request-changes"
-    if "RECOMMENDED_VERDICT: APPROVE" in review_body:
-        return "--approve"
-    return "--comment"
-
-
-def post_review_and_findings(
-    clean_pr: str,
-    verdict: str,
-    review_body: str,
-    findings: list[tuple[str, int, str]],
-) -> None:
-    """Post anchored line findings and the overall review verdict to GitHub via .meta/say/post."""
-    for path_str, line_no, finding_body in findings:
-        raise_cmd = [".meta/say/post", "--role", "reviewer", "raise", clean_pr, path_str, str(line_no)]
-        subprocess.run(raise_cmd, input=finding_body + "\n", text=True, check=True)
-
-    post_cmd = [".meta/say/post", "--role", "reviewer", "review", clean_pr, verdict]
-    subprocess.run(post_cmd, input=review_body + "\n", text=True, check=True)
-
-
 def review_pr(
     pr_number: int | str,
     api_key: str,
@@ -404,19 +334,20 @@ def dispatch_action(
             f"jules: unsupported role '{role}'; Google Labs Jules is configured exclusively "
             "as an autonomous reviewer fallback harness (solorepo's DR-246)."
         )
-    pr = kwargs.get("pr")
-    if not pr:
-        sys.exit("jules: --pr is required when role is reviewer")
+    pr, issue = kwargs.get("pr"), kwargs.get("issue")
+    if bool(pr) == bool(issue):
+        sys.exit("jules: dispatch requires exactly one of --pr or --issue")
     timeout_minutes = int(kwargs.get("timeout_minutes") or 15)
     timeout_seconds = timeout_minutes * 60
     caller_prompt = str(kwargs.get("prompt") or "")
-    review_pr(
-        pr,
-        api_key=api_key,
-        caller_prompt=caller_prompt,
-        timeout_seconds=timeout_seconds,
-        dry_run=dry_run,
-    )
+    if issue:
+        issue_triage.read_issue(
+            str(issue), api_key, issue_triage.Options(caller_prompt, timeout_seconds, dry_run),
+            issue_triage.Api(create_session, list_activities),
+        )
+    else:
+        review_pr(str(pr), api_key=api_key, caller_prompt=caller_prompt,
+                  timeout_seconds=timeout_seconds, dry_run=dry_run)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -462,6 +393,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_disp = sub.add_parser("dispatch", parents=[common], help="Dispatch role execution from composite action")
     p_disp.add_argument("--role", default="reviewer", choices=["reviewer"], help="Role to execute (reviewer only; solorepo's DR-246)")
     p_disp.add_argument("--pr", help="Pull request number")
+    p_disp.add_argument("--issue", help="Challenge number")
     p_disp.add_argument("--prompt", help="Direct prompt instructions")
     p_disp.add_argument("--timeout-minutes", type=int, default=15, help="Timeout in minutes")
 
@@ -549,6 +481,7 @@ def main() -> None:
             api_key=api_key,
             kwargs={
                 "pr": args.pr,
+                "issue": args.issue,
                 "prompt": args.prompt,
                 "timeout_minutes": args.timeout_minutes,
             },

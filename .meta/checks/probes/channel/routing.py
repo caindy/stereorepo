@@ -57,6 +57,9 @@ OPEN = "12"
 JULES_LINE = f"Review pull request #{FIELDS['number']}"
 """The one line the review form is on Jules."""
 
+JULES_READ_LINE = f"Read Challenge #{FIELDS['number']}"
+"""The one line the Challenge reading form is on Jules."""
+
 
 @check("routing probes", pre=True)
 def routing_probes() -> list[str]:
@@ -114,7 +117,9 @@ def _chain_cases(on: Any) -> list[str]:
         ("reviewer", ("agy",), {"GEMINI_FALLBACK": None, "JULES_FALLBACK": "true"},
          ("agy", "claude", "jules")),
         ("reading", ("claude",), OFF, ("claude",)),
-        ("reading", ("agy",), ON, ("agy", "claude")),
+        ("reading", ("claude",), ON, ("claude", "agy", "jules")),
+        ("reading", ("agy",), ON, ("agy", "claude", "jules")),
+        ("reading", ("jules",), ON, ("jules", "claude", "agy")),
     )
     for role, asked, toggles, expected in cases:
         environ = {name: value for name, value in toggles.items() if value is not None}
@@ -202,9 +207,20 @@ def _form_cases(on: Any) -> list[str]:
             if harness == "claude" and "invoke_subagent" in text:
                 problems.append(f"prompts: the Antigravity block survives in {role}-{task} on "
                                 "claude")
-    jules = routing.tier("jules", depth)
+    return problems + _jules_form_cases(on, depth)
+
+
+def _jules_form_cases(on: Any, depth: Any) -> list[str]:
+    """Verify Jules's two short forms and clock-only budget sentence."""
+    prompts = on.prompts
+    jules = on.routing.tier("jules", depth)
+    problems = []
     if prompts.render("reviewer", "review", jules, FIELDS).strip() != JULES_LINE:
         problems.append("prompts: the review form on Jules did not render as its one line")
+    read_prompt = prompts.render("reviewer", "read", jules, FIELDS).strip()
+    if read_prompt != JULES_READ_LINE:
+        problems.append("prompts: the Challenge reading form on Jules did not render "
+                        "as its one line")
     if "turns" in prompts.budget(jules) or "Jules" not in prompts.budget(jules):
         problems.append(f"prompts: the budget sentence on Jules is {prompts.budget(jules)!r}, "
                         "where a harness binding no turn cap is told none")
@@ -244,6 +260,11 @@ def _trunk_cases(on: Any) -> list[str]:
             jules = prompts.render("reviewer", "review", routing.tier("jules", depth), FIELDS)
             if jules.strip() != JULES_LINE:
                 problems.append("prompts: the review form on Jules read from trunk is not its "
+                                "one line, so the harness's own form is not tried there first")
+            jules_read = prompts.render("reviewer", "read", routing.tier("jules", depth),
+                                        FIELDS)
+            if jules_read.strip() != JULES_READ_LINE:
+                problems.append("prompts: the reading form on Jules read from trunk is not its "
                                 "one line, so the harness's own form is not tried there first")
             try:
                 prompts.render("coder", "invented", routing.tier("claude", depth), FIELDS)

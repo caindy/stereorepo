@@ -789,6 +789,12 @@ artifacts:
   - id: work:artifact/meta-jules-client
     name: .meta/jules/client.py
     path: .meta/jules/client.py
+  - id: work:artifact/meta-jules-triage
+    name: .meta/jules/triage.py
+    path: .meta/jules/triage.py
+  - id: work:artifact/meta-jules-review-support
+    name: .meta/jules/review_support.py
+    path: .meta/jules/review_support.py
   - id: work:artifact/meta-jules-readme
     name: .meta/jules/README.md
     path: .meta/jules/README.md
@@ -891,6 +897,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-copilot
     name: .meta/checks/probes/tools/copilot.py
     path: .meta/checks/probes/tools/copilot.py
+  - id: work:artifact/meta-checks-probes-tools-jules
+    name: .meta/checks/probes/tools/jules.py
+    path: .meta/checks/probes/tools/jules.py
   - id: work:artifact/meta-lib-timing
     name: .meta/lib/timing/__init__.py
     path: .meta/lib/timing/__init__.py

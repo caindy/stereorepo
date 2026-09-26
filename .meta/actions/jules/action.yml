@@ -14,6 +14,10 @@ inputs:
     description: Pull request number to review.
     required: false
     default: ""
+  issue:
+    description: Challenge number to read.
+    required: false
+    default: ""
   prompt:
     description: Prompt instructions for the session.
     required: false
@@ -30,11 +34,13 @@ runs:
       env:
         ROLE: ${{ inputs.role }}
         PR: ${{ inputs.pr }}
+        ISSUE: ${{ inputs.issue }}
         PROMPT: ${{ inputs.prompt }}
         TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
       run: |
         python3 .meta/jules/client.py dispatch \
           --role "$ROLE" \
           ${PR:+--pr "$PR"} \
+          ${ISSUE:+--issue "$ISSUE"} \
           ${TIMEOUT_MINUTES:+--timeout-minutes "$TIMEOUT_MINUTES"} \
           ${PROMPT:+--prompt "$PROMPT"}

@@ -31,7 +31,7 @@
 .meta/checks/probes/tools/fallback.py: 277
 .meta/depth.py: 132
 .meta/detect_fallback.py: 23
-.meta/jules/client.py: 60
+.meta/jules/client.py: 0
 .meta/lib/move/advance.py: 521
 .meta/lib/move/challenges.py: 865
 .meta/lib/move/manager/ranking.py: 220

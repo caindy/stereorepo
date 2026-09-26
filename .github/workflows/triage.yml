@@ -66,7 +66,7 @@ jobs:
               && (github.event.label.name == 'easy' || github.event.label.name == 'medium'
                   || github.event.label.name == 'hard' || github.event.label.name == 'human')))
     runs-on: arc-runner-set
-    timeout-minutes: 25
+    timeout-minutes: 70
     env:
       # The Trailer's two halves (solorepo's DR-086): the run id is a workload
       # identity GitHub attests for this run and no other.
@@ -75,6 +75,7 @@ jobs:
       # Fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle
       # (solorepo's DR-178, solorepo's DR-245); set vars.GEMINI_FALLBACK to 'true' to enable.
       GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
+      JULES_FALLBACK: ${{ vars.JULES_FALLBACK || 'false' }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -123,16 +124,16 @@ jobs:
       # the watch reads a step's name and not the log, the annotations or an
       # attempt step's own name, and what showed it, is at `CHAIN` and `RUNG`
       # in `.meta/arc/watch`.
-      - name: chain ${{ steps.before.outputs.tier_1_harness }},${{ steps.before.outputs.tier_2_harness }}
+      - name: chain ${{ steps.before.outputs.tier_1_harness }},${{ steps.before.outputs.tier_2_harness }},${{ steps.before.outputs.tier_3_harness }}
         id: chain
         run: ":"
 
 
-      # The ladder (solorepo's DR-281): two rungs, each the same attempt step
+      # The ladder (solorepo's DR-281): three rungs, each the same attempt step
       # on the harness runner, reading its harness and its caps off the
       # door's `tier_<n>_*` outputs by number. Rung 1 runs where the door
-      # found the Challenge still unread; rung 2 where the door between them
-      # said rung 1 failed and a second rung exists.
+      # found the Challenge still unread; later rungs run where the preceding
+      # attempt failed and the door resolved another rung.
       - name: attempt 1
         id: attempt_1
         if: steps.before.outputs.read == 'true'
@@ -152,8 +153,10 @@ jobs:
           turns: ${{ steps.before.outputs.tier_1_turns }}
           minutes: ${{ steps.before.outputs.tier_1_minutes }}
           agent: ${{ steps.before.outputs.tier_1_agent }}
+          issue-number: ${{ github.event.issue.number }}
           claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github-token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          jules-api-key: ${{ secrets.JULES_API_KEY }}
           # The bound on reading, the same hook the review workflow registers
           # (solorepo's DR-110): a `Read`, `Grep` or `Glob` resolves inside the
           # worktree and outside `.git/`, a `git` command carries no option
@@ -206,8 +209,10 @@ jobs:
           turns: ${{ steps.before.outputs.tier_2_turns }}
           minutes: ${{ steps.before.outputs.tier_2_minutes }}
           agent: ${{ steps.before.outputs.tier_2_agent }}
+          issue-number: ${{ github.event.issue.number }}
           claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github-token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          jules-api-key: ${{ secrets.JULES_API_KEY }}
           # The bound on reading, the same hook the review workflow registers
           # (solorepo's DR-110): a `Read`, `Grep` or `Glob` resolves inside the
           # worktree and outside `.git/`, a `git` command carries no option
@@ -216,6 +221,44 @@ jobs:
           # git's readers, and three `gh pr` readers. No `gh issue` is among
           # them, which is why the door writes what the session needs under
           # `.review/`; the allow-list below names nothing the hook would refuse.
+          claude-settings: |
+            {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
+              "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}
+          claude-args: |
+            --allowedTools "Skill,Read(./**),Grep,Glob,Bash(.meta/say/move:*),Bash(.meta/say/post:*),Bash(.meta/say/whoami:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --disallowedTools "Read(./.git/**)"
+
+      - name: between rungs 2 and 3
+        id: between_2
+        if: steps.attempt_2.outcome != 'skipped'
+        continue-on-error: true
+        run: >-
+          .meta/say/on --role reviewer reviewer between "$ISSUE" --attempt 2 --outcome "$OUTCOME" --transcript "$EXECUTION"
+        env:
+          OUTCOME: ${{ steps.attempt_2.outcome }}
+          EXECUTION: ${{ steps.attempt_2.outputs.execution_file }}
+
+      - name: attempt 3
+        id: attempt_3
+        if: steps.between_2.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_3_minutes || steps.before.outputs.tier_1_minutes) }}
+        env:
+          ACTOR_AGENT: ${{ steps.before.outputs.tier_3_agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.before.outputs.tier_3_agent || steps.before.outputs.agent }}
+        uses: ./.meta/actions/harness
+        with:
+          harness: ${{ steps.before.outputs.tier_3_harness }}
+          role: reviewer
+          model: ${{ steps.before.outputs.tier_3_model }}
+          effort: ${{ steps.before.outputs.tier_3_effort }}
+          turns: ${{ steps.before.outputs.tier_3_turns }}
+          minutes: ${{ steps.before.outputs.tier_3_minutes }}
+          agent: ${{ steps.before.outputs.tier_3_agent }}
+          issue-number: ${{ github.event.issue.number }}
+          claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github-token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          jules-api-key: ${{ secrets.JULES_API_KEY }}
           claude-settings: |
             {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
               "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}

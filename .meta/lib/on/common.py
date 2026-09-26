@@ -28,7 +28,7 @@ CONSTRAINTS = pathlib.Path(__file__).resolve().parents[2] / "templates" / "const
 HARNESSES = routing.AGENTS
 """Each harness a door can choose, and the Agent the Trailer names it by."""
 
-READING_HARNESSES = ("agy", "claude")
+READING_HARNESSES = ("agy", "jules", "claude")
 """The harnesses the reading door chooses among, by a `harness:` label, in the order asked."""
 
 REVIEW_HARNESSES = ("agy", "jules", "claude")

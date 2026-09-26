@@ -200,6 +200,9 @@ def _before_cases(channel: Any, on: Any) -> list[str]:
     ended, out, _, _ = _before(channel, on, _GitHub(_issue(["challenge", "harness:agy"])))
     if "harness=agy" not in out or "agent=antigravity-cli" not in out:
         problems.append(f"before: a Challenge labelled for Antigravity decided {out!r}")
+    ended, out, _, _ = _before(channel, on, _GitHub(_issue(["challenge", "harness:jules"])))
+    if "harness=jules" not in out or "agent=google-labs-jules" not in out:
+        problems.append(f"before: a Challenge labelled for Jules decided {out!r}")
 
     for name, fake in (("at a level", _GitHub(_issue(["challenge", "medium"]))),
                        ("closed", _GitHub(_issue(["challenge"], state="CLOSED")))):
