@@ -85,7 +85,7 @@ def reconcile_root(root_dir: pathlib.Path = ROOT) -> list[str]:
 
 
 def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROOT) -> list[str]:
-    """Projects single-source APM cognitive assets to multi-harness target directories (solorepo's DR-172, solorepo's DR-201, solorepo's #430).
+    """Projects single-source APM cognitive assets to multi-harness target directories (solorepo's DR-172, solorepo's DR-201, solorepo's #430, solorepo's #1075).
 
     When Microsoft APM CLI is present, invokes `apm install ./.meta --target antigravity,codex`
     to deploy skills, agents, and hooks into `.agents/` and `.codex/`.
@@ -112,11 +112,7 @@ def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = 
             if not item.is_dir():
                 continue
             dest_skill_dir = dest_skills / item.name
-            dest_skill_dir.mkdir(parents=True, exist_ok=True)
-            for skill_file in item.iterdir():
-                if skill_file.is_file():
-                    target_file = dest_skill_dir / skill_file.name
-                    target_file.write_bytes(skill_file.read_bytes())
+            shutil.copytree(item, dest_skill_dir, dirs_exist_ok=True)
         actions.append("Projected skills from .meta/.apm/skills/ into .agents/skills/")
 
     return actions

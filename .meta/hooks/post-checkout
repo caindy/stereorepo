@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Git post-checkout lifecycle hook (solorepo's DR-172, solorepo's DR-201, solorepo's #430).
+# Git post-checkout lifecycle hook (solorepo's DR-172, solorepo's DR-201, solorepo's #430, solorepo's #1075).
 # Materializes single-source APM cognitive assets into multi-harness target directories
 # (.agents/skills, .gemini/, .codex/) on branch switches and new worktree creation.
 
@@ -13,6 +13,38 @@ fi
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
+# Augment PATH so hook execution finds toolchains under constrained environments (solorepo's #1075).
+export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+
+PYTHON_BIN=""
+for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        PYTHON_BIN="$candidate"
+        break
+    fi
+done
+
+if [ -z "$PYTHON_BIN" ]; then
+    for candidate in /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
+        if [ -x "$candidate" ]; then
+            PYTHON_BIN="$candidate"
+            break
+        fi
+    done
+fi
+
+if [ -z "$PYTHON_BIN" ]; then
+    echo "post-checkout: warning: python3 not found; unable to reconcile harness cognitive assets (.agents/skills)" >&2
+    exit 0
+fi
+
 if [ -f ".meta/apm_compile.py" ]; then
-    python3 .meta/apm_compile.py --reconcile >/dev/null 2>&1 || true
+    set +e
+    output="$("$PYTHON_BIN" .meta/apm_compile.py --reconcile 2>&1)"
+    status=$?
+    set -e
+    if [ $status -ne 0 ]; then
+        echo "post-checkout: warning: failed to reconcile harness cognitive assets (exit code $status):" >&2
+        echo "$output" >&2
+    fi
 fi

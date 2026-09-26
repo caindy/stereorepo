@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from lib.apm_compile import apm, harness, primitives
+from lib.apm_compile import harness
 
 
 def main(description: str | None) -> None:
@@ -35,6 +35,8 @@ def main(description: str | None) -> None:
         sys.exit(0)
 
     if args.check:
+        from lib.apm_compile import primitives
+
         stale = primitives.check_primitives()
         if stale:
             print("APM primitives are stale:")
@@ -44,14 +46,18 @@ def main(description: str | None) -> None:
         print("APM primitives are up to date.")
         sys.exit(0)
 
-    if args.command == "validate":
-        sys.exit(apm.validate_apm())
-    elif args.command == "pack":
-        sys.exit(apm.pack_apm(args.extra_args))
-    elif args.command == "compile":
-        sys.exit(apm.compile_apm(args.extra_args))
-    elif args.command in ("audit", "doctor", "preview"):
+    if args.command in ("validate", "pack", "compile", "audit", "doctor", "preview"):
+        from lib.apm_compile import apm
+
+        if args.command == "validate":
+            sys.exit(apm.validate_apm())
+        if args.command == "pack":
+            sys.exit(apm.pack_apm(args.extra_args))
+        if args.command == "compile":
+            sys.exit(apm.compile_apm(args.extra_args))
         sys.exit(apm.run_apm([args.command, *args.extra_args]))
+
+    from lib.apm_compile import primitives
 
     count = primitives.write_primitives()
     print(f"Compiled {count} APM primitives.")

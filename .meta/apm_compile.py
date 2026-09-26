@@ -4,58 +4,80 @@
 Compiles declarative assertions and bootstrap capabilities into Agent Package
 Manager (APM) primitives and reconciles root agent harness configurations
 (solorepo's DR-007, solorepo's DR-172, solorepo's DR-173, solorepo's DR-174,
-solorepo's DR-199, solorepo's DR-200, solorepo's DR-208).
+solorepo's DR-199, solorepo's DR-200, solorepo's DR-208, solorepo's #1075).
+
+History in apm_compile.history.md (solorepo's DR-171).
 """
+from __future__ import annotations
+
 import pathlib
 import sys
+
+if __name__ == "__main__" and (
+    "--reconcile" in sys.argv or "-h" in sys.argv or "--help" in sys.argv
+):
+    from lib.apm_compile import cli
+
+    cli.main(__doc__)
+    sys.exit(0)
 
 try:
     import yaml  # noqa: F401  # reason: the import is the test of whether PyYAML is installed
 except ImportError:
-    import subprocess
-    cmd = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
-           str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
-    res = subprocess.run(cmd, check=False)
-    sys.exit(res.returncode)
+    if __name__ == "__main__":
+        import subprocess
+        cmd = ["uvx", "--python", "3.13", "--with", "pyyaml", "python",
+               str(pathlib.Path(__file__).resolve()), *sys.argv[1:]]
+        try:
+            res = subprocess.run(cmd, check=False)
+            sys.exit(res.returncode)
+        except FileNotFoundError:
+            sys.exit("apm_compile: PyYAML is not installed and uvx is not available in PATH.")
 
 from lib.apm_compile import (
     BANNER,
     META,
     ROOT,
-    agents,
-    apm,
-    bootstrap,
-    cli,
     harness,
-    instructions,
-    primitives,
-    skills,
 )
-from lib.apm_compile.agents import agent_primitives
-from lib.apm_compile.apm import compile_apm, pack_apm, run_apm, validate_apm
-from lib.apm_compile.bootstrap import (
-    python_bootstrap_instructions,
-    python_bootstrap_manifest,
-    python_bootstrap_primitives,
-)
-from lib.apm_compile.cli import main
 from lib.apm_compile.harness import (
     check_root_symlinks,
     reconcile_harnesses,
     reconcile_root,
 )
-from lib.apm_compile.instructions import (
-    apm_manifest,
-    discipline_instructions,
-    load_yaml,
-    ubiquitous_language_instructions,
-)
-from lib.apm_compile.primitives import (
-    check_primitives,
-    rendered_primitives,
-    write_primitives,
-)
-from lib.apm_compile.skills import hook_primitives, skill_primitives
+
+try:
+    from lib.apm_compile import (
+        agents,
+        apm,
+        bootstrap,
+        cli,
+        instructions,
+        primitives,
+        skills,
+    )
+    from lib.apm_compile.agents import agent_primitives
+    from lib.apm_compile.apm import compile_apm, pack_apm, run_apm, validate_apm
+    from lib.apm_compile.bootstrap import (
+        python_bootstrap_instructions,
+        python_bootstrap_manifest,
+        python_bootstrap_primitives,
+    )
+    from lib.apm_compile.cli import main
+    from lib.apm_compile.instructions import (
+        apm_manifest,
+        discipline_instructions,
+        load_yaml,
+        ubiquitous_language_instructions,
+    )
+    from lib.apm_compile.primitives import (
+        check_primitives,
+        rendered_primitives,
+        write_primitives,
+    )
+    from lib.apm_compile.skills import hook_primitives, skill_primitives
+except ImportError:
+    pass
 
 __all__ = [
     "BANNER",
