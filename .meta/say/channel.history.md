@@ -201,3 +201,19 @@ non-parsing invocations, returning a `Streams(stdout, stderr)` namedtuple that
 preserves both execution streams on zero-exit commands (solorepo's #1054).
 
 Evidence: `.meta/checks/probes/wrappers.py::gh_wrapper_probes`
+
+
+### GitHub Copilot CLI session and agent identity unrecognized in local execution
+
+In local GitHub Copilot CLI sessions every `say` verb exited on `say: the
+environment does not say who is speaking`, and exporting `ACTOR_SESSION` by
+hand moved the refusal to `say: the environment does not say what is speaking`,
+because `ENV_SESSION` omitted `COPILOT_AGENT_SESSION_ID` and `agent()` had no
+Copilot harness fallback, requiring callers to manually export both
+`ACTOR_SESSION` and `AI_AGENT` (solorepo's #1087). Established: `ENV_SESSION`
+recognizes `COPILOT_AGENT_SESSION_ID`, and `channel.agent()` falls back to
+`channel.COPILOT`, `"copilot-cli"` — the name `.meta/say/on`'s `HARNESSES` gives
+that door — when either name in `ENV_COPILOT` is present outside a run.
+
+Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`,
+`.meta/checks/probes/channel/agent.py::agent_probes`

@@ -196,7 +196,8 @@ def reach_probes(channel: Any, post: Any) -> list[str]:
                         f"patching {fake.patched}")
 
     with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=None,
-                     CLAUDE_CODE_SESSION_ID=None, ANTIGRAVITY_CONVERSATION_ID=None):
+                     CLAUDE_CODE_SESSION_ID=None, ANTIGRAVITY_CONVERSATION_ID=None,
+                     COPILOT_AGENT_SESSION_ID=None):
         code, fake = corrections(channel, post, both, CONVERSATION_URL, None)
     if code is None or "who is speaking" not in code or fake.deleted:
         problems.append(f"correction: a withdrawal by a run the environment does not name came "

@@ -75,7 +75,13 @@ ENV_ANTIGRAVITY = ("ANTIGRAVITY_AGENT", "ANTIGRAVITY_CONVERSATION_ID")
 ANTIGRAVITY = "antigravity-cli"
 """The agent name Antigravity signs with, matching `on.HARNESSES` (solorepo's DR-245)."""
 
-ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", ENV_ANTIGRAVITY[1], "ACTOR_SESSION")
+ENV_COPILOT = ("COPILOT_CLI", "COPILOT_AGENT_SESSION_ID")
+"""Environment variable names identifying a local GitHub Copilot session."""
+
+COPILOT = "copilot-cli"
+"""The agent name GitHub Copilot signs with, matching `on.HARNESSES`."""
+
+ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", ENV_ANTIGRAVITY[1], ENV_COPILOT[1], "ACTOR_SESSION")
 """Environment variable names evaluated to detect local session identifiers."""
 
 RUN_MARK = "gha-"
@@ -231,7 +237,8 @@ def agent() -> str:
     In a workflow run, reads `ENV_RUN_AGENT` (`ACTOR_AGENT`) or derives identity
     from workflow step metadata (`ENV_RUN_STEP`). Outside a run, returns
     `AI_AGENT`, falling back to `ANTIGRAVITY` where `AI_AGENT` is unset and
-    either name in `ENV_ANTIGRAVITY` is set.
+    either name in `ENV_ANTIGRAVITY` is set, or `COPILOT` where either name in
+    `ENV_COPILOT` is set.
 
     Returns:
         The resolved agent harness component name.
@@ -250,8 +257,10 @@ def agent() -> str:
     if not who:
         if any(os.environ.get(name) for name in ENV_ANTIGRAVITY):
             return ANTIGRAVITY
+        if any(os.environ.get(name) for name in ENV_COPILOT):
+            return COPILOT
         sys.exit(f"say: the environment does not say what is speaking "
-                 f"(need one of {ENV_AGENT + ENV_ANTIGRAVITY}); refusing to post")
+                 f"(need one of {ENV_AGENT + ENV_ANTIGRAVITY + ENV_COPILOT}); refusing to post")
     return who
 
 

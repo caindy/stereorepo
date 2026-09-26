@@ -26,57 +26,72 @@ def actor_probes() -> list[str]:
     session id beside it is not read. Outside a run `ACTOR_SESSION` wins when it
     carries the run's mark, `gha-`, and otherwise `ENV_SESSION` is read in its
     own order — `CLAUDE_CODE_SESSION_ID`, then `ANTIGRAVITY_CONVERSATION_ID`,
-    then an unmarked `ACTOR_SESSION` — so a Claude session identifier beats an
-    Antigravity one where both are set, which the case named "claude session
-    precedence over antigravity session" is here to pin: reordering that tuple
-    is a change of behaviour. The mark winning, not mere presence, is the half
-    of the rule the code does not say out loud. `mine()` reads a Trailer as its
-    own exactly when it names the session `actor()` answers, so each case checks
-    both, over one Trailer that is the session's own and one that is not. With
-    nothing set, `actor()` refuses and `mine()` answers `False` for any Trailer.
+    then `COPILOT_AGENT_SESSION_ID`, then an unmarked `ACTOR_SESSION` — so a
+    Claude session identifier beats an Antigravity one where both are set,
+    which the case named "claude session precedence over antigravity session"
+    is here to pin: reordering that tuple is a change of behaviour. The mark
+    winning, not mere presence, is the half of the rule the code does not say
+    out loud. `mine()` reads a Trailer as its own exactly when it names the
+    session `actor()` answers, so each case checks both, over one Trailer that
+    is the session's own and one that is not. With nothing set, `actor()`
+    refuses and `mine()` answers `False` for any Trailer.
 
     A case is `(name, run, actor_session, claude_session, antigravity_session,
-    answer, own, not_own)`: the four variables, `None` for unset — `run` being
-    `GITHUB_RUN_ID`, and the other three `ACTOR_SESSION`,
-    `CLAUDE_CODE_SESSION_ID` and `ANTIGRAVITY_CONVERSATION_ID` in that order;
-    `answer`, what `actor()` returns, or `None` where it refuses; `own`, the
-    session a Trailer must read as mine, or `None` where none does; and
-    `not_own`, a session a Trailer must not. Every case sets `GITHUB_RUN_ID`
-    rather than inheriting it, because the gate itself runs in a run and a case
-    meaning a laptop has to say so.
+    copilot_session, answer, own, not_own)`: the five variables, `None` for
+    unset — `run` being `GITHUB_RUN_ID`, and the other four `ACTOR_SESSION`,
+    `CLAUDE_CODE_SESSION_ID`, `ANTIGRAVITY_CONVERSATION_ID` and
+    `COPILOT_AGENT_SESSION_ID` in that order; `answer`, what `actor()` returns,
+    or `None` where it refuses; `own`, the session a Trailer must read as mine,
+    or `None` where none does; and `not_own`, a session a Trailer must not.
+    Every case sets `GITHUB_RUN_ID` rather than inheriting it, because the gate
+    itself runs in a run and a case meaning a laptop has to say so.
     """
     channel, _, _ = load_channel()
     check_pr = load_module(META / "check_pr.py", "check_pr")
     Case = collections.namedtuple(
         "Case",
-        "name run actor_session claude_session antigravity_session answer own not_own",
+        ("name run actor_session claude_session antigravity_session "
+         "copilot_session answer own not_own"),
     )
     cases = (
         Case("both set, the run's mark beside the harness's uuid",
-             None, "gha-7", "uuid-123", None, "gha-7", "gha-7", "uuid-123"),
+             None, "gha-7", "uuid-123", None, None, "gha-7", "gha-7", "uuid-123"),
         Case("`ACTOR_SESSION` unmarked beside the uuid",
-             None, "not-marked-session", "uuid-456", None, "uuid-456", "uuid-456",
+             None, "not-marked-session", "uuid-456", None, None, "uuid-456", "uuid-456",
              "not-marked-session"),
-        Case("neither set", None, None, None, None, None, None, "uuid-123"),
+        Case("neither set", None, None, None, None, None, None, None, "uuid-123"),
         Case("a run, its mark composed from the run id",
-             "7", "gha-7", "uuid-123", None, "gha-7", "gha-7", "uuid-123"),
+             "7", "gha-7", "uuid-123", None, None, "gha-7", "gha-7", "uuid-123"),
         Case("a run carrying a session id and no mark",
-             "7", None, "uuid-123", None, "gha-7", "gha-7", "uuid-123"),
+             "7", None, "uuid-123", None, None, "gha-7", "gha-7", "uuid-123"),
         Case("a run whose `ACTOR_SESSION` names another Job",
-             "7", "uuid-123", None, None, None, None, "uuid-123"),
+             "7", "uuid-123", None, None, None, None, None, "uuid-123"),
         Case("antigravity session identifier",
-             None, None, None, "agy-uuid-789", "agy-uuid-789", "agy-uuid-789", "uuid-123"),
+             None, None, None, "agy-uuid-789", None, "agy-uuid-789", "agy-uuid-789", "uuid-123"),
         Case("`ACTOR_SESSION` unmarked beside antigravity session",
-             None, "not-marked-session", None, "agy-uuid-789", "agy-uuid-789",
+             None, "not-marked-session", None, "agy-uuid-789", None, "agy-uuid-789",
              "agy-uuid-789", "not-marked-session"),
         Case("claude session precedence over antigravity session",
-             None, None, "uuid-123", "agy-uuid-789", "uuid-123", "uuid-123", "agy-uuid-789"),
+             None, None, "uuid-123", "agy-uuid-789", None, "uuid-123", "uuid-123", "agy-uuid-789"),
+        Case("copilot session identifier",
+             None, None, None, None, "copilot-uuid-101", "copilot-uuid-101",
+             "copilot-uuid-101", "uuid-123"),
+        Case("`ACTOR_SESSION` unmarked beside copilot session",
+             None, "not-marked-session", None, None, "copilot-uuid-101",
+             "copilot-uuid-101", "copilot-uuid-101", "not-marked-session"),
+        Case("antigravity session precedence over copilot session",
+             None, None, None, "agy-uuid-789", "copilot-uuid-101",
+             "agy-uuid-789", "agy-uuid-789", "copilot-uuid-101"),
+        Case("claude session precedence over copilot session",
+             None, None, "uuid-123", None, "copilot-uuid-101",
+             "uuid-123", "uuid-123", "copilot-uuid-101"),
     )
     problems = []
     for case in cases:
         with environment(GITHUB_RUN_ID=case.run, ACTOR_SESSION=case.actor_session,
                          CLAUDE_CODE_SESSION_ID=case.claude_session,
-                         ANTIGRAVITY_CONVERSATION_ID=case.antigravity_session):
+                         ANTIGRAVITY_CONVERSATION_ID=case.antigravity_session,
+                         COPILOT_AGENT_SESSION_ID=case.copilot_session):
             got, code, exited = answered(channel.actor)
             if case.answer is None:
                 if not exited:
@@ -99,7 +114,8 @@ def _probe_signed_integrity(channel: Any) -> list[str]:
     """Verify channel.signed appends attested trailers, preserves matching trailers, and refuses foreign trailers (solorepo's DR-260)."""
     problems: list[str] = []
     with environment(GITHUB_RUN_ID=None, ACTOR_SESSION="sess-123", AI_AGENT="test-agent",
-                     CLAUDE_CODE_SESSION_ID=None, ANTIGRAVITY_CONVERSATION_ID=None):
+                     CLAUDE_CODE_SESSION_ID=None, ANTIGRAVITY_CONVERSATION_ID=None,
+                     COPILOT_AGENT_SESSION_ID=None):
         got = channel.signed("hello world")
         want = "hello world\n\nActor: sess-123\nAgent: test-agent\n"
         if got != want:
