@@ -41,7 +41,7 @@ decisions:
       GitHub Actions runs steps in file order and cannot iterate or reorder
       a `uses:` step at run time, so a ladder of steps each named for a
       harness realizes exactly one order: Claude Code first with the
-      Antigravity CLI behind it on failure, and a `harness:gemini` label
+      Antigravity CLI behind it on failure, and a `harness:agy` label
       running the Antigravity CLI with nothing behind it. The pull request
       fixed one pass by adding a second Claude Code step with a copy of the
       hundred-line prompt and left the other passes as they were, and its
@@ -70,7 +70,7 @@ decisions:
           One table for model, effort, turns and minutes, read by both doors,
           with Claude Code always primary and the Antigravity CLI always the
           fallback. This answers the tuning half of solorepo's #928 and none
-          of the ordering half: `harness:gemini` keeps no fallback, and the
+          of the ordering half: `harness:agy` keeps no fallback, and the
           Gemini-first coder solorepo's #929 asks for stays impossible.
       - name: One job per attempt, through a reusable workflow
         chosen: false

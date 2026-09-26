@@ -8,7 +8,7 @@ challenges:
       outputs every door emits beside the outputs the workflows read, the
       `between` phase that says whether the next rung runs, and the prompt
       forms. The three workflows still ran their harness-named steps, so the
-      chain the door resolved was emitted and not executed: `harness:gemini`
+      chain the door resolved was emitted and not executed: `harness:agy`
       still reached no Claude Code fallback, the Antigravity action still
       decided the fallback in its own step, and eight copies of the coder
       prompt still sat in `coder.yml`.

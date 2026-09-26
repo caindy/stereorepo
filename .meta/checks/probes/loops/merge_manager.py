@@ -694,7 +694,7 @@ def _check_session_merge_failure_isolation(channel: Any, move: Any) -> list[str]
     to preserve human/session PR status under solorepo's DR-258.
     """
     pulls, issues = _fixtures()
-    pulls[0]["headRefName"] = "gemini/session-branch"
+    pulls[0]["headRefName"] = "agy/session-branch"
     pulls[0]["headRefOid"] = "sha-refused-session"
     fake = ManagerFake(pulls, issues)
     winner = 10
@@ -1049,7 +1049,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
     """
     problems = []
     loop_pr_1_cr = {
-        "number": 30, "headRefName": "gemini/issue-30", "isDraft": False,
+        "number": 30, "headRefName": "agy/issue-30", "isDraft": False,
         "reviews": [{"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"}],
         "latestReviews": [], "reviewRequests": [{"login": REVIEWER}],
         "mergeable": "MERGEABLE",
@@ -1071,7 +1071,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         problems.append("is_stalled_autonomous_pr: non-loops session branch should not be marked stalled")
 
     stalled_loop_pr = {
-        "number": 30, "headRefName": "gemini/issue-30", "isDraft": False,
+        "number": 30, "headRefName": "agy/issue-30", "isDraft": False,
         "reviews": [
             {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
             {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
@@ -1114,7 +1114,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         problems.append("is_stalled_autonomous_pr: answered loop PR with new head commit should not be marked stalled")
 
     re_requested_pr = {
-        "number": 37, "headRefName": "gemini/issue-37", "baseRefName": "main", "isDraft": False,
+        "number": 37, "headRefName": "agy/issue-37", "baseRefName": "main", "isDraft": False,
         "latestReviews": APPROVED, "reviews": APPROVED, "reviewRequests": [{"login": REVIEWER}],
         "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
     }
@@ -1123,7 +1123,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         problems.append(f"check_reviewer_approval: re-requested PR must not authorize approval: {reason}")
 
     rebased_pr = {
-        "number": 38, "headRefName": "gemini/issue-38", "baseRefName": "main", "isDraft": False,
+        "number": 38, "headRefName": "agy/issue-38", "baseRefName": "main", "isDraft": False,
         "headRefOid": "7cf0b88",
         "latestReviews": [
             {"author": {"login": REVIEWER}, "state": "APPROVED", "commit": {"oid": "56a50a0"}},
@@ -1156,7 +1156,7 @@ def _check_stall_eviction_dry_run(channel: Any, move: Any) -> list[str]:
     """
     problems = []
     stalled_loop_pr = {
-        "number": 30, "headRefName": "gemini/issue-30", "isDraft": False,
+        "number": 30, "headRefName": "agy/issue-30", "isDraft": False,
         "reviews": [
             {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
             {"author": {"login": REVIEWER}, "state": "CHANGES_REQUESTED"},
@@ -1185,7 +1185,7 @@ def _check_stall_eviction_dry_run(channel: Any, move: Any) -> list[str]:
             problems.append(f"evict_stalled_autonomous_pr: expected PR 30 demoted, got: {demoted}")
 
         conflicting_loop_pr = {
-            "number": 32, "headRefName": "gemini/issue-32", "isDraft": False,
+            "number": 32, "headRefName": "agy/issue-32", "isDraft": False,
             "mergeable": "CONFLICTING",
         }
         if not move.manager.eviction.is_stalled_autonomous_pr(conflicting_loop_pr, REVIEWER):
@@ -1214,7 +1214,7 @@ def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
         return {}
 
     draft_loop_pr = {
-        "number": 31, "headRefName": "gemini/issue-31", "isDraft": True, "changedFiles": 1,
+        "number": 31, "headRefName": "agy/issue-31", "isDraft": True, "changedFiles": 1,
         "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
     }
     with stood_in(channel, gh=gh_restore):
@@ -1232,7 +1232,7 @@ def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
         return {}
 
     failing_draft_pr = {
-        "number": 36, "headRefName": "gemini/issue-36", "isDraft": True, "changedFiles": 1,
+        "number": 36, "headRefName": "agy/issue-36", "isDraft": True, "changedFiles": 1,
         "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
     }
     with stood_in(channel, gh=gh_fail_restore):
@@ -1280,7 +1280,7 @@ def _check_refused_draft_restoration(channel: Any, move: Any) -> list[str]:
             return {}
 
         refused_draft_pr = {
-            "number": 37, "headRefName": "gemini/issue-37", "isDraft": True,
+            "number": 37, "headRefName": "agy/issue-37", "isDraft": True,
             "headRefOid": "commit-refused", "changedFiles": 1,
             "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
         }
@@ -1335,7 +1335,7 @@ def _check_multi_refusal_draft_restoration(channel: Any, move: Any) -> list[str]
             return {}
 
         multi_draft_pr = {
-            "number": 39, "headRefName": "gemini/issue-39", "isDraft": True,
+            "number": 39, "headRefName": "agy/issue-39", "isDraft": True,
             "headRefOid": "commit-current", "changedFiles": 1,
             "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
         }
@@ -1377,7 +1377,7 @@ def _check_request_review_draft_restoration(channel: Any, move: Any) -> list[str
         return {}
 
     pull_data = {
-        "number": 40, "headRefName": "gemini/issue-40", "baseRefName": "main",
+        "number": 40, "headRefName": "agy/issue-40", "baseRefName": "main",
         "state": "OPEN", "isDraft": True, "mergeable": "CONFLICTING",
     }
     with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):
@@ -1402,7 +1402,7 @@ def _check_request_review_draft_restoration(channel: Any, move: Any) -> list[str
 
     ready_calls.clear()
     pull_data = {
-        "number": 42, "headRefName": "gemini/issue-42", "baseRefName": "main",
+        "number": 42, "headRefName": "agy/issue-42", "baseRefName": "main",
         "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE", "changedFiles": 1,
     }
     with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):

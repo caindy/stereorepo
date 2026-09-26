@@ -28,15 +28,15 @@ CONSTRAINTS = pathlib.Path(__file__).resolve().parents[2] / "templates" / "const
 HARNESSES = routing.AGENTS
 """Each harness a door can choose, and the Agent the Trailer names it by."""
 
-READING_HARNESSES = ("gemini", "claude")
+READING_HARNESSES = ("agy", "claude")
 """The harnesses the reading door chooses among, by a `harness:` label, in the order asked."""
 
-REVIEW_HARNESSES = ("gemini", "jules", "claude")
+REVIEW_HARNESSES = ("agy", "jules", "claude")
 """The harnesses the review door chooses among, in the order asked: Antigravity CLI
 (solorepo's DR-245), Google Labs Jules (solorepo's DR-246), and Claude Code by default."""
 
 EVIDENCE = {"claude": (REVIEW / "hook-claude.evidence", "Claude Code"),
-            "gemini": (REVIEW / "hook-agy.evidence", "Antigravity CLI")}
+            "agy": (REVIEW / "hook-agy.evidence", "Antigravity CLI")}
 """Where each harness's session leaves the reading hook's decisions, and the harness's name."""
 
 NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
@@ -65,7 +65,7 @@ class Session(NamedTuple):
     Attributes:
         verdicts: How many verdicts the Role had given before the session, as `before` emitted.
         agents: The fan-out ceiling `before` chose.
-        ran: Which harness step ran the session: `claude`, `gemini`, `jules` or `none`.
+        ran: Which harness step ran the session: `claude`, `agy`, `jules` or `none`.
         transcript: Where Claude Code's execution transcript is, or the empty string.
 
     The first three are `None` where the workflow did not say, which the
@@ -262,7 +262,7 @@ def fallback(handed: Attempt, fields: Mapping[str, str] | None = None) -> None:
     following = tiers[position] if position < len(tiers) else None
     runs = handed.outcome == "failure" and following is not None
     if runs and following is not None:
-        if following.harness == "gemini" and handed.execution:
+        if following.harness == "agy" and handed.execution:
             import detect_fallback
             found = detect_fallback.has_quota_error(handed.execution)
             print(QUOTA.format(path=handed.execution, verdict="holds" if found else "holds no"))

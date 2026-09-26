@@ -22,7 +22,7 @@ def apm_manifest() -> str:
         "version": "0.1.0",
         "description": "A scaffold for building software products as a team of one in the agentic AI era",
         "license": "MIT",
-        "target": ["claude", "gemini", "copilot", "codex", "kiro"],
+        "target": ["claude", "antigravity", "copilot", "codex", "kiro"],
         "type": "hybrid",
     }
     header = (

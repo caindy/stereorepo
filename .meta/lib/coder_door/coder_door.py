@@ -12,7 +12,7 @@ import check_pr
 from lib.move import epics
 from lib.on import common, routing
 
-CODER_HARNESSES = ("gemini", "copilot", "claude")
+CODER_HARNESSES = ("agy", "copilot", "claude")
 """The harnesses the coder's door chooses among, in the order asked."""
 
 PASSES = ("take", "rebase", "answer", "decompose")

@@ -409,10 +409,10 @@ is_approved_pull = check_pr.remedies.is_approved_pull
 is_changes_requested_pull = check_pr.remedies.is_changes_requested_pull
 
 
-# A loop's branch, and nothing else. `(claude|gemini)/issue-<n>` is the shape `coder.yml`
+# A loop's branch, and nothing else. `(claude|agy)/issue-<n>` is the shape `coder.yml`
 # cuts, so it is the shape a dispatched coder can be sent back to; the solo's
 # own pull request is the solo's to rebase, whatever it looks like from here.
-LOOPS_BRANCH = re.compile(r"^(?:claude|gemini)/issue-(\d+)$")
+LOOPS_BRANCH = re.compile(r"^(?:claude|agy)/issue-(\d+)$")
 
 
 def mergeability(pull: common.Pull) -> str | None:

@@ -7,7 +7,7 @@ Usage:
         [--transcript <path>]
     .meta/say/on --role reviewer reviewer after <n>
     .meta/say/on --role reviewer reviewer after <pr> --verdicts N --agents N \
-        --ran claude|gemini|jules|none [--transcript <path>]
+        --ran claude|agy|jules|none [--transcript <path>]
 
 Each loop workflow is a door a Role's run arrives at: `triage.yml` and
 `review.yml` are the reviewer's. What the door's shell steps read and decided

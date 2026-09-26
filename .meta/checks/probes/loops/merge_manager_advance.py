@@ -194,7 +194,7 @@ def _stall_eviction_exemptions(move: Any) -> list[str]:
     problems: list[str] = []
     re_requested_approved_pr = {
         "number": 37,
-        "headRefName": "gemini/issue-37",
+        "headRefName": "agy/issue-37",
         "baseRefName": "main",
         "isDraft": False,
         "latestReviews": APPROVED,

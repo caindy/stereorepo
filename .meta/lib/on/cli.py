@@ -8,7 +8,7 @@ from lib.on import common, review
 DESCRIPTION = ""
 """The entry-point documentation shown by the command-line parser."""
 
-RAN = ("claude", "gemini", "jules", "none")
+RAN = ("claude", "agy", "jules", "none")
 """What `--ran` may say: a harness step, or that none ran."""
 
 NOT_ONE_OF = "{text!r} is not one of {choices}"

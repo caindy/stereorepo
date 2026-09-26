@@ -17,7 +17,7 @@ def python_bootstrap_manifest() -> str:
         "version": "0.1.0",
         "description": "Python developer and refactoring skills for solorepo projects",
         "license": "MIT",
-        "target": ["claude", "gemini", "copilot", "codex", "kiro"],
+        "target": ["claude", "antigravity", "copilot", "codex", "kiro"],
         "type": "hybrid",
     }
     header = (

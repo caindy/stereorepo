@@ -197,9 +197,9 @@ def _before_cases(channel: Any, on: Any) -> list[str]:
         if "#3" not in opened or "#4" not in opened or "claude/issue-3" not in opened:
             problems.append(f"before: the open page {opened!r} does not list what is open")
 
-    ended, out, _, _ = _before(channel, on, _GitHub(_issue(["challenge", "harness:gemini"])))
-    if "harness=gemini" not in out or "agent=antigravity-cli" not in out:
-        problems.append(f"before: a Challenge labelled for Gemini decided {out!r}")
+    ended, out, _, _ = _before(channel, on, _GitHub(_issue(["challenge", "harness:agy"])))
+    if "harness=agy" not in out or "agent=antigravity-cli" not in out:
+        problems.append(f"before: a Challenge labelled for Antigravity decided {out!r}")
 
     for name, fake in (("at a level", _GitHub(_issue(["challenge", "medium"]))),
                        ("closed", _GitHub(_issue(["challenge"], state="CLOSED")))):
@@ -300,7 +300,7 @@ def _review_before_cases(channel: Any, on: Any) -> list[str]:
                         "approval stands beside a bodiless comment and another login's verdict")
     problems += _review_pages(on, written, archived)
 
-    for label, harness, agent in (("harness:gemini", "gemini", "antigravity-cli"),
+    for label, harness, agent in (("harness:agy", "agy", "antigravity-cli"),
                                   ("harness:jules", "jules", "google-labs-jules")):
         ended, out, _, _, _ = _review_before(channel, on, _Pull(labels=[label]))
         if f"harness={harness}" not in out or f"agent={agent}" not in out:
@@ -394,10 +394,10 @@ def _review_after_cases(channel: Any, on: Any) -> list[str]:
         problems.append(f"review after: four agents under a ceiling of three ended {ended.code!r} "
                         f"saying {ended.out!r}")
 
-    ended = _review_after(channel, on, on.Session(1, 1, "gemini", ""),
+    ended = _review_after(channel, on, on.Session(1, 1, "agy", ""),
                           evidence="hook-agy.evidence", spawned=4)
     if ended.code is not None or "(Antigravity CLI)" not in ended.out or "ceiling" in ended.out:
-        problems.append(f"review after: a Gemini session ended {ended.code!r} saying "
+        problems.append(f"review after: an Antigravity session ended {ended.code!r} saying "
                         f"{ended.out!r}, where its hook is read and no ceiling is held")
 
     ended = _review_after(channel, on, on.Session(1, 1, "jules", ""), spawned=4)

@@ -20,7 +20,7 @@ from typing import Any, NamedTuple
 from lib.check_pr import github, polling, review, state
 from lib.check_pr.state import LOOP_LEVELS
 
-LOOPS_BRANCH = re.compile(r"^(?:claude|gemini)/issue-(\d+)$")
+LOOPS_BRANCH = re.compile(r"^(?:claude|agy)/issue-(\d+)$")
 
 
 def asked_of(pr: dict[str, Any]) -> list[str]:

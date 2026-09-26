@@ -6,7 +6,7 @@ and the rest of the fields the door knows replace their angle brackets, and
 an angle bracket the door does not fill, such as the `<path>` in a command
 the prompt shows, is the session's to read as written. What differs by
 harness is a block the template marks with `<!-- claude -->` and
-`<!-- /claude -->`, or `gemini`, and the rendering keeps the block whose
+`<!-- /claude -->`, or `agy`, and the rendering keeps the block whose
 name is the rung's harness and drops the others. The budget sentence is
 filled from the rung, since the Antigravity CLI binds no turn cap and a
 prompt naming one would teach that session to discount the cap that does
@@ -69,7 +69,7 @@ CAPPING = ("claude",)
 builds the Antigravity CLI's argument vector with `--print-timeout` alone, so a turn number
 told to any other session binds nothing (solorepo's DR-277)."""
 
-NAMES = {"gemini": "Antigravity CLI", "jules": "Jules session", "copilot": "Copilot CLI"}
+NAMES = {"agy": "Antigravity CLI", "jules": "Jules session", "copilot": "Copilot CLI"}
 """What a clocked harness's budget sentence calls the session."""
 
 

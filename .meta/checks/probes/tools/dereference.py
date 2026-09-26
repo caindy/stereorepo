@@ -73,7 +73,7 @@ def dereference_probes() -> list[str]:
     )
 
     routed = deref.providers(environ={"GEMINI_FALLBACK": "true"})
-    if [tier.harness for tier in routed] != ["claude", "gemini"]:
+    if [tier.harness for tier in routed] != ["claude", "agy"]:
         problems.append(f"dereference: expected the reviewer reading chain, got {routed!r}")
 
     problems.extend(_provider_problems(deref, pairs[0], routed))
@@ -97,8 +97,8 @@ def _provider_problems(deref: Any, pair: dict[str, Any], routed: tuple[Any, ...]
 
     answer = _ask_with(deref, pair, routed, invoke_primary_failure, original_invoke)
     problems = []
-    if answer != ("ok", "supported") or calls != ["claude", "gemini"]:
-        problems.append(f"dereference: primary failure did not reach Gemini fallback: {calls!r}")
+    if answer != ("ok", "supported") or calls != ["claude", "agy"]:
+        problems.append(f"dereference: primary failure did not reach agy fallback: {calls!r}")
 
     calls.clear()
 
@@ -123,7 +123,7 @@ def _provider_problems(deref: Any, pair: dict[str, Any], routed: tuple[Any, ...]
         lambda pair, tier, seconds: ("?", f"{tier.harness} unavailable", True),
         original_invoke,
     )
-    if answer != ("?", "claude unavailable; gemini unavailable"):
+    if answer != ("?", "claude unavailable; agy unavailable"):
         problems.append(f"dereference: total fallback failure was {answer!r}")
     return problems
 

@@ -104,17 +104,17 @@ def _chain_cases(on: Any) -> list[str]:
     routing = on.routing
     cases: tuple[tuple[str, tuple[str, ...], dict[str, str | None], tuple[str, ...]], ...] = (
         ("coder", ("claude", "take", "medium"), OFF, ("claude",)),
-        ("coder", ("claude", "take", "medium"), ON, ("claude", "gemini", "copilot")),
-        ("coder", ("gemini", "take", "easy"), OFF, ("gemini", "claude")),
-        ("coder", ("gemini", "answer", "medium"), ON, ("gemini", "claude", "copilot")),
+        ("coder", ("claude", "take", "medium"), ON, ("claude", "agy", "copilot")),
+        ("coder", ("agy", "take", "easy"), OFF, ("agy", "claude")),
+        ("coder", ("agy", "answer", "medium"), ON, ("agy", "claude", "copilot")),
         ("coder", ("copilot", "take", "easy"), OFF, ("copilot", "claude")),
         ("reviewer", ("claude",), OFF, ("claude",)),
-        ("reviewer", ("claude",), ON, ("claude", "gemini", "jules")),
-        ("reviewer", ("jules",), ON, ("jules", "claude", "gemini")),
-        ("reviewer", ("gemini",), {"GEMINI_FALLBACK": None, "JULES_FALLBACK": "true"},
-         ("gemini", "claude", "jules")),
+        ("reviewer", ("claude",), ON, ("claude", "agy", "jules")),
+        ("reviewer", ("jules",), ON, ("jules", "claude", "agy")),
+        ("reviewer", ("agy",), {"GEMINI_FALLBACK": None, "JULES_FALLBACK": "true"},
+         ("agy", "claude", "jules")),
         ("reading", ("claude",), OFF, ("claude",)),
-        ("reading", ("gemini",), ON, ("gemini", "claude")),
+        ("reading", ("agy",), ON, ("agy", "claude")),
     )
     for role, asked, toggles, expected in cases:
         environ = {name: value for name, value in toggles.items() if value is not None}
@@ -141,7 +141,7 @@ def _chain_cases(on: Any) -> list[str]:
         if depth != numbers:
             problems.append(f"routing: the coder's depth on {task} at {level} is {depth!r}, "
                             f"not {numbers!r}")
-    gemini = routing.tier("gemini", routing.REVIEW_DEPTHS["standard"], "gemini-x")
+    gemini = routing.tier("agy", routing.REVIEW_DEPTHS["standard"], "gemini-x")
     jules = routing.tier("jules", routing.REVIEW_DEPTHS["standard"])
     if gemini.model != "gemini-x" or jules.model != "":
         problems.append(f"routing: the Antigravity rung runs {gemini.model!r} where a depth hook "
@@ -158,7 +158,7 @@ def _output_cases(on: Any) -> list[str]:
     expected = {"tiers": "3", "tier_1_harness": "claude",
                 "tier_1_model": "claude-opus-5",
                 "tier_1_turns": "120", "tier_1_agent": "anthropics/claude-code-action@v1",
-                "tier_2_harness": "gemini", "tier_2_model": routing.GEMINI_MODEL,
+                "tier_2_harness": "agy", "tier_2_model": routing.GEMINI_MODEL,
                 "tier_2_minutes": "60", "tier_2_agent": "antigravity-cli",
                 "tier_3_harness": "copilot", "tier_3_model": routing.COPILOT_MODEL,
                 "tier_3_agent": "copilot-cli"}
@@ -180,7 +180,7 @@ def _form_cases(on: Any) -> list[str]:
             continue
         fields = {name: FIELDS[name] for name in names}
         allowed = DELIBERATE.get((role, task), ())
-        for harness in ("claude", "gemini", "copilot"):
+        for harness in ("claude", "agy", "copilot"):
             text = prompts.render(role, task, routing.tier(harness, depth), fields)
             if "<!--" in text:
                 problems.append(f"prompts: a block marker survives in {role}-{task} on {harness}")
@@ -195,9 +195,9 @@ def _form_cases(on: Any) -> list[str]:
             if role == "coder" and (capped, clocked) != (harness == "claude", harness != "claude"):
                 problems.append(f"prompts: {role}-{task} on {harness} names the caps as "
                                 f"capped={capped} clocked={clocked}")
-            if harness == "gemini" and role == "coder" and task == "take" \
+            if harness == "agy" and role == "coder" and task == "take" \
                     and "subagent" not in text.lower():
-                problems.append("prompts: the take form on gemini does not refuse subagents "
+                problems.append("prompts: the take form on agy does not refuse subagents "
                                 "(solorepo's DR-257)")
             if harness == "claude" and "invoke_subagent" in text:
                 problems.append(f"prompts: the Antigravity block survives in {role}-{task} on "
@@ -232,7 +232,7 @@ def _trunk_cases(on: Any) -> list[str]:
         emptied = {"TEMPLATES": pathlib.Path(empty), "trunk": _reader}
         for (role, task), names in FIELDS_BY_PASS.items():
             fields = {name: FIELDS[name] for name in names}
-            for harness in ("claude", "gemini", "copilot"):
+            for harness in ("claude", "agy", "copilot"):
                 rung = routing.tier(harness, depth)
                 carried = prompts.render(role, task, rung, fields)
                 with stood_in(prompts, **emptied):
@@ -323,7 +323,7 @@ def _unnumbered_cases(on: Any) -> list[str]:
     """
     problems = []
     depth = on.routing.REVIEW_DEPTHS["deep"]
-    chain = (on.routing.tier("claude", depth), on.routing.tier("gemini", depth))
+    chain = (on.routing.tier("claude", depth), on.routing.tier("agy", depth))
     for handed, name in ((on.Attempt(None, "failure"), "no rung numbered"),
                          (on.Attempt(0, "failure"), "a rung numbered from zero"),
                          (on.Attempt(-1, "failure"), "a rung numbered below zero"),
@@ -347,7 +347,7 @@ def _between_cases(on: Any, coder_door: Any) -> list[str]:
     """Between two rungs: the next runs on a failure alone, and the take's resume clause."""
     problems = []
     ended, out, prompt = _between(
-        on, coder_door, _Rung("answer", ("claude", "gemini"), 1, "failure")
+        on, coder_door, _Rung("answer", ("claude", "agy"), 1, "failure")
     )
     if ended.code is not None or out.get("run") != "true" or "no turn cap" not in prompt \
             or f"#{FIELDS['number']}" not in prompt:
@@ -355,18 +355,18 @@ def _between_cases(on: Any, coder_door: Any) -> list[str]:
                         f"and wrote {prompt[:80]!r}, where rung 2 runs on the Antigravity CLI")
     for outcome_of_rung in ("success", "cancelled", "skipped"):
         ended, out, prompt = _between(
-            on, coder_door, _Rung("answer", ("claude", "gemini"), 1, outcome_of_rung)
+            on, coder_door, _Rung("answer", ("claude", "agy"), 1, outcome_of_rung)
         )
         if ended.code is not None or out.get("run") != "false" or prompt:
             problems.append(f"between: rung 1 ending {outcome_of_rung} decided {out!r}, where "
                             "only a failure hands the pass on")
     ended, out, prompt = _between(
-        on, coder_door, _Rung("answer", ("claude", "gemini"), 2, "failure")
+        on, coder_door, _Rung("answer", ("claude", "agy"), 2, "failure")
     )
     if ended.code is not None or out.get("run") != "false" or prompt:
         problems.append(f"between: the last rung failing decided {out!r}, where nothing follows")
     ended, out, prompt = _between(
-        on, coder_door, _Rung("take", ("gemini", "claude"), 1, "failure", {"number": int(OPEN)})
+        on, coder_door, _Rung("take", ("agy", "claude"), 1, "failure", {"number": int(OPEN)})
     )
     if ended.code is not None or out.get("run") != "true" or out.get("resume") != OPEN \
             or f"left pull request #{OPEN} open" not in prompt or "120 turns" not in prompt:
@@ -374,13 +374,13 @@ def _between_cases(on: Any, coder_door: Any) -> list[str]:
                         f"{out!r} and wrote {prompt[:80]!r}, where rung 2 is Claude Code told to "
                         "resume")
     ended, out, prompt = _between(
-        on, coder_door, _Rung("take", ("claude", "gemini"), 1, "failure")
+        on, coder_door, _Rung("take", ("claude", "agy"), 1, "failure")
     )
     if out.get("resume") != "" or "No harness has left a pull request" not in prompt:
         problems.append(f"between: a take's rung 1 failing over nothing decided {out!r} and "
                         f"wrote {prompt[:80]!r}")
     ended, out, prompt = _between(
-        on, coder_door, _Rung("rebase", ("claude", "gemini"), None, "failure")
+        on, coder_door, _Rung("rebase", ("claude", "agy"), None, "failure")
     )
     if ended.code is None or "named no rung" not in str(ended.code):
         problems.append(f"between: the rebase pass asked the older question ended {ended.code!r}, "

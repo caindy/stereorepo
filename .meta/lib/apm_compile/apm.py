@@ -55,6 +55,6 @@ def compile_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
     """Compiles the APM project into target harness directories redirected to root (solorepo's DR-172, solorepo's DR-201)."""
     cmd_args = ["compile", "--root", ".."]
     if not any(a.startswith("-t") or a.startswith("--target") or a == "--all" for a in args):
-        cmd_args.extend(["-t", "claude,gemini,copilot"])
+        cmd_args.extend(["-t", "claude,antigravity,copilot"])
     cmd_args.extend(args)
     return run_apm(cmd_args, meta_dir=meta_dir)

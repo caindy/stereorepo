@@ -30,6 +30,15 @@ Below, `<n>` is that pull request's number, never the Issue's;
 Do what the Issue asks and no more. Gate green with
 `just gate meta`, commit and push as you go, `.meta/say/move revise <n>`
 <!-- /claude -->
+<!-- agy -->
+Do what the Issue asks and no more. Never run `just gate` or
+`just gate meta` as an entrance check on origin/main (`main` is
+evergreen under PR First). Gate green with
+`just gate meta` only when your changes are complete before handoff.
+Do NOT invoke subagents: evaluate and implement the Challenge
+directly in this session (solorepo's DR-257).
+Commit and push as you go, `.meta/say/move revise <n>`
+<!-- /agy -->
 <!-- gemini -->
 Do what the Issue asks and no more. Never run `just gate` or
 `just gate meta` as an entrance check on origin/main (`main` is

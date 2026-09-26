@@ -19,7 +19,7 @@ In the ontology of work, solorepo distinguishes between conceptual domain groupi
 Unlike legacy scaffolding approaches that relied on destructive file-copying or cloning, a Client Repo consumes solorepo as an upstream versioned package via the [Agent Package Manager (APM)](https://github.com/microsoft/apm):
 
 1. **Subdirectory Packaging:** The Client Repo declares an APM dependency on solorepo's staging ground (`caindy/solorepo/.meta@^0.1.0`), preserving the staging boundary rule that `.meta/` is the staging ground (solorepo's DR-001) and that APM packages nest under `.meta/` (solorepo's DR-172) without placing manifests or symlinks at solorepo's root.
-2. **Multi-Harness Projection:** Through APM, the Client Repo projects the unified disciplines, roles, capability skills, and signed-channel hooks into target harnesses (Claude Code in `.claude/`, OpenAI Codex in `.codex/`, Kiro in `.kiro/`, and Gemini CLI in `.gemini/` and `AGENTS.md`).
+2. **Multi-Harness Projection:** Through APM, the Client Repo projects the unified disciplines, roles, capability skills, and signed-channel hooks into target harnesses (Claude Code in `.claude/`, OpenAI Codex in `.codex/`, Kiro in `.kiro/`, and Antigravity CLI in `.gemini/` and `AGENTS.md`).
 3. **Upstream Synchronization:** The Client Repo runs `apm outdated` and `apm update` to receive upstream discipline refinements, role improvements, and skill bugfixes without repository re-initialization.
 
 ## Inheriting and Specializing the SDLC

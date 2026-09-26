@@ -70,7 +70,7 @@ on:
       harness:
         description: which harness runs
         type: choice
-        options: [claude, gemini, copilot]
+        options: [claude, agy, copilot]
         default: claude
 
 # One run per Issue or per pull request at a time. A second label on the
@@ -131,7 +131,7 @@ jobs:
       || (github.event_name == 'pull_request_review'
         && github.event.review.state == 'changes_requested'
         && github.event.review.user.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
-        && (startsWith(github.event.pull_request.head.ref, 'claude/issue-') || startsWith(github.event.pull_request.head.ref, 'gemini/issue-') || startsWith(github.event.pull_request.head.ref, 'copilot/issue-')))
+        && (startsWith(github.event.pull_request.head.ref, 'claude/issue-') || startsWith(github.event.pull_request.head.ref, 'agy/issue-') || startsWith(github.event.pull_request.head.ref, 'copilot/issue-')))
       || (github.event_name == 'issues'
         && github.event.action == 'labeled'
         && github.event.issue.state == 'open'

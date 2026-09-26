@@ -193,21 +193,21 @@ def _take_cases(channel: Any, on: Any) -> list[str]:
     if "ACTOR_AGENT=anthropics/claude-code-action@v1" not in env:
         problems.append(f"take: the harness was named in the environment as {env!r}")
 
-    _, out, _ = _before(channel, on, _fakes(_GitHub(["challenge", "easy", "harness:gemini"]),
+    _, out, _ = _before(channel, on, _fakes(_GitHub(["challenge", "easy", "harness:agy"]),
                                            take := _Take(level="easy", resume="9")),
                         ("take", "workflow_dispatch", "claude"), ISSUE)
-    if out.get("harness") != "gemini" or out.get("tier_1_harness") != "gemini" \
+    if out.get("harness") != "agy" or out.get("tier_1_harness") != "agy" \
             or out.get("tier_2_model") != "claude-sonnet-5" or out.get("tier_2_minutes") != "30" \
             or out.get("resume") != "9":
-        problems.append(f"take: a Gemini-labelled easy Challenge under a dispatch asking for "
+        problems.append(f"take: an Antigravity-labelled easy Challenge under a dispatch asking for "
                         f"Claude Code decided {out!r}, where the label wins, easy is the "
                         "smaller model, and the hand-back left is named")
     if take.asked != [(ISSUE, "issues")]:
         problems.append(f"take: a dispatched take asked the take door {take.asked!r}, where "
                         "the door is the label's whatever the event")
     _, out, _ = _before(channel, on, _fakes(_GitHub(["challenge", "easy"]), _Take(level="easy")),
-                        ("take", "workflow_dispatch", "gemini"), ISSUE)
-    if out.get("harness") != "gemini":
+                        ("take", "workflow_dispatch", "agy"), ISSUE)
+    if out.get("harness") != "agy":
         problems.append(f"take: an unlabelled Challenge under a dispatch asking for "
                         f"Antigravity CLI decided {out!r}")
 
@@ -315,8 +315,8 @@ def _pull_cases(channel: Any, on: Any) -> list[str]:
         problems.append(f"answer: a dispatched review pass decided {out!r} and asked "
                         f"{take.asked!r}, where the solo's own word is not read against")
 
-    for label, asked, harness in (("harness:gemini", "", "gemini"),
-                                  ("harness:gemini", "claude", "claude")):
+    for label, asked, harness in (("harness:agy", "", "agy"),
+                                  ("harness:agy", "claude", "claude")):
         _, out, _ = _before(channel, on, _fakes(_GitHub([label])),
                             ("answer", "workflow_dispatch", asked), PULL)
         if out.get("harness") != harness:
@@ -515,7 +515,7 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
     green = {"number": 12, "branch": f"claude/issue-{ISSUE}", "green": True,
              "base": "main"}
     fake = _After()
-    step, gemini = (("failure", "skipped"), "claude"), (("failure", "skipped"), "gemini")
+    step, agy = (("failure", "skipped"), "claude"), (("failure", "skipped"), "agy")
     ended, loop = _after(channel, on, _session(take, step, fake, _Left(green)))
     if ended.code is not None or loop.stopped or loop.requested != [(PULL, "reviewer")] \
             or len(fake.posted) != 1 or "where a run stopped" not in fake.posted[0] \
@@ -547,7 +547,7 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
              ("the merged listing unreadable", _Left(green), _After(unreadable="merged"),
               "has merged could not be read"))
     for name, left, fake, why in cases:
-        ended, loop = _after(channel, on, _session(take, gemini, fake, left))
+        ended, loop = _after(channel, on, _session(take, agy, fake, left))
         account = loop.stopped[0][1] if loop.stopped else ""
         if ended.code is not None or len(loop.stopped) != 1 or why not in account \
                 or loop.requested or any(line not in account for line in SIGNED) \
@@ -556,7 +556,7 @@ def _hand_back_cases(channel: Any, on: Any) -> list[str]:
                             f"where the Challenge goes to the solo in a signed account saying "
                             f"{why!r} and naming the branch")
         if (left.left is None or left.left.get("branch") is None) \
-                and f"`gemini/issue-{ISSUE}`" not in account:
+                and f"`agy/issue-{ISSUE}`" not in account:
             problems.append(f"hand-back: {name} named the branch as {account!r}, where the "
                             "prefix the door was handed names it when nothing was left")
     quiet = (("handed already", _Left({**green, "handed": True}), _After()),

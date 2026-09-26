@@ -61,7 +61,7 @@ decisions:
         `--dangerously-skip-permissions`.
       - >-
         In .github/workflows/coder.yml and .github/workflows/review.yml, Gemini execution steps delegate to
-        agy via .meta/actions/agy, supporting explicit `harness:gemini` label selection and fallback.
+        agy via .meta/actions/agy, supporting explicit `harness:agy` label selection and fallback.
       - >-
         .meta/detect_fallback.py is restored to inspect Claude execution failures and activate fallback when
         GEMINI_FALLBACK is enabled (defaulting to False), exporting AI_AGENT=antigravity-cli and

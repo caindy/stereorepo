@@ -8,7 +8,7 @@ description: A scaffold for building software products as a team of one in the a
 license: MIT
 target:
 - claude
-- gemini
+- antigravity
 - copilot
 - codex
 - kiro

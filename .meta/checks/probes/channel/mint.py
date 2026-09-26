@@ -158,7 +158,7 @@ def mint_probes() -> list[str]:
 
     fake = FakeGitHub(body=ASKING)
     with environment(GITHUB_RUN_ID=RUN.removeprefix("gha-"), ACTOR_SESSION=RUN), \
-            stood_in(concepts, branch=lambda: f"gemini/issue-{ISSUE}"):
+            stood_in(concepts, branch=lambda: f"agy/issue-{ISSUE}"):
         said = run_verb(channel, fake, lambda: concepts.mint_concept("work:concept/door"))
     if said or not fake.wrote("ref=refs/tags/concept/door") \
             or not fake.wrote(f"Challenge #{ISSUE} asked for this Concept"):

@@ -18,7 +18,7 @@ name: harness
 description: Run one rung of a pass on the harness the door's chain names for it.
 inputs:
   harness:
-    description: The rung's harness, `claude`, `gemini`, `copilot`, or `jules`.
+    description: The rung's harness, `claude`, `agy`, `copilot`, or `jules`.
     required: true
   role:
     description: The Role the session speaks as, `coder` or `reviewer`.
@@ -133,9 +133,9 @@ runs:
           --max-turns ${{ inputs.turns }}
           ${{ inputs.claude-args }}
 
-    - name: gemini
-      id: gemini
-      if: inputs.harness == 'gemini'
+    - name: agy
+      id: agy
+      if: inputs.harness == 'agy' || inputs.harness == 'gemini'
       uses: ./.meta/actions/agy
       env:
         GEMINI_PROJECT_DIR: ${{ github.workspace }}

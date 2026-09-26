@@ -7,7 +7,7 @@ description: Python developer and refactoring skills for solorepo projects
 license: MIT
 target:
 - claude
-- gemini
+- antigravity
 - copilot
 - codex
 - kiro

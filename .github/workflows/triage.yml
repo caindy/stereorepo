@@ -31,7 +31,7 @@ on:
 # One run per Challenge per kind of delivery. Every label change on the Issue
 # creates a run that enters a group before the job's `if` is read, and GitHub
 # keeps one pending run per group: keyed by number alone, a delivery that will
-# skip — `harness:gemini` landing, say — would displace a pending delivery
+# skip — `harness:agy` landing, say — would displace a pending delivery
 # that would have read, and leave the Challenge unread with nothing to
 # re-deliver it (the hazard `coder.yml`'s key records). The action and the
 # label are in the key, so a delivery can only displace another of its own

@@ -51,7 +51,7 @@ rung's harness binds. The reading form's `<level>` is not a field: it is the
 verdict the session is there to decide, shown in the command it will type, and
 the probe names it as the one angle bracket that survives on purpose. A block
 between `<!-- claude -->` and `<!-- /claude -->`, or
-`gemini`, is kept where its name is the rung's harness and dropped otherwise,
+`agy`, is kept where its name is the rung's harness and dropped otherwise,
 which is how one form says the one thing that differs by harness. Every other
 angle bracket, such as the `<thread-id>` in a command the prompt shows, is the
 session's to read as written. The rendered prompt is written to

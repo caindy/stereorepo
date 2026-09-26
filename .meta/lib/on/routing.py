@@ -26,6 +26,7 @@ from collections.abc import Mapping, Sequence
 from typing import NamedTuple
 
 AGENTS = {
+    "agy": "antigravity-cli",
     "gemini": "antigravity-cli",
     "jules": "google-labs-jules",
     "claude": "anthropics/claude-code-action@v1",
@@ -33,20 +34,25 @@ AGENTS = {
 }
 """Each harness a door can choose, and the Agent the Trailer names it by (solorepo's DR-233)."""
 
-TOGGLES = {"gemini": "GEMINI_FALLBACK", "jules": "JULES_FALLBACK", "copilot": "COPILOT_FALLBACK"}
+TOGGLES = {
+    "agy": "GEMINI_FALLBACK",
+    "gemini": "GEMINI_FALLBACK",
+    "jules": "JULES_FALLBACK",
+    "copilot": "COPILOT_FALLBACK",
+}
 """The repository variable that opts a portfolio in to each fallback harness; Claude Code has
 none, being the harness every portfolio runs (solorepo's DR-240, DR-245, DR-246)."""
 
 ENABLED = ("true", "1", "yes", "on", "enable", "enabled")
 """What a toggle's value reads as on, lowercased and stripped."""
 
-CODER_FALLBACKS = ("claude", "gemini", "copilot")
+CODER_FALLBACKS = ("claude", "agy", "copilot")
 """The coder's harnesses in the order a fallback is tried, after whichever is primary."""
 
-REVIEW_FALLBACKS = ("claude", "gemini", "jules")
+REVIEW_FALLBACKS = ("claude", "agy", "jules")
 """The reviewer's harnesses in the order a fallback is tried, after whichever is primary."""
 
-READING_FALLBACKS = ("claude", "gemini")
+READING_FALLBACKS = ("claude", "agy")
 """The reading door's harnesses in the order a fallback is tried, after whichever is primary."""
 
 
@@ -72,6 +78,7 @@ PROVIDERS = {
     "claude": Provider(
         "claude", "-p", "--model", "CLAUDE_CODE_OAUTH_TOKEN", "~/.config/solorepo/claude.env"
     ),
+    "agy": Provider("agy", "-p", "--model", "", ""),
     "gemini": Provider("agy", "-p", "--model", "", ""),
 }
 """The local invocation and credential contracts of harnesses that read text."""
@@ -97,7 +104,7 @@ class Tier(NamedTuple):
     """One rung of a chain: a harness and what it runs with.
 
     Attributes:
-        harness: `claude`, `gemini` or `jules`.
+        harness: `claude`, `agy`, `copilot` or `jules`.
         model: The model this harness runs; empty for Jules, which chooses its own.
         effort: The reasoning effort.
         turns: The turn cap, told to every harness and bound by Claude Code alone.
@@ -183,9 +190,12 @@ def tier(
         gemini_model (str): The model the Antigravity CLI runs, where a depth hook chose one.
         copilot_model (str): The model GitHub Copilot CLI runs.
     """
-    model = {"claude": depth.model, "gemini": gemini_model, "copilot": copilot_model}.get(
-        harness, ""
-    )
+    model = {
+        "claude": depth.model,
+        "agy": gemini_model,
+        "gemini": gemini_model,
+        "copilot": copilot_model,
+    }.get(harness, "")
     return Tier(harness, model, depth.effort, depth.turns, depth.minutes, AGENTS[harness])
 
 
