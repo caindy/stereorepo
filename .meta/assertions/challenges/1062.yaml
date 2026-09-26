@@ -1,0 +1,9 @@
+challenges:
+  - id: work:challenge/1062
+    name: Require the reviewer Role to review whenever review is requested
+    challenge_type: FEATURE
+    description: >-
+      When a pull request is opened or updated and review is requested of the reviewer
+      Role, the reviewer must review what was submitted rather than deciding whether
+      a review should occur. Furthermore, move open omits automatic review requests
+      when opening pull requests closing easy Challenges.

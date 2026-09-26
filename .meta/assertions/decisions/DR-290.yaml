@@ -1,0 +1,10 @@
+decisions:
+  - id: work:decision/290
+    name: "DR-290 · Require the reviewer Role to review whenever review is requested"
+    status: WITHDRAWN
+    withdrawn_because: "Minted on gemini/reviewer-reviews-when-requested concurrently with DR-291 for Challenge #1062. The decision was enacted under DR-291; this number was reserved on GitHub and withdrawn to preserve sequence contiguity without an unredeemed tag."
+    rationale: |-
+      DR-290 was reserved via tag during session minting immediately prior to
+      DR-291 for Challenge #1062. The architectural decision and implementation
+      are enacted under DR-291. Under solorepo's DR-128, a reserved number is
+      never deleted or reissued, so it is recorded as WITHDRAWN.

@@ -168,7 +168,7 @@ programs:
         held_by: [coder]
       - name: open
         usage: "--title T [--base B|--on <pr>] < body.md"
-        does: "open a draft pull request, the form filled, and request review; --on opens a layer on that one and links the stack; the merge manager, advance and the reconciler pass over the draft; move ready takes it out at final reviewer approval (solorepo's DR-287)"
+        does: "open a draft pull request, the form filled, and request review (omitted for easy Challenges, solorepo's DR-291); --on opens a layer on that one and links the stack; the merge manager, advance and the reconciler pass over the draft; move ready takes it out at final reviewer approval (solorepo's DR-287)"
         held_by: [coder]
       - name: ready
         usage: "<pr>"

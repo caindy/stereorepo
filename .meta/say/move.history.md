@@ -756,4 +756,16 @@ ceiling, and ratchets `reconcile.py`'s baseline debt down to 256 lines.
 
 Evidence: `.meta/checks/probes/loops/reconcile.py::reconcile_probes`
 
+### Automatic review request omitted for easy pull requests
+
+Opening a pull request with `move open` automatically requested reviewer review
+across all pull requests regardless of difficulty, causing reviewer agents to
+reject plan-only Seed Commits on routine tasks (solorepo's DR-249, solorepo's DR-291,
+solorepo's #1062). Established: `open_pull_request` inspects declared closing
+issues and suppresses automatic reviewer review requests when closing an `easy`
+Challenge, reserving automatic plan handoff for non-easy Challenges.
+
+Evidence: `.meta/checks/probes/loops/open_pull_request.py::open_pull_request_probes`
+
+
 

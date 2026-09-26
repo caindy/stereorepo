@@ -61,7 +61,17 @@ pending checks to finish: `gh pr checks` exits non-zero while a check
 is pending, and the standing merge manager evaluates completed checks
 before landing. However, inspect completed checks on this head with
 `gh pr checks <number>` and test form
-compliance with `just pr <number>`.
+compliance with `just pr <number>`. The reviewer Role does not
+decide whether a review should occur (solorepo's DR-291): whenever
+review is requested of your account, execute your review pass and
+evaluate what was submitted. On a plan-only draft pull request (where
+`.review/diff.patch` is empty on a Seed Commit), evaluate the form,
+checks, unaddressed threads, and proposed architecture under **The plan.**;
+approve the plan with `.meta/say/post --role reviewer review <number> --approve`
+if the approach is sound under solorepo's DR-273, or raise objections
+on the plan using top-level comments or `--request-changes`. Never
+decline review or request changes on the grounds that an implementation
+diff has not yet been authored.
 
 <!-- claude -->
 Then review with /code-review:code-review <effort> <repository>/pull/<number>

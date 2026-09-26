@@ -1,4 +1,5 @@
-"""Draft creation and automatic review handoff probes for `move open`."""
+"""Draft creation and review handoff probes for `move open` (solorepo's DR-287,
+solorepo's DR-291)."""
 from typing import Any
 
 from checks.collect import check
@@ -33,4 +34,36 @@ def open_pull_request_probes() -> list[str]:
         return [f"open: GitHub was called without --draft: {created!r}"]
     if requested != [("1043", "reviewer")]:
         return [f"open: expected reviewer handoff after creation, got {requested!r}"]
+
+    requested.clear()
+    created.clear()
+
+    def gh_easy(*args: Any, **_: Any) -> Any:
+        created.append(args)
+        if args[:2] == ("pr", "create"):
+            return "https://github.com/owner/repo/pull/1044"
+        if args[:2] == ("issue", "view"):
+            return {"labels": [{"name": "challenge"}, {"name": "easy"}]}
+        return {}
+
+    target = 100
+    easy_body = (
+        "## Title\n\n"
+        "**What this changes.** None.\n\n"
+        f"**What it closes.**\n- Closes #{target} — easy task\n"
+    )
+
+    with (
+        stood_in(channel, gh=gh_easy),
+        stood_in(move.pull_requests.check_pr, check=lambda _title, _body: []),
+        stood_in(move.pull_requests.handoff, request_review=request_review),
+    ):
+        ended_easy = outcome(
+            lambda: move.pull_requests.open_pull_request("Open easy draft", easy_body)
+        )
+
+    if ended_easy.code:
+        return [f"open: creating easy draft exited with {ended_easy.code!r}"]
+    if requested:
+        return [f"open: expected no reviewer handoff for easy issue, got {requested!r}"]
     return []

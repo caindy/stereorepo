@@ -136,7 +136,7 @@ def open_pull_request(title: str, body: str, base: str = "main",
     """Open a signed draft pull request, request review, and link it with `on`.
 
     The draft passes merge management, `advance`, and reconciliation; `move ready`
-    takes it out at final reviewer approval (solorepo's DR-287).
+    takes it out at reviewer approval (solorepo's DR-287, solorepo's DR-291).
     """
     problems = check_pr.check(title, body)
     if problems:
@@ -159,7 +159,10 @@ def open_pull_request(title: str, body: str, base: str = "main",
     pr_number = url.rstrip("/").rsplit("/", 1)[-1]
     if on:
         link(on, pr_number)
-    handoff.request_review(pr_number, "reviewer")
+    closed = check_pr.form.closed_issues(body)
+    from lib.move import challenges
+    if not any("easy" in challenges.labels_of(issue) for issue in closed):
+        handoff.request_review(pr_number, "reviewer")
 
 
 def arm(pr: str | int, subject: str) -> None:
