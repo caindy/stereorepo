@@ -1,4 +1,5 @@
-"""The refusal `pull_requests.merge` defers, and the ones it will not (solorepo's #982).
+"""The refusal `pull_requests.merge` defers, and the ones it will not (solorepo's #982,
+solorepo's #1055).
 
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
@@ -15,6 +16,7 @@ from checks.probes.harness import (
     stood_in,
     unanswered,
 )
+from lib.gh import Streams
 
 RUNNING = "4 of 4 required status checks are in progress."
 """GitHub's words where the merge waits on a check that has yet to conclude."""
@@ -62,7 +64,8 @@ def _hung(channel: Any) -> str:
             f"answered nothing within {channel.GH_TIMEOUT}s")
 
 
-def _gh(calls: list[tuple[str, ...]], refusal: str | None, returncode: int = 1) -> Any:
+def _gh(calls: list[tuple[str, ...]], refusal: str | None, returncode: int = 1,
+        refusal_stream: str = "stderr") -> Any:
     """A `channel.gh` answering the reads `merge` makes, and refusing its merge call.
 
     `refusal` is what the merge call writes on standard error before exiting
@@ -81,7 +84,13 @@ def _gh(calls: list[tuple[str, ...]], refusal: str | None, returncode: int = 1) 
         calls.append(args)
         if args[:2] in (("pr", "merge"), ("stack", "merge")):
             if refusal is None:
-                return ""
+                return Streams("", "") if kwargs.get("streams") else ""
+            if returncode == 0:
+                if kwargs.get("streams"):
+                    stdout = f"{refusal}\n" if refusal_stream == "stdout" else ""
+                    stderr = f"{refusal}\n" if refusal_stream == "stderr" else ""
+                    return Streams(stdout, stderr)
+                return f"{refusal}\n" if refusal_stream == "stdout" else ""
             if not kwargs.get("tolerate_fail"):
                 sys.exit(f"gh: {refusal}")
             raise subprocess.CalledProcessError(
@@ -108,6 +117,15 @@ def _merged(channel: Any, pull_requests: Any, refusal: str | None, returncode: i
     return came_to, calls
 
 
+def _stack_merged(channel: Any, pull_requests: Any, refusal: str | None, returncode: int = 0,
+                  stream: str = "stderr") -> tuple[Any, list[tuple[str, ...]]]:
+    """`merge --stack` over a `gh` exiting `returncode` with `refusal` on `stream`."""
+    calls: list[tuple[str, ...]] = []
+    with stood_in(channel, gh=_gh(calls, refusal, returncode, stream), repo=lambda: "owner/repo"):
+        came_to = outcome(lambda: pull_requests.merge("7", stack=True))
+    return came_to, calls
+
+
 def _verb_deferred(channel: Any, move: Any) -> tuple[str | None, bool]:
     """What `move merge` came to over a refusal the merge layer defers, and whether it exited.
 
@@ -123,27 +141,70 @@ def _verb_deferred(channel: Any, move: Any) -> tuple[str | None, bool]:
     return code, exited
 
 
-def _refusal_carried(channel: Any, pull_requests: Any) -> str | None:
+def _verb_stack_deferred(channel: Any, move: Any) -> tuple[str | None, bool]:
+    """What `move merge --stack` came to on a zero-exit stack merge with checks running."""
+    args = argparse.Namespace(verb="merge", pr="7", stack=True, auto=False)
+    with stood_in(channel, gh=_gh([], RUNNING, returncode=0), repo=lambda: "owner/repo"):
+        _, code, exited = answered(lambda: move.cli._dispatch_pr_verb(args))
+    return code, exited
+
+
+def _refusal_carried(channel: Any, pull_requests: Any, stack: bool = False,
+                     returncode: int = 1) -> str | None:
     """The `refusal` a deferral carries, read off the exception rather than off its text."""
-    with stood_in(channel, gh=_gh([], RUNNING), repo=lambda: "owner/repo"):
+    with stood_in(channel, gh=_gh([], RUNNING, returncode=returncode), repo=lambda: "owner/repo"):
         try:
-            pull_requests.merge("7")
+            pull_requests.merge("7", stack=stack)
         except pull_requests.MergeDeferredError as deferral:
             return str(deferral.refusal)
     return None
 
 
+def _check_zero_exit_stack(channel: Any, programs: dict[str, Any]) -> list[str]:
+    """Cases covering a zero-exit stack merge with status checks pending (solorepo's #1055)."""
+    pull_requests = programs["move"].pull_requests
+    problems: list[str] = []
+
+    stderr_deferred, stderr_calls = _stack_merged(channel, pull_requests, RUNNING, stream="stderr")
+    if stderr_deferred.code != f"MergeDeferredError: {RUNNING}":
+        problems.append("merge --stack: zero-exit checks on stderr came to "
+                        f"{stderr_deferred.code!r}, where MergeDeferredError is owed")
+    elif _refusal_carried(channel, pull_requests, stack=True, returncode=0) != RUNNING:
+        problems.append("merge --stack: zero-exit deferral carried words other than GitHub's own")
+    if DELETES in stderr_calls:
+        problems.append("merge --stack: zero-exit checks running went on to delete the branch")
+
+    stdout_deferred, _ = _stack_merged(channel, pull_requests, RUNNING, stream="stdout")
+    if stdout_deferred.code != f"MergeDeferredError: {RUNNING}":
+        problems.append("merge --stack: zero-exit checks on stdout came to "
+                        f"{stdout_deferred.code!r}")
+
+    landed, landed_calls = _stack_merged(channel, pull_requests, None)
+    if landed.code is not None or LANDED not in landed.out:
+        problems.append(f"merge --stack: landed stack merge came to {landed.code!r} saying "
+                        f"{landed.out!r}")
+    if DELETES not in landed_calls:
+        problems.append("merge --stack: landed stack merge never asked whether GitHub deletes "
+                        "the branch")
+
+    verb, exited = _verb_stack_deferred(channel, programs["move"])
+    if not exited or verb != DEFERRED_VERB:
+        problems.append(f"move merge --stack: verb came to {verb!r} over a check still running, "
+                        "where an operator is owed the reason rather than a traceback")
+    return problems
+
+
 @check("merge deferral probes", pre=True)
 def merge_deferral_probes() -> list[str]:
-    """`pull_requests.merge` over each refusal GitHub gives it (solorepo's #982).
+    """`pull_requests.merge` over each refusal GitHub gives it (solorepo's #982, solorepo's #1055).
 
     Both merge calls are made under `tolerate_fail`, so GitHub's words reach
     this layer as the `CalledProcessError`'s buffered standard error rather
     than as prose folded into an exit message; the stand-in raises only under
     that keyword, so a call that dropped it would fall through to the exit the
-    classification never sees. Seven cases over a `channel.gh` that answers
-    `merge`'s reads and refuses its merge, and an eighth over the verb the
-    operator types.
+    classification never sees. Eleven cases over a `channel.gh` that answers
+    `merge`'s reads and refuses its merge, and two over the verb the operator
+    types.
 
     A refusal naming required checks still running raises `MergeDeferredError`
     carrying those words, and stops there rather than going on to delete a
@@ -151,19 +212,21 @@ def merge_deferral_probes() -> list[str]:
     words defers alike, `_classified` taking both calls: the merge manager
     passes `stack=` from what the winner is, so a narrowing here would hand a
     stacked branch to the refusal path over a check that was still running. A
-    refusal over a check that *failed* names a required status check too, and
-    is not deferred, which is what the conjunction in `MERGE_DEFERRED` is for;
-    so is a refusal naming no check at all, and both leave in the words
-    `channel.gh` would have exited in. A tolerated timeout exits in the prose
-    `GhTimeout` carries rather than raising a type a caller would read as a
-    deferral, and it is the returncode that says so: a hang carrying GitHub's
-    own deferring words on standard error is still a hang, and is the case that
-    holds the classification to `channel.TIMEOUT_RETURNCODE` rather than to the
-    strings a timeout happens to arrive with. A merge GitHub lands still reads
-    the pull request back and prints what it landed as, which is the path the
-    tolerated failure runs through untouched. Last, `move merge` exits in the
-    refusal's words rather than letting the deferral out as a traceback: a type
-    the merge manager catches is one the operator's verb has to answer too.
+    stacked merge that exits 0 with status checks in progress on stderr or stdout
+    raises `MergeDeferredError` directly rather than falling through to the read-back
+    polling loop (solorepo's #1055). A refusal over a check that *failed* names a
+    required status check too, and is not deferred, which is what the conjunction
+    in `MERGE_DEFERRED` is for; so is a refusal naming no check at all, and both
+    leave in the words `channel.gh` would have exited in. A tolerated timeout exits
+    in the prose `GhTimeout` carries rather than raising a type a caller would
+    read as a deferral, and it is the returncode that says so: a hang carrying
+    GitHub's own deferring words on standard error is still a hang, and is the
+    case that holds the classification to `channel.TIMEOUT_RETURNCODE` rather
+    than to the strings a timeout happens to arrive with. A merge GitHub lands
+    still reads the pull request back and prints what it landed as, which is the
+    path the tolerated failure runs through untouched. Last, `move merge` exits
+    in the refusal's words rather than letting the deferral out as a traceback:
+    a type the merge manager catches is one the operator's verb has to answer too.
     """
     channel, _, programs = load_channel()
     pull_requests = programs["move"].pull_requests
@@ -196,6 +259,7 @@ def merge_deferral_probes() -> list[str]:
                         f"{stack_deferred.code!r}, where the merge manager passes the stack "
                         "flag from what the winner is and a narrowing costs that winner its "
                         "landing")
+    problems.extend(_check_zero_exit_stack(channel, programs))
     if timed_out.code != f"gh: {hung}":
         problems.append(f"merge: a tolerated timeout came to {timed_out.code!r}, where a hang "
                         "is neither a deferral nor a refusal GitHub gave")

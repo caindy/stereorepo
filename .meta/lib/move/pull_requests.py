@@ -567,12 +567,18 @@ def _classified(call: Callable[[], object]) -> None:
             have exited in.
     """
     try:
-        call()
+        res = call()
     except subprocess.CalledProcessError as exc:
         refusal = (exc.stderr or "").strip()
         if exc.returncode != channel.TIMEOUT_RETURNCODE and deferred_refusal(refusal):
             raise MergeDeferredError(refusal) from exc
         sys.exit(f"gh: {refusal}")
+    if isinstance(res, channel.Streams):
+        for stream in (res.stderr, res.stdout):
+            if stream and deferred_refusal(stream):
+                raise MergeDeferredError(stream.strip())
+    elif isinstance(res, str) and deferred_refusal(res):
+        raise MergeDeferredError(res.strip())
 
 
 def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
@@ -595,12 +601,10 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
         SystemExit: If the pull request is not open, is an unsupported stacked auto-merge,
             or if the merge or arming operation fails on GitHub for any other reason.
 
-    Both merge calls tolerate their own failure so that the refusal reaches
-    this layer rather than leaving through `channel.gh`: the CLI buffers
-    GitHub's words on standard error, and a caller that has to read them out of
-    an exit message cannot tell a check still queued from a landing refused for
-    good. `_classified` takes either call's refusal, so a stacked merge waiting
-    on a check defers as an unstacked one does.
+    Both merge calls tolerate failure, and the stack call passes `streams=True`
+    and `echo=True`. `_classified` takes either call's refusal and classifies
+    zero-exit pending status checks to raise `MergeDeferredError` directly
+    (solorepo's #1055).
 
     The stack merge waits indefinitely rather than under `channel.GH_TIMEOUT`:
     it lands every layer up to `pr` and restacks what remains, and a bound cut
@@ -616,11 +620,6 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
     commit would raise where the merge had in fact landed. A merge GitHub
     never lands still reads `OPEN` once the wait runs out, and the exit says
     so, as it always has.
-
-    The stack call passes `echo=True`, so its exit status and both of its
-    streams reach standard error. The read-back says only that the pull request
-    is still open, which reads as GitHub being slow; a stack merge that exits 0
-    having merged nothing says why in its own words (solorepo's #797).
     """
     before = channel.gh("pr", "view", str(pr), "--json", "title,state,headRefName")
     if before["state"] != "OPEN":
@@ -632,7 +631,7 @@ def merge(pr: str | int, stack: bool = False, auto: bool = False) -> None:
     if stack:
         _classified(lambda: channel.gh("stack", "merge", str(pr), "--squash", "--yes",
                                        parse=False, timeout=None, echo=True,
-                                       tolerate_fail=True))
+                                       tolerate_fail=True, streams=True))
     elif stacked(pr):
         sys.exit(f"say: #{pr} is a layer of a stack; the legacy merge cannot take it. "
                  "Pass --stack to merge everything up to it.")

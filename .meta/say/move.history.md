@@ -768,4 +768,17 @@ Challenge, reserving automatic plan handoff for non-easy Challenges.
 Evidence: `.meta/checks/probes/loops/open_pull_request.py::open_pull_request_probes`
 
 
+### A zero-exit stack merge with status checks pending fell through to timeout
 
+In `.meta/lib/move/pull_requests.py`, `merge()` invoked `gh stack merge` under
+`_classified()`, which only caught `subprocess.CalledProcessError`. When status
+checks were in progress, `gh stack merge` exited with status 0 while merging zero
+layers, outputting a pending checks notice. Because the exit code was 0,
+`_classified()` did not catch an exception, and execution fell through to the
+30-second `channel.shown()` polling loop, timing out and causing the merge
+manager to demote the pull request to draft (solorepo's #1055). Established:
+`merge()` passes `streams=True` to `gh stack merge`, and `_classified()` inspects
+captured stdout and stderr streams on zero-exit invocations, raising
+`MergeDeferredError` immediately when in-progress status checks are detected.
+
+Evidence: `.meta/checks/probes/channel/deferral.py::merge_deferral_probes`
