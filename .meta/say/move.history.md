@@ -1,5 +1,15 @@
 # History
 
+### Opaque semantic duplicate filing refusals lacking scoring and term evidence
+
+Rejecting Challenge filings as semantic duplicates without disclosing BM25F scores,
+runner-up comparisons, or matched query terms prevented filers from diagnosing
+false positives or distinguishing genuine duplicates (solorepo's DR-266, solorepo's #1085).
+Established: `refuse_if_semantic_duplicate()` exposes leading and runner-up scores,
+ratio comparison against the 1.79 threshold, and matched terms extracted by `semantic_duplicate()`.
+
+Evidence: `.meta/checks/probes/channel/filing.py::filing_probes`
+
 ### Difficulty label assigned without challenge label
 
 Assigning a difficulty label to an issue that lacked the `challenge` label

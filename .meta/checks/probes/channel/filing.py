@@ -123,7 +123,17 @@ def filing_probes() -> list[str]:
                 level="hard",
             ),
         )
-        if not said or "901" not in said or duplicate.created:
+        if (
+            not said
+            or "901" not in said
+            or "Score:" not in said
+            or "runner-up:" not in said
+            or "ratio:" not in said
+            or "threshold: 1.79" not in said
+            or "Matched terms:" not in said
+            or "duplicate" not in said
+            or duplicate.created
+        ):
             problems.append(
                 f"filing: a semantic duplicate said {said!r} and created {duplicate.created!r}"
             )
@@ -159,6 +169,13 @@ def semantic_ratio_probes(move: ModuleType) -> list[str]:
         match = move.challenges.semantic_duplicate(issues, "Proposed", "body")
     if match != issues[0]:
         problems.append(f"filing: the 1.79 semantic ratio matched {match!r}, not the leading Issue")
+    elif (
+        match.score != 1.79
+        or match.runner_up_score != 1.0
+        or match.runner_up != issues[1]
+        or match.ratio != 1.79
+    ):
+        problems.append(f"filing: the 1.79 semantic duplicate evidence was {match!r}")
 
     scores = [
         SimpleNamespace(identifier="1", score=1.78),
@@ -214,13 +231,37 @@ def semantic_queue_probes(move: ModuleType) -> list[str]:
         "Prevent duplicate Challenge filing",
         "**Waits on.** Nothing.\n\nRefuse repeated Challenge work before it begins.",
     )
+    sole_match = move.challenges.semantic_duplicate(
+        issues,
+        "Repeated refuse",
+        "**Waits on.** Nothing.\n\nRepeated refuse.",
+    )
     problems = []
     if duplicate != issues[0]:
         problems.append(f"filing: the real duplicate corpus matched {duplicate!r}, not the leading Issue")
+    elif (
+        not duplicate.matched_terms
+        or "duplicate" not in duplicate.matched_terms
+        or duplicate.runner_up != issues[1]
+        or duplicate.ratio is None
+        or duplicate.ratio < 1.79
+    ):
+        problems.append(f"filing: the real duplicate evidence was {duplicate!r}")
     if adjacent is not None:
         problems.append(f"filing: the adjacent corpus matched {adjacent!r}")
     if sole_issue is not None:
         problems.append(f"filing: a one-Issue queue matched {sole_issue!r}")
+    if sole_match != issues[0]:
+        problems.append(
+            f"filing: the sole match corpus matched {sole_match!r}, not the leading Issue"
+        )
+    elif (
+        sole_match.runner_up is not None
+        or sole_match.runner_up_score != 0.0
+        or sole_match.ratio != float("inf")
+        or sole_match.matched_terms != ["repeated", "refuse"]
+    ):
+        problems.append(f"filing: the sole match evidence was {sole_match!r}")
     return problems
 
 

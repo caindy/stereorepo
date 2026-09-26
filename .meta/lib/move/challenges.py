@@ -1,9 +1,10 @@
 """The Issue lifecycle: labels and levels, the reviewer's reading, filing, blockers, the
 claim, the hand-back, and the closes that are not a merge (solorepo's DR-264)."""
+import dataclasses
 import re
 import subprocess
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from typing import Any, cast
 
 import channel
@@ -434,9 +435,63 @@ def semantic_body(body: str) -> str:
     return common.WAITS_LINE.sub("", body).strip()
 
 
+@dataclasses.dataclass(frozen=True, eq=False)
+class SemanticDuplicate(Mapping[str, Any]):
+    """Diagnostic evidence and matched document for a semantic duplicate filing (solorepo's DR-266).
+
+    Parameters:
+        issue: The winning issue mapping from the queue.
+        score: Okapi BM25F score of the winning document.
+        runner_up: The runner-up issue mapping from the queue, or None if no runner-up matched.
+        runner_up_score: Okapi BM25F score of the runner-up document.
+        ratio: Ratio of the winning score to the runner-up score, or float('inf') if no runner-up.
+        matched_terms: Query tokens that matched in the winning document's title or body.
+    """
+
+    issue: Mapping[str, Any]
+    score: float
+    runner_up: Mapping[str, Any] | None
+    runner_up_score: float
+    ratio: float
+    matched_terms: list[str]
+
+    def __getitem__(self, key: str) -> Any:
+        return self.issue[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.issue)
+
+    def __len__(self) -> int:
+        return len(self.issue)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, SemanticDuplicate):
+            return (
+                self.issue == other.issue
+                and self.score == other.score
+                and self.runner_up == other.runner_up
+                and self.runner_up_score == other.runner_up_score
+                and self.ratio == other.ratio
+                and self.matched_terms == other.matched_terms
+            )
+        if isinstance(other, Mapping):
+            return self.issue == other
+        return False
+
+
 def semantic_duplicate(issues: Sequence[Mapping[str, Any]], title: str,
-                       body: str) -> Mapping[str, Any] | None:
-    """Return the uniquely dominant semantic queue match for a proposed filing."""
+                       body: str) -> SemanticDuplicate | None:
+    """Return the uniquely dominant semantic queue match for a proposed filing (solorepo's DR-266).
+
+    Parameters:
+        issues: Candidate open issues in the queue.
+        title: Proposed Challenge title.
+        body: Proposed Challenge body.
+
+    Returns:
+        SemanticDuplicate | None: Match and evidence diagnostics if the leading
+            candidate clears the dominance threshold, or None.
+    """
     index = bm25.SearchIndex()
     documents: dict[str, Mapping[str, Any]] = {}
     query = f"{title}\n{semantic_body(body)}"
@@ -462,25 +517,85 @@ def semantic_duplicate(issues: Sequence[Mapping[str, Any]], title: str,
     matches = index.search(query, top_k=2)
     if not matches:
         return None
+
+    def evidence_for(
+        winner_match: Any,
+        runner_up_match: Any | None,
+        ratio: float,
+    ) -> SemanticDuplicate:
+        winner = documents[winner_match.identifier]
+        runner_up = documents.get(runner_up_match.identifier) if runner_up_match else None
+        runner_up_score = runner_up_match.score if runner_up_match else 0.0
+        q_tokens = bm25.tokenize(query)
+        doc_tokens = set(bm25.tokenize(str(winner.get("title", "")))) | set(
+            bm25.tokenize(semantic_body(str(winner.get("body", ""))))
+        )
+        matched_terms = [t for t in dict.fromkeys(q_tokens) if t in doc_tokens]
+        return SemanticDuplicate(
+            issue=winner,
+            score=winner_match.score,
+            runner_up=runner_up,
+            runner_up_score=runner_up_score,
+            ratio=ratio,
+            matched_terms=matched_terms,
+        )
+
     if len(documents) > 1 and len(matches) == 1:
-        return documents[matches[0].identifier]
-    if len(matches) > 1 and matches[0].score / matches[1].score >= SEMANTIC_DUPLICATE_RATIO:
-        return documents[matches[0].identifier]
+        return evidence_for(matches[0], None, float("inf"))
+    if len(matches) > 1:
+        ratio = (
+            matches[0].score / matches[1].score
+            if matches[1].score > 0
+            else float("inf")
+        )
+        if ratio >= SEMANTIC_DUPLICATE_RATIO:
+            return evidence_for(matches[0], matches[1], ratio)
     return None
 
 
 def refuse_if_semantic_duplicate(issues: Sequence[Mapping[str, Any]] | None,
                                  title: str, body: str) -> None:
-    """Refuse a filing whose live queue match clears the solorepo's DR-266 cutoff."""
+    """Refuse a filing whose live queue match clears the solorepo's DR-266 cutoff.
+
+    Parameters:
+        issues: Candidate open issues to check against, or None if listing failed.
+        title: Proposed Challenge title.
+        body: Proposed Challenge body.
+
+    Raises:
+        SystemExit: When a uniquely dominant semantic duplicate is found.
+    """
     if issues is None:
         return
     match = semantic_duplicate(issues, title, body)
     if not match:
         return
     number, url = str(match["number"]), str(match.get("url", ""))
-    sys.exit(f"say: #{number} is the uniquely dominant semantic match for this Challenge: {url}\n"
-             "     Nothing was filed. If this is distinct work, explain the distinction in "
-             "the title and body, then file it again.")
+    if match.runner_up is not None:
+        ru_number = match.runner_up.get("number", "")
+        ru_desc = (
+            f"#{ru_number} (score: {match.runner_up_score:.2f})"
+            if ru_number
+            else f"score: {match.runner_up_score:.2f}"
+        )
+    else:
+        ru_desc = "none (score: 0.00)"
+
+    if match.ratio == float("inf"):
+        ratio_desc = f"∞ >= {SEMANTIC_DUPLICATE_RATIO:.2f}"
+    else:
+        ratio_desc = f"{match.ratio:.2f} >= {SEMANTIC_DUPLICATE_RATIO:.2f}"
+
+    terms_desc = ", ".join(match.matched_terms) if match.matched_terms else "none"
+
+    sys.exit(
+        f"say: #{number} is the uniquely dominant semantic match for this Challenge: {url}\n"
+        f"     Score: {match.score:.2f}; runner-up: {ru_desc}; "
+        f"ratio: {ratio_desc} (threshold: {SEMANTIC_DUPLICATE_RATIO:.2f}).\n"
+        f"     Matched terms: {terms_desc}.\n"
+        "     Nothing was filed. If this is distinct work, explain the distinction in "
+        "the title and body, then file it again."
+    )
 
 
 def file_issue(title: str, body: str, level: str | None = None,
