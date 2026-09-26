@@ -10,7 +10,7 @@ import json
 import subprocess
 import sys
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, NamedTuple
 
 GH_TIMEOUT: float = 60
 """Seconds one `gh` invocation is given before it is abandoned as hung (solorepo's #738).
@@ -42,8 +42,28 @@ _DEGRADE_SENTINEL = object()
 """Sentinel indicating empty output should degrade rather than return blank."""
 
 
+class Streams(NamedTuple):
+    """Captured standard output and standard error streams from a gh command execution.
+
+    Parameters:
+        stdout: Complete captured standard output stream.
+        stderr: Complete captured standard error stream.
+    """
+
+    stdout: str
+    stderr: str
+
+    def __bool__(self) -> bool:
+        """Returns True if either stdout or stderr contains non-whitespace text."""
+        return bool(self.stdout.strip() or self.stderr.strip())
+
+
 class GhTimeout(SystemExit):
     """A `gh` invocation abandoned at its timeout bound (solorepo's #738)."""
+
+
+class GhStreamsError(ValueError):
+    """A streams=True invocation under parse=True (solorepo's #1054)."""
 
 
 GH_HUNG = "gh: `gh {cmd}` answered nothing within {timeout}s"
@@ -100,7 +120,35 @@ def _relay(args: tuple[str, ...] | Sequence[str], out: subprocess.CompletedProce
     )
 
 
-def gh(  # noqa: PLR0913  # reason: one call's eight behaviours, named so a typo raises TypeError
+def _streams_result(
+    out: subprocess.CompletedProcess[str],
+    blank: Any,
+    default: Any,
+    args: Sequence[str],
+    prefix: str | None,
+) -> Any:
+    """Answers captured streams or degrades when both streams are empty without blank."""
+    if blank is _DEGRADE_SENTINEL and not (out.stdout.strip() or out.stderr.strip()):
+        return _degrade(default, "answered nothing", args=args, prefix=prefix)
+    return Streams(out.stdout, out.stderr)
+
+
+def _text_or_degrade(
+    text: str,
+    blank: Any,
+    default: Any,
+    args: Sequence[str],
+    prefix: str | None,
+) -> Any:
+    """Answers stripped output or blank fallback when empty, or degrades."""
+    if text:
+        return text
+    if blank is not _DEGRADE_SENTINEL:
+        return blank
+    return _degrade(default, "answered nothing", args=args, prefix=prefix)
+
+
+def gh(  # noqa: PLR0913  # reason: one call's nine behaviours, named so a typo raises TypeError
     *args: str,
     default: Any = UNSET,
     env: dict[str, str] | None = None,
@@ -111,6 +159,7 @@ def gh(  # noqa: PLR0913  # reason: one call's eight behaviours, named so a typo
     blank: Any = _DEGRADE_SENTINEL,
     prefix: str | None = None,
     subprocess_module: Any = subprocess,
+    streams: bool = False,
 ) -> Any:
     """Executes a gh CLI command and parses JSON or text output.
 
@@ -138,9 +187,11 @@ def gh(  # noqa: PLR0913  # reason: one call's eight behaviours, named so a typo
             A stand-in carries only what those wrappers name, which is why
             `TimeoutExpired` and `CalledProcessError` are fetched from it with a
             fallback to the real classes rather than read outright.
+        streams: Whether to return both execution streams as a Streams namedtuple
+            under non-parsing invocations (solorepo's #1054).
 
     Returns:
-        Any: Parsed JSON data, stripped raw text, or caller fallback.
+        Any: Parsed JSON data, stripped raw text, captured Streams, or caller fallback.
 
     Raises:
         subprocess.CalledProcessError: When tolerate_fail is True and command
@@ -148,7 +199,10 @@ def gh(  # noqa: PLR0913  # reason: one call's eight behaviours, named so a typo
         json.JSONDecodeError: When tolerate_fail is True and output is invalid JSON.
         GhTimeout: When invocation times out and tolerate_fail is False.
         SystemExit: When invocation fails or returns invalid JSON without a fallback.
+        GhStreamsError: When streams is True and parse is True.
     """
+    if streams and parse:
+        raise GhStreamsError
     cmd = ["gh", *args]
     timeout_cls = getattr(subprocess_module, "TimeoutExpired", subprocess.TimeoutExpired)
     cpe_cls = getattr(subprocess_module, "CalledProcessError", subprocess.CalledProcessError)
@@ -167,13 +221,13 @@ def gh(  # noqa: PLR0913  # reason: one call's eight behaviours, named so a typo
         if tolerate_fail:
             raise cpe_cls(out.returncode, cmd, output=out.stdout, stderr=out.stderr)
         return _degrade(default, out.stderr.strip(), args=args, prefix=prefix)
+    if not parse:
+        if streams:
+            return _streams_result(out, blank, default, args, prefix)
+        return _text_or_degrade(out.stdout.strip(), blank, default, args, prefix)
     text = out.stdout.strip()
     if not text:
-        if blank is not _DEGRADE_SENTINEL:
-            return blank
-        return _degrade(default, "answered nothing", args=args, prefix=prefix)
-    if not parse:
-        return text
+        return _text_or_degrade(text, blank, default, args, prefix)
     try:
         return json.loads(text)
     except json.JSONDecodeError as exc:

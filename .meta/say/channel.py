@@ -354,9 +354,8 @@ def role_credential() -> dict[str, str]:
     return {"GH_TOKEN": found["GH_TOKEN"]}
 
 
-GH_TIMEOUT = lib_gh.GH_TIMEOUT
-TIMEOUT_RETURNCODE = lib_gh.TIMEOUT_RETURNCODE
-UNSET = lib_gh.UNSET
+GH_TIMEOUT, TIMEOUT_RETURNCODE, UNSET, Streams = (
+    lib_gh.GH_TIMEOUT, lib_gh.TIMEOUT_RETURNCODE, lib_gh.UNSET, lib_gh.Streams)
 
 STACK_EXTENSION = "github/gh-stack"
 """The extension `gh stack` is, spelled as `gh extension install` takes it.
@@ -425,9 +424,9 @@ def _git_config_env(key: str, value: str) -> dict[str, str]:
     }
 
 
-def gh(*args: str, parse: bool = True, default: Any = UNSET,
-       tolerate_fail: bool = False, timeout: float | None = GH_TIMEOUT,
-       echo: bool = False) -> Any:
+def gh(  # noqa: PLR0913  # reason: one command's named behaviours reject positional misuse
+       *args: str, parse: bool = True, default: Any = UNSET, tolerate_fail: bool = False,
+       timeout: float | None = GH_TIMEOUT, echo: bool = False, streams: bool = False) -> Any:
     """Executes a gh CLI command using the role credential and parses JSON output.
 
     A `gh stack` call is preceded by `_stack_extension`, which installs
@@ -455,10 +454,11 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
             GitHub rather than from its return value discards the only account
             of what it did, and the failure that account names is a call that
             exits 0 having done nothing.
+        streams: Whether to return both execution streams as a `Streams`
+            named tuple (solorepo's #1054).
 
     Returns:
-        Any: Parsed JSON data, the stripped output where parse is false or the
-            command printed nothing, or the fallback.
+        Any: Parsed JSON data, stripped output, captured Streams, or caller fallback.
 
     Raises:
         subprocess.CalledProcessError: If the command fails or times out under
@@ -467,6 +467,7 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
         json.JSONDecodeError: If the output cannot be read as JSON under
             tolerate_fail.
         SystemExit: If the read fails or times out and no fallback was given.
+        ValueError: If streams is True and parse is True.
     """
     extra_env: dict[str, str] = {}
     if args[:1] == ("stack",):
@@ -474,21 +475,15 @@ def gh(*args: str, parse: bool = True, default: Any = UNSET,
         if len(args) > 1 and args[1] == "rebase":
             extra_env = _git_config_env("rebase.empty", "keep")
     return lib_gh.gh(
-        *args,
-        default=default,
-        env={**os.environ, **role_credential(), **extra_env},
-        timeout=timeout,
-        parse=parse,
-        tolerate_fail=tolerate_fail,
-        echo=echo,
-        blank="",
-        prefix="gh",
-        subprocess_module=subprocess,
+        *args, default=default, env={**os.environ, **role_credential(), **extra_env},
+        timeout=timeout, parse=parse, tolerate_fail=tolerate_fail, echo=echo,
+        blank="", prefix="gh", subprocess_module=subprocess, streams=streams,
     )
 
 
-def gh_with_retry(*args: str, parse: bool = True, default: Any = UNSET,
-                  tries: int = 3, delay: float = 2, backoff: float = 2) -> Any:
+def gh_with_retry(  # noqa: PLR0913  # reason: retry policy and command semantics are independent
+                  *args: str, parse: bool = True, default: Any = UNSET, tries: int = 3,
+                  delay: float = 2, backoff: float = 2, streams: bool = False) -> Any:
     """Run gh, retrying on subprocess/API failure with exponential backoff.
 
     A call that answers nothing within `GH_TIMEOUT` seconds is a failure like
@@ -508,10 +503,12 @@ def gh_with_retry(*args: str, parse: bool = True, default: Any = UNSET,
         tries: How many attempts to make before the failure is final.
         delay: Seconds to wait after the first failed attempt.
         backoff: What each further wait is multiplied by.
+        streams: Whether to return both execution streams as a `Streams`
+            named tuple (solorepo's #1054).
 
     Returns:
-        Any: Parsed JSON data, the stripped output where `parse` is false or the
-            command printed nothing, or the fallback.
+        Any: Parsed JSON data, the stripped output where `parse` is false,
+            captured Streams where `streams` is true, or the fallback.
 
     Raises:
         SystemExit: If every attempt fails and no fallback was given, or if an
@@ -520,7 +517,7 @@ def gh_with_retry(*args: str, parse: bool = True, default: Any = UNSET,
     current_delay = delay
     for attempt in range(tries):
         try:
-            return gh(*args, parse=parse, tolerate_fail=True)
+            return gh(*args, parse=parse, tolerate_fail=True, streams=streams)
         except subprocess.CalledProcessError as exc:
             if attempt == tries - 1:
                 return _degrade_relayed(args, exc.stderr.strip(), default)

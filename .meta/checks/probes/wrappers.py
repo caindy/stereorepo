@@ -42,12 +42,13 @@ WIDTH = 120
 """How much of what a read exited with a finding carries: Article 21 gives a problem one line, and `gh`'s own refusal is its whole usage screen."""
 
 
-def stand_in(code: int, out: str) -> types.SimpleNamespace:
+def stand_in(code: int, out: str, err: str = "stood in") -> types.SimpleNamespace:
     """`subprocess` as a wrapper reads it, answering one call.
 
     Parameters:
         code (int): The exit status the call is given.
-        out (str): What the call is given to have printed.
+        out (str): What the call is given to have printed on standard output.
+        err (str): What the call is given to have printed on standard error.
 
     Returns:
         types.SimpleNamespace: A stand-in carrying `run` and `CalledProcessError`,
@@ -55,9 +56,10 @@ def stand_in(code: int, out: str) -> types.SimpleNamespace:
         the real one, so a wrapper that raises rather than exits raises what a
         caller catches.
     """
-    done = subprocess.CompletedProcess(["gh", *MISSING], code, out, "stood in")
+    done = subprocess.CompletedProcess(["gh", *MISSING], code, out, err)
     return types.SimpleNamespace(run=lambda *args, **kwargs: done,
-                                 CalledProcessError=subprocess.CalledProcessError)
+                                 CalledProcessError=subprocess.CalledProcessError,
+                                 TimeoutExpired=subprocess.TimeoutExpired)
 
 
 def contract(wrapper: Wrapper, case: Case, default: Any) -> tuple[Any, bool]:
@@ -180,6 +182,90 @@ def anchored(wrapper: Wrapper) -> list[str]:
     return []
 
 
+def _probe_channel_streams(channel: Any) -> list[str]:
+    """Verification of channel.gh stream capture on populated and empty executions."""
+    problems: list[str] = []
+    with stood_in(channel, subprocess=stand_in(0, "output text\n", "diagnostic warning\n")):
+        res = channel.gh("test", parse=False, streams=True)
+        if not isinstance(res, channel.Streams):
+            problems.append(f"channel.gh streams=True returned {type(res).__name__}")
+        elif res.stdout != "output text\n" or res.stderr != "diagnostic warning\n":
+            problems.append(f"channel.gh streams mismatch: {res!r}")
+        elif not res:
+            problems.append("channel.gh Streams unexpectedly evaluated to falsy")
+        out, err = res
+        if out != "output text\n" or err != "diagnostic warning\n":
+            problems.append(f"channel.Streams unpacking mismatch: {res!r}")
+
+    with stood_in(channel, subprocess=stand_in(0, "", "Checks in progress\n")):
+        res = channel.gh("stack", "merge", parse=False, streams=True)
+        if not isinstance(res, channel.Streams) or res.stderr != "Checks in progress\n":
+            problems.append(f"channel.gh failed on stderr-only zero exit: {res!r}")
+        elif not res:
+            problems.append("channel.gh Streams evaluated to falsy with non-empty stderr")
+
+    with stood_in(channel, subprocess=stand_in(0, "", "")):
+        res = channel.gh("test", parse=False, streams=True)
+        if not isinstance(res, channel.Streams) or res.stdout != "" or res.stderr != "":
+            problems.append(f"channel.gh silent zero exit returned unexpected result: {res!r}")
+        elif res:
+            problems.append("channel.gh silent Streams evaluated to truthy when empty")
+    return problems
+
+
+def _probe_auxiliary_streams(channel: Any, lib_gh: Any) -> list[str]:
+    """Verification of echo, retry, fallback, and validation behaviours under streams=True."""
+    problems: list[str] = []
+    with stood_in(channel, subprocess=stand_in(0, "echo stdout\n", "echo stderr\n")):
+        got, _, exited = answered(
+            lambda: channel.gh("test", parse=False, echo=True, streams=True)
+        )
+        if exited or not isinstance(got, channel.Streams):
+            problems.append("channel.gh with echo=True and streams=True failed to return Streams")
+
+    with stood_in(channel, subprocess=stand_in(0, "retry out\n", "retry err\n")):
+        res = channel.gh_with_retry("test", parse=False, streams=True, tries=1, delay=0)
+        if not isinstance(res, channel.Streams) or res.stdout != "retry out\n":
+            problems.append(f"channel.gh_with_retry failed: {res!r}")
+
+    stream_subprocess = stand_in(0, "", "")
+    degraded = lib_gh.gh(
+        "test", parse=False, streams=True, default="fallback",
+        subprocess_module=stream_subprocess,
+    )
+    if degraded != "fallback":
+        problems.append(f"lib_gh.gh did not degrade on empty streams: {degraded!r}")
+    blank_res = lib_gh.gh(
+        "test", parse=False, streams=True, blank="", subprocess_module=stream_subprocess
+    )
+    if not isinstance(blank_res, lib_gh.Streams) or bool(blank_res):
+        problems.append("lib_gh.gh with blank='' did not return empty Streams")
+
+    with stood_in(channel, subprocess=stand_in(0, "{}", "")):
+        try:
+            channel.gh("test", parse=True, streams=True)
+            problems.append("channel.gh did not raise on streams=True and parse=True")
+        except ValueError:
+            pass
+    return problems
+
+
+def held_streams(channel: Any) -> list[str]:
+    """Verification of captured execution streams under non-parsing invocations.
+
+    Tests channel.gh, lib_gh.gh, and channel.gh_with_retry with streams=True,
+    verifying captured Streams objects, stderr inspection on zero-exit commands,
+    truthiness evaluation, tuple unpacking, and fallback handling (solorepo's #1054).
+
+    Parameters:
+        channel (Any): The channel module loaded by load_channel.
+
+    Returns:
+        list[str]: Descriptions of contract violations encountered, or empty.
+    """
+    return _probe_channel_streams(channel) + _probe_auxiliary_streams(channel, channel.lib_gh)
+
+
 @check("gh wrapper probes", pre=True)
 def gh_wrapper_probes() -> Found | Passed:
     """`next.py`'s, `check_pr`'s, the channel's and `timing`'s `gh`, and the channel's `gh_with_retry`, each over the three reads that go wrong and the three fallbacks a caller gives (solorepo's #737).
@@ -245,7 +331,9 @@ def gh_wrapper_probes() -> Found | Passed:
                 for default in FALLBACKS:
                     problems += held(wrapper, case, default)
             problems += anchored(wrapper)
+        problems += held_streams(channel)
     if problems:
         return Found(problems)
     return Passed(f"{len(subjects)} wrappers over {len(CASES)} failed reads "
-                  f"and {len(FALLBACKS)} fallbacks, and one real `gh` failure each")
+                  f"and {len(FALLBACKS)} fallbacks, one real `gh` failure each, "
+                  "and stream capture verified")

@@ -186,3 +186,18 @@ either name in `ENV_ANTIGRAVITY` is present outside a run.
 
 Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`,
 `.meta/checks/probes/channel/agent.py::agent_probes`
+
+
+### Non-parsing gh invocations discarded stderr on zero-exit commands
+
+In `.meta/lib/gh.py` and `.meta/say/channel.py`, `gh(*args, parse=False)`
+returned only stripped `stdout`. When a command such as `gh stack merge` exited
+0 having merged nothing (due to in-progress status checks or first-use
+extension installation), diagnostic explanations output on `stderr` were
+relayed under `echo=True` but discarded from the return value, preventing
+callers like `pull_requests.merge` from programmatically inspecting stream
+output. Established: `lib_gh.gh` and `channel.gh` support `streams=True` under
+non-parsing invocations, returning a `Streams(stdout, stderr)` namedtuple that
+preserves both execution streams on zero-exit commands (solorepo's #1054).
+
+Evidence: `.meta/checks/probes/wrappers.py::gh_wrapper_probes`
