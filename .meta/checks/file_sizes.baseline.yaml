@@ -26,7 +26,7 @@
 .meta/checks/probes/loops/advance.py: 223
 .meta/checks/probes/loops/dispatch.py: 206
 .meta/checks/probes/loops/merge_manager.py: 1177
-.meta/checks/probes/loops/reconcile.py: 357
+.meta/checks/probes/loops/reconcile.py: 77
 .meta/checks/probes/tools/fallback.py: 277
 .meta/depth.py: 132
 .meta/detect_fallback.py: 23
