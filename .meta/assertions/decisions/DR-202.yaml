@@ -1,0 +1,13 @@
+decisions:
+  - id: work:decision/202
+    name: "DR-202 · Unused reservation on branch claude/issue-400"
+    status: WITHDRAWN
+    withdrawn_because: >-
+      Minted on branch claude/issue-400 for Challenge #400. That work was
+      subsequently settled and enacted under DR-205; this number was reserved on
+      GitHub and is withdrawn to preserve sequence contiguity without an unredeemed tag.
+    rationale: |-
+      Nothing was decided under this number. Grounding YAGNI at the creation
+      boundary in Article A8 and Nothing Unconsumed for Challenge #400 was
+      settled and enacted under DR-205. Under solorepo's DR-128, a reserved number
+      is never deleted or reissued, so it is recorded as WITHDRAWN.

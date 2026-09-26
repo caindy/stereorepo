@@ -308,7 +308,12 @@ true because it turned out to foreclose nothing.
 - [DR-036](assertions/decisions/DR-036.yaml) — withdrawn. An audit report.
 - [DR-045](assertions/decisions/DR-045.yaml) — withdrawn. A run report.
 - [DR-058](assertions/decisions/DR-058.yaml) — withdrawn. The number was cited in `roadmap.md` for a decision nobody wrote down — the A17 word-counting gate, built and removed in the same change.
+- [DR-135](assertions/decisions/DR-135.yaml) — withdrawn. Minted on branch claude/issue-166 for Challenge #166.
+- [DR-136](assertions/decisions/DR-136.yaml) — withdrawn. Minted on branch claude/issue-172 for Challenge #172.
+- [DR-139](assertions/decisions/DR-139.yaml) — withdrawn. Minted on branch claude/issue-178 for Challenge #178.
 - [DR-146](assertions/decisions/DR-146.yaml) — withdrawn. The change proposing this decision (PR #206) was superseded by DR-152 (PR #227).
+- [DR-202](assertions/decisions/DR-202.yaml) — withdrawn. Minted on branch claude/issue-400 for Challenge #400.
+- [DR-211](assertions/decisions/DR-211.yaml) — withdrawn. Minted on branch gemini/issue-446 for Challenge #446.
 - [DR-247](assertions/decisions/DR-247.yaml) — withdrawn. Minted inadvertently on branch gemini/issue-681 (PR #685) while reserving decisions for Challenge #681, which required only a single decision number (decision 246).
 - [DR-280](assertions/decisions/DR-280.yaml) — withdrawn. Minted on solorepo's #934 for an ordered execution plan the static step ladders could not run in every order the policy resolved, and reviewed by a door that did not emit its outputs.
 - [DR-290](assertions/decisions/DR-290.yaml) — withdrawn. Minted on gemini/reviewer-reviews-when-requested concurrently with DR-291 for Challenge #1062.

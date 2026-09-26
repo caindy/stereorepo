@@ -1,0 +1,13 @@
+decisions:
+  - id: work:decision/211
+    name: "DR-211 · Unused reservation on branch gemini/issue-446"
+    status: WITHDRAWN
+    withdrawn_because: >-
+      Minted on branch gemini/issue-446 for Challenge #446. That work was
+      subsequently settled and enacted under DR-212; this number was reserved on
+      GitHub and is withdrawn to preserve sequence contiguity without an unredeemed tag.
+    rationale: |-
+      Nothing was decided under this number. Adapting vendored Python refactoring
+      skills to respect repository tooling contracts for Challenge #446 was
+      settled and enacted under DR-212. Under solorepo's DR-128, a reserved number
+      is never deleted or reissued, so it is recorded as WITHDRAWN.

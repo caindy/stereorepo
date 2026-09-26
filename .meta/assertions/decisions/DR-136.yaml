@@ -1,0 +1,13 @@
+decisions:
+  - id: work:decision/136
+    name: "DR-136 · Unused reservation on branch claude/issue-172"
+    status: WITHDRAWN
+    withdrawn_because: >-
+      Minted on branch claude/issue-172 for Challenge #172. That work was
+      subsequently settled and enacted under DR-180; this number was reserved on
+      GitHub and is withdrawn to preserve sequence contiguity without an unredeemed tag.
+    rationale: |-
+      Nothing was decided under this number. Citation deduplication for generated
+      render targets for Challenge #172 was settled and enacted under DR-180.
+      Under solorepo's DR-128, a reserved number is never deleted or reissued,
+      so it is recorded as WITHDRAWN.
