@@ -1,10 +1,20 @@
-"""The assertion graph's shape, six checks: a reference that resolves to nothing, a `composed_of` cycle a path cannot traverse, a Collaboration whose members cross a file boundary, an audit whose Permission is not the Remit's or whose target is not the Securable's, a Job to be Done whose END goal is not held by its own Persona, and a Portfolio with other than one Bounded Context.
+"""The assertion graph's shape, seven checks: a reference that resolves to nothing, a `composed_of` cycle a path cannot traverse, a Collaboration whose members cross a file boundary, an audit whose Permission is not the Remit's or whose target is not the Securable's, a Job to be Done whose END goal is not held by its own Persona, a Portfolio with other than one Bounded Context, and a Bootstrap lacking coverage for project-binding Disciplines.
 """
 
 
 from typing import Any
 
 from checks.collect import check
+
+PROJECT_BINDING_DISCIPLINES: frozenset[str] = frozenset({
+    "work:discipline/literate-programming",
+    "work:discipline/ratchet",
+    "work:discipline/observed-failure",
+    "work:discipline/nothing-unconsumed",
+    "work:discipline/seeded-artifacts",
+    "work:discipline/written-decisions",
+})
+"""Disciplines binding projects that every registered Bootstrap must implement or exempt."""
 
 
 @check("unresolved references")
@@ -141,3 +151,67 @@ def one_context_per_portfolio(index: dict[str, Any]) -> list[str]:
             problems.append(f"{pid} names '{named}', which is not the context declared in "
                             "domain_vocabulary.yaml")
     return problems
+
+
+@check("bootstrap discipline coverage")
+def bootstrap_discipline_coverage(index: dict[str, Any]) -> list[str]:
+    """Every Bootstrap implements or exempts all project-binding Disciplines (Article 7).
+
+    Validates that each Bootstrap declared in the assertions explicitly accounts
+    for every Discipline in `PROJECT_BINDING_DISCIPLINES`. An implemented
+    Discipline must declare gate steps in `held_by`; an exempt Discipline must
+    supply an `exemption_reason`. Disciplines binding projects cannot be marked
+    `portfolio_scoped`.
+
+    Args:
+        index: Identified objects mapping entity identifier to (class_name, object_dict, file_name).
+
+    Returns:
+        list[str]: Diagnostic problem messages for missing, incomplete, or invalid declarations.
+    """
+    problems: list[str] = []
+    bootstraps = [
+        (bid, obj)
+        for bid, (cls, obj, _) in index.items()
+        if cls == "Bootstrap"
+    ]
+    for bid, obj in sorted(bootstraps):
+        impls = obj.get("discipline_implementations") or []
+        seen: set[str] = set()
+        for entry in impls:
+            disc = entry.get("discipline")
+            if not disc:
+                problems.append(f"{bid}: discipline entry missing 'discipline' reference")
+                continue
+            if disc in seen:
+                problems.append(f"{bid}: discipline '{disc}' declared more than once")
+            seen.add(disc)
+            status = entry.get("status")
+            if status == "implemented":
+                held_by = entry.get("held_by") or []
+                if not held_by:
+                    problems.append(
+                        f"{bid}: discipline '{disc}' is implemented but names no gate steps "
+                        "in 'held_by'"
+                    )
+            elif status == "exempt":
+                reason = entry.get("exemption_reason")
+                if not reason or not str(reason).strip():
+                    problems.append(
+                        f"{bid}: discipline '{disc}' is exempt but carries no 'exemption_reason'"
+                    )
+            elif status == "portfolio_scoped":
+                if disc in PROJECT_BINDING_DISCIPLINES:
+                    problems.append(
+                        f"{bid}: project-binding discipline '{disc}' cannot be "
+                        "marked 'portfolio_scoped'"
+                    )
+            else:
+                problems.append(
+                    f"{bid}: discipline '{disc}' has invalid status '{status}'"
+                )
+        missing = PROJECT_BINDING_DISCIPLINES - seen
+        for disc in sorted(missing):
+            problems.append(f"{bid}: missing discipline entry for '{disc}'")
+    return problems
+

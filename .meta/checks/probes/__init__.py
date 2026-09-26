@@ -24,6 +24,7 @@ import checks.probes.git  # noqa: I001  # reason: registration order is delibera
 import checks.probes.channel
 import checks.probes.loops
 import checks.probes.knowledge
+import checks.probes.structure
 import checks.probes.citations
 import checks.probes.surface
 import checks.probes.wrappers

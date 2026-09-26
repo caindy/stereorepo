@@ -538,6 +538,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py
+  - id: work:artifact/meta-checks-probes-structure
+    name: .meta/checks/probes/structure.py
+    path: .meta/checks/probes/structure.py
   - id: work:artifact/meta-checks-probes-citations
     name: .meta/checks/probes/citations.py
     path: .meta/checks/probes/citations.py

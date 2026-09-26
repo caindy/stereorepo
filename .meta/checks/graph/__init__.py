@@ -9,7 +9,17 @@ report in (solorepo's DR-218). History in graph.history.md (solorepo's DR-171).
 import checks.graph.structure  # noqa: I001  # reason: registration order is deliberate
 import checks.graph.record
 import checks.graph.artifacts  # noqa: F401  # reason: registers check steps
-from checks.graph.structure import audit_invariants, collaboration_membership, composed_of_cycles, hop, one_context_per_portfolio, served_goals, unresolved_references
+from checks.graph.structure import (
+    PROJECT_BINDING_DISCIPLINES,
+    audit_invariants,
+    bootstrap_discipline_coverage,
+    collaboration_membership,
+    composed_of_cycles,
+    hop,
+    one_context_per_portfolio,
+    served_goals,
+    unresolved_references,
+)
 from checks.graph.record import DELETION, OPTIONS_REQUIRED_FROM, RESERVATION, decision_alternatives, decision_level, decision_numbering, decision_supersession, deleted_decision_numbers, reserved_decision_numbers, withdrawn_decisions
 from checks.graph.artifacts import (
     OPERATIONAL_GLOBS,
@@ -26,11 +36,13 @@ __all__ = [
     "DELETION",
     "OPERATIONAL_GLOBS",
     "OPTIONS_REQUIRED_FROM",
+    "PROJECT_BINDING_DISCIPLINES",
     "RECORD",
     "RESERVATION",
     "artifact_paths",
     "artifacts",
     "audit_invariants",
+    "bootstrap_discipline_coverage",
     "collaboration_membership",
     "composed_of_cycles",
     "decision_alternatives",
