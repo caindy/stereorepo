@@ -5,18 +5,33 @@ autonomous loop runs, demoting stalled pull requests to draft to prevent
 head-of-line blocking in the merge queue, restoring approved green drafts to
 ready status, and managing signed merge refusal notices.
 """
+import datetime
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import channel
 import check_pr
 from lib.move import advance, challenges, common, drafts, pull_requests
+from lib.move.actions import in_flight
 from lib.move.manager import ranking
 
 STALL_CHANGES_REQUESTED_THRESHOLD = 3
 """Number of changes-requested review rounds before an autonomous loop PR is
 evicted to draft (solorepo's DR-258)."""
+
+STALL_ESCALATION_MARKER = "<!-- solorepo:draft-escalation -->"
+"""Marker on the first durable observation of an autonomous draft stall."""
+
+
+def idle_minutes(obj: Mapping[str, Any], now: datetime.datetime,
+                 field: str = "updatedAt") -> float:
+    """Return the minutes since `field`, or infinity where GitHub omitted it."""
+    moved = obj.get(field)
+    if not moved:
+        return float("inf")
+    since = datetime.datetime.fromisoformat(str(moved).replace("Z", "+00:00"))
+    return (now - since).total_seconds() / 60
 
 
 def is_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str) -> bool:
@@ -135,6 +150,89 @@ def evict_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str = "review
     if not is_stalled_autonomous_pr(pull, reviewer_login):
         return False
     return demote_to_draft(pull, action="evict", reason="stalled autonomous", dry_run=dry_run)
+
+
+def draft_escalations(pulls: Sequence[common.Pull], reading: Any) -> list[Any]:
+    """Return escalations owed on autonomous implementation drafts that remain stalled.
+
+    The first qualified reconciliation writes an in-place observation tagged
+    with the current head. A later reconciliation can hand the Challenge back
+    only when that observation still names the unchanged draft, no GitHub
+    Actions run answers it, and every other guard still holds. A conflict also
+    needs the rebase run dispatched by the first phase to have completed.
+
+    Parameters:
+        pulls (Sequence[Pull]): The open pull requests in one reconciliation.
+        reading (Reading): The reconciliation's cached Issues, times, and runs.
+
+    Returns:
+        list[Owed]: The Challenge hand-backs owed by qualifying drafts.
+    """
+    from lib.move import reconcile
+
+    owed = []
+    for pull in pulls:
+        match = pull_requests.LOOPS_BRANCH.match(pull.get("headRefName") or "")
+        if not match or not pull.get("isDraft") or not pull.get("changedFiles"):
+            continue
+        challenge = int(match.group(1))
+        found = reconcile._challenge_reads(challenge, reading)
+        if found is not check_pr.state.IssueState.RESUMABLE:
+            continue
+        idle = idle_minutes(pull, reading.now)
+        head = str(pull.get("headRefName") or "")
+        if idle < reading.bound or in_flight(reading.action_runs, branch=head):
+            continue
+        number = int(pull["number"])
+        conflicting = str(pull.get("mergeable") or "").upper() == "CONFLICTING"
+        rebase_finished = any(
+            run.get("status") == "completed"
+            and str(run.get("displayTitle") or "") == f"coder-issue-#{number}"
+            for run in reading.coder_runs.recent or []
+        )
+        if conflicting and (not reading.coder_runs.listed or not rebase_finished):
+            continue
+        diagnosis = (
+            f"Autonomous pull request #{number} on `{head}` remains a draft after "
+            f"{int(idle)} inactive minutes with no queued or in-progress GitHub Actions run."
+        )
+        if conflicting:
+            diagnosis += (" A dispatched rebase attempt completed, but GitHub still reports the "
+                          "pull request conflicting.")
+        else:
+            diagnosis += " The soft draft demotion did not restore progress."
+        observed = any(
+            f"{STALL_ESCALATION_MARKER} head:{pull.get('headRefOid') or ''}"
+            in str(comment.get("body") or "")
+            for comment in pull.get("comments") or []
+        )
+        if not observed:
+            body = (f"{STALL_ESCALATION_MARKER} head:{pull.get('headRefOid') or ''}\n"
+                    f"**Draft stall observation.** {diagnosis}")
+            owed.append(reconcile.Owed(
+                "escalate", number, "first later reconciliation finding this autonomous draft "
+                "stalled", title="observe", body=body,
+            ))
+            continue
+        owed.append(reconcile.Owed(
+            "escalate", challenge, f"#{number} remains an inactive autonomous draft after "
+            "the soft demotion", body=diagnosis,
+        ))
+    return owed
+
+
+def observe_draft_stall(pull: int, body: str) -> None:
+    """Record the first later reconciliation that still finds a draft stalled."""
+    advance.reconcile_notice(pull, STALL_ESCALATION_MARKER, channel.signed(body), body,
+                             label="draft stall observation")
+
+
+def settle_draft_escalation(number: int, observation: bool, body: str) -> None:
+    """Record an observation or hand the associated Challenge back to the solo."""
+    if observation:
+        observe_draft_stall(number, body)
+    else:
+        challenges.stop(number, channel.signed(body))
 
 
 def _restore_draft_if_ready(pull: common.Pull, reviewer_login: str, dry_run: bool) -> bool:

@@ -531,7 +531,7 @@ def _three_dispatchers_agree_on_stack_order(channel: Any, move: Any) -> list[str
                            coder="o-r-coder", reviewer_login="o-r-reviewer",
                            owner="o", name="r", by_number={}, named=set(),
                            coder_runs=move.Runs([], []), review_runs=move.Runs([], []),
-                           triage_runs=move.Runs([], []))
+                           triage_runs=move.Runs([], []), action_runs=move.Runs([], []))
     clock_acts: list[Any] = []
     run_verb(channel, fake, lambda: clock_acts.extend(move.owed_by_pulls(prs, reading)))
     act_root = next((a for a in clock_acts if a.number == 6), None)
@@ -703,4 +703,3 @@ def dispatch_probes() -> list[str]:
         _dispatch_rebase_refused_by_hand(channel, move),
         _three_dispatchers_agree_on_stack_order(channel, move)
     ) for problem in problems]
-

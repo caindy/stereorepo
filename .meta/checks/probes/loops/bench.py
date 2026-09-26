@@ -190,7 +190,8 @@ class _GitHub:
         if args[:2] == ("run", "list"):
             if self.unlistable:
                 return kwargs.get("default")
-            runs = list(self.runs.get(args[args.index("--workflow") + 1], []))
+            workflow = args[args.index("--workflow") + 1] if "--workflow" in args else "all"
+            runs = list(self.runs.get(workflow, []))
             if "--status" in args:
                 wanted = args[args.index("--status") + 1]
                 runs = [r for r in runs if r.get("status") == wanted]
@@ -375,7 +376,7 @@ def _reading(move: Any) -> Any:
     return move.Reading(now=datetime.datetime.now(datetime.UTC), bound=MINUTES, longest=75.0,
                         coder=CODER, reviewer_login=REVIEWER, owner="o", name="r",
                         by_number={}, named=set(), coder_runs=empty, review_runs=empty,
-                        triage_runs=empty)
+                        triage_runs=empty, action_runs=empty)
 
 
 def _trunk(move: Any, failing: list[str], oid: str = "abc1234def") -> Any:

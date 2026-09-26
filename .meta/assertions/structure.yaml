@@ -517,6 +517,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-reconcile
     name: .meta/checks/probes/loops/reconcile.py
     path: .meta/checks/probes/loops/reconcile.py
+  - id: work:artifact/meta-checks-probes-loops-escalation
+    name: .meta/checks/probes/loops/escalation.py
+    path: .meta/checks/probes/loops/escalation.py
   - id: work:artifact/meta-checks-probes-loops-trunk
     name: .meta/checks/probes/loops/trunk.py
     path: .meta/checks/probes/loops/trunk.py

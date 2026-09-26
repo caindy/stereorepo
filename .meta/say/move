@@ -113,6 +113,7 @@ from lib.move.manager.eviction import (
     STALL_CHANGES_REQUESTED_THRESHOLD,
     evaluate_open_pulls,
     evict_stalled_autonomous_pr,
+    idle_minutes,
     is_stalled_autonomous_pr,
 )
 from lib.move.manager.ranking import (
@@ -175,7 +176,6 @@ from lib.move.reconcile import (
     Owed,
     Quiet,
     Reading,
-    idle_minutes,
     owed_by_issue,
     owed_by_issues,
     owed_by_pull,

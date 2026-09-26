@@ -24,7 +24,7 @@
 .meta/checks/probes/harness/github.py: 269
 .meta/checks/probes/knowledge.py: 111
 .meta/checks/probes/loops/advance.py: 223
-.meta/checks/probes/loops/dispatch.py: 206
+.meta/checks/probes/loops/dispatch.py: 205
 .meta/checks/probes/loops/merge_manager.py: 1177
 .meta/checks/probes/loops/reconcile.py: 20
 .meta/checks/probes/tools/fallback.py: 277
@@ -35,7 +35,7 @@
 .meta/lib/move/challenges.py: 750
 .meta/lib/move/manager/ranking.py: 220
 .meta/lib/move/pull_requests.py: 275
-.meta/lib/move/reconcile.py: 256
+.meta/lib/move/reconcile.py: 244
 .meta/next.py: 68
 .meta/run_agy.py: 218
 .meta/say/channel.py: 370

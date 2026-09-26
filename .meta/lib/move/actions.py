@@ -3,10 +3,10 @@ answers.
 
 `pr list` and `issue list` say what is open and what stands on it. Two readings
 here say what they do not. `runs_of` lists a loop workflow's runs, which is how
-a pass tells a dispatch already flying from one it owes, and it is made once per
-loop workflow — three times a reconciler pass, for `coder.yml`, `review.yml` and
-`triage.yml`, and each of those three costs a `gh run list` per status in
-`IN_FLIGHT` and one more for the newest hundred, so nine listings a pass.
+a pass tells a dispatch already flying from one it owes. It also lists every
+workflow once a reconciler pass, which holds draft escalation while any GitHub
+Actions run still answers the branch. Each listing costs a `gh run list` per
+status in `IN_FLIGHT` and one more for the newest hundred.
 `trunk_health` reads the check rollup of trunk's own HEAD commit, which belongs
 to no pull request and so appears in no rollup the loops read, and it is made
 once a pass. Neither is re-read inside the verb that consumes it: both are read
@@ -130,8 +130,8 @@ class Trunk(NamedTuple):
         return not self.red and not self.pending
 
 
-def runs_of(workflow: str) -> Runs:
-    """The runs of a workflow, or that GitHub would not list them, said out loud.
+def runs_of(workflow: str | None = None) -> Runs:
+    """The runs of one workflow, or of every workflow, or that GitHub would not list them.
 
     A listing refused is not nothing in flight: the guard that keeps two coder
     runs off one branch is what the listing is for, and a token without
@@ -141,14 +141,15 @@ def runs_of(workflow: str) -> Runs:
     for a fallback, and is caught here for the same reason.
 
     Parameters:
-        workflow (str): The workflow file's name, as `gh run list` takes it.
+        workflow (str | None): A workflow name, or None for every GitHub Actions workflow.
 
     Returns:
         Runs: What was listed.
     """
     def listing(*args: str) -> list[dict[str, Any]] | None:
         try:
-            found = channel.gh("run", "list", "--workflow", workflow, *args,
+            command = ["run", "list"] + (["--workflow", workflow] if workflow else [])
+            found = channel.gh(*command, *args,
                                "--json", RUN_FIELDS, default=None)
         except SystemExit as exc:
             found, why = None, str(exc.code)
@@ -416,7 +417,7 @@ def breaking(trunk: Trunk, issues: Sequence[Mapping[str, Any]],
     Returns:
         Break: Trunk, and the Challenge standing for its break where one is.
     """
-    from lib.move import reconcile
+    from lib.move import manager
 
     branch, commit = trunk.ref, trunk.oid[:7]
     checks = ", ".join(trunk.failing)
@@ -434,7 +435,7 @@ def breaking(trunk: Trunk, issues: Sequence[Mapping[str, Any]],
         found=check_pr.state.classify_issue({**standing, "state": "OPEN"}, reading.coder,
                                             number in reading.named),
         busy=in_flight(reading.coder_runs, title=f"coder-issue-#{number}"),
-        idle=reconcile.idle_minutes(standing, reading.now, "createdAt"))
+        idle=manager.eviction.idle_minutes(standing, reading.now, "createdAt"))
 
 
 def owed_by_trunk(broken: Break) -> Any:

@@ -10,10 +10,10 @@ import check_pr
 from lib.move import actions, advance, challenges, common, handoff, manager, pull_requests
 from lib.move.actions import Runs, in_flight, read_by, runs_of
 
-RECONCILE_FIELDS = manager.MERGE_MANAGER_FIELDS + ",updatedAt,comments"
-"""The reconciler's read of each open pull request: the merge manager's fields, and two more.
+RECONCILE_FIELDS = manager.MERGE_MANAGER_FIELDS + ",updatedAt,comments,changedFiles"
+"""The reconciler's read of each open pull request: merge fields, inactivity data, and changes.
 
-The two more are `updatedAt` and `comments`. The comments carry the sweep's
+`updatedAt`, `comments`, and `changedFiles` qualify reconciliation. The comments carry the sweep's
 standing advance notice, which is what `advance.stalled_behind` reads and
 `pr list` answers for every pull request at once, so the arm that owes a
 rebase to a branch `gh pr update-branch --rebase` was refused on costs no
@@ -70,21 +70,6 @@ class Owed(NamedTuple):
     lower: int | None = None
     title: str = ""
     body: str = ""
-
-
-def idle_minutes(obj: Mapping[str, Any], now: datetime.datetime,
-                 field: str = "updatedAt") -> float:
-    """Minutes since an Issue or pull request last moved, by `field`; forever without one.
-
-    `updatedAt` is what every bound here is read against, and `createdAt` is
-    what a heal Challenge's escalation is read against: what that bound asks is
-    how long the break has stood, which an act on the Issue must not reset.
-    """
-    moved = obj.get(field)
-    if not moved:
-        return float("inf")
-    since = datetime.datetime.fromisoformat(str(moved).replace("Z", "+00:00"))
-    return (now - since).total_seconds() / 60
 
 
 def _challenge_reads(number: int, reading: Any = None) -> Any:
@@ -402,8 +387,8 @@ PERFORMED = {"rebase": ("dispatch a rebase pass for", "dispatched a rebase pass 
              "release": ("release the claim on", "released the claim on"),
              "file": ("file the heal Challenge for a red trunk",
                       "filed the heal Challenge for a red trunk"),
-             "escalate": ("hand the red trunk to the solo through",
-                          "handed the red trunk to the solo through")}
+             "escalate": ("settle the stalled draft through",
+                          "settled the stalled draft through")}
 """Each act's verb, to say and to have done, for the log."""
 
 
@@ -470,7 +455,7 @@ def _make(act: Owed) -> None:
     elif act.kind == "file":
         challenges.file_issue(act.title, act.body)
     elif act.kind == "escalate":
-        challenges.stop(act.number, act.body)
+        manager.eviction.settle_draft_escalation(act.number, act.title == "observe", act.body)
 
 
 def perform(owed: Sequence[Owed], live: bool) -> None:
@@ -557,9 +542,10 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
                        "--json", RECONCILE_FIELDS)
     issues = channel.gh("issue", "list", "--state", "open", "--limit", "200",
                         "--json", ISSUE_FIELDS)
-    coder_runs, review_runs, triage_runs = (runs_of("coder.yml"), runs_of("review.yml"),
-                                            runs_of("triage.yml"))
-    if not (coder_runs.listed and review_runs.listed and triage_runs.listed):
+    coder_runs, review_runs, triage_runs, action_runs = tuple(
+        runs_of(workflow) for workflow in ("coder.yml", "review.yml", "triage.yml", None)
+    )
+    if not all(runs.listed for runs in (coder_runs, review_runs, triage_runs, action_runs)):
         print("reconcile: holding every act a run could be answering, since the runs could "
               "not be listed and nothing says whether one is")
     reading = Reading(now=datetime.datetime.now(datetime.UTC), bound=bound,
@@ -570,6 +556,7 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
                              if (m := pull_requests.LOOPS_BRANCH.match(
                                  pull.get("headRefName") or ""))},
                       coder_runs=coder_runs, review_runs=review_runs, triage_runs=triage_runs,
+                      action_runs=action_runs,
                       trunk=trunk)
     owed = owed_by_pulls(pulls, reading) + owed_by_issues(issues, reading)
     healing = actions.owed_by_trunk(actions.breaking(trunk, issues, reading)) if trunk else None
@@ -614,6 +601,7 @@ class Reading(NamedTuple):
     coder_runs: Runs
     review_runs: Runs
     triage_runs: Runs
+    action_runs: Runs
     trunk: actions.Trunk | None = None
 
     @property
@@ -623,7 +611,7 @@ class Reading(NamedTuple):
 
 
 def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
-    """What every open loop-branch pull request not in draft is owed, read through both classifiers.
+    """What every open loop-branch pull request is owed, read through both classifiers.
 
     A rebase owed to a layer of a stack is held while a layer below it
     conflicts, since a stack is resolved from the bottom (solorepo's DR-133):
@@ -642,7 +630,7 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
     Returns:
         list[Owed]: The acts owed, at most one per pull request.
     """
-    owed: list[Owed] = []
+    owed = manager.eviction.draft_escalations(pulls, reading)
     for pull in pulls:
         match = pull_requests.LOOPS_BRANCH.match(pull.get("headRefName") or "")
         if not match or pull.get("isDraft"):
@@ -653,7 +641,7 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
         busy = (in_flight(reading.coder_runs, title=f"coder-issue-#{pull['number']}")
                 or in_flight(reading.coder_runs, title=f"coder-issue-#{challenge_number}")
                 or in_flight(reading.review_runs, branch=head))
-        free = not busy and idle_minutes(pull, reading.now) >= reading.bound
+        free = not busy and manager.eviction.idle_minutes(pull, reading.now) >= reading.bound
         if free:
             pull_requests.mergeability(pull)
         checks = manager.ranking.deduplicate_checks(pull.get("statusCheckRollup") or [])
@@ -740,7 +728,7 @@ def owed_by_issues(issues: Sequence[Mapping[str, Any]], reading: Reading) -> lis
         number = int(issue["number"])
         found = check_pr.state.classify_issue({**issue, "state": "OPEN"}, reading.coder,
                                               number in reading.named)
-        idle = idle_minutes(issue, reading.now)
+        idle = manager.eviction.idle_minutes(issue, reading.now)
         busy_coder = in_flight(reading.coder_runs, title=f"coder-issue-#{number}")
         busy_triage = in_flight(reading.triage_runs, title=f"triage-issue-#{number}")
         quiet = Quiet(free=not busy_coder and idle >= reading.bound,
