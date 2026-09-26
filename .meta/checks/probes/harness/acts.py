@@ -110,7 +110,8 @@ def workspace(**variables: str | None) -> Iterator[pathlib.Path]:
         os.chdir(root)
         try:
             with environment(GITHUB_OUTPUT=str(root / "output"), GITHUB_ENV=str(root / "env"),
-                             GEMINI_FALLBACK=None, JULES_FALLBACK=None, **variables):
+                             GEMINI_FALLBACK=None, JULES_FALLBACK=None, COPILOT_FALLBACK=None,
+                             **variables):
                 yield root
         finally:
             os.chdir(held)

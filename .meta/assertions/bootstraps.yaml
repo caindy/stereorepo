@@ -1,0 +1,95 @@
+bootstraps:
+  - id: work:bootstrap/python
+    name: The Python standard
+    description: >-
+      What a Python project in a portfolio inherits — the gates, the rule
+      set, the pins and the documentation layout, and solorepo's Disciplines
+      made executable for one language.
+    primary_persona: work:persona/the-solo
+    built_from:
+      - work:project/python-seed
+    discipline_implementations:
+      - discipline: work:discipline/literate-programming
+        status: implemented
+        exposition: literate-programming.md
+        held_by:
+          - doc
+          - test
+          - orphans
+      - discipline: work:discipline/ratchet
+        status: implemented
+        exposition: ratchet.md
+        held_by:
+          - lints
+          - ruff
+          - types
+      - discipline: work:discipline/observed-failure
+        status: implemented
+        exposition: observed-failure.md
+        held_by:
+          - mutants
+      - discipline: work:discipline/nothing-unconsumed
+        status: implemented
+        exposition: nothing-unconsumed.md
+        held_by:
+          - orphans
+          - evidence
+      - discipline: work:discipline/seeded-artifacts
+        status: implemented
+        exposition: seeded-artifacts.md
+        held_by:
+          - render
+      - discipline: work:discipline/written-decisions
+        status: exempt
+        exposition: written-decisions.md
+        exemption_reason: >-
+          Decision records live in the portfolio's .meta/assertions/decisions/
+          and are verified by the portfolio's gate rather than the bootstrap seed
+          gate.
+
+  - id: work:bootstrap/rust
+    name: The Rust standard
+    description: >-
+      What a Rust project in a portfolio inherits — the gates, the documentation
+      layout, and solorepo's Disciplines made executable for one language.
+    primary_persona: work:persona/the-solo
+    built_from:
+      - work:project/rust-seed
+    discipline_implementations:
+      - discipline: work:discipline/literate-programming
+        status: implemented
+        exposition: literate-programming.md
+        held_by:
+          - doc
+          - test
+          - orphans
+      - discipline: work:discipline/ratchet
+        status: implemented
+        exposition: ratchet.md
+        held_by:
+          - fmt
+          - lints
+          - clippy
+      - discipline: work:discipline/observed-failure
+        status: implemented
+        exposition: observed-failure.md
+        held_by:
+          - mutants
+      - discipline: work:discipline/nothing-unconsumed
+        status: implemented
+        exposition: nothing-unconsumed.md
+        held_by:
+          - orphans
+          - evidence
+      - discipline: work:discipline/seeded-artifacts
+        status: implemented
+        exposition: seeded-artifacts.md
+        held_by:
+          - render
+      - discipline: work:discipline/written-decisions
+        status: exempt
+        exposition: written-decisions.md
+        exemption_reason: >-
+          Decision records live in the portfolio's .meta/assertions/decisions/
+          and are verified by the portfolio's gate rather than the bootstrap seed
+          gate.
