@@ -539,17 +539,14 @@ def _edge_cases(bench: _Bench) -> list[str]:
                         f"owed {left} and said {ended.out!r}, where nothing is owed on a read "
                         "that failed and the log says it failed")
 
-    green_trunk = _trunk(bench.move, [])
     stranded = _pull(45, statusCheckRollup=RED, mergeStateStatus="BEHIND")
-    dry_pass = bench.run(_GitHub([stranded], [bench.issue(45, "medium")], {}),
-                         {"report_trunk": lambda *_: green_trunk}, live=False)
+    dry_pass = bench.run(_GitHub([stranded], [bench.issue(45, "medium")], {}), live=False)
     if ("rebase", 45) in [a for a in bench.acted if a[0] != "merge_manager"] \
             or f"would dispatch a rebase pass for #{45}" not in dry_pass.out:
         problems.append(f"reconcile: not live did not report rebase for stranded PR: "
                         f"{dry_pass.out!r}")
 
-    bench.run(_GitHub([stranded], [bench.issue(45, "medium")], {}),
-              {"report_trunk": lambda *_: green_trunk}, live=True)
+    bench.run(_GitHub([stranded], [bench.issue(45, "medium")], {}), live=True)
     if ("rebase", 45) not in bench.acted:
         problems.append(f"reconcile: a stranded pull request behind green trunk was not rebased: "
                         f"{bench.acted}")

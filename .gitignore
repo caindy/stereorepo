@@ -17,6 +17,9 @@ __pycache__/
 # Gemini CLI scratch and settings.
 .gemini/
 
+# Runner and GitHub CLI runtime state.
+.local/
+
 # Virtual environments
 .venv/
 

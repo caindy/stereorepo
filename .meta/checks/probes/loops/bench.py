@@ -110,7 +110,8 @@ class _GitHub:
     status where one is asked for, `pr view` answered from `views` where a
     case holds a settled read, the review threads of each pull request
     answered over GraphQL from `threads` with the numbers asked for recorded
-    in `queried`, and the takes it dispatches, recorded in `dispatched`.
+    in `queried`, repository check inquiries answered from `trunk_checks`,
+    and the takes it dispatches, recorded in `dispatched`.
     `unlistable` refuses every run listing.
     """
 
@@ -123,6 +124,10 @@ class _GitHub:
         self.issues, self.runs = issues, runs
         self.views = views or {}
         self.threads = CONVERSATIONS if threads is None else threads
+        self.trunk_checks: list[dict[str, Any]] | None = GREEN
+        self.trunk_ref: str | None = "main"
+        self.trunk_oid: str | None = "0123456789abcdef"
+        self.trunk_headline = "the commit that landed"
         self.dispatched: list[tuple[str, ...]] = []
         self.queried: list[int] = []
         self.unlistable = False
@@ -140,16 +145,30 @@ class _GitHub:
         return {k: v for k, v in pull.items() if k in asked} if asked else dict(pull)
 
     def graphql(self, query: str, **variables: Any) -> dict[str, Any]:
-        """The review threads of the pull request asked for, and the ask recorded.
+        """The review threads or trunk checks asked for, and the ask recorded.
 
-        `unreadable` refuses the query in the words the channel exits with.
+        Inspects parameter signatures to discriminate between PR thread queries
+        and repository check inquiries (solorepo's #1059). `unreadable` refuses
+        the query in the words the channel exits with.
         """
-        number = int(variables["number"])
-        self.queried.append(number)
         if self.unreadable:
             raise SystemExit(REFUSED)
-        return {"data": {"repository": {"pullRequest": {
-            "reviewThreads": {"nodes": self.threads.get(number, [])}}}}}
+        if "number" in variables:
+            number = int(variables["number"])
+            self.queried.append(number)
+            return {"data": {"repository": {"pullRequest": {
+                "reviewThreads": {"nodes": self.threads.get(number, [])}}}}}
+        if "owner" in variables and "name" in variables:
+            target: dict[str, Any] = {}
+            if self.trunk_oid is not None:
+                rollup = (None if self.trunk_checks is None
+                          else {"contexts": {"nodes": self.trunk_checks}})
+                target = {"oid": self.trunk_oid, "messageHeadline": self.trunk_headline,
+                          "statusCheckRollup": rollup}
+            ref = (None if self.trunk_ref is None
+                   else {"name": self.trunk_ref, "target": target})
+            return {"data": {"repository": {"defaultBranchRef": ref}}}
+        raise unanswered(variables, "the bench graphql fake")
 
     def __call__(self, *args: str, **kwargs: Any) -> Any:
         """Simulate a gh CLI invocation matching the provided command arguments."""
