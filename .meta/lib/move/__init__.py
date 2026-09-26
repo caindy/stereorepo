@@ -33,14 +33,16 @@ reading, one pass's judgement of every open pull request and the order the
 eligible ones are landed in, and imports `advance`, `challenges`, `common` and
 `pull_requests`; `manager.eviction` is the stall eviction, draft demotion and
 restoration lifecycle, and imports `advance`, `challenges`, `common`, `drafts`,
-`pull_requests` and `ranking`. None of the three names anything out of the
-package root, which imports all three as modules.
+`pull_requests` and `ranking`; `manager.orchestration` is the queue coordination
+and merge execution, and imports `advance`, `challenges`, `common`, `epics`,
+`pull_requests`, `eviction`, `lock` and `ranking`. None of the four names anything
+out of the package root, which imports all four as modules.
 `reconcile` is what every open Issue and pull request is owed on the clock, and
 imports `actions`, `common`, `challenges`, `handoff`, `pull_requests`, `advance`
 and `manager`, every module before it but `decisions`, `concepts` and `drafts`.
 `cli` is the argument surface the script delegates to and imports every module
-but itself. `manager` imports `epics` to close completed parents before ranking
-pull requests.
+but itself. `manager.orchestration` imports `epics` to close completed parents
+before ranking pull requests.
 
 The graph is not a layering. `advance` and `manager` import each other, `handoff`
 and `pull_requests` import each other, and `challenges` and `pull_requests` each

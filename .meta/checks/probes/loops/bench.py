@@ -351,7 +351,9 @@ def _owner(move: Any, name: str) -> Any:
                move.actions, move.cli)
     for module in modules:
         held = getattr(module, name, None)
-        if held is not None and getattr(held, "__module__", None) == module.__name__:
+        mod = getattr(held, "__module__", None)
+        if held is not None and (mod == module.__name__ or
+                                 (mod is not None and mod.startswith(f"{module.__name__}."))):
             return module
     raise AssertionError(UNDEFINED.format(name=name))
 
