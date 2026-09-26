@@ -240,12 +240,25 @@ class _Bench:
         """Initialize bench fixtures and stood-in move verb recorders."""
         self.channel, self.move = channel, move
         self.acted: list[tuple[str, Any]] = []
+        self.filed: list[tuple[str, str]] = []
+        self.stopped: list[tuple[int, str]] = []
         acted = self.acted
+
+        def _file(title: str, body: str) -> None:
+            acted.append(("file", 0))
+            self.filed.append((title, body))
+
+        def _stop(n: Any, body: str) -> None:
+            acted.append(("escalate", int(n)))
+            self.stopped.append((int(n), body))
+
         self.stood = {"merge_manager": lambda **_: acted.append(("merge_manager", None)),
                       "run_coder": lambda pr, task: acted.append((task, int(pr))),
                       "request_review": lambda pr, to: acted.append(("request", int(pr))),
                       "release": lambda n: acted.append(("release", int(n))),
                       "relabel": lambda n, **kw: acted.append(("relabel", (int(n), tuple(kw)))),
+                      "file_issue": _file,
+                      "stop": _stop,
                       "stacked": lambda n: None}
         self.pulls = [_pull(1, latestReviews=CHANGES),
                       _pull(2, mergeable="CONFLICTING", latestReviews=APPROVED),
@@ -307,6 +320,8 @@ class _Bench:
         which is where a caller in the package looks it up (solorepo's DR-217).
         """
         self.acted.clear()
+        self.filed.clear()
+        self.stopped.clear()
         fake.dispatched.clear()
         fake.queried.clear()
         flags.setdefault("minutes", MINUTES)
@@ -338,6 +353,123 @@ def _owner(move: Any, name: str) -> Any:
         if held is not None and getattr(held, "__module__", None) == module.__name__:
             return module
     raise AssertionError(UNDEFINED.format(name=name))
+
+
+FAILED_MERGE = f"say: #{9} is open after the merge call"
+"""What a merge manager whose candidate did not land exits with."""
+
+
+def _refusing(pr: Any, task: str) -> None:
+    """A dispatch GitHub refuses, in the words the channel exits with."""
+    raise SystemExit(REFUSED)
+
+
+def _failing(**_: Any) -> None:
+    """A merge manager whose candidate failed to land."""
+    raise SystemExit(FAILED_MERGE)
+
+
+def _reading(move: Any) -> Any:
+    """A pass's shared reading with nothing standing in it, for the readers that take one."""
+    empty = move.Runs([], [])
+    return move.Reading(now=datetime.datetime.now(datetime.UTC), bound=MINUTES, longest=75.0,
+                        coder=CODER, reviewer_login=REVIEWER, owner="o", name="r",
+                        by_number={}, named=set(), coder_runs=empty, review_runs=empty,
+                        triage_runs=empty)
+
+
+def _trunk(move: Any, failing: list[str], oid: str = "abc1234def") -> Any:
+    """Trunk's HEAD rollup as `report_trunk` answers with one, red where `failing` names a check."""
+    return move.cli.reconcile.actions.Trunk(
+        ref="main", oid=oid, headline="the commit that landed",
+        checks=[{"name": name} for name in failing], failing=failing, pending=False)
+
+
+def _check_reconcile_draft_demotions(fake: _GitHub) -> list[str]:
+    """Verify that conflicting PRs were demoted to draft while maintenance rebases were not."""
+    problems: list[str] = []
+    p2 = next((p for p in fake.pulls if p["number"] == 2), None)
+    p29 = next((p for p in fake.pulls if p["number"] == 29), None)
+    p30 = next((p for p in fake.pulls if p["number"] == 30), None)
+    if p2 and not p2.get("isDraft"):
+        problems.append("reconcile: conflicting pull request 2 was not demoted to draft "
+                        "before rebase dispatch")
+    if p29 and not p29.get("isDraft"):
+        problems.append("reconcile: approved pull request 29 with failing checks "
+                        "was not demoted to draft before review dispatch")
+    if p30 and p30.get("isDraft"):
+        problems.append("reconcile: non-conflict maintenance rebase pull request 30 "
+                        "was demoted to draft")
+    return problems
+
+
+def _check_trunk_outcomes(bench: _Bench) -> list[str]:
+    """Verify reconciler action sequencing and workflow triggers under clean vs failing
+    trunk checks.
+    """
+    problems: list[str] = []
+    stranded = _pull(45, statusCheckRollup=RED, mergeStateStatus="BEHIND")
+    clean_fake = _GitHub([stranded], [bench.issue(45, "medium")], {})
+    dry_clean = bench.run(clean_fake, live=False)
+    if ("rebase", 45) in [a for a in bench.acted if a[0] != "merge_manager"] \
+            or f"would dispatch a rebase pass for #{45}" not in dry_clean.out:
+        problems.append(f"reconcile: clean trunk did not report rebase for stranded PR: "
+                        f"{dry_clean.out!r}")
+    if "trunk is green" not in dry_clean.out or "would file the heal Challenge" in dry_clean.out:
+        problems.append("reconcile: clean trunk check evaluation was misreported")
+
+    bench.run(clean_fake, live=True)
+    p45_clean = next((p for p in clean_fake.pulls if p["number"] == 45), None)
+    if ("rebase", 45) not in bench.acted or (p45_clean and p45_clean.get("isDraft")) \
+            or ("file", 0) in bench.acted:
+        problems.append(f"reconcile: stranded PR behind green trunk was not rebased cleanly: "
+                        f"{bench.acted}")
+
+    red_stranded = _pull(45, statusCheckRollup=RED, mergeStateStatus="BEHIND")
+    conflicting = _pull(2, mergeable="CONFLICTING", latestReviews=APPROVED)
+    failing_app = _pull(29, latestReviews=APPROVED, reviews=APPROVED, statusCheckRollup=RED)
+    red_pulls = [red_stranded, conflicting, failing_app]
+    red_fake = _GitHub(red_pulls, [bench.issue(45, "medium"), bench.issue(2, "medium"),
+                                   bench.issue(29, "medium")], {})
+    red_fake.trunk_checks = RED
+    dry_red = bench.run(red_fake, live=False)
+    if "trunk is red" not in dry_red.out \
+            or "would file the heal Challenge for a red trunk" not in dry_red.out \
+            or f"would dispatch a rebase pass for #{45}" in dry_red.out:
+        problems.append(f"reconcile: red trunk did not report heal filing or suppressed stranded "
+                        f"rebase: {dry_red.out!r}")
+
+    bench.run(red_fake, live=True)
+    non_mm = [a for a in bench.acted if a[0] != "merge_manager"]
+    if ("rebase", 45) in bench.acted or ("file", 0) not in bench.acted or not non_mm \
+            or non_mm[0] != ("file", 0):
+        problems.append(f"reconcile: red trunk did not sequence heal filing before PR acts: "
+                        f"{bench.acted}")
+    p2_red = next((p for p in red_fake.pulls if p["number"] == 2), None)
+    p29_red = next((p for p in red_fake.pulls if p["number"] == 29), None)
+    if ("rebase", 2) not in bench.acted or not (p2_red and p2_red.get("isDraft")) \
+            or ("review", 29) not in bench.acted or not (p29_red and p29_red.get("isDraft")):
+        problems.append("reconcile: draft demotions or maintenance dispatches failed under red "
+                        f"trunk: {bench.acted}")
+
+    heal = {"number": 50,
+            "title": bench.move.cli.reconcile.actions.HEAL_TITLE.format(branch="main",
+                                                                        commit="0123456"),
+            "labels": [{"name": "challenge"}, {"name": "medium"}], "assignees": [],
+            "createdAt": _ago(10), "updatedAt": _ago(10)}
+    heal_fake = _GitHub([red_stranded], [heal, bench.issue(45, "medium")], {})
+    heal_fake.trunk_checks = RED
+    dry_heal = bench.run(heal_fake, live=False)
+    if f"would dispatch the take pass for #{50}" not in dry_heal.out:
+        problems.append(f"reconcile: red trunk did not report take pass for heal Challenge: "
+                        f"{dry_heal.out!r}")
+    bench.run(heal_fake, live=True)
+    dispatched_heal = [a for a in heal_fake.dispatched if a[:3] == ("workflow", "run", "coder.yml")
+                       and "-f" in a and "issue=50" in a]
+    if not dispatched_heal or ("rebase", 45) in bench.acted:
+        problems.append(f"reconcile: heal take pass was not dispatched under red trunk: "
+                        f"{heal_fake.dispatched}")
+    return problems
 
 
 GitHub = _GitHub

@@ -2,7 +2,6 @@
 
 One module for one probe, so a history log's Evidence names the file holding it (solorepo's DR-209).
 """
-import datetime
 from typing import Any
 
 from checks.collect import check
@@ -12,26 +11,27 @@ from checks.probes.loops.bench import (
     APPROVED,
     ASKED,
     CHANGES,
-    CODER,
     COMMENT,
-    MINUTES,
+    FAILED_MERGE,
     OWED,
     PARKED,
     PASSER_BY,
     RED,
-    REFUSED,
     REPLY,
     REVIEWER,
     REVIEWER_FAILED,
     _ago,
     _Bench,
+    _check_reconcile_draft_demotions,
+    _check_trunk_outcomes,
+    _failing,
     _GitHub,
     _notice,
     _pull,
+    _reading,
+    _refusing,
+    _trunk,
 )
-
-FAILED_MERGE = f"say: #{9} is open after the merge call"
-"""What a merge manager whose candidate did not land exits with."""
 
 
 @check("reconcile probes", pre=True)
@@ -325,22 +325,6 @@ def _trunk_cases(move: Any) -> list[str]:
     return problems
 
 
-def _reading(move: Any) -> Any:
-    """A pass's shared reading with nothing standing in it, for the readers that take one."""
-    empty = move.Runs([], [])
-    return move.Reading(now=datetime.datetime.now(datetime.UTC), bound=MINUTES, longest=75.0,
-                        coder=CODER, reviewer_login=REVIEWER, owner="o", name="r",
-                        by_number={}, named=set(), coder_runs=empty, review_runs=empty,
-                        triage_runs=empty)
-
-
-def _trunk(move: Any, failing: list[str], oid: str = "abc1234def") -> Any:
-    """Trunk's HEAD rollup as `report_trunk` answers with one, red where `failing` names a check."""
-    return move.cli.reconcile.actions.Trunk(
-        ref="main", oid=oid, headline="the commit that landed",
-        checks=[{"name": name} for name in failing], failing=failing, pending=False)
-
-
 def _breaking_cases(move: Any) -> list[str]:
     """`breaking`: one heal Challenge per broken commit, found by the title naming it."""
     reading = _reading(move)
@@ -395,24 +379,6 @@ def _issue_cases(move: Any) -> list[str]:
         kind = act.kind if act else None
         if kind != expected:
             problems.append(f"owed_by_issue: {name} owed {kind!r}, not {expected!r}")
-    return problems
-
-
-def _check_reconcile_draft_demotions(fake: _GitHub) -> list[str]:
-    """Verify that conflicting PRs were demoted to draft while maintenance rebases were not."""
-    problems: list[str] = []
-    p2 = next(p for p in fake.pulls if p["number"] == 2)
-    p29 = next(p for p in fake.pulls if p["number"] == 29)
-    p30 = next(p for p in fake.pulls if p["number"] == 30)
-    if not p2.get("isDraft"):
-        problems.append("reconcile: conflicting pull request 2 was not demoted to draft "
-                        "before rebase dispatch")
-    if not p29.get("isDraft"):
-        problems.append("reconcile: approved pull request 29 with failing checks "
-                        "was not demoted to draft before review dispatch")
-    if p30.get("isDraft"):
-        problems.append("reconcile: non-conflict maintenance rebase pull request 30 "
-                        "was demoted to draft")
     return problems
 
 
@@ -496,19 +462,9 @@ def _pass_cases(channel: Any, move: Any) -> list[str]:
     return problems
 
 
-def _refusing(pr: Any, task: str) -> None:
-    """A dispatch GitHub refuses, in the words the channel exits with."""
-    raise SystemExit(REFUSED)
-
-
-def _failing(**_: Any) -> None:
-    """A merge manager whose candidate failed to land."""
-    raise SystemExit(FAILED_MERGE)
-
-
 def _edge_cases(bench: _Bench) -> list[str]:
     """An `UNKNOWN` off the listing, unlistable runs, a refused dispatch, a failed merge,
-    and a green trunk re-dispatching stranded pull requests.
+    and repository status check outcomes governing branch repair and maintenance dispatch.
     """
     problems = []
     unknown = _pull(7, mergeable="UNKNOWN", latestReviews=CHANGES)
@@ -539,17 +495,7 @@ def _edge_cases(bench: _Bench) -> list[str]:
                         f"owed {left} and said {ended.out!r}, where nothing is owed on a read "
                         "that failed and the log says it failed")
 
-    stranded = _pull(45, statusCheckRollup=RED, mergeStateStatus="BEHIND")
-    dry_pass = bench.run(_GitHub([stranded], [bench.issue(45, "medium")], {}), live=False)
-    if ("rebase", 45) in [a for a in bench.acted if a[0] != "merge_manager"] \
-            or f"would dispatch a rebase pass for #{45}" not in dry_pass.out:
-        problems.append(f"reconcile: not live did not report rebase for stranded PR: "
-                        f"{dry_pass.out!r}")
-
-    bench.run(_GitHub([stranded], [bench.issue(45, "medium")], {}), live=True)
-    if ("rebase", 45) not in bench.acted:
-        problems.append(f"reconcile: a stranded pull request behind green trunk was not rebased: "
-                        f"{bench.acted}")
+    problems.extend(_check_trunk_outcomes(bench))
 
     unlistable = _GitHub(bench.pulls, bench.issues, {})
     unlistable.unlistable = True
