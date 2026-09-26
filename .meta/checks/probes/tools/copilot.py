@@ -81,6 +81,6 @@ def copilot_probes() -> list[str]:
     runner = load_module(META / "run_copilot.py", "run_copilot", register=False)
     deploy: Any = load_module(META / "arc" / "deploy", "arc_deploy", register=False)
     with tempfile.TemporaryDirectory() as temporary:
-        root = pathlib.Path(temporary)
+        root = pathlib.Path(temporary).resolve()
         return (_hook_problems(configure, adapter, root) + _command_problems(runner)
                 + _secret_problems(deploy, root))

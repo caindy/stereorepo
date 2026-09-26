@@ -193,6 +193,11 @@ slots:
     range: Product
     multivalued: true
     inlined_as_list: true
+  bootstraps:
+    description: The language Bootstraps in the collection.
+    range: Bootstrap
+    multivalued: true
+    inlined_as_list: true
   projects:
     description: The Projects in the collection.
     range: Project
@@ -262,6 +267,7 @@ classes:
       - decisions
       - portfolio
       - products
+      - bootstraps
       - projects
       - artifacts
       - excluded_paths

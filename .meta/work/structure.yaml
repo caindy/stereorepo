@@ -38,7 +38,27 @@ imports:
   - linkml:types
   - core
   - personas
+  - disciplines
   - ../ddd/strategic
+
+enums:
+
+  DisciplineStatus:
+    description: >-
+      Whether a Discipline is implemented by a Bootstrap, exempt with rationale,
+      or scoped to the Portfolio as a whole.
+    permissible_values:
+      implemented:
+        description: >-
+          The Discipline is satisfied by this Bootstrap and verified by gate steps.
+      exempt:
+        description: >-
+          The Discipline applies to projects, but this Bootstrap holds a specific
+          exemption or is verified by portfolio machinery.
+      portfolio_scoped:
+        description: >-
+          The Discipline binds the Portfolio as a whole rather than an individual
+          Project seed.
 
 slots:
 
@@ -106,6 +126,42 @@ slots:
       File paths or glob patterns excluded from artifact completeness checks.
     multivalued: true
 
+  discipline_implementations:
+    description: >-
+      How this Bootstrap satisfies or exempts Disciplines.
+    range: DisciplineImplementation
+    multivalued: true
+    inlined_as_list: true
+
+  discipline:
+    description: >-
+      The Discipline being implemented or exempted.
+    range: Discipline
+
+  status:
+    description: >-
+      Whether the Discipline is implemented by this Bootstrap, exempt with
+      rationale, or scoped to the Portfolio as a whole.
+    range: DisciplineStatus
+
+  exposition:
+    description: >-
+      The relative file path to the Markdown documentation explaining how this
+      Bootstrap satisfies the Discipline (e.g. literate-programming.md).
+    range: string
+
+  held_by:
+    description: >-
+      The gate steps or checks that hold this Discipline.
+    range: string
+    multivalued: true
+
+  exemption_reason:
+    description: >-
+      The rationale for why this Discipline is exempt or portfolio-scoped for
+      this Bootstrap.
+    range: string
+
 
 classes:
 
@@ -139,6 +195,35 @@ classes:
       name:
         required: true
       primary_persona:
+        required: true
+
+  Bootstrap:
+    is_a: Product
+    description: >-
+      A language standard and seed workspace delivered as a Product of
+      solorepo. Specializes Product with discipline conformance declarations.
+    slots:
+      - discipline_implementations
+    slot_usage:
+      name:
+        required: true
+      primary_persona:
+        required: true
+
+  DisciplineImplementation:
+    description: >-
+      How a Bootstrap satisfies or exempts a Discipline: the exposition
+      document, the gate steps that enforce it, and its conformance status.
+    slots:
+      - discipline
+      - status
+      - exposition
+      - held_by
+      - exemption_reason
+    slot_usage:
+      discipline:
+        required: true
+      status:
         required: true
 
   Artifact:
