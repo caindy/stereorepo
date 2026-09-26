@@ -89,6 +89,10 @@ inputs:
     description: The Jules API key, on the review pass.
     required: false
     default: ""
+  claude-path:
+    description: Path to an existing Claude Code executable; empty auto-detects /usr/local/bin/claude.
+    required: false
+    default: ""
 outputs:
   execution_file:
     description: Where Claude Code wrote the rung's transcript; empty on any other harness.
@@ -108,6 +112,20 @@ runs:
           echo "SOLOREPO_PROMPT_EOF"
         } >> "$GITHUB_OUTPUT"
 
+    - name: locate claude
+      id: locate-claude
+      if: inputs.harness == 'claude'
+      shell: bash
+      run: |
+        candidate="${{ inputs.claude-path }}"
+        if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+          echo "executable=$candidate" >> "$GITHUB_OUTPUT"
+        elif [ -x /usr/local/bin/claude ]; then
+          echo "executable=/usr/local/bin/claude" >> "$GITHUB_OUTPUT"
+        else
+          echo "executable=" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: claude
       id: claude
       if: inputs.harness == 'claude'
@@ -123,6 +141,7 @@ runs:
         CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS: ${{ inputs.claude-agents }}
         SOLOREPO_HOOK_EVIDENCE: ${{ github.workspace }}/.review/hook-claude.evidence
       with:
+        path_to_claude_code_executable: ${{ steps.locate-claude.outputs.executable }}
         claude_code_oauth_token: ${{ inputs.claude-oauth-token }}
         github_token: ${{ inputs.github-token }}
         # The transcript, in the run log: the run is the only record of what

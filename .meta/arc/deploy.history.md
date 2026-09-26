@@ -18,3 +18,14 @@ tables (`ps`) and shell history. Established: `apply_secret()` streams generated
 Kubernetes Secret manifests over process stdin without exposing tokens in argument vectors.
 
 Evidence: `.meta/checks/files/history.py::meta_history_evidence`
+
+### Ephemeral runner pod startup incurred 60s Claude Code installation overhead
+
+On every job invocation, `claude-code-action@v1` dynamically downloaded and installed
+`@anthropic-ai/claude-code`, introducing over 60 seconds of latency to every review,
+coder, and triage attempt. Established: pre-bake `@anthropic-ai/claude-code@2.1.283`
+into `.meta/arc/Dockerfile` alongside existing CLI tooling, and configure
+`path_to_claude_code_executable` in `.meta/actions/harness/action.yml` to execute the
+pre-baked binary directly.
+
+Evidence: `.meta/checks/files/history.py::meta_history_evidence`
