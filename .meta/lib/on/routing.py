@@ -25,12 +25,15 @@ import os
 from collections.abc import Mapping, Sequence
 from typing import NamedTuple
 
-AGENTS = {"gemini": "antigravity-cli", "jules": "google-labs-jules",
-          "claude": "anthropics/claude-code-action@v1", "copilot": "copilot-cli"}
+AGENTS = {
+    "gemini": "antigravity-cli",
+    "jules": "google-labs-jules",
+    "claude": "anthropics/claude-code-action@v1",
+    "copilot": "copilot-cli",
+}
 """Each harness a door can choose, and the Agent the Trailer names it by (solorepo's DR-233)."""
 
-TOGGLES = {"gemini": "GEMINI_FALLBACK", "jules": "JULES_FALLBACK",
-           "copilot": "COPILOT_FALLBACK"}
+TOGGLES = {"gemini": "GEMINI_FALLBACK", "jules": "JULES_FALLBACK", "copilot": "COPILOT_FALLBACK"}
 """The repository variable that opts a portfolio in to each fallback harness; Claude Code has
 none, being the harness every portfolio runs (solorepo's DR-240, DR-245, DR-246)."""
 
@@ -45,6 +48,33 @@ REVIEW_FALLBACKS = ("claude", "gemini", "jules")
 
 READING_FALLBACKS = ("claude", "gemini")
 """The reading door's harnesses in the order a fallback is tried, after whichever is primary."""
+
+
+class Provider(NamedTuple):
+    """How a locally installed harness asks one model-reading question.
+
+    Attributes:
+        executable: The command that invokes the harness.
+        prompt_flag: The flag placing a prompt on standard input.
+        model_flag: The flag selecting the model.
+        credential_environment: The environment variable carrying an optional credential.
+        credential_file: The default outside-tree file carrying that credential.
+    """
+
+    executable: str
+    prompt_flag: str
+    model_flag: str
+    credential_environment: str
+    credential_file: str
+
+
+PROVIDERS = {
+    "claude": Provider(
+        "claude", "-p", "--model", "CLAUDE_CODE_OAUTH_TOKEN", "~/.config/solorepo/claude.env"
+    ),
+    "gemini": Provider("agy", "-p", "--model", "", ""),
+}
+"""The local invocation and credential contracts of harnesses that read text."""
 
 
 class Depth(NamedTuple):
@@ -89,10 +119,12 @@ GEMINI_MODEL = "gemini-3.8-flash"
 COPILOT_MODEL = "gpt-5.3-codex"
 """The model GitHub Copilot CLI runs for autonomous coder passes."""
 
-CODER_DEPTHS = {"rebase": Depth("claude-opus-5", "high", "60", "30"),
-                "decompose": Depth("claude-opus-5", "high", "90", "45"),
-                "medium": Depth("claude-opus-5", "high", "120", "60"),
-                "easy": Depth("claude-sonnet-5", "medium", "60", "30")}
+CODER_DEPTHS = {
+    "rebase": Depth("claude-opus-5", "high", "60", "30"),
+    "decompose": Depth("claude-opus-5", "high", "90", "45"),
+    "medium": Depth("claude-opus-5", "high", "120", "60"),
+    "easy": Depth("claude-sonnet-5", "medium", "60", "30"),
+}
 """The coder's depth by the pass, or by the level a take is at.
 
 `easy` is the smaller model and half an hour; `medium` the larger and the
@@ -103,8 +135,10 @@ conflict here is prose as often as code and a rebase taking an hour is not
 a rebase.
 """
 
-REVIEW_DEPTHS = {"deep": Depth("claude-opus-5", "high", "120", "45"),
-                 "standard": Depth("claude-sonnet-5", "medium", "120", "15")}
+REVIEW_DEPTHS = {
+    "deep": Depth("claude-opus-5", "high", "120", "45"),
+    "standard": Depth("claude-sonnet-5", "medium", "120", "15"),
+}
 """The reviewer's two tiers, which `.meta/depth.py` chooses between by what a change touches
 (solorepo's DR-188)."""
 
@@ -138,8 +172,9 @@ def toggled(harness: str, environ: Mapping[str, str] = os.environ) -> bool:
     return (environ.get(name) or "").strip().lower() in ENABLED
 
 
-def tier(harness: str, depth: Depth, gemini_model: str = GEMINI_MODEL,
-         copilot_model: str = COPILOT_MODEL) -> Tier:
+def tier(
+    harness: str, depth: Depth, gemini_model: str = GEMINI_MODEL, copilot_model: str = COPILOT_MODEL
+) -> Tier:
     """The rung `harness` makes at `depth`.
 
     Parameters:
@@ -148,14 +183,31 @@ def tier(harness: str, depth: Depth, gemini_model: str = GEMINI_MODEL,
         gemini_model (str): The model the Antigravity CLI runs, where a depth hook chose one.
         copilot_model (str): The model GitHub Copilot CLI runs.
     """
-    model = {"claude": depth.model, "gemini": gemini_model,
-             "copilot": copilot_model}.get(harness, "")
+    model = {"claude": depth.model, "gemini": gemini_model, "copilot": copilot_model}.get(
+        harness, ""
+    )
     return Tier(harness, model, depth.effort, depth.turns, depth.minutes, AGENTS[harness])
 
 
-def chain(primary: str, fallbacks: Sequence[str], depth: Depth,
-          gemini_model: str = GEMINI_MODEL,
-          environ: Mapping[str, str] = os.environ) -> tuple[Tier, ...]:
+def provider(harness: str) -> Provider:
+    """The local model-reading contract for `harness`.
+
+    Parameters:
+        harness: A harness selected by a reading chain.
+
+    Raises:
+        KeyError: If the harness has no local text-reading contract.
+    """
+    return PROVIDERS[harness]
+
+
+def chain(
+    primary: str,
+    fallbacks: Sequence[str],
+    depth: Depth,
+    gemini_model: str = GEMINI_MODEL,
+    environ: Mapping[str, str] = os.environ,
+) -> tuple[Tier, ...]:
     """The tiers that may run a pass: the primary first, then each toggled fallback in order.
 
     The primary runs whatever the toggles say, since a label or a dispatch
@@ -169,18 +221,23 @@ def chain(primary: str, fallbacks: Sequence[str], depth: Depth,
         environ (Mapping[str, str]): The environment the toggles are read from.
     """
     order = [primary, *(name for name in fallbacks if name != primary)]
-    return tuple(tier(name, depth, gemini_model) for name in order
-                 if name == primary or toggled(name, environ))
+    return tuple(
+        tier(name, depth, gemini_model)
+        for name in order
+        if name == primary or toggled(name, environ)
+    )
 
 
-def coder_chain(primary: str, task: str, level: str,
-                environ: Mapping[str, str] = os.environ) -> tuple[Tier, ...]:
+def coder_chain(
+    primary: str, task: str, level: str, environ: Mapping[str, str] = os.environ
+) -> tuple[Tier, ...]:
     """The coder's chain for a pass at a level, the primary first."""
     return chain(primary, CODER_FALLBACKS, coder_depth(task, level), environ=environ)
 
 
-def review_chain(primary: str, depth: Depth, gemini_model: str,
-                 environ: Mapping[str, str] = os.environ) -> tuple[Tier, ...]:
+def review_chain(
+    primary: str, depth: Depth, gemini_model: str, environ: Mapping[str, str] = os.environ
+) -> tuple[Tier, ...]:
     """The reviewer's chain at the depth `.meta/depth.py` evaluated, the primary first.
 
     The depth arrives evaluated rather than named, since a portfolio's depth

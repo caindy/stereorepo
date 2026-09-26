@@ -1,16 +1,24 @@
-"""The question asked of each pair, the credential it is asked with, and the model's answer (solorepo's DR-134).
+"""The question asked of each pair, its credential, and the model's answer.
+
+solorepo's DR-134.
 """
+
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from typing import Any
 
+from lib.on import routing
+
 CREDENTIAL = pathlib.Path(
-    os.environ.get("SOLOREPO_MODEL_ENV", "~/.config/solorepo/claude.env")).expanduser()
+    os.environ.get("SOLOREPO_MODEL_ENV", routing.provider("claude").credential_file)
+).expanduser()
 
 
-MODEL = "claude-sonnet-5"
+MODEL = routing.READING_DEPTH.model
 
 
 QUESTION = """You are checking one citation, the way a reviewer checks one.
@@ -44,7 +52,7 @@ WHAT {cite} SAYS
 """
 
 
-def credential() -> dict[str, str]:
+def credential(provider: routing.Provider) -> dict[str, str]:
     """The model token, on the terms the channel holds a Role's: outside the
     working tree, refused where others can read it, and handed to one child
     process rather than exported.
@@ -73,70 +81,113 @@ def credential() -> dict[str, str]:
     Returns the environment to add, or `{}` where the ambient one is what is
     used.
     """
-    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+    if not provider.credential_environment:
+        return {}
+    if os.environ.get(provider.credential_environment):
         return {}
     if not CREDENTIAL.exists():
-        print(f"dereference: no {CREDENTIAL}; asking with ambient auth, which is "
-              "whatever `claude` on this machine is logged in as", file=sys.stderr)
+        print(
+            f"dereference: no {CREDENTIAL}; asking with ambient auth, which is "
+            "whatever `claude` on this machine is logged in as",
+            file=sys.stderr,
+        )
         return {}
     mode = CREDENTIAL.stat().st_mode
     if mode & 0o077:
-        sys.exit(f"dereference: {CREDENTIAL} is readable by others "
-                 f"(mode {mode & 0o777:o}); refusing to use it. chmod 600 it.")
+        sys.exit(
+            f"dereference: {CREDENTIAL} is readable by others "
+            f"(mode {mode & 0o777:o}); refusing to use it. chmod 600 it."
+        )
     for line in CREDENTIAL.read_text().splitlines():
         line = line.strip().removeprefix("export ").strip()
-        if line.startswith("CLAUDE_CODE_OAUTH_TOKEN=") and (
-                value := line.split("=", 1)[1].strip().strip("\"'")):
-            return {"CLAUDE_CODE_OAUTH_TOKEN": value}
-    print(f"dereference: {CREDENTIAL} holds no CLAUDE_CODE_OAUTH_TOKEN; asking with "
-          "ambient auth", file=sys.stderr)
+        if line.startswith(f"{provider.credential_environment}=") and (
+            value := line.split("=", 1)[1].strip().strip("\"'")
+        ):
+            return {provider.credential_environment: value}
+    print(
+        f"dereference: {CREDENTIAL} holds no {provider.credential_environment}; asking with "
+        "ambient auth",
+        file=sys.stderr,
+    )
     return {}
+
+
+def providers(
+    model: str = MODEL, environ: Mapping[str, str] = os.environ
+) -> tuple[routing.Tier, ...]:
+    """The enabled reviewer-reading tiers that may answer a citation.
+
+    Parameters:
+        model: The primary Claude model, retained for the command-line override.
+    """
+    depth = routing.Depth(
+        model,
+        routing.READING_DEPTH.effort,
+        routing.READING_DEPTH.turns,
+        routing.READING_DEPTH.minutes,
+    )
+    return routing.chain("claude", routing.READING_FALLBACKS, depth, environ=environ)
+
+
+def available(tiers: tuple[routing.Tier, ...]) -> bool:
+    """Whether any tier in `tiers` has its configured executable on PATH."""
+    return any(shutil.which(routing.provider(tier.harness).executable) for tier in tiers)
+
+
+def invoke(
+    pair: dict[str, Any],
+    tier: routing.Tier,
+    seconds: int = 120,
+) -> tuple[str, str, bool]:
+    """Ask one routed provider and report whether its invocation failed.
+
+    Everything the question turns on is in the prompt, so the model reads
+    extracted text rather than searching. A valid `?` is the provider's answer;
+    a timeout, missing executable, non-zero exit, or malformed output is an
+    invocation failure that lets the next routed provider try.
+    """
+    provider = routing.provider(tier.harness)
+    if not shutil.which(provider.executable):
+        return "?", f"`{provider.executable}` is not on PATH", True
+
+    env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_BASE_URL"}
+    env.update(credential(provider))
+    try:
+        out = subprocess.run(
+            [provider.executable, provider.prompt_flag, provider.model_flag, tier.model],
+            check=False,
+            input=QUESTION.format(**pair),
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=seconds,
+        )
+    except subprocess.TimeoutExpired:
+        return "?", f"{tier.harness} did not answer within {seconds}s", True
+    if out.returncode:
+        why = out.stdout.strip() or out.stderr.strip() or "the model could not be reached"
+        return "?", f"{tier.harness}: {why.splitlines()[-1][:160]}", True
+    line = next((s.strip() for s in out.stdout.splitlines() if s.strip()), "")
+    for mark in ("ok", "x", "?"):
+        if line == mark or line.startswith(mark + " "):
+            return mark, line[len(mark) :].strip(), False
+    return "?", f"{tier.harness} answered outside the three-mark protocol: {line[:120]!r}", True
 
 
 def ask(
     pair: dict[str, Any],
-    token: dict[str, str],
-    model: str,
+    tiers: tuple[routing.Tier, ...],
     seconds: int = 120,
 ) -> tuple[str, str]:
-    """One question, answered by a model with no tools and the target in hand.
+    """Ask routed providers in order until one answers the citation.
 
-    No tools on purpose: everything the question turns on is in the prompt, so
-    the answer is a reading of text that was extracted deterministically rather
-    than a search that might land anywhere. `ANTHROPIC_BASE_URL` is dropped for
-    the child, because an ambient one belongs to whatever session set it and
-    this asks the credential's own endpoint.
-
-    An answer that is not one of the three marks is `?`. A model told to print
-    one line and printing a paragraph has not answered, and reading a verdict
-    out of the paragraph would be this step guessing on the model's behalf.
-
-    A question that does not come back is `?` too, and that is why there is a
-    timeout on it. Every subprocess `check.py` runs carries one, and those reach
-    at most a remote; this reaches a model, six at a time, and the caller blocks
-    on the last of them. The step is documented as unable to fail the run that
-    holds it, and one that hangs stops it instead — inside `coder.yml` it would
-    spend a step budget that ends with the Issue claimed and the pull request
-    open, which is the state that file's own comment exists to prevent.
-
-    A refused run's reason is read from stdout before stderr: `claude -p`
-    refusing prints the reason there, and keeps stderr for warnings that are
-    true whether the run succeeded or not — solorepo's #171 read the ordering
-    the other way and reported the warning as the reason.
+    A provider's valid `?` is a completed reading and does not fail over. Only
+    an invocation failure advances to the next eligible tier.
     """
-    env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_BASE_URL"}
-    env.update(token)
-    try:
-        out = subprocess.run(["claude", "-p", "--model", model],
-                             check=False, input=QUESTION.format(**pair), capture_output=True,
-                             text=True, env=env, timeout=seconds)
-    except subprocess.TimeoutExpired:
-        return "?", f"the model did not answer within {seconds}s"
-    if out.returncode:
-        why = (out.stdout.strip() or out.stderr.strip() or "the model could not be reached")
-        return "?", why.splitlines()[-1][:160]
-    line = next((s.strip() for s in out.stdout.splitlines() if s.strip()), "")
-    for mark in ("ok", "x", "?"):
-        if line == mark or line.startswith(mark + " "):
-            return mark, line[len(mark):].strip()
-    return "?", f"the answer was not one of the three marks: {line[:120]!r}"
+    failures = []
+    for tier in tiers:
+        mark, detail, failed = invoke(pair, tier, seconds)
+        if not failed:
+            return mark, detail
+        failures.append(detail)
+    return "?", "; ".join(failures) or "no provider was configured"

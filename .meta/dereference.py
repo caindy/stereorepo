@@ -29,8 +29,9 @@ citation and the entry a citation names are `check.py`'s, imported rather than
 written again: two extractors would drift about what a citation is, which is the
 seam solorepo's DR-132 closed between the two checkers. What is this file's own
 is the unit — a sentence, because that is what a reader reads and what a claim
-is made in, where `check.py` needs a whole file flattened to one string. A citation of an Issue is left out — its target is GitHub's and
-`check_pr.py` resolves the number — because every paraphrase failure this was
+is made in, where `check.py` needs a whole file flattened to one string. A
+citation of an Issue is left out — its target is GitHub's and `check_pr.py`
+resolves the number — because every paraphrase failure this was
 built for named an entry, and a step that reaches two systems fails in two ways.
 
 The scope is the diff and the ground that moved. About fifteen hundred citations
@@ -42,10 +43,20 @@ external state file, and `--all` is there for the run that wants the record.
 
 History in dereference.history.md (solorepo's DR-171).
 """
+
 import sys
 
 from lib.dereference import META, ROOT, cli
-from lib.dereference.asking import CREDENTIAL, MODEL, QUESTION, ask, credential
+from lib.dereference.asking import (
+    CREDENTIAL,
+    MODEL,
+    QUESTION,
+    ask,
+    available,
+    credential,
+    invoke,
+    providers,
+)
 from lib.dereference.cli import main
 from lib.dereference.reading import (
     CHECKS,
@@ -78,11 +89,14 @@ __all__ = [
     "articles",
     "as_it_was",
     "ask",
+    "available",
     "citations",
     "cli",
     "credential",
     "git",
+    "invoke",
     "main",
+    "providers",
     "report",
     "scope",
     "sentences",

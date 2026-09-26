@@ -1,8 +1,10 @@
-"""The command line of `.meta/dereference.py`: the scope flags, the model, and the `--pairs` half that asks nothing.
+"""The command line of `.meta/dereference.py`.
+
+It parses scope flags, the model, and the `--pairs` half that asks nothing.
 """
+
 import argparse
 import concurrent.futures
-import shutil
 
 from lib.dereference import asking, reading, report
 
@@ -22,21 +24,46 @@ def main(argv: list[str] | None = None) -> int:
     what that costs.
     """
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--all", action="store_true",
-                    help="every citation in the durable set, not only this branch's")
-    ap.add_argument("--sample", nargs="?", const=20, type=int, default=None,
-                    help="a rotating sample of N citations from the durable set (default 20)")
-    ap.add_argument("--base", default="origin/main",
-                    help="what this branch is read against (default origin/main)")
-    ap.add_argument("--model", default=asking.MODEL, help=f"the model asked (default {asking.MODEL})")
-    ap.add_argument("--limit", type=int, default=None,
-                    help="the most pairs to ask about; above it the step does not run "
-                         "(default 60 over a branch, and no cap under --all)")
+    ap.add_argument(
+        "--all",
+        action="store_true",
+        help="every citation in the durable set, not only this branch's",
+    )
+    ap.add_argument(
+        "--sample",
+        nargs="?",
+        const=20,
+        type=int,
+        default=None,
+        help="a rotating sample of N citations from the durable set (default 20)",
+    )
+    ap.add_argument(
+        "--base",
+        default="origin/main",
+        help="what this branch is read against (default origin/main)",
+    )
+    ap.add_argument(
+        "--model", default=asking.MODEL, help=f"the model asked (default {asking.MODEL})"
+    )
+    ap.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="the most pairs to ask about; above it the step does not run "
+        "(default 60 over a branch, and no cap under --all)",
+    )
     ap.add_argument("--workers", type=int, default=6, help="questions asked at once")
-    ap.add_argument("--timeout", type=int, default=120,
-                    help="seconds one question may take before it answers `?`")
-    ap.add_argument("--pairs", action="store_true",
-                    help="print the pairs and ask nothing: the deterministic half alone")
+    ap.add_argument(
+        "--timeout",
+        type=int,
+        default=120,
+        help="seconds one question may take before it answers `?`",
+    )
+    ap.add_argument(
+        "--pairs",
+        action="store_true",
+        help="print the pairs and ask nothing: the deterministic half alone",
+    )
     args = ap.parse_args(argv)
 
     chk = reading.citations()
@@ -48,19 +75,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{len(pairs)} pair(s)")
         return 0
     if not pairs:
-        print("ok dereference — no citation written or affected on this branch" if not args.sample
-              else "ok dereference — no citations in durable set")
+        print(
+            "ok dereference — no citation written or affected on this branch"
+            if not args.sample
+            else "ok dereference — no citations in durable set"
+        )
         return 0
     limit = args.limit if args.limit is not None else (None if (args.all or args.sample) else 60)
     if limit is not None and len(pairs) > limit:
-        print(f"?  dereference: {len(pairs)} pairs in scope, above the limit of {limit}; "
-              "narrow the scope with --base, raise --limit, or ask the record with --all")
+        print(
+            f"?  dereference: {len(pairs)} pairs in scope, above the limit of {limit}; "
+            "narrow the scope with --base, raise --limit, or ask the record with --all"
+        )
         return 0
-    if not shutil.which("claude"):
-        print("?  dereference: `claude` is not on PATH, and the question is asked through it")
+    tiers = asking.providers(args.model)
+    if not asking.available(tiers):
+        print("?  dereference: no eligible reading provider is on PATH")
         return 0
-    token = asking.credential()
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
-        answers = list(pool.map(
-            lambda pair: asking.ask(pair, token, args.model, args.timeout), pairs))
+        answers = list(pool.map(lambda pair: asking.ask(pair, tiers, args.timeout), pairs))
     return report.report(answers, pairs, base, args.all, sample=bool(args.sample))

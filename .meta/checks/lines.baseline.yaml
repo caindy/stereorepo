@@ -85,7 +85,7 @@
 .meta/checks/probes/tools/apm_compile.py: 1
 .meta/checks/probes/tools/comments.py: 29
 .meta/checks/probes/tools/depth.py: 4
-.meta/checks/probes/tools/dereference.py: 1
+.meta/checks/probes/tools/dereference.py: 0
 .meta/checks/probes/tools/fallback.py: 36
 .meta/checks/probes/tools/gate.py: 3
 .meta/checks/probes/tools/search.py: 5
@@ -94,7 +94,7 @@
 .meta/checks/probes/tools/timing.py: 0
 .meta/checks/probes/wrappers.py: 7
 .meta/depth.py: 8
-.meta/dereference.py: 1
+.meta/dereference.py: 0
 .meta/detect_fallback.py: 11
 .meta/gate: 1
 .meta/hooks/signed_channel.py: 1
@@ -118,8 +118,8 @@
 .meta/lib/check_pr/state.py: 2
 .meta/lib/check_pr/sweep.py: 2
 .meta/lib/check_pr/verdict.py: 5
-.meta/lib/dereference/asking.py: 1
-.meta/lib/dereference/cli.py: 2
+.meta/lib/dereference/asking.py: 0
+.meta/lib/dereference/cli.py: 0
 .meta/lib/dereference/reading.py: 10
 .meta/lib/move/advance.py: 17
 .meta/lib/move/challenges.py: 14

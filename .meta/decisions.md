@@ -528,7 +528,7 @@ and the query a reader in a file actually has.
 | [`.meta/lib/on/common.py`](lib/on/common.py) | [DR-217](assertions/decisions/DR-217.yaml), [DR-264](assertions/decisions/DR-264.yaml), [DR-281](assertions/decisions/DR-281.yaml) |
 | [`.meta/lib/on/prompts.py`](lib/on/prompts.py) | [DR-281](assertions/decisions/DR-281.yaml) |
 | [`.meta/lib/on/review.py`](lib/on/review.py) | [DR-217](assertions/decisions/DR-217.yaml), [DR-264](assertions/decisions/DR-264.yaml), [DR-281](assertions/decisions/DR-281.yaml) |
-| [`.meta/lib/on/routing.py`](lib/on/routing.py) | [DR-281](assertions/decisions/DR-281.yaml), [DR-285](assertions/decisions/DR-285.yaml), [DR-292](assertions/decisions/DR-292.yaml) |
+| [`.meta/lib/on/routing.py`](lib/on/routing.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-281](assertions/decisions/DR-281.yaml), [DR-285](assertions/decisions/DR-285.yaml), [DR-292](assertions/decisions/DR-292.yaml) |
 | [`.meta/lib/post/__init__.py`](lib/post/__init__.py) | [DR-286](assertions/decisions/DR-286.yaml) |
 | [`.meta/lib/post/correction.py`](lib/post/correction.py) | [DR-286](assertions/decisions/DR-286.yaml) |
 | [`.meta/lib/render/__init__.py`](lib/render/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
