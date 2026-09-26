@@ -502,6 +502,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-loops-merge-manager
     name: .meta/checks/probes/loops/merge_manager.py
     path: .meta/checks/probes/loops/merge_manager.py
+  - id: work:artifact/meta-checks-probes-loops-epic
+    name: .meta/checks/probes/loops/epic.py
+    path: .meta/checks/probes/loops/epic.py
   - id: work:artifact/meta-checks-probes-loops-merge-manager-advance
     name: .meta/checks/probes/loops/merge_manager_advance.py
     path: .meta/checks/probes/loops/merge_manager_advance.py
@@ -877,6 +880,9 @@ artifacts:
   - id: work:artifact/meta-lib-move-challenges
     name: .meta/lib/move/challenges.py
     path: .meta/lib/move/challenges.py
+  - id: work:artifact/meta-lib-move-epics
+    name: .meta/lib/move/epics.py
+    path: .meta/lib/move/epics.py
   - id: work:artifact/meta-lib-move-pull-requests
     name: .meta/lib/move/pull_requests.py
     path: .meta/lib/move/pull_requests.py
@@ -958,6 +964,9 @@ artifacts:
   - id: work:artifact/meta-lib-coder-door-lifecycle
     name: .meta/lib/coder_door/coder_door.py
     path: .meta/lib/coder_door/coder_door.py
+  - id: work:artifact/meta-templates-prompts-coder-decompose
+    name: .meta/templates/prompts/coder-decompose.md
+    path: .meta/templates/prompts/coder-decompose.md
   - id: work:artifact/meta-lib-coder-door-handoff
     name: .meta/lib/coder_door/handoff.py
     path: .meta/lib/coder_door/handoff.py

@@ -12,6 +12,7 @@ from lib.move import (
     concepts,
     decisions,
     drafts,
+    epics,
     handoff,
     manager,
     pull_requests,
@@ -90,6 +91,8 @@ def _add_issue_parsers(sub: Any) -> None:
     p = sub.add_parser("delegate")
     p.add_argument("number")
     p.add_argument("--level", choices=common.LOOP_LEVELS, help="ensure Challenge difficulty level")
+    p = sub.add_parser("decompose")
+    p.add_argument("issue", help="the hard parent Challenge approved for decomposition")
 
 
 def _add_pr_parsers(sub: Any) -> None:
@@ -167,34 +170,34 @@ def build_parser(description: str | None = None) -> argparse.ArgumentParser:
 
 def _dispatch_issue_verb(args: argparse.Namespace) -> bool:
     """Dispatch an Issue-specific state transition verb."""
-    if args.verb == "triage":
-        challenges.triage(args.issue, args.level, channel.signed(channel.stdin_body()))
-    elif args.verb == "difficulty":
-        challenges.difficulty(args.issue, args.level)
-    elif args.verb == "reread":
-        challenges.reread(args.issue)
-    elif args.verb == "roadmap":
-        challenges.roadmap(args.issue)
-    elif args.verb == "claim":
-        challenges.claim(args.issue)
-    elif args.verb == "delegate":
-        challenges.delegate(args.number, level=args.level)
-    elif args.verb == "milestone":
-        challenges.milestone(args.issue, args.title, clear=args.clear)
-    elif args.verb == "file":
-        common.refuse_a_level_and_a_mandate_apart(args.level, args.mandate,
-                                                  instead="--roadmap" if args.roadmap else None)
-        challenges.file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level,
-                   roadmap=args.roadmap, blocked_by=args.blocked_by)
-    elif args.verb == "waits":
-        challenges.waits(args.issue, on=args.on, off=args.off, clear=args.clear)
-    elif args.verb == "stop":
-        challenges.stop(args.issue, channel.signed(channel.stdin_body()))
-    elif args.verb == "obviate":
-        challenges.obviate(args.issue, args.by, channel.stdin_body())
-    else:
+    actions: dict[str, Callable[[], object]] = {
+        "triage": lambda: challenges.triage(
+            args.issue, args.level, channel.signed(channel.stdin_body())),
+        "difficulty": lambda: challenges.difficulty(args.issue, args.level),
+        "reread": lambda: challenges.reread(args.issue),
+        "roadmap": lambda: challenges.roadmap(args.issue),
+        "claim": lambda: challenges.claim(args.issue),
+        "delegate": lambda: challenges.delegate(args.number, level=args.level),
+        "decompose": lambda: epics.decompose(args.issue, channel.stdin_body()),
+        "milestone": lambda: challenges.milestone(args.issue, args.title, clear=args.clear),
+        "file": lambda: _file_issue(args),
+        "waits": lambda: challenges.waits(args.issue, on=args.on, off=args.off, clear=args.clear),
+        "stop": lambda: challenges.stop(args.issue, channel.signed(channel.stdin_body())),
+        "obviate": lambda: challenges.obviate(args.issue, args.by, channel.stdin_body()),
+    }
+    action = actions.get(args.verb)
+    if action is None:
         return False
+    action()
     return True
+
+
+def _file_issue(args: argparse.Namespace) -> None:
+    """Apply filing's paired-level and mandate guard, then file the Issue."""
+    common.refuse_a_level_and_a_mandate_apart(
+        args.level, args.mandate, instead="--roadmap" if args.roadmap else None)
+    challenges.file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level,
+                          roadmap=args.roadmap, blocked_by=args.blocked_by)
 
 
 def _mint(ident: str | None) -> None:

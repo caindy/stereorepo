@@ -132,6 +132,7 @@ def classify(issue: dict[str, Any], open_numbers: set[int], closing: dict[int, i
     """
     labels = {lbl["name"] for lbl in issue["labels"]}
     level = next((d for d in DIFFICULTY if d in labels), None)
+    epic = "epic" in labels
     waits = waits_on(issue)
     taken = closing.get(issue["number"])
     if taken:
@@ -144,10 +145,13 @@ def classify(issue: dict[str, Any], open_numbers: set[int], closing: dict[int, i
         live = [n for n in waits if n in open_numbers]
         blocked = bool(live)
         note = "waits on " + ", ".join(f"#{n}" for n in live) if live else "ripe"
+    if epic:
+        blocked, note = True, "parent Epic — children own completion"
     return {
         "number": issue["number"],
         "title": issue["title"],
-        "kind": "challenge" if "challenge" in labels else "roadmap" if "roadmap" in labels else "-",
+        "kind": ("epic" if epic else "challenge" if "challenge" in labels
+                 else "roadmap" if "roadmap" in labels else "-"),
         "level": level,
         "blocked": blocked,
         "note": note,
@@ -159,7 +163,16 @@ def classify(issue: dict[str, Any], open_numbers: set[int], closing: dict[int, i
 
 def row(i: dict[str, Any]) -> str:
     """Formats one issue summary line for the next screen."""
-    level = i["level"] or ("roadmap" if i["kind"] == "roadmap" else "unread" if i["kind"] == "challenge" else "unlabelled")
+    if i["kind"] == "epic":
+        level = "epic"
+    elif i["level"]:
+        level = i["level"]
+    elif i["kind"] == "roadmap":
+        level = "roadmap"
+    elif i["kind"] == "challenge":
+        level = "unread"
+    else:
+        level = "unlabelled"
     return f"  #{i['number']:<4} {level:<10} {i['note']:<24} {i['title'][:70]}"
 
 
@@ -306,6 +319,7 @@ def screen() -> int:
     rows = issues(closing)
     milestones(rows)
 
+    epics = [i for i in rows if i["kind"] == "epic"]
     challenges = [i for i in rows if i["kind"] == "challenge"]
     taken = [i for i in challenges if i["taken"]]
     ripe = [i for i in challenges if i["level"] and i["blocked"] is False]
@@ -324,6 +338,7 @@ def screen() -> int:
         print()
 
     section("in progress — an open pull request closes these; they are its, not next", taken)
+    section("epics — parent Challenges; the merge manager closes these after every child", epics)
     section("ripe — a Challenge with a difficulty and no open blocker; "
             "easy and medium are the coder's the moment they are labelled", ripe)
     section("waiting", waiting + unknown)

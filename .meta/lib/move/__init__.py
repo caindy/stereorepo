@@ -15,6 +15,8 @@ loop workflows' runs are flying, whether trunk's own HEAD commit is green, and
 what a red trunk owes (solorepo's #913, solorepo's #1027).
 `drafts` is the one check before every way out of draft and the verb that makes
 it, and imports `common`.
+`epics` creates child Challenges under an approved hard Challenge and closes a
+parent Epic after all its native GitHub sub-issues close; it imports `challenges`.
 `challenges` is the Issue lifecycle, from filing to the closes that are not a
 merge, and imports `common`, `pull_requests` and `advance`. `pull_requests` is
 the pull request's, opening, layering, the merge and the supersession, and
@@ -37,7 +39,8 @@ package root, which imports all three as modules.
 imports `actions`, `common`, `challenges`, `handoff`, `pull_requests`, `advance`
 and `manager`, every module before it but `decisions`, `concepts` and `drafts`.
 `cli` is the argument surface the script delegates to and imports every module
-but itself.
+but itself. `manager` imports `epics` to close completed parents before ranking
+pull requests.
 
 The graph is not a layering. `advance` and `manager` import each other, `handoff`
 and `pull_requests` import each other, and `challenges` and `pull_requests` each

@@ -9,14 +9,16 @@ from typing import Any, NamedTuple
 
 import channel
 import check_pr
+from lib.move import epics
 from lib.on import common, routing
 
 CODER_HARNESSES = ("gemini", "claude")
 """The harnesses the coder's door chooses among, in the order asked: Antigravity CLI
 by label or as the fallback (solorepo's DR-245), and Claude Code by default."""
 
-PASSES = ("take", "rebase", "answer")
-"""The coder's three passes (solorepo's DR-133, solorepo's DR-159), as `--pass` names them."""
+PASSES = ("take", "rebase", "answer", "decompose")
+"""The coder's passes (solorepo's DR-133, solorepo's DR-159, solorepo's DR-292),
+as `--pass` names them."""
 
 NO_JOB = ("closed", "stale", "unnamed", "held")
 """The words `take` decides with where a verdict's delivery is nobody's to answer: the loop
@@ -203,8 +205,9 @@ def find_pull(number: str, delivery: Delivery) -> dict[str, Any] | None:
 def coder_before(number: str, delivery: Delivery) -> None:
     """The coder's door before the session: the pull request, the harness, whether taken, how deep.
 
-    A take reads the Challenge; the other passes read the pull request and
-    check its branch out, so the work continues where the last pass left it.
+    A take or decomposition pass reads the Challenge; the other passes read
+    the pull request and check its branch out, so work continues where the
+    last pass left it.
     The harness is chosen by label and input, named as every door names it.
     Whether the delivery is still the loop's is read now rather than off the
     frozen payload, since a level can move while a run waits in its
@@ -224,6 +227,28 @@ def coder_before(number: str, delivery: Delivery) -> None:
         delivery (Delivery): What the workflow knows.
     """
     common.emit("GITHUB_OUTPUT", **{"pass": delivery.task})
+    if delivery.task == "decompose":
+        common.emit("GITHUB_OUTPUT", number=number)
+        issue = channel.gh("issue", "view", number, "--json", "state,title,body,labels")
+        labels = check_pr.state.issue_labels(issue)
+        if issue.get("state") != "OPEN" or "challenge" not in labels or "hard" not in labels:
+            sys.exit(f"::notice::#{number} is no longer an open hard Challenge; "
+                     "decomposition stopped")
+        stage = "execute" if delivery.event == "issue_comment" else "propose"
+        if stage == "execute" and not epics.approved(number):
+            sys.exit(f"say: #{number} has no repository-owner decomposition approval")
+        harness = coder_harness(delivery, labels)
+        tiers = routing.coder_chain(harness, delivery.task, "medium")
+        common.name_harness(harness)
+        common.name_tiers(tiers)
+        common.refuse_tracked_scratch()
+        common.write_routing("coder", delivery.task, tiers, {
+            "number": number, "repository": channel.repo(),
+            "title": str(issue.get("title") or ""), "body": str(issue.get("body") or ""),
+            "stage": stage,
+        })
+        common.emit("GITHUB_OUTPUT", level="medium", branch_prefix=harness, stage=stage)
+        return
     if delivery.task == "take":
         view = channel.gh("issue", "view", number, "--json", "labels")
         harness = coder_harness(delivery, check_pr.state.issue_labels(view))
@@ -422,6 +447,33 @@ def coder(phase: str, number: str, delivery: Delivery, ended: Ended,
     elif phase == "rescue":
         from lib.coder_door import handoff
         handoff.coder_rescue(number, delivery, ended.branch_prefix)
+    elif delivery.task == "decompose":
+        coder_decompose_after(number, delivery, ended)
     else:
         from lib.coder_door import handoff
         handoff.coder_after(number, delivery, ended)
+
+
+def coder_decompose_after(number: str, delivery: Delivery, ended: Ended) -> None:
+    """Verify the plan or child Issues were recorded before a decomposition run succeeds."""
+    if not ended.outcomes or "success" not in ended.outcomes:
+        sys.exit(f"coder: decomposition pass on #{number} ended without a successful harness")
+    issue = channel.gh("issue", "view", number, "--json", "labels")
+    labels = check_pr.state.issue_labels(issue)
+    if delivery.event == "issue_comment":
+        children = epics.children_of(number)
+        plan = epics.approved_plan(number)
+        expected = {str(child.get("title") or "") for child in (plan or {}).get("children", [])}
+        actual = {str(child.get("title") or "") for child in children}
+        if "epic" not in labels or len(expected) < 2 or actual != expected:
+            sys.exit(f"coder: approved decomposition on #{number} did not create an Epic "
+                     "with every approved child Challenge")
+        print(f"coder: #{number} has {len(children)} linked child Challenges")
+        return
+    comments = channel.gh("api", "--paginate",
+                          f"repos/{channel.repo()}/issues/{number}/comments")
+    coder_login = channel.role_login("coder")
+    if not any(comment.get("user", {}).get("login") == coder_login
+               and "## Decomposition plan" in comment.get("body", "") for comment in comments):
+        sys.exit(f"coder: decomposition pass on #{number} did not post its plan")
+    print(f"coder: decomposition plan posted on #{number}; waiting for solo approval")

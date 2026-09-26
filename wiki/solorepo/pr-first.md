@@ -23,6 +23,16 @@ events:
 4. **Sweep:** Detects and reports residue branches whose remote heads have merged
    or closed.
 
+## Hard Challenge Decomposition
+
+A `hard` Challenge is decomposed by the coder into a parent Epic and independently
+reviewable child Challenges before autonomous implementation begins (solorepo's DR-292). The coder proposes the child scopes and their dependencies in an Issue
+comment. The solo approves that plan before the coder creates the children; the
+reviewer then assigns each child's actual difficulty. The parent stays open while
+children execute in dependency order. A leaf pull request closes its child
+Challenge, and the merge manager closes the parent Epic only after every child
+Challenge closes.
+
 ## Reviewer Depth & Concurrency
 
 The reviewer pass determines review intensity using a 4-layer template method

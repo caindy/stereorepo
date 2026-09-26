@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/1067
+    name: Decompose hard Challenges into Epics with autonomous child Challenges
+    challenge_type: FEATURE
+    description: >-
+      When the reviewer labels a Challenge `hard`, the coder proposes an
+      implementation breakdown as a parent Epic with medium and easy child
+      Challenges and their dependencies. The solo validates the initial plan;
+      after approval, autonomous coder loops take the children in dependency
+      order. The parent Epic stays open while children are in progress and
+      closes only after every child Challenge has landed and closed.

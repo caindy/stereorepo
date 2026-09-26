@@ -246,7 +246,7 @@ def _lock() -> list[str]:
 
     free = quiet()
     with stood_in(channel, gh=free):
-        took = outcome(lambda: move.merge_manager())
+        took = run_manager(move)
     if "idle — no open pull requests" not in took.out:
         problems.append(f"merge lock: the lock was free and nothing evaluated:\n{took.out}")
     if free.git.refs:
@@ -255,7 +255,7 @@ def _lock() -> list[str]:
     for who, holder in ((RUNNING, held_by(RUNNING, now)), (SESSION, held_by(SESSION, now))):
         busy = quiet(runs={RUNNING.removeprefix(channel.RUN_MARK): "in_progress"}, holder=holder)
         with stood_in(channel, gh=busy):
-            stood = outcome(lambda: move.merge_manager())
+            stood = run_manager(move)
         if f"another manager holds the lock ({who})" not in stood.out:
             problems.append(f"merge lock: a manager met the lock held by {who}, not standing "
                             f"down to it:\n{stood.out}")
@@ -276,7 +276,7 @@ def _lock() -> list[str]:
                   "stands at no tag GitHub will serve"))
     for dead, said in abandoned:
         with stood_in(channel, gh=dead):
-            broke = outcome(lambda: move.merge_manager())
+            broke = run_manager(move)
         if said not in broke.out:
             problems.append(f"merge lock: an abandoned lock was not broken, expecting "
                             f"{said!r}:\n{broke.out}")
@@ -309,7 +309,7 @@ def _unreadable(channel: Any, move: Any, now: datetime.datetime) -> list[str]:
     problems: list[str] = []
     held = quiet(holder=held_by(RUNNING, now), unreadable={LOCK_READ: 0})
     with stood_in(channel, gh=held):
-        blind = outcome(lambda: move.merge_manager())
+        blind = run_manager(move)
     if "would not say who holds the lock" not in blind.out:
         problems.append(f"merge lock: a held lock GitHub would not read was not stood down "
                         f"to:\n{blind.out}")
@@ -321,7 +321,7 @@ def _unreadable(channel: Any, move: Any, now: datetime.datetime) -> list[str]:
 
     wrote = quiet(unreadable={LOCK_READ: 0})
     with stood_in(channel, gh=wrote):
-        gave = outcome(lambda: move.merge_manager())
+        gave = run_manager(move)
     if "would not read the lock back" not in gave.out:
         problems.append(f"merge lock: a read-back GitHub refused was not stood down "
                         f"to:\n{gave.out}")
@@ -330,7 +330,7 @@ def _unreadable(channel: Any, move: Any, now: datetime.datetime) -> list[str]:
 
     took = quiet(unreadable={LOCK_READ: 1})
     with stood_in(channel, gh=took):
-        released = outcome(lambda: move.merge_manager())
+        released = run_manager(move)
     if "idle — no open pull requests" not in released.out:
         problems.append(f"merge lock: a readable lock was not taken:\n{released.out}")
     if "giving back the one this run took" not in released.out:
@@ -340,3 +340,9 @@ def _unreadable(channel: Any, move: Any, now: datetime.datetime) -> list[str]:
         problems.append(f"merge lock: the lock was kept where its holder could not be read: "
                         f"{took.git.refs}")
     return problems
+
+
+def run_manager(move: Any) -> Any:
+    """Run the lock probe without the separately probed Epic-maintenance act."""
+    with stood_in(move.manager.epics, close_completed=lambda: None):
+        return outcome(lambda: move.merge_manager())

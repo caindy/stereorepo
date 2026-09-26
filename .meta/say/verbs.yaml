@@ -166,6 +166,16 @@ programs:
           refused unless `--by` names an open Challenge or a merged pull
           request
         held_by: [coder]
+      - name: decompose
+        usage: "<issue> < approved-plan.json"
+        does: >-
+          create the child Challenges in an approved hard Challenge's parent
+          Epic from the exact JSON plan immediately preceding the solo's
+          `Approve decomposition` comment; child Issues land with `challenge`
+          alone for reviewer triage, carry native dependency links and are
+          linked as GitHub sub-issues; partial retries recover matching child
+          Issues rather than filing duplicates
+        held_by: [coder]
       - name: open
         usage: "--title T [--base B|--on <pr>] < body.md"
         does: "open a draft pull request, the form filled, and request review (omitted for easy Challenges, solorepo's DR-291); --on opens a layer on that one and links the stack; the merge manager, advance and the reconciler pass over the draft; move ready takes it out at final reviewer approval (solorepo's DR-287)"

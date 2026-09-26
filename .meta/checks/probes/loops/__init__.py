@@ -24,6 +24,7 @@ import checks.probes.loops.sweep
 import checks.probes.loops.enacted
 import checks.probes.loops.stop
 import checks.probes.loops.merge_manager
+import checks.probes.loops.epic
 import checks.probes.loops.merge_manager_advance
 import checks.probes.loops.drafts
 import checks.probes.loops.delegate

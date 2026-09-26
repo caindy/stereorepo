@@ -163,7 +163,7 @@
 .meta/lib/worktree_only/paths.py: 3
 .meta/lib/worktree_only/shell.py: 6
 .meta/lib/worktree_only/verdict.py: 5
-.meta/next.py: 16
+.meta/next.py: 15
 .meta/say/channel.py: 3
 .meta/say/commit: 2
 .meta/say/post: 16

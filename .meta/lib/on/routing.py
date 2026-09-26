@@ -86,6 +86,7 @@ GEMINI_MODEL = "gemini-3.8-flash"
 """The model the Antigravity CLI runs, on every pass of every Role."""
 
 CODER_DEPTHS = {"rebase": Depth("claude-opus-5", "high", "60", "30"),
+                "decompose": Depth("claude-opus-5", "high", "90", "45"),
                 "medium": Depth("claude-opus-5", "high", "120", "60"),
                 "easy": Depth("claude-sonnet-5", "medium", "60", "30")}
 """The coder's depth by the pass, or by the level a take is at.
@@ -114,7 +115,7 @@ def coder_depth(task: str, level: str) -> Depth:
     """The coder's depth for a pass, by the pass first and the level after.
 
     Parameters:
-        task (str): `take`, `rebase` or `answer`.
+        task (str): `take`, `rebase`, `answer` or `decompose`.
         level (str): The level a take is at; ignored where the pass names its own depth.
     """
     return CODER_DEPTHS.get(task) or CODER_DEPTHS.get(level) or CODER_DEPTHS["easy"]

@@ -41,9 +41,10 @@ lease at all, and `merge_manager` here is the one thing that does."""
 import sys
 
 import channel
-from lib.move import advance, common, pull_requests
-from lib.move import challenges as challenges
+from lib.move import advance, challenges, common, epics, pull_requests
 from lib.move.manager import eviction, lock, ranking
+
+__all__ = ["challenges"]
 
 _refusal_notice_body = eviction._refusal_notice_body
 
@@ -118,6 +119,7 @@ def _manage(dry_run: bool = False, stranded: bool = True) -> None:
             before GitHub has performed the rebase, so both would issue one for
             the same branch.
     """
+    _close_completed_epics(dry_run)
     owner, name, reviewer_login = ranking.repo_context()
     pulls = channel.gh(
         "pr", "list", "--state", "open", "--limit", "100", "--json", MERGE_MANAGER_FIELDS
@@ -187,3 +189,9 @@ def _manage(dry_run: bool = False, stranded: bool = True) -> None:
         if stranded:
             advance.advance_stranded(pulls, evaluations, owner, name, dry_run)
         sys.exit(exc.code)
+
+
+def _close_completed_epics(dry_run: bool) -> None:
+    """Close completed parent Epics during a real manager pass."""
+    if not dry_run:
+        epics.close_completed()

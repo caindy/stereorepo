@@ -39,6 +39,7 @@ has its own fields, which are what its door writes and all a form may ask for:
 | Form | Fields the door fills |
 |---|---|
 | `coder-take.md` | `<number>`, `<repository>`, `<level>`, `<branch_prefix>`, `<resume>` |
+| `coder-decompose.md` | `<number>`, `<repository>`, `<title>`, `<body>`, `<stage>` |
 | `coder-rebase.md` | `<number>`, `<repository>`, `<branch>`, `<base>`, `<issue>` |
 | `coder-answer.md` | those five and `<stop>` |
 | `reviewer-review.md` | `<number>`, `<repository>`, `<head>`, `<login>`, `<agents>` |

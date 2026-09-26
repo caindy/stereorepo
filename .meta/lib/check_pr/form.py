@@ -115,9 +115,12 @@ def check_closing_blockers(body: str) -> list[str]:
     closed_set = set(targets)
     problems: list[str] = []
     for num in targets:
-        view = github.gh("issue", "view", str(num), "--json", "blockedBy", default=None)
+        view = github.gh("issue", "view", str(num), "--json", "blockedBy,labels", default=None)
         if not isinstance(view, Mapping):
             continue
+        if any(label.get("name") == "epic" for label in view.get("labels", [])):
+            problems.append(
+                f"#{num} is an Epic; a leaf pull request may close only child Challenges")
         raw_blockers = (view.get("blockedBy") or {}).get("nodes", [])
         open_blockers = [
             int(n["number"]) for n in raw_blockers

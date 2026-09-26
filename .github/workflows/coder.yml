@@ -10,11 +10,13 @@
 # standing merge manager lands what is green in order of leverage. What it
 # cannot finish it hands to the solo by relabelling `human` and saying why.
 #
-# Three passes, and the trigger says which: an Issue taken, a request for
-# changes answered, and a branch rebased back to where its outstanding review
-# can be answered at all (solorepo's DR-133, solorepo's DR-159). The last has
-# no event of its own and is dispatched by `.meta/say/move advance` on the merge
-# that caused it.
+# Four passes, and the trigger says which: an Issue taken, a hard Challenge
+# decomposed, a request for changes answered, and a branch rebased back to where
+# its outstanding review can be answered at all (solorepo's DR-133, DR-159,
+# and solorepo's DR-292). The decomposition pass proposes children on the hard-label event and
+# creates them only after the solo's exact approval comment. Rebase has no event
+# of its own and is dispatched by `.meta/say/move advance` on the merge that
+# caused it.
 #
 # Nothing here restates how to work. `AGENTS.md`, the Disciplines and the two
 # forms are the checkout's; this file decides when the coder runs, as whom it
@@ -27,6 +29,8 @@ run-name: coder-issue-#${{ github.event.issue.number || github.event.pull_reques
 on:
   issues:
     types: [labeled]
+  issue_comment:
+    types: [created]
   # The reviewer's request for changes is the coder's second run: solorepo's DR-112
   # promised it and solorepo's #102 sat with a verdict and no Job to take it. The
   # dispatch runs that pass by hand, for a verdict the event passed by — and
@@ -61,7 +65,7 @@ on:
       task:
         description: what the coder is dispatched to do
         type: choice
-        options: [review, rebase]
+        options: [review, rebase, decompose]
         default: review
       harness:
         description: which harness runs
@@ -92,11 +96,12 @@ on:
 #
 # An Issue delivery is keyed by its difficulty label for taking passes (`easy`
 # or `medium` mapped to `take`), and by the label itself for non-taking passes
-# (`challenge`, `roadmap`, `harness:*`, `hard`, `human`). Without this
+# (`challenge`, `roadmap`, `harness:*`, `hard`, `human`). A solo approval comment
+# uses the `decompose` key. Without this
 # separation, a non-taking label arriving while a difficulty run is pending
 # cancels the difficulty run and leaves a delivery that skips (solorepo's #472).
 concurrency:
-  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request || inputs.issue }}-${{ github.event.review.state || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || ((github.event.label.name == 'easy' || github.event.label.name == 'medium') && 'take') || github.event.label.name || 'take' }}
+  group: coder-${{ github.event.issue.number || github.event.pull_request.number || inputs.pull_request || inputs.issue }}-${{ github.event.review.state || (github.event_name == 'issue_comment' && 'decompose') || (inputs.task == 'decompose' && 'decompose') || (inputs.task == 'rebase' && 'rebase') || (inputs.pull_request && 'changes_requested') || ((github.event.label.name == 'easy' || github.event.label.name == 'medium') && 'take') || github.event.label.name || 'take' }}
   cancel-in-progress: false
 
 # The workflow's own token checks the tree out and nothing else. Every read
@@ -110,8 +115,10 @@ permissions:
 jobs:
   coder:
     name: coder
-    # Only a difficulty a loop takes, on a Challenge: `hard` and `human` are
-    # not this Job's, and a `roadmap` Issue is deferred by definition. Or the
+    # Only a difficulty a loop takes, on a Challenge: `hard` opens its
+    # decomposition pass, `human` remains the solo's, and a `roadmap` Issue is
+    # deferred by definition. An owner approval comment resumes decomposition.
+    # Or the
     # reviewer's account requesting changes on a branch named for a Challenge
     # — the prefix says which Issue, not whose the branch is; `before the session`
     # below reads whose it is, on this door as on the first (solorepo's DR-142,
@@ -125,6 +132,17 @@ jobs:
         && github.event.review.state == 'changes_requested'
         && github.event.review.user.login == format('{0}-{1}-reviewer', github.repository_owner, github.event.repository.name)
         && (startsWith(github.event.pull_request.head.ref, 'claude/issue-') || startsWith(github.event.pull_request.head.ref, 'gemini/issue-')))
+      || (github.event_name == 'issues'
+        && github.event.action == 'labeled'
+        && github.event.issue.state == 'open'
+        && github.event.label.name == 'hard'
+        && contains(github.event.issue.labels.*.name, 'challenge'))
+      || (github.event_name == 'issue_comment'
+        && github.event.issue.state == 'open'
+        && contains(github.event.issue.labels.*.name, 'challenge')
+        && contains(github.event.issue.labels.*.name, 'hard')
+        && github.event.comment.body == 'Approve decomposition'
+        && github.event.comment.author_association == 'OWNER')
       || github.event_name == 'workflow_dispatch'
     # The self-hosted scale set (solorepo's DR-137): this Job is what actually
     # spends GitHub Actions minutes, holding a runner for up to the timeout
@@ -245,7 +263,7 @@ jobs:
           fi
         env:
           NUMBER: ${{ github.event.issue.number || inputs.issue || github.event.pull_request.number || inputs.pull_request }}
-          PASS: ${{ (github.event_name == 'issues' || inputs.issue != '') && 'take' || inputs.task == 'rebase' && 'rebase' || 'answer' }}
+          PASS: ${{ ((github.event_name == 'issues' && github.event.label.name == 'hard') || github.event_name == 'issue_comment' || inputs.task == 'decompose') && 'decompose' || (github.event_name == 'issues' || inputs.issue != '') && 'take' || inputs.task == 'rebase' && 'rebase' || 'answer' }}
           EVENT: ${{ github.event_name }}
           HARNESS: ${{ inputs.harness }}
 
@@ -392,7 +410,7 @@ jobs:
       # modifications in the working tree and push unpushed commits directly
       # to the active PR branch (solorepo's #946).
       - name: rescue unpushed work
-        if: ${{ always() && steps.before.outcome == 'success' && steps.before.outputs.by == '' }}
+        if: ${{ always() && steps.before.outcome == 'success' && steps.before.outputs.by == '' && steps.before.outputs.pass != 'decompose' }}
         run: |
           if [ -f .meta/coder_door.py ]; then
             .meta/coder_door.py coder rescue "$NUMBER" --pass "$PASS" --event "$EVENT" \
