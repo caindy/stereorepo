@@ -137,7 +137,7 @@ def _dry_run(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = github()
     with stood_in(channel, gh=manager_github(fake), graphql=conversations):
-        dry = outcome(lambda: move.merge_manager(dry_run=True))
+        dry = outcome(lambda: move.manager.merge_manager(dry_run=True))
     if f"dry run — not advancing #{'20'}" not in dry.out:
         problems.append(f"merge manager: a dry run did not name the stranded pull request:\n{dry.out}")
     if any(pull.get("rebased") for pull in fake.pulls.values()):
@@ -150,7 +150,7 @@ def _held_run(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = github()
     with stood_in(channel, gh=manager_github(fake), graphql=conversations):
-        held = outcome(lambda: move.merge_manager(dry_run=False, stranded=False))
+        held = outcome(lambda: move.manager.merge_manager(dry_run=False, stranded=False))
     if any(pull.get("rebased") for pull in fake.pulls.values()):
         problems.append("merge manager: it rebased a branch on the event advance.yml answers")
     if "advancing" in held.out:
@@ -163,7 +163,7 @@ def _real_run(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = github()
     with stood_in(channel, gh=manager_github(fake), graphql=conversations):
-        ran = outcome(lambda: move.merge_manager(dry_run=False))
+        ran = outcome(lambda: move.manager.merge_manager(dry_run=False))
     if ran.code is not None:
         problems.append(f"merge manager: a refused rebase ended the run — {ran.code}")
     if "idle" not in ran.out:
@@ -208,7 +208,7 @@ def _stall_eviction_exemptions(move: Any) -> list[str]:
         "mergeable": "MERGEABLE",
         "statusCheckRollup": GREEN,
     }
-    if move.is_stalled_autonomous_pr(re_requested_approved_pr, REVIEWER):
+    if move.manager.eviction.is_stalled_autonomous_pr(re_requested_approved_pr, REVIEWER):
         problems.append(
             "is_stalled_autonomous_pr: standing APPROVED verdict must exempt loop PR from stall"
         )
@@ -234,7 +234,7 @@ def _stall_eviction_exemptions(move: Any) -> list[str]:
         "mergeable": "MERGEABLE",
         "statusCheckRollup": GREEN,
     }
-    if move.is_stalled_autonomous_pr(awaiting_promotion_pr, REVIEWER):
+    if move.manager.eviction.is_stalled_autonomous_pr(awaiting_promotion_pr, REVIEWER):
         problems.append("is_stalled_autonomous_pr: AWAITING_PROMOTION PR must be exempt from stall")
     return problems
 
@@ -248,7 +248,7 @@ def _unresolved_conversations_carve_out(move: Any) -> list[str]:
             "comments": {"nodes": [{"body": "**Noticed and not done.** parked notice"}]},
         }
     ]
-    refusal = move.unresolved_conversations(parked)
+    refusal = move.manager.ranking.unresolved_conversations(parked)
     if refusal != "":
         problems.append(
             f"unresolved_conversations: expected empty string for parked notice, got: {refusal!r}"
@@ -259,7 +259,7 @@ def _unresolved_conversations_carve_out(move: Any) -> list[str]:
             "comments": {"nodes": [{"body": "active question"}]},
         }
     ]
-    refusal_owed = move.unresolved_conversations(owed)
+    refusal_owed = move.manager.ranking.unresolved_conversations(owed)
     if refusal_owed != "1 unresolved conversation(s)":
         problems.append(
             f"unresolved_conversations: expected 1 conversation, got: {refusal_owed!r}"

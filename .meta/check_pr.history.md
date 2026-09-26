@@ -215,3 +215,16 @@ against answers an unbounded call successfully, so stripping `timeout=` from
 the invocation fails the probe.
 
 Evidence: `.meta/checks/probes/loops/handoff.py::handoff_probes`
+
+### Check_pr facade re-exported hundreds of redundant leaf symbols
+
+The `.meta/check_pr.py` entry facade re-exported hundreds of leaf symbols from
+`lib.check_pr` across a 116-item `__all__` block, bloating the facade to 318
+lines and creating dual-binding mock hazards (solorepo's DR-217, solorepo's
+#1028). Established: `.meta/check_pr.py` re-exports only its underlying
+submodules (`branch`, `cli`, `form`, `github`, `polling`, `remedies`, `review`,
+`state`, `sweep`, `verdict`), `ROOT`, `META`, and the CLI entry point `main`,
+shrinking the facade to ~84 lines and requiring callers and test probes to
+qualify symbols by submodule.
+
+Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`

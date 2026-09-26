@@ -39,7 +39,7 @@ def swept(channel: Any, move: Any, fake: FakeGitHub, problems: list[str]) -> str
     """
     with (stood_in(channel, gh=fake),
           environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe", AI_AGENT="probe")):
-        ran = outcome(lambda: move.advance())
+        ran = outcome(lambda: move.advance.advance())
     if ran.code is not None:
         problems.append("advance: a sweep that read every open pull request exited with "
                         f"{ran.code!r}, so its colour answers for their weather rather than "
@@ -184,12 +184,12 @@ def _two_pull_requests_failing_in_one_sweep(channel: Any, move: Any) -> list[str
 def _named_pull_request_not_armed(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False}})
-    said = run_verb(channel, fake, lambda: move.advance("7"))
+    said = run_verb(channel, fake, lambda: move.advance.advance("7"))
     if not fake.pulls["7"]["behind"]:
         problems.append("advance: it rebased a pull request nobody had asked to land")
     if not said or "not armed" not in said:
         problems.append(f"advance: it declined a named pull request and said {said!r}")
-    if run_verb(channel, fake, lambda: move.advance("7", held=True)):
+    if run_verb(channel, fake, lambda: move.advance.advance("7", held=True)):
         problems.append("advance: the caller that holds the branch was refused too")
     if fake.pulls["7"]["behind"]:
         problems.append("advance: it refused the caller that holds the branch")
@@ -217,7 +217,7 @@ def _draft_is_never_an_advance_candidate(channel: Any, move: Any) -> list[str]:
         problems.append("advance: a sweep rebased a draft, replaying its Seed Commit away")
     if said:
         problems.append(f"advance: a draft it passed over was reported as a problem: {said!r}")
-    refusal = run_verb(channel, fake, lambda: move.advance("7"))
+    refusal = run_verb(channel, fake, lambda: move.advance.advance("7"))
     if not refusal or "is a draft" not in refusal:
         problems.append(f"advance: it declined a named approved draft and said {refusal!r}")
     if not fake.pulls["7"]["behind"]:
@@ -253,7 +253,7 @@ def _named_stack_base_advances_without_arming(channel: Any, move: Any) -> list[s
         7: {"behind": 1, "armed": False, "layer": True},
         8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
     })
-    said = run_verb(channel, fake, lambda: move.advance("7"))
+    said = run_verb(channel, fake, lambda: move.advance.advance("7"))
     if (fake.checked_out != [("claude/issue-7",)] or fake.stack_rebases != ["7"]
             or not all(fake.pulls[n].get("rebased") for n in ("7", "8")) or said):
         problems.append(f"advance: named stack base was not advanced: {fake.checked_out!r}, {fake.stack_rebases!r}, {said!r}")
@@ -266,7 +266,7 @@ def _named_unarmed_upper_layer_is_refused(channel: Any, move: Any) -> list[str]:
         7: {"behind": 1, "armed": False, "layer": True},
         8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
     })
-    said = run_verb(channel, fake, lambda: move.advance("8"))
+    said = run_verb(channel, fake, lambda: move.advance.advance("8"))
     if not said or "not armed or approved" not in said or fake.stack_rebases:
         problems.append(f"advance: unarmed upper layer was not refused: {said!r}, {fake.stack_rebases!r}")
     return problems
@@ -278,7 +278,7 @@ def _named_unlinked_stack_base_is_refused(channel: Any, move: Any) -> list[str]:
         7: {"behind": 1, "armed": True, "layer": False},
         8: {"behind": 1, "armed": False, "layer": False, "base": "claude/issue-7"},
     })
-    said = run_verb(channel, fake, lambda: move.advance("7"))
+    said = run_verb(channel, fake, lambda: move.advance.advance("7"))
     if not said or "not linked as a GitHub stack" not in said or "solorepo's DR-243" not in said:
         problems.append(f"advance: unlinked stack base did not cite solorepo's DR-243: {said!r}")
     return problems
@@ -290,7 +290,7 @@ def _refused_stack_leaves_every_layer_unmoved(channel: Any, move: Any) -> list[s
         7: {"behind": 1, "armed": False, "layer": True},
         8: {"behind": 1, "armed": False, "layer": True, "base": "claude/issue-7"},
     }, no_stack=[7])
-    said = run_verb(channel, fake, lambda: move.advance("7"))
+    said = run_verb(channel, fake, lambda: move.advance.advance("7"))
     if not said or "#7" not in said or "#8" not in said or any(pull.get("rebased") for pull in fake.pulls.values()):
         problems.append(f"advance: a refused stack partially advanced or misreported: {said!r}, {fake.pulls!r}")
     return problems
@@ -331,7 +331,7 @@ def _stalled_stack_layer_is_tagged_as_a_refused_replay(channel: Any, move: Any) 
     swept(channel, move, fake, problems)
     for number, head in ((behind_after, f"moved{behind_after}"), (unmoved, f"head{unmoved}")):
         bodies = [comment.get("body", "") for comment in fake.comments.get(str(number), [])]
-        tag = f"{move.REPLAY_REFUSED_TAG} head:{head}"
+        tag = f"{move.advance.REPLAY_REFUSED_TAG} head:{head}"
         if len(bodies) != 1 or tag not in bodies[0]:
             problems.append(f"advance: the notice on stalled layer #{number} does not carry "
                             f"{tag!r}, so the reconciler owes it no rebase: {bodies!r}")
@@ -411,7 +411,7 @@ def _stack_with_nothing_behind_is_skipped(channel: Any, move: Any) -> list[str]:
         8: {"behind": 0, "armed": False, "layer": True, "base": "claude/issue-7"},
     })
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.advance())
+        ran = outcome(lambda: move.advance.advance())
     if ran.code is not None:
         problems.append(f"advance: stack with nothing behind exited with {ran.code!r}")
     if fake.checked_out or fake.stack_rebases or fake.pushed_stacks:
@@ -479,7 +479,7 @@ def _refused_stack_review_renewal_is_the_sweeps_own_problem(channel: Any, move: 
         layer: {"behind": 1, "armed": False, "layer": True, "base": f"claude/issue-{root}",
                 "requested": ["o-r-reviewer"], "drops_review": True},
     }, no_edit=[layer])
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = run_verb(channel, fake, lambda: move.advance.advance())
     if not said or f"#{layer}" not in said:
         problems.append(f"advance: a refused stack review renewal exited with {said!r}, "
                         "so a sweep that lost a review request during stack advance reports "
@@ -495,7 +495,7 @@ def _conflicting_stack_advances_once_its_root_is_rebased(channel: Any, move: Any
         8: {"behind": 0, "armed": False, "layer": True, "base": f"claude/issue-{root}"},
     })
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.advance())
+        ran = outcome(lambda: move.advance.advance())
     if ran.code is not None:
         problems.append(f"advance: a conflicting stack exited with {ran.code!r}")
     if f"left #{root}'s stack alone" not in ran.out:
@@ -518,7 +518,7 @@ def _conflicting_stack_advances_once_its_root_is_rebased(channel: Any, move: Any
 def _merge_auto_after_a_failed_advance(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7])
-    said = run_verb(channel, fake, lambda: move.merge("7", auto=True))
+    said = run_verb(channel, fake, lambda: move.pull_requests.merge("7", auto=True))
     if not fake.pulls["7"]["armed"]:
         problems.append("merge --auto: a failed advance left the pull request unarmed")
     if not said or "conflicts" not in said:
@@ -529,7 +529,7 @@ def _merge_auto_after_a_failed_advance(channel: Any, move: Any) -> list[str]:
 def _merge_auto_over_a_merge_that_landed(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": False}}, no_rebase=[7], lands=[7])
-    said = run_verb(channel, fake, lambda: move.merge("7", auto=True))
+    said = run_verb(channel, fake, lambda: move.pull_requests.merge("7", auto=True))
     if said:
         problems.append(f"merge --auto: a merge that landed exited with {said!r}")
     return problems
@@ -538,7 +538,7 @@ def _merge_auto_over_a_merge_that_landed(channel: Any, move: Any) -> list[str]:
 def _merge_auto_over_a_blip_on_the_read_back(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True}}, blip=[7])
-    said = run_verb(channel, fake, lambda: move.merge("7", auto=True))
+    said = run_verb(channel, fake, lambda: move.pull_requests.merge("7", auto=True))
     if not fake.pulls["7"]["armed"] or fake.pulls["7"]["behind"]:
         problems.append("merge --auto: a blip on the read-back left the pull request "
                         f"{fake.pulls['7']!r}")
@@ -552,7 +552,7 @@ def _merge_github_had_not_shown_yet(channel: Any, move: Any) -> list[str]:
     landed = 7
     fake = FakeGitHub({landed: {"armed": False, "slow": 1}}, lands=[landed])
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.merge(str(landed)))
+        ran = outcome(lambda: move.pull_requests.merge(str(landed)))
     if ran.code is not None:
         problems.append(f"merge: a merge GitHub had not shown on the first read exited with {ran.code!r}, "
                         "so a squash GitHub accepted is reported as one that did not land")
@@ -566,7 +566,7 @@ def _merge_github_never_showed(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     stuck = 7
     fake = FakeGitHub({stuck: {"armed": False, "slow": 9}}, lands=[stuck])
-    said = run_verb(channel, fake, lambda: move.merge(str(stuck)))
+    said = run_verb(channel, fake, lambda: move.pull_requests.merge(str(stuck)))
     if not said or "is open after the merge call" not in said:
         problems.append(f"merge: a merge GitHub never showed exited with {said!r}, so the wait "
                         "swallowed the refusal it is wrapped around")

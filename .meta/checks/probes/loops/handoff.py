@@ -109,7 +109,7 @@ def _request_review_cases(channel: Any, move: Any) -> list[str]:
     problems = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "base": "claude/issue-6",
                            "mergeable": "CONFLICTING"}})
-    said = run_verb(channel, fake, lambda: move.request_review("7", "reviewer"))
+    said = run_verb(channel, fake, lambda: move.handoff.request_review("7", "reviewer"))
     if fake.pulls["7"].get("requested"):
         problems.append(f"request-review: a conflicting branch was requested of "
                         f"{fake.pulls['7']['requested']!r}, and no review can run on it")
@@ -118,7 +118,7 @@ def _request_review_cases(channel: Any, move: Any) -> list[str]:
                         "which does not name the rebase that lifts it")
 
     fake = FakeGitHub({8: {"behind": 0, "armed": False}})
-    said = run_verb(channel, fake, lambda: move.request_review("8", "reviewer"))
+    said = run_verb(channel, fake, lambda: move.handoff.request_review("8", "reviewer"))
     if fake.pulls["8"].get("requested") != ["o-r-reviewer"]:
         problems.append(f"request-review: a mergeable branch left GitHub holding "
                         f"{fake.pulls['8'].get('requested')!r}")
@@ -126,7 +126,7 @@ def _request_review_cases(channel: Any, move: Any) -> list[str]:
         problems.append(f"request-review: the handoff it should have made exited with {said!r}")
 
     fake = FakeGitHub({9: {"behind": 0, "armed": False, "unknown": 2}})
-    said = run_verb(channel, fake, lambda: move.request_review("9", "reviewer"))
+    said = run_verb(channel, fake, lambda: move.handoff.request_review("9", "reviewer"))
     if fake.pulls["9"].get("requested") != ["o-r-reviewer"]:
         problems.append("request-review: it took the first `UNKNOWN` for an answer and left "
                         f"GitHub holding {fake.pulls['9'].get('requested')!r}")
@@ -186,7 +186,7 @@ def _pending_request_cases(channel: Any, move: Any) -> list[str]:
             fake.git.unreadable[str(refused)] = 0
         def ask(n: int = number) -> None:
             """The verb under this case's GitHub."""
-            move.request_review(str(n), "reviewer")
+            move.handoff.request_review(str(n), "reviewer")
 
         with stood_in(channel, gh=fake):
             ended = outcome(ask)
@@ -214,7 +214,8 @@ def _watch_cases(check_pr: Any) -> list[str]:
     def watched(polls: list[tuple[str, str]]) -> list[str]:
         """What `--watch` printed on pull request 7, GitHub answering one poll at a time from `polls`."""
         with stood_in(check_pr.github, gh=WatchGitHub(polls)):
-            lines: list[str] = outcome(lambda: check_pr.watch("7", every=0)).out.splitlines()
+            res = outcome(lambda: check_pr.polling.watch("7", every=0))
+            lines: list[str] = res.out.splitlines()
             return lines
 
     lines = watched([("OPEN", "MERGEABLE"), ("OPEN", "UNKNOWN"), ("OPEN", "MERGEABLE"),
@@ -266,7 +267,7 @@ def _watch_failure_cases(check_pr: Any) -> list[str]:
         sys.exit("gh: fatal: Unable to read current working directory: No such file or directory")
 
     with stood_in(check_pr.github, gh=fatal_gh):
-        fatal_res = outcome(lambda: check_pr.watch("7", every=0))
+        fatal_res = outcome(lambda: check_pr.polling.watch("7", every=0))
     if not fatal_res.code or "fatal poll error" not in str(fatal_res.code):
         problems.append(f"watch: fatal poll error did not exit immediately: {fatal_res.code!r}")
 
@@ -274,7 +275,7 @@ def _watch_failure_cases(check_pr: Any) -> list[str]:
         sys.exit("gh: GraphQL: connection timeout")
 
     with stood_in(check_pr.github, gh=transient_gh):
-        breaker_res = outcome(lambda: check_pr.watch("7", every=0, max_retries=3))
+        breaker_res = outcome(lambda: check_pr.polling.watch("7", every=0, max_retries=3))
     if not breaker_res.code or "circuit broken after 3 retries" not in str(breaker_res.code):
         problems.append(f"watch: circuit breaker did not trip after 3 retries: {breaker_res.code!r}")
 
@@ -282,7 +283,7 @@ def _watch_failure_cases(check_pr: Any) -> list[str]:
     with stood_in(check_pr.github, subprocess=_hung_subprocess(bounds)):
         hung_call = outcome(lambda: check_pr.github.gh("pr", "view", "7"))
         given = bounds[0] if bounds else "no call at all"
-        hung_watch = outcome(lambda: check_pr.watch("7", every=0, max_retries=2))
+        hung_watch = outcome(lambda: check_pr.polling.watch("7", every=0, max_retries=2))
     if given != check_pr.github.GH_TIMEOUT:
         problems.append(f"gh: a call reached `subprocess.run` with timeout={given!r} rather "
                         f"than {check_pr.github.GH_TIMEOUT!r}, and an invocation carrying no "
@@ -298,7 +299,7 @@ def _watch_failure_cases(check_pr: Any) -> list[str]:
         raise check_pr.github.GhTimeout(HUNG_LOGIN)
 
     with stood_in(check_pr.github, gh=WatchGitHub([]), role_login=hung_login):
-        hung_eval = outcome(lambda: check_pr.watch("7", every=0, max_retries=2))
+        hung_eval = outcome(lambda: check_pr.polling.watch("7", every=0, max_retries=2))
     if not hung_eval.code or "circuit broken after 2 retries" not in str(hung_eval.code):
         problems.append(f"watch: a hang reading the reviewer's login came to {hung_eval.code!r}, "
                         "and a poll that spends the bound and then classifies without a "
@@ -340,7 +341,7 @@ def _watch_recovery_cases(check_pr: Any) -> list[str]:
         raise unanswered(args, "the gh fake")
 
     with stood_in(check_pr.github, gh=alternating_gh):
-        alternating_res = outcome(lambda: check_pr.watch("7", every=0, max_retries=3))
+        alternating_res = outcome(lambda: check_pr.polling.watch("7", every=0, max_retries=3))
     if alternating_res.code is not None or "pr MERGED" not in alternating_res.out:
         problems.append(
             f"watch: failures separated by successes tripped circuit breaker: code={alternating_res.code!r} out={alternating_res.out!r}"
@@ -359,17 +360,17 @@ def _unheld_armed_cases(check_pr: Any) -> list[str]:
     armed = _pull_of(10, "Stuck armed PR", autoMergeRequest={"enabledAt": "2026-09-11"},
                     mergeable="MERGEABLE")
     with stood_in(check_pr.github, threads=lambda n: [{"id": "t1", "isResolved": False}]):
-        owed = check_pr.unheld([armed], minutes=30, clean={10})
+        owed = check_pr.remedies.unheld([armed], minutes=30, clean={10})
     if len(owed) != 1 or "unresolved conversation" not in owed[0]:
         problems.append(f"unheld: an armed PR with unresolved threads reported {owed!r}")
 
     with stood_in(check_pr.github, threads=lambda n: [{"id": "t1", "isResolved": True}]):
-        clean_owed = check_pr.unheld([armed], minutes=30, clean={10})
+        clean_owed = check_pr.remedies.unheld([armed], minutes=30, clean={10})
         if clean_owed:
             problems.append(f"unheld: an armed PR with no unresolved threads reported {clean_owed!r}")
 
         recent = {**armed, "updatedAt": datetime.datetime.now(datetime.UTC).isoformat()}
-        recent_owed = check_pr.unheld([recent], minutes=30, clean={10},
+        recent_owed = check_pr.remedies.unheld([recent], minutes=30, clean={10},
                                       unresolved={10: [{"id": "t1", "isResolved": False}]})
         if recent_owed:
             problems.append(f"unheld: recent armed PR reported {recent_owed!r} instead of passing in silence")
@@ -380,10 +381,10 @@ def _unheld_idle_cases(check_pr: Any) -> list[str]:
     """`unheld` over each shape of idle pull request a webhook should have carried, the Challenge's labels answered by a `gh` stood in."""
     problems = []
     with stood_in(check_pr.github, threads=lambda n: [{"id": "t1", "isResolved": True}]):
-        reviewer_name = check_pr.role_login("reviewer")
+        reviewer_name = check_pr.github.role_login("reviewer")
         approved = [{"author": {"login": reviewer_name}, "state": "APPROVED"}]
         changes_requested = [{"author": {"login": reviewer_name}, "state": "CHANGES_REQUESTED"}]
-        approved_conflicting = check_pr.unheld(
+        approved_conflicting = check_pr.remedies.unheld(
             [_pull_of(11, "Approved conflicting PR", mergeable="CONFLICTING", latestReviews=approved)],
             minutes=30, clean={11})
         if len(approved_conflicting) != 1 or "approved, on a branch that conflicts" not in approved_conflicting[0]:
@@ -431,7 +432,7 @@ def _unheld_idle_cases(check_pr: Any) -> list[str]:
         )
         for case, level, clean, phrases, pull in idle:
             with stood_in(check_pr.github, gh=lambda *a, level=level: {"state": "OPEN", "labels": [{"name": level}]}):
-                owed = check_pr.unheld([pull], minutes=30, clean=clean)
+                owed = check_pr.remedies.unheld([pull], minutes=30, clean=clean)
             if len(owed) != 1 or any(phrase not in owed[0] for phrase in phrases):
                 problems.append(f"unheld: {case} reported {owed!r}")
     return problems
@@ -440,8 +441,8 @@ def _unheld_idle_cases(check_pr: Any) -> list[str]:
 def _unheld_comment_cases(check_pr: Any) -> list[str]:
     """`unheld` over a reviewer's top-level comment, on a plan-only draft and on a loop branch."""
     problems = []
-    reviewer = check_pr.role_login("reviewer")
-    coder = check_pr.role_login("coder")
+    reviewer = check_pr.github.role_login("reviewer")
+    coder = check_pr.github.role_login("coder")
     old_time = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=60)).isoformat()
 
     def said(n: int, login: str, text: str) -> dict[str, Any]:
@@ -458,20 +459,20 @@ def _unheld_comment_cases(check_pr: Any) -> list[str]:
                 "headRefName": "claude/plan-review-gates", "baseRefName": "main",
                 "reviewRequests": [], "mergeable": "MERGEABLE", **fields}
 
-    owed = check_pr.unheld([plan_of(updatedAt=old_time)], minutes=30, clean=set(),
+    owed = check_pr.remedies.unheld([plan_of(updatedAt=old_time)], minutes=30, clean=set(),
                            unresolved={20: owed_nodes}, reviewer_login=reviewer)
     if len(owed) != 1 or ".meta/say/post comment 20" not in owed[0] or "draft" not in owed[0]:
         problems.append(f"unheld: a plan objection on a plan-only draft reported {owed!r}, "
                         "and a draft nothing reports is the stall solorepo's DR-248 refuses")
 
     now = datetime.datetime.now(datetime.UTC).isoformat()
-    recent = check_pr.unheld([plan_of(updatedAt=now)], minutes=30, clean=set(),
+    recent = check_pr.remedies.unheld([plan_of(updatedAt=now)], minutes=30, clean=set(),
                              unresolved={20: owed_nodes}, reviewer_login=reviewer)
     if recent:
         problems.append(f"unheld: a plan objection a run may still be answering reported "
                         f"{recent!r} instead of passing in silence")
 
-    settled = check_pr.unheld([plan_of(updatedAt=old_time)], minutes=30, clean=set(),
+    settled = check_pr.remedies.unheld([plan_of(updatedAt=old_time)], minutes=30, clean=set(),
                               unresolved={20: answered_nodes}, reviewer_login=reviewer)
     if settled:
         problems.append(f"unheld: an answered comment reported {settled!r}, and a point "
@@ -481,7 +482,7 @@ def _unheld_comment_cases(check_pr: Any) -> list[str]:
                          updatedAt=old_time)
     with stood_in(check_pr.github,
                   gh=lambda *a: {"state": "OPEN", "labels": [{"name": "medium"}]}):
-        dispatched = check_pr.unheld([loop_pull], minutes=30, clean=set(),
+        dispatched = check_pr.remedies.unheld([loop_pull], minutes=30, clean=set(),
                                      unresolved={21: check_pr.github.comment_threads(
                                          [point], reviewer)},
                                      reviewer_login=reviewer)

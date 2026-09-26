@@ -97,7 +97,7 @@ def _unestimated_issue_is_labelled_medium_and_assigned(channel: Any, move: Any) 
     problems: list[str] = []
     fake = FakeDelegate(["challenge"])
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.delegate("5"))
+        ran = outcome(lambda: move.challenges.delegate("5"))
     if ran.code:
         problems.append(f"delegate: unestimated issue failed with exit {ran.code!r}")
     if "o-r-coder" not in fake.assignees:
@@ -116,7 +116,7 @@ def _medium_issue_has_its_label_re_added(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "medium"])
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.delegate("5"))
+        ran = outcome(lambda: move.challenges.delegate("5"))
     if ran.code:
         problems.append(f"delegate: medium issue failed with exit {ran.code!r}")
     removes = [cmd for cmd in fake.edits if "--remove-label" in cmd and "medium" in cmd]
@@ -132,7 +132,7 @@ def _hard_issue_refused_without_level(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "hard"])
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.delegate("5"))
+        ran = outcome(lambda: move.challenges.delegate("5"))
     if not ran.code or "pass --level to explicitly delegate" not in ran.code:
         problems.append(f"delegate: hard issue without --level was not refused:\n{ran.code}")
     if fake.assignees or fake.edits:
@@ -144,7 +144,7 @@ def _hard_issue_delegated_with_an_explicit_level(channel: Any, move: Any) -> lis
     problems: list[str] = []
     fake = FakeDelegate(["challenge", "hard"])
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.delegate("5", level="medium"))
+        ran = outcome(lambda: move.challenges.delegate("5", level="medium"))
     if ran.code:
         problems.append(f"delegate: hard issue with explicit --level medium failed: {ran.code}")
     if "o-r-coder" not in fake.assignees:
@@ -166,7 +166,7 @@ def _conflicting_pull_request_dispatches_rebase_first(channel: Any, move: Any) -
         }
     ])
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.delegate("5"))
+        ran = outcome(lambda: move.challenges.delegate("5"))
     if ran.code:
         problems.append(f"delegate: conflicting PR failed with exit {ran.code!r}")
     if fake.dispatched != [("101", "rebase")]:
@@ -186,7 +186,7 @@ def _changes_requested_pull_request_dispatches_review(channel: Any, move: Any) -
         "reviews": [{"state": "CHANGES_REQUESTED", "author": {"login": "o-r-reviewer"}}],
     })
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.delegate("101"))
+        ran = outcome(lambda: move.challenges.delegate("101"))
     if ran.code:
         problems.append(f"delegate: changes requested PR failed with exit {ran.code!r}")
     if fake.dispatched != [("101", "review")]:
@@ -206,7 +206,7 @@ def _clean_pull_request_refused(channel: Any, move: Any) -> list[str]:
         "reviews": [],
     })
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.delegate("101"))
+        ran = outcome(lambda: move.challenges.delegate("101"))
     if not ran.code or "is clean and has no standing changes requested" not in ran.code:
         problems.append(f"delegate: clean PR without changes requested was not refused:\n{ran.code}")
     if fake.dispatched:
@@ -224,7 +224,7 @@ def _pull_request_off_the_loops_branch_refused(channel: Any, move: Any) -> list[
         "reviews": [],
     })
     with stood_in(channel, gh=fake):
-        ran = outcome(lambda: move.delegate("102"))
+        ran = outcome(lambda: move.challenges.delegate("102"))
     if not ran.code or "is not a loop branch" not in ran.code:
         problems.append(f"delegate: non-loop branch PR was not refused:\n{ran.code}")
     if fake.dispatched:

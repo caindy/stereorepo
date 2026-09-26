@@ -267,7 +267,7 @@ def reviewer(phase: str, number: str, session: common.Session,
     """
     if phase == "between":
         common.fallback(handed)
-    elif channel.sibling("move").kind(number) == "pull request":
+    elif channel.sibling("move").common.kind(number) == "pull request":
         if phase == "before":
             review_before(number)
         else:

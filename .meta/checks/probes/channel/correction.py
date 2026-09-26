@@ -350,11 +350,11 @@ def audit_probes(channel: Any, post: Any, check_pr: Any) -> list[str]:
     for what, body in {"a plain body": "the item",
                        "a fenced Trailer": "the item\n\n```\nActor: gha-9\n```\n"}.items():
         signed = channel.signed(post.refuse_a_typed_trailer(body))
-        found = check_pr.audit_comment_trailers(
+        found = check_pr.review.audit_comment_trailers(
             [{"author": {"login": CODER}, "body": signed}], {CODER})
         if found:
             problems.append(f"correction: the channel takes {what} and the audit reds it: {found}")
-    red = check_pr.audit_comment_trailers(
+    red = check_pr.review.audit_comment_trailers(
         [{"author": {"login": CODER}, "body": f"{DOUBLED}\n\n{MINE}"}], {CODER})
     if not red:
         problems.append("correction: the audit reads the shape that stood on "

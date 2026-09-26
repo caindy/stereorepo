@@ -103,20 +103,20 @@ def _verb_cases(channel: Any, move: Any) -> list[str]:
     problems = []
     with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=None):
         late = FakeIssue(["challenge", "human"], stale=1)
-        said = run_verb(channel, late, lambda: move.claim("7"))
+        said = run_verb(channel, late, lambda: move.challenges.claim("7"))
         if said is not None or late.assignees != ["o-r-coder"]:
             problems.append(f"claim: an Issue GitHub shows late was refused with {said!r} and "
                             f"left assigned to {late.assignees}, where a settle should have "
                             "waited the one stale read out")
 
         never = FakeIssue(["challenge", "human"], stale=99)
-        said = run_verb(channel, never, lambda: move.claim("7"))
+        said = run_verb(channel, never, lambda: move.challenges.claim("7"))
         if said is None or "assigned to nobody" not in said:
             problems.append(f"claim: an Issue GitHub never shows assigned was refused with "
                             f"{said!r}, which does not name who GitHub shows assigned")
 
     held = FakeIssue(["challenge", "human"], assignees=["o-r-coder"], stale=1)
-    said = run_verb(channel, held, lambda: move.release("7"))
+    said = run_verb(channel, held, lambda: move.challenges.release("7"))
     if said is not None or held.assignees:
         problems.append(f"release: an Issue GitHub shows late was refused with {said!r} and "
                         f"left assigned to {held.assignees}")
@@ -132,5 +132,5 @@ def _verb_cases(channel: Any, move: Any) -> list[str]:
 def _relabelled(channel: Any, move: Any, fake: FakeIssue) -> list[str]:
     """`relabel` of Issue 7 adding `hard`, with `gh` stood in by `fake`."""
     with stood_in(channel, gh=fake):
-        labels: list[str] = move.relabel("7", add=["hard"])
+        labels: list[str] = move.challenges.relabel("7", add=["hard"])
     return labels

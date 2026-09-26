@@ -86,7 +86,7 @@ def obviate_probes() -> list[str]:
         fake = FakeObviation(items)
         with (environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe"),
               stood_in(channel, gh=fake)):
-            return outcome(lambda: move.obviate(issue, by, reason)), fake
+            return outcome(lambda: move.challenges.obviate(issue, by, reason)), fake
 
     return went_through(obviated) + refusals(obviated)
 

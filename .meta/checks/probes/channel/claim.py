@@ -52,7 +52,7 @@ def claim_probes() -> list[str]:
         """One claim of Issue 7 under `ACTOR_SESSION` set to `session`, as `(what it exited with, the fake)`."""
         fake = FakeIssue(labels)
         with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=session):
-            return run_verb(channel, fake, lambda: move.claim("7")), fake
+            return run_verb(channel, fake, lambda: move.challenges.claim("7")), fake
 
     for level in ("easy", "medium"):
         said, fake = claimed(["challenge", level], None)

@@ -129,7 +129,7 @@ def _dispatch_conflicting(pull: common.Pull, waiting: list[str],
         challenge_number = None
 
     found = reconcile._challenge_reads(challenge_number) if challenge_number is not None else None
-    act = reconcile.owed_by_pull(pull, found, check_pr.PullRequestState.NEEDS_REBASE,
+    act = reconcile.owed_by_pull(pull, found, check_pr.state.PullRequestState.NEEDS_REBASE,
                                  reviewer_login=reviewer_login,
                                  constraints=reconcile.Constraints(pulls=pulls, held_only=True))
     if act is not None and act.kind == "hold" and act.lower is not None:
@@ -270,7 +270,7 @@ def dispatch(pulls: Sequence[common.Pull]) -> tuple[list[str], list[str]]:
     failed: list[str] = []
     refused: list[str] = []
     reviewer_login = channel.role_login("reviewer")
-    minutes = check_pr.longest_run() or 30
+    minutes = check_pr.sweep.longest_run() or 30
     now = datetime.datetime.now(datetime.UTC)
     for pull in pulls:
         if not pull_requests.LOOPS_BRANCH.match(pull["headRefName"]):
@@ -316,7 +316,7 @@ def _check_dispatch_rebase(pr: str | int, pull: common.Pull) -> None:
     open_now = channel.gh("pr", "list", "--state", "open", "--limit", "100", "--json",
                           "number,headRefName,baseRefName,mergeable")
     act = reconcile.owed_by_pull(pull, check_pr.state.IssueState.RESUMABLE,
-                                 check_pr.PullRequestState.NEEDS_REBASE, "",
+                                 check_pr.state.PullRequestState.NEEDS_REBASE, "",
                                  reconcile.Constraints(pulls=open_now))
     if act is not None and act.kind == "hold" and act.lower is not None:
         sys.exit(f"say: #{pr} is a layer above #{act.lower}, which conflicts with its "

@@ -52,7 +52,10 @@ def triaged(channel: Any, move: Any, fake: FakeIssue, level: str, body: str) -> 
     recorder = Recorder(fake)
     with environment(GITHUB_RUN_ID="1", ACTOR_SESSION="gha-1", ACTOR_AGENT="probe"):
         signed = channel.signed(body)
-        return run_verb(channel, recorder, lambda: move.triage("7", level, signed)), recorder
+        verb = run_verb(
+            channel, recorder, lambda: move.challenges.triage("7", level, signed)
+        )
+        return verb, recorder
 
 
 def by(channel: Any, actor: str) -> dict[str, Any]:

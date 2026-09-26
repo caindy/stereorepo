@@ -29,7 +29,7 @@ def refuse_unformed(pull: int | str, body: str | None, title: str | None) -> Non
         held = channel.gh("pr", "view", str(pull), "--json", "title,body")
         revised = held["title"] if revised is None else revised
         now = held["body"] if now is None else now
-    problems = check_pr.check(revised, now)
+    problems = check_pr.form.check(revised, now)
     if not problems:
         return
     formatted = "\n".join(f"  - {p}" for p in problems)
@@ -138,7 +138,7 @@ def open_pull_request(title: str, body: str, base: str = "main",
     The draft passes merge management, `advance`, and reconciliation; `move ready`
     takes it out at reviewer approval (solorepo's DR-287, solorepo's DR-291).
     """
-    problems = check_pr.check(title, body)
+    problems = check_pr.form.check(title, body)
     if problems:
         formatted = "\n".join(f"  - {p}" for p in problems)
         sys.exit(f"say: pull request body does not satisfy the form (solorepo's A15):\n{formatted}\n"
@@ -403,10 +403,10 @@ def advance_stack(layers: Sequence[common.Pull], before: dict[str, common.Pull],
     return failed, refused, replay_refused
 
 
-is_approved_pull = check_pr.is_approved_pull
+is_approved_pull = check_pr.remedies.is_approved_pull
 
 
-is_changes_requested_pull = check_pr.is_changes_requested_pull
+is_changes_requested_pull = check_pr.remedies.is_changes_requested_pull
 
 
 # A loop's branch, and nothing else. `(claude|gemini)/issue-<n>` is the shape `coder.yml`

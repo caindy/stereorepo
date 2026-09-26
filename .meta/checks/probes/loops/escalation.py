@@ -15,21 +15,21 @@ def escalation_probes() -> list[str]:
     """Escalate only an inactive autonomous draft that no Actions run answers."""
     _, _, programs = load_channel()
     move = programs["move"]
-    empty = move.Runs([], [])
+    empty = move.actions.Runs([], [])
     issue = {"number": ISSUE, "labels": [{"name": "challenge"}, {"name": "medium"}],
              "assignees": []}
     handed_back = {**issue, "labels": [{"name": "challenge"}, {"name": "human"}]}
-    reading = move.Reading(
+    reading = move.reconcile.Reading(
         now=datetime.datetime.now(datetime.UTC), bound=MINUTES, longest=75.0,
         coder=CODER, reviewer_login=REVIEWER, owner="o", name="r",
         by_number={ISSUE: issue}, named={ISSUE},
         coder_runs=empty, review_runs=empty, triage_runs=empty, action_runs=empty,
     )
     draft = _pull(ISSUE, isDraft=True, changedFiles=1)
-    active = move.Runs(
+    active = move.actions.Runs(
         [{"displayTitle": "other", "status": "queued", "headBranch": draft["headRefName"]}], []
     )
-    rebase_done = move.Runs(
+    rebase_done = move.actions.Runs(
         [], [{"displayTitle": f"coder-issue-#{ISSUE}", "status": "completed"}]
     )
     observed = {

@@ -460,15 +460,14 @@ def _after(channel: Any, on: Any, case: _Session) -> tuple[Any, _Loop]:
     it to `GITHUB_ENV` for every step after its own.
     """
     delivery, ended, fake, left, loop = case
-    move = channel.sibling("move")
-    number = ISSUE if delivery[0] == "take" else PULL
+    move, number = channel.sibling("move"), (ISSUE if delivery[0] == "take" else PULL)
     with _workspace(), environment(ACTOR_AGENT="anthropics/claude-code-action@v1"), \
             stood_in(channel, gh=fake), stood_in(on.check_pr.sweep, hand_back=left), \
-            stood_in(move, stop=loop.stop, request_review=loop.request_review,
-                     dispatch_pass=loop.dispatch_pass):
-        ended_as = outcome(lambda: on.coder("after", number, on.Delivery(*delivery),
-                                            on.Ended(*ended)))
-    return ended_as, loop
+            stood_in(move.challenges, stop=loop.stop), \
+            stood_in(move.handoff, request_review=loop.request_review), \
+            stood_in(move.advance, dispatch_pass=loop.dispatch_pass):
+        res = outcome(lambda: on.coder("after", number, on.Delivery(*delivery), on.Ended(*ended)))
+        return res, loop
 
 
 def _after_cases(channel: Any, on: Any) -> list[str]:

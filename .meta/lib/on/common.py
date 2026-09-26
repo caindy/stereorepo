@@ -372,7 +372,7 @@ def reading_after(number: str) -> None:
     """
     view = channel.gh("issue", "view", number, "--json", "labels,state")
     labels = check_pr.state.issue_labels(view)
-    level = next((d for d in channel.sibling("move").DIFFICULTIES if d in labels), None)
+    level = next((d for d in channel.sibling("move").common.DIFFICULTIES if d in labels), None)
     if level is None:
         found = check_pr.state.classify_issue(view, None, False)
         print(f"::error::the session ended and #{number} carries no level, reading "

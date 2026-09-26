@@ -1,4 +1,4 @@
-"""Who the Actor is: `channel.actor()` and `check_pr.mine()` agreeing on the session a Trailer signs with.
+"""Who the Actor is: `channel.actor()` and `check_pr.review.mine()` agreeing on the session a Trailer signs with.
 """
 import collections
 from collections.abc import Callable
@@ -86,9 +86,9 @@ def actor_probes() -> list[str]:
                 problems.append(f"actor: {case.name}: exited with {code}")
             elif got != case.answer:
                 problems.append(f"actor: {case.name}: expected {case.answer!r}, got {got!r}")
-            if case.own is not None and not check_pr.mine(f"Actor: {case.own}\nAgent: cli"):
+            if case.own is not None and not check_pr.review.mine(f"Actor: {case.own}\nAgent: cli"):
                 problems.append(f"mine: {case.name}: expected True for the {case.own!r} Trailer")
-            if check_pr.mine(f"Actor: {case.not_own}\nAgent: cli"):
+            if check_pr.review.mine(f"Actor: {case.not_own}\nAgent: cli"):
                 problems.append(f"mine: {case.name}: expected False for the {case.not_own!r} Trailer")
     problems.extend(_probe_signed_integrity(channel))
     problems.extend(_probe_comment_trailer_audit(check_pr))

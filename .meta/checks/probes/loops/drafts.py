@@ -120,9 +120,9 @@ def _restore_cases(channel: Any, move: Any) -> list[str]:
         return {}
 
     with stood_in(channel, gh=gh, role_login=lambda r: REVIEWER):
-        move.request_review(43, "reviewer")
-        move.evaluate_open_pulls([pull], reviewer_login=REVIEWER, owner="owner", name="repo",
-                                 dry_run=False)
+        move.manager.eviction.evaluate_open_pulls(
+            [pull], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=False
+        )
     if ready_calls or pull.get("isDraft") is not True:
         return ["draft lifecycle: a request or queue pass cleared draft before final approval"]
 
@@ -143,7 +143,7 @@ def _restore_cases(channel: Any, move: Any) -> list[str]:
         return {}
 
     with stood_in(channel, gh=gh_undo, role_login=lambda r: REVIEWER):
-        move.request_review(44, "reviewer")
+        move.handoff.request_review(44, "reviewer")
     if undo_calls != ["44"]:
         return [f"request-review: undrafted PR was not returned to draft, got {undo_calls!r}"]
     return []
@@ -173,7 +173,7 @@ def _watch_cases(check_pr: Any) -> list[str]:
 
     problems = []
     with stood_in(check_pr.github, gh=gh, role_login=lambda role: f"o-r-{role}"):
-        lines: list[str] = outcome(lambda: check_pr.watch("7", every=0)).out.splitlines()
+        lines: list[str] = outcome(lambda: check_pr.polling.watch("7", every=0)).out.splitlines()
     if polls[0] != 1 or not any("CHANGES_REQUESTED" in line for line in lines):
         problems.append(f"watch: a draft carrying a request for changes was polled {polls[0]} "
                         f"times and printed {lines!r}, so a restarted watch sleeps through it")
@@ -181,7 +181,7 @@ def _watch_cases(check_pr: Any) -> list[str]:
     verdict[:] = [{"id": "R2", "author": {"login": "o-r-reviewer"}, "state": "APPROVED"}]
     polls[0] = 0
     with stood_in(check_pr.github, gh=gh, role_login=lambda role: f"o-r-{role}"):
-        lines = outcome(lambda: check_pr.watch("7", every=0)).out.splitlines()
+        lines = outcome(lambda: check_pr.polling.watch("7", every=0)).out.splitlines()
     if not any("READY_TO_MERGE" in line for line in lines):
         problems.append(f"watch: a final-approved draft printed {lines!r}, "
                         "rather than reporting that it is ready to merge")

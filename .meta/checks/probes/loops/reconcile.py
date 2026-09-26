@@ -122,7 +122,7 @@ def _classifier_cases(move: Any) -> list[str]:
     condition of an arm and asserts the state the classifier every reader asks
     reports for it (solorepo's DR-265, solorepo's DR-159).
     """
-    states = move.check_pr.PullRequestState
+    states = move.check_pr.state.PullRequestState
     cases: list[tuple[str, dict[str, Any], Any]] = [
         ("a comment verdict with a thread owed", _pull(1, latestReviews=COMMENT,
                                                        reviewThreads=OWED),
@@ -148,8 +148,8 @@ def _classifier_cases(move: Any) -> list[str]:
     ]
     problems = []
     for name, pull, expected in cases:
-        found = move.check_pr.classify_pr(pull, move.deduplicate_checks(pull["statusCheckRollup"]),
-                                          None, REVIEWER)
+        checks = move.manager.ranking.deduplicate_checks(pull["statusCheckRollup"])
+        found = move.check_pr.state.classify_pr(pull, checks, None, REVIEWER)
         if found is not expected:
             problems.append(f"classify_pr: {name} read {found!r}, not {expected!r}")
     return problems
@@ -239,35 +239,35 @@ def _pull_cases(move: Any) -> list[str]:
         ("unread", _pull(1), issues.UNREAD, True, "hold"),
         ("failing checks while behind green trunk",
          _pull(1, statusCheckRollup=RED, mergeStateStatus="BEHIND"),
-         issues.RESUMABLE, move.Constraints(free=True, trunk_green=True), "rebase"),
+         issues.RESUMABLE, move.reconcile.Constraints(free=True, trunk_green=True), "rebase"),
         ("failing checks while behind red trunk",
          _pull(1, statusCheckRollup=RED, mergeStateStatus="BEHIND"),
-         issues.RESUMABLE, move.Constraints(free=True, trunk_green=False), None),
+         issues.RESUMABLE, move.reconcile.Constraints(free=True, trunk_green=False), None),
         ("failing checks while current on green trunk",
          _pull(1, statusCheckRollup=RED, mergeStateStatus="CLEAN"),
-         issues.RESUMABLE, move.Constraints(free=True, trunk_green=True), None),
+         issues.RESUMABLE, move.reconcile.Constraints(free=True, trunk_green=True), None),
         ("approved with failing checks while behind green trunk",
          _pull(1, latestReviews=APPROVED, statusCheckRollup=RED, mergeStateStatus="BEHIND"),
-         issues.RESUMABLE, move.Constraints(free=True, trunk_green=True), "rebase"),
+         issues.RESUMABLE, move.reconcile.Constraints(free=True, trunk_green=True), "rebase"),
         ("failing checks while behind green trunk in stack above conflicting layer",
          _pull(2, baseRefName="claude/issue-1", statusCheckRollup=RED, mergeStateStatus="BEHIND"),
          issues.RESUMABLE,
-         move.Constraints(free=True, trunk_green=True,
+         move.reconcile.Constraints(free=True, trunk_green=True,
                           pulls=[_pull(1, mergeable="CONFLICTING"),
                                  _pull(2, baseRefName="claude/issue-1", statusCheckRollup=RED,
                                        mergeStateStatus="BEHIND")]),
          "hold"),
         ("failing checks while behind green trunk not free",
          _pull(1, statusCheckRollup=RED, mergeStateStatus="BEHIND"),
-         issues.RESUMABLE, move.Constraints(free=False, trunk_green=True), None),
+         issues.RESUMABLE, move.reconcile.Constraints(free=False, trunk_green=True), None),
         ("no open Challenge", _pull(1), None, True, None),
         ("not free", _pull(1, latestReviews=CHANGES), issues.RESUMABLE, False, None),
     ]
     problems = []
     for name, pull, found, free, expected in cases:
-        state = move.check_pr.classify_pr(pull, move.deduplicate_checks(pull["statusCheckRollup"]),
-                                          None, REVIEWER)
-        act = move.owed_by_pull(pull, found, state, REVIEWER, free)
+        checks = move.manager.ranking.deduplicate_checks(pull["statusCheckRollup"])
+        state = move.check_pr.state.classify_pr(pull, checks, None, REVIEWER)
+        act = move.reconcile.owed_by_pull(pull, found, state, REVIEWER, free)
         kind = act.kind if act else None
         if kind != expected:
             problems.append(f"owed_by_pull: {name} owed {kind!r}, not {expected!r}")
@@ -311,7 +311,7 @@ def _trunk_cases(move: Any) -> list[str]:
     ]
     problems = []
     for name, fields, expected in cases:
-        act = move.owed_by_trunk(move.Break(**fields))
+        act = move.actions.owed_by_trunk(move.actions.Break(**fields))
         kind = act.kind if act else None
         if kind != expected:
             problems.append(f"owed_by_trunk: {name} owed {kind!r}, not {expected!r}")
@@ -329,21 +329,21 @@ def _breaking_cases(move: Any) -> list[str]:
     """`breaking`: one heal Challenge per broken commit, found by the title naming it."""
     reading = _reading(move)
     issues = [{"number": 50,
-               "title": move.HEAL_TITLE.format(branch="main", commit=TRUNK["commit"]),
+               "title": move.actions.HEAL_TITLE.format(branch="main", commit=TRUNK["commit"]),
                "labels": [{"name": "challenge"}, {"name": "medium"}], "assignees": [],
                "createdAt": _ago(10)}]
     problems = []
-    found = move.breaking(_trunk(move, ["gate", "python seed"]), issues, reading)
+    found = move.actions.breaking(_trunk(move, ["gate", "python seed"]), issues, reading)
     if found.challenge != 50 or found.checks != "gate, python seed" \
             or found.found is not move.check_pr.state.IssueState.OFFERED:
         problems.append(f"breaking: a break a Challenge already stands for read {found}, where "
                         "the Challenge whose title names the commit is the one standing for it "
                         "and both failing checks are named")
-    again = move.breaking(_trunk(move, ["gate"], oid="def5678abcdef"), issues, reading)
+    again = move.actions.breaking(_trunk(move, ["gate"], oid="def5678abcdef"), issues, reading)
     if again.challenge is not None:
         problems.append(f"breaking: a second break read #{again.challenge} as its Challenge, "
                         "where a title naming another commit stands for another break")
-    green = move.breaking(_trunk(move, []), issues, reading)
+    green = move.actions.breaking(_trunk(move, []), issues, reading)
     if green.checks or green.challenge is not None:
         problems.append(f"breaking: a green trunk read {green}, where nothing failed and no "
                         "Challenge is looked for")
@@ -352,19 +352,19 @@ def _breaking_cases(move: Any) -> list[str]:
 
 def _issue_cases(move: Any) -> list[str]:
     """`owed_by_issue` over all ten states, each bound within and past, blocked, and under a run."""
-    states = move.check_pr.state.IssueState
-    quiet = move.Quiet(True, True, True, False, 600.0)
+    states, q = move.check_pr.state.IssueState, move.reconcile.Quiet
+    quiet = q(True, True, True, False, 600.0)
     cases: list[tuple[str, Any, Any, str | None]] = [
         ("unread and quiet", states.UNREAD, quiet, "reread"),
         ("unread, read or within the hour", states.UNREAD,
-         move.Quiet(True, False, True, False, 600.0), None),
+         move.reconcile.Quiet(True, False, True, False, 600.0), None),
         ("offered and free", states.OFFERED, quiet, "take"),
         ("offered under a run, or too soon", states.OFFERED,
-         move.Quiet(False, True, True, False, 5.0), None),
-        ("offered and blocked", states.OFFERED, move.Quiet(True, True, True, True, 600.0), None),
+         move.reconcile.Quiet(False, True, True, False, 5.0), None),
+        ("offered and blocked", states.OFFERED, q(True, True, True, True, 600.0), None),
         ("claimed past the longest run", states.CLAIMED, quiet, "release"),
         ("claimed within the longest run", states.CLAIMED,
-         move.Quiet(True, True, False, False, 40.0), None),
+         move.reconcile.Quiet(True, True, False, False, 40.0), None),
         ("held", states.HELD, quiet, None),
         ("handed back", states.HANDED_BACK, quiet, None),
         ("taken", states.TAKEN, quiet, None),
@@ -375,7 +375,7 @@ def _issue_cases(move: Any) -> list[str]:
     ]
     problems = []
     for name, found, when, expected in cases:
-        act = move.owed_by_issue({"number": 5}, found, when)
+        act = move.reconcile.owed_by_issue({"number": 5}, found, when)
         kind = act.kind if act else None
         if kind != expected:
             problems.append(f"owed_by_issue: {name} owed {kind!r}, not {expected!r}")

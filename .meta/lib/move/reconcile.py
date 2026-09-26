@@ -157,8 +157,8 @@ def _owed_rebase(pull: common.Pull, reviewer_login: str,
         lower = pull_requests.conflicting_below(pull, constraints.pulls)
         if lower is not None:
             return _held_above(number, lower, constraints.reading)
-    asked = check_pr.is_review_requested(pull, reviewer_login)
-    verdict = check_pr.latest_verdict(pull, reviewer_login)
+    asked = check_pr.state.is_review_requested(pull, reviewer_login)
+    verdict = check_pr.state.latest_verdict(pull, reviewer_login)
     armed = bool(pull.get("autoMergeRequest"))
     is_approved = (verdict == "APPROVED"
                    or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED")
@@ -200,8 +200,8 @@ def _owed_gate_failed(pull: common.Pull, reviewer_login: str,
     clear inherited breakage from a previous broken baseline (solorepo's #985).
     """
     number = int(pull["number"])
-    asked = check_pr.is_review_requested(pull, reviewer_login)
-    verdict = check_pr.latest_verdict(pull, reviewer_login)
+    asked = check_pr.state.is_review_requested(pull, reviewer_login)
+    verdict = check_pr.state.latest_verdict(pull, reviewer_login)
     checks = manager.ranking.deduplicate_checks(pull.get("statusCheckRollup") or [])
     reviewer_check = next((c for c in checks if c.get("name") == "reviewer"), None)
     reviewer_failed = str((reviewer_check or {}).get("conclusion") or "").upper() == "FAILURE"
@@ -296,7 +296,7 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
     if found is None:
         return None
 
-    pulls_ = check_pr.PullRequestState
+    pulls_ = check_pr.state.PullRequestState
     is_approved = (pull_requests.is_approved_pull(pull, reviewer_login=reviewer_login)
                    or check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED")
     rebase_agency = is_approved and state in (pulls_.NEEDS_REBASE, pulls_.READY_TO_MERGE)
@@ -307,20 +307,20 @@ def owed_by_pull(pull: common.Pull, found: Any, state: Any, reviewer_login: str,
     if not c.free:
         return None
 
-    pulls_ = check_pr.PullRequestState
     if state is pulls_.NEEDS_REBASE:
         return _owed_rebase(pull, reviewer_login, c)
-    if state is pulls_.CHANGES_REQUESTED and not check_pr.is_review_requested(pull, reviewer_login):
+    if (state is pulls_.CHANGES_REQUESTED
+            and not check_pr.state.is_review_requested(pull, reviewer_login)):
         return Owed("review", number, "changes requested, and no run answering them")
     if state is pulls_.GATE_FAILED:
         return _owed_gate_failed(pull, reviewer_login, c)
     if (state is pulls_.AWAITING_REVIEW
-            and not check_pr.is_review_requested(pull, reviewer_login)
-            and not check_pr.latest_verdict(pull, reviewer_login)
+            and not check_pr.state.is_review_requested(pull, reviewer_login)
+            and not check_pr.state.latest_verdict(pull, reviewer_login)
             and not pull.get("autoMergeRequest")):
         return Owed("request", number, "green, and nobody holds it")
     if (state is pulls_.AWAITING_PROMOTION
-            and not check_pr.is_review_requested(pull, reviewer_login)):
+            and not check_pr.state.is_review_requested(pull, reviewer_login)):
         return Owed("request", number,
                     "approved, but notices held for promotion at approval (solorepo's DR-285)")
     if state is pulls_.READY_TO_MERGE:
@@ -549,7 +549,7 @@ def reconcile(live: bool = False, dry_run: bool = False, minutes: float | None =
         print("reconcile: holding every act a run could be answering, since the runs could "
               "not be listed and nothing says whether one is")
     reading = Reading(now=datetime.datetime.now(datetime.UTC), bound=bound,
-                      longest=float(check_pr.longest_run() or 75), coder=coder,
+                      longest=float(check_pr.sweep.longest_run() or 75), coder=coder,
                       reviewer_login=reviewer_login, owner=owner, name=name,
                       by_number={int(i["number"]): i for i in issues},
                       named={int(m.group(1)) for pull in pulls
@@ -645,7 +645,7 @@ def owed_by_pulls(pulls: Sequence[common.Pull], reading: Reading) -> list[Owed]:
         if free:
             pull_requests.mergeability(pull)
         checks = manager.ranking.deduplicate_checks(pull.get("statusCheckRollup") or [])
-        state = check_pr.classify_pr(pull, checks,
+        state = check_pr.state.classify_pr(pull, checks,
                                      _threads_read(pull, checks, reading) if free else None,
                                      reading.reviewer_login)
         act = owed_by_pull(pull, found, state, reading.reviewer_login,
@@ -699,12 +699,12 @@ def _threads_read(pull: common.Pull, checks: Sequence[Mapping[str, Any]],
             not turn on them or GitHub refused the read.
     """
     has_failures, _, _ = check_pr.state.checks_summary(checks)
-    if (check_pr.is_review_requested(pull, reading.reviewer_login)
+    if (check_pr.state.is_review_requested(pull, reading.reviewer_login)
             or str(pull.get("mergeable") or "").upper() == "CONFLICTING"
             or has_failures):
         return None
     if (check_pr.state.standing_verdict(pull, reading.reviewer_login) != "COMMENTED"
-            and check_pr.latest_verdict(pull, reading.reviewer_login) != "APPROVED"):
+            and check_pr.state.latest_verdict(pull, reading.reviewer_login) != "APPROVED"):
         return None
     threads, why = manager.ranking.read_threads(pull, reading.owner, reading.name)
     if threads is None:

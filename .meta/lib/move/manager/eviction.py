@@ -54,8 +54,8 @@ def is_stalled_autonomous_pr(pull: common.Pull, reviewer_login: str) -> bool:
             and advance._find_advance_notice_comment(pull["number"]) is not None:
         return True
     if (check_pr.state.standing_verdict(pull, reviewer_login) == "APPROVED"
-            or check_pr.classify_pr(pull, reviewer_login=reviewer_login)
-            is check_pr.PullRequestState.AWAITING_PROMOTION):
+            or check_pr.state.classify_pr(pull, reviewer_login=reviewer_login)
+            is check_pr.state.PullRequestState.AWAITING_PROMOTION):
         return False
     approved, _ = ranking.check_reviewer_approval(pull, reviewer_login)
     if approved:

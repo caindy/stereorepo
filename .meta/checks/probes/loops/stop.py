@@ -35,7 +35,7 @@ def stop_probes() -> list[str]:
     def stopped(fake: Any, issue: str, body: str) -> Any:
         """`stop(issue, body)` against `fake`: what it exited with, and what it printed on both streams."""
         with stood_in(channel, gh=fake), stood_in(time, sleep=lambda _: None):
-            return outcome(lambda: move.stop(issue, body))
+            return outcome(lambda: move.challenges.stop(issue, body))
 
     fake = FakeIssue(["challenge", "medium"], assignees=["o-r-coder"])
     ended = stopped(fake, "7", "stopped working")

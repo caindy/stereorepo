@@ -282,7 +282,7 @@ def trunk_health(owner: str, name: str) -> tuple[Trunk | None, str]:
         if not head.get("oid"):
             return None, f"GitHub named no commit on {ref.get('name')}"
         contexts = ((head.get("statusCheckRollup") or {}).get("contexts") or {}).get("nodes") or []
-        checks = check_pr.deduplicate_checks([c for c in contexts if c])
+        checks = check_pr.state.deduplicate_checks([c for c in contexts if c])
         _, _, unconcluded = check_pr.state.checks_summary(checks)
         return Trunk(ref=str(ref.get("name") or ""), oid=str(head["oid"]),
                      headline=str(head.get("messageHeadline") or ""), checks=list(checks),

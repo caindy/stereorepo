@@ -41,15 +41,14 @@ query($owner: String!, $name: String!, $number: Int!) {
 """
 
 
-deduplicate_checks = check_pr.deduplicate_checks
+deduplicate_checks = check_pr.state.deduplicate_checks
 
 
 def check_green(pull: common.Pull) -> tuple[bool, str]:
     """Whether every check on the head has concluded and none failed."""
-    contexts = deduplicate_checks(pull.get("statusCheckRollup") or [])
-    if not contexts:
+    if not (contexts := deduplicate_checks(pull.get("statusCheckRollup") or [])):
         return False, "checks pending (no checks concluded)"
-    green_states = set(check_pr.GREEN)
+    green_states = set(check_pr.state.GREEN)
     failed: list[str] = []
     pending: list[str] = []
     for c in contexts:
@@ -83,7 +82,7 @@ def check_reviewer_approval(pull: common.Pull, reviewer_login: str) -> tuple[boo
         tuple[bool, str]: True and a reason string if the latest review from reviewer_login
             is APPROVED and no review is requested; False and a reason string otherwise.
     """
-    if check_pr.is_review_requested(pull, reviewer_login):
+    if check_pr.state.is_review_requested(pull, reviewer_login):
         return False, f"waiting on review from {reviewer_login}"
     reviews = pull.get("latestReviews") or pull.get("reviews") or []
     matching = [r for r in reviews if (r.get("author") or {}).get("login") == reviewer_login]
@@ -268,7 +267,8 @@ def check_decisions_in_force(pull: common.Pull, owner: str, name: str) -> tuple[
     return True, "carries only decisions in force"
 
 
-def lifecycle_refusal(pull: common.Pull, found: check_pr.PullRequestState, reviewer_login: str,
+def lifecycle_refusal(pull: common.Pull,
+                      found: check_pr.state.PullRequestState, reviewer_login: str,
                       threads: Sequence[dict[str, Any]] | None) -> str:
     """The refusal a lifecycle state reads as, in the words the log and `advance_stranded` hold.
 
@@ -288,7 +288,7 @@ def lifecycle_refusal(pull: common.Pull, found: check_pr.PullRequestState, revie
         str: One refusal reason, or the empty string where the state has no
             words of its own.
     """
-    states = check_pr.PullRequestState
+    states = check_pr.state.PullRequestState
     if found is states.NEEDS_REBASE:
         return "branch conflicts with base"
     if found in (states.GATE_FAILED, states.AWAITING_GATE):
@@ -393,14 +393,14 @@ def evaluate_pr(pull: common.Pull, reviewer_login: str, owner: str,
         reasons.append(why)
     threads: list[dict[str, Any]] | None = pull.get("reviewThreads")
     checks = deduplicate_checks(pull.get("statusCheckRollup") or [])
-    found = check_pr.classify_pr(pull, checks, threads, reviewer_login)
-    ready = check_pr.PullRequestState.READY_TO_MERGE
+    found = check_pr.state.classify_pr(pull, checks, threads, reviewer_login)
+    ready = check_pr.state.PullRequestState.READY_TO_MERGE
     if found is ready and threads is None and not reasons:
         threads, unread = read_threads(pull, owner, name)
         if threads is None:
             reasons.append(unread)
         else:
-            found = check_pr.classify_pr(pull, checks, threads, reviewer_login)
+            found = check_pr.state.classify_pr(pull, checks, threads, reviewer_login)
     if found is not ready:
         worded = lifecycle_refusal(pull, found, reviewer_login, threads)
         if worded:
@@ -482,7 +482,7 @@ def has_active_reservation(pull: common.Pull, reviewer_login: str) -> bool:
     contexts = deduplicate_checks(pull.get("statusCheckRollup") or [])
     if not contexts:
         return False
-    green_states = set(check_pr.GREEN)
+    green_states = set(check_pr.state.GREEN)
     has_in_flight = False
     for c in contexts:
         state = (c.get("conclusion") or c.get("state") or c.get("status") or "").upper()

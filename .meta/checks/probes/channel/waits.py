@@ -79,33 +79,33 @@ def _refusal_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> list
     problems: list[str] = []
     refusals = (
         ("a blocker GitHub has no number for", f"no #{'99'}",
-         {1: open_issue}, None, lambda m: m.waits(1, on=[99])),
+         {1: open_issue}, None, lambda m: m.challenges.waits(1, on=[99])),
         ("a blocker that is a pull request", "pull request",
          {1: open_issue, 2: {"state": "open", "pull_request": {}}}, None,
-         lambda m: m.waits(1, on=[2])),
+         lambda m: m.challenges.waits(1, on=[2])),
         ("a blocker that is closed", "closed",
          {1: open_issue, 2: {"state": "closed", "body": ""}}, None,
-         lambda m: m.waits(1, on=[2])),
+         lambda m: m.challenges.waits(1, on=[2])),
         ("an Issue naming itself", "cannot wait on itself",
-         {1: open_issue}, None, lambda m: m.waits(1, on=[1])),
+         {1: open_issue}, None, lambda m: m.challenges.waits(1, on=[1])),
         ("an Issue that already blocks its candidate", "cycle",
          {1: open_issue, 2: {"state": "open", "body": ""}, 3: {"state": "open", "body": ""}},
-         {2: [3], 3: [1]}, lambda m: m.waits(1, on=[2])),
+         {2: [3], 3: [1]}, lambda m: m.challenges.waits(1, on=[2])),
         ("a target that is closed", "closed",
          {1: {"state": "closed", "body": "**Waits on.** Nothing."}}, None,
-         lambda m: m.waits(1, clear=True)),
+         lambda m: m.challenges.waits(1, clear=True)),
         ("an Issue with no such line", "has no `**Waits on.**` line",
          {1: {"state": "open", "body": "filed some other way"},
-          2: {"state": "open", "body": ""}}, None, lambda m: m.waits(1, on=[2])),
+          2: {"state": "open", "body": ""}}, None, lambda m: m.challenges.waits(1, on=[2])),
         ("removing a blocker with an attached explanatory clause", "says",
          {1: {"state": "open", "body": f"**Waits on.** #{'2'}, which settles who may put a decision in force.\n\n**What was noticed.** Detail.\n"},
-          2: {"state": "open", "body": ""}}, {1: [2]}, lambda m: m.waits(1, off=[2])),
+          2: {"state": "open", "body": ""}}, {1: [2]}, lambda m: m.challenges.waits(1, off=[2])),
         ("adding a blocker to a line whose citations carry an explanatory clause", "says",
          {1: {"state": "open",
               "body": f"**Waits on.** #{'2'} and #{'3'}, both open, whose\n"
                       "pull requests are in flight.\n\n**What was noticed.** Detail.\n"},
           2: {"state": "open", "body": ""}, 3: {"state": "open", "body": ""}},
-         {1: [2]}, lambda m: m.waits(1, on=[2, 3])),
+         {1: [2]}, lambda m: m.challenges.waits(1, on=[2, 3])),
     )
     for case, phrase, issues, blockers, call in refusals:
         fake = FakeBlockers(issues, blockers)
@@ -122,7 +122,7 @@ def _mutation_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> lis
     problems: list[str] = []
 
     fake = FakeBlockers({1: open_issue, 2: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
     if answer or fake.blockers.get(1) != [2]:
         problems.append(f"waits: setting a blocker said {answer!r} and left GitHub holding {fake.blockers}")
     if f"**Waits on.** #{'2'}" not in fake.bodies.get(1, ""):
@@ -132,7 +132,7 @@ def _mutation_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> lis
 
     prose_body = {"state": "open", "body": f"**Waits on.** Decision DR-{'041'}.\n\n**What was noticed.** Text.\n"}
     fake = FakeBlockers({1: prose_body, 2: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
     if answer or fake.blockers.get(1) != [2]:
         problems.append(f"waits: setting a blocker with prose said {answer!r} and left {fake.blockers}")
     if f"**Waits on.** Decision DR-{'041'}, #{'2'}" not in fake.bodies.get(1, ""):
@@ -141,7 +141,7 @@ def _mutation_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> lis
     joined = {"state": "open", "body": f"**Waits on.** #{'2'}, #{'3'}\n\n**What was noticed.** Text.\n"}
     fake = FakeBlockers({1: joined, 2: {"state": "open", "body": ""}, 3: {"state": "open", "body": ""}},
                         {1: [2, 3]})
-    answer = _said(channel, fake, lambda: move.waits(1, off=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, off=[2]))
     if answer or fake.blockers.get(1) != [3]:
         problems.append(f"waits: dropping one blocker said {answer!r} and left {fake.blockers}")
     if f"**Waits on.** #{'3'}" not in fake.bodies.get(1, ""):
@@ -149,7 +149,7 @@ def _mutation_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> lis
 
     fake = FakeBlockers({1: {"state": "open", "body": f"**Waits on.** #{'2'}\n\n**What was noticed.** Text.\n"},
                          2: {"state": "open", "body": ""}}, {1: [2]})
-    answer = _said(channel, fake, lambda: move.waits(1, clear=True))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, clear=True))
     if answer or fake.blockers.get(1) != []:
         problems.append(f"waits: clearing said {answer!r} and left GitHub holding {fake.blockers}")
     if "**Waits on.** Nothing." not in fake.bodies.get(1, ""):
@@ -157,7 +157,7 @@ def _mutation_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> lis
 
     fake = FakeBlockers({1: {"state": "open", "body": f"**Waits on.** #{'2'}\n\n**What was noticed.** Text.\n"},
                          2: {"state": "open", "body": ""}}, {1: [2]})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
     if fake.edits:
         problems.append(f"waits: idempotent call made {fake.edits} edits")
 
@@ -176,7 +176,7 @@ def _wrapping_probes(channel: Any, move: Any) -> list[str]:
                "body": f"**Waits on.** #{'2'} and\n#{'3'}.\n\n**What was noticed.** Text.\n"}
     fake = FakeBlockers({1: wrapped, 2: {"state": "open", "body": ""},
                          3: {"state": "open", "body": ""}}, {1: [2, 3]})
-    answer = _said(channel, fake, lambda: move.waits(1, off=[3]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, off=[3]))
     if answer or fake.blockers.get(1) != [2]:
         problems.append(f"waits: a wrapped line said {answer!r} and left {fake.blockers}")
     if f"#{'3'}" in fake.bodies.get(1, ""):
@@ -185,7 +185,7 @@ def _wrapping_probes(channel: Any, move: Any) -> list[str]:
     crlf = {"state": "open",
             "body": "**Waits on.** Nothing.\r\n\r\n**What was noticed.** Text.\r\n"}
     fake = FakeBlockers({1: crlf, 2: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
     written = fake.bodies.get(1, "")
     if answer or f"**Waits on.** #{'2'}" not in written:
         problems.append(f"waits: a body with CRLF endings said {answer!r} and left {written!r}")
@@ -212,7 +212,7 @@ def _severing_probes(channel: Any, move: Any) -> list[str]:
 
     free = {"state": "open", "body": f"**Waits on.** {standing}.\n\n**What was noticed.** Text.\n"}
     fake = FakeBlockers({1: free, 2: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
     if answer or fake.blockers.get(1) != [2]:
         problems.append(f"waits: a free-standing prose blocker said {answer!r} "
                         f"and left {fake.blockers}")
@@ -223,7 +223,7 @@ def _severing_probes(channel: Any, move: Any) -> list[str]:
     settled = {"state": "open",
                "body": f"**Waits on.** {standing}, #{'2'}\n\n**What was noticed.** Text.\n"}
     fake = FakeBlockers({1: settled, 2: {"state": "open", "body": ""}}, {1: [2]})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
     if answer or fake.edits:
         problems.append(f"waits: repeating a settled call on that line said {answer!r} "
                         f"and made {fake.edits} edits")
@@ -233,7 +233,7 @@ def _severing_probes(channel: Any, move: Any) -> list[str]:
                        "\n\n**What was noticed.** Text.\n"}
     fake = FakeBlockers({1: carried, 2: {"state": "open", "body": ""},
                          3: {"state": "open", "body": ""}}, {1: [2]})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2, 3]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2, 3]))
     if answer or fake.blockers.get(1) != [2, 3]:
         problems.append(f"waits: prose standing before a citation said {answer!r} "
                         f"and left {fake.blockers}")
@@ -246,7 +246,7 @@ def _severing_probes(channel: Any, move: Any) -> list[str]:
                         "\n\n**What was noticed.** Text.\n"}
     fake = FakeBlockers({1: trailing, 2: {"state": "open", "body": ""},
                          3: {"state": "open", "body": ""}}, {1: [2]})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2, 3]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2, 3]))
     if not answer or "open until the schema lands" not in answer:
         problems.append("waits: prose standing after a citation under no listed "
                         f"opener was told {answer!r}")
@@ -259,7 +259,7 @@ def _severing_probes(channel: Any, move: Any) -> list[str]:
                         "\n\n**What was noticed.** Text.\n"}
     fake = FakeBlockers({1: carrying, 2: {"state": "open", "body": ""},
                          3: {"state": "open", "body": ""}}, {1: [2]})
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2, 3]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2, 3]))
     if not answer or "for the schema" not in answer:
         problems.append("waits: prose carrying its own citation ahead of every other "
                         f"was told {answer!r}")
@@ -281,7 +281,7 @@ def _revise_probes(channel: Any, move: Any) -> list[str]:
 
     fake = FakeBlockers({1: {"state": "open", "body": "**Waits on.** Nothing.\n"},
                          2: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.revise(1, body=revised))
+    answer = _said(channel, fake, lambda: move.pull_requests.revise(1, body=revised))
     if not answer or "blocked-by relationship does not hold" not in answer:
         problems.append(f"revise: a line citing an unbacked blocker was told {answer!r}")
     if fake.edits:
@@ -289,7 +289,7 @@ def _revise_probes(channel: Any, move: Any) -> list[str]:
 
     fake = FakeBlockers({1: {"state": "open", "body": "**Waits on.** Nothing.\n"},
                          2: {"state": "open", "body": ""}}, {1: [2]})
-    answer = _said(channel, fake, lambda: move.revise(1, body=revised))
+    answer = _said(channel, fake, lambda: move.pull_requests.revise(1, body=revised))
     if answer or fake.bodies.get(1) != revised:
         problems.append(f"revise: a line citing a blocker the relationship holds said {answer!r}")
 
@@ -306,12 +306,12 @@ def _readback_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> lis
     problems: list[str] = []
 
     fake = FakeBlockers({1: open_issue, 2: {"state": "open", "body": ""}}, deaf_body=True)
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
     if not answer or "line not citing" not in answer:
         problems.append(f"waits: deaf body edit was told {answer!r}")
 
     fake = FakeBlockers({1: open_issue, 2: {"state": "open", "body": ""}}, deaf_relationship=True)
-    answer = _said(channel, fake, lambda: move.waits(1, on=[2]))
+    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
     if not answer or "blockedBy" not in answer or "not" not in answer:
         problems.append(f"waits: deaf relationship edit was told {answer!r}")
 
@@ -323,22 +323,22 @@ def _filing_probes(channel: Any, move: Any) -> list[str]:
     problems: list[str] = []
     fake = FakeBlockers({2: {"state": "open", "body": ""}, 3: {"state": "closed", "body": ""}})
 
-    answer = _said(channel, fake, lambda: move.file_issue("Title", f"**Waits on.** #{'2'}.\n\nWhat was noticed.\n",
+    answer = _said(channel, fake, lambda: move.challenges.file_issue("Title", f"**Waits on.** #{'2'}.\n\nWhat was noticed.\n",
                                                           blocked_by=[2]))
     if answer or fake.blockers.get(901) != [2]:
         problems.append(f"file_issue: filing with --blocked-by said {answer!r} and left {fake.blockers}")
 
-    answer = _said(channel, fake, lambda: move.file_issue("Title", f"**Waits on.** #{'2'}.\n\nWhat was noticed.\n"))
+    answer = _said(channel, fake, lambda: move.challenges.file_issue("Title", f"**Waits on.** #{'2'}.\n\nWhat was noticed.\n"))
     if not answer or "--blocked-by" not in answer:
         problems.append(f"file_issue: omitted --blocked-by was told {answer!r}")
 
-    answer = _said(channel, fake, lambda: move.file_issue("Title", f"**Waits on.** #{'3'}.\n\nWhat was noticed.\n",
+    answer = _said(channel, fake, lambda: move.challenges.file_issue("Title", f"**Waits on.** #{'3'}.\n\nWhat was noticed.\n",
                                                           blocked_by=[3]))
     if not answer or "closed" not in answer:
         problems.append(f"file_issue: closed blocker in --blocked-by was told {answer!r}")
 
     fake = FakeBlockers({2: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.file_issue("Title", "**Waits on.** Nothing.\n\nWhat was noticed.\n",
+    answer = _said(channel, fake, lambda: move.challenges.file_issue("Title", "**Waits on.** Nothing.\n\nWhat was noticed.\n",
                                                           blocked_by=[2]))
     if answer or fake.blockers.get(901) != [2]:
         problems.append(f"file_issue: a flag the line does not name said {answer!r} and left {fake.blockers}")
@@ -346,13 +346,13 @@ def _filing_probes(channel: Any, move: Any) -> list[str]:
         problems.append(f"file_issue: the line was left as {fake.bodies.get(901)!r}, not rendered from the flag")
 
     fake = FakeBlockers({2: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.file_issue(
+    answer = _said(channel, fake, lambda: move.challenges.file_issue(
         "Title", f"**Waits on.** Decision DR-{'041'}.\n\nWhat was noticed.\n", blocked_by=[2]))
     if f"DR-{'041'}" not in fake.bodies.get(901, "") or f"#{'2'}" not in fake.bodies.get(901, ""):
         problems.append(f"file_issue: rendering over a prose blocker left the line as {fake.bodies.get(901)!r}")
 
     fake = FakeBlockers({2: {"state": "open", "body": ""}, 3: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.file_issue(
+    answer = _said(channel, fake, lambda: move.challenges.file_issue(
         "Title", f"**Waits on.** #{'2'} and\n#{'3'}.\n\nWhat was noticed.\n", blocked_by=[2]))
     if not answer or f"#{'3'}" not in answer:
         problems.append("file_issue: a citation on the line's second physical "
@@ -362,7 +362,7 @@ def _filing_probes(channel: Any, move: Any) -> list[str]:
                         "edits having refused")
 
     fake = FakeBlockers({2: {"state": "open", "body": ""}})
-    answer = _said(channel, fake, lambda: move.file_issue(
+    answer = _said(channel, fake, lambda: move.challenges.file_issue(
         "Title", f"**Waits on.** #{'2'}, which must land before this.\n\nWhat was noticed.\n",
         blocked_by=[2]))
     if not answer or "Nothing was filed" not in answer:

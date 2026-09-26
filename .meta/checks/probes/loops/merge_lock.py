@@ -345,4 +345,4 @@ def _unreadable(channel: Any, move: Any, now: datetime.datetime) -> list[str]:
 def run_manager(move: Any) -> Any:
     """Run the lock probe without the separately probed Epic-maintenance act."""
     with stood_in(move.manager.epics, close_completed=lambda: None):
-        return outcome(lambda: move.merge_manager())
+        return outcome(lambda: move.manager.merge_manager())

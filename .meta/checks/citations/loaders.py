@@ -26,7 +26,7 @@ def issue_citation() -> tuple[re.Pattern[str], re.Pattern[str]]:
         matching bare Issue numbers and possessive `solorepo's #n` runs (solorepo's DR-132).
     """
     module = load_check_pr()
-    return module.ISSUE, module.FOREIGN
+    return module.verdict.ISSUE, module.verdict.FOREIGN
 
 
 def load_timing() -> Any:

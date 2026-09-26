@@ -142,7 +142,7 @@ def _residue_cases(check_pr: Any) -> list[str]:
     problems = []
     tree = _Tree(["claude/issue-1", "claude/issue-2"])
     with stood_in(check_pr.branch, subprocess=tree), stood_in(check_pr.github, gh=lookup):
-        value, code, _ = answered(check_pr.residue)
+        value, code, _ = answered(check_pr.branch.residue)
     if code is not None:
         problems.append(f"residue: one refused node ended the listing with {code!r}")
     left: list[str] = value or []

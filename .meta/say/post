@@ -192,7 +192,7 @@ def promotes(body: str) -> bool:
     Returns:
         bool: True if an issue reference pattern is found in the body.
     """
-    return bool(check_pr.PROMOTED.search(body))
+    return bool(check_pr.review.PROMOTED.search(body))
 
 
 def refuse_if_sole_author(thread_id: str, promotion: bool = False) -> list[str]:
@@ -241,7 +241,7 @@ def resolve(thread_id: str) -> None:
 def comment_party(c: dict[str, Any]) -> str:
     """Identifies the author and optional actor trailer of a thread comment."""
     login = str((c.get("author") or {}).get("login", "someone"))
-    actor = check_pr.ACTOR.search(c.get("body") or "")
+    actor = check_pr.review.ACTOR.search(c.get("body") or "")
     return f"{login}/{actor.group(1)}" if actor else login
 
 
@@ -332,9 +332,8 @@ def promote(thread_id: str, title: str, body: str, level: str | None, resolve_th
                  "`promote` would file a second Issue for one thread.\n"
                  "     Nothing was filed. The thread is what is unfinished: "
                  f"`post resolve {thread_id}` closes it on the link already posted.")
-    first_line = body.lstrip().split("\n", 1)[0]
-    blocked_by = [int(n) for n in re.findall(r"#(\d+)", first_line)]
-    _, url = channel.sibling("move").file_issue(title, body, level=level, blocked_by=blocked_by)
+    bb = [int(n) for n in re.findall(r"#(\d+)", body.lstrip().split("\n", 1)[0])]
+    _, url = channel.sibling("move").challenges.file_issue(title, body, level=level, blocked_by=bb)
     reply(thread_id, channel.signed(f"Promoted to {url}."))
     if resolve_thread:
         resolve(thread_id)
@@ -356,15 +355,15 @@ def closed_by(pr: int | str) -> list[str] | None:
         SystemExit: If the required section is missing or contains invalid entries.
     """
     body = channel.gh("pr", "view", str(pr), "--json", "body")["body"] or ""
-    found = check_pr.sections(body)
-    if check_pr.CLOSES not in found:
-        sys.exit(f"say: #{pr}'s body has no **{check_pr.CLOSES}.**; the form has one")
-    closing = found[check_pr.CLOSES]
-    if check_pr.NONE.match(closing):
+    found = check_pr.form.sections(body)
+    if check_pr.form.CLOSES not in found:
+        sys.exit(f"say: #{pr}'s body has no **{check_pr.form.CLOSES}.**; the form has one")
+    closing = found[check_pr.form.CLOSES]
+    if check_pr.form.NONE.match(closing):
         return None
     numbers = []
-    for item in check_pr.BULLET.finditer(closing):
-        ref = check_pr.KEYWORD.search(item.group(1))
+    for item in check_pr.form.BULLET.finditer(closing):
+        ref = check_pr.form.KEYWORD.search(item.group(1))
         if ref:
             match = re.search(r"(\d+)$", ref.group(0))
             if match:
@@ -388,8 +387,8 @@ def landed(pr: int | str) -> None:
         print(f"#{pr} closes nothing, and says so; nothing to post")
         return
     if not numbers:
-        sys.exit(f"say: nothing under #{pr}'s **{check_pr.CLOSES}.** carries a closing keyword "
-                 "and a reference; the gate would say the same")
+        sys.exit(f"say: nothing under #{pr}'s **{check_pr.form.CLOSES}.** carries a "
+                 "closing keyword and a reference; the gate would say the same")
     root = channel.HERE.parent.parent
     if importlib.util.find_spec("yaml") is not None:
         command = [sys.executable, ".meta/render.py", "--landed"]
@@ -499,7 +498,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("promote")
     p.add_argument("thread")
     p.add_argument("--title", required=True)
-    p.add_argument("--difficulty", choices=channel.sibling("move").DIFFICULTIES, dest="level",
+    p.add_argument("--difficulty",
+                   choices=channel.sibling("move").common.DIFFICULTIES, dest="level",
                    help="the solo's verdict given in advance, which skips the reviewer; every "
                         "level but `human` needs `--mandate`; without it, `challenge` alone "
                         "(solorepo's DR-230, solorepo's DR-235, solorepo's DR-278)")
@@ -510,8 +510,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--withdraw", action="store_true",
                    help="delete the comment rather than replace its body; takes no body; deletes "
                         "the comment alone, preserving child replies on a review thread")
-    p = sub.add_parser("landed")
-    p.add_argument("pr")
+    sub.add_parser("landed").add_argument("pr")
     p = sub.add_parser("review")
     p.add_argument("pr")
     verdict = p.add_mutually_exclusive_group(required=True)

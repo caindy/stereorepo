@@ -12,6 +12,7 @@ from typing import Any
 import agents
 import channel
 import check_pr
+from lib.check_pr import ROOT
 from lib.coder_door import coder_door
 from lib.on import common as common
 
@@ -175,7 +176,7 @@ def stop_with(issue: str, outcome: str, branch: str, why: str, cap: int | None =
         + coder_door.STAYS_OPEN.format(branch=branch)
         + coder_door.NOT_REQUESTED.format(why=why)
     )
-    channel.sibling("move").stop(issue, channel.signed(body))
+    channel.sibling("move").challenges.stop(issue, channel.signed(body))
 
 
 def hand_back(issue: str, outcome: str, prefix: str, cap: int | None = None) -> None:
@@ -222,7 +223,7 @@ def hand_back(issue: str, outcome: str, prefix: str, cap: int | None = None) -> 
         stop_with(issue, outcome, branch, coder_door.UNREADABLE_ISSUE.format(issue=issue), cap)
         return
     labels = check_pr.state.issue_labels(view)
-    level = next((lvl for lvl in channel.sibling("move").DIFFICULTIES if lvl in labels), "")
+    level = next((lvl for lvl in channel.sibling("move").common.DIFFICULTIES if lvl in labels), "")
     if view.get("state") != "OPEN":
         print(f"#{issue} is closed; a Challenge GitHub has closed has nothing to hand back")
         return
@@ -249,7 +250,7 @@ def hand_back(issue: str, outcome: str, prefix: str, cap: int | None = None) -> 
     ):
         body = account_of(outcome, cap) + coder_door.WORTH_READING.format(issue=issue, level=level)
         channel.sibling("post").conversation_comment(number, channel.signed(body))
-        channel.sibling("move").request_review(number, "reviewer")
+        channel.sibling("move").handoff.request_review(number, "reviewer")
     else:
         stop_with(issue, outcome, branch, not_requested(left, number, branch, base), cap)
 
@@ -308,7 +309,7 @@ def redeliver(number: str) -> None:
     which is said and not a failure.
     """
     try:
-        channel.sibling("move").dispatch_pass(number, "review")
+        channel.sibling("move").advance.dispatch_pass(number, "review")
     except SystemExit as refused:
         print(f"nothing to redeliver on #{number}: {refused}")
 
@@ -389,7 +390,7 @@ def coder_rescue(number: str, delivery: coder_door.Delivery, branch_prefix: str)
         common.command(["git", "add", "-A"])
         issue = number if delivery.task == "take" else (coder_door.loop_issue(branch) or number)
         message = f"[rescue] Uncommitted session work on Challenge #{issue}"
-        commit_script = str(check_pr.ROOT / ".meta" / "say" / "commit")
+        commit_script = str(ROOT / ".meta" / "say" / "commit")
         common.command([sys.executable, commit_script, "-m", message])
         print(f"rescue: committed uncommitted session work on {branch}")
 

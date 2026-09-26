@@ -23,7 +23,7 @@ def open_pull_request_probes() -> list[str]:
 
     with (
         stood_in(channel, gh=gh),
-        stood_in(move.pull_requests.check_pr, check=lambda _title, _body: []),
+        stood_in(move.pull_requests.check_pr.form, check=lambda _title, _body: []),
         stood_in(move.pull_requests.handoff, request_review=request_review),
     ):
         ended = outcome(lambda: move.pull_requests.open_pull_request("Open draft", "body"))
@@ -55,7 +55,7 @@ def open_pull_request_probes() -> list[str]:
 
     with (
         stood_in(channel, gh=gh_easy),
-        stood_in(move.pull_requests.check_pr, check=lambda _title, _body: []),
+        stood_in(move.pull_requests.check_pr.form, check=lambda _title, _body: []),
         stood_in(move.pull_requests.handoff, request_review=request_review),
     ):
         ended_easy = outcome(

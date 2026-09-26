@@ -90,7 +90,7 @@ def _conflicting_changes_requested_dispatches_rebase(channel: Any, move: Any) ->
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING",
                            "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = run_verb(channel, fake, lambda: move.advance.advance())
     if fake.dispatched != [("7", "rebase")]:
         problems.append("advance: a conflicting one with a verdict standing dispatched "
                         f"{fake.dispatched!r}")
@@ -104,7 +104,7 @@ def _recent_conflicting_changes_requested_left_to_the_run(channel: Any, move: An
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING",
                            "updatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
                            "verdicts": [("o-r-reviewer", "CHANGES_REQUESTED")]}})
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = run_verb(channel, fake, lambda: move.advance.advance())
     if fake.dispatched:
         problems.append("advance: a conflicting one whose verdict is recent enough for a run to "
                         f"be standing on it dispatched {fake.dispatched!r}")
@@ -194,7 +194,7 @@ def _stack_root_rebased_by_sweep_refused_by_name(channel: Any, move: Any) -> lis
     if said:
         problems.append(f"advance: the stack it resolved from the bottom exited with {said!r}")
     fake = FakeGitHub({7: dict(p), 8: dict(p, base="claude/issue-7")})
-    named_said = run_verb(channel, fake, lambda: move.advance("7"))
+    named_said = run_verb(channel, fake, lambda: move.advance.advance("7"))
     if not named_said or "base of another open pull request" not in named_said:
         problems.append(f"advance: named stack base should be refused, got {named_said!r}")
     return problems
@@ -225,7 +225,7 @@ def _refused_dispatch_is_the_sweeps_own_problem(channel: Any, move: Any) -> list
                            "mergeable": "CONFLICTING"},
                        8: {"behind": 0, "armed": False, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"}}, no_dispatch=[7])
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = run_verb(channel, fake, lambda: move.advance.advance())
     if fake.dispatched != [("8", "rebase")]:
         problems.append(f"advance: a refused dispatch left the rest at {fake.dispatched!r}")
     if not said or "#7" not in said:
@@ -240,7 +240,7 @@ def _refused_re_request_is_the_sweeps_own_problem(channel: Any, move: Any) -> li
                 "requested": ["o-r-reviewer"],
                 "checks": [{"name": "reviewer", "conclusion": "FAILURE"}]}
     fake = FakeGitHub({7: dict(stranded), 8: dict(stranded)}, no_edit=[7])
-    said = run_verb(channel, fake, lambda: move.advance())
+    said = run_verb(channel, fake, lambda: move.advance.advance())
     if "8" not in fake.edited or "o-r-reviewer" not in (fake.pulls["8"].get("requested") or []):
         problems.append(f"advance: a refused re-request left the rest at {fake.edited!r}")
     if not said or "#7" not in said:
@@ -310,8 +310,8 @@ def _named_and_merge_auto_dispatch_nothing(channel: Any, move: Any) -> list[str]
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": True, "requested": ["reviewer"],
                            "mergeable": "CONFLICTING"}})
-    named = run_verb(channel, fake, lambda: move.advance("7"))
-    merging = run_verb(channel, fake, lambda: move.merge("7", auto=True))
+    named = run_verb(channel, fake, lambda: move.advance.advance("7"))
+    merging = run_verb(channel, fake, lambda: move.pull_requests.merge("7", auto=True))
     if fake.dispatched:
         problems.append(f"advance: a named pull request dispatched {fake.dispatched!r}")
     if named or merging:
@@ -324,7 +324,7 @@ def _named_conflicting_pull_request_refused(channel: Any, move: Any) -> list[str
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 1, "armed": True, "mergeable": "CONFLICTING"}},
                       no_rebase=[7])
-    said = run_verb(channel, fake, lambda: move.advance("7"))
+    said = run_verb(channel, fake, lambda: move.advance.advance("7"))
     if not said or "conflicts" not in said:
         problems.append(f"advance: a named conflicting pull request exited with {said!r}")
     return problems
@@ -335,7 +335,7 @@ def _dispatch_review_on_a_standing_verdict(channel: Any, move: Any, reviewer: st
     fake = FakeGitHub({7: {"behind": 0, "armed": False,
                            "verdicts": [(reviewer, "CHANGES_REQUESTED"),
                                         (reviewer, "COMMENTED")]}})
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "review"))
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "review"))
     if fake.dispatched != [("7", "review")]:
         problems.append(f"dispatch: a verdict standing dispatched {fake.dispatched!r}")
     if said:
@@ -348,7 +348,7 @@ def _dispatch_review_on_a_comment_verdict(channel: Any, move: Any, reviewer: str
     fake = FakeGitHub({7: {"behind": 0, "armed": False,
                            "verdicts": [(reviewer, "COMMENTED",
                                          "withholding approval on the two open threads")]}})
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "review"))
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "review"))
     if fake.dispatched != [("7", "review")]:
         problems.append(f"dispatch: a comment verdict dispatched {fake.dispatched!r}")
     if said:
@@ -362,7 +362,7 @@ def _dispatch_review_on_approval_with_failing_checks(channel: Any, move: Any, re
     fake = FakeGitHub({7: {"behind": 0, "armed": False,
                            "checks": [{"name": "gate", "conclusion": "FAILURE"}],
                            "verdicts": [(reviewer, "APPROVED")]}})
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "review"))
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "review"))
     if fake.dispatched != [("7", "review")]:
         problems.append(f"dispatch: approved PR with failing checks dispatched {fake.dispatched!r}")
     if not fake.pulls["7"].get("draft"):
@@ -380,7 +380,7 @@ def _dispatch_review_refused_without_a_request_for_changes(channel: Any, move: A
                        ("a reply on a thread", {"verdicts": [(reviewer, "COMMENTED")]}),
                        ("no verdict", {})):
         fake = FakeGitHub({7: {"behind": 0, "armed": False, **pull}})
-        said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "review"))
+        said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "review"))
         if fake.dispatched:
             problems.append(f"dispatch: {case} dispatched {fake.dispatched!r}")
         if not said or "last verdict" not in said:
@@ -392,7 +392,7 @@ def _dispatch_review_refused_while_answered(channel: Any, move: Any, reviewer: s
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "requested": [reviewer],
                            "verdicts": [(reviewer, "CHANGES_REQUESTED")]}})
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "review"))
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "review"))
     if fake.dispatched:
         problems.append(f"dispatch: a verdict already answered dispatched {fake.dispatched!r}")
     if not said or "not yet given" not in said:
@@ -404,12 +404,12 @@ def _dispatch_rebase_on_conflicting_not_on_behind(channel: Any, move: Any) -> li
     problems: list[str] = []
     fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING"},
                        8: {"behind": 3, "armed": False}})
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "rebase"))
     if fake.dispatched != [("7", "rebase")]:
         problems.append(f"dispatch: a conflicting branch dispatched {fake.dispatched!r}")
     if said:
         problems.append(f"dispatch: the rebase it should have started exited with {said!r}")
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("8", "rebase"))
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("8", "rebase"))
     if fake.dispatched != [("7", "rebase")]:
         problems.append(f"dispatch: a branch that merely fell behind dispatched {fake.dispatched!r}")
     if not said or "MERGEABLE" not in said:
@@ -438,12 +438,12 @@ def _dispatch_rebase_on_a_behind_branch_the_sweep_was_refused_on(channel: Any,
                "verdicts": [("o-r-reviewer", "APPROVED")]}
 
     def notice(tag: str) -> list[dict[str, Any]]:
-        return [{"id": 1, "body": f"{move.ADVANCE_NOTICE_MARKER}{tag}\n"
+        return [{"id": 1, "body": f"{move.advance.ADVANCE_NOTICE_MARKER}{tag}\n"
                                   "> the sweep could not advance this branch"}]
 
     fake = FakeGitHub({7: dict(stalled)})
-    fake.comments["7"] = notice(f" {move.REPLAY_REFUSED_TAG} head:head7")
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
+    fake.comments["7"] = notice(f" {move.advance.REPLAY_REFUSED_TAG} head:head7")
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "rebase"))
     if fake.dispatched != [("7", "rebase")]:
         problems.append("dispatch: a branch behind its base with a replay refused on its head "
                         f"dispatched {fake.dispatched!r}")
@@ -454,12 +454,12 @@ def _dispatch_rebase_on_a_behind_branch_the_sweep_was_refused_on(channel: Any,
         ("under a notice the sweep raised for something else", notice(""),
          "something other than a replay refused on this head"),
         ("under a notice tagged against a head it no longer has",
-         notice(f" {move.REPLAY_REFUSED_TAG} head:head99"),
+         notice(f" {move.advance.REPLAY_REFUSED_TAG} head:head99"),
          "something other than a replay refused on this head"),
     ):
         bare = FakeGitHub({7: dict(stalled)})
         bare.comments["7"] = list(comments)
-        said = run_verb(channel, bare, lambda: move.dispatch_pass("7", "rebase"))
+        said = run_verb(channel, bare, lambda: move.advance.dispatch_pass("7", "rebase"))
         if bare.dispatched:
             problems.append(f"dispatch: a branch behind its base {case} dispatched "
                             f"{bare.dispatched!r}, where the sweep brings it current")
@@ -475,7 +475,7 @@ def _dispatch_rebase_refused_by_hand(channel: Any, move: Any) -> list[str]:
                         {"branch": "claude/issue-169-followup"}),
                        ("the solo's own branch", {"branch": "fix-the-thing"})):
         fake = FakeGitHub({7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING", **pull}})
-        said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
+        said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "rebase"))
         if fake.dispatched:
             problems.append(f"dispatch: {case} dispatched {fake.dispatched!r}")
         if not said or "by hand" not in said:
@@ -484,13 +484,13 @@ def _dispatch_rebase_refused_by_hand(channel: Any, move: Any) -> list[str]:
              7: {"behind": 0, "armed": False, "mergeable": "CONFLICTING", "layer": True,
                  "base": "claude/issue-6"}}
     fake = FakeGitHub(stack)
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "rebase"))
     if fake.dispatched or not said or "resolved from the bottom" not in said:
         problems.append(f"dispatch: a layer above a conflicting root dispatched "
                         f"{fake.dispatched!r} and was refused with {said!r}, where the root "
                         "is rebased first")
     fake = FakeGitHub(stack)
-    said = run_verb(channel, fake, lambda: move.dispatch_pass("6", "rebase"))
+    said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("6", "rebase"))
     if fake.dispatched != [("6", "rebase")] or said:
         problems.append(f"dispatch: the root of a conflicting stack dispatched "
                         f"{fake.dispatched!r} and said {said!r}, where the root is any loop "
@@ -515,25 +515,25 @@ def _three_dispatchers_agree_on_stack_order(channel: Any, move: Any) -> list[str
         problems.append(f"sweep: conflicting stack sweep exited with {sweep_said!r}")
 
     fake = FakeGitHub(stack)
-    layer_said = run_verb(channel, fake, lambda: move.dispatch_pass("7", "rebase"))
+    layer_said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("7", "rebase"))
     if fake.dispatched or not layer_said or "resolved from the bottom" not in layer_said:
         problems.append(f"verb: layer above conflicting root dispatched {fake.dispatched!r} "
                         f"and was refused with {layer_said!r}")
     fake = FakeGitHub(stack)
-    root_said = run_verb(channel, fake, lambda: move.dispatch_pass("6", "rebase"))
+    root_said = run_verb(channel, fake, lambda: move.advance.dispatch_pass("6", "rebase"))
     if fake.dispatched != [("6", "rebase")] or root_said:
         problems.append(f"verb: root of conflicting stack dispatched {fake.dispatched!r} "
                         f"and said {root_said!r}")
 
     fake = FakeGitHub(stack)
     prs = [fake.view(6), fake.view(7)]
-    reading = move.Reading(now=datetime.datetime.now(datetime.UTC), bound=0, longest=75,
-                           coder="o-r-coder", reviewer_login="o-r-reviewer",
-                           owner="o", name="r", by_number={}, named=set(),
-                           coder_runs=move.Runs([], []), review_runs=move.Runs([], []),
-                           triage_runs=move.Runs([], []), action_runs=move.Runs([], []))
+    runs = move.actions.Runs([], [])
+    reading = move.reconcile.Reading(now=datetime.datetime.now(datetime.UTC), bound=0, longest=75,
+                                     coder="o-r-coder", reviewer_login="o-r-reviewer", owner="o",
+                                     name="r", by_number={}, named=set(), coder_runs=runs,
+                                     review_runs=runs, triage_runs=runs, action_runs=runs)
     clock_acts: list[Any] = []
-    run_verb(channel, fake, lambda: clock_acts.extend(move.owed_by_pulls(prs, reading)))
+    run_verb(channel, fake, lambda: clock_acts.extend(move.reconcile.owed_by_pulls(prs, reading)))
     act_root = next((a for a in clock_acts if a.number == 6), None)
     act_layer = next((a for a in clock_acts if a.number == 7), None)
     if act_root is None or act_root.kind != "rebase":
@@ -550,7 +550,7 @@ def _three_dispatchers_agree_on_stack_order(channel: Any, move: Any) -> list[str
     prs_unreadable = [fake_unreadable.view(6), fake_unreadable.view(7)]
     unreadable_acts: list[Any] = []
     run_verb(channel, fake_unreadable,
-             lambda: unreadable_acts.extend(move.owed_by_pulls(prs_unreadable, reading)))
+             lambda: unreadable_acts.extend(move.reconcile.owed_by_pulls(prs_unreadable, reading)))
     act_unreadable = next((a for a in unreadable_acts if a.number == 7), None)
     if (act_unreadable is None or act_unreadable.kind != "hold" or act_unreadable.lower != 6
             or "no Challenge the loop can read" not in act_unreadable.why):

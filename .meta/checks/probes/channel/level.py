@@ -80,7 +80,7 @@ def moving_probes(channel: Any, move: Any) -> list[str]:
         fake = FakeIssue(list(labels))
         run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
         with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
-            return run_verb(channel, fake, lambda: move.difficulty("7", level)), fake
+            return run_verb(channel, fake, lambda: move.challenges.difficulty("7", level)), fake
 
     for level in ("easy", "medium", "hard"):
         said, fake = moved(level, RUN)
@@ -118,7 +118,8 @@ def filing_probes(channel: Any, move: Any) -> list[str]:
         fake = FakeFiling()
         run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
         with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
-            return run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level=level)), fake
+            file_issue = move.challenges.file_issue
+            return run_verb(channel, fake, lambda: file_issue(TITLE, BODY, level=level)), fake
 
     def landed(fake: FakeFiling) -> list[str]:
         """The labels on the one Issue the fake was asked to create, or none where it was asked for none."""
@@ -298,7 +299,7 @@ def delegating_probes(channel: Any, move: Any) -> list[str]:
         run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
         with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
             return run_verb(channel, fake,
-                            lambda: move.ensure_autonomous_level("7", level)), fake
+                            lambda: move.challenges.ensure_autonomous_level("7", level)), fake
 
     said, fake = delegating(["challenge"], None, RUN)
     if not said or "human" not in said or fake.labels != ["challenge"]:
@@ -354,7 +355,7 @@ def triaging_probes(channel: Any, move: Any) -> list[str]:
         with environment(GITHUB_RUN_ID=run_id,
                          ACTOR_SESSION=session, AI_AGENT="probe", ACTOR_AGENT="probe"):
             return run_verb(channel, fake,
-                            lambda: move.triage("7", "medium", VERDICT_BODY)), fake
+                            lambda: move.challenges.triage("7", "medium", VERDICT_BODY)), fake
 
     said, fake = triaging("o-r-coder", RUN)
     if not said or "reviewer" not in said or fake.labels != ["challenge"] or fake.comments:
@@ -399,7 +400,7 @@ def reread_probes(channel: Any, move: Any) -> list[str]:
         fake.state = state
         run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
         with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
-            return run_verb(channel, fake, lambda: move.reread("7")), fake
+            return run_verb(channel, fake, lambda: move.challenges.reread("7")), fake
 
     said, fake = rereading(["challenge", "hard"])
     if said or fake.labels != ["challenge"]:
@@ -443,7 +444,7 @@ def roadmap_probes(channel: Any, move: Any) -> list[str]:
         fake.state = state
         run_id = session.removeprefix("gha-") if session and session.startswith("gha-") else None
         with environment(GITHUB_RUN_ID=run_id, ACTOR_SESSION=session):
-            return run_verb(channel, fake, lambda: move.roadmap("7")), fake
+            return run_verb(channel, fake, lambda: move.challenges.roadmap("7")), fake
 
     said, fake = roadmapping([])
     if said or fake.labels != ["roadmap"]:
@@ -496,4 +497,3 @@ def next_unlabelled_probes() -> list[str]:
     if "unlabelled" not in row_text:
         problems.append(f"next: row() did not format level as 'unlabelled', got: {row_text!r}")
     return problems
-

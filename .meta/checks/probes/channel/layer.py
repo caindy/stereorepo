@@ -29,7 +29,7 @@ def layer_probes() -> Found | Passed:
                        8: {"behind": 0, "armed": False, "layer": True, "stack": 493}})
     problems = []
     for below in ("7", "8"):
-        said = run_verb(channel, fake, functools.partial(move.link, below, "9"))
+        said = run_verb(channel, fake, functools.partial(move.pull_requests.link, below, "9"))
         if said:
             problems.append(f"link({below!r}, '9') exited with {said!r}")
     if fake.linked != [("7", "9"), ("493", "9")]:

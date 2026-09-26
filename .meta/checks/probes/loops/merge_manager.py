@@ -100,7 +100,7 @@ APPROVED = [{"author": {"login": REVIEWER}, "state": "APPROVED"}]
 
 def _evaluated(move: Any, pull: Any) -> Any:
     """`evaluate_pr` of `pull` as the reviewer's account over `owner/repo`."""
-    return move.evaluate_pr(pull, REVIEWER, "owner", "repo")
+    return move.manager.ranking.evaluate_pr(pull, REVIEWER, "owner", "repo")
 
 
 def _semaphores(move: Any) -> list[str]:
@@ -147,17 +147,17 @@ def _rerun_reads_green(move: Any) -> list[str]:
         {"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-11T12:10:00Z",
          "completedAt": "2026-09-11T12:15:00Z"},
     ]
-    ok_dedup, reasons_dedup = move.check_green({"statusCheckRollup": rerun})
+    ok_dedup, reasons_dedup = move.manager.ranking.check_green({"statusCheckRollup": rerun})
     if not ok_dedup:
         problems.append(f"merge manager: check_green did not deduplicate check runs: {reasons_dedup}")
-    ok_zero, _ = move.check_green({"statusCheckRollup": [
+    ok_zero, _ = move.manager.ranking.check_green({"statusCheckRollup": [
         rerun[0],
         {"name": "gate", "conclusion": "SUCCESS", "completedAt": "0001-01-01T00:00:00Z",
          "createdAt": "2026-09-11T12:10:00Z"},
     ]})
     if not ok_zero:
         problems.append("merge manager: check_green did not handle 0001-01-01 completedAt timestamp")
-    if not citations.load_check_pr().green({"statusCheckRollup": rerun}):
+    if not citations.load_check_pr().remedies.green({"statusCheckRollup": rerun}):
         problems.append("check_pr.green did not deduplicate check runs")
     return problems
 
@@ -170,7 +170,7 @@ def _threads_fail_closed(channel: Any, move: Any) -> list[str]:
         raise RuntimeError(GRAPHQL_OUTAGE)
 
     with stood_in(channel, graphql=broken_graphql):
-        ok_th, msg_th = move.check_threads({"number": 99}, "owner", "repo")
+        ok_th, msg_th = move.manager.ranking.check_threads({"number": 99}, "owner", "repo")
     if ok_th or "could not read conversations" not in msg_th:
         problems.append(f"merge manager: check_threads did not fail closed on exception: {msg_th}")
     return problems
@@ -229,18 +229,18 @@ def _mergeable_unknown_is_waited_out(channel: Any, move: Any) -> list[str]:
         with stood_in(channel, gh=behind):
             ok, reasons = _evaluated(
                 move, {**CLEARED, "mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN"})
-        if ok or reasons != [move.BEHIND_BASE]:
+        if ok or reasons != [move.manager.ranking.BEHIND_BASE]:
             problems.append(
                 f"merge manager: a branch the wait revealed as behind was not "
                 f"refused as behind and nothing else: {reasons}")
 
+        clean = move.manager.ranking.check_mergeable_clean
         with stood_in(channel, gh=_settling_to(mergeable="UNKNOWN")):
-            ok, msg = move.check_mergeable_clean({"number": 1, "mergeable": "UNKNOWN"})
+            ok, msg = clean({"number": 1, "mergeable": "UNKNOWN"})
+            _, reasons = _evaluated(move, {**CLEARED, "mergeable": "UNKNOWN"})
         if ok or "waiting" not in msg:
             problems.append(
                 f"merge manager: UNKNOWN outliving the wait was not refused as waited for: {msg}")
-        with stood_in(channel, gh=_settling_to(mergeable="UNKNOWN")):
-            ok, reasons = _evaluated(move, {**CLEARED, "mergeable": "UNKNOWN"})
         if ok or reasons != ["mergeable is still UNKNOWN after waiting"]:
             problems.append(
                 f"merge manager: an approved pull request whose mergeability never settled "
@@ -329,7 +329,7 @@ def _decisions_in_force(channel: Any, move: Any) -> list[str]:
     )
     for case, expected, phrase, files in cases:
         with stood_in(channel, gh=_diff_of(*files)):
-            ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
+            ok, msg = move.manager.ranking.check_decisions_in_force({"number": 1}, "owner", "repo")
         if ok != expected or phrase not in msg:
             problems.append(f"merge manager: {case} was read as {msg!r}")
 
@@ -338,7 +338,7 @@ def _decisions_in_force(channel: Any, move: Any) -> list[str]:
         raise RuntimeError(API_OUTAGE)
 
     with stood_in(channel, gh=broken_gh):
-        ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
+        ok, msg = move.manager.ranking.check_decisions_in_force({"number": 1}, "owner", "repo")
     if ok or "could not read the diff" not in msg:
         problems.append(f"merge manager: the decision semaphore did not fail closed: {msg}")
 
@@ -349,7 +349,7 @@ def _decisions_in_force(channel: Any, move: Any) -> list[str]:
         return {}
 
     with stood_in(channel, gh=crowded_gh), stood_in(move.manager.ranking, PER_PAGE=1, PAGES=2):
-        ok, msg = move.check_decisions_in_force({"number": 1}, "owner", "repo")
+        ok, msg = move.manager.ranking.check_decisions_in_force({"number": 1}, "owner", "repo")
     if ok or "over 2 files" not in msg:
         problems.append(f"merge manager: a file list past the pages read was not deferred: {msg}")
 
@@ -481,7 +481,7 @@ def _end_to_end(channel: Any, move: Any) -> list[str]:
     problems = []
     fake = ManagerFake(*_fixtures())
     with stood_in(channel, gh=LockedGitHub(fake.gh), repo=fake.repo, graphql=fake.graphql):
-        text = outcome(lambda: move.merge_manager(dry_run=True)).out
+        text = outcome(lambda: move.manager.merge_manager(dry_run=True)).out
         if f"chosen: #{'10'}" not in text:
             problems.append(
                 f"merge manager: expected #{'10'} to be chosen as stack base, got:\n{text}")
@@ -496,7 +496,7 @@ def _end_to_end(channel: Any, move: Any) -> list[str]:
         if fake.merged:
             problems.append(f"merge manager: dry run executed merges: {fake.merged}")
 
-        text = outcome(lambda: move.merge_manager(dry_run=False)).out
+        text = outcome(lambda: move.manager.merge_manager(dry_run=False)).out
         if f"merging #{'10'}" not in text:
             problems.append(f"merge manager: did not attempt merging #{'10'}, got:\n{text}")
         if fake.merged != ["10"]:
@@ -632,7 +632,7 @@ def _check_loop_merge_failure_isolation(channel: Any, move: Any) -> list[str]:
             stood_in(move.pull_requests, merge=failing_merge), \
             stood_in(move.manager.advance, advance_stranded=recording_advance_stranded), \
             stood_in(move.manager.challenges, stop=recording_stop):
-        result = outcome(lambda: move.merge_manager(dry_run=False))
+        result = outcome(lambda: move.manager.merge_manager(dry_run=False))
 
     recorded = {
         "calls": calls,
@@ -737,7 +737,7 @@ def _check_session_merge_failure_isolation(channel: Any, move: Any) -> list[str]
             stood_in(move.pull_requests, merge=failing_merge), \
             stood_in(move.manager.advance, advance_stranded=recording_advance_stranded), \
             stood_in(move.manager.challenges, stop=recording_stop):
-        result = outcome(lambda: move.merge_manager(dry_run=False))
+        result = outcome(lambda: move.manager.merge_manager(dry_run=False))
 
     recorded = {
         "comments": session_comment_calls,
@@ -764,11 +764,11 @@ def _blockers(move: Any) -> list[str]:
     """`issue_blockers` reads GitHub's native `blockedBy` alone (solorepo's DR-213); `next.waits_on` reads native `blockedBy` for Issue blockers and returns a blocker that is not an Issue as text (solorepo's DR-170)."""
     problems = []
     native = {"number": 1, "body": f"**Waits on.** #{'99'}", "blockedBy": {"nodes": [{"number": 42}]}}
-    if move.issue_blockers(native) != [42]:
-        problems.append(f"issue_blockers did not read native blockedBy: {move.issue_blockers(native)}")
+    if move.challenges.issue_blockers(native) != [42]:
+        problems.append(f"issue_blockers did not read native blockedBy: {move.challenges.issue_blockers(native)}")
     prose = {"number": 2, "body": f"**Waits on.** #{'99'}", "blockedBy": {"nodes": []}}
-    if move.issue_blockers(prose) != []:
-        problems.append(f"issue_blockers read body prose as a blocker: {move.issue_blockers(prose)}")
+    if move.challenges.issue_blockers(prose) != []:
+        problems.append(f"issue_blockers read body prose as a blocker: {move.challenges.issue_blockers(prose)}")
 
     screen = load_module(META / "next.py", "next_screen", register=False)
     if screen.waits_on(native) != [42]:
@@ -842,7 +842,7 @@ def _check_contention_overlap(channel: Any, move: Any) -> list[str]:
         return {}
 
     with stood_in(channel, gh=gh_contention, repo=lambda: "owner/repo"):
-        out = outcome(lambda: move.merge_manager(dry_run=True)).out
+        out = outcome(lambda: move.manager.merge_manager(dry_run=True)).out
         if "contention hold" not in out or f"shares 1 file(s) with older #{'20'}" not in out:
             problems.append(f"merge manager: expected PR 21 to be held on contention, got:\n{out}")
         if merged_calls:
@@ -889,12 +889,12 @@ def _check_contention_unreadable(channel: Any, move: Any) -> list[str]:
         return {}
 
     with stood_in(channel, gh=gh_unreadable, repo=lambda: "owner/repo"):
-        out_unreadable = outcome(lambda: move.merge_manager(dry_run=True)).out
+        out_unreadable = outcome(lambda: move.manager.merge_manager(dry_run=True)).out
         if "contention hold" not in out_unreadable or "unreadable file list (maximal contention assumed)" not in out_unreadable:
             problems.append(f"merge manager: expected PR 21 to be held on unreadable diff, got:\n{out_unreadable}")
 
     cache: dict[int, set[str] | None] = {21: None}
-    cand_files = move.pr_changed_files(pull_21, "owner", "repo", cache)
+    cand_files = move.manager.ranking.pr_changed_files(pull_21, "owner", "repo", cache)
     if cand_files is not None:
         problems.append("pr_changed_files: expected None when cached as unreadable")
 
@@ -964,7 +964,7 @@ def _check_disjoint_bypass(channel: Any, move: Any) -> list[str]:
         return {}
 
     with stood_in(channel, gh=LockedGitHub(gh_disjoint), repo=lambda: "owner/repo"):
-        out = outcome(lambda: move.merge_manager(dry_run=False)).out
+        out = outcome(lambda: move.manager.merge_manager(dry_run=False)).out
         if "disjoint bypass" not in out or f"chosen: #{'22'}" not in out:
             problems.append(f"merge manager: expected PR 22 to bypass disjointly, got:\n{out}")
         if merged_calls != ["22"]:
@@ -984,32 +984,32 @@ def _check_reservation_semantics(move: Any) -> list[str]:
     problems = []
 
     draft_pr = {"number": 1, "isDraft": True, "reviewRequests": [{"login": REVIEWER}]}
-    if move.has_active_reservation(draft_pr, REVIEWER):
+    if move.manager.ranking.has_active_reservation(draft_pr, REVIEWER):
         problems.append("has_active_reservation: draft PR should not hold reservation")
 
     req_pr = {"number": 2, "isDraft": False, "reviewRequests": [{"login": REVIEWER}]}
-    if not move.has_active_reservation(req_pr, REVIEWER):
+    if not move.manager.ranking.has_active_reservation(req_pr, REVIEWER):
         problems.append("has_active_reservation: PR with review request should hold reservation")
 
     pending_context_pr = {
         "number": 3, "isDraft": False,
         "statusCheckRollup": [{"context": "ci/test", "state": "PENDING"}],
     }
-    if not move.has_active_reservation(pending_context_pr, REVIEWER):
+    if not move.manager.ranking.has_active_reservation(pending_context_pr, REVIEWER):
         problems.append("has_active_reservation: PR with PENDING StatusContext should hold reservation")
 
     in_progress_pr = {
         "number": 4, "isDraft": False,
         "statusCheckRollup": [{"name": "gate", "status": "IN_PROGRESS"}],
     }
-    if not move.has_active_reservation(in_progress_pr, REVIEWER):
+    if not move.manager.ranking.has_active_reservation(in_progress_pr, REVIEWER):
         problems.append("has_active_reservation: PR with IN_PROGRESS check run should hold reservation")
 
     success_pr = {
         "number": 5, "isDraft": False,
         "statusCheckRollup": [{"context": "ci/test", "state": "SUCCESS"}],
     }
-    if move.has_active_reservation(success_pr, REVIEWER):
+    if move.manager.ranking.has_active_reservation(success_pr, REVIEWER):
         problems.append("has_active_reservation: PR with all green status contexts should not hold reservation")
 
     failed_pr = {
@@ -1019,7 +1019,7 @@ def _check_reservation_semantics(move: Any) -> list[str]:
             {"context": "ci/lint", "state": "FAILURE"},
         ],
     }
-    if move.has_active_reservation(failed_pr, REVIEWER):
+    if move.manager.ranking.has_active_reservation(failed_pr, REVIEWER):
         problems.append("has_active_reservation: PR with failed check should forfeit reservation")
 
     dedup_pr = {
@@ -1029,7 +1029,7 @@ def _check_reservation_semantics(move: Any) -> list[str]:
             {"name": "gate", "conclusion": "SUCCESS", "startedAt": "2026-09-20T10:05:00Z"},
         ],
     }
-    if move.has_active_reservation(dedup_pr, REVIEWER):
+    if move.manager.ranking.has_active_reservation(dedup_pr, REVIEWER):
         problems.append("has_active_reservation: deduplicated green rerun should not hold reservation")
 
     return problems
@@ -1054,7 +1054,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         "latestReviews": [], "reviewRequests": [{"login": REVIEWER}],
         "mergeable": "MERGEABLE",
     }
-    if move.is_stalled_autonomous_pr(loop_pr_1_cr, REVIEWER):
+    if move.manager.eviction.is_stalled_autonomous_pr(loop_pr_1_cr, REVIEWER):
         problems.append("is_stalled_autonomous_pr: single CHANGES_REQUESTED should not stall loop PR")
 
     session_pr_3_cr = {
@@ -1067,7 +1067,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         "latestReviews": [], "reviewRequests": [{"login": REVIEWER}],
         "mergeable": "MERGEABLE",
     }
-    if move.is_stalled_autonomous_pr(session_pr_3_cr, REVIEWER):
+    if move.manager.eviction.is_stalled_autonomous_pr(session_pr_3_cr, REVIEWER):
         problems.append("is_stalled_autonomous_pr: non-loops session branch should not be marked stalled")
 
     stalled_loop_pr = {
@@ -1080,7 +1080,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         "latestReviews": [], "reviewRequests": [{"login": REVIEWER}],
         "mergeable": "MERGEABLE",
     }
-    if not move.is_stalled_autonomous_pr(stalled_loop_pr, REVIEWER):
+    if not move.manager.eviction.is_stalled_autonomous_pr(stalled_loop_pr, REVIEWER):
         problems.append("is_stalled_autonomous_pr: 3 CHANGES_REQUESTED reviews should stall loop PR")
 
     approved_loop_pr = {
@@ -1095,7 +1095,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         "reviewRequests": [],
         "mergeable": "MERGEABLE",
     }
-    if move.is_stalled_autonomous_pr(approved_loop_pr, REVIEWER):
+    if move.manager.eviction.is_stalled_autonomous_pr(approved_loop_pr, REVIEWER):
         problems.append("is_stalled_autonomous_pr: approved loop PR with prior CRs should not be marked stalled")
 
     answered_loop_pr = {
@@ -1110,7 +1110,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         "reviewRequests": [{"login": REVIEWER}],
         "mergeable": "MERGEABLE",
     }
-    if move.is_stalled_autonomous_pr(answered_loop_pr, REVIEWER):
+    if move.manager.eviction.is_stalled_autonomous_pr(answered_loop_pr, REVIEWER):
         problems.append("is_stalled_autonomous_pr: answered loop PR with new head commit should not be marked stalled")
 
     re_requested_pr = {
@@ -1118,7 +1118,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         "latestReviews": APPROVED, "reviews": APPROVED, "reviewRequests": [{"login": REVIEWER}],
         "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
     }
-    ok_app, reason = move.check_reviewer_approval(re_requested_pr, REVIEWER)
+    ok_app, reason = move.manager.ranking.check_reviewer_approval(re_requested_pr, REVIEWER)
     if ok_app or "waiting on review" not in reason:
         problems.append(f"check_reviewer_approval: re-requested PR must not authorize approval: {reason}")
 
@@ -1134,7 +1134,7 @@ def _check_stall_thresholds(move: Any) -> list[str]:
         "reviewRequests": [],
         "mergeable": "MERGEABLE", "statusCheckRollup": GREEN,
     }
-    ok_app_rebased, reason = move.check_reviewer_approval(rebased_pr, REVIEWER)
+    ok_app_rebased, reason = move.manager.ranking.check_reviewer_approval(rebased_pr, REVIEWER)
     if not ok_app_rebased or "approved by reviewer" not in reason:
         problems.append(
             "check_reviewer_approval: clean rebase must preserve approval "
@@ -1172,15 +1172,15 @@ def _check_stall_eviction_dry_run(channel: Any, move: Any) -> list[str]:
             demoted.append(str(args[2]))
             return {}
         if args[0] == "api" and "/comments" in str(args[-1]):
-            return [{"body": f"{move.ADVANCE_NOTICE_MARKER}\nAdvance notice: branch has merge conflicts"}]
+            return [{"body": f"{move.advance.ADVANCE_NOTICE_MARKER}\nAdvance notice: branch has merge conflicts"}]
         return {}
 
     with stood_in(channel, gh=gh_evict, repo=lambda: "owner/repo"):
-        evicted_dry = move.evict_stalled_autonomous_pr(stalled_loop_pr, reviewer_login=REVIEWER, dry_run=True)
+        evicted_dry = move.manager.eviction.evict_stalled_autonomous_pr(stalled_loop_pr, reviewer_login=REVIEWER, dry_run=True)
         if not evicted_dry or demoted:
             problems.append(f"evict_stalled_autonomous_pr: dry run should not demote PR: {demoted}")
 
-        evicted = move.evict_stalled_autonomous_pr(stalled_loop_pr, reviewer_login=REVIEWER, dry_run=False)
+        evicted = move.manager.eviction.evict_stalled_autonomous_pr(stalled_loop_pr, reviewer_login=REVIEWER, dry_run=False)
         if not evicted or demoted != ["30"]:
             problems.append(f"evict_stalled_autonomous_pr: expected PR 30 demoted, got: {demoted}")
 
@@ -1188,7 +1188,7 @@ def _check_stall_eviction_dry_run(channel: Any, move: Any) -> list[str]:
             "number": 32, "headRefName": "gemini/issue-32", "isDraft": False,
             "mergeable": "CONFLICTING",
         }
-        if not move.is_stalled_autonomous_pr(conflicting_loop_pr, REVIEWER):
+        if not move.manager.eviction.is_stalled_autonomous_pr(conflicting_loop_pr, REVIEWER):
             problems.append("is_stalled_autonomous_pr: conflicting loop PR with advance notice should stall")
 
     return problems
@@ -1218,11 +1218,11 @@ def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
         "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
     }
     with stood_in(channel, gh=gh_restore):
-        move.evaluate_open_pulls([draft_loop_pr], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=True)
+        move.manager.eviction.evaluate_open_pulls([draft_loop_pr], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=True)
         if restored:
             problems.append(f"evaluate_open_pulls: dry run should not restore draft PR: {restored}")
 
-        move.evaluate_open_pulls([draft_loop_pr], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=False)
+        move.manager.eviction.evaluate_open_pulls([draft_loop_pr], reviewer_login=REVIEWER, owner="owner", name="repo", dry_run=False)
         if restored != ["31"] or draft_loop_pr.get("isDraft") is not False:
             problems.append(f"evaluate_open_pulls: expected PR 31 restored to ready, got: {restored}")
 
@@ -1236,7 +1236,7 @@ def _check_draft_restoration(channel: Any, move: Any) -> list[str]:
         "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
     }
     with stood_in(channel, gh=gh_fail_restore):
-        move.evaluate_open_pulls([failing_draft_pr], reviewer_login=REVIEWER,
+        move.manager.eviction.evaluate_open_pulls([failing_draft_pr], reviewer_login=REVIEWER,
                                  owner="owner", name="repo", dry_run=False)
         if failing_draft_pr.get("isDraft") is not True:
             problems.append(
@@ -1285,7 +1285,7 @@ def _check_refused_draft_restoration(channel: Any, move: Any) -> list[str]:
             "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
         }
         with stood_in(channel, gh=gh_refused, repo=lambda: "owner/repo"):
-            move.evaluate_open_pulls([refused_draft_pr], reviewer_login=REVIEWER,
+            move.manager.eviction.evaluate_open_pulls([refused_draft_pr], reviewer_login=REVIEWER,
                                      owner="owner", name="repo", dry_run=False)
             if refused_restored:
                 problems.append(
@@ -1295,7 +1295,7 @@ def _check_refused_draft_restoration(channel: Any, move: Any) -> list[str]:
                 problems.append("evaluate_open_pulls: active merge refusal must remain in draft")
 
             refused_draft_pr["headRefOid"] = "commit-fixed"
-            move.evaluate_open_pulls([refused_draft_pr], reviewer_login=REVIEWER,
+            move.manager.eviction.evaluate_open_pulls([refused_draft_pr], reviewer_login=REVIEWER,
                                      owner="owner", name="repo", dry_run=False)
             if refused_restored != ["37"] or refused_draft_pr.get("isDraft") is not False:
                 problems.append(
@@ -1340,7 +1340,7 @@ def _check_multi_refusal_draft_restoration(channel: Any, move: Any) -> list[str]
             "latestReviews": APPROVED, "statusCheckRollup": GREEN, "mergeable": "MERGEABLE",
         }
         with stood_in(channel, gh=gh_multi, repo=lambda: "owner/repo"):
-            move.evaluate_open_pulls([multi_draft_pr], reviewer_login=REVIEWER,
+            move.manager.eviction.evaluate_open_pulls([multi_draft_pr], reviewer_login=REVIEWER,
                                      owner="owner", name="repo", dry_run=False)
             if multi_restored or multi_draft_pr.get("isDraft") is not True:
                 problems.append(
@@ -1382,7 +1382,7 @@ def _check_request_review_draft_restoration(channel: Any, move: Any) -> list[str
     }
     with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):
         try:
-            move.request_review(40, "reviewer")
+            move.handoff.request_review(40, "reviewer")
             problems.append("request_review: expected conflicting branch to raise SystemExit")
         except SystemExit as exc:
             if "conflicts with its base" not in str(exc):
@@ -1396,7 +1396,7 @@ def _check_request_review_draft_restoration(channel: Any, move: Any) -> list[str
         "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE",
     }
     with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):
-        move.request_review(41, "reviewer")
+        move.handoff.request_review(41, "reviewer")
         if ready_calls:
             problems.append(f"request_review: non-loop draft PR should not be undrafted: {ready_calls}")
 
@@ -1406,7 +1406,7 @@ def _check_request_review_draft_restoration(channel: Any, move: Any) -> list[str
         "state": "OPEN", "isDraft": True, "mergeable": "MERGEABLE", "changedFiles": 1,
     }
     with stood_in(channel, gh=gh_req, role_login=lambda r: REVIEWER):
-        move.request_review(42, "reviewer")
+        move.handoff.request_review(42, "reviewer")
         if ready_calls != ["42"]:
             problems.append(f"request_review: expected loop draft PR 42 to be undrafted, got: {ready_calls}")
 
@@ -1466,7 +1466,7 @@ def _check_stalled_pr_merge_manager_refusal(channel: Any, move: Any) -> list[str
         return {}
 
     with stood_in(channel, gh=LockedGitHub(gh_stalled), repo=lambda: "owner/repo"):
-        out = outcome(lambda: move.merge_manager(dry_run=False)).out
+        out = outcome(lambda: move.manager.merge_manager(dry_run=False)).out
         if demoted_calls != ["35"]:
             problems.append(f"merge_manager: expected PR 35 demoted to draft on GitHub, got: {demoted_calls}")
         if stalled_claude_pr.get("isDraft") is not True:
@@ -1566,7 +1566,7 @@ def _check_restore_is_not_merged_in_the_same_pass(channel: Any, move: Any) -> li
 
     with stood_in(channel, gh=LockedGitHub(gh_pass), repo=lambda: "owner/repo"), \
             stood_in(move.manager.advance, advance_stranded=silent_advance_stranded):
-        out = outcome(lambda: move.merge_manager(dry_run=False)).out
+        out = outcome(lambda: move.manager.merge_manager(dry_run=False)).out
     return _verify_restore_deferral(move, out, {
         "restored": restored_calls, "merged": merged_calls, "demoted": demoted_calls})
 
@@ -1651,7 +1651,7 @@ def _check_in_progress_refusal_is_deferred(channel: Any, move: Any) -> list[str]
             stood_in(move.pull_requests, merge=running_checks_merge), \
             stood_in(move.manager.advance, advance_stranded=recording_advance_stranded), \
             stood_in(move.manager.challenges, stop=recording_stop):
-        result = outcome(lambda: move.merge_manager(dry_run=False))
+        result = outcome(lambda: move.manager.merge_manager(dry_run=False))
     return _verify_deferred_refusal(result, pulls[0], {
         "comments": comment_calls, "drafts": demoted_calls,
         "stops": stop_calls, "advance": swept})

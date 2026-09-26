@@ -88,8 +88,8 @@ def _notice(move: Any, number: int, tagged: bool = True) -> list[dict[str, Any]]
     which is the finding `advance.stalled_behind` admits, or untagged, which
     is every other problem a sweep reports under the same marker.
     """
-    tag = f" {move.REPLAY_REFUSED_TAG} head:head{number}" if tagged else ""
-    return [{"id": 1, "body": f"{move.ADVANCE_NOTICE_MARKER}{tag}\n"
+    tag = f" {move.advance.REPLAY_REFUSED_TAG} head:head{number}" if tagged else ""
+    return [{"id": 1, "body": f"{move.advance.ADVANCE_NOTICE_MARKER}{tag}\n"
                               "> the sweep could not advance this branch"}]
 
 
@@ -333,7 +333,7 @@ class _Bench:
             stack.enter_context(stood_in(self.channel, gh=fake, graphql=fake.graphql))
             for module, verbs in by_module.items():
                 stack.enter_context(stood_in(module, **verbs))
-            return outcome(lambda: self.move.reconcile(**flags))
+            return outcome(lambda: self.move.reconcile.reconcile(**flags))
 
 
 UNDEFINED = "no module of lib.move defines {name!r}"
@@ -347,8 +347,8 @@ def _owner(move: Any, name: str) -> Any:
     one that imports them (solorepo's DR-217); `lib/move/__init__.py` gives each its reason.
     """
     modules = (move.common, move.challenges, move.pull_requests, move.decisions,
-               move.cli.handoff, move.manager.advance, move.manager, move.cli.reconcile,
-               move.cli.reconcile.actions, move.cli)
+               move.handoff, move.advance, move.manager, move.reconcile,
+               move.actions, move.cli)
     for module in modules:
         held = getattr(module, name, None)
         if held is not None and getattr(held, "__module__", None) == module.__name__:
@@ -372,16 +372,18 @@ def _failing(**_: Any) -> None:
 
 def _reading(move: Any) -> Any:
     """A pass's shared reading with nothing standing in it, for the readers that take one."""
-    empty = move.Runs([], [])
-    return move.Reading(now=datetime.datetime.now(datetime.UTC), bound=MINUTES, longest=75.0,
-                        coder=CODER, reviewer_login=REVIEWER, owner="o", name="r",
-                        by_number={}, named=set(), coder_runs=empty, review_runs=empty,
-                        triage_runs=empty, action_runs=empty)
+    empty = move.actions.Runs([], [])
+    return move.reconcile.Reading(
+        now=datetime.datetime.now(datetime.UTC), bound=MINUTES, longest=75.0,
+        coder=CODER, reviewer_login=REVIEWER, owner="o", name="r",
+        by_number={}, named=set(), coder_runs=empty, review_runs=empty,
+        triage_runs=empty, action_runs=empty,
+    )
 
 
 def _trunk(move: Any, failing: list[str], oid: str = "abc1234def") -> Any:
     """Trunk's HEAD rollup as `report_trunk` answers with one, red where `failing` names a check."""
-    return move.cli.reconcile.actions.Trunk(
+    return move.actions.Trunk(
         ref="main", oid=oid, headline="the commit that landed",
         checks=[{"name": name} for name in failing], failing=failing, pending=False)
 
@@ -454,8 +456,8 @@ def _check_trunk_outcomes(bench: _Bench) -> list[str]:
                         f"trunk: {bench.acted}")
 
     heal = {"number": 50,
-            "title": bench.move.cli.reconcile.actions.HEAL_TITLE.format(branch="main",
-                                                                        commit="0123456"),
+            "title": bench.move.actions.HEAL_TITLE.format(branch="main",
+                                                           commit="0123456"),
             "labels": [{"name": "challenge"}, {"name": "medium"}], "assignees": [],
             "createdAt": _ago(10), "updatedAt": _ago(10)}
     heal_fake = _GitHub([red_stranded], [heal, bench.issue(45, "medium")], {})

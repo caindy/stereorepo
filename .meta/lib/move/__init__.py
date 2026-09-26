@@ -53,24 +53,7 @@ module level to build its own field list; that holds because nothing `reconcile`
 imports reads `reconcile` at load — `advance`'s references to it resolve inside
 function bodies — and a module that came to must not read it at load.
 
-The entry exports each module beside its names (solorepo's DR-217), so a
-probe stands a seam in on the module that defines it. The modules are named so
-that no verb's own local, `pulls` or `issues` among them, shadows the module it
-must reach.
-
-Four modules the entry exports the names of and not the module itself, and they
-are reached through one that imports them. `advance` and `reconcile` share a
-name with the verb they hold, and there the name wins. `handoff` and `actions`
-are each priced out by the entry's own line ceiling: the `from lib.move import`
-line stands at 97 columns, so either `, handoff` or `, actions` takes it past
-the hundred of `.meta/ruff.toml`, after which ruff's isort wants one name to a
-line and the eight names cost ten. A probe reaching one of the four goes through
-a module that imports it — `manager` for `advance`, `cli` for `handoff` and
-`reconcile`, and `reconcile` for `actions` — which is what the reconciler's
-probe does.
-
-`concepts` is the other way about and is none of the four: the entry exports
-the module and not the names, because the module on that same line costs only
-its line in `__all__`, where each name would cost two, one in a `from
-lib.move.concepts import` block of its own and one in `__all__` beside it.
+The entry exports the package's submodules and the CLI entry point
+(solorepo's DR-217, solorepo's #1028), so callers and test probes access verbs
+and seams qualified by submodule.
 """

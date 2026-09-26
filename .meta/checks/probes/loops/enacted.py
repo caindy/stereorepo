@@ -58,7 +58,7 @@ def _unenacted_cases(check_pr: Any, sample: Any) -> list[str]:
     def read(changed: list[str]) -> tuple[Any, Any]:
         """`unenacted("origin/main")` with the branch's diff stood in for by `changed`."""
         with stood_in(check_pr.branch, touched=lambda base: changed):
-            res: tuple[Any, Any] = check_pr.unenacted("origin/main")
+            res: tuple[Any, Any] = check_pr.branch.unenacted("origin/main")
             return res
 
     found, note = read([".meta/arc/deploy", ".meta/say/move"])
@@ -67,8 +67,8 @@ def _unenacted_cases(check_pr: Any, sample: Any) -> list[str]:
 
     number = int(sample.stem.removeprefix("DR-"))
     entry = f".meta/assertions/decisions/{sample.name}"
-    artifact = next((p for p in check_pr.artifact_map().values()
-                     if not any(p.startswith(r) for r in check_pr.RECORD)), "AGENTS.md")
+    artifact = next((p for p in check_pr.branch.artifact_map().values()
+                     if not any(p.startswith(r) for r in check_pr.branch.RECORD)), "AGENTS.md")
     found, note = read([entry, artifact])
     if found:
         problems.append(f"unenacted: DR-{number:03d} (valid) reported problems {found!r}")
@@ -94,7 +94,7 @@ def _handoff_cases(check_pr: Any) -> list[str]:
 
         with stood_in(check_pr.branch, RENDER=render,
                       unenacted=mock_unenacted):
-            said = outcome(lambda: check_pr.handoff("origin/main")).out
+            said = outcome(lambda: check_pr.branch.handoff("origin/main")).out
         return asked, said.splitlines()
 
     asked, lines = handed_off(["no-such-program-here"])
@@ -103,7 +103,7 @@ def _handoff_cases(check_pr: Any) -> list[str]:
         problems.append(f"handoff: with the render unrunnable it said {enacted!r} and asked "
                         f"{len(asked)} question(s) of an index whose freshness is unknown")
 
-    index = check_pr.INDEX.split("/")[-1]
+    index = check_pr.branch.INDEX.split("/")[-1]
     for answer, run in ((f"unrendered: {index}", False),
                         (f"stale: {index}", False),
                         ("unrendered: justfile", True),
@@ -125,7 +125,7 @@ def _handoff_cases(check_pr: Any) -> list[str]:
 
 def _unresolvable_base(check_pr: Any) -> list[str]:
     """`unenacted` against a ref no checkout has says the diff went unread."""
-    found, note = check_pr.unenacted("no-such-ref-on-any-checkout")
+    found, note = check_pr.branch.unenacted("no-such-ref-on-any-checkout")
     if found is not None:
         return [f"unenacted: an unresolvable base answered {found!r}, {note!r}, "
                 "rather than saying the diff went unread"]
@@ -135,7 +135,7 @@ def _unresolvable_base(check_pr: Any) -> list[str]:
 def _readers_agree(check_pr: Any) -> list[str]:
     """The two readers of the record find something and agree: every path the rendered table names is a declared Artifact."""
     problems = []
-    declared, named = check_pr.artifacts(), check_pr.accounted()
+    declared, named = check_pr.branch.artifacts(), check_pr.branch.accounted()
     if not declared or not named:
         problems.append(f"the handoff's readers found {len(declared)} declared artifact(s) and "
                         f"{len(named)} accounted for; a regex over a file that has been "

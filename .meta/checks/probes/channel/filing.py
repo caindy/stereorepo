@@ -74,11 +74,12 @@ def filing_probes() -> list[str]:
 
     with environment(GITHUB_RUN_ID=None, ACTOR_SESSION=None):
         fake = FakeFiling()
-        said = run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level="hard"))
+        file_issue = move.challenges.file_issue
+        said = run_verb(channel, fake, lambda: file_issue(TITLE, BODY, level="hard"))
         if said or len(fake.created) != 1:
             problems.append(f"filing: a first filing said {said!r} and created {len(fake.created)}")
 
-        said = run_verb(channel, fake, lambda: move.file_issue(TITLE, BODY, level="hard"))
+        said = run_verb(channel, fake, lambda: file_issue(TITLE, BODY, level="hard"))
         if not said or "900" not in said or "post answer" not in said or len(fake.created) != 1:
             problems.append(f"filing: a second filing under one title said {said!r} and left "
                             f"{len(fake.created)} created")
@@ -86,21 +87,21 @@ def filing_probes() -> list[str]:
         said = run_verb(
             channel,
             fake,
-            lambda: move.file_issue("A separate queue", DISTINCT_BODY, level="hard"),
+            lambda: file_issue("A separate queue", DISTINCT_BODY, level="hard"),
         )
         if said or len(fake.created) != 2:
             problems.append(f"filing: a filing under an unused title said {said!r} and left "
                             f"{len(fake.created)} created")
 
         unread = FakeFiling()
-        said = run_verb(channel, unread, lambda: move.file_issue(TITLE, BODY))
+        said = run_verb(channel, unread, lambda: file_issue(TITLE, BODY))
         labels = next(iter(unread.created.values()), ("", "", []))[2]
         if said or labels != ["challenge"]:
             problems.append(f"filing: a filing with no level said {said!r} and landed {labels!r}; "
                             "`challenge` alone is the reviewer's queue (solorepo's DR-230)")
 
         blind = FakeFiling(list_fails=True)
-        said = run_verb(channel, blind, lambda: move.file_issue(TITLE, BODY, level="hard"))
+        said = run_verb(channel, blind, lambda: file_issue(TITLE, BODY, level="hard"))
         if said or blind.listings != 1 or len(blind.created) != 1:
             problems.append(f"filing: a filing whose listing GitHub would not answer said {said!r} "
                             f"after {blind.listings} listing(s), and created {len(blind.created)}")
@@ -116,7 +117,7 @@ def filing_probes() -> list[str]:
         said = run_verb(
             channel,
             duplicate,
-            lambda: move.file_issue(
+            lambda: move.challenges.file_issue(
                 "Prevent duplicate Challenge filing",
                 "**Waits on.** Nothing.\n\nRefuse repeated Challenge work before it begins.",
                 level="hard",
@@ -476,6 +477,7 @@ class Filer:
 
     def __init__(self, filed: list[tuple[str, str | None]]) -> None:
         self.filed = filed
+        self.challenges = self
 
     def file_issue(self, title: str, body: str, level: str | None = None, roadmap: bool = False,
                    blocked_by: list[int] | None = None) -> tuple[str, str]:

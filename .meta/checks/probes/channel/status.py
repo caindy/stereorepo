@@ -35,7 +35,7 @@ def channel_status_probes() -> list[str]:
     problems = []
     for path in sorted((META / "assertions" / "decisions").glob("DR-*.yaml")):
         entries = (yaml.safe_load(path.read_text()) or {}).get("decisions") or []
-        said = move.entry_status(path.read_text())
+        said = move.decisions.entry_status(path.read_text())
         if len(entries) != 1:
             if said is not None:
                 problems.append(f"channel status: {path.name} holds {len(entries)} entries and "
@@ -49,7 +49,7 @@ def channel_status_probes() -> list[str]:
     for shape, text in (("two entries", "decisions:\n  - id: a\n    status: ADOPTED\n"
                                         "  - id: b\n    status: WITHDRAWN\n"),
                         ("no status", "decisions:\n  - id: a\n    name: n\n")):
-        if (said := move.entry_status(text)) is not None:
+        if (said := move.decisions.entry_status(text)) is not None:
             problems.append(f"channel status: {shape} read as {said!r}, where nothing in that "
                             "text is the status of one entry")
     return problems

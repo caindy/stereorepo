@@ -48,7 +48,7 @@ def refuse_a_typed_trailer(text: str) -> str:
     block = channel.trailers()
     if written.endswith(block):
         written = written[: -len(block)]
-    actors, agents = check_pr.typed_trailers(written)
+    actors, agents = check_pr.review.typed_trailers(written)
     typed = [f"Actor: {name}" for name in actors] + [f"Agent: {name}" for name in agents]
     if typed:
         sys.exit("say: refusing — this body types a Trailer into its own text "
@@ -74,7 +74,7 @@ def refuse_a_typed_marker(text: str) -> str:
     Raises:
         SystemExit: If the body already carries the marker.
     """
-    if check_pr.NOTICED.search(text):
+    if check_pr.review.NOTICED.search(text):
         sys.exit(f"say: refusing — this body already carries {NOTICED}, which is `notice`'s to "
                  "supply along with the mention. A second marker is what a body doubled back on "
                  "itself looks like to a reader.\n"

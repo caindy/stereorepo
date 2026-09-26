@@ -142,7 +142,7 @@ decisions:
           promise the last comment is a promotion reply: `sweep` prints "answer
           is already posted with `.meta/say/post resolve`"
           (`.meta/lib/check_pr/remedies.py:173`), `move` prints "`post resolve
-          <thread-id>` where the link is already posted" (`.meta/say/move:195`),
+          <thread-id>` where the link is already posted" (`.meta/lib/move/challenges.py:550`),
           and DR-221's third consequence names the same act as what finishes a
           filing its own guard refused, "`post resolve` where the link is
           already posted"

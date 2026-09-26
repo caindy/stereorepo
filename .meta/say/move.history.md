@@ -782,3 +782,18 @@ captured stdout and stderr streams on zero-exit invocations, raising
 `MergeDeferredError` immediately when in-progress status checks are detected.
 
 Evidence: `.meta/checks/probes/channel/deferral.py::merge_deferral_probes`
+
+### Move facade re-exported hundreds of redundant leaf symbols
+
+The `.meta/say/move` entry facade re-exported hundreds of leaf functions,
+classes, and constants from `lib.move` across a 150-item `__all__` block,
+bloating the facade to 350 lines and repeatedly threatening `ENTRY_CEILING`
+in `.meta/checks/files/python.py` (solorepo's DR-217, solorepo's #1028).
+Established: `.meta/say/move` re-exports only its underlying submodules
+(`actions`, `advance`, `challenges`, `cli`, `common`, `concepts`, `decisions`,
+`drafts`, `epics`, `handoff`, `manager`, `pull_requests`, `reconcile`), `channel`,
+`check_pr`, and the CLI entry points `build_parser` and `main`, shrinking the
+facade to ~58 lines and requiring callers and test probes to qualify symbols by
+submodule.
+
+Evidence: `.meta/checks/probes/loops/open_pull_request.py::open_pull_request_probes`
