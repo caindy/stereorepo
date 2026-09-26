@@ -4,7 +4,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from lib.render import META, decisions, pages, record, skills, writers
+from lib.render import META, bootstraps, decisions, pages, record, skills, writers
 
 TargetFn = Callable[[], str | dict[str, Any] | None]
 
@@ -81,6 +81,8 @@ TARGETS: dict[str, TargetFn] = {
     "../.claude/skills/search/SKILL.md": skills.search_skill,
     "../.claude/skills/technical-writing/SKILL.md": skills.technical_writing_skill,
     "apm_primitives": writers.apm_primitives,
+    "../bootstraps/python/README.md": bootstraps.python_readme,
+    "../bootstraps/rust/README.md": bootstraps.rust_readme,
     "../.gitattributes": gitattributes,
 }
 

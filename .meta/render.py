@@ -6,7 +6,13 @@ from declarative YAML models under `.meta/assertions/` (solorepo's DR-026,
 solorepo's DR-059, solorepo's DR-060). Re-exports compilation targets, markdown
 formatters, and file writers from `lib.render`.
 """
-from lib.render import META, cli, pages, skills, targets, writers
+from lib.render import META, bootstraps, cli, pages, skills, targets, writers
+from lib.render.bootstraps import (
+    bootstrap_readme,
+    bootstrap_table,
+    python_readme,
+    rust_readme,
+)
 from lib.render.decisions import decision_form, decisions, landed
 from lib.render.pages import (
     charter,
@@ -69,6 +75,9 @@ __all__ = [
     "apm_primitives",
     "artifacts",
     "authored",
+    "bootstrap_readme",
+    "bootstrap_table",
+    "bootstraps",
     "channel",
     "charter",
     "cli",
@@ -88,9 +97,11 @@ __all__ = [
     "pr_first_skill",
     "prechecks",
     "pull_request_template",
+    "python_readme",
     "record",
     "rendered",
     "roadmap_template",
+    "rust_readme",
     "search_skill",
     "skill",
     "skills",

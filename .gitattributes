@@ -68,5 +68,7 @@
 /bootstraps/python/.apm/skills/verification-before-completion/SKILL.md merge=union
 /bootstraps/python/.apm/skills/writing-plans/SKILL.md merge=union
 /bootstraps/python/.apm/skills/writing-skills/SKILL.md merge=union
+/bootstraps/python/README.md merge=union
 /bootstraps/python/apm.yml merge=union
+/bootstraps/rust/README.md merge=union
 /justfile merge=union
