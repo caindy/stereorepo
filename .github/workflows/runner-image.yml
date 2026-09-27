@@ -3,15 +3,12 @@
 #
 # Runs on GitHub-hosted `ubuntu-latest` with Docker Buildx to decouple image
 # manufacturing from self-hosted cluster availability, avoiding circular
-# bootstrap dependencies.
+# bootstrap dependencies. Restricted to manual dispatch (workflow_dispatch)
+# to avoid failing trunk checks when GitHub-hosted runner billing is unconfigured
+# (Issue #1140).
 name: runner-image
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.meta/arc/**'
-      - '.github/workflows/runner-image.yml'
   workflow_dispatch:
     inputs:
       tag:
@@ -29,8 +26,6 @@ on:
         required: true
         type: boolean
         default: true
-  schedule:
-    - cron: '0 6 * * 1'
 
 permissions:
   contents: write
@@ -90,7 +85,7 @@ jobs:
           docker run --rm "solorepo-runner:${TAG}" uv --version
 
       - name: Log in to GitHub Container Registry
-        if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true') }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -98,7 +93,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish image to GHCR
-        if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true') }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true' }}
         run: |
           set -euo pipefail
           TAG="${{ steps.tag.outputs.tag }}"
@@ -106,7 +101,7 @@ jobs:
           docker push "ghcr.io/caindy/solorepo-runner:${TAG}"
 
       - name: Verify image on GHCR
-        if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true') }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
