@@ -23,8 +23,9 @@ def main() -> None:
         print(decisions.landed(sys.argv[sys.argv.index("--landed") + 1]))
         sys.exit(0)
     check = "--check" in sys.argv
-    pages = targets.rendered()
-    orphans = targets.unrendered()
+    snap = targets.snapshot()
+    pages = targets.rendered(snap)
+    orphans = targets.unrendered(snap)
     stale = []
     for name, text in pages.items():
         path, want = META / name, text.rstrip("\n") + "\n"

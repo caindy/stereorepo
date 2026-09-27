@@ -55,7 +55,13 @@ from lib.render.skills import (
     verb_line,
     wikisplain_skill,
 )
-from lib.render.targets import TARGETS, gitattributes, rendered, unrendered
+from lib.render.targets import (
+    TARGETS,
+    gitattributes,
+    rendered,
+    snapshot,
+    unrendered,
+)
 from lib.render.writers import apm_primitives, justfile
 
 __all__ = [
@@ -105,6 +111,7 @@ __all__ = [
     "search_skill",
     "skill",
     "skills",
+    "snapshot",
     "specialize",
     "targets",
     "technical_writing_skill",

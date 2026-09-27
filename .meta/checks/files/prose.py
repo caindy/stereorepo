@@ -15,7 +15,7 @@ from checks.files import workflows
 
 
 @functools.cache
-def rendering() -> tuple[Any, Any]:
+def rendering() -> tuple[Any, Any, Any]:
     """The render the three steps below read, run once and shared between them.
 
     `render.ASKED` is filled as the render runs, so what `inherited prose`
@@ -25,7 +25,8 @@ def rendering() -> tuple[Any, Any]:
     """
     sys.path.insert(0, str(META))
     import render
-    return render, render.rendered()
+    snap = render.snapshot()
+    return render, render.rendered(snap), snap
 
 
 def declared(rel: str) -> dict[str, dict[str, Any]]:

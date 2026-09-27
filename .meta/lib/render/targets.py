@@ -9,7 +9,10 @@ from lib.render import META, bootstraps, decisions, pages, record, skills, write
 TargetFn = Callable[[], str | dict[str, Any] | None]
 
 
-def gitattributes() -> str:
+_CURRENT_SNAPSHOT: dict[str, Any] | None = None
+
+
+def gitattributes(snap: dict[str, Any] | None = None) -> str:
     """`merge=union` for every path this file writes, from the list that writes them.
 
     A generated page carries no information its sources do not, and the gate
@@ -40,12 +43,14 @@ def gitattributes() -> str:
     no slash in it matches a basename at any depth, so a bare `justfile` would
     union a nested one that no gate byte-compares (solorepo's #194).
     """
+    if snap is None:
+        if _CURRENT_SNAPSHOT is not None:
+            snap = _CURRENT_SNAPSHOT
+        else:
+            return str(snapshot().get("../.gitattributes", ""))
     names = {"../.gitattributes"}
-    for name, fn in TARGETS.items():
-        if fn is gitattributes:
-            continue
-        result = fn()
-        if result is None:
+    for name, result in snap.items():
+        if name == "../.gitattributes" or result is None:
             continue
         if isinstance(result, dict):
             names.update(result.keys())
@@ -87,7 +92,33 @@ TARGETS: dict[str, TargetFn] = {
 }
 
 
-def rendered() -> dict[str, str]:
+def snapshot(targets_map: dict[str, TargetFn] | None = None) -> dict[str, Any]:
+    """Evaluates target functions once into a mapping of target names to raw outputs.
+
+    Evaluates non-gitattributes targets first so that any target computing
+    attributes can read the current snapshot directly without re-evaluating
+    target functions.
+    """
+    global _CURRENT_SNAPSHOT
+    active = TARGETS if targets_map is None else targets_map
+    snap: dict[str, Any] = {}
+    gitattr_keys = [k for k, fn in active.items()
+                    if fn is gitattributes or k == "../.gitattributes"]
+    for name, fn in active.items():
+        if name in gitattr_keys:
+            continue
+        snap[name] = fn()
+    prev = _CURRENT_SNAPSHOT
+    _CURRENT_SNAPSHOT = snap
+    try:
+        for name in gitattr_keys:
+            snap[name] = active[name]()
+    finally:
+        _CURRENT_SNAPSHOT = prev
+    return snap
+
+
+def rendered(snap: dict[str, Any] | None = None) -> dict[str, str]:
     """Every generated path, relative to `.meta/`, mapped to its content.
 
     A target renders one file or a set of them. Both callers — `cli.main`, which writes,
@@ -98,9 +129,10 @@ def rendered() -> dict[str, str]:
     prose in the assertions, and which generator carries it to a page is not
     that sentence's business.
     """
+    if snap is None:
+        snap = snapshot()
     out: dict[str, str] = {}
-    for name, fn in TARGETS.items():
-        result = fn()
+    for name, result in snap.items():
         if result is None:
             continue
         if isinstance(result, dict):
@@ -111,7 +143,7 @@ def rendered() -> dict[str, str]:
     return {name: record.counted(text) for name, text in out.items()}
 
 
-def unrendered() -> list[str]:
+def unrendered(snap: dict[str, Any] | None = None) -> list[str]:
     """Targets that produce nothing and yet have a file on disk, by name.
 
     By name and not as a sentence about the name, because both callers key on
@@ -119,5 +151,7 @@ def unrendered() -> list[str]:
     record's index is one of them. A sentence answered that question `False`
     however the page stood.
     """
-    return [name for name, fn in TARGETS.items()
-            if fn() is None and (META / name).exists()]
+    if snap is None:
+        snap = snapshot()
+    return [name for name, result in snap.items()
+            if result is None and (META / name).exists()]

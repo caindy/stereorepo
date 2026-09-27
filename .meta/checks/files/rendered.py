@@ -43,8 +43,8 @@ def rendered_prose(pages: dict[str, str]) -> list[str]:
     with a page is written here rather than carried out of the render, which
     has no business holding this step's wording.
     """
-    render, _ = prose.rendering()
-    stale = [f"{name} exists but nothing renders it" for name in render.unrendered()]
+    render, _, snap = prose.rendering()
+    stale = [f"{name} exists but nothing renders it" for name in render.unrendered(snap)]
     stale += [name for name, text in pages.items()
               if not (META / name).exists()
               or (META / name).read_text() != text.rstrip("\n") + "\n"]
