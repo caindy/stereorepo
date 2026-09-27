@@ -28,15 +28,16 @@ CONSTRAINTS = pathlib.Path(__file__).resolve().parents[2] / "templates" / "const
 HARNESSES = routing.AGENTS
 """Each harness a door can choose, and the Agent the Trailer names it by."""
 
-READING_HARNESSES = ("agy", "jules", "claude")
+READING_HARNESSES = ("agy", "jules", "codex", "claude")
 """The harnesses the reading door chooses among, by a `harness:` label, in the order asked."""
 
-REVIEW_HARNESSES = ("agy", "jules", "claude")
-"""The harnesses the review door chooses among, in the order asked: Antigravity CLI
-(solorepo's DR-245), Google Labs Jules (solorepo's DR-246), and Claude Code by default."""
+REVIEW_HARNESSES = ("agy", "jules", "codex", "claude")
+"""The harnesses the review door chooses among, in order: Antigravity CLI, Jules, Codex,
+then Claude Code."""
 
 EVIDENCE = {"claude": (REVIEW / "hook-claude.evidence", "Claude Code"),
-            "agy": (REVIEW / "hook-agy.evidence", "Antigravity CLI")}
+            "agy": (REVIEW / "hook-agy.evidence", "Antigravity CLI"),
+            "codex": (REVIEW / "hook-codex.evidence", "OpenAI Codex")}
 """Where each harness's session leaves the reading hook's decisions, and the harness's name."""
 
 NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",

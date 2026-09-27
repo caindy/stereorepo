@@ -304,7 +304,8 @@ def _review_before_cases(channel: Any, on: Any) -> list[str]:
     problems += _review_pages(on, written, archived)
 
     for label, harness, agent in (("harness:agy", "agy", "antigravity-cli"),
-                                  ("harness:jules", "jules", "google-labs-jules")):
+                                  ("harness:jules", "jules", "google-labs-jules"),
+                                  ("harness:codex", "codex", "openai-codex")):
         ended, out, _, _, _ = _review_before(channel, on, _Pull(labels=[label]))
         if f"harness={harness}" not in out or f"agent={agent}" not in out:
             problems.append(f"review before: a pull request labelled {label} decided {out!r}")

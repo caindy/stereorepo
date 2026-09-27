@@ -29,5 +29,6 @@ import checks.probes.tools.test_specialization
 import checks.probes.tools.fallback
 import checks.probes.tools.copilot
 import checks.probes.tools.jules
+import checks.probes.tools.codex
 import checks.probes.tools.gate
 import checks.probes.tools.comments  # noqa: F401  # reason: registers check steps

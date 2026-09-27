@@ -12,7 +12,7 @@ solorepo's DR-137 deliberately left hosted: **a merge cannot go green while
 this cluster is down**, so the machine being reachable is now the
 repository's business and not only the loops'. `template/`'s seeded gate
 runs on `ubuntu-latest` inside the published runner image (`container:
-ghcr.io/caindy/solorepo-runner:2.337.0-4`), a portfolio having no cluster
+ghcr.io/caindy/solorepo-runner:2.337.0-5`), a portfolio having no cluster
 of its own (solorepo's DR-160).
 
 Two layers, separately invokable:
@@ -69,20 +69,20 @@ Windows 11 Home has no Hyper-V, so `kind` needs Docker under WSL2:
 ## The runner image
 
 `values-runnerset.yaml` pins the runner container image to
-`ghcr.io/caindy/solorepo-runner:2.337.0-4` (solorepo's DR-156, solorepo's DR-160, solorepo's #775).
+`ghcr.io/caindy/solorepo-runner:2.337.0-5` (solorepo's DR-156, solorepo's DR-160, solorepo's #775).
 Defined in `.meta/arc/Dockerfile` on top of `ghcr.io/actions/actions-runner:2.337.0`
 (which carries `python3` `3.12.3`), it pre-bakes `build-essential`, `gh`,
 `jq`, `just`, `uv` (with CPython 3.13), `apm`, `rustup`, `node` / `npm`, `claude` (pinned
-Claude Code 2.1.283), `gemini`, `copilot`, and `agy` (pinned Antigravity CLI 1.2.7).
+Claude Code 2.1.283), `gemini`, `copilot`, `codex` (pinned Codex CLI 0.157.0), and `agy` (pinned Antigravity CLI 1.2.7).
 
 To build, load into a local `kind` cluster, and publish to GHCR:
 ```bash
-docker build -t solorepo-runner:2.337.0-4 -t ghcr.io/caindy/solorepo-runner:2.337.0-4 -f .meta/arc/Dockerfile .meta/arc
-kind load docker-image ghcr.io/caindy/solorepo-runner:2.337.0-4 --name solorepo-arc
+docker build -t solorepo-runner:2.337.0-5 -t ghcr.io/caindy/solorepo-runner:2.337.0-5 -f .meta/arc/Dockerfile .meta/arc
+kind load docker-image ghcr.io/caindy/solorepo-runner:2.337.0-5 --name solorepo-arc
 
 # Publish to GHCR for hosted workflows and specialized portfolios:
 echo "$ARC_GITHUB_TOKEN" | docker login ghcr.io -u <username> --password-stdin
-docker push ghcr.io/caindy/solorepo-runner:2.337.0-4
+docker push ghcr.io/caindy/solorepo-runner:2.337.0-5
 ```
 
 The package on GHCR (`ghcr.io/caindy/solorepo-runner`) must remain configured as
@@ -103,6 +103,22 @@ developer credentials into ephemeral runner pods:
    `emptyDir` at `/home/runner/.gemini` with permissions restricted to
    `chmod 600`.
 
+## Codex subscription credentials
+
+Sign in to the Codex CLI with ChatGPT on the ARC host. The ARC deployer reads
+the file-backed login from `~/.codex/auth.json`; if Codex stores credentials in
+the system keyring, configure `cli_auth_credentials_store = "file"` and sign in
+again so the login is available as a file. Keep the file mode at `600`.
+
+`just arc` applies the ChatGPT login as the `arc-codex-credentials` Secret.
+Runner pods copy `auth.json` into an isolated, mode-`600` `.codex` home. The
+Codex harness accepts only a ChatGPT-authenticated login and removes API-key
+environment variables before starting the CLI. It does not provision an OpenAI
+API key. Set the repository variable `CODEX_FALLBACK` to `true` to add Codex as
+a fallback in coder, reviewer and triage chains. Set `CODEX_MODEL` to select a
+different model; the default is `gpt-5.3-codex`. A `harness:codex` label or coder
+dispatch selects Codex as the primary.
+
 ## Verifying it worked
 
 - `kubectl get pods -n arc-systems` — the controller, `Running`, and its
@@ -110,6 +126,8 @@ developer credentials into ephemeral runner pods:
   pinned to the same number).
 - `kubectl get secret arc-gemini-credentials -n arc-runners` — the Gemini
   subscription Secret provisioned from host credentials.
+- `kubectl get secret arc-codex-credentials -n arc-runners` — the Codex
+  ChatGPT-login Secret provisioned from the host's `.codex` home.
 - GitHub → `caindy/solorepo` → **Settings → Actions → Runners** —
   `arc-runner-set` listed, Idle or Listening.
 - A workflow with `runs-on: arc-runner-set` should show a pod appear and

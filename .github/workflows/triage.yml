@@ -76,6 +76,8 @@ jobs:
       # (solorepo's DR-178, solorepo's DR-245); set vars.GEMINI_FALLBACK to 'true' to enable.
       GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
       JULES_FALLBACK: ${{ vars.JULES_FALLBACK || 'false' }}
+      CODEX_FALLBACK: ${{ vars.CODEX_FALLBACK || 'false' }}
+      CODEX_MODEL: ${{ vars.CODEX_MODEL || 'gpt-5.3-codex' }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -228,6 +230,12 @@ jobs:
             --allowedTools "Skill,Read(./**),Grep,Glob,Bash(.meta/say/move:*),Bash(.meta/say/post:*),Bash(.meta/say/whoami:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
+      # After the session: a session that ended without a level has not read,
+      # and the door says so. The action reports success when the model's
+      # turn ends, and a turn ends without a verdict as readily as with one
+      # (solorepo's DR-122); the level is read rather than the transcript
+      # believed, because GitHub holds the one and the transcript only claims
+      # the other.
       - name: between rungs 2 and 3
         id: between_2
         if: steps.attempt_2.outcome != 'skipped'
@@ -235,6 +243,7 @@ jobs:
         run: >-
           .meta/say/on --role reviewer reviewer between "$ISSUE" --attempt 2 --outcome "$OUTCOME" --transcript "$EXECUTION"
         env:
+          ISSUE: ${{ github.event.issue.number }}
           OUTCOME: ${{ steps.attempt_2.outcome }}
           EXECUTION: ${{ steps.attempt_2.outputs.execution_file }}
 
@@ -244,6 +253,8 @@ jobs:
         continue-on-error: true
         timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_3_minutes || steps.before.outputs.tier_1_minutes) }}
         env:
+          # Whose session this rung is, with the primary's name as the default
+          # an empty output would otherwise unname the run with (solorepo's #836).
           ACTOR_AGENT: ${{ steps.before.outputs.tier_3_agent || steps.before.outputs.agent }}
           AI_AGENT: ${{ steps.before.outputs.tier_3_agent || steps.before.outputs.agent }}
         uses: ./.meta/actions/harness
@@ -259,12 +270,21 @@ jobs:
           claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github-token: ${{ secrets.REVIEWER_GH_TOKEN }}
           jules-api-key: ${{ secrets.JULES_API_KEY }}
+          # The bound on reading, the same hook the review workflow registers
+          # (solorepo's DR-110): a `Read`, `Grep` or `Glob` resolves inside the
+          # worktree and outside `.git/`, a `git` command carries no option
+          # that runs a program or writes a file, and Bash runs only the
+          # programs `.meta/lib/worktree_only/grammar.py` lists, the channel,
+          # git's readers, and three `gh pr` readers. No `gh issue` is among
+          # them, which is why the door writes what the session needs under
+          # `.review/`; the allow-list below names nothing the hook would refuse.
           claude-settings: |
             {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
               "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}
           claude-args: |
             --allowedTools "Skill,Read(./**),Grep,Glob,Bash(.meta/say/move:*),Bash(.meta/say/post:*),Bash(.meta/say/whoami:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
+
 
       # After the session: a session that ended without a level has not read,
       # and the door says so. The action reports success when the model's

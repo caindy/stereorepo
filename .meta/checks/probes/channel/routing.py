@@ -43,11 +43,13 @@ the session is there to decide, shown in the command it will type."""
 
 OFF: dict[str, str | None] = {
     "GEMINI_FALLBACK": None, "JULES_FALLBACK": None, "COPILOT_FALLBACK": None,
+    "CODEX_FALLBACK": None,
 }
 """No fallback toggled."""
 
 ON: dict[str, str | None] = {
     "GEMINI_FALLBACK": "true", "JULES_FALLBACK": "true", "COPILOT_FALLBACK": "true",
+    "CODEX_FALLBACK": "true",
 }
 """Every fallback toggled."""
 
@@ -107,15 +109,16 @@ def _chain_cases(on: Any) -> list[str]:
     routing = on.routing
     cases: tuple[tuple[str, tuple[str, ...], dict[str, str | None], tuple[str, ...]], ...] = (
         ("coder", ("claude", "take", "medium"), OFF, ("claude",)),
-        ("coder", ("claude", "take", "medium"), ON, ("claude", "agy", "copilot")),
+        ("coder", ("claude", "take", "medium"), ON, ("claude", "agy", "copilot", "codex")),
         ("coder", ("agy", "take", "easy"), OFF, ("agy", "claude")),
-        ("coder", ("agy", "answer", "medium"), ON, ("agy", "claude", "copilot")),
+        ("coder", ("agy", "answer", "medium"), ON, ("agy", "claude", "copilot", "codex")),
         ("coder", ("copilot", "take", "easy"), OFF, ("copilot", "claude")),
         ("reviewer", ("claude",), OFF, ("claude",)),
-        ("reviewer", ("claude",), ON, ("claude", "agy", "jules")),
-        ("reviewer", ("jules",), ON, ("jules", "claude", "agy")),
-        ("reviewer", ("agy",), {"GEMINI_FALLBACK": None, "JULES_FALLBACK": "true"},
-         ("agy", "claude", "jules")),
+        ("reviewer", ("claude",), ON, ("claude", "agy", "jules", "codex")),
+        ("reviewer", ("jules",), ON, ("jules", "claude", "agy", "codex")),
+        ("reviewer", ("agy",), {"GEMINI_FALLBACK": None, "JULES_FALLBACK": "true",
+                                  "CODEX_FALLBACK": "true"},
+                ("agy", "claude", "jules", "codex")),
         ("reading", ("claude",), OFF, ("claude",)),
         ("reading", ("claude",), ON, ("claude", "agy", "jules")),
         ("reading", ("agy",), ON, ("agy", "claude", "jules")),
@@ -148,10 +151,13 @@ def _chain_cases(on: Any) -> list[str]:
                             f"not {numbers!r}")
     gemini = routing.tier("agy", routing.REVIEW_DEPTHS["standard"], "gemini-x")
     jules = routing.tier("jules", routing.REVIEW_DEPTHS["standard"])
+    codex = routing.coder_chain("codex", "take", "easy", environ={"CODEX_MODEL": "gpt-probe"})[0]
     if gemini.model != "gemini-x" or jules.model != "":
         problems.append(f"routing: the Antigravity rung runs {gemini.model!r} where a depth hook "
                         f"chose gemini-x, and the Jules rung runs {jules.model!r} where it "
                         "chooses its own")
+    if codex.model != "gpt-probe" or codex.agent != "openai-codex":
+        problems.append(f"routing: the Codex rung is {codex!r}, not the configured model and Agent")
     return problems
 
 
@@ -160,13 +166,15 @@ def _output_cases(on: Any) -> list[str]:
     routing = on.routing
     tiers = routing.coder_chain("claude", "take", "medium", environ=dict(ON))
     named = routing.outputs(tiers)
-    expected = {"tiers": "3", "tier_1_harness": "claude",
+    expected = {"tiers": "4", "tier_1_harness": "claude",
                 "tier_1_model": "claude-opus-5",
                 "tier_1_turns": "120", "tier_1_agent": "anthropics/claude-code-action@v1",
                 "tier_2_harness": "agy", "tier_2_model": routing.GEMINI_MODEL,
                 "tier_2_minutes": "60", "tier_2_agent": "antigravity-cli",
                 "tier_3_harness": "copilot", "tier_3_model": routing.COPILOT_MODEL,
-                "tier_3_agent": "copilot-cli"}
+                "tier_3_agent": "copilot-cli",
+                "tier_4_harness": "codex", "tier_4_model": routing.CODEX_MODEL,
+                "tier_4_agent": "openai-codex"}
     missing = {key: value for key, value in expected.items() if named.get(key) != value}
     if missing:
         return [f"routing: the outputs {named!r} do not carry {missing!r}"]
@@ -185,7 +193,7 @@ def _form_cases(on: Any) -> list[str]:
             continue
         fields = {name: FIELDS[name] for name in names}
         allowed = DELIBERATE.get((role, task), ())
-        for harness in ("claude", "agy", "copilot"):
+        for harness in ("claude", "agy", "copilot", "codex"):
             text = prompts.render(role, task, routing.tier(harness, depth), fields)
             if "<!--" in text:
                 problems.append(f"prompts: a block marker survives in {role}-{task} on {harness}")
@@ -248,7 +256,7 @@ def _trunk_cases(on: Any) -> list[str]:
         emptied = {"TEMPLATES": pathlib.Path(empty), "trunk": _reader}
         for (role, task), names in FIELDS_BY_PASS.items():
             fields = {name: FIELDS[name] for name in names}
-            for harness in ("claude", "agy", "copilot"):
+            for harness in ("claude", "agy", "copilot", "codex"):
                 rung = routing.tier(harness, depth)
                 carried = prompts.render(role, task, rung, fields)
                 with stood_in(prompts, **emptied):

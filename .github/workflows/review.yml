@@ -70,6 +70,8 @@ jobs:
       # Fall back to Google Labs Jules if enabled by the JULES_FALLBACK toggle
       # (solorepo's DR-246); the door reads it for the chain (solorepo's DR-281).
       JULES_FALLBACK: ${{ vars.JULES_FALLBACK || 'false' }}
+      CODEX_FALLBACK: ${{ vars.CODEX_FALLBACK || 'false' }}
+      CODEX_MODEL: ${{ vars.CODEX_MODEL || 'gpt-5.3-codex' }}
       # The head this run reads, and the one its verdict must be recorded
       # against (solorepo's #566). Two of the three things the run reads are
       # pinned to it: the head's trunk paths under `.review/head/` and the
@@ -229,12 +231,12 @@ jobs:
       # the watch reads a step's name and not the log, the annotations or an
       # attempt step's own name, and what showed it, is at `CHAIN` and `RUNG`
       # in `.meta/arc/watch`.
-      - name: chain ${{ steps.before.outputs.tier_1_harness }},${{ steps.before.outputs.tier_2_harness }},${{ steps.before.outputs.tier_3_harness }}
+      - name: chain ${{ steps.before.outputs.tier_1_harness }},${{ steps.before.outputs.tier_2_harness }},${{ steps.before.outputs.tier_3_harness }},${{ steps.before.outputs.tier_4_harness }}
         id: chain
         run: ":"
 
 
-      # The ladder (solorepo's DR-281): three rungs, each the same attempt
+      # The ladder (solorepo's DR-281): four rungs, each the same attempt
       # step on the harness runner, reading its harness and its caps off
       # the door's `tier_<n>_*` outputs by number, so the chain the door
       # resolved runs in that order whatever it is. Rung 1 runs where the
@@ -440,6 +442,71 @@ jobs:
             --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
             --disallowedTools "Read(./.git/**)"
 
+      - name: between rungs 3 and 4
+        id: between_3
+        if: steps.attempt_3.outcome != 'skipped'
+        continue-on-error: true
+        run: >-
+          .meta/say/on --role reviewer reviewer between "$PR" --attempt 3 --outcome "$OUTCOME" --transcript "$EXECUTION"
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          OUTCOME: ${{ steps.attempt_3.outcome }}
+          EXECUTION: ${{ steps.attempt_3.outputs.execution_file }}
+
+
+      - name: attempt 4
+        id: attempt_4
+        if: steps.between_3.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: ${{ fromJSON(steps.before.outputs.tier_4_minutes || steps.before.outputs.tier_1_minutes) }}
+        env:
+          # Whose session this rung is, with the primary's name as the default
+          # an empty output would otherwise unname the run with (solorepo's #836).
+          ACTOR_AGENT: ${{ steps.before.outputs.tier_4_agent || steps.before.outputs.agent }}
+          AI_AGENT: ${{ steps.before.outputs.tier_4_agent || steps.before.outputs.agent }}
+          CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS: ${{ steps.before.outputs.agents }}
+        uses: ./.meta/actions/harness
+        with:
+          harness: ${{ steps.before.outputs.tier_4_harness }}
+          role: reviewer
+          model: ${{ steps.before.outputs.tier_4_model }}
+          effort: ${{ steps.before.outputs.tier_4_effort }}
+          turns: ${{ steps.before.outputs.tier_4_turns }}
+          minutes: ${{ steps.before.outputs.tier_4_minutes }}
+          agent: ${{ steps.before.outputs.tier_4_agent }}
+          number: ${{ github.event.pull_request.number }}
+          claude-agents: ${{ steps.before.outputs.agents }}
+          claude-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The action's own GitHub calls as the Role too, so nothing in the
+          # run is authored by an App or a bot.
+          github-token: ${{ secrets.REVIEWER_GH_TOKEN }}
+          jules-api-key: ${{ secrets.JULES_API_KEY }}
+          # The bound on reading, registered here and nowhere else (solorepo's DR-110):
+          # a `Read`, `Grep` or `Glob` resolves inside the worktree and
+          # outside `.git/`, and a `git` command carries no option that runs
+          # a program or writes a file. A hook, because it is the one layer
+          # that sees an argument rather than a prefix: `git grep -O` runs a
+          # shell and `git log --output=.meta/say` rewrites the channel, and
+          # no prefix list excludes an option. The script is one of the trunk
+          # paths restored above, so it is trunk's.
+          claude-settings: |
+            {"hooks": {"PreToolUse": [{"matcher": "Bash|Read|Grep|Glob",
+              "hooks": [{"type": "command", "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/worktree_only.py"}]}]}}
+          claude-plugin-marketplaces: "https://github.com/anthropics/claude-code.git"
+          claude-plugins: "code-review@claude-code-plugins"
+          # Which programs, by prefix; what they may reach, by the hook above.
+          # The run holds a token, its input is a diff nobody here has vetted,
+          # and `signed_channel.py` bounds only the paths to GitHub, not a
+          # `curl` to anywhere else with the token file as its body. The
+          # first two runs (solorepo's #85, #86) posted nothing because `Skill` was
+          # missing from the list, not because the list was a list; the
+          # reviewer's own runs argued a blanket allowance back out, then
+          # found `git grep -O` inside the list. The shell is the channel,
+          # the checker and git; reading is the tools, under the hook.
+          claude-args: |
+            --allowedTools "Skill,Agent,Read(./**),Grep,Glob,Bash(.meta/say/post:*),Bash(.meta/say/move:*),Bash(.meta/say/whoami:*),Bash(just pr:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*),Bash(git grep:*),Bash(git ls-files:*),Bash(git ls-tree:*)"
+            --disallowedTools "Read(./.git/**)"
+
       # A session that ended without a verdict has not reviewed, and the door
       # says so. The action reports success when the model's turn ends, and a
       # turn ends holding for a background subagent as readily as on a
@@ -476,8 +543,9 @@ jobs:
           # (solorepo's DR-281). The transcript is the first a rung published,
           # which is the Claude Code rung's, whichever number it ran as.
           RAN: >-
-            ${{ steps.attempt_3.outcome != 'skipped' && steps.before.outputs.tier_3_harness
+            ${{ steps.attempt_4.outcome != 'skipped' && steps.before.outputs.tier_4_harness
+                || steps.attempt_3.outcome != 'skipped' && steps.before.outputs.tier_3_harness
                 || steps.attempt_2.outcome != 'skipped' && steps.before.outputs.tier_2_harness
                 || steps.attempt_1.outcome != 'skipped' && steps.before.outputs.tier_1_harness
                 || 'none' }}
-          TRANSCRIPT: ${{ steps.attempt_1.outputs.execution_file || steps.attempt_2.outputs.execution_file || steps.attempt_3.outputs.execution_file }}
+          TRANSCRIPT: ${{ steps.attempt_1.outputs.execution_file || steps.attempt_2.outputs.execution_file || steps.attempt_3.outputs.execution_file || steps.attempt_4.outputs.execution_file }}

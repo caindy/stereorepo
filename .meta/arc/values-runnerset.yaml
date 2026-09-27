@@ -39,8 +39,25 @@ maxRunners: 12
 template:
   spec:
     initContainers:
+      - name: setup-codex-auth
+        image: ghcr.io/caindy/solorepo-runner:2.337.0-5
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            if [ -f /codex-src/auth.json ]; then
+              mkdir -p /codex-dest
+              cp /codex-src/auth.json /codex-dest/auth.json
+              chmod 600 /codex-dest/auth.json
+            fi
+        volumeMounts:
+          - name: codex-creds-secret
+            mountPath: /codex-src
+            readOnly: true
+          - name: codex-home
+            mountPath: /codex-dest
       - name: setup-gemini-creds
-        image: ghcr.io/caindy/solorepo-runner:2.337.0-4
+        image: ghcr.io/caindy/solorepo-runner:2.337.0-5
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
         args:
@@ -67,12 +84,14 @@ template:
     containers:
       - name: runner
         # Single-source runner image on GHCR (solorepo's DR-156, solorepo's DR-160)
-        image: ghcr.io/caindy/solorepo-runner:2.337.0-4
+        image: ghcr.io/caindy/solorepo-runner:2.337.0-5
         imagePullPolicy: IfNotPresent
         command: ["/home/runner/run.sh"]
         volumeMounts:
           - name: gemini-home
             mountPath: /home/runner/.gemini
+          - name: codex-home
+            mountPath: /home/runner/.codex
         env:
           - name: COPILOT_GITHUB_TOKEN
             valueFrom:
@@ -87,6 +106,12 @@ template:
           limits:
             memory: 4Gi
     volumes:
+      - name: codex-creds-secret
+        secret:
+          secretName: arc-codex-credentials
+          optional: true
+      - name: codex-home
+        emptyDir: {}
       - name: gemini-creds-secret
         secret:
           secretName: arc-gemini-credentials

@@ -31,6 +31,7 @@ AGENTS = {
     "jules": "google-labs-jules",
     "claude": "anthropics/claude-code-action@v1",
     "copilot": "copilot-cli",
+    "codex": "openai-codex",
 }
 """Each harness a door can choose, and the Agent the Trailer names it by (solorepo's DR-233)."""
 
@@ -39,6 +40,7 @@ TOGGLES = {
     "gemini": "GEMINI_FALLBACK",
     "jules": "JULES_FALLBACK",
     "copilot": "COPILOT_FALLBACK",
+    "codex": "CODEX_FALLBACK",
 }
 """The repository variable that opts a portfolio in to each fallback harness; Claude Code has
 none, being the harness every portfolio runs (solorepo's DR-240, DR-245, DR-246)."""
@@ -46,10 +48,10 @@ none, being the harness every portfolio runs (solorepo's DR-240, DR-245, DR-246)
 ENABLED = ("true", "1", "yes", "on", "enable", "enabled")
 """What a toggle's value reads as on, lowercased and stripped."""
 
-CODER_FALLBACKS = ("claude", "agy", "copilot")
+CODER_FALLBACKS = ("claude", "agy", "copilot", "codex")
 """The coder's harnesses in the order a fallback is tried, after whichever is primary."""
 
-REVIEW_FALLBACKS = ("claude", "agy", "jules")
+REVIEW_FALLBACKS = ("claude", "agy", "jules", "codex")
 """The reviewer's harnesses in the order a fallback is tried, after whichever is primary."""
 
 READING_FALLBACKS = ("claude", "agy", "jules")
@@ -104,7 +106,7 @@ class Tier(NamedTuple):
     """One rung of a chain: a harness and what it runs with.
 
     Attributes:
-        harness: `claude`, `agy`, `copilot` or `jules`.
+        harness: `claude`, `agy`, `copilot`, `codex` or `jules`.
         model: The model this harness runs; empty for Jules, which chooses its own.
         effort: The reasoning effort.
         turns: The turn cap, told to every harness and bound by Claude Code alone.
@@ -125,6 +127,9 @@ GEMINI_MODEL = "gemini-3.8-flash"
 
 COPILOT_MODEL = "gpt-5.3-codex"
 """The model GitHub Copilot CLI runs for autonomous coder passes."""
+
+CODEX_MODEL = "gpt-5.3-codex"
+"""The model OpenAI Codex CLI runs for autonomous passes."""
 
 CODER_DEPTHS = {
     "rebase": Depth("claude-opus-5", "high", "60", "30"),
@@ -180,7 +185,8 @@ def toggled(harness: str, environ: Mapping[str, str] = os.environ) -> bool:
 
 
 def tier(
-    harness: str, depth: Depth, gemini_model: str = GEMINI_MODEL, copilot_model: str = COPILOT_MODEL
+    harness: str, depth: Depth, gemini_model: str = GEMINI_MODEL,
+    copilot_model: str = COPILOT_MODEL, codex_model: str = CODEX_MODEL
 ) -> Tier:
     """The rung `harness` makes at `depth`.
 
@@ -189,12 +195,14 @@ def tier(
         depth (Depth): The Claude model and the caps every harness shares.
         gemini_model (str): The model the Antigravity CLI runs, where a depth hook chose one.
         copilot_model (str): The model GitHub Copilot CLI runs.
+        codex_model (str): The model OpenAI Codex CLI runs.
     """
     model = {
         "claude": depth.model,
         "agy": gemini_model,
         "gemini": gemini_model,
         "copilot": copilot_model,
+        "codex": codex_model,
     }.get(harness, "")
     return Tier(harness, model, depth.effort, depth.turns, depth.minutes, AGENTS[harness])
 
@@ -232,7 +240,7 @@ def chain(
     """
     order = [primary, *(name for name in fallbacks if name != primary)]
     return tuple(
-        tier(name, depth, gemini_model)
+        tier(name, depth, gemini_model, codex_model=environ.get("CODEX_MODEL", CODEX_MODEL))
         for name in order
         if name == primary or toggled(name, environ)
     )
