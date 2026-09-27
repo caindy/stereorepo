@@ -48,6 +48,8 @@ none, being the harness every portfolio runs (solorepo's DR-240, DR-245, DR-246)
 
 COOLDOWNS = {
     "claude": "CLAUDE_COOLDOWN_UNTIL",
+    "agy": "AGY_COOLDOWN_UNTIL",
+    "gemini": "AGY_COOLDOWN_UNTIL",
 }
 """The repository variable holding the Unix epoch timestamp until which a harness
 is cooling down (solorepo's DR-294)."""
@@ -207,6 +209,8 @@ def is_cooling_down(
     if not var_name:
         return False
     val = (environ.get(var_name) or "").strip()
+    if not val and harness in ("agy", "gemini"):
+        val = (environ.get("ANTIGRAVITY_COOLDOWN_UNTIL") or "").strip()
     if not val:
         return False
     try:

@@ -185,6 +185,14 @@ vars.CLAUDE_COOLDOWN_UNTIL in their job env, which is where the door reads the c
 (solorepo's DR-294)."""
 
 
+AGY_COOLDOWN_ENV_EXPORT = re.compile(
+    r"^\s*AGY_COOLDOWN_UNTIL:\s*\${{\s*vars\.(?:AGY|ANTIGRAVITY)_COOLDOWN_UNTIL\b", re.M
+)
+"""Workflows running the harness runner export AGY_COOLDOWN_UNTIL from
+vars.AGY_COOLDOWN_UNTIL or vars.ANTIGRAVITY_COOLDOWN_UNTIL in their job env, which is where the door
+reads the cooldown cache (solorepo's DR-294)."""
+
+
 HARNESS_ACTION = "./.meta/actions/harness"
 """The harness runner's `uses:` path, as every attempt step names it."""
 
@@ -199,8 +207,8 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
     routing policy sees `GEMINI_FALLBACK` unset and resolves a chain of one rung,
     silently disabling fallback on quota exhaustion even when configured in the
     repository. The reviewer workflows export `JULES_FALLBACK` for their Jules rungs.
-    All fallback workflows export `CLAUDE_COOLDOWN_UNTIL` so that cooling tiers are
-    bypassed across runs (solorepo's DR-294).
+    All fallback workflows export `CLAUDE_COOLDOWN_UNTIL` and `AGY_COOLDOWN_UNTIL`
+    so that cooling tiers are bypassed across runs (solorepo's DR-294).
 
     Returns:
         Passed | Found | CouldNotRun: Validation result checking that workflows
@@ -224,6 +232,11 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
             problems.append(
                 f"{path.relative_to(ROOT)}: runs the harness runner but does not export "
                 "`CLAUDE_COOLDOWN_UNTIL: ${{ vars.CLAUDE_COOLDOWN_UNTIL ... }}` in job `env:`"
+            )
+        if not AGY_COOLDOWN_ENV_EXPORT.search(text):
+            problems.append(
+                f"{path.relative_to(ROOT)}: runs the harness runner but does not export "
+                "`AGY_COOLDOWN_UNTIL: ${{ vars.AGY_COOLDOWN_UNTIL ... }}` in job `env:`"
             )
         if path.name == "coder.yml" and not COPILOT_ENV_EXPORT.search(text):
             problems.append(

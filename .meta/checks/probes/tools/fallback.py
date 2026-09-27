@@ -274,42 +274,30 @@ def _probe_toggle_truthiness(detect_fallback: Any) -> list[str]:
 
 
 def _probe_quota_cooldown(detect_fallback: Any) -> list[str]:
-    """Verify retry-after extraction, expiration calculation, and variable recording
-    (solorepo's DR-294)."""
+    """Verify retry-after extraction and cooldown recording (solorepo's DR-294)."""
     problems: list[str] = []
 
-    retry_cases = [
+    for text, expected in (
         ("Rate limit reached. retry-after: 120", 120),
         ("Please retry after 45 seconds", 45),
         ("Quota limit reached. reset in 300s", 300),
         ("reset after 15m", 900),
         ("reset after 2h", 7200),
         ("try again in 1 hour", 3600),
+        ("RESOURCE_EXHAUSTED: individual quota reached, resetting in 2h33m18s", 9198),
         ("Generic error with no retry header", None),
-    ]
-    for text, expected in retry_cases:
-        extracted = detect_fallback.extract_retry_after(text)
-        if extracted != expected:
-            problems.append(
-                f"fallback probes: extract_retry_after({text!r}) returned {extracted!r}, "
-                f"expected {expected!r}"
-            )
+    ):
+        if (extracted := detect_fallback.extract_retry_after(text)) != expected:
+            problems.append(f"fallback: extract({text[:30]!r}) {extracted!r} != {expected!r}")
 
     now = 1_000_000
-    exp_with_header = detect_fallback.calculate_cooldown_expiration("retry-after: 60", now=now)
-    if exp_with_header != now + 60:
-        problems.append(
-            f"fallback probes: calculate_cooldown_expiration with header produced "
-            f"{exp_with_header}, expected {now + 60}"
-        )
-
-    exp_default = detect_fallback.calculate_cooldown_expiration("generic quota error", now=now)
-    expected_default = now + detect_fallback.DEFAULT_COOLDOWN_SECONDS
-    if exp_default != expected_default:
-        problems.append(
-            f"fallback probes: calculate_cooldown_expiration default produced "
-            f"{exp_default}, expected {expected_default}"
-        )
+    if detect_fallback.calculate_cooldown_expiration("retry-after: 60", now=now) != now + 60:
+        problems.append("fallback: cooldown exp mismatch")
+    if (
+        detect_fallback.calculate_cooldown_expiration("generic quota error", now=now)
+        != now + detect_fallback.DEFAULT_COOLDOWN_SECONDS
+    ):
+        problems.append("fallback: cooldown default mismatch")
 
     orig_gh = detect_fallback.channel.gh
     try:
@@ -321,24 +309,36 @@ def _probe_quota_cooldown(detect_fallback: Any) -> list[str]:
 
         detect_fallback.channel.gh = fake_gh
 
-        detect_fallback.record_cooldown("claude", "retry-after: 60", now=now)
-        expected_call = (
-            ("variable", "set", "CLAUDE_COOLDOWN_UNTIL", "--body", str(now + 60)),
-            {"parse": False, "default": ""},
-        )
-        if not recorded or recorded[0] != expected_call:
-            problems.append(
-                f"fallback probes: record_cooldown for claude invoked {recorded!r}, "
-                f"expected {[expected_call]!r}"
-            )
+        for harness, sample, var_name, offset in (
+            ("claude", "retry-after: 60", "CLAUDE_COOLDOWN_UNTIL", 60),
+            ("agy", "resetting in 2h33m18s", "AGY_COOLDOWN_UNTIL", 9198),
+            ("copilot", "retry-after: 60", None, None),
+        ):
+            recorded.clear()
+            detect_fallback.record_cooldown(harness, sample, now=now)
+            if var_name is None and recorded:
+                problems.append(f"fallback: record_cooldown recorded for {harness}")
+            elif var_name is not None and offset is not None:
+                exp_call = (
+                    ("variable", "set", var_name, "--body", str(now + offset)),
+                    {"parse": False, "default": ""},
+                )
+                if not recorded or recorded[0] != exp_call:
+                    problems.append(f"fallback: record_cooldown for {harness} mismatch")
 
-        recorded.clear()
-        detect_fallback.record_cooldown("agy", "retry-after: 60", now=now)
-        if recorded:
-            problems.append(
-                f"fallback probes: record_cooldown unexpectedly recorded for untracked harness "
-                f"agy: {recorded!r}"
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            f = pathlib.Path(tmp_dir, "t.log")
+            f.write_text("RESOURCE_EXHAUSTED: individual quota reached", encoding="utf-8")
+            quota_cases = (
+                (f, "agy", True),
+                (f, "gemini", True),
+                (f, "claude", False),
+                ("429 Too Many Requests: Rate limit exceeded", "agy", False),
+                ("429 Too Many Requests: Rate limit exceeded", "claude", True),
             )
+            for target, h, expected in quota_cases:
+                if detect_fallback.has_quota_error(target, harness=h) != expected:
+                    problems.append(f"fallback: has_quota_error({target!s}, {h}) != {expected}")
     finally:
         detect_fallback.channel.gh = orig_gh
 

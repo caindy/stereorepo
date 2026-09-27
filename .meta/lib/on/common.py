@@ -267,14 +267,14 @@ def fallback(handed: Attempt, fields: Mapping[str, str] | None = None) -> None:
         current = tiers[position - 1]
         if current.harness in routing.COOLDOWNS:
             import detect_fallback
-            if detect_fallback.has_quota_error(handed.execution):
+            if detect_fallback.has_quota_error(handed.execution, harness=current.harness):
                 detect_fallback.record_cooldown(current.harness, handed.execution)
     following = tiers[position] if position < len(tiers) else None
     runs = handed.outcome == "failure" and following is not None
     if runs and following is not None:
         if following.harness == "agy" and handed.execution:
             import detect_fallback
-            found = detect_fallback.has_quota_error(handed.execution)
+            found = detect_fallback.has_quota_error(handed.execution, harness=current.harness)
             print(QUOTA.format(path=handed.execution, verdict="holds" if found else "holds no"))
         merged = {**routed["fields"], **(fields or {})}
         prompts.write(PROMPT, routed["role"], routed["task"], following, merged)
