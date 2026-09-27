@@ -147,6 +147,9 @@ items:
   - path: .meta/bundle.py
     kind: file
     ownership: managed
+  - path: .meta/adapt.py
+    kind: file
+    ownership: managed
   - path: .meta/bundle.yaml
     kind: file
     ownership: managed

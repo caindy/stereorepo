@@ -66,6 +66,7 @@ CONTRACT: Contract = {
     "arc-cluster": (),
     "arc": (),
     "test-specialization": (("args", FLAGS),),
+    "adapt": (("args", FLAGS),),
 }
 """The declared shape of every root recipe: each parameter in signature order, paired with
 the kind of value it carries. There is no prose kind to declare, so a recipe taking a bare

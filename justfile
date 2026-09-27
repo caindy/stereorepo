@@ -80,3 +80,7 @@ arc:
 # run automated Specialization end-to-end verification (solorepo's DR-239, solorepo's DR-244)
 test-specialization *args:
     python3 .meta/test_specialization.py {{args}}
+
+# plan brownfield adoption for an existing Product repository
+adapt *args:
+    .meta/adapt.py {{args}}

@@ -26,6 +26,7 @@ import checks.probes.tools.search
 import checks.probes.tools.apm_compile
 import checks.probes.tools.terms
 import checks.probes.tools.test_specialization
+import checks.probes.tools.test_brownfield
 import checks.probes.tools.fallback
 import checks.probes.tools.copilot
 import checks.probes.tools.jules

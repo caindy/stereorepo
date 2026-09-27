@@ -126,6 +126,14 @@ def justfile() -> str:
             "    python3 .meta/test_specialization.py {{args}}",
         ]
 
+    if "work:artifact/meta-adapt" in artifacts:
+        lines += [
+            "",
+            "# plan brownfield adoption for an existing Product repository",
+            "adapt *args:",
+            "    .meta/adapt.py {{args}}",
+        ]
+
     return "\n".join(lines) + "\n"
 
 
