@@ -81,7 +81,14 @@ ENV_COPILOT = ("COPILOT_CLI", "COPILOT_AGENT_SESSION_ID")
 COPILOT = "copilot-cli"
 """The agent name GitHub Copilot signs with, matching `on.HARNESSES`."""
 
-ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", ENV_ANTIGRAVITY[1], ENV_COPILOT[1], "ACTOR_SESSION")
+ENV_CODEX = "CODEX_SESSION_ID"
+"""Environment variable identifying a local OpenAI Codex session."""
+
+CODEX = "openai-codex"
+"""The agent name OpenAI Codex signs with, matching `on.HARNESSES`."""
+
+ENV_SESSION = ("CLAUDE_CODE_SESSION_ID", ENV_ANTIGRAVITY[1], ENV_COPILOT[1],
+               ENV_CODEX, "ACTOR_SESSION")
 """Environment variable names evaluated to detect local session identifiers."""
 
 RUN_MARK = "gha-"
@@ -177,13 +184,8 @@ def attested_run() -> str | None:
 
 
 def speaker() -> str | None:
-    """Resolves the active session or run identifier from the environment (solorepo's #285).
-
-    Evaluates attested run identity first, followed by `ACTOR_SESSION` prefixed
-    with `RUN_MARK`, and finally session variables declared in `ENV_SESSION`.
-
-    Returns:
-        The resolved speaker identifier string, or None if no identifier is present.
+    """Return the run mark, a marked `ACTOR_SESSION`, or the first local session
+    in `ENV_SESSION`; return None when none is set (solorepo's #285).
     """
     run = attested_run()
     if run:
@@ -219,26 +221,18 @@ def actor() -> str:
 
 
 def in_a_run() -> bool:
-    """Returns True if execution occurs within a GitHub Actions workflow run.
-
-    Detects workflow execution by verifying either the presence of an attested
-    GITHUB_RUN_ID or an ACTOR_SESSION starting with the RUN_MARK prefix
+    """Return whether a GitHub run ID or marked `ACTOR_SESSION` is present
     (solorepo's DR-148, solorepo's DR-233).
-
-    Returns:
-        bool: True if executing within a GitHub Actions workflow, False otherwise.
     """
     return bool(attested_run()) or (os.environ.get("ACTOR_SESSION") or "").startswith(RUN_MARK)
 
 
 def agent() -> str:
-    """Returns the identifier of the executing agent harness component (solorepo's DR-233).
+    """Return the attested run Agent or the explicit or detected local harness
+    (solorepo's DR-233).
 
-    In a workflow run, reads `ENV_RUN_AGENT` (`ACTOR_AGENT`) or derives identity
-    from workflow step metadata (`ENV_RUN_STEP`). Outside a run, returns
-    `AI_AGENT`, falling back to `ANTIGRAVITY` where `AI_AGENT` is unset and
-    either name in `ENV_ANTIGRAVITY` is set, or `COPILOT` where either name in
-    `ENV_COPILOT` is set.
+    In a run, prefer `ENV_RUN_AGENT` and then `ENV_RUN_STEP`. Locally, prefer
+    `AI_AGENT` and then Antigravity, Copilot, or Codex environment variables.
 
     Returns:
         The resolved agent harness component name.
@@ -259,8 +253,11 @@ def agent() -> str:
             return ANTIGRAVITY
         if any(os.environ.get(name) for name in ENV_COPILOT):
             return COPILOT
+        if os.environ.get(ENV_CODEX):
+            return CODEX
         sys.exit(f"say: the environment does not say what is speaking "
-                 f"(need one of {ENV_AGENT + ENV_ANTIGRAVITY + ENV_COPILOT}); refusing to post")
+                 f"(need one of {ENV_AGENT + ENV_ANTIGRAVITY + ENV_COPILOT + (ENV_CODEX,)}); "
+                 "refusing to post")
     return who
 
 

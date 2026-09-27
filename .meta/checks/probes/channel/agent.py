@@ -25,12 +25,13 @@ def agent_probes() -> list[str]:
     `ANTIGRAVITY_AGENT` or `ANTIGRAVITY_CONVERSATION_ID` is set the answer is
     `antigravity-cli`, the name `on.HARNESSES` gives that door
     (solorepo's DR-245); where either `COPILOT_CLI` or
-    `COPILOT_AGENT_SESSION_ID` is set the answer is `copilot-cli`; where none of
-    the harness variables is set, `agent()` refuses.
+    `COPILOT_AGENT_SESSION_ID` is set the answer is `copilot-cli`; where
+    `CODEX_SESSION_ID` is set the answer is `openai-codex`; where none of the
+    harness variables is set, `agent()` refuses.
 
     A case is `(name, run, actor_agent, ai_agent, workflow, step,
     antigravity_agent, antigravity_session, copilot_cli, copilot_session,
-    answer)`: the nine variables, `None` for unset; and `answer`, what
+    answer, codex_session)`: the ten variables, `None` for unset; and `answer`, what
     `agent()` returns, or `None` where it refuses. Every case sets
     `GITHUB_RUN_ID` rather than inheriting it, because the gate itself runs in
     a run and a case meaning a laptop has to say so.
@@ -39,7 +40,8 @@ def agent_probes() -> list[str]:
     Case = collections.namedtuple(
         "Case",
         ("name run actor_agent ai_agent workflow step antigravity_agent "
-         "antigravity_session copilot_cli copilot_session answer"),
+         "antigravity_session copilot_cli copilot_session answer codex_session"),
+        defaults=[None],
     )
     typed = "an-agent-typed-this"
     cases = (
@@ -72,6 +74,18 @@ def agent_probes() -> list[str]:
         Case("antigravity takes precedence over copilot fallback",
              None, None, None, None, None, "1", None, "1", "copilot-uuid-101",
              "antigravity-cli"),
+        Case("a codex session falling back from CODEX_SESSION_ID",
+             None, None, None, None, None, None, None, None, None,
+             "openai-codex", "codex-uuid-202"),
+        Case("AI_AGENT takes precedence over codex environment",
+             None, None, "custom-agent", None, None, None, None, None, None,
+             "custom-agent", "codex-uuid-202"),
+        Case("copilot takes precedence over codex fallback",
+             None, None, None, None, None, None, None, "1", "copilot-uuid-101",
+             "copilot-cli", "codex-uuid-202"),
+        Case("a run ignores the local codex agent",
+             "7", "attested-agent", None, None, None, None, None, None, None,
+             "attested-agent", "codex-uuid-202"),
     )
     problems = []
     for case in cases:
@@ -81,7 +95,8 @@ def agent_probes() -> list[str]:
                          ANTIGRAVITY_AGENT=case.antigravity_agent,
                          ANTIGRAVITY_CONVERSATION_ID=case.antigravity_session,
                          COPILOT_CLI=case.copilot_cli,
-                         COPILOT_AGENT_SESSION_ID=case.copilot_session):
+                         COPILOT_AGENT_SESSION_ID=case.copilot_session,
+                         CODEX_SESSION_ID=case.codex_session):
             got, code, exited = answered(channel.agent)
             if case.answer is None:
                 if not exited:

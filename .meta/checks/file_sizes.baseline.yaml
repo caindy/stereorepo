@@ -39,7 +39,7 @@
 .meta/lib/move/reconcile.py: 243
 .meta/next.py: 83
 .meta/run_agy.py: 218
-.meta/say/channel.py: 379
+.meta/say/channel.py: 376
 .meta/say/post: 215
 .meta/terms.py: 399
 .meta/test_specialization.py: 156

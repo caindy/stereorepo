@@ -26,7 +26,8 @@ def actor_probes() -> list[str]:
     session id beside it is not read. Outside a run `ACTOR_SESSION` wins when it
     carries the run's mark, `gha-`, and otherwise `ENV_SESSION` is read in its
     own order — `CLAUDE_CODE_SESSION_ID`, then `ANTIGRAVITY_CONVERSATION_ID`,
-    then `COPILOT_AGENT_SESSION_ID`, then an unmarked `ACTOR_SESSION` — so a
+    then `COPILOT_AGENT_SESSION_ID`, then `CODEX_SESSION_ID`, then an unmarked
+    `ACTOR_SESSION` — so a
     Claude session identifier beats an Antigravity one where both are set,
     which the case named "claude session precedence over antigravity session"
     is here to pin: reordering that tuple is a change of behaviour. The mark
@@ -37,10 +38,10 @@ def actor_probes() -> list[str]:
     refuses and `mine()` answers `False` for any Trailer.
 
     A case is `(name, run, actor_session, claude_session, antigravity_session,
-    copilot_session, answer, own, not_own)`: the five variables, `None` for
-    unset — `run` being `GITHUB_RUN_ID`, and the other four `ACTOR_SESSION`,
+    copilot_session, answer, own, not_own, codex_session)`: the six variables, `None` for
+    unset — `run` being `GITHUB_RUN_ID`, and the other five `ACTOR_SESSION`,
     `CLAUDE_CODE_SESSION_ID`, `ANTIGRAVITY_CONVERSATION_ID` and
-    `COPILOT_AGENT_SESSION_ID` in that order; `answer`, what `actor()` returns,
+    `COPILOT_AGENT_SESSION_ID` and `CODEX_SESSION_ID`; `answer`, what `actor()` returns,
     or `None` where it refuses; `own`, the session a Trailer must read as mine,
     or `None` where none does; and `not_own`, a session a Trailer must not.
     Every case sets `GITHUB_RUN_ID` rather than inheriting it, because the gate
@@ -51,7 +52,8 @@ def actor_probes() -> list[str]:
     Case = collections.namedtuple(
         "Case",
         ("name run actor_session claude_session antigravity_session "
-         "copilot_session answer own not_own"),
+         "copilot_session answer own not_own codex_session"),
+        defaults=[None],
     )
     cases = (
         Case("both set, the run's mark beside the harness's uuid",
@@ -85,13 +87,25 @@ def actor_probes() -> list[str]:
         Case("claude session precedence over copilot session",
              None, None, "uuid-123", None, "copilot-uuid-101",
              "uuid-123", "uuid-123", "copilot-uuid-101"),
+        Case("codex session identifier", None, None, None, None, None,
+             "codex-uuid-202", "codex-uuid-202", "uuid-123", "codex-uuid-202"),
+        Case("`ACTOR_SESSION` unmarked beside codex session",
+             None, "not-marked-session", None, None, None,
+             "codex-uuid-202", "codex-uuid-202", "not-marked-session", "codex-uuid-202"),
+        Case("copilot session precedence over codex session",
+             None, None, None, None, "copilot-uuid-101",
+             "copilot-uuid-101", "copilot-uuid-101", "codex-uuid-202", "codex-uuid-202"),
+        Case("a run ignores the local codex session",
+             "7", "gha-7", None, None, None,
+             "gha-7", "gha-7", "codex-uuid-202", "codex-uuid-202"),
     )
     problems = []
     for case in cases:
         with environment(GITHUB_RUN_ID=case.run, ACTOR_SESSION=case.actor_session,
                          CLAUDE_CODE_SESSION_ID=case.claude_session,
                          ANTIGRAVITY_CONVERSATION_ID=case.antigravity_session,
-                         COPILOT_AGENT_SESSION_ID=case.copilot_session):
+                         COPILOT_AGENT_SESSION_ID=case.copilot_session,
+                         CODEX_SESSION_ID=case.codex_session):
             got, code, exited = answered(channel.actor)
             if case.answer is None:
                 if not exited:
@@ -115,7 +129,7 @@ def _probe_signed_integrity(channel: Any) -> list[str]:
     problems: list[str] = []
     with environment(GITHUB_RUN_ID=None, ACTOR_SESSION="sess-123", AI_AGENT="test-agent",
                      CLAUDE_CODE_SESSION_ID=None, ANTIGRAVITY_CONVERSATION_ID=None,
-                     COPILOT_AGENT_SESSION_ID=None):
+                     COPILOT_AGENT_SESSION_ID=None, CODEX_SESSION_ID=None):
         got = channel.signed("hello world")
         want = "hello world\n\nActor: sess-123\nAgent: test-agent\n"
         if got != want:

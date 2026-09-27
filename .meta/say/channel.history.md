@@ -188,6 +188,21 @@ Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`,
 `.meta/checks/probes/channel/agent.py::agent_probes`
 
 
+### Local Codex sessions lacked signed channel identity
+
+OpenAI Codex desktop supplied `CODEX_SESSION_ID` without `ACTOR_SESSION` or
+`AI_AGENT`. The channel did not read the Codex variable, so a local Codex Job
+could not file a Challenge, commit, or open a pull request without exporting
+both generic identity variables per command (solorepo's #1133). Established:
+`channel.actor()` reads `CODEX_SESSION_ID` after the other harness session
+identifiers and before an unmarked `ACTOR_SESSION`; `channel.agent()` uses
+`openai-codex` when `AI_AGENT` is absent and `CODEX_SESSION_ID` is present.
+Workflow run attestation and explicit `AI_AGENT` retain precedence.
+
+Evidence: `.meta/checks/probes/channel/actor.py::actor_probes`,
+`.meta/checks/probes/channel/agent.py::agent_probes`
+
+
 ### Non-parsing gh invocations discarded stderr on zero-exit commands
 
 In `.meta/lib/gh.py` and `.meta/say/channel.py`, `gh(*args, parse=False)`
