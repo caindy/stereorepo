@@ -8,7 +8,11 @@ from checks.collect import check
 from checks.probes.harness import (
     load_channel,
     run_verb,
+    stood_in,
 )
+
+BOUND = (2, 0)
+"""Two reads after the first and no seconds between them: the shape of the wait, not its length."""
 
 
 class FakeBlockers:
@@ -305,15 +309,18 @@ def _readback_probes(channel: Any, move: Any, open_issue: dict[str, Any]) -> lis
     """
     problems: list[str] = []
 
-    fake = FakeBlockers({1: open_issue, 2: {"state": "open", "body": ""}}, deaf_body=True)
-    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
-    if not answer or "line not citing" not in answer:
-        problems.append(f"waits: deaf body edit was told {answer!r}")
+    with stood_in(channel, SETTLES=BOUND):
+        fake = FakeBlockers({1: open_issue, 2: {"state": "open", "body": ""}},
+                            deaf_body=True)
+        answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
+        if not answer or "line not citing" not in answer:
+            problems.append(f"waits: deaf body edit was told {answer!r}")
 
-    fake = FakeBlockers({1: open_issue, 2: {"state": "open", "body": ""}}, deaf_relationship=True)
-    answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
-    if not answer or "blockedBy" not in answer or "not" not in answer:
-        problems.append(f"waits: deaf relationship edit was told {answer!r}")
+        fake = FakeBlockers({1: open_issue, 2: {"state": "open", "body": ""}},
+                            deaf_relationship=True)
+        answer = _said(channel, fake, lambda: move.challenges.waits(1, on=[2]))
+        if not answer or "blockedBy" not in answer or "not" not in answer:
+            problems.append(f"waits: deaf relationship edit was told {answer!r}")
 
     return problems
 
