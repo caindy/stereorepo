@@ -17,9 +17,12 @@ required by that act alone.
 
 **What this changes.** The shape of the change. Not the file list; the diff has that.
 
-**The plan.** For a `hard` or `human` Challenge, the approach validated with the
-solo before code: the architecture chosen and what was rejected. "Not applicable
-— `easy`/`medium`." is a complete answer.
+**The plan.** For a `human` leaf Challenge, the approach approved by the reviewer
+Role on the draft before code (solorepo's DR-273, solorepo's DR-296): the
+architecture chosen and what was rejected. The solo still settles the question
+that made the Challenge `human`. Reviewer-assigned `hard` Challenges decompose
+into Epics (solorepo's DR-292). "Not applicable — `easy`/`medium`." is a complete
+answer.
 
 **What the ground looked like.** The context that will not be visible from the
 code afterwards — what was already true, what was tried and abandoned, what
@@ -51,10 +54,12 @@ thread, not tracked.
 - #<n> — <one line, so the list is readable without opening anything>
 ```
 
-The second heading records the plan validated before writing code for `hard` or
-`human` Challenges (solorepo's DR-249). On routine, bounded work (`easy` or
-`medium`), "Not applicable — `easy`/`medium`." is the complete answer and
-review on the diff is the check.
+The second heading records the plan approved before writing code for `human`
+leaf Challenges (solorepo's DR-249, solorepo's DR-273, solorepo's DR-296).
+Reviewer-assigned `hard` Challenges decompose into Epics under solorepo's DR-292
+rather than opening an implementation pull request. On routine, bounded work
+(`easy` or `medium`), "Not applicable — `easy`/`medium`." is the complete answer,
+and review on the diff is the check.
 
 The fourth heading is the point of the form. It is Chesterton's Fence answered in
 advance: a later reader deciding whether to remove something needs to know what

@@ -571,24 +571,24 @@ disciplines:
         statement: >-
           Never open a pull request when work is already finished. Written at the end it becomes a summary
           of the diff, which git already holds. For `easy` and `medium` Challenges, state the intended
-          shape in the opening body, and review on the diff is the check; for `hard` and `human` Challenges,
-          formulate the plan under **The plan.** and validate it with the solo before writing code, which
-          is the bound that prevents unsound architectures from being enacted into diffs (solorepo's DR-249).
-          On `hard` and `human` Challenges, modifying tracked repository files or running verification
-          gates prior to opening the pull request via `move open` is strictly prohibited (solorepo's DR-269).
-          A coder records the initial plan under **The plan.** in the pull request body on a zero-diff
-          [[seed-commit|Seed Commit]] authored via `commit --allow-empty -m "Record initial plan for Challenge #<n>"`
-          before writing code. The plan passes two gates before any code, and both are required
-          (solorepo's DR-273): the solo's approval in session, which lets the coder go ahead under this
-          Discipline and skips no step of it, and then the reviewer's approval of the plan on the pull
-          request. `move open` opens that pull request as a draft and requests review (omitted when closing
-          easy Challenges, solorepo's DR-291), so that the merge manager, `advance` and the reconciler pass
-          over it and an approval of the plan cannot merge the empty commit; nothing takes a branch that
-          changes no file out of draft. The reviewer raises points on a
+          shape in the opening body, and review on the diff is the check; a reviewer-assigned `hard` Challenge
+          enters Epic decomposition under solorepo's DR-292 rather than an implementation pull request. For a
+          `human` leaf Challenge, formulate the plan under **The plan.** to prevent unsound architectures from
+          being enacted into diffs (solorepo's DR-249, solorepo's DR-296). On that Challenge, modifying tracked
+          repository files or running verification gates prior to opening the pull request via `move open` is
+          strictly prohibited (solorepo's DR-269). A coder records
+          the initial plan under **The plan.** in the pull request body on a zero-diff [[seed-commit|Seed Commit]]
+          authored via `commit --allow-empty -m "Record initial plan for Challenge #<n>"` before writing code.
+          The plan passes the reviewer Role's approval on the draft pull request before any code (solorepo's DR-273,
+          solorepo's DR-296). The solo holds no obligatory in-session approval of that leaf plan; a `human`
+          Challenge's maintainer question must still be settled by the solo, and `move stop` hands an unresolved
+          question back. `move open` opens that pull request as a draft and requests review (omitted when
+          closing easy Challenges, solorepo's DR-291), so that the merge
+          manager, `advance` and the reconciler pass over it and an approval of the plan cannot merge the empty
+          commit; nothing takes a branch that changes no file out of draft. The reviewer raises points on a
           plan-only pull request with `comment`, since there is no line for a thread, and an approval
-          there approves the plan and not a merge. A plan that changes materially in answer to the review
-          goes back to the solo before code. Once both gates pass, push the implementation and request
-          review again while the pull request remains a draft. Final reviewer approval takes the pull
+          there approves the plan and not a merge. Once the reviewer approves the plan, push the implementation
+          and request review again while the pull request remains a draft. Final reviewer approval takes the pull
           request out of draft, making it ready to merge; a merge conflict returns it to draft until the
           coder resolves it and requests review again.
       - id: work:discipline-step/pr-first/take-challenges-in-as-pull-requests

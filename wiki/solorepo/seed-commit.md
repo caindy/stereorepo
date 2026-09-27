@@ -6,13 +6,13 @@ minted: 2026-09-22
 
 # Seed Commit
 
-**Seed Commit** is an empty git commit authored with `.meta/say/commit --allow-empty` carrying the subject line `Record initial plan for Challenge #<n>`, pushed to open a pull request before modifying tracked repository files on hard and human Challenges (solorepo's DR-269).
+**Seed Commit** is an empty git commit authored with `.meta/say/commit --allow-empty` carrying the subject line `Record initial plan for Challenge #<n>`, pushed to open a pull request before modifying tracked repository files on human leaf Challenges (solorepo's DR-269, solorepo's DR-296).
 
 The commit records a git tree identical to its parent, introducing zero file additions, deletions, or modifications. It establishes the initial commit object that allows a pull request to be opened on GitHub before any implementation code is written, reconciling the PR First discipline with GitHub's pull request API.
 
 ## Why the Bound Is Drawn Here
 
-Under [[pr-first|PR First]] (solorepo's DR-249), `hard` and `human` [[challenge|Challenges]] require formulating the technical approach under **The plan.** and validating it with the solo before code is written. Opening the pull request at work commencement creates an active discussion surface where the reviewer Role and the solo can evaluate the proposed architecture before runner cycles and developer hours are spent enacting it into diffs.
+Under [[pr-first|PR First]] (solorepo's DR-249, solorepo's DR-273, solorepo's DR-296), a `human` leaf [[challenge|Challenge]] requires formulating the technical approach under **The plan.** and obtaining reviewer Role approval on the draft before code is written. The solo still settles the question that made the Challenge `human`; reviewer-assigned `hard` Challenges follow Epic decomposition under solorepo's DR-292. Opening the pull request at work commencement gives the reviewer Role a place to evaluate the leaf architecture before runner cycles and developer hours are spent enacting it into diffs.
 
 However, GitHub's pull request creation refuses when there are zero commits between base and head. GitHub's REST API (`POST /repos/{owner}/{repo}/pulls`, solorepo's DR-249) returns HTTP 422 Unprocessable Entity (`"No commits between <base> and <head>"`), and `gh pr create` (calling GraphQL `createPullRequest`) similarly emits `GraphQL: No commits between <base> and <head> (createPullRequest)` when attempting to open a pull request without any commits ahead of base.
 
@@ -34,4 +34,4 @@ The rejected industry terms (`dummy commit`, `placeholder commit`, `empty commit
 
 ---
 
-**See also:** [[incidental-commit]], [[pr-first]], [[challenge]], [[issue]], [[review-thread]], [[decision-record]], [[ubiquitous-language]], [[knowledge-management]], solorepo's DR-249, solorepo's DR-269.
+**See also:** [[incidental-commit]], [[pr-first]], [[challenge]], [[issue]], [[review-thread]], [[decision-record]], [[ubiquitous-language]], [[knowledge-management]], solorepo's DR-249, solorepo's DR-269, solorepo's DR-273, solorepo's DR-292, solorepo's DR-296.

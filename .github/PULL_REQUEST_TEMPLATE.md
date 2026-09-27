@@ -2,9 +2,12 @@
 
 **What this changes.** The shape of the change. Not the file list; the diff has that.
 
-**The plan.** For a `hard` or `human` Challenge, the approach validated with the
-solo before code: the architecture chosen and what was rejected. "Not applicable
-— `easy`/`medium`." is a complete answer.
+**The plan.** For a `human` leaf Challenge, the approach approved by the reviewer
+Role on the draft before code (solorepo's DR-273, solorepo's DR-296): the
+architecture chosen and what was rejected. The solo still settles the question
+that made the Challenge `human`. Reviewer-assigned `hard` Challenges decompose
+into Epics (solorepo's DR-292). "Not applicable — `easy`/`medium`." is a complete
+answer.
 
 **What the ground looked like.** The context that will not be visible from the
 code afterwards — what was already true, what was tried and abandoned, what

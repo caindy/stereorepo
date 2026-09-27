@@ -1,0 +1,11 @@
+challenges:
+  - id: work:challenge/1131
+    name: Remove the obligatory solo plan approval gate without rewriting prior Decisions
+    challenge_type: FEATURE
+    description: >-
+      A leaf pull request requiring pre-code architectural validation waits for
+      both the solo's in-session plan verdict and reviewer approval on a draft.
+      The duplicate approval stalls the coder even when the reviewer can assess
+      the plan independently. A previous branch tried to remove that gate by
+      rewriting adopted DR-273, leaving DR-249 in conflict. Record the changed
+      rule in a new proposed Decision and update the current workflow guidance.
