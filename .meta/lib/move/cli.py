@@ -52,6 +52,9 @@ def _add_issue_parsers(sub: Any) -> None:
                            f"read. A run lands `{common.RUN_LEVEL}` and no other, and every other "
                            "level needs `--mandate`")
     what.add_argument("--roadmap", action="store_true", help="a roadmap Issue: intended and deferred")
+    p.add_argument("--harness",
+                   help="the harness to label the Challenge with: claude, codex, copilot, "
+                        "gemini (solo only)")
     p.add_argument("--mandate", help="the solo's own words asking for `--difficulty`, quoted; "
                                      "without them a level is an inference and is refused, and "
                                      "without a level — beside `--roadmap`, or alone — they "
@@ -197,7 +200,7 @@ def _file_issue(args: argparse.Namespace) -> None:
     common.refuse_a_level_and_a_mandate_apart(
         args.level, args.mandate, instead="--roadmap" if args.roadmap else None)
     challenges.file_issue(args.title, channel.signed(channel.stdin_body()), level=args.level,
-                          roadmap=args.roadmap, blocked_by=args.blocked_by)
+                          roadmap=args.roadmap, harness=args.harness, blocked_by=args.blocked_by)
 
 
 def _mint(ident: str | None) -> None:

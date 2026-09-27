@@ -598,9 +598,31 @@ def refuse_if_semantic_duplicate(issues: Sequence[Mapping[str, Any]] | None,
     )
 
 
-def file_issue(title: str, body: str, level: str | None = None,
-               roadmap: bool = False,
-               blocked_by: Sequence[int | str] = ()) -> tuple[str, str]:
+def _validate_harness(harness: str | None) -> None:
+    """Validate that the harness label is permitted and invoked by the solo."""
+    if not harness:
+        return
+    if channel.role_credential() or channel.in_a_run():
+        sys.exit(
+            "say: `--harness` is the solo's prerogative alone; an agent or run may not set it.\n"
+            "     Nothing was filed. File the Challenge without `--harness`."
+        )
+    if harness not in common.HARNESSES:
+        sys.exit(
+            f"say: unknown harness {harness!r}; permitted values are: "
+            f"{', '.join(common.HARNESSES)}.\n"
+            "     Nothing was filed."
+        )
+
+
+def file_issue(  # noqa: PLR0913  # reason: six parameters define a challenge
+    title: str,
+    body: str,
+    level: str | None = None,
+    roadmap: bool = False,
+    harness: str | None = None,
+    blocked_by: Sequence[int | str] = (),
+) -> tuple[str, str]:
     """File a new Challenge or Roadmap Issue with required structural metadata.
 
     Enforces that the issue body opens with `**Waits on.**` (solorepo's DR-114) and
@@ -629,6 +651,7 @@ def file_issue(title: str, body: str, level: str | None = None,
         body (str): Issue body Markdown text.
         level (str | None): Difficulty level for a Challenge, or None to leave it to the reviewer.
         roadmap (bool): When True, creates a deferred roadmap issue instead of a Challenge.
+        harness (str | None): Harness to label the Challenge with, or None. Solo only.
         blocked_by (Sequence[int | str]): Issue numbers to record as blockers; the
             body's `**Waits on.**` line describes them and does not set them, and
             is rewritten to name them.
@@ -637,7 +660,8 @@ def file_issue(title: str, body: str, level: str | None = None,
         tuple[str, str]: Issue number and URL.
 
     Raises:
-        SystemExit: If a run asks for a level that is a verdict, if the body does
+        SystemExit: If `--harness` is set from a run or role credential, or names an
+            unknown harness, if a run asks for a level that is a verdict, if the body does
             not open with `**Waits on.**`, if an open Issue already carries this
             title, if the body's `**Waits on.**` line names an `#<n>` that
             `blocked_by` omits or carries prose the rendered line would sever
@@ -645,6 +669,7 @@ def file_issue(title: str, body: str, level: str | None = None,
             does not show the labels, the blocked-by relationships and the line
             the call asked for.
     """
+    _validate_harness(harness)
     refuse_a_level_from_a_run(level, "Filed with no level it lands `challenge` alone, which "
                                      "is the reviewer's queue, and the level this run would "
                                      "have landed belongs under `**Difficulty.**` in the body, "
@@ -686,6 +711,8 @@ def file_issue(title: str, body: str, level: str | None = None,
                  "citations, and prose naming a blocker no `#<n>` can — and file it again.")
     body = common.retarget_waits(body, refs)
     labels = ["roadmap"] if roadmap else ["challenge"] + ([level] if level else [])
+    if harness:
+        labels.append(f"harness:{harness}")
     cmd = ["issue", "create", "--title", title, "--body", body]
     for name in labels:
         cmd += ["--label", name]

@@ -107,7 +107,7 @@ programs:
       Decision's number reserved.
     verbs:
       - name: file
-        usage: "--title T [--difficulty D --mandate \"<his words>\"|--roadmap] [--blocked-by <n>[,<n>]] < body.md"
+        usage: "--title T [--difficulty D --mandate \"<his words>\"|--roadmap] [--harness H] [--blocked-by <n>[,<n>]] < body.md"
         does: >-
           file a Challenge the form's way: `challenge` alone, for the reviewer to read
           and land a level on; with `--difficulty`, the solo's verdict given in advance,
@@ -116,7 +116,9 @@ programs:
           in, since a level nobody asked for is one the agent inferred, `human`
           asking for the solo and so asking for no mandate; or a roadmap Issue, which
           lands no level, so `--mandate` there — or alone — is refused in turn,
-          its words having no level to stand behind;
+          its words having no level to stand behind; with `--harness`, the solo's
+          prerogative alone, attaching a `harness:<name>` label for known harnesses
+          (claude, codex, copilot, gemini);
           `--blocked-by` sets the native blockers and the body's `**Waits on.**` line
           is rewritten to describe them; refused where the line names an `#<n>` the
           flag omits, and where its prose reads as part of a citation's sentence,

@@ -19,7 +19,7 @@
 
 .meta/checks/comments.py: 317
 .meta/checks/files/python.py: 337
-.meta/checks/probes/channel/filing.py: 27
+.meta/checks/probes/channel/filing.py: 91
 .meta/checks/probes/channel/on_coder.py: 186
 .meta/checks/probes/git/step.py: 13
 .meta/checks/probes/harness/github.py: 269
@@ -33,7 +33,7 @@
 .meta/detect_fallback.py: 189
 .meta/jules/client.py: 0
 .meta/lib/move/advance.py: 521
-.meta/lib/move/challenges.py: 865
+.meta/lib/move/challenges.py: 892
 .meta/lib/move/manager/ranking.py: 220
 .meta/lib/move/pull_requests.py: 275
 .meta/lib/move/reconcile.py: 243

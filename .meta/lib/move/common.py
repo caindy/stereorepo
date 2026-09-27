@@ -54,6 +54,9 @@ this tuple, so a defect in the code it guards is not reported as a GitHub failur
 DIFFICULTIES = ("easy", "medium", "hard", "human")
 
 
+HARNESSES = ("claude", "codex", "copilot", "gemini")
+
+
 # The two levels a loop takes on the label's own event (solorepo's DR-112), which is what
 # makes a Challenge at either one a run's rather than a session's.
 LOOP_LEVELS = ("easy", "medium")

@@ -2,6 +2,7 @@
 """
 
 from types import ModuleType, SimpleNamespace
+from typing import Any
 
 from checks.collect import check
 from checks.probes.harness import (
@@ -15,6 +16,55 @@ from checks.probes.harness import (
 TITLE = "A Challenge filed once"
 BODY = "**Waits on.** Nothing.\n\nWhat was noticed.\n"
 DISTINCT_BODY = "**Waits on.** Nothing.\n\nA separate queue concern.\n"
+
+
+def _harness_filing_probes(channel: Any, file_issue: Any) -> list[str]:
+    """Cases on the `--harness` label during Challenge filing."""
+    problems: list[str] = []
+    fake = FakeFiling()
+    with stood_in(channel, role_credential=lambda: {}):
+        harness_fake = FakeFiling()
+        said = run_verb(
+            channel,
+            harness_fake,
+            lambda: file_issue(TITLE, BODY, harness="gemini"),
+        )
+        harness_labels = next(iter(harness_fake.created.values()), ("", "", []))[2]
+        if said or harness_labels != ["challenge", "harness:gemini"]:
+            problems.append(
+                f"filing: a filing with harness said {said!r} and landed {harness_labels!r}; "
+                "expected ['challenge', 'harness:gemini']"
+            )
+
+        said = run_verb(channel, fake, lambda: file_issue(TITLE, BODY, harness="unrecognized"))
+        if (
+            not said
+            or "unknown harness 'unrecognized'" not in said
+            or "permitted values are:" not in said
+        ):
+            problems.append(
+                f"filing: a filing with unknown harness said {said!r}; "
+                "expected rejection naming permitted harnesses"
+            )
+
+    with environment(GITHUB_RUN_ID="12345"):
+        run_fake = FakeFiling()
+        said = run_verb(channel, run_fake, lambda: file_issue(TITLE, BODY, harness="gemini"))
+        if not said or "prerogative alone" not in said or run_fake.created:
+            problems.append(
+                f"filing: a filing with harness in a run said {said!r} and left "
+                f"{len(run_fake.created)} created; expected prerogative refusal"
+            )
+
+    with stood_in(channel, role_credential=lambda: {"GH_TOKEN": "token"}):
+        role_fake = FakeFiling()
+        said = run_verb(channel, role_fake, lambda: file_issue(TITLE, BODY, harness="gemini"))
+        if not said or "prerogative alone" not in said or role_fake.created:
+            problems.append(
+                f"filing: a filing with harness under role credentials said {said!r} and left "
+                f"{len(role_fake.created)} created; expected prerogative refusal"
+            )
+    return problems
 
 
 @check("filing probes", pre=True)
@@ -67,6 +117,12 @@ def filing_probes() -> list[str]:
     left as the environment has it: the gate runs inside the coder loop's
     container as well as on a laptop, and the same case would otherwise be a
     filing in one place and a refused level in the other.
+
+    The cases on the harness label. Setting a harness is the solo's prerogative
+    alone, so filing with `--harness` in a run or under role credentials is
+    refused. An unrecognized harness name is rejected naming the permitted values.
+    When filed by the solo with a permitted harness, the Issue lands with both
+    `challenge` and `harness:<name>` labels.
     """
     channel, _, programs = load_channel()
     move, post = programs["move"], programs["post"]
@@ -99,6 +155,7 @@ def filing_probes() -> list[str]:
         if said or labels != ["challenge"]:
             problems.append(f"filing: a filing with no level said {said!r} and landed {labels!r}; "
                             "`challenge` alone is the reviewer's queue (solorepo's DR-230)")
+        problems.extend(_harness_filing_probes(channel, file_issue))
 
         blind = FakeFiling(list_fails=True)
         said = run_verb(channel, blind, lambda: file_issue(TITLE, BODY, level="hard"))
@@ -520,8 +577,15 @@ class Filer:
         self.filed = filed
         self.challenges = self
 
-    def file_issue(self, title: str, body: str, level: str | None = None, roadmap: bool = False,
-                   blocked_by: list[int] | None = None) -> tuple[str, str]:
+    def file_issue(  # noqa: PLR0913  # reason: mirrors file_issue parameters
+        self,
+        title: str,
+        body: str,
+        level: str | None = None,
+        roadmap: bool = False,
+        harness: str | None = None,
+        blocked_by: list[int] | None = None,
+    ) -> tuple[str, str]:
         """The call recorded, answered with a number and URL as the real one answers."""
         self.filed.append((title, level))
         return "900", ISSUE_LINK
