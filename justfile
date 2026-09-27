@@ -77,6 +77,10 @@ arc-cluster:
 arc:
     .meta/arc/deploy
 
+# build the runner container image and optionally load it into kind
+arc-image *args:
+    .meta/arc/image {{args}}
+
 # run automated Specialization end-to-end verification (solorepo's DR-239, solorepo's DR-244)
 test-specialization *args:
     python3 .meta/test_specialization.py {{args}}

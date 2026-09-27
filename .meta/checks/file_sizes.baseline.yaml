@@ -17,6 +17,7 @@
 # Recorded as the ceilings were adopted, in caindy/solorepo#883, and it falls as
 # scripts are decomposed into `.meta/lib/<script>/`.
 
+.meta/arc/deploy: 159
 .meta/checks/comments.py: 317
 .meta/checks/files/python.py: 337
 .meta/checks/probes/channel/filing.py: 91

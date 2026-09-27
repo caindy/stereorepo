@@ -273,6 +273,9 @@ artifacts:
   - id: work:artifact/github-workflows-test-tools
     name: .github/workflows/test-tools.yml
     path: .github/workflows/test-tools.yml
+  - id: work:artifact/github-workflows-runner-image
+    name: .github/workflows/runner-image.yml
+    path: .github/workflows/runner-image.yml
   - id: work:artifact/gitattributes
     name: .gitattributes
     path: .gitattributes
@@ -825,6 +828,9 @@ artifacts:
   - id: work:artifact/meta-arc-deploy
     name: .meta/arc/deploy
     path: .meta/arc/deploy
+  - id: work:artifact/meta-arc-image
+    name: .meta/arc/image
+    path: .meta/arc/image
   - id: work:artifact/meta-arc-teardown
     name: .meta/arc/teardown
     path: .meta/arc/teardown

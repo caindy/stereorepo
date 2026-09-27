@@ -29,3 +29,14 @@ into `.meta/arc/Dockerfile` alongside existing CLI tooling, and configure
 pre-baked binary directly.
 
 Evidence: `.meta/checks/files/history.py::meta_history_evidence`
+
+### Missing runner container image caused scale set deployment failure
+
+Deploying runner scale sets with an image tag not yet published to GitHub Container Registry (GHCR) or present
+in the local cluster containerd cache caused ImagePullBackOff and runner pod startup
+failures. Established: `verify_runner_image()` verifies runner image existence across
+local Docker cache, cluster containerd cache, and GitHub Container Registry (GHCR) Open Container Initiative (OCI) registry before running
+Helm upgrades, failing fast with actionable guidance.
+
+Evidence: `.meta/checks/files/history.py::meta_history_evidence`
+

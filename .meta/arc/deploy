@@ -8,6 +8,7 @@ Applies GitHub registration secrets and local developer Gemini credentials.
 History in deploy.history.md (solorepo's DR-171).
 """
 import argparse
+import base64
 import contextlib
 import json
 import os
@@ -16,6 +17,8 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
 import yaml
 
@@ -471,6 +474,158 @@ def reset_stale_registration(start_time: float | None = None) -> None:
     _wait_listener_ready()
 
 
+def check_local_docker_image(image_ref: str) -> bool:
+    """Checks whether the image is present in the local Docker daemon cache.
+
+    Args:
+        image_ref: Full container image reference including tag.
+
+    Returns:
+        bool: True if image is present in the local Docker daemon cache.
+    """
+    if not shutil.which("docker"):
+        return False
+    res = subprocess.run(["docker", "image", "inspect", image_ref],
+                         check=False, capture_output=True, text=True)
+    return res.returncode == 0
+
+
+def check_kind_cluster_image(image_ref: str, cluster: str = "solorepo-arc") -> bool:
+    """Checks whether the image is cached in the local Kind cluster containerd runtime.
+
+    Args:
+        image_ref: Full container image reference including tag.
+        cluster: Name of the Kind cluster. Defaults to "solorepo-arc".
+
+    Returns:
+        bool: True if image is present in the Kind cluster containerd cache.
+    """
+    if not shutil.which("docker"):
+        return False
+    node_name = f"{cluster}-control-plane"
+    res = subprocess.run(["docker", "exec", node_name, "crictl", "images", "-q", image_ref],
+                         check=False, capture_output=True, text=True)
+    return res.returncode == 0 and bool(res.stdout.strip())
+
+
+def check_ghcr_image(image_ref: str, pat: str | None = None) -> bool:
+    """Checks whether the container image manifest exists on GitHub Container Registry (GHCR).
+
+    Args:
+        image_ref: Full container image reference on GHCR including tag.
+        pat: Optional GitHub personal access token for authenticated registry access.
+
+    Returns:
+        bool: True if image manifest exists on GHCR.
+    """
+    if shutil.which("docker"):
+        res = subprocess.run(["docker", "manifest", "inspect", image_ref],
+                             check=False, capture_output=True, text=True)
+        if res.returncode == 0:
+            return True
+
+    if not image_ref.startswith("ghcr.io/"):
+        return False
+    path_and_tag = image_ref.removeprefix("ghcr.io/")
+    if ":" not in path_and_tag:
+        return False
+    repo_path, tag = path_and_tag.rsplit(":", 1)
+
+    token_url = f"https://ghcr.io/token?service=ghcr.io&scope=repository:{repo_path}:pull"
+    req = urllib.request.Request(token_url)
+    if pat:
+        auth_bytes = base64.b64encode(f":{pat}".encode("ascii")).decode("ascii")
+        req.add_header("Authorization", f"Basic {auth_bytes}")
+
+    bearer_token = None
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            token_data = json.loads(response.read().decode("utf-8"))
+            bearer_token = token_data.get("token")
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError):
+        pass
+
+    manifest_url = f"https://ghcr.io/v2/{repo_path}/manifests/{tag}"
+    m_req = urllib.request.Request(manifest_url, method="HEAD")
+    m_req.add_header("Accept", "application/vnd.docker.distribution.manifest.v2+json, "
+                               "application/vnd.oci.image.manifest.v1+json, "
+                               "application/vnd.docker.distribution.manifest.list.v2+json, "
+                               "application/vnd.oci.image.index.v1+json")
+    if bearer_token:
+        m_req.add_header("Authorization", f"Bearer {bearer_token}")
+    elif pat:
+        auth_bytes = base64.b64encode(f":{pat}".encode("ascii")).decode("ascii")
+        m_req.add_header("Authorization", f"Basic {auth_bytes}")
+
+    try:
+        with urllib.request.urlopen(m_req, timeout=10) as response:
+            return bool(response.status == 200)
+    except urllib.error.HTTPError as e:
+        return bool(e.code == 200)
+    except (urllib.error.URLError, TimeoutError):
+        return False
+
+
+def runner_image_ref(values_path: pathlib.Path = HERE / "values-runnerset.yaml") -> str | None:
+    """Extracts the runner container image reference from values-runnerset.yaml.
+
+    Args:
+        values_path: Path to the runner scale set values file.
+
+    Returns:
+        str | None: Image reference string or None if unparseable or absent.
+    """
+    if not values_path.exists():
+        return None
+    try:
+        with values_path.open(encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        if not isinstance(data, dict):
+            return None
+        template = data.get("template", {})
+        if not isinstance(template, dict):
+            return None
+        spec = template.get("spec", {})
+        if not isinstance(spec, dict):
+            return None
+        containers = spec.get("containers", [])
+        if not isinstance(containers, list):
+            return None
+        for container in containers:
+            if isinstance(container, dict) and container.get("name") == "runner":
+                image = container.get("image")
+                return str(image) if image else None
+    except (OSError, yaml.YAMLError):
+        pass
+    return None
+
+
+def verify_runner_image(image_ref: str, pat: str | None = None) -> None:
+    """Verifies runner image exists locally or on GitHub Container Registry (GHCR).
+
+    Args:
+        image_ref: Full container image reference including tag.
+        pat: Optional GitHub personal access token for GHCR manifest check.
+
+    Raises:
+        SystemExit: If the runner image is not found in Docker cache, Kind cluster
+            cache, or GHCR registry.
+    """
+    print(f"arc: preflight: verifying runner image '{image_ref}' exists...", file=sys.stderr)
+    if check_local_docker_image(image_ref):
+        print(f"arc: runner image '{image_ref}' verified in local Docker cache", file=sys.stderr)
+        return
+    if check_kind_cluster_image(image_ref):
+        print(f"arc: runner image '{image_ref}' verified in local cluster "
+              "containerd cache", file=sys.stderr)
+        return
+    if check_ghcr_image(image_ref, pat=pat):
+        print(f"arc: runner image '{image_ref}' verified on GHCR", file=sys.stderr)
+        return
+    sys.exit(f"arc: runner image '{image_ref}' not found locally or on GHCR. "
+             f"Build and load it with 'just arc-image --load' or publish it to GHCR first.")
+
+
 def main() -> None:
     """CLI entry point for deploying the Actions Runner Controller and runner scale sets."""
     argparse.ArgumentParser(description=__doc__,
@@ -480,6 +635,11 @@ def main() -> None:
     print(f"arc: deploying to kubectl context '{context}'", file=sys.stderr)
     start_time = time.time()
     pat = token()
+
+    image_ref = runner_image_ref()
+    if image_ref:
+        verify_runner_image(image_ref, pat=pat)
+
     helm_upgrade(CONTROLLER_RELEASE, CONTROLLER_NAMESPACE, CONTROLLER_CHART,
                  HERE / "values-controller.yaml")
     apply_secret(pat)
@@ -496,3 +656,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -118,6 +118,14 @@ def justfile() -> str:
             "    .meta/arc/deploy",
         ]
 
+    if "work:artifact/meta-arc-image" in artifacts:
+        lines += [
+            "",
+            "# build the runner container image and optionally load it into kind",
+            "arc-image *args:",
+            "    .meta/arc/image {{args}}",
+        ]
+
     if "work:artifact/meta-test-specialization" in artifacts:
         lines += [
             "",

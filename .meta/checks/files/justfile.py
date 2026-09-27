@@ -65,6 +65,7 @@ CONTRACT: Contract = {
     "bootstrap": (("args", FLAGS),),
     "arc-cluster": (),
     "arc": (),
+    "arc-image": (("args", FLAGS),),
     "test-specialization": (("args", FLAGS),),
     "adapt": (("args", FLAGS),),
 }
