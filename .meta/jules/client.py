@@ -28,7 +28,10 @@ from review_support import (
     post_review_and_findings,
 )
 
-EMPTY_REVIEW = "Jules session {session} returned an empty review response; aborting verdict."
+EMPTY_REVIEW = (
+    "Jules session {session} returned an empty review response; "
+    "aborting verdict (activities={activities})."
+)
 """What a review raises where the session produced no agent text to read a verdict from."""
 
 API_BASE = "https://jules.googleapis.com/v1alpha"
@@ -166,28 +169,19 @@ def poll_session_activities(
     timeout_seconds: int = 180,
     poll_interval: float = 3.0,
 ) -> list[dict[str, Any]]:
-    """Polls a session until agent activities are generated or timeout occurs.
-
-    A failed poll costs one interval rather than the run: a payload that will
-    not parse or will not decode, and a connection dropped mid-read, are
-    swallowed and the next tick asks again.
-    """
+    """Polls a session until agent activities are generated or timeout occurs."""
     clean_id = session_id.removeprefix("sessions/")
     start = time.time()
     while time.time() - start < timeout_seconds:
         try:
             res = list_activities(clean_id, api_key=api_key)
-            raw_activities = res.get("activities")
-            if isinstance(raw_activities, list):
-                activities: list[dict[str, Any]] = [
-                    item for item in raw_activities if isinstance(item, dict)
-                ]
-                agent_activities = [
-                    a for a in activities
-                    if a.get("originator") == "agent" or "agentMessaged" in a
-                ]
-                if agent_activities:
-                    return activities
+            raw = res.get("activities")
+            activities = [i for i in raw if isinstance(i, dict)] if isinstance(raw, list) else []
+            if extract_agent_text(activities):
+                return activities
+            sess = get_session(clean_id, api_key=api_key)
+            if str(sess.get("state", "")).upper() in ("COMPLETED", "FAILED", "CANCELLED"):
+                return activities
         except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             pass
         time.sleep(poll_interval)
@@ -199,8 +193,12 @@ def extract_agent_text(activities: list[dict[str, Any]]) -> str:
     messages: list[str] = []
     for act in activities:
         if act.get("originator") == "agent" or "agentMessaged" in act:
-            agent_msg = act.get("agentMessaged", {})
-            text = agent_msg.get("text") or agent_msg.get("message") or act.get("text") or ""
+            raw_msg = act.get("agentMessaged")
+            m: dict[str, Any] = raw_msg if isinstance(raw_msg, dict) else {}
+            text = (
+                m.get("agentMessage") or m.get("text") or m.get("message")
+                or act.get("agentMessage") or act.get("text") or ""
+            )
             if text:
                 messages.append(str(text))
     return "\n\n".join(messages).strip()
@@ -302,7 +300,7 @@ RECOMMENDED_VERDICT: COMMENT
     activities = poll_session_activities(session_id, api_key=api_key, timeout_seconds=timeout_seconds)
     review_body = extract_agent_text(activities)
     if not review_body.strip():
-        raise RuntimeError(EMPTY_REVIEW.format(session=session_id))
+        raise RuntimeError(EMPTY_REVIEW.format(session=session_id, activities=len(activities)))
 
     findings = extract_findings(review_body)
     verdict = determine_verdict(

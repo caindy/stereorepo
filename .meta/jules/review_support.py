@@ -59,6 +59,8 @@ def determine_verdict(
     """Choose the channel's review flag from checks and the recommendation."""
     if not form_passed or has_failed_ci or unresolved_count > 0 or findings_count > 0:
         return "--request-changes"
+    if not review_body.strip():
+        return "--comment"
     if ("RECOMMENDED_VERDICT: REQUEST_CHANGES" in review_body
             or "RECOMMENDED_VERDICT: REQUEST CHANGES" in review_body):
         return "--request-changes"
