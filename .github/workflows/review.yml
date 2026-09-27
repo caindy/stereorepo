@@ -67,6 +67,8 @@ jobs:
       # Fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle
       # (solorepo's DR-178, solorepo's DR-245); set vars.GEMINI_FALLBACK to 'true' to enable.
       GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
+      # Cooldown cache for Claude quota exhaustion (solorepo's DR-294).
+      CLAUDE_COOLDOWN_UNTIL: ${{ vars.CLAUDE_COOLDOWN_UNTIL || '' }}
       # Fall back to Google Labs Jules if enabled by the JULES_FALLBACK toggle
       # (solorepo's DR-246); the door reads it for the chain (solorepo's DR-281).
       JULES_FALLBACK: ${{ vars.JULES_FALLBACK || 'false' }}

@@ -240,6 +240,9 @@ def fallback(handed: Attempt, fields: Mapping[str, str] | None = None) -> None:
     Where the next rung is the Antigravity CLI, the transcript is scanned
     for a quota error and the log says what it found, advisory as it always
     was: the toggle decided the rung and the scan decides nothing.
+    If the failed rung belongs to a harness with configured cooldowns and holds
+    quota exhaustion indicators, its cooldown expiration timestamp is persisted
+    into repository variables (solorepo's DR-294).
 
     A rung the workflow did not number from one, and an outcome that did not
     arrive, are each refused: `cli.count` and `cli.rung_outcome` answer
@@ -260,6 +263,12 @@ def fallback(handed: Attempt, fields: Mapping[str, str] | None = None) -> None:
     routed = read_routing()
     tiers = [routing.Tier(**rung) for rung in routed["tiers"]]
     position = handed.attempt
+    if handed.outcome == "failure" and handed.execution and 1 <= position <= len(tiers):
+        current = tiers[position - 1]
+        if current.harness in routing.COOLDOWNS:
+            import detect_fallback
+            if detect_fallback.has_quota_error(handed.execution):
+                detect_fallback.record_cooldown(current.harness, handed.execution)
     following = tiers[position] if position < len(tiers) else None
     runs = handed.outcome == "failure" and following is not None
     if runs and following is not None:

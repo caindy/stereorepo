@@ -86,7 +86,7 @@
 .meta/checks/probes/tools/comments.py: 29
 .meta/checks/probes/tools/depth.py: 4
 .meta/checks/probes/tools/dereference.py: 0
-.meta/checks/probes/tools/fallback.py: 36
+.meta/checks/probes/tools/fallback.py: 32
 .meta/checks/probes/tools/gate.py: 3
 .meta/checks/probes/tools/search.py: 5
 .meta/checks/probes/tools/terms.py: 1

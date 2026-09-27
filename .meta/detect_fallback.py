@@ -12,11 +12,177 @@ scan of Claude Code's transcript where the next rung is the Antigravity CLI
 (solorepo's DR-245).
 """
 
+import contextlib
 import json
 import os
 import pathlib
+import re
 import sys
+import time
 from typing import Any
+
+_META = pathlib.Path(__file__).resolve().parent
+if str(_META) not in sys.path:
+    sys.path.insert(0, str(_META))
+_SAY = _META / "say"
+if str(_SAY) not in sys.path:
+    sys.path.insert(0, str(_SAY))
+
+import channel  # noqa: E402  # reason: sys.path resolution required for local modules
+from lib.on import routing  # noqa: E402  # reason: sys.path resolution required for local modules
+
+DEFAULT_COOLDOWN_SECONDS: int = 18000
+"""Fallback quota exhaustion cooldown duration in seconds (5 hours) under solorepo's DR-294."""
+
+DURATION_COMPONENT_PATTERN = re.compile(
+    r"(?P<hours>\d+(?:\.\d+)?)\s*(?:h(?:ours?|rs?)?)(?=\b|\d|\s|$)|"
+    r"(?P<minutes>\d+(?:\.\d+)?)\s*(?:m(?:in(?:ute)?s?)?)(?=\b|\d|\s|$)|"
+    r"(?P<seconds>\d+(?:\.\d+)?)\s*(?:s(?:ec(?:ond)?s?)?)(?=\b|\d|\s|$)",
+    re.IGNORECASE,
+)
+"""Components of textual duration intervals (hours, minutes, seconds)."""
+
+RETRY_HEADER_PATTERN = re.compile(
+    r"(?i)\b(?:resets?(?:\s+(?:in|after|at))?|retry(?:[-_]after|\s+after)?|try\s+again\s+in|retry\s+in)\s*[:=]?\s*([^\n,;.]+)",
+)
+"""Pattern detecting explicit retry or quota reset delay phrases in error output."""
+
+
+def _find_delay_in_data(obj: Any) -> int | None:
+    """Traverse parsed JSON structure for explicit delay or retry-after fields."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            norm = k.lower().replace("-", "").replace("_", "").replace(" ", "")
+            if norm in ("retryafter", "retryafterseconds", "retryinseconds", "retryin"):
+                try:
+                    return int(float(v))
+                except (ValueError, TypeError):
+                    pass
+            res = _find_delay_in_data(v)
+            if res is not None:
+                return res
+    elif isinstance(obj, list):
+        for item in obj:
+            res = _find_delay_in_data(item)
+            if res is not None:
+                return res
+    return None
+
+
+def _parse_duration(text: str) -> int | None:
+    """Parse retry delay duration from textual error messages."""
+    match = RETRY_HEADER_PATTERN.search(text)
+    if not match:
+        return None
+    raw_val = match.group(1).strip()
+    if raw_val.isdigit():
+        return int(raw_val)
+    total = 0.0
+    matched = False
+    for m in DURATION_COMPONENT_PATTERN.finditer(raw_val):
+        matched = True
+        if m.group("hours"):
+            total += float(m.group("hours")) * 3600
+        elif m.group("minutes"):
+            total += float(m.group("minutes")) * 60
+        elif m.group("seconds"):
+            total += float(m.group("seconds"))
+    return int(total) if matched else None
+
+
+def extract_retry_after(raw_text: str, data: Any = None) -> int | None:
+    """Extract a retry delay in seconds from structured error data or raw text.
+
+    Args:
+        raw_text: Raw error text or transcript string to inspect with regexes.
+        data: Optional parsed JSON object or decoded structure to inspect for delay keys.
+
+    Returns:
+        int | None: Parsed delay in seconds if detected, or None if no delay was found.
+    """
+    if data is not None:
+        delay = _find_delay_in_data(data)
+        if delay is not None:
+            return delay
+
+    return _parse_duration(raw_text)
+
+
+def calculate_cooldown_expiration(
+    execution_file: str | pathlib.Path,
+    default_seconds: int = DEFAULT_COOLDOWN_SECONDS,
+    now: float | None = None,
+) -> int:
+    """Calculate the Unix timestamp when quota cooldown expires for an execution failure.
+
+    Reads the execution file, inspects parsed JSON entries and raw text for explicit
+    retry delays using extract_retry_after, and offsets the reference timestamp.
+
+    Args:
+        execution_file: Path to the execution output file or raw text content.
+        default_seconds: Cooldown duration in seconds to apply when no explicit delay is parsed.
+        now: Optional reference timestamp in seconds; defaults to current Unix epoch.
+
+    Returns:
+        int: Future Unix timestamp representing the cooldown expiration boundary.
+    """
+    ref_time = time.time() if now is None else now
+    path = pathlib.Path(execution_file)
+    raw = ""
+    if path.is_file():
+        try:
+            raw = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            print(f"Error reading {path}: {e}", file=sys.stderr)
+            return int(ref_time + default_seconds)
+    else:
+        raw = str(execution_file)
+
+    data: Any = None
+    with contextlib.suppress(json.JSONDecodeError):
+        data = json.loads(raw)
+
+    delay = extract_retry_after(raw, data)
+    duration = delay if delay is not None else default_seconds
+    return int(ref_time + duration)
+
+
+def record_cooldown(
+    harness: str = "claude",
+    execution_file: str | pathlib.Path | None = None,
+    default_seconds: int = DEFAULT_COOLDOWN_SECONDS,
+    now: float | None = None,
+) -> int | None:
+    """Persist the cooldown expiration timestamp for a harness to repository variables.
+
+    Resolves the target GitHub repository variable from routing.COOLDOWNS, determines
+    the expiration timestamp from execution_file or default duration, and writes the
+    variable via channel.gh.
+
+    Args:
+        harness: Identifier of the harness experiencing quota exhaustion.
+        execution_file: Optional path to the execution output file containing error details.
+        default_seconds: Fallback cooldown duration in seconds if no delay is found.
+        now: Optional reference timestamp in seconds.
+
+    Returns:
+        int | None: Unix timestamp of the recorded expiration, or None if the harness
+            has no configured cooldown variable.
+    """
+    var_name = routing.COOLDOWNS.get(harness)
+    if not var_name:
+        return None
+
+    if execution_file is not None:
+        expiration = calculate_cooldown_expiration(
+            execution_file, default_seconds=default_seconds, now=now
+        )
+    else:
+        ref_time = time.time() if now is None else now
+        expiration = int(ref_time + default_seconds)
+
+    channel.gh("variable", "set", var_name, "--body", str(expiration), parse=False, default="")
+    return expiration
 
 
 def is_toggle_enabled(name: str, default: bool = False) -> bool:

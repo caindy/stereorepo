@@ -22,6 +22,7 @@ restore; such a rename lands in two pull requests, the module first.
 """
 
 import os
+import time
 from collections.abc import Mapping, Sequence
 from typing import NamedTuple
 
@@ -44,6 +45,12 @@ TOGGLES = {
 }
 """The repository variable that opts a portfolio in to each fallback harness; Claude Code has
 none, being the harness every portfolio runs (solorepo's DR-240, DR-245, DR-246)."""
+
+COOLDOWNS = {
+    "claude": "CLAUDE_COOLDOWN_UNTIL",
+}
+"""The repository variable holding the Unix epoch timestamp until which a harness
+is cooling down (solorepo's DR-294)."""
 
 ENABLED = ("true", "1", "yes", "on", "enable", "enabled")
 """What a toggle's value reads as on, lowercased and stripped."""
@@ -184,6 +191,32 @@ def toggled(harness: str, environ: Mapping[str, str] = os.environ) -> bool:
     return (environ.get(name) or "").strip().lower() in ENABLED
 
 
+def is_cooling_down(
+    harness: str,
+    environ: Mapping[str, str] = os.environ,
+    now: float | None = None,
+) -> bool:
+    """Whether `harness` is cooling down from a recent quota exhaustion (solorepo's DR-294).
+
+    Parameters:
+        harness (str): The harness.
+        environ (Mapping[str, str]): The environment carrying cooldown timestamps.
+        now (float | None): Current Unix timestamp, defaults to `time.time()`.
+    """
+    var_name = COOLDOWNS.get(harness)
+    if not var_name:
+        return False
+    val = (environ.get(var_name) or "").strip()
+    if not val:
+        return False
+    try:
+        until = float(val)
+    except ValueError:
+        return False
+    current = time.time() if now is None else now
+    return until > current
+
+
 def tier(
     harness: str, depth: Depth, gemini_model: str = GEMINI_MODEL,
     copilot_model: str = COPILOT_MODEL, codex_model: str = CODEX_MODEL
@@ -230,6 +263,8 @@ def chain(
 
     The primary runs whatever the toggles say, since a label or a dispatch
     asked for it by name; a fallback is a rung only where its toggle is on.
+    Tiers cooling down from quota exhaustion are skipped unless no alternative
+    exists (solorepo's DR-294).
 
     Parameters:
         primary (str): The harness chosen by label, input or default.
@@ -239,22 +274,30 @@ def chain(
         environ (Mapping[str, str]): The environment the toggles are read from.
     """
     order = [primary, *(name for name in fallbacks if name != primary)]
+    eligible = [name for name in order if name == primary or toggled(name, environ)]
+    active = [name for name in eligible if not is_cooling_down(name, environ)]
+    chosen = active if active else eligible
     return tuple(
         tier(name, depth, gemini_model, codex_model=environ.get("CODEX_MODEL", CODEX_MODEL))
-        for name in order
-        if name == primary or toggled(name, environ)
+        for name in chosen
     )
 
 
 def coder_chain(
-    primary: str, task: str, level: str, environ: Mapping[str, str] = os.environ
+    primary: str,
+    task: str,
+    level: str,
+    environ: Mapping[str, str] = os.environ,
 ) -> tuple[Tier, ...]:
     """The coder's chain for a pass at a level, the primary first."""
     return chain(primary, CODER_FALLBACKS, coder_depth(task, level), environ=environ)
 
 
 def review_chain(
-    primary: str, depth: Depth, gemini_model: str, environ: Mapping[str, str] = os.environ
+    primary: str,
+    depth: Depth,
+    gemini_model: str,
+    environ: Mapping[str, str] = os.environ,
 ) -> tuple[Tier, ...]:
     """The reviewer's chain at the depth `.meta/depth.py` evaluated, the primary first.
 
@@ -264,7 +307,10 @@ def review_chain(
     return chain(primary, REVIEW_FALLBACKS, depth, gemini_model, environ)
 
 
-def reading_chain(primary: str, environ: Mapping[str, str] = os.environ) -> tuple[Tier, ...]:
+def reading_chain(
+    primary: str,
+    environ: Mapping[str, str] = os.environ,
+) -> tuple[Tier, ...]:
     """The reading door's chain, the primary first."""
     return chain(primary, READING_FALLBACKS, READING_DEPTH, environ=environ)
 

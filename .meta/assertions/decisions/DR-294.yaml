@@ -1,0 +1,102 @@
+decisions:
+  - id: work:decision/294
+    name: "DR-294 · Bypass exhausted ladder tiers via cross-run repository variable quota caching"
+    challenge: work:challenge/1097
+    status: ADOPTED
+    applies:
+      - work:article/8
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-lib-on-routing
+      - work:artifact/meta-lib-on-common
+      - work:artifact/meta-detect-fallback
+      - work:artifact/github-workflows-coder
+      - work:artifact/github-workflows-review
+      - work:artifact/github-workflows-triage
+      - work:artifact/meta-checks-probes-channel-routing
+      - work:artifact/meta-checks-probes-tools-fallback
+      - work:artifact/meta-checks-files-harness
+    context: >-
+      Solorepo's DR-281 established a uniform multi-tier execution ladder where
+      every harness pass runs through a single harness runner action using an
+      in-tree routing table. However, model capacity and quota exhaustion errors
+      (such as HTTP 429) operated strictly post-hoc. When a model's tier was
+      exhausted or rate-limited, each subsequent autonomous loop attempt
+      continued to dispatch that tier first, waiting through execution timeouts
+      and retry delays before failing over to available fallbacks. Challenge
+      #1097 evaluated active 1-token preflight probing, cluster-local state
+      caching, and repository variable cooldown persistence across runs. Active
+      probing was rejected because it consumes the sliding utilization window
+      quota being guarded, introduces network latency into door execution, and
+      risks anti-abuse throttling from upstream API gateways. Cluster-local
+      storage in ARC was rejected because it breaks portability for fresh
+      clones running on standard GitHub-hosted runners.
+    alternatives:
+      - name: Active 1-token preflight network probing in door dispatch
+        chosen: false
+        reason: >-
+          Making out-of-band Messages API requests before every pass burns
+          tokens and requests from rolling 5-hour utilization windows, adds
+          network failure points to local door evaluation, and introduces
+          credential leakage and User-Agent anti-abuse risks into the control
+          plane.
+      - name: Local cluster volume or ConfigMap mounts in ARC runner pods
+        chosen: false
+        reason: >-
+          Mounting shared volumes in the self-hosted Kubernetes cluster is fast
+          for local ARC pods, but breaks the portability requirement of
+          solorepo's DR-245: fresh clones and external portfolios running on
+          GitHub-hosted `ubuntu-latest` lack cluster infrastructure and would
+          silently fail.
+      - name: GitHub Actions cache restoration step
+        chosen: false
+        reason: >-
+          Actions cache requires adding restore steps before the door on every
+          workflow pass, adding 1-3 seconds of runner setup latency to every
+          job even when quotas are healthy, and remains subject to cache
+          eviction policies and regional eventual consistency.
+      - name: Passive cooldown caching via GitHub repository variables
+        chosen: true
+        reason: >-
+          When an attempt step fails with an HTTP 429 quota exhaustion error,
+          the runner calculates the reset window and updates repository variable
+          `CLAUDE_COOLDOWN_UNTIL`. GitHub Actions injects `vars.*` directly into
+          job environment variables at workflow initiation, giving the door's
+          routing policy zero-latency, local-only visibility across all
+          ephemeral runner pods without network round-trips. If an active
+          cooldown timestamp is detected, `routing.py` prunes the exhausted tier
+          from the ladder and promotes active fallbacks to primary. Once the
+          timestamp elapses, the tier automatically re-enters the ladder without
+          requiring manual cleanup.
+    consequences:
+      - >-
+        `.meta/lib/on/routing.py` inspects `CLAUDE_COOLDOWN_UNTIL` and prunes
+        exhausted tiers from the chain when active cooldown timestamps exceed
+        current epoch time and viable fallbacks exist.
+      - >-
+        `.meta/detect_fallback.py` provides helpers to extract retry-after
+        intervals, calculate cooldown expiration timestamps, and persist
+        cooldown state via `gh variable set`.
+      - >-
+        `.meta/lib/on/common.py` records quota cooldown in its `between` phase
+        whenever an attempt fails with a detected quota error.
+      - >-
+        Workflows `coder.yml`, `review.yml`, and `triage.yml` export
+        `CLAUDE_COOLDOWN_UNTIL: ${{ vars.CLAUDE_COOLDOWN_UNTIL || '' }}` in job
+        `env:`.
+      - >-
+        `.meta/checks/files/harness.py` validates that workflows export the
+        cooldown variable alongside fallback toggles.
+    falsifier: >-
+      A workflow run that attempts a Claude rung while `CLAUDE_COOLDOWN_UNTIL`
+      holds a future epoch timestamp and an active fallback is enabled; or an
+      attempt step that encounters an HTTP 429 quota error without recording a
+      cooldown timestamp to repository variables.
+    rationale: |-
+      Autonomous loops must recover from vendor quota exhaustion without human
+      intervention and without wasting finite CI runner minutes. Passive
+      persistence through repository variables matches the pattern established
+      by solorepo's DR-240 and DR-245 fallback toggles. By relying on GitHub
+      Actions' native variable injection, the door preserves DR-281's invariant
+      that local routing policy evaluation makes no outbound network calls and
+      imports nothing that reaches external APIs.

@@ -177,19 +177,30 @@ CODEX_ENV_EXPORT = re.compile(r"^\s*CODEX_FALLBACK:\s*\${{\s*vars\.CODEX_FALLBAC
 """Each harness workflow exports CODEX_FALLBACK, which controls the Codex CLI rung."""
 
 
+CLAUDE_COOLDOWN_ENV_EXPORT = re.compile(
+    r"^\s*CLAUDE_COOLDOWN_UNTIL:\s*\${{\s*vars\.CLAUDE_COOLDOWN_UNTIL\b", re.M
+)
+"""Workflows running the harness runner export CLAUDE_COOLDOWN_UNTIL from
+vars.CLAUDE_COOLDOWN_UNTIL in their job env, which is where the door reads the cooldown cache
+(solorepo's DR-294)."""
+
+
 HARNESS_ACTION = "./.meta/actions/harness"
 """The harness runner's `uses:` path, as every attempt step names it."""
 
 
 @check("fallback workflows export the toggles")
 def fallback_workflows_export_gemini_fallback() -> StepOutcome:
-    """Workflows running the harness runner export the fallback toggles (solorepo's DR-245, DR-246).
+    """Workflows running the harness runner export the fallback toggles and cooldown cache
+    (solorepo's DR-245, DR-246, DR-294).
 
     GitHub Actions does not populate repository variables into runner environments
     automatically. Without an explicit mapping under job-level `env:`, the door's
     routing policy sees `GEMINI_FALLBACK` unset and resolves a chain of one rung,
     silently disabling fallback on quota exhaustion even when configured in the
     repository. The reviewer workflows export `JULES_FALLBACK` for their Jules rungs.
+    All fallback workflows export `CLAUDE_COOLDOWN_UNTIL` so that cooling tiers are
+    bypassed across runs (solorepo's DR-294).
 
     Returns:
         Passed | Found | CouldNotRun: Validation result checking that workflows
@@ -208,6 +219,11 @@ def fallback_workflows_export_gemini_fallback() -> StepOutcome:
             problems.append(
                 f"{path.relative_to(ROOT)}: runs the harness runner but does not export "
                 "`GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK ... }}` in job `env:`"
+            )
+        if not CLAUDE_COOLDOWN_ENV_EXPORT.search(text):
+            problems.append(
+                f"{path.relative_to(ROOT)}: runs the harness runner but does not export "
+                "`CLAUDE_COOLDOWN_UNTIL: ${{ vars.CLAUDE_COOLDOWN_UNTIL ... }}` in job `env:`"
             )
         if path.name == "coder.yml" and not COPILOT_ENV_EXPORT.search(text):
             problems.append(

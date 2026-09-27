@@ -273,6 +273,78 @@ def _probe_toggle_truthiness(detect_fallback: Any) -> list[str]:
     return problems
 
 
+def _probe_quota_cooldown(detect_fallback: Any) -> list[str]:
+    """Verify retry-after extraction, expiration calculation, and variable recording
+    (solorepo's DR-294)."""
+    problems: list[str] = []
+
+    retry_cases = [
+        ("Rate limit reached. retry-after: 120", 120),
+        ("Please retry after 45 seconds", 45),
+        ("Quota limit reached. reset in 300s", 300),
+        ("reset after 15m", 900),
+        ("reset after 2h", 7200),
+        ("try again in 1 hour", 3600),
+        ("Generic error with no retry header", None),
+    ]
+    for text, expected in retry_cases:
+        extracted = detect_fallback.extract_retry_after(text)
+        if extracted != expected:
+            problems.append(
+                f"fallback probes: extract_retry_after({text!r}) returned {extracted!r}, "
+                f"expected {expected!r}"
+            )
+
+    now = 1_000_000
+    exp_with_header = detect_fallback.calculate_cooldown_expiration("retry-after: 60", now=now)
+    if exp_with_header != now + 60:
+        problems.append(
+            f"fallback probes: calculate_cooldown_expiration with header produced "
+            f"{exp_with_header}, expected {now + 60}"
+        )
+
+    exp_default = detect_fallback.calculate_cooldown_expiration("generic quota error", now=now)
+    expected_default = now + detect_fallback.DEFAULT_COOLDOWN_SECONDS
+    if exp_default != expected_default:
+        problems.append(
+            f"fallback probes: calculate_cooldown_expiration default produced "
+            f"{exp_default}, expected {expected_default}"
+        )
+
+    orig_gh = detect_fallback.channel.gh
+    try:
+        recorded: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+
+        def fake_gh(*args: Any, **kwargs: Any) -> str:
+            recorded.append((args, kwargs))
+            return ""
+
+        detect_fallback.channel.gh = fake_gh
+
+        detect_fallback.record_cooldown("claude", "retry-after: 60", now=now)
+        expected_call = (
+            ("variable", "set", "CLAUDE_COOLDOWN_UNTIL", "--body", str(now + 60)),
+            {"parse": False, "default": ""},
+        )
+        if not recorded or recorded[0] != expected_call:
+            problems.append(
+                f"fallback probes: record_cooldown for claude invoked {recorded!r}, "
+                f"expected {[expected_call]!r}"
+            )
+
+        recorded.clear()
+        detect_fallback.record_cooldown("agy", "retry-after: 60", now=now)
+        if recorded:
+            problems.append(
+                f"fallback probes: record_cooldown unexpectedly recorded for untracked harness "
+                f"agy: {recorded!r}"
+            )
+    finally:
+        detect_fallback.channel.gh = orig_gh
+
+    return problems
+
+
 class _FakeStdin:
     """Mock standard input stream for FakePopen."""
 
@@ -752,17 +824,24 @@ def _probe_run_agy(run_agy: Any) -> list[str]:
 
 @check("fallback probes", pre=True)
 def fallback_probes() -> list[str]:
-    """Reviewer and coder confinement, permission merging, toggle evaluation, and streaming runner (solorepo's DR-245, solorepo's DR-257, solorepo's DR-260).
+    """Reviewer and coder confinement, permission merging, toggle evaluation, streaming runner,
+    and quota cooldown persistence (solorepo's DR-245, solorepo's DR-257, solorepo's DR-260,
+    solorepo's DR-294).
 
     Proves that `configure_reviewer_settings()` configures `permissions.deny` with
-    fine-grained denial patterns (`write_file(*)`, `read_url(*)`, `execute_url(*)`, `invoke_subagent(*)`)
-    and PreToolUse hooks for worktree-only and signed-channel, that `configure_coder_settings()`
-    denies `invoke_subagent(*)` and registers signed-channel PreToolUse hook directly in
-    settings and hooks JSON without clobbering credentials, that `merge_settings()` safely
-    merges permissions and tools, that toggle evaluation adheres to accepted truthy conventions,
-    and that `run_agy.py` builds commands, formats tool updates, and handles streaming NDJSON events.
+    fine-grained denial patterns (`write_file(*)`, `read_url(*)`, `execute_url(*)`,
+    `invoke_subagent(*)`) and PreToolUse hooks for worktree-only and signed-channel,
+    that `configure_coder_settings()` denies `invoke_subagent(*)` and registers
+    signed-channel PreToolUse hook directly in settings and hooks JSON without
+    clobbering credentials, that `merge_settings()` safely merges permissions and tools,
+    that toggle evaluation adheres to accepted truthy conventions, that `run_agy.py`
+    builds commands, formats tool updates, and handles streaming NDJSON events,
+    and that quota cooldown extraction and repository variable persistence adhere
+    to solorepo's DR-294.
     """
-    detect_fallback = load_module(META / "detect_fallback.py", "detect_fallback_module", register=False)
+    detect_fallback = load_module(
+        META / "detect_fallback.py", "detect_fallback_module", register=False
+    )
     run_agy = load_module(META / "run_agy.py", "run_agy_module", register=False)
     problems: list[str] = []
 
@@ -773,5 +852,6 @@ def fallback_probes() -> list[str]:
         problems.extend(_probe_merge_settings(detect_fallback, tmp_dir))
 
     problems.extend(_probe_toggle_truthiness(detect_fallback))
+    problems.extend(_probe_quota_cooldown(detect_fallback))
     problems.extend(_probe_run_agy(run_agy))
     return problems

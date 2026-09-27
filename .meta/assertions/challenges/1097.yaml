@@ -1,0 +1,10 @@
+challenges:
+  - id: work:challenge/1097
+    name: Proactively probe model quota to skip exhausted ladder tiers
+    challenge_type: FEATURE
+    description: >-
+      Autonomous loop rungs lack an upfront check to verify whether capacity
+      or token balance is available before starting a session. When an endpoint
+      or token encounters rate limiting or exhaustion (such as HTTP 429),
+      autonomous runs skip cooling tiers directly via repository variable
+      cooldown state caching.

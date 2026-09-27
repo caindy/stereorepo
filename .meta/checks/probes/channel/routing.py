@@ -99,8 +99,8 @@ def routing_probes() -> list[str]:
     _, _, programs = load_channel()
     on = programs["on"]
     coder_door = load_module(".meta/coder_door.py")
-    return (_chain_cases(on) + _output_cases(on) + _form_cases(on) + _trunk_cases(on)
-            + _between_cases(on, coder_door))
+    return (_chain_cases(on) + _cooldown_cases(on) + _output_cases(on) + _form_cases(on)
+            + _trunk_cases(on) + _between_cases(on, coder_door))
 
 
 def _chain_cases(on: Any) -> list[str]:
@@ -158,6 +158,58 @@ def _chain_cases(on: Any) -> list[str]:
                         "chooses its own")
     if codex.model != "gpt-probe" or codex.agent != "openai-codex":
         problems.append(f"routing: the Codex rung is {codex!r}, not the configured model and Agent")
+    return problems
+
+
+def _cooldown_cases(on: Any) -> list[str]:
+    """Quota cooldown bypass behavior across harnesses and environment variables."""
+    problems = []
+    routing = on.routing
+    cases: tuple[tuple[str, tuple[str, ...], dict[str, str | None], tuple[str, ...]], ...] = (
+        ("coder", ("claude", "take", "medium"), {"GEMINI_FALLBACK": "true",
+         "COPILOT_FALLBACK": "true", "CLAUDE_COOLDOWN_UNTIL": "9999999999"}, ("agy", "copilot")),
+        ("coder", ("claude", "take", "medium"), {"GEMINI_FALLBACK": "true",
+         "COPILOT_FALLBACK": "true", "CLAUDE_COOLDOWN_UNTIL": "1"}, ("claude", "agy", "copilot")),
+        ("coder", ("claude", "take", "medium"), {"CLAUDE_COOLDOWN_UNTIL": "9999999999"},
+         ("claude",)),
+        ("reviewer", ("claude",), {"GEMINI_FALLBACK": "true", "JULES_FALLBACK": "true",
+         "CLAUDE_COOLDOWN_UNTIL": "9999999999"}, ("agy", "jules")),
+        ("reading", ("claude",), {"GEMINI_FALLBACK": "true", "JULES_FALLBACK": "true",
+         "CLAUDE_COOLDOWN_UNTIL": "9999999999"}, ("agy", "jules")),
+    )
+    for role, asked, toggles, expected in cases:
+        environ = {name: value for name, value in toggles.items() if value is not None}
+        if role == "coder":
+            tiers = routing.coder_chain(*asked, environ=environ)
+        elif role == "reviewer":
+            tiers = routing.review_chain(
+                asked[0], routing.REVIEW_DEPTHS["deep"], routing.GEMINI_MODEL, environ=environ
+            )
+        else:
+            tiers = routing.reading_chain(asked[0], environ=environ)
+        found = tuple(rung.harness for rung in tiers)
+        if found != expected:
+            problems.append(
+                f"routing: cooldown {role} chain for {asked!r} under {toggles!r} is "
+                f"{found!r}, not {expected!r}"
+            )
+
+    if routing.is_cooling_down("claude", {"CLAUDE_COOLDOWN_UNTIL": "invalid"}):
+        problems.append("routing: is_cooling_down returned True for non-integer timestamp")
+    if routing.is_cooling_down("claude", {"CLAUDE_COOLDOWN_UNTIL": ""}):
+        problems.append("routing: is_cooling_down returned True for empty string")
+    if routing.is_cooling_down("claude", {}):
+        problems.append("routing: is_cooling_down returned True when variable is absent")
+    if routing.is_cooling_down("agy", {"CLAUDE_COOLDOWN_UNTIL": "9999999999"}):
+        problems.append("routing: is_cooling_down returned True for untracked harness")
+    if not routing.is_cooling_down(
+        "claude", {"CLAUDE_COOLDOWN_UNTIL": "2000000000"}, now=1000000000
+    ):
+        problems.append("routing: is_cooling_down returned False for active cooldown")
+    if routing.is_cooling_down(
+        "claude", {"CLAUDE_COOLDOWN_UNTIL": "1000000000"}, now=2000000000
+    ):
+        problems.append("routing: is_cooling_down returned True for expired cooldown")
     return problems
 
 

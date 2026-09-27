@@ -75,6 +75,8 @@ jobs:
       # Fall back to Antigravity CLI (agy) if enabled by the GEMINI_FALLBACK toggle
       # (solorepo's DR-178, solorepo's DR-245); set vars.GEMINI_FALLBACK to 'true' to enable.
       GEMINI_FALLBACK: ${{ vars.GEMINI_FALLBACK || 'false' }}
+      # Cooldown cache for Claude quota exhaustion (solorepo's DR-294).
+      CLAUDE_COOLDOWN_UNTIL: ${{ vars.CLAUDE_COOLDOWN_UNTIL || '' }}
       JULES_FALLBACK: ${{ vars.JULES_FALLBACK || 'false' }}
       CODEX_FALLBACK: ${{ vars.CODEX_FALLBACK || 'false' }}
       CODEX_MODEL: ${{ vars.CODEX_MODEL || 'gpt-5.3-codex' }}
