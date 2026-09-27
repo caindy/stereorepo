@@ -5,7 +5,7 @@ import tempfile
 from typing import Any
 
 from checks.collect import META, ROOT, check
-from checks.probes.harness import environment, load_module
+from checks.probes.harness import environment, load_module, stood_in
 
 
 def _hook_problems(signed: Any, confined: Any, root: pathlib.Path) -> list[str]:
@@ -37,6 +37,32 @@ def _hook_problems(signed: Any, confined: Any, root: pathlib.Path) -> list[str]:
         problems.append(f"Codex reviewer hook refused a worktree file read: {local_read!r}")
     if not evidence.is_file() or len(evidence.read_text(encoding="utf-8").splitlines()) != 6:
         problems.append("Codex hooks did not record each decision as evidence")
+    return problems
+
+
+def _environment_problems(runner: Any, root: pathlib.Path, auth: dict[str, Any]) -> list[str]:
+    auth_file = root / "auth.json"
+    auth_file.write_text(json.dumps(auth), encoding="utf-8")
+    captured_env: dict[str, str] = {}
+
+    def capture_run(*args: Any, **kwargs: Any) -> Any:
+        if "env" in kwargs and isinstance(kwargs["env"], dict):
+            captured_env.update(kwargs["env"])
+        return runner.subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    with stood_in(runner.subprocess, run=capture_run), \
+            environment(PROMPT="test", CODEX_HOME=str(root), ROLE="coder",
+                        OPENAI_API_KEY="test-openai-key", CODEX_API_KEY="test-codex-key"):
+        exit_code = runner.main()
+    problems = []
+    if exit_code != 0:
+        problems.append(f"Codex runner exited with status {exit_code}")
+    if not captured_env:
+        problems.append("Codex runner did not execute child process")
+    if "OPENAI_API_KEY" in captured_env or "CODEX_API_KEY" in captured_env:
+        problems.append("Codex runner leaked billing API keys to child process environment")
+    if captured_env.get("CODEX_HOME") != str(root):
+        problems.append("Codex runner did not pass CODEX_HOME to child process environment")
     return problems
 
 
@@ -77,6 +103,7 @@ def _credential_problems(deploy: Any, runner: Any, root: pathlib.Path) -> list[s
                 "gpt-5.3-codex", "--config", 'model_reasoning_effort="high"', "-"]
     if command != expected:
         problems.append(f"Codex runner command is {command!r}, not {expected!r}")
+    problems.extend(_environment_problems(runner, root, auth))
     return problems
 
 
