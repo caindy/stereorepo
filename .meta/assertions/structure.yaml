@@ -318,6 +318,9 @@ artifacts:
   - id: work:artifact/meta-bootstrap
     name: .meta/bootstrap.py
     path: .meta/bootstrap.py
+  - id: work:artifact/meta-bundle
+    name: .meta/bundle.py
+    path: .meta/bundle.py
   - id: work:artifact/meta-assertions-authority
     name: .meta/assertions/authority.yaml
     path: .meta/assertions/authority.yaml
@@ -711,6 +714,9 @@ artifacts:
   - id: work:artifact/meta-lib
     name: .meta/lib/__init__.py
     path: .meta/lib/__init__.py
+  - id: work:artifact/meta-lib-bundle-init
+    name: .meta/lib/bundle/__init__.py
+    path: .meta/lib/bundle/__init__.py
   - id: work:artifact/meta-lib-gh
     name: .meta/lib/gh.py
     path: .meta/lib/gh.py

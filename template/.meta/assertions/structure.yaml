@@ -23,6 +23,15 @@ projects:
     language: LinkML YAML, with Python for rendering and the gate
     gate: uvx --python 3.13 --with linkml --with pyyaml python .meta/check.py
 
+# The operational paths the completeness check passes over: in a specialized
+# portfolio, operational machinery is inherited from solorepo rather than
+# enacted by local Decision Records.
+excluded_paths:
+  - .meta/*.py
+  - .meta/lib/
+  - .meta/checks/
+  - .meta/say/
+
 # The artifacts a Decision names under `enacted_in`. A file earns an entry by
 # being answerable for something.
 artifacts:

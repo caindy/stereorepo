@@ -63,25 +63,26 @@ def bootstrap_table(bootstrap: str | dict[str, Any], lang: str | None = None) ->
     return "\n".join(lines)
 
 
-def bootstrap_readme(lang: str) -> str:
+def bootstrap_readme(lang: str) -> str | None:
     """Renders a language bootstrap README from assertions.
 
     Parameters:
         lang: Programming language name (e.g. 'Python', 'Rust').
 
     Returns:
-        str: Rendered markdown document for the bootstrap README.
-
-    Raises:
-        LookupError: If the bootstrap is not declared in assertions.
+        Rendered markdown document for the bootstrap README, or None if omitted.
     """
-    target = f"../bootstraps/{lang.lower()}/README.md"
+    target_dir = META.parent / "bootstraps" / lang.lower()
+    if not target_dir.is_dir():
+        return None
+
     data = record.load("assertions/bootstraps.yaml") or {}
     bootstrap_id = f"work:bootstrap/{lang.lower()}"
     bootstrap = next((b for b in data.get("bootstraps") or [] if b.get("id") == bootstrap_id), None)
     if bootstrap is None:
-        raise LookupError(NO_BOOTSTRAP.format(bootstrap=bootstrap_id))
+        return None
 
+    target = f"../bootstraps/{lang.lower()}/README.md"
     table = bootstrap_table(bootstrap, lang)
     out = [
         record.BANNER.format(src="assertions/bootstraps.yaml"),
@@ -92,19 +93,19 @@ def bootstrap_readme(lang: str) -> str:
     return "\n".join(out)
 
 
-def python_readme() -> str:
+def python_readme() -> str | None:
     """Renders bootstraps/python/README.md from assertions.
 
     Returns:
-        str: Rendered markdown content for bootstraps/python/README.md.
+        Rendered markdown content for bootstraps/python/README.md, or None if omitted.
     """
     return bootstrap_readme("Python")
 
 
-def rust_readme() -> str:
+def rust_readme() -> str | None:
     """Renders bootstraps/rust/README.md from assertions.
 
     Returns:
-        str: Rendered markdown content for bootstraps/rust/README.md.
+        Rendered markdown content for bootstraps/rust/README.md, or None if omitted.
     """
     return bootstrap_readme("Rust")

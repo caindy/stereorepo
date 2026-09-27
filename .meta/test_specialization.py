@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Operational test runner for automated Specialization end-to-end verification (solorepo's DR-239, solorepo's DR-244).
+"""Operational test runner for automated Specialization end-to-end verification.
+
+Cites solorepo's DR-239 and solorepo's DR-244.
 
 Executes the 8-step Specialization Discipline into an isolated, temporary git repository
 using pre-judged portfolio fixtures (solorepo's DR-026, solorepo's DR-204), validating that:
@@ -27,6 +29,8 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Sequence
+
+from lib.bundle import Bundle, load_bundle
 
 try:
     import yaml
@@ -91,7 +95,8 @@ def normalize_tokens(tokens: dict[str, str]) -> dict[str, str]:
         tokens (dict[str, str]): Raw tokens dictionary from JSON fixture.
 
     Returns:
-        dict[str, str]: Normalized mapping with placeholders formatted with surrounding double underscores.
+        dict[str, str]: Normalized mapping with placeholders formatted with surrounding
+        double underscores.
     """
     return {
         (k if k.startswith("__") and k.endswith("__") else f"__{k}__"): v
@@ -174,7 +179,11 @@ def substitute_tokens(repo_dir: pathlib.Path, tokens: dict[str, str]) -> list[st
     return surviving
 
 
-def run_command(cmd: Sequence[str], cwd: pathlib.Path, env: dict[str, str] | None = None) -> tuple[int, str, str]:
+def run_command(
+    cmd: Sequence[str],
+    cwd: pathlib.Path,
+    env: dict[str, str] | None = None,
+) -> tuple[int, str, str]:
     """Executes a subprocess command returning its exit code, stdout, and stderr.
 
     Parameters:
@@ -191,6 +200,17 @@ def run_command(cmd: Sequence[str], cwd: pathlib.Path, env: dict[str, str] | Non
     return res.returncode, res.stdout, res.stderr
 
 
+def _copy_item(src: pathlib.Path, dest: pathlib.Path) -> None:
+    """Copies a source file or directory tree to destination path."""
+    if not src.exists():
+        return
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.is_dir():
+        shutil.copytree(src, dest, dirs_exist_ok=True)
+    else:
+        shutil.copy2(src, dest)
+
+
 def step_1_init_repo(target_path: pathlib.Path) -> int:
     """Initializes a fresh git repository at target destination with dummy commit user."""
     print(f"test-specialization: step 1 — initialize git repository in {target_path}")
@@ -203,39 +223,51 @@ def step_1_init_repo(target_path: pathlib.Path) -> int:
     return 0
 
 
-def step_2_copy_inherited(target_path: pathlib.Path, inherited_tokens: list[str], verbose: bool) -> int:
+def step_2_copy_inherited(
+    target_path: pathlib.Path,
+    inherited_tokens: list[str],
+    verbose: bool,
+    bundle: Bundle | None = None,
+) -> int:
     """Copies all inherited files into the destination repository and retargets workflows."""
     print("test-specialization: step 2 — copy inherited scaffold files and retarget workflows")
-    for token in inherited_tokens:
-        src = ROOT / token if (ROOT / token).exists() else META / token
-        if not src.exists():
-            continue
-        dest = target_path / token
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        if src.is_file():
-            shutil.copy2(src, dest)
-        elif src.is_dir():
-            shutil.copytree(src, dest, dirs_exist_ok=True)
+    if bundle is not None:
+        for item in bundle.managed_items():
+            _copy_item(ROOT / item.source_path(), target_path / item.dest_path())
+    else:
+        for token in inherited_tokens:
+            src = ROOT / token if (ROOT / token).exists() else META / token
+            _copy_item(src, target_path / token)
 
     retargeted = retarget_workflows(target_path / ".github" / "workflows")
     if verbose:
-        print(f"test-specialization: retargeted {retargeted} workflow files to public container runner")
+        print(f"test-specialization: retargeted {retargeted} workflow files to public runner")
     return 0
 
 
-def step_3_copy_template(target_path: pathlib.Path) -> int:
+def step_3_copy_template(target_path: pathlib.Path, bundle: Bundle | None = None) -> int:
     """Copies template replacements to target repository and creates agent symlinks."""
     print("test-specialization: step 3 — copy template replacements and link agent entrypoints")
+    if bundle is not None:
+        for item in bundle.template_items():
+            _copy_item(ROOT / item.source_path(), target_path / item.dest_path())
+        for item in bundle.symlink_items():
+            dest = target_path / item.dest_path()
+            dest.unlink(missing_ok=True)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.symlink_to(item.source_path())
+        return 0
+
     template_dir = ROOT / "template"
     if not template_dir.is_dir():
-        print("test-specialization: error — template/ directory missing from scaffold root", file=sys.stderr)
+        print(
+            "test-specialization: error — template/ directory missing from scaffold root",
+            file=sys.stderr,
+        )
         return 1
     for src_file in sorted(template_dir.rglob("*")):
-        if not src_file.is_file():
-            continue
-        dest = target_path / src_file.relative_to(template_dir)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src_file, dest)
+        if src_file.is_file():
+            _copy_item(src_file, target_path / src_file.relative_to(template_dir))
 
     for name, target in (("CLAUDE.md", "AGENTS.md"), ("GEMINI.md", "AGENTS.md"),
                          (".github/copilot-instructions.md", "../AGENTS.md")):
@@ -251,7 +283,10 @@ def step_4_substitute_tokens(target_path: pathlib.Path, tokens: dict[str, str]) 
     print("test-specialization: step 4 — substitute portfolio fixture tokens")
     surviving = substitute_tokens(target_path, tokens)
     if surviving:
-        print("test-specialization: error — surviving placeholders detected after substitution:", file=sys.stderr)
+        print(
+            "test-specialization: error — surviving placeholders detected after substitution:",
+            file=sys.stderr,
+        )
         for s in surviving:
             print(f"  {s}", file=sys.stderr)
         return 1
@@ -267,10 +302,20 @@ def step_5_bootstrap_project(target_path: pathlib.Path, lang: str, verbose: bool
         bootstrap_staging.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(bootstrap_source, bootstrap_staging, dirs_exist_ok=True)
 
-    bootstrap_cmd = [sys.executable, str(target_path / ".meta" / "bootstrap.py"), lang, "core-lib", "core_lib"]
+    bootstrap_cmd = [
+        sys.executable,
+        str(target_path / ".meta" / "bootstrap.py"),
+        lang,
+        "core-lib",
+        "core_lib",
+    ]
     b_code, b_out, b_err = run_command(bootstrap_cmd, target_path)
     if b_code != 0:
-        print(f"test-specialization: error — bootstrapping {lang} project failed (exit {b_code}):\n{b_out}\n{b_err}", file=sys.stderr)
+        print(
+            f"test-specialization: error — bootstrapping {lang} project failed (exit {b_code}):\n"
+            f"{b_out}\n{b_err}",
+            file=sys.stderr,
+        )
         return b_code
     if verbose:
         print(b_out)
@@ -286,7 +331,10 @@ def step_6_render_portfolio(target_path: pathlib.Path) -> int:
     r_code, r_out, r_err = run_command(
         ["uvx", "--python", "3.13", "--with", "pyyaml", "python", ".meta/render.py"], target_path)
     if r_code != 0:
-        print(f"test-specialization: error — render failed (exit {r_code}):\n{r_out}\n{r_err}", file=sys.stderr)
+        print(
+            f"test-specialization: error — render failed (exit {r_code}):\n{r_out}\n{r_err}",
+            file=sys.stderr,
+        )
         return r_code
     return 0
 
@@ -297,11 +345,17 @@ def step_7_verify_scaffold_paths(target_path: pathlib.Path) -> int:
     for prohibited in SCAFFOLD_ONLY_PATHS:
         prohibited_path = target_path / prohibited
         if prohibited_path.exists():
-            print(f"test-specialization: error — prohibited scaffold path exists in portfolio: {prohibited}", file=sys.stderr)
+            print(
+                f"test-specialization: error — prohibited scaffold path exists: {prohibited}",
+                file=sys.stderr,
+            )
             return 1
 
     run_command(["git", "add", "."], target_path)
-    run_command(["git", "commit", "-m", "feat: specialize portfolio from solorepo scaffold"], target_path)
+    run_command(
+        ["git", "commit", "-m", "feat: specialize portfolio from solorepo scaffold"],
+        target_path,
+    )
     return 0
 
 
@@ -317,7 +371,10 @@ def step_8_run_gate(target_path: pathlib.Path, verbose: bool) -> int:
             print(gate_proc.stderr, file=sys.stderr)
 
     if gate_proc.returncode != 0:
-        print(f"test-specialization: error — portfolio gate failed with exit code {gate_proc.returncode}", file=sys.stderr)
+        print(
+            f"test-specialization: error — gate failed with exit code {gate_proc.returncode}",
+            file=sys.stderr,
+        )
         return gate_proc.returncode
 
     gate_stdout = gate_proc.stdout
@@ -325,7 +382,7 @@ def step_8_run_gate(target_path: pathlib.Path, verbose: bool) -> int:
         print("test-specialization: error — gate output contains failed steps", file=sys.stderr)
         return 1
 
-    print("test-specialization: ok — 8 specialization steps and full portfolio gate completed cleanly")
+    print("test-specialization: ok — 8 steps and portfolio gate completed cleanly")
     return 0
 
 
@@ -350,16 +407,31 @@ def execute_specialization_test(
     disciplines_file = META / "assertions" / "disciplines.yaml"
     inherited_tokens = read_inherited_paths(disciplines_file)
     if not inherited_tokens:
-        print("test-specialization: error — failed to load inherited paths from disciplines.yaml", file=sys.stderr)
+        print(
+            "test-specialization: error — failed to load inherited paths from disciplines.yaml",
+            file=sys.stderr,
+        )
         return 1
+
+    bundle: Bundle | None = None
+    if load_bundle is not None:
+        bundle_file = META / "bundle.yaml"
+        if bundle_file.is_file():
+            try:
+                bundle = load_bundle(bundle_file, repo_root=ROOT)
+            except (FileNotFoundError, ValueError, OSError) as exc:
+                print(
+                    f"test-specialization: warning — failed to load bundle: {exc}",
+                    file=sys.stderr,
+                )
 
     code = step_1_init_repo(target_path)
     if code != 0:
         return code
-    code = step_2_copy_inherited(target_path, inherited_tokens, verbose)
+    code = step_2_copy_inherited(target_path, inherited_tokens, verbose, bundle=bundle)
     if code != 0:
         return code
-    code = step_3_copy_template(target_path)
+    code = step_3_copy_template(target_path, bundle=bundle)
     if code != 0:
         return code
     code = step_4_substitute_tokens(target_path, tokens)
@@ -379,34 +451,55 @@ def execute_specialization_test(
 
 def build_parser() -> argparse.ArgumentParser:
     """Builds the argument parser for the specialization end-to-end verification CLI."""
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--target", type=pathlib.Path, default=None, help="directory to run specialization test inside")
-    parser.add_argument("--keep", action="store_true", help="preserve temporary directory after run completes")
-    parser.add_argument("--tokens", type=pathlib.Path, default=DEFAULT_TOKENS_PATH, help="path to custom tokens JSON")
-    parser.add_argument("--lang", default="python", help="bootstrap language to test (default: python)")
-    parser.add_argument("--verbose", "-v", action="store_true", help="stream verbose execution output")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--target", type=pathlib.Path, default=None,
+        help="directory to run specialization test inside",
+    )
+    parser.add_argument(
+        "--keep", action="store_true",
+        help="preserve temporary directory after run completes",
+    )
+    parser.add_argument(
+        "--tokens", type=pathlib.Path, default=DEFAULT_TOKENS_PATH,
+        help="path to custom tokens JSON",
+    )
+    parser.add_argument(
+        "--lang", default="python",
+        help="bootstrap language to test (default: python)",
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true",
+        help="stream verbose execution output",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the specialization end-to-end test CLI tool."""
-    parser = build_parser()
-    args = parser.parse_args(argv)
+    args = build_parser().parse_args(argv)
+    tokens = args.tokens.resolve()
 
     if args.target:
         target = args.target.resolve()
         target.mkdir(parents=True, exist_ok=True)
-        return execute_specialization_test(target, tokens_path=args.tokens.resolve(), lang=args.lang, verbose=args.verbose)
+        return execute_specialization_test(
+            target, tokens_path=tokens, lang=args.lang, verbose=args.verbose,
+        )
 
     if args.keep:
-        temp_dir = tempfile.mkdtemp(prefix="solorepo-test-specialization-")
-        target = pathlib.Path(temp_dir)
+        target = pathlib.Path(tempfile.mkdtemp(prefix="solorepo-test-specialization-"))
         print(f"test-specialization: retaining test directory at {target}")
-        return execute_specialization_test(target, tokens_path=args.tokens.resolve(), lang=args.lang, verbose=args.verbose)
+        return execute_specialization_test(
+            target, tokens_path=tokens, lang=args.lang, verbose=args.verbose,
+        )
 
     with tempfile.TemporaryDirectory(prefix="solorepo-test-specialization-") as temp_dir:
-        target = pathlib.Path(temp_dir)
-        return execute_specialization_test(target, tokens_path=args.tokens.resolve(), lang=args.lang, verbose=args.verbose)
+        return execute_specialization_test(
+            pathlib.Path(temp_dir), tokens_path=tokens, lang=args.lang, verbose=args.verbose,
+        )
 
 
 if __name__ == "__main__":

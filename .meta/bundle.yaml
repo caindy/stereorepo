@@ -1,0 +1,234 @@
+schema_version: 1
+source_revision: dynamic
+
+items:
+  # Managed operating machinery
+  - path: .meta/work/
+    kind: dir
+    ownership: managed
+  - path: .meta/ddd/
+    kind: dir
+    ownership: managed
+  - path: .meta/work_ontology.yaml
+    kind: file
+    ownership: managed
+  - path: .meta/ddd_ontology.yaml
+    kind: file
+    ownership: managed
+  - path: .meta/render.py
+    kind: file
+    ownership: managed
+  - path: .meta/check.py
+    kind: file
+    ownership: managed
+  - path: .meta/check_pr.py
+    kind: file
+    ownership: managed
+  - path: .meta/lib/
+    kind: dir
+    ownership: managed
+  - path: .meta/apm_compile.py
+    kind: file
+    ownership: managed
+  - path: .meta/agents.py
+    kind: file
+    ownership: managed
+  - path: .meta/dereference.py
+    kind: file
+    ownership: managed
+  - path: .meta/depth.py
+    kind: file
+    ownership: managed
+  - path: .meta/gate
+    kind: file
+    ownership: managed
+  - path: .meta/next.py
+    kind: file
+    ownership: managed
+  - path: .meta/search.py
+    kind: file
+    ownership: managed
+  - path: .meta/timing.py
+    kind: file
+    ownership: managed
+  - path: .meta/wikisplain.py
+    kind: file
+    ownership: managed
+  - path: .meta/terms.py
+    kind: file
+    ownership: managed
+  - path: .meta/bootstrap.py
+    kind: file
+    ownership: managed
+  - path: .meta/ruff.toml
+    kind: file
+    ownership: managed
+  - path: .meta/mypy.ini
+    kind: file
+    ownership: managed
+  - path: .meta/actions/
+    kind: dir
+    ownership: managed
+  - path: .meta/say/
+    kind: dir
+    ownership: managed
+  - path: .meta/hooks/
+    kind: dir
+    ownership: managed
+  - path: .meta/checks/
+    kind: dir
+    ownership: managed
+  - path: .claude/settings.json
+    kind: file
+    ownership: managed
+  - path: .meta/assertions/imported/
+    kind: dir
+    ownership: managed
+  - path: .meta/.apm/
+    kind: dir
+    ownership: managed
+  - path: .meta/principles.md
+    kind: file
+    ownership: managed
+  - path: .meta/schemas.md
+    kind: file
+    ownership: managed
+  - path: .meta/templates/
+    kind: dir
+    ownership: managed
+  - path: .meta/arc/Dockerfile
+    kind: file
+    ownership: managed
+  - path: .github/workflows/coder.yml
+    kind: file
+    ownership: managed
+    transformations:
+      - workflow_runners
+  - path: .github/workflows/review.yml
+    kind: file
+    ownership: managed
+    transformations:
+      - workflow_runners
+  - path: .meta/detect_fallback.py
+    kind: file
+    ownership: managed
+  - path: .meta/run_agy.py
+    kind: file
+    ownership: managed
+  - path: .github/workflows/triage.yml
+    kind: file
+    ownership: managed
+    transformations:
+      - workflow_runners
+  - path: .github/workflows/merge.yml
+    kind: file
+    ownership: managed
+    transformations:
+      - workflow_runners
+  - path: .github/workflows/advance.yml
+    kind: file
+    ownership: managed
+    transformations:
+      - workflow_runners
+  - path: .github/workflows/reconcile.yml
+    kind: file
+    ownership: managed
+    transformations:
+      - workflow_runners
+  - path: wiki/solorepo/
+    kind: dir
+    ownership: managed
+  - path: stakeholders/
+    kind: dir
+    ownership: managed
+  - path: .gitignore
+    kind: file
+    ownership: managed
+  - path: .meta/bundle.py
+    kind: file
+    ownership: managed
+  - path: .meta/bundle.yaml
+    kind: file
+    ownership: managed
+
+  # Template replacements
+  - path: .github/workflows/gate.yml
+    source: template/.github/workflows/gate.yml # solorepo template
+    target: .github/workflows/gate.yml
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+  - path: .meta/README.md
+    source: template/.meta/README.md # solorepo template
+    target: .meta/README.md
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+  - path: .meta/assertions/authority.yaml
+    source: template/.meta/assertions/authority.yaml # solorepo template
+    target: .meta/assertions/authority.yaml
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+  - path: .meta/assertions/decisions/DR-001.yaml
+    source: template/.meta/assertions/decisions/DR-001.yaml # solorepo template
+    target: .meta/assertions/decisions/DR-001.yaml
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+  - path: .meta/assertions/domain_vocabulary.yaml
+    source: template/.meta/assertions/domain_vocabulary.yaml # solorepo template
+    target: .meta/assertions/domain_vocabulary.yaml
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+  - path: .meta/assertions/personas.yaml
+    source: template/.meta/assertions/personas.yaml # solorepo template
+    target: .meta/assertions/personas.yaml
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+  - path: .meta/assertions/structure.yaml
+    source: template/.meta/assertions/structure.yaml # solorepo template
+    target: .meta/assertions/structure.yaml
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+  - path: AGENTS.md
+    source: template/AGENTS.md # solorepo template
+    target: AGENTS.md
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+  - path: README.md
+    source: template/README.md # solorepo template
+    target: README.md
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
+
+  # Symlinks
+  - path: CLAUDE.md
+    source: AGENTS.md
+    target: CLAUDE.md
+    kind: symlink
+    ownership: symlink
+  - path: GEMINI.md
+    source: AGENTS.md
+    target: GEMINI.md
+    kind: symlink
+    ownership: symlink
+  - path: .github/copilot-instructions.md
+    source: ../AGENTS.md
+    target: .github/copilot-instructions.md
+    kind: symlink
+    ownership: symlink

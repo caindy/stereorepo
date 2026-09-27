@@ -45,8 +45,8 @@ def cited_decisions(index: dict[str, Any]) -> list[str]:
                 problems.append(f"{rel}: solorepo's DR-{num} is cited and does not exist")
         for num in sorted(bare - (seed if seeded else known)):
             problems.append(f"{rel}: DR-{num} is cited and does not exist")
-        if path in copied:
-            for num in sorted(bare):
+        if home and path in copied:
+            for num in sorted(bare - seed):
                 problems.append(f"{rel}: DR-{num} is cited bare in a file a portfolio inherits, "
                                 "where it will come to mean the portfolio's; cite it as solorepo's")
     return problems

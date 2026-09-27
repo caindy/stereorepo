@@ -10,7 +10,7 @@ of this repository runs on this cluster and nothing here spends
 GitHub-hosted minutes. That includes `main`'s required status checks, which
 solorepo's DR-137 deliberately left hosted: **a merge cannot go green while
 this cluster is down**, so the machine being reachable is now the
-repository's business and not only the loops'. `template/`'s seeded gate
+repository's business and not only the loops'. solorepo's `template/` seeded gate
 runs on `ubuntu-latest` inside the published runner image (`container:
 ghcr.io/caindy/solorepo-runner:2.337.0-5`), a portfolio having no cluster
 of its own (solorepo's DR-160).

@@ -172,6 +172,11 @@ def against_baseline(counts: dict[str, int], sites: dict[str, list[str]],
         if count == allowed:
             continue
         if not (ROOT / relative).is_file():
+            if (
+                not TEMPLATE.is_dir()
+                and relative in ("SPECIALIZE.md", ".meta/test_specialization.py")
+            ):
+                continue
             problems.append(f"{relative}: baseline holds a file that does not exist")
             continue
         direction = "over" if count > allowed else "under"

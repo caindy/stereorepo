@@ -30,7 +30,7 @@
 .meta/checks/files/harness.py: 0
 .meta/checks/files/history.py: 9
 .meta/checks/files/inline_python.py: 2
-.meta/checks/files/justfile.py: 4
+.meta/checks/files/justfile.py: 0
 .meta/checks/files/markdown.py: 1
 .meta/checks/files/prose.py: 1
 .meta/checks/files/python.py: 9
@@ -90,7 +90,7 @@
 .meta/checks/probes/tools/gate.py: 3
 .meta/checks/probes/tools/search.py: 5
 .meta/checks/probes/tools/terms.py: 1
-.meta/checks/probes/tools/test_specialization.py: 13
+.meta/checks/probes/tools/test_specialization.py: 0
 .meta/checks/probes/tools/timing.py: 0
 .meta/checks/probes/wrappers.py: 7
 .meta/depth.py: 8
@@ -169,6 +169,6 @@
 .meta/say/post: 16
 .meta/say/whoami: 2
 .meta/terms.py: 1
-.meta/test_specialization.py: 24
+.meta/test_specialization.py: 0
 .meta/timing.py: 0
 .meta/wikisplain.py: 2

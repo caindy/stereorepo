@@ -39,11 +39,23 @@ def tree() -> list[pathlib.Path]:
 
 
 def inherited() -> list[str]:
-    """What Specialization copies into a portfolio, read from the step that
-    lists it, so the copy set is stated once and this check follows it. A
-    portfolio carries no Specialization Discipline — its Disciplines are under
-    `imported/`, and this one is not among them — so the file is absent there,
-    and absent is an empty copy set rather than a step that dies on the read."""
+    """Returns path tokens inherited during repository Specialization.
+
+    Reads from the installation bundle manifest (.meta/bundle.yaml) when present,
+    falling back to extracting backtick tokens from the Specialization discipline
+    step in disciplines.yaml.
+
+    Returns:
+        list[str]: Relative path strings for all managed operating machinery.
+    """
+    bundle_file = META / "bundle.yaml"
+    if bundle_file.is_file():
+        try:
+            from lib.bundle import load_bundle
+
+            return load_bundle(bundle_path=bundle_file, repo_root=ROOT).inherited_paths()
+        except (FileNotFoundError, ValueError, OSError):
+            pass
     source = META / "assertions" / "disciplines.yaml"
     if not source.is_file():
         return []

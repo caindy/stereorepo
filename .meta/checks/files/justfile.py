@@ -14,7 +14,7 @@ import pathlib
 import re
 from typing import NamedTuple
 
-from checks.collect import ROOT, CouldNotRun, Found, Passed, StepOutcome, check
+from checks.collect import ROOT, TEMPLATE, CouldNotRun, Found, Passed, StepOutcome, check
 
 Contract = dict[str, tuple[tuple[str, str], ...]]
 """A recipe name against the parameters it takes, each paired with the kind of value it carries."""
@@ -156,7 +156,12 @@ def _departures(where: str, recipe: Recipe, declared: tuple[tuple[str, str], ...
     Returns:
         list[str]: One line per departure, empty where the recipe conforms.
     """
-    name, parameters, body, documented = recipe.name, recipe.parameters, recipe.body, recipe.documented
+    name, parameters, body, documented = (
+        recipe.name,
+        recipe.parameters,
+        recipe.body,
+        recipe.documented,
+    )
     problems = []
     if declared is None:
         problems.append(
@@ -182,8 +187,11 @@ def _departures(where: str, recipe: Recipe, declared: tuple[tuple[str, str], ...
 
 
 @check("justfile recipe shape")
-def justfile_recipe_shape(path: pathlib.Path = JUSTFILE, contract: Contract = CONTRACT) -> StepOutcome:
-    """Every root recipe's signature is the one the argument-passing contract declares, and every parameter it takes reaches the tool it was declared for (solorepo's DR-106, solorepo's DR-259).
+def justfile_recipe_shape(
+    path: pathlib.Path = JUSTFILE,
+    contract: Contract = CONTRACT,
+) -> StepOutcome:
+    """Checks that root recipes meet the declared argument-passing contract.
 
     The root `justfile` interpolates `{{name}}` unquoted, so a caller's quotes
     around a multi-word value are discarded before the tool sees its argv. The
@@ -208,6 +216,11 @@ def justfile_recipe_shape(path: pathlib.Path = JUSTFILE, contract: Contract = CO
     if not recipes:
         return CouldNotRun(f"{path.name} holds no recipes")
 
+    effective_contract = dict(contract)
+    if not TEMPLATE.is_dir():
+        for scaffold_recipe in ("arc", "arc-cluster", "test-specialization"):
+            effective_contract.pop(scaffold_recipe, None)
+
     assignments = frozenset(match["name"] for line in text.splitlines()
                             if (match := ASSIGNMENT.match(line)))
     problems: list[str] = []
@@ -215,10 +228,15 @@ def justfile_recipe_shape(path: pathlib.Path = JUSTFILE, contract: Contract = CO
     for recipe in recipes:
         seen.add(recipe.name)
         problems += _departures(f"{path.name}:{recipe.number} {recipe.name}", recipe,
-                                contract.get(recipe.name), assignments)
+                                effective_contract.get(recipe.name), assignments)
 
-    problems += [f"{path.name}: the contract declares '{missing}', which the rendered surface does not hold"
-                 for missing in sorted(set(contract) - seen)]
+    problems += [
+        (
+            f"{path.name}: the contract declares '{missing}', which the rendered surface "
+            "does not hold"
+        )
+        for missing in sorted(set(effective_contract) - seen)
+    ]
 
     if problems:
         return Found(tuple(problems))
