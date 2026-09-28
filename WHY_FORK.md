@@ -382,8 +382,48 @@ file is that issue's stage.
 - *queue* for the whole board: the queue is `backlog/`;
 - *`work/`*: the directory's name during the first spike runs.
 
-**A decision the fork still has to make.** Here, a *Challenge* was a GitHub
-Issue with a difficulty label. On the board, the unit is an *issue*: a file,
-not a GitHub object. The fork must decide whether **issue** replaces
-**Challenge** in its vocabulary, or whether Challenge survives as a synonym.
-Nothing here settles that.
+**Issue replaces Challenge.** In this repository, a *Challenge* was a GitHub
+Issue with a difficulty label. In the fork, the ontology's class is
+**Issue**, and *Challenge* is retired with no synonym.
+
+- **Why.** A model or an engineer already knows what an issue is: a tracked
+  unit of work that can be opened, blocked, split and closed. A coined word
+  must be taught in every session's context, and until then the reader's
+  default meaning is wrong. *Challenge* carries misleading defaults: a
+  contest, an objection, difficulty.
+- **It matches everything else.** The directory is `issues/`, the unit is an
+  issue file, and the prose already says "issue". One word from the ontology
+  through the filesystem to conversation is what a Ubiquitous Language is
+  for.
+- **The ontology's value survives the rename.** The LinkML work ontology
+  kept prose from drifting by giving each concept one term and generating
+  prose from one source. It never depended on coined words. Renaming the
+  class and re-rendering keeps that protection.
+- **The GitHub collision goes away.** Once GitHub Issues are retired, the
+  board is the only kind of issue there is.
+
+**What an Issue is not.** A common word brings its default meaning, and part
+of that default is wrong here. The definition of Issue must say so
+explicitly:
+
+- it has **no number**: the slug is its id;
+- it has **no status, labels or assignee**: its stage is the directory it
+  sits in;
+- it has **no comment thread**: the seats' notes and the solo's desk-check
+  notes are written in the file.
+
+**Epic is dropped as a type.** A split issue is simply an issue with
+children, expressed by the children's `parent:` front matter. Say **parent
+issue**, which needs no teaching.
+
+**The rule for choosing terms in the fork:**
+
+1. **Use the common word** when a competent engineer or model would guess
+   its meaning correctly from the word alone. Define it only where this
+   usage narrows it, including what it is *not*.
+2. **Coin a word** only for a concept that is genuinely new, and pay for its
+   definition once, in the ontology. *Seat*, *quiet turn* and *desk check*
+   qualify. *Challenge* did not.
+3. **Re-test inherited terms** against the first rule before carrying them
+   into the fork. Most of the taxonomy of work (Actor, Agency, Job) named
+   concepts the fork drops, and its coined structure goes with them.
