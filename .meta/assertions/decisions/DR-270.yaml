@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/270
     name: "DR-270 · A Discipline step is an identified entity with a semantic slug CURIE, cited in prose by its human name, and ordinal step citations are refused"
-    challenge: work:challenge/603
     status: ADOPTED
     applies:
       - work:article/12
@@ -35,7 +34,7 @@ decisions:
       - name: Identified steps with slug CURIEs and emphasized names in prose
         chosen: true
         reason: >-
-          Adheres to Article 12 and solorepo's DR-125's criterion that an entity whose identity is its meaning is
+          Adheres to Article 12 and stereorepo's DR-125's criterion that an entity whose identity is its meaning is
           identified by a slug. Steps receive stable CURIEs in the ontology
           (`work:discipline-step/<discipline-slug>/<step-slug>`) and human-readable names.
           Renderers format each step with a bold lead-in name (`{i}. **{name}.** {statement}`)
@@ -63,6 +62,6 @@ decisions:
       A Discipline step cited by ordinal number in durable prose passing the citation gate,
       or a step rename invalidating existing step name citations without verification refusal.
     rationale: |-
-      Composition in this ontology is by reference, not by nesting (solorepo's DR-152). A rule or
+      Composition in this ontology is by reference, not by nesting (stereorepo's DR-152). A rule or
       practice that requires human adherence and is cited across the repository needs an
       identity of its own.

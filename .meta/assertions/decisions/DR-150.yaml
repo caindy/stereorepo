@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/150
     name: "DR-150 · The gate's steps live in `.meta/checks/`, one module per subject, and `check.py` is the run"
-    challenge: work:challenge/222
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-check
@@ -12,15 +11,12 @@ decisions:
       - work:artifact/meta-checks-probes
       - work:artifact/meta-dereference
       - work:artifact/specialize
-      - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-checks-files-python
       - work:artifact/meta-checks-files-sources
       - work:artifact/meta-lib-render-record
       - work:artifact/meta-checks-probes-harness
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-lib-dereference-reading
-      - work:artifact/meta-checks-probes-git
-      - work:artifact/meta-checks-probes-channel
     context: >-
       `check.py` reached 2,592 lines holding four subjects and one thing that is
       not a subject at all. solorepo's #221 made each step register itself at
@@ -128,7 +124,7 @@ decisions:
       - >-
         `files.py` holds `rendering()` and both steps that read it — `rendered
         prose` and `inherited prose` — so the one render the gate performs stays
-        beside the two steps that describe it (solorepo's DR-144). `main()`
+        beside the two steps that describe it (stereorepo's DR-144). `main()`
         names them off `files.rendering()`.
       - >-
         The order the gate prints changes, because a module's steps enter the

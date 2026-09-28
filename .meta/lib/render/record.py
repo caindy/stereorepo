@@ -1,7 +1,7 @@
 """What every page is rendered from: the assertions, re-read from disk on each call, and the prose helpers that weave authored blocks and counts into the pages rendered from them.
 
 `ASKED` is filled as `authored()` and `woven()` run, and the gate reads it back
-after a render (solorepo's DR-144, solorepo's DR-152).
+after a render (stereorepo's DR-144, stereorepo's DR-152).
 """
 import ast
 import posixpath
@@ -43,7 +43,7 @@ NO_BLOCK = "{where} asserts no woven block named {block!r}"
 # prose is asserted, in both directions: prose asserted in the file
 # Specialization replaces, and prose asserted that nothing asks for. A set read
 # from a run is the set, because a list typed beside the call sites would be
-# the second copy all of this exists to remove (solorepo's DR-144, DR-152).
+# the second copy all of this exists to remove (stereorepo's DR-144, DR-152).
 ASKED: set[tuple[str, str, str]] = set()
 
 
@@ -102,7 +102,7 @@ def authored(target: str, slot: str = "preamble") -> str:
 
     `render.py` writes pages and does not author them: a generator carrying
     prose of its own is a second author, and the drift it was built to prevent
-    (solorepo's DR-144). `target` is the path as `TARGETS` names it, relative
+    (stereorepo's DR-144). `target` is the path as `TARGETS` names it, relative
     to `.meta/`, which is the same path the Artifact asserts.
 
     Missing is an error and not an empty page. A `None` spliced into the list
@@ -127,7 +127,7 @@ def authored(target: str, slot: str = "preamble") -> str:
 # (solorepo's #231). Filled here it is held by `rendered prose`, which compares
 # the committed page against a fresh render: the count moves, the page is
 # stale, the gate says so — so the arithmetic is the render's and no step of
-# the gate is added to hold it (solorepo's DR-154).
+# the gate is added to hold it (stereorepo's DR-154).
 COUNT = re.compile(r"\{#(?P<name>[a-z][a-z ]*[a-z])\}")
 
 
@@ -151,8 +151,8 @@ def prechecks() -> list[str]:
     running anything.
 
     The steps live in `.meta/checks/`, one module per subject
-    (solorepo's DR-150), and the probes one level further down in
-    `.meta/checks/probes/`, one module per subject under test (solorepo's DR-209),
+    (stereorepo's DR-150), and the probes one level further down in
+    `.meta/checks/probes/`, one module per subject under test (stereorepo's DR-209),
     so the whole tree is read rather than one file: which module a precheck is
     written in is those splits' business, and a count of them should not move
     when one is carried from one subject to another.
@@ -209,7 +209,7 @@ def woven(host: str | dict[str, Any], block: str, **holes: Any) -> str:
 
     `preamble` and `postamble` are identified by where they sit; a block in the
     middle of a page is not, so it carries a name and is asked for by it
-    (solorepo's DR-152). A block hangs off what it frames, which is what `host`
+    (stereorepo's DR-152). A block hangs off what it frames, which is what `host`
     says: a page's path, as `TARGETS` spells it, where the block belongs to that
     one Artifact; a Discipline, where every reading compiled from it carries the
     same block and one copy per page would be the second copy.

@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/094
     name: "DR-094 · python_bootstrap comes in as a seed and six pages; its charter, journal and generator stay behind"
-    challenge: work:challenge/38
     status: ADOPTED
     applies:
       - work:article/8
@@ -10,7 +9,6 @@ decisions:
     enacted_in:
       - work:artifact/bootstraps-python-readme
       - work:artifact/bootstraps-python-render
-      - work:artifact/github-workflows-gate
     alternatives:
       - name: Copy the template tree whole, memory architecture included
         chosen: false

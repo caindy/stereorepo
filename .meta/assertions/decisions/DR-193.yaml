@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/193
     name: "DR-193 · Retire mechanical formatting (fmt) from the Python bootstrap gate"
-    challenge: work:challenge/383
     product: work:product/python-standard
     status: ADOPTED
     supersedes:

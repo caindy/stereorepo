@@ -1,4 +1,4 @@
-# solorepo
+# stereorepo
 
 A scaffold for building software products as a **team of one in the agentic AI
 era**. Clone it, specialize it, and you have a **Portfolio**: one repository, one
@@ -16,7 +16,7 @@ other seat.
 [`SPECIALIZE.md`](SPECIALIZE.md).** That is the whole entry point. The steps are
 an instruction to follow rather than a program to run, because the work is
 judgement about one specific portfolio. Running repository tooling on a fresh
-clone requires Python >= 3.13 (solorepo's DR-268).
+clone requires Python >= 3.13 (stereorepo's DR-268).
 
 ## What you inherit
 
@@ -30,7 +30,7 @@ clone requires Python >= 3.13 (solorepo's DR-268).
 ## Working on the scaffold itself
 
 [`AGENTS.md`](AGENTS.md) — and `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md`, which are symlinks
-to it — orients an agent working on solorepo rather than on a portfolio made
+to it — orients an agent working on stereorepo rather than on a portfolio made
 from it. From there, [`.meta/README.md`](.meta/README.md) is the load map.
 
 ## Provenance

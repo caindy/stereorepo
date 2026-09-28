@@ -3,7 +3,7 @@ decisions:
     name: "DR-019 · Persona splits into Personality and Persona"
     status: ADOPTED
     enacted_in:
-      - work:artifact/meta-work-actors
+      - work:artifact/meta-work-personas
     rationale: |-
       The original sketch's *Persona* — SOUL.md plus a communication style
       — is really a Personality: the character an Actor presents while

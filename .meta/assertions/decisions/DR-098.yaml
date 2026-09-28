@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/098
     name: "DR-098 · The Python gate is a workspace member run as `uv run gate`, not a Makefile over scripts"
-    challenge: work:challenge/38
     project: work:project/python-seed
     status: ADOPTED
     applies:

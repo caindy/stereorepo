@@ -1,16 +1,16 @@
-# solorepo asserting its own structure.
+# stereorepo asserting its own structure.
 #
 # The scaffold is a Product because it has a primary Persona: the solo who uses
 # it. Dogfooding is what makes that true rather than a stretch — the scaffold's
 # first user is the person building it, and he is present to be asked.
 
 portfolio:
-  id: work:portfolio/solorepo
-  name: solorepo
+  id: work:portfolio/stereorepo
+  name: stereorepo
   description: >-
     The scaffold itself, treated as the Portfolio it produces. One Bounded
     Context, one Ubiquitous Language, one repo.
-  bounded_context: ddd:context/solorepo
+  bounded_context: ddd:context/stereorepo
 
 projects:
   - id: work:project/meta
@@ -55,7 +55,7 @@ products:
   - id: work:product/scaffold
     name: The scaffold
     description: >-
-      solorepo itself, used by the solo who builds it. Its interface is the load
+      stereorepo itself, used by the solo who builds it. Its interface is the load
       map, the vocabulary, the gate and the Specialization procedure.
     primary_persona: work:persona/the-solo
     built_from:
@@ -68,7 +68,7 @@ products:
     name: The Rust standard
     description: >-
       What a Rust project in a portfolio inherits — the gates, the documentation
-      layout, and solorepo's Disciplines made executable for one language.
+      layout, and stereorepo's Disciplines made executable for one language.
     primary_persona: work:persona/the-solo
     built_from:
       - work:project/rust-seed
@@ -80,17 +80,11 @@ products:
     name: The Python standard
     description: >-
       What a Python project in a portfolio inherits — the gates, the rule
-      set, the pins and the documentation layout, and solorepo's Disciplines
+      set, the pins and the documentation layout, and stereorepo's Disciplines
       made executable for one language.
     primary_persona: work:persona/the-solo
     built_from:
       - work:project/python-seed
-
-# The operational paths the completeness check passes over: a file matched here
-# owes no Artifact entry, because it is a record rather than something
-# answerable.
-excluded_paths:
-  - .meta/say/*.history.md
 
 # The artifacts a Decision names under `enacted_in`, and nothing else. Listed
 # here so that naming one is a reference the gate resolves rather than a path
@@ -114,7 +108,7 @@ artifacts:
       how it is satisfied in Rust and which step of the gate holds it there.
     postamble: |
       The other Disciplines bind the Portfolio rather than a Project — Progressive
-      Disclosure, Ubiquitous Language, Dogfooding, Modelling the Solo, PR First,
+      Disclosure, Ubiquitous Language, Dogfooding, Modelling the Human,
       Journaling — so a Bootstrap has nothing to implement for them.
 
       Three Articles bind the gate itself rather than being implemented by it: A5 —
@@ -164,7 +158,7 @@ artifacts:
       satisfied in Python and which step of the gate holds it there.
     postamble: |
       The other Disciplines bind the Portfolio rather than a Project — Progressive
-      Disclosure, Ubiquitous Language, Dogfooding, Modelling the Solo, PR First,
+      Disclosure, Ubiquitous Language, Dogfooding, Modelling the Human,
       Journaling — so a Bootstrap has nothing to implement for them.
 
       Four Articles bind the gate itself rather than being implemented by it: A5 —
@@ -196,7 +190,7 @@ artifacts:
       ## Capabilities and the APM Package
 
       The Python standard declares sixteen agent skills as Capabilities in
-      [`assertions/capabilities.yaml`](assertions/capabilities.yaml) (solorepo's DR-208, solorepo's #59): eight refactoring
+      [`assertions/capabilities.yaml`](assertions/capabilities.yaml) (stereorepo's DR-208, solorepo's #59): eight refactoring
       skills (`py-*`) from `l-mb/python-refactoring-skills` and eight lifecycle skills adapted from `obra/superpowers`.
 
       Rather than vendoring raw skills into the project seed, they are compiled into
@@ -246,36 +240,6 @@ artifacts:
   - id: work:artifact/bootstraps-python-lint-gate
     name: bootstraps/python/skills/py-git-hooks/lint-gate.py
     path: bootstraps/python/skills/py-git-hooks/lint-gate.py
-  - id: work:artifact/github-workflows-gate
-    name: .github/workflows/gate.yml
-    path: .github/workflows/gate.yml
-  - id: work:artifact/github-workflows-review
-    name: .github/workflows/review.yml
-    path: .github/workflows/review.yml
-  - id: work:artifact/github-workflows-coder
-    name: .github/workflows/coder.yml
-    path: .github/workflows/coder.yml
-  - id: work:artifact/github-workflows-triage
-    name: .github/workflows/triage.yml
-    path: .github/workflows/triage.yml
-  - id: work:artifact/github-workflows-advance
-    name: .github/workflows/advance.yml
-    path: .github/workflows/advance.yml
-  - id: work:artifact/github-workflows-merge
-    name: .github/workflows/merge.yml
-    path: .github/workflows/merge.yml
-  - id: work:artifact/github-workflows-reconcile
-    name: .github/workflows/reconcile.yml
-    path: .github/workflows/reconcile.yml
-  - id: work:artifact/github-workflows-test-specialization
-    name: .github/workflows/test-specialization.yml
-    path: .github/workflows/test-specialization.yml
-  - id: work:artifact/github-workflows-test-tools
-    name: .github/workflows/test-tools.yml
-    path: .github/workflows/test-tools.yml
-  - id: work:artifact/github-workflows-runner-image
-    name: .github/workflows/runner-image.yml
-    path: .github/workflows/runner-image.yml
   - id: work:artifact/gitattributes
     name: .gitattributes
     path: .gitattributes
@@ -327,9 +291,6 @@ artifacts:
   - id: work:artifact/meta-adapt
     name: .meta/adapt.py
     path: .meta/adapt.py
-  - id: work:artifact/meta-assertions-authority
-    name: .meta/assertions/authority.yaml
-    path: .meta/assertions/authority.yaml
   - id: work:artifact/meta-assertions-disciplines
     name: .meta/assertions/disciplines.yaml
     path: .meta/assertions/disciplines.yaml
@@ -393,36 +354,18 @@ artifacts:
   - id: work:artifact/meta-checks-files-markdown
     name: .meta/checks/files/markdown.py
     path: .meta/checks/files/markdown.py
+  - id: work:artifact/meta-checks-files-scaffold
+    name: .meta/checks/files/scaffold.py
+    path: .meta/checks/files/scaffold.py
   - id: work:artifact/meta-checks-files-wiki
     name: .meta/checks/files/wiki.py
     path: .meta/checks/files/wiki.py
-  - id: work:artifact/meta-checks-files-vocabulary
-    name: .meta/checks/files/vocabulary.py
-    path: .meta/checks/files/vocabulary.py
-  - id: work:artifact/meta-checks-files-workflows
-    name: .meta/checks/files/workflows.py
-    path: .meta/checks/files/workflows.py
-  - id: work:artifact/meta-checks-files-control-plane
-    name: .meta/checks/files/control_plane.py
-    path: .meta/checks/files/control_plane.py
-  - id: work:artifact/meta-checks-files-harness
-    name: .meta/checks/files/harness.py
-    path: .meta/checks/files/harness.py
-  - id: work:artifact/meta-checks-files-reviewer
-    name: .meta/checks/files/reviewer.py
-    path: .meta/checks/files/reviewer.py
   - id: work:artifact/meta-checks-files-inline-python
     name: .meta/checks/files/inline_python.py
     path: .meta/checks/files/inline_python.py
-  - id: work:artifact/meta-checks-files-arc
-    name: .meta/checks/files/arc.py
-    path: .meta/checks/files/arc.py
   - id: work:artifact/meta-checks-files-justfile
     name: .meta/checks/files/justfile.py
     path: .meta/checks/files/justfile.py
-  - id: work:artifact/meta-checks-files-boundary
-    name: .meta/checks/files/boundary.py
-    path: .meta/checks/files/boundary.py
   - id: work:artifact/meta-checks-files-prose
     name: .meta/checks/files/prose.py
     path: .meta/checks/files/prose.py
@@ -483,171 +426,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-harness-loaders
     name: .meta/checks/probes/harness/loaders.py
     path: .meta/checks/probes/harness/loaders.py
-  - id: work:artifact/meta-checks-probes-harness-github
-    name: .meta/checks/probes/harness/github.py
-    path: .meta/checks/probes/harness/github.py
   - id: work:artifact/meta-checks-probes-harness-fakes
     name: .meta/checks/probes/harness/fakes.py
     path: .meta/checks/probes/harness/fakes.py
-  - id: work:artifact/meta-checks-probes-git
-    name: .meta/checks/probes/git/__init__.py
-    path: .meta/checks/probes/git/__init__.py
-  - id: work:artifact/meta-checks-probes-git-verdicts
-    name: .meta/checks/probes/git/verdicts.py
-    path: .meta/checks/probes/git/verdicts.py
-  - id: work:artifact/meta-checks-probes-git-offers
-    name: .meta/checks/probes/git/offers.py
-    path: .meta/checks/probes/git/offers.py
-  - id: work:artifact/meta-checks-probes-git-events
-    name: .meta/checks/probes/git/events.py
-    path: .meta/checks/probes/git/events.py
-  - id: work:artifact/meta-checks-probes-git-step
-    name: .meta/checks/probes/git/step.py
-    path: .meta/checks/probes/git/step.py
-  - id: work:artifact/meta-checks-probes-git-registration
-    name: .meta/checks/probes/git/registration.py
-    path: .meta/checks/probes/git/registration.py
-  - id: work:artifact/meta-checks-probes-channel
-    name: .meta/checks/probes/channel/__init__.py
-    path: .meta/checks/probes/channel/__init__.py
-  - id: work:artifact/meta-checks-probes-channel-agent
-    name: .meta/checks/probes/channel/agent.py
-    path: .meta/checks/probes/channel/agent.py
-  - id: work:artifact/meta-checks-probes-channel-bound
-    name: .meta/checks/probes/channel/bound.py
-    path: .meta/checks/probes/channel/bound.py
-  - id: work:artifact/meta-checks-probes-channel-extension
-    name: .meta/checks/probes/channel/extension.py
-    path: .meta/checks/probes/channel/extension.py
-  - id: work:artifact/meta-checks-probes-channel-deferral
-    name: .meta/checks/probes/channel/deferral.py
-    path: .meta/checks/probes/channel/deferral.py
-  - id: work:artifact/meta-checks-probes-channel-parser
-    name: .meta/checks/probes/channel/parser.py
-    path: .meta/checks/probes/channel/parser.py
-  - id: work:artifact/meta-checks-probes-channel-status
-    name: .meta/checks/probes/channel/status.py
-    path: .meta/checks/probes/channel/status.py
-  - id: work:artifact/meta-checks-probes-channel-table
-    name: .meta/checks/probes/channel/table.py
-    path: .meta/checks/probes/channel/table.py
-  - id: work:artifact/meta-checks-probes-channel-layer
-    name: .meta/checks/probes/channel/layer.py
-    path: .meta/checks/probes/channel/layer.py
-  - id: work:artifact/meta-checks-probes-channel-claim
-    name: .meta/checks/probes/channel/claim.py
-    path: .meta/checks/probes/channel/claim.py
-  - id: work:artifact/meta-checks-probes-channel-obviate
-    name: .meta/checks/probes/channel/obviate.py
-    path: .meta/checks/probes/channel/obviate.py
-  - id: work:artifact/meta-checks-probes-channel-correction
-    name: .meta/checks/probes/channel/correction.py
-    path: .meta/checks/probes/channel/correction.py
-  - id: work:artifact/meta-checks-probes-channel-level
-    name: .meta/checks/probes/channel/level.py
-    path: .meta/checks/probes/channel/level.py
-  - id: work:artifact/meta-checks-probes-channel-actor
-    name: .meta/checks/probes/channel/actor.py
-    path: .meta/checks/probes/channel/actor.py
-  - id: work:artifact/meta-checks-probes-channel-signing-key
-    name: .meta/checks/probes/channel/signing_key.py
-    path: .meta/checks/probes/channel/signing_key.py
-  - id: work:artifact/meta-checks-probes-channel-reservation
-    name: .meta/checks/probes/channel/reservation.py
-    path: .meta/checks/probes/channel/reservation.py
-  - id: work:artifact/meta-checks-probes-channel-mint
-    name: .meta/checks/probes/channel/mint.py
-    path: .meta/checks/probes/channel/mint.py
-  - id: work:artifact/meta-checks-probes-channel-filing
-    name: .meta/checks/probes/channel/filing.py
-    path: .meta/checks/probes/channel/filing.py
-  - id: work:artifact/meta-checks-probes-channel-triage
-    name: .meta/checks/probes/channel/triage.py
-    path: .meta/checks/probes/channel/triage.py
-  - id: work:artifact/meta-checks-probes-channel-verdict
-    name: .meta/checks/probes/channel/verdict.py
-    path: .meta/checks/probes/channel/verdict.py
-  - id: work:artifact/meta-checks-probes-channel-resolution
-    name: .meta/checks/probes/channel/resolution.py
-    path: .meta/checks/probes/channel/resolution.py
-  - id: work:artifact/meta-checks-probes-channel-settle
-    name: .meta/checks/probes/channel/settle.py
-    path: .meta/checks/probes/channel/settle.py
-  - id: work:artifact/meta-checks-probes-channel-on-coder
-    name: .meta/checks/probes/channel/on_coder.py
-    path: .meta/checks/probes/channel/on_coder.py
-  - id: work:artifact/meta-checks-probes-channel-rescue
-    name: .meta/checks/probes/channel/rescue.py
-    path: .meta/checks/probes/channel/rescue.py
-  - id: work:artifact/meta-checks-probes-channel-routing
-    name: .meta/checks/probes/channel/routing.py
-    path: .meta/checks/probes/channel/routing.py
-  - id: work:artifact/meta-checks-probes-channel-on
-    name: .meta/checks/probes/channel/on.py
-    path: .meta/checks/probes/channel/on.py
-  - id: work:artifact/meta-checks-probes-channel-waits
-    name: .meta/checks/probes/channel/waits.py
-    path: .meta/checks/probes/channel/waits.py
-  - id: work:artifact/meta-checks-probes-loops
-    name: .meta/checks/probes/loops/__init__.py
-    path: .meta/checks/probes/loops/__init__.py
-  - id: work:artifact/meta-checks-probes-loops-advance
-    name: .meta/checks/probes/loops/advance.py
-    path: .meta/checks/probes/loops/advance.py
-  - id: work:artifact/meta-checks-probes-loops-bench
-    name: .meta/checks/probes/loops/bench.py
-    path: .meta/checks/probes/loops/bench.py
-  - id: work:artifact/meta-checks-probes-loops-dispatch
-    name: .meta/checks/probes/loops/dispatch.py
-    path: .meta/checks/probes/loops/dispatch.py
-  - id: work:artifact/meta-checks-probes-loops-handoff
-    name: .meta/checks/probes/loops/handoff.py
-    path: .meta/checks/probes/loops/handoff.py
-  - id: work:artifact/meta-checks-probes-loops-open-pull-request
-    name: .meta/checks/probes/loops/open_pull_request.py
-    path: .meta/checks/probes/loops/open_pull_request.py
-  - id: work:artifact/meta-checks-probes-loops-enacted
-    name: .meta/checks/probes/loops/enacted.py
-    path: .meta/checks/probes/loops/enacted.py
-  - id: work:artifact/meta-checks-probes-loops-stop
-    name: .meta/checks/probes/loops/stop.py
-    path: .meta/checks/probes/loops/stop.py
-  - id: work:artifact/meta-checks-probes-loops-merge-manager
-    name: .meta/checks/probes/loops/merge_manager.py
-    path: .meta/checks/probes/loops/merge_manager.py
-  - id: work:artifact/meta-checks-probes-loops-epic
-    name: .meta/checks/probes/loops/epic.py
-    path: .meta/checks/probes/loops/epic.py
-  - id: work:artifact/meta-checks-probes-loops-merge-manager-advance
-    name: .meta/checks/probes/loops/merge_manager_advance.py
-    path: .meta/checks/probes/loops/merge_manager_advance.py
-  - id: work:artifact/meta-checks-probes-loops-drafts
-    name: .meta/checks/probes/loops/drafts.py
-    path: .meta/checks/probes/loops/drafts.py
-  - id: work:artifact/meta-checks-probes-loops-delegate
-    name: .meta/checks/probes/loops/delegate.py
-    path: .meta/checks/probes/loops/delegate.py
-  - id: work:artifact/meta-checks-probes-loops-take
-    name: .meta/checks/probes/loops/take.py
-    path: .meta/checks/probes/loops/take.py
-  - id: work:artifact/meta-checks-probes-loops-reconcile
-    name: .meta/checks/probes/loops/reconcile.py
-    path: .meta/checks/probes/loops/reconcile.py
-  - id: work:artifact/meta-checks-probes-loops-escalation
-    name: .meta/checks/probes/loops/escalation.py
-    path: .meta/checks/probes/loops/escalation.py
-  - id: work:artifact/meta-checks-probes-loops-trunk
-    name: .meta/checks/probes/loops/trunk.py
-    path: .meta/checks/probes/loops/trunk.py
-  - id: work:artifact/meta-checks-probes-loops-merge-lock
-    name: .meta/checks/probes/loops/merge_lock.py
-    path: .meta/checks/probes/loops/merge_lock.py
-  - id: work:artifact/meta-checks-probes-loops-concurrency
-    name: .meta/checks/probes/loops/concurrency.py
-    path: .meta/checks/probes/loops/concurrency.py
-  - id: work:artifact/meta-checks-probes-loops-sweep
-    name: .meta/checks/probes/loops/sweep.py
-    path: .meta/checks/probes/loops/sweep.py
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py
@@ -660,42 +441,21 @@ artifacts:
   - id: work:artifact/meta-checks-probes-surface
     name: .meta/checks/probes/surface.py
     path: .meta/checks/probes/surface.py
-  - id: work:artifact/meta-checks-probes-wrappers
-    name: .meta/checks/probes/wrappers.py
-    path: .meta/checks/probes/wrappers.py
   - id: work:artifact/meta-checks-probes-ruleset
     name: .meta/checks/probes/ruleset.py
     path: .meta/checks/probes/ruleset.py
   - id: work:artifact/meta-checks-probes-files
     name: .meta/checks/probes/files/__init__.py
     path: .meta/checks/probes/files/__init__.py
-  - id: work:artifact/meta-checks-probes-files-mints
-    name: .meta/checks/probes/files/mints.py
-    path: .meta/checks/probes/files/mints.py
   - id: work:artifact/meta-checks-probes-files-sizes
     name: .meta/checks/probes/files/sizes.py
     path: .meta/checks/probes/files/sizes.py
-  - id: work:artifact/meta-checks-probes-files-arc
-    name: .meta/checks/probes/files/arc.py
-    path: .meta/checks/probes/files/arc.py
-  - id: work:artifact/meta-checks-probes-files-boundary
-    name: .meta/checks/probes/files/boundary.py
-    path: .meta/checks/probes/files/boundary.py
   - id: work:artifact/meta-checks-probes-files-rendered
     name: .meta/checks/probes/files/rendered.py
     path: .meta/checks/probes/files/rendered.py
   - id: work:artifact/meta-checks-probes-tools
     name: .meta/checks/probes/tools/__init__.py
     path: .meta/checks/probes/tools/__init__.py
-  - id: work:artifact/meta-checks-probes-tools-timing
-    name: .meta/checks/probes/tools/timing.py
-    path: .meta/checks/probes/tools/timing.py
-  - id: work:artifact/meta-checks-probes-tools-depth
-    name: .meta/checks/probes/tools/depth.py
-    path: .meta/checks/probes/tools/depth.py
-  - id: work:artifact/meta-checks-probes-tools-agents
-    name: .meta/checks/probes/tools/agents.py
-    path: .meta/checks/probes/tools/agents.py
   - id: work:artifact/meta-checks-probes-tools-dereference
     name: .meta/checks/probes/tools/dereference.py
     path: .meta/checks/probes/tools/dereference.py
@@ -714,12 +474,6 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-terms
     name: .meta/checks/probes/tools/terms.py
     path: .meta/checks/probes/tools/terms.py
-  - id: work:artifact/meta-checks-probes-tools-fallback
-    name: .meta/checks/probes/tools/fallback.py
-    path: .meta/checks/probes/tools/fallback.py
-  - id: work:artifact/meta-check-pr
-    name: .meta/check_pr.py
-    path: .meta/check_pr.py
   - id: work:artifact/meta-lib
     name: .meta/lib/__init__.py
     path: .meta/lib/__init__.py
@@ -732,42 +486,6 @@ artifacts:
   - id: work:artifact/meta-lib-bundle-init
     name: .meta/lib/bundle/__init__.py
     path: .meta/lib/bundle/__init__.py
-  - id: work:artifact/meta-lib-gh
-    name: .meta/lib/gh.py
-    path: .meta/lib/gh.py
-  - id: work:artifact/meta-lib-check-pr
-    name: .meta/lib/check_pr/__init__.py
-    path: .meta/lib/check_pr/__init__.py
-  - id: work:artifact/meta-lib-check-pr-branch
-    name: .meta/lib/check_pr/branch.py
-    path: .meta/lib/check_pr/branch.py
-  - id: work:artifact/meta-lib-check-pr-cli
-    name: .meta/lib/check_pr/cli.py
-    path: .meta/lib/check_pr/cli.py
-  - id: work:artifact/meta-lib-check-pr-form
-    name: .meta/lib/check_pr/form.py
-    path: .meta/lib/check_pr/form.py
-  - id: work:artifact/meta-lib-check-pr-verdict
-    name: .meta/lib/check_pr/verdict.py
-    path: .meta/lib/check_pr/verdict.py
-  - id: work:artifact/meta-lib-check-pr-github
-    name: .meta/lib/check_pr/github.py
-    path: .meta/lib/check_pr/github.py
-  - id: work:artifact/meta-lib-check-pr-sweep
-    name: .meta/lib/check_pr/sweep.py
-    path: .meta/lib/check_pr/sweep.py
-  - id: work:artifact/meta-lib-check-pr-remedies
-    name: .meta/lib/check_pr/remedies.py
-    path: .meta/lib/check_pr/remedies.py
-  - id: work:artifact/meta-lib-check-pr-review
-    name: .meta/lib/check_pr/review.py
-    path: .meta/lib/check_pr/review.py
-  - id: work:artifact/meta-lib-check-pr-polling
-    name: .meta/lib/check_pr/polling.py
-    path: .meta/lib/check_pr/polling.py
-  - id: work:artifact/meta-lib-check-pr-state
-    name: .meta/lib/check_pr/state.py
-    path: .meta/lib/check_pr/state.py
   - id: work:artifact/meta-dereference
     name: .meta/dereference.py
     path: .meta/dereference.py
@@ -789,177 +507,12 @@ artifacts:
   - id: work:artifact/meta-gate
     name: .meta/gate
     path: .meta/gate
-  - id: work:artifact/meta-actions-pull-request
-    name: .meta/actions/pull-request/action.yml
-    path: .meta/actions/pull-request/action.yml
-  - id: work:artifact/meta-actions-sweep
-    name: .meta/actions/sweep/action.yml
-    path: .meta/actions/sweep/action.yml
-  - id: work:artifact/meta-actions-gh
-    name: .meta/actions/gh/action.yml
-    path: .meta/actions/gh/action.yml
-  - id: work:artifact/meta-actions-agy
-    name: .meta/actions/agy/action.yml
-    path: .meta/actions/agy/action.yml
-  - id: work:artifact/meta-actions-harness
-    name: .meta/actions/harness/action.yml
-    path: .meta/actions/harness/action.yml
-  - id: work:artifact/meta-actions-jules
-    name: .meta/actions/jules/action.yml
-    path: .meta/actions/jules/action.yml
-  - id: work:artifact/meta-jules-client
-    name: .meta/jules/client.py
-    path: .meta/jules/client.py
-  - id: work:artifact/meta-jules-triage
-    name: .meta/jules/triage.py
-    path: .meta/jules/triage.py
-  - id: work:artifact/meta-jules-review-support
-    name: .meta/jules/review_support.py
-    path: .meta/jules/review_support.py
-  - id: work:artifact/meta-jules-readme
-    name: .meta/jules/README.md
-    path: .meta/jules/README.md
-  - id: work:artifact/meta-arc-readme
-    name: .meta/arc/README.md
-    path: .meta/arc/README.md
-  - id: work:artifact/meta-arc-cluster
-    name: .meta/arc/cluster
-    path: .meta/arc/cluster
-  - id: work:artifact/meta-arc-deploy
-    name: .meta/arc/deploy
-    path: .meta/arc/deploy
-  - id: work:artifact/meta-arc-image
-    name: .meta/arc/image
-    path: .meta/arc/image
-  - id: work:artifact/meta-arc-teardown
-    name: .meta/arc/teardown
-    path: .meta/arc/teardown
-  - id: work:artifact/meta-arc-values-runnerset
-    name: .meta/arc/values-runnerset.yaml
-    path: .meta/arc/values-runnerset.yaml
-  - id: work:artifact/meta-arc-dockerfile
-    name: .meta/arc/Dockerfile
-    path: .meta/arc/Dockerfile
-  - id: work:artifact/meta-arc-watch
-    name: .meta/arc/watch
-    path: .meta/arc/watch
   - id: work:artifact/meta-ddd-ontology
     name: .meta/ddd_ontology.yaml
     path: .meta/ddd_ontology.yaml
   - id: work:artifact/meta-ddd-skos
     name: .meta/ddd/skos.yaml
     path: .meta/ddd/skos.yaml
-  - id: work:artifact/meta-hooks-signed-channel
-    name: .meta/hooks/signed_channel.py
-    path: .meta/hooks/signed_channel.py
-  - id: work:artifact/meta-lib-signed-channel
-    name: .meta/lib/signed_channel/__init__.py
-    path: .meta/lib/signed_channel/__init__.py
-  - id: work:artifact/meta-lib-signed-channel-tables
-    name: .meta/lib/signed_channel/tables.py
-    path: .meta/lib/signed_channel/tables.py
-  - id: work:artifact/meta-lib-signed-channel-shell
-    name: .meta/lib/signed_channel/shell.py
-    path: .meta/lib/signed_channel/shell.py
-  - id: work:artifact/meta-lib-signed-channel-reach
-    name: .meta/lib/signed_channel/reach.py
-    path: .meta/lib/signed_channel/reach.py
-  - id: work:artifact/meta-lib-signed-channel-verdict
-    name: .meta/lib/signed_channel/verdict.py
-    path: .meta/lib/signed_channel/verdict.py
-  - id: work:artifact/meta-hooks-worktree-only
-    name: .meta/hooks/worktree_only.py
-    path: .meta/hooks/worktree_only.py
-  - id: work:artifact/meta-lib-worktree-only
-    name: .meta/lib/worktree_only/__init__.py
-    path: .meta/lib/worktree_only/__init__.py
-  - id: work:artifact/meta-lib-worktree-only-paths
-    name: .meta/lib/worktree_only/paths.py
-    path: .meta/lib/worktree_only/paths.py
-  - id: work:artifact/meta-lib-worktree-only-shell
-    name: .meta/lib/worktree_only/shell.py
-    path: .meta/lib/worktree_only/shell.py
-  - id: work:artifact/meta-lib-worktree-only-grammar
-    name: .meta/lib/worktree_only/grammar.py
-    path: .meta/lib/worktree_only/grammar.py
-  - id: work:artifact/meta-lib-worktree-only-verdict
-    name: .meta/lib/worktree_only/verdict.py
-    path: .meta/lib/worktree_only/verdict.py
-  - id: work:artifact/meta-next
-    name: .meta/next.py
-    path: .meta/next.py
-  - id: work:artifact/meta-agents
-    name: .meta/agents.py
-    path: .meta/agents.py
-  - id: work:artifact/meta-depth
-    name: .meta/depth.py
-    path: .meta/depth.py
-  - id: work:artifact/meta-timing
-    name: .meta/timing.py
-    path: .meta/timing.py
-  - id: work:artifact/meta-detect-fallback
-    name: .meta/detect_fallback.py
-    path: .meta/detect_fallback.py
-    description: >-
-      Inspects Claude Code execution outputs and activates Gemini fallback
-      when enabled by the GEMINI_FALLBACK toggle (solorepo's DR-245).
-  - id: work:artifact/meta-run-agy
-    name: .meta/run_agy.py
-    path: .meta/run_agy.py
-    description: >-
-      Drives headless Antigravity CLI via streaming NDJSON execution to synchronize
-      long-running commands and stream real-time events in CI (solorepo's DR-257).
-  - id: work:artifact/meta-run-codex
-    name: .meta/run_codex.py
-    path: .meta/run_codex.py
-    description: >-
-      Runs Codex CLI with the ARC-provisioned ChatGPT login and Role-specific
-      sandbox policy.
-  - id: work:artifact/meta-configure-copilot
-    name: .meta/configure_copilot.py
-    path: .meta/configure_copilot.py
-  - id: work:artifact/meta-run-copilot
-    name: .meta/run_copilot.py
-    path: .meta/run_copilot.py
-  - id: work:artifact/meta-hooks-copilot-signed-channel
-    name: .meta/hooks/copilot_signed_channel.py
-    path: .meta/hooks/copilot_signed_channel.py
-  - id: work:artifact/meta-checks-probes-tools-copilot
-    name: .meta/checks/probes/tools/copilot.py
-    path: .meta/checks/probes/tools/copilot.py
-  - id: work:artifact/meta-checks-probes-tools-jules
-    name: .meta/checks/probes/tools/jules.py
-    path: .meta/checks/probes/tools/jules.py
-  - id: work:artifact/meta-hooks-codex-hook-protocol
-    name: .meta/codex_hooks.py
-    path: .meta/codex_hooks.py
-  - id: work:artifact/meta-hooks-codex-signed-channel
-    name: .meta/hooks/codex_signed_channel.py
-    path: .meta/hooks/codex_signed_channel.py
-  - id: work:artifact/meta-hooks-codex-worktree-only
-    name: .meta/hooks/codex_worktree_only.py
-    path: .meta/hooks/codex_worktree_only.py
-  - id: work:artifact/meta-checks-probes-tools-codex
-    name: .meta/checks/probes/tools/codex.py
-    path: .meta/checks/probes/tools/codex.py
-  - id: work:artifact/meta-lib-timing
-    name: .meta/lib/timing/__init__.py
-    path: .meta/lib/timing/__init__.py
-  - id: work:artifact/meta-lib-timing-github
-    name: .meta/lib/timing/github.py
-    path: .meta/lib/timing/github.py
-  - id: work:artifact/meta-lib-timing-arithmetic
-    name: .meta/lib/timing/arithmetic.py
-    path: .meta/lib/timing/arithmetic.py
-  - id: work:artifact/meta-lib-timing-routing
-    name: .meta/lib/timing/routing.py
-    path: .meta/lib/timing/routing.py
-  - id: work:artifact/meta-lib-timing-screen
-    name: .meta/lib/timing/screen.py
-    path: .meta/lib/timing/screen.py
-  - id: work:artifact/meta-lib-timing-cli
-    name: .meta/lib/timing/cli.py
-    path: .meta/lib/timing/cli.py
   - id: work:artifact/meta-readme
     name: .meta/README.md
     path: .meta/README.md
@@ -1035,144 +588,12 @@ artifacts:
   - id: work:artifact/meta-mypy-ini
     name: .meta/mypy.ini
     path: .meta/mypy.ini
-  - id: work:artifact/meta-say
-    name: .meta/say/channel.py
-    path: .meta/say/channel.py
-  - id: work:artifact/meta-say-post
-    name: .meta/say/post
-    path: .meta/say/post
-  - id: work:artifact/meta-lib-post-init
-    name: .meta/lib/post/__init__.py
-    path: .meta/lib/post/__init__.py
-  - id: work:artifact/meta-lib-post-correction
-    name: .meta/lib/post/correction.py
-    path: .meta/lib/post/correction.py
-  - id: work:artifact/meta-lib-move-init
-    name: .meta/lib/move/__init__.py
-    path: .meta/lib/move/__init__.py
-  - id: work:artifact/meta-lib-move-common
-    name: .meta/lib/move/common.py
-    path: .meta/lib/move/common.py
-  - id: work:artifact/meta-lib-move-challenges
-    name: .meta/lib/move/challenges.py
-    path: .meta/lib/move/challenges.py
-  - id: work:artifact/meta-lib-move-epics
-    name: .meta/lib/move/epics.py
-    path: .meta/lib/move/epics.py
-  - id: work:artifact/meta-lib-move-pull-requests
-    name: .meta/lib/move/pull_requests.py
-    path: .meta/lib/move/pull_requests.py
-  - id: work:artifact/meta-lib-move-handoff
-    name: .meta/lib/move/handoff.py
-    path: .meta/lib/move/handoff.py
-  - id: work:artifact/meta-lib-move-drafts
-    name: .meta/lib/move/drafts.py
-    path: .meta/lib/move/drafts.py
-  - id: work:artifact/meta-lib-move-decisions
-    name: .meta/lib/move/decisions.py
-    path: .meta/lib/move/decisions.py
-  - id: work:artifact/meta-lib-move-concepts
-    name: .meta/lib/move/concepts.py
-    path: .meta/lib/move/concepts.py
-  - id: work:artifact/meta-lib-move-advance
-    name: .meta/lib/move/advance.py
-    path: .meta/lib/move/advance.py
-  - id: work:artifact/meta-lib-move-manager
-    name: .meta/lib/move/manager/__init__.py
-    path: .meta/lib/move/manager/__init__.py
-  - id: work:artifact/meta-lib-move-manager-lock
-    name: .meta/lib/move/manager/lock.py
-    path: .meta/lib/move/manager/lock.py
-  - id: work:artifact/meta-lib-move-manager-ranking
-    name: .meta/lib/move/manager/ranking.py
-    path: .meta/lib/move/manager/ranking.py
-  - id: work:artifact/meta-lib-move-manager-eviction
-    name: .meta/lib/move/manager/eviction.py
-    path: .meta/lib/move/manager/eviction.py
-  - id: work:artifact/meta-lib-move-manager-orchestration
-    name: .meta/lib/move/manager/orchestration.py
-    path: .meta/lib/move/manager/orchestration.py
-  - id: work:artifact/meta-lib-move-reconcile
-    name: .meta/lib/move/reconcile.py
-    path: .meta/lib/move/reconcile.py
-  - id: work:artifact/meta-lib-move-actions
-    name: .meta/lib/move/actions.py
-    path: .meta/lib/move/actions.py
-  - id: work:artifact/meta-lib-move-cli
-    name: .meta/lib/move/cli.py
-    path: .meta/lib/move/cli.py
-  - id: work:artifact/meta-say-move
-    name: .meta/say/move
-    path: .meta/say/move
-  - id: work:artifact/meta-say-commit
-    name: .meta/say/commit
-    path: .meta/say/commit
-  - id: work:artifact/meta-say-whoami
-    name: .meta/say/whoami
-    path: .meta/say/whoami
-  - id: work:artifact/meta-say-on
-    name: .meta/say/on
-    path: .meta/say/on
-  - id: work:artifact/meta-coder-door
-    name: .meta/coder_door.py
-    path: .meta/coder_door.py
-  - id: work:artifact/meta-lib-on
-    name: .meta/lib/on/__init__.py
-    path: .meta/lib/on/__init__.py
-  - id: work:artifact/meta-lib-on-common
-    name: .meta/lib/on/common.py
-    path: .meta/lib/on/common.py
-  - id: work:artifact/meta-lib-on-review
-    name: .meta/lib/on/review.py
-    path: .meta/lib/on/review.py
-  - id: work:artifact/meta-lib-on-cli
-    name: .meta/lib/on/cli.py
-    path: .meta/lib/on/cli.py
-  - id: work:artifact/meta-lib-on-routing
-    name: .meta/lib/on/routing.py
-    path: .meta/lib/on/routing.py
-  - id: work:artifact/meta-lib-on-prompts
-    name: .meta/lib/on/prompts.py
-    path: .meta/lib/on/prompts.py
-  - id: work:artifact/meta-lib-coder-door
-    name: .meta/lib/coder_door/__init__.py
-    path: .meta/lib/coder_door/__init__.py
-  - id: work:artifact/meta-lib-coder-door-cli
-    name: .meta/lib/coder_door/cli.py
-    path: .meta/lib/coder_door/cli.py
-  - id: work:artifact/meta-lib-coder-door-lifecycle
-    name: .meta/lib/coder_door/coder_door.py
-    path: .meta/lib/coder_door/coder_door.py
-  - id: work:artifact/meta-templates-prompts-coder-decompose
-    name: .meta/templates/prompts/coder-decompose.md
-    path: .meta/templates/prompts/coder-decompose.md
-  - id: work:artifact/meta-lib-coder-door-handoff
-    name: .meta/lib/coder_door/handoff.py
-    path: .meta/lib/coder_door/handoff.py
-  - id: work:artifact/meta-say-verbs
-    name: .meta/say/verbs.yaml
-    path: .meta/say/verbs.yaml
   - id: work:artifact/meta-schemas
     name: .meta/schemas.md
     path: .meta/schemas.md
   - id: work:artifact/meta-templates-readme
     name: .meta/templates/README.md
     path: .meta/templates/README.md
-  - id: work:artifact/meta-templates-issue
-    name: .meta/templates/issue.md
-    path: .meta/templates/issue.md
-  - id: work:artifact/meta-templates-pull-request
-    name: .meta/templates/pull-request.md
-    path: .meta/templates/pull-request.md
-  - id: work:artifact/meta-templates-roadmap
-    name: .meta/templates/roadmap.md
-    path: .meta/templates/roadmap.md
-  - id: work:artifact/meta-templates-constraints
-    name: .meta/templates/constraints.md
-    path: .meta/templates/constraints.md
-  - id: work:artifact/meta-work-actors
-    name: .meta/work/actors.yaml
-    path: .meta/work/actors.yaml
   - id: work:artifact/meta-work-authority
     name: .meta/work/authority.yaml
     path: .meta/work/authority.yaml
@@ -1206,7 +627,7 @@ artifacts:
     preamble: |
       # Specialize this scaffold into a portfolio
 
-      You are looking at **solorepo**, a scaffold for building software products as a
+      You are looking at **stereorepo**, a scaffold for building software products as a
       team of one in the agentic AI era. Specializing it produces a **Portfolio**:
       one repo, one Bounded Context, one Ubiquitous Language, holding however many
       Products and Projects.
@@ -1221,42 +642,27 @@ artifacts:
   - id: work:artifact/wiki-readme
     name: wiki/README.md
     path: wiki/README.md
-  - id: work:artifact/wiki-solorepo-readme
-    name: wiki/solorepo/README.md
-    path: wiki/solorepo/README.md
-  - id: work:artifact/wiki-solorepo-knowledge-management
-    name: wiki/solorepo/knowledge-management.md
-    path: wiki/solorepo/knowledge-management.md
-  - id: work:artifact/wiki-solorepo-pr-first
-    name: wiki/solorepo/pr-first.md
-    path: wiki/solorepo/pr-first.md
-  - id: work:artifact/wiki-solorepo-ubiquitous-language
-    name: wiki/solorepo/ubiquitous-language.md
-    path: wiki/solorepo/ubiquitous-language.md
-  - id: work:artifact/wiki-solorepo-noticed-and-not-done
-    name: wiki/solorepo/noticed-and-not-done.md
-    path: wiki/solorepo/noticed-and-not-done.md
-  - id: work:artifact/wiki-solorepo-concept
-    name: wiki/solorepo/concept.md
-    path: wiki/solorepo/concept.md
-  - id: work:artifact/wiki-solorepo-client-repo
-    name: wiki/solorepo/client-repo.md
-    path: wiki/solorepo/client-repo.md
-  - id: work:artifact/wiki-solorepo-dev-loop
-    name: wiki/solorepo/dev-loop.md
-    path: wiki/solorepo/dev-loop.md
-  - id: work:artifact/wiki-solorepo-door
-    name: wiki/solorepo/door.md
-    path: wiki/solorepo/door.md
-  - id: work:artifact/wiki-solorepo-seed-commit
-    name: wiki/solorepo/seed-commit.md
-    path: wiki/solorepo/seed-commit.md
+  - id: work:artifact/wiki-stereorepo-readme
+    name: wiki/stereorepo/README.md
+    path: wiki/stereorepo/README.md
+  - id: work:artifact/wiki-stereorepo-knowledge-management
+    name: wiki/stereorepo/knowledge-management.md
+    path: wiki/stereorepo/knowledge-management.md
+  - id: work:artifact/wiki-stereorepo-ubiquitous-language
+    name: wiki/stereorepo/ubiquitous-language.md
+    path: wiki/stereorepo/ubiquitous-language.md
+  - id: work:artifact/wiki-stereorepo-concept
+    name: wiki/stereorepo/concept.md
+    path: wiki/stereorepo/concept.md
+  - id: work:artifact/wiki-stereorepo-client-repo
+    name: wiki/stereorepo/client-repo.md
+    path: wiki/stereorepo/client-repo.md
   - id: work:artifact/meta-wikisplain
     name: .meta/wikisplain.py
     path: .meta/wikisplain.py
     description: >-
       Operational authoring tool for creating and explaining concepts in the
-      Knowledge Management wiki (solorepo's DR-187).
+      Knowledge Management wiki (stereorepo's DR-187).
   - id: work:artifact/meta-lib-wikisplain
     name: .meta/lib/wikisplain/__init__.py
     path: .meta/lib/wikisplain/__init__.py
@@ -1275,12 +681,6 @@ artifacts:
   - id: work:artifact/meta-lib-wikisplain-cli
     name: .meta/lib/wikisplain/cli.py
     path: .meta/lib/wikisplain/cli.py
-  - id: work:artifact/template-github-workflows-gate
-    name: template/.github/workflows/gate.yml
-    path: template/.github/workflows/gate.yml
-  - id: work:artifact/template-meta-assertions-authority
-    name: template/.meta/assertions/authority.yaml
-    path: template/.meta/assertions/authority.yaml
   - id: work:artifact/template-meta-assertions-structure
     name: template/.meta/assertions/structure.yaml
     path: template/.meta/assertions/structure.yaml

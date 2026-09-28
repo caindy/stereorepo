@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/090
     name: "DR-090 · A Bootstrap's gate is written in the language it gates"
-    challenge: work:challenge/51
     status: ADOPTED
     applies:
       - work:article/5

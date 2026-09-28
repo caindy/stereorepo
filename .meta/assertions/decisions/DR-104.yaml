@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/104
     name: "DR-104 · One verb runs any Project's gate or a Product's, and reads the report each gate prints"
-    challenge: work:challenge/53
     status: ADOPTED
     applies:
       - work:article/8

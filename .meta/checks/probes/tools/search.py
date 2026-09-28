@@ -1,4 +1,4 @@
-"""`search.py`'s index and its benchmark (solorepo's DR-103).
+"""`search.py`'s index and its benchmark (stereorepo's DR-103).
 """
 import contextlib
 import dataclasses
@@ -24,13 +24,12 @@ synonyms:
 
 @check("search probes", pre=True)
 def search_probes() -> list[str]:
-    """`search.py` indexes the assertions and the wiki, ranks by Okapi BM25F over three fields, and meets the retrieval benchmark (solorepo's DR-103, solorepo's DR-194, solorepo's DR-195).
+    """`search.py` indexes the assertions and the wiki, ranks by Okapi BM25F over three fields, and meets the retrieval benchmark (stereorepo's DR-103, stereorepo's DR-194, stereorepo's DR-195).
 
     The index built over `.meta/assertions/` and `wiki/` holds at least a
-    hundred documents. Asked who is allowed to push to trunk, the top five
-    hold Article 18, solorepo's DR-100 or solorepo's DR-072; asked for
-    leftover work, they hold the Concept noticed-and-not-done or
-    solorepo's DR-195, the Decision that minted that ingress alias. The
+    hundred documents. Asked who moves an issue between stages, the top five
+    hold the Concept supervisor or stage; asked for leftover work, they hold
+    the Discipline or the Concept journaling. The
     eighteen-query benchmark passes at hit@5 of fifteen or better; its
     printing is silenced, because its return value is the verdict. And a
     result's dictionary carries `id`, `score` and `source_file`.
@@ -45,19 +44,19 @@ def search_probes() -> list[str]:
     if len(index.docs) < 100:
         problems.append(f"search: index populated too few documents ({len(index.docs)})")
 
-    results = index.search("who is allowed to push to trunk", top_k=5)
+    results = index.search("who moves an issue between stages", top_k=5)
     ranked = [res.identifier for res in results]
-    if not any(ident in ranked for ident in ("work:article/18", "work:decision/100", "work:decision/072")):
-        problems.append("search: 'who is allowed to push to trunk' expected solorepo's Article 18, "
-                        f"solorepo's DR-100, or solorepo's DR-072 in top 5, got {ranked}")
+    if not any(ident in ranked for ident in ("work:concept/supervisor", "work:concept/stage")):
+        problems.append("search: 'who moves an issue between stages' expected the Concept "
+                        f"supervisor or stage in top 5, got {ranked}")
     leftover = [res.identifier for res in index.search("leftover work", top_k=5)]
-    if "work:concept/noticed-and-not-done" not in leftover and "work:decision/195" not in leftover:
-        problems.append(f"search: 'leftover work' expected noticed-and-not-done in top 5, got {leftover}")
+    if not {"work:discipline/journaling", "work:concept/journaling"} & set(leftover):
+        problems.append(f"search: 'leftover work' expected journaling in top 5, got {leftover}")
 
     with contextlib.redirect_stdout(io.StringIO()):
         failed = search.run_benchmark(index)
     if failed != 0:
-        problems.append(f"search: solorepo's DR-103 benchmark failed {failed} queries "
+        problems.append(f"search: stereorepo's DR-103 benchmark failed {failed} queries "
                         "below threshold (hit@5 >= 15/18)")
 
     if results:
@@ -86,7 +85,7 @@ class FrontmatterCase:
 
     Attributes:
         name: The case, as a failure names it.
-        page: The whole Markdown of the page, written to `wiki/solorepo/probe.md`.
+        page: The whole Markdown of the page, written to `wiki/stereorepo/probe.md`.
         indexed: Words the title field must hold, each tokenized before it is read.
         ignored: Words the title field must not hold, tokenized the same way.
         body: A word the body field must hold, or None where the case does not say.
@@ -131,7 +130,7 @@ FRONTMATTER_CASES = (
 
 @check("search frontmatter", pre=True)
 def search_frontmatter_probes() -> list[str]:
-    """A wiki page's title field takes the `synonyms` it declares and no other frontmatter list (solorepo's DR-103).
+    """A wiki page's title field takes the `synonyms` it declares and no other frontmatter list (stereorepo's DR-103).
 
     Each case writes one page into a tree of its own and reads back the tokens
     `search.py` indexed it under. A declared synonym is in the title field,
@@ -146,7 +145,7 @@ def search_frontmatter_probes() -> list[str]:
     for case in FRONTMATTER_CASES:
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
-            page = root / "wiki" / "solorepo" / "probe.md"
+            page = root / "wiki" / "stereorepo" / "probe.md"
             page.parent.mkdir(parents=True)
             page.write_text(case.page, encoding="utf-8")
             index = search.build_index(root / ".meta", root)

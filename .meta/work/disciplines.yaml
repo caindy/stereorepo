@@ -1,11 +1,11 @@
-id: https://w3id.org/solorepo/work/disciplines
+id: https://w3id.org/stereorepo/work/disciplines
 name: work-disciplines
 title: Ontology of Work — Disciplines
 description: >-
   How work must proceed, invariably.
 
   A **Discipline** is a structured way of working that must be adhered to because
-  it is not an imperative program (solorepo's DR-025). It has steps and an order, it is *followed*
+  it is not an imperative program (stereorepo's DR-025). It has steps and an order, it is *followed*
   rather than executed, and following it produces artifacts.
 
   The clause doing the work is "not an imperative program". Adherence is what you
@@ -16,9 +16,9 @@ description: >-
   it is what stops a Discipline being written when a script would do.
 
   A Discipline is none of the three things it is most easily mistaken for. Not a
-  Capability, which is what can be done. Not a Permission, which is what may be
-  done and to what. Not a characterisation such as a communication style, which
-  describes rather than prescribes and has no steps to depart from.
+  Capability, which is what can be done. Not a characterisation such as a
+  communication style, which describes rather than prescribes and has no steps to
+  depart from.
 
   Disciplines are also the reason this class exists rather than the prose that
   preceded it: an APM `instructions` primitive is a Discipline compiled for a
@@ -37,7 +37,7 @@ description: >-
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
-  work: https://w3id.org/solorepo/work-ontology/
+  work: https://w3id.org/stereorepo/work-ontology/
   linkml: https://w3id.org/linkml/
 default_prefix: work
 default_range: string
@@ -70,9 +70,9 @@ slots:
 
   applies_to:
     description: >-
-      Where the Discipline holds, when it does not hold everywhere. The scope of
-      an APM `instructions` primitive — its `applyTo` glob — is this Securable.
-    range: Securable
+      Where the Discipline holds, when it does not hold everywhere, as a path
+      glob. The scope of an APM `instructions` primitive — its `applyTo` glob —
+      is this.
 
   enforces:
     description: >-
@@ -120,7 +120,7 @@ classes:
     is_a: WorkEntity
     description: >-
       One step of a Discipline: a prescribed rule or practice that requires judgement
-      (solorepo's DR-270). Identified by a semantic slug CURIE under
+      (stereorepo's DR-270). Identified by a semantic slug CURIE under
       `work:discipline-step/<discipline-slug>/<step-slug>`.
     slots:
       - statement
@@ -193,6 +193,6 @@ classes:
           claiming to hold unconditionally, which is a strong claim and should be
           rare.
 
-          **And if the observation is something you could bring about, it is a
-          Challenge.** An Article retired by work somebody could do needs an Issue
-          tracking that work, or the Charter is holding a plan nobody scheduled.
+          **And if the observation is something you could bring about, it is an
+          Issue.** An Article retired by work somebody could do needs an Issue on
+          the board, or the Charter is holding a plan nobody scheduled.

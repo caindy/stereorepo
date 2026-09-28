@@ -1,4 +1,4 @@
-"""The history logs under `.meta/`: every entry names Evidence that exists, and no log is orphaned from its module (solorepo's DR-171).
+"""The history logs under `.meta/`: every entry names Evidence that exists, and no log is orphaned from its module (stereorepo's DR-171).
 """
 import ast
 
@@ -13,13 +13,13 @@ from checks.collect import (
 
 
 def without_comments(text: str) -> str:
-    """Text with every `<!-- ... -->` comment removed (solorepo's DR-171)."""
+    """Text with every `<!-- ... -->` comment removed (stereorepo's DR-171)."""
     first, *rest = text.split("<!--")
     return first + "".join(piece.split("-->", 1)[1] for piece in rest if "-->" in piece)
 
 
 def history_entries_of(text: str) -> list[tuple[str, str | None]]:
-    """The (title, evidence) pairs of a history log (solorepo's DR-171, solorepo's DR-228)."""
+    """The (title, evidence) pairs of a history log (stereorepo's DR-171, stereorepo's DR-228)."""
     entries: list[tuple[str, str | None]] = []
     for line in without_comments(text).splitlines():
         if line.startswith("### "):
@@ -32,7 +32,7 @@ def history_entries_of(text: str) -> list[tuple[str, str | None]]:
 
 @check("meta history orphans")
 def meta_history_orphans() -> StepOutcome:
-    """Every .history.md under .meta/ has a companion module that names it in its docstring (solorepo's DR-171).
+    """Every .history.md under .meta/ has a companion module that names it in its docstring (stereorepo's DR-171).
 
     The companion is the file of the same stem beside the log: `<stem>.py`, the
     extension-less program `<stem>`, or the package `<stem>/`, whose docstring
@@ -107,7 +107,7 @@ def evidence_problem(evidence: str | None) -> str | None:
 
 @check("meta history evidence")
 def meta_history_evidence() -> StepOutcome:
-    """Every entry in a .meta/ history log names a check or probe that exists (solorepo's DR-171)."""
+    """Every entry in a .meta/ history log names a check or probe that exists (stereorepo's DR-171)."""
     problems: list[str] = []
     logs = 0
     entries = 0

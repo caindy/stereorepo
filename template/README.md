@@ -2,7 +2,7 @@
 
 __PORTFOLIO_DESCRIPTION__
 
-One Bounded Context, one Ubiquitous Language, built as a team of one.
+One Bounded Context, one Ubiquitous Language, built by one human and a pair of agents.
 
 ## Products
 
@@ -14,5 +14,5 @@ _None yet._
 to it — orients an agent working in this repository. From there,
 [`.meta/README.md`](.meta/README.md) is the load map.
 
-Specialized from [solorepo](https://github.com/caindy/solorepo). The vocabulary,
+Specialized from [stereorepo](https://github.com/caindy/stereorepo). The vocabulary,
 Disciplines and gate are inherited; the domain language is this portfolio's own.

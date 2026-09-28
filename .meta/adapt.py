@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uvx --python 3.13 --with pyyaml python
-"""Brownfield repository adoption planner and CLI dispatcher (solorepo's DR-217).
+"""Brownfield repository adoption planner and CLI dispatcher (stereorepo's DR-217).
 
-Analyzes target repositories against the versioned solorepo installation bundle
+Analyzes target repositories against the versioned stereorepo installation bundle
 and product configuration to plan collision-aware adoption.
 """
 

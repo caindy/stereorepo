@@ -4,7 +4,7 @@
 # ceilings themselves are `MODULE_CEILING` and `ENTRY_CEILING` in
 # `.meta/checks/files/python.py`, five hundred lines for a module and three
 # hundred and fifty for a file on the invocation surface, which is where
-# solorepo's DR-217 puts the line between a script and the package holding its
+# stereorepo's DR-217 puts the line between a script and the package holding its
 # body.
 #
 # The Ratchet Discipline is what a checker that cannot be clean at once does: a
@@ -17,30 +17,8 @@
 # Recorded as the ceilings were adopted, in caindy/solorepo#883, and it falls as
 # scripts are decomposed into `.meta/lib/<script>/`.
 
-.meta/arc/deploy: 159
 .meta/checks/comments.py: 317
-.meta/checks/files/python.py: 337
-.meta/checks/probes/channel/filing.py: 91
-.meta/checks/probes/channel/on_coder.py: 186
-.meta/checks/probes/git/step.py: 13
-.meta/checks/probes/harness/github.py: 269
-.meta/checks/probes/knowledge.py: 111
-.meta/checks/probes/loops/advance.py: 223
-.meta/checks/probes/loops/dispatch.py: 205
-.meta/checks/probes/loops/merge_manager.py: 1177
-.meta/checks/probes/loops/reconcile.py: 20
-.meta/checks/probes/tools/fallback.py: 357
-.meta/depth.py: 132
-.meta/detect_fallback.py: 189
-.meta/jules/client.py: 0
-.meta/lib/move/advance.py: 521
-.meta/lib/move/challenges.py: 892
-.meta/lib/move/manager/ranking.py: 220
-.meta/lib/move/pull_requests.py: 275
-.meta/lib/move/reconcile.py: 243
-.meta/next.py: 83
-.meta/run_agy.py: 218
-.meta/say/channel.py: 376
-.meta/say/post: 215
-.meta/terms.py: 399
-.meta/test_specialization.py: 156
+.meta/checks/files/python.py: 333
+.meta/checks/probes/knowledge.py: 110
+.meta/terms.py: 397
+.meta/test_specialization.py: 130

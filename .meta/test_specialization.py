@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """Operational test runner for automated Specialization end-to-end verification.
 
-Cites solorepo's DR-239 and solorepo's DR-244.
+Cites stereorepo's DR-239 and stereorepo's DR-244.
 
 Executes the 8-step Specialization Discipline into an isolated, temporary git repository
-using pre-judged portfolio fixtures (solorepo's DR-026, solorepo's DR-204), validating that:
-1. Inherited tooling, ontologies, and workflows assemble into a viable repository.
-2. Workflow runner labels are successfully retargeted for external execution.
-3. Template replacements and agent symlinks initialize cleanly.
-4. Fixture tokens substitute with zero surviving placeholder tokens.
-5. Language bootstrapping and assertion rendering succeed.
-6. Scaffold-only paths remain strictly absent from the specialized tree.
-7. The full portfolio gate passes cleanly across all initialized projects.
+using pre-judged portfolio fixtures (stereorepo's DR-026, stereorepo's DR-204), validating that:
+1. Inherited tooling and ontologies assemble into a viable repository.
+2. Template replacements and agent symlinks initialize cleanly.
+3. Fixture tokens substitute with zero surviving placeholder tokens.
+4. Language bootstrapping and assertion rendering succeed.
+5. Scaffold-only paths remain strictly absent from the specialized tree.
+6. The full portfolio gate passes cleanly across all initialized projects.
 
 Usage:
     python3 .meta/test_specialization.py [--target <dir>] [--keep] [--lang <python>] [--verbose]
@@ -45,7 +44,7 @@ ROOT = META.parent
 FIXTURES_DIR = META / "fixtures" / "specialization"
 DEFAULT_TOKENS_PATH = FIXTURES_DIR / "tokens.json"
 TOKEN_RE = re.compile(r"__[A-Z0-9_]+__")
-SCAFFOLD_ONLY_PATHS = ("SPECIALIZE.md", "template", "bootstraps")
+SCAFFOLD_ONLY_PATHS = ("SPECIALIZE.md", "template", "bootstraps", "pair", "issues")
 
 NO_FIXTURE = "Tokens fixture file not found: {path}"
 """What `load_tokens` raises where nothing is at the path it was given."""
@@ -127,27 +126,6 @@ def read_inherited_paths(disciplines_file: pathlib.Path) -> list[str]:
     return []
 
 
-def retarget_workflows(workflows_dir: pathlib.Path) -> int:
-    """Retargets ARC runner labels to public GitHub container runners in workflow YAMLs.
-
-    Parameters:
-        workflows_dir (pathlib.Path): Directory containing workflow YAML files.
-
-    Returns:
-        int: Total number of retargeted workflow files.
-    """
-    count = 0
-    if not workflows_dir.is_dir():
-        return count
-    replacement = "runs-on: ubuntu-latest\n    container: ghcr.io/caindy/solorepo-runner:2.337.0-5"
-    for wf in workflows_dir.glob("*.yml"):
-        content = wf.read_text(encoding="utf-8")
-        if "runs-on: arc-runner-set" in content:
-            wf.write_text(content.replace("runs-on: arc-runner-set", replacement), encoding="utf-8")
-            count += 1
-    return count
-
-
 def substitute_tokens(repo_dir: pathlib.Path, tokens: dict[str, str]) -> list[str]:
     """Replaces fixture tokens across repository files and asserts no placeholders survive.
 
@@ -219,7 +197,7 @@ def step_1_init_repo(target_path: pathlib.Path) -> int:
         print(f"test-specialization: git init failed: {err}", file=sys.stderr)
         return code
     run_command(["git", "config", "user.name", "Specialization Test"], target_path)
-    run_command(["git", "config", "user.email", "specialization-test@solorepo.local"], target_path)
+    run_command(["git", "config", "user.email", "test@stereorepo.local"], target_path)
     return 0
 
 
@@ -229,8 +207,8 @@ def step_2_copy_inherited(
     verbose: bool,
     bundle: Bundle | None = None,
 ) -> int:
-    """Copies all inherited files into the destination repository and retargets workflows."""
-    print("test-specialization: step 2 — copy inherited scaffold files and retarget workflows")
+    """Copies all inherited files into the destination repository."""
+    print("test-specialization: step 2 — copy inherited scaffold files")
     if bundle is not None:
         for item in bundle.managed_items():
             _copy_item(ROOT / item.source_path(), target_path / item.dest_path())
@@ -238,10 +216,6 @@ def step_2_copy_inherited(
         for token in inherited_tokens:
             src = ROOT / token if (ROOT / token).exists() else META / token
             _copy_item(src, target_path / token)
-
-    retargeted = retarget_workflows(target_path / ".github" / "workflows")
-    if verbose:
-        print(f"test-specialization: retargeted {retargeted} workflow files to public runner")
     return 0
 
 
@@ -353,7 +327,7 @@ def step_7_verify_scaffold_paths(target_path: pathlib.Path) -> int:
 
     run_command(["git", "add", "."], target_path)
     run_command(
-        ["git", "commit", "-m", "feat: specialize portfolio from solorepo scaffold"],
+        ["git", "commit", "-m", "feat: specialize portfolio from stereorepo scaffold"],
         target_path,
     )
     return 0
@@ -490,13 +464,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
 
     if args.keep:
-        target = pathlib.Path(tempfile.mkdtemp(prefix="solorepo-test-specialization-"))
+        target = pathlib.Path(tempfile.mkdtemp(prefix="stereorepo-test-specialization-"))
         print(f"test-specialization: retaining test directory at {target}")
         return execute_specialization_test(
             target, tokens_path=tokens, lang=args.lang, verbose=args.verbose,
         )
 
-    with tempfile.TemporaryDirectory(prefix="solorepo-test-specialization-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="stereorepo-test-specialization-") as temp_dir:
         return execute_specialization_test(
             pathlib.Path(temp_dir), tokens_path=tokens, lang=args.lang, verbose=args.verbose,
         )

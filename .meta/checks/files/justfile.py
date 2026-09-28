@@ -1,12 +1,12 @@
 """What the root verb surface owes its callers: a recipe signature built from
 flags, subcommands and atomic identifiers, every parameter reaching the tool it
 was declared for, and a doc comment for the index `just --list` prints
-(solorepo's DR-106, solorepo's DR-259).
+(stereorepo's DR-106, stereorepo's DR-259).
 
 The surface this governs is the public one: a `just` private recipe (its name
 prefixed `_`) is an internal subroutine called only from another recipe's
 body, never typed by an operator and never listed by `just --list`, so it
-sits outside solorepo's DR-259's operator-facing contract and this module does
+sits outside stereorepo's DR-259's operator-facing contract and this module does
 not see it (solorepo's #771).
 """
 
@@ -44,35 +44,23 @@ SUBCOMMAND = "subcommand"
 """A scalar naming one of a closed set of targets the recipe dispatches on."""
 
 IDENTIFIER = "identifier"
-"""A scalar carrying one atomic identifier, such as a pull request number."""
+"""A scalar carrying one atomic identifier, such as an issue slug."""
 
 CONTRACT: Contract = {
     "default": (),
     "gate": (("target", SUBCOMMAND),),
     "render": (),
-    "pr": (("n", IDENTIFIER), ("args", FLAGS)),
-    "watch": (("n", IDENTIFIER),),
-    "sweep": (),
-    "pr-all": (),
-    "merge-manager": (("args", FLAGS),),
-    "landed": (("n", IDENTIFIER),),
-    "next": (("args", FLAGS),),
-    "timing": (("args", FLAGS),),
-    "agents": (("args", FLAGS),),
     "dereference": (("args", FLAGS),),
     "terms": (("args", FLAGS),),
     "apm": (("args", FLAGS),),
     "bootstrap": (("args", FLAGS),),
-    "arc-cluster": (),
-    "arc": (),
-    "arc-image": (("args", FLAGS),),
     "test-specialization": (("args", FLAGS),),
     "adapt": (("args", FLAGS),),
 }
 """The declared shape of every root recipe: each parameter in signature order, paired with
 the kind of value it carries. There is no prose kind to declare, so a recipe taking a bare
 multi-word positional cannot be written down here and fails the step until it is redesigned
-(solorepo's DR-259). `pr-all` takes nothing and `next` a flags tail, which is the shape the
+(stereorepo's DR-259). `pr-all` takes nothing and `next` a flags tail, which is the shape the
 composite actions under `.meta/actions/` call them in (solorepo's DR-275)."""
 
 
@@ -169,7 +157,7 @@ def _departures(where: str, recipe: Recipe, declared: tuple[tuple[str, str], ...
         problems.append(
             f"{where} is not in the argument-passing contract — declare its parameters in "
             "CONTRACT as flags, a subcommand or an atomic identifier, or route it to an "
-            "agent skill if it takes prose (solorepo's DR-259)"
+            "agent skill if it takes prose (stereorepo's DR-259)"
         )
     elif parameters != declared:
         problems.append(f"{where} takes {parameters}, but the contract declares {declared}")
@@ -182,7 +170,7 @@ def _departures(where: str, recipe: Recipe, declared: tuple[tuple[str, str], ...
                  for unknown in sorted(interpolated - known)]
 
     if name != "default" and not any(".meta/" in line for line in body):
-        problems.append(f"{where} invokes no tool under .meta/ (solorepo's DR-106)")
+        problems.append(f"{where} invokes no tool under .meta/ (stereorepo's DR-106)")
     if not documented:
         problems.append(f"{where} carries no doc comment, so `just --list` indexes it blank")
     return problems

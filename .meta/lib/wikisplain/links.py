@@ -12,7 +12,7 @@ FENCED_RE = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
 
 
 def extract_known_concepts(root: pathlib.Path | None = None) -> dict[str, str]:
-    """Extract known vocabulary and wiki concepts as a mapping of term to canonical target (solorepo's DR-187).
+    """Extract known vocabulary and wiki concepts as a mapping of term to canonical target (stereorepo's DR-187).
 
     Reads the same three sources as `find_duplicates` and in the same order,
     so a term a search collides against is a term this map resolves. A
@@ -45,9 +45,9 @@ def extract_known_concepts(root: pathlib.Path | None = None) -> dict[str, str]:
 
 
 def embed_wikilinks(
-    text: str, context: str = "solorepo", root: pathlib.Path | None = None
+    text: str, context: str = "stereorepo", root: pathlib.Path | None = None
 ) -> str:
-    """Automatically embed closed-world wikilinks for recognized concepts in prose (solorepo's DR-187)."""
+    """Automatically embed closed-world wikilinks for recognized concepts in prose (stereorepo's DR-187)."""
     known = extract_known_concepts(root)
     sorted_terms = sorted(known.keys(), key=len, reverse=True)
 

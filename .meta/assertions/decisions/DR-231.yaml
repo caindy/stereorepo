@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/231
     name: "DR-231 · A wiki page's synonyms are disjoint from its concept's `avoid` list, and are not held to its `alt_labels`"
-    challenge: work:challenge/594
     status: ADOPTED
     applies:
       - work:article/17
@@ -18,9 +17,9 @@ decisions:
       in both directions and reads neither list, so a page could declare as
       findable the very words the vocabulary exists to stop denoting the
       concept, and the gate stayed green. Both pages minted in caindy/solorepo#581
-      did it: `wiki/solorepo/claim.md` carried `[assertion, statement,
+      did it: `wiki/stereorepo/claim.md` carried `[assertion, statement,
       hypothesis]`, which is `work:concept/claim`'s `avoid` list word for word
-      and in order, and `wiki/solorepo/evidence.md` carried `[grounds,
+      and in order, and `wiki/stereorepo/evidence.md` carried `[grounds,
       receipt]`, `receipt` being the word that change retired. The reviewer
       caught both pages; nothing caught the gap. The cost is not shelf space,
       because the list has a consumer: `.meta/lib/search/build.py` folds every
@@ -40,8 +39,8 @@ decisions:
         chosen: false
         reason: >-
           The strongest rule available, and the two hand-authored pages that
-          predate the defect — `wiki/solorepo/noticed-and-not-done.md` and
-          `wiki/solorepo/externalized-memory.md` — each already carry exactly
+          predate the defect — `wiki/stereorepo/noticed-and-not-done.md` and
+          `wiki/stereorepo/externalized-memory.md` — each already carry exactly
           their `alt_labels`, so it would have cost nothing to adopt. It is
           refused because `alt_labels` and `synonyms` answer different
           questions. `alt_labels` says what else the concept may be *called*, a
@@ -103,7 +102,7 @@ decisions:
       A wiki page on the trunk whose `synonyms` name a word its own concept's
       `avoid` list forbids, or a query for such a word — `uvx --python 3.13
       --with linkml --with pyyaml python .meta/search.py <word>`, the `/search`
-      skill's invocation since solorepo's DR-272 retired `just search` —
+      skill's invocation since stereorepo's DR-272 retired `just search` —
       answering with that page. Equally, a page refused a findable synonym that
       the vocabulary does not forbid, which would mean the rule had become
       equality with `alt_labels` after all.

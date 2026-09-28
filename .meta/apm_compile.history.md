@@ -1,7 +1,7 @@
 # History
 
 History of defects, incidents, and recoveries for `.meta/apm_compile.py` and
-`.meta/hooks/post-checkout` (solorepo's DR-171).
+`.meta/hooks/post-checkout` (stereorepo's DR-171).
 
 ### Post-checkout hook silently swallowed reconciliation failures under constrained environments
 

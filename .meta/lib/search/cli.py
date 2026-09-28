@@ -10,13 +10,13 @@ from lib.search import META, ROOT, benchmark, build
 def main() -> None:
     """CLI entrypoint for search and benchmark evaluation."""
     parser = argparse.ArgumentParser(
-        description="Search repository assertions, decisions, and wiki by meaning (BM25, solorepo's DR-103, solorepo's DR-194, solorepo's DR-195)."
+        description="Search repository assertions, decisions, and wiki by meaning (BM25, stereorepo's DR-103, stereorepo's DR-194, stereorepo's DR-195)."
     )
     parser.add_argument("query", nargs="*", help="Query terms to search for")
     parser.add_argument("--limit", type=int, default=5, help="Number of results to return (default 5)")
     parser.add_argument("--detail", action="store_true", help="Print full snippet context")
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
-    parser.add_argument("--benchmark", action="store_true", help="Run the 18 evaluation benchmark queries (solorepo's DR-103)")
+    parser.add_argument("--benchmark", action="store_true", help="Run the 18 evaluation benchmark queries (stereorepo's DR-103)")
 
     args = parser.parse_args()
 

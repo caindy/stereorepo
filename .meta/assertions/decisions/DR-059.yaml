@@ -43,10 +43,10 @@ decisions:
       - >-
         A cited Article is a typed reference, so a dangling citation is a gate
         failure. The prose form of the same defect is what this change found —
-        `roadmap.md` cited DR-058 for an entry nobody wrote — and a fifth check
+        `roadmap.md` cited solorepo's DR-058 for an entry nobody wrote — and a fifth check
         now holds it: every DR cited in prose resolves to an entry.
       - >-
-        DR-058 is a hole rather than a reconstruction. Writing the missing entry
+        solorepo's DR-058 is a hole rather than a reconstruction. Writing the missing entry
         afterwards from the roadmap's account was tried and dropped: an entry
         nobody took is a reconstruction wearing a decision's authority, and the
         hole is what the number is honestly worth.

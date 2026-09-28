@@ -88,10 +88,11 @@ def main(argv: list[str] | None = None) -> int:
             "narrow the scope with --base, raise --limit, or ask the record with --all"
         )
         return 0
-    tiers = asking.providers(args.model)
-    if not asking.available(tiers):
-        print("?  dereference: no eligible reading provider is on PATH")
+    if not asking.available():
+        print(f"?  dereference: `{asking.EXECUTABLE}` is not on PATH")
         return 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
-        answers = list(pool.map(lambda pair: asking.ask(pair, tiers, args.timeout), pairs))
+        answers = list(
+            pool.map(lambda pair: asking.ask(pair, args.model, args.timeout), pairs)
+        )
     return report.report(answers, pairs, base, args.all, sample=bool(args.sample))

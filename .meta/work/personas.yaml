@@ -1,4 +1,4 @@
-id: https://w3id.org/solorepo/work/personas
+id: https://w3id.org/stereorepo/work/personas
 name: work-personas
 title: Ontology of Work — Personas
 description: >-
@@ -6,26 +6,23 @@ description: >-
 
   A **Persona** is Alan Cooper's: a specific, detailed, named user archetype the
   product is designed for, first-class here rather than a borrowed metaphor.
-  Distinct from Personality, which is the character an Actor presents while
-  working — and the two connect, because interrogating a Persona means an Actor
-  adopts it as a temporary Personality. In collaborative product and feature design,
-  an Actor holding an assigned Stakeholder Surrogate Role assumes the Persona's
-  context, goal hierarchy, behaviors, and frustrations, evaluating design proposals
-  strictly against the user archetype's rejection boundaries (solorepo's DR-200).
+  In collaborative product and feature design, an agent compiled from the Persona
+  assumes its context, goal hierarchy, behaviors, and frustrations, evaluating
+  design proposals strictly against the archetype's rejection boundaries
+  (stereorepo's DR-200).
 
   **The detail is the discipline.** A sketch answers questions differently from a
   rigorously modelled figure, which is why Cooper insists on research over
   invention, and why a thin Persona cannot usefully be interrogated.
 
-  Goals are tiered, because only one tier is Goal-shaped. An END goal is specific
-  and has a plain test for being reached; what it lacks is a Deadline, being
-  standing rather than a bounded commitment. EXPERIENCE and LIFE goals are not
-  Goal-shaped at all. Business and technical goals are deliberately absent: About
+  Goals are tiered. An END goal is specific and has a plain test for being
+  reached, and is standing rather than a bounded commitment. EXPERIENCE and LIFE
+  goals are not testable that way at all. Business and technical goals are deliberately absent: About
   Face keeps them outside the persona so they cannot pollute the user model.
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
-  work: https://w3id.org/solorepo/work-ontology/
+  work: https://w3id.org/stereorepo/work-ontology/
   linkml: https://w3id.org/linkml/
   prov: http://www.w3.org/ns/prov#
 default_prefix: work
@@ -34,7 +31,6 @@ default_range: string
 imports:
   - linkml:types
   - core
-  - actors
 
 enums:
 
@@ -87,7 +83,7 @@ enums:
         description: >-
           Behavioural. What the user wants to accomplish — "process an invoice
           without manual reconciliation". Drives architecture and workflow, and
-          is the tier that is Goal-shaped.
+          is the tier a Job to be Done serves.
       LIFE:
         description: >-
           Reflective. Who the user wants to be — "be recognised as an expert".
@@ -137,8 +133,6 @@ slots:
     description: The Persona whose job this is — the user the work is for.
     range: Persona
 
-  # Goal
-
 classes:
 
   PersonaGoal:
@@ -151,14 +145,9 @@ classes:
         to a set of goals; it does not resolve it to one, and SMART's relevance
         is unfalsifiable while it stays unresolved.
       - >-
-        An END goal is Goal-shaped: specific, and with a plain test for having
-        been reached. What it lacks is a Deadline — it is standing and recurring
-        rather than a bounded commitment — so it is not yet an instance of Goal,
-        whose deadline is required to keep a Goal SMART (solorepo's DR-003). Whether to
-        share an abstraction between them is open; see solorepo's DR-020.
-      - >-
-        EXPERIENCE and LIFE goals are not Goal-shaped at all and are not
-        candidates for it.
+        An END goal is specific, with a plain test for having been reached, and
+        standing rather than a bounded commitment. EXPERIENCE and LIFE goals have
+        no such test.
     slots:
       - id
       - goal_type
@@ -175,22 +164,19 @@ classes:
     description: >-
       A user archetype the product is designed *for*, in Alan Cooper's sense
       from *The Inmates Are Running the Asylum*: a specific, detailed, named
-      figure standing in for a class of real people. Distinct from Personality,
-      which is the character an Actor presents while working.
+      figure standing in for a class of real people.
     comments:
       - >-
         The detail is the discipline. A sketch answers questions differently
         from a rigorously modelled figure, which is why Cooper insists on
         research over invention. A thin Persona cannot be usefully interrogated.
       - >-
-        Interrogation needs no new machinery: an Actor adopts the Persona's
-        Personality and holds a Job to be questioned. The Persona is worn, never
-        authenticated, so an AuditRecord still attributes to the workload
-        identity rather than to a fictional person. In collaborative feature
-        design, the Actor evaluates proposals against the Persona's 3-tier goal
-        hierarchy and rejection boundaries (solorepo's DR-200).
+        Interrogation needs no new machinery: the Persona compiles to an agent
+        that answers as it. In collaborative feature design, that agent
+        evaluates proposals against the Persona's 3-tier goal hierarchy and
+        rejection boundaries (stereorepo's DR-200).
       - >-
-        A JobToBeDone names the Persona whose need it is (solorepo's DR-021). Interrogating
+        A JobToBeDone names the Persona whose need it is (stereorepo's DR-021). Interrogating
         a Persona to surface one is the intended path from user research into
         the work.
     slots:

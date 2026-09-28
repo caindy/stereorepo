@@ -1,4 +1,4 @@
-"""The deterministic half: the citations `check.py` extracts, the sentence each sits in, the entry it names, and the scope a branch is read in, from the diff and the ground that moved (solorepo's DR-192).
+"""The deterministic half: the citations `check.py` extracts, the sentence each sits in, the entry it names, and the scope a branch is read in, from the diff and the ground that moved (stereorepo's DR-192).
 """
 import importlib.util
 import pathlib
@@ -36,17 +36,17 @@ def citations() -> Any:
     """`.meta/checks/citations/`, imported for its extraction and nothing else.
 
     Importing runs nothing — everything it does is under `main()` — and the
-    functions used here read files. It is imported the way `check.py` imports
-    `check_pr.py`, and for the same reason: what a citation is, and which files
+    functions used here read files. It is imported rather than copied because
+    what a citation is, and which files
     hold one durably, is one fact, and a copy of it here would be a second
     answer that drifts.
 
     The gate's steps moved out of `check.py` into `.meta/checks/`
-    (solorepo's DR-150), so what this reaches for now has a name: the citation
+    (stereorepo's DR-150), so what this reaches for now has a name: the citation
     grammar and the copy set are the `citations` package's, and nothing else in
     the gate is wanted here. Its own siblings are imported by plain name, so the
     directory goes on `sys.path` first, and the package is imported by name
-    since a package has no one file to load (solorepo's DR-218).
+    since a package has no one file to load (stereorepo's DR-218).
     """
     if str(CHECKS) not in sys.path:
         sys.path.insert(0, str(CHECKS))
@@ -112,7 +112,7 @@ def spans(chk: Any, path: pathlib.Path) -> list[str]:
     of the item above it with no stop-and-capital in between, so each entry is
     asked to support the reason belonging to its predecessor, and a coder who
     fixed what came back would be rewriting true prose to satisfy a splitter —
-    which is the failure solorepo's DR-134 names as its falsifier, arriving by
+    which is the failure stereorepo's DR-134 names as its falsifier, arriving by
     construction.
     """
     if path.suffix in (".yaml", ".yml"):
@@ -195,7 +195,7 @@ def sampled(
     durable: set[pathlib.Path],
     sample: int,
 ) -> list[dict[str, Any]]:
-    """A rotating sample of `sample` pairs over every durable file, the offset turning with the commit count (solorepo's DR-192)."""
+    """A rotating sample of `sample` pairs over every durable file, the offset turning with the commit count (stereorepo's DR-192)."""
     all_pairs: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
     for path in sorted(durable):
@@ -225,7 +225,7 @@ def moved_articles(base: str, path: pathlib.Path) -> set[str]:
 
 
 def modified_entries(base: str, changed: list[pathlib.Path]) -> set[str]:
-    """The Decisions and Articles this branch moved: every `DR-` assertion among `changed`, and each Article the charter's text changed (solorepo's DR-192)."""
+    """The Decisions and Articles this branch moved: every `DR-` assertion among `changed`, and each Article the charter's text changed (stereorepo's DR-192)."""
     entries: set[str] = set()
     for p in changed:
         try:
@@ -288,7 +288,7 @@ def scope(
     what the citation names.
 
     Everything, what this branch wrote or affected, or a rotating sample
-    (solorepo's DR-192). The branch scope is a set difference over sentences
+    (stereorepo's DR-192). The branch scope is a set difference over sentences
     rather than a read of the diff's line numbers: a folded scalar wraps where
     the line ended and not where the sentence did, so a line-based scope would
     report a claim whose only change was the width of its wrap, and would miss

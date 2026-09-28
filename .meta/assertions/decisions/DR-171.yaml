@@ -1,15 +1,12 @@
 decisions:
   - id: work:decision/171
     name: "DR-171 · History logs under .meta/ use check and probe symbols as receipts, and companion scripts name them to prevent orphans"
-    challenge: work:challenge/190
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-checks-files
       - work:artifact/meta-checks-probes-knowledge
       - work:artifact/meta-checks-graph
       - work:artifact/meta-check
-      - work:artifact/meta-check-pr
-      - work:artifact/meta-say
       - work:artifact/specialize
       - work:artifact/meta-disciplines
       - work:artifact/meta-checks-files-history

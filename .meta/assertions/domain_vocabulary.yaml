@@ -1,15 +1,15 @@
 # This portfolio's own domain language, and the Bounded Context it belongs to.
-# Owned here and never synced: solorepo has no authority over a portfolio's
+# Owned here and never synced: stereorepo has no authority over a portfolio's
 # domain (DR-015).
 #
-# solorepo is the degenerate case. Its domain *is* the work of building software
+# stereorepo is the degenerate case. Its domain *is* the work of building software
 # as a team of one, so the terms are the ones it publishes and there is nothing
 # here but its own Bounded Context. A generated portfolio adds a scheme of its
 # own and fills concept_set with the words its domain experts actually use.
 
 bounded_contexts:
-  - id: ddd:context/solorepo
-    name: solorepo
+  - id: ddd:context/stereorepo
+    name: stereorepo
     description: >-
       The scaffold's own context. Its Ubiquitous Language is the vocabulary in
       this file — the DDD concepts it conforms to, and the terms it originates.

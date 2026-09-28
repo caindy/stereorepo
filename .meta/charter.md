@@ -21,7 +21,7 @@ Discipline; some stand alone, and need nothing behind them.
 
 _In practice:_ `uvx --python 3.13 --with linkml --with pyyaml python .meta/check.py` passes, then the commit. Not a commit with `--no-verify` and a note to fix it after.
 
-_Retired when:_ A commit that is the gate's own act, so a tree that did not pass is not one the history can hold and there is no order left for a Job to keep.
+_Retired when:_ A commit that is the gate's own act, so a tree that did not pass is not one the history can hold and there is no order left for a session to keep.
 
 ### A2. A suppression names its rule and its reason, at the site. Never in configuration.
 
@@ -71,9 +71,9 @@ _Retired when:_ A step whose scope is printed from what its run collected, so no
 
 ### A8. An artifact prevents drift only if something consumes it — and consumption is not sufficient. Ask what it is checked against.
 
-**Enforces** Nothing Unconsumed. **Checked by** Orphan detection, which enforces the necessary half only, and PR review inspecting the creation boundary against speculative abstractions ahead of a consumer (solorepo's DR-008, solorepo's DR-203).
+**Enforces** Nothing Unconsumed. **Checked by** Orphan detection, which enforces the necessary half only, and the second seat inspecting the creation boundary against speculative abstractions ahead of a consumer (stereorepo's DR-008).
 
-_In practice:_ `.github/PULL_REQUEST_TEMPLATE.md` is consumed by GitHub, and checked against the form's own fence by `check.py`. At the creation boundary, capability reification on the schema was reverted in solorepo's DR-008 and provenance schemas deferred to the roadmap in solorepo's DR-203 because a coordinate system invented ahead of its consumer is debris before it is written.
+_In practice:_ `templates/decision.md` is consumed by whoever writes a Decision, and checked against the `Decision` class by `check.py`. At the creation boundary, capability reification on the schema was reverted in stereorepo's DR-008, because a coordinate system invented ahead of its consumer is debris before it is written.
 
 _Retired when:_ An artifact whose future requirements and downstream consumers are proven so invariant that building speculative coordinate systems ahead of consumption demonstrably prevents more rework than it introduces.
 
@@ -81,7 +81,7 @@ _Retired when:_ An artifact whose future requirements and downstream consumers a
 
 **Enforces** Seeded Artifacts. **Checked by** The template is rendered and the real gates run on the result.
 
-_In practice:_ solorepo's `template/` is filled with dummy tokens and the result validated. Never linted where it sits.
+_In practice:_ stereorepo's `template/` is filled with dummy tokens and the result validated. Never linted where it sits.
 
 _Retired when:_ A seed token whose real value is the thing a gate tests, so the filled dummy passes where the portfolio's own fill would not.
 
@@ -99,11 +99,11 @@ _Retired when:_ A rule a seed can satisfy only by inventing content, its subject
 
 _In practice:_ A choice settled in conversation is written as `assertions/decisions/DR-0nn.yaml` in the same change that acts on it.
 
-_Retired when:_ A transcript the artifacts cite by a durable identifier, so a decision left in it is dereferenced from the rule it settles rather than known only to the Job that held it.
+_Retired when:_ A transcript the artifacts cite by a durable identifier, so a decision left in it is dereferenced from the rule it settles rather than known only to the session that held it.
 
 ### A12. A citation in a durable artifact is dereferenced — the number, the claim it names, and a link where one is possible.
 
-**Enforces** Literate Programming. **Checked by** `check.py`, on the four shapes of the claim that are a string search: the number resolves to an entry or an Article, a quotation attributed to one appears in it, a relation stated in prose is the slot it names, and a `path:line` reads the span it is cited beside. `check_pr.py` resolves the number whose target is an Issue. Over the pages, the assertions and what a portfolio inherits — and in an assertion over what the parser holds, so a citation in a YAML comment is resolved for its number alone. A paraphrase is a reading, and `.meta/dereference.py` is where it is read: the coder runs it over what the branch wrote before the hand-off, one model question per citation against the entry it names. That step is not a gate, and its finding blocks no merge — a gate's red is a fact a re-run cannot overturn, and a reading is not (solorepo's DR-134). The reviewer stands behind it.
+**Enforces** Literate Programming. **Checked by** `check.py`, on the four shapes of the claim that are a string search: the number resolves to an entry or an Article, a quotation attributed to one appears in it, a relation stated in prose is the slot it names, and a `path:line` reads the span it is cited beside. Over the pages, the assertions and what a portfolio inherits — and in an assertion over what the parser holds, so a citation in a YAML comment is resolved for its number alone. A paraphrase is a reading, and `.meta/dereference.py` is where it is read: whoever wrote the citations runs it over what the branch wrote, one model question per citation against the entry it names. That step is not a gate, and its finding blocks no landing — a gate's red is a fact a re-run cannot overturn, and a reading is not (stereorepo's DR-134).
 
 _In practice:_ "A9 — a seed is data, gated by rendering it", with a link. Not a bare "A9".
 
@@ -115,80 +115,56 @@ _Retired when:_ A citation whose identifier already carries the claim it names, 
 
 **Enforces** Journaling. **Checked by** Nothing yet.
 
-_In practice:_ The commit subject is a label — "An Article is a reference" — and the argument for it is in the pull request body.
+_In practice:_ The commit subject is a label — "An Article is a reference" — and the argument for it is in the Issue file.
 
 _Retired when:_ A commit message the record indexes where the artifacts are read, so the reasoning in it is cited from the line it explains rather than walked back to through `git blame`.
 
-### A15. Work noticed and not done, recorded only in a summary, has not been noticed.
+### A15. Retired.
 
-**Enforces** PR First. **Checked by** `check_pr.py`: every item under *what was noticed and not done* is a link.
-
-_In practice:_ `- #21 — make the channel the only path by construction`, a link, under the body's fourth heading. Not a sentence in a closing summary.
-
-_Retired when:_ Work noticed about a change as a whole, with no line to hang a conversation on, so the marker is parked where it is not about.
-
-### A16. A review thread resolved without an answer has not been resolved.
-
-**Enforces** PR First. **Checked by** `check_pr.py`: a resolved thread carries a reply from a second party, or a link to the Issue it became.
-
-_In practice:_ A thread the diff has overtaken gets a reply saying so, and is then resolved. Not resolved silently because the anchor moved.
-
-_Retired when:_ A review thread only the Actor who raised it can resolve, so resolved says the point was met rather than that somebody replied.
+### A16. Retired.
 
 ### A17. A term that arrived by use has not been agreed.
 
-**Enforces** Ubiquitous Language. **Checked by** The reviewer Role checking that any word doing the work of a term is enclosed in closed-world wikilinks or minted with the solo, and `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity between vocabulary concepts and wiki pages (solorepo's DR-190).
+**Enforces** Ubiquitous Language. **Checked by** Review checking that any word doing the work of a term is enclosed in closed-world wikilinks or minted with the solo, and `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity between vocabulary concepts and wiki pages (stereorepo's DR-190).
 
-_In practice:_ `Challenge` is used because it is a Concept in the vocabulary. A word that is not gets minted with the solo before it is used again.
+_In practice:_ `Issue` is used because it is a Concept in the vocabulary. A word that is not gets minted with the solo before it is used again.
 
-### A18. Work not pushed has not been handed off.
+### A18. Retired.
 
-**Enforces** PR First. **Checked by** `check_pr.py --handoff`, which refuses a dirty worktree or a branch ahead of its remote.
-
-_In practice:_ `git push` before the session ends, and `check_pr.py --handoff` refuses while the branch is ahead of its remote.
-
-_Retired when:_ A worktree the branch holds as it is written, so a Job that stops without pushing has left nothing behind.
-
-### A19. A commit that does not name its Actor is unattributable.
-
-**Enforces** PR First. **Checked by** `check_pr.py`, which fails a pull request carrying a commit with no `Actor:` Trailer.
-
-_In practice:_ `.meta/say/commit -m "…"`, which composes the `Actor:` Trailer from the environment. Never `git commit` directly.
-
-_Retired when:_ A credential no path but the channel can reach, so an unsigned commit is unrepresentable rather than caught.
+### A19. Retired.
 
 ### A20. A rule that lives only in the decision record is not in force.
 
 **Enforces** Written Decisions. **Checked by** `check.py`, which fails an ADOPTED Decision naming no Artifact under `enacted_in`.
 
-_In practice:_ The rule about a rationale's length is a step of Written Decisions, and solorepo's DR-080 names `.meta/disciplines.md` under `enacted_in`.
+_In practice:_ The rule about a rationale's length is a step of Written Decisions, and stereorepo's DR-080 names `.meta/disciplines.md` under `enacted_in`.
 
-_Retired when:_ A rule every Job here follows that no artifact but the decision record states.
+_Retired when:_ A rule every session here follows that no artifact but the decision record states.
 
 ### A21. A gate reports each step in the one shape every gate here prints — `ok`, `x` or `?`, then the step, then what it covered, found, or could not do — so a reader of any Project's gate reads every other's.
 
-**Checked by** `.meta/gate`, which reads each Project's report rather than its exit code, and fails a gate that prints no step in the shape (solorepo's DR-104).
+**Checked by** `.meta/gate`, which reads each Project's report rather than its exit code, and fails a gate that prints no step in the shape (stereorepo's DR-104).
 
 _In practice:_ `ok orphans — 5 markdown files under 2 packages, each included by a source file` from `cargo xtask gate`, beside `ok artifact paths` from `check.py`, read by the same eye. Not a Rust gate that prints cargo's own summary lines and exits.
 
 _Retired when:_ A Project whose toolchain reports in a form this shape cannot carry without hiding what the tool found.
 
-### A22. State an unprivileged Job cannot observe is state the system does not have.
+### A22. State the next participant cannot observe is state the system does not have.
 
-**Checked by** Its instances, each of which carries its own check: A11, A14, A15, A16, A17, A18 and A20 say the same thing of a decision, of reasoning, of work noticed, of a thread, of a term, of work in a worktree and of a rule. The general claim is held at review, by asking what a Job with no privilege beyond the record could reconstruct (solorepo's DR-216).
+**Checked by** Its instances, each of which carries its own check: A11, A14, A17 and A20 say the same thing of a decision, of reasoning, of a term and of a rule. The general claim is held by the second seat, by asking what a participant with no privilege beyond the record could reconstruct (stereorepo's DR-216).
 
-_In practice:_ The rule that a session's branch must not take the loop's shape existed only in `.github/workflows/coder.yml`'s job condition, so a session deriving it read the implementation and got the right answer for partly the wrong reason; solorepo's DR-215 moved it to PR First's *Read what GitHub holds on arrival* step, where an unprivileged reader meets it.
+_In practice:_ Which stage an issue is in is the directory its file sits in, so a seat, the supervisor and the human all read it from the same place, and none of them holds a copy the others cannot see.
 
-_Retired when:_ A Job that proceeds correctly on state it could not observe, which would mean a privilege nobody declared.
+_Retired when:_ A participant that proceeds correctly on state it could not observe, which would mean a privilege nobody declared.
 
-### A23. A Claim made without checking is a guess, however it turns out. A Claim reads exactly the same whether its author checked it or not, which is what makes an unchecked one dangerous rather than merely weak: no reader, reviewer or gate downstream can tell the two apart, so the check belongs to whoever writes the Claim, at the moment of writing, and cannot be delegated to anyone reading it later. Where the check is available — and it usually is, and usually costs one command — make it before asserting. Where it is not, say so on the Claim itself: a guess marked as a guess costs a reader nothing, and an unmarked one costs them the whole record's credibility once they find it.
+### A23. A Claim made without checking is a guess, however it turns out. A Claim reads exactly the same whether its author checked it or not, which is what makes an unchecked one dangerous rather than merely weak: no reader, seat or gate downstream can tell the two apart, so the check belongs to whoever writes the Claim, at the moment of writing, and cannot be delegated to anyone reading it later. Where the check is available — and it usually is, and usually costs one command — make it before asserting. Where it is not, say so on the Claim itself: a guess marked as a guess costs a reader nothing, and an unmarked one costs them the whole record's credibility once they find it.
 
-**Enforces** Observed Failure. **Checked by** `just dereference`, which reads the citations a branch wrote against what they name, for a Claim citing an Article, a Decision or a Discipline. Nothing resolves a Claim about behaviour or history: that half is held by the author before it is written and by the reviewer after, by asking what was consulted rather than whether it reads well. A22 is its complement and not its general case — that Article has the record carry what a Job needs, this one has the author go and read it.
+**Enforces** Observed Failure. **Checked by** `just dereference`, which reads the citations a branch wrote against what they name, for a Claim citing an Article, a Decision or a Discipline. Nothing resolves a Claim about behaviour or history: that half is held by the author before it is written and by the second seat after, by asking what was consulted rather than whether it reads well. A22 is its complement and not its general case — that Article has the record carry what a participant needs, this one has the author go and read it.
 
 _In practice:_ A Decision of this repository explained a defect by the shape of the code that produced it: three acts that are not one transaction, so a failure part-way through was retried and did the first act twice. The run's log says otherwise — it concluded successfully and carries no error at all, and the verb was simply typed twice, eleven seconds apart, with a recomposed body. Nothing had failed. Reading the log took one call and was done only when the solo asked why the stated mechanism would produce the stated effect, by which point the Claim had survived a review and two earlier corrections to the same paragraph (solorepo's #604).
 
-_Retired when:_ A merged Claim about behaviour or history that no party checked and no citation resolves, or a Claim hedged as uncertain where the check was available and cheap.
+_Retired when:_ A landed Claim about behaviour or history that no party checked and no citation resolves, or a Claim hedged as uncertain where the check was available and cheap.
 
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-052](assertions/decisions/DR-052.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-086](assertions/decisions/DR-086.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml)

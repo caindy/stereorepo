@@ -1,15 +1,10 @@
-"""The channel, the hooks and the scripts loaded as modules without running their `main()`, so a probe can call what they define.
-
-History in loaders.history.md (solorepo's DR-171).
+"""The scripts under `.meta/` loaded as modules without running their `main()`, so a probe can call what they define.
 """
 import importlib.util
 import pathlib
 import sys
 import types
 from importlib.machinery import SourceFileLoader
-from typing import Any
-
-import yaml
 
 from checks.collect import META, ROOT
 
@@ -46,36 +41,3 @@ def load_module(path: str | pathlib.Path, name: str | None = None, register: boo
         sys.modules[name] = module
     loader.exec_module(module)
     return module
-
-
-def load_hook(name: str) -> types.ModuleType:
-    """`.meta/hooks/<name>.py` as a module, by the stem alone."""
-    return load_module(META / "hooks" / f"{name}.py", name)
-
-
-def load_channel() -> tuple[Any, dict[str, Any], dict[str, Any]]:
-    """`.meta/say/` as modules: the signing primitive, the verb table, and every program the table names.
-
-    Returns `(channel, table, programs)`: the `channel.py` module, the parsed
-    `verbs.yaml`, and a dict from each program's name to its module, loaded by
-    the primitive's own `sibling()` so that programs importing each other share
-    one copy (solorepo's DR-117). Each call loads the channel afresh, so what one
-    probe sets on a program does not reach the next; the library package each
-    program in the table is the entry of, `lib.<name>` where one exists
-    (solorepo's DR-217), is evicted from `sys.modules` first for the same
-    reason, since a module that imported the channel once would otherwise keep
-    the copy a previous probe stood its fakes in on and reach GitHub past the
-    next probe's. History in loaders.history.md (solorepo's DR-171).
-
-    The programs have no `.py` and are programs rather than libraries, so the
-    primitive's loader is used. Importing runs nothing: everything each does is
-    under `main()`, and `main()` is under `__name__`.
-    """
-    table = yaml.safe_load((META / "say" / "verbs.yaml").read_text()) or {}
-    bodies = tuple(f"lib.{p['name']}" for p in table.get("programs") or [])
-    for name in [n for n in sys.modules
-                 if n in bodies or n.startswith(tuple(f"{body}." for body in bodies))]:
-        del sys.modules[name]
-    channel = load_module(META / "say" / "channel.py", "channel")
-    programs = {p["name"]: channel.sibling(p["name"]) for p in table.get("programs") or []}
-    return channel, table, programs

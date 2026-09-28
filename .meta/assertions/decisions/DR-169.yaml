@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/169
     name: "DR-169 · Three outcomes and scope reporting for the .meta Project's check.py gate"
-    challenge: work:challenge/292
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-check

@@ -3,8 +3,8 @@
 Steps that read comment tokens rather than the assertion graph — a line of code
 left behind as a comment, a suppression too broad to say what it suppresses, and
 narration inside a function body that belongs in a docstring, a Decision Record,
-a `<module>.history.md` log or a `just` recipe instead (solorepo's DR-171,
-solorepo's DR-194, solorepo's DR-196).
+a `<module>.history.md` log or a `just` recipe instead (stereorepo's DR-171,
+stereorepo's DR-194, stereorepo's DR-196).
 
 The keep-exceptions are the closed list a body comment is measured against:
 legal notices, tool directives, and an external boundary constraint carrying a
@@ -19,9 +19,9 @@ are decidable from the token stream alone.
 
 A suppression owes three things and two steps elsewhere hold two of them: the
 rule it names, which `broad suppressions` here requires, and the reason it
-carries, which `meta lints` requires (solorepo's DR-177). `suppression causes`
+carries, which `meta lints` requires (stereorepo's DR-177). `suppression causes`
 holds the third, reading that reason for a cause this repository can fix
-(solorepo's DR-225).
+(stereorepo's DR-225).
 
 `inline commentary` and `suppression causes` are ratcheted rather than flat:
 the tree held 210 body comment blocks across 15 files when the first was
@@ -31,14 +31,14 @@ baselines are
 `.meta/checks/comments.baseline.yaml` and
 `.meta/checks/suppressions.baseline.yaml`, and each may fall and may not rise.
 The comparison itself is `collect.against_baseline`, shared with the
-`meta types` step of `files.py` (solorepo's DR-210).
+`meta types` step of `files.py` (stereorepo's DR-210).
 
 `repeated suppressions` ratchets too, against
 `.meta/checks/suppressions.baseline.yaml`, and its comparison is
 `against_repeats` rather than the shared one: a group is keyed by its rule and
 reason rather than by a path, so a baseline entry the tree has dropped is one
 to delete rather than one naming a file that no longer exists
-(solorepo's DR-223).
+(stereorepo's DR-223).
 
 Scope: every Python and Rust file git lists.
 """
@@ -71,12 +71,12 @@ SUPPRESSIONS = SUPPRESSIONS_BASELINE
 # coincidence. Two is the literal reading of the Suppression Audit Protocol and
 # refuses the honest pair — two query builders in one module meeting one
 # constraint — so the limit is three, where a reason has been copied rather than
-# arrived at twice (solorepo's DR-223).
+# arrived at twice (stereorepo's DR-223).
 REPEAT_LIMIT = 3
 # The Protocol's escape hatch, narrowed to what is outside this repository: a
 # specification or an upstream tracker a reader can open. `DR-nnn`, `Article n`
 # and `#n` name something inside the repository, and a cause inside it is one to
-# fix rather than to repeat (solorepo's DR-223).
+# fix rather than to repeat (stereorepo's DR-223).
 EXTERNAL = re.compile(r"(https?://|RFC\s*\d+)", re.IGNORECASE)
 
 # A tool directive: the third keep-exception, and the one a linter or formatter
@@ -106,15 +106,15 @@ ALLOW = re.compile(r"#!?\[\s*allow\s*\(")
 # A dereference of something outside this repository, blanked from a reason
 # before its cause is read: a foreign tracker's host spells a module name of
 # this one, so `https://github.com/python/mypy/issues/1` or `github.com/…` is
-# the boundary citation the clause asks for and not a reference to
-# `.meta/lib/check_pr/github.py` (solorepo's DR-225).
+# the boundary citation the clause asks for and not a reference to a module of
+# this repository named `github` (stereorepo's DR-225).
 UPSTREAM = re.compile(
     r"https?://\S+|\b(?:[a-zA-Z0-9-]+\.)+(?:com|org|io|net|dev|edu|gov|app)\b[/\S]*"
 )
 # The four shapes a cause inside this repository takes, each resolved against
 # this tree rather than read: a path the repository holds, a dotted reference
 # whose head is a module under `.meta/` and whose attribute is exported by it,
-# an Issue number, and a Decision Record number (solorepo's DR-225).
+# an Issue number, and a Decision Record number (stereorepo's DR-225).
 REPO_PATH = re.compile(r"[\w.][\w./-]*\.(?:py|md|ya?ml|rs|toml|json|sh|txt)\b")
 DOTTED = re.compile(r"\b(\w+)\.(\w+)")
 ISSUE = re.compile(r"#\d+\b")
@@ -434,7 +434,7 @@ def reasons(source: str) -> list[tuple[int, str]]:
     """Every suppression's reason in a Python source, as `(line, reason)` pairs.
 
     A suppression carrying no reason yields nothing: `meta lints` is the step
-    that refuses that one (solorepo's DR-177), and one defect reported by two
+    that refuses that one (stereorepo's DR-177), and one defect reported by two
     steps reads as two.
 
     A line yields one reason at most, however many directives it carries.
@@ -465,7 +465,7 @@ def internal_cause(reason: str, names: Mapping[str, set[str]] | set[str]) -> str
     The half of the surviving-suppression clause that is decidable: that a cause
     is foreign cannot be proved from a sentence, because a library name is a
     word, but that a cause is local can be, because the thing named is in this
-    tree and the reader can open it (solorepo's DR-225).
+    tree and the reader can open it (stereorepo's DR-225).
 
     Args:
         reason: The text after `# reason:`, as `reasons` returns it.
@@ -510,7 +510,7 @@ def suppression_reasons(source: str) -> list[Suppression]:
     dropped, runs of whitespace collapsed and surrounding punctuation trimmed,
     so that a copy differing only in spacing, capitals or a full stop groups with
     its original. `meta lints` is what requires the reason to be written at all
-    (solorepo's DR-177), and a suppression carrying none reads here as the empty
+    (stereorepo's DR-177), and a suppression carrying none reads here as the empty
     reason.
 
     Normalisation reaches the copy and not the paraphrase: two reasons differing
@@ -550,7 +550,7 @@ def repeated(reading: dict[str, str]) -> tuple[dict[str, list[str]], list[str]]:
     reason cites something outside this repository is left out of the grouping
     entirely: that is the Suppression Audit Protocol's one surviving kind, and a
     boundary a foreign platform forces on the code may recur as often as the
-    code meets it (solorepo's DR-207, solorepo's DR-223).
+    code meets it (stereorepo's DR-207, stereorepo's DR-223).
 
     Args:
         reading: Repository-relative path to the Python source text at it.
@@ -587,7 +587,7 @@ def against_repeats(groups: dict[str, list[str]], recorded: dict[str, int]) -> l
 
     `collect.against_baseline` is not reused: it reads a key that is not a file
     on disk as a stale entry, which is right for a per-file ratchet and wrong
-    for every failing group here (solorepo's DR-223).
+    for every failing group here (stereorepo's DR-223).
 
     Args:
         groups: Group key to every site in it, as `<path>:<line>`.
@@ -622,7 +622,7 @@ def against_repeats(groups: dict[str, list[str]], recorded: dict[str, int]) -> l
 
 @check("commented-out code")
 def commented_out_code() -> StepOutcome:
-    """No comment under `.meta/` or in a Rust source is a line of code left behind (solorepo's DR-171).
+    """No comment under `.meta/` or in a Rust source is a line of code left behind (stereorepo's DR-171).
 
     Code kept as a comment is a claim about the program that nothing runs and
     nothing checks. Version control holds what was deleted; a comment holds only
@@ -666,7 +666,7 @@ def commented_out_code() -> StepOutcome:
 
 @check("broad suppressions")
 def broad_suppressions() -> StepOutcome:
-    """Every suppression names the rule it suppresses (A2, solorepo's DR-177).
+    """Every suppression names the rule it suppresses (A2, stereorepo's DR-177).
 
     The complement to `meta lints`, which holds that a suppression carries a
     reason. This holds that it carries a rule: a bare `noqa` or a bare
@@ -693,19 +693,19 @@ def broad_suppressions() -> StepOutcome:
 
 @check("suppression causes")
 def suppression_causes() -> StepOutcome:
-    """A suppression's reason names a cause outside this repository, ratcheted (A2, solorepo's DR-225).
+    """A suppression's reason names a cause outside this repository, ratcheted (A2, stereorepo's DR-225).
 
     The third thing a suppression owes, after the rule `broad suppressions`
     requires and the reason `meta lints` requires. A suppression earns its keep
     only as an immutable external boundary constraint, so a reason whose cause
     is inside this repository fails by construction: an internal cause is one
-    this repository can fix, which is what solorepo's DR-207 says to do with it.
+    this repository can fix, which is what stereorepo's DR-207 says to do with it.
     An Issue number is refused along with the rest, because deferring to an
     Issue is the escape the clause exists to close.
 
     What the step proves is the local half alone. It says nothing about a reason
     that names no cause this tree holds, which stays with the suppression audit
-    solorepo's DR-207 requires before a handoff.
+    stereorepo's DR-207 requires before a handoff.
 
     The tree is not clean, so the step ratchets against
     `suppressions.baseline.yaml`, which may fall and may not rise. One entry is
@@ -737,7 +737,7 @@ def suppression_causes() -> StepOutcome:
 
 @check("repeated suppressions")
 def repeated_suppressions() -> StepOutcome:
-    """No rule and reason are suppressed together at three sites or more, ratcheted (solorepo's DR-207, solorepo's DR-223).
+    """No rule and reason are suppressed together at three sites or more, ratcheted (stereorepo's DR-207, stereorepo's DR-223).
 
     An identical reason at many sites is one root cause written many times, and
     the Suppression Audit Protocol says to fix the cause: "the suppression is
@@ -781,7 +781,7 @@ def comment_site(relative: str, block: Block) -> str:
 
 @check("inline commentary")
 def inline_commentary() -> StepOutcome:
-    """Function bodies under `.meta/` hold no commentary outside the keep-exceptions, ratcheted (solorepo's DR-194, solorepo's DR-196).
+    """Function bodies under `.meta/` hold no commentary outside the keep-exceptions, ratcheted (stereorepo's DR-194, stereorepo's DR-196).
 
     Narration inside a body is knowledge in the one container that has no reader
     but the next editor of that line. Its destinations are the item docstring,

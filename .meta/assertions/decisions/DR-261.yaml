@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/261
     name: "DR-261 · An unrunnable gate step is amber where a person runs it and a failure under CI"
-    challenge: work:challenge/735
     status: ADOPTED
     applies:
       - work:article/6
@@ -82,7 +81,7 @@ decisions:
         `.meta/check.py` runs every registered step, collects each `CouldNotRun`
         rather than letting one end the traversal, and closes with a block naming
         everything that could not run and what each needs — in Article 21's
-        output grammar beside `ok`, `x` and `?` (solorepo's DR-092).
+        output grammar beside `ok`, `x` and `?` (stereorepo's DR-092).
       - >-
         The schema containers counted by `skipped` report through the same block,
         so the two answers `check.py` held become one.

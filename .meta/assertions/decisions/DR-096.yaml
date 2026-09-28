@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/096
     name: "DR-096 · The rule set, a line length of 88, and an ignore list that stays empty"
-    challenge: work:challenge/38
     product: work:product/python-standard
     status: ADOPTED
     applies:
@@ -42,7 +41,7 @@ decisions:
 
           Amended on #902: the set was enumerated here and asserted nowhere,
           so deleting a family from the manifest cost one line and no gate
-          read it — the `select` door solorepo's DR-263 closed for `.meta`,
+          read it — the `select` door stereorepo's DR-263 closed for `.meta`,
           left open here. The enumeration is now a floor the gate states, and
           it admits `PLR0912`, `PLR0913` and `PLR0915`: the refactor limits
           `max-complexity` has for cyclomatic complexity and branches, arguments
@@ -67,7 +66,7 @@ decisions:
         `bootstraps/python/seed/pyproject.toml` fails the gate until the floor
         is edited too, which is the argument the `ignore` refusal already
         exacts. The mechanism, and the reading of a selector as the linter that
-        owns it, are solorepo's DR-263's.
+        owns it, are stereorepo's DR-263's.
       - >-
         Amended on #902: `PLR0912`, `PLR0913` and `PLR0915` are selected, with
         `max-branches = 12`, `max-args = 5` and `max-statements = 50` under

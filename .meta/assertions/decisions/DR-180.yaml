@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/180
     name: "DR-180 · Deduplicate citation checks by skipping generated render targets in dereference.py"
-    challenge: work:challenge/172
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-dereference

@@ -1,5 +1,5 @@
 ---
-description: Python standard conventions and development guidance across solorepo
+description: Python standard conventions and development guidance across stereorepo
 applyTo: "**/*.py"
 ---
 

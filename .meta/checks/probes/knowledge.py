@@ -1,22 +1,22 @@
-"""What the repository writes down about itself, held to the form its readers assume (solorepo's DR-209).
+"""What the repository writes down about itself, held to its readers' form (stereorepo's DR-209).
 
 The knowledge Knowledge Management governs is one subject in three containers,
 and each of these probes is over one of them: a history log parsed for its
-entries and the Evidence they name (solorepo's DR-171), a withdrawn Decision of the
+entries and the Evidence they name (stereorepo's DR-171), a withdrawn Decision of the
 record asked for the reason its `WITHDRAWN` status owes under
 `.meta/work/decisions.yaml`, and a wiki page held to closed-world wikilinks, a
 MOS:LEAD lead, vocabulary parity and synonyms its concept does not forbid
-(solorepo's DR-185, solorepo's DR-190, solorepo's DR-231) —
+(stereorepo's DR-185, stereorepo's DR-190, stereorepo's DR-231) —
 together with the authoring tool that scaffolds such a page, which is a probe
-over the wiki's form and not over a tool beside the gate (solorepo's DR-187).
+over the wiki's form and not over a tool beside the gate (stereorepo's DR-187).
 One further probe is over the form the prose in all three containers carries:
-the possessive that marks a citation as solorepo's rather than a portfolio's
-own (solorepo's DR-121, solorepo's DR-132).
+the possessive that marks a citation as stereorepo's rather than a portfolio's
+own (stereorepo's DR-121, stereorepo's DR-132).
 Each check is run against strings and stand-in pages rather than the tree, so a
 case is one fixture and one expectation, and a failure names the case. The
 steps register here rather than beside the checks they exercise, because the
 gate over assertions should not take its imports from a test suite
-(solorepo's DR-150).
+(stereorepo's DR-150).
 """
 import collections
 import contextlib
@@ -39,7 +39,7 @@ WikiCase = collections.namedtuple("WikiCase", "name reads pages says")
 
 @check("history probes", pre=True)
 def history_probes() -> list[str]:
-    """`files.history_entries_of` reads a history log's entries and the Evidence they name as `meta history evidence` needs them (solorepo's DR-171).
+    """`files.history_entries_of` reads a history log's entries and the Evidence they name as `meta history evidence` needs them (stereorepo's DR-171).
 
     Two logs, each a string. The first holds a live entry and, inside an HTML
     comment, a second whose Evidence names nothing: the comment is stripped
@@ -96,7 +96,7 @@ def withdrawn_decisions_probes() -> list[str]:
 
 @check("wiki probes", pre=True)
 def wiki_probes() -> list[str]:
-    """Observed failure and concordance for wikilinks, MOS:LEAD lead paragraphs, vocabulary parity and forbidden synonyms (A2, solorepo's DR-185, solorepo's DR-190, solorepo's DR-231).
+    """Observed failure and concordance for wikilinks, MOS:LEAD lead paragraphs, vocabulary parity and forbidden synonyms (A2, stereorepo's DR-185, stereorepo's DR-190, stereorepo's DR-231).
 
     One index stands for the record: a concept carrying an `avoid` list, a
     discipline and a Decision. Each case gives one of `files.wikilinks`,
@@ -105,14 +105,14 @@ def wiki_probes() -> list[str]:
     `FakeWikiPath` pages, and expects either a finding carrying a given text or
     no finding at all. A wikilink resolves against the index, the pages given,
     and the wiki on disk under `ROOT`; the case gives the scoped
-    `[[solorepo/knowledge-management]]` its page so that it holds on a tree
+    `[[stereorepo/knowledge-management]]` its page so that it holds on a tree
     that lacks one; a code fence and inline backticks hide a wikilink from
     the check; `README.md` is exempt from the lead rule; frontmatter may stand
-    ahead of the heading (solorepo's DR-187); a domain page with no minted
-    concept fails parity where solorepo pages of a minted discipline and
-    concept pass (solorepo's DR-190); and a page declaring an avoided word as a
+    ahead of the heading (stereorepo's DR-187); a domain page with no minted
+    concept fails parity where stereorepo pages of a minted discipline and
+    concept pass (stereorepo's DR-190); and a page declaring an avoided word as a
     synonym fails where one declaring an unminted word passes, since parity is
-    owed to the `avoid` list and not to `alt_labels` (solorepo's DR-231).
+    owed to the `avoid` list and not to `alt_labels` (stereorepo's DR-231).
     """
     index = {
         "work:concept/ubiquitous-language": (
@@ -136,96 +136,96 @@ def wiki_probes() -> list[str]:
         WikiCase(
             "an unregistered wikilink",
             files.wikilinks,
-            (("wiki/solorepo/test.md",
+            (("wiki/stereorepo/test.md",
               "# Test\n\n**Test** is a probe referencing [[unregistered-floating-term]].\n"),),
             "[[unregistered-floating-term]] resolves to nothing",
         ),
         WikiCase(
             "wikilinks to a concept, a discipline, a Decision and a scoped wiki page",
             files.wikilinks,
-            (("wiki/solorepo/knowledge-management.md",
+            (("wiki/stereorepo/knowledge-management.md",
               "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n"),
-             ("wiki/solorepo/test.md",
+             ("wiki/stereorepo/test.md",
               "# Test\n\n**Test** is a test referencing [[knowledge-management]], "
-              "[[solorepo/knowledge-management]], [[Ubiquitous Language]], and [[" + "DR-" + "185]].\n")),
+              "[[stereorepo/knowledge-management]], [[Ubiquitous Language]], and [[" + "DR-" + "185]].\n")),
             None,
         ),
         WikiCase(
             "wikilinks inside a code fence and inline backticks",
             files.wikilinks,
-            (("wiki/solorepo/test.md",
+            (("wiki/stereorepo/test.md",
               "# Test\n\n**Test** is a test showing `[[unregistered-inline]]` and:\n```\n[[unregistered-block]]\n```\n"),),
             None,
         ),
         WikiCase(
             "a page with no top-level heading",
             files.wiki_lead_paragraphs,
-            (("wiki/solorepo/test.md", "## Subheading\n\n**Test** is a test page.\n"),),
+            (("wiki/stereorepo/test.md", "## Subheading\n\n**Test** is a test page.\n"),),
             "must begin with a top-level heading",
         ),
         WikiCase(
             "a lead with no bold copula",
             files.wiki_lead_paragraphs,
-            (("wiki/solorepo/test.md", "# Test\n\nTest is a test page without bold formatting.\n"),),
+            (("wiki/stereorepo/test.md", "# Test\n\nTest is a test page without bold formatting.\n"),),
             "first paragraph must open with bold copular definition",
         ),
         WikiCase(
             "a bold subject that is not the title",
             files.wiki_lead_paragraphs,
-            (("wiki/solorepo/test.md", "# Test\n\n**Different Subject** is a test page.\n"),),
+            (("wiki/stereorepo/test.md", "# Test\n\n**Different Subject** is a test page.\n"),),
             "does not match title",
         ),
         WikiCase(
             "a subject that disagrees with the minted label",
             files.wiki_lead_paragraphs,
-            (("wiki/solorepo/ubiquitous-language.md",
+            (("wiki/stereorepo/ubiquitous-language.md",
               "# Ubiquitous Language Alternate\n\n**Ubiquitous Language Alternate** is a discipline.\n"),),
             "disagrees with minted label",
         ),
         WikiCase(
             "a README.md, exempt from MOS:LEAD",
             files.wiki_lead_paragraphs,
-            (("wiki/solorepo/README.md", "# Context Index\n\nAn index of pages without bold copular lead.\n"),),
+            (("wiki/stereorepo/README.md", "# Context Index\n\nAn index of pages without bold copular lead.\n"),),
             None,
         ),
         WikiCase(
-            "frontmatter ahead of a MOS:LEAD lead (solorepo's DR-187)",
+            "frontmatter ahead of a MOS:LEAD lead (stereorepo's DR-187)",
             files.wiki_lead_paragraphs,
-            (("wiki/solorepo/test-frontmatter.md",
-              "---\nslug: test-frontmatter\ncontext: solorepo\nminted: 2026-09-12\n---\n\n"
+            (("wiki/stereorepo/test-frontmatter.md",
+              "---\nslug: test-frontmatter\ncontext: stereorepo\nminted: 2026-09-12\n---\n\n"
               "# Test Frontmatter\n\n**Test Frontmatter** is a test page.\n"),),
             None,
         ),
         WikiCase(
-            "a domain page with no minted concept (solorepo's DR-190)",
+            "a domain page with no minted concept (stereorepo's DR-190)",
             files.ubiquitous_language_wiki_parity,
             (("wiki/billing/unminted-term.md", "# Unminted Term\n\n**Unminted Term** is a term.\n"),),
             "has no corresponding concept in vocabulary schema",
         ),
         WikiCase(
-            "solorepo pages of a minted discipline and concept (solorepo's DR-190)",
+            "stereorepo pages of a minted discipline and concept (stereorepo's DR-190)",
             files.ubiquitous_language_wiki_parity,
-            (("wiki/solorepo/knowledge-management.md",
+            (("wiki/stereorepo/knowledge-management.md",
               "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n"),
-             ("wiki/solorepo/ubiquitous-language.md",
+             ("wiki/stereorepo/ubiquitous-language.md",
               "# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n")),
             None,
         ),
         WikiCase(
-            "a synonym on the concept's own avoid list (solorepo's DR-231)",
+            "a synonym on the concept's own avoid list (stereorepo's DR-231)",
             files.wiki_synonyms_are_not_avoided,
-            (("wiki/solorepo/ubiquitous-language.md",
-              "---\nslug: ubiquitous-language\ncontext: solorepo\nsynonyms:\n  - shared glossary\n"
+            (("wiki/stereorepo/ubiquitous-language.md",
+              "---\nslug: ubiquitous-language\ncontext: stereorepo\nsynonyms:\n  - shared glossary\n"
               "minted: 2026-09-18\n---\n\n# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n"),),
             "is on work:concept/ubiquitous-language's avoid list",
         ),
         WikiCase(
-            "a synonym the vocabulary neither mints nor forbids (solorepo's DR-231)",
+            "a synonym the vocabulary neither mints nor forbids (stereorepo's DR-231)",
             files.wiki_synonyms_are_not_avoided,
-            (("wiki/solorepo/ubiquitous-language.md",
-              "---\nslug: ubiquitous-language\ncontext: solorepo\nsynonyms:\n  - domain dialect\n"
+            (("wiki/stereorepo/ubiquitous-language.md",
+              "---\nslug: ubiquitous-language\ncontext: stereorepo\nsynonyms:\n  - domain dialect\n"
               "minted: 2026-09-18\n---\n\n# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n"),
-             ("wiki/solorepo/knowledge-management.md",
+             ("wiki/stereorepo/knowledge-management.md",
               "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n")),
             None,
         ),
@@ -244,7 +244,7 @@ def wiki_probes() -> list[str]:
 
 @check("wikisplain probes", pre=True)
 def wikisplain_probes() -> list[str]:
-    """`.meta/wikisplain.py` slugifies a title, formats a MOS:LEAD lead, finds a duplicate, refuses a forbidden synonym, and scaffolds a page that passes its own verification (solorepo's DR-187, solorepo's DR-231).
+    """`.meta/wikisplain.py` slugifies a title, formats a MOS:LEAD lead, finds a duplicate, refuses a forbidden synonym, and scaffolds a page that passes its own verification (stereorepo's DR-187, stereorepo's DR-231).
 
     Eight of the tool's acts, each called directly or through `cli.main`:
     `slugify` on a two-word title; `format_lead_sentence` on a title and a
@@ -265,8 +265,8 @@ def wikisplain_probes() -> list[str]:
     so it is refused for the avoid list rather than for the collision and
     nothing is written. Their output is captured, because the gate reads this
     process's stdout for A21's shapes. The tree-reading cases hold only while
-    `wiki/solorepo/` holds the pages the tool links a new page to by default
-    and the vocabulary holds `work:concept/challenge`.
+    `wiki/stereorepo/` holds the pages the tool links a new page to by default
+    and the vocabulary holds `work:concept/issue`.
     """
     wikisplain = load_module(META / "wikisplain.py", "wikisplain")
     problems = []
@@ -279,47 +279,47 @@ def wikisplain_probes() -> list[str]:
     dups = wikisplain.find_duplicates("Knowledge Management", root=ROOT)
     if not any(d["source"] == "wiki" for d in dups):
         problems.append(f"find_duplicates: expected wiki duplicate for 'Knowledge Management', got {dups!r}")
-    avoided = wikisplain.avoided_synonyms("challenge", ["Ticket", "unit of work"], root=ROOT)
+    avoided = wikisplain.avoided_synonyms("issue", ["Ticket", "unit of work"], root=ROOT)
     if [a["synonym"] for a in avoided] != ["Ticket"]:
         problems.append(f"avoided_synonyms: expected 'Ticket' alone to be refused, got {avoided!r}")
     content = wikisplain.generate_page(
-        wikisplain.Page(title="Test Wiki Concept", context="solorepo",
+        wikisplain.Page(title="Test Wiki Concept", context="stereorepo",
                         definition="a synthetic concept for gate validation"),
         root=ROOT,
     )
-    verif = wikisplain.verify_page(content, "wiki/solorepo/test-wiki-concept.md", root=ROOT)
+    verif = wikisplain.verify_page(content, "wiki/stereorepo/test-wiki-concept.md", root=ROOT)
     if verif:
         problems.append(f"verify_page: generated page produced validation warnings: {verif!r}")
     filed = wikisplain.generate_page(
-        wikisplain.Page(title="Test Wiki Concept", slug="test-filed-elsewhere", context="solorepo",
+        wikisplain.Page(title="Test Wiki Concept", slug="test-filed-elsewhere", context="stereorepo",
                         definition="a synthetic concept for gate validation"),
         root=ROOT,
     )
     if "\nslug: test-filed-elsewhere\n" not in filed:
         problems.append(f"generate_page: a Page filed under its own slug declared another: {filed[:120]!r}")
     self_ref = wikisplain.generate_page(
-        wikisplain.Page(title="Test Wiki Concept", slug="test-filed-elsewhere", context="solorepo",
+        wikisplain.Page(title="Test Wiki Concept", slug="test-filed-elsewhere", context="stereorepo",
                         definition="a synthetic concept for gate validation",
                         body="See [[test-filed-elsewhere]] for detail."),
         root=ROOT,
     )
-    self_ref_verif = wikisplain.verify_page(self_ref, "wiki/solorepo/test-filed-elsewhere.md", root=ROOT)
-    if self_ref_verif:
+    found = wikisplain.verify_page(self_ref, "wiki/stereorepo/test-filed-elsewhere.md", root=ROOT)
+    if found:
         problems.append(
-            f"verify_page: self-reference under a custom --slug false-positived: {self_ref_verif!r}"
+            f"verify_page: self-reference under a custom --slug false-positived: {found!r}"
         )
     problems.extend(cli_probes(wikisplain))
     return problems
 
 
 def cli_probes(wikisplain: types.ModuleType) -> list[str]:
-    """`cli.main` refusing a collision and an avoided synonym, each read from its exit code with its output captured (solorepo's DR-187, solorepo's DR-231)."""
+    """`cli.main` refusing a collision and an avoided synonym, each read from its exit code with its output captured (stereorepo's DR-187, stereorepo's DR-231)."""
     problems = []
     for name, argv in (
         ("a concept the wiki and the vocabulary both hold",
          ["Knowledge Management", "--check-duplicate"]),
         ("a synonym on the concept's avoid list, past --force",
-         ["Challenge", "--slug", "challenge", "--synonyms", "ticket", "--force", "--dry-run"]),
+         ["Issue", "--slug", "issue", "--synonyms", "ticket", "--force", "--dry-run"]),
     ):
         said = io.StringIO()
         with contextlib.redirect_stdout(said):
@@ -379,7 +379,7 @@ def wikisplain_argv_probes() -> list[str]:
                 ])
         finally:
             wikisplain.cli.ROOT = old_root
-        target = root / "wiki" / "solorepo" / "command-root-concept.md"
+        target = root / "wiki" / "stereorepo" / "command-root-concept.md"
         if rc != 0:
             problems.append(f"wikisplain argv: expected a successful scaffold, got {rc}")
         if not target.is_file():
@@ -441,10 +441,10 @@ def wikisplain_default_root_probes() -> list[str]:
 
 @check("citation form probes", pre=True)
 def citation_form_probes() -> list[str]:
-    """`citations.FOREIGN` and `check_pr.FOREIGN` hold every citation character exact except its leading `S` or `s`.
+    """`citations.FOREIGN` and `ISSUE_FOREIGN` hold every character exact but a leading `S` or `s`.
 
-    `citations.issue_citation()` loads the `(ISSUE, FOREIGN)` pair from
-    `check_pr.py`. Two forms, each put through the same split `cited_decisions` and
+    `citations.issue_citation()` returns the `(ISSUE, ISSUE_FOREIGN)` pair. Two
+    forms, each put through the same split `cited_decisions` and
     `inherited_citations` make between a citation the possessive marks as
     foreign and one left over for the bare scan: `foreign.sub("", text)`
     followed by the bare pattern's own `findall`. A sentence-initial
@@ -456,15 +456,15 @@ def citation_form_probes() -> list[str]:
     than typed, because `DR-` or `#` immediately followed by digits in a file
     a portfolio copies is a citation as far as `cited decisions` and
     `inherited citations` are concerned, and this one is a fixture
-    (solorepo's DR-124).
+    (stereorepo's DR-124).
     """
     problems = []
     count = 999
     issue, issue_foreign = citations.issue_citation()
     cases = (
         ("Decision", citations.FOREIGN, citations.DR,
-         f"Solorepo's DR-{count:03d} makes PR First a render target.",
-         f"DR-{count:03d} makes PR First a render target."),
+         f"Stereorepo's DR-{count:03d} makes the skill a render target.",
+         f"DR-{count:03d} makes the skill a render target."),
         ("Issue", issue_foreign, issue,
          f"Solorepo's #{count} tracks the same fix.",
          f"#{count} tracks the same fix."),
@@ -480,7 +480,7 @@ def citation_form_probes() -> list[str]:
                             f"read as {still_bare!r}, and the widened pattern "
                             "must still catch it")
         other_case = (
-            f"SOLOREPO'S DR-{count:03d} makes PR First a render target."
+            f"STEREOREPO'S DR-{count:03d} makes the skill a render target."
             if name == "Decision"
             else f"SOLOREPO'S #{count} tracks the same fix."
         )
@@ -494,7 +494,7 @@ def citation_form_probes() -> list[str]:
 
 @check("concept duplicate id probes", pre=True)
 def concept_duplicate_id_probes() -> list[str]:
-    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (solorepo's DR-190, solorepo's #549)."""
+    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (stereorepo's DR-190, solorepo's #549)."""
     import pathlib
     import tempfile
 
@@ -544,20 +544,19 @@ def operational_artifact_probes() -> list[str]:
         meta_dir = tmproot / ".meta"
         lib_dir = meta_dir / "lib" / "sub"
         checks_dir = meta_dir / "checks" / "sub"
-        say_dir = meta_dir / "say"
-        for d in (meta_dir, lib_dir, checks_dir, say_dir):
+        for d in (meta_dir, lib_dir, checks_dir):
             d.mkdir(parents=True, exist_ok=True)
 
         (meta_dir / "tool.py").write_text("# tool\n", encoding="utf-8")
         (lib_dir / "util.py").write_text("# util\n", encoding="utf-8")
         (checks_dir / "check_step.py").write_text("# check\n", encoding="utf-8")
-        (say_dir / "custom_verb").write_text("# verb\n", encoding="utf-8")
-        (say_dir / "note.history.md").write_text("# history\n", encoding="utf-8")
+        (lib_dir / "generated.py").write_text("# generated\n", encoding="utf-8")
+        (checks_dir / "fixture.py").write_text("# fixture\n", encoding="utf-8")
 
         structure_file = tmproot / "structure.yaml"
         structure_file.write_text(
             "excluded_paths:\n"
-            "  - .meta/say/*.history.md\n",
+            "  - .meta/lib/sub/generated.py\n",
             encoding="utf-8",
         )
 
@@ -580,7 +579,7 @@ def operational_artifact_probes() -> list[str]:
         suffix = ": operational file is neither asserted as an Artifact nor excluded"
         expected = [
             f".meta/checks/sub/check_step.py{suffix}",
-            f".meta/say/custom_verb{suffix}",
+            f".meta/checks/sub/fixture.py{suffix}",
         ]
         if findings != expected:
             problems.append(
@@ -592,9 +591,9 @@ def operational_artifact_probes() -> list[str]:
             {"path": ".meta/checks/sub/check_step.py"},
             "structure.yaml",
         )
-        index["work:artifact/verb"] = (
+        index["work:artifact/fixture"] = (
             "Artifact",
-            {"path": ".meta/say/custom_verb"},
+            {"path": ".meta/checks/sub/fixture.py"},
             "structure.yaml",
         )
         clean_findings = graph.operational_artifacts(

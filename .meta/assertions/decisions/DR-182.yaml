@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/182
     name: "DR-182 · Mint Citation and Dereference in the ubiquitous language ontology"
-    challenge: work:challenge/170
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-assertions-imported-vocabulary
@@ -32,7 +31,7 @@ decisions:
     consequences:
       - >-
         `work:concept/citation` and `work:concept/dereference` are formally minted in
-        `.meta/assertions/imported/vocabulary.yaml` under `work:scheme/solorepo` and broader `work:concept/g-recorded`.
+        `.meta/assertions/imported/vocabulary.yaml` under `work:scheme/stereorepo` and broader `work:concept/g-recorded`.
       - >-
         `.meta/vocabulary.md` is re-rendered to include both concepts in the index.
       - >-

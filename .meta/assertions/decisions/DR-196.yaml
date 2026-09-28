@@ -1,20 +1,18 @@
 decisions:
   - id: work:decision/196
     name: "DR-196 · Elevate Diátaxis Compass to Knowledge Management discipline for prose routing and container subordination"
-    challenge: work:challenge/391
     status: ADOPTED
     applies:
       - work:article/1
-      - work:article/15
       - work:article/17
     enacted_in:
       - work:artifact/meta-assertions-imported-disciplines
-      - work:artifact/wiki-solorepo-knowledge-management
+      - work:artifact/wiki-stereorepo-knowledge-management
       - work:artifact/skill-technical-writing
       - work:artifact/meta-lib-render-skills
     context: >-
-      While solorepo established Wikipedia-style Knowledge Management (solorepo's DR-184)
-      and layered technical writing standards (solorepo's DR-194), arriving agents
+      While solorepo established Wikipedia-style Knowledge Management (stereorepo's DR-184)
+      and layered technical writing standards (stereorepo's DR-194), arriving agents
       frequently lacked an unambiguous, deterministic pre-writing entrypoint to decide
       *where* to write for a given change and *how* to shape the prose. Consequently,
       maintainers and autonomous loops suffered from cross-boundary mode-mixing (e.g.
@@ -51,7 +49,7 @@ decisions:
         incorporate the Diátaxis Compass coordinate system, the pre-writing routing
         decision tree, container subordination, and residue exclusion.
       - >-
-        wiki/solorepo/knowledge-management.md is updated to explain the four Diátaxis
+        wiki/stereorepo/knowledge-management.md is updated to explain the four Diátaxis
         quadrants, pre-writing routing, container subordination, and Google developer style
         rules.
       - >-

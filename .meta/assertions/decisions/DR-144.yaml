@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/144
     name: "DR-144 · A generated page's framing prose is an assertion on the Artifact it is written to, so the generator writes pages and never authors them"
-    challenge: work:challenge/202
     status: ADOPTED
     applies:
       - work:article/8

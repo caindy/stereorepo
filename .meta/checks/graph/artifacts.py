@@ -20,7 +20,6 @@ OPERATIONAL_GLOBS = (
     ".meta/*.py",
     ".meta/lib/**/*.py",
     ".meta/checks/**/*.py",
-    ".meta/say/*",
 )
 
 
@@ -144,19 +143,19 @@ def reserved_article_numbers(index: dict[str, Any]) -> list[str]:
     live = {int(a["id"].rsplit("/", 1)[-1]) for a in charter.get("articles") or []}
     problems = [f"A{n} is retired and issued again; a retired number is reserved forever"
                 for n in sorted(retired & live)]
-    # The pointer to the account is prose, `solorepo's DR-085`, since the entry
-    # is solorepo's and the Charter goes to every portfolio (solorepo's DR-121). A string
+    # The pointer to the account is prose, `stereorepo's DR-085`, since the entry
+    # is stereorepo's and the Charter goes to every portfolio (stereorepo's DR-121). A string
     # slot is a slot nothing resolves, so the form is held here and the number
     # by `cited decisions`, which together are what the reference check was.
     problems += [f"A{r['number']}: retired_by is {r.get('retired_by')!r}, and the account "
-                 "of a retirement is cited as solorepo's DR-nnn"
+                 "of a retirement is cited as stereorepo's DR-nnn"
                  for r in holes if not FOREIGN.fullmatch(str(r.get("retired_by", "")))]
     return problems
 
 
 @check("enacted decisions")
 def enacted_decisions(index: dict[str, Any]) -> list[str]:
-    """A20. An adopted decision names an Artifact that carries its rule (solorepo's DR-078).
+    """A20. An adopted decision names an Artifact that carries its rule (stereorepo's DR-078).
 
     Whether the Artifact exists is a reference, resolved with every other. What
     is left here is the arithmetic no schema states: ADOPTED means in force, and

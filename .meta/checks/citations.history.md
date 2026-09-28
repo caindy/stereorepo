@@ -21,7 +21,7 @@ Evidence: `.meta/checks/citations/prose.py::entry_text`
 ### Unwritten Decision numbers cited in repository prose
 
 Prose cited Decision numbers that had not been written down (e.g. `DR-058` in
-`roadmap.md`), leaving unrecorded gaps in the decision index (solorepo's DR-121).
+`roadmap.md`), leaving unrecorded gaps in the decision index (stereorepo's DR-121).
 Established: `cited_decisions()` verifies that every DR cited in durable prose
 or YAML scalars resolves to an existing Decision record.
 
@@ -68,7 +68,7 @@ Evidence: `.meta/checks/citations/claims.py::path_and_line_claims`
 Files named in Decision `enacted_in` assertions cited disparate Decisions,
 creating inconsistencies between the index and file prose (solorepo's #152). Established:
 `enacting_citations()` validates that a file named by the record cites at least
-one Decision asserting enactment in that file (solorepo's DR-131).
+one Decision asserting enactment in that file (stereorepo's DR-131).
 
 Evidence: `.meta/checks/citations/record.py::enacting_citations`
 
@@ -77,7 +77,7 @@ Evidence: `.meta/checks/citations/record.py::enacting_citations`
 Files inherited by portfolios cited bare Issue numbers (e.g. `#114`), which
 collide with the portfolio's issue tracker upon specialization (solorepo's #114).
 Established: `inherited_citations()` requires all Issue citations in inherited
-files to be prefixed with `solorepo's #nnn` (solorepo's DR-132).
+files to be prefixed with `solorepo's #nnn` (stereorepo's DR-132).
 
 Evidence: `.meta/checks/citations/record.py::inherited_citations`
 
@@ -96,7 +96,7 @@ Evidence: `.meta/checks/probes/knowledge.py::citation_form_probes`
 
 Prose in assertion preambles and documentation cited schema slot names in backticks
 that had been removed or replaced in LinkML ontologies, leaving dangling slot
-references unchecked (caindy/solorepo#595). In solorepo's DR-087, `Article.origin`
+references unchecked (caindy/solorepo#595). In stereorepo's DR-087, `Article.origin`
 was removed from `.meta/work/disciplines.yaml` and replaced with `example`, but a
 preamble comment in `.meta/assertions/imported/charter.yaml` retained
 "`origin` is the receipt" silently until caindy/solorepo#581. Established:

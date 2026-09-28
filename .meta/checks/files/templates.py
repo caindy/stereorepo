@@ -23,7 +23,7 @@ from checks.files import sources
 
 
 class Strict(yaml.SafeLoader):
-    """YAML SafeLoader subclass that intercepts and records duplicate mapping keys (solorepo's DR-053)."""
+    """YAML SafeLoader subclass that intercepts and records duplicate mapping keys (stereorepo's DR-053)."""
 
 
 _DUPLICATES: list[tuple[object, int]] = []
@@ -48,7 +48,7 @@ def duplicate_keys() -> list[str]:
     """Validate that no YAML or YML file across `.meta/` and `template/` defines duplicate keys.
 
     Enforces that all workflow and assertion YAML files parse without repeated keys,
-    preventing silent dictionary value overwrites during loading (solorepo's DR-053, solorepo's DR-120).
+    preventing silent dictionary value overwrites during loading (stereorepo's DR-053, solorepo's DR-120).
 
     Returns:
         list[str]: Validation problem messages identifying file, line number, and duplicate key name.
@@ -100,7 +100,7 @@ def _concept_ids_in_file(path: pathlib.Path) -> list[str]:
                                     rel = path
                                 problems.append(
                                     f"{rel}:{line} concept '{cid}' declared twice in concept_set "
-                                    f"(first at line {seen[cid]}) (solorepo's DR-190)"
+                                    f"(first at line {seen[cid]}) (stereorepo's DR-190)"
                                 )
                             else:
                                 seen[cid] = line
@@ -114,7 +114,7 @@ def duplicate_concept_ids(
 
     Enforces that concept declarations within any concept_set carry unique identifiers,
     preventing silent dictionary overwrites and divergent definitions in the Ubiquitous
-    Language (solorepo's DR-190, solorepo's #549).
+    Language (stereorepo's DR-190, solorepo's #549).
 
     Args:
         paths: Specific paths to scan, or None to scan all assertion and template YAML files.
@@ -141,7 +141,7 @@ def duplicate_concept_ids(
 
 @check("surviving placeholders")
 def surviving_placeholders() -> list[str]:
-    """No template token survives anywhere outside `template/` (solorepo's DR-034).
+    """No template token survives anywhere outside `template/` (stereorepo's DR-034).
 
     Scanning only the files `template/` shadows was exact and also useless:
     Specialization deletes `template/` before running the gate, so by the time
@@ -207,7 +207,7 @@ def template_conventions_agree() -> StepOutcome:
     """Validate that root agent instructions and seeded template instructions agree on core conventions.
 
     Verifies that operational conventions asserted in root `AGENTS.md` and `.meta/README.md`
-    are faithfully mirrored in `template/AGENTS.md` and `template/.meta/README.md` (solorepo's DR-183).
+    are faithfully mirrored in `template/AGENTS.md` and `template/.meta/README.md` (stereorepo's DR-183).
 
     Returns:
         Passed | Found | CouldNotRun: Validation result reporting missing convention phrases in template files.
@@ -229,20 +229,17 @@ def template_conventions_agree() -> StepOutcome:
             "symlinks to AGENTS.md",
             ("`CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are symlinks",),
         ),
-        ("minting decisions", (".meta/say/move mint",)),
+        ("numbering decisions", ("highest number the record holds plus one",)),
         ("operator surface", ("`just --list`",)),
-        ("review handoff", (".meta/say/move request-review",)),
-        ("watch semaphore", ("just watch",)),
-        ("sweep semaphore", ("just sweep",)),
-        ("next issue", ("`just next`",)),
+        ("the board", ("`issues/`",)),
         ("harness memory prohibition", ("harness's memory",)),
         ("empty directory README", ("empty directory carries a README",)),
         ("gate is an exit check", ("exit condition, not an entrance condition",)),
     )
 
     readme_conventions = (
-        ("next issue", ("`just next`",)),
-        ("minting decisions", (".meta/say/move mint",)),
+        ("the board", ("`issues/`",)),
+        ("numbering decisions", ("highest number the record holds plus one",)),
         ("operator surface", ("`just --list`",)),
     )
 

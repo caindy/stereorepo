@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/209
     name: "DR-209 · The probes are a package under `.meta/checks/probes/`, one module per subject under test, with the harness in a module of its own"
-    challenge: work:challenge/426
     status: ADOPTED
     applies:
       - work:article/8
@@ -10,26 +9,15 @@ decisions:
     enacted_in:
       - work:artifact/meta-checks-probes
       - work:artifact/meta-checks-probes-harness
-      - work:artifact/meta-checks-probes-git
-      - work:artifact/meta-checks-probes-channel
-      - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-checks-probes-knowledge
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-check
       - work:artifact/meta-render
       - work:artifact/skill-technical-writing
-      - work:artifact/meta-checks-probes-loops-advance
-      - work:artifact/meta-checks-probes-loops-delegate
-      - work:artifact/meta-checks-probes-loops-enacted
-      - work:artifact/meta-checks-probes-loops-handoff
-      - work:artifact/meta-checks-probes-loops-merge-manager
-      - work:artifact/meta-checks-probes-loops-merge-manager-advance
-      - work:artifact/meta-checks-probes-loops-stop
       - work:artifact/meta-lib-render-record
       - work:artifact/meta-lib-render-skills
-      - work:artifact/meta-checks-probes-loops-dispatch
     context: >-
-      solorepo's DR-150 lifted the probes — about 830 lines of them — out of
+      stereorepo's DR-150 lifted the probes — about 830 lines of them — out of
       `check.py` into `.meta/checks/probes.py` so that the gate over assertions
       would not take its imports from a test suite, and named as its falsifier a module that
       becomes the second grab-bag — one that stops having a one-line description
@@ -44,7 +32,7 @@ decisions:
       that use them, and four probes carried their own copy of the same
       ten-line `run` helper.
 
-      Two further costs followed from the one file. solorepo's DR-171 makes a
+      Two further costs followed from the one file. stereorepo's DR-171 makes a
       history log's receipt a `<path>::<symbol>` that the gate resolves, so that
       a defect's regression test is named where the defect is narrated; with
       every probe in one file, every receipt across `.meta/say/`,
@@ -73,7 +61,7 @@ decisions:
           `.meta/checks/git.py`, `.meta/checks/channel.py` and the rest would
           sit beside `files.py` and `graph.py` as though they were invariants
           over the record, which they are not — they load programs and run
-          them. The line solorepo's DR-150 drew between the gate's subjects and
+          them. The line stereorepo's DR-150 drew between the gate's subjects and
           its test suite would be erased by the directory listing, and
           `channel.py` under `.meta/checks/` reads as a second channel. The
           harness would need a name that says it is the probes', which the flat
@@ -81,7 +69,7 @@ decisions:
       - name: pytest under `.meta/`, one test module per subject
         chosen: false
         reason: >-
-          Rejected once already, for the same reasons (solorepo's DR-171): it
+          Rejected once already, for the same reasons (stereorepo's DR-171): it
           makes `.meta/` a package with a test runner when it is a collection of
           scripts and gate checks, and the receipts would need `pytest
           --collect-only` to verify where a `<path>::<symbol>` is read by `ast`
@@ -97,7 +85,7 @@ decisions:
           channel (`channel.py`), the loops' verbs (`loops.py`), what the
           repository writes down about itself (`knowledge.py`) and the tools
           beside the gate (`tools.py`). Each module has a one-line description
-          true of everything in it, which is the test solorepo's DR-150 set —
+          true of everything in it, which is the test stereorepo's DR-150 set —
           `knowledge.py`'s subject being the knowledge Knowledge Management
           governs, held in three containers the gate reads alike: the history
           logs, the record, and the wiki with the tool that scaffolds a page of
@@ -142,7 +130,7 @@ decisions:
         modules carry no body commentary: what the 186 comment blocks knew is
         in the docstring of the item that embodies it, in the case name the
         failure message carries, or in a history-log entry naming Evidence
-        (solorepo's DR-207).
+        (stereorepo's DR-207).
       - >-
         `render.py` reads prechecks off `.meta/checks/**/*.py` rather than
         `.meta/checks/*.py`, so the count prose cites still counts the probes
@@ -161,15 +149,15 @@ decisions:
         the module object `from checks import probes` gives and not the package: an
         `enacted_in` naming it names a docstring and five imports. Each adopted
         Decision that was enacted in the old file is therefore repointed at the
-        module that now holds what it enacted — `probes/loops.py` for DR-161's
+        module that now holds what it enacted — `probes/loops.py` for solorepo's DR-161's
         `merge_manager_probes`, `probes/knowledge.py` for DR-187's,
-        `probes/harness.py` and `probes/loops.py` for DR-158's `FakeGitHub` and
+        `probes/harness.py` and `probes/loops.py` for solorepo's DR-158's `FakeGitHub` and
         the probes that ride on it — so that a dereference lands on the probe.
         Four keep the id they had, each for its own reason: DR-150, whose
         subject is that the probes are imported by nothing the gate over
         assertions imports, which `__init__.py` is what embodies; DR-177 and
         DR-179, which name the scripts under `.meta/` file by file and now name
-        every module of the package beside it; and DR-165, whose `reading pass
+        every module of the package beside it; and solorepo's DR-165, whose `reading pass
         probes` no longer exists, so no module holds it to point at.
     falsifier: >-
       A probe whose subject under test is plainly none of the five modules, or
@@ -181,7 +169,7 @@ decisions:
       The count of a symbol's call sites is not the test: `FakeWikiPath` has
       one and belongs, because what it fakes is `pathlib.Path`.
     rationale: |-
-      solorepo's DR-150 settled where the gate's steps live by asking what each
+      stereorepo's DR-150 settled where the gate's steps live by asking what each
       step is a step of, and the answer for the probes then was "the test
       suite", which was true and was one thing. It stopped being one thing the
       day the suite held five subjects, and the symptoms were the ones that
@@ -204,5 +192,5 @@ decisions:
       what `no_stick` models is a Reference contract for `FakeGitHub`, and a
       Reference contract belongs in the docstring of the item — which is
       writable only once the item has a module whose reader is the one who
-      needs it. Routing first and pruning second is the order solorepo's DR-207
+      needs it. Routing first and pruning second is the order stereorepo's DR-207
       prescribes, and the package is what gives the routing a destination.

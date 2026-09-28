@@ -1,19 +1,14 @@
-id: https://w3id.org/solorepo/work-ontology
+id: https://w3id.org/stereorepo/work-ontology
 name: work-ontology
 title: Ontology of Work
 description: >-
-  The ontology composes a small number of primitives into the unit of assigned
-  work and the unit of shared work:
-
-  Permission = Capability on a Securable. Role = a named set of Capabilities.
-  Goal = Challenge + Definition of Done + Job to be Done + Deadline.
-  Remit = Permissions + Goal. Agency = Role + Remit.
-  Actor = Personality + Identity + Memory. Job = Actor + Agency.
-  Collaboration = the Jobs that meet on one Challenge.
+  The ontology names what a repository is made of and how its work is carried:
+  the Portfolio and its Products and Projects, the Disciplines and the Charter,
+  the Decisions, the Personas the work is for, the Roles an agent is given, and
+  the Issue, which is one unit of work on the board.
 
   This file is the umbrella. It imports the modules, holds the container, and
   otherwise stays small — read the module that covers what you are touching.
-  Roughed in ahead of the structure it names (solorepo's DR-002), in seven modules (solorepo's DR-023).
 license: https://creativecommons.org/licenses/by/4.0/
 
 #-------------------------------------------------------------------------------
@@ -21,11 +16,9 @@ license: https://creativecommons.org/licenses/by/4.0/
 #
 #   Touching...                                    Read first
 #   ------------------------------------------     -------------------------
-#   what can be done, to what, by whose authority   work/authority.yaml
-#   who does the work, and their identity           work/actors.yaml
+#   what can be done, and the Roles agents are given  work/authority.yaml
 #   who the work is for                             work/personas.yaml
-#   what the work is for, and its permissions       work/purpose.yaml
-#   who is assigned what, and where work meets      work/assignment.yaml
+#   what the work is, and what it is for            work/purpose.yaml
 #   how work must proceed, and what is checkable     work/disciplines.yaml
 #   what was foreclosed, and why                    work/decisions.yaml
 #   how the repo is divided into Products/Projects  work/structure.yaml
@@ -37,7 +30,7 @@ license: https://creativecommons.org/licenses/by/4.0/
 #-------------------------------------------------------------------------------
 
 prefixes:
-  work: https://w3id.org/solorepo/work-ontology/
+  work: https://w3id.org/stereorepo/work-ontology/
   linkml: https://w3id.org/linkml/
   prov: http://www.w3.org/ns/prov#
 default_prefix: work
@@ -47,21 +40,13 @@ imports:
   - linkml:types
   - work/core
   - work/authority
-  - work/actors
   - work/personas
   - work/purpose
-  - work/assignment
   - work/disciplines
   - work/decisions
   - work/structure
 
 slots:
-
-  personalities:
-    description: The Personalities in the collection.
-    range: Personality
-    multivalued: true
-    inlined_as_list: true
 
   personas:
     description: The Personas in the collection.
@@ -75,33 +60,9 @@ slots:
     multivalued: true
     inlined_as_list: true
 
-  securables:
-    description: The Securables in the collection.
-    range: Securable
-    multivalued: true
-    inlined_as_list: true
-
-  permission_set:
-    description: The Permissions in the collection.
-    range: Permission
-    multivalued: true
-    inlined_as_list: true
-
   roles:
     description: The Roles in the collection.
     range: Role
-    multivalued: true
-    inlined_as_list: true
-
-  challenges:
-    description: The Challenges in the collection.
-    range: Challenge
-    multivalued: true
-    inlined_as_list: true
-
-  definitions_of_done:
-    description: The Definitions of Done in the collection.
-    range: DefinitionOfDone
     multivalued: true
     inlined_as_list: true
 
@@ -111,59 +72,6 @@ slots:
     multivalued: true
     inlined_as_list: true
 
-  goals:
-    description: The Goals in the collection.
-    range: Goal
-    multivalued: true
-    inlined_as_list: true
-
-  remits:
-    description: The Remits in the collection.
-    range: Remit
-    multivalued: true
-    inlined_as_list: true
-
-  agencies:
-    description: The Agencies in the collection.
-    range: Agency
-    multivalued: true
-    inlined_as_list: true
-
-  principal_identities:
-    description: The durable Identities in the collection.
-    range: PrincipalIdentity
-    multivalued: true
-    inlined_as_list: true
-
-  workload_identities:
-    description: The attested workload Identities in the collection.
-    range: WorkloadIdentity
-    multivalued: true
-    inlined_as_list: true
-
-  memory_set:
-    description: The Memories in the collection.
-    range: Memory
-    multivalued: true
-    inlined_as_list: true
-
-  actors:
-    description: The Actors in the collection.
-    range: Actor
-    multivalued: true
-    inlined_as_list: true
-
-  job_set:
-    description: The Jobs in the collection.
-    range: Job
-    multivalued: true
-    inlined_as_list: true
-
-  collaborations:
-    description: The Collaborations in the collection.
-    range: Collaboration
-    multivalued: true
-    inlined_as_list: true
   disciplines:
     description: The Disciplines in the collection.
     range: Discipline
@@ -215,26 +123,6 @@ slots:
     inlined_as_list: true
 
 
-  # Identity
-
-  executions:
-    description: The Executions in the collection.
-    range: Execution
-    multivalued: true
-    inlined_as_list: true
-
-  boms:
-    description: The Agent Bills of Materials in the collection.
-    range: AgentBillOfMaterials
-    multivalued: true
-    inlined_as_list: true
-
-  audit_records:
-    description: The Audit Records in the collection.
-    range: AuditRecord
-    multivalued: true
-    inlined_as_list: true
-
 classes:
 
   WorkOntology:
@@ -243,24 +131,10 @@ classes:
       Container for a set of work-ontology instances. Collections only; every
       class it gathers is defined in a module.
     slots:
-      - personalities
       - personas
       - capability_set
-      - securables
-      - permission_set
       - roles
-      - challenges
-      - definitions_of_done
       - jobs_to_be_done
-      - goals
-      - remits
-      - agencies
-      - principal_identities
-      - workload_identities
-      - memory_set
-      - actors
-      - job_set
-      - collaborations
       - disciplines
       - articles
       - retired_articles
@@ -271,7 +145,3 @@ classes:
       - projects
       - artifacts
       - excluded_paths
-      # provenance
-      - executions
-      - boms
-      - audit_records

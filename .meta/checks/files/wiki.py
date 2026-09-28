@@ -1,4 +1,4 @@
-"""The wiki: wikilinks that resolve, a lead paragraph that defines its concept, one page per term of the Ubiquitous Language, and synonyms the vocabulary does not forbid (solorepo's DR-187, solorepo's DR-190, solorepo's DR-231).
+"""The wiki: wikilinks that resolve, a lead paragraph that defines its concept, one page per term of the Ubiquitous Language, and synonyms the vocabulary does not forbid (stereorepo's DR-187, stereorepo's DR-190, stereorepo's DR-231).
 """
 import pathlib
 import re
@@ -124,7 +124,7 @@ def _unscoped_page(norm_slug: str, source_path: pathlib.Path, wiki_map: dict[tup
     rel = _rel(source_path)
     if len(rel.parts) >= 3 and rel.parts[0] == "wiki" and (rel.parts[1].lower(), norm_slug) in wiki_map:
         return True
-    if ("solorepo", norm_slug) in wiki_map or ("", norm_slug) in wiki_map:
+    if ("stereorepo", norm_slug) in wiki_map or ("", norm_slug) in wiki_map:
         return True
     return any(s == norm_slug for (c, s) in wiki_map)
 
@@ -135,7 +135,7 @@ def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict[tu
 
     The ontology answers first, by the target and by its slug, and then by the
     same two under each CURIE prefix. What it does not answer is looked for
-    among the wiki pages. A target naming its context — `solorepo/knowledge-
+    among the wiki pages. A target naming its context — `stereorepo/knowledge-
     management`, with or without a leading `wiki/` — is resolved against that
     context and then as a path relative to the page that wrote it. A target
     naming none is tried in the page's own context, then in the scaffold's,
@@ -158,7 +158,7 @@ def _resolves_wikilink(target: str, source_path: pathlib.Path, wiki_map: dict[tu
 
 @check("wikilinks")
 def wikilinks(index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
-    """Internal concept references use closed-world wikilinks (A2, solorepo's DR-185).
+    """Internal concept references use closed-world wikilinks (A2, stereorepo's DR-185).
 
     Every wikilink ([[concept]] or scoped [[context/concept]]) must resolve
     deterministically against either an existing wiki page in the repository
@@ -213,7 +213,7 @@ def _is_wiki_page(path: pathlib.Path, rel: pathlib.Path) -> bool:
 
 
 def _past_frontmatter(lines: list[str]) -> list[str]:
-    """`lines` from the first line after any leading blank lines and any YAML frontmatter block (solorepo's DR-187)."""
+    """`lines` from the first line after any leading blank lines and any YAML frontmatter block (stereorepo's DR-187)."""
     while lines and not lines[0]:
         lines.pop(0)
     if lines and lines[0] == "---":
@@ -256,7 +256,7 @@ def _lead_problem(rel: pathlib.Path, lines: list[str], index: Index, slug: str) 
 @check("wiki lead paragraphs")
 def wiki_lead_paragraphs(index: Index,
                          md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
-    """Every wiki page opens with a bold copular lead definition (MOS:LEAD) concurring with the vocabulary (A2, solorepo's DR-185, solorepo's DR-187).
+    """Every wiki page opens with a bold copular lead definition (MOS:LEAD) concurring with the vocabulary (A2, stereorepo's DR-185, stereorepo's DR-187).
 
     Maintainer-facing exposition under wiki/<context>/ (excluding index READMEs)
     must open with a top-level heading (# <Title>) and a lead sentence defining
@@ -292,8 +292,8 @@ def _domain_vocabulary_problems(wiki_map: dict[tuple[str, str], pathlib.Path]) -
         for item in data.get("concept_set") or []:
             item_id = str(item.get("id") or "")
             slug = item_id.rsplit("/", 1)[-1].lower()
-            if not any(s == slug for (c, s) in wiki_map if c != "solorepo"):
-                problems.append(f"domain_vocabulary.yaml: concept '{item_id}' has no corresponding wiki page (solorepo's DR-190)")
+            if not any(s == slug for (c, s) in wiki_map if c != "stereorepo"):
+                problems.append(f"domain_vocabulary.yaml: concept '{item_id}' has no corresponding wiki page (stereorepo's DR-190)")
     except (OSError, UnicodeDecodeError, yaml.YAMLError, AttributeError, TypeError) as e:
         problems.append(f"domain_vocabulary.yaml: failed to parse for parity check: {e}")
     return problems
@@ -302,7 +302,7 @@ def _domain_vocabulary_problems(wiki_map: dict[tuple[str, str], pathlib.Path]) -
 @check("ubiquitous language wiki parity")
 def ubiquitous_language_wiki_parity(
         index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
-    """Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page, and vice versa (A17, solorepo's DR-184, solorepo's DR-190).
+    """Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page, and vice versa (A17, stereorepo's DR-184, stereorepo's DR-190).
 
     Enforces 1:1 parity between LinkML vocabulary assertions and Knowledge Management
     wiki pages within each Bounded Context. A domain concept without a wiki page, or
@@ -321,14 +321,14 @@ def ubiquitous_language_wiki_parity(
     for (ctx, slug), path in wiki_map.items():
         if not ctx or slug == "readme":
             continue
-        if ctx == "solorepo":
+        if ctx == "stereorepo":
             minted = (f"work:concept/{slug}", f"work:discipline/{slug}")
-            missing = f"solorepo wiki page '{slug}' has no corresponding concept or discipline in index"
+            missing = f"stereorepo wiki page '{slug}' has no corresponding concept or discipline in index"
         else:
             minted = (f"ddd:concept/{slug}", f"work:concept/{slug}")
             missing = f"wiki page '{slug}' has no corresponding concept in vocabulary schema"
         if not any(ident in index for ident in minted):
-            problems.append(f"{_rel(path)}: {missing} (solorepo's DR-190)")
+            problems.append(f"{_rel(path)}: {missing} (stereorepo's DR-190)")
     return problems
 
 
@@ -359,7 +359,7 @@ def _avoided(index: Index, slug: str) -> dict[str, tuple[str, str]]:
 @check("wiki synonyms")
 def wiki_synonyms_are_not_avoided(
         index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
-    """No wiki page declares as a synonym a word its own entry's `avoid` list forbids (A17, solorepo's DR-190, solorepo's DR-231).
+    """No wiki page declares as a synonym a word its own entry's `avoid` list forbids (A17, stereorepo's DR-190, stereorepo's DR-231).
 
     A page's frontmatter `synonyms` are folded into the title field of the BM25
     index at `.meta/lib/search/build.py`, which is the highest weight that index
@@ -389,6 +389,6 @@ def wiki_synonyms_are_not_avoided(
                 word, ident = found
                 problems.append(
                     f"{rel}: synonym '{synonym}' is on {ident}'s avoid list as '{word}', "
-                    f"and a synonym is indexed at title weight (solorepo's DR-231)"
+                    f"and a synonym is indexed at title weight (stereorepo's DR-231)"
                 )
     return problems

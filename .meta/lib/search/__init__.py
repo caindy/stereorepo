@@ -1,4 +1,4 @@
-"""The body of `.meta/search.py`: retrieval over the assertions, the record and the wiki by meaning (solorepo's DR-194).
+"""The body of `.meta/search.py`: retrieval over the assertions, the record and the wiki by meaning (stereorepo's DR-194).
 
 `bm25` is the index; `build` fills it from the assertions and the wiki;
 `benchmark` asks it the queries it must answer; `cli` is the command line the

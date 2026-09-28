@@ -77,7 +77,7 @@ pub fn select(wanted: &str) -> Vec<&'static Step> {
     }
 }
 
-/// The block naming the steps that could not run, and whether they fail the run (Article 6, solorepo's DR-261).
+/// The block naming the steps that could not run, and whether they fail the run (Article 6, stereorepo's DR-261).
 ///
 /// Returns the lines to print, and whether they fail the run under CI.
 #[must_use]
@@ -85,7 +85,7 @@ pub fn closing_block(unrunnable: &[String]) -> (Vec<String>, bool) {
     closing_block_in(unrunnable, std::env::var("CI").as_deref().ok())
 }
 
-/// Computes the closing block lines and failure condition given an explicit CI environment value (Article 6, solorepo's DR-261).
+/// Computes the closing block lines and failure condition given an explicit CI environment value (Article 6, stereorepo's DR-261).
 #[must_use]
 pub fn closing_block_in(unrunnable: &[String], ci: Option<&str>) -> (Vec<String>, bool) {
     if unrunnable.is_empty() {
@@ -105,7 +105,7 @@ pub fn closing_block_in(unrunnable: &[String], ci: Option<&str>) -> (Vec<String>
 /// Executes each step in sequence and prints its formatted outcome.
 ///
 /// Returns `ExitCode::SUCCESS` if all steps pass, `ExitCode::FAILURE` if any step
-/// finds issues or if any step could not run under CI (Article 6, solorepo's DR-261),
+/// finds issues or if any step could not run under CI (Article 6, stereorepo's DR-261),
 /// or exit code 2 if `steps` is empty.
 #[must_use]
 pub fn run(root: &Path, steps: &[&Step]) -> ExitCode {

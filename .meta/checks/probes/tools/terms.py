@@ -1,7 +1,7 @@
-"""`terms.py`'s unminted candidate extraction, keyness, and dispersion probes (solorepo's DR-234).
+"""`terms.py`'s unminted candidate extraction, keyness, and dispersion probes (stereorepo's DR-234).
 
-Covers multiword candidacy and phrase-shaped exclusion under solorepo's DR-271, and
-the corpus that holds prose alone under solorepo's DR-279.
+Covers multiword candidacy and phrase-shaped exclusion under stereorepo's DR-271, and
+the corpus that holds prose alone under stereorepo's DR-279.
 """
 
 from checks.collect import META, ROOT, check
@@ -10,7 +10,7 @@ from checks.probes.harness import load_module
 
 @check("terms probes", pre=True)
 def terms_probes() -> list[str]:
-    """`terms.py` surfaces unminted terms by keyness and dispersion (solorepo's DR-234).
+    """`terms.py` surfaces unminted terms by keyness and dispersion (stereorepo's DR-234).
 
     Validates that:
     1. Gries' DP dispersion equals 0.0 for a flat distribution and approaches
@@ -111,7 +111,7 @@ class StubWordfreq:
 
     The gate's interpreter carries no `wordfreq` — `terms.py` fetches it through
     its own `uvx` shebang — so the floor is probed against a stub holding the
-    relation the library documents and solorepo's DR-271 relies on: a phrase's
+    relation the library documents and stereorepo's DR-271 relies on: a phrase's
     combined frequency sits below the rarest of its tokens. The three entries are
     the values `wordfreq` returns for them, so the probe refuses the same phrase
     the instrument refuses.
@@ -128,7 +128,7 @@ class StubWordfreq:
 
 @check("terms phrase probes", pre=True)
 def terms_phrase_probes() -> list[str]:
-    """`terms.py` proposes phrases and excludes a minted label as one (solorepo's DR-271).
+    """`terms.py` proposes phrases and excludes a minted label as one (stereorepo's DR-271).
 
     Validates that:
     1. A token keeps its internal hyphen, so `drive-by` is one candidate rather
@@ -234,7 +234,7 @@ CODE_CONFIG_ARGS = {"min_zipf": 3.0, "min_dp": 0.45, "min_g2": 1.0, "min_uses": 
 
 @check("terms corpus probes", pre=True)
 def terms_corpus_probes() -> list[str]:
-    """`terms.py` draws candidates from prose alone (solorepo's DR-279).
+    """`terms.py` draws candidates from prose alone (stereorepo's DR-279).
 
     Validates that:
     1. `strip_code` empties a backtick fence, a tilde fence, a fence indented up

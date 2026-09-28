@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/192
     name: "DR-192 · Ground-moved branch scoping and technical writer retrieval remit for durable citation maintenance"
-    challenge: work:challenge/291
     status: ADOPTED
     applies:
       - work:article/12
@@ -24,7 +23,7 @@ decisions:
       - name: Store citation read timestamps in a repository state file
         chosen: false
         reason: >-
-          Violates the core rule of DR-052 and DR-088: state about the record that
+          Violates the core rule of solorepo's DR-052 and solorepo's DR-088: state about the record that
           nothing else consumes churns commits, creates merge conflicts between
           concurrent branches, and rots silently.
       - name: Use git blame author date as read state to sample oldest-written first

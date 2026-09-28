@@ -1,4 +1,6 @@
-"""The floor on `select`, against selectors that reach it and ones that do not (solorepo's DR-263).
+"""The floor on `select`, against selectors that reach it and ones that do not.
+
+stereorepo's DR-263.
 
 `files.python.unselected` is read by the `meta lints` step rather than run
 beside it, so a wrong answer shows as a wrong verdict rather than as a failure:
@@ -8,7 +10,7 @@ again. The cases are the two directions that matter — a selector widening
 inside its own linter, which reaches, and a shorter selector belonging to a
 different linter, which does not — and a failure names the case. The step
 registers here rather than beside the check it exercises, because the gate over
-assertions should not take its imports from a test suite (solorepo's DR-150).
+assertions should not take its imports from a test suite (stereorepo's DR-150).
 """
 import collections
 
@@ -62,7 +64,7 @@ def ruleset_floor_probes() -> list[str]:
     """`files.python.unselected` reads a selector as its own linter does, in floor order.
 
     Two directions, because the floor is only worth the narrower one
-    (solorepo's DR-263). A selector that widens inside the linter owning a
+    (stereorepo's DR-263). A selector that widens inside the linter owning a
     floor entry reaches it, so `TRY` satisfies `TRY003` and `PL` satisfies
     `PLW1510`; a shorter selector belonging to a different linter does not, so
     `B` leaves `BLE` unreached however much of its text it spells. `ALL`

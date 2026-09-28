@@ -1,27 +1,23 @@
-"""The command line of `.meta/render.py`: write, `--check`, or `--landed <n>`.
+"""The command line of `.meta/render.py`: write, or `--check`.
 """
 import sys
 
-from lib.render import META, decisions, targets
+from lib.render import META, targets
 
 
 def main() -> None:
     """Runs the mode the arguments name and exits with the render's verdict.
 
-    `--landed <n>` prints what a Challenge got and exits. Otherwise every
-    target is rendered: written to disk, or under `--check` compared with what
+    Every target is rendered: written to disk, or under `--check` compared with what
     is on disk. Writing also runs `apm_compile.reconcile_root`, which rewrites
     `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` as symlinks to
     `AGENTS.md`; those paths are in no target, and `--check` does not
     touch them. `--check` answers with two prefixes, because they are not the
     same answer and neither is the other's repair: `stale:` names pages made
     current by running this program, and `unrendered:` names pages nothing
-    renders, where what is wrong is the target or the file. `check_pr.py`
-    reads the two apart. Exit status is 1 when either list is non-empty.
+    renders, where what is wrong is the target or the file. Exit status is 1
+    when either list is non-empty.
     """
-    if "--landed" in sys.argv:
-        print(decisions.landed(sys.argv[sys.argv.index("--landed") + 1]))
-        sys.exit(0)
     check = "--check" in sys.argv
     snap = targets.snapshot()
     pages = targets.rendered(snap)

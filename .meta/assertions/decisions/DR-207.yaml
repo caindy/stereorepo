@@ -1,23 +1,20 @@
 decisions:
   - id: work:decision/207
     name: "DR-207 · Four permissible comment exceptions, with routing, mechanization, and suppression audit as the alternatives to prose"
-    challenge: work:challenge/409
     status: ADOPTED
     applies:
       - work:article/12
-      - work:article/15
     enacted_in:
       - work:artifact/skill-technical-writing
       - work:artifact/meta-render
-      - work:artifact/github-workflows-coder
       - work:artifact/agents
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-apm-compile-agents
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-checks-probes-tools-comments
     context: >-
-      solorepo's DR-175 established the reader's rubric for item docstrings and
-      solorepo's DR-198 separated the conversational register from durable
+      stereorepo's DR-175 established the reader's rubric for item docstrings and
+      stereorepo's DR-198 separated the conversational register from durable
       Diátaxis authoring, but both govern docstrings. Neither says what may
       appear as a comment anywhere else in a source file — at module scope, in
       a class body, or inside a function or method — so source modules kept
@@ -78,7 +75,7 @@ decisions:
         A constraint comment is pruned only after the invariant it states is
         held by a type, a runtime precondition, or a probe in
         `.meta/checks/probes/`, so the claim survives the prose
-        (solorepo's DR-171).
+        (stereorepo's DR-171).
       - >-
         A lint or type suppression bypassing safety, correctness, or type
         soundness is an actionable defect rather than a permanent comment.
@@ -98,12 +95,12 @@ decisions:
       same clothes: a fact about the code's surface, a fact about the world
       outside the repository, an invariant, or a story about a past defect.
       Only the first two belong in the source, and only in the shapes
-      solorepo's DR-175 and Article 12 already hold to a standard.
+      stereorepo's DR-175 and Article 12 already hold to a standard.
 
       The other two have better homes that already exist. An invariant becomes
       a type, a precondition, or a probe — a form that fails when it is
       violated, which prose never does. A story becomes a `<module>.history.md`
-      entry with a receipt, which solorepo's DR-171 built for exactly this.
+      entry with a receipt, which stereorepo's DR-171 built for exactly this.
       Naming the destination is what makes the prune safe: the objection to
       deleting a comment is always that it knows something, and the answer is
       to move what it knows rather than to argue about the line.

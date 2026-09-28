@@ -1,1 +1,0 @@
-Read Challenge #<number>

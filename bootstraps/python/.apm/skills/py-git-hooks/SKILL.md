@@ -10,7 +10,7 @@ Configure git pre-commit hooks using the pre-commit framework to enforce code qu
 
 ## Target contexts
 
-A solorepo portfolio holds two kinds of Python target, and this skill behaves
+A stereorepo portfolio holds two kinds of Python target, and this skill behaves
 differently in each.
 
 - **Repository tooling — `.meta/`.** Inherited by every portfolio through
@@ -30,7 +30,7 @@ name.
 
 ### Do not run `pre-commit install` in a repository that sets `core.hooksPath`
 
-solorepo sets it:
+stereorepo sets it:
 
 ```console
 $ git config core.hooksPath
@@ -83,7 +83,7 @@ an upstream copy.
 
 ## Required Tools
 
-**In a solorepo portfolio**, none of these are added for hook management: the
+**In a stereorepo portfolio**, none of these are added for hook management: the
 enforcement point is the gate, and `pre-commit` is not installed. What remains of
 this skill is the Stop hook lint gate, which reaches `ruff` and `mypy` the way its
 target does — `uvx` for `.meta/`, `uv run` inside a Project.
@@ -207,7 +207,7 @@ ln -sf ~/.claude/skills/py-git-hooks/lint-gate.py ~/.claude/hooks/lint-gate.py
   through that Project's `uv run`, from the Project's own directory
 - **Auto-fix pass**: runs `ruff check --fix`, always with the target's `--config`,
   to silently fix trivial issues such as import sorting. It runs **no formatter**:
-  mechanical formatting was retired from this standard (solorepo's DR-193)
+  mechanical formatting was retired from this standard (stereorepo's DR-193)
   because it inflates agent context windows and manufactures rebase churn across
   concurrent branches for no semantic gain
 - **Check pass**: runs `ruff check` and `mypy` to find remaining unfixable errors.
@@ -383,7 +383,7 @@ This creates a cross-session feedback loop: each lint gate block teaches Claude 
 
 ## Verification Checklist
 
-**In a repository that sets `core.hooksPath` (solorepo does)**
+**In a repository that sets `core.hooksPath` (stereorepo does)**
 
 - [ ] `git config core.hooksPath` still reports `.meta/hooks`, and was never unset
 - [ ] No `.pre-commit-config.yaml` was added, and `pre-commit install` was not run

@@ -1,4 +1,6 @@
-"""Installation bundle inventory, parser, and validator for repository transfer (solorepo's DR-217).
+"""Installation bundle inventory, parser, and validator for repository transfer.
+
+stereorepo's DR-217.
 
 Provides structured definitions for operating machinery, template replacements,
 ownership policies, transformations, and source revision tracking across Specialization.

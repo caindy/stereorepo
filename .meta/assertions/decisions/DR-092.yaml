@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/092
     name: "DR-092 · Every gate prints one report shape, so a runner can read any of them"
-    challenge: work:challenge/54
     status: ADOPTED
     applies:
       - work:article/21

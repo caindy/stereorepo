@@ -1,9 +1,0 @@
-challenges:
-  - id: work:challenge/37
-    name: "A gate for A17, once Collaboration works"
-    challenge_type: FEATURE
-    description: >-
-      A gate for Article 17 combining the syntactic half (closed-world wikilinks
-      resolution and 1:1 parity between LinkML vocabulary assertions and Knowledge
-      Management wiki pages) with the reviewing half (reviewer agent checking that
-      words doing the work of terms are grounded or minted).

@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/183
     name: "DR-183 · Dedupe repository conventions and align template seeds"
-    challenge: work:challenge/11
     status: ADOPTED
     enacted_in:
       - work:artifact/template-agents

@@ -1,13 +1,11 @@
 decisions:
   - id: work:decision/132
     name: "DR-132 · An Issue cited in an inherited file names its owner, and resolving the number is not the offline gate's"
-    challenge: work:challenge/160
     status: ADOPTED
     applies:
       - work:article/12
     enacted_in:
       - work:artifact/meta-check
-      - work:artifact/meta-lib-check-pr-verdict
       - work:artifact/meta-checks-citations-loaders
       - work:artifact/meta-checks-citations-record
     alternatives:

@@ -12,7 +12,7 @@ products: []
 
 # One Project per toolchain: one language, one test suite, one gate. `.meta` is
 # the first, seeded, so that `.meta/gate` has something to run from step three
-# and `check.py` runs in CI from the portfolio's first pull request. A gate over
+# and `check.py` runs before the portfolio's first Issue lands. A gate over
 # no Projects is a failure, not a green run.
 projects:
   - id: work:project/meta
@@ -24,7 +24,7 @@ projects:
     gate: uvx --python 3.13 --with linkml --with pyyaml python .meta/check.py
 
 # The operational paths the completeness check passes over: in a specialized
-# portfolio, operational machinery is inherited from solorepo rather than
+# portfolio, operational machinery is inherited from stereorepo rather than
 # enacted by local Decision Records.
 excluded_paths:
   - .meta/*.py

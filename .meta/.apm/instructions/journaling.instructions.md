@@ -1,6 +1,6 @@
 ---
 description: >-
-  Journaling discipline — Narrative goes to the artifact that owns it; the pull request holds what is left over.
+  Journaling discipline — Narrative goes to the artifact that owns it; the issue file holds what is left over.
 applyTo: "**/*"
 ---
 
@@ -9,9 +9,9 @@ applyTo: "**/*"
 
 # Journaling
 
-Narrative goes to the artifact that owns it; the pull request holds what is left over.
-Most of what wants writing down is already owed somewhere. What a schema means belongs in the schema, why a decision was taken belongs in a decision record, a rule belongs in the Charter, a word belongs in the vocabulary. Journaling is that routing, and then the residue — which divides by tense. What is **finished** is the account of this change, the path taken through it and the approach that lost; it goes in the pull request body, which closes when the work does. What is **unfinished** is work noticed and not done; it is a Challenge nobody has taken up, so it goes to an Issue linked from the pull request, which stays open after the body is archived.
-Filing the second as the first is how it is lost. A body is read once, at review, and never again.
+Narrative goes to the artifact that owns it; the issue file holds what is left over.
+Most of what wants writing down is already owed somewhere. What a schema means belongs in the schema, why a decision was taken belongs in a decision record, a rule belongs in the Charter, a word belongs in the vocabulary. Journaling is that routing, and then the residue — which divides by tense. What is **finished** is the account of this change, the path taken through it and the approach that lost; it goes in the issue file, which lands in `issues/done/` with the change. What is **unfinished** is work noticed and not done; it is an issue nobody has taken up, so it goes in a new file in `issues/backlog/`.
+Filing the second as the first is how it is lost. A finished issue file is read when someone asks why, and nobody looks in one for work still to do.
 A commit message is a **label**, not an account. Reasoning left there is reasoning hidden: it is reached by walking `git blame`, which is expensive, lossy under rebase and squash, and attempted only by a reader the artifacts have already failed. Left to itself an agent narrates an entire project through commit messages, because that is the one place it is always asked to write.
 
 ## Judgement
@@ -22,12 +22,12 @@ And whether the residue is worth writing at all. Where the change explains itsel
 ## Steps
 
 - **Route as you write.** Where an artifact owns the paragraph, it goes there.
-- **Put finished residue in pull request.** Place finished residue in the pull request body — what changed, what the ground looked like, and what would make this removable.
-- **Put unfinished residue in linked Issue.** Move unfinished residue to a linked Issue: it is a Challenge, not a paragraph, and it outlives the body.
+- **Put finished residue in the issue file.** Place finished residue in the issue file — what changed, what the ground looked like, and what would make this removable.
+- **Put unfinished residue in the backlog.** Write unfinished residue as a new file in `issues/backlog/`: it is an issue, not a paragraph, and it outlives the one it was noticed in.
 - **Keep commit messages to what changed.** A message that has begun explaining is holding something that belongs elsewhere.
 - **Route findings in same change.** Place every finding in the same change that records it: a rule goes to the Charter; a foreclosing decision goes to a decision record.
 - **Supersede by writing again.** Name what is replaced, and never rewrite.
 
 ## Produces
 
-- Artifacts that carry their own reasoning, and a pull request holding what none of them owns.
+- Artifacts that carry their own reasoning, and an issue file holding what none of them owns.

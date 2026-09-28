@@ -11,7 +11,7 @@ from checks.collect import (
     META,
     check,
 )
-from checks.files import workflows
+from checks.files import scaffold
 
 
 @functools.cache
@@ -50,7 +50,7 @@ def inherited_prose(asked: Collection[tuple[str, str, str]]) -> list[str]:
     """Prose a generator reads is asserted where Specialization copies it.
 
     `Artifact.preamble` moved the framing prose of the generated pages out of
-    `render.py` (solorepo's DR-144). `assertions/structure.yaml` is the wrong
+    `render.py` (stereorepo's DR-144). `assertions/structure.yaml` is the wrong
     home for it: its own first line says the file is the portfolio's and never
     synced, and step three of Specialization replaces it with `template/`'s,
     which declares one Artifact. The renderer is inherited and would then ask
@@ -75,14 +75,14 @@ def inherited_prose(asked: Collection[tuple[str, str, str]]) -> list[str]:
             f"{rel}, which a portfolio renders, in the file Specialization "
             f"replaces — move it to assertions/imported/structure.yaml"
             for rel, slot, block in sorted(asked)
-            if asserts(own.get(rel), slot, block) and not rel.startswith(workflows.SCAFFOLD_ONLY)]
+            if asserts(own.get(rel), slot, block) and not rel.startswith(scaffold.SCAFFOLD_ONLY)]
 
 
 @check("unread prose")
 def unread_prose(asked: Collection[tuple[str, str, str]]) -> list[str]:
-    """Prose asserted that no render asks for (solorepo's DR-152).
+    """Prose asserted that no render asks for (stereorepo's DR-152).
 
-    A8's other half, for the prose solorepo's DR-144 and solorepo's DR-152 moved
+    A8's other half, for the prose stereorepo's DR-144 and stereorepo's DR-152 moved
     out of `render.py`.
     `inherited prose` holds where a block is asserted; this holds whether
     anything reads it at all. Without it, a generator that stops reading a block

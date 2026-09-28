@@ -33,11 +33,6 @@ def gitattributes(snap: dict[str, Any] | None = None) -> str:
     says `rendered prose` and the re-render corrects it. Wrong output that the
     gate already catches, in place of a stop that a human has to clear.
 
-    It is local only: GitHub does not read a repository's `.gitattributes`
-    when it merges, so the pull request still reads `CONFLICTING` until the
-    rebase is pushed. What this removes is the hand-editing inside that
-    rebase, not the label in front of it.
-
     The list is `TARGETS` itself, so a page added there is covered by the act
     of adding it. Every pattern is anchored with a leading `/`: a pattern with
     no slash in it matches a basename at any depth, so a bare `justfile` would
@@ -64,7 +59,7 @@ def gitattributes(snap: dict[str, Any] | None = None) -> str:
         "#",
         "# A generated page is pinned to its sources by the gate, so a conflict in",
         "# one is a conflict about nothing. `union` keeps both sides and the next",
-        "# `just render` puts them in order (solorepo's DR-143). GitHub ignores",
+        "# `just render` puts them in order (stereorepo's DR-143). GitHub ignores",
         "# this file when it merges; it is the rebase here that it spares.",
         "",
     ] + [f"{path} merge=union" for path in paths]) + "\n"
@@ -77,11 +72,6 @@ TARGETS: dict[str, TargetFn] = {
     "vocabulary.md": pages.vocabulary,
     "../SPECIALIZE.md": pages.specialize,
     "../justfile": writers.justfile,
-    "../.github/PULL_REQUEST_TEMPLATE.md": pages.pull_request_template,
-    "../.github/ISSUE_TEMPLATE/challenge.md": pages.issue_template,
-    "../.github/ISSUE_TEMPLATE/roadmap.md": pages.roadmap_template,
-    "../.claude/skills/pr-first/SKILL.md": skills.pr_first_skill,
-    "../.claude/skills/pr-first-reviewer/SKILL.md": skills.pr_first_reviewer_skill,
     "../.claude/skills/wikisplain/SKILL.md": skills.wikisplain_skill,
     "../.claude/skills/search/SKILL.md": skills.search_skill,
     "../.claude/skills/technical-writing/SKILL.md": skills.technical_writing_skill,
@@ -147,8 +137,7 @@ def unrendered(snap: dict[str, Any] | None = None) -> list[str]:
     """Targets that produce nothing and yet have a file on disk, by name.
 
     By name and not as a sentence about the name, because both callers key on
-    the page: the gate wraps it in prose, and `check_pr.py` asks whether the
-    record's index is one of them. A sentence answered that question `False`
+    the page: the gate wraps it in prose. A sentence answered that question `False`
     however the page stood.
     """
     if snap is None:

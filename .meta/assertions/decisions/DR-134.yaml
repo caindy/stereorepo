@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/134
     name: "DR-134 · A gate is a predicate a re-run cannot overturn, so a citation's reading runs before the hand-off and blocks no merge"
-    challenge: work:challenge/148
     status: ADOPTED
     applies:
       - work:article/12
@@ -9,21 +8,19 @@ decisions:
       - work:artifact/meta-dereference
       - work:artifact/meta-charter
       - work:artifact/justfile
-      - work:artifact/github-workflows-coder
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-checks-probes-tools-dereference
       - work:artifact/meta-lib-dereference-asking
       - work:artifact/meta-lib-dereference-reading
       - work:artifact/meta-lib-dereference-report
-      - work:artifact/meta-lib-on-routing
     context: >-
       DR-130 split a citation's claim into the four shapes a string search
       reaches and left the rest, on the grounds that deciding whether a sentence
       supports a paraphrase means reading the entry — the work the check was
       meant to save. The rest is most of what went wrong: of the
       six citation failures on solorepo's #138, #140 and #142 the new checks
-      catch two, and the other four — a sentence attributed to DR-109 it does
+      catch two, and the other four — a sentence attributed to solorepo's DR-109 it does
       not support, a count of eighteen that was fifteen, a derivation stated of
       two numbers that held for one — were each found by a reviewer opening the
       target and reading it. That is an Opus round per pull request for work a
@@ -124,7 +121,7 @@ decisions:
         that reported the token unset. An ordinary variable crosses and the
         credential does not, which is the whole of what the file is for; what
         the harness overrides is the names it owns, `AI_AGENT` written in the
-        same block arriving as the harness's own build string. DR-148 rests on
+        same block arriving as the harness's own build string. solorepo's DR-148 rests on
         the narrow reading and is what the probe was run for. Absent both, the
         ambient `claude` answers and the step says so.
         That last term is where this parts from the channel and is the same

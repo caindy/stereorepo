@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/228
     name: "DR-228 · Claim and Evidence are minted from Toulmin in caindy/fitch-mvp's wording, and a history entry's Receipt line becomes Evidence"
-    challenge: work:challenge/577
     status: ADOPTED
     applies:
       - work:article/17
@@ -21,11 +20,11 @@ decisions:
       log under `.meta/` and both Bootstraps, so every portfolio inherits it. It settled into two
       senses: the resolvable symbol a history entry names, and a provenance
       citation — and a provenance citation is the kind of thing
-      solorepo's DR-171 turned down, refusing "Commit hashes or pull request
+      stereorepo's DR-171 turned down, refusing "Commit hashes or pull request
       citations as receipts" as not mechanically falsifiable, since the hash is
       unchanged when the change it records is undone.
 
-      The word cannot be defined in the lead sentence solorepo's DR-190 requires
+      The word cannot be defined in the lead sentence stereorepo's DR-190 requires
       of a wiki page without choosing between the two, which is the question
       minting forces. Under Toulmin, as caindy/fitch-mvp models him on LinkML, a test
       that can be run and observed is Evidence and what a history entry asserts
@@ -35,7 +34,7 @@ decisions:
       - name: Mint `Receipt` and keep the label
         chosen: false
         reason: >-
-          It settles solorepo's Article 17 by agreeing to the word rather than to
+          It settles stereorepo's Article 17 by agreeing to the word rather than to
           what the word means, and it keeps a term this repository would then own
           alone. The two senses would still have to be separated in the
           definition, and the sense that loses is the one the Charter and the
@@ -57,7 +56,7 @@ decisions:
         reason: >-
           The gate cannot see the defect, which is why it reached that far. A
           word in neither the vocabulary nor the wiki satisfies
-          `ubiquitous language wiki parity` trivially, and solorepo's DR-190
+          `ubiquitous language wiki parity` trivially, and stereorepo's DR-190
           rejected word-frequency heuristics for the reviewer half. Left alone,
           the word does not stop spreading; it spreads into portfolios, which is
           the multiplication Seeded Artifacts names.
@@ -84,8 +83,8 @@ decisions:
         `in_scheme` and this repository is a reader of these two definitions
         rather than the party that settles them — the same instrument
         `work:scheme/ddd` and `work:scheme/apm` already use. Both carry
-        `wiki/solorepo/claim.md` and `wiki/solorepo/evidence.md` at the 1:1
-        parity solorepo's DR-190 requires. `receipt` is an `avoid` label on Evidence, which is where the
+        `wiki/stereorepo/claim.md` and `wiki/stereorepo/evidence.md` at the 1:1
+        parity stereorepo's DR-190 requires. `receipt` is an `avoid` label on Evidence, which is where the
         retired word is recorded. Each definition is the source class's opening
         sentence, quoted whole and unaltered: "Toulmin's Claim: the central
         hypothesis or predicate assertion being evaluated", and "Hard ground
@@ -107,8 +106,8 @@ decisions:
         The two commentary uses say provenance instead. The Disciplines' note
         says the ADRs cite the failure each came from. The Charter's preamble
         named the failure an Article came from as its "receipt", against a slot
-        solorepo's DR-087 had already removed; it now says where that provenance
-        went — solorepo's DR-043 — and that a citation is not the Evidence a
+        stereorepo's DR-087 had already removed; it now says where that provenance
+        went — stereorepo's DR-043 — and that a citation is not the Evidence a
         history entry names.
       - >-
         The label `Claim` collides with the channel verb `claim`, which takes an
@@ -118,11 +117,11 @@ decisions:
       - >-
         A landed Decision's `consequences` and `falsifier` state what is true
         now, so every one of them is corrected to the new names: in
-        solorepo's DR-087, solorepo's DR-091, solorepo's DR-101,
-        solorepo's DR-171, solorepo's DR-209 and solorepo's DR-218. Its `name`,
+        stereorepo's DR-087, stereorepo's DR-091, stereorepo's DR-101,
+        stereorepo's DR-171, stereorepo's DR-209 and stereorepo's DR-218. Its `name`,
         `context`, `alternatives` and `rationale` are the record of what was
         deliberated and are left as written, retired word included:
-        solorepo's DR-171's rejected alternative is named "Commit hashes or pull
+        stereorepo's DR-171's rejected alternative is named "Commit hashes or pull
         request citations as receipts", and that is what it rejected. The line is
         the field, so a reader can tell which half of an entry a later change may
         touch.
@@ -153,5 +152,5 @@ decisions:
       under `.meta/` and both Bootstraps, two gate steps, one check and four
       symbols. It is worth paying now rather than at the next portfolio, because
       a Bootstrap defect propagates once per use. A count of files would have
-      been the shape solorepo's DR-171 rejected commit hashes for: a number
+      been the shape stereorepo's DR-171 rejected commit hashes for: a number
       written down once that nothing re-derives and nothing can fail.

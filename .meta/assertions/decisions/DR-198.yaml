@@ -1,22 +1,19 @@
 decisions:
   - id: work:decision/198
     name: "DR-198 · Two-regime technical writing: conversational register versus durable Diátaxis authoring"
-    challenge: work:challenge/393
     status: ADOPTED
     applies:
       - work:article/1
       - work:article/12
-      - work:article/15
     enacted_in:
       - work:artifact/skill-technical-writing
-      - work:artifact/github-workflows-coder
       - work:artifact/agents
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-apm-compile-agents
     context: >-
       While solorepo established the layered technical writing standard
-      (solorepo's DR-194) and elevated the Diátaxis Compass to Knowledge Management
-      (solorepo's DR-196), practice revealed a fundamental category mistake across
+      (stereorepo's DR-194) and elevated the Diátaxis Compass to Knowledge Management
+      (stereorepo's DR-196), practice revealed a fundamental category mistake across
       agent loops. The Coder personality's directive ("Concise. Recommendation
       before survey, decision before rationale. Cite an Article by number and move
       on. Err toward concision rather than tedium...") was imported into
@@ -38,7 +35,7 @@ decisions:
         chosen: false
         reason: >-
           Leaves agents oscillating between abstruse conversational shorthand and
-          bloated, litigious source code docstrings, continuing to violate solorepo's DR-175.
+          bloated, litigious source code docstrings, continuing to violate stereorepo's DR-175.
       - name: Separate conversational register from durable Diátaxis authoring with skill-based coder cleanup
         chosen: true
         reason: >-

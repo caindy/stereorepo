@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/084
     name: "DR-084 · A decision names its Challenge, and what landed is rendered from the record"
-    challenge: work:challenge/11
     status: ADOPTED
     applies:
       - work:article/8
@@ -30,7 +29,7 @@ decisions:
       - name: Read the decisions out of the pull request body
         chosen: false
         reason: >-
-          DR-076 already puts them there, so nothing new is asserted. But a body
+          solorepo's DR-076 already puts them there, so nothing new is asserted. But a body
           is prose on GitHub, it is parsed rather than resolved, and it is
           per-pull-request — a Challenge served by two of them cannot be summarised
           at all, which is exactly the case that prompted this.
@@ -51,7 +50,7 @@ decisions:
         PR First gains a step: post what landed before merging.
       - >-
         The summary is exactly as complete as the record, which is the property
-        that makes it worth having. Running it against #11 is what found DR-083 —
+        that makes it worth having. Running it against #11 is what found solorepo's DR-083 —
         a decision built inside another change with no entry of its own.
       - >-
         `Challenge` has instances for the first time. Two are asserted, for the

@@ -1,8 +1,0 @@
-challenges:
-  - id: work:challenge/170
-    name: "Citation arrived by use on the day the Articles were written, and now names three different things"
-    challenge_type: GAP
-    description: >-
-      Citation and dereference are load-bearing concepts across Article 12, DR-121,
-      DR-124, DR-125, DR-130, DR-132, and DR-134, but were never formally minted
-      in the ubiquitous language ontology.

@@ -1,7 +1,7 @@
 """Brownfield repository adoption planning probes.
 
 Validates path classification, collision detection, read-only invariants,
-serialization formats, and CLI execution under solorepo's DR-217.
+serialization formats, and CLI execution under stereorepo's DR-217.
 """
 
 from __future__ import annotations
@@ -85,9 +85,8 @@ def _check_retains_and_integrations(scaffold_dir: pathlib.Path, tmp: pathlib.Pat
     agents_file = target_dir / "AGENTS.md"
     agents_file.write_text("# Existing product instructions\n", encoding="utf-8")
 
-    wf_file = target_dir / ".github" / "workflows" / "gate.yml"
-    wf_file.parent.mkdir(parents=True)
-    wf_file.write_text("name: Existing CI\n", encoding="utf-8")
+    readme_file = target_dir / "README.md"
+    readme_file.write_text("# Existing product\n", encoding="utf-8")
 
     scaffold_readme = scaffold_dir / "template" / ".meta" / "README.md"
     meta_readme = target_dir / ".meta" / "README.md"
@@ -113,9 +112,9 @@ def _check_retains_and_integrations(scaffold_dir: pathlib.Path, tmp: pathlib.Pat
     if not agents_act or agents_act.classification != PathClassification.INTEGRATE:
         problems.append("brownfield: AGENTS.md was not classified as INTEGRATE")
 
-    wf_act = action_map.get(".github/workflows/gate.yml")
-    if not wf_act or wf_act.classification != PathClassification.INTEGRATE:
-        problems.append("brownfield: .github/workflows/gate.yml was not classified as INTEGRATE")
+    readme_act = action_map.get("README.md")
+    if not readme_act or readme_act.classification != PathClassification.INTEGRATE:
+        problems.append("brownfield: README.md was not classified as INTEGRATE")
 
     meta_act = action_map.get(".meta/README.md")
     if not meta_act or meta_act.classification != PathClassification.RETAIN:
@@ -188,7 +187,7 @@ def _check_product_config(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list
     ignored_file.parent.mkdir(parents=True)
     ignored_file.write_text("Binary data\n", encoding="utf-8")
 
-    config_file = tmp / ".solorepo.yaml"
+    config_file = tmp / ".stereorepo.yaml"
     config_content = {
         "retain": [".meta/render.py"],
         "integrations": ["custom/merge.txt"],
@@ -327,7 +326,7 @@ def _check_cli_and_formats(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> lis
 
 @check("brownfield adoption probes", pre=True)
 def test_brownfield_probes() -> list[str]:
-    """Probes brownfield adoption planning and CLI dispatcher (solorepo's DR-217).
+    """Probes brownfield adoption planning and CLI dispatcher (stereorepo's DR-217).
 
     Validates that:
     1. Empty target repository plans all bundle entries as CREATE.

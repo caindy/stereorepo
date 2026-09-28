@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/125
     name: "DR-125 · An identifier is a slug where the entity is its meaning and a number where it is an occurrence, and A12 states what would retire it"
-    challenge: work:challenge/19
     status: ADOPTED
     applies:
       - work:article/12

@@ -1,9 +1,0 @@
-challenges:
-  - id: work:challenge/988
-    name: Record architectural decision superseding DR-224 for single-actor resolution of promoted threads
-    challenge_type: FEATURE
-    description: >-
-      DR-224 established a strict requirement that review threads opened by an actor
-      cannot be resolved by that same actor, even when promoted into a tracked issue.
-      In practice, this forces an unnecessary 20-minute secondary reviewer session
-      solely to click resolve on a verified promotion link.

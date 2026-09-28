@@ -4,7 +4,7 @@ Every step of the gate reaches what this module holds: the paths, the schemas,
 the one pass over `.meta/assertions/` that turns the documents into identified
 objects and reference sites, and `@check`, which is how a step says it is one.
 Nothing here checks anything, which is why every other module of the gate may
-import it and it imports none of them (solorepo's DR-150).
+import it and it imports none of them (stereorepo's DR-150).
 
 The registry is here rather than in `check.py` for that reason alone: a step
 registers itself at its definition, so the decorator has to be importable by
@@ -58,7 +58,7 @@ class CouldNotRun:
     """The step did not run, and carries why.
 
     Loud and unmarked: the gate reports it and exits zero where a person runs
-    the gate, non-zero under CI (Article 6, solorepo's DR-261)."""
+    the gate, non-zero under CI (Article 6, stereorepo's DR-261)."""
     def __init__(self, why: str) -> None:
         self.why = why
 
@@ -150,7 +150,7 @@ def against_baseline(counts: dict[str, int], sites: dict[str, list[str]],
     because the debt grew; under, because a baseline nobody lowers has stopped
     being one. It lives here rather than beside either step that reads it, because a
     checker importing another checker for it would be an edge back up the
-    gate's import graph (solorepo's DR-150).
+    gate's import graph (stereorepo's DR-150).
 
     Args:
         counts: Repository-relative path to the debt the tree holds.

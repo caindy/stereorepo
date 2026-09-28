@@ -3,11 +3,11 @@
 Validates that `cited_schema_slots` correctly identifies invalid qualified slot citations,
 explicit slot phrases, and document-scoped former slot names, while verifying git diff
 parsing of deleted schema slots and CouldNotRun fallback behaviour. Probes sit in
-their own module under `.meta/checks/probes/` by subject under test (solorepo's DR-209,
+their own module under `.meta/checks/probes/` by subject under test (stereorepo's DR-209,
 organizing probes into per-subject modules). Verifies the citation subject's slot checks
-under the gate's per-subject decomposition (solorepo's DR-150).
+under the gate's per-subject decomposition (stereorepo's DR-150).
 
-History in citations.history.md (solorepo's DR-171).
+History in citations.history.md (stereorepo's DR-171).
 """
 import pathlib
 import tempfile
@@ -75,7 +75,7 @@ def _probe_qualified_and_former(indices: slots.SlotIndices, rel: str) -> list[st
             f"qualified slot: dot in 'disciplines.yaml' destroyed citation span, got {res!r}"
         )
 
-    hedged_qualified = ["In solorepo's DR-087, Article.origin was removed from schema."]
+    hedged_qualified = ["In stereorepo's DR-087, Article.origin was removed from schema."]
     res = slots.check_prose_spans(hedged_qualified, rel, indices, {"Article"})
     if res:
         problems.append(f"qualified slot: hedged citation should be ignored, got {res!r}")
@@ -174,13 +174,13 @@ def _probe_phrases_and_seams(indices: slots.SlotIndices, rel: str) -> list[str]:
             f"former slot filter: expected 'statement' filtered out, got {filtered_former!r}"
         )
 
-    cross_class_deleted = {"Actor": {"persona", "origin"}}
-    cross_class_slots = {"Actor": set(), "Personality": {"persona"}}
+    cross_class_deleted = {"Role": {"persona", "origin"}}
+    cross_class_slots = {"Role": set(), "Persona": {"persona"}}
     cross_all_slots = {"persona"}
     cross_filtered = slots._former_slots(
         cross_class_deleted, cross_class_slots, cross_all_slots
     )
-    if cross_filtered != {"Actor": {"origin"}}:
+    if cross_filtered != {"Role": {"origin"}}:
         problems.append(
             "former slot cross-class filter: expected 'persona' filtered out, "
             f"got {cross_filtered!r}"

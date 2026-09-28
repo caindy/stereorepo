@@ -1,4 +1,4 @@
-"""`dereference.py`'s scopes and its report (solorepo's DR-134, solorepo's DR-192)."""
+"""`dereference.py`'s scopes and its report (stereorepo's DR-134, stereorepo's DR-192)."""
 
 from typing import Any, cast
 
@@ -8,7 +8,7 @@ from checks.probes.harness import load_module, outcome
 
 @check("dereference probes", pre=True)
 def dereference_probes() -> list[str]:
-    """`dereference.py` scopes and reports its citation readings (solorepo's DR-134, DR-192).
+    """`dereference.py` scopes and reports its citation readings (stereorepo's DR-134, DR-192).
 
     The sample scope, asked for four pairs of the durable set, answers four,
     each carrying its path, citation, sentence and body; asked twice for
@@ -19,7 +19,7 @@ def dereference_probes() -> list[str]:
     report's printing is captured, and what it exited with, if it did, is
     reported beside the case. An `x` closes by saying its marks are a model's
     reading to be answered and not asked again, which is what keeps a
-    provisional red from teaching the re-run (solorepo's DR-134).
+    provisional red from teaching the re-run (stereorepo's DR-134).
     """
     deref = load_module(META / "dereference.py", "dereference", register=False)
     citations_mod = deref.citations()
@@ -49,7 +49,7 @@ def dereference_probes() -> list[str]:
     pairs = [
         {
             "path": "foo.md",
-            "cite": "solorepo's DR-001",
+            "cite": "stereorepo's DR-001",
             "sentence": "Testing claim.",
             "context": "Span",
             "body": "Body",
@@ -72,68 +72,44 @@ def dereference_probes() -> list[str]:
         "not by asking again",
     )
 
-    routed = deref.providers(environ={"GEMINI_FALLBACK": "true"})
-    if [tier.harness for tier in routed] != ["claude", "agy"]:
-        problems.append(f"dereference: expected the reviewer reading chain, got {routed!r}")
-
-    problems.extend(_provider_problems(deref, pairs[0], routed))
+    problems.extend(_ask_problems(deref, pairs[0]))
     return problems
 
 
-def _provider_problems(deref: Any, pair: dict[str, Any], routed: tuple[Any, ...]) -> list[str]:
-    """Return failures in the routed provider fallback contract."""
-    calls: list[str] = []
-    original_invoke = deref.ask.__globals__["invoke"]
-
-    def invoke_primary_failure(
-        pair: dict[str, Any], tier: Any, seconds: int
-    ) -> tuple[str, str, bool]:
-        calls.append(tier.harness)
-        return (
-            ("?", "claude unavailable", True)
-            if tier.harness == "claude"
-            else ("ok", "supported", False)
-        )
-
-    answer = _ask_with(deref, pair, routed, invoke_primary_failure, original_invoke)
+def _ask_problems(deref: Any, pair: dict[str, Any]) -> list[str]:
+    """Return failures in how `ask` reads the model's one-line answer."""
     problems = []
-    if answer != ("ok", "supported") or calls != ["claude", "agy"]:
-        problems.append(f"dereference: primary failure did not reach agy fallback: {calls!r}")
+    original = deref.ask.__globals__["subprocess"]
 
-    calls.clear()
+    class Done:
+        """A stand-in for a finished `claude -p` process."""
 
-    def invoke_undecided(pair: dict[str, Any], tier: Any, seconds: int) -> tuple[str, str, bool]:
-        calls.append(tier.harness)
-        return "?", "the citation needs more context", False
+        def __init__(self, stdout: str, returncode: int = 0) -> None:
+            self.stdout, self.stderr, self.returncode = stdout, "", returncode
 
-    answer = _ask_with(
-        deref,
-        pair,
-        routed,
-        invoke_undecided,
-        original_invoke,
-    )
-    if answer[0] != "?" or calls != ["claude"]:
-        problems.append(f"dereference: a valid undecided answer failed over: {calls!r}")
+    for stdout, code, want in (
+        ("ok the words\n", 0, ("ok", "the words")),
+        ("x it says otherwise\n", 0, ("x", "it says otherwise")),
+        ("maybe\n", 0, "?"),
+        ("", 1, "?"),
+    ):
 
-    answer = _ask_with(
-        deref,
-        pair,
-        routed,
-        lambda pair, tier, seconds: ("?", f"{tier.harness} unavailable", True),
-        original_invoke,
-    )
-    if answer != ("?", "claude unavailable; agy unavailable"):
-        problems.append(f"dereference: total fallback failure was {answer!r}")
+        class Fake:
+            """Replaces `subprocess` inside `ask` for one answer."""
+
+            TimeoutExpired = original.TimeoutExpired
+            result = Done(stdout, code)
+
+            @classmethod
+            def run(cls, *_args: Any, **_kwargs: Any) -> Done:
+                return cls.result
+
+        try:
+            deref.ask.__globals__["subprocess"] = Fake
+            answer = cast(tuple[str, str], deref.ask(pair))
+        finally:
+            deref.ask.__globals__["subprocess"] = original
+        got = answer if isinstance(want, tuple) else answer[0]
+        if got != want:
+            problems.append(f"dereference: {stdout!r} (exit {code}) read as {answer!r}")
     return problems
-
-
-def _ask_with(
-    deref: Any, pair: dict[str, Any], routed: tuple[Any, ...], invoke: Any, original: Any
-) -> tuple[str, str]:
-    """Ask after replacing the provider invocation, then restore it."""
-    try:
-        deref.ask.__globals__["invoke"] = invoke
-        return cast(tuple[str, str], deref.ask(pair, routed))
-    finally:
-        deref.ask.__globals__["invoke"] = original

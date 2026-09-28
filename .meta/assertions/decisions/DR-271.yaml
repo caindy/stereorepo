@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/271
     name: "DR-271 · Multiword term candidates scored against wordfreq's phrase reference, and minted labels excluded as phrases"
-    challenge: work:challenge/643
     status: ADOPTED
     applies:
       - work:article/17
@@ -9,7 +8,7 @@ decisions:
       - work:artifact/meta-terms
       - work:artifact/meta-checks-probes-tools-terms
     context: >-
-      Solorepo's DR-234 placed `just terms` on the operator surface as the one
+      Stereorepo's DR-234 placed `just terms` on the operator surface as the one
       mechanical instrument reading in the direction Article 17 cares about:
       words that arrived by use without being minted. It modelled the corpus as
       unigrams on both sides of its own test, and Challenge solorepo's #643
@@ -35,13 +34,13 @@ decisions:
       Challenge solorepo's #643 read the second part as the expensive one,
       because scoring a compound needs a reference frequency `wordfreq` supplies
       for words and not for arbitrary bigrams, which would mean choosing a null
-      model solorepo's DR-234 did not choose. `wordfreq` supplies one for both:
+      model stereorepo's DR-234 did not choose. `wordfreq` supplies one for both:
       `_word_frequency` combines a multi-token string as `1 / f = 1 / f1 +
       1 / f2 + …`, documenting that "the resulting frequency is less than any
       individual frequency, and the smallest frequency dominates the sum", and
       returns the caller's `minimum` where any token is absent from the
       wordlist. A phrase therefore has a reference relative frequency of exactly
-      the kind a word has, and both of solorepo's DR-234's axes read it
+      the kind a word has, and both of stereorepo's DR-234's axes read it
       unchanged.
     alternatives:
       - name: An independence baseline over reference unigram frequencies
@@ -53,7 +52,7 @@ decisions:
           worth reporting, because English overuses them relative to chance too.
           Expected counts fall so far below observed that every phrase clears
           any keyness threshold and the G² ranking degenerates into a frequency
-          ranking, which solorepo's DR-234 had already rejected for words.
+          ranking, which stereorepo's DR-234 had already rejected for words.
       - name: A collocation measure such as PMI alongside keyness
         chosen: false
         reason: >-
@@ -66,7 +65,7 @@ decisions:
         chosen: true
         reason: >-
           Candidates become the words and the phrases of up to `--max-n` tokens
-          drawn from within one segment, scored on solorepo's DR-234's two
+          drawn from within one segment, scored on stereorepo's DR-234's two
           existing axes against `wordfreq.word_frequency` of the phrase. No
           second measure, no invented null model, and no new fitted knob: the
           Zipf floor keeps its meaning, since it reads the same reference
@@ -92,7 +91,7 @@ decisions:
       - >-
         `.meta/terms.py` proposes candidates of one to `--max-n` tokens, `--min-n`
         restricting the report to phrases, and reports each on the two axes
-        solorepo's DR-234 fitted.
+        stereorepo's DR-234 fitted.
       - >-
         `segment`, `iter_terms` and `extract_vocab_exclusions` in `.meta/terms.py`
         replace unigram tokenization and the word-wise exclusion set;
@@ -121,7 +120,7 @@ decisions:
       than half the vocabulary, and enforcing it over a compound made the
       compound's parts invisible, which is the failure that matters: the
       repository leans on `loop` constantly and the audit had been silent about
-      it since *Dev Loop* was minted. Extending solorepo's DR-234's two axes to
+      it since *Dev Loop* was minted. Extending stereorepo's DR-234's two axes to
       phrases rather than adding a third measure keeps the instrument's claim
       intact — statistical overuse against general English, and document
       locality — and the reference that makes it possible belongs to the library

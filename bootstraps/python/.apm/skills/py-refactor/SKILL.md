@@ -10,7 +10,7 @@ Comprehensive refactoring workflow coordinating specialized skills to improve Py
 
 ## Target contexts
 
-A solorepo portfolio holds two kinds of Python target, and this skill behaves
+A stereorepo portfolio holds two kinds of Python target, and this skill behaves
 differently in each.
 
 - **Repository tooling — `.meta/`.** Inherited by every portfolio through
@@ -175,7 +175,7 @@ If project uses old patterns or pip:
 Set up enforcement to prevent regressions:
 → Invoke: py-git-hooks, and read its Target contexts section first
 
-   Where core.hooksPath is set — solorepo sets it to .meta/hooks — there are no
+   Where core.hooksPath is set — stereorepo sets it to .meta/hooks — there are no
    pre-commit hooks to install, and the enforcement point is the gate:
    `just gate meta`, and `uv run gate` in each Project. What does apply in both
    targets is the Stop hook lint gate, which routes ruff and mypy by target.

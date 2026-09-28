@@ -16,6 +16,6 @@ The install correlates because it falls on the run a coder then re-runs, not
 because the reading reads anything differently while the environment is being
 built. Established: an `x` report closes by saying its marks are a model's
 reading, to be answered rather than asked again, which is the re-run habit
-solorepo's DR-134 names as the cost of a provisional red.
+stereorepo's DR-134 names as the cost of a provisional red.
 
 Evidence: `.meta/checks/probes/tools/dereference.py::dereference_probes`

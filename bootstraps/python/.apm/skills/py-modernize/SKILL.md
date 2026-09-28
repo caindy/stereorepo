@@ -10,7 +10,7 @@ Upgrade Python projects to use modern tooling, syntax, and patterns following En
 
 ## Target contexts
 
-A solorepo portfolio holds two kinds of Python target, and this skill behaves
+A stereorepo portfolio holds two kinds of Python target, and this skill behaves
 differently in each.
 
 - **Repository tooling — `.meta/`.** Inherited by every portfolio through
@@ -36,7 +36,7 @@ behind on it; it is deliberately outside it.
 
 - **Never consolidate `.meta/` into a `pyproject.toml`**, at the repository root
   or anywhere else. Its ruff configuration is `.meta/ruff.toml` and its mypy
-  configuration is `.meta/mypy.ini` (solorepo's DR-177, solorepo's DR-210), both
+  configuration is `.meta/mypy.ini` (stereorepo's DR-177, stereorepo's DR-210), both
   inherited by every portfolio rather than generated into one. A root manifest is
   the failure py-quality-setup's contract names first.
 - **Never migrate `.meta/` to `uv run`.** Its programs are run by `python3` and
@@ -57,7 +57,7 @@ behind on it; it is deliberately outside it.
 
 In a Project workspace this skill applies as written, with one subtraction: the
 seed already targets `py313` deliberately as the support floor rather than the
-development interpreter (solorepo's DR-095), so do not raise `requires-python` to
+development interpreter (stereorepo's DR-095), so do not raise `requires-python` to
 match `.python-version`.
 
 ## Objectives
@@ -280,7 +280,7 @@ grep -rn "from collections import.*Callable\|from collections import.*Iterable" 
 
 - [ ] `uv` is used for venv creation and package installation
 - [ ] `pyproject.toml` is the single configuration source (no setup.py/setup.cfg)
-- [ ] `requires-python` still states the support floor, not the development interpreter (solorepo's DR-095)
+- [ ] `requires-python` still states the support floor, not the development interpreter (stereorepo's DR-095)
 - [ ] `uv run ruff check . --select UP` reports no issues (or only accepted exceptions)
 - [ ] No deprecated `datetime.utcnow()` or `datetime.utcfromtimestamp()` usage
 - [ ] No old-style typing imports (`List`, `Dict`, `Optional`, `Union`)

@@ -1,15 +1,12 @@
 decisions:
   - id: work:decision/195
     name: "DR-195 · Canonize Noticed and Not Done and Concept in Ubiquitous Language with ingress search aliases"
-    challenge: work:challenge/388
     status: ADOPTED
     applies:
-      - work:article/15
       - work:article/17
     enacted_in:
       - work:artifact/meta-assertions-imported-vocabulary
-      - work:artifact/wiki-solorepo-noticed-and-not-done
-      - work:artifact/wiki-solorepo-concept
+      - work:artifact/wiki-stereorepo-concept
       - work:artifact/meta-search
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-checks-probes-tools-search
@@ -21,8 +18,8 @@ decisions:
       While Article 15 of the Charter and solorepo's DR-064 established 'work
       noticed and not done' as the foundational protocol for unexecuted observations,
       the concept lacked formal assertion in imported/vocabulary.yaml and lacked an
-      encyclopedic wiki page in wiki/solorepo/, falling short of 1:1 Ubiquitous
-      Language parity (solorepo's DR-184, solorepo's DR-190). Concurrently,
+      encyclopedic wiki page in wiki/stereorepo/, falling short of 1:1 Ubiquitous
+      Language parity (stereorepo's DR-184, stereorepo's DR-190). Concurrently,
       domain knowledge lacked an asserted atomic unit for the semantic concept
       itself, leading to confusion with physical containers ('wiki page', 'wiki entry')
       and hazardous conflation with Charter Articles ('wiki article'). Additionally,
@@ -51,7 +48,7 @@ decisions:
           'deferred work') in imported/vocabulary.yaml; canonizes Concept as the atomic
           unit of domain meaning while subordinating physical container placement to
           Diátaxis and strictly avoiding 'wiki article'; maintains 1:1 wiki parity in
-          wiki/solorepo/; and upgrades .meta/search.py to index concept pref_label,
+          wiki/stereorepo/; and upgrades .meta/search.py to index concept pref_label,
           alt_labels, and definition with full BM25F title and summary field weighting,
           raising benchmark accuracy to 100% (18/18).
     consequences:
@@ -59,7 +56,7 @@ decisions:
         work:concept/noticed-and-not-done and work:concept/concept are canonized in
         imported/vocabulary.yaml with alt_labels and avoid terms.
       - >-
-        wiki/solorepo/noticed-and-not-done.md and wiki/solorepo/concept.md are created
+        wiki/stereorepo/noticed-and-not-done.md and wiki/stereorepo/concept.md are created
         adhering to MOS:LEAD, closed-world wikilinks, and container subordination.
       - >-
         .meta/search.py indexes LinkML concepts using pref_label, alt_labels, and definition
@@ -74,7 +71,7 @@ decisions:
       In Domain-Driven Design, the Ubiquitous Language must be applied strictly
       within the bounded context while gracefully accommodating external query
       ingress. 'Work noticed and not done' is load-bearing in solorepo's Charter
-      (Article 15) and PR workflow (DR-064). Canonizing it and 'Concept' with
+      (Article 15) and PR workflow (solorepo's DR-064). Canonizing it and 'Concept' with
       SKOS alt_labels enables lexical search engines to bridge natural language
       industry phrasing without polluting code contracts, and protects the Charter's
       empirical Articles from dilution.

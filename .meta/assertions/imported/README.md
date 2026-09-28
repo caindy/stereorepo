@@ -1,9 +1,9 @@
 # imported
 
-What a portfolio inherits from solorepo, and what `sync` pulls forward.
+What a portfolio inherits from stereorepo, and what `sync` pulls forward.
 
 **Do not edit these in a portfolio.** A change here is lost on the next sync, and
-solorepo has no authority over anything outside this directory. The portfolio's
+stereorepo has no authority over anything outside this directory. The portfolio's
 own assertions — its Personas, its Portfolio, Products and Projects, its domain
 vocabulary — live one level up and are never touched by a sync.
 
@@ -16,7 +16,9 @@ the scaffold's about a file every portfolio has; one there is the portfolio's
 about its own. The gate names the mistake either way round.
 
 
-**A DR cited here as solorepo's is an entry of solorepo's record**, which stays
+**A DR cited here as stereorepo's is an entry of stereorepo's record**, which stays
 with the scaffold. This portfolio's record starts at `DR-001`, so a bare number is
-one of its own entries and a number written as solorepo's is not — the gate
-resolves a citation of solorepo's record only where that record is.
+one of its own entries and a number written as stereorepo's is not — the gate
+resolves a citation of stereorepo's record only where that record is. A DR cited
+as solorepo's is an entry of the record stereorepo was seeded from, which neither
+repository holds, and nothing resolves it.

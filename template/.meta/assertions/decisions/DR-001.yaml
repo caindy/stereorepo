@@ -17,7 +17,7 @@ decisions:
           One Bounded Context and one Ubiquitous Language per repository is what
           makes either enforceable, and work spread across repositories has
           neither.
-      - name: Specialize solorepo into this portfolio
+      - name: Specialize stereorepo into this portfolio
         chosen: true
         reason: >-
           It carries the Disciplines, the Charter and the gate from the first
@@ -28,4 +28,4 @@ decisions:
     rationale: |-
       __WHY_THIS_PORTFOLIO_EXISTS__
 
-      Specialized from solorepo.
+      Specialized from stereorepo.

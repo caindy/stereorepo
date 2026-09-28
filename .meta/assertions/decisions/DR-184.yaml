@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/184
-    name: "DR-184 · The Knowledge Management Discipline and hermetic wiki/solorepo/ layout"
-    challenge: work:challenge/24
+    name: "DR-184 · The Knowledge Management Discipline and hermetic wiki/stereorepo/ layout"
     status: ADOPTED
     applies:
       - work:article/8
@@ -12,7 +11,7 @@ decisions:
       - work:artifact/meta-disciplines
       - work:artifact/specialize
       - work:artifact/wiki-readme
-      - work:artifact/wiki-solorepo-readme
+      - work:artifact/wiki-stereorepo-readme
       - work:artifact/meta-checks-files-wiki
       - work:artifact/meta-lib-render-skills
     context: >-
@@ -41,12 +40,12 @@ decisions:
           An unpartitioned directory causes scaffold tooling concepts to collide
           with specialized product domain concepts when a repo is cloned and
           specialized.
-      - name: Knowledge Management Discipline with hermetic Bounded Context partitioning (wiki/solorepo/)
+      - name: Knowledge Management Discipline with hermetic Bounded Context partitioning (wiki/stereorepo/)
         chosen: true
         reason: >-
           Grounds the wiki directly in Domain-Driven Design. Solorepo's own
-          concepts reside hermetically in `wiki/solorepo/` matching its bounded
-          context (`ddd:context/solorepo`) and travel cleanly with the scaffold.
+          concepts reside hermetically in `wiki/stereorepo/` matching its bounded
+          context (`ddd:context/stereorepo`) and travel cleanly with the scaffold.
           Specialized portfolios retain this directory intact and add their own
           bounded context folders (e.g. `wiki/billing/`), preventing any domain
           pollution.
@@ -55,17 +54,17 @@ decisions:
         `.meta/assertions/imported/disciplines.yaml` adopts the Knowledge Management
         Discipline, inherited by all specialized portfolios.
       - >-
-        `wiki/solorepo/` is established as the hermetic home for scaffold
+        `wiki/stereorepo/` is established as the hermetic home for scaffold
         maintainer documentation, seeded with foundational pages adhering to
         MOS:LEAD bold lead definitions.
       - >-
-        Specialization's *Copy what is inherited* step copies `wiki/solorepo/` so portfolios inherit the
+        Specialization's *Copy what is inherited* step copies `wiki/stereorepo/` so portfolios inherit the
         scaffold's operating documentation without namespace pollution.
       - >-
         Resolves Challenge 24 and Challenge 39.
     falsifier: >-
       A maintainer-facing explanation committed outside `wiki/`, or a wiki page
-      authored under `wiki/solorepo/` that defines a product-domain concept rather
+      authored under `wiki/stereorepo/` that defines a product-domain concept rather
       than a scaffold/engineering concept.
     rationale: |-
       Exposition addressed to a human or agent maintainer requires an encyclopedic
@@ -73,7 +72,7 @@ decisions:
       and vocabulary glosses (which capture concise machine definitions).
 
       Partitioning the wiki by Bounded Context mirrors the domain model: solorepo's
-      own tooling lives in `wiki/solorepo/`, and specialized portfolios manage their
+      own tooling lives in `wiki/stereorepo/`, and specialized portfolios manage their
       domain concepts under their own bounded context buckets. This preserves the
       hermetic boundary of the scaffold while giving every specialization an
       orderly home for product documentation.

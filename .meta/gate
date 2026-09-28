@@ -2,11 +2,11 @@
 """Portfolio and project gate runner streaming Article 21 structured reports.
 
 Reads declared projects, products, and gate commands from
-`.meta/assertions/structure.yaml` (solorepo's DR-104). Executes gate commands
+`.meta/assertions/structure.yaml` (stereorepo's DR-104). Executes gate commands
 from repository root, streams and re-prefixes structured step reports adhering to
-Article 21 (solorepo's DR-092), and enforces clean exit and non-empty step assertions.
+Article 21 (stereorepo's DR-092), and enforces clean exit and non-empty step assertions.
 
-History in gate.history.md (solorepo's DR-171).
+History in gate.history.md (stereorepo's DR-171).
 """
 import concurrent.futures
 import io

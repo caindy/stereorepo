@@ -24,7 +24,7 @@ vendored copy **without** a LICENSE file; that is the mistake being avoided here
 
 | Skill | Modified? | What changed |
 |---|---|---|
-| `py-*` (8) | **Yes — locally owned** | Each carries a **Target contexts** section routing it between inherited `.meta/` tooling and a Project workspace (solorepo's DR-212). See below. |
+| `py-*` (8) | **Yes — locally owned** | Each carries a **Target contexts** section routing it between inherited `.meta/` tooling and a Project workspace (stereorepo's DR-212). See below. |
 | `verification-before-completion` | Rewritten | The verification command is `make check`; adds the worktree caveat below. |
 | `using-git-worktrees` | **Heavily rewritten** | Setup is `uv sync`, not `pip`/`poetry`. The "clean baseline" step is the substantive change — see the skill. |
 | `systematic-debugging` | Extended | Four diagnosis rules injected. |
@@ -39,7 +39,7 @@ under its own control, and following them against inherited `.meta/` tooling
 damages it. The guard has to sit inside the skill that carries the hazard,
 because a skill is loaded by its own trigger and by nothing else — which is why
 it could not be an overlay, and so why the byte-identical copy had to go
-(solorepo's DR-212, solorepo's #446).
+(stereorepo's DR-212, solorepo's #446).
 
 | Skill | The hazard it now names |
 |---|---|

@@ -1,8 +1,0 @@
-challenges:
-  - id: work:challenge/458
-    name: outside_pattern() bounds a literal prefix, not a symlink a wildcard component crosses beneath it
-    challenge_type: DEFECT
-    description: >-
-      A glob pattern in outside_pattern() is bounded by its literal prefix before the
-      first wildcard component, allowing wildcards to traverse symlinks checked out
-      beneath valid prefixes and escape the worktree during review runs.

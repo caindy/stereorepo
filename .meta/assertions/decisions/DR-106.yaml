@@ -11,8 +11,6 @@ decisions:
       - work:artifact/meta-disciplines
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-render-writers
-      - work:artifact/template-github-workflows-gate
-      - work:artifact/meta-checks-files-boundary
     alternatives:
       - name: The commands as they are, typed from the load map
         chosen: false

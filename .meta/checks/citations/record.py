@@ -1,4 +1,4 @@
-"""A citation resolved against the record: a Decision that exists, an Artifact named by the Decision it cites, and the citations inherited material carries as solorepo's (solorepo's DR-132).
+"""A citation resolved against the record: a Decision that exists, an Artifact named by the Decision it cites, and the citations inherited material carries as stereorepo's (stereorepo's DR-132).
 """
 
 
@@ -15,7 +15,8 @@ def cited_decisions(index: dict[str, Any]) -> list[str]:
 
     Ensures that Decision citations (`DR-nnn`) in durable files resolve to known Decision
     records in `index` (or the template seed), and enforces that files inherited by
-    specialized portfolios use the qualified `solorepo's DR-nnn` form (solorepo's DR-121, solorepo's DR-124).
+    specialized portfolios use the qualified `stereorepo's DR-nnn` form
+    (stereorepo's DR-121, stereorepo's DR-124).
 
     Parameters:
         index (dict): LinkML model index mapping URI identifiers to entity tuples.
@@ -34,7 +35,7 @@ def cited_decisions(index: dict[str, Any]) -> list[str]:
     for path in loaders.durable(copied):
         seeded = TEMPLATE in path.parents
         try:
-            text = FENCED.sub("", path.read_text())
+            text = loaders.LEGACY.sub("", FENCED.sub("", path.read_text()))
         except (UnicodeDecodeError, OSError):
             continue
         rel = path.relative_to(ROOT)
@@ -42,13 +43,13 @@ def cited_decisions(index: dict[str, Any]) -> list[str]:
         bare = set(loaders.DR.findall(loaders.FOREIGN.sub("", text)))
         if home:
             for num in sorted(foreign - known):
-                problems.append(f"{rel}: solorepo's DR-{num} is cited and does not exist")
+                problems.append(f"{rel}: stereorepo's DR-{num} is cited and does not exist")
         for num in sorted(bare - (seed if seeded else known)):
             problems.append(f"{rel}: DR-{num} is cited and does not exist")
         if home and path in copied:
             for num in sorted(bare - seed):
                 problems.append(f"{rel}: DR-{num} is cited bare in a file a portfolio inherits, "
-                                "where it will come to mean the portfolio's; cite it as solorepo's")
+                                "where it will come to mean the portfolio's; cite it as stereorepo's")
     return problems
 
 
@@ -57,7 +58,7 @@ def enacting_citations(index: dict[str, Any]) -> list[str]:
     """Validate that files named in Decision `enacted_in` slots cite at least one enacting entry.
 
     Enforces bidirectional consistency between Decision enactment metadata and the citations
-    carried in durable file prose (solorepo's DR-131).
+    carried in durable file prose (stereorepo's DR-131).
 
     Parameters:
         index (dict): LinkML model index mapping URI identifiers to entity tuples.
@@ -94,7 +95,7 @@ def enacting_citations(index: dict[str, Any]) -> list[str]:
         if rel not in named:
             continue
         try:
-            text = FENCED.sub("", path.read_text())
+            text = loaders.LEGACY.sub("", FENCED.sub("", path.read_text()))
         except (UnicodeDecodeError, OSError):
             continue
         foreign = {num for m in loaders.FOREIGN.finditer(text) for num in loaders.DR.findall(m.group())}
@@ -112,7 +113,8 @@ def inherited_citations() -> list[str]:
     """Validate that Issue references in files inherited by portfolios use qualified citations.
 
     Enforces that Issue citations in files copied during specialization use `solorepo's #n`
-    rather than bare `#n` syntax to prevent collision with portfolio issue trackers (solorepo's DR-132).
+    rather than bare `#n` syntax to prevent collision with a portfolio's own
+    numbering (stereorepo's DR-132).
 
     Returns:
         list[str]: Validation problem messages for bare Issue citations in inherited files.
@@ -129,5 +131,5 @@ def inherited_citations() -> list[str]:
         for num in sorted(set(issue.findall(foreign.sub("", text))), key=int):
             problems.append(f"{path.relative_to(ROOT)}: #{num} is cited bare in a file a "
                             "portfolio inherits, where it will come to mean an Issue of "
-                            "the portfolio's; cite it as solorepo's")
+                            "the portfolio's; cite it as stereorepo's")
     return problems

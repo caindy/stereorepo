@@ -1,13 +1,11 @@
 decisions:
   - id: work:decision/259
     name: "DR-259 · Reserve the just verb surface for operator flags and identifiers by scoping authoring to skills"
-    challenge: work:challenge/485
     status: ADOPTED
     supersedes:
       - work:decision/187
     applies:
       - work:article/8
-      - work:article/15
       - work:article/22
     enacted_in:
       - work:artifact/justfile
@@ -17,9 +15,9 @@ decisions:
       - work:artifact/skill-technical-writing
       - work:artifact/agents
       - work:artifact/template-agents
-      - work:artifact/wiki-solorepo-knowledge-management
+      - work:artifact/wiki-stereorepo-knowledge-management
     context: >-
-      Solorepo's DR-106 established the root `justfile` as an invoking-only verb surface,
+      Stereorepo's DR-106 established the root `justfile` as an invoking-only verb surface,
       and solorepo's DR-252 formally partitioned repository operational agency into three
       distinct planes: the Local Operator Plane (`just`), the Attested Mutation Plane
       (`.meta/say/`), and the GitHub Inspection Plane (`gh`). Under this separation, the
@@ -40,7 +38,7 @@ decisions:
       `wikisplain`, `dereference`, `search`, `terms`, `apm`, `bootstrap`, and
       `test-specialization`), yet only `wikisplain` took bare prose positionals. A caller
       could not discern whether quoting worked without inspecting the internal `argparse`
-      configuration of the invoked script, violating solorepo's Article 22. Furthermore,
+      configuration of the invoked script, violating stereorepo's Article 22. Furthermore,
       `wikisplain` was an architectural outlier on the Local Operator Plane: an authoring
       workflow creating maintainer-facing prose in `wiki/<context>/`, whereas all other
       content authoring (decisions, challenges, personas, code) is governed by Agent Skills.

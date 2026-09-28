@@ -1,4 +1,4 @@
-"""The Python under `.meta/`, held to its linters — a ruleset at its floor, no configuration ignore, ruff clean, `mypy --strict` clean, a line limit that ratchets, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (solorepo's DR-177, solorepo's DR-210, solorepo's #540, solorepo's #760).
+"""The Python under `.meta/`, held to its linters — a ruleset at its floor, no configuration ignore, ruff clean, `mypy --strict` clean, a line limit that ratchets, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (stereorepo's DR-177, stereorepo's DR-210, solorepo's #540, solorepo's #760).
 
 The line limit runs across two steps rather than one because it arrived over a
 tree that had never been held to one, and the debt it found is diffuse: `meta
@@ -51,7 +51,7 @@ CONTINUATION = "\\"
 
 
 # The `uv tool run` options that take the following word as their value, read
-# off `uv tool run --help` at 0.6.14, the version `.meta/arc/Dockerfile` bakes.
+# off `uv tool run --help` at 0.6.14.
 # A word after one of these is that value, not the command `uvx` was asked to
 # run.
 UVX_VALUED = frozenset({
@@ -129,10 +129,9 @@ def _invocation_options(words: Sequence[str], start: int) -> int | None:
     """Where the options begin for a word that starts a `uvx` invocation, and `None` for a word that starts none.
 
     `uvx`, its long form `uv tool run`, and either qualified by a path are one
-    invocation: `.meta/arc/Dockerfile` installs the binary at
-    `/usr/local/bin/uvx`, and `tool_command()` builds its command from
-    `shutil.which("uvx")`, so a path-qualified spelling is the ordinary runtime
-    shape rather than an exotic one.
+    invocation: `tool_command()` builds its command from `shutil.which("uvx")`,
+    so a path-qualified spelling is the ordinary runtime shape rather than an
+    exotic one.
     """
     command = words[start].rsplit("/", 1)[-1]
     if command == "uvx":
@@ -150,9 +149,8 @@ def uvx_interpreter_calls(text: str) -> list[Invocation]:
     and a YAML folded scalar are all read by one rule, and a call wrapped across
     two lines is read to its command instead of being dropped at the break. A
     rewrap is otherwise how a call site leaves this scan with nothing saying so,
-    and one wrap away is one edit away: `.github/workflows/gate.yml` and
-    `.meta/assertions/structure.yaml` each carry the command on a line of about
-    140 columns.
+    and one wrap away is one edit away: `.meta/assertions/structure.yaml`
+    carries the command on a line of about 140 columns.
 
     What cannot be read that way is reported rather than passed over. An option
     named in neither `UVX_VALUED` nor `UVX_FLAGS` stops the walk, because
@@ -208,7 +206,7 @@ def uvx_interpreter_calls(text: str) -> list[Invocation]:
 def _declared_version() -> str | StepOutcome:
     """The version `.meta/ruff.toml` declares, or the outcome the step reports in place of one.
 
-    The ways there is no version are separated, because under solorepo's DR-261
+    The ways there is no version are separated, because under stereorepo's DR-261
     an unrunnable step fails under CI, which makes this string the whole
     diagnostic of a red required check rather than a note beside a green one. A
     missing file is an environment the step cannot run in; a file that is
@@ -271,7 +269,7 @@ def meta_interpreter() -> StepOutcome:
     """Every invocation that asks `uvx` to run an interpreter names the version `.meta/ruff.toml` declares (solorepo's #760).
 
     Reads the whole worktree — every file git tracks or does not ignore, so
-    `justfile`, `.github/workflows/`, `template/`, `bootstraps/`, Markdown and
+    `justfile`, `template/`, `bootstraps/`, Markdown and
     YAML as much as `.py` — because that is where the invocations are. It is the
     one step in this module that is not scoped to `.meta/`.
 
@@ -300,7 +298,7 @@ def meta_interpreter() -> StepOutcome:
     if sys.version_info[:2] < declared_floor:
         problems.append(
             f"running interpreter is {sys.version.split()[0]}, which is below "
-            f".meta/ruff.toml's declared floor of Python {version} (solorepo's DR-268)"
+            f".meta/ruff.toml's declared floor of Python {version} (stereorepo's DR-268)"
         )
     calls = 0
     for source in sources.tree():
@@ -333,7 +331,7 @@ SELECT_FLOOR = {
 
 Stated here rather than read from the file it audits, and each entry paired with
 its linter rather than left as bare text, for the reasons recorded in
-solorepo's DR-263.
+stereorepo's DR-263.
 """
 
 
@@ -419,7 +417,7 @@ def unreasoned(py_files: Sequence[pathlib.Path]) -> tuple[list[str], int]:
 def meta_lints() -> StepOutcome:
     """The ruleset is at its floor, nothing is switched off, and a suppression gives a reason.
 
-    What is held here is A2 and solorepo's DR-177. An `ignore` in
+    What is held here is A2 and stereorepo's DR-177. An `ignore` in
     `.meta/ruff.toml` switches a rule off where nobody reads it.
     At a site, a `noqa` or `type: ignore` comment without an explanatory
     `reason:` is a configuration ignore with extra steps. This holds .meta/
@@ -431,13 +429,13 @@ def meta_lints() -> StepOutcome:
     after selecting it costs all three. `SELECT_FLOOR` is the ruleset this
     repository must select at a minimum, and a `.meta/ruff.toml` whose `select`
     and `extend-select` do not reach every entry of it is a problem this step
-    reports (solorepo's DR-263).
+    reports (stereorepo's DR-263).
 
     Read from comment tokens, so a suppression quoted in a string or a docstring
     is the text of one rather than one: `comments.py` states every pattern here
     and passes each to a probe as a literal, and a line scan reports both. The
     patterns are `comments.py`'s too, so that the rule a suppression names and
-    the reason it gives are read off one parse (solorepo's DR-150).
+    the reason it gives are read off one parse (stereorepo's DR-150).
     """
     config = META / "ruff.toml"
     if not config.is_file():
@@ -483,23 +481,23 @@ FILE_SIZES_BASELINE = META / "checks" / "file_sizes.baseline.yaml"
 
 
 # How long a module under `.meta/` may run before its body belongs in a package
-# of its own: solorepo's DR-217's number, which that decision's last consequence
+# of its own: stereorepo's DR-217's number, which that decision's last consequence
 # holds the remaining scripts to.
 MODULE_CEILING = 500
 
 
 # How long a file in the entry layer may run. Tighter than `MODULE_CEILING`
-# because solorepo's DR-217 leaves an entry point its docstring, its re-exports
+# because stereorepo's DR-217 leaves an entry point its docstring, its re-exports
 # and its `__main__` guard and puts the body in `.meta/lib/<script>/`: a file on
 # the invocation surface that runs past this is carrying logic the package
 # beneath it should hold.
 ENTRY_CEILING = 350
 
 
-# The two directories whose Python is the invocation surface — the paths the
-# justfile, the workflows and the Role accounts type. Written as the parent of a
-# repository-relative path, which is what `ceiling` reads.
-ENTRY_LAYER = (".meta", ".meta/say")
+# The directory whose Python is the invocation surface — the paths the justfile
+# types. Written as the parent of a repository-relative path, which is what
+# `ceiling` reads.
+ENTRY_LAYER = (".meta",)
 
 
 # The line-length rule, named once because two steps divide it between them:
@@ -510,7 +508,7 @@ LINE_LENGTH_RULE = "E501"
 
 # A mypy diagnostic, which is `<path>:<line>: error: <message>  [<rule>]`. Only
 # `error` is counted: `note` lines elaborate the error above them and would
-# count one diagnostic twice (solorepo's DR-210).
+# count one diagnostic twice (stereorepo's DR-210).
 MYPY_ERROR = re.compile(r"^(?P<path>[^\s:][^:]*):(?P<line>\d+):(?:\d+:)? error: (?P<message>.*)$")
 
 
@@ -559,7 +557,7 @@ def tool_command(name: str, pin: str, args: Sequence[str],
 
 @check("meta ruff")
 def meta_ruff() -> StepOutcome:
-    """Ruff check over .meta/, less the line limit `meta lines` ratchets (solorepo's DR-177).
+    """Ruff check over .meta/, less the line limit `meta lines` ratchets (stereorepo's DR-177).
 
     Runs `ruff check` on the repository staging directory using the ruleset
     `.meta/ruff.toml` declares. A violation fails the gate with the offending
@@ -613,7 +611,7 @@ def ruff_findings(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
 
 @check("meta lines")
 def meta_lines() -> StepOutcome:
-    """Every file under .meta/ sits at its baseline of lines over the limit (solorepo's DR-177).
+    """Every file under .meta/ sits at its baseline of lines over the limit (stereorepo's DR-177).
 
     The limit is 100, declared in `.meta/ruff.toml`. `lines.baseline.yaml`
     records how many lines over it each file may still hold, and a file fails on
@@ -698,7 +696,7 @@ def past_ceilings(lengths: dict[str, int]) -> tuple[dict[str, int], dict[str, li
 
 @check("meta file sizes")
 def meta_file_sizes() -> StepOutcome:
-    """Every file under .meta/ sits at its baseline of lines past its ceiling (solorepo's DR-217).
+    """Every file under .meta/ sits at its baseline of lines past its ceiling (stereorepo's DR-217).
 
     A module may run to `MODULE_CEILING` lines and a file on the invocation
     surface to `ENTRY_CEILING`, past which the body belongs in
@@ -751,7 +749,7 @@ def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
 
 @check("meta types")
 def meta_types() -> StepOutcome:
-    """`mypy --strict` over .meta/ (solorepo's DR-210, solorepo's #540).
+    """`mypy --strict` over .meta/ (stereorepo's DR-210, solorepo's #540).
 
     Product code instantiated from the Python bootstrap's seed is held to
     `mypy --strict` outright, and the tooling under `.meta/` that every
@@ -759,14 +757,12 @@ def meta_types() -> StepOutcome:
     with no baseline read.
 
     The pin is exact on the `uvx` route, matching the gate environment's own
-    top-level requirements in `.meta/assertions/structure.yaml` and
-    `.github/workflows/gate.yml`.
+    top-level requirements in `.meta/assertions/structure.yaml`.
 
     The extension-less programs are named on the command line beside the
     directory, because mypy collects `*.py` from a directory and would
-    otherwise skip the channel, the gate's own entry point and the arc — the
-    programs that read the credential, compose the `Actor:` Trailer and decide
-    which verb a Role may type. `--scripts-are-modules` is what lets more than
+    otherwise skip the gate's own entry point and the hooks.
+    `--scripts-are-modules` is what lets more than
     one of them be named at once: a file with no suffix is a script, every
     script is the module `__main__`, and two `__main__` modules in one run is a
     duplicate-module error that stops the run before it checks anything.
@@ -791,7 +787,7 @@ def meta_types() -> StepOutcome:
 
 @check("meta doc")
 def meta_doc() -> StepOutcome:
-    """Every module and script under .meta/, and every public function, class and method, has a docstring (A2, solorepo's DR-179).
+    """Every module and script under .meta/, and every public function, class and method, has a docstring (A2, stereorepo's DR-179).
 
     Extends the Python Bootstrap's missing_docs requirement to the repository's
     own tooling and scripts under .meta/. Holds inherited and scaffolding Python

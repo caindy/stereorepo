@@ -1,4 +1,4 @@
-"""The assertion graph's shape, seven checks: a reference that resolves to nothing, a `composed_of` cycle a path cannot traverse, a Collaboration whose members cross a file boundary, an audit whose Permission is not the Remit's or whose target is not the Securable's, a Job to be Done whose END goal is not held by its own Persona, a Portfolio with other than one Bounded Context, and a Bootstrap lacking coverage for project-binding Disciplines.
+"""The assertion graph's shape, five checks: a reference that resolves to nothing, a `composed_of` cycle a path cannot traverse, a Job to be Done whose END goal is not held by its own Persona, a Portfolio with other than one Bounded Context, and a Bootstrap lacking coverage for project-binding Disciplines.
 """
 
 
@@ -47,54 +47,6 @@ def composed_of_cycles(index: dict[str, Any]) -> list[str]:
     return problems
 
 
-def hop(index: dict[str, Any], start: str, *slots: str) -> str | None:
-    """Follow a chain of single-valued references, or give up quietly."""
-    cur = start
-    for slot in slots:
-        if cur not in index:
-            return None
-        cur = index[cur][1].get(slot)
-        if not isinstance(cur, str):
-            return None
-    return cur
-
-
-@check("collaboration membership")
-def collaboration_membership(index: dict[str, Any]) -> list[str]:
-    """Every Job in a Collaboration answers the Collaboration's Challenge."""
-    problems = []
-    for cid, (cls, obj, _) in index.items():
-        if cls != "Collaboration":
-            continue
-        for job in obj.get("jobs", []):
-            reached = hop(index, job, "agency", "remit", "goal", "challenge")
-            if reached is not None and reached != obj.get("challenge"):
-                problems.append(
-                    f"{cid}: job '{job}' answers '{reached}', not '{obj.get('challenge')}'")
-    return problems
-
-
-@check("audit invariants")
-def audit_invariants(index: dict[str, Any]) -> list[str]:
-    """An authorising Permission comes from the Remit; a target is in the Securable."""
-    problems = []
-    for aid, (cls, obj, _) in index.items():
-        if cls != "AuditRecord":
-            continue
-        perm = obj.get("under_permission")
-        if perm:
-            remit = hop(index, obj.get("execution", ""), "job", "agency", "remit")
-            granted = index.get(remit, (None, {}, None))[1].get("permissions", []) if remit else None
-            if granted is not None and perm not in granted:
-                problems.append(f"{aid}: '{perm}' is not among the Remit's Permissions")
-        target, securable = obj.get("target"), obj.get("securable")
-        if target and securable in index:
-            members = index[securable][1].get("members")
-            if members is not None and target not in members:
-                problems.append(f"{aid}: target '{target}' is not a member of '{securable}'")
-    return problems
-
-
 @check("served goals")
 def served_goals(index: dict[str, Any]) -> list[str]:
     """A Job to be Done serves END goals, and only ones its own Persona holds.
@@ -129,12 +81,12 @@ def served_goals(index: dict[str, Any]) -> list[str]:
 
 @check("one context per portfolio")
 def one_context_per_portfolio(index: dict[str, Any]) -> list[str]:
-    """A portfolio is exactly one Bounded Context, by construction (solorepo's DR-014).
+    """A portfolio is exactly one Bounded Context, by construction (stereorepo's DR-014).
 
     The slot stays multivalued because `DddModel` is generic DDD and a Context
-    Map legitimately holds many — solorepo's own map has three. What is singular
+    Map legitimately holds many — stereorepo's own map has three. What is singular
     is a portfolio's *own* context, so that is checked rather than typed
-    (solorepo's DR-037): one declaration in `domain_vocabulary.yaml`, and the Portfolio
+    (stereorepo's DR-037): one declaration in `domain_vocabulary.yaml`, and the Portfolio
     names it.
     """
     problems = []

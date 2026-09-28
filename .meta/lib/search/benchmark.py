@@ -1,11 +1,11 @@
-"""The benchmark: the queries the index must answer with a known object near the top, and the count of those it does (solorepo's DR-194).
+"""The benchmark: the queries the index must answer with a known object near the top, and the count of those it does (stereorepo's DR-194).
 """
 
 from lib.search import bm25
 
 
 def run_benchmark(index: bm25.SearchIndex) -> int:
-    """Run the 18 evaluation benchmark queries from Challenge 18 (solorepo's DR-194).
+    """Run the 18 evaluation benchmark queries (stereorepo's DR-194).
 
     Returns 0 where hit@5 reaches 15 of the 18 queries. A portfolio holds a
     different record and so a different subset of the targets, and a query whose
@@ -19,52 +19,47 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
         ),
         (
             "which rules bear on generated files",
-            ["work:discipline/seeded-artifacts", "work:decision/034", "work:decision/083"],
+            ["work:discipline/seeded-artifacts", "work:decision/034"],
         ),
         (
-            "has a ruleset check for required job names been argued before",
-            ["work:challenge/4", "work:decision/061", "work:decision/057"],
+            "which directory says what stage an issue is in",
+            ["work:concept/stage", "work:concept/board", "work:concept/issue"],
         ),
         (
             "has anyone argued for a search index over the record before",
-            ["work:challenge/18", "work:decision/103", "work:decision/077"],
+            ["work:decision/103", "work:decision/077"],
         ),
         (
             "why can't I put reasoning in a commit message",
-            ["work:article/14", "work:decision/076", "work:discipline/journaling", "work:decision/052"],
+            ["work:article/14", "work:discipline/journaling"],
         ),
         (
-            "how does a comment say which agent wrote it",
-            ["work:decision/068", "work:concept/trailer", "work:discipline/pr-first"],
+            "how does a seat agree with the other seat",
+            ["work:concept/quiet-turn", "work:concept/seat"],
         ),
         (
             "why are there no dates in the decision record",
             ["work:decision/081", "work:decision/049", "work:discipline/written-decisions"],
         ),
         (
-            "what happens when a review thread is resolved without an answer",
-            ["work:article/16", "work:discipline/pr-first", "work:concept/review-thread"],
+            "who moves an issue from one stage to the next",
+            ["work:concept/supervisor", "work:concept/stage", "work:concept/board"],
         ),
         (
             "how does a portfolio get updates from the scaffold",
-            ["work:portfolio/solorepo", "work:discipline/specialization"],
+            ["work:portfolio/stereorepo", "work:discipline/specialization"],
         ),
         (
-            "who is allowed to push to trunk",
-            ["work:decision/072", "work:decision/100", "work:article/18", "work:discipline/pr-first"],
+            "which issues wait for the human to check them by hand",
+            ["work:concept/desk-check", "work:concept/human"],
         ),
         (
-            "what is the difference between a Role and a Remit",
-            ["work:decision/066", "work:decision/073", "work:concept/remit"],
+            "what is the difference between a seat and the human",
+            ["work:concept/seat", "work:concept/human"],
         ),
         (
             "where do things noticed but not done go",
-            [
-                "work:article/15",
-                "work:discipline/pr-first",
-                "work:decision/064",
-                "work:concept/noticed-and-not-done",
-            ],
+            ["work:discipline/journaling", "work:concept/journaling"],
         ),
         (
             "why is there a stakeholders directory",
@@ -76,25 +71,19 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
         ),
         (
             "what makes the scaffold its own product",
-            ["work:portfolio/solorepo", "work:product/scaffold", "work:decision/030"],
+            ["work:portfolio/stereorepo", "work:product/scaffold", "work:decision/030"],
         ),
         (
             "I finished a task and there is leftover work, what do I do with it",
-            [
-                "work:decision/054",
-                "work:discipline/journaling",
-                "work:discipline/pr-first",
-                "work:concept/noticed-and-not-done",
-                "wiki:noticed-and-not-done",
-            ],
+            ["work:discipline/journaling", "work:concept/journaling"],
         ),
         (
             "an old rule no longer applies, how is it retired",
-            ["work:decision/085", "work:decision/070", "work:decision/057"],
+            ["work:decision/085", "work:decision/070"],
         ),
         (
-            "why does the tracker live in GitHub instead of a file",
-            ["work:decision/088", "work:decision/061", "work:decision/028", "work:discipline/pr-first"],
+            "why is an issue a file and not a GitHub Issue",
+            ["work:concept/issue", "work:concept/board"],
         ),
     ]
 
@@ -108,7 +97,7 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
     hits_10 = 0
     reciprocal_ranks = []
 
-    print(f"Running BM25 evaluation over {len(active_queries)} benchmark queries (solorepo's DR-194):\n")
+    print(f"Running BM25 evaluation over {len(active_queries)} benchmark queries (stereorepo's DR-194):\n")
     for q, targets in active_queries:
         results = index.search(q, top_k=10)
         target_set = set(targets)

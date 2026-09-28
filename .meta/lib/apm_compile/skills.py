@@ -1,4 +1,4 @@
-"""The skill and hook primitives: Capabilities of kind SKILL compiled to `skills/`, and the gate and the signed channel as hooks (solorepo's DR-174).
+"""The skill and hook primitives: Capabilities of kind SKILL compiled to `skills/`, and the gate as a hook (solorepo's DR-174).
 """
 from __future__ import annotations
 
@@ -49,8 +49,6 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
     try:
         import render
         skill_gens = {
-            "pr-first": render.pr_first_skill,
-            "pr-first-reviewer": render.pr_first_reviewer_skill,
             "wikisplain": render.wikisplain_skill,
             "search": render.search_skill,
             "technical-writing": render.technical_writing_skill,
@@ -61,7 +59,7 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
                 content = gen_fn()
                 if content:
                     out[rel_path] = content
-    except Exception:  # noqa: BLE001  # reason: best effort — the five generators read Artifacts and templates a specialization can leave absent, and a clone missing one gets the other primitives rather than an aborted compile
+    except Exception:  # noqa: BLE001  # reason: best effort — the three generators read Artifacts and templates a specialization can leave absent, and a clone missing one gets the other primitives rather than an aborted compile
         pass
 
     claude_skills = meta_dir.parent / ".claude" / "skills"
@@ -79,21 +77,7 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
 
 
 def hook_primitives() -> dict[str, str]:
-    """Compiles gate and signed channel into hooks/ primitives per solorepo's DR-174."""
-    signed_channel_hook = {
-        "PreToolUse": [
-            {
-                "matcher": "Bash",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.meta/hooks/signed_channel.py",
-                    }
-                ],
-            }
-        ]
-    }
-
+    """Compiles the gate into a Stop hook primitive per solorepo's DR-174."""
     gate_hook = {
         "Stop": [
             {
@@ -108,6 +92,5 @@ def hook_primitives() -> dict[str, str]:
     }
 
     return {
-        ".apm/hooks/signed-channel.json": json.dumps(signed_channel_hook, indent=2) + "\n",
         ".apm/hooks/gate.json": json.dumps(gate_hook, indent=2) + "\n",
     }

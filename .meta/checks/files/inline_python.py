@@ -1,11 +1,10 @@
 """
-The ban on inline Python (solorepo's DR-241): a workflow step, a composite
-action, a shell script or a recipe runs a dedicated script under `.meta/` or a
-CLI flag, never an interpreter handed its code on the command line, on standard
-input or down a pipe, which is how code escapes the linters and the type checker
-this gate runs.
+The ban on inline Python (stereorepo's DR-241): a shell script or a recipe runs a
+dedicated script under `.meta/` or a CLI flag, never an interpreter handed its
+code on the command line, on standard input or down a pipe, which is how code
+escapes the linters and the type checker this gate runs.
 
-History in files.history.md (solorepo's DR-171).
+History in files.history.md (stereorepo's DR-171).
 """
 
 import os
@@ -20,7 +19,6 @@ from checks.collect import (
     StepOutcome,
     check,
 )
-from checks.files.workflows import workflow_files
 
 INLINE_PYTHON = re.compile(
     r"\b(?:python[0-9.]*|uv\s+run\s+python)\b(?:\s+-[a-zA-Z0-9_.-]+(?:\s+[^\s-]\S*)?)*\s+(-c\b|<<|-\s*<<|-\s*$)|"
@@ -100,26 +98,26 @@ def _find_inline_python_in_file(path: pathlib.Path) -> list[str]:
         if INLINE_PYTHON.search(line):
             problems.append(
                 f"{path.relative_to(ROOT)}:{number} contains inline Python: '{stripped}' "
-                "— externalize to a dedicated .meta/ script or CLI flag (solorepo's DR-241)"
+                "— externalize to a dedicated .meta/ script or CLI flag (stereorepo's DR-241)"
             )
     return problems
 
 
 @check("inline python")
 def no_inline_python() -> StepOutcome:
-    """Workflow steps, composite actions, and shell scripts contain no embedded inline Python invocations (solorepo's DR-241, solorepo's #666).
+    """Shell scripts contain no embedded inline Python invocations (stereorepo's DR-241, solorepo's #666).
 
-    Ensures that workflow steps, composite actions, shell scripts, and recipe
+    Ensures that shell scripts and recipe
     definitions execute dedicated, type-checked Python scripts under `.meta/`
     or existing CLI flags rather than inline Python strings (`python3 -c`,
     stdin heredocs, or piped interpreters) that bypass linters, type checkers,
     and repository gate checks.
 
-    History in files.history.md (solorepo's DR-171).
+    History in files.history.md (stereorepo's DR-171).
     """
-    scanned = workflow_files() | _shell_scripts()
+    scanned = _shell_scripts()
     if not scanned:
-        return CouldNotRun("no workflows, actions, or shell scripts found to scan")
+        return CouldNotRun("no shell scripts found to scan")
 
     problems: list[str] = []
     for path in sorted(scanned):

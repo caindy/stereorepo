@@ -1,16 +1,16 @@
-id: https://w3id.org/solorepo/work/structure
+id: https://w3id.org/stereorepo/work/structure
 name: work-structure
 title: Ontology of Work — Structure
 description: >-
-  How a solorepo is divided, and along which two axes.
+  How a stereorepo is divided, and along which two axes.
 
   A **Portfolio** is everything one solo builds inside one Bounded Context:
   exactly one Ubiquitous Language, one set of stakeholders, one per repo. It is
-  what a clone becomes under Specialization. A solorepo is a monorepo by design,
+  what a clone becomes under Specialization. A stereorepo is a monorepo by design,
   and this is the reason — the language is what holds it together, so the repo
   boundary and the language boundary are the same boundary.
 
-  Within it, **Products** and **Projects** are not a hierarchy (solorepo's DR-027). They are
+  Within it, **Products** and **Projects** are not a hierarchy (stereorepo's DR-027). They are
   orthogonal groupings of the same content:
 
   A **Product** groups by *who it is for*. It is delivered to users, has its own
@@ -29,7 +29,7 @@ description: >-
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
-  work: https://w3id.org/solorepo/work-ontology/
+  work: https://w3id.org/stereorepo/work-ontology/
   linkml: https://w3id.org/linkml/
 default_prefix: work
 default_range: string
@@ -96,7 +96,7 @@ slots:
       what a reader is to do with it. Held here because the renderer that writes
       the page must not also author it — a generator with prose of its own is a
       second author, which is the single-copy rule broken by the machinery built
-      to keep it (solorepo's DR-144). Markdown, and only where a generator asks for it.
+      to keep it (stereorepo's DR-144). Markdown, and only where a generator asks for it.
 
   postamble:
     description: >-
@@ -115,11 +115,6 @@ slots:
     description: >-
       The command that must pass before work on this Project is claimed done.
       One per Project, and green before anything is called finished.
-
-  critical_paths:
-    description: >-
-      File glob patterns within this Project that require deep reviewer auditing (solorepo's DR-188).
-    multivalued: true
 
   excluded_paths:
     description: >-
@@ -180,7 +175,7 @@ classes:
         description: >-
           The Bounded Context this Portfolio is. Exactly one, which is the
           constraint that makes a single Ubiquitous Language enforceable across
-          everything in the repo, and so the reason a solorepo is a monorepo.
+          everything in the repo, and so the reason a stereorepo is a monorepo.
 
   Product:
     is_a: WorkEntity
@@ -201,7 +196,7 @@ classes:
     is_a: Product
     description: >-
       A language standard and seed workspace delivered as a Product of
-      solorepo. Specializes Product with discipline conformance declarations.
+      stereorepo. Specializes Product with discipline conformance declarations.
     slots:
       - discipline_implementations
     slot_usage:
@@ -233,7 +228,7 @@ classes:
       carrying its rule, and that A20 requires to cite it back.
 
       Identified rather than named by path so that a reference to one is a
-      reference (solorepo's DR-079) — resolved against the schema by the same machinery
+      reference (stereorepo's DR-079) — resolved against the schema by the same machinery
       every other reference uses, rather than by a checker matching strings. Renaming a file
       then moves one `path`, and the citations that pointed at it keep pointing.
 
@@ -256,13 +251,12 @@ classes:
       gate. The unit of construction.
     comments:
       - >-
-        Not a piece of work — that is a Challenge. And not a whole repository,
+        Not a piece of work — that is an Issue. And not a whole repository,
         which is what `python_bootstrap` means by the word. Both senses are live
         enough to be worth naming as collisions.
     slots:
       - language
       - gate
-      - critical_paths
       - excluded_paths
     slot_usage:
       name:

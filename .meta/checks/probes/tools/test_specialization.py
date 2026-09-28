@@ -1,6 +1,6 @@
 """`test_specialization.py`'s fixture loading, path inheritance, and token substitution probes.
 
-Cites solorepo's DR-239 and solorepo's DR-244.
+Cites stereorepo's DR-239 and stereorepo's DR-244.
 """
 
 from __future__ import annotations
@@ -65,29 +65,9 @@ def _check_fixture_error_handling(runner: Any, tmp: pathlib.Path) -> list[str]:
     return problems
 
 
-def _check_retarget_and_substitute(runner: Any, tmp: pathlib.Path) -> list[str]:
-    """Validates workflow runner retargeting and token substitution."""
+def _check_substitute(runner: Any, tmp: pathlib.Path) -> list[str]:
+    """Validates token substitution."""
     problems: list[str] = []
-    wf_dir = tmp / ".github" / "workflows"
-    wf_dir.mkdir(parents=True)
-    sample_wf = wf_dir / "test.yml"
-    sample_wf.write_text("jobs:\n  test:\n    runs-on: arc-runner-set\n", encoding="utf-8")
-    retargeted_count = runner.retarget_workflows(wf_dir)
-    if retargeted_count != 1:
-        problems.append(
-            f"test-specialization: expected retarget_workflows to retarget 1 file, "
-            f"got {retargeted_count}"
-        )
-    retargeted_content = sample_wf.read_text(encoding="utf-8")
-    if (
-        "runs-on: arc-runner-set" in retargeted_content
-        or "solorepo-runner" not in retargeted_content
-    ):
-        problems.append(
-            "test-specialization: retarget_workflows did not substitute runner configuration "
-            "correctly"
-        )
-
     prefix = "_" + "_"
     test_token_placeholder = f"{prefix}PORTFOLIO_NAME{prefix}"
     unknown_placeholder = f"{prefix}UNKNOWN_TOKEN{prefix}"
@@ -118,7 +98,7 @@ def _check_inherited_paths(runner: Any) -> list[str]:
         ".meta/render.py",
         ".meta/gate",
         ".meta/check.py",
-        ".github/workflows/coder.yml",
+        ".meta/lib/",
     )
     for exp in expected_inherited:
         if exp not in inherited:
@@ -153,14 +133,14 @@ def _check_bundle(runner: Any) -> list[str]:
     if not bundle.source_revision:
         problems.append("test-specialization: bundle source_revision is empty")
 
-    if len(bundle.managed_items()) < 40:
+    if len(bundle.managed_items()) < 25:
         problems.append(
-            f"test-specialization: expected >= 40 managed items, "
+            f"test-specialization: expected >= 25 managed items, "
             f"found {len(bundle.managed_items())}"
         )
-    if len(bundle.template_items()) < 8:
+    if len(bundle.template_items()) < 7:
         problems.append(
-            f"test-specialization: expected >= 8 template items, "
+            f"test-specialization: expected >= 7 template items, "
             f"found {len(bundle.template_items())}"
         )
     if len(bundle.symlink_items()) < 3:
@@ -179,7 +159,7 @@ def _check_bundle(runner: Any) -> list[str]:
 @check("test-specialization probes", pre=True)
 def test_specialization_probes() -> list[str]:
     """`test_specialization.py` fixture loading, workflow retargeting,
-    and placeholder substitution (solorepo's DR-239, solorepo's DR-244).
+    and placeholder substitution (stereorepo's DR-239, stereorepo's DR-244).
 
     Validates that:
     1. `tokens.json` contains all six expected template placeholder keys with non-empty strings.
@@ -203,7 +183,7 @@ def test_specialization_probes() -> list[str]:
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = pathlib.Path(tmp_str)
         problems.extend(_check_fixture_error_handling(runner, tmp))
-        problems.extend(_check_retarget_and_substitute(runner, tmp))
+        problems.extend(_check_substitute(runner, tmp))
 
     problems.extend(_check_inherited_paths(runner))
     problems.extend(_check_bundle(runner))

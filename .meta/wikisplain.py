@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Operational authoring tool for Knowledge Management wiki concepts (solorepo's DR-187).
+"""Operational authoring tool for Knowledge Management wiki concepts (stereorepo's DR-187).
 
 This tool provides a deterministic workflow for checking duplicates, scaffolding,
 and verifying maintainer-facing wiki concept pages under `wiki/<context>/<slug>.md`
 following Wikipedia editorial conventions (MOS:LEAD bold lead definitions,
 closed-world wikilinks, and Bounded Context partitioning).
 
-History in wikisplain.history.md (solorepo's DR-171).
+History in wikisplain.history.md (stereorepo's DR-171).
 """
 
 from __future__ import annotations

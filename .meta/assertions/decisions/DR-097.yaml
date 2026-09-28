@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/097
     name: "DR-097 · The gate's tools are pinned exactly, and the test tools float"
-    challenge: work:challenge/38
     product: work:product/python-standard
     status: ADOPTED
     enacted_in:

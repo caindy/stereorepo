@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/103
     name: "DR-103 · The record is retrieved by meaning: ck's semantic search over a corpus rendered one entry per file, compiled to a skill"
-    challenge: work:challenge/18
     status: RECOMMENDED
     applies:
       - work:article/8
@@ -23,7 +22,7 @@ decisions:
           Forty lines of Python, no install, no index on disk, and 15 of 18 in
           the top five. It is blind where the question has none of the corpus's
           words: "I finished a task and there is leftover work" found nothing,
-          and the semantic modes found PR First and DR-054 first. Kept as the
+          and the semantic modes found PR First and solorepo's DR-054 first. Kept as the
           fallback the falsifier names, because it costs nothing and is most of
           the way there.
       - name: zg, ripgrep with BM25 and vector search in one tool
@@ -56,7 +55,7 @@ decisions:
     consequences:
       - >-
         Nothing is built by this entry, which is what RECOMMENDED says. What
-        it forecloses is the shape: a skill of DR-060's kind, rendered by
+        it forecloses is the shape: a skill of solorepo's DR-060's kind, rendered by
         `render.py`, whose command runs `ck --sem` over a corpus `render.py`
         also emits, so that the skill, the corpus and the assertions are one
         source with two derived copies.
@@ -85,7 +84,7 @@ decisions:
       work", "push to trunk", "Role versus Remit" — are where the gap
       opened, because every entry explains its terms in plain English and
       an embedding carries that where a keyword cannot. Whether it can
-      be a skill of DR-060's shape: yes, and the corpus it reads is a
+      be a skill of solorepo's DR-060's shape: yes, and the corpus it reads is a
       render target, which is the same claim made twice. What keeping the
       index honest costs: nothing, for a tool that re-indexes per query,
       and one flag, for one that does not.

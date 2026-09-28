@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/223
     name: "DR-223 · An identical suppression reason at three sites is one defect, ratcheted per rule and reason"
-    challenge: work:challenge/558
     status: ADOPTED
     applies:
       - work:article/2
@@ -11,7 +10,7 @@ decisions:
       - work:artifact/meta-checks-probes-tools-comments
       - work:artifact/meta-assertions-structure
     context: >-
-      solorepo's DR-207 holds that a lint or type suppression bypassing safety,
+      stereorepo's DR-207 holds that a lint or type suppression bypassing safety,
       correctness or type soundness is an actionable defect rather than a
       permanent comment, and the Suppression Audit Protocol of
       `/technical-writing` says it in full: the suppression is not the fix, it
@@ -27,7 +26,7 @@ decisions:
       them do it.
 
       `meta lints` refuses a suppression carrying no `# reason:` on its line
-      (solorepo's DR-177); each of the 22 carries one, so it passed 22 times.
+      (stereorepo's DR-177); each of the 22 carries one, so it passed 22 times.
       `broad suppressions` refuses a suppression naming no rule; each of the 22
       names `untyped-decorator`, so it passed 22 times. The Protocol forbids a
       blanket suppression at file or module scope and prescribes narrowing it to
@@ -101,7 +100,7 @@ decisions:
         despite naming their cause precisely.
       - >-
         The comparison is `comments.against_repeats` rather than the shared
-        `collect.against_baseline` of solorepo's DR-210. The shared one reads a
+        `collect.against_baseline` of stereorepo's DR-210. The shared one reads a
         key that is not a file on disk as a stale baseline entry, which is right
         for a per-file ratchet and wrong for every failing group here, where the
         key is a rule and a reason. A group over its number is told to fix the
@@ -141,7 +140,7 @@ decisions:
       whether a suppression survives and not two that can disagree.
 
       Ratcheting rather than refusing outright is the same argument
-      solorepo's DR-210 made for types. The tree is not clean, the standard is
+      stereorepo's DR-210 made for types. The tree is not clean, the standard is
       right, and a standard waiting on a sweep is a standard that is not in the
       gate. The number in the file is what the tree holds; lowering it is the
       only way to change it, and the failure line says so in the words of the

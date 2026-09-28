@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/121
     name: "DR-121 · What a portfolio inherits cites solorepo's record as solorepo's, and a portfolio's gate passes over a citation of a record it does not carry"
-    challenge: work:challenge/114
     status: ADOPTED
     applies:
       - work:article/10
@@ -39,7 +38,7 @@ decisions:
       - name: A citation of solorepo's record says so, and the gate resolves it only where that record is
         chosen: true
         reason: >-
-          `solorepo's DR-104`, never a bare `DR-104`, in every file a portfolio
+          `stereorepo's DR-104`, never a bare `DR-104`, in every file a portfolio
           copies and every line `render.py` writes into a copied page. The
           Charter's own line decided it — a citation that silently comes to
           mean something else is worse than a dangling one — and a bare number
@@ -84,7 +83,7 @@ decisions:
         have doubled the diff.
     falsifier: >-
       A portfolio that has to resolve one of these — a step that must read
-      solorepo's DR-085 to check something — and finds that a name in prose is
+      stereorepo's DR-085 to check something — and finds that a name in prose is
       not a reference. Then either the record travels or the id names its home,
       and the possessive was the interim it is.
     rationale: |-

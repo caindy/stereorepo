@@ -2,7 +2,7 @@
 # with. Inherited rather than the portfolio's own, because the pages are: the
 # Charter, the vocabulary, the decision record, the decision form and both
 # skills are written from `assertions/imported/` by a renderer a portfolio also
-# inherits (solorepo's DR-144).
+# inherits (stereorepo's DR-144).
 #
 # `assertions/structure.yaml` is the portfolio's own and is never synced, so a
 # preamble left there would leave every portfolio's renderer asking for prose
@@ -80,31 +80,7 @@ artifacts:
 
       A Concept is a unit of meaning, not a word — which is why two entries
       below share a label. Use the preferred label; do not mint a Concept
-      without the solo. `.meta/say/move mint --concept '<id>'` is how he mints
-      one: it reserves the identifier, it is refused inside a run, and the gate
-      fails a row that stands on no reservation (solorepo's DR-276). Check DDD first, then
-      this vocabulary, then ask.
-  - id: work:artifact/skill-pr-first
-    name: .claude/skills/pr-first/SKILL.md
-    path: .claude/skills/pr-first/SKILL.md
-    description: >-
-      Govern the lifecycle of Challenges, Issues, and pull requests the way
-      this repository requires, as the coder Role: the verbs the coder holds,
-      and where the judgement is. Use when starting any change, claiming an
-      Issue or Challenge (`move claim`), setting or clearing blockers (`move
-      waits`), handing work back (`move stop`), closing or obviating
-      superseded work (`move obviate`), opening, arguing in, and closing a pull
-      request, when a review or comment lands on one, and when picking work up
-      again — an open pull request this branch owns with an unanswered thread is
-      work in progress, whoever noticed it.
-  - id: work:artifact/skill-pr-first-reviewer
-    name: .claude/skills/pr-first-reviewer/SKILL.md
-    path: .claude/skills/pr-first-reviewer/SKILL.md
-    description: >-
-      Review a pull request the way this repository requires, as the reviewer
-      Role: the verbs the reviewer holds, what a pull request here must hold,
-      and what a reviewer's point owes. Use when a review has been requested of
-      the reviewer's account.
+      without the human. Check DDD first, then this vocabulary, then ask.
   - id: work:artifact/skill-wikisplain
     name: .claude/skills/wikisplain/SKILL.md
     path: .claude/skills/wikisplain/SKILL.md
@@ -112,11 +88,11 @@ artifacts:
       Author or explain an encyclopedic concept page in the wiki
       (wiki/<context>/<concept>.md) following Knowledge Management conventions
       (MOS:LEAD bold lead definition, closed-world wikilinks, semantic duplicate
-      prevention, and vocabulary alignment, solorepo's DR-187).
+      prevention, and vocabulary alignment, stereorepo's DR-187).
     preamble: |
       # /wikisplain
 
-      The `/wikisplain` skill creates, explains, and verifies encyclopedic wiki pages in `wiki/<context>/` following the [[knowledge-management|Knowledge Management]] discipline and Wikipedia editorial conventions (solorepo's DR-187).
+      The `/wikisplain` skill creates, explains, and verifies encyclopedic wiki pages in `wiki/<context>/` following the [[knowledge-management|Knowledge Management]] discipline and Wikipedia editorial conventions (stereorepo's DR-187).
 
       ## When to Use
 
@@ -148,17 +124,17 @@ artifacts:
     name: .claude/skills/search/SKILL.md
     path: .claude/skills/search/SKILL.md
     description: >-
-      Search repository assertions, decisions, and wiki concepts by meaning using
-      the in-memory BM25F retrieval of solorepo's DR-194, against the benchmark
-      solorepo's DR-103 set, off the root verb surface since solorepo's DR-272.
+      Search repository assertions, decisions, and wiki concepts by meaning, with
+      the BM25F retrieval of stereorepo's DR-194 and the benchmark of
+      stereorepo's DR-103, as a skill rather than a recipe (stereorepo's DR-272).
     preamble: |
       # /search
 
       The `/search` skill queries repository YAML assertions under `.meta/assertions/` and
       markdown concept pages under `wiki/` using the in-memory Okapi BM25F ranking
-      solorepo's DR-194 built, scored against the eighteen benchmark queries
-      solorepo's DR-103 set, and reached as a skill rather than a `just` recipe
-      since solorepo's DR-272.
+      stereorepo's DR-194 built, scored against the eighteen benchmark queries
+      stereorepo's DR-103 set, and reached as a skill rather than a `just` recipe
+      since stereorepo's DR-272.
 
       ## When to Use
 
@@ -175,7 +151,7 @@ artifacts:
       - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py "<query>" --limit <n>` — return top `<n>` results (default 5)
       - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py "<query>" --detail` — display full contextual snippets
       - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py "<query>" --json` — output search results in JSON format
-      - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py --benchmark` — run the 18 solorepo's DR-103 benchmark queries
+      - `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py --benchmark` — run the 18 stereorepo's DR-103 benchmark queries
 
       When running in an environment where `linkml` and `pyyaml` are installed,
       `python3 .meta/search.py "<query>"` is equivalent.
@@ -187,7 +163,7 @@ artifacts:
          needed section.
       3. **Structured Ingestion:** Use `--json` when parsing search results in
          automated scripts or pipelines.
-      4. **Benchmark Invariants:** Run `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py --benchmark` to test retrieval quality against solorepo's DR-103 benchmark suite (hit@5 >= 15/18).
+      4. **Benchmark Invariants:** Run `uvx --python 3.13 --with linkml --with pyyaml python .meta/search.py --benchmark` to test retrieval quality against stereorepo's DR-103 benchmark suite (hit@5 >= 15/18).
 
       ## Invariants
 
@@ -205,68 +181,68 @@ artifacts:
       Apply the layered technical writing standard (Diátaxis structure, Google developer style,
       literate programming register, closed-world dereferencing, and Ubiquitous Language alignment),
       with the four permissible comment exceptions, knowledge routing, constraint mechanization,
-      and suppression auditing that govern every comment in a source file (solorepo's DR-207).
+      and suppression auditing that govern every comment in a source file (stereorepo's DR-207).
       Use when writing or auditing docstrings, inline comments, lint or type suppressions,
-      Decision Records, wiki pages, or pull request prose.
+      Decision Records, wiki pages, or Issue files.
     preamble: |
       # /technical-writing
 
-      The `/technical-writing` skill operationalizes the character of `work:role/technical-writer` (`work:personality/technical-writer`) and enacts solorepo's DR-194, solorepo's DR-196, and solorepo's DR-198.
+      The `/technical-writing` skill operationalizes the character of `work:role/technical-writer` (`work:personality/technical-writer`) and enacts stereorepo's DR-194, stereorepo's DR-196, and stereorepo's DR-198.
 
-      ## Two Communication and Authoring Regimes (solorepo's DR-198)
+      ## Two Communication and Authoring Regimes (stereorepo's DR-198)
 
-      1. **Conversational Communication Register:** In dialogue, PR review threads, turn responses, and issue comments, speak in the Technical Writer register (`work:personality/technical-writer`): *Spelled out and self-contained. Every citation dereferenced. Assume a reader who was not in the conversation, holds none of its shorthand, and arrives by search some years later. Length is not the cost here; ambiguity is.* This breaks the failure mode of abstruse, cryptic shorthand.
+      1. **Conversational Communication Register:** In dialogue and turn responses, speak in the Technical Writer register (`work:role/technical-writer`): *Spelled out and self-contained. Every citation dereferenced. Assume a reader who was not in the conversation, holds none of its shorthand, and arrives by search some years later. Length is not the cost here; ambiguity is.* This breaks the failure mode of abstruse, cryptic shorthand.
       2. **Durable Artifact Authoring Regime:** When authoring or editing durable files in the repository (code docstrings, Decision Records, wiki pages, companion logs), the structure, tone, and density are governed by the **Diátaxis quadrant** being authored. Conversational expansiveness must not be imported into item docstrings: Reference docstrings must remain dry, crisp, and contract-focused, with zero reviewer litigation.
 
-      This standard combines Diátaxis documentation architecture, Google developer style sentences, and solorepo's Literate Programming (solorepo's DR-171, solorepo's DR-175, solorepo's DR-176) and Knowledge Management (solorepo's DR-184, solorepo's DR-185, solorepo's DR-187, solorepo's DR-196) disciplines.
+      This standard combines Diátaxis documentation architecture, Google developer style sentences, and stereorepo's Literate Programming (stereorepo's DR-171, stereorepo's DR-175, solorepo's DR-176) and Knowledge Management (stereorepo's DR-184, stereorepo's DR-185, stereorepo's DR-187, stereorepo's DR-196) disciplines.
 
       ## Five Overarching Invariants
 
-      1. **Every citation dereferenced (solorepo's DR-134, solorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`solorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search via the `/search` skill, which carries the invocation (solorepo's DR-103).
-      2. **Use the Ubiquitous Language (solorepo's DR-190):** The codebase and LinkML ontologies are the word list. Write `Actor` (not user/bot), `Challenge` (not ticket/issue/story), `Role`, `Remit`, `Persona`.
-      3. **The Reader's Test (solorepo's DR-175):** Can a reader use this item from its docstring alone without reading commit histories or PR threads?
-      4. **No Reviewer Litigation in Code (solorepo's DR-171):** Docstrings state usage contracts, parameters, and invariants. They do not argue against past reviewers. The 'why' and trade-offs belong in Decision Records (`DR-nnn.yaml`) or module docstrings. Incident narratives belong in `<module>.history.md`.
-      5. **The Residue Principle (solorepo's Article 15, solorepo's DR-196):** Pull request descriptions, issue comments, and commit messages are not documentation containers. What fits into any of the four Diátaxis quadrants belongs in a durable repository artifact. What remains is residue, and only residue belongs in a pull request body.
+      1. **Every citation dereferenced (stereorepo's DR-134, stereorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`stereorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search via the `/search` skill, which carries the invocation (stereorepo's DR-103).
+      2. **Use the Ubiquitous Language (stereorepo's DR-190):** The codebase and LinkML ontologies are the word list. Write `Issue` (not ticket/story), `seat` (not coder/reviewer), `human` (not user/owner), `Role`, `Persona`.
+      3. **The Reader's Test (stereorepo's DR-175):** Can a reader use this item from its docstring alone without reading commit histories or Issue files?
+      4. **No Reviewer Litigation in Code (stereorepo's DR-171):** Docstrings state usage contracts, parameters, and invariants. They do not argue against past reviewers. The 'why' and trade-offs belong in Decision Records (`DR-nnn.yaml`) or module docstrings. Incident narratives belong in `<module>.history.md`.
+      5. **The Residue Principle (stereorepo's DR-196):** Issue files and commit messages are not documentation containers. What fits into any of the four Diátaxis quadrants belongs in a durable repository artifact. What remains is residue, and only residue belongs in the Issue file.
 
       ## The Diátaxis Compass
 
       Select exactly one mode before writing:
 
-      | Mode | Purpose | In Solorepo | Tone & Rules |
+      | Mode | Purpose | In Stereorepo | Tone & Rules |
       |---|---|---|---|
       | **Reference** | Facts for lookup (Understanding + Work) | Public function, class, and method docstrings, LinkML schemas | Dry, complete, sure. Describe parameters, invariants, exceptions. No opinions, no tutorials, no past debate. |
       | **Explanation** | Understanding & why (Understanding + Learning) | Decision Records (`DR-nnn.yaml`), module overviews, wiki pages | Anchor on a real 'why' question. Context, constraints, alternatives, trade-offs. |
-      | **How-To** | Steps to a goal (Action + Work) | `just` recipes, solorepo's `SPECIALIZE.md`, workflow guides | Task-oriented, assume competence, action only. No digressions. 'Do X to achieve Y.' |
+      | **How-To** | Steps to a goal (Action + Work) | `just` recipes, stereorepo's `SPECIALIZE.md`, workflow guides | Task-oriented, assume competence, action only. No digressions. 'Do X to achieve Y.' |
       | **Tutorial** | Learning by doing (Action + Learning) | Quickstarts, onboarding lessons | Guided, step-by-step, visible results at each step. |
 
       ## Pre-Writing Routing: Where to Write
 
       Before typing prose for a change, execute this routing tree to select the container:
 
-      1. **Task, recipe, or repeatable procedure:** `justfile` recipe or solorepo's `SPECIALIZE.md` (**How-To**).
-      2. **Public function, class, schema, or API fact:** item docstring or LinkML schema (**Reference**, solorepo's DR-171, solorepo's DR-175).
+      1. **Task, recipe, or repeatable procedure:** `justfile` recipe or stereorepo's `SPECIALIZE.md` (**How-To**).
+      2. **Public function, class, schema, or API fact:** item docstring or LinkML schema (**Reference**, stereorepo's DR-171, stereorepo's DR-175).
       3. **Settled architectural choice between alternatives:** Decision Record in `.meta/assertions/decisions/DR-nnn.yaml` (**Explanation**).
       4. **Bug, incident, or regression history:** `<module>.history.md` with Evidence (**Explanation**).
-      5. **Enduring domain concept or subsystem overview:** `wiki/<context>/<concept>.md` via `/wikisplain` (`python3 .meta/wikisplain.py`) (**Explanation**, solorepo's DR-184, solorepo's DR-190).
-      6. **Unrouted residue:** Pull request descriptions hold only transient reviewer handoff notes and links to surviving review threads or promoted Issues (solorepo's Article 15). Never summarize diffs.
+      5. **Enduring domain concept or subsystem overview:** `wiki/<context>/<concept>.md` via `/wikisplain` (`python3 .meta/wikisplain.py`) (**Explanation**, stereorepo's DR-184, stereorepo's DR-190).
+      6. **Unrouted residue:** The Issue file holds what changed, the path taken and the approach that lost; work noticed and not done is a new Issue in `issues/backlog/`. Never summarize diffs.
 
       ## Container Subordination
 
-      The atomic semantic unit of domain knowledge is the Concept (solorepo's DR-195). Subordinate storage placement to the reader's posture:
+      The atomic semantic unit of domain knowledge is the Concept (stereorepo's DR-195). Subordinate storage placement to the reader's posture:
       - **Schema Gloss:** `vocabulary.yaml` when machine checks and search aliases suffice.
       - **Section / Subsection:** `##` or `###` within an existing document when tightly bound to an aggregate.
       - **Dedicated Wiki Page:** `wiki/<context>/<concept>.md` when the concept has independent depth, invariants, or broad relevance.
       - **Subdirectory:** A folder grouping related concept pages for complex domain aggregates.
 
-      Strictly avoid 'wiki article' (`avoid: [wiki article]`) to protect Charter Articles (solorepo's Article 1, solorepo's Article 15).
+      Strictly avoid 'wiki article' (`avoid: [wiki article]`) to protect Charter Articles (stereorepo's Article 1).
 
-      ## The Four Permissible Comment Exceptions (solorepo's DR-207)
+      ## The Four Permissible Comment Exceptions (stereorepo's DR-207)
 
       These exceptions govern every comment in a source file, at every scope — file header, module level, class body, and function or method body alike. A surprise inside internal code is a defect in the code, not a gap in its narration: rename the symbol, extract the helper, or narrow the type until the implementation reads as its own explanation. Four kinds of comment survive a prune, and no others:
 
       1. **Legal notices.** Copyright, licensing, and attribution headers a license obliges the file to carry.
-      2. **Public API contracts.** Item docstrings written as dry Diátaxis Reference contracts, with no reviewer litigation (solorepo's DR-175, solorepo's DR-194). An item is a module, class, function, method, or module-level binding, and a binding's docstring is the string literal directly below its assignment.
-      3. **Immutable external boundary constraints.** A rule a foreign platform, third-party library, operating system, or wire protocol forces on the code and that you cannot reshape from inside this repository, cited with a dereferenced issue, RFC, or specification reference (solorepo's Article 12). A constraint you own is not this exception: mechanize it instead.
+      2. **Public API contracts.** Item docstrings written as dry Diátaxis Reference contracts, with no reviewer litigation (stereorepo's DR-175, stereorepo's DR-194). An item is a module, class, function, method, or module-level binding, and a binding's docstring is the string literal directly below its assignment.
+      3. **Immutable external boundary constraints.** A rule a foreign platform, third-party library, operating system, or wire protocol forces on the code and that you cannot reshape from inside this repository, cited with a dereferenced issue, RFC, or specification reference (stereorepo's Article 12). A constraint you own is not this exception: mechanize it instead.
       4. **Tool formatting directives.** Markers a formatter or generator reads, such as `# fmt: skip` or `// prettier-ignore`.
 
       Everything else is knowledge to route, a constraint to mechanize, or a suppression to audit. Each has a section below.
@@ -277,9 +253,9 @@ artifacts:
 
       A comment worth deleting is rarely a comment worth losing. Before removing non-trivial commentary, send what it knows down the routing tree in **Pre-Writing Routing: Where to Write** above:
 
-      - **Defect narrative, incident, or regression history:** `<module>.history.md`, each account naming Evidence that can fail — the check or probe symbol under `.meta/checks/probes/` that fails if the defect returns (solorepo's DR-171, solorepo's DR-209).
-      - **Architectural rationale, or an alternative weighed and rejected:** a Decision Record in `.meta/assertions/decisions/DR-nnn.yaml`, or an enduring concept page under `wiki/<context>/` (solorepo's DR-184, solorepo's DR-196).
-      - **An operational instruction — how to run, rebuild, or verify something:** a `justfile` recipe, self-documented by its own comment (solorepo's DR-106).
+      - **Defect narrative, incident, or regression history:** `<module>.history.md`, each account naming Evidence that can fail — the check or probe symbol under `.meta/checks/probes/` that fails if the defect returns (stereorepo's DR-171, stereorepo's DR-209).
+      - **Architectural rationale, or an alternative weighed and rejected:** a Decision Record in `.meta/assertions/decisions/DR-nnn.yaml`, or an enduring concept page under `wiki/<context>/` (stereorepo's DR-184, stereorepo's DR-196).
+      - **An operational instruction — how to run, rebuild, or verify something:** a `justfile` recipe, self-documented by its own comment (stereorepo's DR-106).
       - **Nothing a reader needs:** delete it. Narration of self-evident steps and commented-out dead code have no destination, and git holds the corpse.
 
       Write the destination before you delete the line. A prune that skips this step is the one that loses the knowledge.
@@ -298,13 +274,13 @@ artifacts:
 
       ## Suppression Audit Protocol
 
-      Treat every lint and type suppression the diff adds or touches — `# noqa`, `# type: ignore`, `#[allow(...)]` — as an open defect until you have read what it silences. Under `.meta/`, the `meta lints` check already refuses one that carries no `# reason:` on the same line (solorepo's DR-177), and a reason is the floor rather than the justification.
+      Treat every lint and type suppression the diff adds or touches — `# noqa`, `# type: ignore`, `#[allow(...)]` — as an open defect until you have read what it silences. Under `.meta/`, the `meta lints` check already refuses one that carries no `# reason:` on the same line (stereorepo's DR-177), and a reason is the floor rather than the justification.
 
       - **A suppression over a safety, correctness, or type-soundness finding is a defect.** Fix the root cause. The suppression is not the fix; it is the record that nobody looked.
       - **A surviving suppression is narrow:** the specific rule or error code, never bare. It earns its keep only as an immutable external boundary constraint (exception 3 of The Four Permissible Comment Exceptions above) — a rule a foreign platform, library, or checker forces on the code — with a dereferenced upstream issue or specification saying why the checker is wrong here.
       - **A blanket suppression at file or module scope** hides findings nobody has seen yet, including ones the next change adds under it. Narrow it to the line.
 
-      Run this audit in the pre-handoff pass, over what the branch changed (solorepo's DR-198).
+      Run this audit before a turn ends, over what the branch changed (stereorepo's DR-198).
 
       ## Google Developer Style Sentences
 

@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/154
     name: "DR-154 · A count about the record is a slot the renderer fills, so the arithmetic in prose is the render's and the staleness check holds it"
-    challenge: work:challenge/231
     status: ADOPTED
     applies:
       - work:article/8
@@ -99,7 +98,7 @@ decisions:
         is this defect at one remove. "Most" is true unless three prechecks that
         need neither are added, and it is never arithmetic anybody has to redo.
       - >-
-        The count in DR-115's rationale is left as it stands. An entry records
+        The count in solorepo's DR-115's rationale is left as it stands. An entry records
         the ground a decision was taken on, and a number there is of its moment
         rather than a claim about today.
     falsifier: >-

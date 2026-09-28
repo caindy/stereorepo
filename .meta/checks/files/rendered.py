@@ -17,7 +17,7 @@ from checks.files import prose
 
 @check("apm package")
 def apm_package() -> StepOutcome:
-    """Verifies that .meta/.apm/ passes APM CLI compilation validation when apm is available (solorepo's DR-201)."""
+    """Verifies that .meta/.apm/ passes APM CLI compilation validation when apm is available (stereorepo's DR-201)."""
     apm_bin = shutil.which("apm")
     if not apm_bin:
         return CouldNotRun("apm is not installed (install via 'brew install apm' or 'curl -sSL https://aka.ms/apm-unix | sh')")

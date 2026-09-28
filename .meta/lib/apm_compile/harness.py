@@ -1,4 +1,4 @@
-"""The harness roots reconciled: `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` as symlinks to `AGENTS.md`, and the skills every harness finds in the same place (solorepo's DR-201).
+"""The harness roots reconciled: `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` as symlinks to `AGENTS.md`, and the skills every harness finds in the same place (stereorepo's DR-201).
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from lib.apm_compile import META, ROOT
 
 
 def check_root_symlinks(root_dir: pathlib.Path = ROOT) -> list[str]:
-    """Checks that root harness documentation symlinks point to AGENTS.md (solorepo's DR-172)."""
+    """Checks that root harness documentation symlinks point to AGENTS.md (stereorepo's DR-172)."""
     problems = []
     agents_md = root_dir / "AGENTS.md"
     claude_md = root_dir / "CLAUDE.md"
@@ -39,7 +39,7 @@ def check_root_symlinks(root_dir: pathlib.Path = ROOT) -> list[str]:
 
 
 def reconcile_root(root_dir: pathlib.Path = ROOT) -> list[str]:
-    """Reconciles harness root files ensuring AGENTS.md single-source invariance (solorepo's DR-172).
+    """Reconciles harness root files ensuring AGENTS.md single-source invariance (stereorepo's DR-172).
 
     `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are
     symlinks to `AGENTS.md` and this restores them as such, including where one
@@ -85,7 +85,7 @@ def reconcile_root(root_dir: pathlib.Path = ROOT) -> list[str]:
 
 
 def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROOT) -> list[str]:
-    """Projects single-source APM cognitive assets to multi-harness target directories (solorepo's DR-172, solorepo's DR-201, solorepo's #430, solorepo's #1075).
+    """Projects single-source APM cognitive assets to multi-harness target directories (stereorepo's DR-172, stereorepo's DR-201, solorepo's #430, solorepo's #1075).
 
     When Microsoft APM CLI is present, invokes `apm install ./.meta --target antigravity,codex`
     to deploy skills, agents, and hooks into `.agents/` and `.codex/`.

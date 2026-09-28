@@ -1,20 +1,20 @@
 """Validation of schema slot references cited in living repository prose against LinkML ontologies.
 
 Verifies that prose claims about schema slots resolve against declared schemas
-as part of the citation verification subject (solorepo's DR-150, dividing the gate into
+as part of the citation verification subject (stereorepo's DR-150, dividing the gate into
 per-subject check modules including prose claims about the record). Sits under the
-`.meta/checks/citations/` package following the package structure convention (solorepo's DR-218,
+`.meta/checks/citations/` package following the package structure convention (stereorepo's DR-218,
 converting imported meta modules into packages whose __init__ registers defined members).
 
 Former slot checking derives historically deleted slots per class from git diffs,
 filtering out any slot declared anywhere in current schemas, and flags obsolete slot
 names in backticks within documents asserting those classes. Living durable files
-are scanned while historical records under `assertions/decisions/` and
-`assertions/challenges/`, as well as test probe suites under `checks/probes/`, are
-deliberately excluded: decisions and challenges record historical context at authoring time
+are scanned while historical records under `assertions/decisions/`, as well as
+test probe suites under `checks/probes/`, are deliberately excluded: decisions
+record historical context at authoring time
 (legitimately naming former slots removed during refactoring), while test probes author
 synthetic violating fixtures rather than durable claims about the repository record.
-History in citations.history.md (solorepo's DR-171).
+History in citations.history.md (stereorepo's DR-171).
 """
 import pathlib
 import re
@@ -331,8 +331,8 @@ def cited_schema_slots(
 ) -> StepOutcome:
     """Validate that schema slots cited in living durable prose resolve against LinkML declarations.
 
-    Excludes historical decision records (`assertions/decisions/`), challenges
-    (`assertions/challenges/`), and test probe suites (`checks/probes/`).
+    Excludes historical decision records (`assertions/decisions/`) and test
+    probe suites (`checks/probes/`).
 
     Parameters:
         views (Sequence[Any]): Loaded LinkML SchemaView instances.
@@ -357,7 +357,6 @@ def cited_schema_slots(
         rel = path.relative_to(ROOT).as_posix()
         if (
             "assertions/decisions/" in rel
-            or "assertions/challenges/" in rel
             or "checks/probes/" in rel
         ):
             continue
@@ -367,6 +366,6 @@ def cited_schema_slots(
     if problems:
         return Found(problems)
     return Passed(
-        f"{scanned} living durable files scanned (excluding decisions, challenges, "
+        f"{scanned} living durable files scanned (excluding decisions, "
         f"and probes) against {len(all_slots)} schema slots across {len(class_slots)} classes"
     )

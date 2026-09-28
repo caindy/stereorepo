@@ -1,9 +1,0 @@
-challenges:
-  - id: work:challenge/371
-    name: Operational authoring skill /wikisplain for Knowledge Management
-    challenge_type: FEATURE
-    description: >-
-      An operational authoring skill and CLI tool `/wikisplain` provides a deterministic
-      authoring workflow that checks semantic duplicates against existing vocabulary
-      and wiki slugs, generates canonical MOS:LEAD wiki structures and frontmatter,
-      embeds closed-world wikilinks, and verifies gate compliance.

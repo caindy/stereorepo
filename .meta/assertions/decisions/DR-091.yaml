@@ -1,14 +1,12 @@
 decisions:
   - id: work:decision/091
     name: "DR-091 · The seed builds as it sits, and rendering renames it"
-    challenge: work:challenge/51
     status: ADOPTED
     applies:
       - work:article/9
       - work:article/10
     enacted_in:
       - work:artifact/bootstraps-rust-render
-      - work:artifact/github-workflows-gate
     alternatives:
       - name: Placeholder tokens, as `template/` uses
         chosen: false

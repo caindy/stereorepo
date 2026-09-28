@@ -1,4 +1,4 @@
-"""The command line of `.meta/apm_compile.py`: compile, `--check`, `--reconcile`, or an `apm` operation (solorepo's DR-201).
+"""The command line of `.meta/apm_compile.py`: compile, `--check`, `--reconcile`, or an `apm` operation (stereorepo's DR-201).
 """
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from lib.apm_compile import harness
 
 
 def main(description: str | None) -> None:
-    """CLI entrypoint for APM compiler, packaging, and root reconciliation (solorepo's DR-201).
+    """CLI entrypoint for APM compiler, packaging, and root reconciliation (stereorepo's DR-201).
 
     Args:
         description: The script's docstring, shown by `--help`.

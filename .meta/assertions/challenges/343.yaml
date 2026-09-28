@@ -1,8 +1,0 @@
-challenges:
-  - id: work:challenge/343
-    name: Dogfood and verify the Specialization procedure against a clean test repository
-    challenge_type: TASK
-    description: >-
-      Execute the 8-step specialization procedure from SPECIALIZE.md into a clean
-      test repository, verifying placeholder substitution, domain assertions, bootstrap
-      rendering, APM compilation, and gate execution.

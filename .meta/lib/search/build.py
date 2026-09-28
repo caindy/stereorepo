@@ -1,6 +1,6 @@
 """The index built over every identified object under `.meta/assertions/` and every concept under `wiki/`, through the gate's own collector when it can be imported.
 
-History in build.history.md (solorepo's DR-171).
+History in build.history.md (stereorepo's DR-171).
 """
 import re
 import sys

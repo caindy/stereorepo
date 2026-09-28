@@ -7,7 +7,7 @@ decisions:
       - work:article/12
     consequences:
       - "Forms and seeds use different placeholder markers, and the difference is load-bearing."
-      - "The Portfolio's record was to stay prose — superseded by DR-058."
+      - "The Portfolio's record was to stay prose — superseded by solorepo's DR-058."
     enacted_in:
       - work:artifact/meta-work-decisions
     rationale: |-

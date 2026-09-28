@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/234
     name: "DR-234 · An audit instrument for unminted vocabulary candidates using keyness and Gries' DP dispersion"
-    challenge: work:challenge/589
     status: ADOPTED
     applies:
       - work:article/17
@@ -13,7 +12,7 @@ decisions:
       - work:artifact/meta-assertions-disciplines
     context: >-
       Article 17 states that a term that arrived by use has not been agreed,
-      enforcing the Ubiquitous Language discipline. solorepo's DR-190 established a
+      enforcing the Ubiquitous Language discipline. stereorepo's DR-190 established a
       two-part regime: a deterministic gate checking 1:1 parity between LinkML
       vocabulary assertions and wiki pages, and ambient reviewer guidance
       challenging unminted domain terms. That covers the direction from the
@@ -39,7 +38,7 @@ decisions:
           Dispersion is a corpus statistic. A word introduced in a single change is
           concentrated in that change's files by construction, scoring artificially
           high and triggering false alarms. Furthermore, an on-demand dependency
-          like `wordfreq` is inappropriate for a pinned CI gate. As solorepo's DR-190
+          like `wordfreq` is inappropriate for a pinned CI gate. As stereorepo's DR-190
           recognized in rejecting mechanical diff word-frequency heuristics,
           distinguishing domain terms requires semantic evaluation, and diff-level
           candidate generation produces triage fatigue rather than deterministic
@@ -81,9 +80,9 @@ decisions:
       audit output, or a minted concept whose preferred or alternative label appears
       in the candidate list.
     rationale: |-
-      solorepo's DR-190 rejected mechanical diff word-frequency heuristics
+      stereorepo's DR-190 rejected mechanical diff word-frequency heuristics
       because raw count does not distinguish domain terms from ordinary
       vocabulary. Dispersion measures document locality, not count. Furthermore,
       `just terms` produces a candidate list for human review rather than an
-      automated diff gate, following the division of labour in solorepo's DR-190's
+      automated diff gate, following the division of labour in stereorepo's DR-190's
       rationale between mechanical tooling and human semantic judgement.

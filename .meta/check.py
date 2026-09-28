@@ -2,17 +2,17 @@
 """Gate orchestrator and semantic constraint checker for the .meta Project.
 
 Validates semantic invariants across LinkML schema instances, graph relations,
-prose citations, and code standards (solorepo's DR-029, solorepo's DR-150,
-solorepo's DR-209). Sequentially executes registered prechecks, schema model
+prose citations, and code standards (stereorepo's DR-029, stereorepo's DR-150,
+stereorepo's DR-209). Sequentially executes registered prechecks, schema model
 loaders, and step suites from `.meta/checks/`.
 
-History in check.history.md (solorepo's DR-171).
+History in check.history.md (stereorepo's DR-171).
 """
 import sys
 
 if sys.hexversion < 0x030D0000:
     sys.exit(
-        f"check.py requires Python 3.13+ (solorepo's DR-268); "
+        f"check.py requires Python 3.13+ (stereorepo's DR-268); "
         f"running on {sys.version.split()[0]}"
     )
 
@@ -32,7 +32,7 @@ from checks.collect import STEPS, views
 
 def report(label: str, outcome: collect.StepOutcome | Sequence[str],
            unrunnable: list[str]) -> bool:
-    """Formats and prints a single check step outcome adhering to Article 21 (solorepo's DR-092).
+    """Formats and prints a single check step outcome adhering to Article 21 (stereorepo's DR-092).
 
     Args:
         label: Descriptive identifier of the check step.
@@ -63,7 +63,7 @@ def report(label: str, outcome: collect.StepOutcome | Sequence[str],
 
 def closing_block(unrunnable: Sequence[str],
                   environ: Mapping[str, str] = os.environ) -> tuple[list[str], bool]:
-    """The block naming the steps that could not run, and whether they fail the run (Article 6, solorepo's DR-261).
+    """The block naming the steps that could not run, and whether they fail the run (Article 6, stereorepo's DR-261).
 
     The block stands outside Article 21's three step shapes, and its detail
     lines are indented by two spaces rather than the five `.meta/gate` reads as
@@ -106,7 +106,7 @@ def main() -> int:
         int: 0 where every registered step passed, and where steps that could
         not run were reported outside CI. 1 where any step failed, and where
         any step could not run and the process environment holds a non-empty
-        `CI` (Article 6, solorepo's DR-261).
+        `CI` (Article 6, stereorepo's DR-261).
     """
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(line_buffering=True)

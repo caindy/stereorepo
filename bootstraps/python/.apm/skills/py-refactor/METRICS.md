@@ -108,7 +108,7 @@ just gate                      # every Project the assertions declare
 ```
 
 `ruff format --check` is absent on purpose: mechanical formatting was retired
-from this standard (solorepo's DR-193).
+from this standard (stereorepo's DR-193).
 
 The advisory scanners, which no gate step reads, run per target:
 

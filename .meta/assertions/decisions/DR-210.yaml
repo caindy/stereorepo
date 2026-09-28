@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/210
     name: "DR-210 · Strict type checking over .meta/, ratcheted per file against a two-sided baseline"
-    challenge: work:challenge/432
     status: ADOPTED
     applies:
       - work:article/2
@@ -11,17 +10,16 @@ decisions:
       - work:artifact/meta-checks-comments
       - work:artifact/meta-checks-types-baseline
       - work:artifact/meta-checks-probes-tools
-      - work:artifact/github-workflows-gate
       - work:artifact/meta-assertions-structure
       - work:artifact/meta-mypy-ini
       - work:artifact/meta-checks-files-python
       - work:artifact/meta-checks-probes-tools-comments
     context: >-
       Product code instantiated from `bootstraps/python/seed/` is held to
-      `mypy --strict` (solorepo's DR-193) with an `ignore` list that stays
-      empty (solorepo's DR-096). The tooling under `.meta/`, which every portfolio
+      `mypy --strict` (stereorepo's DR-193) with an `ignore` list that stays
+      empty (stereorepo's DR-096). The tooling under `.meta/`, which every portfolio
       inherits through Specialization, was held to no type checking at all:
-      solorepo's DR-177 brought it a ruff ruleset and two gate steps and
+      stereorepo's DR-177 brought it a ruff ruleset and two gate steps and
       deferred typing outright, on the ground that annotating some 7,600 lines
       was larger than that change.
 
@@ -72,11 +70,11 @@ decisions:
         `collect.against_baseline`, shared by `meta types` and
         `inline commentary`. It sits in `collect.py` because a checker
         importing another checker for it would be an edge back up the gate's
-        import graph (solorepo's DR-150).
+        import graph (stereorepo's DR-150).
       - >-
         The `work:project/meta` gate and `.github/workflows/gate.yml` carry
         `--with mypy==2.3.1 --with types-pyyaml`. The pin is exact for the same
-        reason every other tool in a gate here is (solorepo's DR-097): a ratchet
+        reason every other tool in a gate here is (stereorepo's DR-097): a ratchet
         reads a tool's count as a fact about the tree, so a release that gains
         or loses a diagnostic would fail every file it newly speaks about or has
         gone quiet on.

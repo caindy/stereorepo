@@ -10,7 +10,7 @@ Measure test coverage and verify test suite effectiveness using coverage analysi
 
 ## Target contexts
 
-A solorepo portfolio holds two kinds of Python target, and this skill behaves
+A stereorepo portfolio holds two kinds of Python target, and this skill behaves
 differently in each.
 
 - **Repository tooling — `.meta/`.** Inherited by every portfolio through
@@ -35,7 +35,7 @@ Everything below — `pytest --cov`, `mutmut run`, a coverage threshold, a
 that is by construction rather than neglect.
 
 Its behavioural tests are the **probes** under `.meta/checks/probes/`
-(solorepo's DR-209): one module per subject under test — the hooks, the channel,
+(stereorepo's DR-209): one module per subject under test — the hooks, the channel,
 the loops' verbs, what the repository writes down about itself, and the tools
 beside the gate. Each loads the real programs it covers and runs them against the
 calls they exist to refuse and the states reviewers found them wrong in, and each
@@ -74,7 +74,7 @@ target and not this standard's.
 **In a Project workspace**, add to `[dependency-groups]` dev: `"pytest"`,
 `"pytest-cov"`, `"mutmut"`, `"coverage"`. The seed already carries `pytest` and
 `mutmut`, with the gate's tools pinned exactly and the test tools floating
-(solorepo's DR-097).
+(stereorepo's DR-097).
 **In `.meta/`**, add nothing — none of these apply there. See Target contexts above.
 **Optional**: `"cosmic-ray"` (advanced mutation testing)
 

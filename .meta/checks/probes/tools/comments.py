@@ -1,4 +1,4 @@
-"""The detectors of `comments.py` that the comment steps read through, so a wrong answer shows as a wrong verdict rather than a failure (solorepo's DR-207).
+"""The detectors of `comments.py` that the comment steps read through, so a wrong answer shows as a wrong verdict rather than a failure (stereorepo's DR-207).
 """
 import pathlib
 from typing import Any
@@ -14,32 +14,32 @@ def comment_probes() -> list[str]:
     a false positive here is a gate that refuses a licence header or a sentence
     of Reference prose. Every keep-exception has a case, and every detector has
     the innocent neighbour it must not catch (solorepo's DR-110,
-    solorepo's DR-207).
+    stereorepo's DR-207).
 
     The ratchet the `inline commentary` step reads through is asked the same
     way: a count at its baseline, over it, under it, and an entry naming a file
     the tree no longer has. It is `collect.against_baseline` and is shared with
-    the `meta types` step (solorepo's DR-210); both callers' site formatting
+    the `meta types` step (stereorepo's DR-210); both callers' site formatting
     (`comments.comment_site` and `files.mypy_errors`) and their baseline
     parameters are probed.
 
     `internal_cause` is a fourth detector and carries the same cost both ways:
-    a false negative reopens the escape solorepo's DR-225 closes, and a false
+    a false negative reopens the escape stereorepo's DR-225 closes, and a false
     positive refuses a reason whose cause is a foreign tracker.
 
     The `repeated suppressions` step reads through a second ratchet and a fifth
     detector, and both are asked here: what counts as one rule written with one
     reason, what the threshold lets through, what the external-citation escape
     hatch lifts, and the three ways `comments.against_repeats` fails a group
-    (solorepo's DR-223).
+    (stereorepo's DR-223).
 
     The `meta lines` step reads through a third ratchet and a second output
     parser, and both are asked here: what `files.ruff_findings` counts and how
-    it sites a finding, and the ratchet over it (solorepo's DR-177).
+    it sites a finding, and the ratchet over it (stereorepo's DR-177).
 
     The seed gate synchronization probe asserts that keep-exceptions, suppression
     patterns, and statement detectors in `bootstraps/python/seed/gate/` remain
-    in lockstep with `comments.py` (solorepo's DR-250).
+    in lockstep with `comments.py` (stereorepo's DR-250).
     """
     from checks import comments
     here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
@@ -89,7 +89,7 @@ def _keep_exceptions(comments: Any) -> list[str]:
     expect("directive", comments.keep_exception("noqa: F401"), "noqa")
     expect("notice", comments.keep_exception("Copyright 2026 the solo"), "copyright")
     expect("notice", comments.keep_exception("SPDX-License-Identifier: MIT"), "spdx")
-    expect("citation", comments.keep_exception("GitHub collapses this, see solorepo's DR-171"), "DR")
+    expect("citation", comments.keep_exception("GitHub collapses this, see stereorepo's DR-171"), "DR")
     expect("citation", comments.keep_exception("the API caps a page at 100, see https://docs.github.com/x"), "url")
     expect("citation", comments.keep_exception("refused in the same words as A19, see Article 19"), "article")
     expect(None, comments.keep_exception("build the list first, then sort it"), "narration")
@@ -128,7 +128,7 @@ def _suppressions(comments: Any) -> list[str]:
 
 
 def _causes(comments: Any) -> list[str]:
-    """`reasons` reading a suppression's reason off a source — one per line, however many directives the line carries — and `internal_cause` refusing a cause this tree holds while letting a foreign one through (solorepo's DR-225)."""
+    """`reasons` reading a suppression's reason off a source — one per line, however many directives the line carries — and `internal_cause` refusing a cause this tree holds while letting a foreign one through (stereorepo's DR-225)."""
     problems = []
     source = (
         "value = call()  # noqa: F401  # reason: registers check steps\n"
@@ -148,7 +148,7 @@ def _causes(comments: Any) -> list[str]:
     for text in ("flat `collect` import makes this Any; see collect.check",
                  "the root cause is filed as solorepo's #557",
                  "`render.rendered()` carries no annotations — .meta/render.py re-exports it",
-                 "the ordering solorepo's DR-207 settles",
+                 "the ordering stereorepo's DR-207 settles",
                  "see files.tree"):
         expect(True, comments.internal_cause(text, names) is not None, text)
     for text in ("mypy does not narrow this, see https://github.com/python/mypy/issues/12345",
@@ -176,7 +176,7 @@ def _blocks_and_sites(comments: Any, here: Any) -> tuple[list[str], list[str]]:
         "    # narration, on two lines\n"
         "    # that is one block\n"
         "    value = 1  # SPDX-License-Identifier: MIT\n"
-        "    other = 2  # the header caps at 100, see solorepo's DR-171\n"
+        "    other = 2  # the header caps at 100, see stereorepo's DR-171\n"
         "    return value + other  # noqa: F401  # reason: a directive\n"
     )
     found = [b for b in comments.blocks(comments.python_comments(source))
@@ -193,7 +193,7 @@ def _blocks_and_sites(comments: Any, here: Any) -> tuple[list[str], list[str]]:
 
 
 def _ratchet(comments: Any, here: Any, one: Any) -> list[str]:
-    """The shared ratchet at, over and under its baseline, and over an entry naming a file the tree no longer has (solorepo's DR-210)."""
+    """The shared ratchet at, over and under its baseline, and over an entry naming a file the tree no longer has (stereorepo's DR-210)."""
     problems = []
     def ratcheted(counts: dict[str, int], sites: dict[str, Any], recorded: dict[str, int]) -> list[str]:
         """The shared ratchet, asked about counts under the `inline commentary` step's baseline."""
@@ -383,7 +383,7 @@ def _seed_gate_sync(comments: Any) -> list[str]:
         "return None",
         "noqa: F401",
         "Copyright 2026 the solo",
-        "see solorepo's DR-171",
+        "see stereorepo's DR-171",
         "narration inside body",
         "value = 1  # noqa",
     ):

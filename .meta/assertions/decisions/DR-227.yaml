@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/227
     name: "DR-227 · An option closed by being built stays in the record, marked `tried`"
-    challenge: work:challenge/550
     status: PROPOSED
     applies:
       - work:article/11

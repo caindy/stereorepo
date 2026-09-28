@@ -8,9 +8,11 @@ from lib.wikisplain import ROOT, duplicates, lead, pages
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entrypoint for wikisplain operational authoring tool (solorepo's DR-187)."""
+    """CLI entrypoint for wikisplain operational authoring tool (stereorepo's DR-187)."""
     parser = argparse.ArgumentParser(
-        description="Scaffold, check, and explain Knowledge Management wiki concepts (solorepo's DR-187)."
+        description=(
+            "Scaffold, check, and explain Knowledge Management wiki concepts (stereorepo's DR-187)."
+        )
     )
     parser.add_argument(
         "concept",
@@ -19,8 +21,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--context",
-        default="solorepo",
-        help="The Bounded Context subfolder under wiki/ (default: 'solorepo').",
+        default="stereorepo",
+        help="The Bounded Context subfolder under wiki/ (default: 'stereorepo').",
     )
     parser.add_argument(
         "--definition",
@@ -84,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
         for a in avoided:
             print(f"  - '{a['synonym']}' is on {a['id']}'s avoid list as '{a['avoid']}' in {a['path']}")
         print("A synonym is indexed at title weight, so the search would return this page "
-              "for a word the vocabulary exists to stop denoting the concept (solorepo's DR-231).")
+              "for a word the vocabulary exists to stop denoting the concept (stereorepo's DR-231).")
         return 1
 
     content = pages.generate_page(

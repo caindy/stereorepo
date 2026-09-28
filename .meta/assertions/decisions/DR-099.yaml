@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/099
     name: "DR-099 · The generator stays behind, and its sync design is kept as the shape a portfolio's sync will take"
-    challenge: work:challenge/38
     status: PROPOSED
     applies:
       - work:article/8

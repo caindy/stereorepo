@@ -1,4 +1,4 @@
-id: https://w3id.org/solorepo/work/core
+id: https://w3id.org/stereorepo/work/core
 name: work-core
 title: Ontology of Work — Core
 description: >-
@@ -6,19 +6,18 @@ description: >-
 
   One abstract class and three slots earn their place here for a single reason:
   composition in this ontology is **by reference, not by nesting**. A Capability
-  appears in many Roles without being copied, and an Actor's Memory is the same
-  Memory a Bill of Materials pins. That only works if everything is identified,
-  so WorkEntity gives everything an id.
+  appears in many Roles without being copied. That only works if everything is
+  identified, so WorkEntity gives everything an id.
 
   `Prose` is the one thing here that is not referred to and not identified. A
   block of authored prose is the text itself rather than an entity anything
   points at, so it nests in whatever it frames; it is here because more than one
   module's class carries one, and a module importing another for a single slot
-  would be a worse answer than the exception (solorepo's DR-152).
+  would be a worse answer than the exception (stereorepo's DR-152).
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
-  work: https://w3id.org/solorepo/work-ontology/
+  work: https://w3id.org/stereorepo/work-ontology/
   linkml: https://w3id.org/linkml/
   prov: http://www.w3.org/ns/prov#
 default_prefix: work
@@ -32,15 +31,15 @@ slots:
   id:
     description: >-
       Stable identifier for the entity, in one of two forms, chosen by what the
-      entity is (solorepo's DR-125). A **slug** where the entity is its meaning — a
+      entity is (stereorepo's DR-125). A **slug** where the entity is its meaning — a
       Concept, a Discipline, an Artifact — since two with the same meaning are
       one, and renaming the label leaves the identity alone. A **number** where
-      the entity is an occurrence — a Decision, an Article, a Challenge — since
-      two with the same words are two, the order is when, and a deleted one
-      leaves a hole the gate can see. Neither form is edited once minted, and a
-      number is never reused. A Decision's is minted by `.meta/say/move mint`,
-      which reserves it on GitHub before it is cited anywhere, so that two
-      branches cannot take the same one (solorepo's DR-128).
+      the entity is an occurrence — a Decision, an Article — since two with the
+      same words are two, the order is when, and a deleted one leaves a hole the
+      gate can see. Neither form is edited once minted, and a number is never
+      reused. A Decision's is the highest number the record holds plus one, on
+      `main`; work in a repository is serial, so no two branches race for one
+      (stereorepo's DR-297).
     identifier: true
     range: uriorcurie
 
@@ -78,7 +77,7 @@ slots:
       as named blocks. `preamble` and `postamble` need no name because their
       position identifies them; a block in the middle has no position to be
       named by, so it carries one and the generator asks for it by that name
-      (solorepo's DR-152).
+      (stereorepo's DR-152).
 
       A block hangs off what it frames. The page, where the block belongs to one
       Artifact; the Discipline, where every reading compiled from it carries the

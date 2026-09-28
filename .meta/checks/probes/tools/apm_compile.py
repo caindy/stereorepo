@@ -1,4 +1,4 @@
-"""`apm_compile.py` byte fallback (solorepo's DR-208)
+"""`apm_compile.py` byte fallback (stereorepo's DR-208)
 and worktree skill projection (solorepo's #1075).
 """
 import contextlib
@@ -14,7 +14,7 @@ from checks.probes.harness import load_module
 
 @check("apm compile probes", pre=True)
 def apm_compile_probes() -> list[str]:
-    """`apm_compile.python_bootstrap_primitives` over a skill file that is not UTF-8 text (solorepo's DR-208).
+    """`apm_compile.python_bootstrap_primitives` over a skill file that is not UTF-8 text (stereorepo's DR-208).
 
     One byte that does not decode — the shape a `__pycache__/*.pyc` beside a
     skill's script and a shipped diagram both take — used to end the compile
@@ -52,7 +52,7 @@ def apm_compile_probes() -> list[str]:
 def worktree_projection_probes() -> list[str]:
     """Worktree skill projection under constrained environments and hook error reporting.
 
-    Enacts solorepo's DR-172, solorepo's DR-201, solorepo's #430, and solorepo's #1075.
+    Enacts stereorepo's DR-172, stereorepo's DR-201, solorepo's #430, and solorepo's #1075.
     Verifies that .meta/hooks/post-checkout materializes skills into .agents/skills/
     under constrained execution environments without APM CLI or ambient PyYAML,
     and reports failures to stderr instead of masking them to /dev/null.
@@ -81,8 +81,8 @@ def worktree_projection_probes() -> list[str]:
         )
         if res.returncode != 0:
             problems.append(f"constrained post-checkout failed ({res.returncode}): {res.stderr}")
-        if not (tpath / ".agents" / "skills" / "pr-first" / "SKILL.md").is_file():
-            problems.append("constrained post-checkout did not project pr-first skill")
+        if not (tpath / ".agents" / "skills" / "search" / "SKILL.md").is_file():
+            problems.append("constrained post-checkout did not project the search skill")
 
     with tempfile.TemporaryDirectory() as tmp:
         tpath = pathlib.Path(tmp)

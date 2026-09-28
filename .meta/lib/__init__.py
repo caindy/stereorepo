@@ -1,4 +1,4 @@
-"""The bodies of the scripts under `.meta/`, one package per script (solorepo's DR-217).
+"""The bodies of the scripts under `.meta/`, one package per script (stereorepo's DR-217).
 
 A script at `.meta/<name>.py`, or a hook at `.meta/hooks/<name>.py`, stays
 where the justfile, the workflows, the harness settings and the structure

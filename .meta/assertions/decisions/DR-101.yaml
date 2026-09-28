@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/101
     name: "DR-101 · The paragraph test inside a source file and the receipt rule are steps of Literate Programming and Nothing Unconsumed, not Disciplines of their own"
-    challenge: work:challenge/60
     status: ADOPTED
     applies:
       - work:article/4

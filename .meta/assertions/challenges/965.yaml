@@ -1,6 +1,0 @@
-challenges:
-  - id: work:challenge/965
-    name: "Autonomous rebase and draft restoration deadlock on stale GitHub mergeability cache"
-    challenge_type: DEFECT
-    description: >-
-      An approved, green loop draft in a stack can become permanently deadlocked across scheduled loops due to stale GitHub mergeability caching and draft classification priorities. When GitHub caches a CONFLICTING status for a draft despite the branch being clean over its base, the merge manager refuses to restore it, and the coder's rebase pass refuses to push because git says there is no conflict. Without a push, GitHub never recalculates its test merge ref, and the entire stack halts.

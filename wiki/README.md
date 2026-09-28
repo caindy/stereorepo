@@ -1,9 +1,9 @@
 # Knowledge Base (Wiki)
 
 The repository's home for maintainer-facing exposition, structured under the
-[[solorepo/knowledge-management|Knowledge Management]] discipline (solorepo's DR-184, solorepo's DR-185).
+[[stereorepo/knowledge-management|Knowledge Management]] discipline (stereorepo's DR-184, stereorepo's DR-185).
 
-Where Decision Records capture *why a choice was made* (solorepo's DR-065) and
+Where Decision Records capture *why a choice was made* (stereorepo's DR-065) and
 LinkML vocabularies capture *machine definitions and glosses*, the wiki captures
 **narrative explanations**: how architectures work, how subsystems interact,
 and how domain concepts behave in practice.
@@ -14,19 +14,19 @@ In accordance with Domain-Driven Design, meaning is never global; it is always
 scoped to a **Bounded Context** (`ddd:context/<name>`). The wiki directory is
 partitioned accordingly:
 
-- **[`solorepo/`](solorepo/README.md)** — **Hermetic.** The operating manual,
+- **[`stereorepo/`](stereorepo/README.md)** — **Hermetic.** The operating manual,
   engineering concepts, loop disciplines, and harness mechanisms of the
-  `solorepo` Bounded Context (`ddd:context/solorepo`). When a new portfolio
-  specializes from this scaffold, `wiki/solorepo/` is inherited intact so the
+  `stereorepo` Bounded Context (`ddd:context/stereorepo`). When a new portfolio
+  specializes from this scaffold, `wiki/stereorepo/` is inherited intact so the
   portfolio retains the documentation for its tooling and workflows.
 - **`<bounded-context>/`** — **Domain-specific.** When a portfolio specializes,
   it adds subdirectories for its own declared Bounded Contexts (for example,
   `wiki/billing/`, `wiki/inventory/`). The business concepts of the product live
-  there, completely separated from solorepo's scaffold concepts.
+  there, completely separated from stereorepo's scaffold concepts.
 
 ## Editorial Conventions
 
-Pages in this wiki adhere to Wikipedia-style conventions (solorepo's DR-185):
+Pages in this wiki adhere to Wikipedia-style conventions (stereorepo's DR-185):
 
 1. **The Lead Sentence (MOS:LEAD):** Every page opens with a bolded subject
    followed by a copular definition stating what the concept is:

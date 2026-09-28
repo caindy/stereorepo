@@ -38,4 +38,4 @@ max-branches = 12
 max-statements = 50
 
 [lint.isort]
-known-first-party = ["checks", "check_pr", "channel", "lib", "depth", "agents"]
+known-first-party = ["checks", "lib"]

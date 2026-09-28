@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/244
     name: "DR-244 · Distinguishing synthetic Specialization test verification from the Dogfooding discipline"
-    challenge: work:challenge/679
     status: ADOPTED
     applies:
       - work:article/9
@@ -13,12 +12,11 @@ decisions:
       - work:artifact/meta-fixtures-specialization-readme
       - work:artifact/meta-fixtures-specialization-tokens
       - work:artifact/meta-checks-probes-tools-test-specialization
-      - work:artifact/github-workflows-test-specialization
     context: >-
       Challenge #657 delivered an automated runner and CI workflow to verify the 8-step
-      Specialization procedure into an isolated temporary directory (solorepo's DR-239),
+      Specialization procedure into an isolated temporary directory (stereorepo's DR-239),
       automating the clean test repository verification that closed First Specialization
-      (solorepo's DR-204). That work carried over the colloquial identifier "dogfood" across
+      (stereorepo's DR-204). That work carried over the colloquial identifier "dogfood" across
       runner scripts, operator recipes, and scheduled workflows.
     alternatives:
       - name: Retain colloquial "dogfood" naming across scripts, operator recipes, and workflows
@@ -46,7 +44,7 @@ decisions:
         identifier.
       - >-
         just test-specialization exposes automated Specialization end-to-end verification
-        on the root operator surface (solorepo's DR-106).
+        on the root operator surface (stereorepo's DR-106).
       - >-
         .github/workflows/test-specialization.yml executes automated Specialization
         end-to-end verification on schedule and manual dispatch.
@@ -63,7 +61,7 @@ decisions:
       Any script, recipe, workflow, or assertion under .meta/ or .github/ retaining the
       "dogfood" identifier for synthetic Specialization test execution.
     rationale: >-
-      Per Article 17 and solorepo's DR-190, vocabulary across code, commands, and documentation
+      Per Article 17 and stereorepo's DR-190, vocabulary across code, commands, and documentation
       must strictly adhere to the Ubiquitous Language. In solorepo, Dogfooding is a minted concept
       (work:concept/dogfooding in .meta/assertions/imported/vocabulary.yaml) defined as "Using what
       is being built, on itself, before anyone else has to", and a formal discipline

@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/263
     name: "DR-263 · Assert a floor on ruff's select in the gate's own code, each entry paired with the linter that owns it"
-    challenge: work:challenge/736
     status: ADOPTED
     applies:
       - work:article/2
@@ -10,10 +9,10 @@ decisions:
       - work:artifact/meta-checks-probes-ruleset
       - work:artifact/meta-ruff-toml
     context: >-
-      Solorepo's Article 2 refuses a suppression made in configuration: the `meta lints`
+      Stereorepo's Article 2 refuses a suppression made in configuration: the `meta lints`
       step reads `lint.ignore` and `lint.extend-ignore` out of `.meta/ruff.toml` and fails
       on any entry, so switching a rule off after selecting it costs a site suppression,
-      a `reason:` under solorepo's DR-177, and an argument on the pull request.
+      a `reason:` under stereorepo's DR-177, and an argument on the pull request.
 
       The step never read `select`. Declining to select a family reaches the same end at
       none of that cost: the rule is off, no site carries a comment, and the diff that

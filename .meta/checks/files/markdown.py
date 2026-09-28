@@ -22,7 +22,7 @@ def markdown_links() -> list[str]:
     """Validate that relative Markdown links in documentation resolve to existing files or directories.
 
     Scans Markdown documentation files outside `template/` and `.git/`, ensuring target paths
-    resolve within the git-tracked tree (solorepo's DR-036).
+    resolve within the git-tracked tree (stereorepo's DR-036).
 
     Returns:
         list[str]: Validation problem messages for broken relative links.

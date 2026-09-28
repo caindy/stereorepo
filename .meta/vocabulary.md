@@ -8,10 +8,7 @@ _The words this repo uses, and what they mean._
 
 A Concept is a unit of meaning, not a word — which is why two entries
 below share a label. Use the preferred label; do not mint a Concept
-without the solo. `.meta/say/move mint --concept '<id>'` is how he mints
-one: it reserves the identifier, it is refused inside a run, and the gate
-fails a row that stands on no reservation (solorepo's DR-276). Check DDD first, then
-this vocabulary, then ask.
+without the human. Check DDD first, then this vocabulary, then ask.
 
 ### DDD canon
 
@@ -28,44 +25,37 @@ _Authority: Eric Evans, and About Face for the persona work._
 | **Business goal** | An organisational objective — conversion, support cost, retained revenue. | — |
 | **Technical goal** | An architectural constraint — latency, offline-first sync, data residency. | — |
 
-**Invariant (of an Aggregate).** Carried by the `invariants` slot on Entity, ValueObject and Aggregate. DDD keeps this word; solorepo's clauses are Articles, which is part of why the rename was worth making.
+**Invariant (of an Aggregate).** Carried by the `invariants` slot on Entity, ValueObject and Aggregate. DDD keeps this word; stereorepo's clauses are Articles, which is part of why the rename was worth making.
 
-**Ubiquitous Language.** A portfolio's own domain language. solorepo's vocabulary is imported alongside it to articulate the discipline, and has no authority over it.
-Adopted here as a Discipline of the same name — DDD names the thing, and solorepo names the practice of defining, maintaining and adhering to one.
+**Ubiquitous Language.** A portfolio's own domain language. stereorepo's vocabulary is imported alongside it to articulate the discipline, and has no authority over it.
+Adopted here as a Discipline of the same name — DDD names the thing, and stereorepo names the practice of defining, maintaining and adhering to one.
 
-**Published Language.** What solorepo offers a portfolio, and what DDD offers solorepo.
+**Published Language.** What stereorepo offers a portfolio, and what DDD offers stereorepo.
 
-**Persona.** Cooper's sense. What solorepo's original sketch called a Persona is a Personality; the two are not the same thing. Worn by an Actor as a temporary Personality during collaborative feature design interrogation (solorepo's DR-200).
+**Persona.** Cooper's sense. Compiled to an agent that answers as the Persona during collaborative feature design interrogation (stereorepo's DR-200).
 
-**Business goal.** Named in *About Face* and deliberately kept out of the Persona so it cannot pollute the user model. It justifies a Goal instead.
+**Business goal.** Named in *About Face* and deliberately kept out of the Persona so it cannot pollute the user model. It justifies the work instead.
 
 **Technical goal.** Kept out of the Persona for the same reason as a business goal.
 
-### solorepo work vocabulary
+### stereorepo work vocabulary
 
-_Authority: solorepo._
+_Authority: stereorepo._
 
 #### Doing the work
 
-_Who does work, what they may do, and what they are given to do it with._
+_Who does the work, and how it moves from the backlog to main._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Personality** | The character an Actor presents — a SOUL.md plus a communication style directing its conversational voice. | persona |
 | **Capability** | A kind of thing that can be done or used. Never names an object. | permission, tool access |
-| **Securable** | A set of objects, by enumeration or by a selector rule. | — |
-| **Permission** | The authority to employ a Capability on a Securable. | — |
 | **Role** | A named set of Capabilities. | — |
-| **Remit** | Permissions plus a Goal — what may be done, and what it is to be done for. | — |
-| **Agency** | A Role plus a Remit. | — |
-| **Actor** | A prototype in the division of labor: a Personality with an Identity and a Memory. | user, bot |
-| **Job** | An Actor given an Agency. An assignment. | — |
-| **Collaboration** | The Jobs that meet on one Challenge. Two is the minimum. | — |
-| **Handoff** | The seam where one Job stops and another takes the same Challenge up, sharing no filesystem, no shell and no conversation. | pickup |
-| **Skill (solorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
-| **Door** | The seam at which a loop workflow admits a Role's run: the event it fires on, what the run reads and decides before its harness session starts, and what it reads and writes after the session ends (solorepo's DR-264). | — |
-| **Dev Loop** | The event-driven autonomous execution cycle that advances a Challenge from triage to merged pull request through decoupled coder, reviewer, and merge manager passes without continuous human supervision (solorepo's DR-111, solorepo's DR-112, solorepo's DR-178). | — |
-| **Choreography** | The coordination style in which each participant carries only its own rules and reacts to events on a shared substrate, so that no coordinator holds the process and the flow is what the local rules produce together (solorepo's DR-214, solorepo's DR-216). | — |
+| **Human** | The one person a repository serves, who builds it with agents and decides what they cannot. | solo, user, owner, operator |
+| **Seat** | One of the two long-lived harness sessions that take an Issue from the backlog to `main` in turns, in one shared worktree. | coder, reviewer, agent |
+| **Supervisor** | The deterministic program that runs the seats and moves an Issue between stages from what it can observe: where the Issue file is, the working tree, and the gate's exit code. | orchestrator, captain, lead |
+| **Quiet turn** | A seat's turn that changes nothing, by which the seat accepts the state the other left. | approval, verdict, sign-off |
+| **Desk check** | The human's check of a `human` Issue's result, by hand, before it lands on `main`. | review, approval |
+| **Skill (stereorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 
 #### What the work is for
 
@@ -73,30 +63,17 @@ _Who it serves, what problem it addresses, and how anyone knows it is done._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Challenge** | A problem to be addressed — a defect, epic, feature or task. | ticket, story |
-| **Definition of Done** | The test that decides whether a Goal has been met. | — |
 | **Job to be Done** | The need the work serves, stated from the point of view of the Persona that has it. | — |
-| **Goal** | A SMART goal — Challenge, Definition of Done, Job to be Done and Deadline, all required. | — |
 | **Persona goal** | What a Persona is trying to achieve, at Cooper's experience, end or life tier. | — |
-
-#### What was actually done
-
-_The runtime record — who ran, out of what parts, and what they touched._
-
-| Term | Means | Do not say |
-|---|---|---|
-| **Execution** | One carrying-out of a Job. Where design-time becomes fact. | — |
-| **Audit Record** | One employment of a Capability on a Securable. A Permission in the past tense. | — |
-| **Agent Bill of Materials** | What an Actor was made of at a moment, resolved to immutable references. | — |
 
 #### How the repository is divided
 
-_The units a solorepo is made of._
+_The units a stereorepo is made of._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Portfolio** | Everything one solo builds inside one Bounded Context. One per repo. | — |
-| **Client Repo** | A software repository that specializes solorepo by adopting its cognitive operating layer via the APM package, inheriting its SDLC and verification gates, and instantiating language Projects from Bootstraps on demand. | — |
+| **Portfolio** | Everything one human builds inside one Bounded Context. One per repo. | — |
+| **Client Repo** | A software repository that specializes stereorepo by adopting its cognitive operating layer via the APM package, inheriting its SDLC and verification gates, and instantiating language Projects from Bootstraps on demand. | — |
 | **Product** | Something delivered to users, with its own interface and therefore its own primary Persona. The unit of value. | — |
 | **Project** | A unit of build — one toolchain, one language, its own tests and gate. The unit of construction. | workstream |
 | **Bootstrap** | The standard for one language, together with the gates that hold a project to it. | starter, boilerplate, scaffold |
@@ -107,22 +84,17 @@ _The kinds of thing written down, and which of them is authoritative._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Concept** | The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language (solorepo's DR-184, solorepo's DR-190, solorepo's DR-195). | wiki article, term, entity |
+| **Concept** | The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language (stereorepo's DR-184, stereorepo's DR-190, stereorepo's DR-195). | wiki article, term, entity |
+| **Issue** | One unit of work, as one Markdown file on the board, whose filename slug is its identifier. | ticket, story, challenge, epic, task |
+| **Board** | A repository's set of Issue files, kept in `issues/` at its root, in which the directory holding an Issue file is that Issue's stage. | kanban, tracker |
+| **Stage** | Where an Issue is on its way to `main`: `roadmap`, `backlog`, `todo`, `in-progress`, `desk-check` or `done`, in that order, each a directory of the board. | column, status, state |
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
-| **Issue** | Where a Challenge lives before it is taken up — including work noticed during other work and deliberately not done. | tech debt, backlog item |
-| **Pull Request** | Where a Challenge is taken in, argued and recorded — the Collaboration point, and the searchable account of why each change was made. | changelog, ticket |
-| **Review Thread** | One conversation on a Pull Request, opened against a line or against the change as a whole, and closed by being answered and resolved. | comment, conversation |
-| **Noticed and Not Done** | Work observed but left unexecuted during a change that falls outside its remit, formally parked on the diff as an unresolved review thread and promoted to an Issue at approval to preserve its context without blocking delivery (solorepo's Article 15, solorepo's DR-064, solorepo's DR-159, solorepo's DR-195). | backlog, technical debt, punch list, follow-up ticket |
-| **Incidental Commit** | A fix a branch can already reach that is mechanical, owes no Decision, implies no Challenge of its own and is proved by the gate already running, made in a commit of its own whose subject begins `Incidental:` (solorepo's DR-236). | drive-by, drive-by commit, opportunistic fix |
-| **Seed Commit** | An empty git commit authored with `.meta/say/commit --allow-empty` carrying the subject line `Record initial plan for Challenge #<n>`, pushed to open a pull request before modifying tracked repository files on hard and human Challenges (solorepo's DR-269). | dummy commit, placeholder commit, empty commit |
-| **Mergeability Refresh Commit** | An empty commit force-pushed to a branch already current with its base to clear a stuck CONFLICTING state in GitHub's mergeable cache. | dummy commit, empty commit |
 | **Decision record** | The record of decisions at every level — the Portfolio's, a Product's or a Project's, told apart by which the entry names. One sequence, numbered DR-nnn, newest last. | ADR, architecture decision record |
-| **Trailer** | A `Key: value` line at the end of a commit message or a comment, naming the Actor that wrote it. | — |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
 | **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
-| **Citation** | A formal reference in a durable artifact to an upstream authority — an Article, Decision Record, or Challenge — asserting that the target supports or governs the statement. | reference, link, mention |
+| **Citation** | A formal reference in a durable artifact to an upstream authority — an Article, Decision Record, or Issue — asserting that the target supports or governs the statement. | reference, link, mention |
 | **Dereference** | To resolve and evaluate a citation against what the referenced authority asserts. | resolve, verify link |
-| **Externalized Memory** | The practice of holding what a session would otherwise remember in artifacts the next participant reads, rather than in the agent that learned it (solorepo's DR-216, solorepo's Article 22). | — |
+| **Externalized Memory** | The practice of holding what a session would otherwise remember in artifacts the next participant reads, rather than in the agent that learned it (stereorepo's DR-216, stereorepo's Article 22). | — |
 
 #### The Disciplines
 
@@ -132,8 +104,7 @@ _The named ways of working, each adhered to because it is not a program._
 |---|---|---|
 | **Literate Programming** | An artifact is an exposition addressed to a human reader; the machine-readable part is secondary. | — |
 | **Progressive Disclosure** | One small thing loads always; everything else loads on demand, routed by a load map that is deliberately insufficient. | — |
-| **Journaling** | Routing narrative to the artifact that owns it, and the residue to the Pull Request — never to a commit message. | — |
-| **PR First** | Opening the Pull Request when the work starts, so it is where the work is argued rather than a wrapper round a finished branch. | — |
+| **Journaling** | Routing narrative to the artifact that owns it, and the residue to the issue file — never to a commit message. | — |
 | **Knowledge Management** | Organizing maintainer-facing exposition into an encyclopedic wiki partitioned by Bounded Context. | — |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
 | **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
@@ -142,55 +113,45 @@ _The named ways of working, each adhered to because it is not a program._
 | **Nothing Unconsumed** | An artifact prevents drift only if something consumes it and checks it against something. | — |
 | **Seeded Artifacts** | A seed is data, gated by rendering it and running the real gates on the result, and it must not violate the rules it seeds. | scaffolding |
 | **Written Decisions** | A decision that lives only in a transcript has not been made. | — |
-| **Specialization** | Turning a fresh clone of solorepo into a new portfolio repo. | bootstrap, init, scaffolding step |
+| **Specialization** | Turning a fresh clone of stereorepo into a new portfolio repo. | bootstrap, init, scaffolding step |
 
-**Concept.** The semantic unit of maintainer knowledge. Where a Concept lands in the artifact hierarchy — whether as a schema gloss, a section, or a dedicated markdown file — is subordinate to the authoring agent's structural judgement under the Diátaxis Compass. "Article" is strictly avoided to protect the Charter's empirical clauses (solorepo's Article 1, solorepo's Article 15).
-
-**Personality.** Called Persona in the original sketch, until Cooper's Persona took the word back. Governs conversational voice; durable code is governed by Disciplines (solorepo's DR-198, solorepo's DR-199).
-
-**Challenge.** The work itself, which two artifacts hold in turn: an Issue before it is taken up, a Pull Request while it is being done.
+**Concept.** The semantic unit of maintainer knowledge. Where a Concept lands in the artifact hierarchy — whether as a schema gloss, a section, or a dedicated markdown file — is subordinate to the authoring agent's structural judgement under the Diátaxis Compass. "Article" is strictly avoided to protect the Charter's empirical clauses (stereorepo's Article 1, stereorepo's Article 15).
 
 **Portfolio.** One repo, one Bounded Context, one Ubiquitous Language. The repo boundary and the language boundary are the same boundary, which is why a portfolio is a monorepo.
 
-**Client Repo.** A downstream repository consuming solorepo's cognitive primitives (`.meta/`) via APM. While a Portfolio names the monorepo boundary for one Bounded Context, a Client Repo names the physical git repository that specializes the scaffold, inheriting its disciplines, verification gate, and language bootstraps.
+**Client Repo.** A downstream repository consuming stereorepo's cognitive primitives (`.meta/`) via APM. While a Portfolio names the monorepo boundary for one Bounded Context, a Client Repo names the physical git repository that specializes the scaffold, inheriting its disciplines, verification gate, and language bootstraps.
 
 **Product.** Cooper's rule is the test for one Product against two: a primary persona's goals cannot be met by an interface aimed at another without unacceptable compromise.
 
-**Project.** Products are composed from Projects, many-to-many. Not a piece of work, which is a Challenge; and not a whole repository, which is what python_bootstrap means by the word.
+**Project.** Products are composed from Projects, many-to-many. Not a piece of work, which is an Issue; and not a whole repository, which is what python_bootstrap means by the word.
 
-**Persona goal.** An END goal is Goal-shaped but has no Deadline: it is standing rather than a bounded commitment, so it is not a Goal.
+**Persona goal.** Standing rather than a bounded commitment. What the work in hand is for is an Issue's to say, not a Persona goal's.
 
-**Actor.** Decoupled from execution models, which bind dynamically at runtime (solorepo's DR-188, solorepo's DR-199).
+**Human.** The common word, as in "human in the loop", narrowed to one person. Never a second person: a repository has exactly one human, and a process that needs two is a poor fit. Never an agent acting for the human: an agent's judgement is not the human's, however it is labelled. The `human` difficulty names the Issues that wait for this person's desk check.
 
-**Discipline.** Not a Capability, not a Permission, and not a characterisation such as a communication style.
+**Issue.** The common word, narrowed. An Issue has no number: its slug is its id. It has no status, labels or assignee: its stage is the directory it sits in. It has no comment thread: the seats' notes and the human's desk-check notes are written in the file. Its front matter holds only what cannot be observed or derived — `difficulty`, and optionally `waits_on` and `parent`. An Issue with children is a parent issue; there is no other type.
 
-**Issue.** The hosting service's artifact, borrowed for what it has that a file does not: an open and a closed, a title someone reads, and a backlink to the work that found it. Not a synonym for Challenge — it is one of the two places a Challenge can be.
+**Board.** One per repository, and the board on `main` is authoritative. Not GitHub Issues or Projects, not a status field, and not a kanban view: a view of the board is a projection of it and holds no state of its own.
 
-**Pull Request.** `journal` is the same thing under its older name, kept because it says what the pull request is *for*. Not authoritative, which is the trap: it looks like a record, so findings that stop here give a repository the appearance of having decided things and the substance of having noticed them.
+**Stage.** A directory, never a field. The human adds Issues to `roadmap` and `backlog`; every other move is the supervisor's, and always a `git mv`.
 
-**Review Thread.** **Outdated is not resolved.** GitHub collapses a thread whose anchor moved and leaves it open, and the two states are independent — an objection can outlive the line it was written against. A16 turns on that distinction.
+**Seat.** Coined, because pair programming's driver and navigator divide the typing and here both seats write code. Within a stage the primary seat takes the first turn and the secondary the next; the secondary fixes what it finds rather than describing it. A seat is told the Issue file, what the stage is for, and what changed since its last turn, and nothing about the protocol that moves the Issue.
 
-**Noticed and Not Done.** Recorded only in an Issue or parked review thread, never buried in a commit message or lost in PR summaries (solorepo's Article 15).
+**Supervisor.** A program, not a model, and nothing an agent must remember to invoke. `pair/` in the scaffold; `just pair` runs it.
 
-**Incidental Commit.** The counterpart of Noticed and Not Done, and the two partition what a change encounters outside its remit: what the branch can reach under the four-part bound is committed here, and everything else is parked on the diff. The subject prefix is the whole form and exists to be counted: `git log --grep '^Incidental:'` is the query one direction of the falsifier in solorepo's DR-236 runs. "Drive-by" named this in that Decision as first adopted, and is avoided here under A17 as a word that arrived by use rather than by minting.
+**Quiet turn.** Agreement is observed, never declared: when both seats have accepted the same state, by making it or by leaving it alone, the stage advances if its requirement holds.
 
-**Seed Commit.** The counterpart of the Incidental Commit for the commencement of a change: where an Incidental Commit records an opportunistic mechanical fix discovered during work, a Seed Commit records the initial plan before modifying tracked repository files, providing git with a commit object so GitHub's pull request creation does not refuse when there are zero commits between base and head. Countable across repository history via `git log --grep '^Record initial plan for Challenge #'`.
+**Desk check.** The one stage that waits for the human. Accepting lands the Issue; leaving notes in the Issue file and resuming sends it back to the pair.
 
-**Mergeability Refresh Commit.** Countable across repository history via `git log --grep '^Mergeability Refresh Commit$'`.
+**Discipline.** Not a Capability, and not a characterisation such as a communication style.
 
-**Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until solorepo's DR-093, and imported a qualifier the record never used.
+**Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until stereorepo's DR-093, and imported a qualifier the record never used.
 
 **Bootstrap.** Where a Discipline becomes a command that can fail. A Bootstrap says how a Discipline is satisfied in one language; it never restates the Discipline, because the second copy is the one that drifts.
 
-**Journaling.** The routing practice, not a place. What it routes goes to the artifact that owns it, and the residue to the Pull Request.
+**Journaling.** The routing practice, not a place. What it routes goes to the artifact that owns it, and the residue to the issue file. Leftover work, noticed and not done, is a new Issue in the backlog.
 
-**PR First.** It stands in for the tracker a team would have, and is the only Collaboration point available to agents that share no filesystem.
-
-**Knowledge Management.** Prose addressed to a maintainer who arrives cold and seeks to understand an architecture or domain concept. Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page adhering to MOS:LEAD conventions and closed-world wikilinks (solorepo's DR-184, solorepo's DR-185).
-
-**Trailer.** Borrowed from git, which already parses these. It carries what no other part of the record can: every commit and comment here is made under the solo's account, so identity is asserted by the writer or it is absent. A Role's machine account would say which Role; the trailer says which Actor within it, and the two do not substitute for each other.
-
-**Handoff.** A state, not a message: a review request naming the next Role. It is part of PR First rather than a Discipline of its own — once the note was removed, what remained was a transition with two conditions on it, and a way of working with no judgement in it is a program nobody has written.
+**Knowledge Management.** Prose addressed to a maintainer who arrives cold and seeks to understand an architecture or domain concept. Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page adhering to MOS:LEAD conventions and closed-world wikilinks (stereorepo's DR-184, stereorepo's DR-185).
 
 **Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 
@@ -204,17 +165,11 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Charter.** Borrowed rather than metaphorical. A charter grants and binds; what this one adds is that its clauses are empirical, so it can be argued with on evidence rather than only amended.
 
-**Citation.** A citation is composed of an identifier (number), the claim it names, and a link where one is possible (Article 12, solorepo's DR-182). Evaluated at three progressive depths: target existence, structural correspondence of the claim, and semantic support by the target authority.
+**Citation.** A citation is composed of an identifier (number), the claim it names, and a link where one is possible (Article 12, stereorepo's DR-182). Evaluated at three progressive depths: target existence, structural correspondence of the claim, and semantic support by the target authority.
 
-**Dereference.** The verb Article 12 binds to citation. Checked mechanically for target existence and structural claims by check.py, and evaluated for semantic support by dereference.py before handoff.
+**Dereference.** The verb Article 12 binds to citation. Checked mechanically for target existence and structural claims by check.py, and evaluated for semantic support by dereference.py.
 
-**Door.** Each workflow of the Dev Loop is a door: the reviewer's reading door and review door, the coder's door with its three passes. A door is edge-triggered, and what a dropped edge loses the reconciler re-delivers on the clock.
-
-**Dev Loop.** The runtime engine realizing PR First, and Choreography is the shape it takes: each pass reacts to a GitHub event under its own rules and no coordinator holds the process. Operates across those events using pull requests and branch prefixes as stateless semaphores, carrying multi-harness dispatch, resilient failure fallback, and graceful hand-backs to the solo maintainer.
-
-**Choreography.** The property; the Dev Loop is the engine that has it. Its opposite is orchestration, where one actor holds the process and tells each participant what to do next, which is what a fleet supervisor does and what this repository does not have.
-
-**Externalized Memory.** Not the absence of memory. The harness's own memory surfaces are tracked and generated from the assertions, so memory here is compiled rather than forbidden. What is given up is the private copy: state an unprivileged Job cannot observe is state the system does not have; solorepo's DR-214 records the substrate choice this rests on and explicitly leaves open whether the wider commitment is a Decision of its own or the premise that one rests on; naming the practice does not settle that.
+**Externalized Memory.** Not the absence of memory. The harness's own memory surfaces are tracked and generated from the assertions, so memory here is compiled rather than forbidden. What is given up is the private copy: state the next participant cannot observe is state the system does not have.
 
 ### Toulmin's ontology of argument
 
@@ -228,12 +183,12 @@ _Authority: Stephen Toulmin, *The Uses of Argument* (1958), as caindy/fitch-mvp'
 **Claim.** That sentence is the opening of the `Claim` class in `schema/epistemology.yaml` in caindy/fitch-mvp, quoted whole and unaltered. The schema models Toulmin's ontology of argument on LinkML — the same technology this vocabulary uses — and names Stephen Toulmin as the source; his published one is *The Uses of Argument* (1958). Quoted rather than paraphrased, because four systems are intended to merge and a shared word that acquires a second meaning here is the drift caindy/solorepo#488 exists to prevent.
 The same class continues: "A claim is its text and its warrants", and its Qualifier "is not stored", a claim carrying no probability of its own. `Warrant` and `Qualifier` are that schema's terms and are not minted here.
 The label collides with the channel verb `claim`, which takes an Issue by assigning it to a Role's account, and with "the claim released" in what `move stop` does. That is an ownership lock and not an assertion under evaluation. `confusable_with` cannot hold it, the verb being no Concept, so it is said here: a Claim is argued about, a claim is taken and released.
-What a history entry asserts, what an Article holds against an artifact, and what a Citation names in its target are each a Claim. Whether the rest of Toulmin's ontology is taken with it is caindy/solorepo#576's judgement, not settled here (solorepo's DR-228).
+What a history entry asserts, what an Article holds against an artifact, and what a Citation names in its target are each a Claim. Whether the rest of Toulmin's ontology is taken with it is caindy/solorepo#576's judgement, not settled here (stereorepo's DR-228).
 
 **Evidence.** That sentence is the opening of the `Evidence` class in `schema/epistemology.yaml` in caindy/fitch-mvp, quoted whole and unaltered, for the reason Claim's is.
 The same class continues: "Toulmin's Grounds (Data) by default, reached from a warrant through `grounds`; also Backing when it lends a credence, which is how a data stream earns a track record. The two are positions in an argument, not kinds of evidence." `Grounds`, `Backing` and `Warrant` are that schema's terms, and the slot the quotation names is its slot, not one here; none of them is minted here.
-A Citation can be Evidence and is not the same thing: a citation names an upstream authority, and one that cannot go stale is what solorepo's DR-171 refused, which is why the collision is recorded rather than the word avoided.
-What is distinctive here is not that a history entry names Evidence but that it names Evidence which can fail: solorepo's DR-171 turned down commit hashes and pull request citations as not mechanically falsifiable, because a hash is unchanged when the change it records is undone, so nothing detects that the entry has gone stale. The `Evidence:` line is held to a symbol a parser resolves, which is what lets an entry go stale when the test it names is gone; the word itself carries no such requirement (solorepo's DR-228).
+A Citation can be Evidence and is not the same thing: a citation names an upstream authority, and one that cannot go stale is what stereorepo's DR-171 refused, which is why the collision is recorded rather than the word avoided.
+What is distinctive here is not that a history entry names Evidence but that it names Evidence which can fail: stereorepo's DR-171 turned down commit hashes and pull request citations as not mechanically falsifiable, because a hash is unchanged when the change it records is undone, so nothing detects that the entry has gone stale. The `Evidence:` line is held to a symbol a parser resolves, which is what lets an entry go stale when the test it names is gone; the word itself carries no such requirement (stereorepo's DR-228).
 
 ### APM primitives
 
@@ -253,33 +208,19 @@ more often a collision than a gap.
 
 | This | Is not | 
 |---|---|
-| **Persona** | Personality |
-| **Personality** | Persona |
-| **Challenge** | Project, Issue |
 | **Portfolio** | Product, Client Repo |
 | **Client Repo** | Portfolio, Project |
 | **Product** | Portfolio, Project |
-| **Project** | Challenge, Product |
-| **Job to be Done** | Job |
-| **Goal** | Persona goal |
-| **Persona goal** | Goal |
-| **Job** | Job to be Done |
-| **Issue** | Challenge, Pull Request |
-| **Pull Request** | Challenge, Issue |
-| **Review Thread** | Pull Request |
-| **Noticed and Not Done** | Incidental Commit |
-| **Incidental Commit** | Noticed and Not Done, Seed Commit |
-| **Seed Commit** | Incidental Commit |
-| **Mergeability Refresh Commit** | Seed Commit, Incidental Commit |
-| **Journaling** | Pull Request |
+| **Project** | Issue, Product |
+| **Human** | Seat |
+| **Issue** | Project |
+| **Seat** | Human, Supervisor |
+| **Supervisor** | Seat |
 | **Evidence** | Citation |
-| **Skill (solorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
-| **Dev Loop** | PR First |
-| **Choreography** | Dev Loop |
-| **Externalized Memory** | Choreography |
-| **Skill (APM primitive)** | Skill (solorepo Capability kind), Prompt (APM primitive) |
-| **Prompt (APM primitive)** | Skill (solorepo Capability kind), Skill (APM primitive) |
+| **Skill (stereorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
+| **Skill (APM primitive)** | Skill (stereorepo Capability kind), Prompt (APM primitive) |
+| **Prompt (APM primitive)** | Skill (stereorepo Capability kind), Skill (APM primitive) |
 
 ---
 
-**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-071](assertions/decisions/DR-071.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-182](assertions/decisions/DR-182.yaml), [DR-276](assertions/decisions/DR-276.yaml)
+**Where this came from.** [DR-051](assertions/decisions/DR-051.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-182](assertions/decisions/DR-182.yaml)

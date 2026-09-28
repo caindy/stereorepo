@@ -1,0 +1,57 @@
+decisions:
+  - id: work:decision/297
+    name: "DR-297 · The record keeps solorepo's numbers, and a number it does not hold was solorepo's"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-checks-graph-record
+      - work:artifact/meta-assertions-imported-charter
+      - work:artifact/agents
+    context: >-
+      This repository was seeded from solorepo with its history, and the
+      seeding removed the delivery discipline solorepo ran on, its GitHub
+      choreography, and the taxonomy of work that served them. The Decisions
+      and Articles that existed only for those went with them. What stayed
+      keeps its number, because the entries that stayed cite each other by
+      number and a citation that silently came to mean something else would be
+      worse than one that dangles.
+
+      That leaves holes. The record's numbering rule said a hole is a deletion
+      unless a tag on GitHub reserved the number, and the reservation was the
+      part of the removed machinery that let several branches write Decisions at
+      once. Work in a repository is now serial, one issue at a time, so no two
+      branches race for a number.
+    alternatives:
+      - name: Keep every removed entry, marked WITHDRAWN
+        chosen: false
+        reason: >-
+          The removed entries are the history of a way of working this
+          repository no longer has. Kept, every reader of the record pays for
+          them, and the history is already kept where it belongs: in git, and in
+          solorepo.
+      - name: Renumber the surviving entries contiguously
+        chosen: false
+        reason: >-
+          Every citation in the surviving prose, and every citation a portfolio
+          holds of this record, would come to mean something else.
+      - name: Keep the numbers, and read every number below this one that the record does not hold as solorepo's
+        chosen: true
+        reason: >-
+          The surviving citations keep their meaning, and the rule is one
+          number. A number above this one is issued as the highest the record
+          holds plus one, on `main`, and a hole above it is a deletion.
+    consequences:
+      - >-
+        `decision numbering` accepts a hole below this entry's number and
+        refuses one above it, and reads no tags.
+      - >-
+        Articles 15, 16, 18 and 19 are retired by this entry.
+      - >-
+        The next Decision is the highest number the record holds plus one.
+    falsifier: >-
+      Two Decisions written on two branches at once, both taking the same next
+      number, which would mean work in a repository is no longer serial.
+    rationale: |-
+      The numbers are identifiers, so the surviving ones stay as they are. The
+      holes are the account of the seeding and need no other: the removed
+      entries are in git and in solorepo. Reservation existed for parallel
+      branches, and there are none.

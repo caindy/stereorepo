@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/080
     name: "DR-080 · A rationale carries what the slots cannot"
-    challenge: work:challenge/11
     status: ADOPTED
     applies:
       - work:article/12
@@ -37,9 +36,9 @@ decisions:
         Written Decisions gains two steps: keep `rationale` to what the slots
         cannot hold, and never narrate the sequence of events.
       - >-
-        DR-056 loses a stale detail it had been carrying — it recorded the
+        solorepo's DR-056 loses a stale detail it had been carrying — it recorded the
         required status checks as `files` and `pull request body`, and the second
-        has been `pull request` since DR-057 renamed the job.
+        has been `pull request` since solorepo's DR-057 renamed the job.
     falsifier: >-
       A question about a past decision that the trimmed entry cannot answer and
       the original could. The cut would then have taken reasoning rather than
@@ -52,11 +51,11 @@ decisions:
       The diagnosis is DRY, and it is structural rather than stylistic. A
       rationale that restates its own `options` is a second copy inside one file,
       which is the failure this repository spent its length removing between
-      files. DR-052 stated its three rejected options twice; DR-056 spent 452
+      files. solorepo's DR-052 stated its three rejected options twice; solorepo's DR-056 spent 452
       words narrating an afternoon whose foreclosure is four lines.
 
       The narrative half was never the record's to hold. The routing table has
       always said that what happened on a change goes to the pull request body,
       and an entry recounting the sequence is that rule broken in the artifact
-      that defines it. The stale contexts in DR-056 are what that costs: prose
+      that defines it. The stale contexts in solorepo's DR-056 are what that costs: prose
       nothing checks, wrong for a day and unnoticed.

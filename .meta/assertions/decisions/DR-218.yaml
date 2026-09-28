@@ -1,33 +1,19 @@
 decisions:
   - id: work:decision/218
     name: "DR-218 · A module under .meta/ that is imported rather than run becomes a package of its own name in place, whose __init__ registers what its modules define"
-    challenge: work:challenge/491
     status: ADOPTED
     applies:
       - work:article/2
     enacted_in:
-      - work:artifact/meta-checks-probes-loops
-      - work:artifact/meta-checks-probes-loops-advance
-      - work:artifact/meta-checks-probes-loops-dispatch
-      - work:artifact/meta-checks-probes-loops-handoff
-      - work:artifact/meta-checks-probes-loops-enacted
-      - work:artifact/meta-checks-probes-loops-stop
-      - work:artifact/meta-checks-probes-loops-merge-manager
-      - work:artifact/meta-checks-probes-loops-merge-manager-advance
-      - work:artifact/meta-checks-probes-loops-delegate
       - work:artifact/meta-checks-probes-harness
       - work:artifact/meta-checks-probes-harness-acts
       - work:artifact/meta-checks-probes-harness-loaders
-      - work:artifact/meta-checks-probes-harness-github
       - work:artifact/meta-checks-probes-harness-fakes
       - work:artifact/meta-checks-graph
       - work:artifact/meta-checks-graph-structure
       - work:artifact/meta-checks-graph-record
       - work:artifact/meta-checks-graph-artifacts
       - work:artifact/meta-checks-probes-tools
-      - work:artifact/meta-checks-probes-tools-timing
-      - work:artifact/meta-checks-probes-tools-depth
-      - work:artifact/meta-checks-probes-tools-agents
       - work:artifact/meta-checks-probes-tools-dereference
       - work:artifact/meta-checks-probes-tools-search
       - work:artifact/meta-checks-probes-tools-apm-compile
@@ -37,25 +23,11 @@ decisions:
       - work:artifact/meta-checks-citations-prose
       - work:artifact/meta-checks-citations-record
       - work:artifact/meta-checks-citations-claims
-      - work:artifact/meta-checks-probes-git
-      - work:artifact/meta-checks-probes-git-verdicts
-      - work:artifact/meta-checks-probes-git-offers
-      - work:artifact/meta-checks-probes-git-events
-      - work:artifact/meta-checks-probes-git-step
-      - work:artifact/meta-checks-probes-channel
-      - work:artifact/meta-checks-probes-channel-parser
-      - work:artifact/meta-checks-probes-channel-status
-      - work:artifact/meta-checks-probes-channel-table
-      - work:artifact/meta-checks-probes-channel-layer
-      - work:artifact/meta-checks-probes-channel-claim
-      - work:artifact/meta-checks-probes-channel-actor
-      - work:artifact/meta-checks-probes-channel-signing-key
-      - work:artifact/meta-checks-probes-channel-reservation
       - work:artifact/meta-assertions-structure
       - work:artifact/meta-checks-files
       - work:artifact/meta-lib-dereference-reading
     context: >-
-      Solorepo's DR-217 settled where a script's body goes: the script stays at
+      Stereorepo's DR-217 settled where a script's body goes: the script stays at
       its path, because the justfile, the workflows and the structure
       assertions invoke it there, and its body lives under `.meta/lib/`,
       because a package cannot take the name of a module beside it. The same
@@ -68,7 +40,7 @@ decisions:
       `import checks.probes.loops` resolves to the package because it is the only
       `loops` on `probes.__path__`. Nothing coexists and nothing is shadowed.
 
-      Solorepo's DR-209 asks one module for one subject, so that a history
+      Stereorepo's DR-209 asks one module for one subject, so that a history
       log's receipt names the file holding the probe it cites. Seven probes in
       one file satisfied it at the module's grain; seven modules satisfy it at
       the probe's.
@@ -107,7 +79,7 @@ decisions:
         `.meta/say/move.history.md` names the module holding each probe.
       - >-
         The type ratchet holds one number per probe module in place of the
-        module's (solorepo's DR-210).
+        module's (stereorepo's DR-210).
       - >-
         An imported module under `.meta/checks/` that outgrows one subject
         splits the same way; a script splits as DR-217 says.

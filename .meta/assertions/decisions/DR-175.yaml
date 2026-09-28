@@ -1,20 +1,13 @@
 decisions:
   - id: work:decision/175
     name: "DR-175 · Reader-facing literate programming rubric: docstrings state what to do without litigating against a reviewer"
-    challenge: work:challenge/191
     status: ADOPTED
     enacted_in:
       - work:artifact/bootstraps-python-literate-programming
       - work:artifact/bootstraps-rust-literate-programming
       - work:artifact/meta-checks-citations
-      - work:artifact/meta-say
-      - work:artifact/meta-hooks-signed-channel
-      - work:artifact/meta-lib-check-pr-branch
-      - work:artifact/meta-checks-probes-loops-enacted
       - work:artifact/meta-lib-render-skills
       - work:artifact/meta-lib-apm-compile-agents
-      - work:artifact/meta-lib-worktree-only-grammar
-      - work:artifact/meta-lib-worktree-only-verdict
       - work:artifact/meta-checks-citations-claims
       - work:artifact/meta-checks-citations-prose
     context: >-

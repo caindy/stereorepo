@@ -1,7 +1,7 @@
-"""Brownfield repository adoption planning library (solorepo's DR-217).
+"""Brownfield repository adoption planning library (stereorepo's DR-217).
 
 Provides data structures, path classification, and collision-aware planning
-to adapt existing Product repositories into solorepo management.
+to adapt existing Product repositories into stereorepo management.
 """
 
 from __future__ import annotations

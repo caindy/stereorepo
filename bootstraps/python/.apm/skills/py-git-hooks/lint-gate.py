@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stop hook lint gate, routed by target (solorepo's DR-212).
+"""Stop hook lint gate, routed by target (stereorepo's DR-212).
 
 Runs the linters over the Python files a turn modified, before Claude returns to
 the user, and blocks the stop when something actionable remains. The adaptation
@@ -7,7 +7,7 @@ this copy carries over `l-mb/python-refactoring-skills`' original is that it doe
 not assume one repository shape: a portfolio holds inherited tooling under
 `.meta/` and Project workspaces beside it, configured differently and held by
 different gates, and a checker pointed at the wrong one is worse than no checker
-(solorepo's DR-177, solorepo's DR-210).
+(stereorepo's DR-177, stereorepo's DR-210).
 
 Each modified file is resolved to its target and checked under that target's own
 configuration:
@@ -40,7 +40,7 @@ Three things the original did that this one does not.
 
 `ruff format` is not run: mechanical formatting was retired from this standard
 because it inflates agent context windows and manufactures rebase churn across
-concurrent branches for no semantic gain (solorepo's DR-193).
+concurrent branches for no semantic gain (stereorepo's DR-193).
 
 `basedpyright` is not invoked: nothing in this standard runs it, and blocking on
 findings no gate reads holds a turn to a standard nothing else enforces.

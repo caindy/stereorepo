@@ -16,7 +16,7 @@ apply at all:
   `uvx ruff@0.14.0 check --config .meta/ruff.toml ... .meta/`.
 - **New Project Bootstrap does not apply.** A Project is instantiated by
   `just bootstrap python <path>`, which renders the seed and wires the new
-  Project into `assertions/structure.yaml` (solorepo's DR-206). The seed it
+  Project into `assertions/structure.yaml` (stereorepo's DR-206). The seed it
   renders already holds the manifest, the pinned tools and the gate. Setting one
   up by hand from py-quality-setup and py-git-hooks produces a directory the
   assertions do not declare, which no gate runs.
@@ -68,10 +68,10 @@ apply at all:
 
 **Use case**: Set up quality tools for new project
 
-**In a solorepo portfolio, do not follow this workflow.** Run
+**In a stereorepo portfolio, do not follow this workflow.** Run
 `just bootstrap python <path> [name]` instead: it renders the seed, names its
 package, and wires the new Project into `assertions/structure.yaml` so the gate
-runner knows to run it (solorepo's DR-206). The manifest, the pinned tools, the
+runner knows to run it (stereorepo's DR-206). The manifest, the pinned tools, the
 rule set and the gate all arrive with the seed. Assembling the same thing by hand
 leaves a directory that is not a declared Project, which `just gate` will not
 run and which therefore is not held to anything.

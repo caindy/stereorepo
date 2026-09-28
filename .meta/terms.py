@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uvx --python 3.13 --with wordfreq python
-"""An operator audit instrument that surfaces unminted terms by keyness and dispersion (solorepo's DR-234).
+"""An operator audit instrument that surfaces unminted terms by keyness and dispersion (stereorepo's DR-234).
 
 Evaluates candidate terms doing technical work across the repository's durable
 prose using two complementary statistical dimensions:
@@ -10,10 +10,10 @@ prose using two complementary statistical dimensions:
 
 Candidates are words and the multiword phrases up to `--max-n` tokens that
 occur within one segment of prose, scored on the same two dimensions against the
-reference frequency `wordfreq` supplies for a phrase (solorepo's DR-271). A
+reference frequency `wordfreq` supplies for a phrase (stereorepo's DR-271). A
 markdown file contributes its prose alone: its fenced code blocks and inline code
 spans leave the corpus before segmentation, so a shell invocation is no candidate
-(solorepo's DR-279).
+(stereorepo's DR-279).
 
 Filters candidates against a Zipf frequency floor (default >= 3.0) read on that
 same reference, so a phrase is measured on its combined value rather than on its
@@ -100,8 +100,6 @@ RENDERED_TARGETS: frozenset[str] = frozenset({
     "SPECIALIZE.md",
     ".meta/apm.yml",
     ".meta/templates/decision.md",
-    ".claude/skills/pr-first/SKILL.md",
-    ".claude/skills/pr-first-reviewer/SKILL.md",
     ".claude/skills/technical-writing/SKILL.md",
     ".claude/skills/wikisplain/SKILL.md",
     ".claude/skills/search/SKILL.md",
@@ -241,7 +239,7 @@ def extract_vocab_exclusions(
     and its standard inflections. A multiword label excludes the phrase it is,
     every phrase contained within it, and each of their inflections. It never
     excludes its component words, so minting *Dev Loop* leaves `loop` a candidate
-    (solorepo's DR-271).
+    (stereorepo's DR-271).
     """
     vocab_files = [
         ".meta/assertions/imported/vocabulary.yaml",
@@ -373,7 +371,7 @@ def prose(rel_path: str, content: str) -> str:
 
     A markdown file loses its fenced code blocks and inline code spans, which
     hold shell invocations and identifiers rather than phrases a reader would
-    call a phrase (solorepo's DR-279). An assertion YAML file is read whole, so
+    call a phrase (stereorepo's DR-279). An assertion YAML file is read whole, so
     that the structural vocabulary of the assertions keeps contributing.
     """
     return strip_code(content) if rel_path.endswith(".md") else content
@@ -388,7 +386,7 @@ def segment(text: str) -> list[list[str]]:
     a bullet ends the run. A line is therefore the widest a phrase may be, which
     costs the occurrences a hard wrap splits and refuses every phrase that exists
     only as two structural lines abutting — the `status: ADOPTED` of one
-    assertion line and the `applies:` of the next (solorepo's DR-271).
+    assertion line and the `applies:` of the next (stereorepo's DR-271).
     """
     runs: list[list[str]] = []
     current: list[str] = []
@@ -419,7 +417,7 @@ def iter_terms(text: str, max_n: int = DEFAULT_MAX_N) -> list[str]:
     A phrase of two or more tokens is admitted only within one segment and only
     when neither its first nor its last token is a closed-class function word,
     the linguistic filter that keeps a fragment of a longer construction — *the
-    pull*, *definition of* — from being proposed as a term (solorepo's DR-271).
+    pull*, *definition of* — from being proposed as a term (stereorepo's DR-271).
     """
     return _terms_in_runs(segment(text), max_n)
 
@@ -506,7 +504,7 @@ def _count_corpus(
     File length and corpus total are counted in words whatever `max_n` is, so a
     phrase's dispersion and expected count are measured against the same corpus
     size a word's are. Each file is read through `prose`, so a markdown file's
-    code contributes to neither its length nor its candidates (solorepo's DR-279).
+    code contributes to neither its length nor its candidates (stereorepo's DR-279).
     """
     file_lengths: dict[str, int] = {}
     term_file_counts: dict[str, dict[str, int]] = {}
@@ -542,7 +540,7 @@ def _score_candidate(
     `wordfreq` supplies the reference frequency of a multi-token string by
     combining its tokens as `1 / f = 1 / f1 + 1 / f2 + …`, returning zero where
     any token is absent from the wordlist, so a phrase built on a coinage is
-    refused by the same Zipf floor that refuses the coinage (solorepo's DR-271).
+    refused by the same Zipf floor that refuses the coinage (stereorepo's DR-271).
     The combination sits below the rarest token's own frequency, so the floor
     asks more of a phrase than that each of its words clear `min_zipf`.
     """

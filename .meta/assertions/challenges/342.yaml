@@ -1,9 +1,0 @@
-challenges:
-  - id: work:challenge/342
-    name: Assertion-to-APM compiler generator and harness root reconciliation
-    challenge_type: FEATURE
-    description: >-
-      Implement the generator script that compiles .meta/assertions/ into .meta/.apm/
-      primitives as late-bound derived artifacts (#28), mapping Disciplines and Ubiquitous
-      Language to instructions, Actor prototypes and Roles to agents, Capabilities to skills,
-      Gate and signed channel to hooks, and reconciling root documentation files.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Operational tool for on-demand language bootstrapping (solorepo's DR-206).
+"""Operational tool for on-demand language bootstrapping (stereorepo's DR-206).
 
 Instantiates a new Project from a language Bootstrap (such as Python or Rust),
 substitutes package manifests, and wires the new Project into assertions/structure.yaml.
@@ -61,15 +61,15 @@ def find_bootstrap_dir(lang: str) -> pathlib.Path | None:
 
 
 def fetch_upstream_bootstrap(lang: str, target_dir: pathlib.Path) -> bool:
-    """Fetches a language bootstrap from upstream caindy/solorepo if not present locally."""
-    print(f"[*] Fetching '{lang}' bootstrap from upstream solorepo (caindy/solorepo)...")
+    """Fetches a language bootstrap from upstream caindy/stereorepo if not present locally."""
+    print(f"[*] Fetching '{lang}' bootstrap from upstream stereorepo (caindy/stereorepo)...")
     try:
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = pathlib.Path(tmpdir)
             cmd = [
                 "git", "clone", "--depth", "1", "--filter=blob:none", "--sparse",
-                "https://github.com/caindy/solorepo.git", str(tmp_path / "repo")
+                "https://github.com/caindy/stereorepo.git", str(tmp_path / "repo")
             ]
             subprocess.run(cmd, check=True, capture_output=True, text=True)
             subprocess.run(
@@ -134,7 +134,10 @@ def register_project(
 
 
 def install_bootstrap_apm_package(lang: str) -> None:
-    """Brings in the language bootstrap APM package when a project is bootstrapped (solorepo's DR-208)."""
+    """Brings in the language bootstrap APM package when a project is bootstrapped.
+
+    stereorepo's DR-208.
+    """
     if lang != "python":
         return
     bootstrap_dir = find_bootstrap_dir("python")
@@ -147,15 +150,16 @@ def install_bootstrap_apm_package(lang: str) -> None:
     apm_manifest_file = ROOT / ".meta" / "apm.yml"
     if apm_manifest_file.is_file():
         raw_text = apm_manifest_file.read_text(encoding="utf-8")
-        if "solorepo-python" not in raw_text:
-            dep_block = "dependencies:\n  solorepo-python:\n    path: ../bootstraps/python\n"
+        if "stereorepo-python" not in raw_text:
+            dep_block = "dependencies:\n  stereorepo-python:\n    path: ../bootstraps/python\n"
             if "dependencies:" in raw_text:
-                dep_block = "  solorepo-python:\n    path: ../bootstraps/python\n"
+                dep_block = "  stereorepo-python:\n    path: ../bootstraps/python\n"
                 raw_text = raw_text.replace("dependencies:\n", "dependencies:\n" + dep_block)
             else:
                 raw_text = raw_text.rstrip() + "\n" + dep_block
             apm_manifest_file.write_text(raw_text, encoding="utf-8")
-            print(f"[*] Registered 'solorepo-python' APM package dependency in {apm_manifest_file.relative_to(ROOT)}.")
+            where = apm_manifest_file.relative_to(ROOT)
+            print(f"[*] Registered 'stereorepo-python' APM package dependency in {where}.")
 
     for harness_skills in [ROOT / ".claude" / "skills", ROOT / ".gemini" / "skills"]:
         if harness_skills.parent.is_dir():
@@ -260,9 +264,11 @@ def bootstrap(lang: str, destination: str, name: str | None = None) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entrypoint for on-demand project bootstrapping (solorepo's DR-206)."""
+    """CLI entrypoint for on-demand project bootstrapping (stereorepo's DR-206)."""
     parser = argparse.ArgumentParser(
-        description="Instantiate a Project from a language Bootstrap on demand (solorepo's DR-206)."
+        description=(
+            "Instantiate a Project from a language Bootstrap on demand (stereorepo's DR-206)."
+        )
     )
     parser.add_argument("language", choices=["python", "rust"], help="The bootstrap language (python, rust).")
     parser.add_argument("destination", help="Target destination directory (e.g. products/api or services/backend).")

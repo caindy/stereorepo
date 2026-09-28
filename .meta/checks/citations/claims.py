@@ -38,7 +38,7 @@ def cited_articles() -> list[str]:
 # nothing. `DR-043's step read "..."` puts a noun in the gap and thereby
 # attributes the words to a step that entry changed rather than to the entry,
 # and a reader who opens that entry is right not to find them there — the shape
-# solorepo's DR-044 uses of its predecessor. The claim is un-dereferenceable
+# stereorepo's DR-044 uses of its predecessor. The claim is un-dereferenceable
 # too, and it is not this check's: a check that tests something other than what
 # it says it tests is worse than one that is narrow.
 SUBJECT = r",?(?:\s+(?:which|itself|already|also|still|then|only|here|now|"
@@ -122,7 +122,7 @@ def stated_relations(index: dict[str, Any]) -> list[str]:
     """Validate that semantic relationships between entries stated in prose match assertion slots.
 
     Checks indicative statements using relational verbs (`supersedes`, `applies`, `departs_from`)
-    against explicit relation slots in Decision Record definitions (solorepo's DR-175).
+    against explicit relation slots in Decision Record definitions (stereorepo's DR-175).
 
     Parameters:
         index (dict): LinkML model index mapping URI identifiers to entity tuples.
@@ -210,7 +210,7 @@ def path_and_line_claims() -> list[str]:
 
 
 # A Discipline step is an identified entity with a semantic slug CURIE, cited
-# in prose by its human name, and ordinal step citations are refused (solorepo's DR-270).
+# in prose by its human name, and ordinal step citations are refused (stereorepo's DR-270).
 ORDINAL_WORDS = (
     r"first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
     r"eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|"
@@ -250,7 +250,7 @@ def refused_ordinal_step_citations(index: dict[str, Any]) -> list[str]:
     """Validate that durable prose cites Discipline steps by name rather than ordinal numbers.
 
     Enforces that references to Discipline steps use `<Discipline>'s *<Step Name>* step`
-    rather than positional ordinals to prevent silent citation drift (solorepo's DR-270).
+    rather than positional ordinals to prevent silent citation drift (stereorepo's DR-270).
     Code spans (enclosed in backticks) are exempt as legitimate quotation/mention syntax.
 
     Parameters:
@@ -271,7 +271,7 @@ def refused_ordinal_step_citations(index: dict[str, Any]) -> list[str]:
             for m in ordinal_step.finditer(unquoted):
                 problems.append(
                     f"{rel}: {m.group(0)} is an ordinal step citation; "
-                    "cite steps by name under solorepo's DR-270"
+                    "cite steps by name under stereorepo's DR-270"
                 )
     return problems
 
@@ -282,7 +282,7 @@ def cited_discipline_steps(index: dict[str, Any]) -> list[str]:
 
     Ensures that step citations in durable prose match declared step names in LinkML
     discipline assertions, preventing misattribution across disciplines or casing errors
-    (solorepo's DR-270).
+    (stereorepo's DR-270).
 
     Parameters:
         index (dict): LinkML model index mapping URI identifiers to entity tuples.

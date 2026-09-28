@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/143
     name: "DR-143 · The generated pages are merged by union and corrected by the render, because a conflict in a page pinned to its sources is a conflict about nothing"
-    challenge: work:challenge/193
     status: ADOPTED
     enacted_in:
       - work:artifact/gitattributes
@@ -13,10 +12,10 @@ decisions:
       page carries no information its sources do not. `.meta/decisions.md` is
       one of thirteen such pages, and it is the one that conflicts: entries
       render newest last, so two branches that each record a decision both add
-      a row after the same last row. On #192 that was `main`'s DR-141 against
+      a row after the same last row. On #192 that was solorepo's DR-141 on `main` against
       the entry that branch was adding — `git merge-tree --write-tree` naming
       `.meta/decisions.md` as the only conflicted path, while the two entry
-      files it renders from did not conflict, being separate files. DR-128
+      files it renders from did not conflict, being separate files. solorepo's DR-128
       already stopped two branches taking one number; nothing stopped them
       writing to one line of the page rendered from the numbers. The cost lands
       on every pair of concurrent pull requests that each record a decision,

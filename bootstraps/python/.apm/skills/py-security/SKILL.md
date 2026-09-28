@@ -10,7 +10,7 @@ Find and fix security vulnerabilities in Python code following Engineering Chart
 
 ## Target contexts
 
-A solorepo portfolio holds two kinds of Python target, and this skill behaves
+A stereorepo portfolio holds two kinds of Python target, and this skill behaves
 differently in each.
 
 - **Repository tooling — `.meta/`.** Inherited by every portfolio through
@@ -31,13 +31,13 @@ name.
 ### The `S` ruleset is on in one target and not the other
 
 - **A Project workspace** selects `S` (bandit's rules) in its `pyproject.toml`
-  (solorepo's DR-096), so `uv run gate ruff` already runs this skill's primary
+  (stereorepo's DR-096), so `uv run gate ruff` already runs this skill's primary
   scanner on every gate run. Its one `per-file-ignores` entry —
   `"**/tests/**" = ["S101"]  # reason: assert is the point of a test` — carries
   its reason on the line, which is what `uv run gate lints` requires.
 - **`.meta/`** does not select `S` in `.meta/ruff.toml`. That is deliberate:
   `.meta/` is a directory of command-line programs that invoke subprocesses on
-  purpose, and evaluating it against `S` under solorepo's DR-177 produced false alarms on
+  purpose, and evaluating it against `S` under stereorepo's DR-177 produced false alarms on
   exactly those calls. Scanning `.meta/` for security findings is still worth
   doing; it is a read, and the findings are judged rather than suppressed.
 
@@ -235,7 +235,7 @@ with open(filename) as f:
 
 ## Git Hooks Integration
 
-**Not where `core.hooksPath` is set** — solorepo sets it to `.meta/hooks`, so
+**Not where `core.hooksPath` is set** — stereorepo sets it to `.meta/hooks`, so
 `.git/hooks/` is dead and `.meta/hooks/` is tracked and inherited by every
 portfolio. See py-git-hooks' Target contexts section. Secret detection there
 belongs in the gate, or in the Stop hook lint gate, not in a committed hook.

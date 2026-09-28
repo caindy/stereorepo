@@ -1,21 +1,18 @@
 decisions:
   - id: work:decision/200
     name: "DR-200 · Actors adopt Personas as temporary Personalities for goal-directed collaborative design"
-    challenge: work:challenge/342
     status: ADOPTED
     applies:
       - work:article/8
-      - work:article/15
     enacted_in:
       - work:artifact/meta-work-personas
-      - work:artifact/meta-work-actors
       - work:artifact/meta-apm-readme
       - work:artifact/meta-assertions-imported-vocabulary
       - work:artifact/meta-lib-apm-compile-agents
     context: >-
       In a team of one, product and feature design requires rigorous critique and
       friction before code is committed. While solorepo adopted Alan Cooper's
-      Goal-Directed Personas (solorepo's DR-019, solorepo's DR-041) to model who
+      Goal-Directed Personas (stereorepo's DR-019, stereorepo's DR-041) to model who
       the work is for, and noted that interrogating a Persona involves an Actor
       adopting its character (.meta/work/personas.yaml), the operational mechanics
       of interactive collaborative design with an agent remained unformalized.

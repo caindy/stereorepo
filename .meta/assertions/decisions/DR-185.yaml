@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/185
     name: "DR-185 · Wikipedia conventions: closed-world wikilinks and MOS:LEAD concordance"
-    challenge: work:challenge/22
     status: ADOPTED
     applies:
       - work:article/2
@@ -13,10 +12,9 @@ decisions:
       - work:artifact/meta-checks-probes-knowledge
       - work:artifact/meta-assertions-imported-vocabulary
       - work:artifact/wiki-readme
-      - work:artifact/wiki-solorepo-readme
-      - work:artifact/wiki-solorepo-knowledge-management
-      - work:artifact/wiki-solorepo-ubiquitous-language
-      - work:artifact/wiki-solorepo-pr-first
+      - work:artifact/wiki-stereorepo-readme
+      - work:artifact/wiki-stereorepo-knowledge-management
+      - work:artifact/wiki-stereorepo-ubiquitous-language
       - work:artifact/meta-checks-files-wiki
       - work:artifact/meta-lib-render-skills
     context: >-

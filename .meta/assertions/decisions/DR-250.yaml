@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/250
     name: "DR-250 · Dual-layer comment hygiene: portfolio governance via .meta/ scope broadening and bootstrap self-contained gate checking"
-    challenge: work:challenge/416
     status: ADOPTED
     applies:
       - work:article/2
@@ -9,7 +8,6 @@ decisions:
       - work:article/6
       - work:article/7
       - work:article/8
-      - work:article/15
       - work:article/21
       - work:article/22
     enacted_in:
@@ -18,7 +16,7 @@ decisions:
       - work:artifact/bootstraps-python-lint-gate
     context: >-
       Challenge #416 identified that while static comment and suppression guardrails
-      (solorepo's DR-207) were implemented in `.meta/checks/comments.py` to gate
+      (stereorepo's DR-207) were implemented in `.meta/checks/comments.py` to gate
       the `.meta` Project, the Python Bootstrap seed at `bootstraps/python/seed/`
       and project packages lacked comment checks. The Challenge's original proposal
       suggested that `bootstraps/python/seed/gate/` inherit detector functions and

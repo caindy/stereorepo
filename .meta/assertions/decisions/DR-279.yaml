@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/279
     name: "DR-279 · The term corpus holds prose alone, code fences and backtick spans excluded"
-    challenge: work:challenge/898
     status: ADOPTED
     applies:
       - work:article/17
@@ -12,8 +11,8 @@ decisions:
       - work:artifact/meta-terms
       - work:artifact/meta-checks-probes-tools-terms
     context: >-
-      Solorepo's DR-234 placed the unminted-term audit on the operator surface and
-      solorepo's DR-271 extended it from words to phrases. Both read the corpus as
+      Stereorepo's DR-234 placed the unminted-term audit on the operator surface and
+      stereorepo's DR-271 extended it from words to phrases. Both read the corpus as
       whatever a durable file holds: `_load_fs_corpus` and `_load_git_corpus`
       admitted every markdown file entire, fences included.
 
@@ -29,7 +28,7 @@ decisions:
       What made this a Decision rather than an edit is that it re-scores
       everything. Removing code shortens every file that holds any, which moves
       the corpus total both axes divide by, so every candidate the audit has ever
-      reported is measured against a different denominator and solorepo's DR-234's
+      reported is measured against a different denominator and stereorepo's DR-234's
       two fitted knobs might no longer sit where they were fitted. That is a
       judgment the change's own gate cannot prove, which is why Challenge
       solorepo's #898 was read as `human` and settled by the solo before any code.
@@ -80,7 +79,7 @@ decisions:
         A markdown file contributes its prose alone; an assertion YAML file is read
         whole.
       - >-
-        Solorepo's DR-234's two fitted knobs are unchanged, the measurement above
+        Stereorepo's DR-234's two fitted knobs are unchanged, the measurement above
         being the evidence, so no figure in the audit's contract moves.
       - >-
         `.meta/checks/probes/tools/terms.py` holds a third probe over the four fence
@@ -100,7 +99,7 @@ decisions:
       that needed raising but a corpus that included text no reader would call
       prose: a fenced block is quoted machinery, and so is a backtick span. Taking
       them out asks nothing of the statistics — the same two axes, the same two
-      knobs, measured over less text. What it replaces in solorepo's DR-234 and
-      solorepo's DR-271 is one clause of each, the durable prose both said the
+      knobs, measured over less text. What it replaces in stereorepo's DR-234 and
+      stereorepo's DR-271 is one clause of each, the durable prose both said the
       audit reads, which is what `supersedes` is for and why neither entry is
       rewritten.

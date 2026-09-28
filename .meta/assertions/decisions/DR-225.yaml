@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/225
     name: "DR-225 · A suppression's reason names a cause outside this repository, and an internal Issue is not an escape"
-    challenge: work:challenge/559
     status: ADOPTED
     applies:
       - work:article/2
@@ -20,7 +19,7 @@ decisions:
       clause after the first sentence. The `broad suppressions` step of
       `.meta/checks/comments.py` refuses a suppression that names no rule, and
       the `meta lints` step refuses one that carries no `# reason:`
-      (solorepo's DR-177), which the same skill calls the floor rather than the
+      (stereorepo's DR-177), which the same skill calls the floor rather than the
       justification. Between them, a suppression naming a rule and carrying any
       reason at all was unrefusable.
 
@@ -30,7 +29,7 @@ decisions:
       is a function of this repository whose docstring blames a `sys.path`
       insertion of this repository. Both existing steps passed every one of
       them. An internal cause is one this repository can fix, which is what
-      solorepo's DR-207 already says to do: "A lint or type suppression
+      stereorepo's DR-207 already says to do: "A lint or type suppression
       bypassing safety, correctness, or type soundness is an actionable defect
       rather than a permanent comment."
     alternatives:
@@ -60,7 +59,7 @@ decisions:
           `.meta/`, an Issue number, a Decision Record number — so the step
           refuses what it can prove rather than judging prose. The tree is not
           clean, so the count ratchets as `inline commentary` does
-          (solorepo's DR-210): the debt is named, listed and falling, which is
+          (stereorepo's DR-210): the debt is named, listed and falling, which is
           what it did while this was being written — solorepo's #557 took
           twenty-three of the twenty-four out before the step landed.
     consequences:
@@ -69,7 +68,7 @@ decisions:
         `# reason:` of every `noqa` and `type: ignore` under `.meta/` and
         reports one whose reason names an internal cause, counted per file
         against `.meta/checks/suppressions.baseline.yaml` through
-        `collect.against_baseline` (solorepo's DR-210).
+        `collect.against_baseline` (stereorepo's DR-210).
       - >-
         A URL is blanked before the scan, so a reason dereferencing
         `https://github.com/python/mypy/issues/…` is a foreign dereference and
@@ -109,5 +108,5 @@ decisions:
       sentence — a library name is a word — but that a cause is local can be,
       because the thing named is in the tree and the checker can look. So the
       step refuses what resolves here and says nothing about the rest, which
-      leaves the remainder to the suppression audit solorepo's DR-207 requires
+      leaves the remainder to the suppression audit stereorepo's DR-207 requires
       before a handoff and takes away the one escape that was being used.

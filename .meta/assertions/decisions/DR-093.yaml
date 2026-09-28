@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/093
     name: "DR-093 · A Decision names its level — Portfolio, Product or Project — and ADR is dropped"
-    challenge: work:challenge/32
     status: ADOPTED
     supersedes:
       - work:decision/049

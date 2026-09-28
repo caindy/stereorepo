@@ -3,7 +3,7 @@ bootstraps:
     name: The Python standard
     description: >-
       What a Python project in a portfolio inherits — the gates, the rule
-      set, the pins and the documentation layout, and solorepo's Disciplines
+      set, the pins and the documentation layout, and stereorepo's Disciplines
       made executable for one language.
     primary_persona: work:persona/the-solo
     built_from:
@@ -51,7 +51,7 @@ bootstraps:
     name: The Rust standard
     description: >-
       What a Rust project in a portfolio inherits — the gates, the documentation
-      layout, and solorepo's Disciplines made executable for one language.
+      layout, and stereorepo's Disciplines made executable for one language.
     primary_persona: work:persona/the-solo
     built_from:
       - work:project/rust-seed

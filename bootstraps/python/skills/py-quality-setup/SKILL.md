@@ -10,20 +10,20 @@ Configure comprehensive linting and type checking for Python 3.13 projects follo
 
 ## Target contexts
 
-A solorepo portfolio holds two kinds of Python target. They carry different
+A stereorepo portfolio holds two kinds of Python target. They carry different
 configuration, run through different interpreters, and are held by different
 gates. Settle which one you are standing in before running anything: the setup
 this skill performs is right in one of them and damaging in the other.
 
 This section, and the short form the other seven `py-*` skills carry, is
-solorepo's own (solorepo's DR-212). Upstream has no equivalent, because upstream
+stereorepo's own (stereorepo's DR-212). Upstream has no equivalent, because upstream
 has one target.
 
 | | Repository tooling | A Project workspace |
 |---|---|---|
 | Where | `.meta/`, and nowhere else | wherever the Project was instantiated |
-| Ruff | `.meta/ruff.toml` (solorepo's DR-177) | the Project's own `pyproject.toml` (solorepo's DR-096) |
-| Mypy | `.meta/mypy.ini`, ratcheted against `.meta/checks/types.baseline.yaml` (solorepo's DR-210) | the Project's own `pyproject.toml` |
+| Ruff | `.meta/ruff.toml` (stereorepo's DR-177) | the Project's own `pyproject.toml` (stereorepo's DR-096) |
+| Mypy | `.meta/mypy.ini`, ratcheted against `.meta/checks/types.baseline.yaml` (stereorepo's DR-210) | the Project's own `pyproject.toml` |
 | Run through | `python3` and `uvx` | `uv run`, from the Project's directory |
 | Dependencies | none: no manifest, so no `[dependency-groups]` to add to | `[dependency-groups] dev` in the Project's manifest |
 | Tests | none: no `pytest`, no `tests/` | `tests/` beside each package |
@@ -48,7 +48,7 @@ would obey it.
 
 **Never run a checker without naming the target's configuration.** `mypy` reads
 its configuration from the working directory rather than per file, so `mypy .` at
-the root runs past `.meta/mypy.ini` and past solorepo's DR-210's baseline without reporting
+the root runs past `.meta/mypy.ini` and past stereorepo's DR-210's baseline without reporting
 that it did. `ruff` resolves configuration per file and does find `.meta/ruff.toml`
 by proximity — but an explicit `--config` naming a ruleset that selects `RUF`
 without `F` makes `RUF100` read `# noqa: F401  # reason: registers check steps`
@@ -83,7 +83,7 @@ cd <project> && uv run gate    # one Project workspace
 ```
 
 `.meta/` has no `pytest` and no `tests/`. Its behavioural tests are the probes
-under `.meta/checks/probes/` (solorepo's DR-209), which run as steps of
+under `.meta/checks/probes/` (stereorepo's DR-209), which run as steps of
 `just gate meta`.
 
 
@@ -107,7 +107,7 @@ adopted Python at all.
 - **ruff**: Fast linter (Rust-based, replaces isort and flake8)
 - **mypy**: Standard Python type checker
 - **basedpyright**: upstream's third checker, and **not part of this standard**.
-  Nothing in solorepo runs it, `uv run gate` has no step for it, and the seed's
+  Nothing in stereorepo runs it, `uv run gate` has no step for it, and the seed's
   dev group does not carry it. Leave it out rather than adding a checker whose
   findings no gate reads.
 
@@ -118,11 +118,11 @@ adopted Python at all.
 **Not in `.meta/`, and not at the repository root** — see Target contexts above.
 This section describes a Project workspace, and only a Project workspace.
 
-**In a solorepo portfolio the canonical configuration is the seed's**
+**In a stereorepo portfolio the canonical configuration is the seed's**
 (`bootstraps/python/seed/pyproject.toml`), which arrives with the Project and
-already selects the rule set solorepo's DR-096 settled, pins the gate's tools exactly while
-letting the test tools float (solorepo's DR-097), and targets the support floor rather than
-the development interpreter (solorepo's DR-095). Under Ratchet it is raised and never
+already selects the rule set stereorepo's DR-096 settled, pins the gate's tools exactly while
+letting the test tools float (stereorepo's DR-097), and targets the support floor rather than
+the development interpreter (stereorepo's DR-095). Under Ratchet it is raised and never
 lowered, so this skill's job in an existing Project is to read that manifest and
 verify it, not to overwrite it with the reference below. `ignore` stays empty:
 A2 says a suppression names its rule and its reason at the site, never in
@@ -130,11 +130,11 @@ configuration, and `uv run gate lints` refuses an entry.
 
 Two differences from the reference below are deliberate and not drift.
 `ruff format` is absent, because mechanical formatting was retired from this
-gate (solorepo's DR-193): it inflates agent context windows and manufactures rebase churn
+gate (stereorepo's DR-193): it inflates agent context windows and manufactures rebase churn
 across concurrent branches for no semantic gain. `basedpyright` is absent for
 the reason given under Required Tools.
 
-The reference below is upstream's, and is what a Project outside a solorepo
+The reference below is upstream's, and is what a Project outside a stereorepo
 portfolio should hold. It must include these sections:
 
 ```toml
@@ -337,7 +337,7 @@ A.When using `pyrightconfig.json` for multi-package projects, REMOVE the `tool.b
 
    The copy in this package routes by target: a file under `.meta/` is checked
    against `.meta/ruff.toml` and `.meta/mypy.ini`, a file in a Project workspace
-   through that Project's `uv run`. It runs no formatter, because solorepo's DR-193 retired
+   through that Project's `uv run`. It runs no formatter, because stereorepo's DR-193 retired
    mechanical formatting from this standard, and it does not invoke
    `basedpyright`. Point the symlink at this package's `lint-gate.py` rather than
    an upstream copy, which does all three of those things.
@@ -428,7 +428,7 @@ ignore_missing_imports = true
 **A Project workspace**
 
 - [ ] pyproject.toml has requires-python = ">=3.13"
-- [ ] dev dependencies include ruff and mypy, pinned exactly (solorepo's DR-097)
+- [ ] dev dependencies include ruff and mypy, pinned exactly (stereorepo's DR-097)
 - [ ] [tool.ruff] configured with target-version = "py313", and `ignore = []`
 - [ ] [tool.mypy] configured with python_version = "3.13" and strict = true
 - [ ] `uv run ruff check .` and `uv run mypy .` pass from the Project's directory

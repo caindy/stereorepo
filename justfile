@@ -2,7 +2,7 @@
 # edit the assertions and re-render.
 #
 # The verbs, typed. Every recipe invokes a tool under .meta/ and implements
-# nothing; `just --list` is the index (solorepo's DR-106). Not installed? `uvx --from rust-just just`.
+# nothing; `just --list` is the index (stereorepo's DR-106). Not installed? `uvx --from rust-just just`.
 
 # every recipe, and what it does
 default:
@@ -16,72 +16,23 @@ gate target="":
 render:
     uvx --python 3.13 --with pyyaml python .meta/render.py
 
-# the pull request gate: A15, A16, A18, A19
-pr n *args:
-    python3 .meta/check_pr.py {{n}} {{args}}
-
-# the subscription: one line per change, exiting on actionable events or when it closes
-watch n:
-    python3 .meta/check_pr.py {{n}} --watch
-
-# what this branch owns, and what it still owes
-sweep:
-    python3 .meta/check_pr.py --sweep
-
-# the pull request gate on every open pull request, each verdict published as its check
-pr-all:
-    python3 .meta/check_pr.py --all --publish
-
-# evaluate open pull requests and merge the top candidate in order of leverage
-merge-manager *args:
-    .meta/say/move merge-manager {{args}}
-
-# what landed for a Challenge, from the record; `.meta/say/post landed <pr>` posts it
-landed n:
-    uvx --python 3.13 --with pyyaml python .meta/render.py --landed {{n}}
-
-# what to work on next: pull requests, loops, the milestone, and what is ripe
-next *args:
-    python3 .meta/next.py {{args}}
-
-# what the workflows cost in time: waiting for a runner, and running
-timing *args:
-    python3 .meta/timing.py {{args}}
-
-# count review subagent invocations against the fan-out ceiling (solorepo's DR-191)
-agents *args:
-    python3 .meta/agents.py {{args}}
-
 # the citations this branch wrote, read against what they name; not a gate
 dereference *args:
     uvx --python 3.13 --with linkml --with pyyaml python .meta/dereference.py {{args}}
 
-# surface unminted candidate terms by keyness and dispersion (solorepo's DR-234)
+# surface unminted candidate terms by keyness and dispersion (stereorepo's DR-234)
 terms *args:
     uvx --python 3.13 --with wordfreq python .meta/terms.py {{args}}
 
-# validate, pack, or compile the APM package via .meta/apm_compile.py (solorepo's DR-201)
+# validate, pack, or compile the APM package (stereorepo's DR-201)
 apm *args:
     python3 .meta/apm_compile.py {{args}}
 
-# instantiate a Project from a language Bootstrap on demand (solorepo's DR-206)
+# instantiate a Project from a language Bootstrap on demand (stereorepo's DR-206)
 bootstrap *args:
     uvx --python 3.13 --with pyyaml python .meta/bootstrap.py {{args}}
 
-# the optional local cluster this repo's self-hosted runner can use
-arc-cluster:
-    .meta/arc/cluster
-
-# deploy or update the self-hosted runner (ARC) this repo's CI uses,
-# against whatever cluster kubectl is currently pointed at
-arc:
-    .meta/arc/deploy
-
-# build the runner container image and optionally load it into kind
-arc-image *args:
-    .meta/arc/image {{args}}
-
-# run automated Specialization end-to-end verification (solorepo's DR-239, solorepo's DR-244)
+# Specialization, end to end, in a scratch repository (stereorepo's DR-239, DR-244)
 test-specialization *args:
     python3 .meta/test_specialization.py {{args}}
 

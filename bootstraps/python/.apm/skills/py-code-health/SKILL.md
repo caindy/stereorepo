@@ -10,7 +10,7 @@ Remove dead code and consolidate duplication to keep codebase clean and maintain
 
 ## Target contexts
 
-A solorepo portfolio holds two kinds of Python target, and this skill behaves
+A stereorepo portfolio holds two kinds of Python target, and this skill behaves
 differently in each.
 
 - **Repository tooling — `.meta/`.** Inherited by every portfolio through
@@ -45,7 +45,7 @@ Each module then registers its steps at their definitions with `@check`, so no
 table anywhere names them and nothing calls them by name. Sixty-seven steps are
 registered this way across `.meta/checks/` and `.meta/checks/probes/`. Removing
 one import silently disables every step behind it, which is what happened under
-solorepo's DR-177 before the annotations existed: `ruff check --fix` took the imports and 28
+stereorepo's DR-177 before the annotations existed: `ruff check --fix` took the imports and 28
 gate steps went quiet while the gate stayed green.
 
 **What the tools actually report.** At this skill's own recommended threshold
@@ -63,7 +63,7 @@ So in `.meta/`:
 - **Never delete an import carrying `# noqa: F401  # reason: ...`**, and never
   delete the annotation either. A `noqa` whose rule stops firing is itself an
   error under `RUF100`, so stripping the comment does not make the import safe —
-  it arms the next fixer to remove the import (solorepo's DR-177).
+  it arms the next fixer to remove the import (stereorepo's DR-177).
 - **Never delete a function decorated with `@check`.** It is called by the
   registry, not by a caller vulture can see.
 - Verify with `just gate meta` and read the step count, not just the colour. A

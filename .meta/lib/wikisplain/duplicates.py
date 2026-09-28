@@ -97,7 +97,7 @@ def discipline_duplicates(root_path: pathlib.Path, target_slug: str, target_norm
 def avoided_synonyms(
     slug: str, synonyms: list[str], root: pathlib.Path
 ) -> list[dict[str, Any]]:
-    """The proposed `synonyms` of the concept minted at `slug` that its own `avoid` list forbids, read from the vocabularies under `root` (solorepo's DR-231).
+    """The proposed `synonyms` of the concept minted at `slug` that its own `avoid` list forbids, read from the vocabularies under `root` (stereorepo's DR-231).
 
     One item per forbidden synonym, each giving the `synonym` as proposed, the
     `avoid` entry it matches, the concept's `id`, and the vocabulary `path` that
@@ -125,9 +125,11 @@ def avoided_synonyms(
 
 
 def find_duplicates(
-    query: str, context: str = "solorepo", root: pathlib.Path | None = None
+    query: str, context: str = "stereorepo", root: pathlib.Path | None = None
 ) -> list[dict[str, Any]]:
-    """Search for colliding concepts in vocabulary, disciplines, and wiki pages (solorepo's DR-187).
+    """Search for colliding concepts in vocabulary, disciplines, and wiki pages.
+
+    stereorepo's DR-187.
 
     Three sources are read in turn — the wiki pages, then the vocabulary
     assertions, then the disciplines — and each is matched on slug and on

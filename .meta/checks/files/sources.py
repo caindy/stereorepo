@@ -1,6 +1,6 @@
 """Which files the gate reads: the tree as git sees it, the templates, the Python under `.meta/`, and the Specialization copy set.
 
-`tree()` is the only list of files the gate trusts, and `citations.py` reads prose out of it (solorepo's DR-150).
+`tree()` is the only list of files the gate trusts, and `citations.py` reads prose out of it (stereorepo's DR-150).
 """
 import pathlib
 import re

@@ -1,9 +1,0 @@
-challenges:
-  - id: work:challenge/564
-    name: Decide whether the reviewer Role may hand a Challenge back with move stop
-    challenge_type: FEATURE
-    description: >-
-      PR First establishes a mechanism for handing a Challenge back to the solo
-      via `move stop`, releasing the claim and moving the Issue to `human`.
-      Settling whether this indirection is correct or whether the reviewer Role
-      should also hold `move stop`.

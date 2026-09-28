@@ -1,10 +1,10 @@
-"""Probes for Structure ontology invariants over assertion datasets (solorepo's DR-209).
+"""Probes for Structure ontology invariants over assertion datasets (stereorepo's DR-209).
 
 Validates that structure graph checks correctly enforce domain invariants across
 registered Bootstraps and project bindings (Article 7). Probes sit in their own
-module under `.meta/checks/probes/` by subject under test (solorepo's DR-150).
+module under `.meta/checks/probes/` by subject under test (stereorepo's DR-150).
 
-History in graph.history.md (solorepo's DR-171).
+History in graph.history.md (stereorepo's DR-171).
 """
 from typing import Any
 

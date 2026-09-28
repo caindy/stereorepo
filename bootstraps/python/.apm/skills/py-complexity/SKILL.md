@@ -10,7 +10,7 @@ Reduce code complexity to improve maintainability and understandability.
 
 ## Target contexts
 
-A solorepo portfolio holds two kinds of Python target, and this skill behaves
+A stereorepo portfolio holds two kinds of Python target, and this skill behaves
 differently in each.
 
 - **Repository tooling — `.meta/`.** Inherited by every portfolio through
@@ -37,7 +37,7 @@ no threshold they report blocks a merge here.
 What does hold is ruff's `C90`:
 
 - **A Project workspace** selects `C90` with `max-complexity = 12` in its
-  `pyproject.toml` (solorepo's DR-096), and `uv run gate ruff` enforces it.
+  `pyproject.toml` (stereorepo's DR-096), and `uv run gate ruff` enforces it.
 - **`.meta/`** does not select `C90` in `.meta/ruff.toml`, so complexity there is
   unmeasured by the gate. Reducing it is still worth doing; claiming a gate holds
   it is not. Raising `.meta/`'s rule set is an edit to `.meta/ruff.toml` reviewed

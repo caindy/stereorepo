@@ -20,7 +20,7 @@ satisfied in Python and which step of the gate holds it there.
 | Written Decisions | [`written-decisions.md`](written-decisions.md) | nothing here — the portfolio's gate, and it says why |
 
 The other Disciplines bind the Portfolio rather than a Project — Progressive
-Disclosure, Ubiquitous Language, Dogfooding, Modelling the Solo, PR First,
+Disclosure, Ubiquitous Language, Dogfooding, Modelling the Human,
 Journaling — so a Bootstrap has nothing to implement for them.
 
 Four Articles bind the gate itself rather than being implemented by it: A5 —
@@ -52,7 +52,7 @@ is the package's name, and `render` is the one copy of how it is substituted.
 ## Capabilities and the APM Package
 
 The Python standard declares sixteen agent skills as Capabilities in
-[`assertions/capabilities.yaml`](assertions/capabilities.yaml) (solorepo's DR-208, solorepo's #59): eight refactoring
+[`assertions/capabilities.yaml`](assertions/capabilities.yaml) (stereorepo's DR-208, solorepo's #59): eight refactoring
 skills (`py-*`) from `l-mb/python-refactoring-skills` and eight lifecycle skills adapted from `obra/superpowers`.
 
 Rather than vendoring raw skills into the project seed, they are compiled into

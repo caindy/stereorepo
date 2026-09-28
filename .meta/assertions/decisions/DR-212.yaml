@@ -1,12 +1,10 @@
 decisions:
   - id: work:decision/212
     name: "DR-212 · Vendored skills carrying a solorepo guard are adapted in place and become locally owned"
-    challenge: work:challenge/446
     status: ADOPTED
     applies:
       - work:article/2
       - work:article/8
-      - work:article/19
     enacted_in:
       - work:artifact/bootstraps-python-provenance
       - work:artifact/bootstraps-python-skill-quality-setup
@@ -15,7 +13,7 @@ decisions:
       - work:artifact/meta-lib-apm-compile-bootstrap
     context: >-
       The eight `py-*` refactoring skills are declared as Capabilities and
-      compiled into the `solorepo-python` APM package by DR-208.
+      compiled into the `stereorepo-python` APM package by DR-208.
       `bootstraps/python/PROVENANCE.md` records them as byte-identical to
       `l-mb/python-refactoring-skills` and refreshable for exactly that reason: an
       unmodified vendored file can be re-copied from upstream without losing

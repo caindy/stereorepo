@@ -994,7 +994,7 @@ def closing_block(
 ) -> tuple[list[str], bool]:
     """The block naming the steps that could not run, and whether they fail the run.
 
-    Upholds Article 6 and solorepo's DR-261.
+    Upholds Article 6 and stereorepo's DR-261.
 
     The block stands outside Article 21's three step shapes, and its detail
     lines are indented by two spaces rather than the five `.meta/gate` reads as
@@ -1035,7 +1035,7 @@ def run(
         root: Workspace root directory path.
         steps: List of Step tuples to execute.
         environ: Environment mapping to inspect for CI flag (Article 6,
-            solorepo's DR-261).
+            stereorepo's DR-261).
 
     Returns:
         int: Exit status code (0 for success outside CI or all passing, 1 for failures

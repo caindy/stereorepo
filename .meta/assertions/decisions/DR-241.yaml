@@ -3,10 +3,7 @@ decisions:
     name: "DR-241 · Prohibiting embedded inline Python invocations in workflows and shell scripts"
     status: ADOPTED
     enacted_in:
-      - work:artifact/github-workflows-coder
       - work:artifact/meta-checks-files-inline-python
-      - work:artifact/meta-lib-check-pr-cli
-      - work:artifact/meta-check-pr
     context: >-
       GitHub Actions workflows and shell scripts previously contained embedded inline Python
       invocations (`python3 -c '...'`) within Bash run steps across `.github/workflows/`
@@ -14,7 +11,7 @@ decisions:
       inside workflow YAML blocks and shell commands, they bypassed static analysis
       tools (`ruff`, `mypy`), syntax validators, and repository gate prechecks. Where
       multi-line logic blocks were duplicated across workflows (such as the fallback
-      detection logic consolidated under DR-240 into `.meta/detect_fallback.py`),
+      detection logic consolidated under solorepo's DR-240 into `.meta/detect_fallback.py`),
       maintaining them inline escaped static typing and linting.
     alternatives:
       - name: Permit inline Python one-liners when concise or single-use

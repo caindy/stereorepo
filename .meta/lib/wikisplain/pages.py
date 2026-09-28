@@ -1,4 +1,4 @@
-"""A concept page scaffolded from its definition, and a page verified against the conventions it was scaffolded to (solorepo's DR-187).
+"""A concept page scaffolded from its definition, and a page verified against the conventions it was scaffolded to (stereorepo's DR-187).
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class Page:
 
     title: str
     slug: str = ""
-    context: str = "solorepo"
+    context: str = "stereorepo"
     definition: str = ""
     synonyms: list[str] | None = None
     body: str = ""
@@ -29,7 +29,7 @@ class Page:
 
 
 def generate_page(page: Page, root: pathlib.Path | None = None) -> str:
-    """Generate canonical MOS:LEAD markdown content for the wiki concept `page` (solorepo's DR-187)."""
+    """Generate canonical MOS:LEAD markdown content for the wiki concept `page` (stereorepo's DR-187)."""
     title, context, body = page.title, page.context, page.body
     see_also = page.see_also
     slug = page.slug.strip() or lead.slugify(title)
@@ -59,7 +59,7 @@ def generate_page(page: Page, root: pathlib.Path | None = None) -> str:
 
     see_also_items = list(see_also or [])
     if not see_also_items:
-        default_links = ["knowledge-management", "ubiquitous-language", "pr-first"]
+        default_links = ["knowledge-management", "ubiquitous-language"]
         see_also_items = [link for link in default_links if link != slug]
 
     see_also_str = ", ".join(f"[[{item}]]" for item in see_also_items)
@@ -146,7 +146,7 @@ def wikilink_problems(content: str, rel_path: str, self_slug: str, root: pathlib
 def verify_page(
     content: str, rel_path: str, root: pathlib.Path | None = None
 ) -> list[str]:
-    """Verify generated page content against MOS:LEAD and closed-world wikilink rules (solorepo's DR-187)."""
+    """Verify generated page content against MOS:LEAD and closed-world wikilink rules (stereorepo's DR-187)."""
     problems, title_clean = lead_problems(content.splitlines(), rel_path)
     if title_clean is None or (problems and "after title" in problems[0]):
         return problems

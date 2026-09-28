@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/152
     name: "DR-152 · Prose woven through generated content is a named block on what it frames, and the gate names a block nothing reads"
-    challenge: work:challenge/226
     status: ADOPTED
     applies:
       - work:article/8
@@ -16,7 +15,7 @@ decisions:
       - work:artifact/meta-lib-render-record
       - work:artifact/meta-lib-render-skills
     context: >-
-      solorepo's DR-144 moved a generated page's framing prose onto the Artifact
+      stereorepo's DR-144 moved a generated page's framing prose onto the Artifact
       it is written to, and said in its own consequences what it could not
       reach: prose woven *through* generated content rather than placed before
       or after it. Two blocks of that were left in `render.py`.
@@ -32,7 +31,7 @@ decisions:
       `preamble` and `postamble` could not take them. Both are identified by
       where they sit, and a block in the middle of a page has no position to be
       named by; `path` says which page and nothing says which block. That is why
-      this is a decision rather than a second use of solorepo's DR-144, and why
+      this is a decision rather than a second use of stereorepo's DR-144, and why
       that entry stopped where it did.
 
       The second constraint is that `skill()` writes two pages from one
@@ -75,7 +74,7 @@ decisions:
           not supply: a generator asks for a block by name, so a reordering
           moves nothing and a dropped section is a `LookupError` that says which
           host and which block. Hosting it on what it frames follows the rule
-          solorepo's DR-144 already set — the prose sits one slot from the thing
+          stereorepo's DR-144 already set — the prose sits one slot from the thing
           it is about — and answers the second-copy problem by construction,
           since a Discipline has one of each block however many readings are
           compiled from it. What it costs: two hosts rather than one, so a
@@ -132,7 +131,7 @@ decisions:
       year in which blocks were renamed and sections dropped, would say the
       residue it exists to catch does not happen and the step is ceremony.
     rationale: |-
-      solorepo's DR-144 named this work and left it, on the grounds that a slot
+      stereorepo's DR-144 named this work and left it, on the grounds that a slot
       for woven prose is a different decision. It is, and the difference is one
       word: a preamble is identified by position and a woven block is identified
       by name. Everything else follows from that — the list, the `LookupError`

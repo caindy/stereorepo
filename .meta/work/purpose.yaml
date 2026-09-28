@@ -1,24 +1,20 @@
-id: https://w3id.org/solorepo/work/purpose
+id: https://w3id.org/stereorepo/work/purpose
 name: work-purpose
 title: Ontology of Work — Purpose
 description: >-
-  What the work is for, and what may be done in pursuit of it.
+  What the work is, and what it is for.
 
-  A **Goal** is SMART by construction: Specific by its Challenge, Measurable by
-  its Definition of Done, Achievable and Relevant by its Job to be Done,
-  Time-bound by its Deadline. All four are required, so a Goal missing one fails
-  validation rather than quietly being less than it claims.
+  An **Issue** is one unit of work: one Markdown file on the board, whose
+  filename slug is its identifier and whose directory is its stage. Its front
+  matter holds only what cannot be observed or derived, and this class is the
+  shape of that front matter. An Issue with children is a parent issue; there is
+  no separate type for one.
 
-  A **Job to be Done** states the *user's* job and names a Persona. The original
-  sketch had it specify a Role, which made the need the worker's; that was wrong,
-  and correcting it means an Agency's Role is no longer implied by its Goal.
-
-  A **Remit** adds Permissions to a Goal: what may be done, and what it is to be
-  done for.
+  A **Job to be Done** states the *user's* job and names a Persona.
 license: https://creativecommons.org/licenses/by/4.0/
 
 prefixes:
-  work: https://w3id.org/solorepo/work-ontology/
+  work: https://w3id.org/stereorepo/work-ontology/
   linkml: https://w3id.org/linkml/
   prov: http://www.w3.org/ns/prov#
 default_prefix: work
@@ -27,80 +23,42 @@ default_range: string
 imports:
   - linkml:types
   - core
-  - authority
   - personas
 
 enums:
 
-  GoalBasis:
+  Difficulty:
     description: >-
-      What justifies a Goal. Every Goal has exactly one, so that work with no
-      justification cannot be written down without the omission showing.
+      How an Issue is carried to `main`. Set when the Issue is groomed, by the
+      seats or by the human; never a verdict on the work.
     permissible_values:
-      USER:
+      easy:
+        description: Done in one piece, with few turns.
+      medium:
+        description: Done in one piece, with more room to converge.
+      hard:
         description: >-
-          It serves a Persona's END goal, through a Job to be Done. The default,
-          and the only basis that traces to someone outside the building.
-      BUSINESS:
+          Too big for one piece. The seats split it into child Issues in the
+          backlog, each naming this one as its parent, and it lands as done
+          once the children are written.
+      human:
         description: >-
-          An organisational objective — conversion, support cost, retained
-          revenue. *About Face* names these and keeps them out of the Persona so
-          they cannot pollute the user model; they belong here instead.
-      TECHNICAL:
-        description: >-
-          An architectural constraint — latency, offline-first sync, data
-          residency. Also from *About Face*, and also kept out of the Persona.
-
-  ChallengeType:
-    description: >-
-      The shape of a Challenge. The source ontology gives an open list
-      ("defects, epics, features, tasks, etc."), so this enum is illustrative
-      rather than closed; extend it as new challenge shapes are adopted.
-    permissible_values:
-      DEFECT:
-        description: Observed behaviour differs from intended behaviour.
-      EPIC:
-        description: A large body of work decomposed into features.
-      FEATURE:
-        description: A unit of delivered capability, decomposed into tasks.
-      TASK:
-        description: A single unit of executable work.
-      SPIKE:
-        description: A time-boxed investigation that resolves uncertainty.
-      CHORE:
-        description: Upkeep work that changes no external behaviour.
+          Its result needs the human's desk check before it lands on `main`.
 
 slots:
 
-  challenge_type:
-    description: The shape of the Challenge.
-    range: ChallengeType
+  difficulty:
+    description: How the Issue is carried to `main`.
+    range: Difficulty
 
-  parent_challenge:
-    description: The Challenge this one decomposes, e.g. the epic of a feature.
-    range: Challenge
-
-  # Definition of Done
-
-  shown_by:
+  waits_on:
     description: >-
-      What demonstrates this criterion met — a command, a check, a count that
-      can be taken. The same job `checked_by` does for an Article.
-
-  criteria:
-    description: The criteria that, all being met, make the Goal done.
-    range: AcceptanceCriterion
+      Issues that must be done before this one is ripe, by slug. A slug in
+      another repository is written `<repository>:<slug>`.
     multivalued: true
-    inlined_as_list: true
 
-  metric:
-    description: The quantity observed to check the criterion.
-
-  target_value:
-    description: The value the metric must reach, held as text to allow bounds.
-
-  unit:
-    description: Unit the metric is measured in.
+  parent:
+    description: The Issue this one was split from, by slug.
 
   # Job to be done
 
@@ -108,7 +66,7 @@ slots:
     description: The circumstance that triggers the need ("When ...").
 
   motivation:
-    description: What the Role wants to do in that situation ("I want to ...").
+    description: What the Persona wants to do in that situation ("I want to ...").
 
   expected_outcome:
     description: The outcome that makes the need satisfied ("so that ...").
@@ -122,115 +80,33 @@ slots:
     range: PersonaGoal
     multivalued: true
 
-  challenge:
-    description: >-
-      The Challenge this addresses. A Goal commits to one; a Decision was taken
-      under one, which is how the entries that served a Challenge are gathered
-      without anyone keeping a list.
-    range: Challenge
-
-  definition_of_done:
-    description: The measurable completion test for the Goal.
-    range: DefinitionOfDone
-
-  jtbd:
-    description: The Job to be Done the Goal serves.
-    range: JobToBeDone
-
-  deadline:
-    description: The instant by which the Goal must be met.
-    range: datetime
-
-  goal_basis:
-    description: What justifies this Goal.
-    range: GoalBasis
-
-  # Remit
-
-  permissions:
-    description: The Permissions granted.
-    range: Permission
-    multivalued: true
-
-  goal:
-    description: The Goal the Permissions are granted for.
-    range: Goal
-
-  # Agency
-
 classes:
 
-  Challenge:
-    is_a: WorkEntity
+  Issue:
     description: >-
-      A problem to be addressed, e.g. a defect, epic, feature or task. A
-      Challenge supplies the specificity of a SMART Goal.
+      One unit of work, as one Markdown file on the board. It has no number:
+      its slug is its id. It has no status, labels or assignee: its stage is the
+      directory it sits in. It has no comment thread: the seats' notes and the
+      human's desk-check notes are written in the file.
     slots:
-      - challenge_type
-      - parent_challenge
-    slot_usage:
-      challenge_type:
-        required: true
-
-  Epic:
-    is_a: Challenge
-    description: >-
-      A composite Challenge decomposed into constituent child Challenges.
-      A parent Challenge whose completion depends on the resolution of its child
-      dependencies.
-
-  AcceptanceCriterion:
-    description: >-
-      One checkable condition in a Definition of Done. State the metric and
-      target where the criterion is quantitative.
-
-      `shown_by` is what makes it a criterion rather than a hope: a box ticked
-      because somebody remembers is the convention-by-restraint that solorepo's DR-050 rules
-      out, and a criterion nothing can demonstrate cannot be met, only asserted.
-    slots:
-      - statement
-      - metric
-      - target_value
-      - unit
-      - shown_by
-    slot_usage:
-      statement:
-        required: true
-
-  DefinitionOfDone:
-    is_a: WorkEntity
-    description: >-
-      The test that decides whether a Goal has been met. It supplies the
-      measurability of a SMART Goal.
-    slots:
-      - criteria
-    slot_usage:
-      criteria:
-        required: true
+      - difficulty
+      - waits_on
+      - parent
 
   JobToBeDone:
     is_a: WorkEntity
     description: >-
       The need the work serves, stated from the point of view of the Persona
-      that has it. It supplies the achievability and relevance of a SMART Goal,
-      and it is the element that names the Persona. Distinct from Job, which is
-      an assignment.
+      that has it. It is the element that names the Persona.
     comments:
       - >-
-        The original sketch had this specify a Role, which made the need the
-        worker's. It states the *user's* job (solorepo's DR-021), so it names a Persona.
-        One consequence: an Agency's Role is no longer implied by its Goal, and
-        choosing it becomes an explicit act rather than a derivation.
+        It states the *user's* job, not the worker's (stereorepo's DR-021), so it
+        names a Persona.
       - >-
         `serves` names the END goals this need advances, and is **required**. A
-        need that advances none of a Persona's goals is a need nobody has, and
-        making it required is what lets the schema guarantee the whole chain: a
-        USER Goal must have a Job to be Done, and a Job to be Done must reach an
-        END goal, so no Goal can dead-end at a Persona (solorepo's DR-039).
-      - >-
-        Subtracting the two sides gives the product equivalent of the
-        Permission/AuditRecord diff: an END goal with no Job to be Done is a user
-        need nobody is working on.
+        need that advances none of a Persona's goals is a need nobody has
+        (stereorepo's DR-039). An END goal with no Job to be Done is a user need
+        nobody is working on.
     slots:
       - situation
       - motivation
@@ -243,82 +119,4 @@ classes:
       persona:
         required: true
       serves:
-        required: true
-
-  Goal:
-    is_a: WorkEntity
-    description: >-
-      A SMART goal. Specific by its Challenge, Measurable by its Definition of
-      Done, Time-bound by its Deadline, and Achievable and Relevant by whatever
-      justifies it — a Job to be Done for a user, or a stated business or
-      technical objective.
-
-      Every Goal must serve a Persona's END goal, or be a business or a
-      technical goal (solorepo's DR-038). There is no fourth option, and that is the point:
-      work that answers to nobody cannot be written down without the omission
-      being visible.
-    comments:
-      - >-
-        A Goal that genuinely serves a user *and* the business picks its primary
-        basis. Keeping the basis single-valued is what keeps the arithmetic of
-        solorepo's DR-031 clean — subtract served END goals from held ones and the
-        remainder means something.
-    slots:
-      - challenge
-      - definition_of_done
-      - jtbd
-      - deadline
-      - goal_basis
-      - statement
-    slot_usage:
-      challenge:
-        required: true
-      definition_of_done:
-        required: true
-      deadline:
-        required: true
-      goal_basis:
-        required: true
-      statement:
-        description: >-
-          The business or technical objective this Goal answers to, when it is
-          not a user's.
-    rules:
-      - description: A Goal justified by a user reaches that user through a Job to be Done.
-        preconditions:
-          slot_conditions:
-            goal_basis:
-              equals_string: USER
-        postconditions:
-          slot_conditions:
-            jtbd:
-              required: true
-      - description: >-
-          A business or technical Goal has no user to reach, so it states its
-          objective instead.
-        preconditions:
-          slot_conditions:
-            goal_basis:
-              any_of:
-                - equals_string: BUSINESS
-                - equals_string: TECHNICAL
-        postconditions:
-          slot_conditions:
-            statement:
-              required: true
-            jtbd:
-              value_presence: ABSENT
-
-  Remit:
-    is_a: WorkEntity
-    description: >-
-      A Goal together with the Permissions granted to pursue it: what may be
-      done, and what it is to be done for.
-    slots:
-      - permissions
-      - goal
-    slot_usage:
-      permissions:
-        required: true
-      goal:
         required: true

@@ -1,35 +1,19 @@
 decisions:
   - id: work:decision/179
     name: "DR-179 · Extend docstring gate to inherited repository tooling and scripts (.meta/)"
-    challenge: work:challenge/189
     status: ADOPTED
     enacted_in:
-      - work:artifact/meta-arc-cluster
-      - work:artifact/meta-arc-deploy
-      - work:artifact/meta-arc-teardown
-      - work:artifact/meta-check-pr
       - work:artifact/meta-checks-citations
       - work:artifact/meta-checks-collect
       - work:artifact/meta-checks-files
       - work:artifact/meta-checks-graph
       - work:artifact/meta-checks-probes
       - work:artifact/meta-checks-probes-harness
-      - work:artifact/meta-checks-probes-git
-      - work:artifact/meta-checks-probes-channel
-      - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-checks-probes-knowledge
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-dereference
       - work:artifact/meta-gate
-      - work:artifact/meta-hooks-signed-channel
-      - work:artifact/meta-next
       - work:artifact/meta-render
-      - work:artifact/meta-say
-      - work:artifact/meta-say-commit
-      - work:artifact/meta-say-move
-      - work:artifact/meta-say-post
-      - work:artifact/meta-say-whoami
-      - work:artifact/meta-timing
       - work:artifact/meta-checks-files-python
     context: >-
       The Python Bootstrap's doc gate checks every module and every public

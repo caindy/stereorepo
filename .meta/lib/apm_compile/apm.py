@@ -11,7 +11,7 @@ from lib.apm_compile import META, ROOT, primitives
 
 
 def run_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
-    """Runs the apm CLI inside meta_dir, passing args (solorepo's DR-201)."""
+    """Runs the apm CLI inside meta_dir, passing args (stereorepo's DR-201)."""
     apm_bin = shutil.which("apm")
     if not apm_bin:
         print(
@@ -25,7 +25,7 @@ def run_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
 
 
 def validate_apm(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROOT) -> int:
-    """Validates APM primitives against LinkML assertions and APM CLI schema (solorepo's DR-201, solorepo's DR-208)."""
+    """Validates APM primitives against LinkML assertions and APM CLI schema (stereorepo's DR-201, stereorepo's DR-208)."""
     stale = primitives.check_primitives(meta_dir, root_dir)
     if stale:
         print("Internal assertion-to-primitive drift detected:", file=sys.stderr)
@@ -47,12 +47,12 @@ def validate_apm(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = ROOT) -
 
 
 def pack_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
-    """Packs the APM project into distributable plugin/bundle artifacts (solorepo's DR-201)."""
+    """Packs the APM project into distributable plugin/bundle artifacts (stereorepo's DR-201)."""
     return run_apm(["pack", *args], meta_dir=meta_dir)
 
 
 def compile_apm(args: list[str], meta_dir: pathlib.Path = META) -> int:
-    """Compiles the APM project into target harness directories redirected to root (solorepo's DR-172, solorepo's DR-201)."""
+    """Compiles the APM project into target harness directories redirected to root (stereorepo's DR-172, stereorepo's DR-201)."""
     cmd_args = ["compile", "--root", ".."]
     if not any(a.startswith("-t") or a.startswith("--target") or a == "--all" for a in args):
         cmd_args.extend(["-t", "claude,antigravity,copilot"])

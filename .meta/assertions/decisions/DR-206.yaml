@@ -12,7 +12,7 @@ decisions:
       - work:artifact/meta-apm-manifest
       - work:artifact/meta-apm-readme
       - work:artifact/meta-bootstrap
-      - work:artifact/wiki-solorepo-client-repo
+      - work:artifact/wiki-stereorepo-client-repo
       - work:artifact/meta-lib-render-writers
       - work:artifact/meta-lib-apm-compile-instructions
     context: >-
@@ -41,7 +41,7 @@ decisions:
       - name: Relocate or symlink apm.yml and .apm/ to the repository root
         chosen: false
         reason: >-
-          Violates the rule that `.meta/` is the staging ground (solorepo's DR-001),
+          Violates the rule that `.meta/` is the staging ground (stereorepo's DR-001),
           where structure-explaining tooling and Specialization machinery live in `.meta/`
           and product material lives everywhere else. Testing confirms APM CLI 0.30.0 natively supports
           virtual subdirectory packages (`caindy/solorepo/.meta`), making root entry point
@@ -51,8 +51,8 @@ decisions:
         reason: >-
           Distributes solorepo's cognitive layer directly from its `.meta/` boundary
           via APM's native virtual subdirectory support (`caindy/solorepo/.meta` or packaged release
-          archives) and GitHub Releases. Preserves the nested package layout under `.meta/` (solorepo's DR-172)
-          and the staging boundary rule that `.meta/` is the staging ground (solorepo's DR-001).
+          archives) and GitHub Releases. Preserves the nested package layout under `.meta/` (stereorepo's DR-172)
+          and the staging boundary rule that `.meta/` is the staging ground (stereorepo's DR-001).
           Expanding `target:` in `.meta/apm.yml` authorizes `codex` and `kiro` alongside
           `claude`, `copilot`, and `gemini` (resolving #112). Publishing versioned releases (`v*`)
           via GitHub Actions provides an explicit, auditable signal enabling downstream portfolios
@@ -60,7 +60,7 @@ decisions:
     consequences:
       - >-
         `.meta/apm.yml` and `.meta/.apm/` remain hermetically bounded inside `.meta/`, preserving
-        the staging ground separability rule (solorepo's DR-001) without requiring root symlinks.
+        the staging ground separability rule (stereorepo's DR-001) without requiring root symlinks.
       - >-
         `.meta/apm_compile.py` expands the manifest target set to `["claude", "gemini", "copilot", "codex", "kiro"]`,
         enabling multi-harness projection for OpenAI Codex (`.codex/`) and Kiro (`.kiro/`).
@@ -70,7 +70,7 @@ decisions:
       - >-
         Downstream client repos specialize solorepo by adopting its cognitive operating layer via APM
         (`caindy/solorepo/.meta@^0.1.0`), inheriting its SDLC and verification gates (`.meta/gate`
-        per solorepo's DR-104), and bringing language bootstraps to hand via `just bootstrap <lang> <path>`.
+        per stereorepo's DR-104), and bringing language bootstraps to hand via `just bootstrap <lang> <path>`.
       - >-
         `.meta/bootstrap.py` provides on-demand Project instantiation from language Bootstraps,
         rendering seed projects and wiring them into `structure.yaml`.
@@ -86,5 +86,5 @@ decisions:
 
       By packaging the cognitive layer through APM's native subdirectory support and
       publishing versioned GitHub Releases, solorepo preserves its internal architectural
-      staging ground separability (solorepo's DR-001) while embracing standard package management semantics for distribution,
+      staging ground separability (stereorepo's DR-001) while embracing standard package management semantics for distribution,
       heterogeneous harness reach, and downstream lifecycle synchronization.

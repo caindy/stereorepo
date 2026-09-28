@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/087
     name: "DR-087 · An Article shows how it applies, and accounts for nothing"
-    challenge: work:challenge/11
     status: ADOPTED
     supersedes:
       - work:decision/048

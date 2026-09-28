@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/229
     name: "DR-229 · Observed Failure covers Claims as well as guardrails, and Article 23 holds the author to checking one"
-    challenge: work:challenge/574
     status: ADOPTED
     applies:
       - work:article/23
@@ -35,7 +34,7 @@ decisions:
         chosen: false
         reason: >-
           A gate sees a pull request and nothing else, so it would miss an
-          interactive session editing a record directly. Solorepo's DR-190
+          interactive session editing a record directly. Stereorepo's DR-190
           weighed a purely mechanical regime and a purely instructional one and
           took neither, adopting a gate beside a reading — which is the shape
           Article 23's own `checked_by` takes, and the reason its mechanical half
@@ -45,7 +44,7 @@ decisions:
         reason: >-
           Observed Failure already holds them, of checks: a test that passes
           against broken code passed for the wrong reason, and no coverage
-          number distinguishes the two. Solorepo's DR-101 refused a Discipline
+          number distinguishes the two. Stereorepo's DR-101 refused a Discipline
           for the receipt rule on the ground that a Discipline is a name and the
           idea already had two, calling that rule "Observed Failure and Nothing
           Unconsumed applied to prose" — which is this widening, already stated
@@ -81,7 +80,7 @@ decisions:
         solorepo's #546.
       - >-
         `Claim` is minted into the inherited vocabulary as Toulmin's Claim, in
-        the shape `~/fitch-mvp` models it, with a page under `wiki/solorepo/`.
+        the shape `~/fitch-mvp` models it, with a page under `wiki/stereorepo/`.
         Only that term is taken: `Warrant`, `Grounds`, `Backing`, `Credence`,
         `Rebuttal` and `Qualifier` wait for solorepo's #576, since a word with no
         consumer here is what Nothing Unconsumed refuses.

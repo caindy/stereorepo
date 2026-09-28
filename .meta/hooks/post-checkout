@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Git post-checkout lifecycle hook (solorepo's DR-172, solorepo's DR-201, solorepo's #430, solorepo's #1075).
+# Git post-checkout lifecycle hook (stereorepo's DR-172, stereorepo's DR-201, solorepo's #430, solorepo's #1075).
 # Materializes single-source APM cognitive assets into multi-harness target directories
 # (.agents/skills, .gemini/, .codex/) on branch switches and new worktree creation.
 

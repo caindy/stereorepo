@@ -1,21 +1,20 @@
 decisions:
   - id: work:decision/220
     name: "DR-220 · .meta/ holds the seed's complexity ceiling and pylint's size rules, with no suppression"
-    challenge: work:challenge/538
     status: ADOPTED
     applies:
       - work:article/2
     enacted_in:
       - work:artifact/meta-ruff-toml
     context: >-
-      Solorepo's DR-177 gave `.meta/` its own `ruff.toml`, selecting the rules
+      Stereorepo's DR-177 gave `.meta/` its own `ruff.toml`, selecting the rules
       appropriate to repository tooling and keeping `ignore = []` empty. The
       seed a portfolio is bootstrapped from selects `C90` with
       `max-complexity = 12` besides (`bootstraps/python/seed/pyproject.toml`),
       and `.meta/` did not: the scaffold held product code to a ceiling it did
       not hold itself, and nothing limited a function's size. Once every
       script over five hundred lines had been split into a package under
-      solorepo's DR-217 and DR-218, the seed's ceiling and pylint's size rules
+      stereorepo's DR-217 and DR-218, the seed's ceiling and pylint's size rules
       reported 74 findings across 35 functions of `.meta/`, the largest a
       probe of 228 statements, twenty of them probes written as one function
       holding every case.
@@ -25,7 +24,7 @@ decisions:
         reason: >-
           Seventy-four `# noqa` lines with reasons is the ruleset being held
           on paper and not in the code, and each is a suppression the audit of
-          solorepo's DR-207 treats as an open defect.
+          stereorepo's DR-207 treats as an open defect.
       - name: Select the rules at looser thresholds so the tree passes as it is
         chosen: false
         reason: >-

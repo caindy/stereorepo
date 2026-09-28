@@ -12,7 +12,7 @@ LEAD_COPULA = re.compile(
 
 
 def slugify(text: str) -> str:
-    """Convert a title or concept string into a canonical lowercase slug (solorepo's DR-187)."""
+    """Convert a title or concept string into a canonical lowercase slug (stereorepo's DR-187)."""
     cleaned = text.strip().lower()
     cleaned = re.sub(r"[_\s]+", "-", cleaned)
     cleaned = re.sub(r"[^a-z0-9-]", "", cleaned)
@@ -21,7 +21,7 @@ def slugify(text: str) -> str:
 
 
 def format_lead_sentence(title: str, definition: str) -> str:
-    """Format a MOS:LEAD compliant bold copular lead sentence for a concept (solorepo's DR-187).
+    """Format a MOS:LEAD compliant bold copular lead sentence for a concept (stereorepo's DR-187).
 
     The definition supplies its own copula where it opens with one — `is`,
     `are`, `refers to` and the rest — and is given `is` where it does not, so

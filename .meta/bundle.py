@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uvx --python 3.13 --with pyyaml python
-"""Installation bundle inventory facade and CLI dispatcher (solorepo's DR-217).
+"""Installation bundle inventory facade and CLI dispatcher (stereorepo's DR-217).
 
 Exposes installation bundle definitions, manifest loading, validation, and listing
 subcommands for Specialization and repository verification.
@@ -122,7 +122,7 @@ def _cmd_manifest(args: argparse.Namespace) -> int:
 def main() -> None:
     """CLI dispatcher for bundle operations."""
     parser = argparse.ArgumentParser(
-        description="Inspect and validate solorepo installation bundle."
+        description="Inspect and validate the stereorepo installation bundle."
     )
     parser.add_argument(
         "--bundle",

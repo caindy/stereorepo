@@ -1,12 +1,10 @@
 decisions:
   - id: work:decision/095
     name: "DR-095 · The support floor is 3.13 and the linters target it, not the interpreter developed on"
-    challenge: work:challenge/38
     product: work:product/python-standard
     status: ADOPTED
     enacted_in:
       - work:artifact/bootstraps-python-seed-manifest
-      - work:artifact/github-workflows-gate
     alternatives:
       - name: Everything on the newest interpreter
         chosen: false

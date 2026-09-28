@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/208
     name: "DR-208 · Python Bootstrap declares its sixteen capabilities and compiles them into an APM package"
-    challenge: work:challenge/59
     status: ADOPTED
     applies:
       - work:article/8
@@ -65,7 +64,7 @@ decisions:
         bootstraps/python/assertions/capabilities.yaml asserts the sixteen skills
         as LinkML Capability entities, validated by the repository gate.
       - >-
-        bootstraps/python/apm.yml defines the solorepo-python APM package, and
+        bootstraps/python/apm.yml defines the stereorepo-python APM package, and
         .meta/apm_compile.py compiles its primitives into bootstraps/python/.apm/skills/.
       - >-
         MIT license notices (LICENSE-python-refactoring-skills, LICENSE-superpowers)

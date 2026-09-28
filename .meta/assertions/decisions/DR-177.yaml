@@ -1,31 +1,21 @@
 decisions:
   - id: work:decision/177
     name: "DR-177 · Guardrails for inherited repository tooling (.meta/): ruff ruleset, ignore-free configuration, and gate enforcement"
-    challenge: work:challenge/260
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-ruff-toml
-      - work:artifact/github-workflows-gate
       - work:artifact/meta-check
-      - work:artifact/meta-check-pr
       - work:artifact/meta-checks-citations
       - work:artifact/meta-checks-collect
       - work:artifact/meta-checks-files
       - work:artifact/meta-checks-graph
       - work:artifact/meta-checks-probes
       - work:artifact/meta-checks-probes-harness
-      - work:artifact/meta-checks-probes-git
-      - work:artifact/meta-checks-probes-channel
-      - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-checks-probes-knowledge
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-dereference
       - work:artifact/meta-disciplines
-      - work:artifact/meta-hooks-worktree-only
-      - work:artifact/meta-next
       - work:artifact/meta-render
-      - work:artifact/meta-say
-      - work:artifact/meta-timing
       - work:artifact/specialize
       - work:artifact/meta-checks-files-python
       - work:artifact/meta-lib-render-skills

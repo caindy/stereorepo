@@ -1,7 +1,7 @@
-"""Brownfield repository adoption planning library (solorepo's DR-217).
+"""Brownfield repository adoption planning library (stereorepo's DR-217).
 
 Provides data structures, path classification, and collision-aware planning
-to adapt existing Product repositories into solorepo management.
+to adapt existing Product repositories into stereorepo management.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import yaml
 
 from lib.bundle import Bundle, BundleItem, load_bundle
 
-DEFAULT_INTEGRATIONS: frozenset[str] = frozenset({"AGENTS.md", ".github/workflows/gate.yml"})
+DEFAULT_INTEGRATIONS: frozenset[str] = frozenset({"AGENTS.md", "README.md"})
 
 DEFAULT_IGNORES: frozenset[str] = frozenset({
     ".git", ".git/*", ".git/**", "__pycache__", "__pycache__/*", "*.pyc",
@@ -385,7 +385,7 @@ def _classify_bundle_item(
         return PlannedAction(
             path=dest,
             classification=PathClassification.INTEGRATE,
-            reason="preserves target content while integrating solorepo conventions",
+            reason="preserves target content while integrating stereorepo conventions",
             kind=item.kind,
             source=item.source,
         )
@@ -458,7 +458,7 @@ def build_adoption_plan(
             reason = "explicitly configured for retention"
         elif p in DEFAULT_INTEGRATIONS or _matches_pattern(p, active_config.integrations):
             cls = PathClassification.INTEGRATE
-            reason = "preserves target content while integrating solorepo conventions"
+            reason = "preserves target content while integrating stereorepo conventions"
         else:
             cls = PathClassification.RETAIN
             reason = "existing product artifact retained untouched"

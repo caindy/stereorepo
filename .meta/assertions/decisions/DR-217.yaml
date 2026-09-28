@@ -1,40 +1,11 @@
 decisions:
   - id: work:decision/217
     name: "DR-217 · A script under .meta/ keeps its path as the entry point and its body lives in .meta/lib/<script>/, whose modules import each other as modules"
-    challenge: work:challenge/489
     status: ADOPTED
     applies:
       - work:article/2
     enacted_in:
       - work:artifact/meta-lib
-      - work:artifact/meta-lib-gh
-      - work:artifact/meta-say-move
-      - work:artifact/meta-say-on
-      - work:artifact/meta-lib-on
-      - work:artifact/meta-lib-on-common
-      - work:artifact/meta-lib-on-review
-      - work:artifact/meta-lib-coder-door-lifecycle
-      - work:artifact/meta-lib-coder-door-handoff
-      - work:artifact/meta-lib-on-cli
-      - work:artifact/meta-lib-move-init
-      - work:artifact/meta-lib-move-common
-      - work:artifact/meta-lib-move-challenges
-      - work:artifact/meta-lib-move-pull-requests
-      - work:artifact/meta-lib-move-decisions
-      - work:artifact/meta-lib-move-advance
-      - work:artifact/meta-lib-move-manager
-      - work:artifact/meta-lib-move-reconcile
-      - work:artifact/meta-lib-move-cli
-      - work:artifact/meta-check-pr
-      - work:artifact/meta-lib-check-pr
-      - work:artifact/meta-lib-check-pr-branch
-      - work:artifact/meta-lib-check-pr-cli
-      - work:artifact/meta-lib-check-pr-form
-      - work:artifact/meta-lib-check-pr-github
-      - work:artifact/meta-lib-check-pr-polling
-      - work:artifact/meta-lib-check-pr-review
-      - work:artifact/meta-lib-check-pr-sweep
-      - work:artifact/meta-lib-check-pr-verdict
       - work:artifact/meta-render
       - work:artifact/meta-lib-render
       - work:artifact/meta-lib-render-record
@@ -53,27 +24,11 @@ decisions:
       - work:artifact/meta-lib-apm-compile-harness
       - work:artifact/meta-lib-apm-compile-apm
       - work:artifact/meta-lib-apm-compile-cli
-      - work:artifact/meta-lib-worktree-only
-      - work:artifact/meta-lib-worktree-only-paths
-      - work:artifact/meta-lib-worktree-only-shell
-      - work:artifact/meta-lib-worktree-only-grammar
-      - work:artifact/meta-lib-worktree-only-verdict
-      - work:artifact/meta-lib-signed-channel
-      - work:artifact/meta-lib-signed-channel-tables
-      - work:artifact/meta-lib-signed-channel-shell
-      - work:artifact/meta-lib-signed-channel-reach
-      - work:artifact/meta-lib-signed-channel-verdict
       - work:artifact/meta-lib-dereference
       - work:artifact/meta-lib-dereference-reading
       - work:artifact/meta-lib-dereference-asking
       - work:artifact/meta-lib-dereference-report
       - work:artifact/meta-lib-dereference-cli
-      - work:artifact/meta-lib-timing
-      - work:artifact/meta-lib-timing-github
-      - work:artifact/meta-lib-timing-arithmetic
-      - work:artifact/meta-lib-timing-routing
-      - work:artifact/meta-lib-timing-screen
-      - work:artifact/meta-lib-timing-cli
       - work:artifact/meta-lib-wikisplain
       - work:artifact/meta-lib-wikisplain-lead
       - work:artifact/meta-lib-wikisplain-duplicates
@@ -85,22 +40,17 @@ decisions:
       - work:artifact/meta-lib-search-build
       - work:artifact/meta-lib-search-benchmark
       - work:artifact/meta-lib-search-cli
-      - work:artifact/meta-checks-probes-loops
       - work:artifact/meta-ruff-toml
       - work:artifact/meta-disciplines
       - work:artifact/meta-assertions-structure
-      - work:artifact/meta-depth
-      - work:artifact/meta-timing
       - work:artifact/meta-checks-files
-      - work:artifact/github-workflows-review
       - work:artifact/meta-readme
-      - work:artifact/meta-checks-files-control-plane
     context: >-
       Nothing in either ruleset limits how long a Python file may be, and
       `.meta/` holds four scripts over a thousand lines: `check_pr.py` at
       1709, `checks/probes/loops.py` at 1320, `checks/files.py` at 1295 and
       `render.py` at 1175. The seed's complexity ceiling (`C90`,
-      `max-complexity = 12`), which solorepo's DR-177 left out of `.meta/`,
+      `max-complexity = 12`), which stereorepo's DR-177 left out of `.meta/`,
       would report 71 findings over the tree today, three quarters of them in
       those four files. Applied to a module of that shape, every finding lands
       in one file and the refactor that answers them cannot be reviewed
@@ -172,7 +122,7 @@ decisions:
       - >-
         The type ratchet in `.meta/checks/types.baseline.yaml` holds one number
         per package module in place of the script's, each failing on either
-        side of it (solorepo's DR-210).
+        side of it (stereorepo's DR-210).
       - >-
         The control plane is stated once, as `depth.CONTROL_PLANE`, and both
         boundary patterns are built from it, so `.meta/lib/` is inside the

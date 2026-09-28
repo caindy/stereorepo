@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/085
     name: "DR-085 · A13 is retired, and an Article states what would retire it"
-    challenge: work:challenge/11
     status: ADOPTED
     applies:
       - work:article/4
@@ -44,11 +43,11 @@ decisions:
         is the same failure as inventing a rejected option.
       - >-
         A falsifier naming something somebody could bring about is a Challenge,
-        and needs an Issue. A19's is the credential boundary DR-069 left
+        and needs an Issue. A19's is the credential boundary solorepo's DR-069 left
         unfinished, now #21; without it the Charter was holding a plan nobody had
         scheduled.
       - >-
-        DR-050, DR-052 and DR-054 lose `applies: work:article/13`. `applies` says
+        DR-050, solorepo's DR-052 and solorepo's DR-054 lose `applies: work:article/13`. `applies` says
         a Decision *puts an Article into practice*, which is present tense: an
         entry naming a retired one asserts something false rather than preserving
         something historical. That they leaned on it is part of this account,
@@ -76,7 +75,7 @@ decisions:
       than noise? Retirement should be confident, and the confidence should come
       from operationalising the lesson.
 
-      Three decisions had leaned on it — DR-050, DR-052 and DR-054 — and none of
+      Three decisions had leaned on it — DR-050, solorepo's DR-052 and solorepo's DR-054 — and none of
       them is in force unamended today.
 
       A13 did not fail because pull requests turned out to be fine. It failed

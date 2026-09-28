@@ -1,7 +1,6 @@
 decisions:
   - id: work:decision/222
     name: "DR-222 · Only the solo puts a decision in force, and a change carrying one waits for it"
-    challenge: work:challenge/551
     status: ADOPTED
     applies:
       - work:article/11
@@ -31,7 +30,7 @@ decisions:
       - name: A solo Role with a signing key, so adoption is an attributable act
         chosen: false
         reason: >-
-          It would make adoption evidenced: solorepo's A19 has every commit
+          It would make adoption evidenced: stereorepo's A19 has every commit
           name its Actor, and the Trailer is written from the credential the
           channel speaks with, so an agent holding only a Role's credential
           could not sign as the solo. It also introduces an identity to the

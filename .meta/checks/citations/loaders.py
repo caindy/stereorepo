@@ -1,9 +1,8 @@
-"""What the citation steps read from: the patterns a Decision and an Issue citation take, the scripts loaded for their patterns, and the files a portfolio inherits.
+"""What the citation steps read from: the patterns a Decision and an Issue citation take, and the files a portfolio inherits.
 """
 import pathlib
 import re
 from collections.abc import Iterator
-from typing import Any
 
 from checks.collect import META, ROOT, TEMPLATE
 from checks.files import inherited, tree
@@ -11,57 +10,37 @@ from checks.files import inherited, tree
 DR = re.compile(r"\bDR-(\d{3})\b")
 
 
-# A citation of solorepo's record, in the form the material a portfolio inherits
-# writes one: the possessive, then a run, so `solorepo's DR-073, DR-107` names two,
-# and `Solorepo's DR-073` names one at the head of a sentence.
-FOREIGN = re.compile(r"[Ss]olorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
-SCAFFOLD = "work:portfolio/solorepo"
+# A citation of stereorepo's record, in the form the material a portfolio
+# inherits writes one: the possessive, then a run. `Stereorepo's DR-085` names
+# one at the head of a sentence, and `stereorepo's DR-085, DR-104` names two.
+FOREIGN = re.compile(r"[Ss]tereorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
+SCAFFOLD = "work:portfolio/stereorepo"
+
+# A citation of solorepo's record, the repository stereorepo was seeded from.
+# It names history this record does not hold, so nothing resolves it; it is
+# taken out of the text before the bare scan, like a foreign citation
+# (stereorepo's DR-297).
+LEGACY = re.compile(r"[Ss]olorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
+
+
+# An Issue number cited bare, as GitHub linked one. Not `#abc123`, which is a
+# fragment or a colour, and not the tail of a longer number. Not a number in
+# quotes either: `"#7"` in a probe is the string it greps its own output for.
+ISSUE = re.compile(r"(?<![\w#&\"'])#(\d{1,4})(?!\d)")
+
+# A citation of one of solorepo's GitHub Issues, which is how inherited prose
+# cites the legacy repository's history: the possessive, then a run, so
+# `solorepo's #11, #21` names two.
+ISSUE_FOREIGN = re.compile(r"[Ss]olorepo's #\d{1,4}\b(?:(?:,| and|, and) #\d{1,4}\b)*")
 
 
 def issue_citation() -> tuple[re.Pattern[str], re.Pattern[str]]:
-    """Load compiled regular expressions for Issue citations from `check_pr.py`.
+    """The patterns for an Issue citation: a bare `#n`, and `solorepo's #n` (stereorepo's DR-132).
 
     Returns:
-        tuple[re.Pattern, re.Pattern]: A tuple of `(ISSUE, FOREIGN)` patterns
-        matching bare Issue numbers and possessive `solorepo's #n` runs (solorepo's DR-132).
+        tuple[re.Pattern, re.Pattern]: `(ISSUE, ISSUE_FOREIGN)`.
     """
-    module = load_check_pr()
-    return module.verdict.ISSUE, module.verdict.FOREIGN
-
-
-def load_timing() -> Any:
-    """Load `timing.py` as an isolated module object without executing top-level scripts.
-
-    Returns:
-        types.ModuleType: The imported timing module object.
-    """
-    import importlib.util
-    from importlib.machinery import SourceFileLoader
-
-    loader = SourceFileLoader("timing", str(META / "timing.py"))
-    spec = importlib.util.spec_from_loader("timing", loader)
-    assert spec is not None
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
-
-
-def load_check_pr() -> Any:
-    """Load `check_pr.py` as an isolated module object without executing network calls.
-
-    Returns:
-        Any: The imported check_pr module object, untyped so a caller's
-        `check_pr.<name>` reads are not checked against it.
-    """
-    import importlib.util
-    from importlib.machinery import SourceFileLoader
-
-    loader = SourceFileLoader("check_pr", str(META / "check_pr.py"))
-    spec = importlib.util.spec_from_loader("check_pr", loader)
-    assert spec is not None
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
+    return ISSUE, ISSUE_FOREIGN
 
 
 def copied_files() -> set[pathlib.Path]:
@@ -81,7 +60,8 @@ def durable(copied: set[pathlib.Path]) -> Iterator[pathlib.Path]:
     """Yield all durable repository files subject to citation validation.
 
     Covers documentation pages, inherited portfolio files, template files,
-    and assertion files under `.meta/assertions/`.
+    and assertion files under `.meta/assertions/`. Not `WHY_FORK.md`, which is
+    kept as written until its content is worked up into records.
 
     Parameters:
         copied (set[pathlib.Path]): Set of file paths copied into specialized portfolios.
@@ -91,6 +71,8 @@ def durable(copied: set[pathlib.Path]) -> Iterator[pathlib.Path]:
     """
     for path in tree():
         if path.is_symlink() or not path.is_file() or ".git" in path.parts:
+            continue
+        if path == ROOT / "WHY_FORK.md":
             continue
         if path.suffix == ".md" or path in copied or TEMPLATE in path.parents or (
                 path.suffix in (".yaml", ".yml") and (META / "assertions") in path.parents) or (
