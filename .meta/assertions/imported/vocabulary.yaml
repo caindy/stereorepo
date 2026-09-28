@@ -304,7 +304,8 @@ concept_set:
     broader: work:concept/g-doing
     scope_note: >-
       A program, not a model, and nothing an agent must remember to invoke.
-      `pair/` in the scaffold; `just pair` runs it.
+      The scaffold holds it, outside every portfolio's tree; `just pair` runs
+      it there.
     avoid: [orchestrator, captain, lead]
     confusable_with:
       - work:concept/seat

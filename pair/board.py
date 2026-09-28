@@ -1,0 +1,193 @@
+"""The board: issue files under `issues/`, where the directory is the state.
+
+An issue is `issues/<stage>/<slug>.md`. The slug is its id. Front matter holds
+only `difficulty`, and optionally `waits_on` and `parent`; everything else is
+observed from the directory or derived from git.
+"""
+
+from __future__ import annotations
+
+import re
+import subprocess
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+STAGES = ("roadmap", "backlog", "todo", "in-progress", "desk-check", "done")
+DIFFICULTIES = ("easy", "medium", "hard", "human")
+ISSUES = "issues"
+
+_FRONT = re.compile(r"\A---\n(?P<block>.*?)\n---(?:\n|\Z)", re.DOTALL)
+_HEADING = re.compile(r"^(?:#{1,6}\s*|\*\*)(?P<name>[^*\n]+?)\.?(?:\*\*)?\s*$")
+
+
+class GitError(RuntimeError):
+    """A git command exited non-zero."""
+
+
+def git(cwd: Path, *args: str, check: bool = True) -> str:
+    """Run git in `cwd` and return stripped stdout."""
+    done = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    if check and done.returncode != 0:
+        raise GitError(
+            f"git {' '.join(args)} (in {cwd}): "
+            f"{done.stderr.strip() or done.stdout.strip()}"
+        )
+    return done.stdout.strip()
+
+
+def git_ok(cwd: Path, *args: str) -> bool:
+    """Whether a git command exits zero."""
+    return (
+        subprocess.run(
+            ["git", *args], cwd=cwd, capture_output=True, text=True
+        ).returncode
+        == 0
+    )
+
+
+@dataclass
+class Issue:
+    """One issue file as it stands in a working tree."""
+
+    slug: str
+    stage: str
+    front: dict[str, Any] = field(default_factory=dict)
+    body: str = ""
+
+    @property
+    def path(self) -> str:
+        return f"{ISSUES}/{self.stage}/{self.slug}.md"
+
+    @property
+    def difficulty(self) -> str | None:
+        value = self.front.get("difficulty")
+        return value if value in DIFFICULTIES else None
+
+    @property
+    def title(self) -> str:
+        for line in self.body.splitlines():
+            if line.startswith("# "):
+                return line[2:].strip()
+        return self.slug.replace("-", " ")
+
+
+def parse(text: str) -> tuple[dict[str, Any], str]:
+    """Split a Markdown file into its front matter mapping and its body."""
+    match = _FRONT.match(text)
+    if not match:
+        return {}, text
+    try:
+        front = yaml.safe_load(match["block"]) or {}
+    except yaml.YAMLError:
+        front = {}
+    return (front if isinstance(front, dict) else {}), text[match.end() :]
+
+
+def as_list(value: Any) -> list[str]:
+    """A front matter value that may be a scalar or a list, as a list of strings."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v) for v in value]
+    return [str(value)]
+
+
+def section(body: str, name: str) -> str | None:
+    """The text under a heading or bold lead named `name`, or None if absent.
+
+    `## The plan` runs to the next heading of the same or a higher level, so
+    its `###` subsections belong to it. `**The plan.**` runs to the next
+    heading or bold lead of either form.
+    """
+    lines = body.splitlines()
+    for i, line in enumerate(lines):
+        head = _HEADING.match(line.strip())
+        if head and head["name"].strip().lower() == name.lower():
+            level = _level(line)
+            rest: list[str] = []
+            for later in lines[i + 1 :]:
+                other = _level(later) if _HEADING.match(later.strip()) else None
+                if other is not None and other <= level:
+                    break
+                rest.append(later)
+            return "\n".join(rest).strip()
+    return None
+
+
+def _level(line: str) -> int:
+    """A heading's level (1-6); a bold lead ranks below every heading (7)."""
+    stripped = line.strip()
+    hashes = len(stripped) - len(stripped.lstrip("#"))
+    return hashes if hashes else 7
+
+
+def needs_elaboration(body: str) -> bool:
+    """Whether a seat or the loop has sent this issue back for elaboration."""
+    return section(body, "Needs elaboration") is not None
+
+
+def read(tree: Path, slug: str) -> Issue | None:
+    """The issue with this slug in a working tree, wherever it now sits."""
+    for stage in STAGES:
+        path = tree / ISSUES / stage / f"{slug}.md"
+        if path.is_file():
+            front, body = parse(path.read_text())
+            return Issue(slug, stage, front, body)
+    return None
+
+
+def locations(tree: Path, slug: str) -> list[str]:
+    """Every stage directory holding a file with this slug."""
+    return [s for s in STAGES if (tree / ISSUES / s / f"{slug}.md").is_file()]
+
+
+def listed(repo: Path, ref: str, stage: str) -> list[str]:
+    """Slugs in one stage directory at a git ref, in filename order."""
+    names = git(repo, "ls-tree", "--name-only", ref, f"{ISSUES}/{stage}/", check=False)
+    slugs = [
+        Path(n).stem
+        for n in names.splitlines()
+        if n.endswith(".md") and Path(n).name != "README.md"
+    ]
+    return sorted(slugs)
+
+
+def at_ref(repo: Path, ref: str, stage: str, slug: str) -> Issue | None:
+    """An issue as committed at a ref, or None."""
+    text = subprocess.run(
+        ["git", "show", f"{ref}:{ISSUES}/{stage}/{slug}.md"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    if text.returncode != 0:
+        return None
+    front, body = parse(text.stdout)
+    return Issue(slug, stage, front, body)
+
+
+def next_ripe(repo: Path, ref: str, skip: frozenset[str] = frozenset()) -> str | None:
+    """The first backlog item at `ref` whose `waits_on` are all done."""
+    done = set(listed(repo, ref, "done"))
+    for slug in listed(repo, ref, "backlog"):
+        if slug in skip:
+            continue
+        issue = at_ref(repo, ref, "backlog", slug)
+        if issue and all(
+            w.split(":")[-1] in done for w in as_list(issue.front.get("waits_on"))
+        ):
+            return slug
+    return None
+
+
+def children(tree: Path, parent: str) -> list[str]:
+    """Backlog files in a working tree that name `parent` as their parent."""
+    found = []
+    for path in sorted((tree / ISSUES / "backlog").glob("*.md")):
+        front, _ = parse(path.read_text())
+        if str(front.get("parent", "")) == parent:
+            found.append(path.stem)
+    return found

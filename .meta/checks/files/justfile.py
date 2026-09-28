@@ -43,6 +43,13 @@ FLAGS = "flags"
 SUBCOMMAND = "subcommand"
 """A scalar naming one of a closed set of targets the recipe dispatches on."""
 
+TOOL_ROOTS = (".meta/", "pair/")
+"""Where a recipe's tool may live: the staging ground, or the scaffold-only pair loop."""
+
+SCAFFOLD_RECIPES = ("test-specialization", "adapt", "pair", "pair-status", "pair-accept",
+                    "pair-resume")
+"""Recipes rendered only in the scaffold, which a portfolio's surface does not hold."""
+
 IDENTIFIER = "identifier"
 """A scalar carrying one atomic identifier, such as an issue slug."""
 
@@ -56,12 +63,15 @@ CONTRACT: Contract = {
     "bootstrap": (("args", FLAGS),),
     "test-specialization": (("args", FLAGS),),
     "adapt": (("args", FLAGS),),
+    "pair": (("args", FLAGS),),
+    "pair-status": (),
+    "pair-accept": (("args", FLAGS),),
+    "pair-resume": (("args", FLAGS),),
 }
 """The declared shape of every root recipe: each parameter in signature order, paired with
 the kind of value it carries. There is no prose kind to declare, so a recipe taking a bare
 multi-word positional cannot be written down here and fails the step until it is redesigned
-(stereorepo's DR-259). `pr-all` takes nothing and `next` a flags tail, which is the shape the
-composite actions under `.meta/actions/` call them in (solorepo's DR-275)."""
+(stereorepo's DR-259)."""
 
 
 def _parameters(raw: str) -> list[tuple[str, str]]:
@@ -169,7 +179,7 @@ def _departures(where: str, recipe: Recipe, declared: tuple[tuple[str, str], ...
     problems += [f"{where} interpolates '{{{{{unknown}}}}}', which it does not declare"
                  for unknown in sorted(interpolated - known)]
 
-    if name != "default" and not any(".meta/" in line for line in body):
+    if name != "default" and not any(root in line for line in body for root in TOOL_ROOTS):
         problems.append(f"{where} invokes no tool under .meta/ (stereorepo's DR-106)")
     if not documented:
         problems.append(f"{where} carries no doc comment, so `just --list` indexes it blank")
@@ -192,8 +202,8 @@ def justfile_recipe_shape(
     parameter is interpolated into the body at least once; every interpolation
     names a declared parameter or a name the file assigns at its top level, an
     unnamed one expanding to nothing rather than failing; every body invokes a
-    tool under `.meta/`; and every recipe carries the doc comment `just --list`
-    prints as the index.
+    tool under `.meta/`, or the pair loop under `pair/`; and every recipe
+    carries the doc comment `just --list` prints as the index.
 
     Returns:
         Passed | Found | CouldNotRun: The recipes checked, or one line per departure.
@@ -208,7 +218,7 @@ def justfile_recipe_shape(
 
     effective_contract = dict(contract)
     if not TEMPLATE.is_dir():
-        for scaffold_recipe in ("arc", "arc-cluster", "test-specialization"):
+        for scaffold_recipe in SCAFFOLD_RECIPES:
             effective_contract.pop(scaffold_recipe, None)
 
     assignments = frozenset(match["name"] for line in text.splitlines()

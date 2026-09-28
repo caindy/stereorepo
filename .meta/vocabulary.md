@@ -137,7 +137,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Seat.** Coined, because pair programming's driver and navigator divide the typing and here both seats write code. Within a stage the primary seat takes the first turn and the secondary the next; the secondary fixes what it finds rather than describing it. A seat is told the Issue file, what the stage is for, and what changed since its last turn, and nothing about the protocol that moves the Issue.
 
-**Supervisor.** A program, not a model, and nothing an agent must remember to invoke. `pair/` in the scaffold; `just pair` runs it.
+**Supervisor.** A program, not a model, and nothing an agent must remember to invoke. The scaffold holds it, outside every portfolio's tree; `just pair` runs it there.
 
 **Quiet turn.** Agreement is observed, never declared: when both seats have accepted the same state, by making it or by leaving it alone, the stage advances if its requirement holds.
 

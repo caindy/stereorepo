@@ -65,12 +65,32 @@ def justfile() -> str:
 
     artifacts = {art["id"] for art in structure.get("artifacts") or [] if "id" in art}
 
+    if "work:artifact/pair" in artifacts:
+        lines += [
+            "",
+            "# the pair loop: carry issues from issues/backlog/ to main (--once, --push, --model)",
+            "pair *args:",
+            "    uv run --quiet --script pair/pair.py run {{args}}",
+            "",
+            "# the board on main, the issue in flight, and the last turns",
+            "pair-status:",
+            "    uv run --quiet --script pair/pair.py status",
+            "",
+            "# pass the desk check on the issue waiting in worktrees/pair, and land it",
+            "pair-accept *args:",
+            "    uv run --quiet --script pair/pair.py accept {{args}}",
+            "",
+            "# fail the desk check: the pair picks up the notes in the issue file",
+            "pair-resume *args:",
+            "    uv run --quiet --script pair/pair.py resume {{args}}",
+        ]
+
     if "work:artifact/meta-test-specialization" in artifacts:
         lines += [
             "",
             "# Specialization, end to end, in a scratch repository (stereorepo's DR-239, DR-244)",
             "test-specialization *args:",
-            "    python3 .meta/test_specialization.py {{args}}",
+            "    uvx --python 3.13 --with pyyaml python .meta/test_specialization.py {{args}}",
         ]
 
     if "work:artifact/meta-adapt" in artifacts:

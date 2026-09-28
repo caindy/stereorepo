@@ -134,6 +134,13 @@ items:
     ownership: template
     transformations:
       - token_substitution
+  - path: issues/README.md
+    source: template/issues/README.md # stereorepo template
+    target: issues/README.md
+    kind: file
+    ownership: template
+    transformations:
+      - token_substitution
   - path: README.md
     source: template/README.md # stereorepo template
     target: README.md

@@ -109,3 +109,16 @@ def meta_sources() -> list[pathlib.Path]:
         list[pathlib.Path]: The absolute paths `is_py` accepts.
     """
     return sorted(p for p in META.rglob("*") if is_py(p))
+
+
+SCRIPT_METADATA = re.compile(r"^# /// script$.*?^# ///$", re.M | re.S)
+"""An inline script metadata block (PEP 723): TOML in comments, which `uv run --script` reads."""
+
+
+def script_metadata_lines(text: str) -> set[int]:
+    """The line numbers of a file's inline script metadata block, which is data and not code."""
+    found = SCRIPT_METADATA.search(text)
+    if not found:
+        return set()
+    first = text.count("\n", 0, found.start()) + 1
+    return set(range(first, first + found.group().count("\n") + 1))

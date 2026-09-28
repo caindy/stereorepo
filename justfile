@@ -8,7 +8,7 @@
 default:
     @just --list --unsorted
 
-# every Project's gate — or one Project: meta, rust-seed, python-seed — or one Product: scaffold, rust-standard, python-standard
+# every Project's gate — or one Project: meta, rust-seed, python-seed, pair — or one Product: scaffold, rust-standard, python-standard
 gate target="":
     .meta/gate {{target}}
 
@@ -32,9 +32,25 @@ apm *args:
 bootstrap *args:
     uvx --python 3.13 --with pyyaml python .meta/bootstrap.py {{args}}
 
+# the pair loop: carry issues from issues/backlog/ to main (--once, --push, --model)
+pair *args:
+    uv run --quiet --script pair/pair.py run {{args}}
+
+# the board on main, the issue in flight, and the last turns
+pair-status:
+    uv run --quiet --script pair/pair.py status
+
+# pass the desk check on the issue waiting in worktrees/pair, and land it
+pair-accept *args:
+    uv run --quiet --script pair/pair.py accept {{args}}
+
+# fail the desk check: the pair picks up the notes in the issue file
+pair-resume *args:
+    uv run --quiet --script pair/pair.py resume {{args}}
+
 # Specialization, end to end, in a scratch repository (stereorepo's DR-239, DR-244)
 test-specialization *args:
-    python3 .meta/test_specialization.py {{args}}
+    uvx --python 3.13 --with pyyaml python .meta/test_specialization.py {{args}}
 
 # plan brownfield adoption for an existing Product repository
 adapt *args:

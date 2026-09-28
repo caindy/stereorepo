@@ -51,6 +51,18 @@ projects:
     language: Python
     gate: cd bootstraps/python/seed && uv run gate
 
+  # The pair loop, which carries Issues from the board to `main`. Scaffold-only:
+  # a portfolio runs it from a stereorepo checkout, outside its own tree, so the
+  # seats working there never read the loop's code. Its gate is its tests.
+  - id: work:project/pair
+    name: pair
+    description: >-
+      The supervisor and its seat adapter: a deterministic loop that runs two
+      harness sessions in turns over one Issue and moves the Issue between
+      stages from what it can observe.
+    language: Python
+    gate: uv run --quiet --script pair/gate.py
+
 products:
   - id: work:product/scaffold
     name: The scaffold
@@ -60,6 +72,7 @@ products:
     primary_persona: work:persona/the-human
     built_from:
       - work:project/meta
+      - work:project/pair
 
   # A second Product, which is what makes the monorepo claim more than a word:
   # the scaffold and the Rust standard are delivered to different readers and
@@ -91,6 +104,12 @@ products:
 # a checker matches. Partial by design: a file earns an entry by being
 # answerable for something, not by existing.
 artifacts:
+  - id: work:artifact/pair
+    name: pair/pair.py
+    path: pair/pair.py
+  - id: work:artifact/pair-readme
+    name: pair/README.md
+    path: pair/README.md
   - id: work:artifact/agents
     name: AGENTS.md
     path: AGENTS.md

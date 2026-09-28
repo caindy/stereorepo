@@ -61,7 +61,7 @@ from checks.collect import (
     check,
     recorded_baseline,
 )
-from checks.files import meta_sources, tree
+from checks.files import meta_sources, script_metadata_lines, tree
 
 BASELINE = META / "checks" / "comments.baseline.yaml"
 SUPPRESSIONS_BASELINE = META / "checks" / "suppressions.baseline.yaml"
@@ -644,7 +644,7 @@ def commented_out_code() -> StepOutcome:
             continue
         counted += len(comments)
         for comment in comments:
-            if python_code(comment.text):
+            if comment.line not in script_metadata_lines(text) and python_code(comment.text):
                 problems.append(
                     f"{source.relative_to(ROOT).as_posix()}:{comment.line}: "
                     f"commented-out code — `{comment.text[:60]}`"

@@ -44,7 +44,7 @@ ROOT = META.parent
 FIXTURES_DIR = META / "fixtures" / "specialization"
 DEFAULT_TOKENS_PATH = FIXTURES_DIR / "tokens.json"
 TOKEN_RE = re.compile(r"__[A-Z0-9_]+__")
-SCAFFOLD_ONLY_PATHS = ("SPECIALIZE.md", "template", "bootstraps", "pair", "issues")
+SCAFFOLD_ONLY_PATHS = ("SPECIALIZE.md", "template", "bootstraps", "pair")
 
 NO_FIXTURE = "Tokens fixture file not found: {path}"
 """What `load_tokens` raises where nothing is at the path it was given."""

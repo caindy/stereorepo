@@ -23,7 +23,8 @@ import checks.files.prose
 import checks.files.history
 import checks.files.python
 import checks.files.rendered  # noqa: F401  # reason: registers check steps
-from checks.files.sources import inherited, is_py, meta_sources, template_files, tree
+from checks.files.sources import (inherited, is_py, meta_sources, script_metadata_lines,
+                                  template_files, tree)
 from checks.files.conflicts import CONFLICT_MARKER, conflict_markers
 from checks.files.templates import Strict, duplicate_concept_ids, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
 from checks.files.markdown import FENCED, LINK, markdown_links
@@ -109,6 +110,7 @@ __all__ = [
     "ruff_findings",
     "scaffold",
     "scaffold_only_paths",
+    "script_metadata_lines",
     "sources",
     "surviving_placeholders",
     "template_conventions_agree",

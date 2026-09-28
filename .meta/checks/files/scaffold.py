@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from checks.collect import META, ROOT, TEMPLATE, CouldNotRun, Found, Passed, StepOutcome, check
 from checks.files import sources
 
-SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/")
+SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/", "pair/")
 """Paths the scaffold has and a portfolio does not."""
 
 
