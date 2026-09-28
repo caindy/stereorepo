@@ -174,10 +174,13 @@ section saying why, and the supervisor moves the file back to the roadmap.
 Nobody rules on the other seat's work.
 
 **The board is a set of directories, and `git mv` moves issues between
-them.** The directories are `roadmap/`, `backlog/`, `todo/`, `in-progress/`,
-`desk-check/` and `done/`. The buckets are worth having from the first day,
-because moving a file with `git mv` keeps the board and the history
-consistent.
+them.** The board lives in `issues/` at the repository root, and its
+directories are `issues/roadmap/`, `issues/backlog/`, `issues/todo/`,
+`issues/in-progress/`, `issues/desk-check/` and `issues/done/`. The buckets are
+worth having from the first day, because moving a file with `git mv` keeps the
+board and the history consistent. (The booktutor spike first called the
+top-level directory `work/`. It was renamed because everything else already
+called the unit an *issue*.)
 
 - **Adding to the backlog never interrupts anything.** Each issue is its own
   file, and its filename slug is its id, so no number has to be reserved. The
